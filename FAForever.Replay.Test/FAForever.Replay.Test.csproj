@@ -25,22 +25,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="assets\faforever\22338092.fafreplay">
+    <None Update="assets\faforever\zstd\22338092.fafreplay">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="assets\faforever\22373098.fafreplay">
+    <None Update="assets\faforever\zstd\22373098.fafreplay">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="assets\faforever\22425616.fafreplay">
+    <None Update="assets\faforever\zstd\22425616.fafreplay">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="assets\faforever\22451957.fafreplay">
+    <None Update="assets\faforever\gzip\22451957.fafreplay">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="assets\faforever\22453414.fafreplay">
+    <None Update="assets\faforever\gzip\22453414.fafreplay">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="assets\faforever\22453511.fafreplay">
+    <None Update="assets\faforever\gzip\22453511.fafreplay">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="assets\faforever\TestCommands01.fafreplay">
