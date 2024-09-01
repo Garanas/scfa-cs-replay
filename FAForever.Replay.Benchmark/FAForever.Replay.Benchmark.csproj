@@ -15,4 +15,22 @@
     <ProjectReference Include="..\FAForever.Replay\FAForever.Replay.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="assets\faforever\23225104.fafreplay">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\faforever\23225323.fafreplay">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\faforever\23225440.fafreplay">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\faforever\23225685.fafreplay">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\faforever\23225508.fafreplay">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

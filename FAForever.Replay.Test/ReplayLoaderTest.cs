@@ -31,9 +31,14 @@ public class ReplayLoaderTest
     [DataRow("assets/faforever/gzip/22453414.fafreplay", 29)]
     [DataRow("assets/faforever/gzip/22453511.fafreplay", 25)]
     [DataRow("assets/faforever/TestCommands01.fafreplay", 15640)]
+    [DataRow("assets/faforever/23225508.fafreplay", 2916)]
+    [DataRow("assets/faforever/23225323.fafreplay", 17166)]
+    [DataRow("assets/faforever/23225440.fafreplay", 8042)]
+    [DataRow("assets/faforever/23225685.fafreplay", 17040)]
+    [DataRow("assets/faforever/23225104.fafreplay", 55923)]
     public void UserInputCountTest(string file, int expectedCount)
     {
         Replay replay = ReplayLoader.LoadFAFReplayFromDisk(file);
-        Assert.AreEqual(replay.Events.Count, expectedCount);
+        Assert.AreEqual(expectedCount, replay.Events.Count);
     }
 }

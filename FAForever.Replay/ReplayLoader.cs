@@ -364,7 +364,7 @@ namespace FAForever.Replay
                 );
         }
 
-        public static Replay ParseFAFReplayFromMemory(Stream stream)
+        public static Replay LoadFAFReplayFromMemory(Stream stream)
         {
             BinaryReader reader = new BinaryReader(stream);
             StringBuilder json = new StringBuilder();
@@ -432,7 +432,7 @@ namespace FAForever.Replay
         {
             using (FileStream stream = new FileStream(path, FileMode.Open))
             {
-                return ParseFAFReplayFromMemory(stream);
+                return LoadFAFReplayFromMemory(stream);
             }
 
         }

@@ -25,6 +25,21 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="assets\faforever\large\23225104.fafreplay">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\faforever\medium\23225323.fafreplay">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\faforever\medium\23225440.fafreplay">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\faforever\medium\23225685.fafreplay">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\faforever\small\23225508.fafreplay">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="assets\faforever\zstd\22338092.fafreplay">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -12,7 +12,25 @@ namespace FAForever.Replay.Sandbox
         public static void Main()
         {
             Console.WriteLine("Hello World!");
-            Console.ReadLine();
+
+            while (true)
+            {
+                Console.Write("Provide a replay file: ");
+                string? path = Console.ReadLine();
+                if (path == null)
+                {
+                    continue;
+                }
+
+                if (path == string.Empty)
+                {
+                    continue;
+                }
+
+                FileStream fileStream = new FileStream(path, FileMode.Open);
+                Replay replay = ReplayLoader.LoadFAFReplayFromMemory(fileStream);
+                Console.WriteLine($"Replay has {replay.Events.Count} events."   );
+            }
         }
 
     }
