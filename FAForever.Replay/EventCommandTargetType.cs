@@ -6,11 +6,8 @@ namespace FAForever.Replay
     /// </summary>
     public enum EventCommandTargetType
     {
-
-        // The order matters and should not be adjusted.
-
-        None,
-        Entity,
-        Position,
+        None = 0,
+        Entity = 1,
+        Position = 2,
     };
 }
