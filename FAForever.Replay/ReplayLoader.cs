@@ -387,15 +387,16 @@ namespace FAForever.Replay
             }
 
             // todo: parse meta data
+
             using (MemoryStream replayStream = new MemoryStream())
             {
-
                 if (dictionary.ContainsKey("compression") && dictionary["compression"] != null && dictionary["compression"].ToString() == "zstd")
                 {
                     using (DecompressionStream decompressor = new DecompressionStream(stream))
-                    {
+                    { 
                         decompressor.CopyTo(replayStream);
                         replayStream.Position = 0;
+                        return LoadSCFAReplayFromStream(replayStream);
                     }
                 }
                 else
@@ -410,14 +411,11 @@ namespace FAForever.Replay
                         {
                             decompressor.CopyTo(replayStream);
                             replayStream.Position = 0;
+                            return LoadSCFAReplayFromStream(replayStream);
                         }
                     }
                 }
-
-
-                return LoadSCFAReplayFromStream(replayStream);
             }
-
         }
 
         public static Replay LoadSCFAReplayFromStream(Stream stream)
@@ -428,6 +426,11 @@ namespace FAForever.Replay
             }
         }
 
+        /// <summary>
+        /// Loads a replay from disk that is expected to be in the compressed format of FAForever.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
         public static Replay LoadFAFReplayFromDisk(string path)
         {
             using (FileStream stream = new FileStream(path, FileMode.Open))
@@ -437,11 +440,39 @@ namespace FAForever.Replay
 
         }
 
+        /// <summary>
+        /// Loads a replay from disk that is expected to be in the uncompressed format of Supreme Commander: Forged Alliance.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
         public static Replay LoadSCFAReplayFromDisk(string path)
         {
             using (FileStream reader = new FileStream(path, FileMode.Open))
             {
                 return LoadSCFAReplayFromStream(reader);
+            }
+        }
+
+        /// <summary>
+        /// Loads a replay from disk. Attempts to infer the replay type from the file extension.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        public static Replay LoadReplayFromDisk(string path)
+        {
+            string extension = Path.GetExtension(path);
+            switch(extension)
+            {
+                case ".fafreplay":
+                    return LoadFAFReplayFromDisk(path);
+
+                case ".scfareplay":
+                    return LoadSCFAReplayFromDisk(path);
+
+                default:
+                    throw new ArgumentException("Unknown replay extension. Expected '.fafreplay' or '.scfareplay'");
+
             }
         }
     }
