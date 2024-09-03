@@ -9,10 +9,13 @@ namespace FAForever.Replay.Sandbox
     public class Program
     {
 
-        public async static void Main()
+        public static void Main()
         {
-            Console.WriteLine("Hello World!");
+            Interactive().Wait();
+        }
 
+        public static async Task Interactive()
+        {
             while (true)
             {
                 Console.Write("Provide a replay file: ");
@@ -34,16 +37,14 @@ namespace FAForever.Replay.Sandbox
                     var response = await httpClient.GetAsync(path);
                     Replay replay = ReplayLoader.LoadFAFReplayFromMemory(response.Content.ReadAsStream());
                     Console.WriteLine($"Replay from URL has {replay.Events.Count} events.");
-                } else
+                }
+                else
                 {
                     FileStream fileStream = new FileStream(path, FileMode.Open);
                     Replay replay = ReplayLoader.LoadFAFReplayFromMemory(fileStream);
                     Console.WriteLine($"Replay from disk has {replay.Events.Count} events.");
                 }
-
-
             }
         }
-
     }
 }
