@@ -23,80 +23,25 @@ namespace FAForever.Replay
         }
 
         /// <summary>
-        /// Reads an integer and interprets that as the number of bytes of the string. Advances the string with the size of the string.
-        /// </summary>
-        /// <returns></returns>
-        public string ReadSCString()
-        {
-            int numberOfBytes = this.ReadInt32();
-            return Encoding.ASCII.GetString(this.ReadBytes(numberOfBytes));
-        }
-
-        /// <summary>
         /// Reads bytes until it finds a null byte. Advances the stream with the size of the string.
         /// </summary>
         /// <returns></returns>
-        public string ReadSCStringNullTerminated()
+        public string ReadNullTerminatedString()
         {
-            List<byte> bytes = new List<byte>();
+            const int maximumStringSize = 128;
+            Span<byte> bytes = stackalloc byte[maximumStringSize];
+
             byte b;
+            int index = 0;
             while ((b = this.ReadByte()) != 0)
             {
-                bytes.Add(b);
+                if (index < maximumStringSize)
+                {
+                    bytes[index++] = b;
+                }
             }
 
-            return Encoding.ASCII.GetString(bytes.ToArray());
-        }
-         
-        public LuaData ReadLuaData()
-        {
-            LuaDataType type = (LuaDataType)this.ReadByte();
-
-            switch(type)
-            {
-                case LuaDataType.Nil:
-                    return new LuaData.Nil();
-
-                case LuaDataType.Bool:
-                    return new LuaData.Bool(this.ReadByte() == 0);
-
-                case LuaDataType.Number:
-                    return new LuaData.Number(this.ReadSingle());
-
-                case LuaDataType.String:
-                    return new LuaData.String(this.ReadSCStringNullTerminated());
-
-                case LuaDataType.TableStart:
-                    Dictionary<String, LuaData> table = new Dictionary<String, LuaData>();
-                    while (true)
-                    {
-                        LuaData key = this.ReadLuaData();
-                        switch (key)
-                        {
-                            case LuaData.String s:
-                                table.Add(s.Value, this.ReadLuaData());
-                                break;
-
-                            case LuaData.Number n:
-                                table.Add(((int)n.Value).ToString(), this.ReadLuaData());
-                                break;
-
-                            case LuaData.Nil:
-                                return new LuaData.Table(table);
-
-                            default: 
-                                throw new Exception("Invalid key type in table");
-                        }
-                    }
-
-                    throw new Exception("Invalid state exception");
-
-                case LuaDataType.TableEnd:
-                    return new LuaData.Nil();
-
-                default:
-                    throw new Exception("Invalid LuaDataType");
-            }
+            return Encoding.ASCII.GetString(bytes);
         }
     }
 }

@@ -10,7 +10,6 @@ namespace FAForever.Replay
 {
     public static class ReplayLoader
     {
-
         public static List<ReplayInputToken> TokenizeBody(ReplayBinaryReader reader)
         {
             int tokenHeaderLength = 3;
@@ -47,12 +46,12 @@ namespace FAForever.Replay
 
             CommandFormation formation = ParseEventCommandFormation(reader);
 
-            string blueprintId = reader.ReadSCStringNullTerminated();
+            string blueprintId = reader.ReadNullTerminatedString();
 
             // unknown
             byte[] arg4 = reader.ReadBytes(12);
 
-            LuaData luaData = reader.ReadLuaData();
+            LuaData luaData = LuaDataLoader.ReadLuaData(reader);
 
             Boolean addToQueue = reader.ReadByte() > 0;
 
@@ -161,7 +160,7 @@ namespace FAForever.Replay
                         return new ReplayInput.CreateUnit
                         {
                             ArmyId = reader.ReadByte(),
-                            BlueprintId = reader.ReadSCStringNullTerminated(),
+                            BlueprintId = reader.ReadNullTerminatedString(),
                             X = reader.ReadSingle(),
                             Z = reader.ReadSingle(),
                             Heading = reader.ReadSingle()
@@ -170,7 +169,7 @@ namespace FAForever.Replay
                     case ReplayInputType.CreateProp:
                         return new ReplayInput.CreateProp
                         {
-                            BlueprintId = reader.ReadSCStringNullTerminated(),
+                            BlueprintId = reader.ReadNullTerminatedString(),
                             X = reader.ReadSingle(),
                             Z = reader.ReadSingle(),
                             Heading = reader.ReadSingle()
@@ -191,8 +190,8 @@ namespace FAForever.Replay
                     case ReplayInputType.ProcessInfoPair:
                         return new ReplayInput.ProcessInfoPair
                         {
-                            Arg1 = reader.ReadSCStringNullTerminated(),
-                            Arg2 = reader.ReadSCStringNullTerminated()
+                            Arg1 = reader.ReadNullTerminatedString(),
+                            Arg2 = reader.ReadNullTerminatedString()
                         };
 
                     case ReplayInputType.IssueCommand:
@@ -239,7 +238,7 @@ namespace FAForever.Replay
                         return new ReplayInput.UpdateCommandLuaParameters
                         {
                             CommandId = reader.ReadInt32(),
-                            LuaParameters = reader.ReadLuaData(),
+                            LuaParameters = LuaDataLoader.ReadLuaData(reader),
                             X = reader.ReadSingle(),
                             Y = reader.ReadSingle(),
                             Z = reader.ReadSingle()
@@ -255,7 +254,7 @@ namespace FAForever.Replay
                     case ReplayInputType.DebugCommand:
                         return new ReplayInput.DebugCommand
                         {
-                            Command = reader.ReadSCStringNullTerminated(),
+                            Command = reader.ReadNullTerminatedString(),
                             X = reader.ReadSingle(),
                             Y = reader.ReadSingle(),
                             Z = reader.ReadSingle(),
@@ -266,12 +265,12 @@ namespace FAForever.Replay
                     case ReplayInputType.ExecuteLuaInSim:
                         return new ReplayInput.ExecuteLuaInSim
                         {
-                            LuaCode = reader.ReadSCStringNullTerminated()
+                            LuaCode = reader.ReadNullTerminatedString()
                         };
 
                     case ReplayInputType.Simcallback:
-                        string endpoint = reader.ReadSCStringNullTerminated();
-                        LuaData luaParameters = reader.ReadLuaData();
+                        string endpoint = reader.ReadNullTerminatedString();
+                        LuaData luaParameters = LuaDataLoader.ReadLuaData(reader);
                         CommandUnits units = ParseEventCommandUnits(reader);
 
                         byte[] unknown1 = reader.ReadBytes(4);
@@ -304,17 +303,17 @@ namespace FAForever.Replay
 
         public static ReplayHeader ParseReplayHeader(ReplayBinaryReader reader)
         {
-            string gameVersion = reader.ReadSCStringNullTerminated();
+            string gameVersion = reader.ReadNullTerminatedString();
 
             // Always \r\n
-            string Unknown1 = reader.ReadSCStringNullTerminated();
+            string Unknown1 = reader.ReadNullTerminatedString();
 
-            String[] replayVersionAndScenario = reader.ReadSCStringNullTerminated().Split("\r\n");
+            String[] replayVersionAndScenario = reader.ReadNullTerminatedString().Split("\r\n");
             String replayVersion= replayVersionAndScenario[0];
             String pathToScenario = replayVersionAndScenario[1];
 
             // Always \r\n and an unknown character
-            string Unknown2 = reader.ReadSCStringNullTerminated();
+            string Unknown2 = reader.ReadNullTerminatedString();
 
             int numberOfBytesForMods = reader.ReadInt32();
             byte[] mods = reader.ReadBytes(numberOfBytesForMods);
@@ -326,7 +325,7 @@ namespace FAForever.Replay
             ReplaySource[] clients = new ReplaySource[numberOfClients];
             for (int i = 0; i < numberOfClients; i++)
             {
-                clients[i] = new ReplaySource(PlayerName: reader.ReadSCStringNullTerminated(), PlayerId: reader.ReadInt32());
+                clients[i] = new ReplaySource(PlayerName: reader.ReadNullTerminatedString(), PlayerId: reader.ReadInt32());
             }
 
             Boolean cheatsEnabled = reader.ReadByte() > 0;
