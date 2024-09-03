@@ -4,7 +4,7 @@ namespace FAForever.Replay
     /// <summary>
     /// An enumeration that maps 1-to-1 with the byte that represents the command type of a command in the binary.
     /// </summary>
-    public enum EventCommandType
+    public enum CommandType
     {
         None = 0,
         IssueStop = 1,

@@ -1,5 +1,5 @@
 ﻿
 namespace FAForever.Replay
 {
-    public record Replay(ReplayHeader Header, List<GameEvent> Events);
+    public record Replay(ReplayHeader Header, List<ReplayProcessedInput> Events);
 }

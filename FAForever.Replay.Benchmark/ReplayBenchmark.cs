@@ -5,6 +5,7 @@ using BenchmarkDotNet.Diagnosers;
 
 namespace FAForever.Replay.Benchmark
 {
+    [ShortRunJob]
     [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
     public class ReplayBenchmark
     {

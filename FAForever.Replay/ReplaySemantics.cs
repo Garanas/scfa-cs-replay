@@ -4,28 +4,28 @@ namespace FAForever.Replay
     public static class ReplaySemantics
     {
 
-        public static List<GameEvent> ConvertToGameEvents(List<EventInstance> replayEvents)
+        public static List<ReplayProcessedInput> ConvertToGameEvents(List<ReplayInput> replayEvents)
         {
             
-            List<GameEvent> gameEvents = new List<GameEvent>();
+            List<ReplayProcessedInput> gameEvents = new List<ReplayProcessedInput>();
 
             // loop state
             int tick = -1;
             int source = -1;
 
-            foreach(EventInstance replayEvent in replayEvents)
+            foreach(ReplayInput replayEvent in replayEvents)
             {
                 switch(replayEvent)
                 {
-                    case EventInstance.Advance e:
+                    case ReplayInput.Advance e:
                         tick += e.TicksToAdvance;
                         break;
-                    case EventInstance.SetCommandSource e:
+                    case ReplayInput.SetCommandSource e:
                         source = e.SourceId;
                         break;
 
                     default:
-                        GameEvent gameEvent = new GameEvent(tick, source, replayEvent);
+                        ReplayProcessedInput gameEvent = new ReplayProcessedInput(tick, source, replayEvent);
                         gameEvents.Add(gameEvent);
                         break;
                 }
