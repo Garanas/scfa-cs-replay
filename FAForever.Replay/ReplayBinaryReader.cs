@@ -20,20 +20,16 @@ namespace FAForever.Replay
         /// <returns></returns>
         public string ReadNullTerminatedString()
         {
-            const int maximumStringSize = 128;
-            Span<byte> bytes = stackalloc byte[maximumStringSize];
+            StringBuilder sb = new StringBuilder();
 
-            byte b;
-            int index = 0;
-            while ((b = this.ReadByte()) != 0)
+            char c;
+            while ((c = this.ReadChar()) != '\0')
             {
-                if (index < maximumStringSize)
-                {
-                    bytes[index++] = b;
-                }
+                sb.Append(c);
             }
 
-            return Encoding.ASCII.GetString(bytes);
+
+            return sb.ToString();
         }
     }
 }

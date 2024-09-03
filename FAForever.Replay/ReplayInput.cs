@@ -82,7 +82,7 @@ namespace FAForever.Replay
         /// <param name="EntityId"></param>
         /// <param name="Arg1"></param>
         /// <param name="Arg2"></param>
-        public record struct ProcessInfoPair(int EntityId, String Arg1, String Arg2) : ReplayInput;
+        public record struct ProcessInfoPair(int EntityId, String Name, String Value) : ReplayInput;
 
         /// <summary>
         /// Created by the engine when the user creates a command by clicking
@@ -158,7 +158,7 @@ namespace FAForever.Replay
         /// <param name="func"></param>
         /// <param name="LuaParameters"></param>
         /// <param name="Units"></param>
-        public record struct SimCallback(String Endpoint, LuaData LuaParameters, CommandUnits Units, byte[] Unknown1, byte[] Unknown2) : ReplayInput;
+        public record struct SimCallback(String Endpoint, LuaData LuaParameters, CommandUnits Units) : ReplayInput;
 
         /// <summary>
         /// Created by the User global function `SessionEndGame`
