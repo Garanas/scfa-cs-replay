@@ -8,19 +8,11 @@ namespace FAForever.Replay
 {
     public class ReplayBinaryReader : BinaryReader
     {
-        public ReplayBinaryReader(Stream input) : base(input)
-        {
-            
-        }
+        public ReplayBinaryReader(Stream input) : base(input)  { }
 
-        public ReplayBinaryReader(Stream input, Encoding encoding) : base(input, encoding)
-        {
-            
-        }
+        public ReplayBinaryReader(Stream input, Encoding encoding) : base(input, encoding) { }
 
-        public ReplayBinaryReader(Stream input, Encoding encoding, bool leaveOpen) : base(input, encoding, leaveOpen)
-        {
-        }
+        public ReplayBinaryReader(Stream input, Encoding encoding, bool leaveOpen) : base(input, encoding, leaveOpen) { }
 
         /// <summary>
         /// Reads bytes until it finds a null byte. Advances the stream with the size of the string.
