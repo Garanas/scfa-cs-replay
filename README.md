@@ -10,11 +10,14 @@ All files in `assets/faforever` are automatically part of the benchmark.
 
 _Benchmark data from 2024/09/04_
 
-| LoadReplay | 23225104.fafreplay | 55.013 ms | 82.8102 ms | 4.5391 ms |
-| LoadReplay | 23225323.fafreplay | 15.456 ms | 32.1467 ms | 1.7621 ms |
-| LoadReplay | 23225440.fafreplay | 6.265 ms | 0.3651 ms | 0.0200 ms |
-| LoadReplay | 23225508.fafreplay | 3.304 ms | 1.1702 ms | 0.0641 ms |
-| LoadReplay | 23225685.fafreplay | 18.886 ms | 19.5360 ms | 1.0708 ms |
+| Method     | ReplayFile           | Mean      | Error      | StdDev    | Gen0      | Gen1      | Gen2      | Allocated |
+|----------- |--------------------- |----------:|-----------:|----------:|----------:|----------:|----------:|----------:|
+| LoadReplay | 23225104.fafreplay   | 51.920 ms | 56.8236 ms | 3.1147 ms | 1777.7778 | 1666.6667 | 1111.1111 |  57.92 MB |
+| LoadReplay | 23225323.fafreplay   | 15.332 ms | 10.3524 ms | 0.5675 ms | 1062.5000 | 1046.8750 |  828.1250 |  23.71 MB |
+| LoadReplay | 23225440.fafreplay   |  7.417 ms |  0.2265 ms | 0.0124 ms | 1117.1875 | 1109.3750 |  992.1875 |   9.77 MB |
+| LoadReplay | 23225508.fafreplay   |  3.314 ms |  0.7076 ms | 0.0388 ms |  625.0000 |  621.0938 |  566.4063 |   5.64 MB |
+| LoadReplay | 23225685.fafreplay   | 17.101 ms | 18.0378 ms | 0.9887 ms |  906.2500 |  875.0000 |  625.0000 |  25.61 MB |
+| LoadReplay | TestC(...)eplay [24] | 15.803 ms | 32.3405 ms | 1.7727 ms |  750.0000 |  718.7500 |  500.0000 |  19.96 MB |
 
 ## References
 

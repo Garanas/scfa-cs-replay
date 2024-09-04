@@ -1,5 +1,5 @@
 ﻿
 namespace FAForever.Replay
 {
-    public record struct CommandUnits(int[] EntityIds);
+    public record CommandUnits(int[] EntityIds);
 }
