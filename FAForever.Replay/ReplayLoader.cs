@@ -87,14 +87,13 @@ namespace FAForever.Replay
                 return new CommandFormation.NoFormation();
             }
 
-            return new CommandFormation.Formation(
-                FormationIdentifier: formationId,
-                Heading: reader.ReadSingle(),
-                X: reader.ReadSingle(),
-                Y: reader.ReadSingle(),
-                Z: reader.ReadSingle(),
-                Scale: reader.ReadSingle()
-            );
+            float heading = reader.ReadSingle();
+            float x = reader.ReadSingle();
+            float y = reader.ReadSingle();
+            float z = reader.ReadSingle();
+            float scale = reader.ReadSingle();
+
+            return new CommandFormation.Formation(formationId, heading, x, y, z, scale);
         }
 
         public static List<ReplayProcessedInput> LoadReplayInputs(ReplayBinaryReader reader)
@@ -361,7 +360,7 @@ namespace FAForever.Replay
             return new Replay(
                 Header: replayHeader,
                 Events: replayEvents
-                );
+            );
         }
 
         public static Replay LoadFAFReplayFromMemory(Stream stream)
