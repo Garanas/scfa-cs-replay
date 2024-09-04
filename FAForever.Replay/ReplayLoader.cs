@@ -131,9 +131,12 @@ namespace FAForever.Replay
 
                     case ReplayInputType.VerifyChecksum:
                         {
-                            byte[] hash = reader.ReadBytes(16);
+                            int hash1 = reader.ReadInt32();
+                            int hash2 = reader.ReadInt32();
+                            int hash3 = reader.ReadInt32();
+                            int hash4 = reader.ReadInt32();
                             int tick = reader.ReadInt32();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.VerifyChecksum(hash, tick)));
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.VerifyChecksum(hash1, hash2, hash3, hash4, tick)));
                             break;
                         }
 

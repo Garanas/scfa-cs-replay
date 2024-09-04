@@ -11,9 +11,12 @@ namespace FAForever.Replay
         /// <summary>
         /// Created by the engine to check the state of the game
         /// </summary>
-        /// <param name="Hash"></param>
+        /// <param name="Hash1"></param>
+        /// <param name="Hash2"></param>
+        /// <param name="Hash3"></param>
+        /// <param name="Hash4"></param>
         /// <param name="Tick"></param>
-        public record VerifyChecksum(byte[] Hash, int Tick) : ReplayInput;
+        public record VerifyChecksum(int Hash1, int Hash2, int Hash3, int Hash4, int Tick) : ReplayInput;
 
         /// <summary>
         /// Created by the User global `SessionRequestPause` to request a pause
