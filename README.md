@@ -4,25 +4,27 @@ A small library to read and interpret replays of the game [Supreme Commander: Fo
 
 ## Performance
 
-We use the [BenchmarkDotNet](https://www.myget.org/feed/benchmarkdotnet/package/nuget/BenchmarkDotNet) library to generate basic statistics of the performance of the library as a whole. We do not generate statistics of individual functions since in practice you'll never call the individual functions - you'll always parse a replay as a single unit. 
+We use the [BenchmarkDotNet](https://www.myget.org/feed/benchmarkdotnet/package/nuget/BenchmarkDotNet) library to generate basic statistics of the performance of the library as a whole. We do not generate statistics of individual functions since in practice you'll never call the individual functions - you'll always parse a replay as a single unit.
 
 All files in `assets/faforever` are automatically part of the benchmark.
 
-_Benchmark data from 2024/09/01_
+_Benchmark data from 2024/09/04_
 
-| Method      | ReplayFile         | Mean      | Error    | StdDev   | Median    |
-|------------ |------------------- |----------:|---------:|---------:|----------:|
-| LoadReplays | 23225104.fafreplay | 167.85 ms | 3.353 ms | 3.293 ms | 166.50 ms |
-| LoadReplays | 23225323.fafreplay |  62.32 ms | 1.244 ms | 3.590 ms |  63.38 ms |
-| LoadReplays | 23225440.fafreplay |  16.34 ms | 0.176 ms | 0.147 ms |  16.33 ms |
-| LoadReplays | 23225508.fafreplay |  11.28 ms | 0.222 ms | 0.364 ms |  11.28 ms |
-| LoadReplays | 23225685.fafreplay |  64.65 ms | 1.419 ms | 4.182 ms |  64.79 ms |
+| LoadReplay | 23225104.fafreplay | 55.013 ms | 82.8102 ms | 4.5391 ms |
+| LoadReplay | 23225323.fafreplay | 15.456 ms | 32.1467 ms | 1.7621 ms |
+| LoadReplay | 23225440.fafreplay | 6.265 ms | 0.3651 ms | 0.0200 ms |
+| LoadReplay | 23225508.fafreplay | 3.304 ms | 1.1702 ms | 0.0641 ms |
+| LoadReplay | 23225685.fafreplay | 18.886 ms | 19.5360 ms | 1.0708 ms |
 
 ## References
 
 The library attempts to use the latest and greatest of C#. This is made possible because of various books and online education content:
 
 - [Zoran Horvat](https://www.youtube.com/@zoran-horvat)
+- [dotnet](https://www.youtube.com/@dotnet)
+- - [A Complete .NET Developer's Guide to Span with Stephen Toub](https://www.youtube.com/watch?v=5KdICNWOfEQ)
+- [Raw coding](https://www.youtube.com/@RawCoding)
+- - [Understanding .NET C# Heaps (Deep Dive)](https://www.youtube.com/watch?v=TnDRzHZbOio)
 
 And relevant documentation:
 
