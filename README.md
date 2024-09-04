@@ -10,8 +10,8 @@ All files in `assets/faforever` are automatically part of the benchmark.
 
 _Benchmark data from 2024/09/04_
 
-| Method     | ReplayFile           | Mean      | Error      | StdDev    | Gen0      | Gen1      | Gen2      | Allocated |
-|----------- |--------------------- |----------:|-----------:|----------:|----------:|----------:|----------:|----------:|
+| Method     | ReplayFile           |      Mean |      Error |    StdDev |      Gen0 |      Gen1 |      Gen2 | Allocated |
+| ---------- | -------------------- | --------: | ---------: | --------: | --------: | --------: | --------: | --------: |
 | LoadReplay | 23225104.fafreplay   | 33.060 ms | 17.9827 ms | 0.9857 ms | 1200.0000 | 1133.3333 |  666.6667 |  43.58 MB |
 | LoadReplay | 23225323.fafreplay   |  9.302 ms |  1.6260 ms | 0.0891 ms | 1156.2500 | 1140.6250 | 1000.0000 |  15.84 MB |
 | LoadReplay | 23225440.fafreplay   |  3.208 ms |  0.1279 ms | 0.0070 ms |  417.9688 |  410.1563 |  335.9375 |   5.82 MB |
@@ -32,3 +32,5 @@ The library attempts to use the latest and greatest of C#. This is made possible
 And relevant documentation:
 
 - [BenchmarkDotNet](https://benchmarkdotnet.org/articles/overview.html)
+- - [Diagnoses](https://benchmarkdotnet.org/articles/configs/diagnosers.html)
+- - [About Memory Diagnoser](https://adamsitnik.com/the-new-Memory-Diagnoser/)
