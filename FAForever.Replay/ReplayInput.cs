@@ -4,18 +4,6 @@ namespace FAForever.Replay
     public interface ReplayInput
     {
         /// <summary>
-        /// Created by the engine to advance the tick.
-        /// </summary>
-        /// <param name="TicksToAdvance"></param>
-        public record Advance(int TicksToAdvance) : ReplayInput;
-
-        /// <summary>
-        /// Created by the engine to set the command source for the following events.
-        /// </summary>
-        /// <param name="SourceId"></param>
-        public record SetCommandSource(int SourceId) : ReplayInput;
-
-        /// <summary>
         /// Created by the engine when a player leaves the game.
         /// </summary>
         public record CommandSourceTerminated() : ReplayInput;
