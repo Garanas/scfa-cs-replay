@@ -20,6 +20,6 @@ namespace FAForever.Replay
         /// <param name="X">In world coordinates</param>
         /// <param name="Y">In world coordinates</param>
         /// <param name="Z">In world coordinates</param>
-        public record Position(float X, float Y, float Z): CommandTarget;
+        public record Position(float X, float Y, float Z) : CommandTarget;
     }
 }

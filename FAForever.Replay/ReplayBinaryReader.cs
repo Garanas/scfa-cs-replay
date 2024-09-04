@@ -3,12 +3,11 @@ using System;
 using System.IO;
 using System.Text;
 
-
 namespace FAForever.Replay
 {
     public class ReplayBinaryReader : BinaryReader
     {
-        public ReplayBinaryReader(Stream input) : base(input)  { }
+        public ReplayBinaryReader(Stream input) : base(input) { }
 
         public ReplayBinaryReader(Stream input, Encoding encoding) : base(input, encoding) { }
 

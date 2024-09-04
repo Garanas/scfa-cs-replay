@@ -18,7 +18,7 @@ namespace FAForever.Replay
         /// <summary>
         /// Created by the engine when a player leaves the game.
         /// </summary>
-        public record CommandSourceTerminated(): ReplayInput;
+        public record CommandSourceTerminated() : ReplayInput;
 
         /// <summary>
         /// Created by the engine to check the state of the game
@@ -110,7 +110,7 @@ namespace FAForever.Replay
         /// </summary>
         /// <param name="CommandId"></param>
         /// <param name="Delta"></param>
-        public record DecreaseCommandCount(int CommandId, int Delta): ReplayInput;
+        public record DecreaseCommandCount(int CommandId, int Delta) : ReplayInput;
 
         /// <summary>
         /// Created by the engine when updating the target (entity or position) of a command

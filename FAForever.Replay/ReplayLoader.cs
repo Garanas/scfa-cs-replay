@@ -89,12 +89,12 @@ namespace FAForever.Replay
 
             return new CommandFormation.Formation(
                 FormationIdentifier: formationId,
-                               Heading: reader.ReadSingle(),
-                                              X: reader.ReadSingle(),
-                                                             Y: reader.ReadSingle(),
-                                                                            Z: reader.ReadSingle(),
-                                                                                           Scale: reader.ReadSingle()
-                                                                                                      );
+                Heading: reader.ReadSingle(),
+                X: reader.ReadSingle(),
+                Y: reader.ReadSingle(),
+                Z: reader.ReadSingle(),
+                Scale: reader.ReadSingle()
+            );
         }
 
         public static ReplayInput LoadReplayInput(ReplayBinaryReader reader, ReplayInputType type)
@@ -141,7 +141,7 @@ namespace FAForever.Replay
                         float heading = reader.ReadSingle();
                         return new ReplayInput.CreateUnit(armyId, blueprintId, x, z, heading);
                     }
- 
+
                 case ReplayInputType.CreateProp:
                     {
                         string blueprintId = reader.ReadNullTerminatedString();
@@ -244,7 +244,7 @@ namespace FAForever.Replay
                         CommandUnits debugUnits = ParseEventCommandUnits(reader);
                         return new ReplayInput.DebugCommand(command, x, y, z, focusArmy, debugUnits);
                     }
-    
+
                 case ReplayInputType.ExecuteLuaInSim:
                     {
                         string luaCode = reader.ReadNullTerminatedString();
@@ -267,9 +267,11 @@ namespace FAForever.Replay
             }
         }
 
-        public static List<ReplayInput> LoadReplayInputs(ReplayBinaryReader reader) {
+        public static List<ReplayInput> LoadReplayInputs(ReplayBinaryReader reader)
+        {
             List<ReplayInput> replayInputs = new List<ReplayInput>();
-            while(reader.BaseStream.Position < reader.BaseStream.Length) {
+            while (reader.BaseStream.Position < reader.BaseStream.Length)
+            {
                 long position = reader.BaseStream.Position;
 
                 ReplayInputType type = (ReplayInputType)reader.ReadByte();
@@ -281,7 +283,8 @@ namespace FAForever.Replay
                 if (reader.BaseStream.Position < position + numberOfBytes)
                 {
                     reader.ReadBytes(numberOfBytes - (int)(reader.BaseStream.Position - position));
-                } else if (reader.BaseStream.Position > position + numberOfBytes)
+                }
+                else if (reader.BaseStream.Position > position + numberOfBytes)
                 {
                     throw new DataException("Replay input consumed more bytes than expected");
                 }
@@ -299,7 +302,7 @@ namespace FAForever.Replay
             string Unknown1 = reader.ReadNullTerminatedString();
 
             String[] replayVersionAndScenario = reader.ReadNullTerminatedString().Split("\r\n");
-            String replayVersion= replayVersionAndScenario[0];
+            String replayVersion = replayVersionAndScenario[0];
             String pathToScenario = replayVersionAndScenario[1];
 
             // Always \r\n and an unknown character
@@ -321,7 +324,7 @@ namespace FAForever.Replay
             Boolean cheatsEnabled = reader.ReadByte() > 0;
 
             int numberOfPlayerOptions = reader.ReadByte();
-            for(int i = 0; i < numberOfPlayerOptions; i++)
+            for (int i = 0; i < numberOfPlayerOptions; i++)
             {
                 int numberOfBytesPlayerOptions = reader.ReadInt32();
                 byte[] playerOptions = reader.ReadBytes(numberOfBytesPlayerOptions);
@@ -357,7 +360,7 @@ namespace FAForever.Replay
             BinaryReader reader = new BinaryReader(stream);
             StringBuilder json = new StringBuilder();
 
-            while(true)
+            while (true)
             {
                 char c = reader.ReadChar();
                 if (c == '\n')
@@ -381,7 +384,7 @@ namespace FAForever.Replay
                 if (dictionary.ContainsKey("compression") && dictionary["compression"] != null && dictionary["compression"].ToString() == "zstd")
                 {
                     using (DecompressionStream decompressor = new DecompressionStream(stream))
-                    { 
+                    {
                         decompressor.CopyTo(replayStream);
                         replayStream.Position = 0;
                         return LoadSCFAReplayFromStream(replayStream);
@@ -450,7 +453,7 @@ namespace FAForever.Replay
         public static Replay LoadReplayFromDisk(string path)
         {
             string extension = Path.GetExtension(path);
-            switch(extension)
+            switch (extension)
             {
                 case ".fafreplay":
                     return LoadFAFReplayFromDisk(path);
