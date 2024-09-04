@@ -6,7 +6,7 @@ using BenchmarkDotNet.Diagnosers;
 namespace FAForever.Replay.Benchmark
 {
     [ShortRunJob]
-    [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
+    [MemoryDiagnoser]
     public class ReplayBenchmark
     {
         private static readonly string DirectoryWithReplays = "assets/faforever";
