@@ -1,20 +1,90 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CommandLine;
+
+using System.Xml.Serialization;
 
 namespace FAForever.Replay.Sandbox
 {
     public class Program
     {
 
-        public static void Main()
+        public static void Main(string[] args)
         {
-            Interactive().Wait();
+            Parser.Default.ParseArguments<ProgramArguments>(args)
+                .WithParsed<ProgramArguments>(o =>
+                {
+                    if (!Directory.Exists(o.OutputDirectory))
+                    { Directory.CreateDirectory(o.OutputDirectory); }
+
+                    if (o.Interactive)
+                    {
+                        Interactive(o).Wait();
+                        return;
+                    }
+
+                    Programmatic(o).Wait();
+                });
         }
 
-        public static async Task Interactive()
+        internal static async Task<Replay> LoadReplay(ProgramArguments o)
+        {
+            if (o.FilePath != string.Empty)
+            {
+                return await LoadReplayFromDisk(o.FilePath);
+            }
+            else if (o.URL != string.Empty)
+            {
+                return await LoadReplayFromURL(o.URL);
+            }
+            else
+            {
+                throw new ArgumentException("No valid arguments provided.");
+            }   
+        }
+
+        /// <summary>
+        /// Loads a replay from disk. Uses the file extension to determine if it is a compressed replay from FAForever or a standard Supreme Commander: Forged Alliance replay.
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
+        internal static async Task<Replay> LoadReplayFromDisk(string file)
+        {
+            bool isFAForeverReplay = (Path.GetExtension(file) == ".fafreplay");
+            byte[] content = await File.ReadAllBytesAsync(file);
+            using MemoryStream replayStream = new MemoryStream(content);
+            {
+                if (isFAForeverReplay)
+                {
+                    return ReplayLoader.LoadFAFReplayFromMemory(replayStream);
+                }
+                else
+                {
+                    return ReplayLoader.LoadSCFAReplayFromStream(replayStream);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Loads a replay from a URL via GET HTTP request. Assumes that the replay is a compressed replay from FAForever.
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        internal static async Task<Replay> LoadReplayFromURL(string url)
+        {
+            HttpClient httpClient = new HttpClient();
+            HttpResponseMessage response = await httpClient.GetAsync(url);
+            byte[] content = await response.Content.ReadAsByteArrayAsync();
+            using MemoryStream replayStream = new MemoryStream(content);
+            {
+                return ReplayLoader.LoadFAFReplayFromMemory(replayStream);
+            }
+        }
+
+        /// <summary>
+        /// Interactive mode that allows the user to provide URLs and/or files to process via the console.
+        /// </summary>
+        /// <param name="o"></param>
+        /// <returns></returns>
+        internal static async Task Interactive(ProgramArguments o)
         {
             while (true)
             {
@@ -30,20 +100,38 @@ namespace FAForever.Replay.Sandbox
                     continue;
                 }
 
-                // As an example: https://replay.faforever.com/23031279
                 if (path.Contains("https"))
                 {
-                    HttpClient httpClient = new HttpClient();
-                    var response = await httpClient.GetAsync(path);
-                    Replay replay = ReplayLoader.LoadFAFReplayFromMemory(response.Content.ReadAsStream());
+                    Replay replay = await LoadReplayFromURL(path);
+                    using FileStream fs = new FileStream(Path.Combine(o.OutputDirectory, Path.GetFileNameWithoutExtension(path) + ".xml"), FileMode.Create);
+                    XmlSerializer serializer = new XmlSerializer(typeof(Replay));
+                    serializer.Serialize(fs, replay);
                     Console.WriteLine($"Replay from URL has {replay.Events.Count} events.");
                 }
                 else
                 {
-                    FileStream fileStream = new FileStream(path, FileMode.Open);
-                    Replay replay = ReplayLoader.LoadFAFReplayFromMemory(fileStream);
+                    Replay replay = await LoadReplayFromDisk(path);
+                    XmlSerializer serializer = new XmlSerializer(typeof(Replay));
+                    using FileStream fs = new FileStream(Path.Combine(o.OutputDirectory, Path.GetFileNameWithoutExtension(path) + ".xml"), FileMode.Create);
+                    serializer.Serialize(fs, replay);
                     Console.WriteLine($"Replay from disk has {replay.Events.Count} events.");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Programmatic mode that allows the user to interact with the application via the command line.
+        /// </summary>
+        /// <param name="o"></param>
+        /// <returns></returns>
+        internal static async Task Programmatic(ProgramArguments o)
+        {
+            Replay replay = await LoadReplay(o);
+
+            using (FileStream fs = new FileStream(Path.Combine(o.OutputDirectory, "test.xml"), FileMode.Create))
+            {
+                XmlSerializer serializer = new XmlSerializer(typeof(Replay));
+                serializer.Serialize(fs, replay);
             }
         }
     }
