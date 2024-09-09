@@ -9,7 +9,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAForever.Replay.Test", "FA
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAForever.Replay.Sandbox", "FAForever.Replay.Sandbox\FAForever.Replay.Sandbox.csproj", "{A3686B7C-2A6A-414F-9E0E-D079F61C4A1E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FAForever.Replay.Benchmark", "FAForever.Replay.Benchmark\FAForever.Replay.Benchmark.csproj", "{2AA578E2-B911-47F9-9216-DF0E9BD27420}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAForever.Replay.Benchmark", "FAForever.Replay.Benchmark\FAForever.Replay.Benchmark.csproj", "{2AA578E2-B911-47F9-9216-DF0E9BD27420}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAForever.Replay.Viewer", "FAForever.Replay.Viewer\FAForever.Replay.Viewer.csproj", "{A866CE8D-37CE-4091-90B8-17C13B129F5E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAForever.Replay.TestLibrary", "FAForever.Replay.TestLibrary\FAForever.Replay.TestLibrary.csproj", "{79B1B595-C883-4990-B468-02043ADE0157}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +37,14 @@ Global
 		{2AA578E2-B911-47F9-9216-DF0E9BD27420}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2AA578E2-B911-47F9-9216-DF0E9BD27420}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2AA578E2-B911-47F9-9216-DF0E9BD27420}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A866CE8D-37CE-4091-90B8-17C13B129F5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A866CE8D-37CE-4091-90B8-17C13B129F5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A866CE8D-37CE-4091-90B8-17C13B129F5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A866CE8D-37CE-4091-90B8-17C13B129F5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79B1B595-C883-4990-B468-02043ADE0157}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79B1B595-C883-4990-B468-02043ADE0157}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79B1B595-C883-4990-B468-02043ADE0157}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79B1B595-C883-4990-B468-02043ADE0157}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,45 @@
+﻿@page "/"
+@inject ReplayService replayService;
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+@if (replayService.Replay != null)
+{
+    <p role="status">Current count: @replayService.Replay.Events.Count</p>
+}
+else
+{
+    <p role="status">No replay loaded</p>
+}
+
+<p>@UserInputCount</p>
+
+
+<InputFile OnChange="HandleFileSelected" /><br />
+
+@code {
+
+    private int UserInputCount = 0;
+
+    public async Task HandleFileSelected(InputFileChangeEventArgs args)
+    {
+        if (args.File.Name.ToLower().EndsWith(".fafreplay"))
+
+        {
+            IBrowserFile file = args.File;
+            MemoryStream stream = new MemoryStream();
+            Console.WriteLine(DateTime.Now);
+            await file.OpenReadStream(4 * 512000).CopyToAsync(stream).ConfigureAwait(false);
+            stream.Position = 0;
+            Console.WriteLine(DateTime.Now);
+            replayService.LoadReplay(stream);
+            if (replayService.Replay != null){
+                UserInputCount = replayService.Replay.Events.Count;
+            } else  {
+                UserInputCount = -1;
+            }
+        }
+    }
+}
