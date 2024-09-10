@@ -34,3 +34,9 @@ And relevant documentation:
 - [BenchmarkDotNet](https://benchmarkdotnet.org/articles/overview.html)
 - - [Diagnoses](https://benchmarkdotnet.org/articles/configs/diagnosers.html)
 - - [About Memory Diagnoser](https://adamsitnik.com/the-new-Memory-Diagnoser/)
+
+## Credits
+
+With thanks to the following individuals:
+
+- https://github.com/JoschiZ for casually helping a stranger with Blazor struggles on Discord
