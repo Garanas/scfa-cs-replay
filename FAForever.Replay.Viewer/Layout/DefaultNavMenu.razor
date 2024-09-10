@@ -1,4 +1,5 @@
 ﻿@inject ReplayService replayService;
+@inherits ReactiveComponentBase
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -27,31 +28,31 @@
             </NavLink>
         </div>
 
-        @if (replayService.Replay != null)
+        @if (Observed(() => replayService.Replay) != null)
         {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="chat">
-                    <span class="bi bi-card-list" aria-hidden="true"></span> Game information
-                </NavLink>
-            </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="chat">
+                <span class="bi bi-card-list" aria-hidden="true"></span> Game information
+            </NavLink>
+        </div>
 
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="chat">
-                    <span class="bi bi-activity" aria-hidden="true"></span> Build orders
-                </NavLink>
-            </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="chat">
+                <span class="bi bi-activity" aria-hidden="true"></span> Build orders
+            </NavLink>
+        </div>
 
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="chat">
-                    <span class="bi bi-wechat" aria-hidden="true"></span> Chat messages
-                </NavLink>
-            </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="chat">
+                <span class="bi bi-wechat" aria-hidden="true"></span> Chat messages
+            </NavLink>
+        </div>
 
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="chat">
-                    <span class="bi bi-hammer" aria-hidden="true"></span> Moderation messages
-                </NavLink>
-            </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="chat">
+                <span class="bi bi-hammer" aria-hidden="true"></span> Moderation messages
+            </NavLink>
+        </div>
         }
 
     </nav>

@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
+using Phork.Blazor;
+
 using FAForever.Replay.Viewer.Services;
 
 namespace FAForever.Replay.Viewer
@@ -15,7 +17,8 @@ namespace FAForever.Replay.Viewer
 
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
             builder.Services.AddSingleton<ReplayService>();
-
+            builder.Services.AddPhorkBlazorReactivity();
+            
             await builder.Build().RunAsync();
         }
     }

@@ -1,12 +1,26 @@
 ﻿
-using System.Reactive.Subjects;
+using System.ComponentModel;
 
 namespace FAForever.Replay.Viewer.Services
 {
-    public class ReplayService
+    public class ReplayService : INotifyPropertyChanged
     {
-        
-        public Replay? Replay { get; set; }
+        private Replay? _replay = null;
+
+        public Replay? Replay
+        {
+            get => this._replay;
+            set
+            {
+                if (value == this._replay) return;
+
+                this._replay = value;
+
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(this.Replay)));
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         public void LoadReplay(MemoryStream stream)
         {

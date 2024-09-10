@@ -1,5 +1,6 @@
 ﻿@page "/"
 @inject ReplayService replayService;
+@inherits ReactiveComponentBase
 
 <PageTitle>Home</PageTitle>
 
@@ -7,17 +8,18 @@
 
 @if (replayService.Replay != null)
 {
-    <p role="status">Current count: @replayService.Replay.Events.Count</p>
+<p role="status">Current count: @replayService.Replay.Events.Count</p>
 }
 else
 {
-    <p role="status">No replay loaded</p>
+<p role="status">No replay loaded</p>
 }
 
 <p>@UserInputCount</p>
 
 
-<InputFile OnChange="HandleFileSelected" /><br />
+<InputFile OnChange="HandleFileSelected" />
+<br />
 
 @code {
 
