@@ -1,0 +1,44 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-to-github-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK 8.0.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      # publishes Blazor project to the release folder
+      - name: Publish .NET Project
+        working-directory: FAForever.Replay.Viewer
+        run: dotnet publish FAForever.Replay.Viewer/FAForever.Replay.Viewer.csproj -c Release -o release --nologo
+
+      # changes the base-tag in index.html from '/' to 'scfa-cs-replay' to match GitHub Pages repository subdirectory
+      - name: Change base-tag in index.html from / to scfa-cs-replay
+        working-directory: FAForever.Replay.Viewer
+        run: sed -i 's/<base href="\/" \/>/<base href="\/scfa-cs-replay\/" \/>/g' release/wwwroot/index.html
+
+      # copy index.html to 404.html to serve the same file when a file is not found
+      - name: copy index.html to 404.html
+        working-directory: FAForever.Replay.Viewer
+        run: cp release/wwwroot/index.html release/wwwroot/404.html
+
+      # add .nojekyll file to tell GitHub pages to not treat this as a Jekyll project. (Allow files and folders starting with an underscore)
+      - name: Add .nojekyll file
+        working-directory: FAForever.Replay.Viewer
+        run: touch release/wwwroot/.nojekyll
+ 
+      # publishes wwwroot directory to GitHub Pages
+      - name: Commit wwwroot to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@4.1.5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: deploy/gh-pages # The branch the action should deploy to.
+          folder: FAForever.Replay.Viewer/release/wwwroot # The folder the action should deploy.
