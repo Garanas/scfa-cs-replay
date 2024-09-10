@@ -21,7 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FAForever.Replay.TestLibrary\FAForever.Replay.TestLibrary.csproj" />
     <ProjectReference Include="..\FAForever.Replay\FAForever.Replay.csproj" />
   </ItemGroup>
 
