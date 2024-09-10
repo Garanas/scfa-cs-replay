@@ -87,209 +87,221 @@ namespace FAForever.Replay
                 return new CommandFormation.NoFormation();
             }
 
-            return new CommandFormation.Formation(
-                FormationIdentifier: formationId,
-                Heading: reader.ReadSingle(),
-                X: reader.ReadSingle(),
-                Y: reader.ReadSingle(),
-                Z: reader.ReadSingle(),
-                Scale: reader.ReadSingle()
-            );
+            float heading = reader.ReadSingle();
+            float x = reader.ReadSingle();
+            float y = reader.ReadSingle();
+            float z = reader.ReadSingle();
+            float scale = reader.ReadSingle();
+
+            return new CommandFormation.Formation(formationId, heading, x, y, z, scale);
         }
 
-        public static ReplayInput LoadReplayInput(ReplayBinaryReader reader, ReplayInputType type)
+        public static List<ReplayProcessedInput> LoadReplayInputs(ReplayBinaryReader reader)
         {
-            switch (type)
-            {
-                case ReplayInputType.Advance:
-                    {
-                        int ticksToAdvance = reader.ReadInt32();
-                        return new ReplayInput.Advance(ticksToAdvance);
-                    }
+            // state 
+            int currentTick = 0;
+            int currentSource = 0;
 
-                case ReplayInputType.SetCommandSource:
-                    {
-                        int sourceId = reader.ReadByte();
-                        return new ReplayInput.SetCommandSource(sourceId);
-                    }
-
-                case ReplayInputType.CommandSourceTerminated:
-                    return new ReplayInput.CommandSourceTerminated();
-
-                case ReplayInputType.VerifyChecksum:
-                    {
-                        byte[] hash = reader.ReadBytes(16);
-                        int tick = reader.ReadInt32();
-                        return new ReplayInput.VerifyChecksum(hash, tick);
-                    }
-
-                case ReplayInputType.RequestPause:
-                    return new ReplayInput.RequestPause();
-
-                case ReplayInputType.RequestResume:
-                    return new ReplayInput.RequestResume();
-
-                case ReplayInputType.SingleStep:
-                    return new ReplayInput.SingleStep();
-
-                case ReplayInputType.CreateUnit:
-                    {
-                        int armyId = reader.ReadByte();
-                        string blueprintId = reader.ReadNullTerminatedString();
-                        float x = reader.ReadSingle();
-                        float z = reader.ReadSingle();
-                        float heading = reader.ReadSingle();
-                        return new ReplayInput.CreateUnit(armyId, blueprintId, x, z, heading);
-                    }
-
-                case ReplayInputType.CreateProp:
-                    {
-                        string blueprintId = reader.ReadNullTerminatedString();
-                        float x = reader.ReadSingle();
-                        float z = reader.ReadSingle();
-                        float heading = reader.ReadSingle();
-                        return new ReplayInput.CreateProp(blueprintId, x, z, heading);
-                    }
-
-                case ReplayInputType.DestroyEntity:
-                    {
-                        int entityId = reader.ReadInt32();
-                        return new ReplayInput.DestroyEntity(entityId);
-                    }
-
-                case ReplayInputType.WarpEntity:
-                    {
-                        int entityId = reader.ReadInt32();
-                        float x = reader.ReadSingle();
-                        float y = reader.ReadSingle();
-                        float z = reader.ReadSingle();
-                        return new ReplayInput.WarpEntity(entityId, x, y, z);
-                    }
-
-                case ReplayInputType.ProcessInfoPair:
-                    {
-                        int entityId = reader.ReadInt32();
-                        string name = reader.ReadNullTerminatedString();
-                        string value = reader.ReadNullTerminatedString();
-                        return new ReplayInput.ProcessInfoPair(entityId, name, value);
-                    }
-
-                case ReplayInputType.IssueCommand:
-                    {
-                        CommandUnits units = ParseEventCommandUnits(reader);
-                        CommandData data = ParseEventCommandData(reader);
-                        return new ReplayInput.IssueCommand(units, data);
-                    }
-
-                case ReplayInputType.IssueFactoryCommand:
-                    {
-                        CommandUnits factories = ParseEventCommandUnits(reader);
-                        CommandData data = ParseEventCommandData(reader);
-                        return new ReplayInput.IssueFactoryCommand(factories, data);
-                    }
-
-                case ReplayInputType.IncreaseCommandCount:
-                    {
-                        int commandId = reader.ReadInt32();
-                        int delta = reader.ReadInt32();
-                        return new ReplayInput.IncreaseCommandCount(commandId, delta);
-                    }
-
-                case ReplayInputType.DecreaseCommandCount:
-                    {
-                        int commandId = reader.ReadInt32();
-                        int delta = reader.ReadInt32();
-                        return new ReplayInput.DecreaseCommandCount(commandId, delta);
-                    }
-
-                case ReplayInputType.UpdateCommandTarget:
-                    {
-                        int commandId = reader.ReadInt32();
-                        CommandTarget target = ParseEventCommandTarget(reader);
-                        return new ReplayInput.UpdateCommandTarget(commandId, target);
-                    }
-
-                case ReplayInputType.UpdateCommandType:
-                    {
-                        int commandId = reader.ReadInt32();
-                        CommandType commandType = (CommandType)reader.ReadInt32();
-                        return new ReplayInput.UpdateCommandType(commandId, commandType);
-                    }
-
-                case ReplayInputType.UpdateCommandParameters:
-                    {
-                        int commandId = reader.ReadInt32();
-                        LuaData luaParameters = LuaDataLoader.ReadLuaData(reader);
-                        float x = reader.ReadSingle();
-                        float y = reader.ReadSingle();
-                        float z = reader.ReadSingle();
-                        return new ReplayInput.UpdateCommandLuaParameters(commandId, luaParameters, x, y, z);
-
-                    }
-
-                case ReplayInputType.RemoveFromCommandQueue:
-                    {
-                        int commandId = reader.ReadInt32();
-                        int entityId = reader.ReadInt32();
-                        return new ReplayInput.RemoveCommandFromQueue(commandId, entityId);
-                    }
-
-                case ReplayInputType.DebugCommand:
-                    {
-                        string command = reader.ReadNullTerminatedString();
-                        float x = reader.ReadSingle();
-                        float y = reader.ReadSingle();
-                        float z = reader.ReadSingle();
-                        byte focusArmy = reader.ReadByte();
-                        CommandUnits debugUnits = ParseEventCommandUnits(reader);
-                        return new ReplayInput.DebugCommand(command, x, y, z, focusArmy, debugUnits);
-                    }
-
-                case ReplayInputType.ExecuteLuaInSim:
-                    {
-                        string luaCode = reader.ReadNullTerminatedString();
-                        return new ReplayInput.ExecuteLuaInSim(luaCode);
-                    }
-
-                case ReplayInputType.Simcallback:
-                    {
-                        string endpoint = reader.ReadNullTerminatedString();
-                        LuaData luaParameters = LuaDataLoader.ReadLuaData(reader);
-                        CommandUnits units = ParseEventCommandUnits(reader);
-                        return new ReplayInput.SimCallback(endpoint, luaParameters, units);
-                    }
-
-                case ReplayInputType.EndGame:
-                    return new ReplayInput.EndGame();
-
-                default:
-                    throw new Exception("Unknown replay input type");
-            }
-        }
-
-        public static List<ReplayInput> LoadReplayInputs(ReplayBinaryReader reader)
-        {
-            List<ReplayInput> replayInputs = new List<ReplayInput>();
+            List<ReplayProcessedInput> replayInputs = new List<ReplayProcessedInput>();
             while (reader.BaseStream.Position < reader.BaseStream.Length)
             {
-                long position = reader.BaseStream.Position;
-
                 ReplayInputType type = (ReplayInputType)reader.ReadByte();
                 // includes the type and this number of bytes, which is a bit confusing.
                 int numberOfBytes = reader.ReadInt16();
 
-                ReplayInput replayInput = LoadReplayInput(reader, type);
-
-                if (reader.BaseStream.Position < position + numberOfBytes)
+                switch (type)
                 {
-                    reader.ReadBytes(numberOfBytes - (int)(reader.BaseStream.Position - position));
-                }
-                else if (reader.BaseStream.Position > position + numberOfBytes)
-                {
-                    throw new DataException("Replay input consumed more bytes than expected");
-                }
+                    case ReplayInputType.Advance:
+                        {
+                            int ticksToAdvance = reader.ReadInt32();
+                            currentTick += ticksToAdvance;
+                            break;
+                        }
 
-                replayInputs.Add(replayInput);
+                    case ReplayInputType.SetCommandSource:
+                        {
+                            int sourceId = reader.ReadByte();
+                            currentSource = sourceId;
+                            break;
+                        }
+
+                    case ReplayInputType.CommandSourceTerminated:
+                        replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.CommandSourceTerminated()));
+                        break;
+
+                    case ReplayInputType.VerifyChecksum:
+                        {
+                            int hash1 = reader.ReadInt32();
+                            int hash2 = reader.ReadInt32();
+                            int hash3 = reader.ReadInt32();
+                            int hash4 = reader.ReadInt32();
+                            int tick = reader.ReadInt32();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.VerifyChecksum(hash1, hash2, hash3, hash4, tick)));
+                            break;
+                        }
+
+                    case ReplayInputType.RequestPause:
+                        replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.RequestPause()));
+                        break;
+
+                    case ReplayInputType.RequestResume:
+                        replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.RequestResume()));
+                        break;
+
+                    case ReplayInputType.SingleStep:
+                        replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.SingleStep()));
+                        break;
+
+                    case ReplayInputType.CreateUnit:
+                        {
+                            int armyId = reader.ReadByte();
+                            string blueprintId = reader.ReadNullTerminatedString();
+                            float x = reader.ReadSingle();
+                            float z = reader.ReadSingle();
+                            float heading = reader.ReadSingle();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.CreateUnit(armyId, blueprintId, x, z, heading)));
+                            break;
+                        }
+
+                    case ReplayInputType.CreateProp:
+                        {
+                            string blueprintId = reader.ReadNullTerminatedString();
+                            float x = reader.ReadSingle();
+                            float z = reader.ReadSingle();
+                            float heading = reader.ReadSingle();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.CreateProp(blueprintId, x, z, heading)));
+                            break;
+                        }
+
+                    case ReplayInputType.DestroyEntity:
+                        {
+                            int entityId = reader.ReadInt32();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.DestroyEntity(entityId)));
+                            break;
+                        }
+
+                    case ReplayInputType.WarpEntity:
+                        {
+                            int entityId = reader.ReadInt32();
+                            float x = reader.ReadSingle();
+                            float y = reader.ReadSingle();
+                            float z = reader.ReadSingle();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.WarpEntity(entityId, x, y, z)));
+                            break;
+                        }
+
+                    case ReplayInputType.ProcessInfoPair:
+                        {
+                            int entityId = reader.ReadInt32();
+                            string name = reader.ReadNullTerminatedString();
+                            string value = reader.ReadNullTerminatedString();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.ProcessInfoPair(entityId, name, value)));
+                            break;
+                        }
+
+                    case ReplayInputType.IssueCommand:
+                        {
+                            CommandUnits units = ParseEventCommandUnits(reader);
+                            CommandData data = ParseEventCommandData(reader);
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.IssueCommand(units, data)));
+                            break;
+                        }
+
+                    case ReplayInputType.IssueFactoryCommand:
+                        {
+                            CommandUnits factories = ParseEventCommandUnits(reader);
+                            CommandData data = ParseEventCommandData(reader);
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.IssueFactoryCommand(factories, data)));
+                            break;
+                        }
+
+                    case ReplayInputType.IncreaseCommandCount:
+                        {
+                            int commandId = reader.ReadInt32();
+                            int delta = reader.ReadInt32();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.IncreaseCommandCount(commandId, delta)));
+                            break;
+                        }
+
+                    case ReplayInputType.DecreaseCommandCount:
+                        {
+                            int commandId = reader.ReadInt32();
+                            int delta = reader.ReadInt32();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.DecreaseCommandCount(commandId, delta)));
+                            break;
+                        }
+
+                    case ReplayInputType.UpdateCommandTarget:
+                        {
+                            int commandId = reader.ReadInt32();
+                            CommandTarget target = ParseEventCommandTarget(reader);
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.UpdateCommandTarget(commandId, target)));
+                            break;
+                        }
+
+                    case ReplayInputType.UpdateCommandType:
+                        {
+                            int commandId = reader.ReadInt32();
+                            CommandType commandType = (CommandType)reader.ReadInt32();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.UpdateCommandType(commandId, commandType)));
+                            break;
+                        }
+
+                    case ReplayInputType.UpdateCommandParameters:
+                        {
+                            int commandId = reader.ReadInt32();
+                            LuaData luaParameters = LuaDataLoader.ReadLuaData(reader);
+                            float x = reader.ReadSingle();
+                            float y = reader.ReadSingle();
+                            float z = reader.ReadSingle();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.UpdateCommandLuaParameters(commandId, luaParameters, x, y, z)));
+                            break;
+
+                        }
+
+                    case ReplayInputType.RemoveFromCommandQueue:
+                        {
+                            int commandId = reader.ReadInt32();
+                            int entityId = reader.ReadInt32();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.RemoveCommandFromQueue(commandId, entityId)));
+                            break;
+                        }
+
+                    case ReplayInputType.DebugCommand:
+                        {
+                            string command = reader.ReadNullTerminatedString();
+                            float x = reader.ReadSingle();
+                            float y = reader.ReadSingle();
+                            float z = reader.ReadSingle();
+                            byte focusArmy = reader.ReadByte();
+                            CommandUnits debugUnits = ParseEventCommandUnits(reader);
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.DebugCommand(command, x, y, z, focusArmy, debugUnits)));
+                            break;
+                        }
+
+                    case ReplayInputType.ExecuteLuaInSim:
+                        {
+                            string luaCode = reader.ReadNullTerminatedString();
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.ExecuteLuaInSim(luaCode)));
+                            break;
+                        }
+
+                    case ReplayInputType.Simcallback:
+                        {
+                            string endpoint = reader.ReadNullTerminatedString();
+                            LuaData luaParameters = LuaDataLoader.ReadLuaData(reader);
+                            CommandUnits units = ParseEventCommandUnits(reader);
+                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.SimCallback(endpoint, luaParameters, units)));
+                            break;
+                        }
+
+                    case ReplayInputType.EndGame:
+                        replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.EndGame()));
+                        break;
+
+                    default:
+                        throw new Exception("Unknown replay input type");
+                }
             }
             return replayInputs;
         }
@@ -346,13 +358,12 @@ namespace FAForever.Replay
         public static Replay ParseReplay(ReplayBinaryReader reader)
         {
             ReplayHeader replayHeader = ParseReplayHeader(reader);
-            List<ReplayInput> replayEvents = LoadReplayInputs(reader);
-            List<ReplayProcessedInput> gameEvents = ReplaySemantics.ConvertToGameEvents(replayEvents);
+            List<ReplayProcessedInput> replayEvents = LoadReplayInputs(reader);
 
             return new Replay(
                 Header: replayHeader,
-                Events: gameEvents
-                );
+                Events: replayEvents
+            );
         }
 
         public static Replay LoadFAFReplayFromMemory(Stream stream)
