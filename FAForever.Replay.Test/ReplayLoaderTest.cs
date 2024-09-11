@@ -41,4 +41,15 @@ public class ReplayLoaderTest
         Replay replay = ReplayLoader.LoadFAFReplayFromDisk(file);
         Assert.AreEqual(expectedCount, replay.Events.Count);
     }
+
+    [TestMethod]
+    [DataRow("assets/faforever/TestCommands01.fafreplay", 106)]
+    [DataRow("assets/faforever/gzip/22451957.fafreplay", 0)]
+    [DataRow("assets/faforever/gzip/22453511.fafreplay", 3)]
+    public void ChatMessageCountTest(string file, int expectedCount)
+    {
+        Replay replay = ReplayLoader.LoadFAFReplayFromDisk(file);
+        List<ReplayChatMessage> chatMessages = ReplaySemantics.GetChatMessages(replay.Events);
+        Assert.AreEqual(expectedCount, chatMessages.Count);
+    }
 }
