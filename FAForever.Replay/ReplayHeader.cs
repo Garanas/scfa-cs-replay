@@ -1,5 +1,5 @@
 ﻿
 namespace FAForever.Replay
 {
-    public record ReplayHeader();
+    public record ReplayHeader(ReplaySource[] Clients);
 }

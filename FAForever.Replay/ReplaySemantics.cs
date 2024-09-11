@@ -9,11 +9,11 @@ namespace FAForever.Replay
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public static List<ReplayChatMessage> GetChatMessages(List<ReplayProcessedInput> input)
+        public static List<ReplayChatMessage> GetChatMessages(Replay replay)
         {
             List<ReplayChatMessage> chatMessages = new List<ReplayChatMessage>();
 
-            foreach(ReplayProcessedInput replayInput in input)
+            foreach(ReplayProcessedInput replayInput in replay.Events)
             {
                 switch (replayInput.instance)
                 {
@@ -27,6 +27,12 @@ namespace FAForever.Replay
                             !(msgTable.Value.TryGetValue("to", out LuaData? luaTo) && luaTo is LuaData.String to) ||
                             !(msgTable.Value.TryGetValue("text", out LuaData? luaText) && luaText is LuaData.String text)
                         )
+                        {
+                            break;
+                        }
+
+                        // all players create a sim callback when one player sends a message. Requires refactoring in the game
+                        if (sender.Value != replay.Header.Clients[replayInput.SourceId].PlayerName)
                         {
                             break;
                         }

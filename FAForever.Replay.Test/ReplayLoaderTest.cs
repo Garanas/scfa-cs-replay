@@ -49,7 +49,7 @@ public class ReplayLoaderTest
     public void ChatMessageCountTest(string file, int expectedCount)
     {
         Replay replay = ReplayLoader.LoadFAFReplayFromDisk(file);
-        List<ReplayChatMessage> chatMessages = ReplaySemantics.GetChatMessages(replay.Events);
+        List<ReplayChatMessage> chatMessages = ReplaySemantics.GetChatMessages(replay);
         Assert.AreEqual(expectedCount, chatMessages.Count);
     }
 }
