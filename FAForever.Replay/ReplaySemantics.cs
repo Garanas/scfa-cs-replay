@@ -37,7 +37,7 @@ namespace FAForever.Replay
                             break;
                         }
 
-                        chatMessages.Add(new ReplayChatMessage(TimeSpan.FromSeconds(replayInput.Tick), sender.Value, to.Value, text.Value));
+                        chatMessages.Add(new ReplayChatMessage(TimeSpan.FromSeconds(replayInput.Tick / 10), sender.Value, to.Value, text.Value));
 
                         break;
 
