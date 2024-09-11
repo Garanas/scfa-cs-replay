@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "FAForever.Replay.Viewer",
   "resources": {
-    "hash": "sha256-fr/LUZoH3I/J+zB1biVnC2sEYFKr8y1NutaWaVwNTNc=",
+    "hash": "sha256-ozEfBS+P6DiSZAwaokd4RBNkILrwHxdVZHg3Yi18LxU=",
     "jsModuleNative": {
       "dotnet.native.8.0.8.746giovk6l.js": "sha256-juC5sA7gHTLXFEhAKgdM2/RavswpwCtDfjYGsAz2FXg="
     },
@@ -17,8 +17,8 @@
       "icudt_no_CJK.dat": "sha256-L7sV7NEYP37/Qr2FPCePo5cJqRgTXRwGHuwF5Q+0Nfs="
     },
     "assembly": {
-      "FAForever.Replay.Viewer.wasm": "sha256-mqTm0NH6AS1snYQIOm4NL1pAUHfMiB0nR/jqTP+WpFw=",
-      "FAForever.Replay.wasm": "sha256-D4joUm68ZmUKjIa9IhIoF5SRUZNV+WI/wJHTTMD2mls=",
+      "FAForever.Replay.Viewer.wasm": "sha256-dBqPn3B3AW0JVkSoOXGH+E6uBKFQE8QvuibzwdEw8hA=",
+      "FAForever.Replay.wasm": "sha256-IioYb3ThBEQWnMDNmx1zDbDmVD4zpeuj5rP9TIgXqrg=",
       "ICSharpCode.SharpZipLib.wasm": "sha256-45uwmD+Zm78rcGevK0H6jY3yvSmgQqtuLgppZsZv/+g=",
       "Microsoft.AspNetCore.Components.wasm": "sha256-Nkphk54uo5be2ronms8iStxIWR6NIwsyUAzdKmESOgM=",
       "Microsoft.AspNetCore.Components.Web.wasm": "sha256-OZJWpNK4donqKbpBWr2u/lpbmpI+uVl/Iyzecj0vO0k=",
