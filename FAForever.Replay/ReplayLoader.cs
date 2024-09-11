@@ -352,7 +352,7 @@ namespace FAForever.Replay
 
             int seed = reader.ReadInt32();
 
-            return new ReplayHeader();
+            return new ReplayHeader(clients);
         }
 
         public static Replay ParseReplay(ReplayBinaryReader reader)
