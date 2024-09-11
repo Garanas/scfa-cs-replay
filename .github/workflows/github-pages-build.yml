@@ -1,0 +1,33 @@
+name: GitHub Pages - Build
+
+env:
+  SOURCE_DIR: FAForever.Replay.Viewer
+  PUBLISH_DIR: FAForever.Replay.Viewer/release/wwwroot
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+  build:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK 8.0.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish .NET Project
+        working-directory: ${{ env.SOURCE_DIR }}
+        run: dotnet publish FAForever.Replay.Viewer.csproj -c Release -o release --nologo
+
+      - name: Create an artifact that contains the published files
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: ${{ env.PUBLISH_DIR }}

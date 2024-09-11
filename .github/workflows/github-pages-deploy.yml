@@ -1,0 +1,27 @@
+name: GitHub Pages - Deploy build
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  push:
+    branches: [main]
+
+jobs:
+  artifact:
+    uses: ./.github/workflows/github-pages-post-process.yml
+  deploy:
+    needs: [artifact]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-post-processed
+          path: build
+
+      # publishes wwwroot directory to GitHub Pages
+      - name: Commit wwwroot to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@4.1.5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: live/gh-pages 
+          folder: build 
