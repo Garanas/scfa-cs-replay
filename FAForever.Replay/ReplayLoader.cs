@@ -364,7 +364,7 @@ namespace FAForever.Replay
 
             int seed = reader.ReadInt32();
 
-            return new ReplayHeader(clients, mods.ToArray(), );
+            return new ReplayHeader(clients, mods.ToArray(), new LuaData[] { });
         }
 
         public static Replay ParseReplay(ReplayBinaryReader reader)
