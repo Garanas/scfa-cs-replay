@@ -36,7 +36,7 @@ public class ReplayLoaderTest
     [DataRow("assets/faforever/23225440.fafreplay", 8042)]
     [DataRow("assets/faforever/23225685.fafreplay", 17040)]
     [DataRow("assets/faforever/23225104.fafreplay", 55923)]
-    public void UserInputCountTest(string file, int expectedCount)
+    public void FAForeverUserInputCountTest(string file, int expectedCount)
     {
         Replay replay = ReplayLoader.LoadFAFReplayFromDisk(file);
         Assert.AreEqual(expectedCount, replay.Events.Count);
@@ -46,10 +46,28 @@ public class ReplayLoaderTest
     [DataRow("assets/faforever/TestCommands01.fafreplay", 106)]
     [DataRow("assets/faforever/gzip/22451957.fafreplay", 0)]
     [DataRow("assets/faforever/gzip/22453511.fafreplay", 3)]
-    public void ChatMessageCountTest(string file, int expectedCount)
+    public void FAForeverChatMessageCountTest(string file, int expectedCount)
     {
         Replay replay = ReplayLoader.LoadFAFReplayFromDisk(file);
         List<ReplayChatMessage> chatMessages = ReplaySemantics.GetChatMessages(replay);
         Assert.AreEqual(expectedCount, chatMessages.Count);
+    }
+
+    [TestMethod]
+    [DataRow("assets/faforever/mods.fafreplay", 2)]
+    public void FAForeverModCountTest(string file, int expectedCount)
+    {
+        Replay replay = ReplayLoader.LoadFAFReplayFromDisk(file);
+        List<ReplayChatMessage> chatMessages = ReplaySemantics.GetChatMessages(replay);
+        //Assert.AreEqual(expectedCount, chatMessages.Count);
+    }
+
+    [TestMethod]
+    [DataRow("assets/scfa/21stGameOceanScampsV2.SCFAReplay", 0)]
+    public void SCFAModCountTest(string file, int expectedCount)
+    {
+        Replay replay = ReplayLoader.LoadSCFAReplayFromDisk(file);
+        List<ReplayChatMessage> chatMessages = ReplaySemantics.GetChatMessages(replay);
+        //Assert.AreEqual(expectedCount, chatMessages.Count);
     }
 }

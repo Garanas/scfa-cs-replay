@@ -321,10 +321,21 @@ namespace FAForever.Replay
             string Unknown2 = reader.ReadNullTerminatedString();
 
             int numberOfBytesForMods = reader.ReadInt32();
-            byte[] mods = reader.ReadBytes(numberOfBytesForMods);
+            List<LuaData> mods = new List<LuaData>();
+            LuaData luaMods = LuaDataLoader.ReadLuaData(reader);
+            if (luaMods is LuaData.Table modsTable)
+            {
+                foreach (var mod in modsTable.Value)
+                {
+                    if (mod.Value is LuaData.Table modTable)
+                    {
+                        mods.Add(modTable);
+                    }
+                }
+            }
 
-            int numberOfBytesForGameOptions = reader.ReadInt32();
-            byte[] gameOptions = reader.ReadBytes(numberOfBytesForGameOptions);
+            int numberOfBytesScenario = reader.ReadInt32();
+            LuaData scenario = LuaDataLoader.ReadLuaData(reader);
 
             byte numberOfClients = reader.ReadByte();
             ReplaySource[] clients = new ReplaySource[numberOfClients];
@@ -339,7 +350,8 @@ namespace FAForever.Replay
             for (int i = 0; i < numberOfPlayerOptions; i++)
             {
                 int numberOfBytesPlayerOptions = reader.ReadInt32();
-                byte[] playerOptions = reader.ReadBytes(numberOfBytesPlayerOptions);
+                LuaData playerOptionsData = LuaDataLoader.ReadLuaData(reader);
+                //byte[] playerOptions = reader.ReadBytes(numberOfBytesPlayerOptions);
 
                 int playerSource = reader.ReadByte();
 
@@ -352,7 +364,7 @@ namespace FAForever.Replay
 
             int seed = reader.ReadInt32();
 
-            return new ReplayHeader(clients);
+            return new ReplayHeader(clients, mods.ToArray(), );
         }
 
         public static Replay ParseReplay(ReplayBinaryReader reader)
