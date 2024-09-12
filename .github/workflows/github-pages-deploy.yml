@@ -27,24 +27,24 @@ jobs:
 
       # publishes Blazor project to the release folder
       - name: Publish .NET Project
-        working-directory: SOURCE_DIR
+        working-directory: ${{env.SOURCE_DIR}}
         run: |
           dotnet restore
           dotnet publish FAForever.Replay.Viewer.csproj -c Release -o release --nologo --no-restore
 
       # changes the base-tag in index.html from '/' to 'scfa-cs-replay' to match GitHub Pages repository subdirectory
       - name: Change base-tag in index.html from / to scfa-cs-replay
-        working-directory: SOURCE_DIR
+        working-directory: ${{env.SOURCE_DIR}}
         run: sed -i 's/<base href="\/" \/>/<base href="\/scfa-cs-replay\/" \/>/g' release/wwwroot/index.html
 
       # copy index.html to 404.html to serve the same file when a file is not found
       - name: copy index.html to 404.html
-        working-directory: SOURCE_DIR
+        working-directory: ${{env.SOURCE_DIR}}
         run: cp release/wwwroot/index.html release/wwwroot/404.html
 
       # add .nojekyll file to tell GitHub pages to not treat this as a Jekyll project. (Allow files and folders starting with an underscore)
       - name: Add .nojekyll file
-        working-directory: SOURCE_DIR
+        working-directory: ${{env.SOURCE_DIR}}
         run: touch release/wwwroot/.nojekyll
 
       # publishes wwwroot directory to GitHub Pages
@@ -52,5 +52,5 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@4.1.5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: deploy/gh-pages # The branch the action should deploy to.
-          folder: PUBLISH_DIR # The folder the action should deploy.
+          branch: live/gh-pages
+          folder: ${{env.PUBLISH_DIR}}
