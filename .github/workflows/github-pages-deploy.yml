@@ -7,23 +7,23 @@ on:
     branches: [deploy/gh-pages]
 
 jobs:
-  artifact:
+  build:
     uses: ./.github/workflows/github-pages-post-process.yml
   deploy:
-    needs: [artifact]
+    needs: [build]
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/download-artifact@v4
-        with:
-          name: build-post-processed
-          path: build
+    permissions:
+      pages: write
+      id-token: write
 
-      # publishes wwwroot directory to GitHub Pages
-      - name: Commit wwwroot to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@4.1.5
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: live/gh-pages 
-          folder: build 
+          artifact_name: build-post-processed
