@@ -13,22 +13,24 @@ namespace FAForever.Replay
 
         public ReplayBinaryReader(Stream input, Encoding encoding, bool leaveOpen) : base(input, encoding, leaveOpen) { }
 
+        protected StringBuilder stringBuilder = new StringBuilder();
+
         /// <summary>
         /// Reads bytes until it finds a null byte. Advances the stream with the size of the string.
         /// </summary>
         /// <returns></returns>
         public string ReadNullTerminatedString()
         {
-            StringBuilder sb = new StringBuilder();
+            this.stringBuilder.Clear();
 
             char c;
             while ((c = this.ReadChar()) != '\0')
             {
-                sb.Append(c);
+                this.stringBuilder.Append(c);
             }
 
 
-            return sb.ToString();
+            return this.stringBuilder.ToString();
         }
     }
 }
