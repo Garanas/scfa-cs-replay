@@ -339,7 +339,7 @@ namespace FAForever.Replay
                 throw new Exception("Scenario is not a table");
             }
 
-            return new ReplayScenario(LoadScenarioOptions(scenario), LoadScenarioMap(scenario), scenario.TryGetStringValue("type", out var type) ? type : null);
+            return new ReplayScenario(LoadScenarioOptions(scenario), LoadScenarioMap(scenario), scenario.TryGetStringValue("type", out var type) ? type! : null);
         }
 
         public static ReplayHeader ParseReplayHeader(ReplayBinaryReader reader)
@@ -401,7 +401,7 @@ namespace FAForever.Replay
 
             int seed = reader.ReadInt32();
 
-            return new ReplayHeader(clients, mods.ToArray(), new LuaData[] { });
+            return new ReplayHeader(scenario, clients, mods.ToArray(), new LuaData[] { });
         }
 
         public static Replay ParseReplay(ReplayBinaryReader reader)
