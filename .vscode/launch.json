@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Core Launch (Blazor Standalone)",
+            "name": "Viewer",
             "type": "coreclr",
             "request": "launch",
             "program": "dotnet",
@@ -15,7 +15,38 @@
             "cwd": "${workspaceFolder}/FAForever.Replay.Viewer",
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
-            }
+            },
+            "preLaunchTask": "build"
         },
-    ]
+        {
+            "name": "Test",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "dotnet",
+            "args": [
+                "watch",
+                "test"
+            ],
+            "cwd": "${workspaceFolder}/FAForever.Replay.Test",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "preLaunchTask": "build"
+        },
+        {
+            "name": "Benchmarks",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "dotnet",
+            "args": [
+                "run",
+                "--configuration=Release"
+            ],
+            "cwd": "${workspaceFolder}/FAForever.Replay.Benchmark",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "preLaunchTask": "build"
+        },
+    ],
 }
