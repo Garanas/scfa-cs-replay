@@ -10,7 +10,7 @@ namespace FAForever.Replay
 {
     public static class ReplayLoader
     {
-        public static CommandData ParseEventCommandData(ReplayBinaryReader reader)
+        public static CommandData LoadCommandData(ReplayBinaryReader reader)
         {
             int commandId = reader.ReadInt32();
 
@@ -22,12 +22,12 @@ namespace FAForever.Replay
             // unknown
             int arg2 = reader.ReadInt32();
 
-            CommandTarget target = ParseEventCommandTarget(reader);
+            CommandTarget target = LoadCommandTarget(reader);
 
             // unknown
             byte arg3 = reader.ReadByte();
 
-            CommandFormation formation = ParseEventCommandFormation(reader);
+            CommandFormation formation = LoadCommandFormation(reader);
 
             string blueprintId = reader.ReadNullTerminatedString();
 
@@ -43,7 +43,7 @@ namespace FAForever.Replay
             return new CommandData(commandId, commandType, target, formation, blueprintId, luaData, addToQueue, arg1, arg2, arg3, arg4, arg5, arg6);
         }
 
-        public static CommandUnits ParseEventCommandUnits(ReplayBinaryReader reader)
+        public static CommandUnits LoadCommandUnits(ReplayBinaryReader reader)
         {
             int numberOfEntities = reader.ReadInt32();
             int[] entityIds = new int[numberOfEntities];
@@ -55,7 +55,7 @@ namespace FAForever.Replay
             return new CommandUnits(entityIds);
         }
 
-        public static CommandTarget ParseEventCommandTarget(ReplayBinaryReader reader)
+        public static CommandTarget LoadCommandTarget(ReplayBinaryReader reader)
         {
             CommandTargetType eventCommandTargetType = (CommandTargetType)reader.ReadByte();
             switch (eventCommandTargetType)
@@ -79,7 +79,7 @@ namespace FAForever.Replay
             }
         }
 
-        public static CommandFormation ParseEventCommandFormation(ReplayBinaryReader reader)
+        public static CommandFormation LoadCommandFormation(ReplayBinaryReader reader)
         {
             int formationId = reader.ReadInt32();
             if (formationId == -1)
@@ -201,16 +201,16 @@ namespace FAForever.Replay
 
                     case ReplayInputType.IssueCommand:
                         {
-                            CommandUnits units = ParseEventCommandUnits(reader);
-                            CommandData data = ParseEventCommandData(reader);
+                            CommandUnits units = LoadCommandUnits(reader);
+                            CommandData data = LoadCommandData(reader);
                             replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.IssueCommand(units, data)));
                             break;
                         }
 
                     case ReplayInputType.IssueFactoryCommand:
                         {
-                            CommandUnits factories = ParseEventCommandUnits(reader);
-                            CommandData data = ParseEventCommandData(reader);
+                            CommandUnits factories = LoadCommandUnits(reader);
+                            CommandData data = LoadCommandData(reader);
                             replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.IssueFactoryCommand(factories, data)));
                             break;
                         }
@@ -234,7 +234,7 @@ namespace FAForever.Replay
                     case ReplayInputType.UpdateCommandTarget:
                         {
                             int commandId = reader.ReadInt32();
-                            CommandTarget target = ParseEventCommandTarget(reader);
+                            CommandTarget target = LoadCommandTarget(reader);
                             replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.UpdateCommandTarget(commandId, target)));
                             break;
                         }
@@ -274,7 +274,7 @@ namespace FAForever.Replay
                             float y = reader.ReadSingle();
                             float z = reader.ReadSingle();
                             byte focusArmy = reader.ReadByte();
-                            CommandUnits debugUnits = ParseEventCommandUnits(reader);
+                            CommandUnits debugUnits = LoadCommandUnits(reader);
                             replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.DebugCommand(command, x, y, z, focusArmy, debugUnits)));
                             break;
                         }
@@ -290,7 +290,7 @@ namespace FAForever.Replay
                         {
                             string endpoint = reader.ReadNullTerminatedString();
                             LuaData luaParameters = LuaDataLoader.ReadLuaData(reader);
-                            CommandUnits units = ParseEventCommandUnits(reader);
+                            CommandUnits units = LoadCommandUnits(reader);
                             replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.SimCallback(endpoint, luaParameters, units)));
                             break;
                         }
@@ -342,7 +342,7 @@ namespace FAForever.Replay
             return new ReplayScenario(LoadScenarioOptions(scenario), LoadScenarioMap(scenario), scenario.TryGetStringValue("type", out var type) ? type! : null);
         }
 
-        public static ReplayHeader ParseReplayHeader(ReplayBinaryReader reader)
+        public static ReplayHeader LoadReplayHeader(ReplayBinaryReader reader)
         {
             string gameVersion = reader.ReadNullTerminatedString();
 
@@ -404,9 +404,9 @@ namespace FAForever.Replay
             return new ReplayHeader(scenario, clients, mods.ToArray(), new LuaData[] { });
         }
 
-        public static Replay ParseReplay(ReplayBinaryReader reader)
+        public static Replay LoadReplay(ReplayBinaryReader reader)
         {
-            ReplayHeader replayHeader = ParseReplayHeader(reader);
+            ReplayHeader replayHeader = LoadReplayHeader(reader);
             List<ReplayProcessedInput> replayEvents = LoadReplayInputs(reader);
 
             return new Replay(
@@ -473,7 +473,7 @@ namespace FAForever.Replay
         {
             using (ReplayBinaryReader reader = new ReplayBinaryReader(stream))
             {
-                return ParseReplay(reader);
+                return LoadReplay(reader);
             }
         }
 
