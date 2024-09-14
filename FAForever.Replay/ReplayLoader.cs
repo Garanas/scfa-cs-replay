@@ -10,7 +10,7 @@ namespace FAForever.Replay
 {
     public static class ReplayLoader
     {
-        public static CommandData LoadCommandData(ReplayBinaryReader reader)
+        private static CommandData LoadCommandData(ReplayBinaryReader reader)
         {
             int commandId = reader.ReadInt32();
 
@@ -43,7 +43,7 @@ namespace FAForever.Replay
             return new CommandData(commandId, commandType, target, formation, blueprintId, luaData, addToQueue, arg1, arg2, arg3, arg4, arg5, arg6);
         }
 
-        public static CommandUnits LoadCommandUnits(ReplayBinaryReader reader)
+        private static CommandUnits LoadCommandUnits(ReplayBinaryReader reader)
         {
             int numberOfEntities = reader.ReadInt32();
             int[] entityIds = new int[numberOfEntities];
@@ -55,7 +55,7 @@ namespace FAForever.Replay
             return new CommandUnits(entityIds);
         }
 
-        public static CommandTarget LoadCommandTarget(ReplayBinaryReader reader)
+        private static CommandTarget LoadCommandTarget(ReplayBinaryReader reader)
         {
             CommandTargetType eventCommandTargetType = (CommandTargetType)reader.ReadByte();
             switch (eventCommandTargetType)
@@ -79,7 +79,7 @@ namespace FAForever.Replay
             }
         }
 
-        public static CommandFormation LoadCommandFormation(ReplayBinaryReader reader)
+        private static CommandFormation LoadCommandFormation(ReplayBinaryReader reader)
         {
             int formationId = reader.ReadInt32();
             if (formationId == -1)
@@ -96,7 +96,7 @@ namespace FAForever.Replay
             return new CommandFormation.Formation(formationId, heading, x, y, z, scale);
         }
 
-        public static List<ReplayProcessedInput> LoadReplayInputs(ReplayBinaryReader reader)
+        private static List<ReplayProcessedInput> LoadReplayInputs(ReplayBinaryReader reader)
         {
             // state 
             int currentTick = 0;
@@ -306,7 +306,7 @@ namespace FAForever.Replay
             return replayInputs;
         }
 
-        public static ReplayScenarioMap LoadScenarioMap(LuaData.Table luaScenario)
+        private static ReplayScenarioMap LoadScenarioMap(LuaData.Table luaScenario)
         {
             LuaData.Table? sizeTable = luaScenario.TryGetTableValue("size", out var luaSize) ? luaSize : null;
             int? sizeX = sizeTable != null && sizeTable.TryGetNumberValue("1", out var luaSizeX) ? (int)luaSizeX!.Value : null;
@@ -326,12 +326,12 @@ namespace FAForever.Replay
                 sizeX, sizeZ, massReclaim, energyReclaim); 
         }
 
-        public static ReplayScenarioOptions LoadScenarioOptions(LuaData.Table luaScenario)
+        private static ReplayScenarioOptions LoadScenarioOptions(LuaData.Table luaScenario)
         {
             return new ReplayScenarioOptions();
         }
 
-        public static ReplayScenario LoadScenario(ReplayBinaryReader reader)
+        private static ReplayScenario LoadScenario(ReplayBinaryReader reader)
         {
             LuaData luaScenario = LuaDataLoader.ReadLuaData(reader);
             if (!(luaScenario is LuaData.Table scenario))
@@ -342,7 +342,7 @@ namespace FAForever.Replay
             return new ReplayScenario(LoadScenarioOptions(scenario), LoadScenarioMap(scenario), scenario.TryGetStringValue("type", out var type) ? type! : null);
         }
 
-        public static ReplayHeader LoadReplayHeader(ReplayBinaryReader reader)
+        private static ReplayHeader LoadReplayHeader(ReplayBinaryReader reader)
         {
             string gameVersion = reader.ReadNullTerminatedString();
 
@@ -404,7 +404,7 @@ namespace FAForever.Replay
             return new ReplayHeader(scenario, clients, mods.ToArray(), new LuaData[] { });
         }
 
-        public static Replay LoadReplay(ReplayBinaryReader reader)
+        private static Replay LoadReplay(ReplayBinaryReader reader)
         {
             ReplayHeader replayHeader = LoadReplayHeader(reader);
             List<ReplayProcessedInput> replayEvents = LoadReplayInputs(reader);
