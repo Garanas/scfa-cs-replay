@@ -306,6 +306,42 @@ namespace FAForever.Replay
             return replayInputs;
         }
 
+        public static ReplayScenarioMap LoadScenarioMap(LuaData.Table luaScenario)
+        {
+            LuaData.Table? sizeTable = luaScenario.TryGetTableValue("size", out var luaSize) ? luaSize : null;
+            int? sizeX = sizeTable != null && sizeTable.TryGetNumberValue("1", out var luaSizeX) ? (int)luaSizeX!.Value : null;
+            int? sizeZ = sizeTable != null && sizeTable.TryGetNumberValue("2", out var luaSizeZ) ? (int)luaSizeZ!.Value : null;
+
+            LuaData.Table? reclaimTable = luaScenario.TryGetTableValue("reclaim", out var luaReclaim) ? luaReclaim : null;
+            int? massReclaim = reclaimTable != null && reclaimTable.TryGetNumberValue("1", out var luamassReclaim) ? (int)luamassReclaim!.Value : null;
+            int? energyReclaim = reclaimTable != null && reclaimTable.TryGetNumberValue("2", out var luaEnergyReclaim) ? (int)luaEnergyReclaim!.Value : null;
+
+            return new ReplayScenarioMap(
+                luaScenario.TryGetStringValue("name", out var name) ? name : null, 
+                luaScenario.TryGetStringValue("description", out var description) ? description : null, 
+                luaScenario.TryGetStringValue("map", out var scmap) ? scmap : null, 
+                luaScenario.TryGetStringValue("preview", out var preview) ? preview : null, 
+                luaScenario.TryGetStringValue("repository", out var repository) ? repository : null,
+                luaScenario.TryGetNumberValue("map_version", out var version) ? (int)version! : null,
+                sizeX, sizeZ, massReclaim, energyReclaim); 
+        }
+
+        public static ReplayScenarioOptions LoadScenarioOptions(LuaData.Table luaScenario)
+        {
+            return new ReplayScenarioOptions();
+        }
+
+        public static ReplayScenario LoadScenario(ReplayBinaryReader reader)
+        {
+            LuaData luaScenario = LuaDataLoader.ReadLuaData(reader);
+            if (!(luaScenario is LuaData.Table scenario))
+            {
+                throw new Exception("Scenario is not a table");
+            }
+
+            return new ReplayScenario(LoadScenarioOptions(scenario), LoadScenarioMap(scenario), scenario.TryGetStringValue("type", out var type) ? type : null);
+        }
+
         public static ReplayHeader ParseReplayHeader(ReplayBinaryReader reader)
         {
             string gameVersion = reader.ReadNullTerminatedString();
@@ -335,7 +371,8 @@ namespace FAForever.Replay
             }
 
             int numberOfBytesScenario = reader.ReadInt32();
-            LuaData scenario = LuaDataLoader.ReadLuaData(reader);
+            ReplayScenario scenario = LoadScenario(reader);
+
 
             byte numberOfClients = reader.ReadByte();
             ReplaySource[] clients = new ReplaySource[numberOfClients];
