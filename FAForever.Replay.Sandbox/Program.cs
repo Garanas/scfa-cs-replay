@@ -131,6 +131,13 @@ namespace FAForever.Replay.Sandbox
         {
             Replay replay = await LoadReplay(o);
             Console.WriteLine(replay.Events.Count);
+            Dictionary<string, int> inputCount = ReplaySemantics.CountInputTypes(replay);
+
+            foreach (KeyValuePair<string, int> kvp in inputCount)
+            {
+                Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+            }
+
         }
     }
 }
