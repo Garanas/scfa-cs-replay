@@ -5,7 +5,6 @@ using BenchmarkDotNet.Diagnosers;
 
 namespace FAForever.Replay.Benchmark
 {
-    [ShortRunJob]
     [MemoryDiagnoser]
     public class ReplayBenchmark
     {

@@ -109,7 +109,7 @@ namespace FAForever.Replay.Sandbox
                     using FileStream fs = new FileStream(Path.Combine(o.OutputDirectory, Path.GetFileNameWithoutExtension(path) + ".xml"), FileMode.Create);
                     XmlSerializer serializer = new XmlSerializer(typeof(Replay));
                     serializer.Serialize(fs, replay);
-                    Console.WriteLine($"Replay from URL has {replay.Body.UserInput.Length} events.");
+                    Console.WriteLine($"Replay from URL has {replay.Body.UserInput.Count} events.");
                 }
                 else
                 {
@@ -117,7 +117,7 @@ namespace FAForever.Replay.Sandbox
                     XmlSerializer serializer = new XmlSerializer(typeof(Replay));
                     using FileStream fs = new FileStream(Path.Combine(o.OutputDirectory, Path.GetFileNameWithoutExtension(path) + ".xml"), FileMode.Create);
                     serializer.Serialize(fs, replay);
-                    Console.WriteLine($"Replay from disk has {replay.Body.UserInput.Length} events.");
+                    Console.WriteLine($"Replay from disk has {replay.Body.UserInput.Count} events.");
                 }
             }
         }
@@ -130,7 +130,7 @@ namespace FAForever.Replay.Sandbox
         internal static async Task Programmatic(ProgramArguments o)
         {
             Replay replay = await LoadReplay(o);
-            Console.WriteLine(replay.Body.UserInput.Length);
+            Console.WriteLine(replay.Body.UserInput.Count);
             Dictionary<string, int> inputCount = ReplaySemantics.CountInputTypes(replay);
 
             foreach (KeyValuePair<string, int> kvp in inputCount)

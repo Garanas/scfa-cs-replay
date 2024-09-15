@@ -42,7 +42,7 @@ public class ReplayLoaderTest
     {
         IProgress<string> progress = new Progress<string>();
         Replay replay = ReplayLoader.LoadFAFReplayFromDisk(file, progress);
-        Assert.AreEqual(expectedCount, replay.Body.UserInput.Length);
+        Assert.AreEqual(expectedCount, replay.Body.UserInput.Count);
     }
 
     [TestMethod]

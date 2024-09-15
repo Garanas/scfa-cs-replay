@@ -112,12 +112,13 @@ namespace FAForever.Replay
             // hash to check whether game remained in sync
             bool inSync = true;
             int hashTick = 0;
-            int hash1 = 0;
-            int hash2 = 0;
-            int hash3 = 0;
-            int hash4 = 0;
+            long hashValue = 0;
 
-            List<ReplayProcessedInput> replayInputs = new List<ReplayProcessedInput>();
+            // there is no way to know how many inputs there are in advance but the 
+            // constant resizing of the list is expensive. Therefore we estimate it,
+            // the estimation is what happens to be reasonably correct.
+            int estimatedNumberOfInputs = (int)(20 * Math.Sqrt(reader.BaseStream.Length - reader.BaseStream.Position));
+            List<ReplayProcessedInput> replayInputs = new List<ReplayProcessedInput>(estimatedNumberOfInputs);
             while (reader.BaseStream.Position < reader.BaseStream.Length)
             {
                 ReplayInputType type = (ReplayInputType)reader.ReadByte();
@@ -145,21 +146,13 @@ namespace FAForever.Replay
                         break;
 
                     case ReplayInputType.VerifyChecksum:
-                        {
-                            
-                            int h1 = reader.ReadInt32();
-                            int h2 = reader.ReadInt32();
-                            int h3 = reader.ReadInt32();
-                            int h4 = reader.ReadInt32();
+                        { 
+                            long hash = reader.ReadInt64() ^ reader.ReadInt64();
                             int tick = reader.ReadInt32();
-
                             if (hashTick != tick) {
-                                hash1 = h1;
-                                hash2 = h2;
-                                hash3 = h3;
-                                hash4 = h4;
+                                hashValue = hash;
                             } else {
-                                inSync = (h1 == hash1) && (h2 == hash2) && (h3 == hash3) && (h4 == hash4);
+                                inSync = hashValue == hash;
                             }
                             break;
                         }
@@ -327,8 +320,7 @@ namespace FAForever.Replay
                         throw new Exception("Unknown replay input type");
                 }
             }
-
-            return new ReplayBody(replayInputs.ToArray(), inSync);
+            return new ReplayBody(replayInputs, inSync);
         }
 
         private static ReplayScenarioMap LoadScenarioMap(LuaData.Table luaScenario)

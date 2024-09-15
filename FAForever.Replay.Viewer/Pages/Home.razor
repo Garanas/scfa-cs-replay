@@ -8,7 +8,7 @@
 
 @if (replayService.Replay != null)
 {
-<p role="status">Current count: @replayService.Replay.Body.UserInput.Length</p>
+<p role="status">Current count: @replayService.Replay.Body.UserInput.Count</p>
 }
 else
 {
@@ -38,7 +38,7 @@ else
             Console.WriteLine(DateTime.Now);
             replayService.LoadReplay(stream);
             if (replayService.Replay != null){
-                UserInputCount = replayService.Replay.Body.UserInput.Length;
+                UserInputCount = replayService.Replay.Body.UserInput.Count;
             } else  {
                 UserInputCount = -1;
             }
