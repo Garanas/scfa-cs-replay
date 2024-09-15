@@ -26,18 +26,18 @@ public class ReplayLoaderTest
     }
 
     [TestMethod]
-    [DataRow("assets/faforever/zstd/22338092.fafreplay", 15)]
-    [DataRow("assets/faforever/zstd/22373098.fafreplay", 185)]
-    [DataRow("assets/faforever/zstd/22425616.fafreplay", 104)]
-    [DataRow("assets/faforever/gzip/22451957.fafreplay", 14)]
-    [DataRow("assets/faforever/gzip/22453414.fafreplay", 29)]
-    [DataRow("assets/faforever/gzip/22453511.fafreplay", 25)]
-    [DataRow("assets/faforever/TestCommands01.fafreplay", 15640)]
-    [DataRow("assets/faforever/23225508.fafreplay", 2916)]
-    [DataRow("assets/faforever/23225323.fafreplay", 17166)]
-    [DataRow("assets/faforever/23225440.fafreplay", 8042)]
-    [DataRow("assets/faforever/23225685.fafreplay", 17040)]
-    [DataRow("assets/faforever/23225104.fafreplay", 55923)]
+    [DataRow("assets/faforever/zstd/22338092.fafreplay", 12)]
+    [DataRow("assets/faforever/zstd/22373098.fafreplay", 123)]
+    [DataRow("assets/faforever/zstd/22425616.fafreplay", 99)]
+    [DataRow("assets/faforever/gzip/22451957.fafreplay", 9)]
+    [DataRow("assets/faforever/gzip/22453414.fafreplay", 22)]
+    [DataRow("assets/faforever/gzip/22453511.fafreplay", 20)]
+    [DataRow("assets/faforever/TestCommands01.fafreplay", 13439)]
+    [DataRow("assets/faforever/23225508.fafreplay", 2032)]
+    [DataRow("assets/faforever/23225323.fafreplay", 14296)]
+    [DataRow("assets/faforever/23225440.fafreplay", 6630)]
+    [DataRow("assets/faforever/23225685.fafreplay", 14178)]
+    [DataRow("assets/faforever/23225104.fafreplay", 51017)]
     public void FAForeverUserInputCountTest(string file, int expectedCount)
     {
         IProgress<string> progress = new Progress<string>();

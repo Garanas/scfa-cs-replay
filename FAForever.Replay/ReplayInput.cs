@@ -68,12 +68,16 @@ namespace FAForever.Replay
         public record WarpEntity(int EntityId, float X, float Y, float Z) : ReplayInput;
 
         /// <summary>
-        /// Created by the UserUnit function `ProcessInfo`
+        /// Created by the UserUnit function `ProcessInfo`.
+        /// 
+        /// When you have multiple units in your selection this event is fired for each unit. 
+        /// A common example is to (un)pause a unit. In the library we choose to combine these 
+        /// events and instead of listing the entities we list the number of units that are 
+        /// affected. This significantly reduces the number of events in memory.
         /// </summary>
-        /// <param name="EntityId"></param>
         /// <param name="Arg1"></param>
         /// <param name="Arg2"></param>
-        public record ProcessInfoPair(int EntityId, String Name, String Value) : ReplayInput;
+        public record ProcessInfoPair(int EntityCount, String Name, String Value) : ReplayInput;
 
         /// <summary>
         /// Created by the engine when the user creates a command by clicking

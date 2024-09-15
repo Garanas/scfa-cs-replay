@@ -109,6 +109,14 @@ namespace FAForever.Replay
             int currentTick = 0;
             int currentSource = 0;
 
+            // hash to check whether game remained in sync
+            bool inSync = true;
+            int hashTick = 0;
+            int hash1 = 0;
+            int hash2 = 0;
+            int hash3 = 0;
+            int hash4 = 0;
+
             List<ReplayProcessedInput> replayInputs = new List<ReplayProcessedInput>();
             while (reader.BaseStream.Position < reader.BaseStream.Length)
             {
@@ -138,12 +146,21 @@ namespace FAForever.Replay
 
                     case ReplayInputType.VerifyChecksum:
                         {
-                            int hash1 = reader.ReadInt32();
-                            int hash2 = reader.ReadInt32();
-                            int hash3 = reader.ReadInt32();
-                            int hash4 = reader.ReadInt32();
+                            
+                            int h1 = reader.ReadInt32();
+                            int h2 = reader.ReadInt32();
+                            int h3 = reader.ReadInt32();
+                            int h4 = reader.ReadInt32();
                             int tick = reader.ReadInt32();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.VerifyChecksum(hash1, hash2, hash3, hash4, tick)));
+
+                            if (hashTick != tick) {
+                                hash1 = h1;
+                                hash2 = h2;
+                                hash3 = h3;
+                                hash4 = h4;
+                            } else {
+                                inSync = (h1 == hash1) && (h2 == hash2) && (h3 == hash3) && (h4 == hash4);
+                            }
                             break;
                         }
 
@@ -311,7 +328,7 @@ namespace FAForever.Replay
                 }
             }
 
-            return new ReplayBody(replayInputs.ToArray(), true);
+            return new ReplayBody(replayInputs.ToArray(), inSync);
         }
 
         private static ReplayScenarioMap LoadScenarioMap(LuaData.Table luaScenario)
