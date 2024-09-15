@@ -37,7 +37,8 @@ namespace FAForever.Replay.Benchmark
             byte[] replayData = AllReplays[ReplayFile];
             using (MemoryStream stream = new MemoryStream(replayData))
             {
-                ReplayLoader.LoadFAFReplayFromMemory(stream);
+                IProgress<string> progress = new Progress<string>();
+                ReplayLoader.LoadFAFReplayFromMemory(stream, progress);
             }
         }
     }

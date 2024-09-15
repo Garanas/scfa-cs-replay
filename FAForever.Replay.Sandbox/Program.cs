@@ -54,11 +54,13 @@ namespace FAForever.Replay.Sandbox
             {
                 if (isFAForeverReplay)
                 {
-                    return ReplayLoader.LoadFAFReplayFromMemory(replayStream);
+                    IProgress<string> progress = new Progress<string>((s) => Console.WriteLine($" - {s} at {DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond}"));
+                    return ReplayLoader.LoadFAFReplayFromMemory(replayStream, progress);
                 }
                 else
                 {
-                    return ReplayLoader.LoadSCFAReplayFromStream(replayStream);
+                    IProgress<string> progress = new Progress<string>((s) => Console.WriteLine($" - {s} at {DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond}"));
+                    return ReplayLoader.LoadSCFAReplayFromStream(replayStream, progress);
                 }
             }
         }
@@ -75,7 +77,8 @@ namespace FAForever.Replay.Sandbox
             byte[] content = await response.Content.ReadAsByteArrayAsync();
             using MemoryStream replayStream = new MemoryStream(content);
             {
-                return ReplayLoader.LoadFAFReplayFromMemory(replayStream);
+                IProgress<string> progress = new Progress<string>((s) => Console.WriteLine($" - {s} at {DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond}"));
+                return ReplayLoader.LoadFAFReplayFromMemory(replayStream, progress);
             }
         }
 
@@ -127,12 +130,7 @@ namespace FAForever.Replay.Sandbox
         internal static async Task Programmatic(ProgramArguments o)
         {
             Replay replay = await LoadReplay(o);
-
-            using (FileStream fs = new FileStream(Path.Combine(o.OutputDirectory, "test.xml"), FileMode.Create))
-            {
-                XmlSerializer serializer = new XmlSerializer(typeof(Replay));
-                serializer.Serialize(fs, replay);
-            }
+            Console.WriteLine(replay.Events.Count);
         }
     }
 }

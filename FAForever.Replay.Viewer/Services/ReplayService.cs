@@ -6,6 +6,7 @@ namespace FAForever.Replay.Viewer.Services
 {
     public class ReplayService : INotifyPropertyChanged
     {
+
         private Replay? _replay = null;
 
         public Replay? Replay
@@ -22,6 +23,7 @@ namespace FAForever.Replay.Viewer.Services
         }
 
         private ReadOnlyCollection<ReplayChatMessage>? _chatMessages = null;
+
         public ReadOnlyCollection<ReplayChatMessage>? ChatMessages
         {
             get => this._chatMessages; set
@@ -38,7 +40,8 @@ namespace FAForever.Replay.Viewer.Services
 
         public void LoadReplay(MemoryStream stream)
         {
-            this.Replay = ReplayLoader.LoadFAFReplayFromMemory(stream);
+            IProgress<string> progress = new Progress<string>();
+            this.Replay = ReplayLoader.LoadFAFReplayFromMemory(stream, progress);
             this.ChatMessages = ReplaySemantics.GetChatMessages(this.Replay).AsReadOnly();
         }
     }
