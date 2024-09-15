@@ -101,7 +101,7 @@ namespace FAForever.Replay
             return new CommandFormation.Formation(formationId, heading, x, y, z, scale);
         }
 
-        private static List<ReplayProcessedInput> LoadReplayInputs(ReplayBinaryReader reader, IProgress<string> progress)
+        private static ReplayBody LoadReplayInputs(ReplayBinaryReader reader, IProgress<string> progress)
         {
             progress.Report("Loading replay input");
 
@@ -310,7 +310,8 @@ namespace FAForever.Replay
                         throw new Exception("Unknown replay input type");
                 }
             }
-            return replayInputs;
+
+            return new ReplayBody(replayInputs.ToArray(), true);
         }
 
         private static ReplayScenarioMap LoadScenarioMap(LuaData.Table luaScenario)
@@ -416,11 +417,11 @@ namespace FAForever.Replay
         {
             progress.Report("Loading replay");
             ReplayHeader replayHeader = LoadReplayHeader(reader, progress);
-            List<ReplayProcessedInput> replayEvents = LoadReplayInputs(reader, progress);
+            ReplayBody replayEvents = LoadReplayInputs(reader, progress);
             progress.Report("Done!");
             return new Replay(
                 Header: replayHeader,
-                Events: replayEvents
+                Body: replayEvents
             );
         }
 

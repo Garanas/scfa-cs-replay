@@ -13,7 +13,7 @@ namespace FAForever.Replay
         {
             List<ReplayChatMessage> chatMessages = new List<ReplayChatMessage>();
 
-            foreach (ReplayProcessedInput replayInput in replay.Events)
+            foreach (ReplayProcessedInput replayInput in replay.Body.UserInput)
             {
                 switch (replayInput.instance)
                 {
@@ -54,7 +54,7 @@ namespace FAForever.Replay
 
             Dictionary<string, int> inputTypes = new Dictionary<string, int>();
 
-            foreach (ReplayProcessedInput replayInput in replay.Events)
+            foreach (ReplayProcessedInput replayInput in replay.Body.UserInput)
             {
                 string key = "Unknown";
                 switch (replayInput.instance)
