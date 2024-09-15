@@ -1,37 +1,27 @@
 ﻿
 namespace FAForever.Replay
 {
-    public interface ReplayInput
+    public abstract record ReplayInput(int Tick, int SourceId)
     {
         /// <summary>
         /// Created by the engine when a player leaves the game.
         /// </summary>
-        public record CommandSourceTerminated() : ReplayInput;
-
-        /// <summary>
-        /// Created by the engine to check the state of the game
-        /// </summary>
-        /// <param name="Hash1"></param>
-        /// <param name="Hash2"></param>
-        /// <param name="Hash3"></param>
-        /// <param name="Hash4"></param>
-        /// <param name="Tick"></param>
-        public record VerifyChecksum(int Hash1, int Hash2, int Hash3, int Hash4, int Tick) : ReplayInput;
+        public record CommandSourceTerminated(int Tick, int SourceId) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the User global `SessionRequestPause` to request a pause
         /// </summary>
-        public record RequestPause() : ReplayInput;
+        public record RequestPause(int Tick, int SourceId) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the User global `SessionResume` to request a resume
         /// </summary>
-        public record RequestResume() : ReplayInput;
+        public record RequestResume(int Tick, int SourceId) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the console command `wld_SingleStep` while the game is paused
         /// </summary>
-        public record SingleStep() : ReplayInput;
+        public record SingleStep(int Tick, int SourceId) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the console command `CreateUnit`
@@ -41,7 +31,7 @@ namespace FAForever.Replay
         /// <param name="X"></param>
         /// <param name="Z"></param>
         /// <param name="Heading"></param>
-        public record CreateUnit(int ArmyId, string BlueprintId, float X, float Z, float Heading) : ReplayInput;
+        public record CreateUnit(int Tick, int SourceId, int ArmyId, string BlueprintId, float X, float Z, float Heading) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the console command `CreateProp`
@@ -50,13 +40,13 @@ namespace FAForever.Replay
         /// <param name="X"></param>
         /// <param name="Z"></param>
         /// <param name="Heading"></param>
-        public record CreateProp(string BlueprintId, float X, float Z, float Heading) : ReplayInput;
+        public record CreateProp(int Tick, int SourceId, string BlueprintId, float X, float Z, float Heading) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the console commands `DestroySelectedUnits` and `DestroySelectedUnits`
         /// </summary>
         /// <param name="EntityId"></param>
-        public record DestroyEntity(int EntityId) : ReplayInput;
+        public record DestroyEntity(int Tick, int SourceId, int EntityId) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the console command `TeleportSelectedUnits`
@@ -65,7 +55,7 @@ namespace FAForever.Replay
         /// <param name="X"></param>
         /// <param name="Y"></param>
         /// <param name="Z"></param>
-        public record WarpEntity(int EntityId, float X, float Y, float Z) : ReplayInput;
+        public record WarpEntity(int Tick, int SourceId, int EntityId, float X, float Y, float Z) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the UserUnit function `ProcessInfo`.
@@ -77,58 +67,58 @@ namespace FAForever.Replay
         /// </summary>
         /// <param name="Arg1"></param>
         /// <param name="Arg2"></param>
-        public record ProcessInfoPair(int EntityCount, String Name, String Value) : ReplayInput;
+        public record ProcessInfoPair(int Tick, int SourceId, int EntityCount, String Name, String Value) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the engine when the user creates a command by clicking
         /// </summary>
         /// <param name="Units"></param>
         /// <param name="Data"></param>
-        public record IssueCommand(CommandUnits Units, CommandData Data) : ReplayInput;
+        public record IssueCommand(int Tick, int SourceId, CommandUnits Units, CommandData Data) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the User global function `IssueBlueprintCommand`
         /// </summary>
         /// <param name="Factories"></param>
         /// <param name="Data"></param>
-        public record IssueFactoryCommand(CommandUnits Factories, CommandData Data) : ReplayInput;
+        public record IssueFactoryCommand(int Tick, int SourceId, CommandUnits Factories, CommandData Data) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the User global function `IncreaseBuildCountInQueue`
         /// </summary>
         /// <param name="CommandId"></param>
         /// <param name="Delta"></param>
-        public record IncreaseCommandCount(int CommandId, int Delta) : ReplayInput;
+        public record IncreaseCommandCount(int Tick, int SourceId, int CommandId, int Delta) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the user global function `DecreaseBuildCountInQueue`
         /// </summary>
         /// <param name="CommandId"></param>
         /// <param name="Delta"></param>
-        public record DecreaseCommandCount(int CommandId, int Delta) : ReplayInput;
+        public record DecreaseCommandCount(int Tick, int SourceId, int CommandId, int Delta) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the engine when updating the target (entity or position) of a command
         /// </summary>
         /// <param name="CommandId"></param>
         /// <param name="Target"></param>
-        public record UpdateCommandTarget(int CommandId, CommandTarget Target) : ReplayInput;
+        public record UpdateCommandTarget(int Tick, int SourceId, int CommandId, CommandTarget Target) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the engine when transforming the command (move to patrol)
         /// </summary>
         /// <param name="CommandId"></param>
         /// <param name="Type"></param>
-        public record UpdateCommandType(int CommandId, CommandType Type) : ReplayInput;
+        public record UpdateCommandType(int Tick, int SourceId, int CommandId, CommandType Type) : ReplayInput(Tick, SourceId);
 
-        public record UpdateCommandLuaParameters(int CommandId, LuaData LuaParameters, float X, float Y, float Z) : ReplayInput;
+        public record UpdateCommandLuaParameters(int Tick, int SourceId, int CommandId, LuaData LuaParameters, float X, float Y, float Z) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the User global function `DeleteCommand`
         /// </summary>
         /// <param name="CommandId"></param>
         /// <param name="EntityId"></param>
-        public record RemoveCommandFromQueue(int CommandId, int EntityId) : ReplayInput;
+        public record RemoveCommandFromQueue(int Tick, int SourceId, int CommandId, int EntityId) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by debug related console commands such as `SallyShears`
@@ -139,13 +129,13 @@ namespace FAForever.Replay
         /// <param name="Z"></param>
         /// <param name="FocusArmy"></param>
         /// <param name="Units"></param>
-        public record DebugCommand(String Command, float X, float Y, float Z, byte FocusArmy, CommandUnits Units) : ReplayInput;
+        public record DebugCommand(int Tick, int SourceId, String Command, float X, float Y, float Z, byte FocusArmy, CommandUnits Units) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the User global function `ExecLuaInSim`
         /// </summary>
         /// <param name="LuaCode"></param>
-        public record ExecuteLuaInSim(String LuaCode) : ReplayInput;
+        public record ExecuteLuaInSim(int Tick, int SourceId, String LuaCode) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the user global function `SimCallback`
@@ -153,16 +143,16 @@ namespace FAForever.Replay
         /// <param name="func"></param>
         /// <param name="LuaParameters"></param>
         /// <param name="Units"></param>
-        public record SimCallback(String Endpoint, LuaData LuaParameters, CommandUnits Units) : ReplayInput;
+        public record SimCallback(int Tick, int SourceId, String Endpoint, LuaData LuaParameters, CommandUnits Units) : ReplayInput(Tick, SourceId);
 
         /// <summary>
         /// Created by the User global function `SessionEndGame`
         /// </summary>
-        public record EndGame() : ReplayInput;
+        public record EndGame(int Tick, int SourceId) : ReplayInput(Tick, SourceId);
 
-        public record Unknown(ReplayInputType Type, byte[] Data) : ReplayInput;
+        public record Unknown(int Tick, int SourceId, ReplayInputType Type, byte[] Data) : ReplayInput(Tick, SourceId);
 
-        public record Error(Exception Exception, byte[] Data) : ReplayInput;
+        public record Error(int Tick, int SourceId, Exception Exception, byte[] Data) : ReplayInput(Tick, SourceId);
     }
 
 }

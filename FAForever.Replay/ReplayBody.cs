@@ -1,5 +1,5 @@
 ﻿
 namespace FAForever.Replay
 {
-    public record ReplayBody(List<ReplayProcessedInput> UserInput, bool InSync);
+    public record ReplayBody(List<ReplayInput> UserInput, bool InSync);
 }

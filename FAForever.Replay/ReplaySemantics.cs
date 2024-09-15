@@ -13,9 +13,9 @@ namespace FAForever.Replay
         {
             List<ReplayChatMessage> chatMessages = new List<ReplayChatMessage>();
 
-            foreach (ReplayProcessedInput replayInput in replay.Body.UserInput)
+            foreach (ReplayInput replayInput in replay.Body.UserInput)
             {
-                switch (replayInput.instance)
+                switch (replayInput)
                 {
                     case ReplayInput.SimCallback callback when callback.Endpoint == "GiveResourcesToPlayer" && callback.LuaParameters is LuaData.Table:
 
@@ -54,10 +54,10 @@ namespace FAForever.Replay
 
             Dictionary<string, int> inputTypes = new Dictionary<string, int>();
 
-            foreach (ReplayProcessedInput replayInput in replay.Body.UserInput)
+            foreach (ReplayInput replayInput in replay.Body.UserInput)
             {
                 string key = "Unknown";
-                switch (replayInput.instance)
+                switch (replayInput)
                 {
                     case ReplayInput.CommandSourceTerminated:
                         key = "CommandSourceTerminated";
@@ -145,10 +145,6 @@ namespace FAForever.Replay
 
                     case ReplayInput.UpdateCommandType:
                         key = "UpdateCommandType";
-                        break;
-
-                    case ReplayInput.VerifyChecksum:
-                        key = "VerifyChecksum";
                         break;
 
                     case ReplayInput.WarpEntity:

@@ -118,7 +118,7 @@ namespace FAForever.Replay
             // constant resizing of the list is expensive. Therefore we estimate it,
             // the estimation is what happens to be reasonably correct.
             int estimatedNumberOfInputs = (int)(20 * Math.Sqrt(reader.BaseStream.Length - reader.BaseStream.Position));
-            List<ReplayProcessedInput> replayInputs = new List<ReplayProcessedInput>(estimatedNumberOfInputs);
+            List<ReplayInput> replayInputs = new List<ReplayInput>(estimatedNumberOfInputs);
             while (reader.BaseStream.Position < reader.BaseStream.Length)
             {
                 ReplayInputType type = (ReplayInputType)reader.ReadByte();
@@ -142,7 +142,7 @@ namespace FAForever.Replay
                         }
 
                     case ReplayInputType.CommandSourceTerminated:
-                        replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.CommandSourceTerminated()));
+                        replayInputs.Add(new ReplayInput.CommandSourceTerminated(currentTick, currentSource));
                         break;
 
                     case ReplayInputType.VerifyChecksum:
@@ -158,15 +158,15 @@ namespace FAForever.Replay
                         }
 
                     case ReplayInputType.RequestPause:
-                        replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.RequestPause()));
+                        replayInputs.Add((new ReplayInput.RequestPause(currentTick, currentSource)));
                         break;
 
                     case ReplayInputType.RequestResume:
-                        replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.RequestResume()));
+                        replayInputs.Add((new ReplayInput.RequestResume(currentTick, currentSource)));
                         break;
 
                     case ReplayInputType.SingleStep:
-                        replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.SingleStep()));
+                        replayInputs.Add((new ReplayInput.SingleStep(currentTick, currentSource)));
                         break;
 
                     case ReplayInputType.CreateUnit:
@@ -176,7 +176,7 @@ namespace FAForever.Replay
                             float x = reader.ReadSingle();
                             float z = reader.ReadSingle();
                             float heading = reader.ReadSingle();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.CreateUnit(armyId, blueprintId, x, z, heading)));
+                            replayInputs.Add((new ReplayInput.CreateUnit(currentTick, currentSource, armyId, blueprintId, x, z, heading)));
                             break;
                         }
 
@@ -186,14 +186,14 @@ namespace FAForever.Replay
                             float x = reader.ReadSingle();
                             float z = reader.ReadSingle();
                             float heading = reader.ReadSingle();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.CreateProp(blueprintId, x, z, heading)));
+                            replayInputs.Add((new ReplayInput.CreateProp(currentTick, currentSource, blueprintId, x, z, heading)));
                             break;
                         }
 
                     case ReplayInputType.DestroyEntity:
                         {
                             int entityId = reader.ReadInt32();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.DestroyEntity(entityId)));
+                            replayInputs.Add((new ReplayInput.DestroyEntity(currentTick, currentSource, entityId)));
                             break;
                         }
 
@@ -203,7 +203,7 @@ namespace FAForever.Replay
                             float x = reader.ReadSingle();
                             float y = reader.ReadSingle();
                             float z = reader.ReadSingle();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.WarpEntity(entityId, x, y, z)));
+                            replayInputs.Add((new ReplayInput.WarpEntity(currentTick, currentSource, entityId, x, y, z)));
                             break;
                         }
 
@@ -212,7 +212,7 @@ namespace FAForever.Replay
                             int entityId = reader.ReadInt32();
                             string name = reader.ReadNullTerminatedString();
                             string value = reader.ReadNullTerminatedString();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.ProcessInfoPair(entityId, name, value)));
+                            replayInputs.Add((new ReplayInput.ProcessInfoPair(currentTick, currentSource, entityId, name, value)));
                             break;
                         }
 
@@ -220,7 +220,7 @@ namespace FAForever.Replay
                         {
                             CommandUnits units = LoadCommandUnits(reader);
                             CommandData data = LoadCommandData(reader);
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.IssueCommand(units, data)));
+                            replayInputs.Add((new ReplayInput.IssueCommand(currentTick, currentSource, units, data)));
                             break;
                         }
 
@@ -228,7 +228,7 @@ namespace FAForever.Replay
                         {
                             CommandUnits factories = LoadCommandUnits(reader);
                             CommandData data = LoadCommandData(reader);
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.IssueFactoryCommand(factories, data)));
+                            replayInputs.Add((new ReplayInput.IssueFactoryCommand(currentTick, currentSource, factories, data)));
                             break;
                         }
 
@@ -236,7 +236,7 @@ namespace FAForever.Replay
                         {
                             int commandId = reader.ReadInt32();
                             int delta = reader.ReadInt32();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.IncreaseCommandCount(commandId, delta)));
+                            replayInputs.Add((new ReplayInput.IncreaseCommandCount(currentTick, currentSource, commandId, delta)));
                             break;
                         }
 
@@ -244,7 +244,7 @@ namespace FAForever.Replay
                         {
                             int commandId = reader.ReadInt32();
                             int delta = reader.ReadInt32();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.DecreaseCommandCount(commandId, delta)));
+                            replayInputs.Add((new ReplayInput.DecreaseCommandCount(currentTick, currentSource, commandId, delta)));
                             break;
                         }
 
@@ -252,7 +252,7 @@ namespace FAForever.Replay
                         {
                             int commandId = reader.ReadInt32();
                             CommandTarget target = LoadCommandTarget(reader);
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.UpdateCommandTarget(commandId, target)));
+                            replayInputs.Add((new ReplayInput.UpdateCommandTarget(currentTick, currentSource, commandId, target)));
                             break;
                         }
 
@@ -260,7 +260,7 @@ namespace FAForever.Replay
                         {
                             int commandId = reader.ReadInt32();
                             CommandType commandType = (CommandType)reader.ReadInt32();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.UpdateCommandType(commandId, commandType)));
+                            replayInputs.Add((new ReplayInput.UpdateCommandType(currentTick, currentSource, commandId, commandType)));
                             break;
                         }
 
@@ -271,7 +271,7 @@ namespace FAForever.Replay
                             float x = reader.ReadSingle();
                             float y = reader.ReadSingle();
                             float z = reader.ReadSingle();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.UpdateCommandLuaParameters(commandId, luaParameters, x, y, z)));
+                            replayInputs.Add((new ReplayInput.UpdateCommandLuaParameters(currentTick, currentSource, commandId, luaParameters, x, y, z)));
                             break;
 
                         }
@@ -280,7 +280,7 @@ namespace FAForever.Replay
                         {
                             int commandId = reader.ReadInt32();
                             int entityId = reader.ReadInt32();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.RemoveCommandFromQueue(commandId, entityId)));
+                            replayInputs.Add((new ReplayInput.RemoveCommandFromQueue(currentTick, currentSource, commandId, entityId)));
                             break;
                         }
 
@@ -292,14 +292,14 @@ namespace FAForever.Replay
                             float z = reader.ReadSingle();
                             byte focusArmy = reader.ReadByte();
                             CommandUnits debugUnits = LoadCommandUnits(reader);
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.DebugCommand(command, x, y, z, focusArmy, debugUnits)));
+                            replayInputs.Add((new ReplayInput.DebugCommand(currentTick, currentSource, command, x, y, z, focusArmy, debugUnits)));
                             break;
                         }
 
                     case ReplayInputType.ExecuteLuaInSim:
                         {
                             string luaCode = reader.ReadNullTerminatedString();
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.ExecuteLuaInSim(luaCode)));
+                            replayInputs.Add((new ReplayInput.ExecuteLuaInSim(currentTick, currentSource, luaCode)));
                             break;
                         }
 
@@ -308,12 +308,12 @@ namespace FAForever.Replay
                             string endpoint = reader.ReadNullTerminatedString();
                             LuaData luaParameters = LuaDataLoader.ReadLuaData(reader);
                             CommandUnits units = LoadCommandUnits(reader);
-                            replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.SimCallback(endpoint, luaParameters, units)));
+                            replayInputs.Add((new ReplayInput.SimCallback(currentTick, currentSource, endpoint, luaParameters, units)));
                             break;
                         }
 
                     case ReplayInputType.EndGame:
-                        replayInputs.Add(new ReplayProcessedInput(currentTick, currentSource, new ReplayInput.EndGame()));
+                        replayInputs.Add((new ReplayInput.EndGame(currentTick, currentSource)));
                         break;
 
                     default:
