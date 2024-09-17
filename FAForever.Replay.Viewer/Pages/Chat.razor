@@ -2,23 +2,27 @@
 @inject ReplayService replayService
 @inherits ReactiveComponentBase
 
-
 <PageTitle>Chat messages</PageTitle>
+<MudContainer Fixed="true">
+    <MudText Typo="Typo.h2">Chat history</MudText>
 
-<h1>Chat messages</h1>
-
-@if (Observed(() => replayService.ChatMessages) != null)
-{
-
-    @foreach (var chatMessage in replayService.ChatMessages)
+    @if (Observed(() => replayService.ChatMessages) != null)
     {
-        <div class="chat-message">
-            <span class="chat-message-time">@chatMessage.Timestamp</span>
-            <span class="chat-message-player">@chatMessage.Sender</span>
-            <span class="chat-message-message">@chatMessage.Message</span>
-        </div>
+        <MudTable T="ReplayChatMessage" Items="@replayService.ChatMessages" Hover="true" Breakpoint="Breakpoint.Sm"
+            FixedHeader="true">
+            <HeaderContent>
+                <MudTh>Timestamp</MudTh>
+                <MudTh>User</MudTh>
+                <MudTh>Message</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Timestamp">@context.Timestamp</MudTd>
+                <MudTd DataLabel="User">@context.Sender</MudTd>
+                <MudTd DataLabel="Message">@context.Message</MudTd>
+            </RowTemplate>
+        </MudTable>
     }
-}
+</MudContainer>
 
 @code {
 
