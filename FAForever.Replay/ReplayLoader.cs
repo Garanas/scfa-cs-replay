@@ -51,13 +51,12 @@ namespace FAForever.Replay
         private static CommandUnits LoadCommandUnits(ReplayBinaryReader reader)
         {
             int numberOfEntities = reader.ReadInt32();
-            int[] entityIds = new int[numberOfEntities];
-            for (int i = 0; i < numberOfEntities; i++)
-            {
-                entityIds[i] = reader.ReadInt32();
-            }
 
-            return new CommandUnits(entityIds);
+            // do not read the entities into memory, instead we skip them. There is no way 
+            // for us to know what unit is behind an entity id. The only relevant information is the count.
+            reader.BaseStream.Position += 4 * numberOfEntities;
+
+            return new CommandUnits(numberOfEntities);
         }
 
         private static CommandTarget LoadCommandTarget(ReplayBinaryReader reader)
