@@ -2,23 +2,11 @@
 @inject ReplayService replayService
 @inherits ReactiveComponentBase
 
+<PageTitle>Armies</PageTitle>
 
-<PageTitle>Chat messages</PageTitle>
-
-<h1>Chat messages</h1>
-
-@if (Observed(() => replayService.ChatMessages) != null)
-{
-
-    @foreach (var chatMessage in replayService.ChatMessages)
-    {
-        <div class="chat-message">
-            <span class="chat-message-time">@chatMessage.Timestamp</span>
-            <span class="chat-message-player">@chatMessage.Sender</span>
-            <span class="chat-message-message">@chatMessage.Message</span>
-        </div>
-    }
-}
+<MudContainer Fixed="true">
+    <MudText Typo="Typo.h2">Armies</MudText>
+</MudContainer>
 
 @code {
 
