@@ -21,6 +21,10 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      # These tools enable tree shaking
+      - name: Install tools
+        run: dotnet workload install wasm-tools
+
       # https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-restore
       - name: Restore dependencies
         run: dotnet restore
