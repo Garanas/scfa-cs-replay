@@ -46,6 +46,17 @@ public class ReplayLoaderTest
     }
 
     [TestMethod]
+    [DataRow("assets/scfa/balthazar-01.SCFAReplay", 6290)]
+    [DataRow("assets/scfa/balthazar-02.SCFAReplay", 8377)]
+    [DataRow("assets/scfa/balthazar-03.SCFAReplay", 12077)]
+    public void SCFAUserInputCountTest(string file, int expectedCount)
+    {
+        IProgress<string> progress = new Progress<string>();
+        Replay replay = ReplayLoader.LoadSCFAReplayFromDisk(file, progress);
+        Assert.AreEqual(expectedCount, replay.Body.UserInput.Count);
+    }
+
+    [TestMethod]
     [DataRow("assets/faforever/TestCommands01.fafreplay", 106)]
     [DataRow("assets/faforever/gzip/22451957.fafreplay", 0)]
     [DataRow("assets/faforever/gzip/22453511.fafreplay", 3)]
@@ -63,8 +74,8 @@ public class ReplayLoaderTest
     {
         IProgress<string> progress = new Progress<string>();
         Replay replay = ReplayLoader.LoadFAFReplayFromDisk(file, progress);
-        List<ReplayChatMessage> chatMessages = ReplaySemantics.GetChatMessages(replay);
-        //Assert.AreEqual(expectedCount, chatMessages.Count);
+
+        // TODO
     }
 
     [TestMethod]
@@ -73,7 +84,7 @@ public class ReplayLoaderTest
     {
         IProgress<string> progress = new Progress<string>();
         Replay replay = ReplayLoader.LoadSCFAReplayFromDisk(file, progress);
-        List<ReplayChatMessage> chatMessages = ReplaySemantics.GetChatMessages(replay);
-        //Assert.AreEqual(expectedCount, chatMessages.Count);
+
+        // TODO
     }
 }
