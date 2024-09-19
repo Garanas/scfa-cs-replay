@@ -8,7 +8,8 @@ namespace FAForever.Replay.Benchmark
         static void Main(string[] args)
         {
             var config = ManualConfig.Create(DefaultConfig.Instance);
-            BenchmarkRunner.Run<ReplayBenchmark>(config);
+            BenchmarkRunner.Run<FAForeverReplayBenchmark>(config);
+            BenchmarkRunner.Run<SCFAReplayBenchmark>(config);
         }
     }
 }
