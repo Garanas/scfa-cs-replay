@@ -38,7 +38,14 @@ namespace FAForever.Replay.Viewer.Services
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public void LoadReplay(MemoryStream stream)
+        public void LoadSCFAReplay(MemoryStream stream)
+        {
+            IProgress<string> progress = new Progress<string>();
+            this.Replay = ReplayLoader.LoadSCFAReplayFromStream(stream, progress);
+            this.ChatMessages = ReplaySemantics.GetChatMessages(this.Replay).AsReadOnly();
+        }
+
+        public void LoadFAForeverReplay(MemoryStream stream)
         {
             IProgress<string> progress = new Progress<string>();
             this.Replay = ReplayLoader.LoadFAFReplayFromMemory(stream, progress);

@@ -34,10 +34,10 @@
     <None Update="assets\faforever\TestCommands01.fafreplay">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="assets\scfa\230613-0332_Mellow_Shallows.SCFAReplay">
+    <None Update="assets\scfa\laird-binary-01.SCFAReplay">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="assets\scfa\230810-1035_The_Great_2-0.SCFAReplay">
+    <None Update="assets\scfa\laird-binary-02.SCFAReplay">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
