@@ -8,18 +8,17 @@
 
     @if (Observed(() => replayService.ChatMessages) != null)
     {
-        <MudTable T="ReplayChatMessage" Items="@replayService.ChatMessages" Hover="true" Breakpoint="Breakpoint.Sm"
-            FixedHeader="true">
+        <MudTable T="ReplayChatMessage" Items="@replayService.ChatMessages" Hover="true" Breakpoint="Breakpoint.Sm" FixedHeader="true">
             <HeaderContent>
                 <MudTh>Timestamp</MudTh>
                 <MudTh>User</MudTh>
                 <MudTh>Message</MudTh>
             </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Timestamp">@context.Timestamp</MudTd>
-                <MudTd DataLabel="User">@context.Sender</MudTd>
-                <MudTd DataLabel="Message">@context.Message</MudTd>
-            </RowTemplate>
+                <RowTemplate>
+                    <MudTd DataLabel="Timestamp"><a href="/chat#@context.Timestamp">@context.Timestamp</a></MudTd>
+                    <MudTd DataLabel="User">@context.Sender</MudTd>
+                    <MudTd DataLabel="Message"> <div id="@context.Timestamp"> @context.Message </div></MudTd>
+                </RowTemplate>
         </MudTable>
     }
 </MudContainer>

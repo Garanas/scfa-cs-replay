@@ -1,0 +1,15 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Fixed="false">
+        Replay viewer
+        <MudSpacer />
+        <MudIcon Icon="@Icons.Custom.Brands.GitHub" Title="GitHub" />
+    </MudAppBar>
+        @Body
+</MudLayout>
