@@ -1,0 +1,62 @@
+@inject ReplayService ReplayService;
+@inject NavigationManager NavigationManager
+
+<MudDialog>
+    <TitleContent>
+        Load a replay
+    </TitleContent>
+    <DialogContent>
+        <MudText>Some content</MudText>
+        <MudText>@Status</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public ReplayType Type { get; set; }
+
+    [Parameter]
+    public MemoryStream Stream { get; set; }
+
+    public string Status {get;set;} = String.Empty;
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+
+    private void Cancel() => MudDialog.Cancel();
+
+    protected override async Task OnAfterRenderAsync (bool firstRender) {
+        if (!firstRender){
+            return;
+        }
+
+        Console.WriteLine("OnAfterRenderAsync");
+
+
+
+        Progress<string> progress = new Progress<string>((status) => this.Status = status);
+
+        switch(Type) {
+            case ReplayType.FAForever:
+                ReplayService.LoadFAForeverReplay(Stream, progress);
+                break;
+
+            case ReplayType.SCFA:
+                ReplayService.LoadSCFAReplay(Stream, progress);
+                break;
+
+            default:
+                break;
+        }
+
+        await Task.Delay(2000);
+
+        NavigationManager.NavigateTo("/replay/chat");
+    }
+}

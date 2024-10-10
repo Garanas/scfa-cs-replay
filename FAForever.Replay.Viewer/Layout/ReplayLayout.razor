@@ -1,8 +1,13 @@
 ﻿@inherits LayoutComponentBase
 
+@* Required *@
 <MudThemeProvider />
 <MudPopoverProvider />
+
+@* Needed for dialogs *@
 <MudDialogProvider />
+
+@* Needed for snackbars *@
 <MudSnackbarProvider />
 
 <MudLayout>
@@ -13,7 +18,7 @@
         <MudIcon Icon="@Icons.Custom.Brands.GitHub" Title="GitHub" />
     </MudAppBar>
     <MudDrawer @bind-Open="@_drawerOpen">
-        <DefaultNavMenu />
+        <ReplayNavigation />
     </MudDrawer>
     <MudMainContent>
         @Body

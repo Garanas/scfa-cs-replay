@@ -46,7 +46,7 @@
 
             var response = await HttpClient.GetByteArrayAsync($"https://replay.faforever.com/{url}");
             MemoryStream stream = new MemoryStream();
-            replayService.LoadFAForeverReplay(stream);
+            //replayService.LoadFAForeverReplay(stream);
             return true;
         }
         catch (Exception ex)

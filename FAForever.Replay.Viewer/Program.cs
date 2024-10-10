@@ -6,6 +6,7 @@ using FAForever.Replay.Viewer.Services;
 using MudBlazor.Services;
 
 using Phork.Blazor;
+using MudBlazor;
 
 namespace FAForever.Replay.Viewer
 {
@@ -18,12 +19,15 @@ namespace FAForever.Replay.Viewer
             builder.RootComponents.Add<App>("#app");
             builder.RootComponents.Add<HeadOutlet>("head::after");
 
+
+
             builder.Services.AddScoped(sp => new HttpClient {   });
             builder.Services.AddSingleton<ReplayService>();
+            
             builder.Services.AddPhorkBlazorReactivity();
-
-
             builder.Services.AddMudServices();
+
+
             var app = builder.Build();
 
             await app.RunAsync();
