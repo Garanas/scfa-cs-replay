@@ -1,0 +1,20 @@
+@inherits LayoutComponentBase
+
+@* Required *@
+<MudThemeProvider />
+<MudPopoverProvider />
+
+@* Needed for dialogs *@
+<MudDialogProvider />
+
+@* Needed for snackbars *@
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Fixed="false">
+        Replay viewer
+        <MudSpacer />
+        <MudIcon Icon="@Icons.Custom.Brands.GitHub" Title="GitHub" />
+    </MudAppBar>
+        @Body
+</MudLayout>

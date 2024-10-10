@@ -54,12 +54,12 @@ namespace FAForever.Replay.Sandbox
             {
                 if (isFAForeverReplay)
                 {
-                    IProgress<string> progress = new Progress<string>((s) => Console.WriteLine($" - {s} at {DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond}"));
+                    IProgress<ReplayLoadProgression> progress = new Progress<ReplayLoadProgression>((s) => Console.WriteLine($" - {s} at {DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond}"));
                     return ReplayLoader.LoadFAFReplayFromMemory(replayStream, progress);
                 }
                 else
                 {
-                    IProgress<string> progress = new Progress<string>((s) => Console.WriteLine($" - {s} at {DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond}"));
+                    IProgress<ReplayLoadProgression> progress = new Progress<ReplayLoadProgression>((s) => Console.WriteLine($" - {s} at {DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond}"));
                     return ReplayLoader.LoadSCFAReplayFromStream(replayStream, progress);
                 }
             }
@@ -77,7 +77,7 @@ namespace FAForever.Replay.Sandbox
             byte[] content = await response.Content.ReadAsByteArrayAsync();
             using MemoryStream replayStream = new MemoryStream(content);
             {
-                IProgress<string> progress = new Progress<string>((s) => Console.WriteLine($" - {s} at {DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond}"));
+                IProgress<ReplayLoadProgression> progress = new Progress<ReplayLoadProgression>((s) => Console.WriteLine($" - {s} at {DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond}"));
                 return ReplayLoader.LoadFAFReplayFromMemory(replayStream, progress);
             }
         }

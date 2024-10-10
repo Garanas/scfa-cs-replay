@@ -1,9 +1,14 @@
 ﻿
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using FAForever.Replay.Viewer.Features;
+using MudBlazor;
 
 namespace FAForever.Replay.Viewer.Services
 {
+
+    public enum ReplayType { FAForever, SCFA }
+
     public class ReplayService : INotifyPropertyChanged
     {
 
@@ -38,16 +43,15 @@ namespace FAForever.Replay.Viewer.Services
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public void LoadSCFAReplay(MemoryStream stream)
+        public void LoadSCFAReplay(MemoryStream stream, IProgress<ReplayLoadProgression> progress)
         {
-            IProgress<string> progress = new Progress<string>();
             this.Replay = ReplayLoader.LoadSCFAReplayFromStream(stream, progress);
             this.ChatMessages = ReplaySemantics.GetChatMessages(this.Replay).AsReadOnly();
         }
 
-        public void LoadFAForeverReplay(MemoryStream stream)
+
+        public void LoadFAForeverReplay(MemoryStream stream, IProgress<ReplayLoadProgression> progress)
         {
-            IProgress<string> progress = new Progress<string>();
             this.Replay = ReplayLoader.LoadFAFReplayFromMemory(stream, progress);
             this.ChatMessages = ReplaySemantics.GetChatMessages(this.Replay).AsReadOnly();
         }

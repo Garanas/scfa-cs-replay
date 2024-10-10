@@ -5,13 +5,16 @@ using ZstdSharp;
 
 using System.Text.Json;
 using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
+using System.Diagnostics;
 
 namespace FAForever.Replay
 {
 
     public enum ReplayLoadStatus { NotStarted, Pending, Success, NotApplicable }
 
-    public record ReplayLoadProgression(ReplayLoadStatus Decompression, ReplayLoadStatus Metadata, ReplayLoadStatus Header, ReplayLoadStatus Scenario, ReplayLoadStatus Mods, ReplayLoadStatus Clients, ReplayLoadStatus Armies, ReplayLoadStatus Input);
+    public enum ReplayCompression { Gzip, Zstd }
+
+    public record ReplayLoadProgression(ReplayLoadStatus Decompression = ReplayLoadStatus.NotStarted, float DecompressionTime = 0, ReplayLoadStatus Metadata = ReplayLoadStatus.NotStarted, float MetadataTime = 0, ReplayLoadStatus Header = ReplayLoadStatus.NotStarted, float HeaderTime = 0, ReplayLoadStatus Body = ReplayLoadStatus.NotStarted, float BodyTime = 0);
 
     public static class ReplayLoader
     {
@@ -100,10 +103,8 @@ namespace FAForever.Replay
             return new CommandFormation.Formation(formationId, heading, x, y, z, scale);
         }
 
-        private static ReplayBody LoadReplayInputs(ReplayBinaryReader reader, IProgress<string> progress)
+        private static ReplayBody LoadReplayInputs(ReplayBinaryReader reader)
         {
-            progress.Report("Loading replay input");
-
             // state 
             int currentTick = 0;
             int currentSource = 0;
@@ -145,12 +146,15 @@ namespace FAForever.Replay
                         break;
 
                     case ReplayInputType.VerifyChecksum:
-                        { 
+                        {
                             long hash = reader.ReadInt64() ^ reader.ReadInt64();
                             int tick = reader.ReadInt32();
-                            if (hashTick != tick) {
+                            if (hashTick != tick)
+                            {
                                 hashValue = hash;
-                            } else {
+                            }
+                            else
+                            {
                                 inSync = hashValue == hash;
                             }
                             break;
@@ -333,13 +337,13 @@ namespace FAForever.Replay
             int? energyReclaim = reclaimTable != null && reclaimTable.TryGetNumberValue("2", out var luaEnergyReclaim) ? (int)luaEnergyReclaim!.Value : null;
 
             return new ReplayScenarioMap(
-                luaScenario.TryGetStringValue("name", out var name) ? name : null, 
-                luaScenario.TryGetStringValue("description", out var description) ? description : null, 
-                luaScenario.TryGetStringValue("map", out var scmap) ? scmap : null, 
-                luaScenario.TryGetStringValue("preview", out var preview) ? preview : null, 
+                luaScenario.TryGetStringValue("name", out var name) ? name : null,
+                luaScenario.TryGetStringValue("description", out var description) ? description : null,
+                luaScenario.TryGetStringValue("map", out var scmap) ? scmap : null,
+                luaScenario.TryGetStringValue("preview", out var preview) ? preview : null,
                 luaScenario.TryGetStringValue("repository", out var repository) ? repository : null,
                 luaScenario.TryGetNumberValue("map_version", out var version) ? (int)version! : null,
-                sizeX, sizeZ, massReclaim, energyReclaim); 
+                sizeX, sizeZ, massReclaim, energyReclaim);
         }
 
         private static ReplayScenarioOptions LoadScenarioOptions(LuaData.Table luaScenario)
@@ -358,9 +362,8 @@ namespace FAForever.Replay
             return new ReplayScenario(LoadScenarioOptions(scenario), LoadScenarioMap(scenario), scenario.TryGetStringValue("type", out var type) ? type! : null);
         }
 
-        private static ReplayHeader LoadReplayHeader(ReplayBinaryReader reader, IProgress<string> progress)
+        private static ReplayHeader LoadReplayHeader(ReplayBinaryReader reader)
         {
-            progress.Report("Loading replay header");
             string gameVersion = reader.ReadNullTerminatedString();
 
             // Always \r\n
@@ -421,21 +424,70 @@ namespace FAForever.Replay
             return new ReplayHeader(scenario, clients, mods.ToArray(), new LuaData[] { });
         }
 
-        private static Replay LoadReplay(ReplayBinaryReader reader, IProgress<string> progress)
+        private static Replay LoadReplay(ReplayBinaryReader reader, IProgress<ReplayLoadProgression> progress, ReplayLoadProgression? progression = null)
         {
-            progress.Report("Loading replay");
-            ReplayHeader replayHeader = LoadReplayHeader(reader, progress);
-            ReplayBody replayEvents = LoadReplayInputs(reader, progress);
-            progress.Report("Done!");
+            // setup
+            var stopwatch = new Stopwatch();
+            progression = progression ?? new ReplayLoadProgression();
+
+            progression = progression with { Header = ReplayLoadStatus.Pending };
+            stopwatch.Restart();
+            ReplayHeader replayHeader = LoadReplayHeader(reader);
+            stopwatch.Stop();
+            progression = progression with { Header = ReplayLoadStatus.Success, HeaderTime = stopwatch.ElapsedMilliseconds };
+            progress.Report(progression);
+
+            stopwatch.Restart();
+            progression = progression with { Body = ReplayLoadStatus.Pending };
+            ReplayBody replayEvents = LoadReplayInputs(reader);
+            stopwatch.Stop();
+            progression = progression with { Header = ReplayLoadStatus.Success, HeaderTime = stopwatch.ElapsedMilliseconds };
+            progress.Report(progression);
+
             return new Replay(
                 Header: replayHeader,
                 Body: replayEvents
             );
         }
 
-        public static Replay LoadFAFReplayFromMemory(Stream stream, IProgress<string> progress)
+        private static MemoryStream? DecompressReplay(Stream stream, ReplayCompression compression)
         {
-            progress.Report("Loading FAForever metadata");
+            MemoryStream replayStream = new MemoryStream();
+
+            switch (compression)
+            {
+                case ReplayCompression.Gzip:
+
+                    string base64 = new StreamReader(stream).ReadToEnd();
+                    byte[] bytes = Convert.FromBase64String(base64);
+                    byte[] skipped = new byte[bytes.Length - 4];
+                    Array.Copy(bytes, 4, skipped, 0, skipped.Length);
+                    using (MemoryStream memoryStream = new MemoryStream(skipped, false))
+                    {
+                        using (InflaterInputStream decompressor = new InflaterInputStream(memoryStream))
+                        {
+                            decompressor.CopyTo(replayStream);
+                            replayStream.Position = 0;
+                            return replayStream;
+                        }
+                    }
+
+                case ReplayCompression.Zstd:
+                    using (DecompressionStream decompressor = new DecompressionStream(stream))
+                    {
+                        decompressor.CopyTo(replayStream);
+                        replayStream.Position = 0;
+                        return replayStream;
+                    }
+
+                default:
+                    return null;
+            }
+        }
+
+        public static Replay LoadFAFReplayFromMemory(Stream stream, IProgress<ReplayLoadProgression> progress)
+        {
+            var stopwatch = new Stopwatch();
             BinaryReader reader = new BinaryReader(stream);
             StringBuilder json = new StringBuilder();
 
@@ -458,41 +510,31 @@ namespace FAForever.Replay
 
             // todo: parse meta data
 
-            using (MemoryStream replayStream = new MemoryStream())
+            ReplayLoadProgression? progression = new ReplayLoadProgression();
+
+
+            ReplayCompression replayCompression = ReplayCompression.Gzip;
+            if (dictionary.ContainsKey("compression") && dictionary["compression"] != null && dictionary["compression"].ToString() == "zstd")
             {
-                if (dictionary.ContainsKey("compression") && dictionary["compression"] != null && dictionary["compression"].ToString() == "zstd")
-                {
-                    progress.Report("Decompressing ZSTD stream");
-                    using (DecompressionStream decompressor = new DecompressionStream(stream))
-                    {
-                        decompressor.CopyTo(replayStream);
-                        replayStream.Position = 0;
-                        return LoadSCFAReplayFromStream(replayStream, progress);
-                    }
-                }
-                else
-                {
-                    progress.Report("Decompressing ZLIB stream");
-                    string base64 = new StreamReader(stream).ReadToEnd();
-                    byte[] bytes = Convert.FromBase64String(base64);
-                    byte[] skipped = new byte[bytes.Length - 4];
-                    Array.Copy(bytes, 4, skipped, 0, skipped.Length);
-                    using (MemoryStream memoryStream = new MemoryStream(skipped, false))
-                    {
-                        using (InflaterInputStream decompressor = new InflaterInputStream(memoryStream))
-                        {
-                            decompressor.CopyTo(replayStream);
-                            replayStream.Position = 0;
-                            return LoadSCFAReplayFromStream(replayStream, progress);
-                        }
-                    }
-                }
+                replayCompression = ReplayCompression.Zstd;
+            }
+
+            progression = progression with { Decompression = ReplayLoadStatus.Pending };
+            stopwatch.Restart();
+            MemoryStream decompressedStream = DecompressReplay(stream, replayCompression);
+            stopwatch.Stop();
+            progression = progression with { Decompression = ReplayLoadStatus.Success, DecompressionTime = stopwatch.ElapsedMilliseconds };
+            progress.Report(progression);
+
+            using (ReplayBinaryReader replayBinaryReader = new ReplayBinaryReader(decompressedStream))
+            {
+                return LoadReplay(replayBinaryReader, progress, progression);
             }
         }
 
-        public static Replay LoadSCFAReplayFromStream(Stream stream, IProgress<string> progress)
+        public static Replay LoadSCFAReplayFromStream(Stream stream, IProgress<ReplayLoadProgression> progress, ReplayLoadProgression? progression = null)
         {
-            progress.Report("Loading SCFA replay from stream");
+            progression = progression ?? new ReplayLoadProgression();
             using (ReplayBinaryReader reader = new ReplayBinaryReader(stream))
             {
                 return LoadReplay(reader, progress);
@@ -504,14 +546,12 @@ namespace FAForever.Replay
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static Replay LoadFAFReplayFromDisk(string path, IProgress<string> progress)
+        public static Replay LoadFAFReplayFromDisk(string path, IProgress<ReplayLoadProgression> progress)
         {
-            progress.Report("Loading FAForever replay from disk");
             using (FileStream stream = new FileStream(path, FileMode.Open))
             {
                 return LoadFAFReplayFromMemory(stream, progress);
             }
-
         }
 
         /// <summary>
@@ -519,9 +559,8 @@ namespace FAForever.Replay
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static Replay LoadSCFAReplayFromDisk(string path, IProgress<string> progress)
+        public static Replay LoadSCFAReplayFromDisk(string path, IProgress<ReplayLoadProgression> progress)
         {
-            progress.Report("Loading SCFA replay from disk");
             using (FileStream reader = new FileStream(path, FileMode.Open))
             {
                 return LoadSCFAReplayFromStream(reader, progress);
@@ -534,10 +573,8 @@ namespace FAForever.Replay
         /// <param name="path"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
-        public static Replay LoadReplayFromDisk(string path, IProgress<string> progress)
+        public static Replay LoadReplayFromDisk(string path, IProgress<ReplayLoadProgression> progress)
         {
-            progress.Report("Determining replay type");
-
             string extension = Path.GetExtension(path);
             switch (extension)
             {
