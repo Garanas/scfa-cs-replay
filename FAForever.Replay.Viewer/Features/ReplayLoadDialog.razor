@@ -12,7 +12,7 @@
             <MudListItem Icon="@Icons.Material.Filled.Info" Text="Scenario"
                 SecondaryText="@TranslateText(TimeScenario)" />
             <MudListItem Icon="@Icons.Material.Filled.Input" Text="User input"
-                SecondaryText="@TranslateText(TimeInput)" />
+                SecondaryText="@GetInputStatus()" />
         </MudList>
 
         <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
@@ -34,6 +34,7 @@
     private float? TimeCompression = null;
     private float? TimeScenario = null;
     private float? TimeInput = null;
+    private float? PercentageInput = null;
 
     private void Submit() => MudDialog.Close(DialogResult.Ok(true));
 
@@ -46,6 +47,18 @@
         }
 
         return $"Done ({time.GetValueOrDefault().ToString("0.00")}ms)";
+    }
+
+    private string GetInputStatus() {
+        if (TimeInput.HasValue) {
+            return $"{TimeInput.GetValueOrDefault():0.00}ms";
+        }
+
+        if (PercentageInput.HasValue) {
+            return $"{PercentageInput.GetValueOrDefault():0.00}%";
+        }
+
+        return "N/A";
     }
 
     protected override void OnInitialized()
@@ -73,12 +86,12 @@
                     stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.NotStarted)stage);
                     this.TimeMetadata = stopwatch.ElapsedMilliseconds;
                     this.StateHasChanged();
-                    await Task.Delay(1);
+                    await Task.Delay(10);
 
                     stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.WithMetadata)stage);
                     this.TimeCompression = stopwatch.ElapsedMilliseconds;
                     this.StateHasChanged();
-                    await Task.Delay(1);
+                    await Task.Delay(10);
                     break;
 
                 case ReplayType.SCFA:
@@ -96,8 +109,14 @@
 
             stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.WithScenario)stage);
 
-            while (stage is ReplayLoadingStage.AtInput)
-                stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.AtInput)stage);
+            while (stage is ReplayLoadingStage.AtInput inputStage) {
+                this.PercentageInput = (float)(inputStage.BodyInvariant.PercentageProcessed);
+                this.StateHasChanged();
+                await Task.Delay(1);
+
+                stage = ReplayLoader.ProcessReplayStage(inputStage);
+                await Task.Delay(1);
+            }
 
             this.TimeInput = stopwatch.ElapsedMilliseconds;
             this.StateHasChanged();

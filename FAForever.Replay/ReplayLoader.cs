@@ -107,6 +107,9 @@ namespace FAForever.Replay
             int hashTick = 0;
             long hashValue = 0;
 
+            // progress
+            long startingPointOfStream = reader.BaseStream.Position;
+
             List<ReplayInput> replayInputs;
             if (invariant is not null)
             {
@@ -116,6 +119,7 @@ namespace FAForever.Replay
                 hashTick = invariant.HashTick;
                 hashValue = invariant.HashValue;
                 replayInputs = invariant.Input;
+                startingPointOfStream = invariant.StartingPointOfStream;
             }
             else
             {
@@ -338,7 +342,9 @@ namespace FAForever.Replay
                     break;
                 }
             }
-            return new ReplayBodyInvariant(replayInputs, currentTick, currentSource, inSync, hashTick, hashValue, reader.BaseStream.Position == reader.BaseStream.Length);
+
+            int completionPercentage = (int)Math.Round(100 * ((float)reader.BaseStream.Position - startingPointOfStream) / (reader.BaseStream.Length - startingPointOfStream));
+            return new ReplayBodyInvariant(replayInputs, currentTick, currentSource, inSync, hashTick, hashValue, reader.BaseStream.Position == reader.BaseStream.Length, startingPointOfStream, completionPercentage);
         }
 
         private static ReplayScenarioMap LoadScenarioMap(LuaData.Table luaScenario)
@@ -504,7 +510,9 @@ namespace FAForever.Replay
         }
 
         /// <summary>
-        /// Processes the metadata of a replay from FAForever and returns the intermediate results.
+        /// Processes the metadata of a replay from FAForever and returns the intermediate results. 
+        /// 
+        /// This allows the process to exit periodically, make room for other code to run, and then continue where it left off. This is useful for single threaded environments such as WebAssembly that is used by Blazor.
         /// </summary>
         /// <param name="stage"></param>
         /// <returns></returns>
@@ -524,6 +532,8 @@ namespace FAForever.Replay
 
         /// <summary>
         /// Decompresses the replay and returns the intermediate results.
+        /// 
+        /// This allows the process to exit periodically, make room for other code to run, and then continue where it left off. This is useful for single threaded environments such as WebAssembly that is used by Blazor.
         /// </summary>
         /// <param name="stage"></param>
         /// <returns></returns>
@@ -549,6 +559,8 @@ namespace FAForever.Replay
 
         /// <summary>
         /// Processes the scenario of a replay and returns the intermediate results.
+        /// 
+        /// This allows the process to exit periodically, make room for other code to run, and then continue where it left off. This is useful for single threaded environments such as WebAssembly that is used by Blazor.
         /// </summary>
         /// <param name="stage"></param>
         /// <returns></returns>
@@ -561,6 +573,8 @@ namespace FAForever.Replay
 
         /// <summary>
         /// Processes a portion of the input of a replay and returns the intermediate results.
+        /// 
+        /// This allows the process to exit periodically, make room for other code to run, and then continue where it left off. This is useful for single threaded environments such as WebAssembly that is used by Blazor.
         /// </summary>
         /// <param name="stage"></param>
         /// <returns></returns>
@@ -572,6 +586,8 @@ namespace FAForever.Replay
 
         /// <summary>
         /// Processes a portion of the input of a replay and returns the intermediate results.
+        /// 
+        /// This allows the process to exit periodically, make room for other code to run, and then continue where it left off. This is useful for single threaded environments such as WebAssembly that is used by Blazor.
         /// </summary>
         /// <param name="stage"></param>
         /// <returns></returns>
