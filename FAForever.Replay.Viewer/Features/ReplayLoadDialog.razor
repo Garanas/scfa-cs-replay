@@ -7,12 +7,15 @@
     </TitleContent>
     <DialogContent>
         <MudList T="string">
-            <MudListItem Icon="@Icons.Material.Filled.Compress" Text="Compression" SecondaryText="@TranslateText(Status.Decompression, Status.DecompressionTime)" />
-            <MudListItem Icon="@Icons.Material.Filled.Info" Text="Scenario" SecondaryText="@TranslateText(Status.Header, Status.HeaderTime)" />
-            <MudListItem Icon="@Icons.Material.Filled.Input" Text="User input" SecondaryText="@TranslateText(Status.Body, Status.BodyTime)" />
+            <MudListItem Icon="@Icons.Material.Filled.Compress" Text="Compression"
+                SecondaryText="@TranslateText(TimeCompression)" />
+            <MudListItem Icon="@Icons.Material.Filled.Info" Text="Scenario"
+                SecondaryText="@TranslateText(TimeScenario)" />
+            <MudListItem Icon="@Icons.Material.Filled.Input" Text="User input"
+                SecondaryText="@TranslateText(TimeInput)" />
         </MudList>
 
-        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7"/>
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
     </DialogContent>
 </MudDialog>
 
@@ -27,50 +30,82 @@
     [Parameter]
     public MemoryStream Stream { get; set; }
 
-    public ReplayLoadProgression Status {get;set;} = new ReplayLoadProgression();
+    private float? TimeMetadata = null;
+    private float? TimeCompression = null;
+    private float? TimeScenario = null;
+    private float? TimeInput = null;
 
     private void Submit() => MudDialog.Close(DialogResult.Ok(true));
 
     private void Cancel() => MudDialog.Cancel();
 
-    private string TranslateText(ReplayLoadStatus status, float time) {
-        switch (status) {
-            case ReplayLoadStatus.Success:
-                return $"Done ({time.ToString("0.00")}ms)";
-            case ReplayLoadStatus.NotStarted:
-                return $"Not started";
-            case ReplayLoadStatus.Pending:
-                return $"Pending...";
-            case ReplayLoadStatus.NotApplicable:
-                return $"(Not applicable)";
-            default:
-                return "";
+    private string TranslateText(float? time)
+    {
+        if (time is null) {
+            return "";
         }
+
+        return $"Done ({time.GetValueOrDefault().ToString("0.00")}ms)";
     }
 
-    protected override void OnInitialized() {
+    protected override void OnInitialized()
+    {
         this.MudDialog.SetOptions(new DialogOptions() { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Medium });
     }
 
-    protected override async Task OnAfterRenderAsync (bool firstRender) {
-        if (!firstRender){
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
             return;
         }
 
-        Progress<ReplayLoadProgression> progress = new Progress<ReplayLoadProgression>((status) => { this.Status = status; this.StateHasChanged(); Console.WriteLine(DateTime.Now);});
+        await Task.Run(async () =>
+        {
+            Stopwatch stopwatch = new Stopwatch();
 
-        await Task.Run(() => {
-            switch(Type) {
+            stopwatch.Start();
+            ReplayLoadingStage stage = new ReplayLoadingStage.NotStarted(this.Stream);
+
+            switch (Type)
+            {
                 case ReplayType.FAForever:
-                    ReplayService.LoadFAForeverReplay(Stream, progress);
+                    stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.NotStarted)stage);
+                    this.TimeMetadata = stopwatch.ElapsedMilliseconds;
+                    this.StateHasChanged();
+                    await Task.Delay(1);
+
+                    stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.WithMetadata)stage);
+                    this.TimeCompression = stopwatch.ElapsedMilliseconds;
+                    this.StateHasChanged();
+                    await Task.Delay(1);
                     break;
 
                 case ReplayType.SCFA:
-                    ReplayService.LoadSCFAReplay(Stream, progress);
+                    stage = new ReplayLoadingStage.Decompressed(Stream, null);
                     break;
 
                 default:
                     break;
+            }
+
+            stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.Decompressed)stage);
+            this.TimeScenario = stopwatch.ElapsedMilliseconds;
+            this.StateHasChanged();
+            await Task.Delay(1);
+
+            stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.WithScenario)stage);
+
+            while (stage is ReplayLoadingStage.AtInput)
+                stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.AtInput)stage);
+
+            this.TimeInput = stopwatch.ElapsedMilliseconds;
+            this.StateHasChanged();
+            await Task.Delay(1);
+
+            if (stage is ReplayLoadingStage.Complete completed)
+            {
+                Replay replay = new Replay(completed.Header, completed.Body);
             }
         });
 
