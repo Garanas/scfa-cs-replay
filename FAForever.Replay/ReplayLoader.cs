@@ -11,6 +11,9 @@ namespace FAForever.Replay
 
     public static class ReplayLoader
     {
+        /// <summary>
+        /// Retrieves a command from the stream.
+        /// </summary>
         private static CommandData LoadCommandData(ReplayBinaryReader reader)
         {
             int commandId = reader.ReadInt32();
@@ -44,6 +47,9 @@ namespace FAForever.Replay
             return new CommandData(commandId, commandType, target, formation, blueprintId, luaData, addToQueue, arg1, arg2, arg3, arg4, arg5, arg6);
         }
 
+        /// <summary>
+        /// Retrieves the selection of a command from the stream.
+        /// </summary>
         private static CommandUnits LoadCommandUnits(ReplayBinaryReader reader)
         {
             int numberOfEntities = reader.ReadInt32();
@@ -55,6 +61,9 @@ namespace FAForever.Replay
             return new CommandUnits(numberOfEntities);
         }
 
+        /// <summary>
+        /// Retrieves the target of a command from the stream.
+        /// </summary>
         private static CommandTarget LoadCommandTarget(ReplayBinaryReader reader)
         {
             CommandTargetType eventCommandTargetType = (CommandTargetType)reader.ReadByte();
@@ -79,6 +88,9 @@ namespace FAForever.Replay
             }
         }
 
+        /// <summary>
+        /// Retrieves the formation of a command from the stream.
+        /// </summary>
         private static CommandFormation LoadCommandFormation(ReplayBinaryReader reader)
         {
             int formationId = reader.ReadInt32();
@@ -96,72 +108,60 @@ namespace FAForever.Replay
             return new CommandFormation.Formation(formationId, heading, x, y, z, scale);
         }
 
+        /// <summary>
+        /// Loads all the user input up to the threshold. If no threshold is defined then all input is loaded by default.
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <param name="invariant"></param>
+        /// <param name="inputToProcess"></param>
         private static ReplayBodyInvariant LoadReplayInputs(ReplayBinaryReader reader, ReplayBodyInvariant? invariant, int? inputToProcess)
         {
-            // state 
-            int currentTick = 0;
-            int currentSource = 0;
-
-            // hash to check whether game remained in sync
-            bool inSync = true;
-            int hashTick = 0;
-            long hashValue = 0;
-
-            // progress
-            long startingPointOfStream = reader.BaseStream.Position;
-
-            List<ReplayInput> replayInputs;
-            if (invariant is not null)
-            {
-                currentTick = invariant.Tick;
-                currentSource = invariant.Source;
-                inSync = invariant.InSync;
-                hashTick = invariant.HashTick;
-                hashValue = invariant.HashValue;
-                replayInputs = invariant.Input;
-                startingPointOfStream = invariant.StartingPointOfStream;
-            }
-            else
-            {
-                // there is no way to know how many inputs there are in advance but the 
-                // constant resizing of the list is expensive. Therefore we estimate it,
-                // the estimation is what happens to be reasonably correct.
-                int estimatedNumberOfInputs = (int)(20 * Math.Sqrt(reader.BaseStream.Length - reader.BaseStream.Position));
-                replayInputs = new List<ReplayInput>(estimatedNumberOfInputs);
-            }
+            // setup the locals based on the (optional) invariant
+            int estimatedNumberOfInputsRemaining = (int)(20 * Math.Sqrt(reader.BaseStream.Length - reader.BaseStream.Position));
+            var (input, tick, source, inSync, hashTick, hashValue, _, startingPointOfStream, _) = invariant ?? new ReplayBodyInvariant(
+                input: new List<ReplayInput>(estimatedNumberOfInputsRemaining),
+                tick: 0,
+                source: 0,
+                inSync: true,
+                hashTick: 0,
+                hashValue: 0,
+                endOfStream: false,
+                startingPointOfStream: reader.BaseStream.Position,
+                percentageProcessed: 0
+            );
 
             int inputProcessed = 0;
             while (reader.BaseStream.Position < reader.BaseStream.Length)
             {
                 ReplayInputType type = (ReplayInputType)reader.ReadByte();
-                // includes the type and this number of bytes, which is a bit confusing.
-                int numberOfBytes = reader.ReadInt16();
+                // includes the type and this number of bytes, which is a bit confusing. 
+                int numberOfBytes = reader.ReadInt16() - (1 + 2);
 
                 switch (type)
                 {
                     case ReplayInputType.Advance:
                         {
                             int ticksToAdvance = reader.ReadInt32();
-                            currentTick += ticksToAdvance;
+                            tick += ticksToAdvance;
                             break;
                         }
 
                     case ReplayInputType.SetCommandSource:
                         {
                             int sourceId = reader.ReadByte();
-                            currentSource = sourceId;
+                            source = sourceId;
                             break;
                         }
 
                     case ReplayInputType.CommandSourceTerminated:
-                        replayInputs.Add(new ReplayInput.CommandSourceTerminated(currentTick, currentSource));
+                        input.Add(new ReplayInput.CommandSourceTerminated(tick, source));
                         break;
 
                     case ReplayInputType.VerifyChecksum:
                         {
                             long hash = reader.ReadInt64() ^ reader.ReadInt64();
-                            int tick = reader.ReadInt32();
-                            if (hashTick != tick)
+                            int atTick = reader.ReadInt32();
+                            if (hashTick != atTick)
                             {
                                 hashValue = hash;
                             }
@@ -173,15 +173,15 @@ namespace FAForever.Replay
                         }
 
                     case ReplayInputType.RequestPause:
-                        replayInputs.Add((new ReplayInput.RequestPause(currentTick, currentSource)));
+                        input.Add(new ReplayInput.RequestPause(tick, source));
                         break;
 
                     case ReplayInputType.RequestResume:
-                        replayInputs.Add((new ReplayInput.RequestResume(currentTick, currentSource)));
+                        input.Add(new ReplayInput.RequestResume(tick, source));
                         break;
 
                     case ReplayInputType.SingleStep:
-                        replayInputs.Add((new ReplayInput.SingleStep(currentTick, currentSource)));
+                        input.Add(new ReplayInput.SingleStep(tick, source));
                         break;
 
                     case ReplayInputType.CreateUnit:
@@ -191,7 +191,7 @@ namespace FAForever.Replay
                             float x = reader.ReadSingle();
                             float z = reader.ReadSingle();
                             float heading = reader.ReadSingle();
-                            replayInputs.Add((new ReplayInput.CreateUnit(currentTick, currentSource, armyId, blueprintId, x, z, heading)));
+                            input.Add(new ReplayInput.CreateUnit(tick, source, armyId, blueprintId, x, z, heading));
                             break;
                         }
 
@@ -201,14 +201,14 @@ namespace FAForever.Replay
                             float x = reader.ReadSingle();
                             float z = reader.ReadSingle();
                             float heading = reader.ReadSingle();
-                            replayInputs.Add((new ReplayInput.CreateProp(currentTick, currentSource, blueprintId, x, z, heading)));
+                            input.Add(new ReplayInput.CreateProp(tick, source, blueprintId, x, z, heading));
                             break;
                         }
 
                     case ReplayInputType.DestroyEntity:
                         {
                             int entityId = reader.ReadInt32();
-                            replayInputs.Add((new ReplayInput.DestroyEntity(currentTick, currentSource, entityId)));
+                            input.Add(new ReplayInput.DestroyEntity(tick, source, entityId));
                             break;
                         }
 
@@ -218,7 +218,7 @@ namespace FAForever.Replay
                             float x = reader.ReadSingle();
                             float y = reader.ReadSingle();
                             float z = reader.ReadSingle();
-                            replayInputs.Add((new ReplayInput.WarpEntity(currentTick, currentSource, entityId, x, y, z)));
+                            input.Add(new ReplayInput.WarpEntity(tick, source, entityId, x, y, z));
                             break;
                         }
 
@@ -227,7 +227,7 @@ namespace FAForever.Replay
                             int entityId = reader.ReadInt32();
                             string name = reader.ReadNullTerminatedString();
                             string value = reader.ReadNullTerminatedString();
-                            replayInputs.Add((new ReplayInput.ProcessInfoPair(currentTick, currentSource, entityId, name, value)));
+                            input.Add(new ReplayInput.ProcessInfoPair(tick, source, entityId, name, value));
                             break;
                         }
 
@@ -235,7 +235,7 @@ namespace FAForever.Replay
                         {
                             CommandUnits units = LoadCommandUnits(reader);
                             CommandData data = LoadCommandData(reader);
-                            replayInputs.Add((new ReplayInput.IssueCommand(currentTick, currentSource, units, data)));
+                            input.Add(new ReplayInput.IssueCommand(tick, source, units, data));
                             break;
                         }
 
@@ -243,7 +243,7 @@ namespace FAForever.Replay
                         {
                             CommandUnits factories = LoadCommandUnits(reader);
                             CommandData data = LoadCommandData(reader);
-                            replayInputs.Add((new ReplayInput.IssueFactoryCommand(currentTick, currentSource, factories, data)));
+                            input.Add(new ReplayInput.IssueFactoryCommand(tick, source, factories, data));
                             break;
                         }
 
@@ -251,7 +251,7 @@ namespace FAForever.Replay
                         {
                             int commandId = reader.ReadInt32();
                             int delta = reader.ReadInt32();
-                            replayInputs.Add((new ReplayInput.IncreaseCommandCount(currentTick, currentSource, commandId, delta)));
+                            input.Add(new ReplayInput.IncreaseCommandCount(tick, source, commandId, delta));
                             break;
                         }
 
@@ -259,7 +259,7 @@ namespace FAForever.Replay
                         {
                             int commandId = reader.ReadInt32();
                             int delta = reader.ReadInt32();
-                            replayInputs.Add((new ReplayInput.DecreaseCommandCount(currentTick, currentSource, commandId, delta)));
+                            input.Add(new ReplayInput.DecreaseCommandCount(tick, source, commandId, delta));
                             break;
                         }
 
@@ -267,7 +267,7 @@ namespace FAForever.Replay
                         {
                             int commandId = reader.ReadInt32();
                             CommandTarget target = LoadCommandTarget(reader);
-                            replayInputs.Add((new ReplayInput.UpdateCommandTarget(currentTick, currentSource, commandId, target)));
+                            input.Add(new ReplayInput.UpdateCommandTarget(tick, source, commandId, target));
                             break;
                         }
 
@@ -275,7 +275,7 @@ namespace FAForever.Replay
                         {
                             int commandId = reader.ReadInt32();
                             CommandType commandType = (CommandType)reader.ReadInt32();
-                            replayInputs.Add((new ReplayInput.UpdateCommandType(currentTick, currentSource, commandId, commandType)));
+                            input.Add(new ReplayInput.UpdateCommandType(tick, source, commandId, commandType));
                             break;
                         }
 
@@ -286,7 +286,7 @@ namespace FAForever.Replay
                             float x = reader.ReadSingle();
                             float y = reader.ReadSingle();
                             float z = reader.ReadSingle();
-                            replayInputs.Add((new ReplayInput.UpdateCommandLuaParameters(currentTick, currentSource, commandId, luaParameters, x, y, z)));
+                            input.Add(new ReplayInput.UpdateCommandLuaParameters(tick, source, commandId, luaParameters, x, y, z));
                             break;
 
                         }
@@ -295,7 +295,7 @@ namespace FAForever.Replay
                         {
                             int commandId = reader.ReadInt32();
                             int entityId = reader.ReadInt32();
-                            replayInputs.Add((new ReplayInput.RemoveCommandFromQueue(currentTick, currentSource, commandId, entityId)));
+                            input.Add(new ReplayInput.RemoveCommandFromQueue(tick, source, commandId, entityId));
                             break;
                         }
 
@@ -307,14 +307,14 @@ namespace FAForever.Replay
                             float z = reader.ReadSingle();
                             byte focusArmy = reader.ReadByte();
                             CommandUnits debugUnits = LoadCommandUnits(reader);
-                            replayInputs.Add((new ReplayInput.DebugCommand(currentTick, currentSource, command, x, y, z, focusArmy, debugUnits)));
+                            input.Add(new ReplayInput.DebugCommand(tick, source, command, x, y, z, focusArmy, debugUnits));
                             break;
                         }
 
                     case ReplayInputType.ExecuteLuaInSim:
                         {
                             string luaCode = reader.ReadNullTerminatedString();
-                            replayInputs.Add((new ReplayInput.ExecuteLuaInSim(currentTick, currentSource, luaCode)));
+                            input.Add(new ReplayInput.ExecuteLuaInSim(tick, source, luaCode));
                             break;
                         }
 
@@ -323,12 +323,12 @@ namespace FAForever.Replay
                             string endpoint = reader.ReadNullTerminatedString();
                             LuaData luaParameters = LuaDataLoader.ReadLuaData(reader);
                             CommandUnits units = LoadCommandUnits(reader);
-                            replayInputs.Add((new ReplayInput.SimCallback(currentTick, currentSource, endpoint, luaParameters, units)));
+                            input.Add(new ReplayInput.SimCallback(tick, source, endpoint, luaParameters, units));
                             break;
                         }
 
                     case ReplayInputType.EndGame:
-                        replayInputs.Add((new ReplayInput.EndGame(currentTick, currentSource)));
+                        input.Add(new ReplayInput.EndGame(tick, source));
                         break;
 
                     default:
@@ -344,9 +344,16 @@ namespace FAForever.Replay
             }
 
             int completionPercentage = (int)Math.Round(100 * ((float)reader.BaseStream.Position - startingPointOfStream) / (reader.BaseStream.Length - startingPointOfStream));
-            return new ReplayBodyInvariant(replayInputs, currentTick, currentSource, inSync, hashTick, hashValue, reader.BaseStream.Position == reader.BaseStream.Length, startingPointOfStream, completionPercentage);
+            return new ReplayBodyInvariant(input, tick, source, inSync, hashTick, hashValue, reader.BaseStream.Position == reader.BaseStream.Length, startingPointOfStream, completionPercentage);
         }
 
+        /// <summary>
+        /// Loads in the scenario information from the replay.
+        /// 
+        /// In practice this is a copy of the information from the `_scenario.lua` file of the chosen map. Because of that the content is fairly reliable, but at the same time it can contain anything.
+        /// </summary>
+        /// <param name="luaScenario"></param>
+        /// <returns></returns>
         private static ReplayScenarioMap LoadScenarioMap(LuaData.Table luaScenario)
         {
             LuaData.Table? sizeTable = luaScenario.TryGetTableValue("size", out var luaSize) ? luaSize : null;
@@ -367,11 +374,22 @@ namespace FAForever.Replay
                 sizeX, sizeZ, massReclaim, energyReclaim);
         }
 
+        /// <summary>
+        /// Loads in the scenario options as defined in the lobby. 
+        /// 
+        /// These options reflect the following file: https://github.com/FAForever/fa/blob/develop/lua/ui/lobby/lobbyOptions.lua
+        /// In practice however, all mod options are sent to the scenario by default too. As a result this Lua table can contain quite literally anything. 
+        /// </summary>
+        /// <param name="luaScenario"></param>
+        /// <returns></returns>
         private static ReplayScenarioOptions LoadScenarioOptions(LuaData.Table luaScenario)
         {
             return new ReplayScenarioOptions();
         }
 
+        /// <summary>
+        /// Loads in the scenario from the stream.
+        /// </summary>
         private static ReplayScenario LoadScenario(ReplayBinaryReader reader)
         {
             LuaData luaScenario = LuaDataLoader.ReadLuaData(reader);
@@ -383,6 +401,9 @@ namespace FAForever.Replay
             return new ReplayScenario(LoadScenarioOptions(scenario), LoadScenarioMap(scenario), scenario.TryGetStringValue("type", out var type) ? type! : null);
         }
 
+        /// <summary>
+        /// Loads in the replay header from the stream.
+        /// </summary>
         private static ReplayHeader LoadReplayHeader(ReplayBinaryReader reader)
         {
             string gameVersion = reader.ReadNullTerminatedString();
