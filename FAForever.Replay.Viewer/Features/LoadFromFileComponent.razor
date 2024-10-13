@@ -98,9 +98,10 @@
 
                 var dialogParameters = new DialogParameters<ReplayLoadDialog> {
                     { x => x.Stream, stream },
-                    { x => x.Type, ReplayType.FAForever }
+                    { x => x.Format, ReplayFormat.FAForever }
                 };
-                this.DialogService.ShowAsync<ReplayLoadDialog>("Load replay", dialogParameters);
+
+                await DialogService.ShowAsync<ReplayLoadDialog>("Load replay", dialogParameters);
 
                 return true;
             }
@@ -113,9 +114,10 @@
 
                 var dialogParameters = new DialogParameters<ReplayLoadDialog> {
                     { x => x.Stream, stream },
-                    { x => x.Type, ReplayType.SCFA }
+                    { x => x.Format, ReplayFormat.SCFA }
                 };
-                this.DialogService.ShowAsync<ReplayLoadDialog>("Load replay", dialogParameters);
+
+                await DialogService.ShowAsync<ReplayLoadDialog>("Load replay", dialogParameters);
                 return true;
             }
         }

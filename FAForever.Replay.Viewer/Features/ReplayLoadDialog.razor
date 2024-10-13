@@ -1,4 +1,5 @@
 @inject ReplayService ReplayService;
+@inject ISnackbar Snackbar;
 @inject NavigationManager NavigationManager
 
 <MudDialog>
@@ -6,26 +7,41 @@
         Loading...
     </TitleContent>
     <DialogContent>
-        <MudList T="string">
-            <MudListItem Icon="@Icons.Material.Filled.Compress" Text="Compression"
-                SecondaryText="@TranslateText(TimeCompression)" />
-            <MudListItem Icon="@Icons.Material.Filled.Info" Text="Scenario"
-                SecondaryText="@TranslateText(TimeScenario)" />
-            <MudListItem Icon="@Icons.Material.Filled.Input" Text="User input"
-                SecondaryText="@GetInputStatus()" />
-        </MudList>
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs">
+            <MudTabPanel Text="Parsing" @ref="parsingTab" Disabled="true">
+                <MudList T="string">
+                    <MudListItem Icon="@Icons.Material.Filled.Compress" Text="Compression"
+                        SecondaryText="@TranslateText(TimeCompression)" />
+                    <MudListItem Icon="@Icons.Material.Filled.Info" Text="Scenario"
+                        SecondaryText="@TranslateText(TimeScenario)" />
+                    <MudListItem Icon="@Icons.Material.Filled.Input" Text="User input"
+                        SecondaryText="@GetInputStatus()" />
+                </MudList>
+            </MudTabPanel>
+            <MudTabPanel Text="Semantics" @ref="semanticsTab" Disabled="true">
+
+            </MudTabPanel>
+        </MudTabs>
 
         <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-7" />
     </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Tertiary" OnClick="@Cancel">Cancel</MudButton>
+    </DialogActions>
+
 </MudDialog>
 
 @code {
+
+    MudTabs tabs;
+    MudTabPanel parsingTab;
+    MudTabPanel semanticsTab;
 
     [CascadingParameter]
     private MudDialogInstance MudDialog { get; set; }
 
     [Parameter]
-    public ReplayType Type { get; set; }
+    public ReplayFormat Format { get; set; }
 
     [Parameter]
     public MemoryStream Stream { get; set; }
@@ -36,25 +52,30 @@
     private float? TimeInput = null;
     private float? PercentageInput = null;
 
-    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
 
-    private void Cancel() => MudDialog.Cancel();
+    private readonly CancellationTokenSource  cancellationTokenSource = new CancellationTokenSource();
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
 
     private string TranslateText(float? time)
     {
-        if (time is null) {
+        if (time is null)
+        {
             return "";
         }
 
         return $"Done ({time.GetValueOrDefault().ToString("0.00")}ms)";
     }
 
-    private string GetInputStatus() {
-        if (TimeInput.HasValue) {
+    private string GetInputStatus()
+    {
+        if (TimeInput.HasValue)
+        {
             return $"{TimeInput.GetValueOrDefault():0.00}ms";
         }
 
-        if (PercentageInput.HasValue) {
+        if (PercentageInput.HasValue)
+        {
             return $"{PercentageInput.GetValueOrDefault():0.00}%";
         }
 
@@ -66,70 +87,105 @@
         this.MudDialog.SetOptions(new DialogOptions() { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Medium });
     }
 
+    private void Cancel() {
+        this.cancellationTokenSource.Cancel();
+        this.MudDialog.Cancel();
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-        {
-            return;
-        }
+        if (!firstRender) return;
 
         await Task.Run(async () =>
         {
-            Stopwatch stopwatch = new Stopwatch();
 
-            stopwatch.Start();
-            ReplayLoadingStage stage = new ReplayLoadingStage.NotStarted(this.Stream);
-
-            switch (Type)
+            Replay? replay = await ParseReplay(this.Stream);
+            if (replay is null)
             {
-                case ReplayType.FAForever:
-                    stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.NotStarted)stage);
-                    this.TimeMetadata = stopwatch.ElapsedMilliseconds;
-                    this.StateHasChanged();
-                    await Task.Delay(10);
-
-                    stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.WithMetadata)stage);
-                    this.TimeCompression = stopwatch.ElapsedMilliseconds;
-                    this.StateHasChanged();
-                    await Task.Delay(10);
-                    break;
-
-                case ReplayType.SCFA:
-                    stage = new ReplayLoadingStage.Decompressed(Stream, null);
-                    break;
-
-                default:
-                    break;
+                Snackbar.Add("Failed to load replay", Severity.Error);
+                await Task.Delay(1000);
+                this.MudDialog.Close(DialogResult.Ok(false));
+                NavigationManager.NavigateTo("/");
+                return;
             }
 
-            stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.Decompressed)stage);
-            this.TimeScenario = stopwatch.ElapsedMilliseconds;
-            this.StateHasChanged();
-            await Task.Delay(1);
+            await Task.Delay(1000);
+            tabs.ActivatePanel(this.semanticsTab, true);
 
-            stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.WithScenario)stage);
+            ReplayState state = await ComputeReplaySemantics(replay);
+            ReplayService.ReplayState = state;
+            Snackbar.Add("Replay available", Severity.Success);
+            await Task.Delay(1000);
+            NavigationManager.NavigateTo("/replay/chat");
 
-            while (stage is ReplayLoadingStage.AtInput inputStage) {
-                this.PercentageInput = (float)(inputStage.BodyInvariant.PercentageProcessed);
+            return;
+        }, cancellationToken: cancellationTokenSource.Token);
+    }
+
+    private async Task<Replay?> ParseReplay(MemoryStream stream)
+    {
+        Stopwatch stopwatch = new Stopwatch();
+
+        stopwatch.Start();
+        ReplayLoadingStage stage = new ReplayLoadingStage.NotStarted(stream);
+
+        switch (Format)
+        {
+            case ReplayFormat.FAForever:
+                stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.NotStarted)stage);
+                this.TimeMetadata = stopwatch.ElapsedMilliseconds;
                 this.StateHasChanged();
-                await Task.Delay(1);
+                await Task.Delay(10);
 
-                stage = ReplayLoader.ProcessReplayStage(inputStage);
-                await Task.Delay(1);
-            }
+                stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.WithMetadata)stage);
+                this.TimeCompression = stopwatch.ElapsedMilliseconds;
+                this.StateHasChanged();
+                await Task.Delay(10);
+                break;
 
-            this.TimeInput = stopwatch.ElapsedMilliseconds;
+            case ReplayFormat.SCFA:
+                stage = new ReplayLoadingStage.Decompressed(Stream, null);
+                break;
+
+            default:
+                break;
+        }
+
+        stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.Decompressed)stage);
+        this.TimeScenario = stopwatch.ElapsedMilliseconds;
+        this.StateHasChanged();
+        await Task.Delay(1);
+
+        stage = ReplayLoader.ProcessReplayStage((ReplayLoadingStage.WithScenario)stage);
+
+        while (stage is ReplayLoadingStage.AtInput inputStage)
+        {
+            this.PercentageInput = (float)(inputStage.BodyInvariant.PercentageProcessed);
             this.StateHasChanged();
             await Task.Delay(1);
 
-            if (stage is ReplayLoadingStage.Complete completed)
-            {
-                Replay replay = new Replay(completed.Header, completed.Body);
-            }
-        });
+            stage = ReplayLoader.ProcessReplayStage(inputStage);
+            await Task.Delay(1);
+        }
 
-        await Task.Delay(2000);
+        this.TimeInput = stopwatch.ElapsedMilliseconds;
+        this.StateHasChanged();
+        await Task.Delay(1);
 
-        NavigationManager.NavigateTo("/replay/chat");
+        if (stage is ReplayLoadingStage.Complete completed)
+        {
+            Replay replay = new Replay(completed.Header, completed.Body);
+            return replay;
+        }
+
+        return null;
+    }
+
+    private async Task<ReplayState> ComputeReplaySemantics(Replay replay)
+    {
+        List<ReplayChatMessage> replayChatMessages = ReplaySemantics.GetChatMessages(replay);
+        await Task.Delay(1);
+        ReplayState state = new ReplayState(new ReplayType.SCFA(), replayChatMessages.AsReadOnly());
+        return state;
     }
 }
