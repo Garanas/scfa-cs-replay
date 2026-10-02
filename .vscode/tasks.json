@@ -122,7 +122,58 @@
         "reveal": "always",
         "panel": "dedicated"
       },
-      "detail": "Publish the viewer the same way the GitHub Pages workflow does"
+      "detail": "Publish the standalone viewer (without the server) to FAForever.Replay.Viewer/release"
+    },
+    {
+      "label": "server",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "watch"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/FAForever.Replay.Server",
+        "env": {
+          "ASPNETCORE_ENVIRONMENT": "Development"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "base": "$msCompile",
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^\\s*(dotnet watch|Building|info: Microsoft\\.Hosting\\.Lifetime)",
+          "endsPattern": "(Now listening on|Application started)"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "detail": "Serve the hosted app (WASM + token proxy) on http://127.0.0.1:5080 with hot reload"
+    },
+    {
+      "label": "tailwind: watch",
+      "type": "process",
+      "command": "${workspaceFolder}/tools/tailwindcss.exe",
+      "args": [
+        "-i",
+        "Styles/app.css",
+        "-o",
+        "wwwroot/css/app.css",
+        "--watch"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/FAForever.Replay.Viewer"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated"
+      },
+      "detail": "Rebuild wwwroot/css/app.css on every change (run next to 'server' or 'viewer')"
     }
   ]
 }
