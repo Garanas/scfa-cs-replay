@@ -110,8 +110,49 @@ the FAF team before any public deployment (see TODO.md).
 - Faction icons live in `FAForever.Replay.Viewer/wwwroot/images/factions/` (copied from the FAF game
   repo, `textures/ui/common/faction_icon-lg`, `_med` variants); render them via the display helpers
   in `Services/Theming/Factions.cs` (icon path, name, swatch per faction index).
+- Unit icons live in `FAForever.Replay.Viewer/wwwroot/images/units/`, generated from the FAF game repo
+  (`textures/ui/common/icons/units/*.dds`) by `tools/convert-unit-icons.ps1` (ImageMagick 7). Never edit
+  them by hand; re-run the script. See "Unit icon atlas" below.
 - Tests: MSTest with `[DataRow]` over the real replay assets in `FAForever.Replay.Test/assets/`.
 - Keep the Server minimal: static hosting + token proxy. It must never hold secrets or session state.
+
+## Unit icon atlas
+
+`tools/convert-unit-icons.ps1` writes into `FAForever.Replay.Viewer/wwwroot/images/units/`:
+
+| File | Contents |
+|---|---|
+| `units-atlas.png` + `units-atlas.json` | All ~600 unit icons on a grid of 64 px cells (25 columns). |
+| `backgrounds-atlas.png` + `backgrounds-atlas.json` | The 13 layer backgrounds in one row. |
+| `units/<id>.png`, `backgrounds/<name>.png` | The same images as individual files. |
+
+The JSON index gives the top-left pixel of each cell:
+`{"cellSize":64,"columns":25,"rows":24,"icons":{"uel0101":{"x":0,"y":0},…}}`.
+
+- **Prefer the atlas** wherever many icons are shown (lists, timelines, build orders): one request
+  instead of hundreds. Load the index once (`HttpClient.GetFromJsonAsync` on
+  `images/units/units-atlas.json`), cache it in a service, and render a sized element with the atlas as
+  background:
+  `<span class="unit-icon" style="background-position:-@(x)px -@(y)px"></span>`, where `.unit-icon`
+  (an `@layer components` class in `Styles/app.css`) sets `width/height: 64px`,
+  `background-image: url(../images/units/units-atlas.png)` and `background-repeat: no-repeat`. The
+  computed `background-position` is the one inline `style` that is acceptable.
+- **Scaling:** multiply everything by the same factor `s`: element `64s` px, `background-size` =
+  `1600s px 1536s px` (atlas width/height from `columns`/`rows` × `cellSize`), position `-x·s -y·s`.
+  E.g. 32 px icons: size 32px, `background-size: 800px 768px`, position halved.
+- **Keys are lowercase blueprint ids** without the `_icon` suffix (`uel0101`, `xsl0401`). Normalise
+  ids from replays with `ToLowerInvariant()`; fall back to `default` (a "Place Holder" icon) when an id
+  is missing from the index — mods and campaign units often have no icon.
+- **Backgrounds:** the game draws a layer background behind each icon. Pick it from the blueprint's
+  `General.Icon` (`land`, `air`, `sea`, `amph`) plus a state: `_up` (normal), `_over` (hover),
+  `_down` (pressed/selected). Stack two elements: the background cell, then the unit cell on top.
+  `cons_bar` is the construction progress overlay, not a layer.
+- Icons are transparent PNGs; a few source icons are 32 or 72 px and sit centred (72 px ones scaled
+  down) in their 64 px cell. The individual files keep their original size.
+- Use the individual files only for one-offs (e.g. a single `<img>` on a detail page).
+- After an FA game update, re-run `pwsh tools/convert-unit-icons.ps1 -Source <fa repo>/textures/ui/common/icons/units`
+  and commit the result; output is deterministic (PNG timestamps are stripped), so the diff only
+  shows real changes. Cell positions can shift when icons are added, so never hardcode coordinates.
 
 ## Gotchas
 
