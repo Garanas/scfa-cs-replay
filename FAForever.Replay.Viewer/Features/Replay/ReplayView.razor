@@ -1,0 +1,116 @@
+@using FAForever.Replay
+
+<article>
+    <header class="border-b border-edge pb-6">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="min-w-0">
+                <h1 class="truncate text-2xl font-bold sm:text-3xl">@Title</h1>
+                <p class="mt-1 text-sm text-ink-muted">@Subtitle</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="badge">@OriginLabel</span>
+                @if (Model.Metadata?.FeaturedMod is { Length: > 0 } featuredMod)
+                {
+                    <span class="badge">@featuredMod</span>
+                }
+                <span class="badge" title="In-game duration">@FormatDuration(duration)</span>
+                @if (!Model.Replay.Body.InSync)
+                {
+                    <span class="badge border-primary text-primary" title="The checksums of the players diverged during this game">desync</span>
+                }
+            </div>
+        </div>
+    </header>
+
+    <nav class="mt-6 flex flex-wrap gap-1 border-b border-edge pb-px" aria-label="Replay sections">
+        @foreach (Tab tab in Enum.GetValues<Tab>())
+        {
+            <button type="button" class="@(tab == activeTab ? ActiveTabClass : TabClass)" @onclick="() => activeTab = tab">
+                @TabLabel(tab)
+            </button>
+        }
+    </nav>
+
+    <div class="py-6">
+        @switch (activeTab)
+        {
+            case Tab.Overview:
+                <OverviewPanel Model="Model" />
+                break;
+            case Tab.Players:
+                <PlayersPanel Model="Model" />
+                break;
+            case Tab.Chat:
+                <ChatPanel Model="Model" />
+                break;
+            case Tab.Events:
+                <EventsPanel Model="Model" />
+                break;
+            case Tab.Analysis:
+                <AnalysisPanel Model="Model" />
+                break;
+        }
+    </div>
+</article>
+
+@code {
+    private const string TabClass = "cursor-pointer rounded-t-md px-4 py-2 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink";
+    private const string ActiveTabClass = "cursor-pointer rounded-t-md border-b-2 border-primary bg-raised px-4 py-2 text-sm font-semibold text-primary";
+
+    private enum Tab
+    {
+        Overview,
+        Players,
+        Chat,
+        Events,
+        Analysis,
+    }
+
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private Tab activeTab = Tab.Overview;
+    private TimeSpan duration;
+
+    protected override void OnParametersSet()
+    {
+        duration = ReplayAnalysis.GetDuration(Model.Replay);
+    }
+
+    private string Title => Model.Metadata?.title is { Length: > 0 } title
+        ? title
+        : Model.Origin is ReplayOrigin.LocalFile localFile
+            ? localFile.FileName
+            : $"Replay #{(Model.Origin as ReplayOrigin.Vault)?.ReplayId}";
+
+    private string Subtitle
+    {
+        get
+        {
+            string map = Model.Replay.Header.Scenario.Map.Name is { Length: > 0 } name
+                ? (name.StartsWith("<LOC ", StringComparison.OrdinalIgnoreCase) && name.IndexOf('>') >= 0 ? name[(name.IndexOf('>') + 1)..].Trim() : name)
+                : Model.Metadata?.mapname ?? "Unknown map";
+            int players = Model.Metadata?.num_players ?? Model.Replay.Header.Clients.Length;
+            return $"{map} · {players} {(players == 1 ? "player" : "players")}";
+        }
+    }
+
+    private string OriginLabel => Model.Origin switch
+    {
+        ReplayOrigin.Vault vault => $"vault #{vault.ReplayId}",
+        ReplayOrigin.LocalFile => "local file",
+        _ => "replay",
+    };
+
+    private string TabLabel(Tab tab) => tab switch
+    {
+        Tab.Overview => "Overview",
+        Tab.Players => "Players",
+        Tab.Chat => "Chat",
+        Tab.Events => "Events",
+        Tab.Analysis => "Analysis",
+        _ => tab.ToString(),
+    };
+
+    internal static string FormatDuration(TimeSpan duration)
+        => duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss") : duration.ToString(@"m\:ss");
+}

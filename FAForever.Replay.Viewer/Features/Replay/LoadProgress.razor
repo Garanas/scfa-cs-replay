@@ -1,0 +1,29 @@
+<div class="card">
+    <div class="flex items-center justify-between gap-4">
+        <div class="min-w-0">
+            <p class="font-semibold">@(Progress?.Phase ?? "Loading")&hellip;</p>
+            <p class="mt-0.5 text-sm text-ink-muted">Replays are parsed entirely in your browser.</p>
+        </div>
+        @if (OnCancel.HasDelegate)
+        {
+            <button type="button" class="btn-secondary" @onclick="OnCancel">Cancel</button>
+        }
+    </div>
+    <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-raised" role="progressbar"
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Progress?.Percent">
+        @if (Progress?.Percent is int percent)
+        {
+            <div class="h-full rounded-full bg-primary transition-[width] duration-150" style="width: @(percent)%"></div>
+        }
+        else
+        {
+            <div class="h-full w-full animate-pulse rounded-full bg-primary/50"></div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public ReplayLoadProgress? Progress { get; set; }
+
+    [Parameter] public EventCallback OnCancel { get; set; }
+}

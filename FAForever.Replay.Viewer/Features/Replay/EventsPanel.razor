@@ -1,0 +1,83 @@
+@using FAForever.Replay
+
+<div class="grid gap-6 lg:grid-cols-2">
+    <div class="card">
+        <h3 class="font-semibold">Input types</h3>
+        <p class="mt-1 text-xs text-ink-faint">Every parsed input of the replay body, by type.</p>
+        <table class="mt-4 w-full text-left text-sm">
+            <tbody>
+                @foreach ((string type, int count) in inputCounts)
+                {
+                    <tr class="border-b border-edge/60 last:border-0">
+                        <td class="py-1.5 font-mono text-xs">@type</td>
+                        <td class="py-1.5 text-right font-mono">@count.ToString("N0")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card self-start">
+        <h3 class="font-semibold">Notable events</h3>
+        @if (notableEvents.Count == 0)
+        {
+            <p class="mt-4 text-sm text-ink-muted">No pauses, departures or game-end markers were recorded.</p>
+        }
+        else
+        {
+            <ol class="mt-4 space-y-2 text-sm">
+                @foreach (NotableEvent entry in notableEvents)
+                {
+                    <li class="flex gap-3">
+                        <span class="shrink-0 font-mono text-ink-muted">@ReplayView.FormatDuration(entry.Timestamp)</span>
+                        <span>@entry.Description</span>
+                    </li>
+                }
+            </ol>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private sealed record NotableEvent(TimeSpan Timestamp, string Description);
+
+    private List<(string Type, int Count)> inputCounts = [];
+    private List<NotableEvent> notableEvents = [];
+
+    protected override void OnParametersSet()
+    {
+        inputCounts = ReplaySemantics.CountInputTypes(Model.Replay)
+            .Where(pair => pair.Value > 0)
+            .OrderByDescending(pair => pair.Value)
+            .Select(pair => (pair.Key, pair.Value))
+            .ToList();
+
+        List<NotableEvent> events = [];
+        foreach (ReplayInput input in Model.Replay.Body.UserInput)
+        {
+            string? description = input switch
+            {
+                ReplayInput.RequestPause => $"{PlayerName(input.SourceId)} paused the game",
+                ReplayInput.RequestResume => $"{PlayerName(input.SourceId)} resumed the game",
+                ReplayInput.CommandSourceTerminated => $"{PlayerName(input.SourceId)} left the game",
+                ReplayInput.EndGame => "Game ended",
+                _ => null,
+            };
+
+            if (description is not null)
+            {
+                events.Add(new NotableEvent(ReplayAnalysis.GetTimestamp(input), description));
+            }
+        }
+
+        notableEvents = events;
+    }
+
+    private string PlayerName(int sourceId)
+    {
+        ReplaySource[] clients = Model.Replay.Header.Clients;
+        return sourceId >= 0 && sourceId < clients.Length ? clients[sourceId].PlayerName : $"Source {sourceId}";
+    }
+}

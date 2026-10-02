@@ -5,13 +5,10 @@
   <ItemGroup>
     <!-- Server -->
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.3" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
     <!-- Blazor WASM -->
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.3" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.3" />
-    <!-- UI -->
-    <PackageVersion Include="MudBlazor" Version="9.0.0" />
-    <PackageVersion Include="Phork.Blazor.Reactivity" Version="1.1.2" />
     <!-- Compression -->
     <PackageVersion Include="SharpZipLib" Version="1.4.2" />
     <PackageVersion Include="ZstdSharp.Port" Version="0.8.1" />

@@ -1,0 +1,303 @@
+@using FAForever.Replay
+
+@* Line chart of actions per minute. Mark/interaction specs follow the dataviz method:
+   2px lines, >=8px end markers, hairline solid gridlines, crosshair + one tooltip for
+   all series, a legend (the player toggles) plus direct labels, and a table view as
+   the contrast-relief and accessibility channel. At most four concurrent series; the
+   series colors are the validated --viz-* tokens and follow the player while shown. *@
+
+<div class="flex flex-wrap items-center gap-x-4 gap-y-2" role="group" aria-label="Players to chart">
+    @foreach (RosterEntry entry in roster)
+    {
+        bool isSelected = slotByPlayer.ContainsKey(entry.SourceId);
+        bool isDisabled = !isSelected && slotByPlayer.Count >= MaxSeries;
+        <label class="@(isDisabled ? "flex cursor-not-allowed items-center gap-1.5 text-sm opacity-45" : "flex cursor-pointer items-center gap-1.5 text-sm")"
+               title="@(isDisabled ? $"At most {MaxSeries} players at once" : entry.Name)">
+            <input type="checkbox" class="accent-primary" checked="@isSelected" disabled="@isDisabled"
+                   @onchange="() => Toggle(entry.SourceId)" />
+            @if (isSelected)
+            {
+                <span class="inline-block h-0.75 w-3.5 rounded-full" style="background: var(--viz-@(slotByPlayer[entry.SourceId] + 1))" aria-hidden="true"></span>
+            }
+            <span class="max-w-32 truncate font-medium">@entry.Name</span>
+        </label>
+    }
+</div>
+
+@if (slotByPlayer.Count == 0)
+{
+    <p class="mt-6 text-sm text-ink-muted">Select a player to chart their actions per minute.</p>
+}
+else
+{
+    <div class="relative mt-4" @onmouseleave="() => hoveredBucket = null">
+        <svg viewBox="0 0 @((int)Width) @((int)Height)" class="w-full" role="img"
+             aria-label="Actions per minute over the course of the game, per selected player. The table below holds the same data.">
+            @* Gridlines + y labels *@
+            @for (int line = 0; line <= GridLines; line++)
+            {
+                double value = yMax * line / GridLines;
+                double y = YFor(value);
+                <line x1="@Fmt(Left)" x2="@Fmt(Width - RightPad)" y1="@Fmt(y)" y2="@Fmt(y)"
+                      stroke="var(--th-edge)" stroke-width="1" />
+                @SvgText(Left - 8, y + 3.5, "end", "var(--th-ink-muted)", ((int)value).ToString(), 400)
+            }
+
+            @* X labels *@
+            @foreach (int minute in XTicks())
+            {
+                @SvgText(XForMinute(minute), Height - 6, "middle", "var(--th-ink-muted)", $"{minute}m", 400)
+            }
+
+            @* Series *@
+            @foreach (SeriesLine series in Lines())
+            {
+                <polyline points="@series.Points" fill="none" stroke="@series.Color"
+                          stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <circle cx="@Fmt(series.EndX)" cy="@Fmt(series.EndY)" r="4" fill="@series.Color" />
+                @SvgText(series.EndX + 9, series.LabelY + 3.5, "start", "var(--th-ink)", series.Name, 600)
+            }
+
+            @* Crosshair *@
+            @if (hoveredBucket is int hovered)
+            {
+                <line x1="@Fmt(XForBucket(hovered))" x2="@Fmt(XForBucket(hovered))" y1="@Fmt(Top)" y2="@Fmt(Height - BottomPad)"
+                      stroke="var(--th-ink-faint)" stroke-width="1" />
+            }
+
+            @* Hover hit targets, one per bucket, full plot height *@
+            @for (int bucket = 0; bucket < bucketCount; bucket++)
+            {
+                int captured = bucket;
+                <rect x="@Fmt(HitLeft(bucket))" y="@Fmt(Top)" width="@Fmt(HitWidth(bucket))" height="@Fmt(Height - TopBottom)"
+                      fill="transparent" @onmouseover="() => hoveredBucket = captured" />
+            }
+        </svg>
+
+        @if (hoveredBucket is int tooltipBucket)
+        {
+            <div class="pointer-events-none absolute top-2 z-10 min-w-36 rounded-md border border-edge bg-raised px-3 py-2 text-xs shadow-lg"
+                 style="left: @Fmt(100.0 * XForBucket(tooltipBucket) / Width)%; transform: translateX(@(XForBucket(tooltipBucket) > Width * 0.62 ? "-105%" : "5%"))">
+                <p class="font-semibold text-ink-muted">Minute @tooltipBucket&ndash;@(tooltipBucket + 1)</p>
+                <ul class="mt-1 space-y-1">
+                    @foreach (SeriesLine series in Lines().OrderByDescending(line => line.Values[tooltipBucket]))
+                    {
+                        <li class="flex items-center gap-2">
+                            <span class="inline-block h-0.75 w-3.5 shrink-0 rounded-full" style="background: @series.Color" aria-hidden="true"></span>
+                            <span class="font-semibold">@((int)Math.Round(series.Values[tooltipBucket]))</span>
+                            <span class="truncate text-ink-muted">@series.Name</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+
+    <details class="mt-4">
+        <summary class="cursor-pointer text-sm text-ink-muted transition hover:text-ink">View as table</summary>
+        <div class="mt-2 max-h-64 overflow-y-auto rounded-md border border-edge">
+            <table class="w-full text-left text-xs">
+                <thead class="sticky top-0 bg-raised">
+                    <tr>
+                        <th class="px-3 py-2 font-semibold">Minute</th>
+                        @foreach (SeriesLine series in Lines())
+                        {
+                            <th class="px-3 py-2 text-right font-semibold">@series.Name</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int bucket = 0; bucket < bucketCount; bucket++)
+                    {
+                        <tr class="border-t border-edge/60">
+                            <td class="px-3 py-1.5 font-mono text-ink-muted">@bucket&ndash;@(bucket + 1)</td>
+                            @foreach (SeriesLine series in Lines())
+                            {
+                                <td class="px-3 py-1.5 text-right font-mono">@((int)Math.Round(series.Values[bucket]))</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </details>
+}
+
+@code {
+    private const int MaxSeries = 4;
+    private const int GridLines = 4;
+    private const int BucketSeconds = 60;
+
+    private const double Width = 720;
+    private const double Height = 280;
+    private const double Left = 40;
+    private const double RightPad = 110;
+    private const double Top = 14;
+    private const double BottomPad = 26;
+    private const double TopBottom = Top + BottomPad;
+
+    [Parameter, EditorRequired] public required Replay Replay { get; set; }
+
+    private sealed record RosterEntry(int SourceId, string Name, int TotalActions);
+
+    private sealed record SeriesLine(string Name, string Color, double[] Values, string Points, double EndX, double EndY, double LabelY);
+
+    private List<RosterEntry> roster = [];
+    private Dictionary<int, double[]> apmBySource = [];
+    private readonly Dictionary<int, int> slotByPlayer = [];
+    private int bucketCount;
+    private double yMax = 20;
+    private int? hoveredBucket;
+    private Replay? analysedReplay;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(analysedReplay, Replay))
+        {
+            return;
+        }
+        analysedReplay = Replay;
+
+        Dictionary<int, int> totals = ReplayAnalysis.CountPlayerActions(Replay);
+        Dictionary<int, int[]> buckets = ReplayAnalysis.GetActionBuckets(Replay, BucketSeconds);
+        double durationSeconds = ReplayAnalysis.GetDuration(Replay).TotalSeconds;
+
+        bucketCount = buckets.Values.FirstOrDefault()?.Length ?? 0;
+        // Drop a trailing sliver of a minute: scaling it up to a rate only adds noise.
+        if (bucketCount > 1 && durationSeconds - (bucketCount - 1) * BucketSeconds < BucketSeconds / 2.0)
+        {
+            bucketCount--;
+        }
+
+        apmBySource = [];
+        foreach ((int sourceId, int[] series) in buckets)
+        {
+            apmBySource[sourceId] = series.Take(bucketCount).Select(count => (double)count).ToArray();
+        }
+
+        roster = Replay.Header.Clients
+            .Select((client, sourceId) => new RosterEntry(sourceId, client.PlayerName, totals.GetValueOrDefault(sourceId)))
+            .Where(entry => entry.TotalActions > 0)
+            .OrderByDescending(entry => entry.TotalActions)
+            .ToList();
+
+        // Default: the most active players, up to the series cap.
+        slotByPlayer.Clear();
+        foreach (RosterEntry entry in roster.Take(MaxSeries))
+        {
+            slotByPlayer[entry.SourceId] = slotByPlayer.Count;
+        }
+
+        hoveredBucket = null;
+        RescaleY();
+    }
+
+    private void Toggle(int sourceId)
+    {
+        if (slotByPlayer.Remove(sourceId))
+        {
+            RescaleY();
+            return;
+        }
+
+        if (slotByPlayer.Count >= MaxSeries)
+        {
+            return;
+        }
+
+        // Sticky slots: a newly selected player takes the lowest free color slot; players
+        // that stay selected keep their color (a filter never repaints the survivors).
+        int slot = Enumerable.Range(0, MaxSeries).First(candidate => !slotByPlayer.ContainsValue(candidate));
+        slotByPlayer[sourceId] = slot;
+        RescaleY();
+    }
+
+    private void RescaleY()
+    {
+        double max = 0;
+        foreach (int sourceId in slotByPlayer.Keys)
+        {
+            if (apmBySource.TryGetValue(sourceId, out double[]? values) && values.Length > 0)
+            {
+                max = Math.Max(max, values.Max());
+            }
+        }
+
+        yMax = Math.Max(20, Math.Ceiling(max / 20) * 20);
+    }
+
+    private List<SeriesLine> Lines()
+    {
+        List<SeriesLine> lines = [];
+        foreach ((int sourceId, int slot) in slotByPlayer.OrderBy(pair => pair.Value))
+        {
+            if (!apmBySource.TryGetValue(sourceId, out double[]? values))
+            {
+                continue;
+            }
+
+            System.Text.StringBuilder points = new();
+            for (int bucket = 0; bucket < bucketCount; bucket++)
+            {
+                points.Append(Fmt(XForBucket(bucket))).Append(',').Append(Fmt(YFor(values[bucket]))).Append(' ');
+            }
+
+            string name = roster.FirstOrDefault(entry => entry.SourceId == sourceId)?.Name ?? $"Source {sourceId}";
+            double endY = YFor(values[bucketCount - 1]);
+            lines.Add(new SeriesLine(name, $"var(--viz-{slot + 1})", values, points.ToString().TrimEnd(), XForBucket(bucketCount - 1), endY, endY));
+        }
+
+        // Nudge the direct labels apart when line ends sit close together.
+        List<SeriesLine> byY = lines.OrderBy(line => line.LabelY).ToList();
+        for (int i = 1; i < byY.Count; i++)
+        {
+            if (byY[i].LabelY - byY[i - 1].LabelY < 14)
+            {
+                int index = lines.IndexOf(byY[i]);
+                byY[i] = byY[i] with { LabelY = byY[i - 1].LabelY + 14 };
+                lines[index] = byY[i];
+            }
+        }
+
+        return lines;
+    }
+
+    private double XForBucket(int bucket)
+        => bucketCount <= 1 ? Left + (Width - Left - RightPad) / 2 : Left + (Width - Left - RightPad) * bucket / (bucketCount - 1);
+
+    private double XForMinute(int minute) => XForBucket(Math.Min(minute, Math.Max(bucketCount - 1, 0)));
+
+    private double YFor(double value) => Top + (Height - TopBottom) * (1 - value / yMax);
+
+    private double HitLeft(int bucket) => bucket == 0 ? Left : (XForBucket(bucket - 1) + XForBucket(bucket)) / 2;
+
+    private double HitWidth(int bucket)
+    {
+        double right = bucket == bucketCount - 1 ? Width - RightPad : (XForBucket(bucket) + XForBucket(bucket + 1)) / 2;
+        return Math.Max(right - HitLeft(bucket), 1);
+    }
+
+    private IEnumerable<int> XTicks()
+    {
+        if (bucketCount <= 1)
+        {
+            yield break;
+        }
+
+        int totalMinutes = bucketCount - 1;
+        int step = new[] { 1, 2, 5, 10, 15, 20, 30, 60 }.First(candidate => totalMinutes / candidate <= 7);
+        for (int minute = 0; minute <= totalMinutes; minute += step)
+        {
+            yield return minute;
+        }
+    }
+
+    private static string Fmt(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Renders an SVG text element. Razor reserves the literal &lt;text&gt; tag, so the
+    /// element is emitted as markup; the content is HTML-encoded (player names are data).
+    /// </summary>
+    private static MarkupString SvgText(double x, double y, string anchor, string fill, string content, int weight)
+        => new($"<text x=\"{Fmt(x)}\" y=\"{Fmt(y)}\" text-anchor=\"{anchor}\" font-size=\"11\" font-weight=\"{weight}\" fill=\"{fill}\">{System.Net.WebUtility.HtmlEncode(content)}</text>");
+}

@@ -1,0 +1,141 @@
+@page "/"
+@implements IDisposable
+@inject NavigationManager Navigation
+@inject ReplayLoadingService Loader
+@inject ReplaySessionState Session
+
+<PageTitle>FAF Replays</PageTitle>
+
+<section class="py-14 text-center sm:py-20">
+    <h1 class="mx-auto max-w-2xl text-4xl font-extrabold tracking-tight sm:text-5xl">
+        Explore <span class="text-primary">FAForever</span> replays
+    </h1>
+    <p class="mx-auto mt-4 max-w-xl text-lg text-ink-muted">
+        Search the vault, replay the build orders and analyse every command &mdash; straight from your browser.
+    </p>
+</section>
+
+<section class="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
+    <div class="card">
+        <h2 class="text-lg font-bold">From the vault</h2>
+        <p class="mt-1 text-sm text-ink-muted">Paste a replay ID, e.g. <span class="font-mono text-ink">23031279</span>.</p>
+        <form class="mt-4 flex gap-2" @onsubmit="OpenVaultReplay" @onsubmit:preventDefault>
+            <input class="input-field font-mono" placeholder="Replay ID" inputmode="numeric"
+                   @bind="vaultReplayId" @bind:event="oninput" disabled="@IsLoading" />
+            <button type="submit" class="btn-primary" disabled="@(!CanOpenVaultReplay)">Open</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2 class="text-lg font-bold">From a file</h2>
+        <p class="mt-1 text-sm text-ink-muted">A <span class="font-mono text-ink">.fafreplay</span> or <span class="font-mono text-ink">.scfareplay</span> file.</p>
+        <div class="relative mt-4 flex min-h-20 cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-edge px-4 text-sm text-ink-muted transition hover:border-primary hover:text-ink">
+            <InputFile OnChange="OnFileSelected" accept=".fafreplay,.scfareplay" disabled="@IsLoading"
+                       class="absolute inset-0 cursor-pointer opacity-0" title="" />
+            <span>Drop a replay here, or click to browse</span>
+        </div>
+    </div>
+</section>
+
+<section class="mx-auto mt-6 max-w-3xl" aria-live="polite">
+    @if (IsLoading)
+    {
+        <LoadProgress Progress="progress" OnCancel="CancelLoad" />
+    }
+    @if (error is not null)
+    {
+        <div class="card border-primary/50" role="alert">
+            <p class="font-semibold">Could not load the replay</p>
+            <p class="mt-1 text-sm text-ink-muted">@error</p>
+        </div>
+    }
+</section>
+
+@code {
+    // Generous cap: the largest known .scfareplay files are tens of MB.
+    private const long MaxReplayFileBytes = 256L * 1024 * 1024;
+
+    private string vaultReplayId = string.Empty;
+    private string? error;
+    private ReplayLoadProgress? progress;
+    private CancellationTokenSource? loadCancellation;
+
+    private bool IsLoading => loadCancellation is not null;
+
+    private bool CanOpenVaultReplay => !IsLoading && NormalizeReplayId() is not null;
+
+    private void OpenVaultReplay()
+    {
+        if (NormalizeReplayId() is int replayId)
+        {
+            Navigation.NavigateTo($"/replay/{replayId}");
+        }
+    }
+
+    private int? NormalizeReplayId()
+    {
+        string candidate = vaultReplayId.Trim().TrimStart('#');
+        return int.TryParse(candidate, out int replayId) && replayId > 0 ? replayId : null;
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs args)
+    {
+        error = null;
+        IBrowserFile file = args.File;
+
+        if (ReplayFormats.FromFileName(file.Name) is not ReplayFormat format)
+        {
+            error = $"'{file.Name}' is not a .fafreplay or .scfareplay file.";
+            return;
+        }
+
+        using CancellationTokenSource cancellation = new();
+        loadCancellation = cancellation;
+        try
+        {
+            progress = new ReplayLoadProgress("Reading file", null);
+
+            using MemoryStream buffer = new();
+            await using (Stream source = file.OpenReadStream(MaxReplayFileBytes, cancellation.Token))
+            {
+                await source.CopyToAsync(buffer, cancellation.Token);
+            }
+            buffer.Position = 0;
+
+            ReplayLoadResult result = await Loader.LoadAsync(buffer, format, new Progress<ReplayLoadProgress>(OnProgress), cancellation.Token);
+            switch (result)
+            {
+                case ReplayLoadResult.Success success:
+                    Session.Set(new LoadedReplay(success.Replay, success.Metadata, new ReplayOrigin.LocalFile(file.Name)));
+                    Navigation.NavigateTo("/replay/local");
+                    break;
+                case ReplayLoadResult.Failure failure:
+                    error = failure.Message;
+                    break;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The user cancelled; nothing to report.
+        }
+        catch (Exception exception)
+        {
+            error = $"Could not read the file: {exception.Message}";
+        }
+        finally
+        {
+            loadCancellation = null;
+            progress = null;
+        }
+    }
+
+    private void OnProgress(ReplayLoadProgress update)
+    {
+        progress = update;
+        StateHasChanged();
+    }
+
+    private void CancelLoad() => loadCancellation?.Cancel();
+
+    public void Dispose() => loadCancellation?.Cancel();
+}

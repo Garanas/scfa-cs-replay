@@ -1,0 +1,23 @@
+<div class="space-y-6">
+    <div class="card">
+        <h3 class="font-semibold">Actions per minute</h3>
+        <p class="mt-1 text-xs text-ink-faint">
+            Deliberate inputs (orders, queue changes, pauses) per minute of game time. Pick up to four players.
+        </p>
+        <div class="mt-4">
+            <ApmChart Replay="Model.Replay" />
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 class="font-semibold">Build order</h3>
+        <p class="mt-1 text-xs text-ink-faint">Every construction order a player issued, in game time.</p>
+        <div class="mt-4">
+            <BuildOrderTable Replay="Model.Replay" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+}

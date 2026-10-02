@@ -1,0 +1,170 @@
+@import "tailwindcss";
+
+@source "../**/*.razor";
+@source "../wwwroot/index.html";
+
+/*
+ * Faction themes
+ * --------------
+ * Every theme defines the same set of --th-* design tokens. The active theme is picked
+ * by the data-theme attribute on <html> (set pre-boot by index.html, toggled by
+ * ThemeService). UEF is the default when no attribute is present.
+ */
+
+:root,
+[data-theme="uef"] {
+    color-scheme: dark;
+    --th-base: #0a1020;
+    --th-surface: #101a30;
+    --th-raised: #172442;
+    --th-edge: #2a3b63;
+    --th-ink: #e9effb;
+    --th-ink-muted: #9fb0d4;
+    --th-ink-faint: #64769e;
+    --th-primary: #4a8df0;
+    --th-primary-strong: #2f6fd9;
+    --th-on-primary: #061224;
+    --th-accent: #e3b341;
+    --th-glow: rgba(74, 141, 240, 0.35);
+    /* Chart series colors (validated, dark-surface steps; Aeon overrides with light steps). */
+    --viz-1: #3987e5;
+    --viz-2: #d95926;
+    --viz-3: #199e70;
+    --viz-4: #c98500;
+}
+
+[data-theme="cybran"] {
+    color-scheme: dark;
+    --th-base: #120b0c;
+    --th-surface: #1b1113;
+    --th-raised: #27181b;
+    --th-edge: #44252c;
+    --th-ink: #f8e9e9;
+    --th-ink-muted: #cba0a4;
+    --th-ink-faint: #8f666c;
+    --th-primary: #e54b4b;
+    --th-primary-strong: #c53030;
+    --th-on-primary: #1d0606;
+    --th-accent: #ff9b50;
+    --th-glow: rgba(229, 75, 75, 0.35);
+}
+
+[data-theme="aeon"] {
+    color-scheme: light;
+    --th-base: #edf3ed;
+    --th-surface: #f8fbf8;
+    --th-raised: #ffffff;
+    --th-edge: #c8d9cb;
+    --th-ink: #15241d;
+    --th-ink-muted: #51685c;
+    --th-ink-faint: #84988d;
+    --th-primary: #0f9168;
+    --th-primary-strong: #0b7250;
+    --th-on-primary: #f3fbf7;
+    --th-accent: #a8862a;
+    --th-glow: rgba(15, 145, 104, 0.25);
+    /* Chart series colors: light-surface steps. */
+    --viz-1: #2a78d6;
+    --viz-2: #eb6834;
+    --viz-3: #1baf7a;
+    --viz-4: #eda100;
+}
+
+[data-theme="seraphim"] {
+    color-scheme: dark;
+    --th-base: #151109;
+    --th-surface: #1f1a0e;
+    --th-raised: #2b2414;
+    --th-edge: #4b3f20;
+    --th-ink: #f7efd9;
+    --th-ink-muted: #c8b78a;
+    --th-ink-faint: #8d7f5a;
+    --th-primary: #d9a92c;
+    --th-primary-strong: #bb8f14;
+    --th-on-primary: #221a04;
+    --th-accent: #7fd9c9;
+    --th-glow: rgba(217, 169, 44, 0.32);
+}
+
+/* Theme-independent faction swatches, used by the switcher buttons. */
+:root {
+    --swatch-uef: #4a8df0;
+    --swatch-cybran: #e54b4b;
+    --swatch-aeon: #0f9168;
+    --swatch-seraphim: #d9a92c;
+}
+
+/*
+ * Map the active theme tokens onto Tailwind design tokens, so utilities like
+ * bg-surface, text-ink-muted and border-edge follow the faction automatically.
+ */
+@theme inline {
+    --color-base: var(--th-base);
+    --color-surface: var(--th-surface);
+    --color-raised: var(--th-raised);
+    --color-edge: var(--th-edge);
+    --color-ink: var(--th-ink);
+    --color-ink-muted: var(--th-ink-muted);
+    --color-ink-faint: var(--th-ink-faint);
+    --color-primary: var(--th-primary);
+    --color-primary-strong: var(--th-primary-strong);
+    --color-on-primary: var(--th-on-primary);
+    --color-accent: var(--th-accent);
+    --font-display: "Exo 2", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+    html {
+        @apply bg-base font-body text-ink antialiased;
+        transition: background-color 200ms ease;
+    }
+
+    body {
+        @apply min-h-dvh;
+    }
+
+    h1, h2, h3, h4 {
+        @apply font-display;
+    }
+
+    ::selection {
+        background: var(--th-primary);
+        color: var(--th-on-primary);
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--th-primary);
+        outline-offset: 2px;
+    }
+}
+
+@layer components {
+    .nav-link {
+        @apply rounded-md px-3 py-1.5 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink;
+    }
+
+    .nav-link.active {
+        @apply bg-raised text-primary;
+    }
+
+    .btn-primary {
+        @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .btn-secondary {
+        @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-edge bg-raised px-4 py-2 text-sm font-semibold text-ink transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .card {
+        @apply rounded-xl border border-edge bg-surface p-6;
+    }
+
+    .input-field {
+        @apply w-full rounded-md border border-edge bg-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none;
+    }
+
+    .badge {
+        @apply inline-flex items-center rounded-full border border-edge bg-raised px-2.5 py-0.5 text-xs font-medium text-ink-muted;
+    }
+}

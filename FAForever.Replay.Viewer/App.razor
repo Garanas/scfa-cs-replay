@@ -1,12 +1,19 @@
-﻿<Router AppAssembly="@typeof(App).Assembly">
+<CascadingAuthenticationState>
+<Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(ReplayLayout)" />
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
-        <PageTitle>Not found</PageTitle>
-        <LayoutView Layout="@typeof(LandingLayout)">
-            <p role="alert">Sorry, there's nothing at this address.</p>
+        <PageTitle>Not found — FAF Replays</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <section class="py-24 text-center">
+                <p class="font-display text-6xl font-extrabold text-primary">404</p>
+                <h1 class="mt-4 font-display text-2xl font-bold">This page went out of sync</h1>
+                <p class="mt-2 text-ink-muted">The address does not match any known route.</p>
+                <a href="/" class="btn-primary mt-8 inline-flex">Back to home</a>
+            </section>
         </LayoutView>
     </NotFound>
 </Router>
+</CascadingAuthenticationState>

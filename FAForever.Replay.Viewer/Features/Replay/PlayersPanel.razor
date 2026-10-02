@@ -1,0 +1,54 @@
+@using FAForever.Replay
+
+<div class="card overflow-x-auto p-0">
+    <table class="w-full text-left text-sm">
+        <thead>
+            <tr class="border-b border-edge text-xs uppercase tracking-wide text-ink-muted">
+                <th class="px-4 py-3 font-semibold">Player</th>
+                <th class="px-4 py-3 text-right font-semibold">Actions</th>
+                <th class="px-4 py-3 text-right font-semibold" title="Average actions per minute">APM</th>
+                <th class="px-4 py-3 text-right font-semibold" title="Construction orders issued">Build orders</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (PlayerRow row in Rows)
+            {
+                <tr class="border-b border-edge/60 last:border-0 hover:bg-raised/50">
+                    <td class="px-4 py-3 font-medium">@row.Name</td>
+                    <td class="px-4 py-3 text-right font-mono">@row.Actions.ToString("N0")</td>
+                    <td class="px-4 py-3 text-right font-mono">@row.AveragePerMinute.ToString("0")</td>
+                    <td class="px-4 py-3 text-right font-mono">@row.BuildOrders.ToString("N0")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<p class="mt-3 text-xs text-ink-faint">
+    Clients without any recorded actions (observers, disconnected players) are listed with zeroes.
+    Lobby details such as factions and ratings come from the FAForever API and are only available for vault replays.
+</p>
+
+@code {
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private sealed record PlayerRow(string Name, int Actions, double AveragePerMinute, int BuildOrders);
+
+    private List<PlayerRow> Rows { get; set; } = [];
+
+    protected override void OnParametersSet()
+    {
+        Replay replay = Model.Replay;
+        Dictionary<int, int> actions = ReplayAnalysis.CountPlayerActions(replay);
+        double minutes = Math.Max(ReplayAnalysis.GetDuration(replay).TotalMinutes, 1e-9);
+
+        List<PlayerRow> rows = [];
+        for (int sourceId = 0; sourceId < replay.Header.Clients.Length; sourceId++)
+        {
+            int actionCount = actions.GetValueOrDefault(sourceId);
+            int buildOrders = ReplayAnalysis.GetBuildOrder(replay, sourceId).Count;
+            rows.Add(new PlayerRow(replay.Header.Clients[sourceId].PlayerName, actionCount, actionCount / minutes, buildOrders));
+        }
+
+        Rows = rows.OrderByDescending(row => row.Actions).ToList();
+    }
+}

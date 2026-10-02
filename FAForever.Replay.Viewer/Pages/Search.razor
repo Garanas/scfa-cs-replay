@@ -1,0 +1,220 @@
+@page "/search"
+@implements IDisposable
+@inject FafApiClient Api
+@inject AuthService Auth
+
+<PageTitle>Search — FAF Replays</PageTitle>
+
+<h1 class="text-2xl font-bold">Search the vault</h1>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <div class="card mt-6 max-w-xl text-center">
+            <p class="font-semibold">Sign in to search</p>
+            <p class="mt-2 text-sm text-ink-muted">
+                The FAForever API requires a signed-in account to browse the replay vault.
+                Use the <span class="font-semibold text-ink">Sign in</span> button in the header.
+            </p>
+        </div>
+    </NotAuthorized>
+    <Authorized>
+        <form class="card mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" @onsubmit="SearchFromStart" @onsubmit:preventDefault>
+            <label class="block text-sm">
+                <span class="mb-1 block font-medium text-ink-muted">Player</span>
+                <input class="input-field" placeholder="Exact name, * as wildcard" @bind="playerName" />
+            </label>
+            <label class="block text-sm">
+                <span class="mb-1 block font-medium text-ink-muted">Map</span>
+                <input class="input-field" placeholder="Part of the map name" @bind="mapName" />
+            </label>
+            <label class="block text-sm">
+                <span class="mb-1 block font-medium text-ink-muted">Featured mod</span>
+                <select class="input-field" @bind="featuredMod">
+                    <option value="">Any</option>
+                    <option value="faf">FAF</option>
+                    <option value="fafbeta">FAF Beta</option>
+                    <option value="fafdevelop">FAF Develop</option>
+                    <option value="coop">Coop</option>
+                    <option value="nomads">Nomads</option>
+                </select>
+            </label>
+            <label class="block text-sm">
+                <span class="mb-1 block font-medium text-ink-muted">Played after</span>
+                <input type="date" class="input-field" @bind="playedAfter" />
+            </label>
+            <div class="flex items-end gap-3 sm:col-span-2 lg:col-span-4">
+                <button type="submit" class="btn-primary" disabled="@isSearching">Search</button>
+                @if (Auth.Session?.UserName is { } ownName)
+                {
+                    <button type="button" class="btn-secondary" disabled="@isSearching" @onclick="() => SearchOwnReplaysAsync(ownName)">My replays</button>
+                }
+                <label class="ml-auto flex items-center gap-2 text-sm text-ink-muted">
+                    <input type="checkbox" class="accent-primary" @bind="finishedOnly" />
+                    Finished games only
+                </label>
+            </div>
+        </form>
+
+        <section class="mt-6" aria-live="polite">
+            @if (isSearching)
+            {
+                <div class="card animate-pulse text-center text-sm text-ink-muted">Searching the vault&hellip;</div>
+            }
+            else if (error is not null)
+            {
+                <div class="card" role="alert">
+                    <p class="font-semibold">Search failed</p>
+                    <p class="mt-1 text-sm text-ink-muted">@error</p>
+                </div>
+            }
+            else if (result is { } search)
+            {
+                @if (search.Games.Count == 0)
+                {
+                    <div class="card text-center text-sm text-ink-muted">No games match these filters.</div>
+                }
+                else
+                {
+                    <p class="text-sm text-ink-muted">
+                        @(search.TotalRecords is { } total ? $"{total:N0} games found" : "Results")
+                        @(search.TotalPages is { } pages ? $" · page {search.Page} of {pages:N0}" : $" · page {search.Page}")
+                    </p>
+                    <div class="mt-3 grid gap-4 md:grid-cols-2">
+                        @foreach (GameSummary game in search.Games)
+                        {
+                            <a href="/replay/@game.Id" class="card flex gap-4 transition hover:border-primary">
+                                @if (game.MapPreviewUrl is { } previewUrl)
+                                {
+                                    <img src="@previewUrl" alt="" loading="lazy"
+                                         class="h-20 w-20 shrink-0 rounded-md border border-edge object-cover"
+                                         onerror="this.style.visibility='hidden'" />
+                                }
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <p class="truncate font-semibold" title="@game.Title">@game.Title</p>
+                                        <span class="badge shrink-0">#@game.Id</span>
+                                    </div>
+                                    <p class="mt-0.5 truncate text-sm text-ink-muted">
+                                        @(game.MapName ?? "Unknown map")
+                                        @if (game.FeaturedMod is { } mod)
+                                        {
+                                            <span> · @mod</span>
+                                        }
+                                    </p>
+                                    <p class="mt-0.5 text-xs text-ink-faint">
+                                        @game.StartTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                        @if (game.Duration is { } gameDuration)
+                                        {
+                                            <span> · @ReplayView.FormatDuration(gameDuration)</span>
+                                        }
+                                    </p>
+                                    <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                                        @foreach (GamePlayer player in game.Players.Take(8))
+                                        {
+                                            <span class="inline-flex items-center gap-1.5 text-xs">
+                                                <span class="inline-block h-2 w-2 rounded-full" style="background: @FactionSwatch(player.Faction)" title="@(player.Faction?.ToString() ?? "Unknown faction")"></span>
+                                                <span class="font-medium">@player.Login</span>
+                                                @if (player.Rating is { } rating)
+                                                {
+                                                    <span class="text-ink-faint">(@rating)</span>
+                                                }
+                                            </span>
+                                        }
+                                        @if (game.Players.Count > 8)
+                                        {
+                                            <span class="text-xs text-ink-faint">+@(game.Players.Count - 8) more</span>
+                                        }
+                                    </div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                    <div class="mt-6 flex items-center justify-center gap-3">
+                        <button type="button" class="btn-secondary" disabled="@(isSearching || search.Page <= 1)" @onclick="() => SearchAsync(search.Page - 1)">Previous</button>
+                        <button type="button" class="btn-secondary" disabled="@(isSearching || (search.TotalPages is { } totalPages && search.Page >= totalPages))" @onclick="() => SearchAsync(search.Page + 1)">Next</button>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="card text-center text-sm text-ink-muted">
+                    Search by player, map or mod &mdash; or list your own recent games with <span class="font-medium text-ink">My replays</span>.
+                </div>
+            }
+        </section>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private string playerName = string.Empty;
+    private string mapName = string.Empty;
+    private string featuredMod = string.Empty;
+    private DateTime? playedAfter;
+    private bool finishedOnly = true;
+
+    private bool isSearching;
+    private string? error;
+    private GameSearchResult? result;
+    private CancellationTokenSource? searchCancellation;
+
+    private Task SearchFromStart() => SearchAsync(1);
+
+    private async Task SearchOwnReplaysAsync(string ownName)
+    {
+        playerName = ownName;
+        await SearchAsync(1);
+    }
+
+    private async Task SearchAsync(int page)
+    {
+        searchCancellation?.Cancel();
+        using CancellationTokenSource cancellation = new();
+        searchCancellation = cancellation;
+
+        isSearching = true;
+        error = null;
+        try
+        {
+            result = await Api.SearchGamesAsync(new GameSearchQuery
+            {
+                PlayerName = playerName,
+                MapName = mapName,
+                FeaturedMod = featuredMod,
+                FinishedOnly = finishedOnly,
+                PlayedAfter = playedAfter is { } after ? DateOnly.FromDateTime(after) : null,
+                Page = page,
+            }, cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer search or navigation.
+        }
+        catch (NotAuthenticatedException)
+        {
+            error = "Your session has expired. Sign in again to keep searching.";
+        }
+        catch (HttpRequestException exception)
+        {
+            error = $"The FAForever API could not be reached: {exception.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(searchCancellation, cancellation))
+            {
+                searchCancellation = null;
+                isSearching = false;
+            }
+        }
+    }
+
+    private static string FactionSwatch(GameFaction? faction) => faction switch
+    {
+        GameFaction.Uef => "var(--swatch-uef)",
+        GameFaction.Aeon => "var(--swatch-aeon)",
+        GameFaction.Cybran => "var(--swatch-cybran)",
+        GameFaction.Seraphim => "var(--swatch-seraphim)",
+        _ => "var(--th-ink-faint)",
+    };
+
+    public void Dispose() => searchCancellation?.Cancel();
+}

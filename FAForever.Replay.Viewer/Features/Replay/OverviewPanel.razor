@@ -1,0 +1,159 @@
+@using FAForever.Replay
+
+<div class="grid gap-6 lg:grid-cols-[2fr_3fr]">
+    <div class="card flex flex-col items-center justify-center gap-3">
+        @if (MapPreviewUrl is { } previewUrl)
+        {
+            <img src="@previewUrl" alt="Map preview of @MapName" loading="lazy"
+                 class="aspect-square w-full max-w-72 rounded-lg border border-edge object-cover"
+                 onerror="this.style.display='none'" />
+        }
+        <div class="text-center">
+            <p class="font-display text-lg font-bold">@MapName</p>
+            @if (MapSize is { } size)
+            {
+                <p class="text-sm text-ink-muted">@size</p>
+            }
+            @if (StripLocTag(Model.Replay.Header.Scenario.Map.Description) is { Length: > 0 } description)
+            {
+                <p class="mt-2 line-clamp-6 max-w-72 text-sm text-ink-muted" title="@description">@description</p>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <dl class="grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2">
+            @foreach ((string label, string value) in Facts)
+            {
+                <div class="flex justify-between gap-4 border-b border-edge/60 py-2 last:border-0 sm:last:border-b">
+                    <dt class="text-ink-muted">@label</dt>
+                    <dd class="truncate text-right font-medium" title="@value">@value</dd>
+                </div>
+            }
+        </dl>
+
+        @if (Mods.Count > 0)
+        {
+            <h3 class="mt-6 text-sm font-semibold text-ink-muted">Mods</h3>
+            <ul class="mt-2 flex flex-wrap gap-2">
+                @foreach (string mod in Mods)
+                {
+                    <li class="badge">@mod</li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private string MapName => StripLocTag(Model.Replay.Header.Scenario.Map.Name) ?? Model.Metadata?.mapname ?? "Unknown map";
+
+    /// <summary>
+    /// Map names and descriptions can carry a game localisation marker,
+    /// e.g. "&lt;LOC SCMP_026_Description&gt;Vya-3 was once...". Strip it.
+    /// </summary>
+    private static string? StripLocTag(string? text)
+    {
+        if (text is null)
+        {
+            return null;
+        }
+
+        if (text.StartsWith("<LOC ", StringComparison.OrdinalIgnoreCase) && text.IndexOf('>') is int end and >= 0)
+        {
+            return text[(end + 1)..].Trim();
+        }
+
+        return text.Trim();
+    }
+
+    private string? MapSize
+    {
+        get
+        {
+            if (Model.Replay.Header.Scenario.Map is { SizeX: int sizeX, SizeZ: int sizeZ } && sizeX > 0 && sizeZ > 0)
+            {
+                // 51.2 world units per kilometre: a 1024 map is 20x20 km.
+                return $"{Math.Round(sizeX / 51.2)} x {Math.Round(sizeZ / 51.2)} km";
+            }
+
+            return null;
+        }
+    }
+
+    private string? MapPreviewUrl
+    {
+        get
+        {
+            // The vault serves preview images by map folder name, e.g.
+            // https://content.faforever.com/maps/previews/small/astro_crater_battles_4x4_rich_huge.png
+            string? folder = Model.Metadata?.mapname;
+            if (folder is null && Model.Replay.Header.Scenario.Map.SCMapReference is { Length: > 0 } reference)
+            {
+                string[] segments = reference.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                folder = segments.Length >= 2 ? segments[^2] : null;
+            }
+
+            return folder is { Length: > 0 }
+                ? $"https://content.faforever.com/maps/previews/small/{folder.ToLowerInvariant()}.png"
+                : null;
+        }
+    }
+
+    private List<(string Label, string Value)> Facts
+    {
+        get
+        {
+            List<(string, string)> facts = [];
+            if (Model.Origin is ReplayOrigin.Vault vault)
+            {
+                facts.Add(("Replay ID", $"#{vault.ReplayId}"));
+            }
+            if (Model.Metadata is { } metadata)
+            {
+                facts.Add(("Host", metadata.host));
+                facts.Add(("Recorded by", metadata.recorder));
+                facts.Add(("Played on", DateTimeOffset.FromUnixTimeSeconds((long)metadata.launched_at).ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
+                facts.Add(("Players", metadata.num_players.ToString()));
+                facts.Add(("Victory condition", VictoryCondition(metadata.GameType)));
+                facts.Add(("Complete", metadata.Complete ? "yes" : "no"));
+            }
+            else
+            {
+                facts.Add(("Clients", Model.Replay.Header.Clients.Length.ToString()));
+            }
+            facts.Add(("Duration", ReplayView.FormatDuration(ReplayAnalysis.GetDuration(Model.Replay))));
+            facts.Add(("Inputs parsed", Model.Replay.Body.UserInput.Count.ToString("N0")));
+            facts.Add(("In sync", Model.Replay.Body.InSync ? "yes" : "no — desync detected"));
+            return facts;
+        }
+    }
+
+    private static string VictoryCondition(string gameType) => gameType switch
+    {
+        "0" => "Assassination",
+        "1" => "Supremacy",
+        "2" => "Annihilation",
+        "3" => "Sandbox",
+        _ => gameType,
+    };
+
+    private List<string> Mods
+    {
+        get
+        {
+            List<string> mods = [];
+            foreach (LuaData mod in Model.Replay.Header.Mods)
+            {
+                if (mod is LuaData.Table table && table.TryGetStringValue("name", out string? name) && name is { Length: > 0 })
+                {
+                    mods.Add(name);
+                }
+            }
+
+            return mods;
+        }
+    }
+}

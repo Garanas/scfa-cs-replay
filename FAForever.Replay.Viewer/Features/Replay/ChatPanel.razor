@@ -1,0 +1,43 @@
+@using FAForever.Replay
+
+@if (messages.Count == 0)
+{
+    <div class="card text-center text-sm text-ink-muted">No chat messages in this replay.</div>
+}
+else
+{
+    <div class="card overflow-x-auto p-0">
+        <table class="w-full text-left text-sm">
+            <thead>
+                <tr class="border-b border-edge text-xs uppercase tracking-wide text-ink-muted">
+                    <th class="px-4 py-3 font-semibold">Time</th>
+                    <th class="px-4 py-3 font-semibold">From</th>
+                    <th class="px-4 py-3 font-semibold">To</th>
+                    <th class="w-full px-4 py-3 font-semibold">Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (ReplayChatMessage message in messages)
+                {
+                    <tr class="border-b border-edge/60 align-top last:border-0 hover:bg-raised/50">
+                        <td class="px-4 py-2 font-mono text-ink-muted">@ReplayView.FormatDuration(message.Timestamp)</td>
+                        <td class="whitespace-nowrap px-4 py-2 font-medium">@message.Sender</td>
+                        <td class="px-4 py-2"><span class="badge">@message.Receiver</span></td>
+                        <td class="px-4 py-2">@message.Message</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private List<ReplayChatMessage> messages = [];
+
+    protected override void OnParametersSet()
+    {
+        messages = ReplaySemantics.GetChatMessages(Model.Replay);
+    }
+}

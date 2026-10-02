@@ -1,0 +1,22 @@
+@page "/replay/local"
+@inject ReplaySessionState Session
+
+@if (Session.Current is { Origin: ReplayOrigin.LocalFile localFile } loaded)
+{
+    <PageTitle>@localFile.FileName — FAF Replays</PageTitle>
+    <ReplayView Model="loaded" />
+}
+else
+{
+    <PageTitle>Local replay — FAF Replays</PageTitle>
+    <div class="mx-auto max-w-3xl py-8">
+        <div class="card text-center">
+            <h1 class="text-xl font-bold">No local replay loaded</h1>
+            <p class="mt-2 text-sm text-ink-muted">
+                Load a <span class="font-mono">.fafreplay</span> or <span class="font-mono">.scfareplay</span> file from the home page.
+                Local replays live in memory only, so a refresh clears them.
+            </p>
+            <a href="/" class="btn-primary mt-6 inline-flex">Back to home</a>
+        </div>
+    </div>
+}

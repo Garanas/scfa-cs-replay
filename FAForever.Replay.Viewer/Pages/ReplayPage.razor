@@ -1,0 +1,118 @@
+@page "/replay/{ReplayId:int}"
+@implements IDisposable
+@inject HttpClient Http
+@inject IConfiguration Configuration
+@inject ReplayLoadingService Loader
+@inject ReplaySessionState Session
+
+<PageTitle>Replay #@ReplayId — FAF Replays</PageTitle>
+
+@if (Session.Current is { Origin: ReplayOrigin.Vault vault } loaded && vault.ReplayId == ReplayId)
+{
+    <ReplayView Model="loaded" />
+}
+else if (error is not null)
+{
+    <div class="mx-auto max-w-3xl py-8">
+        <div class="card" role="alert">
+            <h1 class="text-xl font-bold">Could not load replay #@ReplayId</h1>
+            <p class="mt-2 text-sm text-ink-muted">@error</p>
+            <div class="mt-6 flex gap-3">
+                <button type="button" class="btn-primary" @onclick="RetryAsync">Try again</button>
+                <a href="/" class="btn-secondary">Back to home</a>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="mx-auto max-w-3xl py-8" aria-live="polite">
+        <LoadProgress Progress="progress" OnCancel="CancelLoad" />
+    </div>
+}
+
+@code {
+    [Parameter] public int ReplayId { get; set; }
+
+    private string? error;
+    private ReplayLoadProgress? progress;
+    private CancellationTokenSource? loadCancellation;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Session.Current is { Origin: ReplayOrigin.Vault vault } && vault.ReplayId == ReplayId)
+        {
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task RetryAsync()
+    {
+        error = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loadCancellation?.Cancel();
+        using CancellationTokenSource cancellation = new();
+        loadCancellation = cancellation;
+        error = null;
+
+        try
+        {
+            progress = new ReplayLoadProgress("Downloading from the vault", null);
+
+            string apiBase = Configuration["FafApi:BaseUrl"] ?? "https://api.faforever.com";
+            using HttpResponseMessage response = await Http.GetAsync($"{apiBase}/game/{ReplayId}/replay", cancellation.Token);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                error = "The vault has no replay with this ID.";
+                return;
+            }
+            response.EnsureSuccessStatusCode();
+
+            byte[] bytes = await response.Content.ReadAsByteArrayAsync(cancellation.Token);
+            using MemoryStream buffer = new(bytes);
+
+            ReplayLoadResult result = await Loader.LoadAsync(buffer, ReplayFormat.FAForever, new Progress<ReplayLoadProgress>(OnProgress), cancellation.Token);
+            switch (result)
+            {
+                case ReplayLoadResult.Success success:
+                    Session.Set(new LoadedReplay(success.Replay, success.Metadata, new ReplayOrigin.Vault(ReplayId)));
+                    break;
+                case ReplayLoadResult.Failure failure:
+                    error = failure.Message;
+                    break;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The user cancelled or navigated away.
+        }
+        catch (HttpRequestException exception)
+        {
+            error = $"The download failed: {exception.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(loadCancellation, cancellation))
+            {
+                loadCancellation = null;
+            }
+            progress = null;
+        }
+    }
+
+    private void OnProgress(ReplayLoadProgress update)
+    {
+        progress = update;
+        StateHasChanged();
+    }
+
+    private void CancelLoad() => loadCancellation?.Cancel();
+
+    public void Dispose() => loadCancellation?.Cancel();
+}

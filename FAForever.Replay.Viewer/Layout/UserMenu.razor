@@ -1,0 +1,32 @@
+@implements IDisposable
+@inject AuthService Auth
+
+<AuthorizeView>
+    <Authorized>
+        <div class="flex items-center gap-2">
+            <span class="hidden max-w-40 truncate text-sm font-medium sm:inline" title="Signed in via FAForever">
+                @context.User.Identity?.Name
+            </span>
+            <button type="button" class="btn-secondary px-3 py-1.5" @onclick="() => Auth.LogoutAsync()">Sign out</button>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="flex items-center gap-2">
+            @if (Auth.LastError is { } error)
+            {
+                <span class="badge border-primary text-primary" title="@error">sign-in failed</span>
+            }
+            <button type="button" class="btn-primary px-3 py-1.5" @onclick="BeginLoginAsync">Sign in</button>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    protected override void OnInitialized() => Auth.Changed += OnAuthChanged;
+
+    private async Task BeginLoginAsync() => await Auth.BeginLoginAsync();
+
+    private void OnAuthChanged() => StateHasChanged();
+
+    public void Dispose() => Auth.Changed -= OnAuthChanged;
+}

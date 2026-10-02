@@ -1,0 +1,97 @@
+@using FAForever.Replay
+
+<div class="flex flex-wrap items-center gap-3">
+    <label class="text-sm font-medium text-ink-muted" for="build-order-player">Player</label>
+    <select id="build-order-player" class="input-field max-w-60" @bind="selectedSourceId" @bind:after="RefreshEntries">
+        @foreach (RosterEntry entry in roster)
+        {
+            <option value="@entry.SourceId">@entry.Name</option>
+        }
+    </select>
+</div>
+
+@if (Entries.Count == 0)
+{
+    <p class="mt-4 text-sm text-ink-muted">No construction orders recorded for this player.</p>
+}
+else
+{
+    <div class="mt-4 max-h-96 overflow-y-auto rounded-md border border-edge">
+        <table class="w-full text-left text-sm">
+            <thead class="sticky top-0 bg-raised text-xs uppercase tracking-wide text-ink-muted">
+                <tr>
+                    <th class="px-3 py-2 font-semibold">Time</th>
+                    <th class="px-3 py-2 font-semibold">Order</th>
+                    <th class="px-3 py-2 font-semibold">Blueprint</th>
+                    <th class="px-3 py-2 text-right font-semibold" title="Number of units or factories that received the order">Units</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (ReplayAnalysis.BuildOrderEntry entry in Entries)
+                {
+                    <tr class="border-t border-edge/60 hover:bg-raised/50">
+                        <td class="px-3 py-1.5 font-mono text-ink-muted">@ReplayView.FormatDuration(entry.Timestamp)</td>
+                        <td class="px-3 py-1.5">@OrderLabel(entry.Type)</td>
+                        @* TODO(unit-names): map blueprint ids to unit names/icons via a static lookup. *@
+                        <td class="px-3 py-1.5 font-mono">@entry.BlueprintId</td>
+                        <td class="px-3 py-1.5 text-right font-mono">@entry.UnitCount</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="mt-2 text-xs text-ink-faint">@Entries.Count construction orders.</p>
+}
+
+@code {
+    [Parameter, EditorRequired] public required Replay Replay { get; set; }
+
+    private sealed record RosterEntry(int SourceId, string Name);
+
+    private List<RosterEntry> roster = [];
+    private int selectedSourceId;
+    private Replay? analysedReplay;
+
+    private List<ReplayAnalysis.BuildOrderEntry> Entries { get; set; } = [];
+    private int entriesForSourceId = -1;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(analysedReplay, Replay))
+        {
+            analysedReplay = Replay;
+            Dictionary<int, int> totals = ReplayAnalysis.CountPlayerActions(Replay);
+            roster = Replay.Header.Clients
+                .Select((client, sourceId) => (client, sourceId))
+                .Where(pair => totals.GetValueOrDefault(pair.sourceId) > 0)
+                .OrderByDescending(pair => totals.GetValueOrDefault(pair.sourceId))
+                .Select(pair => new RosterEntry(pair.sourceId, pair.client.PlayerName))
+                .ToList();
+            selectedSourceId = roster.Count > 0 ? roster[0].SourceId : 0;
+            entriesForSourceId = -1;
+        }
+
+        RefreshEntries();
+    }
+
+    private void RefreshEntries()
+    {
+        if (entriesForSourceId == selectedSourceId || analysedReplay is null)
+        {
+            return;
+        }
+
+        entriesForSourceId = selectedSourceId;
+        Entries = ReplayAnalysis.GetBuildOrder(analysedReplay, selectedSourceId);
+    }
+
+    private static string OrderLabel(CommandType type) => type switch
+    {
+        CommandType.IssueBuildFactory => "Build (factory)",
+        CommandType.IssueBuildMobile => "Build (engineer)",
+        CommandType.IssueUpgrade => "Upgrade",
+        CommandType.IssueSiloBuildNuke => "Nuke silo",
+        CommandType.IssueSiloBuildTactical => "Tactical silo",
+        _ => type.ToString(),
+    };
+}

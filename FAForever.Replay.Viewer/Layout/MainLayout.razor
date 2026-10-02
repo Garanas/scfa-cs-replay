@@ -1,0 +1,16 @@
+@inherits LayoutComponentBase
+
+<div class="flex min-h-dvh flex-col">
+    <AppHeader />
+
+    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+        @Body
+    </main>
+
+    <footer class="border-t border-edge">
+        <div class="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-ink-faint sm:px-6">
+            <span>Replay analysis for Supreme Commander: Forged Alliance Forever.</span>
+            <a class="transition hover:text-ink" href="https://github.com/Garanas/scfa-cs-replay" target="_blank" rel="noreferrer">Source on GitHub</a>
+        </div>
+    </footer>
+</div>
