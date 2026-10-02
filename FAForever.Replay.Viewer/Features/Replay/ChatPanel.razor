@@ -8,17 +8,35 @@
 else
 {
     <div class="grid gap-6 lg:grid-cols-[1fr_3fr]">
-    <div class="card max-h-[70vh] self-start overflow-y-auto p-2" role="group" aria-label="Chat senders">
-        @foreach ((string sender, int count) in senders)
-        {
-            bool isSelected = selectedSenders.Contains(sender);
-            <label class="@(isSelected ? SelectedSenderClass : SenderClass)">
-                <input type="checkbox" class="accent-primary" checked="@isSelected"
-                       @onchange="() => Toggle(sender)" />
-                <span class="truncate text-sm">@sender</span>
-                <span class="badge ml-auto shrink-0">@count</span>
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
+        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
+
+        <div class="grid grid-cols-2 gap-2 px-3 py-2">
+            <label class="block text-xs text-ink-muted">
+                From
+                <input class="input-field mt-1 px-2 py-1 font-mono text-xs" placeholder="0:00"
+                       @bind="fromText" @bind:after="ApplyTimeFilter" />
             </label>
-        }
+            <label class="block text-xs text-ink-muted">
+                To
+                <input class="input-field mt-1 px-2 py-1 font-mono text-xs" placeholder="@ReplayView.FormatDuration(duration)"
+                       @bind="toText" @bind:after="ApplyTimeFilter" />
+            </label>
+        </div>
+
+        <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Players</h3>
+        <div role="group" aria-label="Chat senders">
+            @foreach ((string sender, int count) in senders)
+            {
+                bool isSelected = selectedSenders.Contains(sender);
+                <label class="@(isSelected ? SelectedSenderClass : SenderClass)">
+                    <input type="checkbox" class="accent-primary" checked="@isSelected"
+                           @onchange="() => Toggle(sender)" />
+                    <span class="truncate text-sm">@sender</span>
+                    <span class="badge ml-auto shrink-0">@count</span>
+                </label>
+            }
+        </div>
     </div>
 
     <div class="card max-h-[70vh] self-start overflow-y-auto p-0">
@@ -43,9 +61,9 @@ else
                 }
             </tbody>
         </table>
-        @if (selectedSenders.Count == 0)
+        @if (!FilteredMessages.Any())
         {
-            <p class="px-4 py-3 text-sm text-ink-muted">Select at least one player to see their messages.</p>
+            <p class="px-4 py-3 text-sm text-ink-muted">No messages match the current filters.</p>
         }
     </div>
     </div>
@@ -53,6 +71,8 @@ else
 
 @code {
     private const string QueryParameter = "players";
+    private const string FromParameter = "from";
+    private const string ToParameter = "to";
     private const string SenderClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-ink-muted transition hover:bg-raised hover:text-ink";
     private const string SelectedSenderClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 font-medium text-ink transition hover:bg-raised";
 
@@ -61,13 +81,40 @@ else
     private List<ReplayChatMessage> allMessages = [];
     private List<(string Sender, int Count)> senders = [];
     private HashSet<string> selectedSenders = [];
+    private TimeSpan duration;
+    private string fromText = string.Empty;
+    private string toText = string.Empty;
+    private TimeSpan? fromTime;
+    private TimeSpan? toTime;
 
     private IEnumerable<ReplayChatMessage> FilteredMessages
-        => selectedSenders.Count == senders.Count ? allMessages : allMessages.Where(message => selectedSenders.Contains(message.Sender));
+    {
+        get
+        {
+            IEnumerable<ReplayChatMessage> messages = selectedSenders.Count == senders.Count
+                ? allMessages
+                : allMessages.Where(message => selectedSenders.Contains(message.Sender));
+            if (fromTime is { } from)
+            {
+                messages = messages.Where(message => message.Timestamp >= from);
+            }
+            if (toTime is { } to)
+            {
+                messages = messages.Where(message => message.Timestamp <= to);
+            }
+
+            return messages;
+        }
+    }
 
     protected override void OnParametersSet()
     {
         allMessages = ReplaySemantics.GetChatMessages(Model.Replay);
+        duration = ReplayAnalysis.GetDuration(Model.Replay);
+        fromText = UrlQuery.Get(Navigation, FromParameter) ?? string.Empty;
+        toText = UrlQuery.Get(Navigation, ToParameter) ?? string.Empty;
+        fromTime = ParseGameTime(fromText);
+        toTime = ParseGameTime(toText);
         senders = allMessages
             .GroupBy(message => message.Sender)
             .Select(group => (group.Key, group.Count()))
@@ -96,5 +143,43 @@ else
             ? null
             : string.Join(',', senders.Select(pair => pair.Sender).Where(selectedSenders.Contains));
         Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(QueryParameter, value), replace: true);
+    }
+
+    private void ApplyTimeFilter()
+    {
+        fromTime = ParseGameTime(fromText);
+        toTime = ParseGameTime(toText);
+
+        // Normalized (or removed when empty/invalid): the URL stays shareable and self-corrects.
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            [FromParameter] = fromTime is { } from ? ReplayView.FormatDuration(from) : null,
+            [ToParameter] = toTime is { } to ? ReplayView.FormatDuration(to) : null,
+        }), replace: true);
+    }
+
+    /// <summary>
+    /// Parses game time as minutes ("12"), m:ss ("12:30") or h:mm:ss ("1:02:30").
+    /// </summary>
+    private static TimeSpan? ParseGameTime(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        string[] parts = text.Trim().Split(':');
+        return parts.Length switch
+        {
+            1 when int.TryParse(parts[0], out int minutes) && minutes >= 0
+                => TimeSpan.FromMinutes(minutes),
+            2 when int.TryParse(parts[0], out int minutes) && int.TryParse(parts[1], out int seconds)
+                && minutes >= 0 && seconds is >= 0 and < 60
+                => new TimeSpan(0, minutes, seconds),
+            3 when int.TryParse(parts[0], out int hours) && int.TryParse(parts[1], out int minutes) && int.TryParse(parts[2], out int seconds)
+                && hours >= 0 && minutes is >= 0 and < 60 && seconds is >= 0 and < 60
+                => new TimeSpan(hours, minutes, seconds),
+            _ => null,
+        };
     }
 }

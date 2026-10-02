@@ -116,6 +116,33 @@ the FAF team before any public deployment (see TODO.md).
 - Tests: MSTest with `[DataRow]` over the real replay assets in `FAForever.Replay.Test/assets/`.
 - Keep the Server minimal: static hosting + token proxy. It must never hold secrets or session state.
 
+## Shareable view state (query parameters)
+
+**The URL is the single source of truth for view state**, so any view of a replay can be shared by
+copying the address: `/replay/23225104?tab=chat&players=MarcusM,Printer` opens the Chat tab filtered
+to those two players, on any machine.
+
+| Parameter | Meaning | Default when absent |
+|---|---|---|
+| `tab` | Active replay section: `players`, `chat`, `events`, `callbacks`, `analysis` | Overview |
+| `players` | Comma-separated chat senders to show | All senders |
+| `from` / `to` | Game-time bounds for chat messages (`12`, `12:30` or `1:02:30`) | Start / end of the replay |
+| `endpoint` | Selected sim-callback endpoint | The most frequent endpoint |
+
+The pattern, for any new panel with a selection worth sharing:
+
+- **Read** with `UrlQuery.Get(Navigation, "name")` (`Services/UrlQuery.cs`) inside `OnParametersSet`,
+  and derive the full panel state from Model + URL there — every render is then idempotent, and a
+  pasted link restores the exact view without extra plumbing.
+- **Write** with `Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("name", value), replace: true)`.
+  Always `replace: true`: selections must not pollute the browser history.
+- **Defaults stay out of the URL**: pass `null` as the value to remove the parameter when the
+  selection equals the default (Overview tab, all players, top endpoint). Links stay short and the
+  bare URL keeps working.
+- **Degrade gracefully**: unknown player names are ignored, an unknown endpoint falls back to the
+  default — a stale link to a different replay must never break the page.
+- Parameters are independent and may be combined; switching tabs leaves the other parameters alone.
+
 ## Unit icon atlas
 
 `tools/convert-unit-icons.ps1` writes into `FAForever.Replay.Viewer/wwwroot/images/units/`:
