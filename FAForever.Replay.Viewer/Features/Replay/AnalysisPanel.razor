@@ -2,7 +2,9 @@
     <div class="card">
         <h3 class="font-semibold">Actions per minute</h3>
         <p class="mt-1 text-xs text-ink-faint">
-            Deliberate inputs (orders, queue changes, pauses) per minute of game time. Pick up to four players.
+            Actions per minute of game time. All input a player issues within a single simulation tick
+            counts as one action &mdash; drag-building a line of walls would otherwise count once per wall.
+            Pick up to four players.
         </p>
         <div class="mt-4">
             <ApmChart Replay="Model.Replay" />

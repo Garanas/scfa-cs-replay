@@ -1,4 +1,5 @@
 @using FAForever.Replay
+@inject NavigationManager Navigation
 
 <article>
     <header class="border-b border-edge pb-6">
@@ -25,7 +26,7 @@
     <nav class="mt-6 flex flex-wrap gap-1 border-b border-edge pb-px" aria-label="Replay sections">
         @foreach (Tab tab in Enum.GetValues<Tab>())
         {
-            <button type="button" class="@(tab == activeTab ? ActiveTabClass : TabClass)" @onclick="() => activeTab = tab">
+            <button type="button" class="@(tab == activeTab ? ActiveTabClass : TabClass)" @onclick="() => SelectTab(tab)">
                 @TabLabel(tab)
             </button>
         }
@@ -46,6 +47,9 @@
             case Tab.Events:
                 <EventsPanel Model="Model" />
                 break;
+            case Tab.Callbacks:
+                <CallbacksPanel Model="Model" />
+                break;
             case Tab.Analysis:
                 <AnalysisPanel Model="Model" />
                 break;
@@ -63,6 +67,7 @@
         Players,
         Chat,
         Events,
+        Callbacks,
         Analysis,
     }
 
@@ -74,7 +79,28 @@
     protected override void OnParametersSet()
     {
         duration = ReplayAnalysis.GetDuration(Model.Replay);
+        // The URL is the source of truth for the active tab, so a view can be shared.
+        activeTab = ParseTab(UrlQuery.Get(Navigation, "tab"));
     }
+
+    private void SelectTab(Tab tab)
+    {
+        activeTab = tab;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("tab", TabQueryValue(tab)), replace: true);
+    }
+
+    private static Tab ParseTab(string? value) => value?.ToLowerInvariant() switch
+    {
+        "players" => Tab.Players,
+        "chat" => Tab.Chat,
+        "events" => Tab.Events,
+        "callbacks" => Tab.Callbacks,
+        "analysis" => Tab.Analysis,
+        _ => Tab.Overview,
+    };
+
+    private static string? TabQueryValue(Tab tab)
+        => tab == Tab.Overview ? null : tab.ToString().ToLowerInvariant();
 
     private string Title => Model.Metadata?.title is { Length: > 0 } title
         ? title
@@ -108,6 +134,7 @@
         Tab.Players => "Players",
         Tab.Chat => "Chat",
         Tab.Events => "Events",
+        Tab.Callbacks => "Callbacks",
         Tab.Analysis => "Analysis",
         _ => tab.ToString(),
     };

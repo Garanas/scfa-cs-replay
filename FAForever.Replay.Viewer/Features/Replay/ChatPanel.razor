@@ -1,15 +1,30 @@
 @using FAForever.Replay
+@inject NavigationManager Navigation
 
-@if (messages.Count == 0)
+@if (allMessages.Count == 0)
 {
     <div class="card text-center text-sm text-ink-muted">No chat messages in this replay.</div>
 }
 else
 {
-    <div class="card overflow-x-auto p-0">
+    <div class="grid gap-6 lg:grid-cols-[1fr_3fr]">
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-2" role="group" aria-label="Chat senders">
+        @foreach ((string sender, int count) in senders)
+        {
+            bool isSelected = selectedSenders.Contains(sender);
+            <label class="@(isSelected ? SelectedSenderClass : SenderClass)">
+                <input type="checkbox" class="accent-primary" checked="@isSelected"
+                       @onchange="() => Toggle(sender)" />
+                <span class="truncate text-sm">@sender</span>
+                <span class="badge ml-auto shrink-0">@count</span>
+            </label>
+        }
+    </div>
+
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-0">
         <table class="w-full text-left text-sm">
-            <thead>
-                <tr class="border-b border-edge text-xs uppercase tracking-wide text-ink-muted">
+            <thead class="sticky top-0 bg-raised text-xs uppercase tracking-wide text-ink-muted">
+                <tr>
                     <th class="px-4 py-3 font-semibold">Time</th>
                     <th class="px-4 py-3 font-semibold">From</th>
                     <th class="px-4 py-3 font-semibold">To</th>
@@ -17,9 +32,9 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (ReplayChatMessage message in messages)
+                @foreach (ReplayChatMessage message in FilteredMessages)
                 {
-                    <tr class="border-b border-edge/60 align-top last:border-0 hover:bg-raised/50">
+                    <tr class="border-t border-edge/60 align-top hover:bg-raised/50">
                         <td class="px-4 py-2 font-mono text-ink-muted">@ReplayView.FormatDuration(message.Timestamp)</td>
                         <td class="whitespace-nowrap px-4 py-2 font-medium">@message.Sender</td>
                         <td class="px-4 py-2"><span class="badge">@message.Receiver</span></td>
@@ -28,16 +43,58 @@ else
                 }
             </tbody>
         </table>
+        @if (selectedSenders.Count == 0)
+        {
+            <p class="px-4 py-3 text-sm text-ink-muted">Select at least one player to see their messages.</p>
+        }
+    </div>
     </div>
 }
 
 @code {
+    private const string QueryParameter = "players";
+    private const string SenderClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-ink-muted transition hover:bg-raised hover:text-ink";
+    private const string SelectedSenderClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 font-medium text-ink transition hover:bg-raised";
+
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
-    private List<ReplayChatMessage> messages = [];
+    private List<ReplayChatMessage> allMessages = [];
+    private List<(string Sender, int Count)> senders = [];
+    private HashSet<string> selectedSenders = [];
+
+    private IEnumerable<ReplayChatMessage> FilteredMessages
+        => selectedSenders.Count == senders.Count ? allMessages : allMessages.Where(message => selectedSenders.Contains(message.Sender));
 
     protected override void OnParametersSet()
     {
-        messages = ReplaySemantics.GetChatMessages(Model.Replay);
+        allMessages = ReplaySemantics.GetChatMessages(Model.Replay);
+        senders = allMessages
+            .GroupBy(message => message.Sender)
+            .Select(group => (group.Key, group.Count()))
+            .OrderByDescending(pair => pair.Item2)
+            .ThenBy(pair => pair.Key)
+            .ToList();
+
+        // The URL is the source of truth: absent means everyone is selected.
+        string? fromQuery = UrlQuery.Get(Navigation, QueryParameter);
+        selectedSenders = fromQuery is { Length: > 0 }
+            ? senders.Select(pair => pair.Sender)
+                .Intersect(fromQuery.Split(','), StringComparer.Ordinal)
+                .ToHashSet()
+            : senders.Select(pair => pair.Sender).ToHashSet();
+    }
+
+    private void Toggle(string sender)
+    {
+        if (!selectedSenders.Remove(sender))
+        {
+            selectedSenders.Add(sender);
+        }
+
+        // Keep the order of the sender list so the parameter is stable and shareable.
+        string? value = selectedSenders.Count == senders.Count
+            ? null
+            : string.Join(',', senders.Select(pair => pair.Sender).Where(selectedSenders.Contains));
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(QueryParameter, value), replace: true);
     }
 }

@@ -49,19 +49,26 @@ namespace FAForever.Replay
         }
 
         /// <summary>
-        /// Counts the actions of each input source. The key of the dictionary is the source id,
-        /// which maps to <see cref="ReplayHeader.Clients"/>.
+        /// Counts the actions of each input source. All input a player issues within a single
+        /// simulation tick counts as one action: a single UI gesture expands into many orders
+        /// that all land in the same tick, while a player cannot perform two deliberate gestures
+        /// within one tick (100 ms). Drag-building a line of walls, for example, would otherwise
+        /// count as one action for each wall in the drag; see <see cref="CountPlayerOrders"/>
+        /// for the raw order count. The key of the dictionary is the source id, which maps to
+        /// <see cref="ReplayHeader.Clients"/>.
         /// </summary>
         public static Dictionary<int, int> CountPlayerActions(Replay replay)
         {
             Dictionary<int, int> actions = new();
+            Dictionary<int, int> lastCountedTick = new();
             foreach (ReplayInput input in replay.Body.UserInput)
             {
-                if (!IsPlayerAction(input))
+                if (!IsPlayerAction(input) || lastCountedTick.GetValueOrDefault(input.SourceId, -1) == input.Tick)
                 {
                     continue;
                 }
 
+                lastCountedTick[input.SourceId] = input.Tick;
                 actions[input.SourceId] = actions.GetValueOrDefault(input.SourceId) + 1;
             }
 
@@ -69,10 +76,32 @@ namespace FAForever.Replay
         }
 
         /// <summary>
-        /// Buckets the actions of each input source over time. The key of the dictionary is the
-        /// source id. Each value holds one count per bucket of <paramref name="bucketSeconds"/>,
-        /// covering the full duration of the replay. Divide by the bucket length to get actions
-        /// per minute.
+        /// Counts the raw orders of each input source, without the per-tick grouping of
+        /// <see cref="CountPlayerActions"/>: drag-building a line of walls counts one order
+        /// per wall here, but one action there. The ratio between the two says something
+        /// about play style (template and drag builders versus single clickers).
+        /// </summary>
+        public static Dictionary<int, int> CountPlayerOrders(Replay replay)
+        {
+            Dictionary<int, int> orders = new();
+            foreach (ReplayInput input in replay.Body.UserInput)
+            {
+                if (!IsPlayerAction(input))
+                {
+                    continue;
+                }
+
+                orders[input.SourceId] = orders.GetValueOrDefault(input.SourceId) + 1;
+            }
+
+            return orders;
+        }
+
+        /// <summary>
+        /// Buckets the actions of each input source over time, with the same per-tick grouping
+        /// as <see cref="CountPlayerActions"/>. The key of the dictionary is the source id.
+        /// Each value holds one count per bucket of <paramref name="bucketSeconds"/>, covering
+        /// the full duration of the replay. Divide by the bucket length to get actions per minute.
         /// </summary>
         public static Dictionary<int, int[]> GetActionBuckets(Replay replay, int bucketSeconds = 60)
         {
@@ -82,13 +111,15 @@ namespace FAForever.Replay
             int bucketCount = Math.Max(1, (int)(GetDuration(replay).TotalSeconds / bucketSeconds) + 1);
 
             Dictionary<int, int[]> buckets = new();
+            Dictionary<int, int> lastCountedTick = new();
             foreach (ReplayInput input in replay.Body.UserInput)
             {
-                if (!IsPlayerAction(input))
+                if (!IsPlayerAction(input) || lastCountedTick.GetValueOrDefault(input.SourceId, -1) == input.Tick)
                 {
                     continue;
                 }
 
+                lastCountedTick[input.SourceId] = input.Tick;
                 if (!buckets.TryGetValue(input.SourceId, out int[]? series))
                 {
                     series = new int[bucketCount];

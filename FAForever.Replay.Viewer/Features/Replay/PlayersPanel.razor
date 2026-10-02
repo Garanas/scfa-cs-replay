@@ -7,7 +7,8 @@
                 <th class="px-4 py-3 font-semibold">Player</th>
                 <th class="px-4 py-3 font-semibold">Team</th>
                 <th class="px-4 py-3 text-right font-semibold" title="Lobby rating: mean − 3 × deviation">Rating</th>
-                <th class="px-4 py-3 text-right font-semibold">Actions</th>
+                <th class="px-4 py-3 text-right font-semibold" title="All input a player issues within a single simulation tick counts as one action">Actions</th>
+                <th class="px-4 py-3 text-right font-semibold" title="Raw orders the sim received — drag-building a line of walls counts one order per wall">Orders</th>
                 <th class="px-4 py-3 text-right font-semibold" title="Average actions per minute">APM</th>
                 <th class="px-4 py-3 text-right font-semibold" title="Construction orders issued">Build orders</th>
             </tr>
@@ -42,6 +43,7 @@
                     <td class="px-4 py-3">@row.Team</td>
                     <td class="px-4 py-3 text-right font-mono">@(row.Rating?.ToString("0") ?? "—")</td>
                     <td class="px-4 py-3 text-right font-mono">@(row.Actions?.ToString("N0") ?? "—")</td>
+                    <td class="px-4 py-3 text-right font-mono">@(row.Orders?.ToString("N0") ?? "—")</td>
                     <td class="px-4 py-3 text-right font-mono">@(row.AveragePerMinute?.ToString("0") ?? "—")</td>
                     <td class="px-4 py-3 text-right font-mono">@(row.BuildOrders?.ToString("N0") ?? "—")</td>
                 </tr>
@@ -50,8 +52,10 @@
     </table>
 </div>
 <p class="mt-3 text-xs text-ink-faint">
-    Factions, teams and ratings come from the lobby options in the replay header. Who won is not
-    stored in a replay; that verdict lives in the FAForever API.
+    All input a player issues within a single simulation tick (100 ms) counts as one action.
+    Drag-building a line of walls, for example, would otherwise count as one action for each wall
+    in the drag. Factions, teams and ratings come from the lobby options in the replay header.
+    Who won is not stored in a replay; that verdict lives in the FAForever API.
 </p>
 
 @code {
@@ -59,7 +63,7 @@
 
     private sealed record PlayerRow(
         string Name, string? Clan, string? Tag, int? Faction,
-        string Team, int? Rating, int? Actions, double? AveragePerMinute, int? BuildOrders);
+        string Team, int? Rating, int? Actions, int? Orders, double? AveragePerMinute, int? BuildOrders);
 
     private List<PlayerRow> Rows { get; set; } = [];
 
@@ -67,6 +71,7 @@
     {
         Replay replay = Model.Replay;
         Dictionary<int, int> actions = ReplayAnalysis.CountPlayerActions(replay);
+        Dictionary<int, int> orders = ReplayAnalysis.CountPlayerOrders(replay);
         double minutes = Math.Max(ReplayAnalysis.GetDuration(replay).TotalMinutes, 1e-9);
 
         List<PlayerRow> rows = [];
@@ -80,12 +85,14 @@
             }
 
             int? actionCount = null;
+            int? orderCount = null;
             double? apm = null;
             int? buildOrders = null;
             if (army.SourceId is int sourceId)
             {
                 clientsWithArmy.Add(sourceId);
                 actionCount = actions.GetValueOrDefault(sourceId);
+                orderCount = orders.GetValueOrDefault(sourceId);
                 apm = actionCount / minutes;
                 buildOrders = ReplayAnalysis.GetBuildOrder(replay, sourceId).Count;
             }
@@ -102,6 +109,7 @@
                 TeamLabel(army.Team),
                 rating,
                 actionCount,
+                orderCount,
                 apm,
                 buildOrders));
         }
@@ -113,7 +121,7 @@
             {
                 rows.Add(new PlayerRow(
                     replay.Header.Clients[sourceId].PlayerName, null, "observer",
-                    null, "—", null, null, null, null));
+                    null, "—", null, null, null, null, null));
             }
         }
 

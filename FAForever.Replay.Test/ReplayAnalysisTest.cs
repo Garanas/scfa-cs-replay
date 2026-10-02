@@ -23,9 +23,9 @@ namespace FAForever.Replay.Test
         }
 
         [TestMethod]
-        [DataRow("assets/faforever/TestCommands01.fafreplay", 9983, 2, 2161)]
-        [DataRow("assets/faforever/23225104.fafreplay", 22758, 6, 6274)]
-        [DataRow("assets/scfa/balthazar-01.SCFAReplay", 5720, 2, 1827)]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 7373, 2, 1495)]
+        [DataRow("assets/faforever/23225104.fafreplay", 15611, 6, 3508)]
+        [DataRow("assets/scfa/balthazar-01.SCFAReplay", 3357, 2, 1135)]
         public void CountPlayerActionsTest(string file, int expectedTotal, int sourceId, int expectedForSource)
         {
             Replay replay = Load(file);
@@ -34,6 +34,27 @@ namespace FAForever.Replay.Test
 
             Assert.AreEqual(expectedTotal, actions.Values.Sum());
             Assert.AreEqual(expectedForSource, actions[sourceId]);
+        }
+
+        [TestMethod]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 9983, 2, 2161)]
+        [DataRow("assets/faforever/23225104.fafreplay", 22758, 6, 6274)]
+        [DataRow("assets/scfa/balthazar-01.SCFAReplay", 5720, 2, 1827)]
+        public void CountPlayerOrdersTest(string file, int expectedTotal, int sourceId, int expectedForSource)
+        {
+            Replay replay = Load(file);
+
+            Dictionary<int, int> orders = ReplayAnalysis.CountPlayerOrders(replay);
+
+            Assert.AreEqual(expectedTotal, orders.Values.Sum());
+            Assert.AreEqual(expectedForSource, orders[sourceId]);
+
+            // Orders never undercut actions: a batch holds at least one order.
+            Dictionary<int, int> actions = ReplayAnalysis.CountPlayerActions(replay);
+            foreach ((int source, int actionCount) in actions)
+            {
+                Assert.IsTrue(orders[source] >= actionCount);
+            }
         }
 
         [TestMethod]

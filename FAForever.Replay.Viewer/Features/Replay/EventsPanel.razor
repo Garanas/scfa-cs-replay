@@ -4,17 +4,19 @@
     <div class="card">
         <h3 class="font-semibold">Input types</h3>
         <p class="mt-1 text-xs text-ink-faint">Every parsed input of the replay body, by type.</p>
-        <table class="mt-4 w-full text-left text-sm">
-            <tbody>
-                @foreach ((string type, int count) in inputCounts)
-                {
-                    <tr class="border-b border-edge/60 last:border-0">
-                        <td class="py-1.5 font-mono text-xs">@type</td>
-                        <td class="py-1.5 text-right font-mono">@count.ToString("N0")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="mt-4 max-h-[60vh] overflow-y-auto">
+            <table class="w-full text-left text-sm">
+                <tbody>
+                    @foreach ((string type, int count) in inputCounts)
+                    {
+                        <tr class="border-b border-edge/60 last:border-0">
+                            <td class="py-1.5 font-mono text-xs">@type</td>
+                            <td class="py-1.5 text-right font-mono">@count.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <div class="card self-start">
@@ -25,7 +27,7 @@
         }
         else
         {
-            <ol class="mt-4 space-y-2 text-sm">
+            <ol class="mt-4 max-h-[60vh] space-y-2 overflow-y-auto pr-2 text-sm">
                 @foreach (NotableEvent entry in notableEvents)
                 {
                     <li class="flex gap-3">

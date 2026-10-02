@@ -1,0 +1,98 @@
+@using FAForever.Replay
+@inject NavigationManager Navigation
+
+@* Every sim callback of the replay, grouped by endpoint: the raw mechanics behind chat,
+   pings, resource sharing, self-destructs, control groups and mod features. *@
+
+<div class="grid gap-6 lg:grid-cols-[1fr_3fr]">
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-2" role="group" aria-label="Callback endpoints">
+        @foreach ((string endpoint, int count) in endpointCounts)
+        {
+            <button type="button"
+                    class="@(endpoint == selectedEndpoint ? ActiveEndpointClass : EndpointClass)"
+                    @onclick="() => Select(endpoint)">
+                <span class="truncate font-mono text-xs">@endpoint</span>
+                <span class="badge ml-auto shrink-0">@count.ToString("N0")</span>
+            </button>
+        }
+    </div>
+
+    <div class="card max-h-[70vh] self-start overflow-x-auto overflow-y-auto p-0">
+        <table class="w-full text-left text-sm">
+            <thead class="sticky top-0 bg-raised text-xs uppercase tracking-wide text-ink-muted">
+                <tr>
+                    <th class="px-4 py-3 font-semibold">Time</th>
+                    <th class="px-4 py-3 font-semibold">Player</th>
+                    <th class="px-4 py-3 text-right font-semibold" title="Number of units the callback applies to">Units</th>
+                    <th class="w-full px-4 py-3 font-semibold">Parameters</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (ReplayInput.SimCallback callback in SelectedCallbacks.Take(MaxRows))
+                {
+                    <tr class="border-t border-edge/60 align-top hover:bg-raised/50">
+                        <td class="px-4 py-2 font-mono text-ink-muted">@ReplayView.FormatDuration(ReplayAnalysis.GetTimestamp(callback))</td>
+                        <td class="whitespace-nowrap px-4 py-2 font-medium">@PlayerName(callback.SourceId)</td>
+                        <td class="px-4 py-2 text-right font-mono">@(callback.Units.UnitCount > 0 ? callback.Units.UnitCount.ToString() : "—")</td>
+                        <td class="px-4 py-2 font-mono text-xs text-ink-muted">@LuaDataFormatter.Format(callback.LuaParameters)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (SelectedCallbacks.Count > MaxRows)
+        {
+            <p class="border-t border-edge/60 px-4 py-2 text-xs text-ink-faint">
+                Showing the first @MaxRows of @SelectedCallbacks.Count.ToString("N0") callbacks.
+            </p>
+        }
+    </div>
+</div>
+
+@code {
+    private const int MaxRows = 250;
+    private const string QueryParameter = "endpoint";
+    private const string EndpointClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-left text-ink-muted transition hover:bg-raised hover:text-ink";
+    private const string ActiveEndpointClass = "flex w-full cursor-pointer items-center gap-2 rounded-md bg-raised px-3 py-1.5 text-left font-semibold text-primary";
+
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private List<(string Endpoint, int Count)> endpointCounts = [];
+    private Dictionary<string, List<ReplayInput.SimCallback>> callbacksByEndpoint = [];
+    private string? selectedEndpoint;
+
+    private List<ReplayInput.SimCallback> SelectedCallbacks
+        => selectedEndpoint is { } endpoint && callbacksByEndpoint.TryGetValue(endpoint, out List<ReplayInput.SimCallback>? callbacks) ? callbacks : [];
+
+    protected override void OnParametersSet()
+    {
+        callbacksByEndpoint = Model.Replay.Body.UserInput
+            .OfType<ReplayInput.SimCallback>()
+            .GroupBy(callback => callback.Endpoint)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        endpointCounts = callbacksByEndpoint
+            .Select(pair => (pair.Key, pair.Value.Count))
+            .OrderByDescending(pair => pair.Count)
+            .ThenBy(pair => pair.Key)
+            .ToList();
+
+        // The URL is the source of truth: absent (or unknown) means the most frequent endpoint.
+        string? fromQuery = UrlQuery.Get(Navigation, QueryParameter);
+        selectedEndpoint = fromQuery is { Length: > 0 } && callbacksByEndpoint.ContainsKey(fromQuery)
+            ? fromQuery
+            : endpointCounts.Count > 0 ? endpointCounts[0].Endpoint : null;
+    }
+
+    private void Select(string endpoint)
+    {
+        selectedEndpoint = endpoint;
+        string? value = endpointCounts.Count > 0 && endpoint == endpointCounts[0].Endpoint ? null : endpoint;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(QueryParameter, value), replace: true);
+    }
+
+    private string PlayerName(int sourceId)
+    {
+        ReplaySource[] clients = Model.Replay.Header.Clients;
+        return sourceId >= 0 && sourceId < clients.Length ? clients[sourceId].PlayerName : $"Source {sourceId}";
+    }
+}
