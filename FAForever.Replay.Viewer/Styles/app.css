@@ -168,6 +168,24 @@
         @apply inline-flex items-center rounded-full border border-edge bg-raised px-2.5 py-0.5 text-xs font-medium text-ink-muted;
     }
 
+    /* Unit icon from the sprite atlases (see UnitIcon.razor): size and cell position are set inline. */
+    .unit-icon {
+        @apply relative inline-block shrink-0 align-middle;
+    }
+
+    .unit-icon-layer,
+    .unit-icon-unit {
+        @apply absolute inset-0 bg-no-repeat;
+    }
+
+    .unit-icon-layer {
+        background-image: url(../images/units/backgrounds-atlas.png);
+    }
+
+    .unit-icon-unit {
+        background-image: url(../images/units/units-atlas.png);
+    }
+
     /* Fallback backdrop for the minimap when the vault has no preview (e.g. generated maps). */
     .map-grid {
         background-color: var(--th-raised);

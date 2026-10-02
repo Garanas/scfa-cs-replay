@@ -156,23 +156,22 @@ The pattern, for any new panel with a selection worth sharing:
 The JSON index gives the top-left pixel of each cell:
 `{"cellSize":64,"columns":25,"rows":24,"icons":{"uel0101":{"x":0,"y":0},…}}`.
 
-- **Prefer the atlas** wherever many icons are shown (lists, timelines, build orders): one request
-  instead of hundreds. Load the index once (`HttpClient.GetFromJsonAsync` on
-  `images/units/units-atlas.json`), cache it in a service, and render a sized element with the atlas as
-  background:
-  `<span class="unit-icon" style="background-position:-@(x)px -@(y)px"></span>`, where `.unit-icon`
-  (an `@layer components` class in `Styles/app.css`) sets `width/height: 64px`,
-  `background-image: url(../images/units/units-atlas.png)` and `background-repeat: no-repeat`. The
-  computed `background-position` is the one inline `style` that is acceptable.
-- **Scaling:** multiply everything by the same factor `s`: element `64s` px, `background-size` =
-  `1600s px 1536s px` (atlas width/height from `columns`/`rows` × `cellSize`), position `-x·s -y·s`.
-  E.g. 32 px icons: size 32px, `background-size: 800px 768px`, position halved.
+- **Use the `<UnitIcon BlueprintId="uel0101" Size="32" />` component** (`Features/Replay/UnitIcon.razor`)
+  wherever a unit is shown; it stacks the layer background and the unit icon from the atlases. One
+  request instead of hundreds. The scoped `UnitIconAtlas` service (`Services/Units/`) fetches both JSON
+  indexes once and shares them across all icons on the page.
+- How it renders: `.unit-icon` / `.unit-icon-layer` / `.unit-icon-unit` (`@layer components` in
+  `Styles/app.css`) carry the atlas image; the computed `background-size` and `background-position`
+  are the one inline `style` that is acceptable. Scaling multiplies everything by `s = Size / cellSize`:
+  `background-size` = atlas width/height (`columns`/`rows` × `cellSize`) × `s`, position `-x·s -y·s`.
 - **Keys are lowercase blueprint ids** without the `_icon` suffix (`uel0101`, `xsl0401`). Normalise
   ids from replays with `ToLowerInvariant()`; fall back to `default` (a "Place Holder" icon) when an id
   is missing from the index — mods and campaign units often have no icon.
-- **Backgrounds:** the game draws a layer background behind each icon. Pick it from the blueprint's
+- **Backgrounds:** the game draws a layer background behind each icon, from the blueprint's
   `General.Icon` (`land`, `air`, `sea`, `amph`) plus a state: `_up` (normal), `_over` (hover),
-  `_down` (pressed/selected). Stack two elements: the background cell, then the unit cell on top.
+  `_down` (pressed/selected) — `UnitIcon`'s `State` parameter. Replays carry no blueprints, so
+  `UnitIconAtlas.Layer` derives the layer from the id's third letter (`a` air, `s` sea, else land);
+  amphibious units therefore show the land background.
   `cons_bar` is the construction progress overlay, not a layer.
 - Icons are transparent PNGs; a few source icons are 32 or 72 px and sit centred (72 px ones scaled
   down) in their 64 px cell. The individual files keep their original size.

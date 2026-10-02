@@ -3,6 +3,7 @@ using FAForever.Replay.Viewer.Services.Api;
 using FAForever.Replay.Viewer.Services.Auth;
 using FAForever.Replay.Viewer.Services.Replays;
 using FAForever.Replay.Viewer.Services.Theming;
+using FAForever.Replay.Viewer.Services.Units;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -15,6 +16,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddScoped<ThemeService>();
 builder.Services.AddScoped<ReplayLoadingService>();
 builder.Services.AddScoped<ReplaySessionState>();
+builder.Services.AddScoped<UnitIconAtlas>();
 
 builder.Services.AddSingleton(builder.Configuration.GetSection("OAuth").Get<OAuthOptions>() ?? new OAuthOptions());
 builder.Services.AddScoped<AuthService>();

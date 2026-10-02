@@ -1,0 +1,69 @@
+@using FAForever.Replay.Viewer.Services.Units
+@inject UnitIconAtlas Atlas
+
+@* The layer background and the unit icon are two cells of the sprite atlases, stacked. *@
+<span class="unit-icon" style="width:@(Size)px;height:@(Size)px" title="@(Title ?? BlueprintId)">
+    @if (backgroundStyle is not null)
+    {
+        <span class="unit-icon-layer" style="@backgroundStyle"></span>
+    }
+    @if (unitStyle is not null)
+    {
+        <span class="unit-icon-unit" style="@unitStyle"></span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public required string BlueprintId { get; set; }
+
+    /// <summary>Rendered size in pixels; the atlas cells are 64 px.</summary>
+    [Parameter] public int Size { get; set; } = 32;
+
+    /// <summary>Background state: <c>up</c> (normal), <c>over</c> (hover) or <c>down</c> (selected).</summary>
+    [Parameter] public string State { get; set; } = "up";
+
+    [Parameter] public string? Title { get; set; }
+
+    private UnitIconAtlas.Index? units;
+    private UnitIconAtlas.Index? backgrounds;
+    private string? unitStyle;
+    private string? backgroundStyle;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            (units, backgrounds) = await Atlas.LoadAsync();
+        }
+        catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            // Icons are decoration: without the atlas the empty box keeps the layout intact.
+            Console.Error.WriteLine($"Unit icon atlas unavailable: {exception.Message}");
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (units is null || backgrounds is null)
+        {
+            return;
+        }
+
+        string key = UnitIconAtlas.IconKey(BlueprintId);
+        unitStyle = CellStyle(units, units.Icons.GetValueOrDefault(key) ?? units.Icons.GetValueOrDefault(UnitIconAtlas.DefaultIcon));
+        backgroundStyle = CellStyle(backgrounds, backgrounds.Icons.GetValueOrDefault($"{UnitIconAtlas.Layer(key)}_{State}"));
+    }
+
+    // Scales the whole atlas so that one cell matches Size, then shifts it to the requested cell.
+    private string? CellStyle(UnitIconAtlas.Index index, UnitIconAtlas.Cell? cell)
+    {
+        if (cell is null)
+        {
+            return null;
+        }
+
+        double scale = (double)Size / index.CellSize;
+        return FormattableString.Invariant(
+            $"background-size:{index.Width * scale}px {index.Height * scale}px;background-position:{-cell.X * scale}px {-cell.Y * scale}px");
+    }
+}
