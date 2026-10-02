@@ -2,6 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "build",
       "type": "dotnet",
       "task": "build --configuration=Release",
       "group": {
@@ -9,7 +10,119 @@
         "isDefault": true
       },
       "problemMatcher": [],
-      "label": "build"
+      "detail": "Build the solution in Release"
     },
+    {
+      "label": "test",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "test",
+        "--nologo"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/FAForever.Replay.Test"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "detail": "Run the MSTest suite once"
+    },
+    {
+      "label": "test: watch",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "watch",
+        "test",
+        "--nologo"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/FAForever.Replay.Test"
+      },
+      "isBackground": true,
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "detail": "Re-run the MSTest suite on every file change"
+    },
+    {
+      "label": "benchmark",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--configuration=Release"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/FAForever.Replay.Benchmark"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "detail": "Run all BenchmarkDotNet benchmarks (Release, takes several minutes)"
+    },
+    {
+      "label": "viewer",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "watch"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/FAForever.Replay.Viewer",
+        "env": {
+          "ASPNETCORE_ENVIRONMENT": "Development"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "base": "$msCompile",
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^\\s*(dotnet watch|Building|info: Microsoft\\.Hosting\\.Lifetime)",
+          "endsPattern": "(Now listening on|Application started)"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "detail": "Serve the Blazor WASM viewer with hot reload"
+    },
+    {
+      "label": "viewer: build (Release)",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "publish",
+        "--configuration=Release",
+        "--output=release",
+        "--nologo"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/FAForever.Replay.Viewer"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "detail": "Publish the viewer the same way the GitHub Pages workflow does"
+    }
   ]
 }
