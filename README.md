@@ -2,6 +2,25 @@
 
 A small library to read and interpret replays of the game [Supreme Commander: Forged Alliance Forever](https://store.steampowered.com/app/9420/Supreme_Commander_Forged_Alliance/). It also supports the compressed replay format of [FAForever](https://faforever.com/). It is inspired by a similar [Java implementation](https://github.com/FAForever/faf-java-commons/blob/develop/faf-commons-data/src/main/java/com/faforever/commons/replay/ReplayLoader.java).
 
+## Web app
+
+The repository also ships a web app to search, inspect and analyse replays:
+
+- `FAForever.Replay.Viewer` — a standalone Blazor WebAssembly app (Tailwind CSS v4, four
+  faction themes) that parses replays entirely in the browser.
+- `FAForever.Replay.Server` — a minimal ASP.NET Core host that serves the viewer and proxies
+  the FAForever OAuth token exchange (Hydra does not send CORS headers).
+
+Run it locally:
+
+```sh
+pwsh tools/install-tailwind.ps1      # once: fetch the Tailwind standalone CLI
+dotnet watch --project FAForever.Replay.Server   # http://127.0.0.1:5080
+```
+
+See [AGENTS.md](AGENTS.md) for architecture notes, conventions and the verified FAForever
+endpoint/CORS matrix, and [TODO.md](TODO.md) for open items.
+
 ## Performance
 
 We use the [BenchmarkDotNet](https://www.myget.org/feed/benchmarkdotnet/package/nuget/BenchmarkDotNet) library to generate basic statistics of the performance of the library as a whole. We do not generate statistics of individual functions since in practice you'll never call the individual functions - you'll always parse a replay as a single unit.
