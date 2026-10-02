@@ -291,3 +291,7 @@ __pycache__/
 # Tailwind standalone CLI (download via tools/install-tailwind.ps1)
 tools/tailwindcss
 tools/tailwindcss.exe
+
+# Playwright MCP (screenshots, traces, downloads)
+.playwright-mcp/
+.claude/settings.local.json
