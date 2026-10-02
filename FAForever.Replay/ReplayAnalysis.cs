@@ -18,6 +18,12 @@ namespace FAForever.Replay
         public record BuildOrderEntry(TimeSpan Timestamp, CommandType Type, string BlueprintId, int UnitCount);
 
         /// <summary>
+        /// A position on the map in world units. The top-left corner of the map is (0, 0);
+        /// X runs to the right and Z runs down. A 20x20 km map is 1024 by 1024 world units.
+        /// </summary>
+        public record MapPosition(float X, float Z);
+
+        /// <summary>
         /// Converts the tick of an input to in-game time.
         /// </summary>
         public static TimeSpan GetTimestamp(ReplayInput input)
@@ -125,6 +131,54 @@ namespace FAForever.Replay
             }
 
             return buildOrder;
+        }
+
+        /// <summary>
+        /// Estimates where each input source started, by averaging the map positions of their
+        /// first construction orders. Early build orders cluster around the spawn, so the
+        /// centroid lands on the base within a few map units. The key of the dictionary is the
+        /// source id; sources without early construction orders (e.g. observers) are absent.
+        /// </summary>
+        /// <param name="replay">The replay to analyse.</param>
+        /// <param name="maxTick">Only orders up to this tick are considered (default: the first two minutes).</param>
+        /// <param name="samplesPerSource">The number of construction orders to average per source.</param>
+        public static Dictionary<int, MapPosition> GetEstimatedSpawnPositions(Replay replay, int maxTick = 1200, int samplesPerSource = 5)
+        {
+            Dictionary<int, (float SumX, float SumZ, int Count)> sums = new();
+            foreach (ReplayInput input in replay.Body.UserInput)
+            {
+                if (input.Tick > maxTick)
+                {
+                    // Inputs are ordered by tick.
+                    break;
+                }
+
+                CommandData? data = input switch
+                {
+                    ReplayInput.IssueCommand command => command.Data,
+                    ReplayInput.IssueFactoryCommand factoryCommand => factoryCommand.Data,
+                    _ => null,
+                };
+
+                if (data is not { Target: CommandTarget.Position position } || !IsConstructionCommand(data.Type))
+                {
+                    continue;
+                }
+
+                (float sumX, float sumZ, int count) = sums.GetValueOrDefault(input.SourceId);
+                if (count < samplesPerSource)
+                {
+                    sums[input.SourceId] = (sumX + position.X, sumZ + position.Z, count + 1);
+                }
+            }
+
+            Dictionary<int, MapPosition> spawns = new(sums.Count);
+            foreach ((int sourceId, (float sumX, float sumZ, int count)) in sums)
+            {
+                spawns[sourceId] = new MapPosition(sumX / count, sumZ / count);
+            }
+
+            return spawns;
         }
 
         /// <summary>

@@ -14,7 +14,18 @@ builder.Services.AddHttpClient("Hydra", client =>
 WebApplication app = builder.Build();
 
 app.UseBlazorFrameworkFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        // Without a Cache-Control header browsers cache heuristically, which serves stale
+        // CSS/JS during development. no-cache forces revalidation (cheap 304s via ETag).
+        if (app.Environment.IsDevelopment())
+        {
+            context.Context.Response.Headers.CacheControl = "no-cache";
+        }
+    },
+});
 
 // Hydra's token endpoint does not send CORS headers, so a browser app cannot call it
 // directly. This endpoint forwards the (public, PKCE-based) token request verbatim and

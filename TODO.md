@@ -14,8 +14,10 @@
   require OAuth so they could not be verified while building. Search for `TODO(api-attributes)`.
 - [ ] **Map blueprint ids to unit names/icons** in the build-order table (static lookup, e.g.
   generated from the FAF unit database). Search for `TODO(unit-names)`.
-- [ ] **Review the desync flag and `LuaDataLoader` boolean parsing.** Both test replays shown in the
-  browser (vault #22338092 and a one-player .scfareplay) render a "desync" badge, which is suspicious
-  for single-player games — `ReplayBody.InSync` may be a false positive. Related:
-  `LuaDataLoader.cs` line 17 reads `new LuaData.Bool(reader.ReadByte() == 0)`, which looks inverted.
-  Both are core-library concerns and were deliberately left untouched during the UI rebuild.
+- [ ] **Review the desync flag.** Both test replays shown in the browser (vault #22338092 and a
+  one-player .scfareplay) render a "desync" badge, which is suspicious for single-player games —
+  `ReplayBody.InSync` may be a false positive.
+- [x] ~~`LuaDataLoader` boolean parsing~~ — confirmed inverted and **fixed** (`!= 0`): with the old
+  read, rated human players carried `Human=false` and civilian armies `Human=true` in every test
+  replay. Note: faf-java-commons `LoadUtils.parseLua` has the same inversion (`== 0`) — worth
+  reporting upstream.

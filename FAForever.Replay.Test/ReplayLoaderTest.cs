@@ -69,15 +69,15 @@ public class ReplayLoaderTest
     {
         Replay replay = ReplayLoader.LoadFAFReplayFromDisk(file);
 
-        // TODO
+        Assert.AreEqual(expectedCount, replay.Header.Mods.Length);
     }
 
     [TestMethod]
-    [DataRow("assets/scfa/21stGameOceanScampsV2.SCFAReplay", 0)]
+    [DataRow("assets/scfa/21stGameOceanScampsV2.SCFAReplay", 12)]
     public void SCFAModCountTest(string file, int expectedCount)
     {
         Replay replay = ReplayLoader.LoadSCFAReplayFromDisk(file);
 
-        // TODO
+        Assert.AreEqual(expectedCount, replay.Header.Mods.Length);
     }
 }

@@ -1,0 +1,72 @@
+@using FAForever.Replay
+
+<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    @foreach (StatTile tile in tiles)
+    {
+        <div class="card px-4 py-3">
+            <p class="text-xs text-ink-muted">@tile.Label</p>
+            <p class="mt-1 text-2xl font-semibold">@tile.Value</p>
+            @if (tile.Context is { } context)
+            {
+                <p class="mt-0.5 truncate text-xs text-ink-faint" title="@context">@context</p>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private sealed record StatTile(string Label, string Value, string? Context);
+
+    private List<StatTile> tiles = [];
+
+    protected override void OnParametersSet()
+    {
+        Replay replay = Model.Replay;
+        List<StatTile> computed = [];
+
+        // Average rating of the two largest teams, from the lobby options in the header.
+        List<IGrouping<int, ReplayPlayerOptions>> teams = replay.Header.Armies
+            .Where(army => army.Civilian != true && army is { Team: not null, RatingMean: not null, RatingDeviation: not null })
+            .GroupBy(army => army.Team!.Value)
+            .OrderByDescending(group => group.Count())
+            .Take(2)
+            .ToList();
+        if (teams.Count == 2)
+        {
+            int[] averages = teams
+                .OrderBy(group => group.Key)
+                .Select(group => (int)Math.Round(group.Average(army => army.RatingMean!.Value - 3 * army.RatingDeviation!.Value)))
+                .ToArray();
+            computed.Add(new StatTile("Average rating", $"{averages[0]} vs {averages[1]}", "per team, from the lobby"));
+        }
+        else if (teams.Count == 1)
+        {
+            int average = (int)Math.Round(teams[0].Average(army => army.RatingMean!.Value - 3 * army.RatingDeviation!.Value));
+            computed.Add(new StatTile("Average rating", average.ToString(), "from the lobby"));
+        }
+
+        // Peak actions per minute across all players.
+        Dictionary<int, int[]> buckets = ReplayAnalysis.GetActionBuckets(replay);
+        if (buckets.Count > 0)
+        {
+            (int sourceId, int peak) = buckets
+                .Select(pair => (pair.Key, pair.Value.Max()))
+                .OrderByDescending(pair => pair.Item2)
+                .First();
+            string player = sourceId >= 0 && sourceId < replay.Header.Clients.Length
+                ? replay.Header.Clients[sourceId].PlayerName
+                : $"source {sourceId}";
+            computed.Add(new StatTile("Peak APM", peak.ToString("N0"), $"by {player}"));
+        }
+
+        List<ReplayResourceTransfer> transfers = ReplaySemantics.GetResourceTransfers(replay);
+        computed.Add(new StatTile("Resource transfers", transfers.Count.ToString("N0"), "between allies"));
+
+        int pauses = ReplaySemantics.CountInputTypes(replay).GetValueOrDefault("RequestPause");
+        computed.Add(new StatTile("Pauses", pauses.ToString("N0"), null));
+
+        tiles = computed;
+    }
+}

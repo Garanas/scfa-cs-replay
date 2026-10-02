@@ -162,5 +162,37 @@ namespace FAForever.Replay
             return inputTypes;
         }
 
+        /// <summary>
+        /// Retrieves all resource transfers between players. Transfers share the sim callback
+        /// of chat messages ("GiveResourcesToPlayer"); entries with a "Msg" table are chat and
+        /// are skipped. The mass/energy values are fractions of the sender's current storage,
+        /// not absolute amounts.
+        /// </summary>
+        public static List<ReplayResourceTransfer> GetResourceTransfers(Replay replay)
+        {
+            List<ReplayResourceTransfer> transfers = new List<ReplayResourceTransfer>();
+
+            foreach (ReplayInput replayInput in replay.Body.UserInput)
+            {
+                if (replayInput is ReplayInput.SimCallback { Endpoint: "GiveResourcesToPlayer", LuaParameters: LuaData.Table table }
+                    && !table.Value.ContainsKey("Msg")
+                    && table.TryGetNumberValue("Mass", out double? mass)
+                    && table.TryGetNumberValue("Energy", out double? energy)
+                    && table.TryGetNumberValue("From", out double? fromArmy)
+                    && table.TryGetNumberValue("To", out double? toArmy))
+                {
+                    transfers.Add(new ReplayResourceTransfer(
+                        ReplayAnalysis.GetTimestamp(replayInput),
+                        replayInput.SourceId,
+                        (int)fromArmy!.Value,
+                        (int)toArmy!.Value,
+                        mass!.Value,
+                        energy!.Value));
+                }
+            }
+
+            return transfers;
+        }
+
     }
 }

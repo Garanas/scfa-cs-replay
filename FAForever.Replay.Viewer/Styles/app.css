@@ -167,4 +167,13 @@
     .badge {
         @apply inline-flex items-center rounded-full border border-edge bg-raised px-2.5 py-0.5 text-xs font-medium text-ink-muted;
     }
+
+    /* Fallback backdrop for the minimap when the vault has no preview (e.g. generated maps). */
+    .map-grid {
+        background-color: var(--th-raised);
+        background-image:
+            linear-gradient(var(--th-edge) 1px, transparent 1px),
+            linear-gradient(90deg, var(--th-edge) 1px, transparent 1px);
+        background-size: 12.5% 12.5%;
+    }
 }

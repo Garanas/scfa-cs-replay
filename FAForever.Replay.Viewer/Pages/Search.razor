@@ -112,7 +112,14 @@
                                         @foreach (GamePlayer player in game.Players.Take(8))
                                         {
                                             <span class="inline-flex items-center gap-1.5 text-xs">
-                                                <span class="inline-block h-2 w-2 rounded-full" style="background: @FactionSwatch(player.Faction)" title="@(player.Faction?.ToString() ?? "Unknown faction")"></span>
+                                                @if (Factions.IconPath(player.Faction) is { } factionIcon)
+                                                {
+                                                    <img src="@factionIcon" alt="" title="@Factions.Name(player.Faction)" class="h-3.5 w-3.5 shrink-0" loading="lazy" />
+                                                }
+                                                else
+                                                {
+                                                    <span class="inline-block h-2 w-2 rounded-full" style="background: @Factions.Swatch(player.Faction)" title="Unknown faction"></span>
+                                                }
                                                 <span class="font-medium">@player.Login</span>
                                                 @if (player.Rating is { } rating)
                                                 {
@@ -206,15 +213,6 @@
             }
         }
     }
-
-    private static string FactionSwatch(GameFaction? faction) => faction switch
-    {
-        GameFaction.Uef => "var(--swatch-uef)",
-        GameFaction.Aeon => "var(--swatch-aeon)",
-        GameFaction.Cybran => "var(--swatch-cybran)",
-        GameFaction.Seraphim => "var(--swatch-seraphim)",
-        _ => "var(--th-ink-faint)",
-    };
 
     public void Dispose() => searchCancellation?.Cancel();
 }

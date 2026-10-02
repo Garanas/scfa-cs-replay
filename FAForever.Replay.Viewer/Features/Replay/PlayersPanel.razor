@@ -5,6 +5,8 @@
         <thead>
             <tr class="border-b border-edge text-xs uppercase tracking-wide text-ink-muted">
                 <th class="px-4 py-3 font-semibold">Player</th>
+                <th class="px-4 py-3 font-semibold">Team</th>
+                <th class="px-4 py-3 text-right font-semibold" title="Lobby rating: mean − 3 × deviation">Rating</th>
                 <th class="px-4 py-3 text-right font-semibold">Actions</th>
                 <th class="px-4 py-3 text-right font-semibold" title="Average actions per minute">APM</th>
                 <th class="px-4 py-3 text-right font-semibold" title="Construction orders issued">Build orders</th>
@@ -14,24 +16,50 @@
             @foreach (PlayerRow row in Rows)
             {
                 <tr class="border-b border-edge/60 last:border-0 hover:bg-raised/50">
-                    <td class="px-4 py-3 font-medium">@row.Name</td>
-                    <td class="px-4 py-3 text-right font-mono">@row.Actions.ToString("N0")</td>
-                    <td class="px-4 py-3 text-right font-mono">@row.AveragePerMinute.ToString("0")</td>
-                    <td class="px-4 py-3 text-right font-mono">@row.BuildOrders.ToString("N0")</td>
+                    <td class="px-4 py-3">
+                        <span class="flex items-center gap-2">
+                            @if (Factions.IconPath(row.Faction) is { } factionIcon)
+                            {
+                                <img src="@factionIcon" alt="@Factions.Name(row.Faction)" title="@Factions.Name(row.Faction)"
+                                     class="h-5 w-5 shrink-0" loading="lazy" />
+                            }
+                            else
+                            {
+                                <span class="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style="background: @Factions.Swatch(row.Faction)"
+                                      title="Unknown faction" aria-hidden="true"></span>
+                            }
+                            <span class="font-medium">@row.Name</span>
+                            @if (row.Clan is { Length: > 0 } clan)
+                            {
+                                <span class="text-xs text-ink-faint">[@clan]</span>
+                            }
+                            @if (row.Tag is { } tag)
+                            {
+                                <span class="badge">@tag</span>
+                            }
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">@row.Team</td>
+                    <td class="px-4 py-3 text-right font-mono">@(row.Rating?.ToString("0") ?? "—")</td>
+                    <td class="px-4 py-3 text-right font-mono">@(row.Actions?.ToString("N0") ?? "—")</td>
+                    <td class="px-4 py-3 text-right font-mono">@(row.AveragePerMinute?.ToString("0") ?? "—")</td>
+                    <td class="px-4 py-3 text-right font-mono">@(row.BuildOrders?.ToString("N0") ?? "—")</td>
                 </tr>
             }
         </tbody>
     </table>
 </div>
 <p class="mt-3 text-xs text-ink-faint">
-    Clients without any recorded actions (observers, disconnected players) are listed with zeroes.
-    Lobby details such as factions and ratings come from the FAForever API and are only available for vault replays.
+    Factions, teams and ratings come from the lobby options in the replay header. Who won is not
+    stored in a replay; that verdict lives in the FAForever API.
 </p>
 
 @code {
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
-    private sealed record PlayerRow(string Name, int Actions, double AveragePerMinute, int BuildOrders);
+    private sealed record PlayerRow(
+        string Name, string? Clan, string? Tag, int? Faction,
+        string Team, int? Rating, int? Actions, double? AveragePerMinute, int? BuildOrders);
 
     private List<PlayerRow> Rows { get; set; } = [];
 
@@ -42,13 +70,66 @@
         double minutes = Math.Max(ReplayAnalysis.GetDuration(replay).TotalMinutes, 1e-9);
 
         List<PlayerRow> rows = [];
-        for (int sourceId = 0; sourceId < replay.Header.Clients.Length; sourceId++)
+        HashSet<int> clientsWithArmy = [];
+
+        foreach (ReplayPlayerOptions army in replay.Header.Armies)
         {
-            int actionCount = actions.GetValueOrDefault(sourceId);
-            int buildOrders = ReplayAnalysis.GetBuildOrder(replay, sourceId).Count;
-            rows.Add(new PlayerRow(replay.Header.Clients[sourceId].PlayerName, actionCount, actionCount / minutes, buildOrders));
+            if (army.Civilian == true)
+            {
+                continue;
+            }
+
+            int? actionCount = null;
+            double? apm = null;
+            int? buildOrders = null;
+            if (army.SourceId is int sourceId)
+            {
+                clientsWithArmy.Add(sourceId);
+                actionCount = actions.GetValueOrDefault(sourceId);
+                apm = actionCount / minutes;
+                buildOrders = ReplayAnalysis.GetBuildOrder(replay, sourceId).Count;
+            }
+
+            int? rating = army is { RatingMean: { } mean, RatingDeviation: { } deviation }
+                ? (int)Math.Round(mean - 3 * deviation)
+                : null;
+
+            rows.Add(new PlayerRow(
+                army.PlayerName ?? (army.SourceId is int id ? replay.Header.Clients[id].PlayerName : "Unknown"),
+                army.Clan,
+                army.Human == true ? null : "AI",
+                army.Faction,
+                TeamLabel(army.Team),
+                rating,
+                actionCount,
+                apm,
+                buildOrders));
         }
 
-        Rows = rows.OrderByDescending(row => row.Actions).ToList();
+        // Clients without an army are observers (they can chat, but command nothing).
+        for (int sourceId = 0; sourceId < replay.Header.Clients.Length; sourceId++)
+        {
+            if (!clientsWithArmy.Contains(sourceId))
+            {
+                rows.Add(new PlayerRow(
+                    replay.Header.Clients[sourceId].PlayerName, null, "observer",
+                    null, "—", null, null, null, null));
+            }
+        }
+
+        Rows = rows
+            .OrderBy(row => row.Tag == "observer")
+            .ThenBy(row => row.Team)
+            .ThenByDescending(row => row.Actions ?? -1)
+            .ToList();
     }
+
+    private static string TeamLabel(int? team) => team switch
+    {
+        // Team 1 is the lobby's "no team" (FFA); displayed teams start at 2.
+        null => "—",
+        1 => "FFA",
+        _ => $"Team {team - 1}",
+    };
+
 }

@@ -1,13 +1,10 @@
 @using FAForever.Replay
 
-<div class="grid gap-6 lg:grid-cols-[2fr_3fr]">
-    <div class="card flex flex-col items-center justify-center gap-3">
-        @if (MapPreviewUrl is { } previewUrl)
-        {
-            <img src="@previewUrl" alt="Map preview of @MapName" loading="lazy"
-                 class="aspect-square w-full max-w-72 rounded-lg border border-edge object-cover"
-                 onerror="this.style.display='none'" />
-        }
+<ReplayStatTiles Model="Model" />
+
+<div class="mt-6 grid gap-6 lg:grid-cols-[2fr_3fr]">
+    <div class="card flex flex-col gap-3 self-start">
+        <MapView Model="Model" />
         <div class="text-center">
             <p class="font-display text-lg font-bold">@MapName</p>
             @if (MapSize is { } size)
@@ -16,32 +13,48 @@
             }
             @if (StripLocTag(Model.Replay.Header.Scenario.Map.Description) is { Length: > 0 } description)
             {
-                <p class="mt-2 line-clamp-6 max-w-72 text-sm text-ink-muted" title="@description">@description</p>
+                <p class="mt-2 line-clamp-6 text-sm text-ink-muted" title="@description">@description</p>
             }
         </div>
     </div>
 
-    <div class="card">
-        <dl class="grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2">
-            @foreach ((string label, string value) in Facts)
-            {
-                <div class="flex justify-between gap-4 border-b border-edge/60 py-2 last:border-0 sm:last:border-b">
-                    <dt class="text-ink-muted">@label</dt>
-                    <dd class="truncate text-right font-medium" title="@value">@value</dd>
-                </div>
-            }
-        </dl>
-
-        @if (Mods.Count > 0)
-        {
-            <h3 class="mt-6 text-sm font-semibold text-ink-muted">Mods</h3>
-            <ul class="mt-2 flex flex-wrap gap-2">
-                @foreach (string mod in Mods)
+    <div class="space-y-6">
+        <section class="card">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Replay</h3>
+            <dl class="mt-2 grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2">
+                @foreach ((string label, string value) in ReplayFacts)
                 {
-                    <li class="badge">@mod</li>
+                    <div class="flex justify-between gap-4 border-b border-edge/60 py-2 last:border-0 sm:last:border-b">
+                        <dt class="text-ink-muted">@label</dt>
+                        <dd class="text-right font-medium">@value</dd>
+                    </div>
                 }
-            </ul>
-        }
+            </dl>
+        </section>
+
+        <section class="card">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Lobby options</h3>
+            <dl class="mt-2 grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2">
+                @foreach ((string label, string value) in LobbyFacts)
+                {
+                    <div class="flex justify-between gap-4 border-b border-edge/60 py-2 last:border-0 sm:last:border-b">
+                        <dt class="text-ink-muted">@label</dt>
+                        <dd class="text-right font-medium">@value</dd>
+                    </div>
+                }
+            </dl>
+
+            @if (Mods.Count > 0)
+            {
+                <h4 class="mt-6 text-sm font-semibold text-ink-muted">Mods</h4>
+                <ul class="mt-2 flex flex-wrap gap-2">
+                    @foreach (string mod in Mods)
+                    {
+                        <li class="badge">@mod</li>
+                    }
+                </ul>
+            }
+        </section>
     </div>
 </div>
 
@@ -83,29 +96,15 @@
         }
     }
 
-    private string? MapPreviewUrl
+    /// <summary>
+    /// Facts about the recording itself: who made it, when, and what the parser found.
+    /// </summary>
+    private List<(string Label, string Value)> ReplayFacts
     {
         get
         {
-            // The vault serves preview images by map folder name, e.g.
-            // https://content.faforever.com/maps/previews/small/astro_crater_battles_4x4_rich_huge.png
-            string? folder = Model.Metadata?.mapname;
-            if (folder is null && Model.Replay.Header.Scenario.Map.SCMapReference is { Length: > 0 } reference)
-            {
-                string[] segments = reference.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                folder = segments.Length >= 2 ? segments[^2] : null;
-            }
+            ReplayHeader header = Model.Replay.Header;
 
-            return folder is { Length: > 0 }
-                ? $"https://content.faforever.com/maps/previews/small/{folder.ToLowerInvariant()}.png"
-                : null;
-        }
-    }
-
-    private List<(string Label, string Value)> Facts
-    {
-        get
-        {
             List<(string, string)> facts = [];
             if (Model.Origin is ReplayOrigin.Vault vault)
             {
@@ -116,28 +115,95 @@
                 facts.Add(("Host", metadata.host));
                 facts.Add(("Recorded by", metadata.recorder));
                 facts.Add(("Played on", DateTimeOffset.FromUnixTimeSeconds((long)metadata.launched_at).ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
-                facts.Add(("Players", metadata.num_players.ToString()));
-                facts.Add(("Victory condition", VictoryCondition(metadata.GameType)));
                 facts.Add(("Complete", metadata.Complete ? "yes" : "no"));
             }
-            else
-            {
-                facts.Add(("Clients", Model.Replay.Header.Clients.Length.ToString()));
-            }
             facts.Add(("Duration", ReplayView.FormatDuration(ReplayAnalysis.GetDuration(Model.Replay))));
+            facts.Add(("Game version", header.GameVersion.Replace("Supreme Commander ", string.Empty)));
+            facts.Add(("Seed", header.Seed.ToString()));
             facts.Add(("Inputs parsed", Model.Replay.Body.UserInput.Count.ToString("N0")));
             facts.Add(("In sync", Model.Replay.Body.InSync ? "yes" : "no — desync detected"));
             return facts;
         }
     }
 
-    private static string VictoryCondition(string gameType) => gameType switch
+    /// <summary>
+    /// The settings the game was started with, from the lobby options in the header.
+    /// </summary>
+    private List<(string Label, string Value)> LobbyFacts
     {
-        "0" => "Assassination",
-        "1" => "Supremacy",
-        "2" => "Annihilation",
-        "3" => "Sandbox",
-        _ => gameType,
+        get
+        {
+            ReplayHeader header = Model.Replay.Header;
+            ReplayScenarioOptions options = header.Scenario.Options;
+
+            List<(string, string)> facts = [];
+            facts.Add(("Players", header.Armies.Count(army => army.Civilian != true).ToString()));
+            if (VictoryCondition(options.Victory) is { } victory)
+            {
+                facts.Add(("Victory condition", victory));
+            }
+            if (options.UnitCap is { } unitCap)
+            {
+                facts.Add(("Unit cap", unitCap.ToString("N0")));
+            }
+            if (options.Raw is { } raw && raw.TryGetStringValue("Share", out string? share) && share is { Length: > 0 })
+            {
+                facts.Add(("Share condition", ShareCondition(share)));
+            }
+            if (options.PrebuiltUnits is { } prebuilt)
+            {
+                facts.Add(("Prebuilt units", prebuilt ? "yes" : "no"));
+            }
+            if (options.AllowObservers is { } observers)
+            {
+                facts.Add(("Observers allowed", observers ? "yes" : "no"));
+            }
+            if (AutoTeams(options.AutoTeams) is { } autoTeams)
+            {
+                facts.Add(("Auto teams", autoTeams));
+            }
+            if (options.TeamSpawn is { Length: > 0 } teamSpawn)
+            {
+                facts.Add(("Spawns", teamSpawn.Replace('_', ' ')));
+            }
+            facts.Add(("Cheats", header.CheatsEnabled ? "enabled" : "disabled"));
+            return facts;
+        }
+    }
+
+    /// <summary>
+    /// Maps the victory keys of lua/ui/lobby/lobbyOptions.lua to their display names.
+    /// </summary>
+    private static string? VictoryCondition(string? victory) => victory switch
+    {
+        "demoralization" => "Assassination",
+        "decapitation" => "Decapitation",
+        "domination" => "Supremacy",
+        "eradication" => "Annihilation",
+        "sandbox" => "Sandbox",
+        null => null,
+        _ => victory,
+    };
+
+    private static string ShareCondition(string share) => share switch
+    {
+        "FullShare" => "Full share",
+        "ShareUntilDeath" => "Share until death",
+        "PartialShare" => "Partial share",
+        "TransferToKiller" => "Traitors",
+        "Defectors" => "Defectors",
+        "CivilianDeserter" => "Desert to civilians",
+        _ => share,
+    };
+
+    private static string? AutoTeams(string? autoTeams) => autoTeams switch
+    {
+        "none" => "None",
+        "manual" => "Manual",
+        "tvsb" => "Top vs bottom",
+        "lvsr" => "Left vs right",
+        "pvsi" => "Even vs uneven",
+        _ => autoTeams,
     };
 
     private List<string> Mods

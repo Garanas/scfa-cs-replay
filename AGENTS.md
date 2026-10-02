@@ -31,6 +31,27 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
   `tools/install-tailwind.ps1`. The Viewer's MSBuild target regenerates `wwwroot/css/app.css` on every
   build when the CLI is present; the generated file is **committed** so builds work without it (CI).
 
+## Browser automation (Playwright MCP)
+
+`.mcp.json` registers the official Playwright MCP server (`npx -y @playwright/mcp@latest`), so agents
+can drive the Viewer in a real browser: navigate, snapshot the accessibility tree, click, read console
+output and inspect network traffic.
+
+- **Start the app first** — the MCP server only drives a browser, it does not host anything. Run the
+  `server` task (or `dotnet watch --project FAForever.Replay.Server`) and navigate to
+  `http://127.0.0.1:5080`; the fixed port matters for OAuth (see above).
+- Project-scoped MCP servers need a one-off approval per machine. Accept the prompt on the next
+  Claude Code start, or run `claude mcp list` to check the connection.
+- Screenshots, traces and downloads land in `.playwright-mcp/` (gitignored). The viewport defaults to
+  1440x900 — the Viewer's layout is desktop-first.
+- `.claude/settings.json` pre-approves the navigation, inspection and interaction tools.
+  `browser_evaluate`, `browser_run_code_unsafe` and `browser_file_upload` deliberately still prompt.
+- The browser profile is temporary: an FAF login does **not** survive a browser restart. For a
+  persistent session add `--user-data-dir=.playwright-mcp/profile` to the args — that stores real
+  session cookies on disk, so keep the directory gitignored.
+- This is an inspection tool, not a test suite. There is no Playwright test project; automated
+  coverage lives in `FAForever.Replay.Test` (MSTest).
+
 ## External FAForever endpoints (verified 2026-10)
 
 | Endpoint | Auth | CORS | Notes |
@@ -61,8 +82,16 @@ the FAF team before any public deployment (see TODO.md).
   `.scfareplay` = raw body — construct `ReplayLoadingStage.Decompressed(stream, null)` directly.
 - `ProcessReplayStage(WithMetadata)` disposes the input stream; don't reuse it.
 - Player names come from `Replay.Header.Clients[input.SourceId]`; ticks are **10 per second**.
-- Lobby data (factions, teams, ratings) is **not** in the parsed header (`ArmyOptions` is always
-  empty); fetch it from the FAF API instead.
+- Lobby data lives in `Replay.Header.Armies` (`ReplayPlayerOptions`: faction 1=UEF/2=Aeon/
+  3=Cybran/4=Seraphim, team where 1 = FFA, start spot, colors, rating MEAN/DEV, country, clan;
+  `Raw` holds the full Lua table, e.g. `OwnerID`). `Armies[i].SourceId` links an army to
+  `Header.Clients`; it is null for AI and civilian armies. Clients without an army are observers.
+  Game options live in `Header.Scenario.Options`. What a replay does **not** know is who won —
+  that comes from the FAF API only.
+- Lua booleans on the wire are `0 = false`; lobby options additionally encode booleans as the
+  strings `'true'/'false'`, `'On'/'Off'` or `'Yes'/'No'` (see the `GetFlexibleBool` reader in
+  `ReplayLoader`). Beware: faf-java-commons reads Lua booleans inverted (`== 0`); we verified
+  against real replays (known humans must have `Human == true`) and deliberately diverge.
 
 ## Conventions
 
@@ -78,6 +107,9 @@ the FAF team before any public deployment (see TODO.md).
   custom properties switched by `data-theme` on `<html>`, mapped to Tailwind tokens via
   `@theme inline`. **Always use the semantic utilities** (`bg-surface`, `text-ink-muted`,
   `border-edge`, `bg-primary`, …) — never hardcode colours in components, or faction switching breaks.
+- Faction icons live in `FAForever.Replay.Viewer/wwwroot/images/factions/` (copied from the FAF game
+  repo, `textures/ui/common/faction_icon-lg`, `_med` variants); render them via the display helpers
+  in `Services/Theming/Factions.cs` (icon path, name, swatch per faction index).
 - Tests: MSTest with `[DataRow]` over the real replay assets in `FAForever.Replay.Test/assets/`.
 - Keep the Server minimal: static hosting + token proxy. It must never hold secrets or session state.
 

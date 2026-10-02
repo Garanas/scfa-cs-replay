@@ -384,7 +384,111 @@ namespace FAForever.Replay
         /// <returns></returns>
         private static ReplayScenarioOptions LoadScenarioOptions(LuaData.Table luaScenario)
         {
-            return new ReplayScenarioOptions();
+            if (!luaScenario.TryGetTableValue("Options", out LuaData.Table? options) || options is null)
+            {
+                return new ReplayScenarioOptions();
+            }
+
+            return new ReplayScenarioOptions(
+                Victory: GetString(options, "Victory"),
+                UnitCap: GetInt(options, "UnitCap"),
+                CheatsEnabled: GetFlexibleBool(options, "CheatsEnabled"),
+                PrebuiltUnits: GetFlexibleBool(options, "PrebuiltUnits"),
+                AllowObservers: GetFlexibleBool(options, "AllowObservers"),
+                RevealCivilians: GetFlexibleBool(options, "RevealCivilians"),
+                Score: GetFlexibleBool(options, "Score"),
+                AutoTeams: GetString(options, "AutoTeams"),
+                TeamLock: GetString(options, "TeamLock"),
+                TeamSpawn: GetString(options, "TeamSpawn"),
+                Unranked: GetString(options, "Unranked"),
+                ScenarioFile: GetString(options, "ScenarioFile"),
+                Raw: options);
+        }
+
+        /// <summary>
+        /// Loads the lobby options of a single army. The keys mirror the PlayerOptions record
+        /// of faf-java-commons; everything stays reachable through the raw table.
+        /// </summary>
+        private static ReplayPlayerOptions LoadPlayerOptions(LuaData.Table army, int? sourceId)
+        {
+            return new ReplayPlayerOptions(
+                SourceId: sourceId,
+                PlayerName: GetString(army, "PlayerName"),
+                Faction: GetInt(army, "Faction"),
+                Team: GetInt(army, "Team"),
+                StartSpot: GetInt(army, "StartSpot"),
+                Human: GetBool(army, "Human"),
+                Civilian: GetBool(army, "Civilian"),
+                AIPersonality: GetString(army, "AIPersonality"),
+                PlayerColor: GetInt(army, "PlayerColor"),
+                ArmyColor: GetInt(army, "ArmyColor"),
+                Country: GetString(army, "Country"),
+                Clan: GetString(army, "PlayerClan"),
+                RatingMean: GetNumber(army, "MEAN"),
+                RatingDeviation: GetNumber(army, "DEV"),
+                RatedGames: GetInt(army, "NG"),
+                Raw: army);
+        }
+
+        private static string? GetString(LuaData.Table table, string key)
+            => table.TryGetStringValue(key, out string? value) ? value : null;
+
+        private static double? GetNumber(LuaData.Table table, string key)
+            => table.TryGetNumberValue(key, out double? value) ? value : null;
+
+        private static bool? GetBool(LuaData.Table table, string key)
+            => table.TryGetBooleanValue(key, out bool? value) ? value : null;
+
+        /// <summary>
+        /// Reads a boolean lobby option. Lobby options encode booleans inconsistently
+        /// (see lua/ui/lobby/lobbyOptions.lua): AllowObservers is a real boolean, while
+        /// CheatsEnabled is 'false'/'true', PrebuiltUnits is 'Off'/'On' and
+        /// RevealCivilians is 'No'/'Yes'.
+        /// </summary>
+        private static bool? GetFlexibleBool(LuaData.Table table, string key)
+        {
+            if (table.TryGetBooleanValue(key, out bool? value))
+            {
+                return value;
+            }
+
+            if (table.TryGetStringValue(key, out string? text))
+            {
+                if (string.Equals(text, "true", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(text, "on", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(text, "yes", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                if (string.Equals(text, "false", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(text, "off", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(text, "no", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Reads an integer value that mods and older lobbies sometimes store as a string
+        /// (e.g. UnitCap).
+        /// </summary>
+        private static int? GetInt(LuaData.Table table, string key)
+        {
+            if (table.TryGetNumberValue(key, out double? number) && number is { } numberValue)
+            {
+                return (int)numberValue;
+            }
+
+            if (table.TryGetStringValue(key, out string? text) && int.TryParse(text, out int parsed))
+            {
+                return parsed;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -445,14 +549,19 @@ namespace FAForever.Replay
 
             Boolean cheatsEnabled = reader.ReadByte() > 0;
 
-            int numberOfPlayerOptions = reader.ReadByte();
-            for (int i = 0; i < numberOfPlayerOptions; i++)
+            int numberOfArmies = reader.ReadByte();
+            List<ReplayPlayerOptions> armies = new List<ReplayPlayerOptions>(numberOfArmies);
+            for (int i = 0; i < numberOfArmies; i++)
             {
                 int numberOfBytesPlayerOptions = reader.ReadInt32();
                 LuaData playerOptionsData = LuaDataLoader.ReadLuaData(reader);
-                //byte[] playerOptions = reader.ReadBytes(numberOfBytesPlayerOptions);
 
+                // 255 means that no client controls the army: an AI or a civilian army.
                 int playerSource = reader.ReadByte();
+                if (playerOptionsData is LuaData.Table armyTable)
+                {
+                    armies.Add(LoadPlayerOptions(armyTable, playerSource != 255 ? playerSource : null));
+                }
 
                 // ???
                 if (playerSource != 255)
@@ -463,7 +572,7 @@ namespace FAForever.Replay
 
             int seed = reader.ReadInt32();
 
-            return new ReplayHeader(scenario, clients, mods.ToArray(), new LuaData[] { });
+            return new ReplayHeader(gameVersion, replayVersion, pathToScenario, scenario, clients, mods.ToArray(), armies.ToArray(), cheatsEnabled, seed);
         }
 
         private static Replay LoadReplay(ReplayBinaryReader reader)

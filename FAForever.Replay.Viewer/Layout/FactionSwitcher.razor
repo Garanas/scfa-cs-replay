@@ -1,7 +1,7 @@
 @implements IDisposable
 @inject ThemeService Theme
 
-<div class="flex items-center gap-2 rounded-full border border-edge bg-raised/70 px-2 py-1.5" role="group" aria-label="Faction theme">
+<div class="flex items-center gap-1 rounded-full border border-edge bg-raised/70 px-1.5 py-1" role="group" aria-label="Faction theme">
     @foreach (FactionTheme faction in FactionTheme.All)
     {
         bool isActive = faction == Theme.Current;
@@ -9,16 +9,16 @@
                 title="@faction.DisplayName theme"
                 aria-pressed="@isActive"
                 class="@(isActive ? ActiveClass : BaseClass)"
-                style="--swatch: var(--swatch-@faction.Id)"
                 @onclick="() => Theme.SetAsync(faction)">
+            <img src="images/factions/@(faction.Id).png" alt="" class="h-5 w-5" />
             <span class="sr-only">@faction.DisplayName theme</span>
         </button>
     }
 </div>
 
 @code {
-    private const string BaseClass = "h-3.5 w-3.5 cursor-pointer rounded-full bg-[var(--swatch)] opacity-60 transition hover:scale-110 hover:opacity-100";
-    private const string ActiveClass = "h-3.5 w-3.5 cursor-pointer rounded-full bg-[var(--swatch)] ring-2 ring-[var(--swatch)] ring-offset-2 ring-offset-surface transition";
+    private const string BaseClass = "cursor-pointer rounded-full p-0.5 opacity-45 transition hover:scale-110 hover:opacity-100";
+    private const string ActiveClass = "cursor-pointer rounded-full p-0.5 ring-2 ring-primary transition";
 
     protected override void OnInitialized() => Theme.Changed += OnThemeChanged;
 

@@ -14,7 +14,10 @@ namespace FAForever.Replay
                     return new LuaData.Nil();
 
                 case LuaDataType.Bool:
-                    return new LuaData.Bool(reader.ReadByte() == 0);
+                    // Note: 0 is false, anything else is true. The reference implementation
+                    // (faf-java-commons LoadUtils.parseLua) reads this inverted; verified
+                    // against replays where known human players must have Human == true.
+                    return new LuaData.Bool(reader.ReadByte() != 0);
 
                 case LuaDataType.Number:
                     return new LuaData.Number(reader.ReadSingle());
