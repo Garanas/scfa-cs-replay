@@ -1,38 +1,54 @@
-var builder = WebApplication.CreateBuilder(args);
+using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Mvc;
 
-builder.Services.AddHttpClient("FAForeverReplay", client =>
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+string tokenEndpoint = builder.Configuration["OAuth:TokenEndpoint"] ?? "https://hydra.faforever.com/oauth2/token";
+
+builder.Services.AddHttpClient("Hydra", client =>
 {
-    client.BaseAddress = new Uri("https://replay.faforever.com/");
-    client.DefaultRequestHeaders.Add("User-Agent", "FAForever-Replay-Viewer");
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("FAForever-Replay-Viewer");
 });
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
-app.UseRouting();
 
-app.MapGet("/api/replay/{replayId}", async (string replayId, IHttpClientFactory httpClientFactory) =>
+// Hydra's token endpoint does not send CORS headers, so a browser app cannot call it
+// directly. This endpoint forwards the (public, PKCE-based) token request verbatim and
+// returns Hydra's response verbatim. No secrets are involved and nothing is stored.
+app.MapPost("/api/oauth/token", async (HttpContext context, IHttpClientFactory httpClientFactory, ILogger<Program> logger, CancellationToken cancellationToken) =>
 {
-    if (!replayId.All(char.IsDigit))
-        return Results.BadRequest("Invalid replay ID");
+    if (!MediaTypeHeaderValue.TryParse(context.Request.ContentType, out MediaTypeHeaderValue? contentType)
+        || contentType.MediaType != "application/x-www-form-urlencoded")
+    {
+        context.Response.StatusCode = StatusCodes.Status415UnsupportedMediaType;
+        return;
+    }
 
-    var client = httpClientFactory.CreateClient("FAForeverReplay");
+    using HttpRequestMessage upstreamRequest = new(HttpMethod.Post, tokenEndpoint)
+    {
+        Content = new StreamContent(context.Request.Body),
+    };
+    upstreamRequest.Content.Headers.ContentType = contentType;
+
+    HttpClient client = httpClientFactory.CreateClient("Hydra");
     try
     {
-        var response = await client.GetAsync(replayId);
-        if (!response.IsSuccessStatusCode)
-            return Results.StatusCode((int)response.StatusCode);
-
-        var content = await response.Content.ReadAsByteArrayAsync();
-        var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
-        return Results.File(content, contentType);
+        using HttpResponseMessage upstreamResponse = await client.SendAsync(upstreamRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        context.Response.StatusCode = (int)upstreamResponse.StatusCode;
+        context.Response.ContentType = upstreamResponse.Content.Headers.ContentType?.ToString() ?? "application/json";
+        await upstreamResponse.Content.CopyToAsync(context.Response.Body, cancellationToken);
     }
-    catch (Exception ex)
+    catch (HttpRequestException exception)
     {
-        return Results.Problem($"Failed to fetch replay: {ex.Message}");
+        logger.LogError(exception, "Token exchange with {TokenEndpoint} failed", tokenEndpoint);
+        context.Response.StatusCode = StatusCodes.Status502BadGateway;
+        await context.Response.WriteAsJsonAsync(new { error = "upstream_unreachable" }, cancellationToken);
     }
-});
+}).WithMetadata(new RequestSizeLimitAttribute(8 * 1024));
 
 app.MapFallbackToFile("index.html");
 

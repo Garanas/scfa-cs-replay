@@ -13,7 +13,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAForever.Replay.Benchmark"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAForever.Replay.Viewer", "FAForever.Replay.Viewer\FAForever.Replay.Viewer.csproj", "{A866CE8D-37CE-4091-90B8-17C13B129F5E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FAForever.Replay.Server", "FAForever.Replay.Server\FAForever.Replay.Server.csproj", "{383AADFA-4ECF-4165-B7FA-637AE9EE6DA1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAForever.Replay.Server", "FAForever.Replay.Server\FAForever.Replay.Server.csproj", "{383AADFA-4ECF-4165-B7FA-637AE9EE6DA1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
