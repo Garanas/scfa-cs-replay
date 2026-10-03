@@ -61,7 +61,7 @@
                             <span class="flex items-center gap-2">
                                 @if (ReplayInputFormatter.TryGetBlueprintId(input) is { } blueprintId)
                                 {
-                                    <UnitIcon BlueprintId="@blueprintId" Size="20" />
+                                    <UnitIcon BlueprintId="@blueprintId" Size="20" Title="@UnitNames.GetOrNull(blueprintId)" />
                                 }
                                 <span class="font-mono text-xs text-ink-muted">@ReplayInputFormatter.Describe(input)</span>
                             </span>

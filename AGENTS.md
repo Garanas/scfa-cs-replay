@@ -115,7 +115,10 @@ the FAF team before any public deployment (see TODO.md).
   **use `ReplayPlayerOptions.Color`** (CSS hex) rather than the raw `PlayerColor`/`ArmyColor`
   indices; `GameColors.BySource(header)`/`ByName(header)` give lookup maps for inputs and chat.
   Lobby option keys/values ← `lua/ui/lobby/lobbyOptions.lua` (see `ReplayScenarioOptions` and the
-  `GetFlexibleBool` reader). Re-check both after game updates.
+  `GetFlexibleBool` reader). Unit display names ← the `Description` fields of `units/*_unit.bp`,
+  generated into `FAForever.Replay/UnitNames.g.cs` by `tools/generate-unit-names.ps1`
+  (`UnitNames.GetOrNull(blueprintId)`; never edit the generated file). Re-check all of these
+  after game updates.
 - Unit icons live in `FAForever.Replay.Viewer/wwwroot/images/units/`, generated from the FAF game repo
   (`textures/ui/common/icons/units/*.dds`) by `tools/convert-unit-icons.ps1` (ImageMagick 7). Never edit
   them by hand; re-run the script. See "Unit icon atlas" below.

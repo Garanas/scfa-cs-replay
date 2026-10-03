@@ -15,8 +15,9 @@
 - [ ] **Show the match outcome on vault replays** (now unblocked): fetch `/data/game/{id}` with
   `playerStats.player` when signed in and merge into the replay page — winner badges in Players,
   rating changes (`beforeMean/afterMean`), validity. The replay file itself never knows who won.
-- [ ] **Map blueprint ids to unit names/icons** in the build-order table (static lookup, e.g.
-  generated from the FAF unit database). Search for `TODO(unit-names)`.
+- [x] ~~Map blueprint ids to unit names/icons~~ — icons via the sprite atlases (`UnitIcon`), names
+  via `FAForever.Replay/UnitNames.g.cs`, generated from the game repo's blueprint Description
+  fields by `tools/generate-unit-names.ps1`.
 - [ ] **Review the desync flag.** Both test replays shown in the browser (vault #22338092 and a
   one-player .scfareplay) render a "desync" badge, which is suspicious for single-player games —
   `ReplayBody.InSync` may be a false positive.
