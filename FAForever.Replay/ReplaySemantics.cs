@@ -281,6 +281,109 @@ namespace FAForever.Replay
         }
 
         /// <summary>
+        /// Retrieves all player intents that carry a world position, in tick order, for
+        /// playing a replay back on the map: commands with a clicked target position,
+        /// retargeted queued commands and spawned units. Pings stay in <see cref="GetPings"/>
+        /// (they carry their own type, name and colour); debug commands are excluded as
+        /// camera noise.
+        /// </summary>
+        public static List<ReplayMapEvent> GetMapEvents(Replay replay)
+        {
+            List<ReplayMapEvent> events = new List<ReplayMapEvent>();
+
+            foreach (ReplayInput replayInput in replay.Body.UserInput)
+            {
+                switch (replayInput)
+                {
+                    case ReplayInput.IssueCommand { Data: { Target: CommandTarget.Position position } data } command:
+                        events.Add(new ReplayMapEvent(
+                            ReplayAnalysis.GetTimestamp(replayInput),
+                            replayInput.SourceId,
+                            ReplayMapEventKind.Command,
+                            data.Type,
+                            position.X,
+                            position.Z,
+                            string.IsNullOrEmpty(data.BlueprintId) ? null : data.BlueprintId,
+                            command.Units.UnitCount));
+                        break;
+
+                    case ReplayInput.IssueFactoryCommand { Data: { Target: CommandTarget.Position position } data } factoryCommand:
+                        events.Add(new ReplayMapEvent(
+                            ReplayAnalysis.GetTimestamp(replayInput),
+                            replayInput.SourceId,
+                            ReplayMapEventKind.FactoryCommand,
+                            data.Type,
+                            position.X,
+                            position.Z,
+                            string.IsNullOrEmpty(data.BlueprintId) ? null : data.BlueprintId,
+                            factoryCommand.Factories.UnitCount));
+                        break;
+
+                    case ReplayInput.UpdateCommandTarget { Target: CommandTarget.Position position }:
+                        events.Add(new ReplayMapEvent(
+                            ReplayAnalysis.GetTimestamp(replayInput),
+                            replayInput.SourceId,
+                            ReplayMapEventKind.Retarget,
+                            CommandType.None,
+                            position.X,
+                            position.Z,
+                            null,
+                            0));
+                        break;
+
+                    case ReplayInput.CreateUnit create:
+                        events.Add(new ReplayMapEvent(
+                            ReplayAnalysis.GetTimestamp(replayInput),
+                            replayInput.SourceId,
+                            ReplayMapEventKind.UnitSpawn,
+                            CommandType.None,
+                            create.X,
+                            create.Z,
+                            string.IsNullOrEmpty(create.BlueprintId) ? null : create.BlueprintId,
+                            1));
+                        break;
+                }
+            }
+
+            return events;
+        }
+
+        /// <summary>
+        /// Retrieves the notable moments in the flow of the game session, in tick order:
+        /// pauses, players leaving, self-destructs and the end of the game.
+        /// </summary>
+        public static List<ReplaySessionEvent> GetSessionEvents(Replay replay)
+        {
+            List<ReplaySessionEvent> events = new List<ReplaySessionEvent>();
+
+            foreach (ReplayInput replayInput in replay.Body.UserInput)
+            {
+                ReplaySessionEvent? sessionEvent = replayInput switch
+                {
+                    ReplayInput.RequestPause => new ReplaySessionEvent(
+                        ReplayAnalysis.GetTimestamp(replayInput), replayInput.SourceId, ReplaySessionEventKind.Paused),
+                    ReplayInput.RequestResume => new ReplaySessionEvent(
+                        ReplayAnalysis.GetTimestamp(replayInput), replayInput.SourceId, ReplaySessionEventKind.Resumed),
+                    ReplayInput.CommandSourceTerminated => new ReplaySessionEvent(
+                        ReplayAnalysis.GetTimestamp(replayInput), replayInput.SourceId, ReplaySessionEventKind.PlayerLeft),
+                    ReplayInput.EndGame => new ReplaySessionEvent(
+                        ReplayAnalysis.GetTimestamp(replayInput), replayInput.SourceId, ReplaySessionEventKind.GameEnded),
+                    ReplayInput.IssueCommand { Data.Type: CommandType.IssueKillSelf or CommandType.IssueDestroySelf } command
+                        => new ReplaySessionEvent(
+                            ReplayAnalysis.GetTimestamp(replayInput), replayInput.SourceId, ReplaySessionEventKind.SelfDestruct, command.Units.UnitCount),
+                    _ => null,
+                };
+
+                if (sessionEvent is not null)
+                {
+                    events.Add(sessionEvent);
+                }
+            }
+
+            return events;
+        }
+
+        /// <summary>
         /// Ping payloads carry colours as ARGB hex without a prefix (e.g. "ffe80a0a").
         /// </summary>
         private static string? ToCssColor(string? color) => color switch
