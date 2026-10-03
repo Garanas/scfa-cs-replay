@@ -1,0 +1,62 @@
+@* The synchronized event feed of the Playthrough tab: chat, transfers, pings and session
+   events up to the current playback time, newest on top. Clicking a row seeks playback.
+   Pure rendering: the panel owns the composed, player-filtered item list and the visible
+   count; ShouldRender skips the frames in which neither changed, and @key on the absolute
+   item index keeps existing rows stable so only a newly inserted row plays the enter
+   animation. *@
+
+<div role="log" aria-label="Game events up to the current playback time">
+    @if (VisibleCount == 0)
+    {
+        <p class="px-3 py-2 text-xs text-ink-faint">Nothing yet — press play, or scrub the timeline.</p>
+    }
+    @for (int index = Math.Min(VisibleCount, Items.Count) - 1; index >= LowerBound; index--)
+    {
+        Item item = Items[index];
+        <button type="button" @key="index" title="Jump playback to this moment"
+                class="pt-feed-row flex w-full cursor-pointer items-start gap-2 rounded-md px-3 py-1 text-left transition hover:bg-raised"
+                @onclick="() => OnSeek.InvokeAsync(item.Timestamp)">
+            <span class="shrink-0 pt-0.5 font-mono text-xs text-ink-muted">@GameTime.Format(item.Timestamp)</span>
+            <span class="min-w-0">
+                <PlayerLabel Name="@item.Player" Color="@item.Color" />
+                <span class="block truncate text-xs text-ink-muted">@item.Text</span>
+            </span>
+        </button>
+    }
+    @if (VisibleCount > MaxRows)
+    {
+        <p class="px-3 py-2 text-xs text-ink-faint">Showing the latest @MaxRows of @VisibleCount.ToString("N0") events.</p>
+    }
+</div>
+
+@code {
+    private const int MaxRows = 100;
+
+    /// <summary>One feed entry; Kind is a short tag such as "chat" or "ping".</summary>
+    public sealed record Item(TimeSpan Timestamp, string Player, string? Color, string Text, string Kind);
+
+    /// <summary>All feed items of the replay, chronological and already player-filtered.</summary>
+    [Parameter, EditorRequired] public required IReadOnlyList<Item> Items { get; set; }
+
+    /// <summary>How many items playback has passed; the feed shows the newest of these.</summary>
+    [Parameter] public int VisibleCount { get; set; }
+
+    [Parameter] public EventCallback<TimeSpan> OnSeek { get; set; }
+
+    private int LowerBound => Math.Max(0, Math.Min(VisibleCount, Items.Count) - MaxRows);
+
+    private int lastRenderedCount = -1;
+    private IReadOnlyList<Item>? lastRenderedItems;
+
+    protected override bool ShouldRender()
+    {
+        if (VisibleCount == lastRenderedCount && ReferenceEquals(Items, lastRenderedItems))
+        {
+            return false;
+        }
+
+        lastRenderedCount = VisibleCount;
+        lastRenderedItems = Items;
+        return true;
+    }
+}

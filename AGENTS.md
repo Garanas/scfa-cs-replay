@@ -127,6 +127,12 @@ the FAF team before any public deployment (see TODO.md).
   generated into `FAForever.Replay/UnitNames.g.cs` by `tools/generate-unit-names.ps1`
   (`UnitNames.GetOrNull(blueprintId)`; never edit the generated file). Re-check all of these
   after game updates.
+- Command-type marker icons (Playthrough tab): `wwwroot/images/commands/<slug>.png`, slug = the
+  lowercase `CommandCategory` name (`move`, `attack`, `launch`, …). `Services/Commands/CommandIcons.cs`
+  holds the manifest of available slugs; until a PNG lands, markers use the inline SVG glyph symbols
+  in `PlaythroughMarkerLayer.razor`. Adding an icon = drop the file + add its slug to
+  `CommandIcons.Available` (no onerror fallback on purpose: SVG `<image>` does not fire error
+  events reliably).
 - Unit icons live in `FAForever.Replay.Viewer/wwwroot/images/units/`, generated from the FAF game repo
   (`textures/ui/common/icons/units/*.dds`) by `tools/convert-unit-icons.ps1` (ImageMagick 7). Never edit
   them by hand; re-run the script. See "Unit icon atlas" below.
@@ -141,11 +147,12 @@ to those two players, on any machine.
 
 | Parameter | Meaning | Default when absent |
 |---|---|---|
-| `tab` | Active replay section: `players`, `chat`, `events`, `callbacks`, `analysis` | Overview |
-| `players` | Comma-separated player names to show; shared by Chat, Events, Callbacks and Analysis | All players |
+| `tab` | Active replay section: `players`, `playthrough`, `chat`, `events`, `callbacks`, `analysis` | Overview |
+| `players` | Comma-separated player names to show; shared by Playthrough, Chat, Events, Callbacks and Analysis | All players |
 | `from` / `to` | Game-time window (`12`, `12:30` or `1:02:30`); shared across tabs | See window policy below |
 | `types` | Comma-separated input types shown in the Events stream | All types |
 | `endpoint` | Selected sim-callback endpoint | The most frequent endpoint |
+| `at` | Playback position of the Playthrough tab (`12`, `12:30` or `1:02:30`); written on pause/seek only, never while playing | `0:00`, paused |
 
 **Window policy** (`TimeWindowFilter.ReadWindow`): one rule on every tab — a window is at most
 **four minutes** (`TimeWindowFilter.MaxWindow`), self-correcting with no error states: reversed
@@ -154,6 +161,10 @@ Events *requires* a window (default `0:00`–`4:00`, kept out of the URL); every
 optional (both parameters absent = whole game). The stepper buttons are always visible and shift
 by the window length, shown as their label (−4:00 / +4:00); without an active window the forward
 stepper starts one at `0:00`–`4:00` (the back stepper is disabled until there is one).
+The **Playthrough tab is exempt** from the window policy: it is a playback view, not a filtered
+list — its shareable state is the single `at` instant and it deliberately has no `from`/`to`.
+Playback state (playing, speed, current time while playing) lives in component fields; `at` is
+written only on pause or seek-while-paused, so playing never floods the URL or re-renders siblings.
 Reuse `Features/Replay/TimeWindowFilter.razor` and `PlayerFilterList.razor` for any new filter panel;
 both own their query parameters, and parents re-derive state from the URL in `OnParametersSet`.
 
