@@ -13,7 +13,7 @@
     @for (int index = Math.Min(VisibleCount, Items.Count) - 1; index >= LowerBound; index--)
     {
         Item item = Items[index];
-        <button type="button" @key="index" title="Jump playback to this moment"
+        <button type="button" @key="index" title="@($"{item.Text} — click to jump playback here")"
                 class="pt-feed-row flex w-full cursor-pointer items-start gap-2 rounded-md px-3 py-1 text-left transition hover:bg-raised"
                 @onclick="() => OnSeek.InvokeAsync(item.Timestamp)">
             <span class="shrink-0 pt-0.5 font-mono text-xs text-ink-muted">@GameTime.Format(item.Timestamp)</span>
