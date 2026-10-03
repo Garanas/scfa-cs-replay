@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Buffers;
 using System.IO;
@@ -18,12 +18,26 @@ namespace FAForever.Replay
         /// </summary>
         private readonly int BufferOrigin;
 
+        /// <summary>
+        /// Strings up to this number of bytes are interned: blueprint ids, sim callback endpoints and
+        /// Lua table keys repeat thousands of times in a replay. Longer strings (chat, Lua code) are not.
+        /// </summary>
+        private const int MaxInternedLength = 64;
+
+        /// <summary>
+        /// The interned strings of this reader. The cache lives as long as the reader, which is one replay.
+        /// </summary>
+        private readonly Dictionary<string, string> InternedStrings = new Dictionary<string, string>();
+
+        private readonly Dictionary<string, string>.AlternateLookup<ReadOnlySpan<char>> InternedStringsLookup;
+
         public ReplayBinaryReader(Stream input) : this(input, Encoding.UTF8, false) { }
 
         public ReplayBinaryReader(Stream input, Encoding encoding) : this(input, encoding, false) { }
 
         public ReplayBinaryReader(Stream input, Encoding encoding, bool leaveOpen) : base(input, encoding, leaveOpen)
         {
+            InternedStringsLookup = InternedStrings.GetAlternateLookup<ReadOnlySpan<char>>();
             if (input is MemoryStream memoryStream && memoryStream.TryGetBuffer(out ArraySegment<byte> segment))
             {
                 Buffer = segment.Array;
@@ -52,10 +66,32 @@ namespace FAForever.Replay
                 }
 
                 BaseStream.Position = position + length + 1;
-                return Encoding.UTF8.GetString(remaining[..length]);
+                return length <= MaxInternedLength ? Intern(remaining[..length]) : Encoding.UTF8.GetString(remaining[..length]);
             }
 
             return ReadNullTerminatedStringFromStream();
+        }
+
+        /// <summary>
+        /// Decodes the bytes and returns the interned string, allocating only the first time a string is seen.
+        /// </summary>
+        private string Intern(ReadOnlySpan<byte> bytes)
+        {
+            if (bytes.IsEmpty)
+            {
+                return string.Empty;
+            }
+
+            // UTF-8 never decodes to more characters than it has bytes
+            Span<char> characters = stackalloc char[MaxInternedLength];
+            characters = characters[..Encoding.UTF8.GetChars(bytes, characters)];
+            if (!InternedStringsLookup.TryGetValue(characters, out string? value))
+            {
+                value = new string(characters);
+                InternedStrings.Add(value, value);
+            }
+
+            return value;
         }
 
         /// <summary>
