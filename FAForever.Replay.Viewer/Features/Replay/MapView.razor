@@ -13,7 +13,7 @@
              onerror="this.style.display='none'" />
     }
 
-    @if (markers.Count > 0)
+    @if (markers.Count > 0 || Overlay is not null)
     {
         <svg class="absolute inset-0 h-full w-full" viewBox="0 0 @sizeX @sizeZ" role="img"
              aria-label="Estimated start positions of the players">
@@ -35,12 +35,25 @@
                     @SvgLabel(marker.X, marker.Y + IconSize * 1.15, marker.Label)
                 </g>
             }
+            @Overlay
         </svg>
     }
 </div>
 
 @code {
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    /// <summary>
+    /// Extra SVG content rendered on top of the spawn markers, in world coordinates
+    /// (the viewBox spans 0,0 to SizeX,SizeZ).
+    /// </summary>
+    [Parameter] public RenderFragment? Overlay { get; set; }
+
+    /// <summary>
+    /// The world-unit size of the map, with the fallback for maps that do not state one.
+    /// </summary>
+    public static (int SizeX, int SizeZ) Size(ReplayScenarioMap map)
+        => (map.SizeX is > 0 and int x ? x : 1024, map.SizeZ is > 0 and int z ? z : 1024);
 
     private sealed record SpawnMarker(float X, float Y, string Label, string Title, string? Icon, string Swatch, string? ArmyColor);
 
@@ -71,9 +84,7 @@
 
     protected override void OnParametersSet()
     {
-        ReplayScenarioMap map = Model.Replay.Header.Scenario.Map;
-        sizeX = map.SizeX is > 0 and int x ? x : 1024;
-        sizeZ = map.SizeZ is > 0 and int z ? z : 1024;
+        (sizeX, sizeZ) = Size(Model.Replay.Header.Scenario.Map);
 
         markers.Clear();
         Dictionary<int, ReplayAnalysis.MapPosition> spawns = ReplayAnalysis.GetEstimatedSpawnPositions(Model.Replay);
