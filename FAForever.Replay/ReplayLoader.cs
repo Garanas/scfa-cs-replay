@@ -123,7 +123,8 @@ namespace FAForever.Replay
                 tick: 0,
                 source: 0,
                 inSync: true,
-                hashTick: 0,
+                // No checksum seen yet; -1 so the first one, at tick 0, starts a new tick.
+                hashTick: -1,
                 hashValue: 0,
                 endOfStream: false,
                 startingPointOfStream: reader.BaseStream.Position,
@@ -160,15 +161,19 @@ namespace FAForever.Replay
 
                     case ReplayInputType.VerifyChecksum:
                         {
+                            // Every client records its checksum of the same tick (every 50 ticks); the
+                            // game is in sync while they agree. The first one of a tick is the
+                            // reference, and once they disagree the replay stays out of sync.
                             long hash = reader.ReadInt64() ^ reader.ReadInt64();
                             int atTick = reader.ReadInt32();
                             if (hashTick != atTick)
                             {
+                                hashTick = atTick;
                                 hashValue = hash;
                             }
-                            else
+                            else if (hashValue != hash)
                             {
-                                inSync = hashValue == hash;
+                                inSync = false;
                             }
                             break;
                         }

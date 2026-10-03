@@ -34,9 +34,10 @@
   live in fields, so a shared link loses them. The entity id is already replay data; the chat and
   order keys are list indices assigned while loading, so those need a key from replay data first
   (tick + player + ordinal).
-- [ ] **Review the desync flag.** Both test replays shown in the browser (vault #22338092 and a
-  one-player .scfareplay) render a "desync" badge, which is suspicious for single-player games —
-  `ReplayBody.InSync` may be a false positive.
+- [x] ~~Review the desync flag~~ — fixed 2026-10-03: the checksum comparison never advanced past
+  tick 0 and compared the first checksum with 0, so every replay read as desynced. Every client
+  records a checksum of the same tick every 50 ticks; `InSync` is now false only when they differ
+  (`SCFADesyncTest` covers a forged mismatch). All test assets are in sync.
 - [x] ~~`LuaDataLoader` boolean parsing~~ — confirmed inverted and **fixed** (`!= 0`): with the old
   read, rated human players carried `Human=false` and civilian armies `Human=true` in every test
   replay. Note: faf-java-commons `LoadUtils.parseLua` has the same inversion (`== 0`) — worth

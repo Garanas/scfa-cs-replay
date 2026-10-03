@@ -80,4 +80,86 @@ public class ReplayLoaderTest
 
         Assert.AreEqual(expectedCount, replay.Header.Mods.Length);
     }
+
+    /// <summary>
+    /// Every client records its checksum of the same tick; none of these games desynced, so all of
+    /// those agree. (The flag used to be stuck on "desync" for every replay.)
+    /// </summary>
+    [TestMethod]
+    [DataRow("assets/faforever/23225104.fafreplay")]
+    [DataRow("assets/faforever/23225508.fafreplay")]
+    [DataRow("assets/faforever/TestCommands01.fafreplay")]
+    [DataRow("assets/faforever/mods.fafreplay")]
+    [DataRow("assets/faforever/zstd/22338092.fafreplay")]
+    [DataRow("assets/faforever/gzip/22453414.fafreplay")]
+    public void FAForeverInSyncTest(string file)
+    {
+        Replay replay = ReplayLoader.LoadFAFReplayFromDisk(file);
+
+        Assert.IsTrue(replay.Body.InSync);
+    }
+
+    [TestMethod]
+    [DataRow("assets/scfa/21stGameOceanScampsV2.SCFAReplay")]
+    [DataRow("assets/scfa/balthazar-01.SCFAReplay")]
+    public void SCFAInSyncTest(string file)
+    {
+        Replay replay = ReplayLoader.LoadSCFAReplayFromDisk(file);
+
+        Assert.IsTrue(replay.Body.InSync);
+    }
+
+    /// <summary>
+    /// A desync is two clients recording a different checksum for the same tick. The test changes
+    /// one byte of a second checksum halfway through the game; the replay must then be out of sync,
+    /// and stay so although the checksums after it agree again.
+    /// </summary>
+    [TestMethod]
+    [DataRow("assets/scfa/21stGameOceanScampsV2.SCFAReplay")]
+    public void SCFADesyncTest(string file)
+    {
+        byte[] bytes = File.ReadAllBytes(file);
+        ReplayLoadingStage.WithScenario atBody = (ReplayLoadingStage.WithScenario)ReplayLoader.ProcessReplayStage(
+            new ReplayLoadingStage.Decompressed(new MemoryStream(bytes), null));
+        int position = (int)atBody.Stream.BaseStream.Position;
+
+        // Walk the inputs (type byte, int16 length including those 3 bytes) to the second checksum
+        // of a tick past the middle: VerifyChecksum = 16 bytes of hash, then the int32 tick.
+        const int halfway = 10_000; // ticks; this game lasts about 38,000
+        int? previousTick = null;
+        int changed = -1;
+        while (position < bytes.Length && changed < 0)
+        {
+            byte type = bytes[position];
+            int length = BitConverter.ToInt16(bytes, position + 1);
+            if (type == (byte)ReplayInputType.VerifyChecksum)
+            {
+                int tick = BitConverter.ToInt32(bytes, position + 3 + 16);
+                if (tick == previousTick && tick >= halfway)
+                {
+                    changed = position + 3;
+                }
+                previousTick = tick;
+            }
+            position += length;
+        }
+
+        Assert.IsTrue(changed >= 0, "The replay has no tick with two checksums past the middle.");
+        bytes[changed] ^= 0xFF;
+
+        ReplayLoadingStage stage = new ReplayLoadingStage.Decompressed(new MemoryStream(bytes), null);
+        while (stage is not ReplayLoadingStage.Complete)
+        {
+            stage = stage switch
+            {
+                ReplayLoadingStage.Decompressed decompressed => ReplayLoader.ProcessReplayStage(decompressed),
+                ReplayLoadingStage.WithScenario withScenario => ReplayLoader.ProcessReplayStage(withScenario),
+                ReplayLoadingStage.AtInput atInput => ReplayLoader.ProcessReplayStage(atInput),
+                ReplayLoadingStage.Failed failed => throw new AssertFailedException(failed.Message),
+                _ => throw new AssertFailedException($"Unexpected stage {stage.GetType().Name}"),
+            };
+        }
+
+        Assert.IsFalse(((ReplayLoadingStage.Complete)stage).Body.InSync);
+    }
 }
