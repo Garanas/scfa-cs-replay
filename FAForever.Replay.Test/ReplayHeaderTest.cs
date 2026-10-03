@@ -303,5 +303,20 @@ namespace FAForever.Replay.Test
                 Assert.IsFalse(string.IsNullOrWhiteSpace(entry.Message));
             }
         }
+
+        [TestMethod]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 0)]
+        [DataRow("assets/faforever/23225104.fafreplay", 0)]
+        [DataRow("assets/scfa/balthazar-01.SCFAReplay", 0)]
+        public void GetObserversTest(string file, int expectedObservers)
+        {
+            ReplayHeader header = Load(file).Header;
+
+            List<ReplaySource> observers = ReplaySemantics.GetObservers(header);
+
+            Assert.AreEqual(expectedObservers, observers.Count);
+            // Structural: observers are exactly the clients no army claims.
+            Assert.AreEqual(header.Clients.Length - header.Armies.Count(army => army.SourceId is not null), observers.Count);
+        }
     }
 }

@@ -229,6 +229,33 @@ namespace FAForever.Replay
         }
 
         /// <summary>
+        /// The clients that do not control an army: observers. They can chat, but they
+        /// command nothing, so they have no actions, orders or build orders.
+        /// </summary>
+        public static List<ReplaySource> GetObservers(ReplayHeader header)
+        {
+            HashSet<int> sourcesWithArmy = new HashSet<int>();
+            foreach (ReplayPlayerOptions army in header.Armies)
+            {
+                if (army.SourceId is { } sourceId)
+                {
+                    sourcesWithArmy.Add(sourceId);
+                }
+            }
+
+            List<ReplaySource> observers = new List<ReplaySource>();
+            for (int sourceId = 0; sourceId < header.Clients.Length; sourceId++)
+            {
+                if (!sourcesWithArmy.Contains(sourceId))
+                {
+                    observers.Add(header.Clients[sourceId]);
+                }
+            }
+
+            return observers;
+        }
+
+        /// <summary>
         /// Retrieves the events the game logged for moderation via the ModeratorEvent sim
         /// callback, such as ping creations and self-destructs.
         /// </summary>

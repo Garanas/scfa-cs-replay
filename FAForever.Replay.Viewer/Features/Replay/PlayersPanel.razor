@@ -77,7 +77,6 @@
         double minutes = Math.Max(ReplayAnalysis.GetDuration(replay).TotalMinutes, 1e-9);
 
         List<PlayerRow> rows = [];
-        HashSet<int> clientsWithArmy = [];
 
         foreach (ReplayPlayerOptions army in replay.Header.Armies)
         {
@@ -92,7 +91,6 @@
             int? buildOrders = null;
             if (army.SourceId is int sourceId)
             {
-                clientsWithArmy.Add(sourceId);
                 actionCount = actions.GetValueOrDefault(sourceId);
                 orderCount = orders.GetValueOrDefault(sourceId);
                 apm = actionCount / minutes;
@@ -113,15 +111,11 @@
                 buildOrders));
         }
 
-        // Clients without an army are observers (they can chat, but command nothing).
-        for (int sourceId = 0; sourceId < replay.Header.Clients.Length; sourceId++)
+        foreach (ReplaySource observer in ReplaySemantics.GetObservers(replay.Header))
         {
-            if (!clientsWithArmy.Contains(sourceId))
-            {
-                rows.Add(new PlayerRow(
-                    replay.Header.Clients[sourceId].PlayerName, null, "observer",
-                    null, null, "—", null, null, null, null, null));
-            }
+            rows.Add(new PlayerRow(
+                observer.PlayerName, null, "observer",
+                null, null, "—", null, null, null, null, null));
         }
 
         Rows = rows
