@@ -327,6 +327,30 @@ namespace FAForever.Replay
         }
 
         /// <summary>
+        /// Retrieves the end-of-game statistics the clients reported to the server, see
+        /// <see cref="ReplayGameStats"/>. Null when the replay has none (older replays, games
+        /// that did not end normally) or when no report could be parsed.
+        /// </summary>
+        public static ReplayGameStats? GetGameStats(Replay replay) => GetGameStats(replay.Body.UserInput);
+
+        /// <inheritdoc cref="GetGameStats(Replay)"/>
+        public static ReplayGameStats? GetGameStats(IEnumerable<ReplayInput> inputs)
+        {
+            foreach (ReplayInput replayInput in inputs)
+            {
+                if (replayInput is ReplayInput.SimCallback { Endpoint: "ModeratorEvent", LuaParameters: LuaData.Table table }
+                    && table.TryGetStringValue("Message", out string? message) && message is not null
+                    && ReplayGameStatsReader.GetJson(message) is { } json
+                    && ReplayGameStatsReader.Parse(json) is { } armies)
+                {
+                    return new ReplayGameStats(ReplayAnalysis.GetTimestamp(replayInput), replayInput.SourceId, armies);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Retrieves every order the players gave, in tick order: IssueCommand (to units) and
         /// IssueFactoryCommand (to factories), with the clicked position when the target is
         /// one. Unlike <see cref="GetMapEvents"/> this keeps orders without a position, such as

@@ -57,6 +57,9 @@
             case Tab.Players:
                 <PlayersPanel Model="Model" />
                 break;
+            case Tab.Stats:
+                <StatsPanel Model="Model" />
+                break;
             case Tab.Playthrough:
                 <PlaythroughPanel Model="Model" />
                 break;
@@ -87,6 +90,7 @@
     {
         Overview,
         Players,
+        Stats,
         Playthrough,
         BuildOrder,
         Chat,
@@ -131,6 +135,7 @@
     private static Tab ParseTab(string? value) => value?.ToLowerInvariant() switch
     {
         "players" => Tab.Players,
+        "stats" => Tab.Stats,
         "playthrough" => Tab.Playthrough,
         "buildorder" => Tab.BuildOrder,
         "chat" => Tab.Chat,
@@ -173,6 +178,7 @@
     {
         Tab.Overview => "Overview",
         Tab.Players => "Players",
+        Tab.Stats => "Statistics",
         Tab.Playthrough => "Playthrough",
         Tab.BuildOrder => "Build order",
         Tab.Chat => "Chat",

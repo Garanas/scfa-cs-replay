@@ -31,6 +31,12 @@ parser in the browser is in [`../FAForever.Replay.Viewer/AGENTS.md`](../FAForeve
   callback per stroke, sent only by its author (no dedup needed, unlike chat). Observers share
   paintings through chat, so theirs are not in the replay. Use `ReplaySemantics.GetDrawings`;
   pings come from `ReplaySemantics.GetPings`. Both are shown on the Chat tab (`ChatPanel` → `ChatMapLayer`/`ChatFeed`) and, alive for their in-game lifetime, on the Playthrough map (same `ChatMapLayer`).
+- End-of-game statistics (the score screen, `lua/sim/score.lua`) reach the replay because FAF hooks
+  `GpgNetSend` (`lua/ui/globals/GpgNetSend.lua`) to log every call as a `ModeratorEvent` sim callback:
+  `Message = "GpgNetSend with command 'JsonStats' and data '<json>,'"`, once per client at game end.
+  Use `ReplaySemantics.GetGameStats` (null when absent or unparseable; never throws). The game's dkson
+  writes every fractional number with a spurious `0` after the decimal point (`1415.1` → `1415.01`);
+  `ReplayGameStatsReader` undoes that. Shown on the Statistics tab (`StatsPanel`).
 - Lobby data lives in `Replay.Header.Armies` (`ReplayPlayerOptions`: faction 1=UEF/2=Aeon/
   3=Cybran/4=Seraphim, team where 1 = FFA, start spot, colors, rating MEAN/DEV, country, clan;
   `Raw` holds the full Lua table, e.g. `OwnerID`). `Armies[i].SourceId` links an army to

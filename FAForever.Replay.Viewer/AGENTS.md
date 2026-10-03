@@ -53,6 +53,9 @@ drawings, game-data tables) are in [`../FAForever.Replay/AGENTS.md`](../FAForeve
   PNG (currently only `special`) uses the inline SVG glyph symbols in `PlaythroughMarkerLayer.razor`.
   Adding an icon = extend the script mapping, re-run it, add the slug to `CommandIcons.Available`
   (no onerror fallback on purpose: SVG `<image>` does not fire error events reliably).
+- Stat icons (Statistics tab: mass, energy, kills, build, redcross): `wwwroot/images/stats/<name>.png`,
+  converted at native size (~20 px) from the game's `textures/ui/common/game/unit_view_icons/*.dds` by
+  `tools/convert-stat-icons.ps1` (ImageMagick 7; never edit them by hand).
 - Unit icons live in `wwwroot/images/units/`, generated from the FAF game repo
   (`textures/ui/common/icons/units/*.dds`) by `tools/convert-unit-icons.ps1` (ImageMagick 7). Never edit
   them by hand; re-run the script. See "Unit icon atlas" below.
@@ -65,7 +68,7 @@ to those two players, on any machine.
 
 | Parameter | Meaning | Default when absent |
 |---|---|---|
-| `tab` | Active replay section: `players`, `playthrough`, `buildorder`, `chat`, `events`, `callbacks`, `moderation` (right-aligned, apart from the analysis tabs) | Overview |
+| `tab` | Active replay section: `players`, `stats`, `playthrough`, `buildorder`, `chat`, `events`, `callbacks`, `moderation` (right-aligned, apart from the analysis tabs) | Overview |
 | `players` | Comma-separated player names to show; shared by Playthrough, Chat, Events, Callbacks and Moderation | All players |
 | `from` / `to` | Game-time window (`12`, `12:30` or `1:02:30`); shared across tabs | See window policy below |
 | `types` | Comma-separated input types shown in the Events stream | All types |
