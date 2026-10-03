@@ -28,6 +28,12 @@
 - [x] ~~Map blueprint ids to unit names/icons~~ — icons via the sprite atlases (`UnitIcon`), names
   via `FAForever.Replay/UnitNames.g.cs`, generated from the game repo's blueprint Description
   fields by `tools/generate-unit-names.ps1`.
+- [ ] **Put the remaining selections in the URL** (see the guardrails in AGENTS.md, "Shareable view
+  state"): the selected chat message or drawing (`ChatPanel.selected`), the selected order
+  (`BuildOrderPanel.selected`) and the selected unit on the Units view (`BuildOrderPanel.selectedEntity`)
+  live in fields, so a shared link loses them. The entity id is already replay data; the chat and
+  order keys are list indices assigned while loading, so those need a key from replay data first
+  (tick + player + ordinal).
 - [ ] **Review the desync flag.** Both test replays shown in the browser (vault #22338092 and a
   one-player .scfareplay) render a "desync" badge, which is suspicious for single-player games —
   `ReplayBody.InSync` may be a false positive.
