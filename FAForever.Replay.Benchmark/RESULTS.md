@@ -45,3 +45,65 @@ Observations:
   ~5.2 ms; 23225440: 2.71 ms vs ~1.8 ms). The cause is still unknown, and the two code paths are almost
   identical. Possibly a GC/measurement effect (Body runs on a fresh non-expandable `MemoryStream`); to be
   investigated before attributing step results to the staged path.
+
+## Steps 1, 2, 3, 5 — screening with the short job (2026-10-03)
+
+Measured with `--job short` (3 iterations; error margins are wide, so only large effects count) on
+`--filter "*ParseBenchmark.Body*" "*DecompressBenchmark*" "*SCFAReplayBenchmark*"`, each step on its own
+branch from `09c3f07`, against a short-job baseline of that same commit. Mean / Allocated.
+
+| Benchmark | Baseline | Step 1 (strings) | Step 2 (Lua allocs) | Step 1+3 (interning) | Step 5 (zstd) | Combined |
+|---|---:|---:|---:|---:|---:|---:|
+| Decompress 23225104 | 4.87 ms / 16.3 MB | — | — | — | 2.09 ms / 6.4 MB | 2.11 ms / 6.4 MB |
+| Decompress 23225685 | 2.81 ms / 8.1 MB | — | — | — | 0.80 ms / 2.5 MB | 0.78 ms / 2.5 MB |
+| Body 23225104 | 22.2 ms / 13.5 MB | 14.9 ms / 13.5 MB | 18.1 ms / 11.5 MB | 12.5 ms / 10.2 MB | — | 9.7 ms / 8.2 MB |
+| Body 23225685 | 8.47 ms / 5.2 MB | 6.29 ms / 5.2 MB | 6.07 ms / 4.2 MB | 5.55 ms / 4.3 MB | — | 4.25 ms / 3.4 MB |
+| Body TestCommands01 | 7.95 ms / 5.2 MB | 6.11 ms / 5.2 MB | 5.27 ms / 4.3 MB | 4.79 ms / 4.3 MB | — | 3.93 ms / 3.3 MB |
+| Body laird-binary-01 | 171 ms / 108 MB | 156 ms / 108 MB | 125 ms / 89 MB | 164 ms / 88 MB | — | 90 ms / 68 MB |
+| End-to-end laird-binary-01 | 169 ms / 106 MB | 164 ms / 117 MB | 127 ms / 87 MB | 176 ms / 97 MB | — | 93 ms / 78 MB |
+| End-to-end laird-binary-02 | 92 ms / 52 MB | 53 ms / 59 MB | 56 ms / 44 MB | 54 ms / 48 MB | — | 32 ms / 40 MB |
+
+Notes:
+
+- Step 1 adds one copy for streams that do not expose their buffer (`new MemoryStream(bytes)`), which is
+  visible in the SCFA end-to-end allocations; decompressed replays expose their buffer and need no copy.
+- Step 3's timing on SCFA is within the noise of the short job; its value is mostly fewer allocations
+  (fewer, shared strings), which matters more in the WebAssembly interpreter than here.
+- Step 5, first attempt, was *slower*: FAForever replays do not store the decompressed size in the zstd
+  frame header, `GetDecompressedSize` then returns an upper bound (6.03 MB vs 5.83 MB actual), and the
+  exact-size check made it always fall back. Using the bound as the buffer size fixed it.
+- Before merging into the main line: re-run the full (default job) suite for a definitive table.
+
+## Steps 1, 2, 3, 5 combined — full run (2026-10-03)
+
+`perf/combined` (`1c73040`), DefaultJob, same machine and settings as the step 0 baseline. Mean / Allocated,
+with the change against the baseline.
+
+Caveat: this run took 39 minutes instead of ~15 and several cases show an elevated standard deviation
+(6–10%), so the machine was busy at times. Allocations are deterministic and reliable; for timings, small
+differences (< ~10%) are not meaningful. The cleanest cases (low deviation) are TestCommands01, 23225685
+and the laird-binary-01 body.
+
+| Replay | Decompress | Header | Body | End-to-end |
+|---|---:|---:|---:|---:|
+| `faforever/23225104.fafreplay` | 2.63 ms / 6,405 KB (2.7×, −61%) | 26.9 μs / 57.0 KB | 13.37 ms / 8,203 KB (1.5×, −39%) | 11.63 ms / 14,604 KB (1.8×, −51%) |
+| `faforever/23225323.fafreplay` | 0.99 ms / 2,712 KB (2.9×, −66%) | 16.9 μs / 45.0 KB | 4.86 ms / 3,077 KB (1.1×, −28%) | 4.18 ms / 5,796 KB (1.6×, −53%) |
+| `faforever/23225440.fafreplay` | 0.80 ms / 1,283 KB (≈, −33%) | 18.6 μs / 44.9 KB | 2.31 ms / 1,598 KB (1.2×, −29%) | 1.90 ms / 2,927 KB (1.3×, −31%) |
+| `faforever/23225508.fafreplay` | 0.33 ms / 687 KB (1.2×, −24%) | 11.4 μs / 29.5 KB | 0.94 ms / 559 KB (≈, −28%) | 1.17 ms / 1,254 KB (≈, −26%) |
+| `faforever/23225685.fafreplay` | 0.87 ms / 2,535 KB (3.0×, −69%) | 17.6 μs / 46.5 KB | 4.26 ms / 3,392 KB (2.0×, −34%) | 4.36 ms / 5,934 KB (1.8×, −55%) |
+| `faforever/TestCommands01.fafreplay` | 0.67 ms / 2,117 KB (1.8×, −47%) | 25.3 μs / 70.6 KB | 3.92 ms / 3,338 KB (1.8×, −36%) | 4.08 ms / 5,493 KB (1.3×, −41%) |
+| `faforever/gzip/22453414.fafreplay` | 55.7 μs / 94.9 KB (unchanged path) | 24.3 μs / 73.1 KB | 4.1 μs / 14.2 KB | 96.4 μs / 181.4 KB |
+| `scfa/laird-binary-01.SCFAReplay` | — | 30.6 μs / 88.8 KB | 91.11 ms / 68,166 KB (1.9×, −37%) | 120.09 ms / 77.58 MB (1.5×, −27%) |
+| `scfa/laird-binary-02.SCFAReplay` | — | 34.9 μs / 85.4 KB | 45.28 ms / 33,798 KB (1.8×, −37%) | 44.48 ms / 39.77 MB (1.8×, −24%) |
+
+Observations:
+
+- **Allocations drop by 25–69% across the board**; decompression and the body both roughly halve or better
+  for the larger replays.
+- **The header is about 2× faster** (41 → 27 μs for 23225104), but it was never significant.
+- The legacy gzip path is unchanged; its 45 → 56 μs is noise (it shares no code with these changes).
+- End-to-end for laird-binary-01 (120 ms) is notably more than Body (91 ms) plus the one-off buffer copy.
+  The same gap is visible for the FAF replays in the baseline (see step 0). Still unexplained; worth a
+  closer look together with the GC behaviour (Gen2 counts) of the one-shot path.
+- A rerun on a quiet machine would firm up the timings, especially 23225104 and 23225323, whose body
+  results (13.4 / 4.9 ms) are slower than the screening run (9.7 / 3.4 ms).
