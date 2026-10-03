@@ -153,6 +153,14 @@
     --color-primary-strong: var(--th-primary-strong);
     --color-on-primary: var(--th-on-primary);
     --color-accent: var(--th-accent);
+    --color-viz-1: var(--viz-1);
+    --color-viz-2: var(--viz-2);
+    --color-viz-3: var(--viz-3);
+    --color-viz-4: var(--viz-4);
+    --color-viz-5: var(--viz-5);
+    --color-viz-6: var(--viz-6);
+    --color-viz-7: var(--viz-7);
+    --color-viz-8: var(--viz-8);
     --font-display: "Exo 2", ui-sans-serif, system-ui, sans-serif;
     --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
@@ -179,6 +187,12 @@
     :focus-visible {
         outline: 2px solid var(--th-primary);
         outline-offset: 2px;
+    }
+
+    /* FocusOnNavigate (App.razor) focuses the page heading for screen readers; it is not
+       interactive, so it gets no focus ring. */
+    h1[tabindex="-1"]:focus {
+        outline: none;
     }
 }
 

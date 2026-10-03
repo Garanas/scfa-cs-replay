@@ -1,0 +1,48 @@
+@* The same bytes three ways (hexadecimal, numbers, letters), to show that a byte is only a
+   number and the format decides what it means. The chosen view is transient. *@
+
+<div>
+    <div class="inline-flex rounded-lg border border-edge bg-raised p-1 text-sm" role="group" aria-label="Show the bytes as">
+        @foreach ((View view, string label) in Views)
+        {
+            <button type="button" class="cursor-pointer rounded-md px-3 py-1.5 font-medium transition @(view == current ? "bg-primary text-on-primary" : "text-ink-muted hover:text-ink")"
+                    aria-pressed="@(view == current)" @onclick="() => current = view">
+                @label
+            </button>
+        }
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-1.5">
+        @foreach (byte value in Bytes)
+        {
+            <span class="flex h-10 w-10 items-center justify-center rounded-md border font-mono transition @(current == View.Letters && value is 0 or 32 ? "text-[10px]" : "text-sm") @(value == 0 ? "border-viz-7/60 bg-viz-7/15 text-ink" : "border-edge bg-raised text-ink")"
+                  title="@($"Hexadecimal {value:X2} · number {value} · {Describe(value)}")">
+                @Show(value)
+            </span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required byte[] Bytes { get; set; }
+
+    private enum View { Hexadecimal, Numbers, Letters }
+
+    private static readonly (View, string)[] Views = [(View.Hexadecimal, "Hexadecimal"), (View.Numbers, "Numbers"), (View.Letters, "Letters")];
+
+    private View current = View.Hexadecimal;
+
+    private string Show(byte value) => current switch
+    {
+        View.Numbers => value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        View.Letters => value switch { 0 => "end", 32 => "space", _ => ((char)value).ToString() },
+        _ => value.ToString("X2"),
+    };
+
+    private static string Describe(byte value) => value switch
+    {
+        0 => "the end of the text",
+        32 => "a space",
+        _ => $"the sign {(char)value}",
+    };
+}

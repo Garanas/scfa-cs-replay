@@ -1,0 +1,19 @@
+@* One numbered chapter of an About article; Id is the anchor the table of contents links to. *@
+
+<section id="@Id" class="scroll-mt-24 border-t border-edge pt-14">
+    <p class="font-display text-sm font-bold tracking-[0.2em] text-primary">@Number</p>
+    <h2 class="mt-1 text-2xl font-bold text-ink sm:text-3xl">@Title</h2>
+    <div class="mt-6 space-y-5 text-[17px] leading-relaxed text-ink-muted [&_strong]:font-semibold [&_strong]:text-ink">
+        @ChildContent
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public required string Id { get; set; }
+
+    [Parameter, EditorRequired] public required string Number { get; set; }
+
+    [Parameter, EditorRequired] public required string Title { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
