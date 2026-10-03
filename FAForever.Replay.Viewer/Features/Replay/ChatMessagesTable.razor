@@ -23,7 +23,7 @@ else
             {
                 <tr class="border-t border-edge/60 align-top hover:bg-raised/50">
                     <td class="px-4 py-2 font-mono text-ink-muted">@GameTime.Format(message.Timestamp)</td>
-                    <td class="whitespace-nowrap px-4 py-2 font-medium">@message.Sender</td>
+                    <td class="whitespace-nowrap px-4 py-2"><PlayerLabel Name="@message.Sender" Color="@Colors?.GetValueOrDefault(message.Sender)" /></td>
                     <td class="px-4 py-2"><span class="badge">@message.Receiver</span></td>
                     <td class="px-4 py-2">@message.Message</td>
                 </tr>
@@ -34,4 +34,7 @@ else
 
 @code {
     [Parameter, EditorRequired] public required IReadOnlyList<ReplayChatMessage> Messages { get; set; }
+
+    /// <summary>In-game colour per player name (GameColors.ByName).</summary>
+    [Parameter] public IReadOnlyDictionary<string, string>? Colors { get; set; }
 }

@@ -41,7 +41,7 @@
                 {
                     <tr class="border-t border-edge/60 align-top hover:bg-raised/50">
                         <td class="px-4 py-2 font-mono text-ink-muted">@ReplayView.FormatDuration(ReplayAnalysis.GetTimestamp(callback))</td>
-                        <td class="whitespace-nowrap px-4 py-2 font-medium">@PlayerName(callback.SourceId)</td>
+                        <td class="whitespace-nowrap px-4 py-2"><PlayerLabel Name="@PlayerName(callback.SourceId)" Color="@colorsBySource.GetValueOrDefault(callback.SourceId)" /></td>
                         <td class="px-4 py-2 text-right font-mono">@(callback.Units.UnitCount > 0 ? callback.Units.UnitCount.ToString() : "—")</td>
                         <td class="px-4 py-2 font-mono text-xs text-ink-muted">@LuaDataFormatter.Format(callback.LuaParameters)</td>
                     </tr>
@@ -71,7 +71,8 @@
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
     private List<(string Endpoint, int Count)> endpointCounts = [];
-    private List<(string Name, int Count)> playerItems = [];
+    private List<(string Name, int Count, string? Color)> playerItems = [];
+    private Dictionary<int, string> colorsBySource = [];
     private Dictionary<string, List<ReplayInput.SimCallback>> callbacksByEndpoint = [];
     private string? selectedEndpoint;
     private HashSet<int> selectedSources = [];
@@ -114,11 +115,12 @@
             .GroupBy(callback => callback.Endpoint)
             .ToDictionary(group => group.Key, group => group.ToList());
 
+        colorsBySource = GameColors.BySource(Model.Replay.Header);
         playerItems = Model.Replay.Body.UserInput
             .OfType<ReplayInput.SimCallback>()
             .GroupBy(callback => callback.SourceId)
             .OrderByDescending(group => group.Count())
-            .Select(group => (PlayerName(group.Key), group.Count()))
+            .Select(group => (PlayerName(group.Key), group.Count(), colorsBySource.GetValueOrDefault(group.Key)))
             .ToList();
         HashSet<string> selectedNames = PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name));
         selectedSources = Enumerable.Range(0, Model.Replay.Header.Clients.Length)

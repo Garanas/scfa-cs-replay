@@ -41,5 +41,13 @@ namespace FAForever.Replay
         double? RatingMean,
         double? RatingDeviation,
         int? RatedGames,
-        LuaData.Table Raw);
+        LuaData.Table Raw)
+    {
+        /// <summary>
+        /// The in-game colour of this army as CSS hex, resolved against
+        /// <see cref="GameColors"/> (lua/GameColors.lua). PlayerColor is what the game
+        /// renders for the player (marker pings confirm it); ArmyColor is the fallback.
+        /// </summary>
+        public string? Color => GameColors.ToCss(PlayerColor) ?? GameColors.ToCss(ArmyColor);
+    }
 }

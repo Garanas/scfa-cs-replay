@@ -22,7 +22,7 @@ else
                 {
                     <tr class="border-t border-edge/60 hover:bg-raised/50">
                         <td class="px-3 py-1.5 font-mono text-ink-muted">@GameTime.Format(row.Timestamp)</td>
-                        <td class="whitespace-nowrap px-3 py-1.5 font-medium">@row.Player</td>
+                        <td class="whitespace-nowrap px-3 py-1.5"><PlayerLabel Name="@row.Player" Color="@row.Color" /></td>
                         <td class="px-3 py-1.5">@OrderLabel(row.Type)</td>
                         @* TODO(unit-names): map blueprint ids to unit names via a static lookup. *@
                         <td class="px-3 py-1">
@@ -54,12 +54,13 @@ else
 
     [Parameter] public TimeSpan? To { get; set; }
 
-    private sealed record Row(TimeSpan Timestamp, string Player, CommandType Type, string BlueprintId, int UnitCount);
+    private sealed record Row(TimeSpan Timestamp, string Player, string? Color, CommandType Type, string BlueprintId, int UnitCount);
 
     private List<Row> Entries { get; set; } = [];
 
     protected override void OnParametersSet()
     {
+        Dictionary<int, string> colorsBySource = GameColors.BySource(Replay.Header);
         List<Row> rows = [];
         foreach (int sourceId in SelectedSourceIds)
         {
@@ -70,7 +71,7 @@ else
             {
                 if ((From is not { } from || entry.Timestamp >= from) && (To is not { } to || entry.Timestamp <= to))
                 {
-                    rows.Add(new Row(entry.Timestamp, player, entry.Type, entry.BlueprintId, entry.UnitCount));
+                    rows.Add(new Row(entry.Timestamp, player, colorsBySource.GetValueOrDefault(sourceId), entry.Type, entry.BlueprintId, entry.UnitCount));
                 }
             }
         }

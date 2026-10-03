@@ -1,0 +1,13 @@
+@* A player name with their in-game colour (lua/GameColors.lua) as a small chip. The chip
+   is transparent when the colour is unknown (observers), keeping the alignment intact. *@
+
+<span class="inline-flex items-center gap-1.5">
+    <span class="h-3.5 w-1 shrink-0 rounded-full" style="background: @(Color ?? "transparent")" aria-hidden="true"></span>
+    <span class="font-medium">@Name</span>
+</span>
+
+@code {
+    [Parameter, EditorRequired] public required string Name { get; set; }
+
+    [Parameter] public string? Color { get; set; }
+}

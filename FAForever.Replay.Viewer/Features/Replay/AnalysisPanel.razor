@@ -38,7 +38,7 @@
     private TimeSpan duration;
     private TimeSpan? windowFrom;
     private TimeSpan? windowTo;
-    private List<(string Name, int Count)> playerItems = [];
+    private List<(string Name, int Count, string? Color)> playerItems = [];
     private List<int> selectedSourceIds = [];
 
     protected override void OnParametersSet()
@@ -48,12 +48,13 @@
         (windowFrom, windowTo) = TimeWindowFilter.ReadWindow(Navigation, required: false, duration);
 
         Dictionary<int, int> actions = ReplayAnalysis.CountPlayerActions(replay);
+        Dictionary<int, string> colorsBySource = GameColors.BySource(replay.Header);
         List<(int SourceId, string Name, int Count)> roster = actions
             .OrderByDescending(pair => pair.Value)
             .Select(pair => (pair.Key, PlayerName(pair.Key), pair.Value))
             .ToList();
 
-        playerItems = roster.Select(entry => (entry.Name, entry.Count)).ToList();
+        playerItems = roster.Select(entry => (entry.Name, entry.Count, colorsBySource.GetValueOrDefault(entry.SourceId))).ToList();
         HashSet<string> selectedNames = PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name));
         selectedSourceIds = roster.Where(entry => selectedNames.Contains(entry.Name)).Select(entry => entry.SourceId).ToList();
     }

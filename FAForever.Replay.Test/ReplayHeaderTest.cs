@@ -164,5 +164,24 @@ namespace FAForever.Replay.Test
 
             Assert.AreEqual(expectedValidatedPlayers, validated);
         }
+
+        /// <summary>
+        /// The colour indices of the header resolve against lua/GameColors.lua. The expected
+        /// values are cross-checked against the colours that SpawnPing marker callbacks carry
+        /// for the same players in this replay.
+        /// </summary>
+        [TestMethod]
+        [DataRow("assets/faforever/23225104.fafreplay", 0, "#e80a0a")]
+        [DataRow("assets/faforever/23225104.fafreplay", 7, "#b76518")]
+        [DataRow("assets/faforever/23225104.fafreplay", 2, "#436eee")]
+        [DataRow("assets/faforever/23225104.fafreplay", 5, "#2f4f4f")]
+        public void PlayerColorResolvesAgainstGameColorsTest(string file, int sourceId, string expectedColor)
+        {
+            ReplayHeader header = Load(file).Header;
+
+            ReplayPlayerOptions army = header.Armies.Single(candidate => candidate.SourceId == sourceId);
+
+            Assert.AreEqual(expectedColor, army.Color);
+        }
     }
 }

@@ -4,12 +4,13 @@
    selected). Parents derive the same selection with SelectedFrom. *@
 
 <div role="group" aria-label="Players">
-    @foreach ((string name, int count) in Items)
+    @foreach ((string name, int count, string? color) in Items)
     {
         bool isSelected = selected.Contains(name);
         <label class="@(isSelected ? SelectedClass : UnselectedClass)">
             <input type="checkbox" class="accent-primary" checked="@isSelected"
                    @onchange="() => Toggle(name)" />
+            <span class="h-3.5 w-1 shrink-0 rounded-full" style="background: @(color ?? "transparent")" aria-hidden="true"></span>
             <span class="truncate text-sm">@name</span>
             <span class="badge ml-auto shrink-0">@count.ToString("N0")</span>
         </label>
@@ -21,7 +22,7 @@
     private const string UnselectedClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-ink-muted transition hover:bg-raised hover:text-ink";
     private const string SelectedClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 font-medium text-ink transition hover:bg-raised";
 
-    [Parameter, EditorRequired] public required IReadOnlyList<(string Name, int Count)> Items { get; set; }
+    [Parameter, EditorRequired] public required IReadOnlyList<(string Name, int Count, string? Color)> Items { get; set; }
 
     private HashSet<string> selected = [];
 

@@ -17,7 +17,7 @@ else
     </div>
 
     <div class="card max-h-[70vh] self-start overflow-y-auto p-0">
-        <ChatMessagesTable Messages="FilteredMessages.ToList()" />
+        <ChatMessagesTable Messages="FilteredMessages.ToList()" Colors="colorsByName" />
     </div>
     </div>
 }
@@ -26,7 +26,8 @@ else
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
     private List<ReplayChatMessage> allMessages = [];
-    private List<(string Sender, int Count)> senders = [];
+    private List<(string Sender, int Count, string? Color)> senders = [];
+    private Dictionary<string, string> colorsByName = [];
     private HashSet<string> selectedSenders = [];
     private TimeSpan duration;
     private TimeSpan? fromTime;
@@ -56,11 +57,12 @@ else
     {
         allMessages = ReplaySemantics.GetChatMessages(Model.Replay);
         duration = ReplayAnalysis.GetDuration(Model.Replay);
+        colorsByName = GameColors.ByName(Model.Replay.Header);
         senders = allMessages
             .GroupBy(message => message.Sender)
-            .Select(group => (group.Key, group.Count()))
+            .Select(group => (group.Key, group.Count(), colorsByName.GetValueOrDefault(group.Key)))
             .OrderByDescending(pair => pair.Item2)
-            .ThenBy(pair => pair.Key)
+            .ThenBy(pair => pair.Item1)
             .ToList();
 
         // The URL is the source of truth for both filters.

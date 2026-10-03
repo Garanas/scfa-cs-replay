@@ -56,7 +56,7 @@
                 {
                     <tr class="border-t border-edge/60 align-top hover:bg-raised/50">
                         <td class="px-4 py-1.5 font-mono text-ink-muted">@GameTime.Format(ReplayAnalysis.GetTimestamp(input))</td>
-                        <td class="whitespace-nowrap px-4 py-1.5 font-medium">@PlayerName(input.SourceId)</td>
+                        <td class="whitespace-nowrap px-4 py-1.5"><PlayerLabel Name="@PlayerName(input.SourceId)" Color="@colorsBySource.GetValueOrDefault(input.SourceId)" /></td>
                         <td class="px-4 py-1.5">
                             <span class="flex items-center gap-2">
                                 @if (ReplayInputFormatter.TryGetBlueprintId(input) is { } blueprintId)
@@ -97,7 +97,8 @@
     private TimeSpan duration;
     private TimeSpan windowFrom;
     private TimeSpan windowTo;
-    private List<(string Name, int Count)> playerItems = [];
+    private List<(string Name, int Count, string? Color)> playerItems = [];
+    private Dictionary<int, string> colorsBySource = [];
     private List<(string Type, int Count)> typeItems = [];
     private HashSet<string> selectedTypes = [];
     private HashSet<int> selectedSources = [];
@@ -150,9 +151,10 @@
         }
 
         notableEvents = notable;
+        colorsBySource = GameColors.BySource(replay.Header);
         playerItems = inputCounts
             .OrderByDescending(pair => pair.Value)
-            .Select(pair => (PlayerName(pair.Key), pair.Value))
+            .Select(pair => (PlayerName(pair.Key), pair.Value, colorsBySource.GetValueOrDefault(pair.Key)))
             .ToList();
         typeItems = typeCounts
             .OrderByDescending(pair => pair.Value)
