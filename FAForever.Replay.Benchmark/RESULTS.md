@@ -45,3 +45,31 @@ Observations:
   ~5.2 ms; 23225440: 2.71 ms vs ~1.8 ms). The cause is still unknown, and the two code paths are almost
   identical. Possibly a GC/measurement effect (Body runs on a fresh non-expandable `MemoryStream`); to be
   investigated before attributing step results to the staged path.
+
+## Steps 1, 2, 3, 5 — screening with the short job (2026-10-03)
+
+Measured with `--job short` (3 iterations; error margins are wide, so only large effects count) on
+`--filter "*ParseBenchmark.Body*" "*DecompressBenchmark*" "*SCFAReplayBenchmark*"`, each step on its own
+branch from `09c3f07`, against a short-job baseline of that same commit. Mean / Allocated.
+
+| Benchmark | Baseline | Step 1 (strings) | Step 2 (Lua allocs) | Step 1+3 (interning) | Step 5 (zstd) | Combined |
+|---|---:|---:|---:|---:|---:|---:|
+| Decompress 23225104 | 4.87 ms / 16.3 MB | — | — | — | 2.09 ms / 6.4 MB | 2.11 ms / 6.4 MB |
+| Decompress 23225685 | 2.81 ms / 8.1 MB | — | — | — | 0.80 ms / 2.5 MB | 0.78 ms / 2.5 MB |
+| Body 23225104 | 22.2 ms / 13.5 MB | 14.9 ms / 13.5 MB | 18.1 ms / 11.5 MB | 12.5 ms / 10.2 MB | — | 9.7 ms / 8.2 MB |
+| Body 23225685 | 8.47 ms / 5.2 MB | 6.29 ms / 5.2 MB | 6.07 ms / 4.2 MB | 5.55 ms / 4.3 MB | — | 4.25 ms / 3.4 MB |
+| Body TestCommands01 | 7.95 ms / 5.2 MB | 6.11 ms / 5.2 MB | 5.27 ms / 4.3 MB | 4.79 ms / 4.3 MB | — | 3.93 ms / 3.3 MB |
+| Body laird-binary-01 | 171 ms / 108 MB | 156 ms / 108 MB | 125 ms / 89 MB | 164 ms / 88 MB | — | 90 ms / 68 MB |
+| End-to-end laird-binary-01 | 169 ms / 106 MB | 164 ms / 117 MB | 127 ms / 87 MB | 176 ms / 97 MB | — | 93 ms / 78 MB |
+| End-to-end laird-binary-02 | 92 ms / 52 MB | 53 ms / 59 MB | 56 ms / 44 MB | 54 ms / 48 MB | — | 32 ms / 40 MB |
+
+Notes:
+
+- Step 1 adds one copy for streams that do not expose their buffer (`new MemoryStream(bytes)`), which is
+  visible in the SCFA end-to-end allocations; decompressed replays expose their buffer and need no copy.
+- Step 3's timing on SCFA is within the noise of the short job; its value is mostly fewer allocations
+  (fewer, shared strings), which matters more in the WebAssembly interpreter than here.
+- Step 5, first attempt, was *slower*: FAForever replays do not store the decompressed size in the zstd
+  frame header, `GetDecompressedSize` then returns an upper bound (6.03 MB vs 5.83 MB actual), and the
+  exact-size check made it always fall back. Using the bound as the buffer size fixed it.
+- Before merging into the main line: re-run the full (default job) suite for a definitive table.
