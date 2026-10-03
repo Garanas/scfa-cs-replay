@@ -362,6 +362,18 @@
     private void AddMarker(ReplayMapEvent mapEvent, TimeSpan nowWall)
     {
         CommandCategory category = CommandCategories.GetCategory(mapEvent.CommandType);
+        string title = $"{GameTime.Format(mapEvent.Timestamp)} · {PlayerName(mapEvent.SourceId)}: {DescribeMapEvent(mapEvent)}";
+
+        activeMarkers.Add(new PlaythroughMarkerLayer.Marker(
+            sequence++, mapEvent.X, mapEvent.Z,
+            colorsBySource.GetValueOrDefault(mapEvent.SourceId),
+            category, mapEvent.Kind, mapEvent.BlueprintId,
+            IsPing: false, title, nowWall, MarkerLifetime, mapEvent.UnitCount));
+    }
+
+    /// <summary>A one-line description of a map event, e.g. "Move · 34 units" or "Build Mass Extractor".</summary>
+    private static string DescribeMapEvent(ReplayMapEvent mapEvent)
+    {
         string verb = mapEvent.Kind switch
         {
             ReplayMapEventKind.Retarget => "Retarget",
@@ -370,14 +382,13 @@
         };
         string unit = mapEvent.BlueprintId is { } blueprintId ? $" {UnitNames.GetOrNull(blueprintId) ?? blueprintId}" : "";
         string count = mapEvent.UnitCount > 1 ? $" · {mapEvent.UnitCount} units" : "";
-        string title = $"{GameTime.Format(mapEvent.Timestamp)} · {PlayerName(mapEvent.SourceId)}: {verb}{unit}{count}";
-
-        activeMarkers.Add(new PlaythroughMarkerLayer.Marker(
-            sequence++, mapEvent.X, mapEvent.Z,
-            colorsBySource.GetValueOrDefault(mapEvent.SourceId),
-            category, mapEvent.Kind, mapEvent.BlueprintId,
-            IsPing: false, title, nowWall, MarkerLifetime, mapEvent.UnitCount));
+        return $"{verb}{unit}{count}";
     }
+
+    /// <summary>Whether the map event shows its blueprint's unit icon rather than a category icon.</summary>
+    private static bool ShowsUnitIcon(ReplayMapEvent mapEvent, CommandCategory category)
+        => mapEvent.BlueprintId is not null
+           && (category == CommandCategory.Build || mapEvent.Kind == ReplayMapEventKind.UnitSpawn);
 
     private void AddPingMarker(ReplayPing ping, TimeSpan nowWall)
     {
@@ -527,12 +538,17 @@
     private List<PlaythroughFeed.Item> BuildAllFeedItems(Replay replay, List<ReplaySessionEvent> sessionEvents)
     {
         List<PlaythroughFeed.Item> items = [];
-        Dictionary<string, string> colorsByName = GameColors.ByName(replay.Header);
 
-        foreach (ReplayChatMessage chat in ReplaySemantics.GetChatMessages(replay))
+        // The orders themselves - the chat has its own tab and stays out of this feed.
+        foreach (ReplayMapEvent mapEvent in mapEvents)
         {
-            string text = chat.Receiver is "all" ? chat.Message : $"[to {chat.Receiver}] {chat.Message}";
-            items.Add(new PlaythroughFeed.Item(chat.Timestamp, chat.Sender, colorsByName.GetValueOrDefault(chat.Sender), text, "chat"));
+            CommandCategory category = CommandCategories.GetCategory(mapEvent.CommandType);
+            bool unitIcon = ShowsUnitIcon(mapEvent, category);
+            items.Add(new PlaythroughFeed.Item(
+                mapEvent.Timestamp, PlayerName(mapEvent.SourceId), colorsBySource.GetValueOrDefault(mapEvent.SourceId),
+                DescribeMapEvent(mapEvent), "command",
+                unitIcon ? null : CommandIcons.IconPath(category),
+                unitIcon ? mapEvent.BlueprintId : null));
         }
 
         foreach (ReplayResourceTransfer transfer in ReplaySemantics.GetResourceTransfers(replay))

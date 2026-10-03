@@ -19,7 +19,17 @@
             <span class="shrink-0 pt-0.5 font-mono text-xs text-ink-muted">@GameTime.Format(item.Timestamp)</span>
             <span class="min-w-0">
                 <PlayerLabel Name="@item.Player" Color="@item.Color" />
-                <span class="block truncate text-xs text-ink-muted">@item.Text</span>
+                <span class="flex items-center gap-1.5 text-xs text-ink-muted">
+                    @if (item.BlueprintId is { } blueprintId)
+                    {
+                        <UnitIcon BlueprintId="@blueprintId" Size="16" />
+                    }
+                    else if (item.IconPath is { } iconPath)
+                    {
+                        <img src="@iconPath" alt="" class="h-4 w-4 shrink-0" />
+                    }
+                    <span class="truncate">@item.Text</span>
+                </span>
             </span>
         </button>
     }
@@ -32,8 +42,12 @@
 @code {
     private const int MaxRows = 100;
 
-    /// <summary>One feed entry; Kind is a short tag such as "chat" or "ping".</summary>
-    public sealed record Item(TimeSpan Timestamp, string Player, string? Color, string Text, string Kind);
+    /// <summary>
+    /// One feed entry; Kind is a short tag such as "command" or "ping". A build command
+    /// carries its BlueprintId (rendered as the unit icon), other commands their category
+    /// icon path.
+    /// </summary>
+    public sealed record Item(TimeSpan Timestamp, string Player, string? Color, string Text, string Kind, string? IconPath = null, string? BlueprintId = null);
 
     /// <summary>All feed items of the replay, chronological and already player-filtered.</summary>
     [Parameter, EditorRequired] public required IReadOnlyList<Item> Items { get; set; }
