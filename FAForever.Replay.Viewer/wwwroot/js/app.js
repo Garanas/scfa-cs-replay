@@ -41,6 +41,14 @@ window.fafReplay = {
             mode = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
         }
         document.documentElement.setAttribute("data-mode", mode);
+        window.fafReplay.syncThemeColor();
+    },
+    /* Colours the browser and installed-app title bar with the page background of the mode. */
+    syncThemeColor: function () {
+        const color = getComputedStyle(document.documentElement).getPropertyValue("--th-base").trim();
+        if (color) {
+            document.querySelector('meta[name="theme-color"]')?.setAttribute("content", color);
+        }
     },
     /* Session storage wrappers for the OAuth flow (PKCE verifier, state, tokens). */
     sessionGet: function (key) {
@@ -99,6 +107,91 @@ window.fafReplay = {
         } catch (e) {
             return false;
         }
+    },
+    /*
+     * PWA (see wwwroot/service-worker.published.js). A new version installs in the background and
+     * waits; the app shows a banner (Layout/UpdateBanner.razor) and only switches over when the user
+     * accepts, so a replay being analysed is never reloaded from under them.
+     */
+    updateListener: null,
+    updateAvailable: false,
+    registerServiceWorker: function () {
+        window.fafReplay.syncThemeColor();
+        if (!("serviceWorker" in navigator)) {
+            return;
+        }
+        navigator.serviceWorker.register("service-worker.js", { updateViaCache: "none" }).then((registration) => {
+            const notify = () => {
+                window.fafReplay.updateAvailable = true;
+                window.fafReplay.updateListener?.invokeMethodAsync("OnUpdateAvailable");
+            };
+            // Only an update when a worker already controls the page; the first install is not.
+            if (registration.waiting && navigator.serviceWorker.controller) {
+                notify();
+            }
+            registration.addEventListener("updatefound", () => {
+                const worker = registration.installing;
+                worker?.addEventListener("statechange", () => {
+                    if (worker.state === "installed" && navigator.serviceWorker.controller) {
+                        notify();
+                    }
+                });
+            });
+            // An installed app may stay open for days: look for a new version every hour.
+            setInterval(() => registration.update().catch(() => { }), 60 * 60 * 1000);
+        }).catch(() => { /* No service worker (e.g. plain http on a LAN address): the app just runs online. */ });
+
+        let reloading = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (!reloading) {
+                reloading = true;
+                window.location.reload();
+            }
+        });
+    },
+    onUpdateAvailable: function (listener) {
+        window.fafReplay.updateListener = listener;
+        return window.fafReplay.updateAvailable;
+    },
+    applyUpdate: async function () {
+        const registration = await navigator.serviceWorker.getRegistration();
+        registration?.waiting?.postMessage("skipWaiting");
+    },
+    /*
+     * File handling: the installed app is registered for .fafreplay and .scfareplay files
+     * (manifest.webmanifest), so "Open with" hands the file to the launch queue. The queue can
+     * deliver before Blazor has started, so the file waits here until the home page asks for it.
+     */
+    launchedFile: null,
+    launchListener: null,
+    initLaunchQueue: function () {
+        if (!("launchQueue" in window)) {
+            return;
+        }
+        window.launchQueue.setConsumer(async (launchParams) => {
+            const handle = launchParams.files?.[0];
+            if (!handle) {
+                return;
+            }
+            window.fafReplay.launchedFile = await handle.getFile();
+            window.fafReplay.launchListener?.invokeMethodAsync("OnFileLaunched");
+        });
+    },
+    onFileLaunched: function (listener) {
+        window.fafReplay.launchListener = listener;
+        return window.fafReplay.launchedFile !== null;
+    },
+    offFileLaunched: function () {
+        window.fafReplay.launchListener = null;
+    },
+    /* Hands the launched file over once: its name, and its contents as a stream. */
+    takeLaunchedFileName: function () {
+        return window.fafReplay.launchedFile?.name ?? null;
+    },
+    takeLaunchedFileContent: function () {
+        const file = window.fafReplay.launchedFile;
+        window.fafReplay.launchedFile = null;
+        return file;
     }
 };
 
@@ -106,3 +199,5 @@ window.fafReplay = {
 window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function () {
     window.fafReplay.applyMode();
 });
+
+window.fafReplay.initLaunchQueue();

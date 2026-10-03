@@ -35,7 +35,7 @@ app.UseStaticFiles(new StaticFileOptions
     {
         // Without a Cache-Control header browsers cache heuristically, which serves stale
         // CSS/JS during development. no-cache forces revalidation (cheap 304s via ETag).
-        if (app.Environment.IsDevelopment())
+        if (app.Environment.IsDevelopment() || MustRevalidate(context.File.Name))
         {
             context.Context.Response.Headers.CacheControl = "no-cache";
         }
@@ -79,3 +79,8 @@ app.MapPost("/api/oauth/token", async (HttpContext context, IHttpClientFactory h
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+// The files that decide which version of the app a browser runs: the service worker, its list of
+// assets and the entry page. Never cached heuristically, or a deploy would go unnoticed.
+static bool MustRevalidate(string fileName) =>
+    fileName is "index.html" or "service-worker.js" or "service-worker-assets.js" or "manifest.webmanifest";

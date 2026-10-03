@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Source of the app icons (tools/convert-app-icons.ps1). Full-bleed background, artwork inside
+       the 80% safe zone so the same drawing works as a maskable icon. UEF theme colours. -->
+  <rect width="512" height="512" fill="#0a1020"/>
+  <circle cx="256" cy="256" r="150" fill="#101a30"/>
+  <path d="M256 126 A130 130 0 1 1 135.9 206.3" fill="none" stroke="#4a8df0" stroke-width="26" stroke-linecap="round"/>
+  <path d="M156 160 L98 204 L166 232 Z" fill="#4a8df0" stroke="#4a8df0" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M224 196 L314 256 L224 316 Z" fill="#e3b341" stroke="#e3b341" stroke-width="18" stroke-linejoin="round"/>
+</svg>
