@@ -112,8 +112,8 @@
     {
         get
         {
-            string map = Model.Replay.Header.Scenario.Map.Name is { Length: > 0 } name
-                ? (name.StartsWith("<LOC ", StringComparison.OrdinalIgnoreCase) && name.IndexOf('>') >= 0 ? name[(name.IndexOf('>') + 1)..].Trim() : name)
+            string map = Model.Replay.Header.Scenario.Map.DisplayName is { Length: > 0 } name
+                ? name
                 : Model.Metadata?.mapname ?? "Unknown map";
             int armies = Model.Replay.Header.Armies.Count(army => army.Civilian != true);
             int players = armies > 0 ? armies : Model.Metadata?.num_players ?? Model.Replay.Header.Clients.Length;

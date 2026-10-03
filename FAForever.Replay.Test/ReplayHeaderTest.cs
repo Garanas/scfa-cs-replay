@@ -230,5 +230,24 @@ namespace FAForever.Replay.Test
             Assert.AreEqual(expectedFaction, army.FactionValue);
             Assert.AreEqual(expectedName, army.FactionName);
         }
+
+        [TestMethod]
+        public void StripLocalisationTagTest()
+        {
+            Assert.AreEqual("Vya-3 Protectorate", ReplayScenarioMap.StripLocalisationTag("<LOC SCMP_026>Vya-3 Protectorate"));
+            Assert.AreEqual("Plain name", ReplayScenarioMap.StripLocalisationTag("  Plain name "));
+            Assert.IsNull(ReplayScenarioMap.StripLocalisationTag(null));
+        }
+
+        [TestMethod]
+        [DataRow("assets/faforever/zstd/22338092.fafreplay", "Vya-3 Protectorate", "Vya-3 was once a haven")]
+        public void MapDisplayTextIsStrippedTest(string file, string expectedName, string expectedDescriptionStart)
+        {
+            ReplayScenarioMap map = Load(file).Header.Scenario.Map;
+
+            Assert.AreEqual(expectedName, map.DisplayName);
+            Assert.IsNotNull(map.DisplayDescription);
+            Assert.IsTrue(map.DisplayDescription!.StartsWith(expectedDescriptionStart), map.DisplayDescription);
+        }
     }
 }

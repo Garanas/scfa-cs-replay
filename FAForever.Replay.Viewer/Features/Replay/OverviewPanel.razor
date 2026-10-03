@@ -11,7 +11,7 @@
             {
                 <p class="text-sm text-ink-muted">@size</p>
             }
-            @if (StripLocTag(Model.Replay.Header.Scenario.Map.Description) is { Length: > 0 } description)
+            @if (Model.Replay.Header.Scenario.Map.DisplayDescription is { Length: > 0 } description)
             {
                 <p class="mt-2 line-clamp-6 text-sm text-ink-muted" title="@description">@description</p>
             }
@@ -61,26 +61,7 @@
 @code {
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
-    private string MapName => StripLocTag(Model.Replay.Header.Scenario.Map.Name) ?? Model.Metadata?.mapname ?? "Unknown map";
-
-    /// <summary>
-    /// Map names and descriptions can carry a game localisation marker,
-    /// e.g. "&lt;LOC SCMP_026_Description&gt;Vya-3 was once...". Strip it.
-    /// </summary>
-    private static string? StripLocTag(string? text)
-    {
-        if (text is null)
-        {
-            return null;
-        }
-
-        if (text.StartsWith("<LOC ", StringComparison.OrdinalIgnoreCase) && text.IndexOf('>') is int end and >= 0)
-        {
-            return text[(end + 1)..].Trim();
-        }
-
-        return text.Trim();
-    }
+    private string MapName => Model.Replay.Header.Scenario.Map.DisplayName ?? Model.Metadata?.mapname ?? "Unknown map";
 
     private string? MapSize
     {
