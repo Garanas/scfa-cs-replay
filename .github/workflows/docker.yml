@@ -1,13 +1,16 @@
 # Builds the container image of the hosted viewer (Dockerfile: FAForever.Replay.Server with the
 # Blazor app) and pushes it to the GitHub Container Registry as ghcr.io/garanas/scfa-cs-replay,
 # tagged "latest" and "sha-<commit>". The VPS pulls it with deploy/compose.yaml.
-# Pull requests only build the image, to catch a broken Dockerfile before it reaches main.
+#
+# Releasing is a deliberate step: only a push to the deploy/production branch publishes an image
+# (e.g. `git push origin main:deploy/production`); pushes to main do not. Pull requests to main
+# only build the image, to catch a broken Dockerfile early.
 
 name: Container image
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "deploy/production" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -46,7 +49,7 @@ jobs:
           # metadata-action lowercases the name, as registries require (the owner "Garanas" is not).
           images: ${{ env.IMAGE }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/deploy/production' }}
             type=sha,prefix=sha-
             type=ref,event=pr
 

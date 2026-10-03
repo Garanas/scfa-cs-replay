@@ -2,41 +2,59 @@
 
 The hosted viewer runs as a container behind Traefik on a small VPS (TransIP V1: 1 vCPU, 1 GB is
 plenty: replays are parsed in the visitor's browser, the server only serves files and proxies the
-OAuth token exchange). Measured locally: Traefik ~20 MB, the vault ~25 MB.
+OAuth token exchange). Visitor statistics come from a self-hosted GoatCounter at
+https://stats.jipwijnia.nl. Measured locally: Traefik ~30 MB, the vault ~20 MB, GoatCounter ~45 MB.
 
 | File | What |
 |---|---|
 | `../Dockerfile` | Image: `FAForever.Replay.Server` with the viewer, on the chiseled ASP.NET runtime (non-root, port 8080). |
-| `../.github/workflows/docker.yml` | CI: tests, then builds and pushes `ghcr.io/garanas/scfa-cs-replay:latest` and `:sha-<commit>` on every push to `main`. |
-| `compose.yaml` | Production stack: Traefik (HTTPS via Let's Encrypt HTTP-01, HTTP → HTTPS) and the vault. |
+| `../.github/workflows/docker.yml` | CI: tests, then builds and pushes `ghcr.io/garanas/scfa-cs-replay:latest` and `:sha-<commit>` on every push to the `deploy/production` branch (not on `main`). |
+| `compose.yaml` | Production stack: Traefik (HTTPS via Let's Encrypt HTTP-01, HTTP → HTTPS), the vault and GoatCounter. |
+| `setup.sh` | One-time setup of a fresh Ubuntu VPS (user, SSH keys only, firewall, updates, swap, Docker, `/opt/vault`). |
 | `compose.local.yaml` | Override to run the same stack locally from source, without Let's Encrypt. |
-| `.env.example` | Settings for the server (`ACME_EMAIL`, `VAULT_HOST`, `VAULT_IMAGE`). |
+| `.env.example` | Settings for the server (`ACME_EMAIL`, `VAULT_HOST`, `STATS_HOST`, `VAULT_IMAGE`). |
 
 ## Try it locally
 
 ```sh
 docker compose -f deploy/compose.yaml -f deploy/compose.local.yaml up --build -d
-# http://vault.localhost
+# http://vault.localhost, GoatCounter at http://stats.localhost
 docker compose -f deploy/compose.yaml -f deploy/compose.local.yaml down
 ```
 
 ## First-time server setup
 
-1. **VPS** with Ubuntu LTS. Log in with an SSH key, disable password login, enable
-   `unattended-upgrades`, add a 1–2 GB swap file, and open only ports 22, 80 and 443 (`ufw`).
-2. **Docker** Engine with the compose plugin (docs.docker.com/engine/install/ubuntu).
-3. **DNS** at TransIP: an `A` record (and `AAAA` for IPv6) for `vault` pointing at the VPS. Leave the
-   `MX` records of jipwijnia.nl alone — mail stays at TransIP.
-4. **Image access**: the GHCR package must be public (GitHub → Packages → scfa-cs-replay → Package
-   settings → visibility), or run `docker login ghcr.io` on the server with a read-only token.
-5. **Stack**: copy `compose.yaml` and `.env.example` to e.g. `/opt/vault`, then
+1. **Server**: on a fresh Ubuntu VPS, logged in with your SSH key, run
    ```sh
-   cp .env.example .env    # fill in ACME_EMAIL
-   docker compose up -d
+   curl -fsSL https://raw.githubusercontent.com/Garanas/scfa-cs-replay/deploy/production/deploy/setup.sh -o setup.sh
+   sudo bash setup.sh jip
    ```
-   Traefik requests the certificate on the first HTTPS request once DNS points at the server.
+   It creates the user `jip`, allows SSH keys only, opens only ports 22/80/443, enables automatic
+   security updates and swap, installs Docker and puts `compose.yaml` and `.env` in `/opt/vault`.
+   Keep the session open until `ssh jip@<server>` works in a second terminal.
+2. **DNS** at TransIP: `A` records (and `AAAA` for IPv6) for `vault` and `stats` pointing at the VPS.
+   Leave the other records of jipwijnia.nl alone (`@`, `www`, `MX`): the website and mail stay where
+   they are.
+3. **Stack**: fill in `ACME_EMAIL` in `/opt/vault/.env`, then `cd /opt/vault && docker compose up -d`.
+   Traefik requests a certificate per host name on its first HTTPS request. The image is public on
+   GHCR, so no `docker login` is needed.
+4. **GoatCounter**: create the site and your account right away, before anyone else can open the
+   setup wizard at https://stats.jipwijnia.nl:
+   ```sh
+   docker compose exec goatcounter goatcounter db create site -vhost=stats.jipwijnia.nl -user.email=<you>
+   ```
+   Then log in at https://stats.jipwijnia.nl. Page views are paths (`/replay/123`); which replay tabs
+   are used shows up as events (`tab/buildorder`). Visits from `localhost` are never counted.
 
-## Updating
+## Releasing and updating
+
+A new image is only built from the `deploy/production` branch. To release what is on `main`:
+
+```sh
+git push origin main:deploy/production     # CI tests, builds and pushes :latest
+```
+
+Then on the server:
 
 ```sh
 cd /opt/vault && docker compose pull && docker compose up -d
