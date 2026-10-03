@@ -30,7 +30,7 @@
                 }
                 else if (item.Ping is { } ping)
                 {
-                    <span class="font-semibold">@ChatPanel.PingGlyph(ping.Type)</span>
+                    <span class="font-semibold" style="color: @(ChatPanel.PingColor(ping.Type) ?? "inherit")">@ChatPanel.PingGlyph(ping.Type)</span>
                 }
             </span>
             @if (item.Message is { } message)

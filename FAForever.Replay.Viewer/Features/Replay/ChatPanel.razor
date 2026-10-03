@@ -55,7 +55,7 @@
             @foreach ((string type, string label) in PingLegend)
             {
                 <span role="listitem" class="inline-flex items-center gap-1">
-                    <span class="w-4 text-center font-semibold" aria-hidden="true">@PingGlyph(type)</span>
+                    <span class="w-4 text-center font-semibold" style="color: @(PingColor(type) ?? "inherit")" aria-hidden="true">@PingGlyph(type)</span>
                     @label
                 </span>
             }
@@ -151,7 +151,11 @@
         }
     }
 
-    private static List<Item> ExtractItems(Replay replay)
+    /// <summary>
+    /// All chat messages, drawings and pings of a replay in time order, with stable keys.
+    /// The Playthrough tab uses the drawings and pings among them.
+    /// </summary>
+    public static List<Item> ExtractItems(Replay replay)
     {
         Dictionary<string, string> colorsByName = GameColors.ByName(replay.Header);
         Dictionary<int, string> colorsBySource = GameColors.BySource(replay.Header);
@@ -195,6 +199,19 @@
         { Ping: { Name: { } name } ping } => $"{ping.Type} ping “{name}”",
         { Ping: { } ping } => $"{ping.Type} ping",
         _ => string.Empty,
+    };
+
+    /// <summary>
+    /// The colour of a ping type, after the in-game ring of that type (PingTypes in
+    /// lua/ui/game/ping.lua): blue for move, yellow for alert, red for attack. Null for the
+    /// other types, which keep the colour of the player (markers carry their own).
+    /// </summary>
+    public static string? PingColor(string type) => type.ToLowerInvariant() switch
+    {
+        "move" => "#33b5ff",
+        "alert" => "#ffcc00",
+        "attack" => "#ff3333",
+        _ => null,
     };
 
     public static string PingGlyph(string type) => type.ToLowerInvariant() switch

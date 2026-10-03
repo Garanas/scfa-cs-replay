@@ -94,7 +94,7 @@ the FAF team before any public deployment (see TODO.md).
   `{ShareablePainting={PeerName, ShareId, PaintingAdapterIdentifier, Samples={x,y,z,x,y,z,…}}}`, one
   callback per stroke, sent only by its author (no dedup needed, unlike chat). Observers share
   paintings through chat, so theirs are not in the replay. Use `ReplaySemantics.GetDrawings`;
-  pings come from `ReplaySemantics.GetPings`. Both are shown on the Chat tab (`ChatPanel` → `ChatMapLayer`/`ChatFeed`).
+  pings come from `ReplaySemantics.GetPings`. Both are shown on the Chat tab (`ChatPanel` → `ChatMapLayer`/`ChatFeed`) and, alive for their in-game lifetime, on the Playthrough map (same `ChatMapLayer`).
 - Lobby data lives in `Replay.Header.Armies` (`ReplayPlayerOptions`: faction 1=UEF/2=Aeon/
   3=Cybran/4=Seraphim, team where 1 = FFA, start spot, colors, rating MEAN/DEV, country, clan;
   `Raw` holds the full Lua table, e.g. `OwnerID`). `Armies[i].SourceId` links an army to

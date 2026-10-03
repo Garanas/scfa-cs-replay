@@ -1,9 +1,10 @@
 @using FAForever.Replay
 
-@* The drawings and pings of the Chat tab, rendered inside MapView's Overlay slot in world
-   coordinates. The hovered or selected item is highlighted and the others dim; clicking
-   an item on the map selects it. Chat messages have no position and are
-   skipped. *@
+@* Drawings and pings rendered inside MapView's Overlay slot in world coordinates, shared by
+   the Chat tab (the items of the time window) and the Playthrough tab (the items alive at the
+   playback time). The highlighted item stands out and the others dim; with OnSelect set,
+   clicking an item selects it. Chat messages have no position and are skipped. ShouldRender
+   skips renders in which nothing changed, so a playback frame costs nothing here. *@
 
 @foreach (ChatPanel.Item item in Items)
 {
@@ -11,8 +12,8 @@
     {
         bool dimmed = Highlighted is { } key && key != item.Key;
         bool highlighted = Highlighted == item.Key;
-        <g @key="item.Key" class="cursor-pointer" opacity="@(dimmed ? "0.3" : "1")" @onclick="() => OnSelect.InvokeAsync(item)">
-            <title>@item.Player — @ChatPanel.Describe(item) at @ChatPanel.FormatTime(item.Timestamp) — click to highlight</title>
+        <g @key="item.Key" class="@(Selectable ? "cursor-pointer" : null)" opacity="@(dimmed ? "0.3" : "1")" @onclick="() => OnSelect.InvokeAsync(item)">
+            <title>@item.Player — @ChatPanel.Describe(item) at @ChatPanel.FormatTime(item.Timestamp)@(Selectable ? " — click to highlight" : "")</title>
             @if (item.Drawing is { } drawing)
             {
                 string points = string.Join(' ', drawing.Points.Select(point => $"{Fmt(point.X)},{Fmt(point.Z)}"));
@@ -24,7 +25,7 @@
             }
             else if (item.Ping is { } ping)
             {
-                string color = ping.Color ?? item.Color ?? "#ffffff";
+                string color = ChatPanel.PingColor(ping.Type) ?? ping.Color ?? item.Color ?? "#ffffff";
                 <circle cx="@Fmt(ping.X)" cy="@Fmt(ping.Z)" r="@Fmt(PingRadius * (highlighted ? 1.4 : 1))" fill="rgba(10, 12, 18, 0.6)"
                         stroke="@color" stroke-width="@(highlighted ? 4 : 2.5)" vector-effect="non-scaling-stroke" />
                 @MapCanvas.SvgLabel(ping.X, ping.Z + PingRadius * 0.45, ChatPanel.PingGlyph(ping.Type), PingRadius * 1.25)
@@ -48,6 +49,25 @@
     [Parameter] public double PingRadius { get; set; } = 15;
 
     [Parameter] public EventCallback<ChatPanel.Item> OnSelect { get; set; }
+
+    private bool Selectable => OnSelect.HasDelegate;
+
+    private IReadOnlyList<ChatPanel.Item>? lastItems;
+    private int? lastHighlighted;
+    private double lastPingRadius;
+
+    protected override bool ShouldRender()
+    {
+        if (ReferenceEquals(Items, lastItems) && Highlighted == lastHighlighted && PingRadius == lastPingRadius)
+        {
+            return false;
+        }
+
+        lastItems = Items;
+        lastHighlighted = Highlighted;
+        lastPingRadius = PingRadius;
+        return true;
+    }
 
     private static string Fmt(double value) => MapCanvas.Fmt(value);
 }

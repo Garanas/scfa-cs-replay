@@ -230,7 +230,7 @@
     }
 
     /* Playthrough markers (PlaythroughMarkerLayer.razor). Each marker mounts once and its
-       animation runs once; the durations mirror MarkerLifetime/PingLifetime in
+       animation runs once; the duration mirrors MarkerLifetime in
        PlaythroughPanel.razor. transform-box/transform-origin keep the scale centred on the
        marker instead of the SVG viewport origin; the class sits on a nested <g> because a
        CSS transform would override the positioning transform attribute. */
@@ -238,17 +238,6 @@
         transform-box: fill-box;
         transform-origin: center;
         animation: pt-marker-pop 1.5s ease-out forwards;
-    }
-
-    .pt-marker-ping {
-        animation-name: pt-marker-fade;
-        animation-duration: 2.5s;
-    }
-
-    .pt-ping-ring {
-        transform-box: fill-box;
-        transform-origin: center;
-        animation: pt-ping-ring 2.5s ease-out forwards;
     }
 
     /* Newly inserted feed rows slide in (PlaythroughFeed.razor). */
@@ -279,36 +268,6 @@
     100% {
         opacity: 0;
         transform: scale(0.95);
-    }
-}
-
-@keyframes pt-marker-fade {
-    0% {
-        opacity: 0;
-    }
-
-    10% {
-        opacity: 1;
-    }
-
-    70% {
-        opacity: 1;
-    }
-
-    100% {
-        opacity: 0;
-    }
-}
-
-@keyframes pt-ping-ring {
-    from {
-        opacity: 0.9;
-        transform: scale(0.2);
-    }
-
-    to {
-        opacity: 0;
-        transform: scale(1);
     }
 }
 
