@@ -4,14 +4,12 @@
 @* What the game logs for moderators (the ModeratorEvent sim callback): pings, markers,
    self-destructs, focus-army changes and the messages sent to the FAF server. Messages are shown
    verbatim — they are evidence — and each time links to the Events tab: that player's raw input
-   around the moment, for the details. *@
+   around the moment, for the details. It always covers the whole game: the shared time window is
+   ignored, so a window left behind by another tab (or by such a link) never hides events. *@
 
 <div class="grid gap-6 lg:grid-cols-[1fr_3fr]">
     <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
-        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
-        <TimeWindowFilter Duration="duration" />
-
-        <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Players</h3>
+        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Players</h3>
         <PlayerFilterList Items="playerItems" />
 
         <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Kinds</h3>
@@ -117,7 +115,6 @@
                 .ToList();
         }
 
-        (TimeSpan? from, TimeSpan? to) = TimeWindowFilter.ReadWindow(Navigation, required: false, duration);
         HashSet<string> selectedNames = PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name));
 
         string? kindsFromQuery = UrlQuery.Get(Navigation, KindsParameter);
@@ -132,7 +129,6 @@
         }
 
         visible = rows
-            .Where(row => (from is null || row.Event.Timestamp >= from) && (to is null || row.Event.Timestamp <= to))
             .Where(row => selectedNames.Contains(row.Player) && selectedKinds.Contains(row.Kind))
             .ToList();
     }
