@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time setup of a fresh Ubuntu VPS (22.04/24.04) for the stack in deploy/compose.yaml.
+# One-time setup of a fresh Ubuntu LTS VPS for the stack in deploy/compose.yaml.
 # Run as root, after you can log in with an SSH key:
 #
 #   curl -fsSL https://raw.githubusercontent.com/Garanas/scfa-cs-replay/deploy/production/deploy/setup.sh -o setup.sh
@@ -64,14 +64,17 @@ if [[ -f "$USER_HOME/.ssh/authorized_keys" ]]; then
 fi
 
 has_password() { passwd -S "$USER_NAME" | grep -q " P "; }
-if [[ -t 0 ]] && ! has_password; then
+# Provider images (e.g. TransIP with an SSH key) create a key-only user with passwordless sudo.
+has_nopasswd_sudo() { sudo -l -U "$USER_NAME" 2>/dev/null | grep -q "NOPASSWD: ALL"; }
+can_sudo() { has_password || has_nopasswd_sudo; }
+if [[ -t 0 ]] && ! can_sudo; then
     step "Password for $USER_NAME (needed for sudo; SSH logins use the key)"
     passwd "$USER_NAME"
 fi
 
 step "SSH hardening"
-# Only lock root out once the new user can both log in (key) and administer (sudo password).
-if [[ -s "$USER_HOME/.ssh/authorized_keys" ]] && has_password; then
+# Only lock root out once the new user can both log in (key) and administer (sudo).
+if [[ -s "$USER_HOME/.ssh/authorized_keys" ]] && can_sudo; then
     cat > /etc/ssh/sshd_config.d/10-hardening.conf <<'EOF'
 PasswordAuthentication no
 KbdInteractiveAuthentication no
@@ -84,7 +87,7 @@ EOF
     sshd -t
     systemctl reload ssh 2>/dev/null || systemctl reload sshd
 else
-    echo "!! $USER_NAME has no SSH key or no password yet: password and root login stay enabled." >&2
+    echo "!! $USER_NAME has no SSH key or cannot sudo yet: password and root login stay enabled." >&2
     echo "!! Add a key to $USER_HOME/.ssh/authorized_keys, set a password, and run this script again." >&2
 fi
 
