@@ -146,14 +146,7 @@ namespace FAForever.Replay.Test
                     continue;
                 }
 
-                int? impliedFaction = buildOrder[0].BlueprintId[..2] switch
-                {
-                    "ue" => 1,
-                    "ua" => 2,
-                    "ur" => 3,
-                    "xs" => 4,
-                    _ => null,
-                };
+                int? impliedFaction = (int?)Blueprints.GetFaction(buildOrder[0].BlueprintId);
 
                 if (impliedFaction is not null)
                 {

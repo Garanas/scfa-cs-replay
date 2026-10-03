@@ -43,15 +43,14 @@ public sealed class UnitIconAtlas(HttpClient http)
 
     /// <summary>
     /// The layer background of a blueprint (<c>land</c>, <c>air</c> or <c>sea</c>). The game takes it
-    /// from <c>General.Icon</c> in the blueprint, which a replay does not contain, so we derive it from
-    /// the id instead: the third letter is the unit's layer (<c>uea0101</c> air, <c>ues0201</c> sea).
-    /// Structures and amphibious units fall back to land.
+    /// from <c>General.Icon</c> in the blueprint, which a replay does not contain, so it is derived
+    /// from the id via <see cref="FAForever.Replay.Blueprints.GetLayer"/>. Structures and amphibious
+    /// units fall back to land.
     /// </summary>
-    public static string Layer(string blueprintId) =>
-        blueprintId.Length < 3 ? "land" : char.ToLowerInvariant(blueprintId[2]) switch
-        {
-            'a' => "air",
-            's' => "sea",
-            _ => "land",
-        };
+    public static string Layer(string blueprintId) => FAForever.Replay.Blueprints.GetLayer(blueprintId) switch
+    {
+        FAForever.Replay.BlueprintLayer.Air => "air",
+        FAForever.Replay.BlueprintLayer.Naval => "sea",
+        _ => "land",
+    };
 }
