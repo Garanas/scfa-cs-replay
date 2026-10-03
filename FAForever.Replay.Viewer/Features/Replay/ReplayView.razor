@@ -44,6 +44,9 @@
             case Tab.Playthrough:
                 <PlaythroughPanel Model="Model" />
                 break;
+            case Tab.BuildOrder:
+                <BuildOrderPanel Model="Model" />
+                break;
             case Tab.Chat:
                 <ChatPanel Model="Model" />
                 break;
@@ -69,6 +72,7 @@
         Overview,
         Players,
         Playthrough,
+        BuildOrder,
         Chat,
         Events,
         Callbacks,
@@ -97,6 +101,7 @@
     {
         "players" => Tab.Players,
         "playthrough" => Tab.Playthrough,
+        "buildorder" => Tab.BuildOrder,
         "chat" => Tab.Chat,
         "events" => Tab.Events,
         "callbacks" => Tab.Callbacks,
@@ -138,6 +143,7 @@
         Tab.Overview => "Overview",
         Tab.Players => "Players",
         Tab.Playthrough => "Playthrough",
+        Tab.BuildOrder => "Build order",
         Tab.Chat => "Chat",
         Tab.Events => "Events",
         Tab.Callbacks => "Callbacks",

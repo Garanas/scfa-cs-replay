@@ -120,6 +120,8 @@ the FAF team before any public deployment (see TODO.md).
   custom properties switched by `data-theme` on `<html>`, mapped to Tailwind tokens via
   `@theme inline`. **Always use the semantic utilities** (`bg-surface`, `text-ink-muted`,
   `border-edge`, `bg-primary`, …) — never hardcode colours in components, or faction switching breaks.
+- Page width: header, page and footer share `MainLayout.Container` (`max-w-6xl`). The Build order
+  tab compares two players side by side and widens it to a full HD screen (`max-w-[1824px]`).
 - Anything drawn on the map goes through `Features/Replay/MapCanvas.razor`: an SVG in world
   coordinates with the vault preview as backdrop, so replay positions (x, z) are used as-is; its
   `ViewBox` parameter zooms in on a part of the map.
@@ -157,19 +159,22 @@ to those two players, on any machine.
 
 | Parameter | Meaning | Default when absent |
 |---|---|---|
-| `tab` | Active replay section: `players`, `playthrough`, `chat`, `events`, `callbacks`, `analysis` | Overview |
+| `tab` | Active replay section: `players`, `playthrough`, `buildorder`, `chat`, `events`, `callbacks`, `analysis` | Overview |
 | `players` | Comma-separated player names to show; shared by Playthrough, Chat, Events, Callbacks and Analysis | All players |
 | `from` / `to` | Game-time window (`12`, `12:30` or `1:02:30`); shared across tabs | See window policy below |
 | `types` | Comma-separated input types shown in the Events stream | All types |
 | `endpoint` | Selected sim-callback endpoint | The most frequent endpoint |
 | `pings` | `off` hides pings on the Chat tab (map and feed) | Pings shown |
+| `compare` | The two players of the Build order tab, `Left,Right` (unknown names fall back per slot) | The first army vs the first army of another team |
+| `builds` | `only` shows construction orders only on the Build order tab | All orders |
 | `at` | Playback position of the Playthrough tab (`12`, `12:30` or `1:02:30`); written on pause/seek only, never while playing | `0:00`, paused |
 
 **Window policy** (`TimeWindowFilter.ReadWindow`): one rule on every tab — a window is at most
 **four minutes** (`TimeWindowFilter.MaxWindow`), self-correcting with no error states: reversed
 bounds swap, a single bound implies the other, To is pulled along when the window is too long.
 Events *requires* a window (default `0:00`–`4:00`, kept out of the URL); everywhere else it is
-optional (both parameters absent = whole game). The stepper buttons are always visible and shift
+optional (both parameters absent = whole game). Build order ignores the window: it always covers
+the first ten minutes. The stepper buttons are always visible and shift
 by the window length, shown as their label (−4:00 / +4:00); without an active window the forward
 stepper starts one at `0:00`–`4:00` (the back stepper is disabled until there is one).
 The **Playthrough tab is exempt** from the window policy: it is a playback view, not a filtered

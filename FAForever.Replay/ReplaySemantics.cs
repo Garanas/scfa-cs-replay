@@ -327,6 +327,93 @@ namespace FAForever.Replay
         }
 
         /// <summary>
+        /// Retrieves every order the players gave, in tick order: IssueCommand (to units) and
+        /// IssueFactoryCommand (to factories), with the clicked position when the target is
+        /// one. Unlike <see cref="GetMapEvents"/> this keeps orders without a position, such as
+        /// factory build queues (IssueBuildFactory), which a build order needs.
+        /// </summary>
+        public static List<ReplayCommand> GetCommands(Replay replay) => GetCommands(replay.Body.UserInput);
+
+        /// <inheritdoc cref="GetCommands(Replay)"/>
+        public static List<ReplayCommand> GetCommands(IEnumerable<ReplayInput> inputs)
+        {
+            List<ReplayCommand> commands = new List<ReplayCommand>();
+
+            foreach (ReplayInput replayInput in inputs)
+            {
+                (bool fromFactory, CommandData data, int unitCount) = replayInput switch
+                {
+                    ReplayInput.IssueCommand command => (false, command.Data, command.Units.UnitCount),
+                    ReplayInput.IssueFactoryCommand factoryCommand => (true, factoryCommand.Data, factoryCommand.Factories.UnitCount),
+                    _ => (false, null!, 0),
+                };
+                if (data is null)
+                {
+                    continue;
+                }
+
+                commands.Add(new ReplayCommand(
+                    ReplayAnalysis.GetTimestamp(replayInput),
+                    replayInput.SourceId,
+                    fromFactory,
+                    data.Type,
+                    data.Target is CommandTarget.Position position ? new ReplayAnalysis.MapPosition(position.X, position.Z) : null,
+                    string.IsNullOrEmpty(data.BlueprintId) ? null : data.BlueprintId,
+                    unitCount));
+            }
+
+            return commands;
+        }
+
+        /// <summary>
+        /// Retrieves every change to the count of a queued order, in tick order, resolved to
+        /// the order it changes (matched on source and command identifier).
+        /// </summary>
+        public static List<ReplayQueueChange> GetQueueChanges(Replay replay) => GetQueueChanges(replay.Body.UserInput);
+
+        /// <inheritdoc cref="GetQueueChanges(Replay)"/>
+        public static List<ReplayQueueChange> GetQueueChanges(IEnumerable<ReplayInput> inputs)
+        {
+            List<ReplayQueueChange> changes = new List<ReplayQueueChange>();
+            Dictionary<(int SourceId, int Identifier), CommandData> orders = new Dictionary<(int, int), CommandData>();
+
+            foreach (ReplayInput replayInput in inputs)
+            {
+                switch (replayInput)
+                {
+                    case ReplayInput.IssueCommand command:
+                        orders[(replayInput.SourceId, command.Data.Identifier)] = command.Data;
+                        break;
+
+                    case ReplayInput.IssueFactoryCommand factoryCommand:
+                        orders[(replayInput.SourceId, factoryCommand.Data.Identifier)] = factoryCommand.Data;
+                        break;
+
+                    case ReplayInput.IncreaseCommandCount increase:
+                        changes.Add(Resolve(replayInput, increase.CommandId, increase.Delta));
+                        break;
+
+                    case ReplayInput.DecreaseCommandCount decrease:
+                        changes.Add(Resolve(replayInput, decrease.CommandId, -decrease.Delta));
+                        break;
+                }
+            }
+
+            return changes;
+
+            ReplayQueueChange Resolve(ReplayInput input, int commandId, int delta)
+            {
+                CommandData? order = orders.GetValueOrDefault((input.SourceId, commandId));
+                return new ReplayQueueChange(
+                    ReplayAnalysis.GetTimestamp(input),
+                    input.SourceId,
+                    delta,
+                    order?.Type,
+                    string.IsNullOrEmpty(order?.BlueprintId) ? null : order.BlueprintId);
+            }
+        }
+
+        /// <summary>
         /// Retrieves all player intents that carry a world position, in tick order, for
         /// playing a replay back on the map: commands with a clicked target position,
         /// retargeted queued commands and spawned units. Pings stay in <see cref="GetPings"/>
