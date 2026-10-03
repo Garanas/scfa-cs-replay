@@ -24,3 +24,10 @@ services:
       traefik.http.routers.vault-http.rule: Host(`vault.localhost`)
       traefik.http.routers.vault-http.entrypoints: web
       traefik.http.routers.vault-http.service: vault
+
+  goatcounter:
+    labels:
+      traefik.http.routers.stats.rule: Host(`stats.localhost`)
+      traefik.http.routers.stats-http.rule: Host(`stats.localhost`)
+      traefik.http.routers.stats-http.entrypoints: web
+      traefik.http.routers.stats-http.service: stats

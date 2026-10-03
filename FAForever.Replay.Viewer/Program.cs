@@ -1,4 +1,5 @@
 using FAForever.Replay.Viewer;
+using FAForever.Replay.Viewer.Services.Analytics;
 using FAForever.Replay.Viewer.Services.Api;
 using FAForever.Replay.Viewer.Services.Auth;
 using FAForever.Replay.Viewer.Services.Replays;
@@ -17,6 +18,7 @@ builder.Services.AddScoped<ThemeService>();
 builder.Services.AddScoped<ReplayLoadingService>();
 builder.Services.AddScoped<ReplaySessionState>();
 builder.Services.AddScoped<UnitIconAtlas>();
+builder.Services.AddScoped<AnalyticsService>();
 
 builder.Services.AddSingleton(builder.Configuration.GetSection("OAuth").Get<OAuthOptions>() ?? new OAuthOptions());
 builder.Services.AddScoped<AuthService>();
@@ -31,5 +33,8 @@ await host.Services.GetRequiredService<ThemeService>().InitializeAsync();
 
 // Restore a persisted login and complete the OAuth callback when we just returned from Hydra.
 await host.Services.GetRequiredService<AuthService>().InitializeAsync();
+
+// Count visits when analytics is configured (production only).
+await host.Services.GetRequiredService<AnalyticsService>().InitializeAsync();
 
 await host.RunAsync();

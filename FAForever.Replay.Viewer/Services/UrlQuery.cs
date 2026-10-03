@@ -9,9 +9,11 @@ namespace FAForever.Replay.Viewer.Services;
 /// </summary>
 public static class UrlQuery
 {
-    public static string? Get(NavigationManager navigation, string name)
+    public static string? Get(NavigationManager navigation, string name) => Get(new Uri(navigation.Uri), name);
+
+    public static string? Get(Uri uri, string name)
     {
-        string query = new Uri(navigation.Uri).Query;
+        string query = uri.Query;
         foreach (string pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
             int separator = pair.IndexOf('=');

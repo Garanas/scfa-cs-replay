@@ -36,6 +36,33 @@ window.fafReplay = {
     scrollIntoView: function (id) {
         document.getElementById(id)?.scrollIntoView({ block: "nearest" });
     },
+    /*
+     * GoatCounter (see Services/Analytics/AnalyticsService.cs). The script is only loaded when an
+     * endpoint is configured; counts made before it has loaded wait in a queue. "no_onload": the
+     * app counts every page itself, so the automatic count on load would be a duplicate.
+     */
+    analyticsQueue: [],
+    analyticsInit: function (endpoint) {
+        const script = document.createElement("script");
+        script.async = true;
+        script.src = endpoint.replace(/\/count$/, "/count.js");
+        script.dataset.goatcounter = endpoint;
+        script.dataset.goatcounterSettings = JSON.stringify({ no_onload: true });
+        script.onload = () => {
+            const queue = window.fafReplay.analyticsQueue;
+            window.fafReplay.analyticsQueue = [];
+            queue.forEach((send) => send());
+        };
+        document.head.appendChild(script);
+    },
+    analyticsCount: function (path, title, isEvent) {
+        const send = () => window.goatcounter?.count?.({ path: path, title: title ?? undefined, event: isEvent });
+        if (window.goatcounter?.count) {
+            send();
+        } else {
+            window.fafReplay.analyticsQueue.push(send);
+        }
+    },
     /* Copies text to the clipboard; false when the browser refuses (no permission, insecure origin). */
     copyText: async function (text) {
         try {

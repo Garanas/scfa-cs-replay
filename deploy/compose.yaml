@@ -43,5 +43,22 @@ services:
       traefik.http.routers.vault.entrypoints: websecure
       traefik.http.services.vault.loadbalancer.server.port: "8080"
 
+  # Visitor statistics (goatcounter.com): no cookies, no personal data, SQLite in a volume.
+  # The viewer counts itself when Analytics:GoatCounter is set (appsettings.Production.json).
+  # Create the first site from the command line right after the first start, before anyone
+  # else can reach the setup wizard; see deploy/README.md.
+  goatcounter:
+    image: arp242/goatcounter:2.7
+    restart: unless-stopped
+    volumes:
+      - goatcounter:/home/goatcounter/goatcounter-data
+    mem_limit: 128m
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.stats.rule: Host(`${STATS_HOST:-stats.jipwijnia.nl}`)
+      traefik.http.routers.stats.entrypoints: websecure
+      traefik.http.services.stats.loadbalancer.server.port: "8080"
+
 volumes:
   letsencrypt:
+  goatcounter:
