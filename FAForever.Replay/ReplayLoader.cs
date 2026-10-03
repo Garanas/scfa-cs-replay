@@ -1,4 +1,4 @@
-
+﻿
 using System.Text;
 using ZstdSharp;
 
@@ -11,6 +11,11 @@ namespace FAForever.Replay
 
     public static class ReplayLoader
     {
+        // Commands are immutable records, so the values without (or with little) content can be shared.
+        private static readonly CommandTarget.None NoTarget = new CommandTarget.None();
+        private static readonly CommandFormation.NoFormation NoFormation = new CommandFormation.NoFormation();
+        private static readonly CommandUnits[] CommandUnitsByCount = Enumerable.Range(0, 257).Select(count => new CommandUnits(count)).ToArray();
+
         /// <summary>
         /// Retrieves a command from the stream.
         /// </summary>
@@ -58,7 +63,7 @@ namespace FAForever.Replay
             // for us to know what unit is behind an entity id. The only relevant information is the count.
             reader.BaseStream.Position += 4 * numberOfEntities;
 
-            return new CommandUnits(numberOfEntities);
+            return (uint)numberOfEntities < (uint)CommandUnitsByCount.Length ? CommandUnitsByCount[numberOfEntities] : new CommandUnits(numberOfEntities);
         }
 
         /// <summary>
@@ -84,7 +89,7 @@ namespace FAForever.Replay
                     }
 
                 default:
-                    return new CommandTarget.None();
+                    return NoTarget;
             }
         }
 
@@ -96,7 +101,7 @@ namespace FAForever.Replay
             int formationId = reader.ReadInt32();
             if (formationId == -1)
             {
-                return new CommandFormation.NoFormation();
+                return NoFormation;
             }
 
             float heading = reader.ReadSingle();
@@ -605,6 +610,83 @@ namespace FAForever.Replay
             return JsonSerializer.Deserialize<ReplayMetadata>(json.ToString());
         }
 
+        /// <summary>
+        /// The reader is significantly faster on a memory stream that exposes its buffer (see
+        /// <see cref="ReplayBinaryReader.ReadNullTerminatedString"/>). Decompressed replays always are;
+        /// for any other stream the remainder is copied into one. The copy is cheap compared to parsing.
+        /// </summary>
+        private static Stream WithAccessibleBuffer(Stream stream)
+        {
+            if (stream is MemoryStream memoryStream && memoryStream.TryGetBuffer(out _))
+            {
+                return stream;
+            }
+
+            MemoryStream copy = stream.CanSeek ? new MemoryStream((int)(stream.Length - stream.Position)) : new MemoryStream();
+            stream.CopyTo(copy);
+            copy.Position = 0;
+            return copy;
+        }
+
+        /// <summary>
+        /// Decompresses a zstd body in one go into a single buffer. Its size comes from the frame
+        /// header: the exact size when the frame stores it, otherwise an upper bound (FAForever
+        /// replays do not store it; the bound is a few percent too large). Returns null (without
+        /// consuming the stream) when no size is available or the body does not fit, so the caller
+        /// can fall back to streaming decompression.
+        /// Avoids the repeated growing and copying of a memory stream that is written in chunks.
+        /// </summary>
+        private static MemoryStream? TryDecompressZstdInOneGo(Stream stream)
+        {
+            if (!(stream is MemoryStream memoryStream))
+            {
+                return null;
+            }
+
+            // the compressed body is small compared to the decompressed one, copying it is cheap
+            long start = memoryStream.Position;
+            ReadOnlySpan<byte> compressed;
+            if (memoryStream.TryGetBuffer(out ArraySegment<byte> buffer))
+            {
+                compressed = buffer.AsSpan((int)start);
+            }
+            else
+            {
+                byte[] copy = new byte[memoryStream.Length - start];
+                memoryStream.ReadExactly(copy);
+                memoryStream.Position = start;
+                compressed = copy;
+            }
+
+            ulong size;
+            try
+            {
+                size = Decompressor.GetDecompressedSize(compressed);
+            }
+            catch (ZstdException)
+            {
+                return null;
+            }
+
+            if (size == 0 || size > int.MaxValue)
+            {
+                return null;
+            }
+
+            byte[] decompressed = GC.AllocateUninitializedArray<byte>((int)size);
+            int written;
+            using (Decompressor decompressor = new Decompressor())
+            {
+                if (!decompressor.TryUnwrap(compressed, decompressed, out written))
+                {
+                    return null;
+                }
+            }
+
+            memoryStream.Position = memoryStream.Length;
+            return new MemoryStream(decompressed, 0, written, writable: false, publiclyVisible: true);
+        }
+
         private static MemoryStream? DecompressReplay(Stream stream, ReplayCompression compression)
         {
             MemoryStream replayStream = new MemoryStream();
@@ -628,6 +710,12 @@ namespace FAForever.Replay
                     }
 
                 case ReplayCompression.Zstd:
+                    MemoryStream? decompressed = TryDecompressZstdInOneGo(stream);
+                    if (decompressed != null)
+                    {
+                        return decompressed;
+                    }
+
                     using (DecompressionStream decompressor = new DecompressionStream(stream))
                     {
                         decompressor.CopyTo(replayStream);
@@ -697,7 +785,7 @@ namespace FAForever.Replay
         /// <returns></returns>
         public static ReplayLoadingStage ProcessReplayStage(ReplayLoadingStage.Decompressed stage)
         {
-            ReplayBinaryReader reader = new ReplayBinaryReader(stage.Stream);
+            ReplayBinaryReader reader = new ReplayBinaryReader(WithAccessibleBuffer(stage.Stream));
             ReplayHeader replayHeader = LoadReplayHeader(reader);
             return new ReplayLoadingStage.WithScenario(reader, stage.Metadata, replayHeader);
         }
@@ -771,7 +859,7 @@ namespace FAForever.Replay
         /// <returns></returns>
         public static Replay LoadSCFAReplayFromStream(Stream stream)
         {
-            using (ReplayBinaryReader reader = new ReplayBinaryReader(stream))
+            using (ReplayBinaryReader reader = new ReplayBinaryReader(WithAccessibleBuffer(stream)))
             {
                 return LoadReplay(reader);
             }
