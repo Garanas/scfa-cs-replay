@@ -225,6 +225,14 @@
         background-image: url(../images/units/units-atlas.png);
     }
 
+    /* The game's unit view icons (Statistics tab) are drawn for the dark in-game UI, and several are
+       white; a thin dark outline keeps them legible on the light themes. A property of the
+       asset, not a theme colour. */
+    .stat-icon {
+        @apply inline-block h-4 w-4 shrink-0 align-text-bottom;
+        filter: drop-shadow(0 0 1px rgb(0 0 0 / 0.9));
+    }
+
     /* Fallback backdrop for the minimap when the vault has no preview (e.g. generated maps). */
     .map-grid {
         background-color: var(--th-raised);
