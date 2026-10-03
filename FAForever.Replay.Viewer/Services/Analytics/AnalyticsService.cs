@@ -5,7 +5,7 @@ using Microsoft.JSInterop;
 namespace FAForever.Replay.Viewer.Services.Analytics;
 
 /// <summary>
-/// Counts visits with a self-hosted GoatCounter (deploy/compose.yaml), when
+/// Counts visits with a self-hosted GoatCounter (compose.yaml in Garanas/jipwijnia-vps), when
 /// <c>Analytics:GoatCounter</c> is configured — only in appsettings.Production.json, so nothing
 /// is counted during development. GoatCounter sets no cookies and stores no personal data.
 ///

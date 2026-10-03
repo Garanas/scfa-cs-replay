@@ -1,6 +1,7 @@
 # Builds the container image of the hosted viewer (Dockerfile: FAForever.Replay.Server with the
 # Blazor app) and pushes it to the GitHub Container Registry as ghcr.io/garanas/scfa-cs-replay,
-# tagged "latest" and "sha-<commit>". The deploy job then has the VPS pull it (deploy/deploy.sh).
+# tagged "latest" and "sha-<commit>". The deploy job then has the VPS pull it (vault-deploy, see
+# github.com/Garanas/jipwijnia-vps, which holds the server configuration).
 #
 # Releasing is a deliberate step: only a push to the deploy/production branch publishes an image
 # (e.g. `git push origin main:deploy/production`); pushes to main do not. Pull requests to main
@@ -65,9 +66,9 @@ jobs:
           cache-to: type=gha,mode=max
 
   # Rolls the new image out on the VPS. The key in the "production" environment may only run
-  # vault-deploy there (deploy/deploy.sh): pull the image, restart the vault. compose.yaml stays manual.
+  # vault-deploy there (vault-deploy.sh in jipwijnia-vps): pull the image, restart the vault.
   # Needs, in the environment, the secrets DEPLOY_SSH_KEY, DEPLOY_HOST and DEPLOY_KNOWN_HOSTS
-  # (the VPS host key, so a server pretending to be the VPS is refused). See deploy/README.md.
+  # (the VPS host key, so a server pretending to be the VPS is refused). See the jipwijnia-vps README.
   deploy:
     needs: image
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/deploy/production'

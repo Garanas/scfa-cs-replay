@@ -8,7 +8,6 @@
 .idea/
 .claude/
 .playwright-mcp/
-deploy/
 tools/
 FAForever.Replay.Test/
 FAForever.Replay.Benchmark/

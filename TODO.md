@@ -5,12 +5,13 @@
   loopback redirect URIs without a path (hence the fixed `http://127.0.0.1:5080` dev origin). A proper
   client needs: public client, PKCE S256, redirect URIs for localhost + the production origin, scopes
   `openid offline public_profile`, and ideally `allowed_cors_origins` so the token proxy can be dropped.
-- [ ] **Host https://vault.jipwijnia.nl** (see `deploy/README.md`): VPS with Docker, DNS `A`/`AAAA`
-  record for `vault` at TransIP, GHCR package public (or a pull token), `docker compose up -d`.
-  Replays from the vault and local files work there right away; signing in (and so Search) needs
-  the dedicated client above, registered with redirect URIs `https://vault.jipwijnia.nl/` and
-  `http://127.0.0.1` — the server proxies the token exchange, so no CORS change at FAF is needed.
-  `wwwroot/appsettings.Production.json` already holds the production redirect URI.
+- [x] ~~Host https://vault.jipwijnia.nl~~ — live since 2026-10-03, with automated deploys from
+  `deploy/production`; the server is configured in
+  [Garanas/jipwijnia-vps](https://github.com/Garanas/jipwijnia-vps). Signing in (and so Search)
+  still needs the dedicated client above, registered with redirect URIs
+  `https://vault.jipwijnia.nl/` and `http://127.0.0.1` — the server proxies the token exchange, so
+  no CORS change at FAF is needed. `wwwroot/appsettings.Production.json` already holds the
+  production redirect URI.
 - [ ] **Retire the old GitHub Pages site** (https://garanas.github.io/scfa-cs-replay/, the old
   MudBlazor viewer served from `live/gh-pages`): unpublish Pages, or replace it with a redirect to
   the vault, and delete the branches `live/gh-pages` and `deploy/gh-pages`.

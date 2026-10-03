@@ -1,5 +1,6 @@
 # The hosted viewer: FAForever.Replay.Server serving the Blazor WebAssembly app (FAForever.Replay.Viewer)
-# plus its OAuth token proxy. Built in CI and pushed to ghcr.io/garanas/scfa-cs-replay; see deploy/.
+# plus its OAuth token proxy. Built in CI and pushed to ghcr.io/garanas/scfa-cs-replay; the server
+# that runs it is configured in github.com/Garanas/jipwijnia-vps.
 #
 #   docker build -t scfa-cs-replay .
 #   docker run --rm -p 8080:8080 scfa-cs-replay      # http://localhost:8080
