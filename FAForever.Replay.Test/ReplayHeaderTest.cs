@@ -197,5 +197,24 @@ namespace FAForever.Replay.Test
             // mean - 3 x deviation, rounded - the convention FAForever uses everywhere.
             Assert.AreEqual(expectedRating, army.Rating);
         }
+
+        [TestMethod]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 2, 1)]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 1, 2)]
+        [DataRow("assets/faforever/23225104.fafreplay", 6, 2)]
+        public void DisplayTeamSkipsTheFfaSlotTest(string file, int sourceId, int expectedDisplayTeam)
+        {
+            ReplayHeader header = Load(file).Header;
+
+            ReplayPlayerOptions army = header.Armies.Single(candidate => candidate.SourceId == sourceId);
+
+            Assert.AreEqual(expectedDisplayTeam, army.DisplayTeam);
+
+            // Lobby team 1 means FFA: civilians carry it and must have no display team.
+            foreach (ReplayPlayerOptions civilian in header.Armies.Where(candidate => candidate.Civilian == true))
+            {
+                Assert.IsNull(civilian.DisplayTeam);
+            }
+        }
     }
 }

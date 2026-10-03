@@ -95,7 +95,7 @@
                 markerX,
                 markerY,
                 name,
-                $"{name} — {faction}{(army.Team is > 1 and int team ? $", team {team - 1}" : "")} (estimated start)",
+                $"{name} — {faction}{(army.DisplayTeam is { } team ? $", team {team}" : "")} (estimated start)",
                 Factions.IconPath(army.Faction),
                 Factions.Swatch(army.Faction),
                 army.Color));

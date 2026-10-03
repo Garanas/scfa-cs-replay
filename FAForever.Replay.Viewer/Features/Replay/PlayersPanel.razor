@@ -105,7 +105,7 @@
                 army.Human == true ? null : "AI",
                 army.Faction,
                 army.Color,
-                TeamLabel(army.Team),
+                TeamLabel(army),
                 army.Rating,
                 actionCount,
                 orderCount,
@@ -131,12 +131,11 @@
             .ToList();
     }
 
-    private static string TeamLabel(int? team) => team switch
+    private static string TeamLabel(ReplayPlayerOptions army) => army switch
     {
-        // Team 1 is the lobby's "no team" (FFA); displayed teams start at 2.
-        null => "—",
-        1 => "FFA",
-        _ => $"Team {team - 1}",
+        { DisplayTeam: { } team } => $"Team {team}",
+        { Team: 1 } => "FFA",
+        _ => "—",
     };
 
 }

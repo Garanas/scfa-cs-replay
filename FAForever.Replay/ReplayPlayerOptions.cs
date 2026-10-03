@@ -61,5 +61,12 @@ namespace FAForever.Replay
         /// </summary>
         public static int? DisplayRating(double? mean, double? deviation)
             => mean is { } m && deviation is { } d ? (int)Math.Round(m - 3 * d) : null;
+
+        /// <summary>
+        /// The team number as the game displays it. The lobby stores team 1 for "no team"
+        /// (FFA) and starts real teams at 2, so lobby team 2 is displayed as team 1.
+        /// Null when the army plays FFA or carries no team.
+        /// </summary>
+        public int? DisplayTeam => Team is > 1 and { } team ? team - 1 : null;
     }
 }
