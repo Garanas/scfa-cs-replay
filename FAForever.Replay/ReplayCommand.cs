@@ -15,5 +15,13 @@ namespace FAForever.Replay
         CommandType CommandType,
         ReplayAnalysis.MapPosition? Position,
         string? BlueprintId,
-        int UnitCount);
+        int UnitCount)
+    {
+        /// <summary>
+        /// The commander upgrade an IssueScript order starts, e.g. "AdvancedEngineering"
+        /// (its Lua parameters are {TaskName='EnhanceTask', Enhancement=...}); a name ending in
+        /// "Remove" takes one off. Null for every other order.
+        /// </summary>
+        public string? Enhancement { get; init; }
+    }
 }

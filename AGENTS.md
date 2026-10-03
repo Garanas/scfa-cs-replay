@@ -172,9 +172,7 @@ to those two players, on any machine.
 | `endpoint` | Selected sim-callback endpoint | The most frequent endpoint |
 | `pings` | `off` hides pings on the Chat tab (map and feed) | Pings shown |
 | `compare` | The two players of the Build order tab, `Left,Right` (unknown names fall back per slot) | The first army vs the first army of another team |
-| `builds` | `only` shows construction orders only on the Build order tab | All orders |
-| `view` | `units` shows the units (entities) of both players instead of the order ledger on the Build order tab | The ledger |
-| `combat` | `show` also lists combat units in the units view of the Build order tab | Hidden |
+| `view` | Below the maps on the Build order tab: `timings` shows key moments and units ordered per minute, `units` the units (entities) of both players | The order ledger |
 | `at` | Playback position of the Playthrough tab (`12`, `12:30` or `1:02:30`); written on pause/seek only, never while playing | `0:00`, paused |
 
 **Window policy** (`TimeWindowFilter.ReadWindow`): one rule on every tab — a window is at most

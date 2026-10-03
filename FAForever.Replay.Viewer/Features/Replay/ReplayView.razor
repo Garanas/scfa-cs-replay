@@ -1,20 +1,35 @@
 @using FAForever.Replay
 @inherits UrlStateComponent
+@inject IJSRuntime JS
 
 <article>
-    <header class="border-b border-edge pb-6">
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div class="min-w-0">
-                <h1 class="truncate text-2xl font-bold sm:text-3xl">@Title</h1>
-                <p class="mt-1 text-sm text-ink-muted">@Subtitle</p>
+    @* Two columns: what was played (map preview, map, player count) and which replay it is
+       (title, game length, vault number). *@
+    <header class="grid items-center gap-4 border-b border-edge pb-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div class="flex min-w-0 items-center gap-4">
+            <div class="w-20 shrink-0">
+                <MapCanvas Model="Model" AriaLabel="@($"Map preview of {MapName}")" />
             </div>
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="badge">@OriginLabel</span>
-                @if (Model.Metadata?.FeaturedMod is { Length: > 0 } featuredMod)
-                {
-                    <span class="badge">@featuredMod</span>
-                }
+            <div class="min-w-0">
+                <h1 class="truncate text-2xl font-bold sm:text-3xl">@MapName</h1>
+                <p class="mt-1 text-lg font-semibold text-ink-muted">@PlayerCount @(PlayerCount == 1 ? "player" : "players")</p>
+            </div>
+        </div>
+        <div class="flex min-w-0 flex-col gap-2 sm:items-end sm:text-right">
+            <p class="m-0 max-w-full truncate font-medium" title="@Title">@Title</p>
+            <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                 <span class="badge" title="In-game duration">@FormatDuration(duration)</span>
+                @if (Model.Origin is ReplayOrigin.Vault vault)
+                {
+                    <button type="button" class="badge cursor-pointer transition hover:border-primary hover:text-primary"
+                            title="Copy the replay id" @onclick="() => CopyReplayId(vault.ReplayId)">
+                        @(copied ? "copied!" : OriginLabel)
+                    </button>
+                }
+                else
+                {
+                    <span class="badge">@OriginLabel</span>
+                }
                 @if (!Model.Replay.Body.InSync)
                 {
                     <span class="badge border-primary text-primary" title="The checksums of the players diverged during this game">desync</span>
@@ -83,12 +98,27 @@
 
     private Tab activeTab = Tab.Overview;
     private TimeSpan duration;
+    private bool copied;
 
     protected override void OnParametersSet()
     {
         duration = ReplayAnalysis.GetDuration(Model.Replay);
         // The URL is the source of truth for the active tab, so a view can be shared.
         activeTab = ParseTab(UrlQuery.Get(Navigation, "tab"));
+    }
+
+    /// <summary>Copies the vault id (what the FAF client's replay search takes) and confirms it on the badge for a moment.</summary>
+    private async Task CopyReplayId(int replayId)
+    {
+        if (!await JS.InvokeAsync<bool>("fafReplay.copyText", replayId.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+        {
+            return;
+        }
+
+        copied = true;
+        StateHasChanged();
+        await Task.Delay(1500);
+        copied = false;
     }
 
     private void SelectTab(Tab tab)
@@ -118,16 +148,16 @@
             ? localFile.FileName
             : $"Replay #{(Model.Origin as ReplayOrigin.Vault)?.ReplayId}";
 
-    private string Subtitle
+    private string MapName => Model.Replay.Header.Scenario.Map.DisplayName is { Length: > 0 } name
+        ? name
+        : Model.Metadata?.mapname ?? "Unknown map";
+
+    private int PlayerCount
     {
         get
         {
-            string map = Model.Replay.Header.Scenario.Map.DisplayName is { Length: > 0 } name
-                ? name
-                : Model.Metadata?.mapname ?? "Unknown map";
             int armies = Model.Replay.Header.Armies.Count(army => army.Civilian != true);
-            int players = armies > 0 ? armies : Model.Metadata?.num_players ?? Model.Replay.Header.Clients.Length;
-            return $"{map} · {players} {(players == 1 ? "player" : "players")}";
+            return armies > 0 ? armies : Model.Metadata?.num_players ?? Model.Replay.Header.Clients.Length;
         }
     }
 

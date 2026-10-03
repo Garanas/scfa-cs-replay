@@ -30,6 +30,20 @@ namespace FAForever.Replay.Test
         }
 
         [TestMethod]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", "HeavyAntiMatterCannon")]
+        [DataRow("assets/faforever/23225685.fafreplay", "LeftPod")]
+        public void ReadsCommanderUpgrades(string file, string firstEnhancement)
+        {
+            Replay replay = Load(file);
+
+            List<ReplayCommand> commands = ReplaySemantics.GetCommands(replay);
+
+            Assert.AreEqual(firstEnhancement, commands.First(command => command.Enhancement is not null).Enhancement);
+            Assert.IsTrue(commands.Where(command => command.Enhancement is not null).All(command => command.CommandType == CommandType.IssueScript),
+                "Only script orders start an upgrade.");
+        }
+
+        [TestMethod]
         [DataRow("assets/faforever/TestCommands01.fafreplay")]
         [DataRow("assets/faforever/23225104.fafreplay")]
         [DataRow("assets/scfa/balthazar-01.SCFAReplay")]

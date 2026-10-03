@@ -11,14 +11,16 @@
    the comparison, the toggles, the time axis.
 
    Instead of the ledger, "view=units" lists the units of both players (EntityList): every
-   entity that received orders, with a guess of what it is and its orders in sequence;
-   clicking one draws its route on the map (EntityPathLayer). Combat units are hidden unless
-   "combat=show".
+   entity that received orders, with a guess of what it is and its orders on a time lane;
+   clicking one draws its route on the map (EntityPathLayer). Combat units are left out: in
+   the opening, what matters is what the commander, engineers and factories did.
+   "view=timings" shows the opening at a glance instead (BuildOrderTimings).
 
    The tab always covers the opening, the first ten minutes; it ignores the shared from/to.
-   The two players live in "compare" (picked in the header of each side), "builds=only"
-   hides all but construction orders. Clicking an order in the ledger highlights it on the
-   map; clicking a marker highlights and scrolls to its order. Selections stay out of the URL. *@
+   The two players live in "compare" (picked in the header of each side). Equal orders given
+   in the same tick are one "10× …" row in the ledger (BuildOrderItem.Group). Clicking an order
+   in the ledger highlights it on the map; clicking a marker highlights and scrolls to its
+   order. Selections stay out of the URL. *@
 
 <div class="card grid gap-x-6 gap-y-5 p-6 xl:grid-cols-[minmax(0,1fr)_176px_minmax(0,1fr)]">
     @if (players.Count == 0)
@@ -27,10 +29,13 @@
     }
     else
     {
-        <div class="flex min-w-0 flex-col gap-4">
-            @PlayerHeader(left, 0)
-            <div class="grid grid-cols-[minmax(0,440px)_minmax(0,1fr)] gap-6">
+        <div class="grid min-w-0 grid-cols-[minmax(0,440px)_minmax(0,1fr)] gap-x-6">
+            <div class="@StickyClass">
+                @PlayerHeader(left, 0)
                 @SideMap(left, leftItems)
+            </div>
+            <div class="flex min-w-0 flex-col gap-4">
+                @OrderCount(leftItems, isLeft: true)
                 @Values(true)
             </div>
         </div>
@@ -48,49 +53,65 @@
                 }
             </ol>
             <div class="mt-auto flex flex-col gap-2">
-                <div role="group" aria-label="Below the maps" class="grid grid-cols-2 gap-1 rounded-lg border border-edge bg-surface p-1">
-                    <button type="button" aria-pressed="@(showUnits ? "false" : "true")" @onclick="() => SetView(units: false)"
-                            class="@(showUnits ? ViewClass : ActiveViewClass)">Orders</button>
-                    <button type="button" aria-pressed="@(showUnits ? "true" : "false")" @onclick="() => SetView(units: true)"
-                            class="@(showUnits ? ActiveViewClass : ViewClass)">Units</button>
+                <div role="group" aria-label="Below the maps" class="grid grid-cols-3 gap-0.5 rounded-lg border border-edge bg-surface p-1">
+                    @foreach ((BelowMaps option, string label) in ViewOptions)
+                    {
+                        <button type="button" aria-pressed="@(view == option ? "true" : "false")" @onclick="() => SetView(option)"
+                                class="@(view == option ? ActiveViewClass : ViewClass)">@label</button>
+                    }
                 </div>
-                @if (showUnits)
-                {
-                    <label class="flex cursor-pointer items-center justify-center gap-2 px-3 py-1 text-sm text-ink-muted hover:text-ink">
-                        <input type="checkbox" class="accent-primary" checked="@showCombat" @onchange="ToggleCombat" />
-                        Combat units
-                    </label>
-                }
-                else
-                {
-                    <label class="flex cursor-pointer items-center justify-center gap-2 px-3 py-1 text-sm text-ink-muted hover:text-ink">
-                        <input type="checkbox" class="accent-primary" checked="@buildsOnly" @onchange="ToggleBuildsOnly" />
-                        Build orders only
-                    </label>
-                }
             </div>
         </div>
 
-        <div class="flex min-w-0 flex-col gap-4">
-            @PlayerHeader(right, 1)
-            <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,440px)] gap-6">
+        <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,440px)] gap-x-6">
+            <div class="flex min-w-0 flex-col gap-4">
+                @OrderCount(rightItems, isLeft: false)
                 @Values(false)
+            </div>
+            <div class="@StickyClass">
+                @PlayerHeader(right, 1)
                 @SideMap(right, rightItems)
             </div>
         </div>
 
-        @if (showUnits)
+        @if (view == BelowMaps.Timings)
         {
-            <div class="grid max-h-[70vh] grid-cols-[minmax(0,1fr)_176px_minmax(0,1fr)] gap-x-6 overflow-y-auto border-t border-edge pt-2 xl:col-span-3">
-                <EntityList Player="@(left?.Name ?? "")" Mirrored="true" Entities="leftEntities" Selected="selectedEntity" OnSelect="SelectEntity" OnHover="HoverEntity" />
-                <p class="pt-1 text-center text-xs text-ink-faint">What a unit is, is a guess from its orders; only the ACU is certain.</p>
-                <EntityList Player="@(right?.Name ?? "")" Entities="rightEntities" Selected="selectedEntity" OnSelect="SelectEntity" OnHover="HoverEntity" />
+            <div class="border-t border-edge xl:col-span-3">
+                <BuildOrderTimings Left="leftWindow" Right="rightWindow" LeftColor="@left?.Color" RightColor="@right?.Color"
+                                   Span="windowEnd" Selected="selected" OnSelect="Select" />
+            </div>
+        }
+        else if (ShowUnits)
+        {
+            <div class="flex flex-col gap-3 border-t border-edge pt-3 xl:col-span-3">
+                <div class="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-ink-muted" role="list" aria-label="Lane legend">
+                    <span role="listitem" class="flex items-center gap-1.5">
+                        <span class="h-4 w-[18px] rounded bg-surface ring-1 ring-edge" aria-hidden="true"></span>Construction
+                    </span>
+                    @foreach ((CommandCategory category, string label) in LaneLegend)
+                    {
+                        <span role="listitem" class="flex items-center gap-1.5">
+                            <span class="h-4 w-[3px] rounded-sm" style="background: @EntityList.CategoryColor(category)" aria-hidden="true"></span>@label
+                        </span>
+                    }
+                    <span role="listitem" class="flex items-center gap-1.5">
+                        <span class="h-0.5 w-[18px] bg-ink-muted" aria-hidden="true"></span>Queue (shift)
+                    </span>
+                    <span class="text-ink-faint">· What a unit is, is a guess from its orders; only the ACU is certain.</span>
+                </div>
+                @* Ten lanes high (30 px each, plus the 20 px time axis that sticks to the top), then it scrolls. *@
+                <div class="grid max-h-[320px] grid-cols-2 gap-x-6 overflow-y-auto">
+                    <EntityList Player="@(left?.Name ?? "")" Mirrored="true" Entities="leftEntities" Span="windowEnd" Color="@left?.Color"
+                                Selected="selectedEntity" OnSelect="SelectEntity" OnHover="HoverEntity" />
+                    <EntityList Player="@(right?.Name ?? "")" Entities="rightEntities" Span="windowEnd" Color="@right?.Color"
+                                Selected="selectedEntity" OnSelect="SelectEntity" OnHover="HoverEntity" />
+                </div>
             </div>
         }
         else
         {
             <div role="log" aria-label="Orders of both players by game time"
-                 class="max-h-[70vh] overflow-y-auto border-t border-edge xl:col-span-3">
+                 class="max-h-[330px] overflow-y-auto border-t border-edge xl:col-span-3">
                 @if (ledger.Count == 0)
                 {
                     <p class="py-3 text-center text-sm text-ink-muted">No orders in this window.</p>
@@ -99,16 +120,16 @@
                 {
                     <div @key="row.Time" class="grid grid-cols-[minmax(0,1fr)_176px_minmax(0,1fr)] gap-x-6 border-b border-edge/40 py-0.5">
                         <div class="flex min-w-0 flex-col">
-                            @foreach (BuildOrderItem item in row.Left)
+                            @foreach (LedgerEntry entry in row.Left)
                             {
-                                @LedgerItem(item, mirrored: true)
+                                @LedgerItem(entry, mirrored: true)
                             }
                         </div>
                         <span class="feed-time flex h-7 items-center justify-center text-xs">@row.Time</span>
                         <div class="flex min-w-0 flex-col">
-                            @foreach (BuildOrderItem item in row.Right)
+                            @foreach (LedgerEntry entry in row.Right)
                             {
-                                @LedgerItem(item, mirrored: false)
+                                @LedgerItem(entry, mirrored: false)
                             }
                         </div>
                     </div>
@@ -120,11 +141,19 @@
 
 @code {
     private const string CompareParameter = "compare";
-    private const string BuildsParameter = "builds";
     private const string ViewParameter = "view";
-    private const string CombatParameter = "combat";
-    private const string ViewClass = "cursor-pointer rounded-md px-2 py-1 text-sm text-ink-muted transition hover:bg-raised hover:text-ink";
-    private const string ActiveViewClass = "cursor-pointer rounded-md bg-raised px-2 py-1 text-sm font-semibold text-primary";
+    private const string ViewClass = "cursor-pointer rounded-md px-1 py-1 text-[13px] text-ink-muted transition hover:bg-raised hover:text-ink";
+    private const string ActiveViewClass = "cursor-pointer rounded-md bg-raised px-1 py-1 text-[13px] font-semibold text-primary";
+
+    /// <summary>What the tab shows below the maps; "view" in the URL, the ledger by default.</summary>
+    private enum BelowMaps { Orders, Timings, Units }
+
+    private static readonly (BelowMaps View, string Label)[] ViewOptions =
+    [
+        (BelowMaps.Orders, "Orders"),
+        (BelowMaps.Timings, "Timings"),
+        (BelowMaps.Units, "Units"),
+    ];
     private const string HeadingClass = "pt-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint";
 
     /// <summary>The part of the game the tab covers: the opening.</summary>
@@ -142,7 +171,10 @@
     private sealed record SummaryRow(string Label, bool IsHeading, int Left = 0, int Right = 0);
 
     /// <summary>The orders of both players at one second of game time.</summary>
-    private sealed record LedgerRow(string Time, List<BuildOrderItem> Left, List<BuildOrderItem> Right);
+    private sealed record LedgerRow(string Time, List<LedgerEntry> Left, List<LedgerEntry> Right);
+
+    /// <summary>A row of the ledger: an order, or <see cref="Count"/> equal orders of the same tick.</summary>
+    private sealed record LedgerEntry(BuildOrderItem Item, int Count);
 
     private Replay? extractedFrom;
     private TimeSpan duration;
@@ -153,7 +185,6 @@
     private Player? left;
     private Player? right;
     private TimeSpan windowEnd;
-    private bool buildsOnly;
     private List<BuildOrderItem> leftItems = [];
     private List<BuildOrderItem> rightItems = [];
     private HashSet<int> leftKeys = [];
@@ -161,8 +192,11 @@
     private List<SummaryRow> summary = [];
     private List<LedgerRow> ledger = [];
 
-    private bool showUnits;
-    private bool showCombat;
+    private BelowMaps view;
+    private List<BuildOrderItem> leftWindow = [];
+    private List<BuildOrderItem> rightWindow = [];
+
+    private bool ShowUnits => view == BelowMaps.Units;
     private List<ReplayEntity> leftEntities = [];
     private List<ReplayEntity> rightEntities = [];
     private int? selectedEntity;
@@ -200,7 +234,7 @@
                     .Select((change, index) => BuildOrderItem.From(commands.Count + index, change)))
                 .OrderBy(item => item.Timestamp)
                 .GroupBy(item => item.SourceId)
-                .ToDictionary(group => group.Key, group => group.ToList());
+                .ToDictionary(group => group.Key, group => GroupEqualOrders(group));
 
             // The commander first, then the units in the order they first received orders.
             entitiesBySource = ReplaySemantics.GetEntities(replay, Opening)
@@ -211,36 +245,39 @@
                     .ToList());
         }
 
-        // The URL is the source of truth: the two players and the builds-only toggle.
+        // The URL is the source of truth: the two players and what shows below the maps.
         (Player? defaultLeft, Player? defaultRight) = DefaultPair();
         string[] compared = (UrlQuery.Get(Navigation, CompareParameter) ?? "").Split(',');
         left = Find(compared.ElementAtOrDefault(0)) ?? defaultLeft;
         right = Find(compared.ElementAtOrDefault(1)) ?? defaultRight;
 
         windowEnd = duration < Opening ? duration : Opening;
-        buildsOnly = string.Equals(UrlQuery.Get(Navigation, BuildsParameter), "only", StringComparison.OrdinalIgnoreCase);
-        showUnits = string.Equals(UrlQuery.Get(Navigation, ViewParameter), "units", StringComparison.OrdinalIgnoreCase);
-        showCombat = string.Equals(UrlQuery.Get(Navigation, CombatParameter), "show", StringComparison.OrdinalIgnoreCase);
+        view = UrlQuery.Get(Navigation, ViewParameter)?.ToLowerInvariant() switch
+        {
+            "units" => BelowMaps.Units,
+            "timings" => BelowMaps.Timings,
+            _ => BelowMaps.Orders,
+        };
 
-        List<BuildOrderItem> leftWindow = InWindow(left);
-        List<BuildOrderItem> rightWindow = InWindow(right);
+        leftWindow = InWindow(left);
+        rightWindow = InWindow(right);
         List<ReplayEntity> leftAll = left is not null ? entitiesBySource.GetValueOrDefault(left.SourceId) ?? [] : [];
         List<ReplayEntity> rightAll = right is not null ? entitiesBySource.GetValueOrDefault(right.SourceId) ?? [] : [];
         summary = Summarise(leftWindow, rightWindow, leftAll, rightAll);
-        leftEntities = showCombat ? leftAll : leftAll.Where(entity => entity.Kind != ReplayEntityKind.Unit).ToList();
-        rightEntities = showCombat ? rightAll : rightAll.Where(entity => entity.Kind != ReplayEntityKind.Unit).ToList();
+        leftEntities = leftAll.Where(entity => entity.Kind != ReplayEntityKind.Unit).ToList();
+        rightEntities = rightAll.Where(entity => entity.Kind != ReplayEntityKind.Unit).ToList();
         if (selectedEntity is { } entityId && !leftEntities.Concat(rightEntities).Any(entity => entity.EntityId == entityId))
         {
             selectedEntity = null;
         }
 
-        leftItems = buildsOnly ? leftWindow.Where(item => item.IsBuild).ToList() : leftWindow;
-        rightItems = buildsOnly ? rightWindow.Where(item => item.IsBuild).ToList() : rightWindow;
+        leftItems = leftWindow;
+        rightItems = rightWindow;
         leftKeys = leftItems.Select(item => item.Key).ToHashSet();
         rightKeys = rightItems.Select(item => item.Key).ToHashSet();
         ledger = BuildLedger(leftItems, rightItems);
 
-        // A selection that the window or filters hide is dropped.
+        // A selection of a player no longer compared is dropped.
         if (selected is { } key && !leftKeys.Contains(key) && !rightKeys.Contains(key))
         {
             selected = null;
@@ -263,7 +300,7 @@
 
     /// <summary>
     /// How often each player gave each type of order and which units they ordered, over the
-    /// whole window (the builds-only toggle filters the maps and the ledger, not these counts).
+    /// whole window.
     /// </summary>
     private static List<SummaryRow> Summarise(List<BuildOrderItem> left, List<BuildOrderItem> right,
         List<ReplayEntity> leftEntities, List<ReplayEntity> rightEntities)
@@ -314,17 +351,51 @@
         return rows;
     }
 
-    /// <summary>Both players' orders grouped per second of game time.</summary>
+    /// <summary>Both players' orders grouped per second of game time, equal orders of a tick as one entry.</summary>
     private static List<LedgerRow> BuildLedger(List<BuildOrderItem> left, List<BuildOrderItem> right)
-        => left.Select(item => (Side: 0, Item: item))
+    {
+        static List<LedgerEntry> Entries(IEnumerable<BuildOrderItem> items)
+            => items.GroupBy(item => item.Group).Select(group => new LedgerEntry(group.First(), group.Count())).ToList();
+
+        return left.Select(item => (Side: 0, Item: item))
             .Concat(right.Select(item => (Side: 1, Item: item)))
             .GroupBy(entry => (int)entry.Item.Timestamp.TotalSeconds)
             .OrderBy(group => group.Key)
             .Select(group => new LedgerRow(
                 GameTime.Format(TimeSpan.FromSeconds(group.Key)),
-                group.Where(entry => entry.Side == 0).Select(entry => entry.Item).ToList(),
-                group.Where(entry => entry.Side == 1).Select(entry => entry.Item).ToList()))
+                Entries(group.Where(entry => entry.Side == 0).Select(entry => entry.Item)),
+                Entries(group.Where(entry => entry.Side == 1).Select(entry => entry.Item))))
             .ToList();
+    }
+
+    /// <summary>
+    /// Marks equal orders of one player in the same tick (same text, so the same type, unit and
+    /// selection size) as one group: the key of the first. Items are in time order.
+    /// </summary>
+    private static List<BuildOrderItem> GroupEqualOrders(IEnumerable<BuildOrderItem> items)
+    {
+        List<BuildOrderItem> grouped = [];
+        Dictionary<string, int> firstOfTick = [];
+        foreach (BuildOrderItem item in items)
+        {
+            if (grouped.Count > 0 && grouped[^1].Timestamp != item.Timestamp)
+            {
+                firstOfTick.Clear();
+            }
+
+            if (firstOfTick.TryGetValue(item.Text, out int group))
+            {
+                grouped.Add(item with { Group = group });
+            }
+            else
+            {
+                firstOfTick[item.Text] = item.Key;
+                grouped.Add(item);
+            }
+        }
+
+        return grouped;
+    }
 
     /// <summary>
     /// The players compared by default: the first army, against the first army of another
@@ -357,6 +428,18 @@
         Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(CompareParameter, value), replace: true);
     }
 
+    private static readonly (CommandCategory Category, string Label)[] LaneLegend =
+    [
+        (CommandCategory.Move, "Move"),
+        (CommandCategory.Reclaim, "Reclaim"),
+        (CommandCategory.Guard, "Assist / guard"),
+        (CommandCategory.Repair, "Repair"),
+        (CommandCategory.Patrol, "Patrol"),
+        (CommandCategory.Attack, "Attack"),
+        (CommandCategory.Aggressive, "Attack-move"),
+        (CommandCategory.Special, "Other"),
+    ];
+
     private static readonly (ReplayEntityKind Kind, string Label)[] KindLabels =
     [
         (ReplayEntityKind.Engineer, "Engineers"),
@@ -365,11 +448,9 @@
         (ReplayEntityKind.Unit, "Combat units"),
     ];
 
-    private void SetView(bool units)
-        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(ViewParameter, units ? "units" : null), replace: true);
-
-    private void ToggleCombat()
-        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(CombatParameter, showCombat ? null : "show"), replace: true);
+    private void SetView(BelowMaps option)
+        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(ViewParameter,
+            option == BelowMaps.Orders ? null : option.ToString().ToLowerInvariant()), replace: true);
 
     private void SelectEntity(ReplayEntity entity) => selectedEntity = selectedEntity == entity.EntityId ? null : entity.EntityId;
 
@@ -377,16 +458,13 @@
 
     /// <summary>The unit whose route a side's map shows: the hovered one, else the selected one.</summary>
     private ReplayEntity? RouteOn(List<ReplayEntity> entities)
-        => showUnits && (hoveredEntity ?? selectedEntity) is { } entityId
+        => ShowUnits && (hoveredEntity ?? selectedEntity) is { } entityId
             ? entities.FirstOrDefault(entity => entity.EntityId == entityId)
             : null;
 
-    private void ToggleBuildsOnly()
-        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(BuildsParameter, buildsOnly ? null : "only"), replace: true);
-
     private static string RowId(int key) => $"build-order-{key}";
 
-    private void Select(BuildOrderItem item) => selected = selected == item.Key ? null : item.Key;
+    private void Select(BuildOrderItem item) => selected = selected == item.Group ? null : item.Group;
 
     private void SelectFromMap(BuildOrderItem item)
     {
@@ -413,10 +491,21 @@
                     <option value="@choice.Name">@choice.Label</option>
                 }
             </select>
-            <span class="@(slot == 1 ? "mr-auto" : "ml-auto") text-sm text-ink-muted">
-                <span class="font-semibold text-ink">@((slot == 0 ? leftItems : rightItems).Count.ToString("N0"))</span> orders
-            </span>
         </header>
+    };
+
+    /// <summary>
+    /// The player's name and map follow the page down along the comparison (sticky below the
+    /// app header), and scroll away where the table starts: the end of their grid row.
+    /// </summary>
+    private const string StickyClass = "sticky top-[72px] flex flex-col gap-4 self-start";
+
+    /// <summary>How many orders the player gave, on the line of the window label in the centre.</summary>
+    private RenderFragment OrderCount(List<BuildOrderItem> items, bool isLeft) => __builder =>
+    {
+        <p class="@(isLeft ? "justify-end" : "") flex h-10 items-center text-sm text-ink-muted">
+            <span><span class="font-semibold text-ink">@items.Count.ToString("N0")</span> orders</span>
+        </p>
     };
 
     private RenderFragment SideMap(Player? player, List<BuildOrderItem> items) => __builder =>
@@ -463,14 +552,16 @@
         </ol>
     };
 
-    private RenderFragment LedgerItem(BuildOrderItem item, bool mirrored) => __builder =>
+    private RenderFragment LedgerItem(LedgerEntry entry, bool mirrored) => __builder =>
     {
+        BuildOrderItem item = entry.Item;
+        string text = entry.Count > 1 ? $"{entry.Count}× {item.Text}" : item.Text;
         bool isSelected = selected == item.Key;
         <button type="button" @key="item.Key" id="@RowId(item.Key)" aria-pressed="@(isSelected ? "true" : "false")"
                 class="feed-row h-7 py-0 @(mirrored ? "flex-row-reverse text-right" : "") @(isSelected ? "bg-raised ring-1 ring-primary" : "")"
-                title="@($"{ChatPanel.FormatTime(item.Timestamp)} · {item.Text}{(item.Position is null ? " (no position)" : "")} — click to highlight")"
+                title="@($"{ChatPanel.FormatTime(item.Timestamp)} · {text}{(item.Position is null ? " (no position)" : "")} — click to highlight")"
                 @onclick="() => Select(item)"
-                @onmouseenter="() => hovered = item.Key" @onmouseleave="() => hovered = null">
+                @onmouseenter="() => hovered = item.Group" @onmouseleave="() => hovered = null">
             @if (item.IsBuild && item.BlueprintId is { } blueprintId)
             {
                 <UnitIcon BlueprintId="@blueprintId" Size="16" />
@@ -483,7 +574,7 @@
             {
                 <span class="h-4 w-4 shrink-0" aria-hidden="true"></span>
             }
-            <span class="min-w-0 truncate @(item.IsBuild ? "font-medium text-ink" : "text-ink-muted")">@item.Text</span>
+            <span class="min-w-0 truncate @(item.IsBuild ? "font-medium text-ink" : "text-ink-muted")">@text</span>
         </button>
     };
 }

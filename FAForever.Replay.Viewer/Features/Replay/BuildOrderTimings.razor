@@ -1,0 +1,136 @@
+@using FAForever.Replay
+
+@* The simple variant of the Build order tab (view=timings), mirrored like the ledger: when each
+   player first ordered the milestones of an opening (OpeningTimings.Moments), the earlier one
+   emphasised and the later one with how far behind; then the units their factories were
+   ordered to build, per minute and over the whole opening. Clicking a moment highlights its
+   order on the map. *@
+
+<div class="flex flex-col xl:col-span-3">
+    <h3 class="@HeadingClass">Key moments</h3>
+    @if (moments.Count == 0)
+    {
+        <p class="py-3 text-center text-sm text-ink-muted">No milestones in the opening.</p>
+    }
+    @foreach (MomentRow row in moments)
+    {
+        <div class="@RowClass">
+            @MomentCell(row.Left, row.Right, LeftColor, mirrored: true)
+            <span class="flex h-8 items-center justify-center text-center text-xs text-ink-muted">@row.Label</span>
+            @MomentCell(row.Right, row.Left, RightColor, mirrored: false)
+        </div>
+    }
+
+    <h3 class="@HeadingClass mt-4">Units ordered</h3>
+    @foreach (MinuteRow row in minutes)
+    {
+        <div class="@RowClass @(row.IsTotal ? "border-t border-edge" : "")">
+            @UnitsCell(row.Left, mirrored: true, LeftColor)
+            <span class="@(row.IsTotal ? "font-semibold text-ink" : "font-mono text-ink-muted") flex min-h-8 items-center justify-center text-xs">@row.Label</span>
+            @UnitsCell(row.Right, mirrored: false, RightColor)
+        </div>
+    }
+    <p class="mt-2 text-center text-xs text-ink-faint">
+        Orders, not completions: the replay holds what players asked for, so cancelled structures and units still count.
+    </p>
+</div>
+
+@code {
+    private const string HeadingClass = "py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-ink-faint";
+    private const string RowClass = "grid grid-cols-[minmax(0,1fr)_176px_minmax(0,1fr)] gap-x-6 border-b border-edge/40";
+
+    /// <summary>The construction (and other) orders of the left player in the opening.</summary>
+    [Parameter, EditorRequired] public required IReadOnlyList<BuildOrderItem> Left { get; set; }
+
+    [Parameter, EditorRequired] public required IReadOnlyList<BuildOrderItem> Right { get; set; }
+
+    [Parameter] public string? LeftColor { get; set; }
+
+    [Parameter] public string? RightColor { get; set; }
+
+    /// <summary>The span of the opening, for the minute rows.</summary>
+    [Parameter, EditorRequired] public required TimeSpan Span { get; set; }
+
+    [Parameter] public int? Selected { get; set; }
+
+    [Parameter] public EventCallback<BuildOrderItem> OnSelect { get; set; }
+
+    private sealed record MomentRow(string Label, BuildOrderItem? Left, BuildOrderItem? Right);
+
+    private sealed record MinuteRow(string Label, List<OpeningTimings.UnitCount> Left, List<OpeningTimings.UnitCount> Right, bool IsTotal = false);
+
+    private List<MomentRow> moments = [];
+    private List<MinuteRow> minutes = [];
+
+    protected override void OnParametersSet()
+    {
+        moments = OpeningTimings.Moments
+            .Select(moment => new MomentRow(moment.Label, OpeningTimings.Find(moment, Left), OpeningTimings.Find(moment, Right)))
+            .Where(row => row.Left is not null || row.Right is not null)
+            .ToList();
+
+        int minuteCount = Math.Max(1, (int)Math.Ceiling(Span.TotalMinutes));
+        minutes = Enumerable.Range(0, minuteCount)
+            .Select(minute =>
+            {
+                TimeSpan from = TimeSpan.FromMinutes(minute);
+                TimeSpan to = TimeSpan.FromMinutes(minute + 1);
+                return new MinuteRow($"{minute}:00 – {minute + 1}:00",
+                    OpeningTimings.UnitsOrdered(Left, from, to), OpeningTimings.UnitsOrdered(Right, from, to));
+            })
+            .Append(new MinuteRow("Opening",
+                OpeningTimings.UnitsOrdered(Left, TimeSpan.Zero, TimeSpan.MaxValue),
+                OpeningTimings.UnitsOrdered(Right, TimeSpan.Zero, TimeSpan.MaxValue), IsTotal: true))
+            .ToList();
+    }
+
+    /// <summary>
+    /// When one player reached a milestone: the earlier of the two emphasised, the later with
+    /// how far behind it was. The time sits against the centre.
+    /// </summary>
+    private RenderFragment MomentCell(BuildOrderItem? item, BuildOrderItem? other, string? color, bool mirrored) => __builder =>
+    {
+        if (item is null)
+        {
+            <span class="@(mirrored ? "justify-end" : "") flex h-8 items-center font-mono text-sm text-ink-faint">—</span>
+            return;
+        }
+
+        bool first = other is null || item.Timestamp <= other.Timestamp;
+        bool isSelected = Selected == item.Group;
+        <button type="button" aria-pressed="@(isSelected ? "true" : "false")"
+                class="@(mirrored ? "flex-row-reverse" : "") flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-1 transition hover:bg-raised @(isSelected ? "bg-raised ring-1 ring-primary" : "")"
+                title="@($"{ChatPanel.FormatTime(item.Timestamp)} · {item.Text} — click to highlight on the map")"
+                @onclick="() => OnSelect.InvokeAsync(item)">
+            <span class="h-5 w-1 shrink-0 rounded-full @(first ? "" : "opacity-0")" style="background: @(color ?? "var(--th-primary)")" aria-hidden="true"></span>
+            <span class="font-mono text-sm @(first ? "font-semibold text-ink" : "text-ink-muted")">@GameTime.Format(item.Timestamp)</span>
+            @if (!first && other is not null)
+            {
+                <span class="font-mono text-xs text-ink-faint">+@GameTime.Format(item.Timestamp - other.Timestamp)</span>
+            }
+            @if (item.IsBuild && item.BlueprintId is { } blueprintId)
+            {
+                <UnitIcon BlueprintId="@blueprintId" Size="20" />
+            }
+            else if (item.Enhancement is { } enhancement)
+            {
+                <span class="truncate text-xs text-ink-muted">@enhancement</span>
+            }
+        </button>
+    };
+
+    /// <summary>Unit icons with their count, starting against the centre.</summary>
+    private static RenderFragment UnitsCell(List<OpeningTimings.UnitCount> units, bool mirrored, string? color) => __builder =>
+    {
+        <div class="@(mirrored ? "flex-row-reverse" : "") flex min-h-8 flex-wrap items-center gap-1.5 py-1">
+            @foreach (OpeningTimings.UnitCount unit in units)
+            {
+                <span class="inline-flex items-center rounded bg-surface" title="@($"{unit.Count} × {UnitNames.GetOrNull(unit.BlueprintId) ?? unit.BlueprintId}")"
+                      style="box-shadow: 0 0 0 1px @(color ?? "var(--th-edge)")">
+                    <UnitIcon BlueprintId="@unit.BlueprintId" Size="20" />
+                    <span class="px-1 font-mono text-[11px] text-ink">×@unit.Count</span>
+                </span>
+            }
+        </div>
+    };
+}

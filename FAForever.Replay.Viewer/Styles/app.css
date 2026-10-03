@@ -179,6 +179,22 @@
         @apply h-3.5 w-1 shrink-0 rounded-full;
     }
 
+    /* A horizontal lane over the opening of a game, one block per minute (EntityList.razor):
+       alternating bands, ten to the lane. Symmetric, so it also works mirrored. */
+    .minute-lane {
+        /* The padding keeps markers at 0:00 and at the end inside; the bands follow the content. */
+        padding-inline: 12px;
+        background-origin: content-box;
+        background-color: var(--th-surface);
+        background-image: linear-gradient(to right, var(--th-raised) 50%, transparent 50%);
+        background-size: 20% 100%;
+    }
+
+    /* Mirrored lanes run from right (0:00) to left: the bands start at the right edge. */
+    .minute-lane-mirrored {
+        background-position: right top;
+    }
+
     .card {
         @apply rounded-xl border border-edge bg-surface p-6;
     }

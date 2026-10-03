@@ -334,6 +334,15 @@ namespace FAForever.Replay
         /// </summary>
         public static List<ReplayCommand> GetCommands(Replay replay) => GetCommands(replay.Body.UserInput);
 
+        /// <summary>The commander upgrade a script order starts, see <see cref="ReplayCommand.Enhancement"/>.</summary>
+        private static string? GetEnhancement(CommandData data)
+            => data.Type == CommandType.IssueScript
+                && data.LuaParameters is LuaData.Table table
+                && table.TryGetStringValue("TaskName", out string? task) && task == "EnhanceTask"
+                && table.TryGetStringValue("Enhancement", out string? enhancement) && !string.IsNullOrEmpty(enhancement)
+                    ? enhancement
+                    : null;
+
         /// <inheritdoc cref="GetCommands(Replay)"/>
         public static List<ReplayCommand> GetCommands(IEnumerable<ReplayInput> inputs)
         {
@@ -359,7 +368,10 @@ namespace FAForever.Replay
                     data.Type,
                     data.Target is CommandTarget.Position position ? new ReplayAnalysis.MapPosition(position.X, position.Z) : null,
                     string.IsNullOrEmpty(data.BlueprintId) ? null : data.BlueprintId,
-                    unitCount));
+                    unitCount)
+                {
+                    Enhancement = GetEnhancement(data),
+                });
             }
 
             return commands;

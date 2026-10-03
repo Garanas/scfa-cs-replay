@@ -4,11 +4,11 @@
 @* Where a player's orders happened, rendered inside MapView's Overlay slot in world
    coordinates: construction orders as the unit icon, moves as small dots, other orders as
    their command icon. Orders without a position are skipped. Moves and other orders are drawn
-   first so the build orders stay on top; the highlighted order is drawn last, enlarged, and
-   the rest dim. ShouldRender skips renders in which nothing changed. *@
+   first so the build orders stay on top; the highlighted order (with the equal orders of its
+   tick, BuildOrderItem.Group) is drawn last, enlarged, and the rest dim. ShouldRender skips renders in which nothing changed. *@
 
 @{
-    BuildOrderItem? highlightedItem = null;
+    List<BuildOrderItem> highlightedItems = [];
 }
 <g opacity="@(Highlighted is null ? "1" : "0.35")">
     @foreach (BuildOrderItem item in Items)
@@ -17,9 +17,9 @@
         {
             continue;
         }
-        if (item.Key == Highlighted)
+        if (item.Group == Highlighted)
         {
-            highlightedItem = item;
+            highlightedItems.Add(item);
             continue;
         }
 
@@ -31,18 +31,18 @@
         {
             continue;
         }
-        if (item.Key == Highlighted)
+        if (item.Group == Highlighted)
         {
-            highlightedItem = item;
+            highlightedItems.Add(item);
             continue;
         }
 
         @RenderOrder(item, position, BuildSize)
     }
 </g>
-@if (highlightedItem is { Position: { } highlightedPosition })
+@foreach (BuildOrderItem highlightedItem in highlightedItems)
 {
-    @RenderOrder(highlightedItem, highlightedPosition, BuildSize * 1.6)
+    @RenderOrder(highlightedItem, highlightedItem.Position!, BuildSize * 1.6)
 }
 
 @code {
@@ -51,7 +51,7 @@
     /// <summary>The player's in-game colour.</summary>
     [Parameter] public string? Color { get; set; }
 
-    /// <summary>The key of the hovered or selected order, if any.</summary>
+    /// <summary>The group (BuildOrderItem.Group) of the hovered or selected order, if any.</summary>
     [Parameter] public int? Highlighted { get; set; }
 
     [Parameter] public EventCallback<BuildOrderItem> OnSelect { get; set; }
@@ -76,7 +76,7 @@
 
     private RenderFragment RenderOrder(BuildOrderItem item, ReplayAnalysis.MapPosition position, double size) => __builder =>
     {
-        bool emphasised = item.Key == Highlighted;
+        bool emphasised = item.Group == Highlighted;
         string color = Color ?? "var(--th-ink-muted)";
         <g @key="item.Key" class="cursor-pointer" @onclick="() => OnSelect.InvokeAsync(item)">
             <title>@GameTime.Format(item.Timestamp) · @item.Text — click to highlight</title>
