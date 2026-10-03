@@ -30,6 +30,50 @@ namespace FAForever.Replay.Test
         }
 
         [TestMethod]
+        [DataRow("assets/faforever/TestCommands01.fafreplay")]
+        [DataRow("assets/faforever/23225104.fafreplay")]
+        [DataRow("assets/scfa/balthazar-01.SCFAReplay")]
+        public void EntityIdsCarryTheArmyAndTheCommanderBuildsFirst(string file)
+        {
+            Replay replay = Load(file);
+            Dictionary<int, int> armyBySource = replay.Header.Armies
+                .Select((army, index) => (army.SourceId, index))
+                .Where(pair => pair.SourceId is not null)
+                .ToDictionary(pair => pair.SourceId!.Value, pair => pair.index);
+            HashSet<int> sourcesThatBuilt = [];
+
+            foreach (ReplayInput input in replay.Body.UserInput)
+            {
+                (CommandUnits? units, CommandData? data) = input switch
+                {
+                    ReplayInput.IssueCommand command => (command.Units, command.Data),
+                    ReplayInput.IssueFactoryCommand command => (command.Factories, command.Data),
+                    _ => (null, null),
+                };
+                if (units is null || data is null || !armyBySource.TryGetValue(input.SourceId, out int army))
+                {
+                    continue;
+                }
+
+                Assert.AreEqual(units.UnitCount, units.EntityIds.Length);
+
+                // An entity id is (army index << 20) | serial number.
+                foreach (int id in units.EntityIds.Span)
+                {
+                    Assert.AreEqual(army, id >> 20, $"Entity 0x{id:X8} ordered by source {input.SourceId}");
+                }
+
+                // The first construction order of every army comes from serial 0: the commander.
+                if (data.Type == CommandType.IssueBuildMobile && sourcesThatBuilt.Add(input.SourceId))
+                {
+                    CollectionAssert.AreEqual(new[] { army << 20 }, units.EntityIds.ToArray());
+                }
+            }
+
+            Assert.IsTrue(sourcesThatBuilt.Count >= 2);
+        }
+
+        [TestMethod]
         [DataRow("assets/faforever/TestCommands01.fafreplay", 300)]
         [DataRow("assets/faforever/23225104.fafreplay", 340)]
         [DataRow("assets/scfa/balthazar-01.SCFAReplay", 82)]

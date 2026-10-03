@@ -90,6 +90,9 @@ the FAF team before any public deployment (see TODO.md).
   `.scfareplay` = raw body — construct `ReplayLoadingStage.Decompressed(stream, null)` directly.
 - `ProcessReplayStage(WithMetadata)` disposes the input stream; don't reuse it.
 - Player names come from `Replay.Header.Clients[input.SourceId]`; ticks are **10 per second**.
+- Command selections (`CommandUnits.EntityIds`) carry the entity ids the order went to. An entity id
+  is `(army index << 20) | serial`; serial 0 is the army's commander (ACU), later serials follow the
+  order in which units appear. What kind of unit an id is, the replay does not say.
 - Drawings ("painting", `lua/ui/game/painting`) are the `SharePaintingBrushStroke` sim callback:
   `{ShareablePainting={PeerName, ShareId, PaintingAdapterIdentifier, Samples={x,y,z,x,y,z,…}}}`, one
   callback per stroke, sent only by its author (no dedup needed, unlike chat). Observers share

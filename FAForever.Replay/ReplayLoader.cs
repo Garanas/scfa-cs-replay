@@ -14,7 +14,6 @@ namespace FAForever.Replay
         // Commands are immutable records, so the values without (or with little) content can be shared.
         private static readonly CommandTarget.None NoTarget = new CommandTarget.None();
         private static readonly CommandFormation.NoFormation NoFormation = new CommandFormation.NoFormation();
-        private static readonly CommandUnits[] CommandUnitsByCount = Enumerable.Range(0, 257).Select(count => new CommandUnits(count)).ToArray();
 
         /// <summary>
         /// Retrieves a command from the stream.
@@ -55,15 +54,10 @@ namespace FAForever.Replay
         /// <summary>
         /// Retrieves the selection of a command from the stream.
         /// </summary>
-        private static CommandUnits LoadCommandUnits(ReplayBinaryReader reader)
+        private static CommandUnits LoadCommandUnits(ReplayBinaryReader reader, EntityIdBuffer entityIds, int source)
         {
-            int numberOfEntities = reader.ReadInt32();
-
-            // do not read the entities into memory, instead we skip them. There is no way 
-            // for us to know what unit is behind an entity id. The only relevant information is the count.
-            reader.BaseStream.Position += 4 * numberOfEntities;
-
-            return (uint)numberOfEntities < (uint)CommandUnitsByCount.Length ? CommandUnitsByCount[numberOfEntities] : new CommandUnits(numberOfEntities);
+            // The ids link the orders given to the same unit; see EntityIdBuffer for how they are stored.
+            return entityIds.Read(reader, source);
         }
 
         /// <summary>
@@ -136,6 +130,7 @@ namespace FAForever.Replay
             );
 
             int inputProcessed = 0;
+            EntityIdBuffer entityIds = invariant?.EntityIds ?? new EntityIdBuffer();
             while (reader.BaseStream.Position < reader.BaseStream.Length)
             {
                 ReplayInputType type = (ReplayInputType)reader.ReadByte();
@@ -238,7 +233,7 @@ namespace FAForever.Replay
 
                     case ReplayInputType.IssueCommand:
                         {
-                            CommandUnits units = LoadCommandUnits(reader);
+                            CommandUnits units = LoadCommandUnits(reader, entityIds, source);
                             CommandData data = LoadCommandData(reader);
                             input.Add(new ReplayInput.IssueCommand(tick, source, units, data));
                             break;
@@ -246,7 +241,7 @@ namespace FAForever.Replay
 
                     case ReplayInputType.IssueFactoryCommand:
                         {
-                            CommandUnits factories = LoadCommandUnits(reader);
+                            CommandUnits factories = LoadCommandUnits(reader, entityIds, source);
                             CommandData data = LoadCommandData(reader);
                             input.Add(new ReplayInput.IssueFactoryCommand(tick, source, factories, data));
                             break;
@@ -311,7 +306,7 @@ namespace FAForever.Replay
                             float y = reader.ReadSingle();
                             float z = reader.ReadSingle();
                             byte focusArmy = reader.ReadByte();
-                            CommandUnits debugUnits = LoadCommandUnits(reader);
+                            CommandUnits debugUnits = LoadCommandUnits(reader, entityIds, source);
                             input.Add(new ReplayInput.DebugCommand(tick, source, command, x, y, z, focusArmy, debugUnits));
                             break;
                         }
@@ -327,7 +322,7 @@ namespace FAForever.Replay
                         {
                             string endpoint = reader.ReadNullTerminatedString();
                             LuaData luaParameters = LuaDataLoader.ReadLuaData(reader);
-                            CommandUnits units = LoadCommandUnits(reader);
+                            CommandUnits units = LoadCommandUnits(reader, entityIds, source);
                             input.Add(new ReplayInput.SimCallback(tick, source, endpoint, luaParameters, units));
                             break;
                         }
@@ -349,7 +344,10 @@ namespace FAForever.Replay
             }
 
             int completionPercentage = (int)Math.Round(100 * ((float)reader.BaseStream.Position - startingPointOfStream) / (reader.BaseStream.Length - startingPointOfStream));
-            return new ReplayBodyInvariant(input, tick, source, inSync, hashTick, hashValue, reader.BaseStream.Position == reader.BaseStream.Length, startingPointOfStream, completionPercentage);
+            return new ReplayBodyInvariant(input, tick, source, inSync, hashTick, hashValue, reader.BaseStream.Position == reader.BaseStream.Length, startingPointOfStream, completionPercentage)
+            {
+                EntityIds = entityIds,
+            };
         }
 
         /// <summary>

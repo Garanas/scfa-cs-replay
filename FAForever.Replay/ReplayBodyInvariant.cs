@@ -32,5 +32,8 @@
         public long StartingPointOfStream { get; init; } = startingPointOfStream;
 
         public int PercentageProcessed { get; init; } = percentageProcessed;
+
+        /// <summary>The store of command selections, carried from batch to batch.</summary>
+        internal EntityIdBuffer? EntityIds { get; init; }
     }
 }

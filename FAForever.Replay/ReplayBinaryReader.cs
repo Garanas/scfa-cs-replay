@@ -46,6 +46,33 @@ namespace FAForever.Replay
         }
 
         /// <summary>
+        /// Reads consecutive little-endian 32-bit integers into <paramref name="destination"/>, in one
+        /// copy when the stream is backed by a buffer.
+        /// </summary>
+        public void ReadInt32s(Span<int> destination)
+        {
+            int length = destination.Length * sizeof(int);
+            if (Buffer != null && BitConverter.IsLittleEndian)
+            {
+                long position = BaseStream.Position;
+                if (position + length > BaseStream.Length)
+                {
+                    throw new EndOfStreamException();
+                }
+
+                System.Runtime.InteropServices.MemoryMarshal.Cast<byte, int>(Buffer.AsSpan(BufferOrigin + (int)position, length))
+                    .CopyTo(destination);
+                BaseStream.Position = position + length;
+                return;
+            }
+
+            for (int i = 0; i < destination.Length; i++)
+            {
+                destination[i] = ReadInt32();
+            }
+        }
+
+        /// <summary>
         /// Reads bytes until it finds a null byte. Advances the stream with the size of the string.
         /// </summary>
         /// <returns></returns>
