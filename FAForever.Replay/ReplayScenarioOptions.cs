@@ -9,6 +9,7 @@ namespace FAForever.Replay
     /// quite literally anything; only the common lobby options are typed.
     /// </summary>
     /// <param name="Victory">The victory condition key: demoralization (assassination), domination (supremacy), eradication (annihilation) or sandbox.</param>
+    /// <param name="Share">The share condition key, e.g. FullShare or ShareUntilDeath.</param>
     /// <param name="UnitCap">The unit cap per army.</param>
     /// <param name="CheatsEnabled">Whether cheats are enabled.</param>
     /// <param name="PrebuiltUnits">Whether armies start with prebuilt units.</param>
@@ -23,6 +24,7 @@ namespace FAForever.Replay
     /// <param name="Raw">The complete Options table, including all mod options.</param>
     public record ReplayScenarioOptions(
         string? Victory,
+        string? Share,
         int? UnitCap,
         bool? CheatsEnabled,
         bool? PrebuiltUnits,
@@ -40,8 +42,51 @@ namespace FAForever.Replay
         /// An empty set of options, used when the scenario carries no Options table.
         /// </summary>
         public ReplayScenarioOptions()
-            : this(null, null, null, null, null, null, null, null, null, null, null, null, null)
+            : this(null, null, null, null, null, null, null, null, null, null, null, null, null, null)
         {
         }
+
+        /// <summary>
+        /// The victory condition as the lobby displays it (lua/ui/lobby/lobbyOptions.lua).
+        /// </summary>
+        public string? VictoryName => Victory switch
+        {
+            "demoralization" => "Assassination",
+            "decapitation" => "Decapitation",
+            "domination" => "Supremacy",
+            "eradication" => "Annihilation",
+            "sandbox" => "Sandbox",
+            null => null,
+            _ => Victory,
+        };
+
+        /// <summary>
+        /// The share condition as the lobby displays it (lua/ui/lobby/lobbyOptions.lua).
+        /// </summary>
+        public string? ShareName => Share switch
+        {
+            "FullShare" => "Full share",
+            "ShareUntilDeath" => "Share until death",
+            "PartialShare" => "Partial share",
+            "TransferToKiller" => "Traitors",
+            "Defectors" => "Defectors",
+            "CivilianDeserter" => "Desert to civilians",
+            null => null,
+            _ => Share,
+        };
+
+        /// <summary>
+        /// The automatic team assignment as the lobby displays it.
+        /// </summary>
+        public string? AutoTeamsName => AutoTeams switch
+        {
+            "none" => "None",
+            "manual" => "Manual",
+            "tvsb" => "Top vs bottom",
+            "lvsr" => "Left vs right",
+            "pvsi" => "Even vs uneven",
+            null => null,
+            _ => AutoTeams,
+        };
     }
 }

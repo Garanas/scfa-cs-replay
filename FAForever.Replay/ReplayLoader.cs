@@ -391,6 +391,7 @@ namespace FAForever.Replay
 
             return new ReplayScenarioOptions(
                 Victory: GetString(options, "Victory"),
+                Share: GetString(options, "Share"),
                 UnitCap: GetInt(options, "UnitCap"),
                 CheatsEnabled: GetFlexibleBool(options, "CheatsEnabled"),
                 PrebuiltUnits: GetFlexibleBool(options, "PrebuiltUnits"),

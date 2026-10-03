@@ -119,7 +119,7 @@
 
             List<(string, string)> facts = [];
             facts.Add(("Players", header.Armies.Count(army => army.Civilian != true).ToString()));
-            if (VictoryCondition(options.Victory) is { } victory)
+            if (options.VictoryName is { } victory)
             {
                 facts.Add(("Victory condition", victory));
             }
@@ -127,9 +127,9 @@
             {
                 facts.Add(("Unit cap", unitCap.ToString("N0")));
             }
-            if (options.Raw is { } raw && raw.TryGetStringValue("Share", out string? share) && share is { Length: > 0 })
+            if (options.ShareName is { } share)
             {
-                facts.Add(("Share condition", ShareCondition(share)));
+                facts.Add(("Share condition", share));
             }
             if (options.PrebuiltUnits is { } prebuilt)
             {
@@ -139,7 +139,7 @@
             {
                 facts.Add(("Observers allowed", observers ? "yes" : "no"));
             }
-            if (AutoTeams(options.AutoTeams) is { } autoTeams)
+            if (options.AutoTeamsName is { } autoTeams)
             {
                 facts.Add(("Auto teams", autoTeams));
             }
@@ -151,41 +151,6 @@
             return facts;
         }
     }
-
-    /// <summary>
-    /// Maps the victory keys of lua/ui/lobby/lobbyOptions.lua to their display names.
-    /// </summary>
-    private static string? VictoryCondition(string? victory) => victory switch
-    {
-        "demoralization" => "Assassination",
-        "decapitation" => "Decapitation",
-        "domination" => "Supremacy",
-        "eradication" => "Annihilation",
-        "sandbox" => "Sandbox",
-        null => null,
-        _ => victory,
-    };
-
-    private static string ShareCondition(string share) => share switch
-    {
-        "FullShare" => "Full share",
-        "ShareUntilDeath" => "Share until death",
-        "PartialShare" => "Partial share",
-        "TransferToKiller" => "Traitors",
-        "Defectors" => "Defectors",
-        "CivilianDeserter" => "Desert to civilians",
-        _ => share,
-    };
-
-    private static string? AutoTeams(string? autoTeams) => autoTeams switch
-    {
-        "none" => "None",
-        "manual" => "Manual",
-        "tvsb" => "Top vs bottom",
-        "lvsr" => "Left vs right",
-        "pvsi" => "Even vs uneven",
-        _ => autoTeams,
-    };
 
     private List<string> Mods
     {

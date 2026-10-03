@@ -249,5 +249,18 @@ namespace FAForever.Replay.Test
             Assert.IsNotNull(map.DisplayDescription);
             Assert.IsTrue(map.DisplayDescription!.StartsWith(expectedDescriptionStart), map.DisplayDescription);
         }
+
+        [TestMethod]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", "FullShare", "Full share", "Assassination", "Even vs uneven")]
+        [DataRow("assets/faforever/23225104.fafreplay", "FullShare", "Full share", "Assassination", "Left vs right")]
+        public void ScenarioOptionDisplayNamesTest(string file, string expectedShare, string expectedShareName, string expectedVictoryName, string expectedAutoTeamsName)
+        {
+            ReplayScenarioOptions options = Load(file).Header.Scenario.Options;
+
+            Assert.AreEqual(expectedShare, options.Share);
+            Assert.AreEqual(expectedShareName, options.ShareName);
+            Assert.AreEqual(expectedVictoryName, options.VictoryName);
+            Assert.AreEqual(expectedAutoTeamsName, options.AutoTeamsName);
+        }
     }
 }
