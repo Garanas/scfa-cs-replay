@@ -77,13 +77,13 @@ else
                                 <th colspan="3" class="border-b border-l border-edge px-2 pt-3 pb-1 text-center font-semibold">@label</th>
                             }
                         </tr>
-                        <tr class="border-b border-edge text-xs text-ink-muted">
-                            <th class="px-4 py-2 text-left font-semibold uppercase tracking-wide">Player</th>
+                        <tr class="border-b border-edge text-xs uppercase tracking-wide text-ink-muted">
+                            <th class="px-4 py-2 text-left font-semibold">Player</th>
                             @foreach ((string key, string label) in group)
                             {
-                                <th class="border-l border-edge py-2 pr-1.5 pl-2 text-right font-normal" title="Units built">built</th>
-                                <th class="px-1.5 py-2 text-right font-normal" title="Enemy units killed">killed</th>
-                                <th class="py-2 pr-2 pl-1.5 text-right font-normal" title="Own units lost">lost</th>
+                                <th class="border-l border-edge py-2 pr-1.5 pl-2 text-right font-semibold" title="Units built">Built</th>
+                                <th class="px-1.5 py-2 text-right font-semibold" title="Enemy units killed">Killed</th>
+                                <th class="py-2 pr-2 pl-1.5 text-right font-semibold" title="Own units lost">Lost</th>
                             }
                         </tr>
                     </thead>
@@ -112,14 +112,14 @@ else
                 <thead>
                     <tr class="text-xs uppercase tracking-wide text-ink-muted">
                         <th class="px-4 pt-3 font-semibold"></th>
-                        <th colspan="4" class="border-b border-edge px-3 pt-3 pb-1 text-center font-semibold"><span class="inline-flex items-center gap-1 align-middle">@StatIcon("mass")Mass</span></th>
-                        <th colspan="4" class="border-b border-edge px-3 pt-3 pb-1 text-center font-semibold"><span class="inline-flex items-center gap-1 align-middle">@StatIcon("energy")Energy</span></th>
+                        <th colspan="4" class="border-b border-l border-edge px-3 pt-3 pb-1 text-center font-semibold"><span class="inline-flex items-center gap-1 align-middle">@StatIcon("mass")Mass</span></th>
+                        <th colspan="4" class="border-b border-l border-edge px-3 pt-3 pb-1 text-center font-semibold"><span class="inline-flex items-center gap-1 align-middle">@StatIcon("energy")Energy</span></th>
                     </tr>
                     <tr class="border-b border-edge text-xs uppercase tracking-wide text-ink-muted">
                         <th class="px-4 py-2 font-semibold">Player</th>
                         @for (int i = 0; i < 2; i++)
                         {
-                            <th class="px-3 py-2 text-right font-semibold" title="Everything produced, reclaim included">Produced</th>
+                            <th class="border-l border-edge px-3 py-2 text-right font-semibold" title="Everything produced, reclaim included">Produced</th>
                             <th class="px-3 py-2 text-right font-semibold" title="The part of the production that came from reclaim">Reclaimed</th>
                             <th class="px-3 py-2 text-right font-semibold">Spent</th>
                             <th class="px-3 py-2 text-right font-semibold" title="Production lost because storage was full">Wasted</th>
@@ -134,7 +134,7 @@ else
                             <td class="px-4 py-2">@PlayerCell(row)</td>
                             @foreach ((ReplayResourceIncome income, ReplayResourceExpense expense) in new[] { (resources.MassIn, resources.MassOut), (resources.EnergyIn, resources.EnergyOut) })
                             {
-                                <td class="px-3 py-2 text-right font-mono">@Format(income.Total)</td>
+                                <td class="border-l border-edge px-3 py-2 text-right font-mono">@Format(income.Total)</td>
                                 <td class="px-3 py-2 text-right font-mono">@Format(income.Reclaimed)</td>
                                 <td class="px-3 py-2 text-right font-mono">@Format(expense.Total)</td>
                                 <td class="px-3 py-2 text-right font-mono">@Format(expense.Excess)</td>
