@@ -99,10 +99,6 @@
                 buildOrders = ReplayAnalysis.GetBuildOrder(replay, sourceId).Count;
             }
 
-            int? rating = army is { RatingMean: { } mean, RatingDeviation: { } deviation }
-                ? (int)Math.Round(mean - 3 * deviation)
-                : null;
-
             rows.Add(new PlayerRow(
                 army.PlayerName ?? (army.SourceId is int id ? replay.Header.Clients[id].PlayerName : "Unknown"),
                 army.Clan,
@@ -110,7 +106,7 @@
                 army.Faction,
                 army.Color,
                 TeamLabel(army.Team),
-                rating,
+                army.Rating,
                 actionCount,
                 orderCount,
                 apm,

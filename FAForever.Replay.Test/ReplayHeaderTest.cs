@@ -183,5 +183,19 @@ namespace FAForever.Replay.Test
 
             Assert.AreEqual(expectedColor, army.Color);
         }
+
+        [TestMethod]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 2, 2218)]
+        [DataRow("assets/faforever/23225104.fafreplay", 6, 1599)]
+        [DataRow("assets/faforever/zstd/22338092.fafreplay", 0, 1676)]
+        public void RatingFollowsTheDisplayConventionTest(string file, int sourceId, int expectedRating)
+        {
+            ReplayHeader header = Load(file).Header;
+
+            ReplayPlayerOptions army = header.Armies.Single(candidate => candidate.SourceId == sourceId);
+
+            // mean - 3 x deviation, rounded - the convention FAForever uses everywhere.
+            Assert.AreEqual(expectedRating, army.Rating);
+        }
     }
 }

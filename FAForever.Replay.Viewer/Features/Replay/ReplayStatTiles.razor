@@ -28,7 +28,7 @@
 
         // Average rating of the two largest teams, from the lobby options in the header.
         List<IGrouping<int, ReplayPlayerOptions>> teams = replay.Header.Armies
-            .Where(army => army.Civilian != true && army is { Team: not null, RatingMean: not null, RatingDeviation: not null })
+            .Where(army => army is { Civilian: not true, Team: not null, Rating: not null })
             .GroupBy(army => army.Team!.Value)
             .OrderByDescending(group => group.Count())
             .Take(2)
@@ -37,13 +37,13 @@
         {
             int[] averages = teams
                 .OrderBy(group => group.Key)
-                .Select(group => (int)Math.Round(group.Average(army => army.RatingMean!.Value - 3 * army.RatingDeviation!.Value)))
+                .Select(group => (int)Math.Round(group.Average(army => (double)army.Rating!.Value)))
                 .ToArray();
             computed.Add(new StatTile("Average rating", $"{averages[0]} vs {averages[1]}", "per team, from the lobby"));
         }
         else if (teams.Count == 1)
         {
-            int average = (int)Math.Round(teams[0].Average(army => army.RatingMean!.Value - 3 * army.RatingDeviation!.Value));
+            int average = (int)Math.Round(teams[0].Average(army => (double)army.Rating!.Value));
             computed.Add(new StatTile("Average rating", average.ToString(), "from the lobby"));
         }
 

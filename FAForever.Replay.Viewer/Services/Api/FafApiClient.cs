@@ -104,10 +104,7 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
 
             JsonApiResource? player = document.FindIncluded(stats.Relationship("player"));
 
-            // The displayed rating is the conservative estimate: mean - 3 * deviation.
-            int? rating = stats.GetNumber("beforeMean") is { } mean && stats.GetNumber("beforeDeviation") is { } deviation
-                ? (int)Math.Round(mean - 3 * deviation)
-                : null;
+            int? rating = FAForever.Replay.ReplayPlayerOptions.DisplayRating(stats.GetNumber("beforeMean"), stats.GetNumber("beforeDeviation"));
 
             players.Add(new GamePlayer(
                 player?.GetString("login") ?? "Unknown",

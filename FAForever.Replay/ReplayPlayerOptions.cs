@@ -49,5 +49,17 @@ namespace FAForever.Replay
         /// renders for the player (marker pings confirm it); ArmyColor is the fallback.
         /// </summary>
         public string? Color => GameColors.ToCss(PlayerColor) ?? GameColors.ToCss(ArmyColor);
+
+        /// <summary>
+        /// The rating as FAForever displays it: mean - 3 x deviation, rounded. Null when the
+        /// lobby carried no rating (offline games, AI and civilian armies).
+        /// </summary>
+        public int? Rating => DisplayRating(RatingMean, RatingDeviation);
+
+        /// <summary>
+        /// The FAForever display-rating convention, shared with rating data from the API.
+        /// </summary>
+        public static int? DisplayRating(double? mean, double? deviation)
+            => mean is { } m && deviation is { } d ? (int)Math.Round(m - 3 * d) : null;
     }
 }
