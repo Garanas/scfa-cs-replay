@@ -2,7 +2,7 @@
    into their sides below with the outcome and rating change the FAF API recorded. Games
    without a replay file stay visible but are not links. *@
 
-<a href="@(Game.ReplayAvailable == false ? null : $"/replay/{Game.Id}")"
+<a href="@(Game.ReplayAvailable == false ? null : $"replay/{Game.Id}")"
    class="card flex flex-col gap-4 p-5 transition @(Game.ReplayAvailable == false ? "opacity-60" : "hover:border-primary")">
     <div class="flex gap-4">
         @* The placeholder sits underneath the preview: it shows when the vault has no preview

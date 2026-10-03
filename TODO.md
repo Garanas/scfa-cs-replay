@@ -5,6 +5,15 @@
   loopback redirect URIs without a path (hence the fixed `http://127.0.0.1:5080` dev origin). A proper
   client needs: public client, PKCE S256, redirect URIs for localhost + the production origin, scopes
   `openid offline public_profile`, and ideally `allowed_cors_origins` so the token proxy can be dropped.
+- [ ] **Enable sign-in on GitHub Pages.** The viewer is deployed as a static site to
+  https://garanas.github.io/scfa-cs-replay/ (`.github/workflows/pages.yml`); replays from the vault
+  and local files work, signing in (and so Search) does not: there is no token proxy there and the
+  redirect URI is pinned to `http://127.0.0.1:5080`. Needs the dedicated client above (with this
+  origin as redirect URI and CORS origin) and a production `appsettings` that calls the token
+  endpoint directly.
+- [ ] **Remove the old Pages branches** `live/gh-pages` and `deploy/gh-pages` once the Actions
+  deployment runs, and `.github/pages/service-worker.js` some months later (it retires the old
+  deployment's service worker in returning browsers).
 - [x] ~~Verify the login flow against Hydra with a real FAF account~~ — verified 2026-10-03: sign-in
   via the loopback redirect works, `/me` resolves the player name, and `/search` returns live results.
 - [x] ~~Verify the FAF API attribute/filter names with live calls~~ — verified 2026-10-03 with a real

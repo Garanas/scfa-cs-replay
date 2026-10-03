@@ -68,7 +68,7 @@
     {
         if (NormalizeReplayId() is int replayId)
         {
-            Navigation.NavigateTo($"/replay/{replayId}");
+            Navigation.NavigateTo($"replay/{replayId}");
         }
     }
 
@@ -107,7 +107,7 @@
             {
                 case ReplayLoadResult.Success success:
                     Session.Set(new LoadedReplay(success.Replay, success.Metadata, new ReplayOrigin.LocalFile(file.Name)));
-                    Navigation.NavigateTo("/replay/local");
+                    Navigation.NavigateTo("replay/local");
                     break;
                 case ReplayLoadResult.Failure failure:
                     error = failure.Message;
