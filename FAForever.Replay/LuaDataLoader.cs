@@ -1,8 +1,19 @@
-﻿
+
+using System.Globalization;
+
 namespace FAForever.Replay
 {
     public static class LuaDataLoader
     {
+        // Lua values are immutable records, so the values without content can be shared.
+        private static readonly LuaData.Nil Nil = new LuaData.Nil();
+        private static readonly LuaData.Bool True = new LuaData.Bool(true);
+        private static readonly LuaData.Bool False = new LuaData.Bool(false);
+
+        /// <summary>
+        /// Array-like tables use the keys 1, 2, 3, ... Caching their string representation avoids an allocation per entry.
+        /// </summary>
+        private static readonly string[] IntegerKeys = Enumerable.Range(0, 257).Select(i => i.ToString(CultureInfo.InvariantCulture)).ToArray();
 
         public static LuaData ReadLuaData(ReplayBinaryReader reader)
         {
@@ -11,13 +22,13 @@ namespace FAForever.Replay
             switch (type)
             {
                 case LuaDataType.Nil:
-                    return new LuaData.Nil();
+                    return Nil;
 
                 case LuaDataType.Bool:
                     // Note: 0 is false, anything else is true. The reference implementation
                     // (faf-java-commons LoadUtils.parseLua) reads this inverted; verified
                     // against replays where known human players must have Human == true.
-                    return new LuaData.Bool(reader.ReadByte() != 0);
+                    return reader.ReadByte() != 0 ? True : False;
 
                 case LuaDataType.Number:
                     return new LuaData.Number(reader.ReadSingle());
@@ -29,18 +40,22 @@ namespace FAForever.Replay
                     Dictionary<String, LuaData> table = new Dictionary<String, LuaData>();
                     while (true)
                     {
-                        LuaData key = ReadLuaData(reader);
-                        switch (key)
+                        // read the key directly, without allocating a Lua value for it
+                        LuaDataType keyType = (LuaDataType)reader.ReadByte();
+                        switch (keyType)
                         {
-                            case LuaData.String s:
-                                table.Add(s.Value, ReadLuaData(reader));
+                            case LuaDataType.String:
+                                table.Add(reader.ReadNullTerminatedString(), ReadLuaData(reader));
                                 break;
 
-                            case LuaData.Number n:
-                                table.Add(((int)n.Value).ToString(), ReadLuaData(reader));
+                            case LuaDataType.Number:
+                                int index = (int)reader.ReadSingle();
+                                string key = (uint)index < (uint)IntegerKeys.Length ? IntegerKeys[index] : index.ToString(CultureInfo.InvariantCulture);
+                                table.Add(key, ReadLuaData(reader));
                                 break;
 
-                            case LuaData.Nil:
+                            case LuaDataType.Nil:
+                            case LuaDataType.TableEnd:
                                 return new LuaData.Table(table);
 
                             default:
@@ -48,10 +63,8 @@ namespace FAForever.Replay
                         }
                     }
 
-                    throw new Exception("Invalid state exception");
-
                 case LuaDataType.TableEnd:
-                    return new LuaData.Nil();
+                    return Nil;
 
                 default:
                     throw new Exception("Invalid LuaDataType");
