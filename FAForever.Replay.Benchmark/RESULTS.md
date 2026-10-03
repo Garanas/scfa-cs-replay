@@ -73,3 +73,37 @@ Notes:
   frame header, `GetDecompressedSize` then returns an upper bound (6.03 MB vs 5.83 MB actual), and the
   exact-size check made it always fall back. Using the bound as the buffer size fixed it.
 - Before merging into the main line: re-run the full (default job) suite for a definitive table.
+
+## Steps 1, 2, 3, 5 combined — full run (2026-10-03)
+
+`perf/combined` (`1c73040`), DefaultJob, same machine and settings as the step 0 baseline. Mean / Allocated,
+with the change against the baseline.
+
+Caveat: this run took 39 minutes instead of ~15 and several cases show an elevated standard deviation
+(6–10%), so the machine was busy at times. Allocations are deterministic and reliable; for timings, small
+differences (< ~10%) are not meaningful. The cleanest cases (low deviation) are TestCommands01, 23225685
+and the laird-binary-01 body.
+
+| Replay | Decompress | Header | Body | End-to-end |
+|---|---:|---:|---:|---:|
+| `faforever/23225104.fafreplay` | 2.63 ms / 6,405 KB (2.7×, −61%) | 26.9 μs / 57.0 KB | 13.37 ms / 8,203 KB (1.5×, −39%) | 11.63 ms / 14,604 KB (1.8×, −51%) |
+| `faforever/23225323.fafreplay` | 0.99 ms / 2,712 KB (2.9×, −66%) | 16.9 μs / 45.0 KB | 4.86 ms / 3,077 KB (1.1×, −28%) | 4.18 ms / 5,796 KB (1.6×, −53%) |
+| `faforever/23225440.fafreplay` | 0.80 ms / 1,283 KB (≈, −33%) | 18.6 μs / 44.9 KB | 2.31 ms / 1,598 KB (1.2×, −29%) | 1.90 ms / 2,927 KB (1.3×, −31%) |
+| `faforever/23225508.fafreplay` | 0.33 ms / 687 KB (1.2×, −24%) | 11.4 μs / 29.5 KB | 0.94 ms / 559 KB (≈, −28%) | 1.17 ms / 1,254 KB (≈, −26%) |
+| `faforever/23225685.fafreplay` | 0.87 ms / 2,535 KB (3.0×, −69%) | 17.6 μs / 46.5 KB | 4.26 ms / 3,392 KB (2.0×, −34%) | 4.36 ms / 5,934 KB (1.8×, −55%) |
+| `faforever/TestCommands01.fafreplay` | 0.67 ms / 2,117 KB (1.8×, −47%) | 25.3 μs / 70.6 KB | 3.92 ms / 3,338 KB (1.8×, −36%) | 4.08 ms / 5,493 KB (1.3×, −41%) |
+| `faforever/gzip/22453414.fafreplay` | 55.7 μs / 94.9 KB (unchanged path) | 24.3 μs / 73.1 KB | 4.1 μs / 14.2 KB | 96.4 μs / 181.4 KB |
+| `scfa/laird-binary-01.SCFAReplay` | — | 30.6 μs / 88.8 KB | 91.11 ms / 68,166 KB (1.9×, −37%) | 120.09 ms / 77.58 MB (1.5×, −27%) |
+| `scfa/laird-binary-02.SCFAReplay` | — | 34.9 μs / 85.4 KB | 45.28 ms / 33,798 KB (1.8×, −37%) | 44.48 ms / 39.77 MB (1.8×, −24%) |
+
+Observations:
+
+- **Allocations drop by 25–69% across the board**; decompression and the body both roughly halve or better
+  for the larger replays.
+- **The header is about 2× faster** (41 → 27 μs for 23225104), but it was never significant.
+- The legacy gzip path is unchanged; its 45 → 56 μs is noise (it shares no code with these changes).
+- End-to-end for laird-binary-01 (120 ms) is notably more than Body (91 ms) plus the one-off buffer copy.
+  The same gap is visible for the FAF replays in the baseline (see step 0). Still unexplained; worth a
+  closer look together with the GC behaviour (Gen2 counts) of the one-shot path.
+- A rerun on a quiet machine would firm up the timings, especially 23225104 and 23225323, whose body
+  results (13.4 / 4.9 ms) are slower than the screening run (9.7 / 3.4 ms).
