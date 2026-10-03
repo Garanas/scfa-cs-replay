@@ -141,6 +141,15 @@ public sealed class JsonApiResource
             ? value.GetDouble()
             : null;
 
+    /// <summary>
+    /// An integer attribute; also accepts a numeric string, as Elide serialises some
+    /// numeric columns (e.g. gamePlayerStats.team) as strings.
+    /// </summary>
+    public int? GetInt32(string attribute)
+        => GetNumber(attribute) is { } number
+            ? (int)number
+            : int.TryParse(GetString(attribute), out int parsed) ? parsed : null;
+
     public bool? GetBoolean(string attribute)
         => attributes.ValueKind == JsonValueKind.Object && attributes.TryGetProperty(attribute, out JsonElement value)
             && value.ValueKind is JsonValueKind.True or JsonValueKind.False

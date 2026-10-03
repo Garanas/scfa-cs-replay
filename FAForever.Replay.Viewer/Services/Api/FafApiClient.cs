@@ -16,9 +16,10 @@ public sealed class NotAuthenticatedException : Exception;
 /// cross-origin requests, so it is called directly from the browser with a Bearer token.
 ///
 /// The attribute and filter names were verified against live responses on 2026-10-03
-/// (search by login, totals, map/mod includes, ratings and factions). gamePlayerStats
-/// additionally carries "result", "score" and afterMean/afterDeviation for a future
-/// match-outcome feature.
+/// (search by login, totals, map/mod includes, ratings and factions). The cards also use
+/// game.validity/victoryCondition/replayTicks/replayAvailable and gamePlayerStats.result,
+/// afterMean/afterDeviation, color and ai — names taken from the published schema
+/// (/v3/api-docs) and read defensively.
 /// </summary>
 public sealed class FafApiClient(HttpClient http, AuthService auth, IConfiguration configuration)
 {
@@ -108,10 +109,15 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
 
             players.Add(new GamePlayer(
                 player?.GetString("login") ?? "Unknown",
-                (int?)stats.GetNumber("team"),
-                stats.GetNumber("faction") is { } faction && (int)faction is >= 1 and <= 5 ? (FAForever.Replay.Faction)(int)faction : null,
+                stats.GetInt32("team"),
+                stats.GetInt32("faction") is { } faction && faction is >= 1 and <= 5 ? (FAForever.Replay.Faction)faction : null,
                 rating,
-                stats.GetString("result")));
+                stats.GetString("result"))
+            {
+                RatingAfter = FAForever.Replay.ReplayPlayerOptions.DisplayRating(stats.GetNumber("afterMean"), stats.GetNumber("afterDeviation")),
+                Color = FAForever.Replay.GameColors.ToCss(stats.GetInt32("color")),
+                IsAi = stats.GetBoolean("ai") ?? false,
+            });
         }
 
         players.Sort((left, right) => (left.Team ?? int.MaxValue).CompareTo(right.Team ?? int.MaxValue));
@@ -124,7 +130,13 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
             map?.GetString("displayName") ?? mapVersion?.GetString("folderName"),
             mapVersion?.GetString("thumbnailUrlSmall"),
             featuredMod?.GetString("displayName") ?? featuredMod?.GetString("technicalName"),
-            players);
+            players)
+        {
+            ReplayTicks = game.GetInt32("replayTicks"),
+            Validity = game.GetString("validity"),
+            VictoryCondition = game.GetString("victoryCondition"),
+            ReplayAvailable = game.GetBoolean("replayAvailable"),
+        };
     }
 
     /// <summary>

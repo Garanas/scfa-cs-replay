@@ -82,58 +82,7 @@
                     <div class="mt-3 grid gap-4 md:grid-cols-2">
                         @foreach (GameSummary game in search.Games)
                         {
-                            <a href="/replay/@game.Id" class="card flex gap-4 transition hover:border-primary">
-                                @if (game.MapPreviewUrl is { } previewUrl)
-                                {
-                                    <img src="@previewUrl" alt="" loading="lazy"
-                                         class="h-20 w-20 shrink-0 rounded-md border border-edge object-cover"
-                                         onerror="this.style.visibility='hidden'" />
-                                }
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <p class="truncate font-semibold" title="@game.Title">@game.Title</p>
-                                        <span class="badge shrink-0">#@game.Id</span>
-                                    </div>
-                                    <p class="mt-0.5 truncate text-sm text-ink-muted">
-                                        @(game.MapName ?? "Unknown map")
-                                        @if (game.FeaturedMod is { } mod)
-                                        {
-                                            <span> · @mod</span>
-                                        }
-                                    </p>
-                                    <p class="mt-0.5 text-xs text-ink-faint">
-                                        @game.StartTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-                                        @if (game.Duration is { } gameDuration)
-                                        {
-                                            <span> · @ReplayView.FormatDuration(gameDuration)</span>
-                                        }
-                                    </p>
-                                    <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                                        @foreach (GamePlayer player in game.Players.Take(8))
-                                        {
-                                            <span class="inline-flex items-center gap-1.5 text-xs">
-                                                @if (Factions.IconPath(player.Faction) is { } factionIcon)
-                                                {
-                                                    <img src="@factionIcon" alt="" title="@Factions.Name(player.Faction)" class="h-3.5 w-3.5 shrink-0" loading="lazy" />
-                                                }
-                                                else
-                                                {
-                                                    <span class="inline-block h-2 w-2 rounded-full" style="background: @Factions.Swatch(player.Faction)" title="Unknown faction"></span>
-                                                }
-                                                <span class="font-medium">@player.Login</span>
-                                                @if (player.Rating is { } rating)
-                                                {
-                                                    <span class="text-ink-faint">(@rating)</span>
-                                                }
-                                            </span>
-                                        }
-                                        @if (game.Players.Count > 8)
-                                        {
-                                            <span class="text-xs text-ink-faint">+@(game.Players.Count - 8) more</span>
-                                        }
-                                    </div>
-                                </div>
-                            </a>
+                            <GameCard Game="game" HighlightedPlayer="@searchedPlayer" />
                         }
                     </div>
                     <div class="mt-6 flex items-center justify-center gap-3">
@@ -162,6 +111,7 @@
     private bool isSearching;
     private string? error;
     private GameSearchResult? result;
+    private string? searchedPlayer;
     private CancellationTokenSource? searchCancellation;
 
     private Task SearchFromStart() => SearchAsync(1);
@@ -191,6 +141,7 @@
                 PlayedAfter = playedAfter is { } after ? DateOnly.FromDateTime(after) : null,
                 Page = page,
             }, cancellation.Token);
+            searchedPlayer = playerName.Trim();
         }
         catch (OperationCanceledException)
         {

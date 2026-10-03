@@ -1,0 +1,183 @@
+@* A vault game as a search result: map, timing and status at the top, the players grouped
+   into their sides below with the outcome and rating change the FAF API recorded. Games
+   without a replay file stay visible but are not links. *@
+
+<a href="@(Game.ReplayAvailable == false ? null : $"/replay/{Game.Id}")"
+   class="card flex flex-col gap-4 p-5 transition @(Game.ReplayAvailable == false ? "opacity-60" : "hover:border-primary")">
+    <div class="flex gap-4">
+        @if (Game.MapPreviewUrl is { } previewUrl)
+        {
+            <img src="@previewUrl" alt="" loading="lazy"
+                 class="h-20 w-20 shrink-0 rounded-md border border-edge object-cover"
+                 onerror="this.style.visibility='hidden'" />
+        }
+        <div class="min-w-0 flex-1">
+            <div class="flex items-start justify-between gap-2">
+                <p class="truncate font-semibold" title="@Game.Title">@Game.Title</p>
+                <span class="badge shrink-0">#@Game.Id</span>
+            </div>
+            <p class="mt-0.5 truncate text-sm text-ink-muted">
+                @(Game.MapName ?? "Unknown map")
+                @if (Game.FeaturedMod is { } mod)
+                {
+                    <span> · @mod</span>
+                }
+            </p>
+            <p class="mt-0.5 text-xs text-ink-faint">
+                @Game.StartTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                @if (Game.Duration is { } duration)
+                {
+                    <span title="@(Game.ReplayTicks is > 0 ? "In-game duration" : "Time between start and end")"> · @ReplayView.FormatDuration(duration)</span>
+                }
+                @if (VictoryConditionName(Game.VictoryCondition) is { } condition)
+                {
+                    <span title="Victory condition"> · @condition</span>
+                }
+            </p>
+            @if (Game.ReplayAvailable == false || (Game.Validity is not null && !Game.IsRated))
+            {
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                    @if (Game.ReplayAvailable == false)
+                    {
+                        <span class="badge" title="The vault holds no replay file for this game">No replay</span>
+                    }
+                    @if (Game.Validity is { } validity && !Game.IsRated)
+                    {
+                        <span class="badge" title="Not rated: @validity">Unrated · @Humanize(validity)</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (Game.Players.Count > 0)
+    {
+        IReadOnlyList<GameSide> sides = Game.Sides;
+        @if (sides.Count > 2 && sides.All(side => side.Team is null))
+        {
+            @* Free for all: one list, each player carrying their own outcome. *@
+            <div class="rounded-lg border border-edge bg-raised/40 p-3">
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Free for all</p>
+                <ul class="space-y-1">
+                    @foreach (GameSide side in sides.Take(MaxPlayersPerSide))
+                    {
+                        @PlayerRow(side.Players[0], showOutcome: true)
+                    }
+                </ul>
+                @if (sides.Count > MaxPlayersPerSide)
+                {
+                    <p class="mt-1 text-xs text-ink-faint">+@(sides.Count - MaxPlayersPerSide) more</p>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="grid gap-2 sm:grid-cols-2">
+                @foreach (GameSide side in sides)
+                {
+                    <div class="rounded-lg border bg-raised/40 p-3 @(side.Outcome == GameOutcome.Victory ? "border-accent" : "border-edge")">
+                        <div class="mb-2 flex items-center justify-between gap-2 text-xs">
+                            <span class="font-semibold uppercase tracking-wide text-ink-muted">
+                                @(side.Team is { } team ? $"Team {team - 1}" : "FFA")
+                                @if (side.Players.Count > 1 && side.AverageRating is { } average)
+                                {
+                                    <span class="ml-1 font-normal normal-case tracking-normal text-ink-faint" title="Average rating">avg @average</span>
+                                }
+                            </span>
+                            @OutcomeLabel(side.Outcome)
+                        </div>
+                        <ul class="space-y-1">
+                            @foreach (GamePlayer player in side.Players.Take(MaxPlayersPerSide))
+                            {
+                                @PlayerRow(player, showOutcome: false)
+                            }
+                        </ul>
+                        @if (side.Players.Count > MaxPlayersPerSide)
+                        {
+                            <p class="mt-1 text-xs text-ink-faint">+@(side.Players.Count - MaxPlayersPerSide) more</p>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+</a>
+
+@code {
+    private const int MaxPlayersPerSide = 6;
+
+    [Parameter, EditorRequired] public required GameSummary Game { get; set; }
+
+    /// <summary>A player name to emphasise, e.g. the one that was searched for.</summary>
+    [Parameter] public string? HighlightedPlayer { get; set; }
+
+    private bool IsHighlighted(GamePlayer player)
+        => HighlightedPlayer is { Length: > 0 } name && string.Equals(player.Login, name, StringComparison.OrdinalIgnoreCase);
+
+    private RenderFragment PlayerRow(GamePlayer player, bool showOutcome) => @<li class="flex items-center gap-2 text-sm">
+        <span class="h-3.5 w-1 shrink-0 rounded-full" style="background: @(player.Color ?? "transparent")" aria-hidden="true"></span>
+        @if (Factions.IconPath(player.Faction) is { } factionIcon)
+        {
+            <img src="@factionIcon" alt="" title="@Factions.Name(player.Faction)" class="h-4 w-4 shrink-0" loading="lazy" />
+        }
+        else
+        {
+            <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: @Factions.Swatch(player.Faction)" title="@(Factions.Name(player.Faction) ?? "Unknown faction")"></span>
+        }
+        <span class="min-w-0 truncate @(IsHighlighted(player) ? "font-semibold text-primary" : "font-medium")" title="@player.Login">@player.Login</span>
+        @if (player.IsAi)
+        {
+            <span class="badge px-1.5 py-0 text-[10px]">AI</span>
+        }
+        @if (showOutcome)
+        {
+            @OutcomeLabel(player.Outcome)
+        }
+        <span class="ml-auto flex shrink-0 items-baseline gap-1.5 font-mono text-xs">
+            @if (player.Rating is { } rating)
+            {
+                <span class="text-ink-muted" title="Rating before the game">@rating</span>
+            }
+            @if (player.RatingChange is { } change)
+            {
+                <span class="w-9 text-right @(change > 0 ? "text-ink" : "text-ink-faint")" title="Rating change">@FormatChange(change)</span>
+            }
+        </span>
+    </li>;
+
+    private static RenderFragment OutcomeLabel(GameOutcome outcome) => outcome switch
+    {
+        GameOutcome.Victory => @<span class="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-accent">
+            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+                <path d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V18h3v3H8v-3h3v-3.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3V3Zm0 4H6v1a2 2 0 0 0 1 1.7V7Zm10 0v2.7A2 2 0 0 0 18 8V7h-1Z" />
+            </svg>
+            Victory
+        </span>,
+        GameOutcome.Draw => @<span class="shrink-0 text-xs font-medium text-ink-muted">Draw</span>,
+        GameOutcome.Defeat => @<span class="shrink-0 text-xs text-ink-faint">Defeat</span>,
+        _ => @<span></span>,
+    };
+
+    private static string FormatChange(int change) => change switch
+    {
+        > 0 => $"+{change}",
+        < 0 => $"−{-change}",
+        _ => "±0",
+    };
+
+    /// <summary>The in-game names of the victory conditions; the default (assassination) is not shown.</summary>
+    private static string? VictoryConditionName(string? condition) => condition switch
+    {
+        "DOMINATION" => "Supremacy",
+        "ERADICATION" => "Annihilation",
+        "SANDBOX" => "Sandbox",
+        _ => null,
+    };
+
+    /// <summary>"TOO_SHORT" → "Too short".</summary>
+    private static string Humanize(string value)
+    {
+        string text = value.Replace('_', ' ').ToLowerInvariant();
+        return text.Length > 0 ? char.ToUpperInvariant(text[0]) + text[1..] : text;
+    }
+}
