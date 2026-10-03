@@ -1,0 +1,87 @@
+@* The synchronized event feed of the Playthrough tab: chat, transfers, pings and session
+   events up to the current playback time, newest on top. Clicking a row seeks playback.
+   Pure rendering: the panel owns the composed, player-filtered item list and the visible
+   count; ShouldRender skips the frames in which neither changed, and @key on the absolute
+   item index keeps existing rows stable so only a newly inserted row plays the enter
+   animation. *@
+
+<div role="log" aria-label="Game events up to the current playback time">
+    @if (Suspended)
+    {
+        <p class="px-3 py-2 text-xs text-ink-faint">
+            The feed scrolls too fast to read above ×4. Pause playback or lower the speed to follow along.
+        </p>
+    }
+    else if (VisibleCount == 0)
+    {
+        <p class="px-3 py-2 text-xs text-ink-faint">Nothing yet — press play, or scrub the timeline.</p>
+    }
+    @for (int index = Suspended ? -1 : Math.Min(VisibleCount, Items.Count) - 1; index >= LowerBound; index--)
+    {
+        Item item = Items[index];
+        <button type="button" @key="index" title="@($"{item.Player}: {item.Text} — click to jump playback here")"
+                class="pt-feed-row flex w-full cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.5 text-left transition hover:bg-raised"
+                @onclick="() => OnSeek.InvokeAsync(item.Timestamp)">
+            <span class="shrink-0 font-mono text-xs text-ink-muted">@GameTime.Format(item.Timestamp)</span>
+            <span class="h-3.5 w-1 shrink-0 rounded-full" style="background: @(item.Color ?? "transparent")" aria-hidden="true"></span>
+            @if (item.BlueprintId is { } blueprintId)
+            {
+                <UnitIcon BlueprintId="@blueprintId" Size="16" />
+            }
+            else if (item.IconPath is { } iconPath)
+            {
+                <img src="@iconPath" alt="" class="h-4 w-4 shrink-0" />
+            }
+            <span class="min-w-0 truncate text-xs text-ink-muted">@item.Text</span>
+        </button>
+    }
+    @if (!Suspended && VisibleCount > MaxRows)
+    {
+        <p class="px-3 py-2 text-xs text-ink-faint">Showing the latest @MaxRows of @VisibleCount.ToString("N0") events.</p>
+    }
+</div>
+
+@code {
+    private const int MaxRows = 100;
+
+    /// <summary>
+    /// One feed entry; Kind is a short tag such as "command" or "ping". A build command
+    /// carries its BlueprintId (rendered as the unit icon), other commands their category
+    /// icon path.
+    /// </summary>
+    public sealed record Item(TimeSpan Timestamp, string Player, string? Color, string Text, string Kind, string? IconPath = null, string? BlueprintId = null);
+
+    /// <summary>All feed items of the replay, chronological and already player-filtered.</summary>
+    [Parameter, EditorRequired] public required IReadOnlyList<Item> Items { get; set; }
+
+    /// <summary>How many items playback has passed; the feed shows the newest of these.</summary>
+    [Parameter] public int VisibleCount { get; set; }
+
+    [Parameter] public EventCallback<TimeSpan> OnSeek { get; set; }
+
+    /// <summary>
+    /// True while playback is too fast to follow (above ×8): the rows make way for a
+    /// message, and re-renders are skipped entirely until the state flips back.
+    /// </summary>
+    [Parameter] public bool Suspended { get; set; }
+
+    private int LowerBound => Math.Max(0, Math.Min(VisibleCount, Items.Count) - MaxRows);
+
+    private int lastRenderedCount = -1;
+    private IReadOnlyList<Item>? lastRenderedItems;
+    private bool lastRenderedSuspended;
+
+    protected override bool ShouldRender()
+    {
+        if (Suspended == lastRenderedSuspended
+            && (Suspended || (VisibleCount == lastRenderedCount && ReferenceEquals(Items, lastRenderedItems))))
+        {
+            return false;
+        }
+
+        lastRenderedCount = VisibleCount;
+        lastRenderedItems = Items;
+        lastRenderedSuspended = Suspended;
+        return true;
+    }
+}
