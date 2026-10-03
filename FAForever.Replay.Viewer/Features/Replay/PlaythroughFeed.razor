@@ -13,24 +13,20 @@
     @for (int index = Math.Min(VisibleCount, Items.Count) - 1; index >= LowerBound; index--)
     {
         Item item = Items[index];
-        <button type="button" @key="index" title="@($"{item.Text} — click to jump playback here")"
-                class="pt-feed-row flex w-full cursor-pointer items-start gap-2 rounded-md px-3 py-1 text-left transition hover:bg-raised"
+        <button type="button" @key="index" title="@($"{item.Player}: {item.Text} — click to jump playback here")"
+                class="pt-feed-row flex w-full cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.5 text-left transition hover:bg-raised"
                 @onclick="() => OnSeek.InvokeAsync(item.Timestamp)">
-            <span class="shrink-0 pt-0.5 font-mono text-xs text-ink-muted">@GameTime.Format(item.Timestamp)</span>
-            <span class="min-w-0">
-                <PlayerLabel Name="@item.Player" Color="@item.Color" />
-                <span class="flex items-center gap-1.5 text-xs text-ink-muted">
-                    @if (item.BlueprintId is { } blueprintId)
-                    {
-                        <UnitIcon BlueprintId="@blueprintId" Size="16" />
-                    }
-                    else if (item.IconPath is { } iconPath)
-                    {
-                        <img src="@iconPath" alt="" class="h-4 w-4 shrink-0" />
-                    }
-                    <span class="truncate">@item.Text</span>
-                </span>
-            </span>
+            <span class="shrink-0 font-mono text-xs text-ink-muted">@GameTime.Format(item.Timestamp)</span>
+            <span class="h-3.5 w-1 shrink-0 rounded-full" style="background: @(item.Color ?? "transparent")" aria-hidden="true"></span>
+            @if (item.BlueprintId is { } blueprintId)
+            {
+                <UnitIcon BlueprintId="@blueprintId" Size="16" />
+            }
+            else if (item.IconPath is { } iconPath)
+            {
+                <img src="@iconPath" alt="" class="h-4 w-4 shrink-0" />
+            }
+            <span class="min-w-0 truncate text-xs text-ink-muted">@item.Text</span>
         </button>
     }
     @if (VisibleCount > MaxRows)
