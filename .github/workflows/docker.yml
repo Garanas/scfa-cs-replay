@@ -60,12 +60,13 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: SOURCE_REVISION=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   # Rolls the new image out on the VPS. The key in the "production" environment may only run
   # vault-deploy there (deploy/deploy.sh): pull the image, restart the vault. compose.yaml stays manual.
-  # Needs, in the environment: secret DEPLOY_SSH_KEY, variables DEPLOY_HOST and DEPLOY_KNOWN_HOSTS
+  # Needs, in the environment, the secrets DEPLOY_SSH_KEY, DEPLOY_HOST and DEPLOY_KNOWN_HOSTS
   # (the VPS host key, so a server pretending to be the VPS is refused). See deploy/README.md.
   deploy:
     needs: image
@@ -82,14 +83,14 @@ jobs:
       - name: Deploy to the VPS
         env:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
-          HOST: ${{ vars.DEPLOY_HOST }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy
           chmod 600 ~/.ssh/deploy
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "deploy@$HOST"
+          ssh -T -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "deploy@$HOST"
 
       - name: Check the site
         run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors -o /dev/null https://vault.jipwijnia.nl/

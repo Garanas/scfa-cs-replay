@@ -12,7 +12,15 @@
     <footer class="border-t border-edge">
         <div class="mx-auto flex w-full @Container flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-ink-faint sm:px-6">
             <span>Replay analysis for Supreme Commander: Forged Alliance Forever.</span>
-            <a class="transition hover:text-ink" href="https://github.com/Garanas/scfa-cs-replay" target="_blank" rel="noreferrer">Source on GitHub</a>
+            <span class="flex items-center gap-2">
+                <a class="transition hover:text-ink" href="@BuildInfo.Repository" target="_blank" rel="noreferrer">Source on GitHub</a>
+                @if (BuildInfo.CommitUrl is { } commitUrl)
+                {
+                    <span aria-hidden="true">·</span>
+                    <a class="font-mono transition hover:text-ink" href="@commitUrl" target="_blank" rel="noreferrer"
+                       title="The commit this version was built from">@BuildInfo.ShortCommit</a>
+                }
+            </span>
         </div>
     </footer>
 </div>

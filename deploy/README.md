@@ -78,10 +78,11 @@ Roll back by setting `VAULT_IMAGE=ghcr.io/garanas/scfa-cs-replay:sha-<commit>` i
    echo 'command="/usr/local/bin/vault-deploy",restrict <contents of github-deploy.pub>' \
        | sudo tee /home/deploy/.ssh/authorized_keys
    ```
-3. GitHub → Settings → Environments → `production` (limit it to the `deploy/production` branch):
-   - secret `DEPLOY_SSH_KEY`: the contents of `github-deploy` (the private key);
-   - variable `DEPLOY_HOST`: the server's address;
-   - variable `DEPLOY_KNOWN_HOSTS`: the output of `ssh-keyscan -t ed25519 <server>`, after checking
+3. GitHub → Settings → Environments → `production` (limit it to the `deploy/production` branch),
+   three environment **secrets**:
+   - `DEPLOY_SSH_KEY`: the contents of `github-deploy` (the private key);
+   - `DEPLOY_HOST`: the server's address;
+   - `DEPLOY_KNOWN_HOSTS`: the output of `ssh-keyscan -t ed25519 <server>`, after checking
      its fingerprint against `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server.
 4. Delete both key files from your machine; GitHub holds the only copy. A new key is a matter of
    repeating these steps.
