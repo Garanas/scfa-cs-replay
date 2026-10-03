@@ -5,13 +5,16 @@
   loopback redirect URIs without a path (hence the fixed `http://127.0.0.1:5080` dev origin). A proper
   client needs: public client, PKCE S256, redirect URIs for localhost + the production origin, scopes
   `openid offline public_profile`, and ideally `allowed_cors_origins` so the token proxy can be dropped.
-- [ ] **Verify the login flow against Hydra with a real FAF account** (needs a human with credentials):
-  home → Sign in → FAF login page → redirected back → profile visible → `/search` works.
-- [ ] **Verify the FAF API attribute/filter names with live calls** (needs a signed-in session):
-  `FafApiClient` follows the faf-java-api models (`name`, `startTime`, `endTime`,
-  `playerStats.player.login`, `mapVersion.map.displayName`, `featuredMod.technicalName`,
-  `beforeMean`/`beforeDeviation`, `faction`, `team`, `result`, `thumbnailUrlSmall`), but reads
-  require OAuth so they could not be verified while building. Search for `TODO(api-attributes)`.
+- [x] ~~Verify the login flow against Hydra with a real FAF account~~ — verified 2026-10-03: sign-in
+  via the loopback redirect works, `/me` resolves the player name, and `/search` returns live results.
+- [x] ~~Verify the FAF API attribute/filter names with live calls~~ — verified 2026-10-03 with a real
+  session: `playerStats.player.login` filtering, `page[totals]`, `name`/`startTime`/`endTime`,
+  `mapVersion.map.displayName`, `thumbnailUrlSmall`, `featuredMod`, `faction`/`team`/
+  `beforeMean`/`beforeDeviation` all behave as modelled. Bonus for the future result feature:
+  `gamePlayerStats` carries `result` ("VICTORY"/"DEFEAT"), `score` and `afterMean`/`afterDeviation`.
+- [ ] **Show the match outcome on vault replays** (now unblocked): fetch `/data/game/{id}` with
+  `playerStats.player` when signed in and merge into the replay page — winner badges in Players,
+  rating changes (`beforeMean/afterMean`), validity. The replay file itself never knows who won.
 - [ ] **Map blueprint ids to unit names/icons** in the build-order table (static lookup, e.g.
   generated from the FAF unit database). Search for `TODO(unit-names)`.
 - [ ] **Review the desync flag.** Both test replays shown in the browser (vault #22338092 and a

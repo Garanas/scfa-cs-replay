@@ -15,9 +15,10 @@ public sealed class NotAuthenticatedException : Exception;
 /// Typed client for api.faforever.com (JSON:API/Elide with RSQL filters). The API allows
 /// cross-origin requests, so it is called directly from the browser with a Bearer token.
 ///
-/// TODO(api-attributes): the attribute and filter names below follow the faf-java-api models
-/// but could not be verified live while building this (reads require an OAuth token). Verify
-/// them against real responses after the first successful login; see TODO.md.
+/// The attribute and filter names were verified against live responses on 2026-10-03
+/// (search by login, totals, map/mod includes, ratings and factions). gamePlayerStats
+/// additionally carries "result", "score" and afterMean/afterDeviation for a future
+/// match-outcome feature.
 /// </summary>
 public sealed class FafApiClient(HttpClient http, AuthService auth, IConfiguration configuration)
 {

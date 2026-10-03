@@ -1,20 +1,29 @@
 @using FAForever.Replay
-@inject NavigationManager Navigation
+@inherits UrlStateComponent
 
 @* Every sim callback of the replay, grouped by endpoint: the raw mechanics behind chat,
    pings, resource sharing, self-destructs, control groups and mod features. *@
 
 <div class="grid gap-6 lg:grid-cols-[1fr_3fr]">
-    <div class="card max-h-[70vh] self-start overflow-y-auto p-2" role="group" aria-label="Callback endpoints">
-        @foreach ((string endpoint, int count) in endpointCounts)
-        {
-            <button type="button"
-                    class="@(endpoint == selectedEndpoint ? ActiveEndpointClass : EndpointClass)"
-                    @onclick="() => Select(endpoint)">
-                <span class="truncate font-mono text-xs">@endpoint</span>
-                <span class="badge ml-auto shrink-0">@count.ToString("N0")</span>
-            </button>
-        }
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
+        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
+        <TimeWindowFilter Duration="duration" />
+
+        <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Players</h3>
+        <PlayerFilterList Items="playerItems" />
+
+        <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Endpoints</h3>
+        <div role="group" aria-label="Callback endpoints">
+            @foreach ((string endpoint, int count) in endpointCounts)
+            {
+                <button type="button"
+                        class="@(endpoint == selectedEndpoint ? ActiveEndpointClass : EndpointClass)"
+                        @onclick="() => Select(endpoint)">
+                    <span class="truncate font-mono text-xs">@endpoint</span>
+                    <span class="badge ml-auto shrink-0">@count.ToString("N0")</span>
+                </button>
+            }
+        </div>
     </div>
 
     <div class="card max-h-[70vh] self-start overflow-x-auto overflow-y-auto p-0">
@@ -39,10 +48,15 @@
                 }
             </tbody>
         </table>
-        @if (SelectedCallbacks.Count > MaxRows)
+        @{ int total = SelectedCallbacks.Count(); }
+        @if (total == 0)
+        {
+            <p class="px-4 py-3 text-sm text-ink-muted">No callbacks match the current filters.</p>
+        }
+        else if (total > MaxRows)
         {
             <p class="border-t border-edge/60 px-4 py-2 text-xs text-ink-faint">
-                Showing the first @MaxRows of @SelectedCallbacks.Count.ToString("N0") callbacks.
+                Showing the first @MaxRows of @total.ToString("N0") callbacks.
             </p>
         }
     </div>
@@ -57,18 +71,59 @@
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
     private List<(string Endpoint, int Count)> endpointCounts = [];
+    private List<(string Name, int Count)> playerItems = [];
     private Dictionary<string, List<ReplayInput.SimCallback>> callbacksByEndpoint = [];
     private string? selectedEndpoint;
+    private HashSet<int> selectedSources = [];
+    private TimeSpan duration;
+    private TimeSpan? windowFrom;
+    private TimeSpan? windowTo;
 
-    private List<ReplayInput.SimCallback> SelectedCallbacks
-        => selectedEndpoint is { } endpoint && callbacksByEndpoint.TryGetValue(endpoint, out List<ReplayInput.SimCallback>? callbacks) ? callbacks : [];
+    private IEnumerable<ReplayInput.SimCallback> SelectedCallbacks
+    {
+        get
+        {
+            if (selectedEndpoint is not { } endpoint || !callbacksByEndpoint.TryGetValue(endpoint, out List<ReplayInput.SimCallback>? callbacks))
+            {
+                return [];
+            }
+
+            IEnumerable<ReplayInput.SimCallback> filtered = callbacks.Where(callback => selectedSources.Contains(callback.SourceId));
+            if (windowFrom is { } from)
+            {
+                int fromTick = (int)(from.TotalSeconds * ReplayAnalysis.TicksPerSecond);
+                filtered = filtered.Where(callback => callback.Tick >= fromTick);
+            }
+            if (windowTo is { } to)
+            {
+                int toTick = (int)(to.TotalSeconds * ReplayAnalysis.TicksPerSecond);
+                filtered = filtered.Where(callback => callback.Tick <= toTick);
+            }
+
+            return filtered;
+        }
+    }
 
     protected override void OnParametersSet()
     {
+        duration = ReplayAnalysis.GetDuration(Model.Replay);
+        (windowFrom, windowTo) = TimeWindowFilter.ReadWindow(Navigation, required: false, duration);
+
         callbacksByEndpoint = Model.Replay.Body.UserInput
             .OfType<ReplayInput.SimCallback>()
             .GroupBy(callback => callback.Endpoint)
             .ToDictionary(group => group.Key, group => group.ToList());
+
+        playerItems = Model.Replay.Body.UserInput
+            .OfType<ReplayInput.SimCallback>()
+            .GroupBy(callback => callback.SourceId)
+            .OrderByDescending(group => group.Count())
+            .Select(group => (PlayerName(group.Key), group.Count()))
+            .ToList();
+        HashSet<string> selectedNames = PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name));
+        selectedSources = Enumerable.Range(0, Model.Replay.Header.Clients.Length)
+            .Where(sourceId => selectedNames.Contains(PlayerName(sourceId)))
+            .ToHashSet();
 
         endpointCounts = callbacksByEndpoint
             .Select(pair => (pair.Key, pair.Value.Count))

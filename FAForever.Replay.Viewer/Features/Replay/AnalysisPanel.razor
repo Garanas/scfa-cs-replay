@@ -1,25 +1,66 @@
-<div class="space-y-6">
-    <div class="card">
-        <h3 class="font-semibold">Actions per minute</h3>
-        <p class="mt-1 text-xs text-ink-faint">
-            Actions per minute of game time. All input a player issues within a single simulation tick
-            counts as one action &mdash; drag-building a line of walls would otherwise count once per wall.
-            Pick up to four players.
-        </p>
-        <div class="mt-4">
-            <ApmChart Replay="Model.Replay" />
-        </div>
+@using FAForever.Replay
+@inherits UrlStateComponent
+
+<div class="grid gap-6 lg:grid-cols-[1fr_3fr]">
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
+        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
+        <TimeWindowFilter Duration="duration" />
+
+        <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Players</h3>
+        <PlayerFilterList Items="playerItems" />
     </div>
 
-    <div class="card">
-        <h3 class="font-semibold">Build order</h3>
-        <p class="mt-1 text-xs text-ink-faint">Every construction order a player issued, in game time.</p>
-        <div class="mt-4">
-            <BuildOrderTable Replay="Model.Replay" />
+    <div class="space-y-6">
+        <div class="card">
+            <h3 class="font-semibold">Actions per minute</h3>
+            <p class="mt-1 text-xs text-ink-faint">
+                Actions per minute of game time. All input a player issues within a single simulation tick
+                counts as one action &mdash; drag-building a line of walls would otherwise count once per wall.
+            </p>
+            <div class="mt-4">
+                <ApmChart Replay="Model.Replay" SelectedSourceIds="selectedSourceIds" From="windowFrom" To="windowTo" />
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="font-semibold">Build order</h3>
+            <p class="mt-1 text-xs text-ink-faint">Every construction order of the selected players, in game time.</p>
+            <div class="mt-4">
+                <BuildOrderTable Replay="Model.Replay" SelectedSourceIds="selectedSourceIds" From="windowFrom" To="windowTo" />
+            </div>
         </div>
     </div>
 </div>
 
 @code {
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private TimeSpan duration;
+    private TimeSpan? windowFrom;
+    private TimeSpan? windowTo;
+    private List<(string Name, int Count)> playerItems = [];
+    private List<int> selectedSourceIds = [];
+
+    protected override void OnParametersSet()
+    {
+        Replay replay = Model.Replay;
+        duration = ReplayAnalysis.GetDuration(replay);
+        (windowFrom, windowTo) = TimeWindowFilter.ReadWindow(Navigation, required: false, duration);
+
+        Dictionary<int, int> actions = ReplayAnalysis.CountPlayerActions(replay);
+        List<(int SourceId, string Name, int Count)> roster = actions
+            .OrderByDescending(pair => pair.Value)
+            .Select(pair => (pair.Key, PlayerName(pair.Key), pair.Value))
+            .ToList();
+
+        playerItems = roster.Select(entry => (entry.Name, entry.Count)).ToList();
+        HashSet<string> selectedNames = PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name));
+        selectedSourceIds = roster.Where(entry => selectedNames.Contains(entry.Name)).Select(entry => entry.SourceId).ToList();
+    }
+
+    private string PlayerName(int sourceId)
+    {
+        ReplaySource[] clients = Model.Replay.Header.Clients;
+        return sourceId >= 0 && sourceId < clients.Length ? clients[sourceId].PlayerName : $"Source {sourceId}";
+    }
 }

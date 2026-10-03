@@ -125,9 +125,26 @@ to those two players, on any machine.
 | Parameter | Meaning | Default when absent |
 |---|---|---|
 | `tab` | Active replay section: `players`, `chat`, `events`, `callbacks`, `analysis` | Overview |
-| `players` | Comma-separated chat senders to show | All senders |
-| `from` / `to` | Game-time bounds for chat messages (`12`, `12:30` or `1:02:30`) | Start / end of the replay |
+| `players` | Comma-separated player names to show; shared by Chat, Events, Callbacks and Analysis | All players |
+| `from` / `to` | Game-time window (`12`, `12:30` or `1:02:30`); shared across tabs | See window policy below |
+| `types` | Comma-separated input types shown in the Events stream | All types |
 | `endpoint` | Selected sim-callback endpoint | The most frequent endpoint |
+
+**Window policy** (`TimeWindowFilter.ReadWindow`): one rule on every tab — a window is at most
+**four minutes** (`TimeWindowFilter.MaxWindow`), self-correcting with no error states: reversed
+bounds swap, a single bound implies the other, To is pulled along when the window is too long.
+Events *requires* a window (default `0:00`–`4:00`, kept out of the URL); everywhere else it is
+optional (both parameters absent = whole game). The stepper buttons shift by the window length
+and show it as their label (−4:00 / +4:00).
+Reuse `Features/Replay/TimeWindowFilter.razor` and `PlayerFilterList.razor` for any new filter panel;
+both own their query parameters, and parents re-derive state from the URL in `OnParametersSet`.
+
+**Every component that derives state from the URL must inherit `UrlStateComponent`**
+(`Services/UrlStateComponent.cs`, which also provides the protected `Navigation` property — don't
+`@inject NavigationManager` on top of it). Gotcha it exists for: a query-only navigation does not
+re-render a page whose parameters are unchanged value types — Blazor skips the whole subtree — so a
+filter written by one component would never reach its siblings. The base subscribes to
+`LocationChanged` and re-runs `OnParametersSet` + render.
 
 The pattern, for any new panel with a selection worth sharing:
 

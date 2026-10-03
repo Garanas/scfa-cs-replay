@@ -1,93 +1,81 @@
 @using FAForever.Replay
 
-<div class="flex flex-wrap items-center gap-3">
-    <label class="text-sm font-medium text-ink-muted" for="build-order-player">Player</label>
-    <select id="build-order-player" class="input-field max-w-60" @bind="selectedSourceId" @bind:after="RefreshEntries">
-        @foreach (RosterEntry entry in roster)
-        {
-            <option value="@entry.SourceId">@entry.Name</option>
-        }
-    </select>
-</div>
-
 @if (Entries.Count == 0)
 {
-    <p class="mt-4 text-sm text-ink-muted">No construction orders recorded for this player.</p>
+    <p class="text-sm text-ink-muted">No construction orders match the current filters.</p>
 }
 else
 {
-    <div class="mt-4 max-h-96 overflow-y-auto rounded-md border border-edge">
+    <div class="max-h-96 overflow-y-auto rounded-md border border-edge">
         <table class="w-full text-left text-sm">
             <thead class="sticky top-0 bg-raised text-xs uppercase tracking-wide text-ink-muted">
                 <tr>
                     <th class="px-3 py-2 font-semibold">Time</th>
+                    <th class="px-3 py-2 font-semibold">Player</th>
                     <th class="px-3 py-2 font-semibold">Order</th>
                     <th class="px-3 py-2 font-semibold">Blueprint</th>
                     <th class="px-3 py-2 text-right font-semibold" title="Number of units or factories that received the order">Units</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (ReplayAnalysis.BuildOrderEntry entry in Entries)
+                @foreach (Row row in Entries.Take(MaxRows))
                 {
                     <tr class="border-t border-edge/60 hover:bg-raised/50">
-                        <td class="px-3 py-1.5 font-mono text-ink-muted">@ReplayView.FormatDuration(entry.Timestamp)</td>
-                        <td class="px-3 py-1.5">@OrderLabel(entry.Type)</td>
+                        <td class="px-3 py-1.5 font-mono text-ink-muted">@GameTime.Format(row.Timestamp)</td>
+                        <td class="whitespace-nowrap px-3 py-1.5 font-medium">@row.Player</td>
+                        <td class="px-3 py-1.5">@OrderLabel(row.Type)</td>
                         @* TODO(unit-names): map blueprint ids to unit names via a static lookup. *@
                         <td class="px-3 py-1">
                             <span class="flex items-center gap-2">
-                                <UnitIcon BlueprintId="@entry.BlueprintId" />
-                                <span class="font-mono">@entry.BlueprintId</span>
+                                <UnitIcon BlueprintId="@row.BlueprintId" />
+                                <span class="font-mono">@row.BlueprintId</span>
                             </span>
                         </td>
-                        <td class="px-3 py-1.5 text-right font-mono">@entry.UnitCount</td>
+                        <td class="px-3 py-1.5 text-right font-mono">@row.UnitCount</td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
-    <p class="mt-2 text-xs text-ink-faint">@Entries.Count construction orders.</p>
+    <p class="mt-2 text-xs text-ink-faint">
+        @(Entries.Count > MaxRows ? $"Showing the first {MaxRows} of {Entries.Count:N0} construction orders — narrow the window or the filters." : $"{Entries.Count:N0} construction orders.")
+    </p>
 }
 
 @code {
+    private const int MaxRows = 250;
+
     [Parameter, EditorRequired] public required Replay Replay { get; set; }
 
-    private sealed record RosterEntry(int SourceId, string Name);
+    /// <summary>The players to show, in display order.</summary>
+    [Parameter, EditorRequired] public required IReadOnlyList<int> SelectedSourceIds { get; set; }
 
-    private List<RosterEntry> roster = [];
-    private int selectedSourceId;
-    private Replay? analysedReplay;
+    [Parameter] public TimeSpan? From { get; set; }
 
-    private List<ReplayAnalysis.BuildOrderEntry> Entries { get; set; } = [];
-    private int entriesForSourceId = -1;
+    [Parameter] public TimeSpan? To { get; set; }
+
+    private sealed record Row(TimeSpan Timestamp, string Player, CommandType Type, string BlueprintId, int UnitCount);
+
+    private List<Row> Entries { get; set; } = [];
 
     protected override void OnParametersSet()
     {
-        if (!ReferenceEquals(analysedReplay, Replay))
+        List<Row> rows = [];
+        foreach (int sourceId in SelectedSourceIds)
         {
-            analysedReplay = Replay;
-            Dictionary<int, int> totals = ReplayAnalysis.CountPlayerActions(Replay);
-            roster = Replay.Header.Clients
-                .Select((client, sourceId) => (client, sourceId))
-                .Where(pair => totals.GetValueOrDefault(pair.sourceId) > 0)
-                .OrderByDescending(pair => totals.GetValueOrDefault(pair.sourceId))
-                .Select(pair => new RosterEntry(pair.sourceId, pair.client.PlayerName))
-                .ToList();
-            selectedSourceId = roster.Count > 0 ? roster[0].SourceId : 0;
-            entriesForSourceId = -1;
+            string player = sourceId >= 0 && sourceId < Replay.Header.Clients.Length
+                ? Replay.Header.Clients[sourceId].PlayerName
+                : $"Source {sourceId}";
+            foreach (ReplayAnalysis.BuildOrderEntry entry in ReplayAnalysis.GetBuildOrder(Replay, sourceId))
+            {
+                if ((From is not { } from || entry.Timestamp >= from) && (To is not { } to || entry.Timestamp <= to))
+                {
+                    rows.Add(new Row(entry.Timestamp, player, entry.Type, entry.BlueprintId, entry.UnitCount));
+                }
+            }
         }
 
-        RefreshEntries();
-    }
-
-    private void RefreshEntries()
-    {
-        if (entriesForSourceId == selectedSourceId || analysedReplay is null)
-        {
-            return;
-        }
-
-        entriesForSourceId = selectedSourceId;
-        Entries = ReplayAnalysis.GetBuildOrder(analysedReplay, selectedSourceId);
+        Entries = rows.OrderBy(row => row.Timestamp).ToList();
     }
 
     private static string OrderLabel(CommandType type) => type switch

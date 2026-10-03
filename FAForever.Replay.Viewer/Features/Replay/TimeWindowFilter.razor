@@ -1,0 +1,146 @@
+@inherits UrlStateComponent
+
+@* From/to game-time inputs backed by the shared "from"/"to" query parameters (see
+   AGENTS.md § Shareable view state). The window self-corrects: invalid input is dropped,
+   reversed bounds swap, a single bound implies the other, and the window never exceeds
+   MaxWindow (four minutes). Parents re-read the effective window from the URL with
+   ReadWindow in their own OnParametersSet. *@
+
+<div class="grid grid-cols-2 gap-2 px-3 py-2">
+    <label class="block text-xs text-ink-muted">
+        From
+        <input class="input-field mt-1 px-2 py-1 font-mono text-xs" placeholder="0:00"
+               @bind="fromText" @bind:after="Apply" />
+    </label>
+    <label class="block text-xs text-ink-muted">
+        To
+        <input class="input-field mt-1 px-2 py-1 font-mono text-xs" placeholder="@GameTime.Format(Duration)"
+               @bind="toText" @bind:after="Apply" />
+    </label>
+</div>
+
+@if (Window is { From: { } stepFrom, To: { } stepTo } && stepTo > stepFrom)
+{
+    TimeSpan length = stepTo - stepFrom;
+    <div class="grid grid-cols-2 gap-2 px-3 pb-2">
+        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@(stepFrom <= TimeSpan.Zero)"
+                @onclick="() => Step(-1)">&minus;@GameTime.Format(length)</button>
+        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@(stepTo >= Duration)"
+                @onclick="() => Step(1)">+@GameTime.Format(length)</button>
+    </div>
+}
+
+@code {
+    private const string FromParameter = "from";
+    private const string ToParameter = "to";
+
+    /// <summary>
+    /// The maximum window length, on every tab: windows exist to keep the rendered detail
+    /// views bounded, and one shared length keeps the window meaningful across tab switches.
+    /// </summary>
+    public static readonly TimeSpan MaxWindow = TimeSpan.FromMinutes(4);
+
+    /// <summary>The duration of the replay: upper bound for the window and the stepper.</summary>
+    [Parameter, EditorRequired] public required TimeSpan Duration { get; set; }
+
+    /// <summary>When true a window always exists, defaulting to 0:00 - MaxWindow.</summary>
+    [Parameter] public bool Required { get; set; }
+
+    private string fromText = string.Empty;
+    private string toText = string.Empty;
+
+    private (TimeSpan? From, TimeSpan? To) Window => ReadWindow(Navigation, Required, Duration);
+
+    protected override void OnParametersSet()
+    {
+        (TimeSpan? from, TimeSpan? to) = Window;
+        fromText = from is { } f ? GameTime.Format(f) : string.Empty;
+        toText = to is { } t ? GameTime.Format(t) : string.Empty;
+    }
+
+    /// <summary>
+    /// The effective window according to the URL: either no window at all (both parameters
+    /// absent and not <paramref name="required"/>), or a window of at most <see cref="MaxWindow"/>.
+    /// </summary>
+    public static (TimeSpan? From, TimeSpan? To) ReadWindow(NavigationManager navigation, bool required, TimeSpan duration)
+    {
+        TimeSpan? from = GameTime.TryParse(UrlQuery.Get(navigation, FromParameter));
+        TimeSpan? to = GameTime.TryParse(UrlQuery.Get(navigation, ToParameter));
+
+        if (from is null && to is null && !required)
+        {
+            return (null, null);
+        }
+
+        return Normalize(from, to, duration);
+    }
+
+    /// <summary>
+    /// Turns any combination of bounds into a valid window: reversed bounds swap, a missing
+    /// bound is implied by the other, and the length is capped at <see cref="MaxWindow"/>.
+    /// </summary>
+    private static (TimeSpan From, TimeSpan To) Normalize(TimeSpan? from, TimeSpan? to, TimeSpan duration)
+    {
+        if (from is { } a && to is { } b && b < a)
+        {
+            (from, to) = (b, a);
+        }
+
+        TimeSpan start = from ?? ((to ?? MaxWindow) > MaxWindow ? to!.Value - MaxWindow : TimeSpan.Zero);
+        TimeSpan end = to ?? start + MaxWindow;
+        if (end - start > MaxWindow)
+        {
+            end = start + MaxWindow;
+        }
+
+        return (start, end < duration ? end : duration);
+    }
+
+    private void Apply()
+    {
+        TimeSpan? from = GameTime.TryParse(fromText);
+        TimeSpan? to = GameTime.TryParse(toText);
+
+        if (from is null && to is null)
+        {
+            Write(null, null);
+            return;
+        }
+
+        (TimeSpan start, TimeSpan end) = Normalize(from, to, Duration);
+        Write(start, end);
+    }
+
+    private void Step(int direction)
+    {
+        if (Window is not { From: { } start, To: { } end } || end <= start)
+        {
+            return;
+        }
+
+        TimeSpan length = end - start;
+        TimeSpan upperBound = Duration > length ? Duration - length : TimeSpan.Zero;
+        TimeSpan newFrom = Clamp(start + direction * length, TimeSpan.Zero, upperBound);
+        Write(newFrom, newFrom + length);
+    }
+
+    private void Write(TimeSpan? from, TimeSpan? to)
+    {
+        if (Required && from is { Ticks: 0 } && to is { } end && end == DefaultTo)
+        {
+            // The default window stays out of the URL, per the shareable-URL convention.
+            (from, to) = (null, null);
+        }
+
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            [FromParameter] = from is { } f ? GameTime.Format(f) : null,
+            [ToParameter] = to is { } t ? GameTime.Format(t) : null,
+        }), replace: true);
+    }
+
+    private TimeSpan DefaultTo => MaxWindow < Duration ? MaxWindow : Duration;
+
+    private static TimeSpan Clamp(TimeSpan value, TimeSpan min, TimeSpan max)
+        => value < min ? min : value > max ? max : value;
+}
