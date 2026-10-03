@@ -1,0 +1,289 @@
+@using FAForever.Replay
+@inherits UrlStateComponent
+@inject IJSRuntime JS
+
+@* The drawings (brush strokes) and pings of the players on the map. Built for moderation:
+   the shared from/to and players parameters decide exactly what is drawn, so the address of
+   the page is the evidence — a drawing made of several strokes shows up as a whole when the
+   window covers all of them. "Focus" narrows the window around one item in a single click. *@
+
+<div class="grid gap-6 lg:grid-cols-[1fr_3fr]">
+    <div class="card max-h-[80vh] self-start overflow-y-auto p-2">
+        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
+        <TimeWindowFilter Duration="duration" />
+        <label class="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm">
+            <input type="checkbox" class="accent-primary" checked="@showPings" @onchange="TogglePings" />
+            Show pings
+        </label>
+
+        <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Players</h3>
+        @if (playerItems.Count == 0)
+        {
+            <p class="px-3 py-1.5 text-sm text-ink-muted">Nobody drew or pinged.</p>
+        }
+        else
+        {
+            <PlayerFilterList Items="playerItems" />
+        }
+
+        <p class="px-3 pb-2 pt-4 text-xs text-ink-faint">
+            In game, drawings are only shown to the author's allies and to observers, and fade after
+            25 seconds. Drawings by observers are not stored in the replay.
+        </p>
+    </div>
+
+    <div class="card flex flex-col gap-4 self-start">
+        <div class="flex flex-wrap items-center gap-2">
+            <p class="text-sm text-ink-muted">
+                <span class="font-semibold text-ink">@visible.Count(item => item.Drawing is not null).ToString("N0")</span> drawings,
+                <span class="font-semibold text-ink">@visible.Count(item => item.Ping is not null).ToString("N0")</span> pings
+                @(windowFrom is { } from && windowTo is { } to ? $"between {GameTime.Format(from)} and {GameTime.Format(to)}" : "in the whole game")
+            </p>
+            <div class="ml-auto flex gap-2">
+                <button type="button" class="btn-secondary px-3 py-1 text-xs" @onclick="ToggleZoom">
+                    @(fitToItems ? "Show whole map" : "Zoom to drawings")
+                </button>
+                <button type="button" class="btn-secondary px-3 py-1 text-xs" @onclick="CopyLink"
+                        title="Copy a link to exactly this view">
+                    @(copied ? "Link copied" : "Copy link")
+                </button>
+            </div>
+        </div>
+
+        <div class="mx-auto w-full max-w-[70vh]">
+            <MapCanvas Model="Model" ViewBox="viewBox" AriaLabel="Drawings and pings of the players">
+                @foreach (MapItem item in visible)
+                {
+                    bool dimmed = hovered is { } key && key != item.Key;
+                    bool highlighted = hovered == item.Key;
+                    string color = ColorOf(item);
+                    <g class="cursor-pointer" opacity="@(dimmed ? "0.3" : "1")" @onclick="() => Focus(item)">
+                        <title>@ItemTitle(item) — click to focus</title>
+                        @if (item.Drawing is { } drawing)
+                        {
+                            string points = string.Join(' ', drawing.Points.Select(point => $"{Fmt(point.X)},{Fmt(point.Z)}"));
+                            <polyline points="@points" fill="none" stroke="rgba(10, 12, 18, 0.75)" stroke-width="@(highlighted ? 9 : 6)"
+                                      stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+                            <polyline points="@points" fill="none" stroke="@color" stroke-width="@(highlighted ? 5 : 3)"
+                                      stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+                        }
+                        else if (item.Ping is { } ping)
+                        {
+                            <circle cx="@Fmt(ping.X)" cy="@Fmt(ping.Z)" r="@Fmt(PingRadius * (highlighted ? 1.4 : 1))" fill="rgba(10, 12, 18, 0.6)"
+                                    stroke="@color" stroke-width="@(highlighted ? 4 : 2.5)" vector-effect="non-scaling-stroke" />
+                            @MapCanvas.SvgLabel(ping.X, ping.Z + PingRadius * 0.45, PingGlyph(ping.Type), PingRadius * 1.25)
+                            @if (ping.Name is { } name)
+                            {
+                                @MapCanvas.SvgLabel(ping.X, ping.Z + PingRadius * 2.6, name, PingRadius * 1.1)
+                            }
+                        }
+                    </g>
+                }
+            </MapCanvas>
+        </div>
+
+        @if (visible.Count == 0)
+        {
+            <p class="text-center text-sm text-ink-muted">
+                @(allItems.Count == 0 ? "No drawings or pings in this replay." : "No drawings or pings match the filters.")
+            </p>
+        }
+        else
+        {
+            <div class="max-h-[40vh] overflow-y-auto rounded-lg border border-edge">
+                <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-raised text-left text-xs uppercase tracking-wide text-ink-muted">
+                        <tr>
+                            <th class="px-4 py-2 font-semibold">Time</th>
+                            <th class="px-4 py-2 font-semibold">Player</th>
+                            <th class="px-4 py-2 font-semibold">What</th>
+                            <th class="px-4 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (MapItem item in visible)
+                        {
+                            <tr class="@(hovered == item.Key ? "bg-raised" : "") border-t border-edge/60"
+                                @onmouseenter="() => hovered = item.Key" @onmouseleave="() => hovered = null">
+                                <td class="whitespace-nowrap px-4 py-1.5 font-mono text-xs text-ink-muted">@FormatTime(item.Timestamp)</td>
+                                <td class="whitespace-nowrap px-4 py-1.5"><PlayerLabel Name="@PlayerName(item.SourceId)" Color="@colorsBySource.GetValueOrDefault(item.SourceId)" /></td>
+                                <td class="px-4 py-1.5">@Describe(item)</td>
+                                <td class="px-4 py-1.5 text-right">
+                                    <button type="button" class="btn-secondary px-2 py-0.5 text-xs" @onclick="() => Focus(item)"
+                                            title="Show only the moment around this item">Focus</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private const string PingsParameter = "pings";
+    private const string ZoomParameter = "zoom";
+
+    /// <summary>Focus widens the window this much on both sides of an item.</summary>
+    private static readonly TimeSpan FocusMargin = TimeSpan.FromSeconds(5);
+
+    /// <summary>The smallest part of the map the view zooms in to, as a fraction of its size.</summary>
+    private const double MinZoom = 1.0 / 5;
+
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    /// <summary>A drawing or a ping; <see cref="Key"/> is stable for a replay.</summary>
+    private sealed record MapItem(int Key, TimeSpan Timestamp, int SourceId, ReplayDrawing? Drawing, ReplayPing? Ping);
+
+    private LoadedReplay? extractedFrom;
+    private List<MapItem> allItems = [];
+    private List<MapItem> visible = [];
+    private List<(string Name, int Count, string? Color)> playerItems = [];
+    private Dictionary<int, string> colorsBySource = [];
+    private TimeSpan duration;
+    private TimeSpan? windowFrom;
+    private TimeSpan? windowTo;
+    private bool showPings = true;
+    private bool fitToItems = true;
+    private MapCanvas.MapViewBox? viewBox;
+    private int? hovered;
+    private bool copied;
+
+    private double PingRadius => (viewBox?.Width ?? MapCanvas.MapSize(Model.Replay.Header).X) / 70;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(extractedFrom, Model))
+        {
+            // Extract once per replay: OnParametersSet re-runs on every query change.
+            extractedFrom = Model;
+            duration = ReplayAnalysis.GetDuration(Model.Replay);
+            colorsBySource = GameColors.BySource(Model.Replay.Header);
+            allItems = ReplaySemantics.GetDrawings(Model.Replay)
+                .Select(drawing => (drawing.Timestamp, drawing.SourceId, (ReplayDrawing?)drawing, (ReplayPing?)null))
+                .Concat(ReplaySemantics.GetPings(Model.Replay)
+                    .Select(ping => (ping.Timestamp, ping.SourceId, (ReplayDrawing?)null, (ReplayPing?)ping)))
+                .OrderBy(item => item.Timestamp)
+                .Select((item, index) => new MapItem(index, item.Timestamp, item.SourceId, item.Item3, item.Item4))
+                .ToList();
+            playerItems = allItems
+                .GroupBy(item => item.SourceId)
+                .OrderByDescending(group => group.Count())
+                .ThenBy(group => PlayerName(group.Key))
+                .Select(group => (PlayerName(group.Key), group.Count(), colorsBySource.GetValueOrDefault(group.Key)))
+                .ToList();
+        }
+
+        // The URL is the source of truth for every filter, so the view can be shared as evidence.
+        (windowFrom, windowTo) = TimeWindowFilter.ReadWindow(Navigation, required: false, duration);
+        showPings = !string.Equals(UrlQuery.Get(Navigation, PingsParameter), "off", StringComparison.OrdinalIgnoreCase);
+        fitToItems = !string.Equals(UrlQuery.Get(Navigation, ZoomParameter), "map", StringComparison.OrdinalIgnoreCase);
+        HashSet<string> selectedNames = PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name));
+
+        visible = allItems
+            .Where(item => showPings || item.Ping is null)
+            .Where(item => selectedNames.Contains(PlayerName(item.SourceId)))
+            .Where(item => windowFrom is not { } from || item.Timestamp >= from)
+            .Where(item => windowTo is not { } to || item.Timestamp <= to)
+            .ToList();
+        viewBox = fitToItems ? FitTo(visible) : null;
+        copied = false;
+    }
+
+    /// <summary>
+    /// The part of the map that holds every visible item, with some margin. Keeps the aspect
+    /// ratio of the map (so the layout does not jump while filtering), never zooms in further
+    /// than <see cref="MinZoom"/> (the preview gets blurry) and stays within the map.
+    /// </summary>
+    private MapCanvas.MapViewBox? FitTo(IReadOnlyList<MapItem> items)
+    {
+        IEnumerable<(double X, double Z)> positions = items.SelectMany(item => item.Drawing is { } drawing
+            ? drawing.Points.Select(point => ((double)point.X, (double)point.Z))
+            : [((double)item.Ping!.X, (double)item.Ping.Z)]);
+        if (!positions.Any())
+        {
+            return null;
+        }
+
+        (int mapX, int mapZ) = MapCanvas.MapSize(Model.Replay.Header);
+        double minX = positions.Min(p => p.X), maxX = positions.Max(p => p.X);
+        double minZ = positions.Min(p => p.Z), maxZ = positions.Max(p => p.Z);
+
+        double scale = Math.Max(Math.Max((maxX - minX) / mapX, (maxZ - minZ) / mapZ) * 1.3, MinZoom);
+        if (scale >= 1)
+        {
+            return null;
+        }
+
+        double width = mapX * scale, height = mapZ * scale;
+        double x = Math.Clamp((minX + maxX - width) / 2, 0, mapX - width);
+        double z = Math.Clamp((minZ + maxZ - height) / 2, 0, mapZ - height);
+        return new MapCanvas.MapViewBox(x, z, width, height);
+    }
+
+    private void Focus(MapItem item)
+    {
+        TimeSpan second = TimeSpan.FromSeconds(Math.Floor(item.Timestamp.TotalSeconds));
+        TimeSpan from = second > FocusMargin ? second - FocusMargin : TimeSpan.Zero;
+        TimeSpan to = second + FocusMargin + TimeSpan.FromSeconds(1);
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["from"] = GameTime.Format(from),
+            ["to"] = GameTime.Format(to < duration ? to : duration),
+        }), replace: true);
+    }
+
+    private void TogglePings()
+        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(PingsParameter, showPings ? "off" : null), replace: true);
+
+    private void ToggleZoom()
+        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(ZoomParameter, fitToItems ? "map" : null), replace: true);
+
+    private async Task CopyLink()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Navigation.Uri);
+            copied = true;
+        }
+        catch (JSException)
+        {
+            // Clipboard access can be denied; the address bar still holds the same link.
+        }
+    }
+
+    private string ColorOf(MapItem item)
+        => item.Ping?.Color ?? colorsBySource.GetValueOrDefault(item.SourceId) ?? "#ffffff";
+
+    private string ItemTitle(MapItem item) => $"{PlayerName(item.SourceId)} — {Describe(item)} at {FormatTime(item.Timestamp)}";
+
+    private static string Describe(MapItem item) => item switch
+    {
+        { Drawing: { } drawing } => $"Drawing ({drawing.Points.Count} points)",
+        { Ping: { Name: { } name } ping } => $"{ping.Type} ping “{name}”",
+        { Ping: { } ping } => $"{ping.Type} ping",
+        _ => string.Empty,
+    };
+
+    private static string PingGlyph(string type) => type.ToLowerInvariant() switch
+    {
+        "alert" => "!",
+        "attack" => "✕",
+        "move" => "➜",
+        "marker" => "◆",
+        "nuke" => "☢",
+        _ => "•",
+    };
+
+    /// <summary>Game time with tenths: strokes of one drawing are often seconds apart.</summary>
+    private static string FormatTime(TimeSpan time) => $"{GameTime.Format(time)}.{time.Milliseconds / 100}";
+
+    private static string Fmt(double value) => MapCanvas.Fmt(value);
+
+    private string PlayerName(int sourceId)
+    {
+        ReplaySource[] clients = Model.Replay.Header.Clients;
+        return sourceId >= 0 && sourceId < clients.Length ? clients[sourceId].PlayerName : $"Source {sourceId}";
+    }
+}

@@ -1,0 +1,80 @@
+@using FAForever.Replay
+
+@* The map as an SVG in world coordinates: (0,0) is the top-left corner, X right, Z down, so
+   overlays (ChildContent) can use positions from the replay as-is. The vault preview is an
+   SVG image spanning the whole map, which keeps it aligned when ViewBox zooms in on a part of
+   the map; generated maps without a preview show the themed grid backdrop instead. *@
+
+<div class="map-grid relative w-full overflow-hidden rounded-lg border border-edge" style="aspect-ratio: @Fmt(view.Width) / @Fmt(view.Height)">
+    <svg class="absolute inset-0 h-full w-full" viewBox="@Fmt(view.X) @Fmt(view.Z) @Fmt(view.Width) @Fmt(view.Height)"
+         role="img" aria-label="@AriaLabel">
+        @if (PreviewUrl is { } previewUrl)
+        {
+            <image href="@previewUrl" x="0" y="0" width="@size.X" height="@size.Z" preserveAspectRatio="none"
+                   onerror="this.style.display='none'"><title>Map preview of @MapName</title></image>
+        }
+        @ChildContent
+    </svg>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    /// <summary>The visible part of the map in world units; the whole map when null.</summary>
+    [Parameter] public MapViewBox? ViewBox { get; set; }
+
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>SVG elements drawn on top of the map, in world coordinates.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>A rectangle of the map in world units.</summary>
+    public sealed record MapViewBox(double X, double Z, double Width, double Height);
+
+    private (int X, int Z) size = (1024, 1024);
+    private MapViewBox view = new(0, 0, 1024, 1024);
+
+    private string MapName => Model.Replay.Header.Scenario.Map.DisplayName ?? Model.Metadata?.mapname ?? "map";
+
+    private string? PreviewUrl
+    {
+        get
+        {
+            string? folder = Model.Metadata?.mapname;
+            if (folder is null && Model.Replay.Header.Scenario.Map.SCMapReference is { Length: > 0 } reference)
+            {
+                string[] segments = reference.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                folder = segments.Length >= 2 ? segments[^2] : null;
+            }
+
+            return folder is { Length: > 0 }
+                ? $"https://content.faforever.com/maps/previews/large/{folder.ToLowerInvariant()}.png"
+                : null;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        size = MapSize(Model.Replay.Header);
+        view = ViewBox ?? new MapViewBox(0, 0, size.X, size.Z);
+    }
+
+    /// <summary>
+    /// The playable size of the map in world units, falling back to 20x20 km when the
+    /// scenario does not say.
+    /// </summary>
+    public static (int X, int Z) MapSize(ReplayHeader header)
+    {
+        ReplayScenarioMap map = header.Scenario.Map;
+        return (map.SizeX is > 0 and int x ? x : 1024, map.SizeZ is > 0 and int z ? z : 1024);
+    }
+
+    public static string Fmt(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// A text label in world coordinates. Razor reserves the &lt;text&gt; tag, so the element is
+    /// emitted as markup; white fill with a dark stroke stays readable on any backdrop.
+    /// </summary>
+    public static MarkupString SvgLabel(double x, double y, string content, double fontSize)
+        => new($"<text x=\"{Fmt(x)}\" y=\"{Fmt(y)}\" text-anchor=\"middle\" font-size=\"{Fmt(fontSize)}\" font-weight=\"600\" fill=\"#ffffff\" stroke=\"rgba(10, 12, 18, 0.8)\" stroke-width=\"{Fmt(fontSize * 0.19)}\" paint-order=\"stroke\" pointer-events=\"none\">{System.Net.WebUtility.HtmlEncode(content)}</text>");
+}

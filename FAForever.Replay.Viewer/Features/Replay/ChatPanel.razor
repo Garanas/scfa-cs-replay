@@ -1,7 +1,26 @@
 @using FAForever.Replay
 @inherits UrlStateComponent
 
-@if (allMessages.Count == 0)
+@* Two views on what the players communicated: the chat messages, and what they drew and
+   pinged on the map. The sub-tab lives in the "view" query parameter; the time window and
+   the player selection are shared by both. *@
+
+<div class="segmented mb-4" role="tablist" aria-label="Chat views">
+    <button type="button" role="tab" aria-selected="@(!showMap)" class="segmented-item @(showMap ? "" : "active")"
+            @onclick="() => SelectView(map: false)">
+        Messages <span class="badge">@allMessages.Count.ToString("N0")</span>
+    </button>
+    <button type="button" role="tab" aria-selected="@showMap" class="segmented-item @(showMap ? "active" : "")"
+            @onclick="() => SelectView(map: true)">
+        Drawings &amp; pings <span class="badge">@mapItemCount.ToString("N0")</span>
+    </button>
+</div>
+
+@if (showMap)
+{
+    <DrawingsPanel Model="Model" />
+}
+else if (allMessages.Count == 0)
 {
     <div class="card text-center text-sm text-ink-muted">No chat messages in this replay.</div>
 }
@@ -23,6 +42,8 @@ else
 }
 
 @code {
+    private const string ViewParameter = "view";
+
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
     private List<ReplayChatMessage> allMessages = [];
@@ -32,6 +53,9 @@ else
     private TimeSpan duration;
     private TimeSpan? fromTime;
     private TimeSpan? toTime;
+    private bool showMap;
+    private LoadedReplay? countedFrom;
+    private int mapItemCount;
 
     private IEnumerable<ReplayChatMessage> FilteredMessages
     {
@@ -55,7 +79,14 @@ else
 
     protected override void OnParametersSet()
     {
+        // Absent or unknown means the messages, so the default stays out of the URL.
+        showMap = string.Equals(UrlQuery.Get(Navigation, ViewParameter), "map", StringComparison.OrdinalIgnoreCase);
         allMessages = ReplaySemantics.GetChatMessages(Model.Replay);
+        if (!ReferenceEquals(countedFrom, Model))
+        {
+            countedFrom = Model;
+            mapItemCount = ReplaySemantics.GetDrawings(Model.Replay).Count + ReplaySemantics.GetPings(Model.Replay).Count;
+        }
         duration = ReplayAnalysis.GetDuration(Model.Replay);
         colorsByName = GameColors.ByName(Model.Replay.Header);
         senders = allMessages
@@ -68,5 +99,11 @@ else
         // The URL is the source of truth for both filters.
         selectedSenders = PlayerFilterList.SelectedFrom(Navigation, senders.Select(pair => pair.Sender));
         (fromTime, toTime) = TimeWindowFilter.ReadWindow(Navigation, required: false, duration);
+    }
+
+    private void SelectView(bool map)
+    {
+        showMap = map;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(ViewParameter, map ? "map" : null), replace: true);
     }
 }

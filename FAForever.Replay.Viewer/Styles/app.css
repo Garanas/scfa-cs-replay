@@ -164,6 +164,19 @@
         @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-edge bg-raised px-4 py-2 text-sm font-semibold text-ink transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-50;
     }
 
+    /* Sub-tabs within a replay section (e.g. Chat: Messages | Map). */
+    .segmented {
+        @apply inline-flex gap-1 rounded-lg border border-edge bg-surface p-1;
+    }
+
+    .segmented-item {
+        @apply inline-flex cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink;
+    }
+
+    .segmented-item.active {
+        @apply bg-raised font-semibold text-primary;
+    }
+
     .card {
         @apply rounded-xl border border-edge bg-surface p-6;
     }
