@@ -30,11 +30,12 @@
 
         <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Export</h3>
         <div class="px-3 pb-2">
-            <button type="button" class="btn-secondary w-full px-3 py-1.5 text-sm" disabled="@(visible.Count == 0)" @onclick="CopyPrompt">
+            <button type="button" class="btn-secondary w-full px-3 py-1.5 text-sm" disabled="@(promptEntries.Count == 0)" @onclick="CopyPrompt">
                 @(copied ? "Copied!" : "Copy as AI prompt")
             </button>
             <p class="mt-2 text-xs text-ink-faint">
-                The @visible.Count.ToString("N0") entries shown, with the players and instructions, to paste into an AI
+                @promptEntries.Count.ToString("N0") entries of the selected players &mdash; the kinds shown, plus always their
+                chat, pings and drawings &mdash; with instructions and how to link back here, to paste into an AI
                 assistant for a first analysis. It contains player names and chat.
             </p>
         </div>
@@ -86,6 +87,7 @@
     private LoadedReplay? parsedModel;
     private List<ModerationEntry> rows = [];
     private List<ModerationEntry> visible = [];
+    private List<ModerationEntry> promptEntries = [];
     private TimeSpan duration;
     private Dictionary<string, string> colorsByName = [];
     private List<(string Name, int Count, string? Color)> playerItems = [];
@@ -132,6 +134,9 @@
         visible = rows
             .Where(row => selectedNames.Contains(row.Player) && selectedKinds.Contains(row.Kind))
             .ToList();
+        promptEntries = rows
+            .Where(row => selectedNames.Contains(row.Player) && (selectedKinds.Contains(row.Kind) || ModerationLog.IsCommunication(row.Kind)))
+            .ToList();
     }
 
     private void ToggleKind(ModerationKind kind)
@@ -147,10 +152,10 @@
         Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(KindsParameter, value), replace: true);
     }
 
-    /// <summary>Copies the shown entries as a prompt, and confirms it on the button for a moment.</summary>
+    /// <summary>Copies the entries as a prompt, and confirms it on the button for a moment.</summary>
     private async Task CopyPrompt()
     {
-        string prompt = ModerationLog.BuildPrompt(Model, visible, Navigation.Uri);
+        string prompt = ModerationLog.BuildPrompt(Model, promptEntries, Navigation.Uri, Navigation.BaseUri);
         if (!await JS.InvokeAsync<bool>("fafReplay.copyText", prompt))
         {
             return;

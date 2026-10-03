@@ -73,7 +73,7 @@ to those two players, on any machine.
 | `from` / `to` | Game-time window (`12`, `12:30` or `1:02:30`); shared across tabs | See window policy below |
 | `types` | Comma-separated input types shown in the Events stream | All types |
 | `endpoint` | Selected sim-callback endpoint | The most frequent endpoint |
-| `kinds` | Comma-separated entry kinds on the Moderation tab (`Features/Replay/ModerationLog.cs`): `chat`, `selfdestruct`, `giveunits`, `recall`, `pause`, `left`, `focus`, `marker`, `ping`, `server`, `other` | All kinds but `chat` |
+| `kinds` | Comma-separated entry kinds on the Moderation tab (`Features/Replay/ModerationLog.cs`): `chat`, `selfdestruct`, `giveunits`, `recall`, `pause`, `left`, `focus`, `marker`, `ping`, `drawing`, `server`, `other` | All kinds but `chat` |
 | `pings` | `off` hides pings on the Chat tab (map and feed) | Pings shown |
 | `compare` | The two players of the Build order tab, `Left,Right` (unknown names fall back per slot) | The first army vs the first army of another team |
 | `view` | Below the maps on the Build order tab: `timings` shows key moments and units ordered per minute, `units` the units (entities) of both players | The order ledger |
@@ -150,6 +150,44 @@ based on, and they end up in moderation records. Treat them as a public contract
 - **Check it before merging** a change to a replay tab: set up a view, copy the address, open it in
   a private window (signed out) and confirm the identical view, selection included. Then add the
   parameter to the table above.
+
+## Moderation tab and the AI prompt
+
+The Moderation tab (`Features/Replay/ModerationPanel.razor`) lists everything a moderator reads
+through; `Features/Replay/ModerationLog.cs` collects it and builds the AI prompt, so the table and
+the prompt always show the same entries.
+
+- **Sources** (`ModerationLog.Collect`): the game's own `ModeratorEvent` log, plus what that log
+  leaves out — chat (`GetChatMessages`), pings and markers with their position (`GetPings`; the
+  position-less copies in the moderator log are dropped), drawings with the area they cover
+  (`GetDrawings`), units given away (`GiveUnitsToPlayer`), recall votes (`SetRecallVote`), pause
+  requests and players leaving (`CommandSourceTerminated`). Left out on purpose: the resume every
+  client sends at tick 0, chat to `notify` (automatic upgrade notices), and the content of
+  `GpgNetSend 'JsonStats'` (kilobytes of end-of-game statistics; reduced to one line, the Callbacks
+  tab keeps the full text). Everything else is shown verbatim — it is evidence.
+- **Kinds** (`ModerationKind`): the query values of `kinds` are the lowercase enum names, so
+  renaming a member breaks links (see "Names and formats are stable"). Chat is off by default
+  (`ShownByDefault`); chat, pings, markers and drawings are communication (`IsCommunication`).
+- **Player names, not army numbers:** callbacks carry 1-based army numbers (`To`, `From`); entries
+  show the player's name, with the number in brackets where it matters.
+- **The AI prompt** ("Copy as AI prompt", `ModerationLog.BuildPrompt`) holds the selected players'
+  entries of the selected kinds, plus always their communication. It has fixed sections: the
+  instructions (summarise per player, cite game times, link every finding, stick to the log, leave
+  the decision to the moderator), the game (replay, current view, map with its size), the players
+  (army number, team, faction, rating), what each kind means (including the coordinate system),
+  how to build links, and the log. The instructions must keep the model from guessing intent or
+  deciding on a punishment.
+- **The prompt only goes to the clipboard.** The app never sends replay data or chat to an AI
+  service itself; the moderator decides where to paste it. The note under the button says the
+  prompt contains player names and chat.
+- **The prompt's "Links" section is a hand-written copy of the URL contract above** (tabs,
+  `players`, `from`/`to`, `at`, `kinds`, the four-minute window, the time format) and is built
+  from `Navigation.BaseUri`, so links point to wherever the app runs. When a tab, parameter, kind
+  or the window policy changes, update `ModerationLog.AppendLinks` and the kinds list in it in the
+  same change, or the AI will produce links that no longer open the right view. Check one generated
+  link by opening it.
+- New moderation-relevant data goes into `Collect` (with a kind, a label in `Label` and a line in
+  the prompt's "What the entries mean"), never only into the panel.
 
 ## Unit icon atlas
 

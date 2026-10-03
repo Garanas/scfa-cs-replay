@@ -40,6 +40,7 @@
     /// <summary>
     /// The maximum window length, on every tab: windows exist to keep the rendered detail
     /// views bounded, and one shared length keeps the window meaningful across tab switches.
+    /// The AI prompt explains this limit too (<see cref="ModerationLog"/>, "Links"): keep it in step.
     /// </summary>
     public static readonly TimeSpan MaxWindow = TimeSpan.FromMinutes(4);
 

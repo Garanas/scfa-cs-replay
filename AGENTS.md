@@ -12,7 +12,7 @@ project:
   data, Lua booleans), game-data tables.
 - **UI work** (`FAForever.Replay.Viewer`): [`FAForever.Replay.Viewer/AGENTS.md`](FAForever.Replay.Viewer/AGENTS.md)
   — WebAssembly rules, styling and theming, icons, shareable view state (the URL guardrails),
-  analytics, Playwright.
+  the Moderation tab and its AI prompt, analytics, Playwright.
 
 ## Solution layout
 

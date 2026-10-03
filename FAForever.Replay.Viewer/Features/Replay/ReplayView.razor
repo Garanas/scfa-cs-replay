@@ -132,6 +132,8 @@
         Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("tab", TabQueryValue(tab)), replace: true);
     }
 
+    // The tab query values are part of the link contract, which the AI prompt also teaches
+    // (ModerationLog.AppendLinks): never rename one, and update the prompt when tabs change.
     private static Tab ParseTab(string? value) => value?.ToLowerInvariant() switch
     {
         "players" => Tab.Players,
