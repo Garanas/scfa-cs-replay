@@ -1,5 +1,6 @@
 @page "/search"
-@implements IDisposable
+@inherits UrlStateComponent
+@using System.Globalization
 @inject FafApiClient Api
 @inject AuthService Auth
 
@@ -18,7 +19,7 @@
         </div>
     </NotAuthorized>
     <Authorized>
-        <form class="card mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" @onsubmit="SearchFromStart" @onsubmit:preventDefault>
+        <form class="card mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.4fr)]" @onsubmit="SubmitSearch" @onsubmit:preventDefault>
             <label class="block text-sm">
                 <span class="mb-1 block font-medium text-ink-muted">Player</span>
                 <input class="input-field" placeholder="Exact name, * as wildcard" @bind="playerName" />
@@ -39,14 +40,22 @@
                 </select>
             </label>
             <label class="block text-sm">
-                <span class="mb-1 block font-medium text-ink-muted">Played after</span>
-                <input type="date" class="input-field" @bind="playedAfter" />
+                <span class="mb-1 block font-medium text-ink-muted">Played around</span>
+                <span class="flex gap-2">
+                    <input type="date" class="input-field min-w-0 flex-1" @bind="playedAround" />
+                    <select class="input-field w-auto" @bind="period" aria-label="Period around the date">
+                        @foreach (SearchPeriod option in Enum.GetValues<SearchPeriod>())
+                        {
+                            <option value="@option">± @PeriodName(option)</option>
+                        }
+                    </select>
+                </span>
             </label>
             <div class="flex items-end gap-3 sm:col-span-2 lg:col-span-4">
                 <button type="submit" class="btn-primary" disabled="@isSearching">Search</button>
                 @if (Auth.Session?.UserName is { } ownName)
                 {
-                    <button type="button" class="btn-secondary" disabled="@isSearching" @onclick="() => SearchOwnReplaysAsync(ownName)">My replays</button>
+                    <button type="button" class="btn-secondary" disabled="@isSearching" @onclick="() => SearchOwnReplays(ownName)">My replays</button>
                 }
                 <label class="ml-auto flex items-center gap-2 text-sm text-ink-muted">
                     <input type="checkbox" class="accent-primary" @bind="finishedOnly" />
@@ -78,16 +87,20 @@
                     <p class="text-sm text-ink-muted">
                         @(search.TotalRecords is { } total ? $"{total:N0} games found" : "Results")
                         @(search.TotalPages is { } pages ? $" · page {search.Page} of {pages:N0}" : $" · page {search.Page}")
+                        @if (activeQuery?.PlayedWindow is { } window)
+                        {
+                            <span> · played @window.From.ToString("yyyy-MM-dd") – @window.To.ToString("yyyy-MM-dd")</span>
+                        }
                     </p>
                     <div class="mt-3 grid gap-4 md:grid-cols-2">
                         @foreach (GameSummary game in search.Games)
                         {
-                            <GameCard Game="game" HighlightedPlayer="@searchedPlayer" />
+                            <GameCard Game="game" HighlightedPlayer="@activeQuery?.PlayerName" />
                         }
                     </div>
                     <div class="mt-6 flex items-center justify-center gap-3">
-                        <button type="button" class="btn-secondary" disabled="@(isSearching || search.Page <= 1)" @onclick="() => SearchAsync(search.Page - 1)">Previous</button>
-                        <button type="button" class="btn-secondary" disabled="@(isSearching || (search.TotalPages is { } totalPages && search.Page >= totalPages))" @onclick="() => SearchAsync(search.Page + 1)">Next</button>
+                        <button type="button" class="btn-secondary" disabled="@(isSearching || search.Page <= 1)" @onclick="() => GoToPage(search.Page - 1)">Previous</button>
+                        <button type="button" class="btn-secondary" disabled="@(isSearching || (search.TotalPages is { } totalPages && search.Page >= totalPages))" @onclick="() => GoToPage(search.Page + 1)">Next</button>
                     </div>
                 }
             }
@@ -102,46 +115,152 @@
 </AuthorizeView>
 
 @code {
+    // The URL is the source of truth (AGENTS.md § Shareable view state): the form writes the
+    // criteria to the query string and OnParametersSet runs the search they describe, so the
+    // browser's Back button and shared links restore both the form and the results. A bare
+    // /search lists the most recent games.
     private string playerName = string.Empty;
     private string mapName = string.Empty;
     private string featuredMod = string.Empty;
-    private DateTime? playedAfter;
+    private DateTime? playedAround;
+    private SearchPeriod period = SearchPeriod.Year;
     private bool finishedOnly = true;
 
     private bool isSearching;
     private string? error;
     private GameSearchResult? result;
-    private string? searchedPlayer;
+    private GameSearchQuery? activeQuery;
     private CancellationTokenSource? searchCancellation;
 
-    private Task SearchFromStart() => SearchAsync(1);
-
-    private async Task SearchOwnReplaysAsync(string ownName)
+    protected override void OnParametersSet()
     {
-        playerName = ownName;
-        await SearchAsync(1);
+        // LocationChanged also fires when navigating away (e.g. to a replay); only react to our own URL.
+        if (!Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Equals("search", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        GameSearchQuery query = ReadQuery();
+        if (query == activeQuery)
+        {
+            return;
+        }
+
+        playerName = query.PlayerName;
+        mapName = query.MapName;
+        featuredMod = query.FeaturedMod;
+        playedAround = query.PlayedAround?.ToDateTime(TimeOnly.MinValue);
+        period = query.Period;
+        finishedOnly = query.FinishedOnly;
+        _ = SearchAsync(query);
     }
 
-    private async Task SearchAsync(int page)
+    private GameSearchQuery ReadQuery() => new()
+    {
+        PlayerName = UrlQuery.Get(Navigation, "player")?.Trim() ?? string.Empty,
+        MapName = UrlQuery.Get(Navigation, "map")?.Trim() ?? string.Empty,
+        FeaturedMod = UrlQuery.Get(Navigation, "mod")?.Trim() ?? string.Empty,
+        PlayedAround = DateOnly.TryParseExact(UrlQuery.Get(Navigation, "around"), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly around) ? around : null,
+        Period = ParsePeriod(UrlQuery.Get(Navigation, "within")),
+        FinishedOnly = !string.Equals(UrlQuery.Get(Navigation, "finished"), "false", StringComparison.OrdinalIgnoreCase),
+        Page = int.TryParse(UrlQuery.Get(Navigation, "page"), out int page) && page > 1 ? page : 1,
+    };
+
+    private GameSearchQuery QueryFromForm() => new()
+    {
+        PlayerName = playerName.Trim(),
+        MapName = mapName.Trim(),
+        FeaturedMod = featuredMod,
+        PlayedAround = playedAround is { } around ? DateOnly.FromDateTime(around) : null,
+        Period = period,
+        FinishedOnly = finishedOnly,
+    };
+
+    private void SubmitSearch() => Navigate(QueryFromForm());
+
+    private void SearchOwnReplays(string ownName) => Navigate(QueryFromForm() with { PlayerName = ownName });
+
+    private void GoToPage(int page)
+    {
+        if (activeQuery is { } query)
+        {
+            Navigate(query with { Page = Math.Max(page, 1) });
+        }
+    }
+
+    /// <summary>
+    /// Writes the query to the URL; defaults stay out of it. Re-submitting the current search
+    /// leaves the URL unchanged, so that case refreshes the results directly.
+    /// </summary>
+    private void Navigate(GameSearchQuery query)
+    {
+        string uri = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["player"] = NullIfEmpty(query.PlayerName),
+            ["map"] = NullIfEmpty(query.MapName),
+            ["mod"] = NullIfEmpty(query.FeaturedMod),
+            ["around"] = query.PlayedAround?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["within"] = query.PlayedAround is not null && query.Period != SearchPeriod.Year ? PeriodTokens[query.Period] : null,
+            ["finished"] = query.FinishedOnly ? null : "false",
+            ["page"] = query.Page > 1 ? query.Page : null,
+        });
+
+        if (uri == Navigation.Uri)
+        {
+            _ = SearchAsync(query);
+        }
+        else
+        {
+            Navigation.NavigateTo(uri, replace: true);
+        }
+    }
+
+    /// <summary>URL tokens of the periods; the default (a year) stays out of the URL.</summary>
+    private static readonly Dictionary<SearchPeriod, string> PeriodTokens = new()
+    {
+        [SearchPeriod.Year] = "year",
+        [SearchPeriod.Week] = "week",
+        [SearchPeriod.Month] = "month",
+        [SearchPeriod.Quarter] = "3months",
+    };
+
+    /// <summary>Unknown or missing tokens fall back to the default, a year.</summary>
+    private static SearchPeriod ParsePeriod(string? token)
+    {
+        foreach ((SearchPeriod value, string name) in PeriodTokens)
+        {
+            if (string.Equals(name, token, StringComparison.OrdinalIgnoreCase))
+            {
+                return value;
+            }
+        }
+
+        return SearchPeriod.Year;
+    }
+
+    private static string PeriodName(SearchPeriod value) => value switch
+    {
+        SearchPeriod.Week => "1 week",
+        SearchPeriod.Month => "1 month",
+        SearchPeriod.Quarter => "3 months",
+        _ => "1 year",
+    };
+
+    private static string? NullIfEmpty(string value) => value.Length > 0 ? value : null;
+
+    private async Task SearchAsync(GameSearchQuery query)
     {
         searchCancellation?.Cancel();
         using CancellationTokenSource cancellation = new();
         searchCancellation = cancellation;
 
+        activeQuery = query;
         isSearching = true;
         error = null;
+        StateHasChanged();
         try
         {
-            result = await Api.SearchGamesAsync(new GameSearchQuery
-            {
-                PlayerName = playerName,
-                MapName = mapName,
-                FeaturedMod = featuredMod,
-                FinishedOnly = finishedOnly,
-                PlayedAfter = playedAfter is { } after ? DateOnly.FromDateTime(after) : null,
-                Page = page,
-            }, cancellation.Token);
-            searchedPlayer = playerName.Trim();
+            result = await Api.SearchGamesAsync(query, cancellation.Token);
         }
         catch (OperationCanceledException)
         {
@@ -161,9 +280,14 @@
             {
                 searchCancellation = null;
                 isSearching = false;
+                StateHasChanged();
             }
         }
     }
 
-    public void Dispose() => searchCancellation?.Cancel();
+    public override void Dispose()
+    {
+        base.Dispose();
+        searchCancellation?.Cancel();
+    }
 }

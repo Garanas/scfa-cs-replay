@@ -15,11 +15,38 @@ public sealed record GameSearchQuery
     /// <summary>Only games that actually finished (have an end time).</summary>
     public bool FinishedOnly { get; init; } = true;
 
-    public DateOnly? PlayedAfter { get; init; }
+    /// <summary>Centre of the period to search in, or null for any date.</summary>
+    public DateOnly? PlayedAround { get; init; }
+
+    /// <summary>How far before and after <see cref="PlayedAround"/> to search.</summary>
+    public SearchPeriod Period { get; init; } = SearchPeriod.Year;
+
+    /// <summary>The start dates to search in: [From, To] inclusive, or null for any date.</summary>
+    public (DateOnly From, DateOnly To)? PlayedWindow => PlayedAround is { } around
+        ? Period switch
+        {
+            SearchPeriod.Week => (around.AddDays(-7), around.AddDays(7)),
+            SearchPeriod.Month => (around.AddMonths(-1), around.AddMonths(1)),
+            SearchPeriod.Quarter => (around.AddMonths(-3), around.AddMonths(3)),
+            _ => (around.AddYears(-1), around.AddYears(1)),
+        }
+        : null;
 
     public int Page { get; init; } = 1;
 
     public int PageSize { get; init; } = 12;
+}
+
+/// <summary>
+/// The half-width of the "played around" window; a year at most, to keep the
+/// date filter meaningful.
+/// </summary>
+public enum SearchPeriod
+{
+    Week,
+    Month,
+    Quarter,
+    Year,
 }
 
 public sealed record GameSearchResult(IReadOnlyList<GameSummary> Games, int Page, int? TotalPages, int? TotalRecords);

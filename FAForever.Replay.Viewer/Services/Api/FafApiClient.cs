@@ -44,9 +44,10 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
         {
             filters.Add($"featuredMod.technicalName=={Quote(query.FeaturedMod)}");
         }
-        if (query.PlayedAfter is { } after)
+        if (query.PlayedWindow is { } window)
         {
-            filters.Add($"startTime=ge={after:yyyy-MM-dd}T00:00:00Z");
+            filters.Add($"startTime=ge={window.From:yyyy-MM-dd}T00:00:00Z");
+            filters.Add($"startTime=lt={window.To.AddDays(1):yyyy-MM-dd}T00:00:00Z");
         }
 
         string url = $"{BaseUrl}/data/game"

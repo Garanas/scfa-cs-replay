@@ -25,6 +25,6 @@ public abstract class UrlStateComponent : ComponentBase, IDisposable
             StateHasChanged();
         });
 
-    public void Dispose()
+    public virtual void Dispose()
         => Navigation.LocationChanged -= OnLocationChanged;
 }

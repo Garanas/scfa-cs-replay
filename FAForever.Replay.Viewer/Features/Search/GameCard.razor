@@ -5,38 +5,42 @@
 <a href="@(Game.ReplayAvailable == false ? null : $"/replay/{Game.Id}")"
    class="card flex flex-col gap-4 p-5 transition @(Game.ReplayAvailable == false ? "opacity-60" : "hover:border-primary")">
     <div class="flex gap-4">
-        @if (Game.MapPreviewUrl is { } previewUrl)
-        {
-            <img src="@previewUrl" alt="" loading="lazy"
-                 class="h-20 w-20 shrink-0 rounded-md border border-edge object-cover"
-                 onerror="this.style.visibility='hidden'" />
-        }
+        @* The placeholder sits underneath the preview: it shows when the vault has no preview
+           (e.g. generated maps) or the image fails to load. *@
+        <div class="map-grid relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-edge"
+             title="@(Game.MapPreviewUrl is null ? "No map preview" : null)">
+            <span class="font-display text-2xl font-bold text-ink-faint" aria-hidden="true">?</span>
+            @if (Game.MapPreviewUrl is { } previewUrl)
+            {
+                <img src="@previewUrl" alt="" loading="lazy"
+                     class="absolute inset-0 h-full w-full object-cover"
+                     onerror="this.style.visibility='hidden'" />
+            }
+        </div>
         <div class="min-w-0 flex-1">
+            @* Facts about the game on the left, its classification (id, branch, mode, rating
+               status) on the right; the duration sits centred between date and mode. *@
             <div class="flex items-start justify-between gap-2">
                 <p class="truncate font-semibold" title="@Game.Title">@Game.Title</p>
                 <span class="badge shrink-0">#@Game.Id</span>
             </div>
-            <p class="mt-0.5 truncate text-sm text-ink-muted">
-                @(Game.MapName ?? "Unknown map")
+            <div class="mt-0.5 flex items-baseline justify-between gap-2 text-sm text-ink-muted">
+                <span class="truncate">@(Game.MapName ?? "Unknown map")</span>
                 @if (Game.FeaturedMod is { } mod)
                 {
-                    <span> · @mod</span>
+                    <span class="shrink-0" title="Featured mod">@mod</span>
                 }
-            </p>
-            <p class="mt-0.5 text-xs text-ink-faint">
-                @Game.StartTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-                @if (Game.Duration is { } duration)
-                {
-                    <span title="@(Game.ReplayTicks is > 0 ? "In-game duration" : "Time between start and end")"> · @ReplayView.FormatDuration(duration)</span>
-                }
-                @if (VictoryConditionName(Game.VictoryCondition) is { } condition)
-                {
-                    <span title="Victory condition"> · @condition</span>
-                }
-            </p>
+            </div>
+            <div class="mt-0.5 grid grid-cols-[1fr_auto_1fr] items-baseline gap-2 text-xs text-ink-faint">
+                <span class="truncate">@Game.StartTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+                <span class="text-center" title="@(Game.ReplayTicks is > 0 ? "In-game duration" : "Time between start and end")">
+                    @(Game.Duration is { } duration ? ReplayView.FormatDuration(duration) : null)
+                </span>
+                <span class="truncate text-right" title="Victory condition">@VictoryConditionName(Game.VictoryCondition)</span>
+            </div>
             @if (Game.ReplayAvailable == false || (Game.Validity is not null && !Game.IsRated))
             {
-                <div class="mt-2 flex flex-wrap gap-1.5">
+                <div class="mt-2 flex flex-wrap justify-end gap-1.5">
                     @if (Game.ReplayAvailable == false)
                     {
                         <span class="badge" title="The vault holds no replay file for this game">No replay</span>
