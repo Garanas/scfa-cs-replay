@@ -128,11 +128,13 @@ the FAF team before any public deployment (see TODO.md).
   (`UnitNames.GetOrNull(blueprintId)`; never edit the generated file). Re-check all of these
   after game updates.
 - Command-type marker icons (Playthrough tab): `wwwroot/images/commands/<slug>.png`, slug = the
-  lowercase `CommandCategory` name (`move`, `attack`, `launch`, …). `Services/Commands/CommandIcons.cs`
-  holds the manifest of available slugs; until a PNG lands, markers use the inline SVG glyph symbols
-  in `PlaythroughMarkerLayer.razor`. Adding an icon = drop the file + add its slug to
-  `CommandIcons.Available` (no onerror fallback on purpose: SVG `<image>` does not fire error
-  events reliably).
+  lowercase `CommandCategory` name (`move`, `attack`, `launch`, …), generated from the game's
+  waypoint button textures (`textures/ui/common/game/waypoints/*.dds`) by
+  `tools/convert-command-icons.ps1` (ImageMagick 7; never edit them by hand).
+  `Services/Commands/CommandIcons.cs` holds the manifest of available slugs; a category without a
+  PNG (currently only `special`) uses the inline SVG glyph symbols in `PlaythroughMarkerLayer.razor`.
+  Adding an icon = extend the script mapping, re-run it, add the slug to `CommandIcons.Available`
+  (no onerror fallback on purpose: SVG `<image>` does not fire error events reliably).
 - Unit icons live in `FAForever.Replay.Viewer/wwwroot/images/units/`, generated from the FAF game repo
   (`textures/ui/common/icons/units/*.dds`) by `tools/convert-unit-icons.ps1` (ImageMagick 7). Never edit
   them by hand; re-run the script. See "Unit icon atlas" below.
