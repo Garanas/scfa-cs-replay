@@ -30,6 +30,14 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
 - Tailwind: the standalone CLI lives at `tools/tailwindcss.exe` (gitignored). Install it once with
   `tools/install-tailwind.ps1`. The Viewer's MSBuild target regenerates `wwwroot/css/app.css` on every
   build when the CLI is present; the generated file is **committed** so builds work without it (CI).
+- Benchmarks (`FAForever.Replay.Benchmark`, always `-c Release`): without arguments everything runs;
+  `dotnet run -c Release -- --filter "*ParseBenchmark.Body*"` runs one phase. Phases: `DecompressBenchmark`
+  (metadata + decompression), `ParseBenchmark.Header` / `.Body` (on pre-decompressed bytes, body via the
+  staged API with the Viewer's batch size), and the end-to-end `FAForeverReplayBenchmark` /
+  `SCFAReplayBenchmark`. Log results per optimisation step in `FAForever.Replay.Benchmark/RESULTS.md`.
+- Parser changes must keep `ReplayFingerprintTest` green: it pins a hash of the complete parsed output
+  of every test asset, and checks that the staged API matches a one-shot load. Only update the expected
+  hashes when an output change is intended.
 
 ## Browser automation (Playwright MCP)
 
