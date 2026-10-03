@@ -19,10 +19,10 @@
 <section class="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
     <div class="card">
         <h2 class="text-lg font-bold">From the vault</h2>
-        <p class="mt-1 text-sm text-ink-muted">Paste a replay ID, e.g. <span class="font-mono text-ink">23031279</span>.</p>
+        <p class="mt-1 text-sm text-ink-muted">Paste a replay ID or link, e.g. <span class="font-mono text-ink">23031279</span>.</p>
         <form class="mt-4 flex gap-2" @onsubmit="OpenVaultReplay" @onsubmit:preventDefault>
             <input class="input-field font-mono" placeholder="Replay ID" inputmode="numeric"
-                   @bind="vaultReplayId" @bind:event="oninput" disabled="@IsLoading" />
+                   @bind="vaultReplayId" @bind:event="oninput" @bind:after="ExtractReplayIdFromLink" disabled="@IsLoading" />
             <button type="submit" class="btn-primary" disabled="@(!CanOpenVaultReplay)">Open</button>
         </form>
     </div>
@@ -71,6 +71,17 @@
         if (NormalizeReplayId() is int replayId)
         {
             Navigation.NavigateTo($"replay/{replayId}");
+        }
+    }
+
+    // The FAF client copies a replay as a link (https://replay.faforever.com/25692731); keep just the id.
+    private void ExtractReplayIdFromLink()
+    {
+        if (Uri.TryCreate(vaultReplayId.Trim(), UriKind.Absolute, out Uri? link)
+            && link.Host.Equals("replay.faforever.com", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(link.AbsolutePath.Trim('/'), out int replayId) && replayId > 0)
+        {
+            vaultReplayId = replayId.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 
