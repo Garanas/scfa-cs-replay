@@ -6,11 +6,17 @@
    animation. *@
 
 <div role="log" aria-label="Game events up to the current playback time">
-    @if (VisibleCount == 0)
+    @if (Suspended)
+    {
+        <p class="px-3 py-2 text-xs text-ink-faint">
+            The feed scrolls too fast to read above ×8. Pause playback or lower the speed to follow along.
+        </p>
+    }
+    else if (VisibleCount == 0)
     {
         <p class="px-3 py-2 text-xs text-ink-faint">Nothing yet — press play, or scrub the timeline.</p>
     }
-    @for (int index = Math.Min(VisibleCount, Items.Count) - 1; index >= LowerBound; index--)
+    @for (int index = Suspended ? -1 : Math.Min(VisibleCount, Items.Count) - 1; index >= LowerBound; index--)
     {
         Item item = Items[index];
         <button type="button" @key="index" title="@($"{item.Player}: {item.Text} — click to jump playback here")"
@@ -29,7 +35,7 @@
             <span class="min-w-0 truncate text-xs text-ink-muted">@item.Text</span>
         </button>
     }
-    @if (VisibleCount > MaxRows)
+    @if (!Suspended && VisibleCount > MaxRows)
     {
         <p class="px-3 py-2 text-xs text-ink-faint">Showing the latest @MaxRows of @VisibleCount.ToString("N0") events.</p>
     }
@@ -53,20 +59,29 @@
 
     [Parameter] public EventCallback<TimeSpan> OnSeek { get; set; }
 
+    /// <summary>
+    /// True while playback is too fast to follow (above ×8): the rows make way for a
+    /// message, and re-renders are skipped entirely until the state flips back.
+    /// </summary>
+    [Parameter] public bool Suspended { get; set; }
+
     private int LowerBound => Math.Max(0, Math.Min(VisibleCount, Items.Count) - MaxRows);
 
     private int lastRenderedCount = -1;
     private IReadOnlyList<Item>? lastRenderedItems;
+    private bool lastRenderedSuspended;
 
     protected override bool ShouldRender()
     {
-        if (VisibleCount == lastRenderedCount && ReferenceEquals(Items, lastRenderedItems))
+        if (Suspended == lastRenderedSuspended
+            && (Suspended || (VisibleCount == lastRenderedCount && ReferenceEquals(Items, lastRenderedItems))))
         {
             return false;
         }
 
         lastRenderedCount = VisibleCount;
         lastRenderedItems = Items;
+        lastRenderedSuspended = Suspended;
         return true;
     }
 }

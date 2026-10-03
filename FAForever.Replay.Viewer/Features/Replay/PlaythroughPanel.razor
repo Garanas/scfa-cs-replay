@@ -72,7 +72,8 @@
 
     <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
         <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Feed</h3>
-        <PlaythroughFeed Items="feedItems" VisibleCount="feedCursor" OnSeek="SeekFromFeed" />
+        <PlaythroughFeed Items="feedItems" VisibleCount="feedCursor" OnSeek="SeekFromFeed"
+                         Suspended="@(playing && Speeds[speedIndex] > MaxFeedSpeed)" />
     </div>
 </div>
 
@@ -89,6 +90,9 @@
     private static readonly TimeSpan PingLifetime = TimeSpan.FromSeconds(2.5);
 
     private static readonly double[] Speeds = [1, 2, 4, 8, 16, 32, 64];
+
+    /// <summary>Above this speed the feed scrolls too fast to read and suspends itself.</summary>
+    private const double MaxFeedSpeed = 8;
 
     private static readonly (CommandCategory Category, string Label)[] LegendEntries =
     [
