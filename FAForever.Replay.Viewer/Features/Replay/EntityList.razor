@@ -1,0 +1,134 @@
+@using FAForever.Replay
+@using FAForever.Replay.Viewer.Services.Commands
+
+@* One player's units on the Build order tab (view=units): every entity that received orders
+   in the opening, with what it probably is (see ReplayEntityKind; only the commander is
+   certain) and its orders as a row of icons. A gap marks where a new chain starts (an order
+   that was not shift-queued, or the order after a stop); repeats within a chain collapse into
+   one icon with a count. Clicking a row shows the unit's route on the map. Mirrored (the left
+   player) puts time and label against the centre and lets the orders run outwards, so both
+   lists read from the centre of the page. *@
+
+<ol class="m-0 flex list-none flex-col p-0" aria-label="@($"Units of {Player}")">
+    @if (Entities.Count == 0)
+    {
+        <li class="px-2 py-3 text-sm text-ink-muted">No units received orders.</li>
+    }
+    @foreach (ReplayEntity entity in Entities)
+    {
+        bool isSelected = Selected == entity.EntityId;
+        <li @key="entity.EntityId">
+            <button type="button" aria-pressed="@(isSelected ? "true" : "false")"
+                    class="feed-row items-start gap-3 py-1 @(Mirrored ? "flex-row-reverse text-right" : "") @(isSelected ? "bg-raised ring-1 ring-primary" : "")"
+                    title="@($"{Label(entity)} — entity 0x{entity.EntityId:X8}, {entity.Orders.Count} orders — click to show its route")"
+                    @onclick="() => OnSelect.InvokeAsync(entity)"
+                    @onmouseenter="() => OnHover.InvokeAsync(entity.EntityId)" @onmouseleave="() => OnHover.InvokeAsync(null)">
+                <span class="@(Mirrored ? "flex-row-reverse" : "") flex w-36 shrink-0 items-center gap-2">
+                    <span class="feed-time w-9 @(Mirrored ? "text-left" : "text-right")">@GameTime.Format(entity.FirstSeen)</span>
+                    <span class="truncate @(entity.Kind == ReplayEntityKind.Commander ? "font-semibold text-ink" : "text-ink-muted")">@Label(entity)</span>
+                </span>
+                <span class="@(Mirrored ? "flex-row-reverse" : "") flex min-w-0 flex-wrap items-center gap-1">
+                    @foreach (Step step in Steps(entity))
+                    {
+                        @if (step.StartsChain)
+                        {
+                            <span class="mx-0.5 h-4 w-px bg-edge" aria-hidden="true"></span>
+                        }
+                        <span class="@(Mirrored ? "flex-row-reverse" : "") relative inline-flex" title="@step.Title">
+                            @if (step.BlueprintId is { } blueprintId)
+                            {
+                                <UnitIcon BlueprintId="@blueprintId" Size="18" />
+                            }
+                            else if (CommandIcons.IconPath(step.Category) is { } iconPath)
+                            {
+                                <img src="@iconPath" alt="@step.Title" class="h-[18px] w-[18px]" />
+                            }
+                            else
+                            {
+                                <span class="inline-flex h-[18px] w-[18px] items-center justify-center rounded bg-raised text-[9px] text-ink-muted">@step.Category.ToString()[..1]</span>
+                            }
+                            @if (step.Count > 1)
+                            {
+                                <span class="@(Mirrored ? "mr-0.5" : "ml-0.5") self-end font-mono text-[10px] text-ink-muted">×@step.Count</span>
+                            }
+                        </span>
+                    }
+                </span>
+            </button>
+        </li>
+    }
+</ol>
+
+@code {
+    [Parameter, EditorRequired] public required string Player { get; set; }
+
+    /// <summary>The entities to list, in display order.</summary>
+    [Parameter, EditorRequired] public required IReadOnlyList<ReplayEntity> Entities { get; set; }
+
+    [Parameter] public int? Selected { get; set; }
+
+    /// <summary>Right-to-left, for the left player: the orders run from the centre outwards.</summary>
+    [Parameter] public bool Mirrored { get; set; }
+
+    [Parameter] public EventCallback<ReplayEntity> OnSelect { get; set; }
+
+    [Parameter] public EventCallback<int?> OnHover { get; set; }
+
+    /// <summary>A run of equal orders within one chain, shown as one icon.</summary>
+    private sealed record Step(bool StartsChain, CommandCategory Category, string? BlueprintId, int Count, string Title);
+
+    /// <summary>
+    /// What an entity is, as a label: "ACU" is certain, the rest are guesses (prefixed with ~).
+    /// A factory is named after what it built, a structure after its upgrade.
+    /// </summary>
+    public static string Label(ReplayEntity entity) => entity.Kind switch
+    {
+        ReplayEntityKind.Commander => "ACU",
+        ReplayEntityKind.Engineer => "~Engineer",
+        ReplayEntityKind.Factory => FactoryLabel(entity),
+        ReplayEntityKind.Structure => entity.Orders.FirstOrDefault(order => order.BlueprintId is not null)?.BlueprintId is { } upgrade
+            ? $"~{UnitNames.GetOrNull(upgrade) ?? "Structure"}"
+            : "~Structure",
+        _ => "~Unit",
+    };
+
+    /// <summary>A factory by the layer of the units it built: the third letter of their blueprint ids (l, a, s).</summary>
+    private static string FactoryLabel(ReplayEntity entity)
+    {
+        char? layer = entity.Orders
+            .Where(order => order.CommandType == CommandType.IssueBuildFactory && order.BlueprintId is { Length: > 3 })
+            .Select(order => (char?)char.ToLowerInvariant(order.BlueprintId![2]))
+            .FirstOrDefault(letter => letter is 'l' or 'a' or 's');
+        return layer switch
+        {
+            'l' => "~Land factory",
+            'a' => "~Air factory",
+            's' => "~Naval factory",
+            _ => "~Factory",
+        };
+    }
+
+    private static List<Step> Steps(ReplayEntity entity)
+    {
+        List<Step> steps = [];
+        for (int index = 0; index < entity.Orders.Count; index++)
+        {
+            ReplayEntityOrder order = entity.Orders[index];
+            CommandCategory category = CommandCategories.GetCategory(order.CommandType);
+            string? blueprintId = category == CommandCategory.Build ? order.BlueprintId : null;
+            bool startsChain = index > 0 && !entity.ContinuesChain(index);
+
+            if (!startsChain && steps.Count > 0 && steps[^1].Category == category && steps[^1].BlueprintId == blueprintId)
+            {
+                steps[^1] = steps[^1] with { Count = steps[^1].Count + 1 };
+                continue;
+            }
+
+            string unit = blueprintId is not null ? $" {UnitNames.GetOrNull(blueprintId) ?? blueprintId}" : "";
+            steps.Add(new Step(startsChain, category, blueprintId, 1,
+                $"{GameTime.Format(order.Timestamp)} · {ReplayInputFormatter.Verb(order.CommandType)}{unit}{(order.FromFactory ? " (factory order)" : "")}"));
+        }
+
+        return steps;
+    }
+}

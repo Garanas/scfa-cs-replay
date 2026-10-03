@@ -366,6 +366,101 @@ namespace FAForever.Replay
         }
 
         /// <summary>
+        /// Retrieves every entity that received an order (IssueCommand or IssueFactoryCommand),
+        /// with its orders in time order and a guess of what kind of unit it is (see
+        /// <see cref="ReplayEntityKind"/>). Only orders up to <paramref name="until"/> are taken
+        /// into account, when given. Entities are ordered by source, then by entity id.
+        /// </summary>
+        public static List<ReplayEntity> GetEntities(Replay replay, TimeSpan? until = null) => GetEntities(replay.Body.UserInput, until);
+
+        /// <inheritdoc cref="GetEntities(Replay, TimeSpan?)"/>
+        public static List<ReplayEntity> GetEntities(IEnumerable<ReplayInput> inputs, TimeSpan? until = null)
+        {
+            Dictionary<int, (int SourceId, List<ReplayEntityOrder> Orders)> byId = new Dictionary<int, (int, List<ReplayEntityOrder>)>();
+
+            foreach (ReplayInput replayInput in inputs)
+            {
+                (CommandUnits? units, CommandData? data, bool fromFactory) = replayInput switch
+                {
+                    ReplayInput.IssueCommand command => (command.Units, command.Data, false),
+                    ReplayInput.IssueFactoryCommand factoryCommand => (factoryCommand.Factories, factoryCommand.Data, true),
+                    _ => (null, null, false),
+                };
+                if (units is null || data is null)
+                {
+                    continue;
+                }
+
+                TimeSpan timestamp = ReplayAnalysis.GetTimestamp(replayInput);
+                if (until is { } limit && timestamp > limit)
+                {
+                    break;
+                }
+
+                // One order object, shared by every entity of the selection.
+                ReplayEntityOrder order = new ReplayEntityOrder(
+                    timestamp,
+                    data.Type,
+                    data.Target is CommandTarget.Position position ? new ReplayAnalysis.MapPosition(position.X, position.Z) : null,
+                    string.IsNullOrEmpty(data.BlueprintId) ? null : data.BlueprintId,
+                    !data.ClearQueue,
+                    fromFactory,
+                    units.UnitCount);
+
+                foreach (int entityId in units.EntityIds.Span)
+                {
+                    if (!byId.TryGetValue(entityId, out var entry))
+                    {
+                        entry = (replayInput.SourceId, new List<ReplayEntityOrder>());
+                        byId[entityId] = entry;
+                    }
+
+                    entry.Orders.Add(order);
+                }
+            }
+
+            return byId
+                .Select(pair => new ReplayEntity(pair.Key, pair.Value.SourceId, GuessKind(pair.Key, pair.Value.Orders), pair.Value.Orders))
+                .OrderBy(entity => entity.SourceId)
+                .ThenBy(entity => entity.EntityId)
+                .ToList();
+        }
+
+        /// <summary>
+        /// What an entity probably is, from the orders it received: serial 0 is the commander;
+        /// factory queues and factory orders mean a factory; construction, reclaim, repair,
+        /// capture and assisting a structure (a guard order on a blueprint whose id has a 'b' as
+        /// third letter, e.g. urb0101) mean an engineer; only upgrades mean a structure; anything
+        /// else is a unit.
+        /// </summary>
+        private static ReplayEntityKind GuessKind(int entityId, List<ReplayEntityOrder> orders)
+        {
+            if ((entityId & 0xFFFFF) == 0)
+            {
+                return ReplayEntityKind.Commander;
+            }
+
+            if (orders.Any(order => order.FromFactory || order.CommandType == CommandType.IssueBuildFactory))
+            {
+                return ReplayEntityKind.Factory;
+            }
+
+            if (orders.Any(order => order.CommandType is CommandType.IssueBuildMobile or CommandType.IssueReclaim
+                or CommandType.IssueRepair or CommandType.BuildAssist or CommandType.IssueCapture
+                || (order.CommandType == CommandType.IssueGuard && order.BlueprintId is { Length: > 2 } blueprintId && blueprintId[2] is 'b' or 'B')))
+            {
+                return ReplayEntityKind.Engineer;
+            }
+
+            if (orders.All(order => order.CommandType is CommandType.IssueUpgrade or CommandType.IssueStop))
+            {
+                return ReplayEntityKind.Structure;
+            }
+
+            return ReplayEntityKind.Unit;
+        }
+
+        /// <summary>
         /// Retrieves every change to the count of a queued order, in tick order, resolved to
         /// the order it changes (matched on source and command identifier).
         /// </summary>

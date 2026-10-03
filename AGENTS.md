@@ -92,7 +92,10 @@ the FAF team before any public deployment (see TODO.md).
 - Player names come from `Replay.Header.Clients[input.SourceId]`; ticks are **10 per second**.
 - Command selections (`CommandUnits.EntityIds`) carry the entity ids the order went to. An entity id
   is `(army index << 20) | serial`; serial 0 is the army's commander (ACU), later serials follow the
-  order in which units appear. What kind of unit an id is, the replay does not say.
+  order in which units appear. What kind of unit an id is, the replay does not say;
+  `ReplaySemantics.GetEntities` guesses it from the orders (`ReplayEntityKind`).
+- `CommandData.ClearQueue` is the last byte of a command: 1 = the order replaces the queue, 0 = it was
+  shift-queued. (It used to be called `AddToQueue`, the inverse; verified on real replays, see its doc.)
 - Drawings ("painting", `lua/ui/game/painting`) are the `SharePaintingBrushStroke` sim callback:
   `{ShareablePainting={PeerName, ShareId, PaintingAdapterIdentifier, Samples={x,y,z,x,y,z,…}}}`, one
   callback per stroke, sent only by its author (no dedup needed, unlike chat). Observers share
@@ -170,6 +173,8 @@ to those two players, on any machine.
 | `pings` | `off` hides pings on the Chat tab (map and feed) | Pings shown |
 | `compare` | The two players of the Build order tab, `Left,Right` (unknown names fall back per slot) | The first army vs the first army of another team |
 | `builds` | `only` shows construction orders only on the Build order tab | All orders |
+| `view` | `units` shows the units (entities) of both players instead of the order ledger on the Build order tab | The ledger |
+| `combat` | `show` also lists combat units in the units view of the Build order tab | Hidden |
 | `at` | Playback position of the Playthrough tab (`12`, `12:30` or `1:02:30`); written on pause/seek only, never while playing | `0:00`, paused |
 
 **Window policy** (`TimeWindowFilter.ReadWindow`): one rule on every tab — a window is at most

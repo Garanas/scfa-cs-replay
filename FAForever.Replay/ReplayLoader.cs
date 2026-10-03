@@ -46,9 +46,10 @@ namespace FAForever.Replay
 
             LuaData luaData = LuaDataLoader.ReadLuaData(reader);
 
-            bool addToQueue = reader.ReadByte() > 0;
+            // 1 = the order replaces the queue, 0 = queued after the current orders (shift).
+            bool clearQueue = reader.ReadByte() > 0;
 
-            return new CommandData(commandId, commandType, target, formation, blueprintId, luaData, addToQueue, arg1, arg2, arg3, arg4, arg5, arg6);
+            return new CommandData(commandId, commandType, target, formation, blueprintId, luaData, clearQueue, arg1, arg2, arg3, arg4, arg5, arg6);
         }
 
         /// <summary>
