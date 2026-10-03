@@ -606,9 +606,11 @@ namespace FAForever.Replay
         }
 
         /// <summary>
-        /// Decompresses a zstd body in one go into a buffer of exactly the right size. The size is
-        /// read from the frame header; returns null (without consuming the stream) when the size is
-        /// unknown or the body does not fit, so the caller can fall back to streaming decompression.
+        /// Decompresses a zstd body in one go into a single buffer. Its size comes from the frame
+        /// header: the exact size when the frame stores it, otherwise an upper bound (FAForever
+        /// replays do not store it; the bound is a few percent too large). Returns null (without
+        /// consuming the stream) when no size is available or the body does not fit, so the caller
+        /// can fall back to streaming decompression.
         /// Avoids the repeated growing and copying of a memory stream that is written in chunks.
         /// </summary>
         private static MemoryStream? TryDecompressZstdInOneGo(Stream stream)
@@ -649,16 +651,17 @@ namespace FAForever.Replay
             }
 
             byte[] decompressed = GC.AllocateUninitializedArray<byte>((int)size);
+            int written;
             using (Decompressor decompressor = new Decompressor())
             {
-                if (!decompressor.TryUnwrap(compressed, decompressed, out int written) || written != decompressed.Length)
+                if (!decompressor.TryUnwrap(compressed, decompressed, out written))
                 {
                     return null;
                 }
             }
 
             memoryStream.Position = memoryStream.Length;
-            return new MemoryStream(decompressed, 0, decompressed.Length, writable: false, publiclyVisible: true);
+            return new MemoryStream(decompressed, 0, written, writable: false, publiclyVisible: true);
         }
 
         private static MemoryStream? DecompressReplay(Stream stream, ReplayCompression compression)
