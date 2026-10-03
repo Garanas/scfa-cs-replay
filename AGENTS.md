@@ -90,6 +90,11 @@ the FAF team before any public deployment (see TODO.md).
   `.scfareplay` = raw body — construct `ReplayLoadingStage.Decompressed(stream, null)` directly.
 - `ProcessReplayStage(WithMetadata)` disposes the input stream; don't reuse it.
 - Player names come from `Replay.Header.Clients[input.SourceId]`; ticks are **10 per second**.
+- Drawings ("painting", `lua/ui/game/painting`) are the `SharePaintingBrushStroke` sim callback:
+  `{ShareablePainting={PeerName, ShareId, PaintingAdapterIdentifier, Samples={x,y,z,x,y,z,…}}}`, one
+  callback per stroke, sent only by its author (no dedup needed, unlike chat). Observers share
+  paintings through chat, so theirs are not in the replay. Use `ReplaySemantics.GetDrawings`;
+  pings come from `ReplaySemantics.GetPings`. Both are shown by `DrawingsPanel` (Chat → Drawings & pings).
 - Lobby data lives in `Replay.Header.Armies` (`ReplayPlayerOptions`: faction 1=UEF/2=Aeon/
   3=Cybran/4=Seraphim, team where 1 = FFA, start spot, colors, rating MEAN/DEV, country, clan;
   `Raw` holds the full Lua table, e.g. `OwnerID`). `Armies[i].SourceId` links an army to
@@ -115,6 +120,9 @@ the FAF team before any public deployment (see TODO.md).
   custom properties switched by `data-theme` on `<html>`, mapped to Tailwind tokens via
   `@theme inline`. **Always use the semantic utilities** (`bg-surface`, `text-ink-muted`,
   `border-edge`, `bg-primary`, …) — never hardcode colours in components, or faction switching breaks.
+- Anything drawn on the map goes through `Features/Replay/MapCanvas.razor`: an SVG in world
+  coordinates with the vault preview as backdrop, so replay positions (x, z) are used as-is; its
+  `ViewBox` parameter zooms in on a part of the map.
 - Faction icons live in `FAForever.Replay.Viewer/wwwroot/images/factions/` (copied from the FAF game
   repo, `textures/ui/common/faction_icon-lg`, `_med` variants); render them via the display helpers
   in `Services/Theming/Factions.cs` (icon path, name, swatch per faction index).
@@ -146,6 +154,9 @@ to those two players, on any machine.
 | `from` / `to` | Game-time window (`12`, `12:30` or `1:02:30`); shared across tabs | See window policy below |
 | `types` | Comma-separated input types shown in the Events stream | All types |
 | `endpoint` | Selected sim-callback endpoint | The most frequent endpoint |
+| `view` | Chat sub-tab: `map` shows drawings and pings on the map | Chat messages |
+| `pings` | `off` hides pings on the Chat map | Pings shown |
+| `zoom` | `map` shows the whole map on the Chat map | Zoomed to the visible drawings/pings |
 
 **Window policy** (`TimeWindowFilter.ReadWindow`): one rule on every tab — a window is at most
 **four minutes** (`TimeWindowFilter.MaxWindow`), self-correcting with no error states: reversed

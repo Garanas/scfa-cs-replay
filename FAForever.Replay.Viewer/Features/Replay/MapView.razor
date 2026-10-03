@@ -1,43 +1,29 @@
 @using FAForever.Replay
 
-@* Minimap: the vault preview (when it exists) with the estimated start position of every
-   player on top. Positions are derived from the first construction orders, so they work
-   for any replay — including generated maps that have no preview at all (the themed grid
-   backdrop takes over). World coordinates: (0,0) is the top-left corner, X right, Z down. *@
+@* Minimap: the map (see MapCanvas) with the estimated start position of every player on
+   top. Positions are derived from the first construction orders, so they work for any
+   replay — including generated maps that have no preview at all. *@
 
-<div class="map-grid relative w-full overflow-hidden rounded-lg border border-edge" style="aspect-ratio: @sizeX / @sizeZ">
-    @if (PreviewUrl is { } previewUrl)
+<MapCanvas Model="Model" AriaLabel="Estimated start positions of the players">
+    @foreach (SpawnMarker marker in markers)
     {
-        <img src="@previewUrl" alt="Map preview of @MapName" loading="lazy"
-             class="absolute inset-0 h-full w-full object-cover"
-             onerror="this.style.display='none'" />
-    }
-
-    @if (markers.Count > 0)
-    {
-        <svg class="absolute inset-0 h-full w-full" viewBox="0 0 @sizeX @sizeZ" role="img"
-             aria-label="Estimated start positions of the players">
-            @foreach (SpawnMarker marker in markers)
+        <g>
+            <title>@marker.Title</title>
+            <circle cx="@Fmt(marker.X)" cy="@Fmt(marker.Y)" r="@Fmt(IconSize * 0.62)" fill="rgba(10, 12, 18, 0.55)"
+                    stroke="@(marker.ArmyColor ?? "transparent")" stroke-width="@Fmt(IconSize * 0.09)" />
+            @if (marker.Icon is { } icon)
             {
-                <g>
-                    <title>@marker.Title</title>
-                    <circle cx="@Fmt(marker.X)" cy="@Fmt(marker.Y)" r="@Fmt(IconSize * 0.62)" fill="rgba(10, 12, 18, 0.55)"
-                            stroke="@(marker.ArmyColor ?? "transparent")" stroke-width="@Fmt(IconSize * 0.09)" />
-                    @if (marker.Icon is { } icon)
-                    {
-                        <image href="@icon" x="@Fmt(marker.X - IconSize / 2)" y="@Fmt(marker.Y - IconSize / 2)"
-                               width="@Fmt(IconSize)" height="@Fmt(IconSize)" />
-                    }
-                    else
-                    {
-                        <circle cx="@Fmt(marker.X)" cy="@Fmt(marker.Y)" r="@Fmt(IconSize * 0.3)" fill="@marker.Swatch" />
-                    }
-                    @SvgLabel(marker.X, marker.Y + IconSize * 1.15, marker.Label)
-                </g>
+                <image href="@icon" x="@Fmt(marker.X - IconSize / 2)" y="@Fmt(marker.Y - IconSize / 2)"
+                       width="@Fmt(IconSize)" height="@Fmt(IconSize)" />
             }
-        </svg>
+            else
+            {
+                <circle cx="@Fmt(marker.X)" cy="@Fmt(marker.Y)" r="@Fmt(IconSize * 0.3)" fill="@marker.Swatch" />
+            }
+            @MapCanvas.SvgLabel(marker.X, marker.Y + IconSize * 1.15, marker.Label, IconSize * 0.42)
+        </g>
     }
-</div>
+</MapCanvas>
 
 @code {
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
@@ -50,30 +36,9 @@
 
     private double IconSize => Math.Max(sizeX, sizeZ) / 16.0;
 
-    private string MapName => Model.Replay.Header.Scenario.Map.DisplayName ?? Model.Metadata?.mapname ?? "map";
-
-    private string? PreviewUrl
-    {
-        get
-        {
-            string? folder = Model.Metadata?.mapname;
-            if (folder is null && Model.Replay.Header.Scenario.Map.SCMapReference is { Length: > 0 } reference)
-            {
-                string[] segments = reference.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                folder = segments.Length >= 2 ? segments[^2] : null;
-            }
-
-            return folder is { Length: > 0 }
-                ? $"https://content.faforever.com/maps/previews/large/{folder.ToLowerInvariant()}.png"
-                : null;
-        }
-    }
-
     protected override void OnParametersSet()
     {
-        ReplayScenarioMap map = Model.Replay.Header.Scenario.Map;
-        sizeX = map.SizeX is > 0 and int x ? x : 1024;
-        sizeZ = map.SizeZ is > 0 and int z ? z : 1024;
+        (sizeX, sizeZ) = MapCanvas.MapSize(Model.Replay.Header);
 
         markers.Clear();
         Dictionary<int, ReplayAnalysis.MapPosition> spawns = ReplayAnalysis.GetEstimatedSpawnPositions(Model.Replay);
@@ -102,12 +67,5 @@
         }
     }
 
-    private static string Fmt(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
-
-    /// <summary>
-    /// A name label under a marker. Razor reserves the &lt;text&gt; tag, so the element is
-    /// emitted as markup; white fill with a dark stroke stays readable on any backdrop.
-    /// </summary>
-    private MarkupString SvgLabel(double x, double y, string content)
-        => new($"<text x=\"{Fmt(x)}\" y=\"{Fmt(y)}\" text-anchor=\"middle\" font-size=\"{Fmt(IconSize * 0.42)}\" font-weight=\"600\" fill=\"#ffffff\" stroke=\"rgba(10, 12, 18, 0.8)\" stroke-width=\"{Fmt(IconSize * 0.08)}\" paint-order=\"stroke\">{System.Net.WebUtility.HtmlEncode(content)}</text>");
+    private static string Fmt(double value) => MapCanvas.Fmt(value);
 }

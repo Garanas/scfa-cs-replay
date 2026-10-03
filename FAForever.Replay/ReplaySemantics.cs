@@ -229,6 +229,52 @@ namespace FAForever.Replay
         }
 
         /// <summary>
+        /// Retrieves all brush strokes the players painted on the map, from the
+        /// SharePaintingBrushStroke sim callback. Strokes with fewer than two samples are skipped.
+        /// </summary>
+        public static List<ReplayDrawing> GetDrawings(Replay replay) => GetDrawings(replay.Body.UserInput);
+
+        /// <inheritdoc cref="GetDrawings(Replay)"/>
+        public static List<ReplayDrawing> GetDrawings(IEnumerable<ReplayInput> inputs)
+        {
+            List<ReplayDrawing> drawings = new List<ReplayDrawing>();
+
+            foreach (ReplayInput replayInput in inputs)
+            {
+                if (replayInput is ReplayInput.SimCallback { Endpoint: "SharePaintingBrushStroke", LuaParameters: LuaData.Table table }
+                    && table.TryGetTableValue("ShareablePainting", out LuaData.Table? painting) && painting is not null
+                    && painting.TryGetTableValue("Samples", out LuaData.Table? samples) && samples is not null)
+                {
+                    // The samples are interleaved x, y, z world coordinates; the map plane is (x, z).
+                    List<ReplayAnalysis.MapPosition> points = new List<ReplayAnalysis.MapPosition>();
+                    for (int i = 1;
+                         samples.TryGetNumberValue(i.ToString(), out double? x) && x is { } sampleX
+                         && samples.TryGetNumberValue((i + 2).ToString(), out double? z) && z is { } sampleZ;
+                         i += 3)
+                    {
+                        points.Add(new ReplayAnalysis.MapPosition((float)sampleX, (float)sampleZ));
+                    }
+
+                    if (points.Count < 2)
+                    {
+                        continue;
+                    }
+
+                    painting.TryGetStringValue("PeerName", out string? peerName);
+                    painting.TryGetNumberValue("ShareId", out double? shareId);
+                    drawings.Add(new ReplayDrawing(
+                        ReplayAnalysis.GetTimestamp(replayInput),
+                        replayInput.SourceId,
+                        string.IsNullOrEmpty(peerName) ? null : peerName,
+                        shareId is { } id ? (int)id : null,
+                        points));
+                }
+            }
+
+            return drawings;
+        }
+
+        /// <summary>
         /// The clients that do not control an army: observers. They can chat, but they
         /// command nothing, so they have no actions, orders or build orders.
         /// </summary>
