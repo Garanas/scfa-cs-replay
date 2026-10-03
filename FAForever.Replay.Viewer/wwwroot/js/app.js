@@ -1,18 +1,46 @@
 window.fafReplay = {
-    getTheme: function () {
+    /* The faction accent (Styles/app.css, "Colour scheme"); the stored key predates the mode. */
+    getFaction: function () {
         try {
             return window.localStorage.getItem("faf-theme");
         } catch (e) {
             return null;
         }
     },
-    setTheme: function (themeId) {
-        document.documentElement.setAttribute("data-theme", themeId);
+    setFaction: function (faction) {
+        document.documentElement.setAttribute("data-faction", faction);
         try {
-            window.localStorage.setItem("faf-theme", themeId);
+            window.localStorage.setItem("faf-theme", faction);
         } catch (e) {
             /* Private browsing or blocked storage: the choice just does not persist. */
         }
+    },
+    /* The light/dark preference: "auto" (the default, follows the system), "light" or "dark". */
+    getMode: function () {
+        try {
+            var mode = window.localStorage.getItem("faf-mode");
+            return mode === "light" || mode === "dark" ? mode : "auto";
+        } catch (e) {
+            return "auto";
+        }
+    },
+    setMode: function (mode) {
+        try {
+            if (mode === "auto") {
+                window.localStorage.removeItem("faf-mode");
+            } else {
+                window.localStorage.setItem("faf-mode", mode);
+            }
+        } catch (e) { }
+        window.fafReplay.applyMode();
+    },
+    /* Resolves the preference into data-mode on <html>, like the pre-boot script in index.html. */
+    applyMode: function () {
+        var mode = window.fafReplay.getMode();
+        if (mode === "auto") {
+            mode = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        }
+        document.documentElement.setAttribute("data-mode", mode);
     },
     /* Session storage wrappers for the OAuth flow (PKCE verifier, state, tokens). */
     sessionGet: function (key) {
@@ -73,3 +101,8 @@ window.fafReplay = {
         }
     }
 };
+
+/* On "auto", follow the system setting when it changes (e.g. at sunset). */
+window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function () {
+    window.fafReplay.applyMode();
+});

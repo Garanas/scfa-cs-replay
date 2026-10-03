@@ -1,8 +1,8 @@
 namespace FAForever.Replay.Viewer.Services.Theming;
 
 /// <summary>
-/// One of the four faction-flavoured colour themes. The <see cref="Id"/> matches the
-/// <c>data-theme</c> attribute on the root element and the CSS blocks in Styles/app.css.
+/// One of the four faction accents. The <see cref="Id"/> matches the
+/// <c>data-faction</c> attribute on the root element and the CSS blocks in Styles/app.css.
 /// </summary>
 public sealed record FactionTheme(string Id, string DisplayName)
 {
@@ -14,5 +14,5 @@ public sealed record FactionTheme(string Id, string DisplayName)
     public static readonly IReadOnlyList<FactionTheme> All = [Uef, Cybran, Aeon, Seraphim];
 
     public static FactionTheme FromId(string? id)
-        => All.FirstOrDefault(theme => theme.Id == id) ?? Uef;
+        => All.FirstOrDefault(theme => theme.Id == id) ?? Cybran;
 }

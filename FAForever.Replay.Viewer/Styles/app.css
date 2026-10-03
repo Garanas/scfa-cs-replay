@@ -4,29 +4,32 @@
 @source "../wwwroot/index.html";
 
 /*
- * Faction themes
- * --------------
- * Every theme defines the same set of --th-* design tokens. The active theme is picked
- * by the data-theme attribute on <html> (set pre-boot by index.html, toggled by
- * ThemeService). UEF is the default when no attribute is present.
+ * Colour scheme
+ * -------------
+ * Two independent choices, both attributes on <html> (set pre-boot by index.html, changed by
+ * ThemeService):
+ *
+ * - data-mode ("dark" | "light") picks the page itself: backgrounds, surfaces, text and the
+ *   chart palette. "Auto" is not a value here: the scripts resolve it from the system setting.
+ * - data-faction ("uef" | "cybran" | "aeon" | "seraphim") picks the accent: buttons, links,
+ *   active tabs and navigation, the logo, borders and focus rings. Each faction has a dark and
+ *   a light step, so its colour stays readable as text on either page.
+ *
+ * Borders, the glow and the header tint are mixed from the accent below, so a faction only
+ * defines its accent colours. Without attributes the page is dark Cybran.
  */
 
-:root,
-[data-theme="uef"] {
+/* Mode: the neutral page colours. */
+:root {
     color-scheme: dark;
-    --th-base: #0a1020;
-    --th-surface: #101a30;
-    --th-raised: #172442;
-    --th-edge: #2a3b63;
-    --th-ink: #e9effb;
-    --th-ink-muted: #9fb0d4;
-    --th-ink-faint: #64769e;
-    --th-primary: #4a8df0;
-    --th-primary-strong: #2f6fd9;
-    --th-on-primary: #061224;
-    --th-accent: #e3b341;
-    --th-glow: rgba(74, 141, 240, 0.35);
-    /* Chart series colors (validated, dark-surface steps; Aeon overrides with light steps). */
+    --th-base: #0c0f14;
+    --th-surface: #13171e;
+    --th-raised: #1b2029;
+    --th-edge-neutral: #2a303b;
+    --th-ink: #e8ebf1;
+    --th-ink-muted: #a2aaba;
+    --th-ink-faint: #6b7385;
+    /* Chart series colors (validated, dark-surface steps). */
     --viz-1: #3987e5;
     --viz-2: #d95926;
     --viz-3: #199e70;
@@ -37,36 +40,15 @@
     --viz-8: #e66767;
 }
 
-[data-theme="cybran"] {
-    color-scheme: dark;
-    --th-base: #120b0c;
-    --th-surface: #1b1113;
-    --th-raised: #27181b;
-    --th-edge: #44252c;
-    --th-ink: #f8e9e9;
-    --th-ink-muted: #cba0a4;
-    --th-ink-faint: #8f666c;
-    --th-primary: #e54b4b;
-    --th-primary-strong: #c53030;
-    --th-on-primary: #1d0606;
-    --th-accent: #ff9b50;
-    --th-glow: rgba(229, 75, 75, 0.35);
-}
-
-[data-theme="aeon"] {
+:root[data-mode="light"] {
     color-scheme: light;
-    --th-base: #edf3ed;
-    --th-surface: #f8fbf8;
+    --th-base: #f2f4f7;
+    --th-surface: #fbfbfd;
     --th-raised: #ffffff;
-    --th-edge: #c8d9cb;
-    --th-ink: #15241d;
-    --th-ink-muted: #51685c;
-    --th-ink-faint: #84988d;
-    --th-primary: #0f9168;
-    --th-primary-strong: #0b7250;
-    --th-on-primary: #f3fbf7;
-    --th-accent: #a8862a;
-    --th-glow: rgba(15, 145, 104, 0.25);
+    --th-edge-neutral: #d5d9e1;
+    --th-ink: #161a21;
+    --th-ink-muted: #525a6a;
+    --th-ink-faint: #868d9c;
     /* Chart series colors: light-surface steps. */
     --viz-1: #2a78d6;
     --viz-2: #eb6834;
@@ -78,23 +60,75 @@
     --viz-8: #e34948;
 }
 
-[data-theme="seraphim"] {
-    color-scheme: dark;
-    --th-base: #151109;
-    --th-surface: #1f1a0e;
-    --th-raised: #2b2414;
-    --th-edge: #4b3f20;
-    --th-ink: #f7efd9;
-    --th-ink-muted: #c8b78a;
-    --th-ink-faint: #8d7f5a;
+/* Faction: the accent, a dark-mode and a light-mode step each. A light block has a higher
+   specificity than every dark block, so the order only matters within a mode: the default
+   (Cybran, also on :root) comes first in each. */
+:root,
+[data-faction="cybran"] {
+    --th-primary: #e54b4b;
+    --th-primary-strong: #c53030;
+    --th-on-primary: #1d0606;
+    --th-accent: #ff9b50;
+}
+
+[data-faction="uef"] {
+    --th-primary: #4a8df0;
+    --th-primary-strong: #2f6fd9;
+    --th-on-primary: #061224;
+    --th-accent: #e3b341;
+}
+
+[data-faction="aeon"] {
+    --th-primary: #2fbf8c;
+    --th-primary-strong: #1f9e72;
+    --th-on-primary: #04170f;
+    --th-accent: #d4b24a;
+}
+
+[data-faction="seraphim"] {
     --th-primary: #d9a92c;
     --th-primary-strong: #bb8f14;
     --th-on-primary: #221a04;
     --th-accent: #7fd9c9;
-    --th-glow: rgba(217, 169, 44, 0.32);
 }
 
-/* Theme-independent faction swatches, used by the switcher buttons. */
+:root[data-mode="light"],
+[data-faction="cybran"][data-mode="light"] {
+    --th-primary: #c62f2f;
+    --th-primary-strong: #a32222;
+    --th-on-primary: #ffffff;
+    --th-accent: #c25e14;
+}
+
+[data-faction="uef"][data-mode="light"] {
+    --th-primary: #2563c9;
+    --th-primary-strong: #1d4fa3;
+    --th-on-primary: #ffffff;
+    --th-accent: #a8770f;
+}
+
+[data-faction="aeon"][data-mode="light"] {
+    --th-primary: #0b7f5b;
+    --th-primary-strong: #08654a;
+    --th-on-primary: #ffffff;
+    --th-accent: #8a6d1c;
+}
+
+[data-faction="seraphim"][data-mode="light"] {
+    --th-primary: #94700f;
+    --th-primary-strong: #7a5c0a;
+    --th-on-primary: #ffffff;
+    --th-accent: #1f8a7a;
+}
+
+/* Mixed from both: the faction tints the chrome, the mode keeps it readable. */
+:root {
+    --th-edge: color-mix(in oklab, var(--th-primary) 22%, var(--th-edge-neutral));
+    --th-glow: color-mix(in srgb, var(--th-primary) 35%, transparent);
+    --th-nav: color-mix(in oklab, var(--th-primary) 9%, var(--th-surface));
+}
+
+/* Mode-independent faction swatches (Factions.Swatch). */
 :root {
     --swatch-uef: #4a8df0;
     --swatch-cybran: #e54b4b;
@@ -103,13 +137,14 @@
 }
 
 /*
- * Map the active theme tokens onto Tailwind design tokens, so utilities like
- * bg-surface, text-ink-muted and border-edge follow the faction automatically.
+ * Map the active tokens onto Tailwind design tokens, so utilities like bg-surface,
+ * text-ink-muted and border-edge follow the mode and the faction automatically.
  */
 @theme inline {
     --color-base: var(--th-base);
     --color-surface: var(--th-surface);
     --color-raised: var(--th-raised);
+    --color-nav: var(--th-nav);
     --color-edge: var(--th-edge);
     --color-ink: var(--th-ink);
     --color-ink-muted: var(--th-ink-muted);
@@ -226,7 +261,7 @@
     }
 
     /* The game's unit view icons (Statistics tab) are drawn for the dark in-game UI, and several are
-       white; a thin dark outline keeps them legible on the light themes. A property of the
+       white; a thin dark outline keeps them legible in light mode. A property of the
        asset, not a theme colour. */
     .stat-icon {
         @apply inline-block h-4 w-4 shrink-0 align-text-bottom;

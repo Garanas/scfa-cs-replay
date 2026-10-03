@@ -1,0 +1,45 @@
+@implements IDisposable
+@inject ThemeService Theme
+
+@* One button that cycles the page between auto (the system setting), light and dark. The icon
+   shows the current mode; the title says what a click does. *@
+
+<button type="button"
+        class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary"
+        title="@($"{Label(Theme.Mode)} mode — click for {Label(ThemeService.Next(Theme.Mode)).ToLowerInvariant()}")"
+        @onclick="Theme.CycleModeAsync">
+    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        @switch (Theme.Mode)
+        {
+            case ThemeMode.Light:
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+                break;
+            case ThemeMode.Dark:
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                break;
+            default:
+                @* Half filled: whatever the system says. *@
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" />
+                break;
+        }
+    </svg>
+    <span class="sr-only">@Label(Theme.Mode) mode, click for @Label(ThemeService.Next(Theme.Mode)).ToLowerInvariant()</span>
+</button>
+
+@code {
+    private static string Label(ThemeMode mode) => mode switch
+    {
+        ThemeMode.Light => "Light",
+        ThemeMode.Dark => "Dark",
+        _ => "Auto",
+    };
+
+    protected override void OnInitialized() => Theme.Changed += OnThemeChanged;
+
+    private void OnThemeChanged() => StateHasChanged();
+
+    public void Dispose() => Theme.Changed -= OnThemeChanged;
+}

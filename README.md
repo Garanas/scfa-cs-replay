@@ -7,7 +7,7 @@ A small library to read and interpret replays of the game [Supreme Commander: Fo
 The repository also ships a web app to search, inspect and analyse replays:
 
 - `FAForever.Replay.Viewer` — a standalone Blazor WebAssembly app (Tailwind CSS v4, four
-  faction themes) that parses replays entirely in the browser.
+  faction colour themes, light and dark) that parses replays entirely in the browser.
 - `FAForever.Replay.Server` — a minimal ASP.NET Core host that serves the viewer and proxies
   the FAForever OAuth token exchange (Hydra does not send CORS headers).
 
