@@ -1,0 +1,196 @@
+@using FAForever.Replay
+@inherits UrlStateComponent
+
+@* What the game logs for moderators (the ModeratorEvent sim callback): pings, markers,
+   self-destructs, focus-army changes and the messages sent to the FAF server. Messages are shown
+   verbatim — they are evidence — and each time links to the Events tab: that player's raw input
+   around the moment, for the details. *@
+
+<div class="grid gap-6 lg:grid-cols-[1fr_3fr]">
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
+        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
+        <TimeWindowFilter Duration="duration" />
+
+        <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Players</h3>
+        <PlayerFilterList Items="playerItems" />
+
+        <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Kinds</h3>
+        <div role="group" aria-label="Event kinds">
+            @foreach ((Kind kind, int count) in kindItems)
+            {
+                bool isSelected = selectedKinds.Contains(kind);
+                <label class="@(isSelected ? SelectedKindClass : KindClass)">
+                    <input type="checkbox" class="accent-primary" checked="@isSelected"
+                           @onchange="() => ToggleKind(kind)" />
+                    <span class="truncate text-xs">@KindLabel(kind)</span>
+                    <span class="badge ml-auto shrink-0">@count.ToString("N0")</span>
+                </label>
+            }
+        </div>
+    </div>
+
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-0">
+        <table class="w-full text-left text-sm">
+            <thead class="sticky top-0 bg-raised text-xs uppercase tracking-wide text-ink-muted">
+                <tr>
+                    <th class="px-4 py-3 font-semibold">Time</th>
+                    <th class="px-4 py-3 font-semibold">Player</th>
+                    <th class="px-4 py-3 font-semibold">Kind</th>
+                    <th class="w-full px-4 py-3 font-semibold">Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (Row row in visible)
+                {
+                    <tr class="border-t border-edge/60 align-top hover:bg-raised/50">
+                        <td class="px-4 py-1.5 font-mono">
+                            <a href="@EventsLink(row)" class="text-ink-muted hover:text-primary hover:underline"
+                               title="Show @row.Player's input around this moment on the Events tab">@GameTime.Format(row.Event.Timestamp)</a>
+                        </td>
+                        <td class="whitespace-nowrap px-4 py-1.5"><PlayerLabel Name="@row.Player" Color="@colorsBySource.GetValueOrDefault(row.Event.SourceId)" /></td>
+                        <td class="whitespace-nowrap px-4 py-1.5"><span class="badge">@KindLabel(row.Kind)</span></td>
+                        <td class="px-4 py-1.5 font-mono text-xs text-ink-muted">@row.Event.Message</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (rows.Count == 0)
+        {
+            <p class="px-4 py-3 text-sm text-ink-muted">The game logged no moderator events in this replay.</p>
+        }
+        else if (visible.Count == 0)
+        {
+            <p class="px-4 py-3 text-sm text-ink-muted">No moderator events match the current filters.</p>
+        }
+    </div>
+</div>
+
+@code {
+    private const string KindsParameter = "kinds";
+    private const string KindClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1 text-left text-ink-muted transition hover:bg-raised hover:text-ink";
+    private const string SelectedKindClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1 text-left font-medium text-ink transition hover:bg-raised";
+
+    /// <summary>What a message is about, from its fixed wording in the game's lua. The query values are the lowercase names.</summary>
+    private enum Kind
+    {
+        SelfDestruct,
+        Focus,
+        Marker,
+        Ping,
+        Server,
+        Other,
+    }
+
+    private sealed record Row(ReplayModeratorEvent Event, string Player, Kind Kind);
+
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private LoadedReplay? parsedModel;
+    private List<Row> rows = [];
+    private List<Row> visible = [];
+    private TimeSpan duration;
+    private Dictionary<int, string> colorsBySource = [];
+    private List<(string Name, int Count, string? Color)> playerItems = [];
+    private List<(Kind Kind, int Count)> kindItems = [];
+    private HashSet<Kind> selectedKinds = [];
+
+    protected override void OnParametersSet()
+    {
+        Replay replay = Model.Replay;
+        if (!ReferenceEquals(parsedModel, Model))
+        {
+            parsedModel = Model;
+            duration = ReplayAnalysis.GetDuration(replay);
+            colorsBySource = GameColors.BySource(replay.Header);
+            rows = ReplaySemantics.GetModeratorEvents(replay)
+                .Select(entry => new Row(entry, PlayerName(entry.SourceId), Classify(entry.Message)))
+                .ToList();
+            playerItems = rows
+                .GroupBy(row => row.Event.SourceId)
+                .OrderByDescending(group => group.Count())
+                .Select(group => (group.First().Player, group.Count(), colorsBySource.GetValueOrDefault(group.Key)))
+                .ToList();
+            kindItems = rows
+                .GroupBy(row => row.Kind)
+                .OrderBy(group => group.Key)
+                .Select(group => (group.Key, group.Count()))
+                .ToList();
+        }
+
+        (TimeSpan? from, TimeSpan? to) = TimeWindowFilter.ReadWindow(Navigation, required: false, duration);
+        HashSet<string> selectedNames = PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name));
+
+        string? kindsFromQuery = UrlQuery.Get(Navigation, KindsParameter);
+        HashSet<string> requested = (kindsFromQuery ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        selectedKinds = kindItems.Select(item => item.Kind)
+            .Where(kind => requested.Count == 0 || requested.Contains(kind.ToString()))
+            .ToHashSet();
+        if (selectedKinds.Count == 0)
+        {
+            // Only unknown kinds in the link: show everything rather than an empty page.
+            selectedKinds = kindItems.Select(item => item.Kind).ToHashSet();
+        }
+
+        visible = rows
+            .Where(row => (from is null || row.Event.Timestamp >= from) && (to is null || row.Event.Timestamp <= to))
+            .Where(row => selectedNames.Contains(row.Player) && selectedKinds.Contains(row.Kind))
+            .ToList();
+    }
+
+    private void ToggleKind(Kind kind)
+    {
+        if (!selectedKinds.Remove(kind))
+        {
+            selectedKinds.Add(kind);
+        }
+
+        string? value = selectedKinds.Count == kindItems.Count || selectedKinds.Count == 0
+            ? null
+            : string.Join(',', kindItems.Select(item => item.Kind).Where(selectedKinds.Contains).Select(item => item.ToString().ToLowerInvariant()));
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(KindsParameter, value), replace: true);
+    }
+
+    /// <summary>How far before and after the event the Events tab shows: enough to see what led to it.</summary>
+    private static readonly TimeSpan EventsMargin = TimeSpan.FromSeconds(15);
+
+    /// <summary>The Events tab, narrowed to this player and a short window around the event.</summary>
+    private string EventsLink(Row row)
+    {
+        TimeSpan moment = TimeSpan.FromSeconds(Math.Floor(row.Event.Timestamp.TotalSeconds));
+        TimeSpan from = moment > EventsMargin ? moment - EventsMargin : TimeSpan.Zero;
+        TimeSpan to = moment + EventsMargin < duration ? moment + EventsMargin : duration;
+        return Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["tab"] = "events",
+            ["players"] = row.Player,
+            ["from"] = GameTime.Format(from),
+            ["to"] = GameTime.Format(to),
+        });
+    }
+
+    private static Kind Classify(string message) => message switch
+    {
+        _ when message.StartsWith("Self-destructed", StringComparison.Ordinal) => Kind.SelfDestruct,
+        _ when message.Contains("focus army", StringComparison.Ordinal) => Kind.Focus,
+        _ when message.StartsWith("Created a marker", StringComparison.Ordinal) => Kind.Marker,
+        _ when message.StartsWith("Created a ping", StringComparison.Ordinal) => Kind.Ping,
+        _ when message.StartsWith("GpgNetSend", StringComparison.Ordinal) => Kind.Server,
+        _ => Kind.Other,
+    };
+
+    private static string KindLabel(Kind kind) => kind switch
+    {
+        Kind.SelfDestruct => "Self-destruct",
+        Kind.Focus => "Focus army",
+        Kind.Marker => "Marker",
+        Kind.Ping => "Ping",
+        Kind.Server => "To FAF server",
+        _ => "Other",
+    };
+
+    private string PlayerName(int sourceId)
+    {
+        ReplaySource[] clients = Model.Replay.Header.Clients;
+        return sourceId >= 0 && sourceId < clients.Length ? clients[sourceId].PlayerName : $"Source {sourceId}";
+    }
+}

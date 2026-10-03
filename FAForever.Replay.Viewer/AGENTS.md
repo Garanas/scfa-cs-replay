@@ -65,11 +65,12 @@ to those two players, on any machine.
 
 | Parameter | Meaning | Default when absent |
 |---|---|---|
-| `tab` | Active replay section: `players`, `playthrough`, `buildorder`, `chat`, `events`, `callbacks`, `analysis` | Overview |
-| `players` | Comma-separated player names to show; shared by Playthrough, Chat, Events, Callbacks and Analysis | All players |
+| `tab` | Active replay section: `players`, `playthrough`, `buildorder`, `chat`, `events`, `callbacks`, `moderation` (right-aligned, apart from the analysis tabs) | Overview |
+| `players` | Comma-separated player names to show; shared by Playthrough, Chat, Events, Callbacks and Moderation | All players |
 | `from` / `to` | Game-time window (`12`, `12:30` or `1:02:30`); shared across tabs | See window policy below |
 | `types` | Comma-separated input types shown in the Events stream | All types |
 | `endpoint` | Selected sim-callback endpoint | The most frequent endpoint |
+| `kinds` | Comma-separated moderator-event kinds on the Moderation tab: `selfdestruct`, `focus`, `marker`, `ping`, `server`, `other` | All kinds |
 | `pings` | `off` hides pings on the Chat tab (map and feed) | Pings shown |
 | `compare` | The two players of the Build order tab, `Left,Right` (unknown names fall back per slot) | The first army vs the first army of another team |
 | `view` | Below the maps on the Build order tab: `timings` shows key moments and units ordered per minute, `units` the units (entities) of both players | The order ledger |

@@ -41,7 +41,8 @@
     <nav class="mt-6 flex flex-wrap gap-1 border-b border-edge pb-px" aria-label="Replay sections">
         @foreach (Tab tab in Enum.GetValues<Tab>())
         {
-            <button type="button" class="@(tab == activeTab ? ActiveTabClass : TabClass)" @onclick="() => SelectTab(tab)">
+            @* Moderation is a different use of the page than the analysis tabs, so it sits apart, on the right. *@
+            <button type="button" class="@(tab == activeTab ? ActiveTabClass : TabClass) @(tab == Tab.Moderation ? "ml-auto" : "")" @onclick="() => SelectTab(tab)">
                 @TabLabel(tab)
             </button>
         }
@@ -71,8 +72,8 @@
             case Tab.Callbacks:
                 <CallbacksPanel Model="Model" />
                 break;
-            case Tab.Analysis:
-                <AnalysisPanel Model="Model" />
+            case Tab.Moderation:
+                <ModerationPanel Model="Model" />
                 break;
         }
     </div>
@@ -91,7 +92,7 @@
         Chat,
         Events,
         Callbacks,
-        Analysis,
+        Moderation,
     }
 
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
@@ -135,7 +136,7 @@
         "chat" => Tab.Chat,
         "events" => Tab.Events,
         "callbacks" => Tab.Callbacks,
-        "analysis" => Tab.Analysis,
+        "moderation" => Tab.Moderation,
         _ => Tab.Overview,
     };
 
@@ -177,7 +178,7 @@
         Tab.Chat => "Chat",
         Tab.Events => "Events",
         Tab.Callbacks => "Callbacks",
-        Tab.Analysis => "Analysis",
+        Tab.Moderation => "Moderation",
         _ => tab.ToString(),
     };
 
