@@ -110,6 +110,10 @@ the FAF team before any public deployment (see TODO.md).
 - Faction icons live in `FAForever.Replay.Viewer/wwwroot/images/factions/` (copied from the FAF game
   repo, `textures/ui/common/faction_icon-lg`, `_med` variants); render them via the display helpers
   in `Services/Theming/Factions.cs` (icon path, name, swatch per faction index).
+- Game-data tables mirrored from the FA repo, with their lua sources: in-game army colours in
+  `Services/Theming/ArmyColors.cs` ← `lua/GameColors.lua` (`PlayerColor`/`ArmyColor` in the replay
+  header are 1-based indices into it); lobby option keys/values ← `lua/ui/lobby/lobbyOptions.lua`
+  (see `ReplayScenarioOptions` and the `GetFlexibleBool` reader). Re-check both after game updates.
 - Unit icons live in `FAForever.Replay.Viewer/wwwroot/images/units/`, generated from the FAF game repo
   (`textures/ui/common/icons/units/*.dds`) by `tools/convert-unit-icons.ps1` (ImageMagick 7). Never edit
   them by hand; re-run the script. See "Unit icon atlas" below.

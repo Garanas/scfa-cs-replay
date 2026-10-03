@@ -21,7 +21,8 @@
             {
                 <g>
                     <title>@marker.Title</title>
-                    <circle cx="@Fmt(marker.X)" cy="@Fmt(marker.Y)" r="@Fmt(IconSize * 0.62)" fill="rgba(10, 12, 18, 0.55)" />
+                    <circle cx="@Fmt(marker.X)" cy="@Fmt(marker.Y)" r="@Fmt(IconSize * 0.62)" fill="rgba(10, 12, 18, 0.55)"
+                            stroke="@(marker.ArmyColor ?? "transparent")" stroke-width="@Fmt(IconSize * 0.09)" />
                     @if (marker.Icon is { } icon)
                     {
                         <image href="@icon" x="@Fmt(marker.X - IconSize / 2)" y="@Fmt(marker.Y - IconSize / 2)"
@@ -41,7 +42,7 @@
 @code {
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
-    private sealed record SpawnMarker(float X, float Y, string Label, string Title, string? Icon, string Swatch);
+    private sealed record SpawnMarker(float X, float Y, string Label, string Title, string? Icon, string Swatch, string? ArmyColor);
 
     private readonly List<SpawnMarker> markers = [];
     private int sizeX = 1024;
@@ -96,7 +97,8 @@
                 name,
                 $"{name} — {faction}{(army.Team is > 1 and int team ? $", team {team - 1}" : "")} (estimated start)",
                 Factions.IconPath(army.Faction),
-                Factions.Swatch(army.Faction)));
+                Factions.Swatch(army.Faction),
+                ArmyColors.ForArmy(army)));
         }
     }
 

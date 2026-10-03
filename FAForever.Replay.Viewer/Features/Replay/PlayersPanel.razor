@@ -19,6 +19,8 @@
                 <tr class="border-b border-edge/60 last:border-0 hover:bg-raised/50">
                     <td class="px-4 py-3">
                         <span class="flex items-center gap-2">
+                            <span class="h-4 w-1 shrink-0 rounded-full" style="background: @(row.Color ?? "transparent")"
+                                  title="In-game colour" aria-hidden="true"></span>
                             @if (Factions.IconPath(row.Faction) is { } factionIcon)
                             {
                                 <img src="@factionIcon" alt="@Factions.Name(row.Faction)" title="@Factions.Name(row.Faction)"
@@ -62,7 +64,7 @@
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
     private sealed record PlayerRow(
-        string Name, string? Clan, string? Tag, int? Faction,
+        string Name, string? Clan, string? Tag, int? Faction, string? Color,
         string Team, int? Rating, int? Actions, int? Orders, double? AveragePerMinute, int? BuildOrders);
 
     private List<PlayerRow> Rows { get; set; } = [];
@@ -106,6 +108,7 @@
                 army.Clan,
                 army.Human == true ? null : "AI",
                 army.Faction,
+                ArmyColors.ForArmy(army),
                 TeamLabel(army.Team),
                 rating,
                 actionCount,
@@ -121,7 +124,7 @@
             {
                 rows.Add(new PlayerRow(
                     replay.Header.Clients[sourceId].PlayerName, null, "observer",
-                    null, "—", null, null, null, null, null));
+                    null, null, "—", null, null, null, null, null));
             }
         }
 
