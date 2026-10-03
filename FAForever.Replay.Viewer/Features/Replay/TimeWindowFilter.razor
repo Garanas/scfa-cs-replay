@@ -19,16 +19,19 @@
     </label>
 </div>
 
-@if (Window is { From: { } stepFrom, To: { } stepTo } && stepTo > stepFrom)
-{
-    TimeSpan length = stepTo - stepFrom;
-    <div class="grid grid-cols-2 gap-2 px-3 pb-2">
-        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@(stepFrom <= TimeSpan.Zero)"
-                @onclick="() => Step(-1)">&minus;@GameTime.Format(length)</button>
-        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@(stepTo >= Duration)"
-                @onclick="() => Step(1)">+@GameTime.Format(length)</button>
-    </div>
+@{
+    (TimeSpan? windowFrom, TimeSpan? windowTo) = Window;
+    bool hasWindow = windowFrom is { } wf && windowTo is { } wt && wt > wf;
+    TimeSpan stepLength = hasWindow ? windowTo!.Value - windowFrom!.Value : DefaultTo;
+    bool canStepBack = hasWindow && windowFrom!.Value > TimeSpan.Zero;
+    bool canStepForward = hasWindow ? windowTo!.Value < Duration : DefaultTo < Duration;
 }
+<div class="grid grid-cols-2 gap-2 px-3 pb-2">
+    <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@(!canStepBack)"
+            @onclick="() => Step(-1)">&minus;@GameTime.Format(stepLength)</button>
+    <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@(!canStepForward)"
+            @onclick="() => Step(1)">+@GameTime.Format(stepLength)</button>
+</div>
 
 @code {
     private const string FromParameter = "from";
@@ -113,15 +116,18 @@
 
     private void Step(int direction)
     {
-        if (Window is not { From: { } start, To: { } end } || end <= start)
+        if (Window is { From: { } start, To: { } end } && end > start)
         {
-            return;
+            TimeSpan length = end - start;
+            TimeSpan upperBound = Duration > length ? Duration - length : TimeSpan.Zero;
+            TimeSpan newFrom = Clamp(start + direction * length, TimeSpan.Zero, upperBound);
+            Write(newFrom, newFrom + length);
         }
-
-        TimeSpan length = end - start;
-        TimeSpan upperBound = Duration > length ? Duration - length : TimeSpan.Zero;
-        TimeSpan newFrom = Clamp(start + direction * length, TimeSpan.Zero, upperBound);
-        Write(newFrom, newFrom + length);
+        else if (direction > 0)
+        {
+            // No active window (whole game): stepping forward starts paging from the beginning.
+            Write(TimeSpan.Zero, DefaultTo);
+        }
     }
 
     private void Write(TimeSpan? from, TimeSpan? to)

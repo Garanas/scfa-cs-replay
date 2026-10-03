@@ -151,8 +151,9 @@ to those two players, on any machine.
 **four minutes** (`TimeWindowFilter.MaxWindow`), self-correcting with no error states: reversed
 bounds swap, a single bound implies the other, To is pulled along when the window is too long.
 Events *requires* a window (default `0:00`–`4:00`, kept out of the URL); everywhere else it is
-optional (both parameters absent = whole game). The stepper buttons shift by the window length
-and show it as their label (−4:00 / +4:00).
+optional (both parameters absent = whole game). The stepper buttons are always visible and shift
+by the window length, shown as their label (−4:00 / +4:00); without an active window the forward
+stepper starts one at `0:00`–`4:00` (the back stepper is disabled until there is one).
 Reuse `Features/Replay/TimeWindowFilter.razor` and `PlayerFilterList.razor` for any new filter panel;
 both own their query parameters, and parents re-derive state from the URL in `OnParametersSet`.
 
