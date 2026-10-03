@@ -295,3 +295,6 @@ tools/tailwindcss.exe
 # Playwright MCP (screenshots, traces, downloads)
 .playwright-mcp/
 .claude/settings.local.json
+
+# Deployment secrets (deploy/.env.example is the template)
+deploy/.env

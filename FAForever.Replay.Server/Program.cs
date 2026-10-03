@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -11,7 +12,21 @@ builder.Services.AddHttpClient("Hydra", client =>
     client.DefaultRequestHeaders.UserAgent.ParseAdd("FAForever-Replay-Viewer");
 });
 
+// The token proxy is public once deployed: limit it per client address so it cannot be used
+// to hammer Hydra. A sign-in takes one request and a refresh one more per hour, so this is
+// generous for people. Behind a reverse proxy the address comes from X-Forwarded-For (set
+// ASPNETCORE_FORWARDEDHEADERS_ENABLED=true, as the container does).
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("token", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
+});
+
 WebApplication app = builder.Build();
+
+app.UseRateLimiter();
 
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles(new StaticFileOptions
@@ -59,7 +74,7 @@ app.MapPost("/api/oauth/token", async (HttpContext context, IHttpClientFactory h
         context.Response.StatusCode = StatusCodes.Status502BadGateway;
         await context.Response.WriteAsJsonAsync(new { error = "upstream_unreachable" }, cancellationToken);
     }
-}).WithMetadata(new RequestSizeLimitAttribute(8 * 1024));
+}).WithMetadata(new RequestSizeLimitAttribute(8 * 1024)).RequireRateLimiting("token");
 
 app.MapFallbackToFile("index.html");
 

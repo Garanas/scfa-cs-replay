@@ -27,12 +27,13 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
 
 - The server **must** run on `http://127.0.0.1:5080` in development: the temporary OAuth client only
   accepts loopback redirect URIs, and `wwwroot/appsettings.json` pins `RedirectUri` to that origin.
-- Deployment: every push to `main` publishes the Viewer (only) as a static site to GitHub Pages,
-  https://garanas.github.io/scfa-cs-replay/ (`.github/workflows/pages.yml`, after the tests). The
-  app lives below `/scfa-cs-replay/` there (the workflow rewrites `<base href>`), so **in-app links
-  must be base-relative**: `href="replay/123"`, `NavigateTo("search")`, `href=""` for home — never
-  a leading `/`. Deep links work through a copy of `index.html` as `404.html`. Sign-in does not work
-  there yet (no token proxy, see TODO.md).
+- Deployment: a container image (`Dockerfile`: the Server with the Viewer) is built and pushed to
+  `ghcr.io/garanas/scfa-cs-replay` on every push to `main` (`.github/workflows/docker.yml`, after
+  the tests) and runs behind Traefik on a VPS at https://vault.jipwijnia.nl. Everything about the
+  host lives in `deploy/` (compose files, `.env.example`, README); try the production stack locally
+  with `docker compose -f deploy/compose.yaml -f deploy/compose.local.yaml up --build` →
+  http://vault.localhost. Keep **in-app links base-relative** (`href="replay/123"`,
+  `NavigateTo("search")`, `href=""` for home — no leading `/`), so the app also works below a path.
 - Tailwind: the standalone CLI lives at `tools/tailwindcss.exe` (gitignored). Install it once with
   `tools/install-tailwind.ps1`. The Viewer's MSBuild target regenerates `wwwroot/css/app.css` on every
   build when the CLI is present; the generated file is **committed** so builds work without it (CI).

@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+**/TestResults/
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+.claude/
+.playwright-mcp/
+deploy/
+tools/
+FAForever.Replay.Test/
+FAForever.Replay.Benchmark/
+FAForever.Replay.Sandbox/
+**/*.user
