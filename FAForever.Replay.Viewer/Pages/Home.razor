@@ -21,7 +21,7 @@
         <h2 class="text-lg font-bold">From the vault</h2>
         <p class="mt-1 text-sm text-ink-muted">Paste a replay ID or link, e.g. <span class="font-mono text-ink">23031279</span>.</p>
         <form class="mt-4 flex gap-2" @onsubmit="OpenVaultReplay" @onsubmit:preventDefault>
-            <input class="input-field font-mono" placeholder="Replay ID" inputmode="numeric"
+            <input @ref="vaultReplayInput" class="input-field font-mono" placeholder="Replay ID" inputmode="numeric"
                    @bind="vaultReplayId" @bind:event="oninput" @bind:after="ExtractReplayIdFromLink" disabled="@IsLoading" />
             <button type="submit" class="btn-primary" disabled="@(!CanOpenVaultReplay)">Open</button>
         </form>
@@ -57,6 +57,7 @@
     private const long MaxReplayFileBytes = 256L * 1024 * 1024;
 
     private string vaultReplayId = string.Empty;
+    private ElementReference vaultReplayInput;
     private string? error;
     private ReplayLoadProgress? progress;
     private CancellationTokenSource? loadCancellation;
@@ -101,6 +102,9 @@
     {
         if (firstRender)
         {
+            // Ready to paste a replay id or link right away.
+            await vaultReplayInput.FocusAsync();
+
             // The installed app opens .fafreplay and .scfareplay files ("Open with"); see js/app.js.
             launchListener = DotNetObjectReference.Create(this);
             if (await JS.InvokeAsync<bool>("fafReplay.onFileLaunched", launchListener))
