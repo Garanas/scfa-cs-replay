@@ -203,6 +203,17 @@
         background-size: 12.5% 12.5%;
     }
 
+    /* Spawn markers on the minimap (MapView.razor); inactive = the player already left or
+       was defeated at the current playback time. */
+    .map-marker {
+        transition: opacity 500ms ease, filter 500ms ease;
+    }
+
+    .map-marker-inactive {
+        filter: grayscale(1);
+        opacity: 0.45;
+    }
+
     /* Playthrough markers (PlaythroughMarkerLayer.razor). Each marker mounts once and its
        animation runs once; the durations mirror MarkerLifetime/PingLifetime in
        PlaythroughPanel.razor. transform-box/transform-origin keep the scale centred on the

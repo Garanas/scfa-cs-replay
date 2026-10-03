@@ -8,9 +8,18 @@
    pause/seek. The loop is a cooperative async timer; WASM is single-threaded, so there
    is no Task.Run anywhere (AGENTS.md hard rule). *@
 
-<div class="grid gap-6 lg:grid-cols-[3fr_1fr]">
+<div class="grid gap-6 lg:grid-cols-[1fr_3fr_1fr]">
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
+        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
+        <PlayerFilterList Items="playerItems" />
+        <label class="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-ink-muted transition hover:bg-raised hover:text-ink">
+            <input type="checkbox" class="accent-primary" @bind="trailsEnabled" @bind:after="OnTrailsToggled" />
+            <span class="text-sm">Trails</span>
+        </label>
+    </div>
+
     <div class="card flex flex-col gap-3 self-start">
-        <MapView Model="Model">
+        <MapView Model="Model" MarkerScale="0.6" InactiveSources="defeatedSources">
             <Overlay>
                 <PlaythroughMarkerLayer Markers="activeMarkers"
                                         TrailChunks="@(trailsEnabled ? closedTrailChunks : NoChunks)"
@@ -34,15 +43,8 @@
         </div>
     </div>
 
-    <div class="card max-h-[80vh] self-start overflow-y-auto p-2">
-        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
-        <PlayerFilterList Items="playerItems" />
-        <label class="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-ink-muted transition hover:bg-raised hover:text-ink">
-            <input type="checkbox" class="accent-primary" @bind="trailsEnabled" @bind:after="OnTrailsToggled" />
-            <span class="text-sm">Trails</span>
-        </label>
-
-        <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Feed</h3>
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
+        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Feed</h3>
         <PlaythroughFeed Items="feedItems" VisibleCount="feedCursor" OnSeek="SeekFromFeed" />
     </div>
 </div>
@@ -81,6 +83,11 @@
     private HashSet<int> selectedSources = [];
     private List<PlaythroughFeed.Item> feedItems = [];
 
+    // When each source stopped sending input (CommandSourceTerminated): the player left or
+    // was defeated. Their spawn marker greys out once playback passes that moment.
+    private Dictionary<int, TimeSpan> terminationBySource = [];
+    private readonly HashSet<int> defeatedSources = [];
+
     // Playback state - component fields on purpose, never derived from the URL.
     private TimeSpan current;
     private bool playing;
@@ -117,7 +124,19 @@
             colorsBySource = GameColors.BySource(replay.Header);
             mapEvents = ReplaySemantics.GetMapEvents(replay);
             pings = ReplaySemantics.GetPings(replay);
-            allFeedItems = BuildAllFeedItems(replay);
+
+            List<ReplaySessionEvent> sessionEvents = ReplaySemantics.GetSessionEvents(replay);
+            terminationBySource = [];
+            foreach (ReplaySessionEvent sessionEvent in sessionEvents)
+            {
+                if (sessionEvent.Kind == ReplaySessionEventKind.PlayerLeft && !terminationBySource.ContainsKey(sessionEvent.SourceId))
+                {
+                    terminationBySource[sessionEvent.SourceId] = sessionEvent.Timestamp;
+                }
+            }
+            defeatedSources.Clear();
+
+            allFeedItems = BuildAllFeedItems(replay, sessionEvents);
 
             Dictionary<int, int> inputCounts = [];
             foreach (ReplayInput input in replay.Body.UserInput)
@@ -279,6 +298,20 @@
         {
             markerVersion++;
         }
+
+        UpdateDefeated();
+    }
+
+    private void UpdateDefeated()
+    {
+        defeatedSources.Clear();
+        foreach ((int sourceId, TimeSpan moment) in terminationBySource)
+        {
+            if (moment <= current)
+            {
+                defeatedSources.Add(sourceId);
+            }
+        }
     }
 
     private void AddMarker(ReplayMapEvent mapEvent, TimeSpan nowWall)
@@ -359,6 +392,7 @@
         activeMarkers.Clear();
         closedTrailChunks.RemoveAll(chunk => chunk.LastTimestamp > current);
         openTrail.RemoveAll(dot => dot.Timestamp > current);
+        UpdateDefeated();
         markerVersion++;
     }
 
@@ -444,7 +478,7 @@
         return low;
     }
 
-    private List<PlaythroughFeed.Item> BuildAllFeedItems(Replay replay)
+    private List<PlaythroughFeed.Item> BuildAllFeedItems(Replay replay, List<ReplaySessionEvent> sessionEvents)
     {
         List<PlaythroughFeed.Item> items = [];
         Dictionary<string, string> colorsByName = GameColors.ByName(replay.Header);
@@ -493,7 +527,7 @@
 
         // FAF clients emit a RequestResume on startup; only resumes that answer a pause are shown.
         int pauseDepth = 0;
-        foreach (ReplaySessionEvent sessionEvent in ReplaySemantics.GetSessionEvents(replay))
+        foreach (ReplaySessionEvent sessionEvent in sessionEvents)
         {
             string? text = sessionEvent.Kind switch
             {

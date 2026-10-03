@@ -19,7 +19,7 @@
              aria-label="Estimated start positions of the players">
             @foreach (SpawnMarker marker in markers)
             {
-                <g>
+                <g class="map-marker @(InactiveSources?.Contains(marker.SourceId) == true ? "map-marker-inactive" : null)">
                     <title>@marker.Title</title>
                     <circle cx="@Fmt(marker.X)" cy="@Fmt(marker.Y)" r="@Fmt(IconSize * 0.62)" fill="rgba(10, 12, 18, 0.55)"
                             stroke="@(marker.ArmyColor ?? "transparent")" stroke-width="@Fmt(IconSize * 0.09)" />
@@ -49,19 +49,26 @@
     /// </summary>
     [Parameter] public RenderFragment? Overlay { get; set; }
 
+    /// <summary>Scales the spawn markers; the Playthrough tab uses smaller ones.</summary>
+    [Parameter] public double MarkerScale { get; set; } = 1.0;
+
+    /// <summary>Sources whose spawn marker is greyed out, e.g. players already defeated.</summary>
+    [Parameter] public IReadOnlyCollection<int>? InactiveSources { get; set; }
+
     /// <summary>
     /// The world-unit size of the map, with the fallback for maps that do not state one.
     /// </summary>
     public static (int SizeX, int SizeZ) Size(ReplayScenarioMap map)
         => (map.SizeX is > 0 and int x ? x : 1024, map.SizeZ is > 0 and int z ? z : 1024);
 
-    private sealed record SpawnMarker(float X, float Y, string Label, string Title, string? Icon, string Swatch, string? ArmyColor);
+    private sealed record SpawnMarker(int SourceId, float X, float Y, string Label, string Title, string? Icon, string Swatch, string? ArmyColor);
 
     private readonly List<SpawnMarker> markers = [];
+    private Replay? markersFrom;
     private int sizeX = 1024;
     private int sizeZ = 1024;
 
-    private double IconSize => Math.Max(sizeX, sizeZ) / 16.0;
+    private double IconSize => Math.Max(sizeX, sizeZ) / 16.0 * MarkerScale;
 
     private string MapName => Model.Replay.Header.Scenario.Map.DisplayName ?? Model.Metadata?.mapname ?? "map";
 
@@ -86,6 +93,14 @@
     {
         (sizeX, sizeZ) = Size(Model.Replay.Header.Scenario.Map);
 
+        // Spawn estimation walks the replay inputs; cache it per replay, because an overlay
+        // host (the Playthrough tab) re-renders this component on every playback frame.
+        if (ReferenceEquals(markersFrom, Model.Replay))
+        {
+            return;
+        }
+        markersFrom = Model.Replay;
+
         markers.Clear();
         Dictionary<int, ReplayAnalysis.MapPosition> spawns = ReplayAnalysis.GetEstimatedSpawnPositions(Model.Replay);
         foreach (ReplayPlayerOptions army in Model.Replay.Header.Armies)
@@ -103,6 +118,7 @@
             string name = army.PlayerName ?? Model.Replay.Header.Clients[sourceId].PlayerName;
             string faction = Factions.Name(army.Faction) ?? "Unknown faction";
             markers.Add(new SpawnMarker(
+                sourceId,
                 markerX,
                 markerY,
                 name,
