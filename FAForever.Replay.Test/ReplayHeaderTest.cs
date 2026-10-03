@@ -262,5 +262,30 @@ namespace FAForever.Replay.Test
             Assert.AreEqual(expectedVictoryName, options.VictoryName);
             Assert.AreEqual(expectedAutoTeamsName, options.AutoTeamsName);
         }
+
+        [TestMethod]
+        [DataRow("assets/faforever/23225104.fafreplay", 86, "Move", 1, 500.858, 532.378)]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 65, "Alert", 9, 669.14, 520.518)]
+        public void GetPingsTest(string file, int expectedCount, string expectedFirstType, int expectedFirstSource, double expectedFirstX, double expectedFirstZ)
+        {
+            Replay replay = Load(file);
+
+            List<ReplayPing> pings = ReplaySemantics.GetPings(replay);
+
+            Assert.AreEqual(expectedCount, pings.Count);
+            ReplayPing first = pings[0];
+            Assert.AreEqual(expectedFirstType, first.Type);
+            Assert.AreEqual(expectedFirstSource, first.SourceId);
+            Assert.AreEqual(expectedFirstX, first.X, 0.01);
+            Assert.AreEqual(expectedFirstZ, first.Z, 0.01);
+
+            // Marker pings carry the typed text and a colour.
+            ReplayPing? marker = pings.FirstOrDefault(ping => ping.Type == "Marker");
+            if (marker is not null)
+            {
+                Assert.IsNotNull(marker.Name);
+                Assert.IsTrue(marker.Color is ['#', ..]);
+            }
+        }
     }
 }

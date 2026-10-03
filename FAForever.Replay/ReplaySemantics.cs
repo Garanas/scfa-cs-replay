@@ -194,5 +194,49 @@ namespace FAForever.Replay
             return transfers;
         }
 
+        /// <summary>
+        /// Retrieves all pings the players placed on the map, from the SpawnPing and
+        /// SpawnSpecialPing sim callbacks.
+        /// </summary>
+        public static List<ReplayPing> GetPings(Replay replay)
+        {
+            List<ReplayPing> pings = new List<ReplayPing>();
+
+            foreach (ReplayInput replayInput in replay.Body.UserInput)
+            {
+                if (replayInput is ReplayInput.SimCallback { Endpoint: "SpawnPing" or "SpawnSpecialPing", LuaParameters: LuaData.Table table }
+                    && table.TryGetStringValue("Type", out string? type) && type is not null
+                    && table.TryGetTableValue("Location", out LuaData.Table? location) && location is not null
+                    && location.TryGetNumberValue("1", out double? x) && x is { } locationX
+                    && location.TryGetNumberValue("2", out double? y) && y is { } locationY
+                    && location.TryGetNumberValue("3", out double? z) && z is { } locationZ)
+                {
+                    table.TryGetStringValue("Name", out string? name);
+                    table.TryGetStringValue("Color", out string? color);
+                    pings.Add(new ReplayPing(
+                        ReplayAnalysis.GetTimestamp(replayInput),
+                        replayInput.SourceId,
+                        type,
+                        (float)locationX,
+                        (float)locationY,
+                        (float)locationZ,
+                        string.IsNullOrEmpty(name) ? null : name,
+                        ToCssColor(color)));
+                }
+            }
+
+            return pings;
+        }
+
+        /// <summary>
+        /// Ping payloads carry colours as ARGB hex without a prefix (e.g. "ffe80a0a").
+        /// </summary>
+        private static string? ToCssColor(string? color) => color switch
+        {
+            { Length: 8 } => "#" + color[2..],
+            { Length: 6 } => "#" + color,
+            _ => null,
+        };
+
     }
 }
