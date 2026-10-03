@@ -11,6 +11,11 @@ namespace FAForever.Replay
 
     public static class ReplayLoader
     {
+        // Commands are immutable records, so the values without (or with little) content can be shared.
+        private static readonly CommandTarget.None NoTarget = new CommandTarget.None();
+        private static readonly CommandFormation.NoFormation NoFormation = new CommandFormation.NoFormation();
+        private static readonly CommandUnits[] CommandUnitsByCount = Enumerable.Range(0, 257).Select(count => new CommandUnits(count)).ToArray();
+
         /// <summary>
         /// Retrieves a command from the stream.
         /// </summary>
@@ -58,7 +63,7 @@ namespace FAForever.Replay
             // for us to know what unit is behind an entity id. The only relevant information is the count.
             reader.BaseStream.Position += 4 * numberOfEntities;
 
-            return new CommandUnits(numberOfEntities);
+            return (uint)numberOfEntities < (uint)CommandUnitsByCount.Length ? CommandUnitsByCount[numberOfEntities] : new CommandUnits(numberOfEntities);
         }
 
         /// <summary>
@@ -84,7 +89,7 @@ namespace FAForever.Replay
                     }
 
                 default:
-                    return new CommandTarget.None();
+                    return NoTarget;
             }
         }
 
@@ -96,7 +101,7 @@ namespace FAForever.Replay
             int formationId = reader.ReadInt32();
             if (formationId == -1)
             {
-                return new CommandFormation.NoFormation();
+                return NoFormation;
             }
 
             float heading = reader.ReadSingle();
