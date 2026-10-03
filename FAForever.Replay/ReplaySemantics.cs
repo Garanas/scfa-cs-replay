@@ -229,6 +229,31 @@ namespace FAForever.Replay
         }
 
         /// <summary>
+        /// Retrieves the events the game logged for moderation via the ModeratorEvent sim
+        /// callback, such as ping creations and self-destructs.
+        /// </summary>
+        public static List<ReplayModeratorEvent> GetModeratorEvents(Replay replay)
+        {
+            List<ReplayModeratorEvent> events = new List<ReplayModeratorEvent>();
+
+            foreach (ReplayInput replayInput in replay.Body.UserInput)
+            {
+                if (replayInput is ReplayInput.SimCallback { Endpoint: "ModeratorEvent", LuaParameters: LuaData.Table table }
+                    && table.TryGetStringValue("Message", out string? message) && message is not null)
+                {
+                    table.TryGetNumberValue("From", out double? fromArmy);
+                    events.Add(new ReplayModeratorEvent(
+                        ReplayAnalysis.GetTimestamp(replayInput),
+                        replayInput.SourceId,
+                        fromArmy is { } from ? (int)from : null,
+                        message));
+                }
+            }
+
+            return events;
+        }
+
+        /// <summary>
         /// Ping payloads carry colours as ARGB hex without a prefix (e.g. "ffe80a0a").
         /// </summary>
         private static string? ToCssColor(string? color) => color switch

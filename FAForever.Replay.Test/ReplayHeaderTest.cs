@@ -287,5 +287,21 @@ namespace FAForever.Replay.Test
                 Assert.IsTrue(marker.Color is ['#', ..]);
             }
         }
+
+        [TestMethod]
+        [DataRow("assets/faforever/23225104.fafreplay", 175)]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 162)]
+        public void GetModeratorEventsTest(string file, int expectedCount)
+        {
+            Replay replay = Load(file);
+
+            List<ReplayModeratorEvent> events = ReplaySemantics.GetModeratorEvents(replay);
+
+            Assert.AreEqual(expectedCount, events.Count);
+            foreach (ReplayModeratorEvent entry in events)
+            {
+                Assert.IsFalse(string.IsNullOrWhiteSpace(entry.Message));
+            }
+        }
     }
 }
