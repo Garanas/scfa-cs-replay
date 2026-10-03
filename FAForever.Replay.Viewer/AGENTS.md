@@ -32,10 +32,22 @@ drawings, game-data tables) are in [`../FAForever.Replay/AGENTS.md`](../FAForeve
 - Styling: Tailwind utilities in markup; recurring patterns become `@layer components` classes in
   `Styles/app.css` (`.card`, `.btn-primary`, `.input-field`, …). No inline
   `<style>` blocks in components; no component library.
-- Theming: four faction themes (UEF default, Cybran, Aeon, Seraphim) implemented as `--th-*` CSS
-  custom properties switched by `data-theme` on `<html>`, mapped to Tailwind tokens via
-  `@theme inline`. **Always use the semantic utilities** (`bg-surface`, `text-ink-muted`,
-  `border-edge`, `bg-primary`, …) — never hardcode colours in components, or faction switching breaks.
+- Theming: two independent choices, both `--th-*` CSS custom properties switched by an attribute on
+  `<html>` and mapped to Tailwind tokens via `@theme inline` (`Styles/app.css`, "Colour scheme"):
+  - **Mode** (`data-mode`: `dark` / `light`) owns the page: `base`, `surface`, `raised`, `ink*` and
+    the chart palette. The header button (`Layout/ModeToggle.razor`) cycles auto → light → dark;
+    auto is resolved from `prefers-color-scheme` by the scripts (pre-boot in `index.html`, then
+    `fafReplay.applyMode`, which also follows system changes), so CSS only ever sees dark or light.
+  - **Faction** (`data-faction`: Cybran default, UEF, Aeon, Seraphim) owns the accents:
+    `primary*`, `on-primary`, `accent`, and through them the chrome — buttons, links, active tabs,
+    navigation, the logo, focus rings. `edge` (borders), the glow and `nav` (the header background)
+    are mixed from `primary` with the mode's neutrals, so they follow both. Every faction has a dark
+    and a light step of its accent: a colour readable as text on one page is not on the other.
+
+  **Always use the semantic utilities** (`bg-surface`, `text-ink-muted`, `border-edge`,
+  `bg-primary`, …) — never hardcode colours in components, or switching breaks. Never give a faction
+  its own backgrounds, and never tie a colour to a faction being light or dark; check new UI in
+  both modes.
 - Page width: header, page and footer share `MainLayout.Container` (`max-w-6xl`). The Build order
   tab compares two players side by side and widens it to a full HD screen (`max-w-[1824px]`).
 - Anything drawn on the map goes through `Features/Replay/MapCanvas.razor`: an SVG in world
@@ -143,7 +155,7 @@ based on, and they end up in moderation records. Treat them as a public contract
   to change, keep reading the old form. Players are referenced by name, times in game time
   (`12:30`), tabs by their query value — not by indices that depend on lobby order.
 - **No hidden inputs.** What is shown may depend only on the replay and the URL. Browser storage
-  holds personal preferences only (the faction theme), never something that filters or selects.
+  holds personal preferences only (faction, light/dark mode), never something that filters or selects.
 - **The login round trip keeps the full URL.** `AuthService.BeginLoginAsync` stores the address,
   query included, and the callback returns to it. Any new redirect (another provider, an error
   page) must do the same.

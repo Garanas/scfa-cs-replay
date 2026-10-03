@@ -1,17 +1,17 @@
 @implements IDisposable
 @inject ThemeService Theme
 
-<div class="flex items-center gap-1 rounded-full border border-edge bg-raised/70 px-1.5 py-1" role="group" aria-label="Faction theme">
+<div class="flex items-center gap-1 rounded-full border border-edge bg-raised/70 px-1.5 py-1" role="group" aria-label="Faction colours">
     @foreach (FactionTheme faction in FactionTheme.All)
     {
         bool isActive = faction == Theme.Current;
         <button type="button"
-                title="@faction.DisplayName theme"
+                title="@faction.DisplayName colours"
                 aria-pressed="@isActive"
                 class="@(isActive ? ActiveClass : BaseClass)"
                 @onclick="() => Theme.SetAsync(faction)">
             <img src="images/factions/@(faction.Id).png" alt="" class="h-5 w-5" />
-            <span class="sr-only">@faction.DisplayName theme</span>
+            <span class="sr-only">@faction.DisplayName colours</span>
         </button>
     }
 </div>

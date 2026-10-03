@@ -13,14 +13,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
     <script>
-        // Apply the persisted faction theme before first paint to avoid a flash.
+        // Apply the persisted faction and light/dark mode before first paint to avoid a flash
+        // (keep in step with fafReplay.applyMode in js/app.js). "auto" follows the system setting.
         (function () {
+            var root = document.documentElement;
+            var faction = null, mode = null;
             try {
-                var theme = window.localStorage.getItem("faf-theme");
-                if (theme) {
-                    document.documentElement.setAttribute("data-theme", theme);
-                }
+                faction = window.localStorage.getItem("faf-theme");
+                mode = window.localStorage.getItem("faf-mode");
             } catch (e) { }
+            if (faction) {
+                root.setAttribute("data-faction", faction);
+            }
+            if (mode !== "light" && mode !== "dark") {
+                mode = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+            }
+            root.setAttribute("data-mode", mode);
         })();
     </script>
 </head>
@@ -35,7 +43,7 @@
                 justify-content: center;
                 gap: 1rem;
                 min-height: 100dvh;
-                color: var(--th-ink-muted, #9fb0d4);
+                color: var(--th-ink-muted, #a2aaba);
                 font-family: system-ui, sans-serif;
             }
 
@@ -43,8 +51,8 @@
                 width: 0.875rem;
                 height: 0.875rem;
                 border-radius: 9999px;
-                background: var(--th-primary, #4a8df0);
-                box-shadow: 0 0 18px var(--th-glow, rgba(74, 141, 240, 0.35));
+                background: var(--th-primary, #e54b4b);
+                box-shadow: 0 0 18px var(--th-glow, rgba(229, 75, 75, 0.35));
                 animation: faf-pulse 1.2s ease-in-out infinite;
             }
 
