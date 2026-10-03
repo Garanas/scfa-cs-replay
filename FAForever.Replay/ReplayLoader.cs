@@ -1,4 +1,4 @@
-
+﻿
 using System.Text;
 using ZstdSharp;
 
@@ -605,6 +605,24 @@ namespace FAForever.Replay
             return JsonSerializer.Deserialize<ReplayMetadata>(json.ToString());
         }
 
+        /// <summary>
+        /// The reader is significantly faster on a memory stream that exposes its buffer (see
+        /// <see cref="ReplayBinaryReader.ReadNullTerminatedString"/>). Decompressed replays always are;
+        /// for any other stream the remainder is copied into one. The copy is cheap compared to parsing.
+        /// </summary>
+        private static Stream WithAccessibleBuffer(Stream stream)
+        {
+            if (stream is MemoryStream memoryStream && memoryStream.TryGetBuffer(out _))
+            {
+                return stream;
+            }
+
+            MemoryStream copy = stream.CanSeek ? new MemoryStream((int)(stream.Length - stream.Position)) : new MemoryStream();
+            stream.CopyTo(copy);
+            copy.Position = 0;
+            return copy;
+        }
+
         private static MemoryStream? DecompressReplay(Stream stream, ReplayCompression compression)
         {
             MemoryStream replayStream = new MemoryStream();
@@ -697,7 +715,7 @@ namespace FAForever.Replay
         /// <returns></returns>
         public static ReplayLoadingStage ProcessReplayStage(ReplayLoadingStage.Decompressed stage)
         {
-            ReplayBinaryReader reader = new ReplayBinaryReader(stage.Stream);
+            ReplayBinaryReader reader = new ReplayBinaryReader(WithAccessibleBuffer(stage.Stream));
             ReplayHeader replayHeader = LoadReplayHeader(reader);
             return new ReplayLoadingStage.WithScenario(reader, stage.Metadata, replayHeader);
         }
@@ -771,7 +789,7 @@ namespace FAForever.Replay
         /// <returns></returns>
         public static Replay LoadSCFAReplayFromStream(Stream stream)
         {
-            using (ReplayBinaryReader reader = new ReplayBinaryReader(stream))
+            using (ReplayBinaryReader reader = new ReplayBinaryReader(WithAccessibleBuffer(stream)))
             {
                 return LoadReplay(reader);
             }

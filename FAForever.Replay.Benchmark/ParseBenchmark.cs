@@ -1,4 +1,4 @@
-
+﻿
 using BenchmarkDotNet.Attributes;
 
 namespace FAForever.Replay.Benchmark
@@ -51,7 +51,8 @@ namespace FAForever.Replay.Benchmark
         [Benchmark]
         public ReplayBody Body()
         {
-            MemoryStream stream = new MemoryStream(Decompressed) { Position = BodyOffset };
+            MemoryStream stream = OpenDecompressed();
+            stream.Position = BodyOffset;
             ReplayLoadingStage stage = new ReplayLoadingStage.WithScenario(new ReplayBinaryReader(stream), null, ParsedHeader);
             while (true)
             {
@@ -74,9 +75,17 @@ namespace FAForever.Replay.Benchmark
             }
         }
 
+        /// <summary>
+        /// Like the stream that decompression produces, this stream exposes its buffer.
+        /// </summary>
+        private MemoryStream OpenDecompressed()
+        {
+            return new MemoryStream(Decompressed, 0, Decompressed.Length, writable: false, publiclyVisible: true);
+        }
+
         private ReplayLoadingStage ParseHeader()
         {
-            return ReplayLoader.ProcessReplayStage(new ReplayLoadingStage.Decompressed(new MemoryStream(Decompressed), null));
+            return ReplayLoader.ProcessReplayStage(new ReplayLoadingStage.Decompressed(OpenDecompressed(), null));
         }
     }
 }
