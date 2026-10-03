@@ -1,0 +1,637 @@
+@using System.Diagnostics
+@using FAForever.Replay.Viewer.Services.Commands
+@inherits UrlStateComponent
+
+@* Plays the replay back like a video (see AGENTS.md § Playthrough): positional orders
+   appear as animated, player-coloured markers on the minimap, everything else scrolls by
+   in the feed on the right. Playback state (current time, playing, speed) lives in
+   component fields, NOT in the URL - only the "at" instant is shareable, written on
+   pause/seek. The loop is a cooperative async timer; WASM is single-threaded, so there
+   is no Task.Run anywhere (AGENTS.md hard rule). *@
+
+<div class="grid gap-6 lg:grid-cols-[1fr_3fr_1fr]">
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
+        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
+        <PlayerFilterList Items="playerItems" />
+        <label class="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-ink-muted transition hover:bg-raised hover:text-ink">
+            <input type="checkbox" class="accent-primary" @bind="trailsEnabled" @bind:after="OnTrailsToggled" />
+            <span class="text-sm">Trails</span>
+        </label>
+    </div>
+
+    <div class="card flex flex-col gap-3 self-start">
+        <MapView Model="Model" MarkerScale="0.6" InactiveSources="defeatedSources">
+            <Overlay>
+                <PlaythroughMarkerLayer Markers="activeMarkers"
+                                        TrailChunks="@(trailsEnabled ? closedTrailChunks : NoChunks)"
+                                        OpenTrail="@(trailsEnabled ? openTrail : NoDots)"
+                                        Version="markerVersion"
+                                        IconSize="markerIconSize" />
+            </Overlay>
+        </MapView>
+        <div class="flex items-center gap-3">
+            <button type="button" class="btn-primary px-3 py-1.5 text-sm" @onclick="TogglePlay">
+                @(playing ? "Pause" : "Play")
+            </button>
+            <button type="button" class="btn-secondary px-2 py-1.5 font-mono text-xs" @onclick="CycleSpeed"
+                    title="Playback speed">
+                ×@Speeds[speedIndex].ToString("0")
+            </button>
+            <input type="range" min="0" max="@ScrubMax" step="1" value="@((int)current.TotalSeconds)"
+                   class="min-w-0 flex-1 accent-primary" aria-label="Playback position"
+                   @oninput="OnScrubInput" @onchange="OnScrubCommit" />
+            <span class="shrink-0 font-mono text-xs text-ink-muted">@GameTime.Format(current) / @GameTime.Format(duration)</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-edge/60 pt-2 text-xs text-ink-muted"
+             role="list" aria-label="Marker legend">
+            @foreach ((CommandCategory category, string label) in LegendEntries)
+            {
+                <span role="listitem" class="inline-flex items-center gap-1">
+                    @if (CommandIcons.IconPath(category) is { } iconPath)
+                    {
+                        <img src="@iconPath" alt="" class="h-4 w-4" />
+                    }
+                    else
+                    {
+                        @* The glyph symbols are defined once in the marker layer's <defs>. *@
+                        <svg viewBox="0 0 10 10" class="h-4 w-4" aria-hidden="true"><use href="#pt-glyph-@CommandIcons.Slug(category)" /></svg>
+                    }
+                    @label
+                </span>
+            }
+            <span role="listitem" class="inline-flex items-center gap-1">
+                <svg viewBox="0 0 10 10" class="h-4 w-4" aria-hidden="true"><circle cx="5" cy="5" r="3.6" fill="none" stroke="currentColor" stroke-width="1" /><circle cx="5" cy="5" r="1" fill="currentColor" /></svg>
+                Ping
+            </span>
+            <span role="listitem" class="inline-flex items-center gap-1">
+                <svg viewBox="0 0 10 10" class="h-4 w-4" aria-hidden="true"><circle cx="5" cy="5" r="2" fill="currentColor" opacity="0.4" /></svg>
+                Trail
+            </span>
+        </div>
+    </div>
+
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
+        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Feed</h3>
+        <PlaythroughFeed Items="feedItems" VisibleCount="feedCursor" OnSeek="SeekFromFeed"
+                         Suspended="@(playing && Speeds[speedIndex] > MaxFeedSpeed)" />
+    </div>
+</div>
+
+@code {
+    private const string AtParameter = "at";
+    private const int FrameMilliseconds = 100;
+    private const int MaxActiveMarkers = 120;
+    private const int MaxTrailDots = 2000;
+    private const int TrailChunkSize = 250;
+
+    // Wall-time marker lifetimes, independent of playback speed. The CSS animation
+    // durations of .pt-marker and .pt-marker-ping (Styles/app.css) must match these.
+    private static readonly TimeSpan MarkerLifetime = TimeSpan.FromSeconds(1.5);
+    private static readonly TimeSpan PingLifetime = TimeSpan.FromSeconds(2.5);
+
+    private static readonly double[] Speeds = [1, 2, 4, 8, 16, 32, 64];
+
+    /// <summary>Above this speed the feed scrolls too fast to read and suspends itself.</summary>
+    private const double MaxFeedSpeed = 4;
+
+    private static readonly (CommandCategory Category, string Label)[] LegendEntries =
+    [
+        (CommandCategory.Move, "Move"),
+        (CommandCategory.Attack, "Attack"),
+        (CommandCategory.Aggressive, "Attack-move"),
+        (CommandCategory.Patrol, "Patrol"),
+        (CommandCategory.Build, "Build"),
+        (CommandCategory.Launch, "Launch"),
+        (CommandCategory.Reclaim, "Reclaim"),
+        (CommandCategory.Repair, "Repair"),
+        (CommandCategory.Capture, "Capture"),
+        (CommandCategory.Guard, "Guard"),
+        (CommandCategory.Transport, "Transport"),
+        (CommandCategory.Teleport, "Teleport"),
+        (CommandCategory.Stop, "Stop"),
+        (CommandCategory.Special, "Other"),
+    ];
+    private static readonly List<PlaythroughMarkerLayer.TrailChunk> NoChunks = [];
+    private static readonly List<PlaythroughMarkerLayer.TrailDot> NoDots = [];
+
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    // Extraction caches, rebuilt only when the replay itself changes.
+    private Replay? extractedFrom;
+    private TimeSpan duration;
+    private double markerIconSize = 25;
+    private Dictionary<int, string> colorsBySource = [];
+    private List<int> allSourceIds = [];
+    private List<(string Name, int Count, string? Color)> playerItems = [];
+    private List<ReplayMapEvent> mapEvents = [];
+    private List<ReplayPing> pings = [];
+    private List<PlaythroughFeed.Item> allFeedItems = [];
+
+    // Player filter (shared "players" query parameter).
+    private HashSet<string> selectedNames = [];
+    private HashSet<int> selectedSources = [];
+    private List<PlaythroughFeed.Item> feedItems = [];
+
+    // When each source stopped sending input (CommandSourceTerminated): the player left or
+    // was defeated. Their spawn marker greys out once playback passes that moment.
+    private Dictionary<int, TimeSpan> terminationBySource = [];
+    private readonly HashSet<int> defeatedSources = [];
+
+    // Playback state - component fields on purpose, never derived from the URL.
+    private TimeSpan current;
+    private bool playing;
+    private int speedIndex = 2; // ×4
+    private bool trailsEnabled = true;
+    private CancellationTokenSource? loopCts;
+    private readonly Stopwatch wallClock = Stopwatch.StartNew();
+    private string? lastSeenAt;
+
+    // Stream cursors into the sorted lists above.
+    private int nextMapEvent;
+    private int nextPing;
+    private int feedCursor;
+
+    // What the marker layer renders; markerVersion gates its re-rendering.
+    private readonly List<PlaythroughMarkerLayer.Marker> activeMarkers = [];
+    private readonly List<PlaythroughMarkerLayer.TrailChunk> closedTrailChunks = [];
+    private readonly List<PlaythroughMarkerLayer.TrailDot> openTrail = [];
+    private int markerVersion;
+    private long sequence;
+    private long trailChunkId;
+
+    private int ScrubMax => Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds));
+
+    protected override void OnParametersSet()
+    {
+        Replay replay = Model.Replay;
+        if (!ReferenceEquals(extractedFrom, replay))
+        {
+            extractedFrom = replay;
+            duration = ReplayAnalysis.GetDuration(replay);
+            (int sizeX, int sizeZ) = MapCanvas.MapSize(replay.Header);
+            markerIconSize = Math.Max(sizeX, sizeZ) / 40.0;
+            colorsBySource = GameColors.BySource(replay.Header);
+            mapEvents = ReplaySemantics.GetMapEvents(replay);
+            pings = ReplaySemantics.GetPings(replay);
+
+            List<ReplaySessionEvent> sessionEvents = ReplaySemantics.GetSessionEvents(replay);
+            terminationBySource = [];
+            foreach (ReplaySessionEvent sessionEvent in sessionEvents)
+            {
+                if (sessionEvent.Kind == ReplaySessionEventKind.PlayerLeft && !terminationBySource.ContainsKey(sessionEvent.SourceId))
+                {
+                    terminationBySource[sessionEvent.SourceId] = sessionEvent.Timestamp;
+                }
+            }
+            defeatedSources.Clear();
+
+            allFeedItems = BuildAllFeedItems(replay, sessionEvents);
+
+            Dictionary<int, int> inputCounts = [];
+            foreach (ReplayInput input in replay.Body.UserInput)
+            {
+                inputCounts[input.SourceId] = inputCounts.GetValueOrDefault(input.SourceId) + 1;
+            }
+            allSourceIds = inputCounts.Keys.ToList();
+            playerItems = inputCounts
+                .OrderByDescending(pair => pair.Value)
+                .Select(pair => (PlayerName(pair.Key), pair.Value, colorsBySource.GetValueOrDefault(pair.Key)))
+                .ToList();
+
+            selectedNames = [];
+            StopLoop();
+            current = TimeSpan.Zero;
+        }
+
+        HashSet<string> names = PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name));
+        if (!names.SetEquals(selectedNames))
+        {
+            selectedNames = names;
+            selectedSources = allSourceIds.Where(sourceId => names.Contains(PlayerName(sourceId))).ToHashSet();
+            feedItems = allFeedItems.Where(item => names.Contains(item.Player)).ToList();
+            feedCursor = FirstIndexAfter(feedItems, current, item => item.Timestamp);
+            // A changed selection invalidates the visible markers; they refill within a frame.
+            activeMarkers.Clear();
+            markerVersion++;
+        }
+
+        string? atFromUrl = UrlQuery.Get(Navigation, AtParameter);
+        if (!string.Equals(atFromUrl, lastSeenAt, StringComparison.Ordinal))
+        {
+            lastSeenAt = atFromUrl;
+            SeekTo(GameTime.TryParse(atFromUrl) ?? TimeSpan.Zero);
+        }
+    }
+
+    private void TogglePlay()
+    {
+        if (playing)
+        {
+            Pause();
+        }
+        else
+        {
+            Play();
+        }
+    }
+
+    private void Play()
+    {
+        if (duration <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        if (current >= duration)
+        {
+            SeekTo(TimeSpan.Zero);
+        }
+
+        playing = true;
+        loopCts?.Cancel();
+        loopCts = new CancellationTokenSource();
+        _ = RunLoopAsync(loopCts.Token);
+    }
+
+    private void Pause()
+    {
+        playing = false;
+        loopCts?.Cancel();
+        WriteAt();
+    }
+
+    private async Task RunLoopAsync(CancellationToken token)
+    {
+        try
+        {
+            using PeriodicTimer timer = new(TimeSpan.FromMilliseconds(FrameMilliseconds));
+            TimeSpan lastWall = wallClock.Elapsed;
+            while (playing && await timer.WaitForNextTickAsync(token))
+            {
+                TimeSpan nowWall = wallClock.Elapsed;
+                current += (nowWall - lastWall) * Speeds[speedIndex];
+                lastWall = nowWall;
+                if (current >= duration)
+                {
+                    current = duration;
+                    playing = false;
+                }
+
+                Advance(nowWall);
+                StateHasChanged();
+
+                if (!playing)
+                {
+                    WriteAt();
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // A pause, seek or dispose cancelled the timer.
+        }
+    }
+
+    /// <summary>
+    /// Ingests every event up to the current playback time via the stream cursors, and
+    /// expires markers that outlived their wall-time lifetime.
+    /// </summary>
+    private void Advance(TimeSpan nowWall)
+    {
+        bool changed = false;
+
+        while (nextMapEvent < mapEvents.Count && mapEvents[nextMapEvent].Timestamp <= current)
+        {
+            ReplayMapEvent mapEvent = mapEvents[nextMapEvent++];
+            if (!selectedSources.Contains(mapEvent.SourceId))
+            {
+                continue;
+            }
+
+            AddMarker(mapEvent, nowWall);
+            if (trailsEnabled)
+            {
+                AddTrailDot(mapEvent);
+            }
+            changed = true;
+        }
+
+        while (nextPing < pings.Count && pings[nextPing].Timestamp <= current)
+        {
+            ReplayPing ping = pings[nextPing++];
+            if (!selectedSources.Contains(ping.SourceId))
+            {
+                continue;
+            }
+
+            AddPingMarker(ping, nowWall);
+            changed = true;
+        }
+
+        while (feedCursor < feedItems.Count && feedItems[feedCursor].Timestamp <= current)
+        {
+            feedCursor++;
+        }
+
+        if (activeMarkers.RemoveAll(marker => nowWall - marker.AddedAtWall > marker.Lifetime) > 0)
+        {
+            changed = true;
+        }
+        if (activeMarkers.Count > MaxActiveMarkers)
+        {
+            activeMarkers.RemoveRange(0, activeMarkers.Count - MaxActiveMarkers);
+            changed = true;
+        }
+
+        if (changed)
+        {
+            markerVersion++;
+        }
+
+        UpdateDefeated();
+    }
+
+    private void UpdateDefeated()
+    {
+        defeatedSources.Clear();
+        foreach ((int sourceId, TimeSpan moment) in terminationBySource)
+        {
+            if (moment <= current)
+            {
+                defeatedSources.Add(sourceId);
+            }
+        }
+    }
+
+    private void AddMarker(ReplayMapEvent mapEvent, TimeSpan nowWall)
+    {
+        CommandCategory category = CommandCategories.GetCategory(mapEvent.CommandType);
+        string title = $"{GameTime.Format(mapEvent.Timestamp)} · {PlayerName(mapEvent.SourceId)}: {DescribeMapEvent(mapEvent)}";
+
+        activeMarkers.Add(new PlaythroughMarkerLayer.Marker(
+            sequence++, mapEvent.X, mapEvent.Z,
+            colorsBySource.GetValueOrDefault(mapEvent.SourceId),
+            category, mapEvent.Kind, mapEvent.BlueprintId,
+            IsPing: false, title, nowWall, MarkerLifetime, mapEvent.UnitCount));
+    }
+
+    /// <summary>A one-line description of a map event, e.g. "Move · 34 units" or "Build Mass Extractor".</summary>
+    private static string DescribeMapEvent(ReplayMapEvent mapEvent)
+    {
+        string verb = mapEvent.Kind switch
+        {
+            ReplayMapEventKind.Retarget => "Retarget",
+            ReplayMapEventKind.UnitSpawn => "Spawn",
+            _ => ReplayInputFormatter.Verb(mapEvent.CommandType),
+        };
+        string unit = mapEvent.BlueprintId is { } blueprintId ? $" {UnitNames.GetOrNull(blueprintId) ?? blueprintId}" : "";
+        string count = mapEvent.UnitCount > 1 ? $" · {mapEvent.UnitCount} units" : "";
+        return $"{verb}{unit}{count}";
+    }
+
+    /// <summary>Whether the map event shows its blueprint's unit icon rather than a category icon.</summary>
+    private static bool ShowsUnitIcon(ReplayMapEvent mapEvent, CommandCategory category)
+        => mapEvent.BlueprintId is not null
+           && (category == CommandCategory.Build || mapEvent.Kind == ReplayMapEventKind.UnitSpawn);
+
+    private void AddPingMarker(ReplayPing ping, TimeSpan nowWall)
+    {
+        string label = ping.Name is { Length: > 0 } name ? $"{ping.Type} — {name}" : ping.Type;
+        string title = $"{GameTime.Format(ping.Timestamp)} · {PlayerName(ping.SourceId)}: ping {label}";
+
+        activeMarkers.Add(new PlaythroughMarkerLayer.Marker(
+            sequence++, ping.X, ping.Z,
+            ping.Color ?? colorsBySource.GetValueOrDefault(ping.SourceId),
+            CommandCategory.Special, ReplayMapEventKind.Command, null,
+            IsPing: true, title, nowWall, PingLifetime));
+    }
+
+    private void AddTrailDot(ReplayMapEvent mapEvent)
+    {
+        openTrail.Add(new PlaythroughMarkerLayer.TrailDot(
+            sequence++, mapEvent.X, mapEvent.Z,
+            colorsBySource.GetValueOrDefault(mapEvent.SourceId), mapEvent.Timestamp, mapEvent.UnitCount));
+
+        if (openTrail.Count >= TrailChunkSize)
+        {
+            CloseTrailChunk();
+        }
+        if (closedTrailChunks.Count * TrailChunkSize + openTrail.Count > MaxTrailDots && closedTrailChunks.Count > 0)
+        {
+            closedTrailChunks.RemoveAt(0);
+        }
+    }
+
+    /// <summary>
+    /// Freezes the open trail dots into a single markup chunk: re-renders then compare one
+    /// string reference instead of diffing hundreds of circle elements.
+    /// </summary>
+    private void CloseTrailChunk()
+    {
+        System.Text.StringBuilder markup = new();
+        foreach (PlaythroughMarkerLayer.TrailDot dot in openTrail)
+        {
+            string radius = PlaythroughMarkerLayer.Fmt(markerIconSize * 0.12 * PlaythroughMarkerLayer.SizeScale(dot.UnitCount));
+            markup.Append($"<circle cx=\"{PlaythroughMarkerLayer.Fmt(dot.X)}\" cy=\"{PlaythroughMarkerLayer.Fmt(dot.Z)}\" r=\"{radius}\" fill=\"{dot.Color ?? "var(--th-ink-muted)"}\" opacity=\"0.35\" />");
+        }
+
+        closedTrailChunks.Add(new PlaythroughMarkerLayer.TrailChunk(
+            trailChunkId++, openTrail[^1].Timestamp, new MarkupString(markup.ToString())));
+        openTrail.Clear();
+    }
+
+    /// <summary>
+    /// Jumps playback to the given moment: cursors move by binary search, the live markers
+    /// clear (they refill when playing), and trails beyond the moment are truncated.
+    /// </summary>
+    private void SeekTo(TimeSpan moment)
+    {
+        current = moment < TimeSpan.Zero ? TimeSpan.Zero : moment > duration ? duration : moment;
+        nextMapEvent = FirstIndexAfter(mapEvents, current, mapEvent => mapEvent.Timestamp);
+        nextPing = FirstIndexAfter(pings, current, ping => ping.Timestamp);
+        feedCursor = FirstIndexAfter(feedItems, current, item => item.Timestamp);
+        activeMarkers.Clear();
+        closedTrailChunks.RemoveAll(chunk => chunk.LastTimestamp > current);
+        openTrail.RemoveAll(dot => dot.Timestamp > current);
+        UpdateDefeated();
+        markerVersion++;
+    }
+
+    private void SeekFromFeed(TimeSpan moment)
+    {
+        SeekTo(moment);
+        if (!playing)
+        {
+            WriteAt();
+        }
+    }
+
+    private void OnScrubInput(ChangeEventArgs args)
+    {
+        if (double.TryParse(args.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out double seconds))
+        {
+            SeekTo(TimeSpan.FromSeconds(seconds));
+        }
+    }
+
+    private void OnScrubCommit()
+    {
+        if (!playing)
+        {
+            WriteAt();
+        }
+    }
+
+    private void CycleSpeed() => speedIndex = (speedIndex + 1) % Speeds.Length;
+
+    private void OnTrailsToggled() => markerVersion++;
+
+    /// <summary>
+    /// Persists the playback position as the shareable "at" parameter. Only called when
+    /// paused or seeking while paused - never per frame (see AGENTS.md).
+    /// </summary>
+    private void WriteAt()
+    {
+        string? value = current > TimeSpan.Zero ? GameTime.Format(current) : null;
+        lastSeenAt = value;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(AtParameter, value), replace: true);
+    }
+
+    private void StopLoop()
+    {
+        playing = false;
+        loopCts?.Cancel();
+        loopCts = null;
+        activeMarkers.Clear();
+        closedTrailChunks.Clear();
+        openTrail.Clear();
+        nextMapEvent = 0;
+        nextPing = 0;
+        feedCursor = 0;
+        markerVersion++;
+    }
+
+    public override void Dispose()
+    {
+        loopCts?.Cancel();
+        loopCts?.Dispose();
+        base.Dispose();
+    }
+
+    /// <summary>The first index whose timestamp lies after the moment, on a sorted list.</summary>
+    private static int FirstIndexAfter<T>(List<T> items, TimeSpan moment, Func<T, TimeSpan> timestamp)
+    {
+        int low = 0;
+        int high = items.Count;
+        while (low < high)
+        {
+            int mid = (low + high) / 2;
+            if (timestamp(items[mid]) <= moment)
+            {
+                low = mid + 1;
+            }
+            else
+            {
+                high = mid;
+            }
+        }
+
+        return low;
+    }
+
+    private List<PlaythroughFeed.Item> BuildAllFeedItems(Replay replay, List<ReplaySessionEvent> sessionEvents)
+    {
+        List<PlaythroughFeed.Item> items = [];
+
+        // The orders themselves - the chat has its own tab and stays out of this feed.
+        foreach (ReplayMapEvent mapEvent in mapEvents)
+        {
+            CommandCategory category = CommandCategories.GetCategory(mapEvent.CommandType);
+            bool unitIcon = ShowsUnitIcon(mapEvent, category);
+            items.Add(new PlaythroughFeed.Item(
+                mapEvent.Timestamp, PlayerName(mapEvent.SourceId), colorsBySource.GetValueOrDefault(mapEvent.SourceId),
+                DescribeMapEvent(mapEvent), "command",
+                unitIcon ? null : CommandIcons.IconPath(category),
+                unitIcon ? mapEvent.BlueprintId : null));
+        }
+
+        foreach (ReplayResourceTransfer transfer in ReplaySemantics.GetResourceTransfers(replay))
+        {
+            List<string> parts = [];
+            if (transfer.MassRatio > 0)
+            {
+                parts.Add($"{transfer.MassRatio:P0} mass");
+            }
+            if (transfer.EnergyRatio > 0)
+            {
+                parts.Add($"{transfer.EnergyRatio:P0} energy");
+            }
+            string what = parts.Count > 0 ? string.Join(" and ", parts) : "resources";
+            items.Add(new PlaythroughFeed.Item(
+                transfer.Timestamp, PlayerName(transfer.SourceId), colorsBySource.GetValueOrDefault(transfer.SourceId),
+                $"sent {what} to {ArmyName(replay, transfer.ToArmy)}", "transfer"));
+        }
+
+        foreach (ReplayPing ping in pings)
+        {
+            string text = ping.Name is { Length: > 0 } name ? $"pinged {ping.Type} — {name}" : $"pinged {ping.Type}";
+            items.Add(new PlaythroughFeed.Item(ping.Timestamp, PlayerName(ping.SourceId), colorsBySource.GetValueOrDefault(ping.SourceId), text, "ping"));
+        }
+
+        foreach (ReplayModeratorEvent moderatorEvent in ReplaySemantics.GetModeratorEvents(replay))
+        {
+            // Marker creations already show as ping rows; the moderator copy would duplicate them.
+            if (moderatorEvent.Message.StartsWith("Created a marker", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            items.Add(new PlaythroughFeed.Item(
+                moderatorEvent.Timestamp, PlayerName(moderatorEvent.SourceId), colorsBySource.GetValueOrDefault(moderatorEvent.SourceId),
+                moderatorEvent.Message, "mod"));
+        }
+
+        // FAF clients emit a RequestResume on startup; only resumes that answer a pause are shown.
+        int pauseDepth = 0;
+        foreach (ReplaySessionEvent sessionEvent in sessionEvents)
+        {
+            string? text = sessionEvent.Kind switch
+            {
+                ReplaySessionEventKind.Paused => "paused the game",
+                ReplaySessionEventKind.Resumed when pauseDepth > 0 => "resumed the game",
+                ReplaySessionEventKind.PlayerLeft => "left the game",
+                ReplaySessionEventKind.GameEnded => "game ended",
+                ReplaySessionEventKind.SelfDestruct => $"self-destructed {sessionEvent.UnitCount} unit{(sessionEvent.UnitCount == 1 ? "" : "s")}",
+                _ => null,
+            };
+            pauseDepth = sessionEvent.Kind switch
+            {
+                ReplaySessionEventKind.Paused => pauseDepth + 1,
+                ReplaySessionEventKind.Resumed => Math.Max(0, pauseDepth - 1),
+                _ => pauseDepth,
+            };
+            if (text is not null)
+            {
+                items.Add(new PlaythroughFeed.Item(
+                    sessionEvent.Timestamp, PlayerName(sessionEvent.SourceId), colorsBySource.GetValueOrDefault(sessionEvent.SourceId),
+                    text, "game"));
+            }
+        }
+
+        return items.OrderBy(item => item.Timestamp).ToList();
+    }
+
+    private static string ArmyName(Replay replay, int army)
+    {
+        ReplayPlayerOptions[] armies = replay.Header.Armies;
+        return army >= 1 && army <= armies.Length
+            ? armies[army - 1].PlayerName ?? $"Army {army}"
+            : $"Army {army}";
+    }
+
+    private string PlayerName(int sourceId)
+    {
+        ReplaySource[] clients = Model.Replay.Header.Clients;
+        return sourceId >= 0 && sourceId < clients.Length ? clients[sourceId].PlayerName : $"Source {sourceId}";
+    }
+}

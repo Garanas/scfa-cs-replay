@@ -78,7 +78,10 @@ namespace FAForever.Replay
             _ => "",
         };
 
-        private static string Verb(CommandType type) => type switch
+        /// <summary>
+        /// The human-readable verb of a command type, e.g. "Move" or "Launch nuke".
+        /// </summary>
+        public static string Verb(CommandType type) => type switch
         {
             CommandType.None => "Command",
             CommandType.IssueStop => "Stop",

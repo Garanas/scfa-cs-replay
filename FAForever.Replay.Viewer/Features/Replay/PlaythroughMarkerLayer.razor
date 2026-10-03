@@ -1,0 +1,138 @@
+@using FAForever.Replay.Viewer.Services.Commands
+
+@* The animated command markers and trail dots of the Playthrough tab, rendered inside
+   MapView's Overlay slot in world coordinates. Pure rendering: the panel owns all state
+   and bumps Version whenever anything changed; ShouldRender skips every other frame.
+   Each marker mounts exactly once (@key on a monotonic, never-reused sequence number),
+   so its CSS animation runs once from insertion and is never restarted by re-renders.
+   The scale/fade animation lives on a nested <g> because a CSS transform would override
+   the positioning transform attribute on the same element. *@
+
+<defs>
+    <symbol id="pt-glyph-move" viewBox="0 0 10 10"><path d="M2.5 1.8 L8 5 L2.5 8.2 Z" fill="currentColor" /></symbol>
+    <symbol id="pt-glyph-aggressive" viewBox="0 0 10 10"><path d="M1 1.8 L4.6 5 L1 8.2 Z M5 1.8 L8.6 5 L5 8.2 Z" fill="currentColor" /></symbol>
+    <symbol id="pt-glyph-attack" viewBox="0 0 10 10"><circle cx="5" cy="5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.2" /><circle cx="5" cy="5" r="1" fill="currentColor" /></symbol>
+    <symbol id="pt-glyph-patrol" viewBox="0 0 10 10"><path d="M2 3.2 H7 M7 3.2 L5.6 1.8 M8 6.8 H3 M3 6.8 L4.4 8.2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" /></symbol>
+    <symbol id="pt-glyph-build" viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.2" /><path d="M5 3.4 V6.6 M3.4 5 H6.6" stroke="currentColor" stroke-width="1.2" /></symbol>
+    <symbol id="pt-glyph-launch" viewBox="0 0 10 10"><path d="M5 1 L6.8 5.4 H3.2 Z" fill="currentColor" /><rect x="4.3" y="5.8" width="1.4" height="2.6" fill="currentColor" /></symbol>
+    <symbol id="pt-glyph-reclaim" viewBox="0 0 10 10"><path d="M5 1.6 L8.6 8 H1.4 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" /></symbol>
+    <symbol id="pt-glyph-repair" viewBox="0 0 10 10"><path d="M4.1 1.6 h1.8 v2.5 h2.5 v1.8 h-2.5 v2.5 h-1.8 v-2.5 h-2.5 v-1.8 h2.5 Z" fill="currentColor" /></symbol>
+    <symbol id="pt-glyph-capture" viewBox="0 0 10 10"><path d="M3.6 1.6 H1.6 V8.4 H3.6 M6.4 1.6 H8.4 V8.4 H6.4" fill="none" stroke="currentColor" stroke-width="1.2" /></symbol>
+    <symbol id="pt-glyph-guard" viewBox="0 0 10 10"><path d="M5 1.2 L8.4 2.6 V5 C8.4 7.4 5 8.8 5 8.8 C5 8.8 1.6 7.4 1.6 5 V2.6 Z" fill="currentColor" /></symbol>
+    <symbol id="pt-glyph-transport" viewBox="0 0 10 10"><rect x="1.8" y="3" width="6.4" height="4" fill="none" stroke="currentColor" stroke-width="1.2" /><path d="M3.9 3 V7 M6.1 3 V7" stroke="currentColor" stroke-width="0.8" /></symbol>
+    <symbol id="pt-glyph-teleport" viewBox="0 0 10 10"><circle cx="5" cy="5" r="3.4" fill="none" stroke="currentColor" stroke-width="1" /><circle cx="5" cy="5" r="1.4" fill="currentColor" /></symbol>
+    <symbol id="pt-glyph-stop" viewBox="0 0 10 10"><rect x="2.4" y="2.4" width="5.2" height="5.2" fill="currentColor" /></symbol>
+    <symbol id="pt-glyph-special" viewBox="0 0 10 10"><path d="M5 1.4 L8.6 5 L5 8.6 L1.4 5 Z" fill="none" stroke="currentColor" stroke-width="1.2" /></symbol>
+</defs>
+
+<g pointer-events="none">
+    @foreach (TrailChunk chunk in TrailChunks)
+    {
+        <g @key="chunk.Id">@chunk.Markup</g>
+    }
+    @foreach (TrailDot dot in OpenTrail)
+    {
+        <circle @key="dot.Sequence" cx="@Fmt(dot.X)" cy="@Fmt(dot.Z)" r="@Fmt(IconSize * 0.12 * SizeScale(dot.UnitCount))"
+                fill="@(dot.Color ?? "var(--th-ink-muted)")" opacity="0.35" />
+    }
+</g>
+
+@foreach (Marker marker in Markers)
+{
+    <g @key="marker.Sequence" transform="translate(@Fmt(marker.X) @Fmt(marker.Z))"
+       style="color: @(marker.Color ?? "var(--th-ink-muted)")"
+       opacity="@(marker.Kind == ReplayMapEventKind.Retarget ? "0.6" : "1")">
+        @if (marker.IsPing)
+        {
+            <g class="pt-marker pt-marker-ping">
+                <title>@marker.Title</title>
+                <circle class="pt-ping-ring" r="@Fmt(IconSize * 1.1)" fill="none"
+                        stroke="currentColor" stroke-width="@Fmt(IconSize * 0.12)" />
+                <circle r="@Fmt(IconSize * 0.18)" fill="currentColor" />
+            </g>
+        }
+        else
+        {
+            double size = IconSize * SizeScale(marker.UnitCount);
+            <g class="pt-marker">
+                <title>@marker.Title</title>
+                <circle r="@Fmt(size * 0.55)" fill="rgba(10, 12, 18, 0.55)"
+                        stroke="currentColor" stroke-width="@Fmt(size * 0.1)" />
+                @if (marker.BlueprintId is { } blueprintId
+                     && (marker.Category == CommandCategory.Build || marker.Kind == ReplayMapEventKind.UnitSpawn))
+                {
+                    <image href="images/units/units/@(blueprintId.ToLowerInvariant()).png"
+                           x="@Fmt(-size * 0.33)" y="@Fmt(-size * 0.33)"
+                           width="@Fmt(size * 0.66)" height="@Fmt(size * 0.66)" />
+                }
+                else if (CommandIcons.IconPath(marker.Category) is { } iconPath)
+                {
+                    <image href="@iconPath"
+                           x="@Fmt(-size * 0.3)" y="@Fmt(-size * 0.3)"
+                           width="@Fmt(size * 0.6)" height="@Fmt(size * 0.6)" />
+                }
+                else
+                {
+                    <use href="#pt-glyph-@CommandIcons.Slug(marker.Category)"
+                         x="@Fmt(-size * 0.3)" y="@Fmt(-size * 0.3)"
+                         width="@Fmt(size * 0.6)" height="@Fmt(size * 0.6)" />
+                }
+            </g>
+        }
+    </g>
+}
+
+@code {
+    /// <summary>A single animated marker. Sequence numbers are monotonic and never reused.</summary>
+    public sealed record Marker(
+        long Sequence,
+        float X,
+        float Z,
+        string? Color,
+        CommandCategory Category,
+        ReplayMapEventKind Kind,
+        string? BlueprintId,
+        bool IsPing,
+        string Title,
+        TimeSpan AddedAtWall,
+        TimeSpan Lifetime,
+        int UnitCount = 1);
+
+    /// <summary>A permanent trail dot, left behind by a map event while trails are enabled.</summary>
+    public sealed record TrailDot(long Sequence, float X, float Z, string? Color, TimeSpan Timestamp, int UnitCount = 1);
+
+    /// <summary>
+    /// How much a marker grows with the number of units behind the order: logarithmic, so
+    /// a single engineer reads small and every doubling adds a step, capped at 64+ units.
+    /// </summary>
+    public static double SizeScale(int unitCount)
+        => unitCount <= 1 ? 0.65 : Math.Min(1.7, 0.65 + 0.17 * Math.Log2(unitCount));
+
+    /// <summary>A frozen batch of trail dots, pre-rendered to markup so re-renders skip it.</summary>
+    public sealed record TrailChunk(long Id, TimeSpan LastTimestamp, MarkupString Markup);
+
+    [Parameter, EditorRequired] public required IReadOnlyList<Marker> Markers { get; set; }
+    [Parameter] public IReadOnlyList<TrailChunk> TrailChunks { get; set; } = [];
+    [Parameter] public IReadOnlyList<TrailDot> OpenTrail { get; set; } = [];
+
+    /// <summary>Bumped by the panel whenever markers or trails changed; gates re-rendering.</summary>
+    [Parameter] public int Version { get; set; }
+
+    /// <summary>Marker size in world units.</summary>
+    [Parameter] public double IconSize { get; set; } = 25;
+
+    private int lastRenderedVersion = int.MinValue;
+
+    protected override bool ShouldRender()
+    {
+        if (Version == lastRenderedVersion)
+        {
+            return false;
+        }
+
+        lastRenderedVersion = Version;
+        return true;
+    }
+
+    internal static string Fmt(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+}

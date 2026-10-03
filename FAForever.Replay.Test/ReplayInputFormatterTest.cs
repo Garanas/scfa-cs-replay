@@ -80,5 +80,16 @@ namespace FAForever.Replay.Test
 
             Assert.IsTrue(withBlueprint > 1000, $"Expected plenty of blueprint-carrying inputs, found {withBlueprint}");
         }
+
+        [TestMethod]
+        [DataRow(CommandType.IssueMove, "Move")]
+        [DataRow(CommandType.IssueBuildMobile, "Build")]
+        [DataRow(CommandType.IssueNuke, "Launch nuke")]
+        [DataRow(CommandType.IssueKillSelf, "Self-destruct")]
+        [DataRow(CommandType.IssueAggressiveMove, "Aggressive move")]
+        public void VerbTest(CommandType type, string expected)
+        {
+            Assert.AreEqual(expected, ReplayInputFormatter.Verb(type));
+        }
     }
 }
