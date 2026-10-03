@@ -11,6 +11,7 @@
 #   - firewall: only SSH (rate limited), HTTP and HTTPS; automatic security updates with a
 #     nightly reboot when one needs it; 2 GB swap
 #   - Docker Engine + compose plugin, with log rotation
+#   - a "deploy" user for GitHub Actions whose key may only run vault-deploy (deploy/deploy.sh)
 #   - /opt/vault with compose.yaml and .env (fill in .env, then `docker compose up -d`)
 
 set -euo pipefail
@@ -129,6 +130,21 @@ cat > /etc/docker/daemon.json <<'EOF'
 EOF
 systemctl restart docker
 usermod -aG docker "$USER_NAME"
+
+step "Deploy user for GitHub Actions"
+# Logs in with a key that may only run vault-deploy (see deploy.sh). Both the script and the
+# authorized_keys file are root-owned, so the user cannot change what its key is allowed to do.
+if ! id deploy &>/dev/null; then
+    adduser --disabled-password --gecos "" deploy
+fi
+usermod -aG docker deploy
+curl -fsSL "$RAW/deploy.sh" -o /usr/local/bin/vault-deploy
+chown root:root /usr/local/bin/vault-deploy
+chmod 755 /usr/local/bin/vault-deploy
+install -d -m 755 -o root -g root /home/deploy/.ssh
+if [[ ! -f /home/deploy/.ssh/authorized_keys ]]; then
+    install -m 644 -o root -g root /dev/null /home/deploy/.ssh/authorized_keys
+fi
 
 step "Stack in $STACK_DIR"
 install -d -o "$USER_NAME" -g "$USER_NAME" "$STACK_DIR"

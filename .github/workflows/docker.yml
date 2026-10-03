@@ -1,6 +1,6 @@
 # Builds the container image of the hosted viewer (Dockerfile: FAForever.Replay.Server with the
 # Blazor app) and pushes it to the GitHub Container Registry as ghcr.io/garanas/scfa-cs-replay,
-# tagged "latest" and "sha-<commit>". The VPS pulls it with deploy/compose.yaml.
+# tagged "latest" and "sha-<commit>". The deploy job then has the VPS pull it (deploy/deploy.sh).
 #
 # Releasing is a deliberate step: only a push to the deploy/production branch publishes an image
 # (e.g. `git push origin main:deploy/production`); pushes to main do not. Pull requests to main
@@ -62,3 +62,34 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Rolls the new image out on the VPS. The key in the "production" environment may only run
+  # vault-deploy there (deploy/deploy.sh): pull the image, restart the vault. compose.yaml stays manual.
+  # Needs, in the environment: secret DEPLOY_SSH_KEY, variables DEPLOY_HOST and DEPLOY_KNOWN_HOSTS
+  # (the VPS host key, so a server pretending to be the VPS is refused). See deploy/README.md.
+  deploy:
+    needs: image
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/deploy/production'
+    runs-on: ubuntu-latest
+    permissions: {}
+    environment:
+      name: production
+      url: https://vault.jipwijnia.nl
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - name: Deploy to the VPS
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "deploy@$HOST"
+
+      - name: Check the site
+        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors -o /dev/null https://vault.jipwijnia.nl/
