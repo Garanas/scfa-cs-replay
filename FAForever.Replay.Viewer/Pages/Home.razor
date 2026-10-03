@@ -3,8 +3,9 @@
 @inject NavigationManager Navigation
 @inject ReplayLoadingService Loader
 @inject ReplaySessionState Session
+@inject IJSRuntime JS
 
-<PageTitle>FAF Replays</PageTitle>
+<PageTitle>Vault of FAF</PageTitle>
 
 <section class="py-14 text-center sm:py-20">
     <h1 class="mx-auto max-w-2xl text-4xl font-extrabold tracking-tight sm:text-5xl">
@@ -59,6 +60,7 @@
     private string? error;
     private ReplayLoadProgress? progress;
     private CancellationTokenSource? loadCancellation;
+    private DotNetObjectReference<Home>? launchListener;
 
     private bool IsLoading => loadCancellation is not null;
 
@@ -78,14 +80,45 @@
         return int.TryParse(candidate, out int replayId) && replayId > 0 ? replayId : null;
     }
 
-    private async Task OnFileSelected(InputFileChangeEventArgs args)
+    private Task OnFileSelected(InputFileChangeEventArgs args)
+    {
+        IBrowserFile file = args.File;
+        return LoadFileAsync(file.Name, cancellationToken => Task.FromResult(file.OpenReadStream(MaxReplayFileBytes, cancellationToken)));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // The installed app opens .fafreplay and .scfareplay files ("Open with"); see js/app.js.
+            launchListener = DotNetObjectReference.Create(this);
+            if (await JS.InvokeAsync<bool>("fafReplay.onFileLaunched", launchListener))
+            {
+                await OnFileLaunched();
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnFileLaunched()
+    {
+        if (IsLoading || await JS.InvokeAsync<string?>("fafReplay.takeLaunchedFileName") is not string fileName)
+        {
+            return;
+        }
+
+        await using IJSStreamReference content = await JS.InvokeAsync<IJSStreamReference>("fafReplay.takeLaunchedFileContent");
+        await LoadFileAsync(fileName, async cancellationToken => await content.OpenReadStreamAsync(MaxReplayFileBytes, cancellationToken));
+        StateHasChanged();
+    }
+
+    private async Task LoadFileAsync(string fileName, Func<CancellationToken, Task<Stream>> openRead)
     {
         error = null;
-        IBrowserFile file = args.File;
 
-        if (ReplayFormats.FromFileName(file.Name) is not ReplayFormat format)
+        if (ReplayFormats.FromFileName(fileName) is not ReplayFormat format)
         {
-            error = $"'{file.Name}' is not a .fafreplay or .scfareplay file.";
+            error = $"'{fileName}' is not a .fafreplay or .scfareplay file.";
             return;
         }
 
@@ -94,9 +127,10 @@
         try
         {
             progress = new ReplayLoadProgress("Reading file", null);
+            StateHasChanged();
 
             using MemoryStream buffer = new();
-            await using (Stream source = file.OpenReadStream(MaxReplayFileBytes, cancellation.Token))
+            await using (Stream source = await openRead(cancellation.Token))
             {
                 await source.CopyToAsync(buffer, cancellation.Token);
             }
@@ -106,7 +140,7 @@
             switch (result)
             {
                 case ReplayLoadResult.Success success:
-                    Session.Set(new LoadedReplay(success.Replay, success.Metadata, new ReplayOrigin.LocalFile(file.Name)));
+                    Session.Set(new LoadedReplay(success.Replay, success.Metadata, new ReplayOrigin.LocalFile(fileName)));
                     Navigation.NavigateTo("replay/local");
                     break;
                 case ReplayLoadResult.Failure failure:
@@ -137,5 +171,12 @@
 
     private void CancelLoad() => loadCancellation?.Cancel();
 
-    public void Dispose() => loadCancellation?.Cancel();
+    public void Dispose()
+    {
+        loadCancellation?.Cancel();
+        if (launchListener is not null)
+        {
+            _ = JS.InvokeVoidAsync("fafReplay.offFileLaunched").AsTask().ContinueWith(_ => launchListener.Dispose());
+        }
+    }
 }

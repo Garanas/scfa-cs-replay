@@ -27,6 +27,29 @@ drawings, game-data tables) are in [`../FAForever.Replay/AGENTS.md`](../FAForeve
   change (query left out) and an event per replay-tab change (`tab/<name>`), only when
   `Analytics:GoatCounter` is set — which only `wwwroot/appsettings.Production.json` does.
 
+## Progressive web app
+
+The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
+
+- **Service worker:** `wwwroot/service-worker.js` in development (caches nothing, so every build is
+  picked up), `wwwroot/service-worker.published.js` when published (`ServiceWorker` item in the
+  .csproj). It caches the app shell from the generated `service-worker-assets.js` (published files
+  with hashes) and serves `index.html` for every navigation. Data is never cached: vault replays and
+  the API always come from the network. The individual unit/background icons are excluded (the app
+  uses the atlases); exclude any new bulk folder in `offlineAssetsExclude` too.
+- **Updates wait for the user:** a new version installs in the background and
+  `Layout/UpdateBanner.razor` offers a reload; the worker only takes over on `skipWaiting` from the
+  page, so a local replay held in memory is never reloaded away. The Server sends `no-cache` for
+  `index.html`, the service worker, its asset list and the manifest.
+- **File handling:** the installed app is registered for `.fafreplay`/`.scfareplay` ("Open with").
+  `js/app.js` takes the file from the `launchQueue` (which may deliver before Blazor runs) and
+  `Pages/Home.razor` loads it like a picked file.
+- **Icons:** `wwwroot/icons/icon.svg` is the source; `tools/convert-app-icons.ps1` (ImageMagick 7)
+  renders the favicon, manifest and Apple touch icons. Never edit the PNGs by hand.
+- `theme-color` follows the light/dark mode (`fafReplay.syncThemeColor` in `applyMode`, from `--th-base`).
+- Test PWA behaviour on a **published** build (`dotnet publish FAForever.Replay.Server -c Release`),
+  served from 127.0.0.1 or https — the development worker does nothing.
+
 ## Conventions
 
 - Styling: Tailwind utilities in markup; recurring patterns become `@layer components` classes in
