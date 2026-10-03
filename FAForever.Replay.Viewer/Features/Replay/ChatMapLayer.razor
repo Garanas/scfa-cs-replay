@@ -1,0 +1,73 @@
+@using FAForever.Replay
+
+@* Drawings and pings rendered inside MapView's Overlay slot in world coordinates, shared by
+   the Chat tab (the items of the time window) and the Playthrough tab (the items alive at the
+   playback time). The highlighted item stands out and the others dim; with OnSelect set,
+   clicking an item selects it. Chat messages have no position and are skipped. ShouldRender
+   skips renders in which nothing changed, so a playback frame costs nothing here. *@
+
+@foreach (ChatPanel.Item item in Items)
+{
+    @if (item.Drawing is not null || item.Ping is not null)
+    {
+        bool dimmed = Highlighted is { } key && key != item.Key;
+        bool highlighted = Highlighted == item.Key;
+        <g @key="item.Key" class="@(Selectable ? "cursor-pointer" : null)" opacity="@(dimmed ? "0.3" : "1")" @onclick="() => OnSelect.InvokeAsync(item)">
+            <title>@item.Player — @ChatPanel.Describe(item) at @ChatPanel.FormatTime(item.Timestamp)@(Selectable ? " — click to highlight" : "")</title>
+            @if (item.Drawing is { } drawing)
+            {
+                string points = string.Join(' ', drawing.Points.Select(point => $"{Fmt(point.X)},{Fmt(point.Z)}"));
+                string color = item.Color ?? "#ffffff";
+                <polyline points="@points" fill="none" stroke="rgba(10, 12, 18, 0.75)" stroke-width="@(highlighted ? 9 : 6)"
+                          stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+                <polyline points="@points" fill="none" stroke="@color" stroke-width="@(highlighted ? 5 : 3)"
+                          stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+            }
+            else if (item.Ping is { } ping)
+            {
+                string color = ChatPanel.PingColor(ping.Type) ?? ping.Color ?? item.Color ?? "#ffffff";
+                <circle cx="@Fmt(ping.X)" cy="@Fmt(ping.Z)" r="@Fmt(PingRadius * (highlighted ? 1.4 : 1))" fill="rgba(10, 12, 18, 0.6)"
+                        stroke="@color" stroke-width="@(highlighted ? 4 : 2.5)" vector-effect="non-scaling-stroke" />
+                @MapCanvas.SvgLabel(ping.X, ping.Z + PingRadius * 0.45, ChatPanel.PingGlyph(ping.Type), PingRadius * 1.25)
+                @if (ping.Name is { } name)
+                {
+                    @MapCanvas.SvgLabel(ping.X, ping.Z + PingRadius * 2.6, name, PingRadius * 1.1)
+                }
+            }
+        </g>
+    }
+}
+
+@code {
+    /// <summary>The visible items of the Chat tab; messages among them are ignored.</summary>
+    [Parameter, EditorRequired] public required IReadOnlyList<ChatPanel.Item> Items { get; set; }
+
+    /// <summary>The key of the hovered or selected item, if any.</summary>
+    [Parameter] public int? Highlighted { get; set; }
+
+    /// <summary>Ping radius in world units.</summary>
+    [Parameter] public double PingRadius { get; set; } = 15;
+
+    [Parameter] public EventCallback<ChatPanel.Item> OnSelect { get; set; }
+
+    private bool Selectable => OnSelect.HasDelegate;
+
+    private IReadOnlyList<ChatPanel.Item>? lastItems;
+    private int? lastHighlighted;
+    private double lastPingRadius;
+
+    protected override bool ShouldRender()
+    {
+        if (ReferenceEquals(Items, lastItems) && Highlighted == lastHighlighted && PingRadius == lastPingRadius)
+        {
+            return false;
+        }
+
+        lastItems = Items;
+        lastHighlighted = Highlighted;
+        lastPingRadius = PingRadius;
+        return true;
+    }
+
+    private static string Fmt(double value) => MapCanvas.Fmt(value);
+}

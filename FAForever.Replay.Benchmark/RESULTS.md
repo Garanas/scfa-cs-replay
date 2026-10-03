@@ -107,3 +107,36 @@ Observations:
   closer look together with the GC behaviour (Gen2 counts) of the one-shot path.
 - A rerun on a quiet machine would firm up the timings, especially 23225104 and 23225323, whose body
   results (13.4 / 4.9 ms) are slower than the screening run (9.7 / 3.4 ms).
+
+## Step 6 — entity ids of command selections (2026-10-03)
+
+Not an optimisation but a feature: the parser used to skip the entity ids of every command
+selection (`CommandUnits`); it now keeps them, for the per-unit analysis of the Build order tab.
+Body only, `--filter "*ParseBenchmark.Body*" --inProcess` (the in-process toolchain, because a
+second copy of the benchmark project in a git worktree under `.claude/worktrees/` makes the default
+toolchain refuse to build). Before and after were measured the same way, back to back.
+
+| Replay | Before | Ids, a slice per selection | Ids, repeated selections shared |
+|---|---:|---:|---:|
+| `faforever/23225104.fafreplay` | 12.30 ms / 8,203 KB | 17.64 ms / 12,961 KB | 11.33 ms / 9,214 KB |
+| `faforever/23225323.fafreplay` | 4.39 ms / 3,077 KB | 5.55 ms / 4,623 KB | 5.04 ms / 3,322 KB |
+| `faforever/23225440.fafreplay` | 2.54 ms / 1,599 KB | 2.58 ms / 2,196 KB | 2.29 ms / 1,698 KB |
+| `faforever/23225508.fafreplay` | 0.89 ms / 559 KB | 0.91 ms / 917 KB | 0.89 ms / 594 KB |
+| `faforever/23225685.fafreplay` | 5.42 ms / 3,392 KB | 6.29 ms / 4,756 KB | 5.30 ms / 3,748 KB |
+| `faforever/TestCommands01.fafreplay` | 4.89 ms / 3,338 KB | 5.79 ms / 4,274 KB | 4.57 ms / 3,558 KB |
+| `faforever/gzip/22453414.fafreplay` | 6.0 μs / 14.2 KB | 5.8 μs / 23.1 KB | 6.1 μs / 30.5 KB¹ |
+| `scfa/laird-binary-01.SCFAReplay` | 92.53 ms / 68,168 KB | 93.34 ms / 71,377 KB | 99.98 ms / 68,781 KB |
+| `scfa/laird-binary-02.SCFAReplay` | 40.79 ms / 33,799 KB | 42.16 ms / 36,493 KB | 45.07 ms / 34,383 KB |
+
+¹ Before the first chunk was made lazy (a body without commands now allocates no chunk).
+
+Observations:
+
+- **Storing every selection as is costs up to +58% allocations** (23225104): players give dozens of
+  orders to the same group of units, and each order repeated the ids.
+- **Sharing a selection equal to the previous one of the same source** brings that down to +6–12%,
+  and the ids are copied in one block from the buffer (`ReplayBinaryReader.ReadInt32s`) instead of
+  one `ReadInt32` per id. Timings are back to the baseline within noise for the FAF replays; the
+  laird replays (+6–10%) have standard deviations of that order.
+- An entity id is `(army index << 20) | serial`; serial 0 is the commander, and its first order
+  is always the first construction order (pinned by `ReplayCommandsTest`).

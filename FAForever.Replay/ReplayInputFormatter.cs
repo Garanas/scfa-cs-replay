@@ -60,7 +60,7 @@ namespace FAForever.Replay
             string blueprint = string.IsNullOrEmpty(data.BlueprintId) ? "" : " " + data.BlueprintId;
             string target = DescribeTarget(data.Target);
             string count = units.UnitCount > 0 ? Invariant($" · {units.UnitCount} {unitsNoun}") : "";
-            string queued = data.AddToQueue ? " (queued)" : "";
+            string queued = data.ClearQueue ? "" : " (queued)";
             return $"{Verb(data.Type)}{blueprint}{target}{count}{queued}";
         }
 

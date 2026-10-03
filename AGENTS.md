@@ -90,11 +90,17 @@ the FAF team before any public deployment (see TODO.md).
   `.scfareplay` = raw body — construct `ReplayLoadingStage.Decompressed(stream, null)` directly.
 - `ProcessReplayStage(WithMetadata)` disposes the input stream; don't reuse it.
 - Player names come from `Replay.Header.Clients[input.SourceId]`; ticks are **10 per second**.
+- Command selections (`CommandUnits.EntityIds`) carry the entity ids the order went to. An entity id
+  is `(army index << 20) | serial`; serial 0 is the army's commander (ACU), later serials follow the
+  order in which units appear. What kind of unit an id is, the replay does not say;
+  `ReplaySemantics.GetEntities` guesses it from the orders (`ReplayEntityKind`).
+- `CommandData.ClearQueue` is the last byte of a command: 1 = the order replaces the queue, 0 = it was
+  shift-queued. (It used to be called `AddToQueue`, the inverse; verified on real replays, see its doc.)
 - Drawings ("painting", `lua/ui/game/painting`) are the `SharePaintingBrushStroke` sim callback:
   `{ShareablePainting={PeerName, ShareId, PaintingAdapterIdentifier, Samples={x,y,z,x,y,z,…}}}`, one
   callback per stroke, sent only by its author (no dedup needed, unlike chat). Observers share
   paintings through chat, so theirs are not in the replay. Use `ReplaySemantics.GetDrawings`;
-  pings come from `ReplaySemantics.GetPings`. Both are shown by `DrawingsPanel` (Chat → Drawings & pings).
+  pings come from `ReplaySemantics.GetPings`. Both are shown on the Chat tab (`ChatPanel` → `ChatMapLayer`/`ChatFeed`) and, alive for their in-game lifetime, on the Playthrough map (same `ChatMapLayer`).
 - Lobby data lives in `Replay.Header.Armies` (`ReplayPlayerOptions`: faction 1=UEF/2=Aeon/
   3=Cybran/4=Seraphim, team where 1 = FFA, start spot, colors, rating MEAN/DEV, country, clan;
   `Raw` holds the full Lua table, e.g. `OwnerID`). `Armies[i].SourceId` links an army to
@@ -120,6 +126,8 @@ the FAF team before any public deployment (see TODO.md).
   custom properties switched by `data-theme` on `<html>`, mapped to Tailwind tokens via
   `@theme inline`. **Always use the semantic utilities** (`bg-surface`, `text-ink-muted`,
   `border-edge`, `bg-primary`, …) — never hardcode colours in components, or faction switching breaks.
+- Page width: header, page and footer share `MainLayout.Container` (`max-w-6xl`). The Build order
+  tab compares two players side by side and widens it to a full HD screen (`max-w-[1824px]`).
 - Anything drawn on the map goes through `Features/Replay/MapCanvas.razor`: an SVG in world
   coordinates with the vault preview as backdrop, so replay positions (x, z) are used as-is; its
   `ViewBox` parameter zooms in on a part of the map.
@@ -157,21 +165,22 @@ to those two players, on any machine.
 
 | Parameter | Meaning | Default when absent |
 |---|---|---|
-| `tab` | Active replay section: `players`, `playthrough`, `chat`, `events`, `callbacks`, `analysis` | Overview |
+| `tab` | Active replay section: `players`, `playthrough`, `buildorder`, `chat`, `events`, `callbacks`, `analysis` | Overview |
 | `players` | Comma-separated player names to show; shared by Playthrough, Chat, Events, Callbacks and Analysis | All players |
 | `from` / `to` | Game-time window (`12`, `12:30` or `1:02:30`); shared across tabs | See window policy below |
 | `types` | Comma-separated input types shown in the Events stream | All types |
 | `endpoint` | Selected sim-callback endpoint | The most frequent endpoint |
-| `view` | Chat sub-tab: `map` shows drawings and pings on the map | Chat messages |
-| `pings` | `off` hides pings on the Chat map | Pings shown |
-| `zoom` | `map` shows the whole map on the Chat map | Zoomed to the visible drawings/pings |
+| `pings` | `off` hides pings on the Chat tab (map and feed) | Pings shown |
+| `compare` | The two players of the Build order tab, `Left,Right` (unknown names fall back per slot) | The first army vs the first army of another team |
+| `view` | Below the maps on the Build order tab: `timings` shows key moments and units ordered per minute, `units` the units (entities) of both players | The order ledger |
 | `at` | Playback position of the Playthrough tab (`12`, `12:30` or `1:02:30`); written on pause/seek only, never while playing | `0:00`, paused |
 
 **Window policy** (`TimeWindowFilter.ReadWindow`): one rule on every tab — a window is at most
 **four minutes** (`TimeWindowFilter.MaxWindow`), self-correcting with no error states: reversed
 bounds swap, a single bound implies the other, To is pulled along when the window is too long.
 Events *requires* a window (default `0:00`–`4:00`, kept out of the URL); everywhere else it is
-optional (both parameters absent = whole game). The stepper buttons are always visible and shift
+optional (both parameters absent = whole game). Build order ignores the window: it always covers
+the first ten minutes. The stepper buttons are always visible and shift
 by the window length, shown as their label (−4:00 / +4:00); without an active window the forward
 stepper starts one at `0:00`–`4:00` (the back stepper is disabled until there is one).
 The **Playthrough tab is exempt** from the window policy: it is a playback view, not a filtered

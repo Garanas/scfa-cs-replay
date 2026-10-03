@@ -31,5 +31,18 @@ window.fafReplay = {
         try {
             window.sessionStorage.removeItem(key);
         } catch (e) { }
+    },
+    /* Scrolls an element into view within its scroll container, e.g. a selected feed row. */
+    scrollIntoView: function (id) {
+        document.getElementById(id)?.scrollIntoView({ block: "nearest" });
+    },
+    /* Copies text to the clipboard; false when the browser refuses (no permission, insecure origin). */
+    copyText: async function (text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 };

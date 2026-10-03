@@ -5,8 +5,8 @@ namespace FAForever.Replay.Test
     [TestClass]
     public class ReplayInputFormatterTest
     {
-        private static CommandData Command(CommandType type, CommandTarget target, string blueprintId = "", bool addToQueue = false)
-            => new(1, type, target, new CommandFormation.NoFormation(), blueprintId, new LuaData.Nil(), addToQueue, 0, 0, 0, 0, 0, 0);
+        private static CommandData Command(CommandType type, CommandTarget target, string blueprintId = "", bool queued = false)
+            => new(1, type, target, new CommandFormation.NoFormation(), blueprintId, new LuaData.Nil(), ClearQueue: !queued, 0, 0, 0, 0, 0, 0);
 
         [TestMethod]
         public void DescribesMoveCommand()
@@ -23,7 +23,7 @@ namespace FAForever.Replay.Test
         {
             ReplayInput input = new ReplayInput.IssueCommand(0, 0,
                 new CommandUnits(3),
-                Command(CommandType.IssueBuildMobile, new CommandTarget.Position(100f, 0f, 200f), "uab0101", addToQueue: true));
+                Command(CommandType.IssueBuildMobile, new CommandTarget.Position(100f, 0f, 200f), "uab0101", queued: true));
 
             Assert.AreEqual("Build uab0101 → (100, 200) · 3 units (queued)", ReplayInputFormatter.Describe(input));
             Assert.AreEqual("uab0101", ReplayInputFormatter.TryGetBlueprintId(input));

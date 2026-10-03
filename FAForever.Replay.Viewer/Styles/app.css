@@ -164,17 +164,35 @@
         @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-edge bg-raised px-4 py-2 text-sm font-semibold text-ink transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-50;
     }
 
-    /* Sub-tabs within a replay section (e.g. Chat: Messages | Map). */
-    .segmented {
-        @apply inline-flex gap-1 rounded-lg border border-edge bg-surface p-1;
+    /* A row in a time-ordered feed (PlaythroughFeed.razor, ChatFeed.razor): game time, the
+       player's colour chip, an optional 16 px icon and the text. Clicking a row acts on its
+       moment (seek or focus). */
+    .feed-row {
+        @apply flex w-full cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.5 text-left text-xs transition hover:bg-raised;
     }
 
-    .segmented-item {
-        @apply inline-flex cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink;
+    .feed-time {
+        @apply shrink-0 font-mono text-ink-muted;
     }
 
-    .segmented-item.active {
-        @apply bg-raised font-semibold text-primary;
+    .feed-chip {
+        @apply h-3.5 w-1 shrink-0 rounded-full;
+    }
+
+    /* A horizontal lane over the opening of a game, one block per minute (EntityList.razor):
+       alternating bands, ten to the lane. Symmetric, so it also works mirrored. */
+    .minute-lane {
+        /* The padding keeps markers at 0:00 and at the end inside; the bands follow the content. */
+        padding-inline: 12px;
+        background-origin: content-box;
+        background-color: var(--th-surface);
+        background-image: linear-gradient(to right, var(--th-raised) 50%, transparent 50%);
+        background-size: 20% 100%;
+    }
+
+    /* Mirrored lanes run from right (0:00) to left: the bands start at the right edge. */
+    .minute-lane-mirrored {
+        background-position: right top;
     }
 
     .card {
@@ -228,7 +246,7 @@
     }
 
     /* Playthrough markers (PlaythroughMarkerLayer.razor). Each marker mounts once and its
-       animation runs once; the durations mirror MarkerLifetime/PingLifetime in
+       animation runs once; the duration mirrors MarkerLifetime in
        PlaythroughPanel.razor. transform-box/transform-origin keep the scale centred on the
        marker instead of the SVG viewport origin; the class sits on a nested <g> because a
        CSS transform would override the positioning transform attribute. */
@@ -236,17 +254,6 @@
         transform-box: fill-box;
         transform-origin: center;
         animation: pt-marker-pop 1.5s ease-out forwards;
-    }
-
-    .pt-marker-ping {
-        animation-name: pt-marker-fade;
-        animation-duration: 2.5s;
-    }
-
-    .pt-ping-ring {
-        transform-box: fill-box;
-        transform-origin: center;
-        animation: pt-ping-ring 2.5s ease-out forwards;
     }
 
     /* Newly inserted feed rows slide in (PlaythroughFeed.razor). */
@@ -277,36 +284,6 @@
     100% {
         opacity: 0;
         transform: scale(0.95);
-    }
-}
-
-@keyframes pt-marker-fade {
-    0% {
-        opacity: 0;
-    }
-
-    10% {
-        opacity: 1;
-    }
-
-    70% {
-        opacity: 1;
-    }
-
-    100% {
-        opacity: 0;
-    }
-}
-
-@keyframes pt-ping-ring {
-    from {
-        opacity: 0.9;
-        transform: scale(0.2);
-    }
-
-    to {
-        opacity: 0;
-        transform: scale(1);
     }
 }
 

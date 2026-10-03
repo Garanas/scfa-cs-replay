@@ -42,43 +42,33 @@
     <g @key="marker.Sequence" transform="translate(@Fmt(marker.X) @Fmt(marker.Z))"
        style="color: @(marker.Color ?? "var(--th-ink-muted)")"
        opacity="@(marker.Kind == ReplayMapEventKind.Retarget ? "0.6" : "1")">
-        @if (marker.IsPing)
-        {
-            <g class="pt-marker pt-marker-ping">
-                <title>@marker.Title</title>
-                <circle class="pt-ping-ring" r="@Fmt(IconSize * 1.1)" fill="none"
-                        stroke="currentColor" stroke-width="@Fmt(IconSize * 0.12)" />
-                <circle r="@Fmt(IconSize * 0.18)" fill="currentColor" />
-            </g>
-        }
-        else
-        {
+        @{
             double size = IconSize * SizeScale(marker.UnitCount);
-            <g class="pt-marker">
-                <title>@marker.Title</title>
-                <circle r="@Fmt(size * 0.55)" fill="rgba(10, 12, 18, 0.55)"
-                        stroke="currentColor" stroke-width="@Fmt(size * 0.1)" />
-                @if (marker.BlueprintId is { } blueprintId
-                     && (marker.Category == CommandCategory.Build || marker.Kind == ReplayMapEventKind.UnitSpawn))
-                {
-                    <image href="images/units/units/@(blueprintId.ToLowerInvariant()).png"
-                           x="@Fmt(-size * 0.33)" y="@Fmt(-size * 0.33)"
-                           width="@Fmt(size * 0.66)" height="@Fmt(size * 0.66)" />
-                }
-                else if (CommandIcons.IconPath(marker.Category) is { } iconPath)
-                {
-                    <image href="@iconPath"
-                           x="@Fmt(-size * 0.3)" y="@Fmt(-size * 0.3)"
-                           width="@Fmt(size * 0.6)" height="@Fmt(size * 0.6)" />
-                }
-                else
-                {
-                    <use href="#pt-glyph-@CommandIcons.Slug(marker.Category)"
-                         x="@Fmt(-size * 0.3)" y="@Fmt(-size * 0.3)"
-                         width="@Fmt(size * 0.6)" height="@Fmt(size * 0.6)" />
-                }
-            </g>
         }
+        <g class="pt-marker">
+            <title>@marker.Title</title>
+            <circle r="@Fmt(size * 0.55)" fill="rgba(10, 12, 18, 0.55)"
+                    stroke="currentColor" stroke-width="@Fmt(size * 0.1)" />
+            @if (marker.BlueprintId is { } blueprintId
+                 && (marker.Category == CommandCategory.Build || marker.Kind == ReplayMapEventKind.UnitSpawn))
+            {
+                <image href="images/units/units/@(blueprintId.ToLowerInvariant()).png"
+                       x="@Fmt(-size * 0.33)" y="@Fmt(-size * 0.33)"
+                       width="@Fmt(size * 0.66)" height="@Fmt(size * 0.66)" />
+            }
+            else if (CommandIcons.IconPath(marker.Category) is { } iconPath)
+            {
+                <image href="@iconPath"
+                       x="@Fmt(-size * 0.3)" y="@Fmt(-size * 0.3)"
+                       width="@Fmt(size * 0.6)" height="@Fmt(size * 0.6)" />
+            }
+            else
+            {
+                <use href="#pt-glyph-@CommandIcons.Slug(marker.Category)"
+                     x="@Fmt(-size * 0.3)" y="@Fmt(-size * 0.3)"
+                     width="@Fmt(size * 0.6)" height="@Fmt(size * 0.6)" />
+            }
+        </g>
     </g>
 }
 
@@ -92,7 +82,6 @@
         CommandCategory Category,
         ReplayMapEventKind Kind,
         string? BlueprintId,
-        bool IsPing,
         string Title,
         TimeSpan AddedAtWall,
         TimeSpan Lifetime,

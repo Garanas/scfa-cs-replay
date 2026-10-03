@@ -108,6 +108,25 @@ internal static class ReplayFingerprint
             AppendLua(builder, lua);
         }
 
+        // The generated ToString of CommandUnits shows the memory, not the ids in it.
+        CommandUnits? units = input switch
+        {
+            ReplayInput.IssueCommand command => command.Units,
+            ReplayInput.IssueFactoryCommand command => command.Factories,
+            ReplayInput.DebugCommand command => command.Units,
+            ReplayInput.SimCallback callback => callback.Units,
+            _ => null,
+        };
+
+        if (units is not null)
+        {
+            builder.Append(" Ids=");
+            foreach (int id in units.EntityIds.Span)
+            {
+                builder.Append(id).Append(',');
+            }
+        }
+
         builder.Append('\n');
     }
 

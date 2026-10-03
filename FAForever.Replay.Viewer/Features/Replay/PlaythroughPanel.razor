@@ -4,12 +4,13 @@
 
 @* Plays the replay back like a video (see AGENTS.md § Playthrough): positional orders
    appear as animated, player-coloured markers on the minimap, everything else scrolls by
-   in the feed on the right. Playback state (current time, playing, speed) lives in
+   in the feed on the right. Drawings and pings are drawn as on the Chat tab (ChatMapLayer)
+   and stay on the map for as long as they do in game, in game time. Playback state (current time, playing, speed) lives in
    component fields, NOT in the URL - only the "at" instant is shareable, written on
    pause/seek. The loop is a cooperative async timer; WASM is single-threaded, so there
    is no Task.Run anywhere (AGENTS.md hard rule). *@
 
-<div class="grid gap-6 lg:grid-cols-[1fr_3fr_1fr]">
+<div class="grid gap-6 lg:grid-cols-[1fr_2.4fr_1.6fr]">
     <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
         <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
         <PlayerFilterList Items="playerItems" />
@@ -22,6 +23,7 @@
     <div class="card flex flex-col gap-3 self-start">
         <MapView Model="Model" MarkerScale="0.6" InactiveSources="defeatedSources">
             <Overlay>
+                <ChatMapLayer Items="aliveMapItems" PingRadius="pingRadius" />
                 <PlaythroughMarkerLayer Markers="activeMarkers"
                                         TrailChunks="@(trailsEnabled ? closedTrailChunks : NoChunks)"
                                         OpenTrail="@(trailsEnabled ? openTrail : NoDots)"
@@ -64,6 +66,10 @@
                 Ping
             </span>
             <span role="listitem" class="inline-flex items-center gap-1">
+                <svg viewBox="0 0 10 10" class="h-4 w-4" aria-hidden="true"><path d="M1.5 7 C3 2.5 5 8.5 8.5 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>
+                Drawing
+            </span>
+            <span role="listitem" class="inline-flex items-center gap-1">
                 <svg viewBox="0 0 10 10" class="h-4 w-4" aria-hidden="true"><circle cx="5" cy="5" r="2" fill="currentColor" opacity="0.4" /></svg>
                 Trail
             </span>
@@ -84,10 +90,14 @@
     private const int MaxTrailDots = 2000;
     private const int TrailChunkSize = 250;
 
-    // Wall-time marker lifetimes, independent of playback speed. The CSS animation
-    // durations of .pt-marker and .pt-marker-ping (Styles/app.css) must match these.
+    // Wall-time marker lifetime, independent of playback speed. The CSS animation duration
+    // of .pt-marker (Styles/app.css) must match it.
     private static readonly TimeSpan MarkerLifetime = TimeSpan.FromSeconds(1.5);
-    private static readonly TimeSpan PingLifetime = TimeSpan.FromSeconds(2.5);
+
+    // Game-time lifetimes of drawings and pings, as in game: drawings fade after 25 seconds
+    // (lua/ui/game/painting), pings live 6 seconds (Lifetime in lua/ui/game/ping.lua).
+    private static readonly TimeSpan DrawingLifetime = TimeSpan.FromSeconds(25);
+    private static readonly TimeSpan PingLifetime = TimeSpan.FromSeconds(6);
 
     private static readonly double[] Speeds = [1, 2, 4, 8, 16, 32, 64];
 
@@ -124,7 +134,8 @@
     private List<int> allSourceIds = [];
     private List<(string Name, int Count, string? Color)> playerItems = [];
     private List<ReplayMapEvent> mapEvents = [];
-    private List<ReplayPing> pings = [];
+    private List<ChatPanel.Item> mapItems = [];
+    private double pingRadius = 15;
     private List<PlaythroughFeed.Item> allFeedItems = [];
 
     // Player filter (shared "players" query parameter).
@@ -148,13 +159,16 @@
 
     // Stream cursors into the sorted lists above.
     private int nextMapEvent;
-    private int nextPing;
     private int feedCursor;
 
     // What the marker layer renders; markerVersion gates its re-rendering.
     private readonly List<PlaythroughMarkerLayer.Marker> activeMarkers = [];
     private readonly List<PlaythroughMarkerLayer.TrailChunk> closedTrailChunks = [];
     private readonly List<PlaythroughMarkerLayer.TrailDot> openTrail = [];
+
+    // Drawings and pings alive at the current time; replaced (never mutated) when that set
+    // changes, so ChatMapLayer can skip the frames in which it did not.
+    private List<ChatPanel.Item> aliveMapItems = [];
     private int markerVersion;
     private long sequence;
     private long trailChunkId;
@@ -172,7 +186,8 @@
             markerIconSize = Math.Max(sizeX, sizeZ) / 40.0;
             colorsBySource = GameColors.BySource(replay.Header);
             mapEvents = ReplaySemantics.GetMapEvents(replay);
-            pings = ReplaySemantics.GetPings(replay);
+            mapItems = ChatPanel.ExtractItems(replay).Where(item => item.Message is null).ToList();
+            pingRadius = sizeX / 70.0;
 
             List<ReplaySessionEvent> sessionEvents = ReplaySemantics.GetSessionEvents(replay);
             terminationBySource = [];
@@ -213,6 +228,7 @@
             // A changed selection invalidates the visible markers; they refill within a frame.
             activeMarkers.Clear();
             markerVersion++;
+            UpdateAliveMapItems();
         }
 
         string? atFromUrl = UrlQuery.Get(Navigation, AtParameter);
@@ -316,18 +332,6 @@
             changed = true;
         }
 
-        while (nextPing < pings.Count && pings[nextPing].Timestamp <= current)
-        {
-            ReplayPing ping = pings[nextPing++];
-            if (!selectedSources.Contains(ping.SourceId))
-            {
-                continue;
-            }
-
-            AddPingMarker(ping, nowWall);
-            changed = true;
-        }
-
         while (feedCursor < feedItems.Count && feedItems[feedCursor].Timestamp <= current)
         {
             feedCursor++;
@@ -349,6 +353,37 @@
         }
 
         UpdateDefeated();
+        UpdateAliveMapItems();
+    }
+
+    /// <summary>
+    /// Recomputes the drawings and pings alive at the current time: a pure function of the
+    /// playback time and the player filter, so seeking needs no extra bookkeeping. Keeps the
+    /// list reference when the set did not change.
+    /// </summary>
+    private void UpdateAliveMapItems()
+    {
+        List<ChatPanel.Item> alive = [];
+        for (int index = FirstIndexAfter(mapItems, current, item => item.Timestamp) - 1; index >= 0; index--)
+        {
+            ChatPanel.Item item = mapItems[index];
+            TimeSpan age = current - item.Timestamp;
+            if (age > DrawingLifetime)
+            {
+                break;
+            }
+
+            if (age <= (item.Ping is null ? DrawingLifetime : PingLifetime) && selectedNames.Contains(item.Player))
+            {
+                alive.Add(item);
+            }
+        }
+        alive.Reverse();
+
+        if (!alive.Select(item => item.Key).SequenceEqual(aliveMapItems.Select(item => item.Key)))
+        {
+            aliveMapItems = alive;
+        }
     }
 
     private void UpdateDefeated()
@@ -372,7 +407,7 @@
             sequence++, mapEvent.X, mapEvent.Z,
             colorsBySource.GetValueOrDefault(mapEvent.SourceId),
             category, mapEvent.Kind, mapEvent.BlueprintId,
-            IsPing: false, title, nowWall, MarkerLifetime, mapEvent.UnitCount));
+            title, nowWall, MarkerLifetime, mapEvent.UnitCount));
     }
 
     /// <summary>A one-line description of a map event, e.g. "Move · 34 units" or "Build Mass Extractor".</summary>
@@ -393,18 +428,6 @@
     private static bool ShowsUnitIcon(ReplayMapEvent mapEvent, CommandCategory category)
         => mapEvent.BlueprintId is not null
            && (category == CommandCategory.Build || mapEvent.Kind == ReplayMapEventKind.UnitSpawn);
-
-    private void AddPingMarker(ReplayPing ping, TimeSpan nowWall)
-    {
-        string label = ping.Name is { Length: > 0 } name ? $"{ping.Type} — {name}" : ping.Type;
-        string title = $"{GameTime.Format(ping.Timestamp)} · {PlayerName(ping.SourceId)}: ping {label}";
-
-        activeMarkers.Add(new PlaythroughMarkerLayer.Marker(
-            sequence++, ping.X, ping.Z,
-            ping.Color ?? colorsBySource.GetValueOrDefault(ping.SourceId),
-            CommandCategory.Special, ReplayMapEventKind.Command, null,
-            IsPing: true, title, nowWall, PingLifetime));
-    }
 
     private void AddTrailDot(ReplayMapEvent mapEvent)
     {
@@ -448,12 +471,12 @@
     {
         current = moment < TimeSpan.Zero ? TimeSpan.Zero : moment > duration ? duration : moment;
         nextMapEvent = FirstIndexAfter(mapEvents, current, mapEvent => mapEvent.Timestamp);
-        nextPing = FirstIndexAfter(pings, current, ping => ping.Timestamp);
         feedCursor = FirstIndexAfter(feedItems, current, item => item.Timestamp);
         activeMarkers.Clear();
         closedTrailChunks.RemoveAll(chunk => chunk.LastTimestamp > current);
         openTrail.RemoveAll(dot => dot.Timestamp > current);
         UpdateDefeated();
+        UpdateAliveMapItems();
         markerVersion++;
     }
 
@@ -506,7 +529,6 @@
         closedTrailChunks.Clear();
         openTrail.Clear();
         nextMapEvent = 0;
-        nextPing = 0;
         feedCursor = 0;
         markerVersion++;
     }
@@ -572,16 +594,20 @@
                 $"sent {what} to {ArmyName(replay, transfer.ToArmy)}", "transfer"));
         }
 
-        foreach (ReplayPing ping in pings)
+        // Drawings and pings read as on the Chat tab.
+        foreach (ChatPanel.Item item in mapItems)
         {
-            string text = ping.Name is { Length: > 0 } name ? $"pinged {ping.Type} — {name}" : $"pinged {ping.Type}";
-            items.Add(new PlaythroughFeed.Item(ping.Timestamp, PlayerName(ping.SourceId), colorsBySource.GetValueOrDefault(ping.SourceId), text, "ping"));
+            items.Add(item.Ping is { } ping
+                ? new PlaythroughFeed.Item(item.Timestamp, item.Player, item.Color, ChatPanel.Describe(item), "ping",
+                    Glyph: ChatPanel.PingGlyph(ping.Type), GlyphColor: ChatPanel.PingColor(ping.Type))
+                : new PlaythroughFeed.Item(item.Timestamp, item.Player, item.Color, ChatPanel.Describe(item), "drawing"));
         }
 
         foreach (ReplayModeratorEvent moderatorEvent in ReplaySemantics.GetModeratorEvents(replay))
         {
-            // Marker creations already show as ping rows; the moderator copy would duplicate them.
-            if (moderatorEvent.Message.StartsWith("Created a marker", StringComparison.Ordinal))
+            // Pings and markers already show as ping rows; the moderator copy would duplicate them.
+            if (moderatorEvent.Message.StartsWith("Created a marker", StringComparison.Ordinal)
+                || moderatorEvent.Message.StartsWith("Created a ping", StringComparison.Ordinal))
             {
                 continue;
             }

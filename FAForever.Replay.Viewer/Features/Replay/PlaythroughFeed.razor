@@ -1,5 +1,5 @@
-@* The synchronized event feed of the Playthrough tab: chat, transfers, pings and session
-   events up to the current playback time, newest on top. Clicking a row seeks playback.
+@* The synchronized event feed of the Playthrough tab: orders, transfers, pings, drawings and
+   session events up to the current playback time, newest on top. Clicking a row seeks playback.
    Pure rendering: the panel owns the composed, player-filtered item list and the visible
    count; ShouldRender skips the frames in which neither changed, and @key on the absolute
    item index keeps existing rows stable so only a newly inserted row plays the enter
@@ -20,10 +20,10 @@
     {
         Item item = Items[index];
         <button type="button" @key="index" title="@($"{item.Player}: {item.Text} — click to jump playback here")"
-                class="pt-feed-row flex w-full cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.5 text-left transition hover:bg-raised"
+                class="pt-feed-row feed-row"
                 @onclick="() => OnSeek.InvokeAsync(item.Timestamp)">
-            <span class="shrink-0 font-mono text-xs text-ink-muted">@GameTime.Format(item.Timestamp)</span>
-            <span class="h-3.5 w-1 shrink-0 rounded-full" style="background: @(item.Color ?? "transparent")" aria-hidden="true"></span>
+            <span class="feed-time">@GameTime.Format(item.Timestamp)</span>
+            <span class="feed-chip" style="background: @(item.Color ?? "transparent")" aria-hidden="true"></span>
             @if (item.BlueprintId is { } blueprintId)
             {
                 <UnitIcon BlueprintId="@blueprintId" Size="16" />
@@ -32,7 +32,15 @@
             {
                 <img src="@iconPath" alt="" class="h-4 w-4 shrink-0" />
             }
-            <span class="min-w-0 truncate text-xs text-ink-muted">@item.Text</span>
+            else if (item.Glyph is { } glyph)
+            {
+                <span class="w-4 shrink-0 text-center font-semibold" style="color: @(item.GlyphColor ?? "inherit")" aria-hidden="true">@glyph</span>
+            }
+            else if (item.Kind == "drawing")
+            {
+                <svg viewBox="0 0 10 10" class="h-4 w-4 shrink-0 text-ink-muted" aria-hidden="true"><path d="M1.5 7 C3 2.5 5 8.5 8.5 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>
+            }
+            <span class="min-w-0 truncate text-ink-muted">@item.Text</span>
         </button>
     }
     @if (!Suspended && VisibleCount > MaxRows)
@@ -45,11 +53,13 @@
     private const int MaxRows = 100;
 
     /// <summary>
-    /// One feed entry; Kind is a short tag such as "command" or "ping". A build command
-    /// carries its BlueprintId (rendered as the unit icon), other commands their category
-    /// icon path.
+    /// One feed entry; Kind is a short tag such as "command", "ping" or "drawing". A build
+    /// command carries its BlueprintId (rendered as the unit icon), other commands their
+    /// category icon path, pings their glyph and colour as on the Chat tab (ChatPanel.PingGlyph,
+    /// PingColor); a drawing shows the brush-stroke icon.
     /// </summary>
-    public sealed record Item(TimeSpan Timestamp, string Player, string? Color, string Text, string Kind, string? IconPath = null, string? BlueprintId = null);
+    public sealed record Item(TimeSpan Timestamp, string Player, string? Color, string Text, string Kind,
+        string? IconPath = null, string? BlueprintId = null, string? Glyph = null, string? GlyphColor = null);
 
     /// <summary>All feed items of the replay, chronological and already player-filtered.</summary>
     [Parameter, EditorRequired] public required IReadOnlyList<Item> Items { get; set; }
