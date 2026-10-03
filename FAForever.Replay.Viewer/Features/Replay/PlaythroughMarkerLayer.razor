@@ -32,7 +32,7 @@
     }
     @foreach (TrailDot dot in OpenTrail)
     {
-        <circle @key="dot.Sequence" cx="@Fmt(dot.X)" cy="@Fmt(dot.Z)" r="@Fmt(IconSize * 0.12)"
+        <circle @key="dot.Sequence" cx="@Fmt(dot.X)" cy="@Fmt(dot.Z)" r="@Fmt(IconSize * 0.12 * SizeScale(dot.UnitCount))"
                 fill="@(dot.Color ?? "var(--th-ink-muted)")" opacity="0.35" />
     }
 </g>
@@ -53,28 +53,29 @@
         }
         else
         {
+            double size = IconSize * SizeScale(marker.UnitCount);
             <g class="pt-marker">
                 <title>@marker.Title</title>
-                <circle r="@Fmt(IconSize * 0.55)" fill="rgba(10, 12, 18, 0.55)"
-                        stroke="currentColor" stroke-width="@Fmt(IconSize * 0.1)" />
+                <circle r="@Fmt(size * 0.55)" fill="rgba(10, 12, 18, 0.55)"
+                        stroke="currentColor" stroke-width="@Fmt(size * 0.1)" />
                 @if (marker.BlueprintId is { } blueprintId
                      && (marker.Category == CommandCategory.Build || marker.Kind == ReplayMapEventKind.UnitSpawn))
                 {
                     <image href="images/units/units/@(blueprintId.ToLowerInvariant()).png"
-                           x="@Fmt(-IconSize * 0.33)" y="@Fmt(-IconSize * 0.33)"
-                           width="@Fmt(IconSize * 0.66)" height="@Fmt(IconSize * 0.66)" />
+                           x="@Fmt(-size * 0.33)" y="@Fmt(-size * 0.33)"
+                           width="@Fmt(size * 0.66)" height="@Fmt(size * 0.66)" />
                 }
                 else if (CommandIcons.IconPath(marker.Category) is { } iconPath)
                 {
                     <image href="@iconPath"
-                           x="@Fmt(-IconSize * 0.3)" y="@Fmt(-IconSize * 0.3)"
-                           width="@Fmt(IconSize * 0.6)" height="@Fmt(IconSize * 0.6)" />
+                           x="@Fmt(-size * 0.3)" y="@Fmt(-size * 0.3)"
+                           width="@Fmt(size * 0.6)" height="@Fmt(size * 0.6)" />
                 }
                 else
                 {
                     <use href="#pt-glyph-@CommandIcons.Slug(marker.Category)"
-                         x="@Fmt(-IconSize * 0.3)" y="@Fmt(-IconSize * 0.3)"
-                         width="@Fmt(IconSize * 0.6)" height="@Fmt(IconSize * 0.6)" />
+                         x="@Fmt(-size * 0.3)" y="@Fmt(-size * 0.3)"
+                         width="@Fmt(size * 0.6)" height="@Fmt(size * 0.6)" />
                 }
             </g>
         }
@@ -94,10 +95,18 @@
         bool IsPing,
         string Title,
         TimeSpan AddedAtWall,
-        TimeSpan Lifetime);
+        TimeSpan Lifetime,
+        int UnitCount = 1);
 
     /// <summary>A permanent trail dot, left behind by a map event while trails are enabled.</summary>
-    public sealed record TrailDot(long Sequence, float X, float Z, string? Color, TimeSpan Timestamp);
+    public sealed record TrailDot(long Sequence, float X, float Z, string? Color, TimeSpan Timestamp, int UnitCount = 1);
+
+    /// <summary>
+    /// How much a marker grows with the number of units behind the order: logarithmic, so
+    /// a single engineer reads small and every doubling adds a step, capped at 64+ units.
+    /// </summary>
+    public static double SizeScale(int unitCount)
+        => unitCount <= 1 ? 0.65 : Math.Min(1.7, 0.65 + 0.17 * Math.Log2(unitCount));
 
     /// <summary>A frozen batch of trail dots, pre-rendered to markup so re-renders skip it.</summary>
     public sealed record TrailChunk(long Id, TimeSpan LastTimestamp, MarkupString Markup);
