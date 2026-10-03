@@ -37,16 +37,4 @@ public sealed record GameSummary(
     public TimeSpan? Duration => StartTime is { } start && EndTime is { } end && end > start ? end - start : null;
 }
 
-public sealed record GamePlayer(string Login, int? Team, GameFaction? Faction, int? Rating, string? Result);
-
-/// <summary>
-/// Faction indices as used by the lobby and the API.
-/// </summary>
-public enum GameFaction
-{
-    Uef = 1,
-    Aeon = 2,
-    Cybran = 3,
-    Seraphim = 4,
-    Nomads = 5,
-}
+public sealed record GamePlayer(string Login, int? Team, FAForever.Replay.Faction? Faction, int? Rating, string? Result);

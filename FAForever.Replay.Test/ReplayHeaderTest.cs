@@ -216,5 +216,19 @@ namespace FAForever.Replay.Test
                 Assert.IsNull(civilian.DisplayTeam);
             }
         }
+
+        [TestMethod]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 2, Faction.Seraphim, "Seraphim")]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 1, Faction.Uef, "UEF")]
+        [DataRow("assets/faforever/23225104.fafreplay", 0, Faction.Cybran, "Cybran")]
+        public void FactionResolvesToTheEnumTest(string file, int sourceId, Faction expectedFaction, string expectedName)
+        {
+            ReplayHeader header = Load(file).Header;
+
+            ReplayPlayerOptions army = header.Armies.Single(candidate => candidate.SourceId == sourceId);
+
+            Assert.AreEqual(expectedFaction, army.FactionValue);
+            Assert.AreEqual(expectedName, army.FactionName);
+        }
     }
 }

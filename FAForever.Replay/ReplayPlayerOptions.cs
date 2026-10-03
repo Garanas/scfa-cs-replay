@@ -63,6 +63,17 @@ namespace FAForever.Replay
             => mean is { } m && deviation is { } d ? (int)Math.Round(m - 3 * d) : null;
 
         /// <summary>
+        /// The faction as an enum, when the index is a known faction.
+        /// </summary>
+        public FAForever.Replay.Faction? FactionValue
+            => Faction is { } faction && faction is >= 1 and <= 5 ? (FAForever.Replay.Faction)faction : null;
+
+        /// <summary>
+        /// The faction display name (UEF, Aeon, Cybran, Seraphim, Random), or null when unknown.
+        /// </summary>
+        public string? FactionName => FactionValue?.DisplayName();
+
+        /// <summary>
         /// The team number as the game displays it. The lobby stores team 1 for "no team"
         /// (FFA) and starts real teams at 2, so lobby team 2 is displayed as team 1.
         /// Null when the army plays FFA or carries no team.

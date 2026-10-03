@@ -109,7 +109,7 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
             players.Add(new GamePlayer(
                 player?.GetString("login") ?? "Unknown",
                 (int?)stats.GetNumber("team"),
-                stats.GetNumber("faction") is { } faction ? (GameFaction)(int)faction : null,
+                stats.GetNumber("faction") is { } faction && (int)faction is >= 1 and <= 5 ? (FAForever.Replay.Faction)(int)faction : null,
                 rating,
                 stats.GetString("result")));
         }

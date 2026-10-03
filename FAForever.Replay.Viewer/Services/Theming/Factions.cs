@@ -1,5 +1,3 @@
-using FAForever.Replay.Viewer.Services.Api;
-
 namespace FAForever.Replay.Viewer.Services.Theming;
 
 /// <summary>
@@ -9,14 +7,8 @@ namespace FAForever.Replay.Viewer.Services.Theming;
 /// </summary>
 public static class Factions
 {
-    public static string? Name(int? faction) => faction switch
-    {
-        1 => "UEF",
-        2 => "Aeon",
-        3 => "Cybran",
-        4 => "Seraphim",
-        _ => null,
-    };
+    public static string? Name(int? faction)
+        => faction is { } f && f is >= 1 and <= 5 ? ((Faction)f).DisplayName() : null;
 
     public static string? IconPath(int? faction) => faction switch
     {
@@ -36,9 +28,9 @@ public static class Factions
         _ => "var(--th-ink-faint)",
     };
 
-    public static string? Name(GameFaction? faction) => Name((int?)faction);
+    public static string? Name(Faction? faction) => Name((int?)faction);
 
-    public static string? IconPath(GameFaction? faction) => IconPath((int?)faction);
+    public static string? IconPath(Faction? faction) => IconPath((int?)faction);
 
-    public static string Swatch(GameFaction? faction) => Swatch((int?)faction);
+    public static string Swatch(Faction? faction) => Swatch((int?)faction);
 }
