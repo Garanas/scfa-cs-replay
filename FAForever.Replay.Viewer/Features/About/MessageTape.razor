@@ -1,0 +1,39 @@
+@* Ticks 44 to 46 of the example replay, message by message, as the body stores them: every
+   tick advances the clock and hands the turn to each player, and at tick 45 the first order
+   of the game sits between them. One row per tick. *@
+
+<ol class="space-y-2 font-body" aria-label="Messages from tick 44 to tick 46">
+    <li class="pl-4 font-mono text-ink-faint" aria-hidden="true">⋮</li>
+    @foreach ((int tick, bool withOrder) in Ticks)
+    {
+        <li class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border @(withOrder ? "border-primary/60 bg-primary/5" : "border-edge bg-surface") px-4 py-3">
+            <span class="w-20 shrink-0 text-xs">
+                <span class="block font-semibold text-ink">Tick @tick</span>
+                <span class="block font-mono text-ink-faint">@($"{tick / 10.0:0.0}") s</span>
+            </span>
+            <span class="flex flex-wrap items-center gap-1.5">
+                @Message("Time +1", "Advance", ExampleReplay.Tone.Frame)
+                @Message("Player 1", "SetCommandSource", ExampleReplay.Tone.Selection)
+                @if (withOrder)
+                {
+                    <span class="flex items-center gap-2 rounded-md border border-viz-2/60 bg-viz-2/15 py-1 pl-1 pr-2.5" title="IssueCommand">
+                        <UnitIcon BlueprintId="urb0101" Size="28" Title="Land Factory" />
+                        <span class="text-xs leading-tight">
+                            <span class="block font-semibold text-ink">Order</span>
+                            <span class="block text-ink-muted">Build a Land Factory</span>
+                        </span>
+                    </span>
+                }
+                @Message("Player 2", "SetCommandSource", ExampleReplay.Tone.Selection)
+            </span>
+        </li>
+    }
+    <li class="pl-4 font-mono text-ink-faint" aria-hidden="true">⋮</li>
+</ol>
+
+@code {
+    private static readonly (int Tick, bool WithOrder)[] Ticks = [(44, false), (45, true), (46, false)];
+
+    private static RenderFragment Message(string text, string kind, ExampleReplay.Tone tone) =>
+        @<span class="whitespace-nowrap rounded-md border px-2.5 py-1.5 text-xs font-medium @AnnotatedBytes.Fill(tone)" title="@kind">@text</span>;
+}

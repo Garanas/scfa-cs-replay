@@ -224,6 +224,25 @@ the prompt always show the same entries.
 - New moderation-relevant data goes into `Collect` (with a kind, a label in `Label` and a line in
   the prompt's "What the entries mean"), never only into the panel.
 
+## About pages
+
+`Pages/About.razor` (`/about`) lists explainers for players; each file format gets a card there and
+its own page below `about/`, starting with `Pages/AboutReplayFormat.razor` (`/about/replay-format`).
+The illustrations live in `Features/About/` (`AnnotatedBytes`, `ByteViewer`, `MessageTape`,
+`ByteShareBar`, `AboutChapter`).
+
+- **Audience:** players without technical skills. Explain ideas, not code (no reader classes or
+  method names in the text), and build up from what a byte is.
+- **Writing style, on request of the owner:** simple English and short sentences. No hyphens,
+  underscores or dashes (em or en) in the visible text: write "end of game", not "end-of-game".
+  Check the rendered text, e.g. filter `main.innerText` lines for `[-_—–]` in the browser.
+- **Facts are measured, not estimated:** every number comes from one real replay and lives in
+  `Features/About/ExampleReplay.cs`, with how it was measured. Re-measure when the example changes.
+- `text-base` is a colour here (the `base` token), not a font size: use `text-[16px]`.
+- Tailwind only scans `.razor` files, so colour classes picked in code (the tones of
+  `AnnotatedBytes.Fill`/`Swatch`) must be literal strings in a `.razor` file. The chart palette is
+  available as `viz-1` to `viz-8` (`bg-viz-2`, `border-viz-3/60`, …).
+
 ## Unit icon atlas
 
 `tools/convert-unit-icons.ps1` writes into `wwwroot/images/units/`:
