@@ -34,9 +34,6 @@ public sealed record ModerationEntry(TimeSpan Timestamp, string Player, Moderati
 /// </summary>
 public static class ModerationLog
 {
-    /// <summary>Chat is the bulk of most games, so it is opt-in; every other kind shows by default.</summary>
-    public static bool ShownByDefault(ModerationKind kind) => kind != ModerationKind.Chat;
-
     /// <summary>
     /// How players talked to each other: chat, pings, markers and drawings. The AI prompt always
     /// includes these for the selected players, as the context of everything else.
@@ -243,7 +240,7 @@ public static class ModerationLog
         prompt.AppendLine("- `tab=chat&from=<time>&to=<time>`: the chat in that window, with the pings and drawings drawn on the map. Best to check chat, pings, markers and drawings.");
         prompt.AppendLine("- `tab=events&players=<name>&from=<time>&to=<time>`: every input of that player (orders, callbacks) in that window. Best to see exactly what a player did around an entry, e.g. from 15 seconds before to 15 seconds after it.");
         prompt.AppendLine("- `tab=playthrough&at=<time>`: the game played back on the map, paused at that moment.");
-        prompt.AppendLine("- `tab=moderation&players=<names>&kinds=<kinds>`: this log. Kinds: chat, selfdestruct, giveunits, recall, pause, left, focus, marker, ping, drawing, server, other. Without `kinds` everything but chat is shown.");
+        prompt.AppendLine("- `tab=moderation&players=<names>&kinds=<kinds>`: this log. Kinds: chat, selfdestruct, giveunits, recall, pause, left, focus, marker, ping, drawing, server, other. Without `kinds` every kind is shown.");
         prompt.AppendLine();
         prompt.AppendLine("Rules:");
         prompt.AppendLine("- Times are game time as m:ss or h:mm:ss, e.g. 10:42 or 1:02:30.");

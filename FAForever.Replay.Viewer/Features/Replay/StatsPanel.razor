@@ -1,28 +1,17 @@
 @using FAForever.Replay
 
-@* The end-of-game statistics (ReplaySemantics.GetGameStats): the numbers of the in-game score
-   screen (lua/ui/dialogs/hotstats.lua). Only games that ended normally carry them, so the tab
-   is always there but may only explain why it is empty; the caveat on top is always shown. *@
-
-<p class="mb-6 rounded-md border border-edge bg-raised/50 px-4 py-3 text-sm text-ink-muted" role="note">
-    <span class="font-semibold text-ink">No guarantees.</span>
-    These are the numbers of the in-game score screen. They are not part of the recorded game itself but a report
-    the game sends to the server when it ends, which happens to be logged in the replay@(stats is null ? "" : $" — this one by {Reporter} at {ReplayView.FormatDuration(stats.Timestamp)}").
-    A replay may not have it at all, and when it does, it can be incomplete: it only covers what the game tracks,
-    defeated players stop being updated shortly after their defeat, and mods or game versions can change what is reported.
-    @if (stats is not null)
-    {
-        <text>Kills count enemy units destroyed; the score is the game's own formula of resources spent and the value of units destroyed and lost.</text>
-    }
-</p>
+@* The end-of-game statistics (ReplaySemantics.GetGameStats): the report the server uses for
+   achievements, not the in-game score screen (whose data is not in the replay). Only games that
+   ended normally carry them, so the tab
+   is always there but may only explain why it is empty; the caveat sits below the numbers. *@
 
 @if (stats is null)
 {
     <div class="card mx-auto max-w-2xl text-center">
         <p class="font-semibold">No end-of-game statistics in this replay</p>
         <p class="mt-2 text-sm text-ink-muted">
-            When a game ends, every player's game reports the score screen's statistics to the
-            server, and that report is recorded in the replay. Games that did not end normally, and
+            When a game ends, every player's game reports its statistics to the server for
+            achievements, and that report is recorded in the replay. Games that did not end normally, and
             replays recorded before FAF started logging the report, do not have it.
         </p>
     </div>
@@ -185,6 +174,15 @@ else
                 </table>
             </section>
         }
+
+        <p class="text-xs leading-relaxed text-ink-faint" role="note">
+            These are not the numbers of the in-game score screen, which the replay does not have. They come from the report
+            the game sends to the server when it ends, to award achievements. It is not part of the recorded game itself
+            but happens to be logged in the replay — this one by @Reporter at @ReplayView.FormatDuration(stats.Timestamp).
+            It can be incomplete: it only covers what the game tracks, defeated players stop being updated shortly after their defeat,
+            and mods or game versions can change what is reported.
+            Kills count enemy units destroyed; the score is the game's own formula of resources spent and the value of units destroyed and lost.
+        </p>
     </div>
 }
 
@@ -209,7 +207,7 @@ else
         new("Energy", "energy", "Total energy produced, reclaim included", stats => stats.Resources.EnergyIn.Total),
     ];
 
-    /// <summary>The unit categories of lua/sim/score.lua: those of the score screen, then those the server tracks for achievements.</summary>
+    /// <summary>The unit categories of lua/sim/score.lua: by type, then by role and tech level.</summary>
     private static readonly (string Title, (string Key, string Label)[] Categories)[] CategoryGroups =
     [
         ("Units by type",

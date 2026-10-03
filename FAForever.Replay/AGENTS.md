@@ -31,7 +31,8 @@ parser in the browser is in [`../FAForever.Replay.Viewer/AGENTS.md`](../FAForeve
   callback per stroke, sent only by its author (no dedup needed, unlike chat). Observers share
   paintings through chat, so theirs are not in the replay. Use `ReplaySemantics.GetDrawings`;
   pings come from `ReplaySemantics.GetPings`. Both are shown on the Chat tab (`ChatPanel` → `ChatMapLayer`/`ChatFeed`) and, alive for their in-game lifetime, on the Playthrough map (same `ChatMapLayer`).
-- End-of-game statistics (the score screen, `lua/sim/score.lua`) reach the replay because FAF hooks
+- End-of-game statistics (`lua/sim/score.lua`; the report the server uses for achievements, **not**
+  the data of the in-game score screen, which the replay does not have) reach the replay because FAF hooks
   `GpgNetSend` (`lua/ui/globals/GpgNetSend.lua`) to log every call as a `ModeratorEvent` sim callback:
   `Message = "GpgNetSend with command 'JsonStats' and data '<json>,'"`, once per client at game end.
   Use `ReplaySemantics.GetGameStats` (null when absent or unparseable; never throws). The game's dkson

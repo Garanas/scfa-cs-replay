@@ -95,8 +95,8 @@
     private HashSet<ModerationKind> selectedKinds = [];
     private bool copied;
 
-    /// <summary>The kinds shown without a <c>kinds</c> parameter: everything in this replay but chat.</summary>
-    private IEnumerable<ModerationKind> DefaultKinds => kindItems.Select(item => item.Kind).Where(ModerationLog.ShownByDefault);
+    /// <summary>The kinds shown without a <c>kinds</c> parameter: everything in this replay.</summary>
+    private IEnumerable<ModerationKind> DefaultKinds => kindItems.Select(item => item.Kind);
 
     protected override void OnParametersSet()
     {

@@ -108,7 +108,7 @@ to those two players, on any machine.
 | `from` / `to` | Game-time window (`12`, `12:30` or `1:02:30`); shared across tabs | See window policy below |
 | `types` | Comma-separated input types shown in the Events stream | All types |
 | `endpoint` | Selected sim-callback endpoint | The most frequent endpoint |
-| `kinds` | Comma-separated entry kinds on the Moderation tab (`Features/Replay/ModerationLog.cs`): `chat`, `selfdestruct`, `giveunits`, `recall`, `pause`, `left`, `focus`, `marker`, `ping`, `drawing`, `server`, `other` | All kinds but `chat` |
+| `kinds` | Comma-separated entry kinds on the Moderation tab (`Features/Replay/ModerationLog.cs`): `chat`, `selfdestruct`, `giveunits`, `recall`, `pause`, `left`, `focus`, `marker`, `ping`, `drawing`, `server`, `other` | All kinds |
 | `pings` | `off` hides pings on the Chat tab (map and feed) | Pings shown |
 | `compare` | The two players of the Build order tab, `Left,Right` (unknown names fall back per slot) | The first army vs the first army of another team |
 | `view` | Below the maps on the Build order tab: `timings` shows key moments and units ordered per minute, `units` the units (entities) of both players | The order ledger |
@@ -201,8 +201,8 @@ the prompt always show the same entries.
   `GpgNetSend 'JsonStats'` (kilobytes of end-of-game statistics; reduced to one line, the Callbacks
   tab keeps the full text). Everything else is shown verbatim — it is evidence.
 - **Kinds** (`ModerationKind`): the query values of `kinds` are the lowercase enum names, so
-  renaming a member breaks links (see "Names and formats are stable"). Chat is off by default
-  (`ShownByDefault`); chat, pings, markers and drawings are communication (`IsCommunication`).
+  renaming a member breaks links (see "Names and formats are stable"). Every kind, chat included,
+  is shown by default; chat, pings, markers and drawings are communication (`IsCommunication`).
 - **Player names, not army numbers:** callbacks carry 1-based army numbers (`To`, `From`); entries
   show the player's name, with the number in brackets where it matters.
 - **The AI prompt** ("Copy as AI prompt", `ModerationLog.BuildPrompt`) holds the selected players'

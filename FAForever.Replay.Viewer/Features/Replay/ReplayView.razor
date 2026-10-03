@@ -49,6 +49,7 @@
     </nav>
 
     <div class="py-6">
+        @TabIntro(activeTab)
         @switch (activeTab)
         {
             case Tab.Overview:
@@ -189,6 +190,41 @@
         Tab.Moderation => "Moderation",
         _ => tab.ToString(),
     };
+
+    /// <summary>One or two lines on what a tab shows and where it comes from in the game's code; none on the Overview and Moderation.</summary>
+    private static RenderFragment TabIntro(Tab tab) => tab switch
+    {
+        Tab.Players => Intro(@<text>
+            Who played, from the lobby options stored in the replay header (@FaSource("lua/ui/lobby/lobbyOptions.lua")),
+            with the actions each player issued during the game.</text>),
+        Tab.Stats => Intro(@<text>
+            The end-of-game report the game sends to the server for achievements, which is logged in the replay; the
+            simulation tallies the numbers in @FaSource("lua/sim/score.lua"). The score screen's data is not in the replay.</text>),
+        Tab.Playthrough => Intro(@<text>
+            The players' orders played back on the map. A replay records input only, not the simulation, so this shows
+            what players ordered rather than where their units were.</text>),
+        Tab.BuildOrder => Intro(@<text>
+            What two players ordered to be built in the first ten minutes, side by side. The replay holds the orders,
+            not whether construction finished.</text>),
+        Tab.Chat => Intro(@<text>
+            Chat messages (@FaSource("lua/ui/game/chat.lua")), map pings (@FaSource("lua/ui/game/ping.lua")) and drawings
+            (@FaSource("lua/ui/game/painting", "painting", tree: true)), with the pings and drawings on the map.</text>),
+        Tab.Events => Intro(@<text>
+            Everything the clients sent to the simulation, tick by tick: orders, selections, callbacks and more.
+            This is the raw input stream that a replay consists of.</text>),
+        Tab.Callbacks => Intro(@<text>
+            Sim callbacks: the UI asking the simulation to act on a player's behalf, such as distributing orders, giving resources to an ally or voting
+            to recall. The endpoints are defined in @FaSource("lua/SimCallbacks.lua").</text>),
+        _ => _ => { },
+    };
+
+    private static RenderFragment Intro(RenderFragment content)
+        => @<p class="mb-4 text-sm text-ink-muted">@content</p>;
+
+    /// <summary>A link to a file (or folder) of the game's Lua code in the FAForever/fa repository.</summary>
+    private static RenderFragment FaSource(string path, string? label = null, bool tree = false)
+        => @<a class="font-mono text-xs text-primary hover:underline" href="https://github.com/FAForever/fa/@(tree ? "tree" : "blob")/develop/@path"
+               target="_blank" rel="noreferrer">@(label ?? path[(path.LastIndexOf('/') + 1)..])</a>;
 
     internal static string FormatDuration(TimeSpan duration)
         => duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss") : duration.ToString(@"m\:ss");

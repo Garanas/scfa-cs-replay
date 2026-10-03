@@ -4,8 +4,9 @@ namespace FAForever.Replay
     /// The end-of-game statistics (lua/sim/score.lua) that every client reports to the server
     /// with <c>GpgNetSend('JsonStats', json)</c> when the game ends. FAF hooks GpgNetSend
     /// (lua/ui/globals/GpgNetSend.lua) to also log the call through the ModeratorEvent sim
-    /// callback, which is how the payload ends up in the replay. The in-game score screen
-    /// (lua/ui/dialogs/hotstats.lua) shows the same numbers.
+    /// callback, which is how the payload ends up in the replay. The server uses the report to
+    /// award achievements; it is not what the in-game score screen (lua/ui/dialogs/hotstats.lua)
+    /// shows, which is not in the replay.
     /// </summary>
     /// <remarks>
     /// Only replays of games that ended normally carry it, and only those recorded since the
