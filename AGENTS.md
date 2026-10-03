@@ -94,7 +94,7 @@ the FAF team before any public deployment (see TODO.md).
   `{ShareablePainting={PeerName, ShareId, PaintingAdapterIdentifier, Samples={x,y,z,x,y,z,…}}}`, one
   callback per stroke, sent only by its author (no dedup needed, unlike chat). Observers share
   paintings through chat, so theirs are not in the replay. Use `ReplaySemantics.GetDrawings`;
-  pings come from `ReplaySemantics.GetPings`. Both are shown by `DrawingsPanel` (Chat → Drawings & pings).
+  pings come from `ReplaySemantics.GetPings`. Both are shown on the Chat tab (`ChatPanel` → `ChatMapLayer`/`ChatFeed`).
 - Lobby data lives in `Replay.Header.Armies` (`ReplayPlayerOptions`: faction 1=UEF/2=Aeon/
   3=Cybran/4=Seraphim, team where 1 = FFA, start spot, colors, rating MEAN/DEV, country, clan;
   `Raw` holds the full Lua table, e.g. `OwnerID`). `Armies[i].SourceId` links an army to
@@ -162,9 +162,7 @@ to those two players, on any machine.
 | `from` / `to` | Game-time window (`12`, `12:30` or `1:02:30`); shared across tabs | See window policy below |
 | `types` | Comma-separated input types shown in the Events stream | All types |
 | `endpoint` | Selected sim-callback endpoint | The most frequent endpoint |
-| `view` | Chat sub-tab: `map` shows drawings and pings on the map | Chat messages |
-| `pings` | `off` hides pings on the Chat map | Pings shown |
-| `zoom` | `map` shows the whole map on the Chat map | Zoomed to the visible drawings/pings |
+| `pings` | `off` hides pings on the Chat tab (map and feed) | Pings shown |
 | `at` | Playback position of the Playthrough tab (`12`, `12:30` or `1:02:30`); written on pause/seek only, never while playing | `0:00`, paused |
 
 **Window policy** (`TimeWindowFilter.ReadWindow`): one rule on every tab — a window is at most

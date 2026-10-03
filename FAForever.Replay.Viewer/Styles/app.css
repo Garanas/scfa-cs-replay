@@ -164,17 +164,19 @@
         @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-edge bg-raised px-4 py-2 text-sm font-semibold text-ink transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-50;
     }
 
-    /* Sub-tabs within a replay section (e.g. Chat: Messages | Map). */
-    .segmented {
-        @apply inline-flex gap-1 rounded-lg border border-edge bg-surface p-1;
+    /* A row in a time-ordered feed (PlaythroughFeed.razor, ChatFeed.razor): game time, the
+       player's colour chip, an optional 16 px icon and the text. Clicking a row acts on its
+       moment (seek or focus). */
+    .feed-row {
+        @apply flex w-full cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.5 text-left text-xs transition hover:bg-raised;
     }
 
-    .segmented-item {
-        @apply inline-flex cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink;
+    .feed-time {
+        @apply shrink-0 font-mono text-ink-muted;
     }
 
-    .segmented-item.active {
-        @apply bg-raised font-semibold text-primary;
+    .feed-chip {
+        @apply h-3.5 w-1 shrink-0 rounded-full;
     }
 
     .card {

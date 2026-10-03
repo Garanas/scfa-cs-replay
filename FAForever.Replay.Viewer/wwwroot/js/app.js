@@ -31,5 +31,9 @@ window.fafReplay = {
         try {
             window.sessionStorage.removeItem(key);
         } catch (e) { }
+    },
+    /* Scrolls an element into view within its scroll container, e.g. a selected feed row. */
+    scrollIntoView: function (id) {
+        document.getElementById(id)?.scrollIntoView({ block: "nearest" });
     }
 };

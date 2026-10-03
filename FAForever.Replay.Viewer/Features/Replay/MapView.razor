@@ -4,7 +4,7 @@
    top. Positions are derived from the first construction orders, so they work for any
    replay — including generated maps that have no preview at all. *@
 
-<MapCanvas Model="Model" AriaLabel="Estimated start positions of the players">
+<MapCanvas Model="Model" AriaLabel="@AriaLabel">
     @foreach (SpawnMarker marker in markers)
     {
         <g class="map-marker @(InactiveSources?.Contains(marker.SourceId) == true ? "map-marker-inactive" : null)">
@@ -40,6 +40,8 @@
 
     /// <summary>Sources whose spawn marker is greyed out, e.g. players already defeated.</summary>
     [Parameter] public IReadOnlyCollection<int>? InactiveSources { get; set; }
+
+    [Parameter] public string AriaLabel { get; set; } = "Estimated start positions of the players";
 
     private sealed record SpawnMarker(int SourceId, float X, float Y, string Label, string Title, string? Icon, string Swatch, string? ArmyColor);
 
