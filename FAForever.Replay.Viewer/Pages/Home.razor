@@ -19,7 +19,9 @@
 <section class="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
     <div class="card">
         <h2 class="text-lg font-bold">From the vault</h2>
-        <p class="mt-1 text-sm text-ink-muted">Paste a replay ID or link, e.g. <span class="font-mono text-ink">25692731</span>.</p>
+        <p class="mt-1 text-sm text-ink-muted">Paste a replay ID or link, e.g.
+            <button type="button" class="cursor-pointer font-mono text-primary hover:underline disabled:cursor-default disabled:text-ink disabled:no-underline"
+                    title="Open this replay" @onclick="OpenExampleReplay" disabled="@IsLoading">@ExampleReplayId</button>.</p>
         <form class="mt-4 flex gap-2" @onsubmit="OpenVaultReplay" @onsubmit:preventDefault>
             <input @ref="vaultReplayInput" class="input-field font-mono" placeholder="Replay ID" inputmode="numeric"
                    @bind="vaultReplayId" @bind:event="oninput" @bind:after="ExtractReplayIdFromLink" disabled="@IsLoading" />
@@ -53,6 +55,8 @@
 </section>
 
 @code {
+    private const int ExampleReplayId = 25692731;
+
     // Generous cap: the largest known .scfareplay files are tens of MB.
     private const long MaxReplayFileBytes = 256L * 1024 * 1024;
 
@@ -73,6 +77,12 @@
         {
             Navigation.NavigateTo($"replay/{replayId}");
         }
+    }
+
+    private void OpenExampleReplay()
+    {
+        vaultReplayId = ExampleReplayId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        OpenVaultReplay();
     }
 
     // The FAF client copies a replay as a link (https://replay.faforever.com/25692731); keep just the id.
