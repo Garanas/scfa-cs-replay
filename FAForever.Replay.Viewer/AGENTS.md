@@ -45,6 +45,8 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
   `js/app.js` takes the file from the `launchQueue` (which may deliver before Blazor runs) and
   `Pages/Home.razor` loads it like a picked file. `launch_handler` (`navigate-existing`) opens it in
   the app window that is already open instead of a new one (Chromium; others ignore it).
+- **Shortcuts:** the manifest's `shortcuts` (Search, About) appear when right-clicking or
+  long-pressing the installed app's icon. Keep their URLs relative, like the in-app links.
 - **Icons:** `wwwroot/icons/icon.svg` is the source; `tools/convert-app-icons.ps1` (ImageMagick 7)
   renders the favicon, manifest and Apple touch icons. Never edit the PNGs by hand.
 - `theme-color` follows the light/dark mode (`fafReplay.syncThemeColor` in `applyMode`, from `--th-base`).
