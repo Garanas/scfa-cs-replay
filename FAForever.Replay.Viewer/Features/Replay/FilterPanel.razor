@@ -1,0 +1,42 @@
+@* The filter column of the list tabs (Playthrough, Chat, Events, Callbacks, Moderation). Wide
+   (lg), it stands open beside the content, scrolling on its own. Narrower, it sits above the
+   content and folds into one line that says what is filtered, so the content comes first.
+   Open or closed is a pointer aid, like a menu: it stays out of the URL. *@
+
+<div class="card self-start p-2 lg:max-h-[70vh] lg:overflow-y-auto">
+    <button type="button" class="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left transition hover:bg-raised lg:hidden"
+            aria-expanded="@(open ? "true" : "false")" @onclick="() => open = !open">
+        <span class="shrink-0 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</span>
+        <span class="min-w-0 flex-1 truncate text-xs text-ink">@Summary</span>
+        <svg class="h-4 w-4 shrink-0 text-ink-muted transition @(open ? "rotate-180" : "")" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" />
+        </svg>
+    </button>
+    <div class="@(open ? "" : "hidden") lg:block">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    /// <summary>What is filtered, in a few words, for the folded line (see the helpers below).</summary>
+    [Parameter, EditorRequired] public required string Summary { get; set; }
+
+    [Parameter, EditorRequired] public required RenderFragment ChildContent { get; set; }
+
+    private bool open;
+
+    /// <summary>"all players", or how many of them are shown.</summary>
+    public static string Players(int selected, int total)
+        => selected == total ? "all players" : $"{selected} of {total} players";
+
+    /// <summary>The time window, or "whole game" without one.</summary>
+    public static string Window(TimeSpan? from, TimeSpan? to)
+        => from is { } start && to is { } end ? $"{GameTime.Format(start)} to {GameTime.Format(end)}" : "whole game";
+
+    /// <summary>"all {noun}", or how many of them are shown.</summary>
+    public static string Count(int selected, int total, string noun)
+        => selected == total ? $"all {noun}" : $"{selected} of {total} {noun}";
+
+    public static string Join(params string?[] parts) => string.Join(" · ", parts.Where(part => !string.IsNullOrEmpty(part)));
+}

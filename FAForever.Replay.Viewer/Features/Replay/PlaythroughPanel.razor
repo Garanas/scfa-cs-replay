@@ -11,15 +11,15 @@
    pause/seek. The loop is a cooperative async timer; WASM is single-threaded, so there
    is no Task.Run anywhere (AGENTS.md hard rule). *@
 
-<div class="grid gap-6 lg:grid-cols-[1fr_2.4fr_1.6fr]">
-    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
-        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_2.4fr_1.6fr]">
+    <FilterPanel Summary="@FilterSummary">
+        <h3 class="hidden px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted lg:block">Filters</h3>
         <PlayerFilterList Items="playerItems" />
         <label class="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-ink-muted transition hover:bg-raised hover:text-ink">
             <input type="checkbox" class="accent-primary" @bind="trailsEnabled" @bind:after="OnTrailsToggled" />
             <span class="text-sm">Trails</span>
         </label>
-    </div>
+    </FilterPanel>
 
     <div class="card flex flex-col gap-3 self-start">
         <MapView Model="Model" MarkerScale="0.6" InactiveSources="defeatedSources">
@@ -32,7 +32,8 @@
                                         IconSize="markerIconSize" />
             </Overlay>
         </MapView>
-        <div class="flex items-center gap-3">
+        @* Narrow screens put the slider on a line of its own, so it gets the full width. *@
+        <div class="flex flex-wrap items-center gap-3">
             <button type="button" class="btn-primary px-3 py-1.5 text-sm" @onclick="TogglePlay">
                 @(playing ? "Pause" : "Play")
             </button>
@@ -41,9 +42,9 @@
                 ×@Speeds[speedIndex].ToString("0")
             </button>
             <input type="range" min="0" max="@ScrubMax" step="1" value="@((int)current.TotalSeconds)"
-                   class="min-w-0 flex-1 accent-primary" aria-label="Playback position"
+                   class="min-w-0 flex-1 accent-primary max-sm:order-last max-sm:basis-full" aria-label="Playback position"
                    @oninput="OnScrubInput" @onchange="OnScrubCommit" />
-            <span class="shrink-0 font-mono text-xs text-ink-muted">@GameTime.Format(current) / @GameTime.Format(duration)</span>
+            <span class="shrink-0 font-mono text-xs text-ink-muted max-sm:ml-auto">@GameTime.Format(current) / @GameTime.Format(duration)</span>
         </div>
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-edge/60 pt-2 text-xs text-ink-muted"
              role="list" aria-label="Marker legend">
@@ -536,6 +537,8 @@
     private void CycleSpeed() => speedIndex = (speedIndex + 1) % Speeds.Length;
 
     private void OnTrailsToggled() => markerVersion++;
+
+    private string FilterSummary => FilterPanel.Join(FilterPanel.Players(PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name)).Count, playerItems.Count), trailsEnabled ? null : "no trails");
 
     /// <summary>
     /// Persists the playback position as the shareable "at" parameter. Only called when

@@ -7,12 +7,13 @@
    as one icon with a count), other orders as a tick in the colour of their type, and a queue -
    orders shift-queued after each other (ReplayEntity.ContinuesChain) - as a line from the
    first order to the last. Mirrored (the left player) runs the time from right to left, so
-   0:00 is against the centre for both players. Clicking a row shows the unit's route on the map. *@
+   0:00 is against the centre for both players. Clicking a row shows the unit's route on the map.
+   Where the lanes scroll sideways (narrow screens), the names stick to the left. *@
 
 <div class="flex flex-col gap-1">
     @* The time axis stays in view while the lanes scroll (sticky in the panel's scroll box). *@
     <div class="@(Mirrored ? "flex-row-reverse" : "") sticky top-0 z-10 flex items-end gap-3 bg-surface">
-        <span class="w-36 shrink-0"></span>
+        <span class="w-24 shrink-0 xl:w-36"></span>
         <div class="flex-1 px-3">
             <div class="relative h-4">
                 @for (int minute = 0; minute <= MinuteCount; minute++)
@@ -38,7 +39,7 @@
                         title="@($"{Label(entity)}: entity 0x{entity.EntityId:X8}, {entity.Orders.Count} orders (click to show its route)")"
                         @onclick="() => OnSelect.InvokeAsync(entity)"
                         @onmouseenter="() => OnHover.InvokeAsync(entity.EntityId)" @onmouseleave="() => OnHover.InvokeAsync(null)">
-                    <span class="@(Mirrored ? "flex-row-reverse text-right" : "") flex w-36 shrink-0 items-baseline gap-2">
+                    <span class="@(Mirrored ? "flex-row-reverse text-right" : "sticky left-0 z-[1] bg-surface") flex w-24 shrink-0 items-center gap-2 self-stretch xl:w-36">
                         <span class="truncate text-xs @(entity.Kind == ReplayEntityKind.Commander ? "font-semibold text-ink" : "text-ink-muted")">@Label(entity)</span>
                         <span class="font-mono text-[10px] text-ink-faint">#@entity.Serial</span>
                     </span>

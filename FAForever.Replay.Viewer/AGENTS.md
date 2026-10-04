@@ -82,6 +82,20 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
   (`.menu-popover`). `js/app.js` closes a popover when a link inside it is taken.
 - Page width: header, page and footer share `MainLayout.Container` (`max-w-6xl`). The Build order
   tab compares two players side by side and widens it to a full HD screen (`max-w-[1824px]`).
+- Narrow screens (phones, about 390 px wide) are built with Tailwind's breakpoints in CSS, desktop
+  unchanged from `sm`/`lg` up. The recurring patterns:
+  - **Filter columns** of the list tabs go through `Features/Replay/FilterPanel.razor`: open beside
+    the content from `lg`, folded into one summary line above it below that.
+  - **Tables:** `.list-table` turns a table into a list below `sm` (the long cell gets
+    `.list-table-wide`, the cells `max-sm:p-0`); `.sticky-first-column` keeps the player column of
+    a wide table in view while it scrolls sideways. `.tab-strip` is a row of tabs that scrolls.
+  - A single-column `grid` needs `grid-cols-1` (`minmax(0, 1fr)`), or its column grows with its
+    widest content and the page scrolls sideways.
+  - A component renders a different layout per width only when rendering both and hiding one with
+    CSS is too heavy: the Build order tab (two maps with hundreds of markers) asks
+    `fafReplay.onMediaChange` and shows one player at a time below `xl`.
+  - Check a change at 390x844 too (`browser_resize`): no tab may scroll the page sideways
+    (`document.documentElement.scrollWidth` equals the viewport width).
 - Anything drawn on the map goes through `Features/Replay/MapCanvas.razor`: an SVG in world
   coordinates with the vault preview as backdrop, so replay positions (x, z) are used as-is; its
   `ViewBox` parameter zooms in on a part of the map.
@@ -121,6 +135,7 @@ to those two players, on any machine.
 | `pings` | `off` hides pings on the Chat tab (map and feed) | Pings shown |
 | `compare` | The two players of the Build order tab, `Left,Right` (unknown names fall back per slot) | The first army vs the first army of another team |
 | `view` | Below the maps on the Build order tab: `timings` shows key moments and units ordered per minute, `units` the units (entities) of both players | The order ledger |
+| `side` | `right` shows the second player of `compare` on narrow screens, where the Build order tab shows one player at a time; wide screens ignore it | The first player |
 | `at` | Playback position of the Playthrough tab (`12`, `12:30` or `1:02:30`); written on pause/seek only, never while playing | `0:00`, paused |
 
 **Window policy** (`TimeWindowFilter.ReadWindow`): one rule on every tab: a window is at most
@@ -303,7 +318,7 @@ output and inspect network traffic.
 - Project-scoped MCP servers need a one-off approval per machine. Accept the prompt on the next
   Claude Code start, or run `claude mcp list` to check the connection.
 - Screenshots, traces and downloads land in `.playwright-mcp/` at the repo root (gitignored). The viewport defaults to
-  1440x900; the Viewer's layout is desktop-first.
+  1440x900; resize to 390x844 to check narrow screens (see Conventions).
 - `.claude/settings.json` pre-approves the navigation, inspection and interaction tools.
   `browser_evaluate`, `browser_run_code_unsafe` and `browser_file_upload` deliberately still prompt.
 - The browser profile is temporary: an FAF login does **not** survive a browser restart. For a

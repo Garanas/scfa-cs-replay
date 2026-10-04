@@ -4,7 +4,8 @@
    player first ordered the milestones of an opening (OpeningTimings.Moments), the earlier one
    emphasised and the later one with how far behind; then the units their factories were
    ordered to build, per minute and over the whole opening. Clicking a moment highlights its
-   order on the map. *@
+   order on the map. With Focus (narrow screens) only that player's column is shown, after the
+   label, still compared with the other player. *@
 
 <div class="flex flex-col xl:col-span-3">
     <h3 class="@HeadingClass">Key moments</h3>
@@ -15,9 +16,17 @@
     @foreach (MomentRow row in moments)
     {
         <div class="@RowClass">
-            @MomentCell(row.Left, row.Right, LeftColor, mirrored: true)
-            <span class="flex h-8 items-center justify-center text-center text-xs text-ink-muted">@row.Label</span>
-            @MomentCell(row.Right, row.Left, RightColor, mirrored: false)
+            @if (Focus is { } focus)
+            {
+                <span class="@FocusLabelClass h-8">@row.Label</span>
+                @(focus == 1 ? MomentCell(row.Right, row.Left, RightColor, mirrored: false) : MomentCell(row.Left, row.Right, LeftColor, mirrored: false))
+            }
+            else
+            {
+                @MomentCell(row.Left, row.Right, LeftColor, mirrored: true)
+                <span class="flex h-8 items-center justify-center text-center text-xs text-ink-muted">@row.Label</span>
+                @MomentCell(row.Right, row.Left, RightColor, mirrored: false)
+            }
         </div>
     }
 
@@ -25,9 +34,17 @@
     @foreach (MinuteRow row in minutes)
     {
         <div class="@RowClass @(row.IsTotal ? "border-t border-edge" : "")">
-            @UnitsCell(row.Left, mirrored: true, LeftColor)
-            <span class="@(row.IsTotal ? "font-semibold text-ink" : "font-mono text-ink-muted") flex min-h-8 items-center justify-center text-xs">@row.Label</span>
-            @UnitsCell(row.Right, mirrored: false, RightColor)
+            @if (Focus is { } focus)
+            {
+                <span class="@FocusLabelClass @(row.IsTotal ? "font-semibold text-ink" : "font-mono") min-h-8">@row.Label</span>
+                @(focus == 1 ? UnitsCell(row.Right, mirrored: false, RightColor) : UnitsCell(row.Left, mirrored: false, LeftColor))
+            }
+            else
+            {
+                @UnitsCell(row.Left, mirrored: true, LeftColor)
+                <span class="@(row.IsTotal ? "font-semibold text-ink" : "font-mono text-ink-muted") flex min-h-8 items-center justify-center text-xs">@row.Label</span>
+                @UnitsCell(row.Right, mirrored: false, RightColor)
+            }
         </div>
     }
     <p class="mt-2 text-center text-xs text-ink-faint">
@@ -37,7 +54,11 @@
 
 @code {
     private const string HeadingClass = "py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-ink-faint";
-    private const string RowClass = "grid grid-cols-[minmax(0,1fr)_176px_minmax(0,1fr)] gap-x-6 border-b border-edge/40";
+    private const string PairRowClass = "grid grid-cols-[minmax(0,1fr)_176px_minmax(0,1fr)] gap-x-6 border-b border-edge/40";
+    private const string FocusRowClass = "grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-3 border-b border-edge/40";
+    private const string FocusLabelClass = "flex items-center text-xs text-ink-muted";
+
+    private string RowClass => Focus is null ? PairRowClass : FocusRowClass;
 
     /// <summary>The construction (and other) orders of the left player in the opening.</summary>
     [Parameter, EditorRequired] public required IReadOnlyList<BuildOrderItem> Left { get; set; }
@@ -54,6 +75,9 @@
     [Parameter] public int? Selected { get; set; }
 
     [Parameter] public EventCallback<BuildOrderItem> OnSelect { get; set; }
+
+    /// <summary>Show only this player's column (0 left, 1 right) instead of both; null shows both.</summary>
+    [Parameter] public int? Focus { get; set; }
 
     private sealed record MomentRow(string Label, BuildOrderItem? Left, BuildOrderItem? Right);
 

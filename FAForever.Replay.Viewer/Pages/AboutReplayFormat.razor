@@ -386,7 +386,7 @@
                         {
                             <div class="flex items-center gap-3">
                                 <img src="@Factions.IconPath(faction)" alt="" class="h-6 w-6 shrink-0" />
-                                <span class="w-32 shrink-0 text-sm text-ink">@player</span>
+                                <span class="w-20 shrink-0 truncate text-sm text-ink sm:w-32">@player</span>
                                 <span class="h-3 flex-1 overflow-hidden rounded-full bg-raised">
                                     <span class="block h-full rounded-full" style="width: @((apm / 75 * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture))%; background: @Factions.Swatch(faction)"></span>
                                 </span>

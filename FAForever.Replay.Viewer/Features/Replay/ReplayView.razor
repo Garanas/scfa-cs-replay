@@ -55,11 +55,12 @@
         }
     </header>
 
-    <nav class="mt-6 flex flex-wrap gap-1 border-b border-edge pb-px" aria-label="Replay sections">
+    @* On narrow screens the tabs stay on one line and scroll sideways; the active one is scrolled into view. *@
+    <nav class="tab-strip mt-6 border-b border-edge pb-px" aria-label="Replay sections">
         @foreach (Tab tab in Enum.GetValues<Tab>())
         {
             @* Moderation is a different use of the page than the analysis tabs, so it sits apart, on the right. *@
-            <button type="button" class="@(tab == activeTab ? ActiveTabClass : TabClass) @(tab == Tab.Moderation ? "ml-auto" : "")" @onclick="() => SelectTab(tab)">
+            <button type="button" id="@TabId(tab)" class="@(tab == activeTab ? ActiveTabClass : TabClass) @(tab == Tab.Moderation ? "ml-auto" : "")" @onclick="() => SelectTab(tab)">
                 @TabLabel(tab)
             </button>
         }
@@ -101,8 +102,8 @@
 </article>
 
 @code {
-    private const string TabClass = "cursor-pointer rounded-t-md px-4 py-2 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink";
-    private const string ActiveTabClass = "cursor-pointer rounded-t-md border-b-2 border-primary bg-raised px-4 py-2 text-sm font-semibold text-primary";
+    private const string TabClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md px-3 py-2 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink sm:px-4";
+    private const string ActiveTabClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md border-b-2 border-primary bg-raised px-3 py-2 text-sm font-semibold text-primary sm:px-4";
 
     private enum Tab
     {
@@ -124,6 +125,7 @@
     private bool copied;
     private bool canShare;
     private bool linkCopied;
+    private Tab? scrolledToTab;
 
     protected override void OnParametersSet()
     {
@@ -148,6 +150,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (scrolledToTab != activeTab)
+        {
+            scrolledToTab = activeTab;
+            await JS.InvokeVoidAsync("fafReplay.scrollIntoView", TabId(activeTab));
+        }
+
         // Only where the system has a share sheet (mobile, Safari, Chromium on Windows and ChromeOS).
         if (firstRender && await JS.InvokeAsync<bool>("fafReplay.canShare"))
         {
@@ -200,6 +208,8 @@
         "moderation" => Tab.Moderation,
         _ => Tab.Overview,
     };
+
+    private static string TabId(Tab tab) => $"replay-tab-{tab.ToString().ToLowerInvariant()}";
 
     private static string? TabQueryValue(Tab tab)
         => tab == Tab.Overview ? null : tab.ToString().ToLowerInvariant();

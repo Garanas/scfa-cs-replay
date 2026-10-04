@@ -1,7 +1,7 @@
 @using FAForever.Replay
 
 <div class="card overflow-x-auto p-0">
-    <table class="w-full text-left text-sm">
+    <table class="sticky-first-column w-full text-left text-sm">
         <thead>
             <tr class="border-b border-edge text-xs uppercase tracking-wide text-ink-muted">
                 <th class="px-4 py-3 font-semibold">Player</th>
@@ -34,7 +34,7 @@
                             <span class="font-medium">@row.Name</span>
                             @if (row.Clan is { Length: > 0 } clan)
                             {
-                                <span class="text-xs text-ink-faint">[@clan]</span>
+                                <span class="text-xs text-ink-faint max-sm:hidden">[@clan]</span>
                             }
                             @if (row.Tag is { } tag)
                             {

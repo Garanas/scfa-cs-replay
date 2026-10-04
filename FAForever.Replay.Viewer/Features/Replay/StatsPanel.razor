@@ -20,8 +20,8 @@ else
 {
     <div class="space-y-6">
         <section class="card overflow-x-auto p-0">
-            <h3 class="px-4 pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Summary</h3>
-            <table class="mt-2 w-full text-left text-sm">
+            <h3 class="sticky left-0 px-4 pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Summary</h3>
+            <table class="sticky-first-column mt-2 w-full text-left text-sm">
                 <thead>
                     <tr class="border-b border-edge text-xs uppercase tracking-wide text-ink-muted">
                         <th class="px-4 py-3 font-semibold">Player</th>
@@ -56,8 +56,8 @@ else
         @foreach ((string title, List<(string Key, string Label)> group) in categoryGroups)
         {
             <section class="card overflow-x-auto p-0">
-                <h3 class="px-4 pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">@title</h3>
-                <table class="mt-2 w-full text-sm">
+                <h3 class="sticky left-0 px-4 pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">@title</h3>
+                <table class="sticky-first-column mt-2 w-full text-sm">
                     <thead>
                         <tr class="text-xs uppercase tracking-wide text-ink-muted">
                             <th class="px-4 pt-3"></th>
@@ -96,8 +96,8 @@ else
         }
 
         <section class="card overflow-x-auto p-0">
-            <h3 class="px-4 pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Economy</h3>
-            <table class="mt-2 w-full text-left text-sm">
+            <h3 class="sticky left-0 px-4 pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Economy</h3>
+            <table class="sticky-first-column mt-2 w-full text-left text-sm">
                 <thead>
                     <tr class="text-xs uppercase tracking-wide text-ink-muted">
                         <th class="px-4 pt-3 font-semibold"></th>
@@ -137,8 +137,8 @@ else
         @if (tracked.Count > 0)
         {
             <section class="card overflow-x-auto p-0">
-                <h3 class="px-4 pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Tracked units</h3>
-                <p class="px-4 pt-1 text-xs text-ink-faint">
+                <h3 class="sticky left-0 px-4 pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Tracked units</h3>
+                <p class="sticky left-0 px-4 pt-1 text-xs text-ink-faint">
                     The units the server keeps statistics on for achievements: commanders, air superiority fighters and experimentals.
                 </p>
                 <table class="mt-2 w-full text-left text-sm">
@@ -160,7 +160,7 @@ else
                                     <span class="flex items-center gap-2">
                                         <UnitIcon BlueprintId="@item.BlueprintId" Size="28" Title="@item.UnitName" />
                                         <span>@item.UnitName</span>
-                                        <span class="font-mono text-xs text-ink-faint">@item.BlueprintId</span>
+                                        <span class="font-mono text-xs text-ink-faint max-sm:hidden">@item.BlueprintId</span>
                                     </span>
                                 </td>
                                 <td class="px-3 py-2"><PlayerLabel Name="@item.Row.Name" Color="@item.Row.Color" /></td>
@@ -310,7 +310,7 @@ else
         }
         @if (!compact)
         {
-            <span class="text-xs text-ink-faint">@row.Team</span>
+            <span class="text-xs text-ink-faint max-sm:hidden">@row.Team</span>
         }
     </span>;
 
