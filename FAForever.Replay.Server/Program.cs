@@ -12,6 +12,15 @@ builder.Services.AddHttpClient("Hydra", client =>
     client.DefaultRequestHeaders.UserAgent.ParseAdd("FAForever-Replay-Viewer");
 });
 
+// Link previews (ReplayLinkPreview.cs): the metadata line of a replay, read from the vault.
+builder.Services.AddHttpClient(ReplayLinkPreview.HttpClientName, client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("FAForever-Replay-Viewer");
+});
+builder.Services.AddMemoryCache(options => options.SizeLimit = 10_000);
+builder.Services.AddSingleton<ReplayLinkPreview>();
+
 // The token proxy is public once deployed: limit it per client address so it cannot be used
 // to hammer Hydra. A sign-in takes one request and a refresh one more per hour, so this is
 // generous for people. Behind a reverse proxy the address comes from X-Forwarded-For (set
@@ -75,6 +84,19 @@ app.MapPost("/api/oauth/token", async (HttpContext context, IHttpClientFactory h
         await context.Response.WriteAsJsonAsync(new { error = "upstream_unreachable" }, cancellationToken);
     }
 }).WithMetadata(new RequestSizeLimitAttribute(8 * 1024)).RequireRateLimiting("token");
+
+// A replay page is the app's index.html with that replay's link preview (Open Graph tags): link
+// unfurlers (Discord, X, Slack, ...) do not run the app. The app itself ignores the tags.
+app.MapGet("/replay/{replayId:int}", async (int replayId, HttpContext context, ReplayLinkPreview preview, CancellationToken cancellationToken) =>
+{
+    if (await preview.RenderAsync(replayId, context, cancellationToken) is not string html)
+    {
+        return Results.NotFound();
+    }
+
+    context.Response.Headers.CacheControl = "no-cache";
+    return Results.Content(html, "text/html; charset=utf-8");
+});
 
 app.MapFallbackToFile("index.html");
 

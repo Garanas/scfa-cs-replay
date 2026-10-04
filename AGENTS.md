@@ -20,7 +20,7 @@ project:
 |---|---|
 | `FAForever.Replay` | Core replay parser (the crown jewel: change with care, it is benchmarked and heavily tested). |
 | `FAForever.Replay.Viewer` | Standalone Blazor WebAssembly app (UI). Tailwind CSS v4, no component library. |
-| `FAForever.Replay.Server` | Minimal ASP.NET Core host: serves the Viewer's static files **and** proxies the OAuth token exchange. |
+| `FAForever.Replay.Server` | Minimal ASP.NET Core host: serves the Viewer's static files, proxies the OAuth token exchange **and** fills in link previews for replay pages. |
 | `FAForever.Replay.Test` | MSTest suite with real replay assets under `assets/`. |
 | `FAForever.Replay.Sandbox` | CLI scratch pad. |
 | `FAForever.Replay.Benchmark` | BenchmarkDotNet harness. |
@@ -58,7 +58,7 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
 | `https://api.faforever.com/data/*` | Bearer token required (401 otherwise) | `*` | JSON:API (Elide) with RSQL filters; call directly from the browser. |
 | `https://api.faforever.com/me` | Bearer token | `*` | Current user. |
 | `https://api.faforever.com/game/{id}/replay` | anonymous | `*` | 302 → `content.faforever.com/replays/...fafreplay`; browser fetch can follow it. Do **not** proxy replay downloads. |
-| `https://content.faforever.com/maps/previews/small/{map}.png` | anonymous | n/a for `<img>` | Map preview images. |
+| `https://content.faforever.com/maps/previews/small/{map}.png` | anonymous | n/a for `<img>` | Map preview images (`large/` too, used for link previews). |
 
 OAuth client: we temporarily reuse the official FAF client's **public** client
 (`2e8808cf-5889-469b-b2c3-01f0cc58c4af`, PKCE, loopback redirect without a path, hence the fixed dev
@@ -73,7 +73,16 @@ the FAF team before any public deployment (see TODO.md).
 - NuGet versions live **only** in `Directory.Packages.props` (central package management).
 - UI text is English. Code identifiers are English.
 - Tests: MSTest with `[DataRow]` over the real replay assets in `FAForever.Replay.Test/assets/`.
-- Keep the Server minimal: static hosting + token proxy. It must never hold secrets or session state.
+- Keep the Server minimal: static hosting, the token proxy and link previews. It must never hold
+  secrets or session state.
+- Link previews (`FAForever.Replay.Server/ReplayLinkPreview.cs`): unfurlers (Discord, X, Slack) do not
+  run the app, so `/replay/{id}` is served as `index.html` with that replay's Open Graph tags in place
+  of the default block between `<!-- Link preview` and `<!-- /Link preview -->`. The data is the
+  replay file's first line (its JSON metadata), fetched anonymously with a Range request; the replay
+  itself is never downloaded or passed on. Cards are cached in memory (a day; failures five minutes)
+  and uncached lookups are rate-limited per client address. Map names come from the vault folder
+  (`osiris.v0006` becomes "Osiris"); the original maps (`scmp_009`, `x1mp_017`) have only a code, so
+  their card shows no name.
 
 ## Gotchas
 
