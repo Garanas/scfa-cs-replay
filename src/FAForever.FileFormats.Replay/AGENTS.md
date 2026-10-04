@@ -8,15 +8,10 @@ libraries: see [`../FAForever.FileFormats.Blueprints/AGENTS.md`](../FAForever.Fi
 
 ## Tests and benchmarks
 
-- Parser changes must keep `ReplayFingerprintTest` (`tests/FAForever.FileFormats.Replay.Tests`) green: it
-  pins a hash of the complete parsed output of every test asset, and checks that the staged API matches a
-  one-shot load. Only update the expected hashes when an output change is intended. The hashed text
-  includes full type names (record `ToString`), so renaming a namespace changes every hash too.
-- Benchmarks (`benchmarks/FAForever.FileFormats.Replay.Benchmarks`, always `-c Release`): without arguments everything runs;
-  `dotnet run -c Release -- --filter "*ParseBenchmark.Body*"` runs one phase. Phases: `DecompressBenchmark`
-  (metadata + decompression), `ParseBenchmark.Header` / `.Body` (on pre-decompressed bytes, body via the
-  staged API with the Viewer's batch size), and the end-to-end `FAForeverReplayBenchmark` /
-  `SCFAReplayBenchmark`. Log results per optimisation step in `benchmarks/FAForever.FileFormats.Replay.Benchmarks/RESULTS.md`.
+- Parser changes must keep `ReplayFingerprintTest` green: it pins the complete parsed output of every
+  replay asset. When and how to update its hashes: [`../../tests/AGENTS.md`](../../tests/AGENTS.md).
+- Performance work is measured with the benchmarks and logged in their `RESULTS.md`; how to run and
+  log them: [`../../benchmarks/AGENTS.md`](../../benchmarks/AGENTS.md).
 
 ## The replay model
 

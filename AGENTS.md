@@ -3,14 +3,17 @@
 A .NET 10 solution for parsing and analysing Supreme Commander: Forged Alliance (Forever) replays,
 with a Blazor WebAssembly front-end for searching the FAForever vault and inspecting replays.
 
-This file holds what applies everywhere. Three projects have their own guide, which agents that
-support nested guides pick up when they touch files there. Read it before planning work in that
-project:
+This file holds what applies everywhere. Each top-level folder and three projects have their own
+guide, which agents that support nested guides pick up when they touch files there. Read it before
+planning work there:
 
-- **Replay parser work** (`FAForever.FileFormats.Replay`, its tests and benchmarks):
+- **Folders:** [`src/AGENTS.md`](src/AGENTS.md) (dependency rules, library rules, adding a library),
+  [`tests/AGENTS.md`](tests/AGENTS.md) (running, assets, the fingerprint test),
+  [`benchmarks/AGENTS.md`](benchmarks/AGENTS.md) (running, logging results),
+  [`sandbox/AGENTS.md`](sandbox/AGENTS.md) (the scratch CLI).
+- **Replay parser work** (`FAForever.FileFormats.Replay`):
   [`src/FAForever.FileFormats.Replay/AGENTS.md`](src/FAForever.FileFormats.Replay/AGENTS.md) covers the
-  fingerprint test, benchmarks, the replay model's semantics (entity ids, `ClearQueue`, lobby data,
-  Lua booleans), game-data tables.
+  replay model's semantics (entity ids, `ClearQueue`, lobby data, Lua booleans), game-data tables.
 - **Blueprint and Lua work** (`FAForever.FileFormats.Blueprints`, `FAForever.FileFormats.Lua`):
   [`src/FAForever.FileFormats.Blueprints/AGENTS.md`](src/FAForever.FileFormats.Blueprints/AGENTS.md) covers
   the blueprint parser, the Lua evaluator, blueprint ids and unit names.
