@@ -108,27 +108,6 @@ window.fafReplay = {
             return false;
         }
     },
-    /*
-     * Copies a link both as rich text (an anchor with a title, for chat, forums and documents) and
-     * as the bare address; falls back to the address alone where ClipboardItem is missing.
-     */
-    copyLink: async function (url, title) {
-        if (typeof ClipboardItem !== "undefined") {
-            const anchor = document.createElement("a");
-            anchor.href = url;
-            anchor.textContent = title;
-            try {
-                await navigator.clipboard.write([new ClipboardItem({
-                    "text/html": new Blob([anchor.outerHTML], { type: "text/html" }),
-                    "text/plain": new Blob([url], { type: "text/plain" })
-                })]);
-                return true;
-            } catch (e) {
-                /* Some browsers refuse text/html; try the plain address. */
-            }
-        }
-        return window.fafReplay.copyText(url);
-    },
     /* The Web Share API: the system's share sheet, where there is one. */
     canShare: function () {
         return typeof navigator.share === "function";
