@@ -43,7 +43,8 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
   `index.html`, the service worker, its asset list and the manifest.
 - **File handling:** the installed app is registered for `.fafreplay`/`.scfareplay` ("Open with").
   `js/app.js` takes the file from the `launchQueue` (which may deliver before Blazor runs) and
-  `Pages/Home.razor` loads it like a picked file.
+  `Pages/Home.razor` loads it like a picked file. `launch_handler` (`navigate-existing`) opens it in
+  the app window that is already open instead of a new one (Chromium; others ignore it).
 - **Icons:** `wwwroot/icons/icon.svg` is the source; `tools/convert-app-icons.ps1` (ImageMagick 7)
   renders the favicon, manifest and Apple touch icons. Never edit the PNGs by hand.
 - `theme-color` follows the light/dark mode (`fafReplay.syncThemeColor` in `applyMode`, from `--th-base`).
