@@ -141,6 +141,30 @@ window.fafReplay = {
         }
     },
     /*
+     * Page Visibility: tells a component when the page is hidden (another tab, a minimised
+     * window). Returns an id for offPageHidden.
+     */
+    pageHiddenHandlers: new Map(),
+    pageHiddenNextId: 1,
+    onPageHidden: function (listener) {
+        const id = window.fafReplay.pageHiddenNextId++;
+        const handler = () => {
+            if (document.visibilityState === "hidden") {
+                listener.invokeMethodAsync("OnPageHidden");
+            }
+        };
+        window.fafReplay.pageHiddenHandlers.set(id, handler);
+        document.addEventListener("visibilitychange", handler);
+        return id;
+    },
+    offPageHidden: function (id) {
+        const handler = window.fafReplay.pageHiddenHandlers.get(id);
+        if (handler) {
+            document.removeEventListener("visibilitychange", handler);
+            window.fafReplay.pageHiddenHandlers.delete(id);
+        }
+    },
+    /*
      * PWA (see wwwroot/service-worker.published.js). A new version installs in the background and
      * waits; the app shows a banner (Layout/UpdateBanner.razor) and only switches over when the user
      * accepts, so a replay being analysed is never reloaded from under them.

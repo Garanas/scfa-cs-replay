@@ -132,6 +132,8 @@ The **Playthrough tab is exempt** from the window policy: it is a playback view,
 list: its shareable state is the single `at` instant and it deliberately has no `from`/`to`.
 Playback state (playing, speed, current time while playing) lives in component fields; `at` is
 written only on pause or seek-while-paused, so playing never floods the URL or re-renders siblings.
+Playback pauses when the page is hidden (Page Visibility API, `fafReplay.onPageHidden`), so a
+shared `at` is always a moment the user actually saw.
 The **Moderation tab is exempt** too: moderators read through the whole game, so it ignores
 `from`/`to` (they stay in the URL for the other tabs); its time links open the Events tab on that
 player and a 30-second window around the event.
