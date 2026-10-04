@@ -45,6 +45,9 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
   `js/app.js` takes the file from the `launchQueue` (which may deliver before Blazor runs) and
   `Pages/Home.razor` loads it like a picked file. `launch_handler` (`navigate-existing`) opens it in
   the app window that is already open instead of a new one (Chromium; others ignore it).
+- **Share target:** the installed app takes shared links (`share_target`, GET to `./` with
+  `title`, `text`, `url`). `Pages/Home.razor` opens a link into the app as is, a
+  `replay.faforever.com` link or a bare id as that replay, and puts anything else in the replay input.
 - **Shortcuts:** the manifest's `shortcuts` (Search, About) appear when right-clicking or
   long-pressing the installed app's icon. Keep their URLs relative, like the in-app links.
 - **Icons:** `wwwroot/icons/icon.svg` is the source; `tools/convert-app-icons.ps1` (ImageMagick 7)

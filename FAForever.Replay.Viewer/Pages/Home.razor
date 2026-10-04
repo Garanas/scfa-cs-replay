@@ -78,12 +78,64 @@
     // The FAF client copies a replay as a link (https://replay.faforever.com/25692731); keep just the id.
     private void ExtractReplayIdFromLink()
     {
-        if (Uri.TryCreate(vaultReplayId.Trim(), UriKind.Absolute, out Uri? link)
-            && link.Host.Equals("replay.faforever.com", StringComparison.OrdinalIgnoreCase)
-            && int.TryParse(link.AbsolutePath.Trim('/'), out int replayId) && replayId > 0)
+        if (TryParseFafReplayLink(vaultReplayId.Trim(), out int replayId))
         {
             vaultReplayId = replayId.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
+    }
+
+    private static bool TryParseFafReplayLink(string candidate, out int replayId)
+    {
+        replayId = 0;
+        return Uri.TryCreate(candidate, UriKind.Absolute, out Uri? link)
+            && link.Host.Equals("replay.faforever.com", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(link.AbsolutePath.Trim('/'), out replayId) && replayId > 0;
+    }
+
+    protected override void OnInitialized()
+    {
+        // Web Share Target (manifest.webmanifest): sharing to the installed app opens it here with
+        // the shared title, text and url. Apps put a link in any of them, often amid other text.
+        string[] shared = new[] { "url", "text", "title" }
+            .Select(name => UrlQuery.Get(Navigation, name))
+            .OfType<string>()
+            .Where(value => value.Length > 0)
+            .ToArray();
+        if (shared.Length > 0)
+        {
+            OpenSharedLink(shared);
+        }
+    }
+
+    /// <summary>
+    /// Opens what was shared: a link into this app as is (it carries its view), a FAF replay link or
+    /// a bare replay id as that replay. Anything else lands in the replay input, to be fixed by hand.
+    /// </summary>
+    private void OpenSharedLink(string[] shared)
+    {
+        foreach (string value in shared)
+        {
+            string[] words = value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            foreach (string word in words)
+            {
+                if (word.StartsWith(Navigation.BaseUri, StringComparison.OrdinalIgnoreCase))
+                {
+                    Navigation.NavigateTo(word, replace: true);
+                    return;
+                }
+
+                // A number only counts as an id when it is all that was shared, not "3 replays".
+                if (TryParseFafReplayLink(word, out int replayId)
+                    || words.Length == 1 && int.TryParse(word.TrimStart('#'), out replayId) && replayId > 0)
+                {
+                    Navigation.NavigateTo($"replay/{replayId}", replace: true);
+                    return;
+                }
+            }
+        }
+
+        vaultReplayId = shared[0];
+        Navigation.NavigateTo("", replace: true);
     }
 
     private int? NormalizeReplayId()
