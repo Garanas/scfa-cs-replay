@@ -73,6 +73,39 @@ namespace FAForever.FileFormats.Blueprints
         /// </summary>
         public double? BuildRate { get; init; }
 
+        /// <summary>
+        /// Mass and energy the unit produces per second (extractors, generators, commanders).
+        /// </summary>
+        public double? ProductionPerSecondMass { get; init; }
+
+        public double? ProductionPerSecondEnergy { get; init; }
+
+        /// <summary>
+        /// Top speed: <c>Air.MaxAirspeed</c> for aircraft, otherwise <c>Physics.MaxSpeed</c>. Null for structures.
+        /// </summary>
+        public double? MaxSpeed { get; init; }
+
+        /// <summary>
+        /// Whether a player can get the unit in a game: a commander, or reachable from one through
+        /// builds and upgrades (<see cref="UnitBuildTree.Buildable"/>). Campaign, civilian and helper
+        /// units are not. Set by <see cref="UnitData.From"/>; false from <see cref="From"/> alone.
+        /// </summary>
+        public bool Buildable { get; init; }
+
+        /// <summary>
+        /// The ids of the units it can build (<see cref="UnitBuildTree.Builds"/>), including what
+        /// enhancements add. Set by <see cref="UnitData.From"/>; empty from <see cref="From"/> alone.
+        /// </summary>
+        public IReadOnlyList<string> Builds { get; init; } = [];
+
+        /// <summary>
+        /// The unit it upgrades from or to in place, e.g. a tech 1 mass extractor to tech 2
+        /// (<c>General.UpgradesFrom</c> / <c>General.UpgradesTo</c>), lower case.
+        /// </summary>
+        public string? UpgradesFrom { get; init; }
+
+        public string? UpgradesTo { get; init; }
+
         public double? VisionRadius { get; init; }
 
         public double? WaterVisionRadius { get; init; }
@@ -110,6 +143,11 @@ namespace FAForever.FileFormats.Blueprints
             BuildCostEnergy = unit.Economy.BuildCostEnergy,
             BuildTime = unit.Economy.BuildTime,
             BuildRate = unit.Economy.BuildRate,
+            ProductionPerSecondMass = unit.Economy.ProductionPerSecondMass,
+            ProductionPerSecondEnergy = unit.Economy.ProductionPerSecondEnergy,
+            MaxSpeed = unit.Physics.MotionType == "RULEUMT_None" ? null : unit.Air?.MaxAirspeed ?? unit.Physics.MaxSpeed,
+            UpgradesFrom = UnitId(unit.General.UpgradesFrom),
+            UpgradesTo = UnitId(unit.General.UpgradesTo),
             VisionRadius = unit.Intel.VisionRadius,
             WaterVisionRadius = unit.Intel.WaterVisionRadius,
             RadarRadius = unit.Intel.RadarRadius,
@@ -117,6 +155,10 @@ namespace FAForever.FileFormats.Blueprints
             OmniRadius = unit.Intel.OmniRadius,
             Weapons = unit.Weapons.Select(UnitSummaryWeapon.From).ToList(),
         };
+
+        // An empty value and "none" (used by a few blueprints) mean no unit.
+        private static string? UnitId(string? id) =>
+            id is { Length: > 0 } && !id.Equals("none", StringComparison.OrdinalIgnoreCase) ? id.ToLowerInvariant() : null;
 
         /// <summary>
         /// Drops the localisation tag the game looks the text up by: <c>&lt;LOC uel0201_name&gt;MA12 Striker</c>
@@ -154,6 +196,13 @@ namespace FAForever.FileFormats.Blueprints
         /// <c>Death</c> for the explosion when the unit dies and <c>Teleport</c> for teleport effects.
         /// </summary>
         public string? WeaponCategory { get; init; }
+
+        /// <summary>
+        /// What the weapon is for, which the game uses to show its range: <c>UWRC_DirectFire</c>,
+        /// <c>UWRC_IndirectFire</c> (artillery, missiles), <c>UWRC_AntiAir</c>, <c>UWRC_AntiNavy</c>
+        /// (torpedoes) or <c>UWRC_Countermeasure</c> (missile and torpedo defence).
+        /// </summary>
+        public string? RangeCategory { get; init; }
 
         /// <summary>
         /// Damage per projectile or beam pulse.
@@ -197,6 +246,7 @@ namespace FAForever.FileFormats.Blueprints
         {
             DisplayName = weapon.DisplayName,
             WeaponCategory = weapon.WeaponCategory,
+            RangeCategory = weapon.RangeCategory,
             Damage = weapon.Damage,
             DamageRadius = weapon.DamageRadius,
             MaxRadius = weapon.MaxRadius,

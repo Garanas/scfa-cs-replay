@@ -24,6 +24,9 @@ namespace FAForever.FileFormats.Blueprints.Tests
             Assert.AreEqual("RULEUMT_Land", striker.MotionType);
             Assert.IsTrue(striker.HasCategory("DIRECTFIRE"));
             Assert.AreEqual(300, striker.MaxHealth);
+            Assert.AreEqual(3.4, striker.MaxSpeed);
+            Assert.AreEqual("UWRC_DirectFire", striker.Weapons[0].RangeCategory);
+            Assert.IsFalse(striker.Buildable); // only UnitData.From knows the build tree
             Assert.AreEqual(56, striker.BuildCostMass);
             Assert.IsNull(striker.ShieldMaxHealth);
 

@@ -37,11 +37,42 @@ namespace FAForever.FileFormats.Blueprints
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// The data of a game version from its unit blueprints.
+        /// The units that can build the given one, sorted by id (the inverse of <see cref="UnitSummary.Builds"/>).
         /// </summary>
-        public static UnitData From(int gameVersion, IEnumerable<BlueprintUnit> units) => new UnitData(
-            gameVersion,
-            units.Select(UnitSummary.From).OrderBy(unit => unit.BlueprintId, StringComparer.Ordinal).ToList());
+        public IReadOnlyList<UnitSummary> GetBuilders(string blueprintId)
+        {
+            builders ??= Units
+                .SelectMany(builder => builder.Builds.Select(target => (Target: target, Builder: builder)))
+                .GroupBy(pair => pair.Target, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => (IReadOnlyList<UnitSummary>)group.Select(pair => pair.Builder).ToList(), StringComparer.OrdinalIgnoreCase);
+            return builders.GetValueOrDefault(blueprintId) ?? [];
+        }
+
+        private Dictionary<string, IReadOnlyList<UnitSummary>>? builders;
+
+        /// <summary>
+        /// The data of a game version from its unit blueprints, with the build tree
+        /// (<see cref="UnitBuildTree"/>) filled in.
+        /// </summary>
+        public static UnitData From(int gameVersion, IEnumerable<BlueprintUnit> units)
+        {
+            List<BlueprintUnit> all = units.ToList();
+            IReadOnlyDictionary<string, IReadOnlyList<string>> builds = UnitBuildTree.Builds(all);
+            IReadOnlySet<string> buildable = UnitBuildTree.Buildable(all, builds);
+            return new UnitData(
+                gameVersion,
+                all.Select(unit =>
+                    {
+                        UnitSummary summary = UnitSummary.From(unit);
+                        return summary with
+                        {
+                            Buildable = buildable.Contains(summary.BlueprintId),
+                            Builds = builds.GetValueOrDefault(summary.BlueprintId) ?? [],
+                        };
+                    })
+                    .OrderBy(unit => unit.BlueprintId, StringComparer.Ordinal)
+                    .ToList());
+        }
 
         /// <summary>
         /// Writes the data as JSON with one unit per line, so the diff after a game update shows
