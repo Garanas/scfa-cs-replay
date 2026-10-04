@@ -8,11 +8,24 @@
   "display": "standalone",
   "background_color": "#0c0f14",
   "theme_color": "#0c0f14",
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
+  "shortcuts": [
+    { "name": "Search the vault", "short_name": "Search", "url": "./search", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "About Vault of FAF", "short_name": "About", "url": "./about", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ],
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  },
   "file_handlers": [
     {
       "action": "./",

@@ -43,7 +43,13 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
   `index.html`, the service worker, its asset list and the manifest.
 - **File handling:** the installed app is registered for `.fafreplay`/`.scfareplay` ("Open with").
   `js/app.js` takes the file from the `launchQueue` (which may deliver before Blazor runs) and
-  `Pages/Home.razor` loads it like a picked file.
+  `Pages/Home.razor` loads it like a picked file. `launch_handler` (`navigate-existing`) opens it in
+  the app window that is already open instead of a new one (Chromium; others ignore it).
+- **Share target:** the installed app takes shared links (`share_target`, GET to `./` with
+  `title`, `text`, `url`). `Pages/Home.razor` opens a link into the app as is, a
+  `replay.faforever.com` link or a bare id as that replay, and puts anything else in the replay input.
+- **Shortcuts:** the manifest's `shortcuts` (Search, About) appear when right-clicking or
+  long-pressing the installed app's icon. Keep their URLs relative, like the in-app links.
 - **Icons:** `wwwroot/icons/icon.svg` is the source; `tools/convert-app-icons.ps1` (ImageMagick 7)
   renders the favicon, manifest and Apple touch icons. Never edit the PNGs by hand.
 - `theme-color` follows the light/dark mode (`fafReplay.syncThemeColor` in `applyMode`, from `--th-base`).
@@ -71,6 +77,9 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
   `bg-primary`, …); never hardcode colours in components, or switching breaks. Never give a faction
   its own backgrounds, and never tie a colour to a faction being light or dark; check new UI in
   both modes.
+- Menus and other things that open on top of the page are popovers (Popover API: `popover` +
+  `popovertarget`, no open/closed state in C#), like the header's menu on narrow screens
+  (`.menu-popover`). `js/app.js` closes a popover when a link inside it is taken.
 - Page width: header, page and footer share `MainLayout.Container` (`max-w-6xl`). The Build order
   tab compares two players side by side and widens it to a full HD screen (`max-w-[1824px]`).
 - Anything drawn on the map goes through `Features/Replay/MapCanvas.razor`: an SVG in world
@@ -126,6 +135,8 @@ The **Playthrough tab is exempt** from the window policy: it is a playback view,
 list: its shareable state is the single `at` instant and it deliberately has no `from`/`to`.
 Playback state (playing, speed, current time while playing) lives in component fields; `at` is
 written only on pause or seek-while-paused, so playing never floods the URL or re-renders siblings.
+Playback pauses when the page is hidden (Page Visibility API, `fafReplay.onPageHidden`), so a
+shared `at` is always a moment the user actually saw.
 The **Moderation tab is exempt** too: moderators read through the whole game, so it ignores
 `from`/`to` (they stay in the URL for the other tabs); its time links open the Events tab on that
 player and a 30-second window around the event.

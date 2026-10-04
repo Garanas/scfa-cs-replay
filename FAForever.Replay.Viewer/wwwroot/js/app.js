@@ -109,6 +109,62 @@ window.fafReplay = {
         }
     },
     /*
+     * Copies a link both as rich text (an anchor with a title, for chat, forums and documents) and
+     * as the bare address; falls back to the address alone where ClipboardItem is missing.
+     */
+    copyLink: async function (url, title) {
+        if (typeof ClipboardItem !== "undefined") {
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.textContent = title;
+            try {
+                await navigator.clipboard.write([new ClipboardItem({
+                    "text/html": new Blob([anchor.outerHTML], { type: "text/html" }),
+                    "text/plain": new Blob([url], { type: "text/plain" })
+                })]);
+                return true;
+            } catch (e) {
+                /* Some browsers refuse text/html; try the plain address. */
+            }
+        }
+        return window.fafReplay.copyText(url);
+    },
+    /* The Web Share API: the system's share sheet, where there is one. */
+    canShare: function () {
+        return typeof navigator.share === "function";
+    },
+    shareLink: async function (url, title) {
+        try {
+            await navigator.share({ title: title, url: url });
+        } catch (e) {
+            /* The user closed the share sheet, or sharing is not allowed here. */
+        }
+    },
+    /*
+     * Page Visibility: tells a component when the page is hidden (another tab, a minimised
+     * window). Returns an id for offPageHidden.
+     */
+    pageHiddenHandlers: new Map(),
+    pageHiddenNextId: 1,
+    onPageHidden: function (listener) {
+        const id = window.fafReplay.pageHiddenNextId++;
+        const handler = () => {
+            if (document.visibilityState === "hidden") {
+                listener.invokeMethodAsync("OnPageHidden");
+            }
+        };
+        window.fafReplay.pageHiddenHandlers.set(id, handler);
+        document.addEventListener("visibilitychange", handler);
+        return id;
+    },
+    offPageHidden: function (id) {
+        const handler = window.fafReplay.pageHiddenHandlers.get(id);
+        if (handler) {
+            document.removeEventListener("visibilitychange", handler);
+            window.fafReplay.pageHiddenHandlers.delete(id);
+        }
+    },
+    /*
      * PWA (see wwwroot/service-worker.published.js). A new version installs in the background and
      * waits; the app shows a banner (Layout/UpdateBanner.razor) and only switches over when the user
      * accepts, so a replay being analysed is never reloaded from under them.
@@ -194,6 +250,14 @@ window.fafReplay = {
         return file;
     }
 };
+
+/* Popover API: a link in a popover menu (the header's menu) navigates in place, so close the menu. */
+document.addEventListener("click", function (event) {
+    const popover = event.target.closest?.("[popover]");
+    if (popover && event.target.closest("a")) {
+        popover.hidePopover();
+    }
+});
 
 /* On "auto", follow the system setting when it changes (e.g. at sunset). */
 window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function () {

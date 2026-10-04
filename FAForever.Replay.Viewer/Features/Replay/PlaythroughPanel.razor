@@ -1,6 +1,7 @@
 @using System.Diagnostics
 @using FAForever.Replay.Viewer.Services.Commands
 @inherits UrlStateComponent
+@inject IJSRuntime JS
 
 @* Plays the replay back like a video (see AGENTS.md § Playthrough): positional orders
    appear as animated, player-coloured markers on the minimap, everything else scrolls by
@@ -173,6 +174,10 @@
     private long sequence;
     private long trailChunkId;
 
+    // Page Visibility: playback pauses while the page is hidden (see OnPageHidden).
+    private DotNetObjectReference<PlaythroughPanel>? pageListener;
+    private int? pageHiddenId;
+
     private int ScrubMax => Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds));
 
     protected override void OnParametersSet()
@@ -236,6 +241,29 @@
         {
             lastSeenAt = atFromUrl;
             SeekTo(GameTime.TryParse(atFromUrl) ?? TimeSpan.Zero);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            pageListener = DotNetObjectReference.Create(this);
+            pageHiddenId = await JS.InvokeAsync<int>("fafReplay.onPageHidden", pageListener);
+        }
+    }
+
+    /// <summary>
+    /// Pauses when the page is hidden. Browsers throttle the timers of hidden pages and playback
+    /// follows the wall clock, so it would otherwise jump ahead unseen; pausing also writes "at".
+    /// </summary>
+    [JSInvokable]
+    public void OnPageHidden()
+    {
+        if (playing)
+        {
+            Pause();
+            StateHasChanged();
         }
     }
 
@@ -537,6 +565,12 @@
     {
         loopCts?.Cancel();
         loopCts?.Dispose();
+        if (pageListener is not null)
+        {
+            DotNetObjectReference<PlaythroughPanel> listener = pageListener;
+            ValueTask unsubscribe = pageHiddenId is int id ? JS.InvokeVoidAsync("fafReplay.offPageHidden", id) : ValueTask.CompletedTask;
+            _ = unsubscribe.AsTask().ContinueWith(_ => listener.Dispose());
+        }
         base.Dispose();
     }
 

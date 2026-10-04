@@ -25,6 +25,17 @@
                             title="Copy the replay id" @onclick="() => CopyReplayId(vault.ReplayId)">
                         @(copied ? "copied!" : OriginLabel)
                     </button>
+                    <button type="button" class="badge cursor-pointer transition hover:border-primary hover:text-primary"
+                            title="Copy a link to this view" @onclick="() => CopyLink(vault.ReplayId)">
+                        @(linkCopied ? "copied!" : "copy link")
+                    </button>
+                    @if (canShare)
+                    {
+                        <button type="button" class="badge cursor-pointer transition hover:border-primary hover:text-primary"
+                                title="Share a link to this view" @onclick="() => ShareLink(vault.ReplayId)">
+                            share
+                        </button>
+                    }
                 }
                 else
                 {
@@ -105,6 +116,8 @@
     private Tab activeTab = Tab.Overview;
     private TimeSpan duration;
     private bool copied;
+    private bool linkCopied;
+    private bool canShare;
 
     protected override void OnParametersSet()
     {
@@ -126,6 +139,41 @@
         await Task.Delay(1500);
         copied = false;
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Only where the system has a share sheet (mobile, Safari, Chromium on Windows and ChromeOS).
+        if (firstRender && await JS.InvokeAsync<bool>("fafReplay.canShare"))
+        {
+            canShare = true;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Hands the address of this view to the system's share sheet.</summary>
+    private async Task ShareLink(int replayId)
+        => await JS.InvokeVoidAsync("fafReplay.shareLink", Navigation.Uri, LinkTitle(replayId));
+
+    /// <summary>
+    /// Copies the address of this view, as a link with a readable title where the paste target
+    /// takes rich text (chat, forums, documents) and as the bare address everywhere else.
+    /// </summary>
+    private async Task CopyLink(int replayId)
+    {
+        if (!await JS.InvokeAsync<bool>("fafReplay.copyLink", Navigation.Uri, LinkTitle(replayId)))
+        {
+            return;
+        }
+
+        linkCopied = true;
+        StateHasChanged();
+        await Task.Delay(1500);
+        linkCopied = false;
+    }
+
+    /// <summary>What a shared link is called, e.g. "Replay #25717491 on Osiris · Chat".</summary>
+    private string LinkTitle(int replayId)
+        => $"Replay #{replayId} on {MapName}" + (activeTab == Tab.Overview ? "" : $" · {TabLabel(activeTab)}");
 
     private void SelectTab(Tab tab)
     {
