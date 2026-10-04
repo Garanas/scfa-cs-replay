@@ -306,6 +306,33 @@ The JSON index gives the top-left pixel of each cell:
   and commit the result; output is deterministic (PNG timestamps are stripped), so the diff only
   shows real changes. Cell positions can shift when icons are added, so never hardcode coordinates.
 
+## Unit cards
+
+Hovering a unit on the Build order tab (the order ledger, the key moments and the "units ordered"
+chips of the Timings view) shows a card with what the unit is: name, faction, tech, where it moves,
+roles, cost, build power, health, shield, intel ranges and its weapons. The data is
+`wwwroot/data/units.json` (see the [Blueprints guide](../FAForever.FileFormats.Blueprints/AGENTS.md),
+"Unit data"); regenerate it, never edit it by hand.
+
+- `Services/Units/UnitDatabase.cs` fetches the file once (scoped, like `UnitIconAtlas`).
+  `Features/Replay/UnitCardHost.razor` (placed once in `ReplayView`) starts that load with the replay
+  page, because reading it takes about a second in the WebAssembly interpreter, and renders the card.
+- A row shows the card with `UnitCardService.Show(blueprintId, x, y)` from `@onmouseenter` (pointer
+  position from `MouseEventArgs.ClientX/Y`) and hides it with `Hide()` on `@onmouseleave`; navigation
+  hides it too. Hover is transient state: never in the URL. Rows that show a card drop their `title`,
+  or the browser's tooltip would cover it.
+- `fafReplay.placeNear` puts the card beside the pointer and keeps it inside the viewport; the card
+  ignores the pointer (`pointer-events-none`), so it never takes the hover away from the row.
+- `Features/Replay/UnitCard.razor` shows only real weapons (not `Death`, `Teleport` or weapons without
+  damage) and merges identical ones ("2 × Electron Autocannon"). Roles and the motion type label come
+  from `Services/Units/UnitRoles.cs`; gunships have no category of their own (`AIR` + `GROUNDATTACK`).
+- **The data is one game version of the FAF branch.** `Services/Units/UnitDataNotes.cs` adds a note
+  to the card when a replay ran on another featured mod (`Metadata.FeaturedMod` is not `faf`), outside
+  FAF (header version not `v1.50.x`, e.g. Steam), on another game version, or with mods
+  (`Header.Mods`). Units missing from the data (mods, campaign) get a short card saying so.
+- The published service worker caches `units.json` with the app shell (it matches `\.json$`), so
+  cards work offline and new data arrives as an app update.
+
 ## Browser automation (Playwright MCP)
 
 `.mcp.json` (repo root) registers the official Playwright MCP server (`npx -y @playwright/mcp@latest`), so agents

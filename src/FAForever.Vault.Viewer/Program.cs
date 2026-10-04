@@ -18,6 +18,8 @@ builder.Services.AddScoped<ThemeService>();
 builder.Services.AddScoped<ReplayLoadingService>();
 builder.Services.AddScoped<ReplaySessionState>();
 builder.Services.AddScoped<UnitIconAtlas>();
+builder.Services.AddScoped<UnitDatabase>();
+builder.Services.AddScoped<UnitCardService>();
 builder.Services.AddScoped<AnalyticsService>();
 
 builder.Services.AddSingleton(builder.Configuration.GetSection("OAuth").Get<OAuthOptions>() ?? new OAuthOptions());

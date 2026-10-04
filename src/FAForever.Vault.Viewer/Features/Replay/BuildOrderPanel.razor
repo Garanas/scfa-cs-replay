@@ -2,6 +2,7 @@
 @using FAForever.Vault.Viewer.Services.Commands
 @inherits UrlStateComponent
 @inject IJSRuntime JS
+@inject FAForever.Vault.Viewer.Services.Units.UnitCardService Cards
 
 @* Compares the opening of two players: the maps of where their orders happened on top, with
    between them how often each type of order was given and which units were ordered, and
@@ -510,6 +511,22 @@ else
 
     private void HoverEntity(int? entityId) => hoveredEntity = entityId;
 
+    /// <summary>Highlights an order on the maps and, for a unit, shows its card next to the pointer.</summary>
+    private void HoverItem(BuildOrderItem item, MouseEventArgs pointer)
+    {
+        hovered = item.Group;
+        if (item.IsBuild && item.BlueprintId is { } blueprintId)
+        {
+            Cards.Show(blueprintId, pointer.ClientX, pointer.ClientY);
+        }
+    }
+
+    private void LeaveItem()
+    {
+        hovered = null;
+        Cards.Hide();
+    }
+
     /// <summary>The unit whose route a side's map shows: the hovered one, else the selected one.</summary>
     private ReplayEntity? RouteOn(List<ReplayEntity> entities)
         => ShowUnits && (hoveredEntity ?? selectedEntity) is { } entityId
@@ -613,9 +630,9 @@ else
         bool isSelected = selected == item.Key;
         <button type="button" @key="item.Key" id="@RowId(item.Key)" aria-pressed="@(isSelected ? "true" : "false")"
                 class="feed-row h-7 py-0 @(mirrored ? "flex-row-reverse text-right" : "") @(isSelected ? "bg-raised ring-1 ring-primary" : "")"
-                title="@($"{ChatPanel.FormatTime(item.Timestamp)} · {text}{(item.Position is null ? " (no position)" : "")} (click to highlight)")"
+                title="@(item.IsBuild ? null : $"{ChatPanel.FormatTime(item.Timestamp)} · {text}{(item.Position is null ? " (no position)" : "")} (click to highlight)")"
                 @onclick="() => Select(item)"
-                @onmouseenter="() => hovered = item.Group" @onmouseleave="() => hovered = null">
+                @onmouseenter="(MouseEventArgs pointer) => HoverItem(item, pointer)" @onmouseleave="LeaveItem">
             @if (item.IsBuild && item.BlueprintId is { } blueprintId)
             {
                 <UnitIcon BlueprintId="@blueprintId" Size="16" />

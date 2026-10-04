@@ -1,0 +1,121 @@
+# Regenerates src/FAForever.Vault.Viewer/wwwroot/data/units.json (tools/generate-unit-data.cs) for a
+# release of the FAF game repository and opens a pull request with the result.
+#
+# Triggers:
+# - repository_dispatch "fa-release": sent by the FA repository when it publishes a release, with
+#   the release tag as client_payload.version. A workflow there could look like this; it needs a
+#   token (secret) that may create dispatch events here (fine-grained, "Contents: read and write"
+#   on this repository):
+#
+#     on:
+#       release:
+#         types: [published]
+#     jobs:
+#       notify:
+#         runs-on: ubuntu-latest
+#         steps:
+#           - run: gh api repos/Garanas/scfa-cs-replay/dispatches -f event_type=fa-release -f "client_payload[version]=$TAG"
+#             env:
+#               GH_TOKEN: ${{ secrets.VAULT_DISPATCH_TOKEN }}
+#               TAG: ${{ github.event.release.tag_name }}
+#
+# - workflow_dispatch: by hand, for a given version or the latest release.
+# - schedule: once a day, for the latest release, in case a dispatch did not arrive.
+#
+# It does nothing when units.json already holds that version. Creating the pull request needs
+# "Allow GitHub Actions to create and approve pull requests" (Settings → Actions → General). Pull
+# requests opened with the workflow's token do not start other workflows: run the tests by hand or
+# push a commit to the branch.
+
+name: Update unit data
+
+on:
+  repository_dispatch:
+    types: [fa-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: FA release tag (e.g. 3839); empty for the latest release
+        required: false
+  schedule:
+    - cron: '17 6 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-unit-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Choose the version
+      id: version
+      env:
+        GH_TOKEN: ${{ github.token }}
+        # Passed through the environment, never pasted into the script: the dispatch payload
+        # comes from another repository.
+        REQUESTED: ${{ github.event.client_payload.version || github.event.inputs.version }}
+      run: |
+        version="${REQUESTED:-$(gh api repos/FAForever/fa/releases/latest --jq .tag_name)}"
+        if ! [[ "$version" =~ ^[0-9]+$ ]]; then
+          echo "Not a game version: '$version'" >&2
+          exit 1
+        fi
+        current="$(head -c 200 src/FAForever.Vault.Viewer/wwwroot/data/units.json | grep -oE '"gameVersion":[0-9]+' | grep -oE '[0-9]+' || true)"
+        echo "Requested $version, units.json has ${current:-nothing}"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        if [ "$version" = "$current" ]; then
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    # Only units/ and the root files (mod_info.lua, which holds the version) of that tag. The FA
+    # repository also has branches named like versions, so fetch the tag explicitly.
+    - name: Fetch the unit blueprints
+      if: steps.version.outputs.skip != 'true'
+      env:
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        git init -q fa
+        git -C fa remote add origin https://github.com/FAForever/fa.git
+        git -C fa sparse-checkout set units
+        git -C fa fetch -q --depth 1 --filter=blob:none origin "refs/tags/$VERSION"
+        git -C fa checkout -q FETCH_HEAD
+
+    - name: Setup .NET
+      if: steps.version.outputs.skip != 'true'
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Generate the unit data
+      if: steps.version.outputs.skip != 'true'
+      run: dotnet run tools/generate-unit-data.cs -- fa
+
+    - name: Open a pull request
+      if: steps.version.outputs.skip != 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        if git diff --quiet -- src/FAForever.Vault.Viewer/wwwroot/data/units.json; then
+          echo "No changes"
+          exit 0
+        fi
+        branch="unit-data/$VERSION"
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git switch -c "$branch"
+        git add src/FAForever.Vault.Viewer/wwwroot/data/units.json
+        git commit -q -m "Update the unit data to game version $VERSION"
+        git push -q --force origin "$branch"
+        if [ -z "$(gh pr list --head "$branch" --json number --jq '.[0].number')" ]; then
+          gh pr create --base main --head "$branch" \
+            --title "Update the unit data to game version $VERSION" \
+            --body "Regenerated \`units.json\` from [FAForever/fa $VERSION](https://github.com/FAForever/fa/releases/tag/$VERSION) with \`tools/generate-unit-data.cs\`. The diff shows one line per changed unit."
+        fi

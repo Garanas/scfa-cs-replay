@@ -32,6 +32,26 @@ Data is as written in the file, before the game's post-processing (mod merges, `
 units leave out `General.TechLevel`, so use `BlueprintUnit.TechLevel` (from the categories). Every `.bp`
 in the FA repo parses; tests use the copies in `tests/FAForever.FileFormats.Blueprints.Tests/assets/blueprints`.
 
+## Unit data (the unit cards)
+
+The browser does not parse blueprints: `tools/generate-unit-data.cs` (a file-based app, `dotnet run
+tools/generate-unit-data.cs -- <fa checkout>`) parses `units/*_unit.bp` of one FA release and writes
+`src/FAForever.Vault.Viewer/wwwroot/data/units.json`, which the Viewer's unit cards read.
+
+- `UnitSummary` is what a card shows (name, faction, tech, motion type, categories, cost, build power,
+  health, shield, intel ranges, weapons with damage, salvo, range and rate of fire); `UnitSummary.From`
+  maps a `BlueprintUnit`. Values are as written in the blueprint; nothing is computed (no DPS).
+- `UnitData` is the file: `{"gameVersion":3839,"units":[...]}` with **one unit per line**, sorted by
+  id, camel case, nulls left out, so a release's diff shows which units changed. JSON goes through the
+  source-generated `UnitDataJsonContext` (no reflection, safe under trimming in WebAssembly).
+- The game version comes from `version` in the FA repository's `mod_info.lua` (read with
+  `LuaSourceParser`); it is also the release tag and the last number of a replay header's version.
+- Only the current release is kept. `.github/workflows/update-unit-data.yml` regenerates the file
+  and opens a pull request when FA publishes a release (a `repository_dispatch` from the FA
+  repository, by hand, or a daily check of the latest release).
+- Adding a field: a property on `UnitSummary` (or `UnitSummaryWeapon`), its line in `From`, a test,
+  then re-run the generator and commit `units.json`.
+
 ## Blueprint ids, unit names and factions
 
 - `BlueprintIds` decodes the id convention (`ueb0101` = [prefix u][faction e][layer b][number 0101]):

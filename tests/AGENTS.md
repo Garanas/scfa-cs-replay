@@ -7,7 +7,7 @@ guide is [`../AGENTS.md`](../AGENTS.md); what the replay tests pin down is expla
 | Project | Covers | Assets |
 |---|---|---|
 | `FAForever.FileFormats.Lua.Tests` | `LuaSourceParser`, `LuaDataFormatter` | none (inline Lua) |
-| `FAForever.FileFormats.Blueprints.Tests` | `BlueprintParser`, `BlueprintIds`, `UnitNames` | `.bp` files copied from the FA repo |
+| `FAForever.FileFormats.Blueprints.Tests` | `BlueprintParser`, `BlueprintIds`, `UnitNames`, `UnitSummary`, `UnitData` | `.bp` files copied from the FA repo |
 | `FAForever.FileFormats.Replay.Tests` | loader, header, inputs, semantics, fingerprints | `.fafreplay` / `.scfareplay` files |
 
 ## Running

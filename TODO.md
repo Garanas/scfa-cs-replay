@@ -42,3 +42,11 @@
   read, rated human players carried `Human=false` and civilian armies `Human=true` in every test
   replay. Note: faf-java-commons `LoadUtils.parseLua` has the same inversion (`== 0`), worth
   reporting upstream.
+- [ ] **Turn on automatic unit data updates.** `.github/workflows/update-unit-data.yml` regenerates
+  `wwwroot/data/units.json` for a new FA release and opens a pull request. It needs: (1) Settings →
+  Actions → General → "Allow GitHub Actions to create and approve pull requests"; (2) for an update
+  right after a release instead of the daily check, a workflow in
+  [FAForever/fa](https://github.com/FAForever/fa) that sends a `repository_dispatch` (`fa-release`,
+  the tag as `client_payload.version`) with a token that may do so here; the snippet is at the top
+  of the workflow file. That needs the FAF team's agreement. The workflow has not run on GitHub yet:
+  trigger it by hand once (Actions → Update unit data → Run workflow) to check it.
