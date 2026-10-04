@@ -256,7 +256,43 @@
     }
 
     .card {
-        @apply rounded-xl border border-edge bg-surface p-6;
+        @apply rounded-xl border border-edge bg-surface p-4 sm:p-6;
+    }
+
+    /* A wide table whose first column (the player) stays in view while the other columns scroll
+       sideways underneath it, on narrow screens. */
+    .sticky-first-column :is(th, td):first-child {
+        @apply max-sm:sticky max-sm:left-0 max-sm:z-[1] max-sm:bg-surface max-sm:shadow-[1px_0_0_var(--th-edge)];
+    }
+
+    /* A row of tabs that scrolls sideways where it does not fit, without a scrollbar. */
+    .tab-strip {
+        @apply flex gap-1 overflow-x-auto;
+        scrollbar-width: none;
+    }
+
+    .tab-strip::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* A table that turns into a list on narrow screens (below sm): no header row, each row a
+       block with its cells on one line and the .list-table-wide cell (the message) on a line of
+       its own below. The cells' padding utilities still apply: add max-sm:p-0 to them. */
+    .list-table thead {
+        @apply max-sm:hidden;
+    }
+
+    .list-table,
+    .list-table tbody {
+        @apply max-sm:block;
+    }
+
+    .list-table tr {
+        @apply max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-2 max-sm:gap-y-1 max-sm:px-4 max-sm:py-2;
+    }
+
+    .list-table .list-table-wide {
+        @apply max-sm:basis-full;
     }
 
     .input-field {

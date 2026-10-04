@@ -9,8 +9,8 @@
    details. It always covers the whole game: the shared time window is ignored, so a window left
    behind by another tab (or by such a link) never hides events. *@
 
-<div class="grid gap-6 lg:grid-cols-[1fr_3fr]">
-    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_3fr]">
+    <FilterPanel Summary="@FilterSummary">
         <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Players</h3>
         <PlayerFilterList Items="playerItems" />
 
@@ -34,15 +34,15 @@
                 @(copied ? "Copied!" : "Copy as AI prompt")
             </button>
             <p class="mt-2 text-xs text-ink-faint">
-                @promptEntries.Count.ToString("N0") entries of the selected players &mdash; the kinds shown, plus always their
-                chat, pings and drawings &mdash; with instructions and how to link back here, to paste into an AI
+                @promptEntries.Count.ToString("N0") entries of the selected players (the kinds shown, plus always their
+                chat, pings and drawings), with instructions and how to link back here, to paste into an AI
                 assistant for a first analysis. It contains player names and chat.
             </p>
         </div>
-    </div>
+    </FilterPanel>
 
     <div class="card max-h-[70vh] self-start overflow-y-auto p-0">
-        <table class="w-full text-left text-sm">
+        <table class="list-table w-full text-left text-sm">
             <thead class="sticky top-0 bg-raised text-xs uppercase tracking-wide text-ink-muted">
                 <tr>
                     <th class="px-4 py-3 font-semibold">Time</th>
@@ -55,13 +55,13 @@
                 @foreach (ModerationEntry row in visible)
                 {
                     <tr class="border-t border-edge/60 align-top hover:bg-raised/50">
-                        <td class="px-4 py-1.5 font-mono">
+                        <td class="px-4 py-1.5 font-mono max-sm:p-0">
                             <a href="@EventsLink(row)" class="text-ink-muted hover:text-primary hover:underline"
                                title="Show @row.Player's input around this moment on the Events tab">@GameTime.Format(row.Timestamp)</a>
                         </td>
-                        <td class="whitespace-nowrap px-4 py-1.5"><PlayerLabel Name="@row.Player" Color="@colorsByName.GetValueOrDefault(row.Player)" /></td>
-                        <td class="whitespace-nowrap px-4 py-1.5"><span class="badge">@ModerationLog.Label(row.Kind)</span></td>
-                        <td class="@(row.Kind == ModerationKind.Chat ? "text-sm text-ink" : "font-mono text-xs text-ink-muted") px-4 py-1.5">@row.Message</td>
+                        <td class="whitespace-nowrap px-4 py-1.5 max-sm:p-0"><PlayerLabel Name="@row.Player" Color="@colorsByName.GetValueOrDefault(row.Player)" /></td>
+                        <td class="whitespace-nowrap px-4 py-1.5 max-sm:p-0"><span class="badge">@ModerationLog.Label(row.Kind)</span></td>
+                        <td class="@(row.Kind == ModerationKind.Chat ? "text-sm text-ink" : "font-mono text-xs text-ink-muted") list-table-wide px-4 py-1.5 max-sm:p-0">@row.Message</td>
                     </tr>
                 }
             </tbody>
@@ -79,6 +79,8 @@
 
 @code {
     private const string KindsParameter = "kinds";
+
+    private string FilterSummary => FilterPanel.Join(FilterPanel.Players(PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name)).Count, playerItems.Count), FilterPanel.Count(selectedKinds.Count, kindItems.Count, "kinds"));
     private const string KindClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1 text-left text-ink-muted transition hover:bg-raised hover:text-ink";
     private const string SelectedKindClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1 text-left font-medium text-ink transition hover:bg-raised";
 

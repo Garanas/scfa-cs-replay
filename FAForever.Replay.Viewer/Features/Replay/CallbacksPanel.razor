@@ -4,9 +4,9 @@
 @* Every sim callback of the replay, grouped by endpoint: the raw mechanics behind chat,
    pings, resource sharing, self-destructs, control groups and mod features. *@
 
-<div class="grid gap-6 lg:grid-cols-[1fr_3fr]">
-    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
-        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_3fr]">
+    <FilterPanel Summary="@FilterSummary">
+        <h3 class="hidden px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted lg:block">Filters</h3>
         <TimeWindowFilter Duration="duration" />
 
         <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Players</h3>
@@ -24,10 +24,10 @@
                 </button>
             }
         </div>
-    </div>
+    </FilterPanel>
 
     <div class="card max-h-[70vh] self-start overflow-x-auto overflow-y-auto p-0">
-        <table class="w-full text-left text-sm">
+        <table class="list-table w-full text-left text-sm">
             <thead class="sticky top-0 bg-raised text-xs uppercase tracking-wide text-ink-muted">
                 <tr>
                     <th class="px-4 py-3 font-semibold">Time</th>
@@ -40,10 +40,19 @@
                 @foreach (ReplayInput.SimCallback callback in SelectedCallbacks.Take(MaxRows))
                 {
                     <tr class="border-t border-edge/60 align-top hover:bg-raised/50">
-                        <td class="px-4 py-2 font-mono text-ink-muted">@ReplayView.FormatDuration(ReplayAnalysis.GetTimestamp(callback))</td>
-                        <td class="whitespace-nowrap px-4 py-2"><PlayerLabel Name="@PlayerName(callback.SourceId)" Color="@colorsBySource.GetValueOrDefault(callback.SourceId)" /></td>
-                        <td class="px-4 py-2 text-right font-mono">@(callback.Units.UnitCount > 0 ? callback.Units.UnitCount.ToString() : "—")</td>
-                        <td class="px-4 py-2 font-mono text-xs text-ink-muted">@LuaDataFormatter.Format(callback.LuaParameters)</td>
+                        <td class="px-4 py-2 font-mono text-ink-muted max-sm:p-0">@ReplayView.FormatDuration(ReplayAnalysis.GetTimestamp(callback))</td>
+                        <td class="whitespace-nowrap px-4 py-2 max-sm:p-0"><PlayerLabel Name="@PlayerName(callback.SourceId)" Color="@colorsBySource.GetValueOrDefault(callback.SourceId)" /></td>
+                        <td class="px-4 py-2 text-right font-mono max-sm:p-0">
+                            @if (callback.Units.UnitCount > 0)
+                            {
+                                @callback.Units.UnitCount<span class="font-sans text-ink-muted sm:hidden"> units</span>
+                            }
+                            else
+                            {
+                                <span class="max-sm:hidden">—</span>
+                            }
+                        </td>
+                        <td class="list-table-wide px-4 py-2 max-sm:break-all font-mono text-xs text-ink-muted max-sm:p-0">@LuaDataFormatter.Format(callback.LuaParameters)</td>
                     </tr>
                 }
             </tbody>
@@ -65,6 +74,8 @@
 @code {
     private const int MaxRows = 250;
     private const string QueryParameter = "endpoint";
+
+    private string FilterSummary => FilterPanel.Join(selectedEndpoint, FilterPanel.Window(windowFrom, windowTo), FilterPanel.Players(PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name)).Count, playerItems.Count));
     private const string EndpointClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-left text-ink-muted transition hover:bg-raised hover:text-ink";
     private const string ActiveEndpointClass = "flex w-full cursor-pointer items-center gap-2 rounded-md bg-raised px-3 py-1.5 text-left font-semibold text-primary";
 

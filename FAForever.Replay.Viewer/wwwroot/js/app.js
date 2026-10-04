@@ -144,6 +144,28 @@ window.fafReplay = {
         }
     },
     /*
+     * Media queries, for a component that renders a different layout per screen width (not just
+     * other classes), so it renders only the one that fits. Returns whether the query matches now
+     * and an id for offMediaChange; calls OnMediaChanged(matches) when that changes.
+     */
+    mediaHandlers: new Map(),
+    mediaNextId: 1,
+    onMediaChange: function (query, listener) {
+        const id = window.fafReplay.mediaNextId++;
+        const list = window.matchMedia(query);
+        const handler = () => listener.invokeMethodAsync("OnMediaChanged", list.matches);
+        window.fafReplay.mediaHandlers.set(id, { list: list, handler: handler });
+        list.addEventListener("change", handler);
+        return { id: id, matches: list.matches };
+    },
+    offMediaChange: function (id) {
+        const entry = window.fafReplay.mediaHandlers.get(id);
+        if (entry) {
+            entry.list.removeEventListener("change", entry.handler);
+            window.fafReplay.mediaHandlers.delete(id);
+        }
+    },
+    /*
      * PWA (see wwwroot/service-worker.published.js). A new version installs in the background and
      * waits; the app shows a banner (Layout/UpdateBanner.razor) and only switches over when the user
      * accepts, so a replay being analysed is never reloaded from under them.

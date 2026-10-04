@@ -14,8 +14,8 @@
             <p class="font-semibold">Sign in to search</p>
             <p class="mt-2 text-sm text-ink-muted">
                 The FAForever API requires a signed-in account to browse the replay vault.
-                Use the <span class="font-semibold text-ink">Sign in</span> button in the header.
             </p>
+            <button type="button" class="btn-primary mt-4" @onclick="() => Auth.BeginLoginAsync()">Sign in with FAForever</button>
         </div>
     </NotAuthorized>
     <Authorized>
@@ -51,7 +51,7 @@
                     </select>
                 </span>
             </label>
-            <div class="flex items-end gap-3 sm:col-span-2 lg:col-span-4">
+            <div class="flex flex-wrap items-end gap-3 sm:col-span-2 lg:col-span-4">
                 <button type="submit" class="btn-primary" disabled="@isSearching">Search</button>
                 @if (Auth.Session?.UserName is { } ownName)
                 {
@@ -107,7 +107,7 @@
             else
             {
                 <div class="card text-center text-sm text-ink-muted">
-                    Search by player, map or mod &mdash; or list your own recent games with <span class="font-medium text-ink">My replays</span>.
+                    Search by player, map or mod, or list your own recent games with <span class="font-medium text-ink">My replays</span>.
                 </div>
             }
         </section>

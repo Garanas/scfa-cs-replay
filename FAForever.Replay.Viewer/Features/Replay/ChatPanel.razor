@@ -11,9 +11,9 @@
    all of them. Clicking an item, in the feed or on the map, highlights it in both without
    touching the window; the selection is a pointer aid and stays out of the URL. *@
 
-<div class="grid gap-6 lg:grid-cols-[1fr_2.4fr_1.6fr]">
-    <div class="card max-h-[70vh] self-start overflow-y-auto p-2">
-        <h3 class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Filters</h3>
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_2.4fr_1.6fr]">
+    <FilterPanel Summary="@FilterSummary">
+        <h3 class="hidden px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted lg:block">Filters</h3>
         <TimeWindowFilter Duration="duration" />
         @if (playerItems.Count == 0)
         {
@@ -32,7 +32,7 @@
             In game, drawings are only shown to the author's allies and to observers, and fade after
             25 seconds. Drawings by observers are not stored in the replay.
         </p>
-    </div>
+    </FilterPanel>
 
     <div class="card flex flex-col gap-3 self-start">
         <MapView Model="Model" MarkerScale="0.6" AriaLabel="Drawings and pings of the players">
@@ -71,6 +71,8 @@
 
 @code {
     private const string PingsParameter = "pings";
+
+    private string FilterSummary => FilterPanel.Join(FilterPanel.Window(windowFrom, windowTo), FilterPanel.Players(PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name)).Count, playerItems.Count), showPings ? null : "no pings");
 
     private static readonly (string Type, string Label)[] PingLegend =
     [

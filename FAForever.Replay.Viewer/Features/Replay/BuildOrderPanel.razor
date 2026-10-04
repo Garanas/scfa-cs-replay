@@ -20,8 +20,24 @@
    The two players live in "compare" (picked in the header of each side). Equal orders given
    in the same tick are one "10× …" row in the ledger (BuildOrderItem.Group). Clicking an order
    in the ledger highlights it on the map; clicking a marker highlights and scrolls to its
-   order. Selections stay out of the URL. *@
+   order. Selections stay out of the URL.
 
+   Side by side needs a wide screen (xl). Narrower, the tab shows one of the two players at a
+   time, with a switch between them ("side=right" in the URL for the second); the opponent stays
+   in the comparison through their numbers next to the bars and the "+0:12" behind in Timings. Only the layout that fits is rendered (see OnMediaChanged): two maps
+   with hundreds of markers are too heavy to keep hidden. *@
+
+@if (wide is null)
+{
+    @* The width is known after the first render; until then there is nothing to choose. *@
+    <div class="card min-h-40"></div>
+}
+else if (wide == false)
+{
+    @NarrowLayout()
+}
+else
+{
 <div class="card grid gap-x-6 gap-y-5 p-6 xl:grid-cols-[minmax(0,1fr)_176px_minmax(0,1fr)]">
     @if (players.Count == 0)
     {
@@ -84,21 +100,7 @@
         else if (ShowUnits)
         {
             <div class="flex flex-col gap-3 border-t border-edge pt-3 xl:col-span-3">
-                <div class="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-ink-muted" role="list" aria-label="Lane legend">
-                    <span role="listitem" class="flex items-center gap-1.5">
-                        <span class="h-4 w-[18px] rounded bg-surface ring-1 ring-edge" aria-hidden="true"></span>Construction
-                    </span>
-                    @foreach ((CommandCategory category, string label) in LaneLegend)
-                    {
-                        <span role="listitem" class="flex items-center gap-1.5">
-                            <span class="h-4 w-[3px] rounded-sm" style="background: @EntityList.CategoryColor(category)" aria-hidden="true"></span>@label
-                        </span>
-                    }
-                    <span role="listitem" class="flex items-center gap-1.5">
-                        <span class="h-0.5 w-[18px] bg-ink-muted" aria-hidden="true"></span>Queue (shift)
-                    </span>
-                    <span class="text-ink-faint">· What a unit is, is a guess from its orders; only the ACU is certain.</span>
-                </div>
+                @LaneLegendRow()
                 @* Ten lanes high (30 px each, plus the 20 px time axis that sticks to the top), then it scrolls. *@
                 <div class="grid max-h-[320px] grid-cols-2 gap-x-6 overflow-y-auto">
                     <EntityList Player="@(left?.Name ?? "")" Mirrored="true" Entities="leftEntities" Span="windowEnd" Color="@left?.Color"
@@ -138,10 +140,15 @@
         }
     }
 </div>
+}
 
 @code {
     private const string CompareParameter = "compare";
     private const string ViewParameter = "view";
+    private const string SideParameter = "side";
+
+    /// <summary>Where the two players fit side by side: Tailwind's xl breakpoint.</summary>
+    private const string WideQuery = "(min-width: 80rem)";
     private const string ViewClass = "cursor-pointer rounded-md px-1 py-1 text-[13px] text-ink-muted transition hover:bg-raised hover:text-ink";
     private const string ActiveViewClass = "cursor-pointer rounded-md bg-raised px-1 py-1 text-[13px] font-semibold text-primary";
 
@@ -208,6 +215,19 @@
 
     private int? Highlighted => hovered ?? selected;
 
+    // Narrow screens: which of the two players is shown (0 left, 1 right), from "side".
+    private int focus;
+    private Player? Focused => focus == 1 ? right : left;
+    private Player? Opponent => focus == 1 ? left : right;
+    private List<BuildOrderItem> FocusedItems => focus == 1 ? rightItems : leftItems;
+
+    // Whether the screen is wide enough for both players; null until the first render asked.
+    private bool? wide;
+    private DotNetObjectReference<BuildOrderPanel>? mediaListener;
+    private int? mediaId;
+
+    private sealed record MediaState(int Id, bool Matches);
+
     protected override void OnParametersSet()
     {
         Replay replay = Model.Replay;
@@ -258,6 +278,7 @@
             "timings" => BelowMaps.Timings,
             _ => BelowMaps.Orders,
         };
+        focus = string.Equals(UrlQuery.Get(Navigation, SideParameter), "right", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
 
         leftWindow = InWindow(left);
         rightWindow = InWindow(right);
@@ -286,12 +307,45 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            mediaListener = DotNetObjectReference.Create(this);
+            MediaState media = await JS.InvokeAsync<MediaState>("fafReplay.onMediaChange", WideQuery, mediaListener);
+            mediaId = media.Id;
+            wide = media.Matches;
+            StateHasChanged();
+            return;
+        }
+
         if (scrollToSelected && selected is { } key)
         {
             scrollToSelected = false;
             await JS.InvokeVoidAsync("fafReplay.scrollIntoView", RowId(key));
         }
     }
+
+    /// <summary>Switches between the side-by-side and the one-player layout when the window is resized.</summary>
+    [JSInvokable]
+    public void OnMediaChanged(bool matches)
+    {
+        wide = matches;
+        StateHasChanged();
+    }
+
+    public override void Dispose()
+    {
+        if (mediaListener is not null)
+        {
+            DotNetObjectReference<BuildOrderPanel> listener = mediaListener;
+            ValueTask unsubscribe = mediaId is int id ? JS.InvokeVoidAsync("fafReplay.offMediaChange", id) : ValueTask.CompletedTask;
+            _ = unsubscribe.AsTask().ContinueWith(_ => listener.Dispose());
+        }
+        base.Dispose();
+    }
+
+    /// <summary>Shows the other player on narrow screens; the first player is the default and stays out of the URL.</summary>
+    private void SetFocus(int slot)
+        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(SideParameter, slot == 1 ? "right" : null), replace: true);
 
     private List<BuildOrderItem> InWindow(Player? player)
         => player is not null && itemsBySource.TryGetValue(player.SourceId, out List<BuildOrderItem>? items)
@@ -476,15 +530,15 @@
     private int? HighlightedAmong(HashSet<int> keys) => Highlighted is { } key && keys.Contains(key) ? key : null;
 
     /// <summary>Faction, colour and player picker; the right side mirrors the left.</summary>
-    private RenderFragment PlayerHeader(Player? player, int slot) => __builder =>
+    private RenderFragment PlayerHeader(Player? player, int slot, bool narrow = false) => __builder =>
     {
-        <header class="@(slot == 1 ? "flex-row-reverse" : "") flex h-10 items-center gap-2.5">
+        <header class="@(slot == 1 && !narrow ? "flex-row-reverse" : "") flex h-10 items-center gap-2.5">
             @if (Factions.IconPath(player?.Faction) is { } factionIcon)
             {
                 <img src="@factionIcon" alt="@Factions.Name(player?.Faction)" title="@Factions.Name(player?.Faction)" class="h-7 w-7" />
             }
             <span class="h-6 w-1 shrink-0 rounded-full" style="background: @(player?.Color ?? "transparent")" aria-hidden="true"></span>
-            <select class="input-field w-72 py-1.5 font-semibold" aria-label="@(slot == 0 ? "Left player" : "Right player")"
+            <select class="input-field @(narrow ? "min-w-0 flex-1" : "w-72") py-1.5 font-semibold" aria-label="@(slot == 0 ? "Left player" : "Right player")"
                     value="@player?.Name" @onchange="args => Pick(slot, args.Value as string)">
                 @foreach (Player choice in players)
                 {
@@ -576,5 +630,150 @@
             }
             <span class="min-w-0 truncate @(item.IsBuild ? "font-medium text-ink" : "text-ink-muted")">@text</span>
         </button>
+    };
+
+    /// <summary>What the marks on the unit lanes mean.</summary>
+    private static RenderFragment LaneLegendRow() => __builder =>
+    {
+        <div class="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-ink-muted" role="list" aria-label="Lane legend">
+            <span role="listitem" class="flex items-center gap-1.5">
+                <span class="h-4 w-[18px] rounded bg-surface ring-1 ring-edge" aria-hidden="true"></span>Construction
+            </span>
+            @foreach ((CommandCategory category, string label) in LaneLegend)
+            {
+                <span role="listitem" class="flex items-center gap-1.5">
+                    <span class="h-4 w-[3px] rounded-sm" style="background: @EntityList.CategoryColor(category)" aria-hidden="true"></span>@label
+                </span>
+            }
+            <span role="listitem" class="flex items-center gap-1.5">
+                <span class="h-0.5 w-[18px] bg-ink-muted" aria-hidden="true"></span>Queue (shift)
+            </span>
+            <span class="text-ink-faint">· What a unit is, is a guess from its orders; only the ACU is certain.</span>
+        </div>
+    };
+
+    /// <summary>
+    /// Narrow screens: one of the two players, chosen with a switch, in one column: the map, the
+    /// comparison with its labels, and below it the same three views as side by side.
+    /// </summary>
+    private RenderFragment NarrowLayout() => __builder =>
+    {
+        <div class="card flex flex-col gap-4 p-4 sm:p-6">
+            @if (players.Count == 0)
+            {
+                <p class="text-center text-sm text-ink-muted">This replay has no players to compare.</p>
+                return;
+            }
+
+            <div role="group" aria-label="Player shown" class="grid grid-cols-2 gap-0.5 rounded-lg border border-edge bg-surface p-1">
+                @foreach ((Player? player, int slot) in new[] { (left, 0), (right, 1) })
+                {
+                    <button type="button" aria-pressed="@(focus == slot ? "true" : "false")" @onclick="() => SetFocus(slot)"
+                            class="@(focus == slot ? ActiveViewClass : ViewClass) flex min-w-0 items-center justify-center gap-2">
+                        <span class="h-4 w-1 shrink-0 rounded-full" style="background: @(player?.Color ?? "transparent")" aria-hidden="true"></span>
+                        <span class="truncate">@player?.Name</span>
+                    </button>
+                }
+            </div>
+
+            @* With more than two players, the shown slot can be given to anyone. *@
+            @if (players.Count > 2)
+            {
+                @PlayerHeader(Focused, focus, narrow: true)
+            }
+            @SideMap(Focused, FocusedItems)
+
+            <p class="flex items-center justify-between text-sm text-ink-muted">
+                <span><span class="font-semibold text-ink">@FocusedItems.Count.ToString("N0")</span> orders</span>
+                <span class="font-mono">0:00 – @GameTime.Format(windowEnd)</span>
+            </p>
+
+            @NarrowValues()
+
+            <div role="group" aria-label="Below the comparison" class="grid grid-cols-3 gap-0.5 rounded-lg border border-edge bg-surface p-1">
+                @foreach ((BelowMaps option, string label) in ViewOptions)
+                {
+                    <button type="button" aria-pressed="@(view == option ? "true" : "false")" @onclick="() => SetView(option)"
+                            class="@(view == option ? ActiveViewClass : ViewClass)">@label</button>
+                }
+            </div>
+
+            @if (view == BelowMaps.Timings)
+            {
+                <BuildOrderTimings Left="leftWindow" Right="rightWindow" LeftColor="@left?.Color" RightColor="@right?.Color"
+                                   Span="windowEnd" Selected="selected" OnSelect="Select" Focus="focus" />
+            }
+            else if (ShowUnits)
+            {
+                @LaneLegendRow()
+                @* Ten minutes need room: the lanes scroll sideways, the unit names stay (EntityList). *@
+                <div class="overflow-x-auto">
+                    <div class="min-w-[40rem]">
+                        <EntityList Player="@(Focused?.Name ?? "")" Entities="@(focus == 1 ? rightEntities : leftEntities)" Span="windowEnd"
+                                    Color="@Focused?.Color" Selected="selectedEntity" OnSelect="SelectEntity" OnHover="HoverEntity" />
+                    </div>
+                </div>
+            }
+            else
+            {
+                @* Ten minutes of orders run to hundreds of rows: a box of its own, not the whole page. *@
+                <div role="log" aria-label="@($"Orders of {Focused?.Name} by game time")" class="max-h-[60vh] overflow-y-auto border-t border-edge">
+                    @{ bool any = false; }
+                    @foreach (LedgerRow row in ledger)
+                    {
+                        List<LedgerEntry> entries = focus == 1 ? row.Right : row.Left;
+                        if (entries.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        any = true;
+                        <div @key="row.Time" class="grid grid-cols-[3rem_minmax(0,1fr)] gap-x-2 border-b border-edge/40 py-0.5">
+                            <span class="feed-time flex h-7 items-center text-xs">@row.Time</span>
+                            <div class="flex min-w-0 flex-col">
+                                @foreach (LedgerEntry entry in entries)
+                                {
+                                    @LedgerItem(entry, mirrored: false)
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (!any)
+                    {
+                        <p class="py-3 text-center text-sm text-ink-muted">No orders in this window.</p>
+                    }
+                </div>
+            }
+        </div>
+    };
+
+    /// <summary>
+    /// The comparison for one player: label, a bar, the number and, small, the opponent's number on
+    /// each line. The bar is scaled to the larger of the two, as side by side.
+    /// </summary>
+    private RenderFragment NarrowValues() => __builder =>
+    {
+        <ol class="m-0 list-none p-0" aria-label="@($"{Focused?.Name}: how often")">
+            @foreach (SummaryRow row in summary)
+            {
+                if (row.IsHeading)
+                {
+                    <li class="@HeadingClass flex h-7 items-end">@row.Label</li>
+                    continue;
+                }
+
+                int value = focus == 1 ? row.Right : row.Left;
+                int other = focus == 1 ? row.Left : row.Right;
+                double share = 100.0 * value / Math.Max(1, Math.Max(row.Left, row.Right));
+                <li class="flex h-7 items-center gap-3 border-b border-edge/60">
+                    <span class="w-32 shrink-0 truncate text-xs text-ink-muted">@row.Label</span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block h-2 rounded-full opacity-60" style="width: @(share.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%; background: @(Focused?.Color ?? "var(--th-ink-muted)")" aria-hidden="true"></span>
+                    </span>
+                    <span class="w-10 shrink-0 text-right font-mono text-sm @(value == 0 ? "text-ink-faint" : "text-ink")">@value</span>
+                    <span class="w-14 shrink-0 font-mono text-[11px] text-ink-faint" title="@Opponent?.Name">vs @other</span>
+                </li>
+            }
+        </ol>
     };
 }
