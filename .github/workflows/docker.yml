@@ -1,4 +1,4 @@
-# Builds the container image of the hosted viewer (Dockerfile: FAForever.Replay.Server with the
+# Builds the container image of the hosted viewer (Dockerfile: FAForever.Vault.Server with the
 # Blazor app) and pushes it to the GitHub Container Registry as ghcr.io/garanas/scfa-cs-replay,
 # tagged "latest" and "sha-<commit>". The deploy job then has the VPS pull it (vault-deploy, see
 # github.com/Garanas/jipwijnia-vps, which holds the server configuration).

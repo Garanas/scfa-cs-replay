@@ -1,0 +1,110 @@
+@using FAForever.FileFormats.Replay
+@using FAForever.Vault.Viewer.Services.Commands
+
+@* Where a player's orders happened, rendered inside MapView's Overlay slot in world
+   coordinates: construction orders as the unit icon, moves as small dots, other orders as
+   their command icon. Orders without a position are skipped. Moves and other orders are drawn
+   first so the build orders stay on top; the highlighted order (with the equal orders of its
+   tick, BuildOrderItem.Group) is drawn last, enlarged, and the rest dim. ShouldRender skips renders in which nothing changed. *@
+
+@{
+    List<BuildOrderItem> highlightedItems = [];
+}
+<g opacity="@(Highlighted is null ? "1" : "0.35")">
+    @foreach (BuildOrderItem item in Items)
+    {
+        if (item.Position is not { } position || item.IsBuild)
+        {
+            continue;
+        }
+        if (item.Group == Highlighted)
+        {
+            highlightedItems.Add(item);
+            continue;
+        }
+
+        @RenderOrder(item, position, BuildSize * 0.45)
+    }
+    @foreach (BuildOrderItem item in Items)
+    {
+        if (item.Position is not { } position || !item.IsBuild)
+        {
+            continue;
+        }
+        if (item.Group == Highlighted)
+        {
+            highlightedItems.Add(item);
+            continue;
+        }
+
+        @RenderOrder(item, position, BuildSize)
+    }
+</g>
+@foreach (BuildOrderItem highlightedItem in highlightedItems)
+{
+    @RenderOrder(highlightedItem, highlightedItem.Position!, BuildSize * 1.6)
+}
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<BuildOrderItem> Items { get; set; }
+
+    /// <summary>The player's in-game colour.</summary>
+    [Parameter] public string? Color { get; set; }
+
+    /// <summary>The group (BuildOrderItem.Group) of the hovered or selected order, if any.</summary>
+    [Parameter] public int? Highlighted { get; set; }
+
+    [Parameter] public EventCallback<BuildOrderItem> OnSelect { get; set; }
+
+    /// <summary>The size of a build order marker in world units.</summary>
+    [Parameter] public double BuildSize { get; set; } = 24;
+
+    private IReadOnlyList<BuildOrderItem>? lastItems;
+    private int? lastHighlighted;
+
+    protected override bool ShouldRender()
+    {
+        if (ReferenceEquals(Items, lastItems) && Highlighted == lastHighlighted)
+        {
+            return false;
+        }
+
+        lastItems = Items;
+        lastHighlighted = Highlighted;
+        return true;
+    }
+
+    private RenderFragment RenderOrder(BuildOrderItem item, ReplayAnalysis.MapPosition position, double size) => __builder =>
+    {
+        bool emphasised = item.Group == Highlighted;
+        string color = Color ?? "var(--th-ink-muted)";
+        <g @key="item.Key" class="cursor-pointer" @onclick="() => OnSelect.InvokeAsync(item)">
+            <title>@GameTime.Format(item.Timestamp) · @item.Text (click to highlight)</title>
+            @if (item.IsBuild)
+            {
+                <circle cx="@Fmt(position.X)" cy="@Fmt(position.Z)" r="@Fmt(size * 0.55)" fill="rgba(10, 12, 18, 0.6)"
+                        stroke="@color" stroke-width="@(emphasised ? 3 : 1.5)" vector-effect="non-scaling-stroke" />
+                <image href="images/units/units/@(item.BlueprintId!.ToLowerInvariant()).png"
+                       x="@Fmt(position.X - size * 0.35)" y="@Fmt(position.Z - size * 0.35)"
+                       width="@Fmt(size * 0.7)" height="@Fmt(size * 0.7)" />
+            }
+            else if (item.Category == CommandCategory.Move)
+            {
+                <circle cx="@Fmt(position.X)" cy="@Fmt(position.Z)" r="@Fmt(size * (emphasised ? 0.4 : 0.22))" fill="@color"
+                        stroke="rgba(10, 12, 18, 0.75)" stroke-width="1" vector-effect="non-scaling-stroke" />
+            }
+            else if (CommandIcons.IconPath(item.Category) is { } iconPath)
+            {
+                <image href="@iconPath" x="@Fmt(position.X - size / 2)" y="@Fmt(position.Z - size / 2)"
+                       width="@Fmt(size)" height="@Fmt(size)" />
+            }
+            else
+            {
+                <circle cx="@Fmt(position.X)" cy="@Fmt(position.Z)" r="@Fmt(size * 0.3)" fill="none"
+                        stroke="@color" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+            }
+        </g>
+    };
+
+    private static string Fmt(double value) => MapCanvas.Fmt(value);
+}

@@ -1,0 +1,51 @@
+@using System.Globalization
+@using static FAForever.Vault.Viewer.Features.About.ExampleReplay
+
+@* Where the bytes of the body go: one stacked bar plus a legend with bytes and messages. *@
+
+<div>
+    <div class="flex h-7 w-full overflow-hidden rounded-full bg-raised" role="img"
+         aria-label="@string.Join(", ", Shares.Select(share => $"{share.Label} {Percent(share)}"))">
+        @foreach (ByteShare share in Shares)
+        {
+            <span class="@AnnotatedBytes.Swatch(share.Tone) h-full border-r-2 border-surface last:border-r-0" style="width: @Width(share)" title="@share.Label: @Percent(share)"></span>
+        }
+    </div>
+
+    <table class="mt-5 w-full text-sm">
+        <thead>
+            <tr class="border-b border-edge text-left text-xs uppercase tracking-wide text-ink-faint">
+                <th class="py-2 font-semibold">Messages about</th>
+                <th class="py-2 text-right font-semibold">Share</th>
+                <th class="hidden py-2 text-right font-semibold sm:table-cell">Bytes</th>
+                <th class="py-2 text-right font-semibold">Messages</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (ByteShare share in Shares)
+            {
+                <tr class="border-b border-edge/60 last:border-0">
+                    <td class="py-2">
+                        <span class="flex items-center gap-2.5">
+                            <span class="h-3 w-3 shrink-0 rounded-sm @AnnotatedBytes.Swatch(share.Tone)" aria-hidden="true"></span>
+                            <span class="text-ink">@share.Label</span>
+                        </span>
+                    </td>
+                    <td class="py-2 text-right font-mono font-semibold text-ink">@Percent(share)</td>
+                    <td class="hidden py-2 text-right font-mono text-ink-muted sm:table-cell">@share.Bytes.ToString("N0", CultureInfo.InvariantCulture)</td>
+                    <td class="py-2 text-right font-mono text-ink-muted">@share.Messages.ToString("N0", CultureInfo.InvariantCulture)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<ByteShare> Shares { get; set; }
+
+    private long Total => Shares.Sum(share => share.Bytes);
+
+    private string Percent(ByteShare share) => (share.Bytes * 100.0 / Total).ToString("0.0", CultureInfo.InvariantCulture) + "%";
+
+    private string Width(ByteShare share) => (share.Bytes * 100.0 / Total).ToString("0.###", CultureInfo.InvariantCulture) + "%";
+}

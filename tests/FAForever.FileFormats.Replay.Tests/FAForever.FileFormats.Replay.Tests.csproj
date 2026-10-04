@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FAForever.FileFormats.Replay\FAForever.FileFormats.Replay.csproj" />
+  </ItemGroup>
+
+</Project>

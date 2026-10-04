@@ -2,20 +2,26 @@
 
 A small library to read and interpret replays of the game [Supreme Commander: Forged Alliance Forever](https://store.steampowered.com/app/9420/Supreme_Commander_Forged_Alliance/). It also supports the compressed replay format of [FAForever](https://faforever.com/). It is inspired by a similar [Java implementation](https://github.com/FAForever/faf-java-commons/blob/develop/faf-commons-data/src/main/java/com/faforever/commons/replay/ReplayLoader.java).
 
+The libraries live in `src/`:
+
+- `FAForever.FileFormats.Replay`: the replay parser.
+- `FAForever.FileFormats.Blueprints`: blueprint files (`.bp`) of units, projectiles, props and effects.
+- `FAForever.FileFormats.Lua`: Lua values and the data-only Lua that game files are written in.
+
 ## Web app
 
 The repository also ships a web app to search, inspect and analyse replays:
 
-- `FAForever.Replay.Viewer`: a standalone Blazor WebAssembly app (Tailwind CSS v4, four
+- `src/FAForever.Vault.Viewer`: a standalone Blazor WebAssembly app (Tailwind CSS v4, four
   faction colour themes, light and dark) that parses replays entirely in the browser.
-- `FAForever.Replay.Server`: a minimal ASP.NET Core host that serves the viewer and proxies
+- `src/FAForever.Vault.Server`: a minimal ASP.NET Core host that serves the viewer and proxies
   the FAForever OAuth token exchange (Hydra does not send CORS headers).
 
 Run it locally:
 
 ```sh
 pwsh tools/install-tailwind.ps1      # once: fetch the Tailwind standalone CLI
-dotnet watch --project FAForever.Replay.Server   # http://127.0.0.1:5080
+dotnet watch --project src/FAForever.Vault.Server   # http://127.0.0.1:5080
 ```
 
 See [AGENTS.md](AGENTS.md) for architecture notes, conventions and the verified FAForever

@@ -10,7 +10,7 @@
 # The JSON index maps each name to its cell: { "cellSize": 64, "columns": 25, "icons": { "uel0101": { "x": 0, "y": 0 } } }.
 param(
     [string]$Source = "D:/faf-development/fa/textures/ui/common/icons/units",
-    [string]$Output = (Join-Path $PSScriptRoot "../FAForever.Replay.Viewer/wwwroot/images/units"),
+    [string]$Output = (Join-Path $PSScriptRoot "../src/FAForever.Vault.Viewer/wwwroot/images/units"),
     [int]$CellSize = 64,
     [int]$Columns = 25
 )

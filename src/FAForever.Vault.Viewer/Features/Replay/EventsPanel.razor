@@ -1,0 +1,213 @@
+@using FAForever.FileFormats.Replay
+@inherits UrlStateComponent
+
+@* Input inspector: the raw input stream of the replay, readable. The time window is
+   mandatory so the stream never renders the whole game. *@
+
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_3fr]">
+    <FilterPanel Summary="@FilterSummary">
+        <h3 class="hidden px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted lg:block">Filters</h3>
+        <TimeWindowFilter Duration="duration" Required="true" />
+
+        <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Players</h3>
+        <PlayerFilterList Items="playerItems" />
+
+        <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Types</h3>
+        <div role="group" aria-label="Input types">
+            @foreach ((string type, int count) in typeItems)
+            {
+                bool isSelected = selectedTypes.Contains(type);
+                <label class="@(isSelected ? SelectedTypeClass : TypeClass)">
+                    <input type="checkbox" class="accent-primary" checked="@isSelected"
+                           @onchange="() => ToggleType(type)" />
+                    <span class="truncate font-mono text-xs">@type</span>
+                    <span class="badge ml-auto shrink-0">@count.ToString("N0")</span>
+                </label>
+            }
+        </div>
+
+        @if (notableEvents.Count > 0)
+        {
+            <h3 class="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Notable</h3>
+            <div role="group" aria-label="Notable events">
+                @foreach (NotableEvent entry in notableEvents)
+                {
+                    <button type="button" class="@TypeClass" title="Jump the window to this moment"
+                            @onclick="() => JumpTo(entry.Timestamp)">
+                        <span class="shrink-0 font-mono text-xs text-ink-muted">@GameTime.Format(entry.Timestamp)</span>
+                        <span class="truncate text-xs">@entry.Description</span>
+                    </button>
+                }
+            </div>
+        }
+    </FilterPanel>
+
+    <div class="card max-h-[70vh] self-start overflow-y-auto p-0">
+        <table class="list-table w-full text-left text-sm">
+            <thead class="sticky top-0 bg-raised text-xs uppercase tracking-wide text-ink-muted">
+                <tr>
+                    <th class="px-4 py-3 font-semibold">Time</th>
+                    <th class="px-4 py-3 font-semibold">Player</th>
+                    <th class="w-full px-4 py-3 font-semibold">Event</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (ReplayInput input in FilteredInputs.Take(MaxRows))
+                {
+                    <tr class="border-t border-edge/60 align-top hover:bg-raised/50">
+                        <td class="px-4 py-1.5 font-mono text-ink-muted max-sm:p-0">@GameTime.Format(ReplayAnalysis.GetTimestamp(input))</td>
+                        <td class="whitespace-nowrap px-4 py-1.5 max-sm:p-0"><PlayerLabel Name="@PlayerName(input.SourceId)" Color="@colorsBySource.GetValueOrDefault(input.SourceId)" /></td>
+                        <td class="list-table-wide px-4 py-1.5 max-sm:p-0">
+                            <span class="flex items-center gap-2">
+                                @if (ReplayInputFormatter.TryGetBlueprintId(input) is { } blueprintId)
+                                {
+                                    <UnitIcon BlueprintId="@blueprintId" Size="20" Title="@UnitNames.GetOrNull(blueprintId)" />
+                                }
+                                <span class="font-mono text-xs text-ink-muted">@ReplayInputFormatter.Describe(input)</span>
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @{ int total = FilteredInputs.Count(); }
+        @if (total == 0)
+        {
+            <p class="px-4 py-3 text-sm text-ink-muted">No inputs match the current filters.</p>
+        }
+        else if (total > MaxRows)
+        {
+            <p class="border-t border-edge/60 px-4 py-2 text-xs text-ink-faint">
+                Showing the first @MaxRows of @total.ToString("N0") inputs. Narrow the window or the filters.
+            </p>
+        }
+    </div>
+</div>
+
+@code {
+    private const int MaxRows = 250;
+    private const string TypesParameter = "types";
+
+    private string FilterSummary => FilterPanel.Join(FilterPanel.Window(windowFrom, windowTo), FilterPanel.Players(PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name)).Count, playerItems.Count),
+        FilterPanel.Count(selectedTypes.Count, typeItems.Count, "types"));
+    private const string TypeClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1 text-left text-ink-muted transition hover:bg-raised hover:text-ink";
+    private const string SelectedTypeClass = "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1 text-left font-medium text-ink transition hover:bg-raised";
+
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private sealed record NotableEvent(TimeSpan Timestamp, string Description);
+
+    private TimeSpan duration;
+    private TimeSpan windowFrom;
+    private TimeSpan windowTo;
+    private List<(string Name, int Count, string? Color)> playerItems = [];
+    private Dictionary<int, string> colorsBySource = [];
+    private List<(string Type, int Count)> typeItems = [];
+    private HashSet<string> selectedTypes = [];
+    private HashSet<int> selectedSources = [];
+    private List<NotableEvent> notableEvents = [];
+
+    private IEnumerable<ReplayInput> FilteredInputs
+    {
+        get
+        {
+            int fromTick = (int)(windowFrom.TotalSeconds * ReplayAnalysis.TicksPerSecond);
+            int toTick = (int)(windowTo.TotalSeconds * ReplayAnalysis.TicksPerSecond);
+            return Model.Replay.Body.UserInput.Where(input =>
+                input.Tick >= fromTick
+                && input.Tick <= toTick
+                && selectedSources.Contains(input.SourceId)
+                && selectedTypes.Contains(input.GetType().Name));
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        Replay replay = Model.Replay;
+        duration = ReplayAnalysis.GetDuration(replay);
+
+        (TimeSpan? from, TimeSpan? to) = TimeWindowFilter.ReadWindow(Navigation, required: true, duration);
+        windowFrom = from ?? TimeSpan.Zero;
+        windowTo = to ?? duration;
+
+        Dictionary<int, int> inputCounts = [];
+        Dictionary<string, int> typeCounts = [];
+        List<NotableEvent> notable = [];
+        foreach (ReplayInput input in replay.Body.UserInput)
+        {
+            inputCounts[input.SourceId] = inputCounts.GetValueOrDefault(input.SourceId) + 1;
+            string type = input.GetType().Name;
+            typeCounts[type] = typeCounts.GetValueOrDefault(type) + 1;
+
+            string? description = input switch
+            {
+                ReplayInput.RequestPause => $"{PlayerName(input.SourceId)} paused the game",
+                ReplayInput.RequestResume => $"{PlayerName(input.SourceId)} resumed the game",
+                ReplayInput.CommandSourceTerminated => $"{PlayerName(input.SourceId)} left the game",
+                ReplayInput.EndGame => "Game ended",
+                _ => null,
+            };
+            if (description is not null)
+            {
+                notable.Add(new NotableEvent(ReplayAnalysis.GetTimestamp(input), description));
+            }
+        }
+
+        notableEvents = notable;
+        colorsBySource = GameColors.BySource(replay.Header);
+        playerItems = inputCounts
+            .OrderByDescending(pair => pair.Value)
+            .Select(pair => (PlayerName(pair.Key), pair.Value, colorsBySource.GetValueOrDefault(pair.Key)))
+            .ToList();
+        typeItems = typeCounts
+            .OrderByDescending(pair => pair.Value)
+            .ThenBy(pair => pair.Key)
+            .Select(pair => (pair.Key, pair.Value))
+            .ToList();
+
+        HashSet<string> selectedNames = PlayerFilterList.SelectedFrom(Navigation, playerItems.Select(item => item.Name));
+        selectedSources = inputCounts.Keys.Where(sourceId => selectedNames.Contains(PlayerName(sourceId))).ToHashSet();
+
+        string? typesFromQuery = UrlQuery.Get(Navigation, TypesParameter);
+        selectedTypes = typesFromQuery is { Length: > 0 }
+            ? typeItems.Select(item => item.Type).Intersect(typesFromQuery.Split(','), StringComparer.Ordinal).ToHashSet()
+            : typeItems.Select(item => item.Type).ToHashSet();
+    }
+
+    private void ToggleType(string type)
+    {
+        if (!selectedTypes.Remove(type))
+        {
+            selectedTypes.Add(type);
+        }
+
+        string? value = selectedTypes.Count == typeItems.Count
+            ? null
+            : string.Join(',', typeItems.Select(item => item.Type).Where(selectedTypes.Contains));
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(TypesParameter, value), replace: true);
+    }
+
+    /// <summary>
+    /// Centers the window on the given moment.
+    /// </summary>
+    private void JumpTo(TimeSpan moment)
+    {
+        TimeSpan MaxWindow = TimeWindowFilter.MaxWindow;
+        TimeSpan upperBound = duration > MaxWindow ? duration - MaxWindow : TimeSpan.Zero;
+        TimeSpan from = moment - MaxWindow / 2;
+        from = from < TimeSpan.Zero ? TimeSpan.Zero : from > upperBound ? upperBound : from;
+        from = TimeSpan.FromSeconds(Math.Floor(from.TotalSeconds));
+
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["from"] = GameTime.Format(from),
+            ["to"] = GameTime.Format(from + MaxWindow < duration ? from + MaxWindow : duration),
+        }), replace: true);
+    }
+
+    private string PlayerName(int sourceId)
+    {
+        ReplaySource[] clients = Model.Replay.Header.Clients;
+        return sourceId >= 0 && sourceId < clients.Length ? clients[sourceId].PlayerName : $"Source {sourceId}";
+    }
+}

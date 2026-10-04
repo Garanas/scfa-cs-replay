@@ -9,7 +9,7 @@
             "args": [
                 "watch"
             ],
-            "cwd": "${workspaceFolder}/FAForever.Replay.Server",
+            "cwd": "${workspaceFolder}/src/FAForever.Vault.Server",
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             },
@@ -27,7 +27,7 @@
             "args": [
                 "watch"
             ],
-            "cwd": "${workspaceFolder}/FAForever.Replay.Viewer",
+            "cwd": "${workspaceFolder}/src/FAForever.Vault.Viewer",
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             },
@@ -42,7 +42,7 @@
                 "watch",
                 "test"
             ],
-            "cwd": "${workspaceFolder}/FAForever.Replay.Test",
+            "cwd": "${workspaceFolder}/tests/FAForever.FileFormats.Replay.Tests",
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             },
@@ -57,7 +57,7 @@
                 "run",
                 "--configuration=Release"
             ],
-            "cwd": "${workspaceFolder}/FAForever.Replay.Benchmark",
+            "cwd": "${workspaceFolder}/benchmarks/FAForever.FileFormats.Replay.Benchmarks",
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             },

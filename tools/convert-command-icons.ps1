@@ -5,7 +5,7 @@
 # The Special category deliberately has no icon and keeps its SVG glyph.
 param(
     [string]$Source = "D:/SteamLibrary/steamapps/common/Supreme Commander Forged Alliance/gamedata/textures/textures/ui/common/game/waypoints",
-    [string]$Output = (Join-Path $PSScriptRoot "../FAForever.Replay.Viewer/wwwroot/images/commands"),
+    [string]$Output = (Join-Path $PSScriptRoot "../src/FAForever.Vault.Viewer/wwwroot/images/commands"),
     [int]$Size = 64
 )
 

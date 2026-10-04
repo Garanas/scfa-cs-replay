@@ -1,0 +1,96 @@
+@using static FAForever.Vault.Viewer.Features.About.ExampleReplay
+
+@* A run of bytes split into named groups, coloured by role. Selectable: pointing at (or
+   focusing) a group explains it in the panel below; the selection is transient view state. *@
+
+<div>
+    <div class="flex flex-wrap items-start gap-x-1.5 gap-y-3">
+        @for (int i = 0; i < Groups.Count; i++)
+        {
+            int index = i;
+            ByteGroup group = Groups[index];
+            bool active = Selectable && index == selected;
+            if (Selectable)
+            {
+                <button type="button" class="flex cursor-pointer flex-col items-start gap-1 rounded-md text-left"
+                        aria-pressed="@active" aria-label="@($"{group.Label}: {group.Hex}")" @onmouseenter="() => selected = index" @onfocus="() => selected = index" @onclick="() => selected = index">
+                    @Chip(group, active)
+                    <span class="px-0.5 text-[11px] leading-tight @(active ? "font-semibold text-ink" : "text-ink-faint")">@group.Label</span>
+                </button>
+            }
+            else
+            {
+                <span class="flex flex-col items-start gap-1">
+                    @Chip(group, false)
+                    <span class="px-0.5 text-[11px] leading-tight text-ink-faint">@group.Label</span>
+                </span>
+            }
+        }
+    </div>
+
+    @if (Selectable && selected >= 0 && selected < Groups.Count)
+    {
+        ByteGroup current = Groups[selected];
+        <div class="mt-5 flex items-start gap-4 rounded-lg border border-edge bg-raised p-4" aria-live="polite">
+            <span class="mt-1 h-3 w-3 shrink-0 rounded-full @Swatch(current.Tone)" aria-hidden="true"></span>
+            <div class="min-w-0">
+                <p class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span class="font-display text-[16px] font-bold text-ink">@current.Label</span>
+                    <span class="font-mono text-sm text-ink-muted">@current.Hex</span>
+                    <span class="text-sm text-ink-faint">means</span>
+                    <span class="font-mono text-sm font-semibold text-primary">@current.Value</span>
+                </p>
+                <p class="mt-1.5 text-sm leading-relaxed text-ink-muted">@current.Explanation</p>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<ByteGroup> Groups { get; set; }
+
+    /// <summary>When set, groups can be pointed at and are explained below the bytes.</summary>
+    [Parameter] public bool Selectable { get; set; }
+
+    /// <summary>The group explained before anything is pointed at.</summary>
+    [Parameter] public int InitialSelection { get; set; }
+
+    private int selected = -1;
+
+    protected override void OnInitialized() => selected = InitialSelection;
+
+    private static RenderFragment Chip(ByteGroup group, bool active) => @<span class="flex gap-0.5 rounded-md border px-1 py-1 font-mono text-sm transition @Fill(group.Tone) @(active ? "ring-2 ring-primary ring-offset-2 ring-offset-surface" : "")">
+        @foreach (string value in group.Hex.Split(' '))
+        {
+            <span class="w-6 text-center">@value</span>
+        }
+    </span>;
+
+    // Literal class names, so Tailwind (which scans .razor files only) generates them.
+
+    /// <summary>Border and tinted background of a byte group.</summary>
+    public static string Fill(Tone tone) => tone switch
+    {
+        Tone.Frame or Tone.Marker => "border-viz-7/60 bg-viz-7/15 text-ink",
+        Tone.Selection => "border-viz-1/60 bg-viz-1/15 text-ink",
+        Tone.Order => "border-viz-2/60 bg-viz-2/15 text-ink",
+        Tone.Target or Tone.Number => "border-viz-3/60 bg-viz-3/15 text-ink",
+        Tone.Blueprint or Tone.Text => "border-viz-4/60 bg-viz-4/15 text-ink",
+        Tone.Formation => "border-viz-5/60 bg-viz-5/15 text-ink",
+        Tone.Extra => "border-viz-8/60 bg-viz-8/15 text-ink",
+        _ => "border-dashed border-ink-faint/60 text-ink-faint",
+    };
+
+    /// <summary>A solid swatch for legends and bars.</summary>
+    public static string Swatch(Tone tone) => tone switch
+    {
+        Tone.Frame or Tone.Marker => "bg-viz-7",
+        Tone.Selection => "bg-viz-1",
+        Tone.Order => "bg-viz-2",
+        Tone.Target or Tone.Number => "bg-viz-3",
+        Tone.Blueprint or Tone.Text => "bg-viz-4",
+        Tone.Formation => "bg-viz-5",
+        Tone.Extra => "bg-viz-8",
+        _ => "bg-ink-faint/50",
+    };
+}

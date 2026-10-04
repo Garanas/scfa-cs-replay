@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    Imported after the project body, when the SDK has added its default None items: an Update in
+    Directory.Build.props would find nothing to update yet.
+  -->
+  <ItemGroup>
+    <!-- Test assets (replays, blueprint files) are read from the output directory. -->
+    <None Update="assets\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

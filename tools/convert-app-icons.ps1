@@ -1,10 +1,10 @@
 #!/usr/bin/env pwsh
 # Renders the app icons (favicon, PWA manifest icons, Apple touch icon) from
-# FAForever.Replay.Viewer/wwwroot/icons/icon.svg. Requires ImageMagick 7 (`magick`).
+# src/FAForever.Vault.Viewer/wwwroot/icons/icon.svg. Requires ImageMagick 7 (`magick`).
 # The SVG is full bleed with its artwork inside the 80% safe zone, so it is used as-is for the
 # maskable icon; the regular icons get rounded corners.
 param(
-    [string]$Output = (Join-Path $PSScriptRoot "../FAForever.Replay.Viewer/wwwroot")
+    [string]$Output = (Join-Path $PSScriptRoot "../src/FAForever.Vault.Viewer/wwwroot")
 )
 
 $ErrorActionPreference = "Stop"

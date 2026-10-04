@@ -298,3 +298,6 @@ tools/tailwindcss.exe
 
 # Deployment secrets (deploy/.env.example is the template)
 deploy/.env
+
+# BenchmarkDotNet results (log them in RESULTS.md instead)
+BenchmarkDotNet.Artifacts/

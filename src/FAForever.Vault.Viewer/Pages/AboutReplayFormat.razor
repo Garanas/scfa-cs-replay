@@ -1,0 +1,589 @@
+@page "/about/replay-format"
+@using static FAForever.Vault.Viewer.Features.About.ExampleReplay
+
+@* An explainer for players, not programmers: from bytes to build orders. All numbers come from
+   one real replay (ExampleReplay). Writing style, on request of the owner: simple English, short
+   sentences, and no hyphens, underscores or dashes in the visible text. *@
+
+<PageTitle>The replay format · Vault of FAF</PageTitle>
+
+<nav class="text-sm text-ink-faint" aria-label="Breadcrumb">
+    <a href="about" class="transition hover:text-ink">About</a>
+    <span class="mx-1.5" aria-hidden="true">/</span>
+    <span class="text-ink-muted">The replay format</span>
+</nav>
+
+@* Hero: the promise of the page, next to the real first bytes of the example replay. *@
+<header class="mt-6 grid items-center gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+    <div>
+        <p class="font-display text-sm font-bold tracking-[0.2em] text-primary">FILE FORMATS</p>
+        <h1 class="mt-2 text-4xl font-extrabold tracking-tight sm:text-5xl">Inside a replay file</h1>
+        <p class="mt-5 text-lg leading-relaxed text-ink-muted">
+            Every game on FAF can be watched again. That works because of one small file: the replay.
+            This page opens one up. We go from loose bytes all the way to build orders and APM, one step at a time.
+        </p>
+        <p class="mt-3 text-lg leading-relaxed text-ink-muted">You do not need to know how to program. Curiosity is enough.</p>
+        <div class="mt-7 flex flex-wrap gap-3">
+            <a href="about/replay-format#idea" class="btn-primary">Start reading</a>
+            <a href="replay/@ReplayId" class="btn-secondary">Open the example game</a>
+        </div>
+    </div>
+
+    <figure class="card relative overflow-hidden p-0 shadow-[0_0_60px_-20px_var(--th-glow)]">
+        <figcaption class="flex items-center justify-between border-b border-edge px-4 py-2.5 text-xs text-ink-faint">
+            <span class="flex items-center gap-1.5" aria-hidden="true">
+                <span class="h-2.5 w-2.5 rounded-full bg-viz-8/70"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-viz-4/70"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-viz-3/70"></span>
+            </span>
+            <span>The first bytes of our example game</span>
+        </figcaption>
+        <div class="px-4 py-4 font-mono text-[13px] leading-7 sm:text-sm">
+            @for (int row = 0; row < FirstBytes.Length / 8; row++)
+            {
+                int offset = row * 8;
+                <div class="flex gap-4 whitespace-nowrap">
+                    <span class="text-ink-faint">@offset.ToString("X4")</span>
+                    <span class="text-ink">
+                        @for (int i = offset; i < offset + 8; i++)
+                        {
+                            <span class="@(FirstBytes[i] == 0 ? "text-viz-7" : "") mr-1.5">@FirstBytes[i].ToString("X2")</span>
+                        }
+                    </span>
+                    <span class="hidden text-primary sm:inline">@Printable(offset)</span>
+                </div>
+            }
+            <div class="flex gap-4 text-ink-faint/60" aria-hidden="true">
+                <span>0028</span><span>… and 2,294,623 bytes more</span>
+            </div>
+        </div>
+    </figure>
+</header>
+
+@* The example game in four numbers. *@
+<section class="mt-12 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="The example game in numbers">
+    @foreach ((string value, string label) in HeroStats)
+    {
+        <div class="card p-5">
+            <p class="font-display text-3xl font-bold text-ink">@value</p>
+            <p class="mt-1 text-sm text-ink-muted">@label</p>
+        </div>
+    }
+</section>
+<p class="mt-3 text-sm text-ink-faint">
+    Every number on this page comes from one real game in the FAF vault: a 1v1 on Osiris that lasted one and a half hours.
+    <a href="replay/@ReplayId" class="text-primary hover:underline">See it in the viewer.</a>
+</p>
+
+<div class="mt-14 grid gap-12 xl:grid-cols-[190px_minmax(0,1fr)]">
+    <aside class="hidden xl:block">
+        <nav class="sticky top-24" aria-label="Chapters">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-faint">On this page</p>
+            <ol class="space-y-1 text-sm">
+                @foreach ((string id, string number, string title) in Chapters)
+                {
+                    <li>
+                        <a href="about/replay-format#@id" class="flex gap-2.5 rounded-md px-2 py-1 text-ink-muted transition hover:bg-raised hover:text-ink">
+                            <span class="font-mono text-xs leading-5 text-primary">@number</span>
+                            <span>@title</span>
+                        </a>
+                    </li>
+                }
+            </ol>
+        </nav>
+    </aside>
+
+    <article class="max-w-3xl space-y-16">
+
+        <AboutChapter Id="idea" Number="01" Title="A replay is not a video">
+            <p>
+                A video stores what you see, picture by picture. A replay does something smarter.
+                It stores <strong>what the players told the game to do</strong>. Move here. Build that. Attack this.
+            </p>
+            <p>
+                When you watch a replay, your computer plays the whole game again with those same orders.
+                The game is built so that the same orders always give the same result.
+                Every shot hits or misses exactly as it did on the day.
+            </p>
+            <div class="grid gap-4 sm:grid-cols-3">
+                @foreach ((string title, string text) in IdeaCards)
+                {
+                    <div class="rounded-xl border border-edge bg-surface p-5">
+                        <p class="font-display font-bold text-ink">@title</p>
+                        <p class="mt-2 text-sm leading-relaxed text-ink-muted">@text</p>
+                    </div>
+                }
+            </div>
+            <p>
+                There is one catch. A replay only works with the exact game version that played it.
+                A small balance change would change what happens. That is why the FAF client loads the old
+                game version before it plays an old replay.
+            </p>
+            <p class="rounded-xl border-l-4 border-primary bg-raised px-5 py-4 text-[16px]">
+                Every five seconds, each player's game also writes down a fingerprint of the whole game: a <strong>checksum</strong>.
+                If two fingerprints ever differ, the games have drifted apart. Players call that a <strong>desync</strong>.
+            </p>
+        </AboutChapter>
+
+        <AboutChapter Id="bytes" Number="02" Title="What is a binary file?">
+            <p>
+                Everything on a computer is stored as <strong>bytes</strong>. A byte is a small number from 0 to 255.
+                A file is nothing more than a long row of bytes.
+            </p>
+            <p>
+                In a text file, every byte is a letter. In a <strong>binary file</strong>, a byte can mean anything:
+                a number, a part of a number, a letter or a marker. Only the format tells you which.
+            </p>
+            <p>
+                People often write bytes in <strong>hexadecimal</strong>. It uses the digits 0 to 9 and the letters A to F.
+                That way every byte fits in exactly two signs: 00 is 0 and FF is 255.
+            </p>
+            <div class="card">
+                <p class="mb-4 text-[16px] text-ink">These are the first 29 bytes of our replay. Switch the view to see what they say.</p>
+                <ByteViewer Bytes="VersionBytes" />
+                <p class="mt-4 text-sm text-ink-faint">The last byte is a zero. It marks the end of the text.</p>
+            </div>
+            <p>
+                The file starts with plain text: the version of the game. But most of the file is not text at all.
+                Read as letters, it would look like noise. To make sense of it, we need to know the format.
+            </p>
+        </AboutChapter>
+
+        <AboutChapter Id="reading" Number="03" Title="How we read it">
+            <p>
+                Reading a binary file is like filling in a form where all the boxes are glued together.
+                Nothing in the file says where one box ends and the next one starts.
+                You have to <strong>know the order of the boxes and the size of each one</strong>.
+            </p>
+            <p>
+                So we keep a finger on the current byte. We read a piece, move the finger past it, and read the next piece.
+                If we get a single size wrong, everything after it goes wrong too.
+                The format has only a few kinds of pieces:
+            </p>
+            <div class="grid gap-3 sm:grid-cols-2">
+                @foreach ((string title, string size, string text, string example, string result) in BuildingBlocks)
+                {
+                    <div class="rounded-xl border border-edge bg-surface p-5">
+                        <p class="flex items-baseline justify-between gap-3">
+                            <span class="font-display font-bold text-ink">@title</span>
+                            <span class="badge">@size</span>
+                        </p>
+                        <p class="mt-2 text-sm leading-relaxed text-ink-muted">@text</p>
+                        <p class="mt-3 flex flex-wrap items-center gap-2 font-mono text-sm">
+                            <span class="rounded-md border border-edge bg-raised px-2 py-0.5 text-ink">@example</span>
+                            <span class="text-ink-faint" aria-hidden="true">→</span>
+                            <span class="font-semibold text-primary">@result</span>
+                        </p>
+                    </div>
+                }
+            </div>
+            <p>
+                The last piece is the game's own. Supreme Commander uses the language Lua for its scripts,
+                and it stores lists of named values as a <strong>Lua table</strong>.
+                Every value starts with a mark that says what follows: 0 a number, 1 a text, 2 nothing,
+                3 yes or no, 4 the start of a table and 5 the end of one.
+            </p>
+            <div class="card">
+                <p class="mb-5 text-[16px] text-ink">This is how the lobby tells the game that a player picked Cybran:</p>
+                <AnnotatedBytes Groups="LuaFaction" />
+                <p class="mt-5 text-sm text-ink-faint">Faction 1 is UEF, 2 is Aeon, 3 is Cybran and 4 is Seraphim.</p>
+            </div>
+        </AboutChapter>
+
+        <AboutChapter Id="formats" Number="04" Title="Two formats, one game">
+            <p>Replays come in two kinds of files. On the inside, they hold exactly the same thing.</p>
+            <div class="grid gap-4 md:grid-cols-2">
+                <div class="card flex flex-col">
+                    <p class="font-mono text-sm font-semibold text-primary">.scfareplay</p>
+                    <h3 class="mt-1 text-xl font-bold text-ink">Written by the game</h3>
+                    <p class="mt-3 text-sm leading-relaxed text-ink-muted">
+                        This is the file Supreme Commander writes by itself. It holds a header and a body, and nothing else.
+                        It is not compressed, so it gets big: a long team game easily takes a few megabytes.
+                    </p>
+                    <div class="mt-auto pt-6" aria-hidden="true">
+                        <div class="flex h-9 overflow-hidden rounded-md text-xs font-semibold">
+                            <span class="flex w-[14%] items-center justify-center bg-viz-1/30 text-ink">Header</span>
+                            <span class="flex flex-1 items-center justify-center bg-viz-2/30 text-ink">Body</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card flex flex-col">
+                    <p class="font-mono text-sm font-semibold text-primary">.fafreplay</p>
+                    <h3 class="mt-1 text-xl font-bold text-ink">Written by FAF</h3>
+                    <p class="mt-3 text-sm leading-relaxed text-ink-muted">
+                        FAF wraps the same data in a smaller package. The file starts with one line of readable text:
+                        a summary of the game. It names the title, the map, the players and teams, when the game started and ended,
+                        and the game version. Below that line sits the replay of the game itself, compressed.
+                    </p>
+                    <div class="mt-auto space-y-2 pt-6" aria-hidden="true">
+                        <div class="flex h-9 overflow-hidden rounded-md text-xs font-semibold">
+                            <span class="flex w-[22%] items-center justify-center bg-viz-4/30 text-ink">Summary</span>
+                            <span class="flex w-[30%] items-center justify-center bg-ink-faint/25 text-ink">Compressed</span>
+                        </div>
+                        <p class="pl-[22%] text-xs text-ink-faint">↓ unpack</p>
+                        <div class="ml-[22%] flex h-9 overflow-hidden rounded-md text-xs font-semibold">
+                            <span class="flex w-[14%] items-center justify-center bg-viz-1/30 text-ink">H</span>
+                            <span class="flex flex-1 items-center justify-center bg-viz-2/30 text-ink">Body</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-3">
+                @foreach ((string value, string title, string text) in FormatFacts)
+                {
+                    <div class="rounded-xl border border-edge bg-surface p-5">
+                        <p class="font-display text-2xl font-bold text-primary">@value</p>
+                        <p class="mt-1 font-semibold text-ink">@title</p>
+                        <p class="mt-2 text-sm leading-relaxed text-ink-muted">@text</p>
+                    </div>
+                }
+            </div>
+        </AboutChapter>
+
+        <AboutChapter Id="header" Number="05" Title="The header sets the stage">
+            <p>
+                The header comes first. It describes the game before the first second is played.
+                Our example needs only <strong>1,806 bytes</strong> for it. That is less than a tenth of a percent of the file.
+                It holds, in this order:
+            </p>
+            <ol class="relative space-y-0 border-l-2 border-edge pl-0">
+                @for (int i = 0; i < HeaderParts.Length; i++)
+                {
+                    (string title, string value, string text) = HeaderParts[i];
+                    <li class="relative pb-6 pl-8 last:pb-0">
+                        <span class="absolute -left-[13px] top-0 flex h-6 w-6 items-center justify-center rounded-full border-2 border-edge bg-surface font-mono text-[11px] font-bold text-primary">@(i + 1)</span>
+                        <p class="font-semibold text-ink">@title</p>
+                        @if (value.Length > 0)
+                        {
+                            <p class="mt-1 inline-block rounded-md bg-raised px-2 py-0.5 font-mono text-sm text-primary">@value</p>
+                        }
+                        <p class="mt-1.5 text-[16px] leading-relaxed">@text</p>
+                    </li>
+                }
+            </ol>
+        </AboutChapter>
+
+        <AboutChapter Id="body" Number="06" Title="The body is a stream of messages">
+            <p>
+                After the header comes the body. It is one long stream of messages, in the order they happened.
+                Every message starts the same way: <strong>one byte that says what kind of message it is</strong>,
+                and <strong>two bytes that give its length</strong>. Then comes the content.
+            </p>
+            <div class="card">
+                <AnnotatedBytes Groups="MessageFrame" />
+                <p class="mt-5 text-sm text-ink-faint">
+                    Thanks to the length, a reader can step over a message it does not care about.
+                </p>
+            </div>
+            <p>There are 24 kinds of message. Most of them are rare. A few of them do nearly all the work:</p>
+            <div class="grid gap-3 sm:grid-cols-2">
+                @foreach ((string title, string name, string text, string count, ExampleReplay.Tone tone) in MessageKinds)
+                {
+                    <div class="flex gap-4 rounded-xl border border-edge bg-surface p-5">
+                        <span class="mt-1.5 h-3 w-3 shrink-0 rounded-full @AnnotatedBytes.Swatch(tone)" aria-hidden="true"></span>
+                        <div class="min-w-0">
+                            <p class="flex flex-wrap items-baseline justify-between gap-x-3">
+                                <span class="font-display font-bold text-ink">@title</span>
+                                <span class="font-mono text-sm text-ink-muted">@count</span>
+                            </p>
+                            <p class="font-mono text-xs text-ink-faint">@name</p>
+                            <p class="mt-2 text-sm leading-relaxed text-ink-muted">@text</p>
+                        </div>
+                    </div>
+                }
+            </div>
+            <p>
+                Time in the game moves in <strong>ticks</strong>. There are ten ticks in every second.
+                Here is a real piece of the stream, from tick 44 to tick 46:
+            </p>
+            <MessageTape />
+            <p>
+                See the rhythm? Every tick says <em>time moves on</em>, <em>now player 1</em>, <em>now player 2</em>.
+                It does so even when nobody does anything at all. Only at tick 45 does a real order show up.
+            </p>
+            <div class="card">
+                <h3 class="mb-5 text-lg font-bold text-ink">Where the bytes go</h3>
+                <ByteShareBar Shares="BodyShares" />
+            </div>
+            <p>
+                More than a third of the body only says whose turn it is and that time moves on.
+                That kind of repetition is exactly what compression loves. It is why the file in the vault is eight times smaller.
+            </p>
+        </AboutChapter>
+
+        <AboutChapter Id="order" Number="07" Title="One order up close">
+            <p>
+                Let us zoom in on a single message: the very first order of our game.
+                After 4.5 seconds, the Cybran player selects their Commander and orders a Land Factory.
+                Here are all 64 bytes of it. <strong>Point at a group to see what it means.</strong>
+            </p>
+            <div class="card">
+                <AnnotatedBytes Groups="FirstOrder" Selectable="true" InitialSelection="14" />
+            </div>
+            <div class="flex flex-wrap items-center gap-5 rounded-xl border border-edge bg-surface p-5">
+                <UnitIcon BlueprintId="urb0101" Size="56" Title="Land Factory" />
+                <div class="min-w-0 flex-1">
+                    <p class="font-display text-lg font-bold text-ink">Read together, it says:</p>
+                    <p class="mt-1 text-[16px]">
+                        At 0:04, the Commander of the first army must build a Cybran Land Factory at 455.5 by 853.5,
+                        and drop whatever it was doing.
+                    </p>
+                </div>
+            </div>
+            <p>
+                Did you notice the grey boxes? Six pieces of this message are still a mystery.
+                Nobody has worked out yet what they mean. Because we know their size, we can step over them,
+                and the rest still reads fine. A little mystery is part of the fun.
+            </p>
+            <p>
+                The unit id deserves a word too. Units are not stored by name. Each army counts its units, starting at its own number:
+                the first army at 0, the second at 1,048,576, and so on. Number 0 of each army is always its Commander.
+                Other units get the next number when they first appear. That is all a replay knows about a unit.
+                Whether it is a tank or a bomber, we have to guess from the orders it gets.
+            </p>
+        </AboutChapter>
+
+        <AboutChapter Id="answers" Number="08" Title="From bytes to answers">
+            <p>
+                Reading turns the bytes into a list of events. Each event knows its moment, its player and what happened.
+                The messages about time and turns are folded into the events, so our example becomes a list of 17,612 events.
+                Now the fun begins. With simple counting, we can answer real questions.
+            </p>
+
+            <ol class="grid gap-2 sm:grid-cols-4" aria-label="From bytes to answers">
+                @for (int i = 0; i < Pipeline.Length; i++)
+                {
+                    (string value, string label) = Pipeline[i];
+                    <li class="relative rounded-xl border @(i == Pipeline.Length - 1 ? "border-primary/60 bg-primary/10" : "border-edge bg-surface") px-4 py-4 text-center">
+                        <p class="font-display text-xl font-bold text-ink">@value</p>
+                        <p class="text-sm text-ink-muted">@label</p>
+                        @if (i < Pipeline.Length - 1)
+                        {
+                            <span class="absolute -right-2.5 top-1/2 z-10 hidden -translate-y-1/2 text-primary sm:block" aria-hidden="true">▶</span>
+                        }
+                    </li>
+                }
+            </ol>
+
+            <div class="space-y-4">
+                <div class="card">
+                    <h3 class="text-lg font-bold text-ink">How long was the game?</h3>
+                    <p class="mt-2 text-[16px]">
+                        Take the moment of the last event. Our game ends at tick 54,384. Divide by ten and you get
+                        <strong>1 hour, 30 minutes and 38 seconds</strong>.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3 class="text-lg font-bold text-ink">How fast did they play?</h3>
+                    <p class="mt-2 text-[16px]">
+                        Count the actions of each player and divide by the minutes played. That is the famous <strong>APM</strong>,
+                        actions per minute. One rule matters: everything a player does within one tick counts as one action.
+                        Dragging a line of walls is one move of the hand, not twenty.
+                    </p>
+                    <div class="mt-5 space-y-3">
+                        @foreach ((int faction, string player, int actions, double apm) in Speed)
+                        {
+                            <div class="flex items-center gap-3">
+                                <img src="@Factions.IconPath(faction)" alt="" class="h-6 w-6 shrink-0" />
+                                <span class="w-20 shrink-0 truncate text-sm text-ink sm:w-32">@player</span>
+                                <span class="h-3 flex-1 overflow-hidden rounded-full bg-raised">
+                                    <span class="block h-full rounded-full" style="width: @((apm / 75 * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture))%; background: @Factions.Swatch(faction)"></span>
+                                </span>
+                                <span class="w-24 shrink-0 text-right font-mono text-sm"><span class="font-semibold text-ink">@apm.ToString("0", System.Globalization.CultureInfo.InvariantCulture)</span> <span class="text-ink-faint">APM</span></span>
+                            </div>
+                        }
+                    </div>
+                    <p class="mt-5 text-sm leading-relaxed text-ink-muted">
+                        A fun detail: the Aeon player gave more orders, 9,188 against 7,475, but made fewer actions.
+                        One move of their hand often gave many orders at once.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3 class="text-lg font-bold text-ink">What did they build first?</h3>
+                    <p class="mt-2 text-[16px]">
+                        Keep only the build orders of one player, in the order of time. That list is the <strong>build order</strong>.
+                        Here are the first seconds of both players:
+                    </p>
+                    <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                        @foreach ((int faction, string player, BuildStep[] steps) in Openings)
+                        {
+                            <div class="rounded-lg border border-edge bg-raised/50 p-4">
+                                <p class="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+                                    <img src="@Factions.IconPath(faction)" alt="" class="h-5 w-5" /> @player
+                                </p>
+                                <ol class="space-y-2">
+                                    @foreach (BuildStep step in steps)
+                                    {
+                                        <li class="flex items-center gap-3 text-sm">
+                                            <span class="w-9 font-mono text-ink-faint">@step.Time</span>
+                                            <UnitIcon BlueprintId="@step.BlueprintId" Size="28" />
+                                            <span class="text-ink">@(UnitNames.GetOrNull(step.BlueprintId) ?? step.BlueprintId)</span>
+                                            @if (step.Count > 1)
+                                            {
+                                                <span class="badge">×@step.Count</span>
+                                            }
+                                        </li>
+                                    }
+                                </ol>
+                            </div>
+                        }
+                    </div>
+                    <p class="mt-4 text-sm leading-relaxed text-ink-muted">
+                        Two styles at a glance. The Cybran Commander queues power and mass right away.
+                        The Aeon player fills the new factory with seven engineers in one go.
+                    </p>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="card">
+                        <h3 class="text-lg font-bold text-ink">Where did they start?</h3>
+                        <p class="mt-2 text-[16px]">
+                            Take the spots of the first five buildings and average them.
+                            Early buildings sit around the base, so the average lands right on it.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-lg font-bold text-ink">What did they say?</h3>
+                        <p class="mt-2 text-[16px]">
+                            Chat hides in a surprising place. It travels inside the message for sharing resources,
+                            with zero mass and zero energy. Every player's game sends a copy, so we keep only the one from the sender.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border-l-4 border-primary bg-raised px-5 py-4">
+                    <h3 class="font-bold text-ink">What a replay cannot tell</h3>
+                    <p class="mt-2 text-[16px]">
+                        A replay holds orders, not results. It does not know where the units are, how much health they have,
+                        or who won. To know that, you would have to play the whole game again, like Supreme Commander does.
+                        The winner comes from the FAF server instead.
+                    </p>
+                </div>
+            </div>
+        </AboutChapter>
+
+        <AboutChapter Id="try" Number="09" Title="Try it yourself">
+            <p>
+                Everything on this page happens in your browser, in a few seconds.
+                A replay file you open yourself never leaves your computer.
+            </p>
+            <div class="relative overflow-hidden rounded-2xl border border-primary/50 bg-surface p-8 shadow-[0_0_80px_-30px_var(--th-glow)]">
+                <h3 class="text-2xl font-bold text-ink">Pick a game and look inside</h3>
+                <p class="mt-2 max-w-xl text-[16px]">
+                    Open our example, paste the id of any game from the vault, or drop a replay file from your own computer.
+                </p>
+                <div class="mt-6 flex flex-wrap gap-3">
+                    <a href="replay/@ReplayId" class="btn-primary">Open the example game</a>
+                    <a href="" class="btn-secondary">Open a replay</a>
+                    <a href="@($"{BuildInfo.Repository}/tree/main/src/FAForever.FileFormats.Replay")" target="_blank" rel="noreferrer" class="btn-secondary">Read the code on GitHub</a>
+                </div>
+            </div>
+            <p class="text-sm text-ink-faint">
+                Many people in the FAF community worked out this format over the years.
+                The replay reader in the <a href="https://github.com/FAForever/faf-java-commons" target="_blank" rel="noreferrer" class="text-primary hover:underline">FAF Java Commons</a>
+                library was our guide.
+            </p>
+        </AboutChapter>
+    </article>
+</div>
+
+@code {
+    private static readonly (string Value, string Label)[] HeroStats =
+    [
+        ("1:30:38", "of game time"),
+        ("279 KB", "file in the vault"),
+        ("2.2 MB", "once unpacked"),
+        ("182,942", "messages inside"),
+    ];
+
+    private static readonly (string Id, string Number, string Title)[] Chapters =
+    [
+        ("idea", "01", "Not a video"),
+        ("bytes", "02", "Bytes"),
+        ("reading", "03", "How we read it"),
+        ("formats", "04", "Two formats"),
+        ("header", "05", "The header"),
+        ("body", "06", "The body"),
+        ("order", "07", "One order up close"),
+        ("answers", "08", "Bytes to answers"),
+        ("try", "09", "Try it yourself"),
+    ];
+
+    private static readonly (string Title, string Text)[] IdeaCards =
+    [
+        ("Like chess notation", "A game of chess can be written down as a short list of moves. Anyone can play it again on their own board. A replay is the same idea for Supreme Commander."),
+        ("Tiny files", "Ninety minutes of battle fit in 279 KB. A single photo from a phone is often bigger than that."),
+        ("Even luck repeats", "The game draws its random numbers from one starting number, the seed. The seed is in the replay, so every bit of luck happens again."),
+    ];
+
+    private static readonly (string Title, string Size, string Text, string Example, string Result)[] BuildingBlocks =
+    [
+        ("A byte", "1 byte", "A small number from 0 to 255. Good for kinds and markers.", "0C", "12"),
+        ("A whole number", "4 bytes", "Numbers up to about two billion. The smallest part comes first.", "01 00 00 00", "1"),
+        ("A decimal number", "4 bytes", "A number with a fraction, such as a spot on the map.", "00 C0 E3 43", "455.5"),
+        ("A text", "until a zero", "Letters one after another, until a byte with the value zero.", "75 72 62 30 31 30 31 00", "urb0101"),
+    ];
+
+    private static readonly (string Value, string Title, string Text)[] FormatFacts =
+    [
+        ("8×", "Smaller", "Our example takes 279 KB in the vault and 2.2 MB unpacked. Replays repeat themselves a lot, as the body will show, so they shrink very well."),
+        ("1 line", "Quick to scan", "The summary can be read without unpacking anything. That makes it quick to list games and show who played where."),
+        ("2 ways", "To compress", "New replays use Zstandard, a fast and modern method. Older ones use zlib, written out as plain letters with Base64."),
+    ];
+
+    private static readonly (string Title, string Value, string Text)[] HeaderParts =
+    [
+        ("The game version", "Supreme Commander v1.50.3828", "3828 is the version of the FAF game."),
+        ("The replay version and the map", "Replay v1.9 · /maps/osiris.v0006/osiris.scmap", "Which version of the format this is, and the file of the map."),
+        ("A curious marker", "0D 0A 1A", "A line break and then byte 1A, the old end of file mark from the days of DOS. Most likely it is there so that showing the file as text stops at this point."),
+        ("The mods", "", "Every mod that was active, as Lua tables. Our game used none."),
+        ("The scenario", "", "The map and the lobby options: the victory condition, the unit cap, the sharing rules and more. Osiris is 1024 by 1024, a 20 km map."),
+        ("The clients", "", "Everyone who joined the game, players and observers, each with their FAF player id. Our game had two."),
+        ("Cheats", "", "A single byte. Were cheats allowed?"),
+        ("The armies", "", "One Lua table per army, straight from the lobby: faction, team, start spot, colour, rating, country and clan. Our game: Cybran against Aeon."),
+        ("The seed", "49592157", "The starting number for every bit of chance in the game."),
+    ];
+
+    private static readonly ExampleReplay.ByteGroup[] MessageFrame =
+    [
+        new("0C", "Kind", "12", "", ExampleReplay.Tone.Frame),
+        new("40 00", "Length", "64", "", ExampleReplay.Tone.Frame),
+        new("01 00 00 00 00 00 00 00 …", "Content: as long as the length says", "", "", ExampleReplay.Tone.Unknown),
+    ];
+
+    private static readonly (string Title, string Name, string Text, string Count, ExampleReplay.Tone Tone)[] MessageKinds =
+    [
+        ("Time moves on", "Advance", "The clock moves forward, almost always by a single tick.", "54,384", ExampleReplay.Tone.Frame),
+        ("Whose turn", "SetCommandSource", "The next messages come from this player.", "108,770", ExampleReplay.Tone.Selection),
+        ("An order", "IssueCommand", "An order to units or to a factory: move, attack, build, reclaim and many more.", "14,154", ExampleReplay.Tone.Order),
+        ("A changed order", "RemoveFromCommandQueue and others", "An order that already exists changes: fewer units to build, a new target, or it leaves the queue.", "2,505", ExampleReplay.Tone.Formation),
+        ("A fingerprint", "VerifyChecksum", "The checksum of the game, from every player, every 50 ticks.", "2,176", ExampleReplay.Tone.Target),
+        ("A callback", "SimCallback", "A request from the interface: chat, pings, drawings, sharing mass and energy, and much more.", "569", ExampleReplay.Tone.Blueprint),
+    ];
+
+    private static readonly (string Value, string Label)[] Pipeline =
+    [
+        ("2,294,663", "bytes"),
+        ("182,942", "messages"),
+        ("17,612", "events"),
+        ("Answers", "for you"),
+    ];
+
+    private static readonly (int Faction, string Player, int Actions, double Apm)[] Speed =
+    [
+        (3, "Cybran player", 6410, 70.7),
+        (2, "Aeon player", 4848, 53.5),
+    ];
+
+    private static readonly (int Faction, string Player, BuildStep[] Steps)[] Openings =
+    [
+        (3, "Cybran player", CybranOpening),
+        (2, "Aeon player", AeonOpening),
+    ];
+
+    /// <summary>The bytes of one row of the hero dump as letters; anything unprintable is a dot.</summary>
+    private static string Printable(int offset)
+        => new(FirstBytes.Skip(offset).Take(8).Select(value => value is >= 32 and < 127 ? (char)value : '·').ToArray());
+}

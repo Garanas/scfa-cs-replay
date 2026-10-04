@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="SharpZipLib" />
+    <PackageReference Include="ZstdSharp.Port" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FAForever.FileFormats.Blueprints\FAForever.FileFormats.Blueprints.csproj" />
+    <ProjectReference Include="..\FAForever.FileFormats.Lua\FAForever.FileFormats.Lua.csproj" />
+  </ItemGroup>
+
+</Project>

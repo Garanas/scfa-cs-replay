@@ -1,0 +1,171 @@
+@using FAForever.FileFormats.Replay
+
+<ReplayStatTiles Model="Model" />
+
+<div class="mt-6 grid gap-6 lg:grid-cols-[2fr_3fr]">
+    <div class="card flex flex-col gap-3 self-start">
+        <MapView Model="Model" />
+        <div class="text-center">
+            <p class="font-display text-lg font-bold">@MapName</p>
+            @if (MapSize is { } size)
+            {
+                <p class="text-sm text-ink-muted">@size</p>
+            }
+            @if (Model.Replay.Header.Scenario.Map.DisplayDescription is { Length: > 0 } description)
+            {
+                <p class="mt-2 line-clamp-6 text-sm text-ink-muted" title="@description">@description</p>
+            }
+        </div>
+    </div>
+
+    <div class="space-y-6">
+        <section class="card">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Replay</h3>
+            <dl class="mt-2 grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2">
+                @foreach ((string label, string value) in ReplayFacts)
+                {
+                    <div class="flex justify-between gap-4 border-b border-edge/60 py-2 last:border-0 sm:last:border-b">
+                        <dt class="text-ink-muted">@label</dt>
+                        <dd class="text-right font-medium">@value</dd>
+                    </div>
+                }
+            </dl>
+        </section>
+
+        <section class="card">
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Lobby options</h3>
+            <dl class="mt-2 grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2">
+                @foreach ((string label, string value) in LobbyFacts)
+                {
+                    <div class="flex justify-between gap-4 border-b border-edge/60 py-2 last:border-0 sm:last:border-b">
+                        <dt class="text-ink-muted">@label</dt>
+                        <dd class="text-right font-medium">@value</dd>
+                    </div>
+                }
+            </dl>
+
+            @if (Mods.Count > 0)
+            {
+                <h4 class="mt-6 text-sm font-semibold text-ink-muted">Mods</h4>
+                <ul class="mt-2 flex flex-wrap gap-2">
+                    @foreach (string mod in Mods)
+                    {
+                        <li class="badge">@mod</li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private string MapName => Model.Replay.Header.Scenario.Map.DisplayName ?? Model.Metadata?.mapname ?? "Unknown map";
+
+    private string? MapSize
+    {
+        get
+        {
+            if (Model.Replay.Header.Scenario.Map is { SizeX: int sizeX, SizeZ: int sizeZ } && sizeX > 0 && sizeZ > 0)
+            {
+                // 51.2 world units per kilometre: a 1024 map is 20x20 km.
+                return $"{Math.Round(sizeX / 51.2)} x {Math.Round(sizeZ / 51.2)} km";
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Facts about the recording itself: who made it, when, and what the parser found.
+    /// </summary>
+    private List<(string Label, string Value)> ReplayFacts
+    {
+        get
+        {
+            ReplayHeader header = Model.Replay.Header;
+
+            List<(string, string)> facts = [];
+            if (Model.Origin is ReplayOrigin.Vault vault)
+            {
+                facts.Add(("Replay ID", $"#{vault.ReplayId}"));
+            }
+            if (Model.Metadata is { } metadata)
+            {
+                facts.Add(("Host", metadata.host));
+                facts.Add(("Recorded by", metadata.recorder));
+                facts.Add(("Played on", DateTimeOffset.FromUnixTimeSeconds((long)metadata.launched_at).ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
+                facts.Add(("Complete", metadata.Complete ? "yes" : "no"));
+            }
+            facts.Add(("Duration", ReplayView.FormatDuration(ReplayAnalysis.GetDuration(Model.Replay))));
+            facts.Add(("Game version", header.GameVersion.Replace("Supreme Commander ", string.Empty)));
+            facts.Add(("Seed", header.Seed.ToString()));
+            facts.Add(("Inputs parsed", Model.Replay.Body.UserInput.Count.ToString("N0")));
+            facts.Add(("In sync", Model.Replay.Body.InSync ? "yes" : "no, desync detected"));
+            return facts;
+        }
+    }
+
+    /// <summary>
+    /// The settings the game was started with, from the lobby options in the header.
+    /// </summary>
+    private List<(string Label, string Value)> LobbyFacts
+    {
+        get
+        {
+            ReplayHeader header = Model.Replay.Header;
+            ReplayScenarioOptions options = header.Scenario.Options;
+
+            List<(string, string)> facts = [];
+            facts.Add(("Players", header.Armies.Count(army => army.Civilian != true).ToString()));
+            if (options.VictoryName is { } victory)
+            {
+                facts.Add(("Victory condition", victory));
+            }
+            if (options.UnitCap is { } unitCap)
+            {
+                facts.Add(("Unit cap", unitCap.ToString("N0")));
+            }
+            if (options.ShareName is { } share)
+            {
+                facts.Add(("Share condition", share));
+            }
+            if (options.PrebuiltUnits is { } prebuilt)
+            {
+                facts.Add(("Prebuilt units", prebuilt ? "yes" : "no"));
+            }
+            if (options.AllowObservers is { } observers)
+            {
+                facts.Add(("Observers allowed", observers ? "yes" : "no"));
+            }
+            if (options.AutoTeamsName is { } autoTeams)
+            {
+                facts.Add(("Auto teams", autoTeams));
+            }
+            if (options.TeamSpawn is { Length: > 0 } teamSpawn)
+            {
+                facts.Add(("Spawns", teamSpawn.Replace('_', ' ')));
+            }
+            facts.Add(("Cheats", header.CheatsEnabled ? "enabled" : "disabled"));
+            return facts;
+        }
+    }
+
+    private List<string> Mods
+    {
+        get
+        {
+            List<string> mods = [];
+            foreach (LuaData mod in Model.Replay.Header.Mods)
+            {
+                if (mod is LuaData.Table table && table.TryGetStringValue("name", out string? name) && name is { Length: > 0 })
+                {
+                    mods.Add(name);
+                }
+            }
+
+            return mods;
+        }
+    }
+}

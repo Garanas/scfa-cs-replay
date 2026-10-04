@@ -1,0 +1,294 @@
+@using FAForever.FileFormats.Replay
+@inherits UrlStateComponent
+@inject IJSRuntime JS
+
+<article>
+    @* Two columns: what was played (map preview, map, player count) and which replay it is
+       (title, game length, vault number), plus a share button as large as the map preview. On
+       narrow screens the share button sits next to the map and the second column moves below. *@
+    <header class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-edge pb-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <div class="flex min-w-0 items-center gap-4">
+            <div class="w-20 shrink-0">
+                <MapCanvas Model="Model" AriaLabel="@($"Map preview of {MapName}")" />
+            </div>
+            <div class="min-w-0">
+                <h1 class="truncate text-2xl font-bold sm:text-3xl">@MapName</h1>
+                <p class="mt-1 text-lg font-semibold text-ink-muted">@PlayerCount @(PlayerCount == 1 ? "player" : "players")</p>
+            </div>
+        </div>
+        <div class="col-span-2 flex min-w-0 flex-col gap-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:items-end sm:text-right">
+            <p class="m-0 max-w-full truncate font-medium" title="@Title">@Title</p>
+            <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                <span class="badge" title="In-game duration">@FormatDuration(duration)</span>
+                @if (Model.Origin is ReplayOrigin.Vault vault)
+                {
+                    <button type="button" class="badge cursor-pointer transition hover:border-primary hover:text-primary"
+                            title="Copy the replay id" @onclick="() => CopyReplayId(vault.ReplayId)">
+                        @(copied ? "copied!" : OriginLabel)
+                    </button>
+                }
+                else
+                {
+                    <span class="badge">@OriginLabel</span>
+                }
+                @if (!Model.Replay.Body.InSync)
+                {
+                    <span class="badge border-primary text-primary" title="The checksums of the players diverged during this game">desync</span>
+                }
+            </div>
+        </div>
+        @if (Model.Origin is ReplayOrigin.Vault shared)
+        {
+            @* A link to a local file means nothing to someone else, so only vault replays get one. *@
+            <button type="button"
+                    class="col-start-2 row-start-1 flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 justify-self-end rounded-lg sm:col-start-3 border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary"
+                    title="@(canShare ? "Share a link to this view" : "Copy a link to this view")"
+                    @onclick="() => ShareLink(shared.ReplayId)">
+                <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <path d="M16 6l-4-4-4 4" />
+                    <path d="M12 2v13" />
+                </svg>
+                <span class="text-xs font-semibold">@(linkCopied ? "Copied" : "Share")</span>
+            </button>
+        }
+    </header>
+
+    @* On narrow screens the tabs stay on one line and scroll sideways; the active one is scrolled into view. *@
+    <nav class="tab-strip mt-6 border-b border-edge pb-px" aria-label="Replay sections">
+        @foreach (Tab tab in Enum.GetValues<Tab>())
+        {
+            @* Moderation is a different use of the page than the analysis tabs, so it sits apart, on the right. *@
+            <button type="button" id="@TabId(tab)" class="@(tab == activeTab ? ActiveTabClass : TabClass) @(tab == Tab.Moderation ? "ml-auto" : "")" @onclick="() => SelectTab(tab)">
+                @TabLabel(tab)
+            </button>
+        }
+    </nav>
+
+    <div class="py-6">
+        @TabIntro(activeTab)
+        @switch (activeTab)
+        {
+            case Tab.Overview:
+                <OverviewPanel Model="Model" />
+                break;
+            case Tab.Players:
+                <PlayersPanel Model="Model" />
+                break;
+            case Tab.Stats:
+                <StatsPanel Model="Model" />
+                break;
+            case Tab.Playthrough:
+                <PlaythroughPanel Model="Model" />
+                break;
+            case Tab.BuildOrder:
+                <BuildOrderPanel Model="Model" />
+                break;
+            case Tab.Chat:
+                <ChatPanel Model="Model" />
+                break;
+            case Tab.Events:
+                <EventsPanel Model="Model" />
+                break;
+            case Tab.Callbacks:
+                <CallbacksPanel Model="Model" />
+                break;
+            case Tab.Moderation:
+                <ModerationPanel Model="Model" />
+                break;
+        }
+    </div>
+</article>
+
+@code {
+    private const string TabClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md px-3 py-2 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink sm:px-4";
+    private const string ActiveTabClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md border-b-2 border-primary bg-raised px-3 py-2 text-sm font-semibold text-primary sm:px-4";
+
+    private enum Tab
+    {
+        Overview,
+        Players,
+        Stats,
+        Playthrough,
+        BuildOrder,
+        Chat,
+        Events,
+        Callbacks,
+        Moderation,
+    }
+
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private Tab activeTab = Tab.Overview;
+    private TimeSpan duration;
+    private bool copied;
+    private bool canShare;
+    private bool linkCopied;
+    private Tab? scrolledToTab;
+
+    protected override void OnParametersSet()
+    {
+        duration = ReplayAnalysis.GetDuration(Model.Replay);
+        // The URL is the source of truth for the active tab, so a view can be shared.
+        activeTab = ParseTab(UrlQuery.Get(Navigation, "tab"));
+    }
+
+    /// <summary>Copies the vault id (what the FAF client's replay search takes) and confirms it on the badge for a moment.</summary>
+    private async Task CopyReplayId(int replayId)
+    {
+        if (!await JS.InvokeAsync<bool>("fafReplay.copyText", replayId.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+        {
+            return;
+        }
+
+        copied = true;
+        StateHasChanged();
+        await Task.Delay(1500);
+        copied = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (scrolledToTab != activeTab)
+        {
+            scrolledToTab = activeTab;
+            await JS.InvokeVoidAsync("fafReplay.scrollIntoView", TabId(activeTab));
+        }
+
+        // Only where the system has a share sheet (mobile, Safari, Chromium on Windows and ChromeOS).
+        if (firstRender && await JS.InvokeAsync<bool>("fafReplay.canShare"))
+        {
+            canShare = true;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Hands the address of this view to the system's share sheet, or copies it where there is none.</summary>
+    private async Task ShareLink(int replayId)
+    {
+        if (canShare)
+        {
+            await JS.InvokeVoidAsync("fafReplay.shareLink", Navigation.Uri, LinkTitle(replayId));
+            return;
+        }
+
+        if (!await JS.InvokeAsync<bool>("fafReplay.copyText", Navigation.Uri))
+        {
+            return;
+        }
+
+        linkCopied = true;
+        StateHasChanged();
+        await Task.Delay(1500);
+        linkCopied = false;
+    }
+
+    /// <summary>The title a shared link gets, e.g. "Replay #25717491 on Osiris · Chat".</summary>
+    private string LinkTitle(int replayId)
+        => $"Replay #{replayId} on {MapName}" + (activeTab == Tab.Overview ? "" : $" · {TabLabel(activeTab)}");
+
+    private void SelectTab(Tab tab)
+    {
+        activeTab = tab;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("tab", TabQueryValue(tab)), replace: true);
+    }
+
+    // The tab query values are part of the link contract, which the AI prompt also teaches
+    // (ModerationLog.AppendLinks): never rename one, and update the prompt when tabs change.
+    private static Tab ParseTab(string? value) => value?.ToLowerInvariant() switch
+    {
+        "players" => Tab.Players,
+        "stats" => Tab.Stats,
+        "playthrough" => Tab.Playthrough,
+        "buildorder" => Tab.BuildOrder,
+        "chat" => Tab.Chat,
+        "events" => Tab.Events,
+        "callbacks" => Tab.Callbacks,
+        "moderation" => Tab.Moderation,
+        _ => Tab.Overview,
+    };
+
+    private static string TabId(Tab tab) => $"replay-tab-{tab.ToString().ToLowerInvariant()}";
+
+    private static string? TabQueryValue(Tab tab)
+        => tab == Tab.Overview ? null : tab.ToString().ToLowerInvariant();
+
+    private string Title => Model.Metadata?.title is { Length: > 0 } title
+        ? title
+        : Model.Origin is ReplayOrigin.LocalFile localFile
+            ? localFile.FileName
+            : $"Replay #{(Model.Origin as ReplayOrigin.Vault)?.ReplayId}";
+
+    private string MapName => Model.Replay.Header.Scenario.Map.DisplayName is { Length: > 0 } name
+        ? name
+        : Model.Metadata?.mapname ?? "Unknown map";
+
+    private int PlayerCount
+    {
+        get
+        {
+            int armies = Model.Replay.Header.Armies.Count(army => army.Civilian != true);
+            return armies > 0 ? armies : Model.Metadata?.num_players ?? Model.Replay.Header.Clients.Length;
+        }
+    }
+
+    private string OriginLabel => Model.Origin switch
+    {
+        ReplayOrigin.Vault vault => $"vault #{vault.ReplayId}",
+        ReplayOrigin.LocalFile => "local file",
+        _ => "replay",
+    };
+
+    private string TabLabel(Tab tab) => tab switch
+    {
+        Tab.Overview => "Overview",
+        Tab.Players => "Players",
+        Tab.Stats => "Statistics",
+        Tab.Playthrough => "Playthrough",
+        Tab.BuildOrder => "Build order",
+        Tab.Chat => "Chat",
+        Tab.Events => "Events",
+        Tab.Callbacks => "Callbacks",
+        Tab.Moderation => "Moderation",
+        _ => tab.ToString(),
+    };
+
+    /// <summary>One or two lines on what a tab shows and where it comes from in the game's code; none on the Overview and Moderation.</summary>
+    private static RenderFragment TabIntro(Tab tab) => tab switch
+    {
+        Tab.Players => Intro(@<text>
+            Who played, from the lobby options stored in the replay header (@FaSource("lua/ui/lobby/lobbyOptions.lua")),
+            with the actions each player issued during the game.</text>),
+        Tab.Stats => Intro(@<text>
+            The end-of-game report the game sends to the server for achievements, which is logged in the replay; the
+            simulation tallies the numbers in @FaSource("lua/sim/score.lua"). The score screen's data is not in the replay.</text>),
+        Tab.Playthrough => Intro(@<text>
+            The players' orders played back on the map. A replay records input only, not the simulation, so this shows
+            what players ordered rather than where their units were.</text>),
+        Tab.BuildOrder => Intro(@<text>
+            What two players ordered to be built in the first ten minutes, side by side. The replay holds the orders,
+            not whether construction finished.</text>),
+        Tab.Chat => Intro(@<text>
+            Chat messages (@FaSource("lua/ui/game/chat.lua")), map pings (@FaSource("lua/ui/game/ping.lua")) and drawings
+            (@FaSource("lua/ui/game/painting", "painting", tree: true)), with the pings and drawings on the map.</text>),
+        Tab.Events => Intro(@<text>
+            Everything the clients sent to the simulation, tick by tick: orders, selections, callbacks and more.
+            This is the raw input stream that a replay consists of.</text>),
+        Tab.Callbacks => Intro(@<text>
+            Sim callbacks: the UI asking the simulation to act on a player's behalf, such as distributing orders, giving resources to an ally or voting
+            to recall. The endpoints are defined in @FaSource("lua/SimCallbacks.lua").</text>),
+        _ => _ => { },
+    };
+
+    private static RenderFragment Intro(RenderFragment content)
+        => @<p class="mb-4 text-sm text-ink-muted">@content</p>;
+
+    /// <summary>A link to a file (or folder) of the game's Lua code in the FAForever/fa repository.</summary>
+    private static RenderFragment FaSource(string path, string? label = null, bool tree = false)
+        => @<a class="font-mono text-xs text-primary hover:underline" href="https://github.com/FAForever/fa/@(tree ? "tree" : "blob")/develop/@path"
+               target="_blank" rel="noreferrer">@(label ?? path[(path.LastIndexOf('/') + 1)..])</a>;
+
+    internal static string FormatDuration(TimeSpan duration)
+        => duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss") : duration.ToString(@"m\:ss");
+}

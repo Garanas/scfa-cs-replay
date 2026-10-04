@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FAForever.FileFormats.Blueprints\FAForever.FileFormats.Blueprints.csproj" />
+  </ItemGroup>
+
+</Project>

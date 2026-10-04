@@ -4,7 +4,7 @@
 # size (about 20 px); the Viewer shows them at that size.
 param(
     [string]$Source = "D:/SteamLibrary/steamapps/common/Supreme Commander Forged Alliance/gamedata/textures/textures/ui/common/game/unit_view_icons",
-    [string]$Output = (Join-Path $PSScriptRoot "../FAForever.Replay.Viewer/wwwroot/images/stats")
+    [string]$Output = (Join-Path $PSScriptRoot "../src/FAForever.Vault.Viewer/wwwroot/images/stats")
 )
 
 $ErrorActionPreference = "Stop"

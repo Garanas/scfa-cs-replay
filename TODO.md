@@ -26,7 +26,7 @@
   `playerStats.player` when signed in and merge into the replay page: winner badges in Players,
   rating changes (`beforeMean/afterMean`), validity. The replay file itself never knows who won.
 - [x] ~~Map blueprint ids to unit names/icons~~: icons via the sprite atlases (`UnitIcon`), names
-  via `FAForever.Replay/UnitNames.g.cs`, generated from the game repo's blueprint Description
+  via `src/FAForever.FileFormats.Blueprints/UnitNames.g.cs`, generated from the game repo's blueprint Description
   fields by `tools/generate-unit-names.ps1`.
 - [ ] **Put the remaining selections in the URL** (see the guardrails in AGENTS.md, "Shareable view
   state"): the selected chat message or drawing (`ChatPanel.selected`), the selected order

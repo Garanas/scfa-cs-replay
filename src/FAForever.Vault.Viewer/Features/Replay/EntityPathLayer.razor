@@ -1,0 +1,83 @@
+@using FAForever.FileFormats.Replay
+
+@* The route of one unit on the Build order tab, inside MapView's Overlay slot in world
+   coordinates: a line through the orders of each chain (shift-queued orders, see
+   ReplayEntity.ContinuesChain), and a marker per order with a position - construction orders
+   as the unit icon, the first order ringed. A new chain starts without a line: that order
+   replaced the queue. The line shows what the player ordered, not where the unit went. *@
+
+<g pointer-events="none">
+    @foreach (string points in chains)
+    {
+        <polyline points="@points" fill="none" stroke="rgba(10, 12, 18, 0.8)" stroke-width="5"
+                  stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+        <polyline points="@points" fill="none" stroke="@(Color ?? "#ffffff")" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
+    }
+    @foreach (Marker marker in markers)
+    {
+        @if (marker.BlueprintId is { } blueprintId)
+        {
+            <circle cx="@Fmt(marker.X)" cy="@Fmt(marker.Z)" r="@Fmt(Size * 0.55)" fill="rgba(10, 12, 18, 0.7)"
+                    stroke="@(Color ?? "#ffffff")" stroke-width="@(marker.IsFirst ? 3 : 1.5)" vector-effect="non-scaling-stroke" />
+            <image href="images/units/units/@(blueprintId.ToLowerInvariant()).png"
+                   x="@Fmt(marker.X - Size * 0.35)" y="@Fmt(marker.Z - Size * 0.35)" width="@Fmt(Size * 0.7)" height="@Fmt(Size * 0.7)" />
+        }
+        else
+        {
+            <circle cx="@Fmt(marker.X)" cy="@Fmt(marker.Z)" r="@Fmt(Size * (marker.IsFirst ? 0.35 : 0.2))" fill="@(Color ?? "#ffffff")"
+                    stroke="rgba(10, 12, 18, 0.8)" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+        }
+    }
+</g>
+
+@code {
+    [Parameter, EditorRequired] public required ReplayEntity Entity { get; set; }
+
+    /// <summary>The player's in-game colour.</summary>
+    [Parameter] public string? Color { get; set; }
+
+    /// <summary>The size of a construction marker in world units.</summary>
+    [Parameter] public double Size { get; set; } = 24;
+
+    private sealed record Marker(float X, float Z, string? BlueprintId, bool IsFirst);
+
+    private readonly List<string> chains = [];
+    private readonly List<Marker> markers = [];
+
+    protected override void OnParametersSet()
+    {
+        chains.Clear();
+        markers.Clear();
+
+        List<string> current = [];
+        for (int index = 0; index < Entity.Orders.Count; index++)
+        {
+            ReplayEntityOrder order = Entity.Orders[index];
+            if (!Entity.ContinuesChain(index) && current.Count > 0)
+            {
+                Close(current);
+            }
+            if (order.Position is not { } position)
+            {
+                continue;
+            }
+
+            current.Add($"{Fmt(position.X)},{Fmt(position.Z)}");
+            bool isBuild = CommandCategories.GetCategory(order.CommandType) == CommandCategory.Build;
+            markers.Add(new Marker(position.X, position.Z, isBuild ? order.BlueprintId : null, markers.Count == 0));
+        }
+        Close(current);
+    }
+
+    private void Close(List<string> points)
+    {
+        if (points.Count > 1)
+        {
+            chains.Add(string.Join(' ', points));
+        }
+        points.Clear();
+    }
+
+    private static string Fmt(double value) => MapCanvas.Fmt(value);
+}

@@ -3,35 +3,49 @@
 A .NET 10 solution for parsing and analysing Supreme Commander: Forged Alliance (Forever) replays,
 with a Blazor WebAssembly front-end for searching the FAForever vault and inspecting replays.
 
-This file holds what applies everywhere. Two projects have their own guide, which agents that
+This file holds what applies everywhere. Three projects have their own guide, which agents that
 support nested guides pick up when they touch files there. Read it before planning work in that
 project:
 
-- **Parser work** (`FAForever.Replay`, its tests and benchmarks): [`FAForever.Replay/AGENTS.md`](FAForever.Replay/AGENTS.md)
-  covers the fingerprint test, benchmarks, the replay model's semantics (entity ids, `ClearQueue`, lobby
-  data, Lua booleans), game-data tables.
-- **UI work** (`FAForever.Replay.Viewer`): [`FAForever.Replay.Viewer/AGENTS.md`](FAForever.Replay.Viewer/AGENTS.md)
+- **Replay parser work** (`FAForever.FileFormats.Replay`, its tests and benchmarks):
+  [`src/FAForever.FileFormats.Replay/AGENTS.md`](src/FAForever.FileFormats.Replay/AGENTS.md) covers the
+  fingerprint test, benchmarks, the replay model's semantics (entity ids, `ClearQueue`, lobby data,
+  Lua booleans), game-data tables.
+- **Blueprint and Lua work** (`FAForever.FileFormats.Blueprints`, `FAForever.FileFormats.Lua`):
+  [`src/FAForever.FileFormats.Blueprints/AGENTS.md`](src/FAForever.FileFormats.Blueprints/AGENTS.md) covers
+  the blueprint parser, the Lua evaluator, blueprint ids and unit names.
+- **UI work** (`FAForever.Vault.Viewer`): [`src/FAForever.Vault.Viewer/AGENTS.md`](src/FAForever.Vault.Viewer/AGENTS.md)
   covers WebAssembly rules, styling and theming, icons, shareable view state (the URL guardrails),
   the Moderation tab and its AI prompt, analytics, Playwright.
 
 ## Solution layout
 
+Folders by role (`src/`, `tests/`, `benchmarks/`, `sandbox/`); the solution groups the projects by
+product in the solution folders `FileFormats` and `Vault`.
+
 | Project | Purpose |
 |---|---|
-| `FAForever.Replay` | Core replay parser (the crown jewel: change with care, it is benchmarked and heavily tested). |
-| `FAForever.Replay.Viewer` | Standalone Blazor WebAssembly app (UI). Tailwind CSS v4, no component library. |
-| `FAForever.Replay.Server` | Minimal ASP.NET Core host: serves the Viewer's static files, proxies the OAuth token exchange **and** fills in link previews for replay pages. |
-| `FAForever.Replay.Test` | MSTest suite with real replay assets under `assets/`. |
-| `FAForever.Replay.Sandbox` | CLI scratch pad. |
-| `FAForever.Replay.Benchmark` | BenchmarkDotNet harness. |
+| `src/FAForever.FileFormats.Lua` | Lua values (`LuaData`), their formatter, and an evaluator for the data-only Lua that game files are written in. |
+| `src/FAForever.FileFormats.Blueprints` | Blueprint files (`.bp`), blueprint ids, unit names and factions. References Lua. |
+| `src/FAForever.FileFormats.Replay` | Core replay parser (the crown jewel: change with care, it is benchmarked and heavily tested). References Lua and Blueprints. |
+| `src/FAForever.Vault.Viewer` | Standalone Blazor WebAssembly app (UI). Tailwind CSS v4, no component library. |
+| `src/FAForever.Vault.Server` | Minimal ASP.NET Core host: serves the Viewer's static files, proxies the OAuth token exchange **and** fills in link previews for replay pages. |
+| `tests/FAForever.FileFormats.*.Tests` | MSTest suites, one per library, with real assets under `assets/`. |
+| `benchmarks/FAForever.FileFormats.Replay.Benchmarks` | BenchmarkDotNet harness. |
+| `sandbox/FAForever.FileFormats.Replay.Sandbox` | CLI scratch pad. |
+
+Shared MSBuild settings: `Directory.Build.props` at the root (target framework, nullable, implicit
+usings) for every project; `tests/Directory.Build.props` adds the MSTest packages and
+`tests/Directory.Build.targets` copies each test project's `assets/` to the output. A new test
+project only lists its project reference.
 
 ## Commands
 
 ```sh
-dotnet build FAForever.sln                         # build everything
-dotnet test FAForever.Replay.Test                  # run the test suite
-dotnet watch --project FAForever.Replay.Server     # run the hosted app on http://127.0.0.1:5080
-tools/tailwindcss.exe -i Styles/app.css -o wwwroot/css/app.css --watch   # from FAForever.Replay.Viewer/
+dotnet build FAForever.sln                              # build everything
+dotnet test FAForever.sln                               # run every test project
+dotnet watch --project src/FAForever.Vault.Server       # run the hosted app on http://127.0.0.1:5080
+tools/tailwindcss.exe -i Styles/app.css -o wwwroot/css/app.css --watch   # from src/FAForever.Vault.Viewer/
 ```
 
 VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: watch`, `benchmark`.
@@ -46,7 +60,7 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
   Everything about the server (compose stack, setup script, deploy key, runbook) lives in a
   separate public repository, [Garanas/jipwijnia-vps](https://github.com/Garanas/jipwijnia-vps); try
   the image locally with `docker build -t scfa-cs-replay . && docker run --rm -p 8080:8080 scfa-cs-replay`.
-  The footer shows the commit a build came from (`FAForever.Replay.Viewer/Services/BuildInfo.cs`; CI
+  The footer shows the commit a build came from (`src/FAForever.Vault.Viewer/Services/BuildInfo.cs`; CI
   passes it as the `SOURCE_REVISION` build argument, since the image build has no `.git`).
 
 ## External FAForever endpoints (verified 2026-10)
@@ -72,10 +86,10 @@ the FAF team before any public deployment (see TODO.md).
   functions (`ReplaySemantics`, `ReplayAnalysis`).
 - NuGet versions live **only** in `Directory.Packages.props` (central package management).
 - UI text is English. Code identifiers are English.
-- Tests: MSTest with `[DataRow]` over the real replay assets in `FAForever.Replay.Test/assets/`.
+- Tests: MSTest with `[DataRow]` over the real assets in each test project's `assets/` (replays in `tests/FAForever.FileFormats.Replay.Tests/assets/`).
 - Keep the Server minimal: static hosting, the token proxy and link previews. It must never hold
   secrets or session state.
-- Link previews (`FAForever.Replay.Server/ReplayLinkPreview.cs`): unfurlers (Discord, X, Slack) do not
+- Link previews (`src/FAForever.Vault.Server/ReplayLinkPreview.cs`): unfurlers (Discord, X, Slack) do not
   run the app, so `/replay/{id}` is served as `index.html` with that replay's Open Graph tags in place
   of the default block between `<!-- Link preview` and `<!-- /Link preview -->`. The data is the
   replay file's first line (its JSON metadata), fetched anonymously with a Range request; the replay
@@ -87,7 +101,7 @@ the FAF team before any public deployment (see TODO.md).
 ## Gotchas
 
 - Player names come from `Replay.Header.Clients[input.SourceId]`; ticks are **10 per second**.
-- `ReplayLoadingStage` is declared in the **global namespace** (not `FAForever.Replay`).
+- `ReplayLoadingStage` is declared in the **global namespace** (not `FAForever.FileFormats.Replay`).
 - `ReplayMetadata` field names are mixed-case on purpose (they mirror the JSON): `uid`, `mapname`,
   `launched_at` (unix seconds), `num_players`, `FeaturedMod`, …
 - The test workflow (`.github/workflows/test.yml`) runs on Linux: anything Windows-only

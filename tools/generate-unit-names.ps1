@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# Generates FAForever.Replay/UnitNames.g.cs from the blueprint files of the FAF game
+# Generates src/FAForever.FileFormats.Blueprints/UnitNames.g.cs from the blueprint files of the FAF game
 # repository. The name of a unit is the Description field of its *_unit.bp, e.g.
 #   Description = "<LOC uel0001_desc>Armored Command Unit",
 # with the localisation marker stripped. Output is deterministic (sorted by id), so the
@@ -10,7 +10,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$target = Join-Path $PSScriptRoot "..\FAForever.Replay\UnitNames.g.cs"
+$target = Join-Path $PSScriptRoot "..\src\FAForever.FileFormats.Blueprints\UnitNames.g.cs"
 $pattern = 'Description\s*=\s*"(?:<LOC\s+[^>]+>)?([^"]*)"'
 
 $entries = Get-ChildItem -Path $Source -Recurse -Filter "*_unit.bp" | ForEach-Object {
@@ -30,7 +30,7 @@ $builder = [System.Text.StringBuilder]::new()
 [void]$builder.AppendLine("// the Description field). Do not edit by hand; re-run the script after a game update.")
 [void]$builder.AppendLine("// </auto-generated>")
 [void]$builder.AppendLine("")
-[void]$builder.AppendLine("namespace FAForever.Replay")
+[void]$builder.AppendLine("namespace FAForever.FileFormats.Blueprints")
 [void]$builder.AppendLine("{")
 [void]$builder.AppendLine("    public static partial class UnitNames")
 [void]$builder.AppendLine("    {")

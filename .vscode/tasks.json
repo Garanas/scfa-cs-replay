@@ -18,10 +18,11 @@
       "command": "dotnet",
       "args": [
         "test",
+        "FAForever.sln",
         "--nologo"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/FAForever.Replay.Test"
+        "cwd": "${workspaceFolder}"
       },
       "group": {
         "kind": "test",
@@ -33,7 +34,7 @@
         "panel": "dedicated",
         "clear": true
       },
-      "detail": "Run the MSTest suite once"
+      "detail": "Run every test project once"
     },
     {
       "label": "test: watch",
@@ -45,7 +46,7 @@
         "--nologo"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/FAForever.Replay.Test"
+        "cwd": "${workspaceFolder}/tests/FAForever.FileFormats.Replay.Tests"
       },
       "isBackground": true,
       "problemMatcher": "$msCompile",
@@ -54,7 +55,7 @@
         "panel": "dedicated",
         "clear": true
       },
-      "detail": "Re-run the MSTest suite on every file change"
+      "detail": "Re-run the replay tests on every file change (dotnet watch takes one project)"
     },
     {
       "label": "benchmark",
@@ -65,7 +66,7 @@
         "--configuration=Release"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/FAForever.Replay.Benchmark"
+        "cwd": "${workspaceFolder}/benchmarks/FAForever.FileFormats.Replay.Benchmarks"
       },
       "problemMatcher": "$msCompile",
       "presentation": {
@@ -83,7 +84,7 @@
         "watch"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/FAForever.Replay.Viewer",
+        "cwd": "${workspaceFolder}/src/FAForever.Vault.Viewer",
         "env": {
           "ASPNETCORE_ENVIRONMENT": "Development"
         }
@@ -115,14 +116,14 @@
         "--nologo"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/FAForever.Replay.Viewer"
+        "cwd": "${workspaceFolder}/src/FAForever.Vault.Viewer"
       },
       "problemMatcher": "$msCompile",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated"
       },
-      "detail": "Publish the standalone viewer (without the server) to FAForever.Replay.Viewer/release"
+      "detail": "Publish the standalone viewer (without the server) to src/FAForever.Vault.Viewer/release"
     },
     {
       "label": "server",
@@ -132,7 +133,7 @@
         "watch"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/FAForever.Replay.Server",
+        "cwd": "${workspaceFolder}/src/FAForever.Vault.Server",
         "env": {
           "ASPNETCORE_ENVIRONMENT": "Development"
         }
@@ -165,7 +166,7 @@
         "--watch"
       ],
       "options": {
-        "cwd": "${workspaceFolder}/FAForever.Replay.Viewer"
+        "cwd": "${workspaceFolder}/src/FAForever.Vault.Viewer"
       },
       "isBackground": true,
       "problemMatcher": [],

@@ -9,7 +9,7 @@
 .claude/
 .playwright-mcp/
 tools/
-FAForever.Replay.Test/
-FAForever.Replay.Benchmark/
-FAForever.Replay.Sandbox/
+tests/
+benchmarks/
+sandbox/
 **/*.user

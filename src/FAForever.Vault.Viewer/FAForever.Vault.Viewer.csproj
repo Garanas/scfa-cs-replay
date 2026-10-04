@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <!-- PWA: the build lists every published file with its hash for the service worker. -->
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FAForever.FileFormats.Replay\FAForever.FileFormats.Replay.csproj" />
+  </ItemGroup>
+
+  <!--
+    Rebuild wwwroot/css/app.css from Styles/app.css with the Tailwind standalone CLI.
+    The generated file is committed, so builds still work when the CLI is absent
+    (e.g. CI); run tools/install-tailwind.ps1 once to enable local rebuilds.
+  -->
+  <Target Name="BuildTailwindCss" BeforeTargets="ResolveStaticWebAssetsInputs">
+    <PropertyGroup>
+      <TailwindCli>$(MSBuildProjectDirectory)\..\..\tools\tailwindcss.exe</TailwindCli>
+    </PropertyGroup>
+    <Exec Condition="Exists('$(TailwindCli)')"
+          Command="&quot;$(TailwindCli)&quot; -i &quot;$(MSBuildProjectDirectory)\Styles\app.css&quot; -o &quot;$(MSBuildProjectDirectory)\wwwroot\css\app.css&quot; --minify"
+          StandardOutputImportance="low" />
+    <Warning Condition="!Exists('$(TailwindCli)')"
+             Text="Tailwind CLI not found at $(TailwindCli); using the committed wwwroot/css/app.css. Run tools/install-tailwind.ps1 to enable CSS rebuilds." />
+  </Target>
+
+</Project>
