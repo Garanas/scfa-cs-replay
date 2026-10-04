@@ -42,6 +42,13 @@
   read, rated human players carried `Human=false` and civilian armies `Human=true` in every test
   replay. Note: faf-java-commons `LoadUtils.parseLua` has the same inversion (`== 0`), worth
   reporting upstream.
+- [ ] **Make a render of the Build order tab cheaper.** Every event on the tab re-renders all of
+  it: both maps with hundreds of markers and the ledger, 150 to 250 ms in a debug build (measured
+  2026-10-04 on replay 25717491). Hovering an order no longer waits for it (`IHandleEvent` in
+  `BuildOrderPanel`, see the Viewer guide, "Unit cards"), but hovering an entity on the Units view
+  and selecting an order still do. Idea: move the map markers and ledger rows into child components
+  that only re-render when their own highlight or selection changes, and measure again in a
+  release build.
 - [ ] **Turn on automatic unit data updates.** `.github/workflows/update-unit-data.yml` regenerates
   `wwwroot/data/units.json` for a new FA release and opens a pull request. It needs: (1) Settings →
   Actions → General → "Allow GitHub Actions to create and approve pull requests"; (2) for an update
