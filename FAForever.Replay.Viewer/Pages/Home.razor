@@ -19,7 +19,7 @@
 <section class="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
     <div class="card">
         <h2 class="text-lg font-bold">From the vault</h2>
-        <p class="mt-1 text-sm text-ink-muted">Paste a replay ID or link, e.g. <span class="font-mono text-ink">23031279</span>.</p>
+        <p class="mt-1 text-sm text-ink-muted">Paste a replay ID or link, e.g. <span class="font-mono text-ink">25692731</span>.</p>
         <form class="mt-4 flex gap-2" @onsubmit="OpenVaultReplay" @onsubmit:preventDefault>
             <input @ref="vaultReplayInput" class="input-field font-mono" placeholder="Replay ID" inputmode="numeric"
                    @bind="vaultReplayId" @bind:event="oninput" @bind:after="ExtractReplayIdFromLink" disabled="@IsLoading" />
