@@ -13,6 +13,24 @@
         <div class="ml-auto flex items-center gap-3">
             @* About sits apart from the main sections, with the settings on the right. *@
             <NavLink href="about" class="nav-link hidden sm:inline-flex" ActiveClass="active">About</NavLink>
+
+            @* Narrow screens: the sections in a menu, a popover (Popover API). The browser opens and
+               closes it, light dismiss and Escape included; js/app.js closes it when a link is taken. *@
+            <button type="button" popovertarget="main-menu"
+                    class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary sm:hidden"
+                    title="Menu">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" aria-hidden="true">
+                    <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <span class="sr-only">Menu</span>
+            </button>
+            <nav id="main-menu" popover class="menu-popover" aria-label="Main">
+                <NavLink href="" Match="NavLinkMatch.All" class="nav-link" ActiveClass="active">Home</NavLink>
+                <NavLink href="search" class="nav-link" ActiveClass="active">Search</NavLink>
+                <NavLink href="about" class="nav-link" ActiveClass="active">About</NavLink>
+            </nav>
+
             <ModeToggle />
             <FactionSwitcher />
             <UserMenu />

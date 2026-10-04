@@ -205,6 +205,16 @@
         @apply bg-raised text-primary;
     }
 
+    /* The header's menu on narrow screens (AppHeader.razor): a popover, so the browser places it
+       in the top layer; it drops down from the right edge, below the header. */
+    .menu-popover {
+        @apply fixed inset-auto top-14 right-4 m-0 flex-col gap-1 rounded-lg border border-edge bg-surface p-2 text-ink shadow-lg;
+    }
+
+    .menu-popover:popover-open {
+        @apply flex;
+    }
+
     .btn-primary {
         @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-50;
     }

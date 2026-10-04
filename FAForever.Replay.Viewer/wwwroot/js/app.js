@@ -251,6 +251,14 @@ window.fafReplay = {
     }
 };
 
+/* Popover API: a link in a popover menu (the header's menu) navigates in place, so close the menu. */
+document.addEventListener("click", function (event) {
+    const popover = event.target.closest?.("[popover]");
+    if (popover && event.target.closest("a")) {
+        popover.hidePopover();
+    }
+});
+
 /* On "auto", follow the system setting when it changes (e.g. at sunset). */
 window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function () {
     window.fafReplay.applyMode();

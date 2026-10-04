@@ -77,6 +77,9 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
   `bg-primary`, …); never hardcode colours in components, or switching breaks. Never give a faction
   its own backgrounds, and never tie a colour to a faction being light or dark; check new UI in
   both modes.
+- Menus and other things that open on top of the page are popovers (Popover API: `popover` +
+  `popovertarget`, no open/closed state in C#), like the header's menu on narrow screens
+  (`.menu-popover`). `js/app.js` closes a popover when a link inside it is taken.
 - Page width: header, page and footer share `MainLayout.Container` (`max-w-6xl`). The Build order
   tab compares two players side by side and widens it to a full HD screen (`max-w-[1824px]`).
 - Anything drawn on the map goes through `Features/Replay/MapCanvas.razor`: an SVG in world
