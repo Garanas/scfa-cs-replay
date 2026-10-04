@@ -1,0 +1,14 @@
+TrailEmitterBlueprint {
+    BlendMode = 3,
+    HighFidelity = true,
+    LODCutoff = 160,
+    Lifetime = -1.0,
+    LowFidelity = false,
+    MedFidelity = true,
+    RampTexture = "/textures/particles/ramp_white_03.dds",
+    RepeatTexture = "/textures/particles/air_contrail_02.dds",
+    Size = 0.1,
+    SortOrder = 0,
+    TextureRepeatRate = 1,
+    TrailLength = 15,
+}

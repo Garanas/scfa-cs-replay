@@ -59,3 +59,13 @@ give lookup maps for inputs and chat. Lobby option keys/values ← `lua/ui/lobby
 fields of `units/*_unit.bp`, generated into `UnitNames.g.cs` by `tools/generate-unit-names.ps1`
 (`UnitNames.GetOrNull(blueprintId)`; never edit the generated file). Re-check all of these after
 game updates.
+
+Blueprint files (`.bp`) can also be read at runtime: `BlueprintParser.Parse(text, "/units/uel0101/uel0101_unit.bp")`
+mirrors `lua/system/Blueprints.lua` (kinds, blueprint ids) on top of `LuaSourceParser`, an evaluator for the
+data-only Lua subset (tables, constant expressions, named calls; no functions or control flow). It returns typed
+records (`BlueprintUnit` with `BlueprintUnitEconomy`, `BlueprintWeapon`, …; `BlueprintProjectile`, `BlueprintProp`,
+`BlueprintMesh`, `BlueprintEmitter`, `BlueprintTrailEmitter`, `BlueprintBeam`), each read by its own `Read` method
+through `BlueprintTableReader`. They hold a hand-picked subset of fields, named after the file's keys (field
+meanings: `engine/Core/Blueprints/*.lua` in the FA repo); every record keeps its full table in `Raw`. Data is as
+written in the file, before the game's post-processing (mod merges, `ModBlueprints`); most units leave out
+`General.TechLevel`, so use `BlueprintUnit.TechLevel` (from the categories). Every `.bp` in the FA repo parses.
