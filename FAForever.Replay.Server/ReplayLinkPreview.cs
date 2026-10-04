@@ -10,7 +10,7 @@ using Microsoft.Extensions.FileProviders;
 /// <summary>
 /// Link previews for replay pages. Discord, X, Slack and other link unfurlers read the Open Graph
 /// tags of the HTML without running the app, so the Server fills them in for <c>/replay/{id}</c>:
-/// the map preview, the game's title, map, player count, date and length.
+/// the map preview and name, replay id, team layout, date and length.
 /// <para>
 /// The data comes from the first line of the replay file, its JSON metadata, which the vault serves
 /// anonymously (the FAF API's game data needs a token). Only that line is read; the replay itself is
@@ -155,50 +155,50 @@ public sealed class ReplayLinkPreview(
             return null;
         }
 
-        string? mapFolder = String(root, "mapname");
-        List<List<string>> teams = [];
-        if (root.TryGetProperty("teams", out JsonElement teamsElement) && teamsElement.ValueKind == JsonValueKind.Object)
-        {
-            // Keys are team numbers ("1" is no team, everyone for themselves); order by number.
-            foreach (JsonProperty team in teamsElement.EnumerateObject().OrderBy(team => int.TryParse(team.Name, out int number) ? number : int.MaxValue))
-            {
-                if (team.Value.ValueKind != JsonValueKind.Array)
-                {
-                    continue;
-                }
+        // Lobbies without a map selection record the string "None".
+        string? mapFolder = String(root, "mapname") is { Length: > 0 } folder && folder != "None" ? folder : null;
 
-                List<string> names = team.Value.EnumerateArray()
-                    .Where(name => name.ValueKind == JsonValueKind.String)
-                    .Select(name => name.GetString()!)
-                    .ToList();
-                if (names.Count == 0)
-                {
-                    continue;
-                }
-
-                // Team 1 means no team: each of its players stands alone.
-                if (team.Name == "1")
-                {
-                    teams.AddRange(names.Select(name => new List<string> { name }));
-                }
-                else
-                {
-                    teams.Add(names);
-                }
-            }
-        }
-
+        List<int> teamSizes = TeamSizes(root);
         double launchedAt = Number(root, "launched_at");
         double gameEnd = Number(root, "game_end");
         return new ReplayCard(
             replayId,
-            String(root, "title") is { Length: > 0 } title ? title : null,
             mapFolder,
             MapDisplayName(mapFolder),
-            root.TryGetProperty("num_players", out JsonElement players) && players.TryGetInt32(out int count) ? count : teams.Sum(team => team.Count),
+            root.TryGetProperty("num_players", out JsonElement players) && players.TryGetInt32(out int count) ? count : teamSizes.Sum(),
+            teamSizes,
             launchedAt > 0 ? DateTimeOffset.FromUnixTimeSeconds((long)launchedAt) : null,
-            launchedAt > 0 && gameEnd > launchedAt ? TimeSpan.FromSeconds(gameEnd - launchedAt) : null,
-            teams);
+            launchedAt > 0 && gameEnd > launchedAt ? TimeSpan.FromSeconds(gameEnd - launchedAt) : null);
+    }
+
+    /// <summary>How many players each team had, largest first; the names are not kept.</summary>
+    private static List<int> TeamSizes(JsonElement root)
+    {
+        List<int> sizes = [];
+        if (!root.TryGetProperty("teams", out JsonElement teams) || teams.ValueKind != JsonValueKind.Object)
+        {
+            return sizes;
+        }
+
+        foreach (JsonProperty team in teams.EnumerateObject())
+        {
+            int size = team.Value.ValueKind == JsonValueKind.Array
+                ? team.Value.EnumerateArray().Count(name => name.ValueKind == JsonValueKind.String)
+                : 0;
+
+            // Team 1 means no team: each of its players stands alone.
+            if (team.Name == "1")
+            {
+                sizes.AddRange(Enumerable.Repeat(1, size));
+            }
+            else if (size > 0)
+            {
+                sizes.Add(size);
+            }
+        }
+
+        sizes.Sort((a, b) => b.CompareTo(a));
+        return sizes;
     }
 
     /// <summary>
@@ -231,21 +231,22 @@ public sealed class ReplayLinkPreview(
             && name[(separator + 1)..].All(char.IsAsciiDigit);
     }
 
-    /// <summary>The second line of a card, e.g. "Osiris · 2 players · 7 Oct 2025 · 1h 34m".</summary>
+    /// <summary>The description of a card, e.g. "#25717491 · 1v1 · 7 Oct 2025 · 1h 34m".</summary>
     internal static string Summary(ReplayCard card)
     {
-        List<string> parts = [];
-        if (card.MapName is { } map)
+        // Without a map name the title is the replay id already.
+        List<string> parts = card.MapName is null ? [] : [$"#{card.ReplayId}"];
+        if (TeamLayout(card.TeamSizes) is { } layout)
         {
-            parts.Add(map);
+            parts.Add(layout);
         }
-        if (card.PlayerCount > 0)
+        else if (card.PlayerCount > 0)
         {
             parts.Add(card.PlayerCount == 1 ? "1 player" : $"{card.PlayerCount} players");
         }
         if (card.LaunchedAt is { } launchedAt)
         {
-            parts.Add(launchedAt.ToString("d MMM yyyy, HH:mm 'UTC'", CultureInfo.InvariantCulture));
+            parts.Add(launchedAt.ToString("d MMM yyyy", CultureInfo.InvariantCulture));
         }
         if (card.Duration is { } duration)
         {
@@ -255,19 +256,28 @@ public sealed class ReplayLinkPreview(
         return string.Join(" · ", parts);
     }
 
-    /// <summary>Who played, e.g. "Morax vs Blackdeath" or "A, B vs C, D"; empty when unknown.</summary>
-    internal static string Matchup(ReplayCard card)
+    /// <summary>
+    /// "1v1", "4v4", "3v2", "1v1v1"; a free-for-all of more than four players is "6-player FFA".
+    /// Null for a game of one team (or none recorded), where a layout says nothing.
+    /// </summary>
+    internal static string? TeamLayout(IReadOnlyList<int> sizes)
     {
-        const int MaxLength = 200;
-        string matchup = string.Join(" vs ", card.Teams.Select(team => string.Join(", ", team)));
-        return matchup.Length > MaxLength ? matchup[..(MaxLength - 1)] + "…" : matchup;
+        if (sizes.Count < 2)
+        {
+            return null;
+        }
+
+        return sizes.Count > 4 && sizes.All(size => size == 1)
+            ? $"{sizes.Count}-player FFA"
+            : string.Join("v", sizes);
     }
 
     private string RenderTags(ReplayCard card, string pageUrl)
     {
-        string title = card.Title ?? $"Replay #{card.ReplayId}";
-        string matchup = Matchup(card);
-        string description = matchup.Length > 0 ? $"{Summary(card)}\n{matchup}" : Summary(card);
+        // The map names the game best. The lobby title is not used: it is often just the players'
+        // names ("Team A Vs Team B"), or nothing readable at all.
+        string title = card.MapName ?? $"Replay #{card.ReplayId}";
+        string description = Summary(card);
 
         StringBuilder tags = new();
         tags.AppendLine($"{BlockStart} (Open Graph) for replay #{card.ReplayId}, filled in by FAForever.Replay.Server. -->");
@@ -323,10 +333,9 @@ public sealed class ReplayLinkPreview(
 /// <summary>What a link preview shows of a replay, from its metadata.</summary>
 public sealed record ReplayCard(
     int ReplayId,
-    string? Title,
     string? MapFolder,
     string? MapName,
     int PlayerCount,
+    List<int> TeamSizes,
     DateTimeOffset? LaunchedAt,
-    TimeSpan? Duration,
-    List<List<string>> Teams);
+    TimeSpan? Duration);
