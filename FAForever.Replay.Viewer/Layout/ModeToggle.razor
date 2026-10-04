@@ -6,7 +6,7 @@
 
 <button type="button"
         class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary"
-        title="@($"{Label(Theme.Mode)} mode — click for {Label(ThemeService.Next(Theme.Mode)).ToLowerInvariant()}")"
+        title="@($"{Label(Theme.Mode)} mode (click for {Label(ThemeService.Next(Theme.Mode)).ToLowerInvariant()})")"
         @onclick="Theme.CycleModeAsync">
     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

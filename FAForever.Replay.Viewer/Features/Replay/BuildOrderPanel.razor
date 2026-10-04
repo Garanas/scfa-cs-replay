@@ -559,7 +559,7 @@
         bool isSelected = selected == item.Key;
         <button type="button" @key="item.Key" id="@RowId(item.Key)" aria-pressed="@(isSelected ? "true" : "false")"
                 class="feed-row h-7 py-0 @(mirrored ? "flex-row-reverse text-right" : "") @(isSelected ? "bg-raised ring-1 ring-primary" : "")"
-                title="@($"{ChatPanel.FormatTime(item.Timestamp)} · {text}{(item.Position is null ? " (no position)" : "")} — click to highlight")"
+                title="@($"{ChatPanel.FormatTime(item.Timestamp)} · {text}{(item.Position is null ? " (no position)" : "")} (click to highlight)")"
                 @onclick="() => Select(item)"
                 @onmouseenter="() => hovered = item.Group" @onmouseleave="() => hovered = null">
             @if (item.IsBuild && item.BlueprintId is { } blueprintId)

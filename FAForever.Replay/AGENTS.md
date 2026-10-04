@@ -1,6 +1,6 @@
-# Agent guide — FAForever.Replay (the parser)
+# Agent guide: FAForever.Replay (the parser)
 
-The core replay parser: the crown jewel. Change it with care — it is benchmarked and heavily
+The core replay parser: the crown jewel. Change it with care: it is benchmarked and heavily
 tested. The repository-wide guide is [`../AGENTS.md`](../AGENTS.md); how the Viewer drives the
 parser in the browser is in [`../FAForever.Replay.Viewer/AGENTS.md`](../FAForever.Replay.Viewer/AGENTS.md).
 
@@ -18,7 +18,7 @@ parser in the browser is in [`../FAForever.Replay.Viewer/AGENTS.md`](../FAForeve
 ## The replay model
 
 - `.fafreplay` = JSON metadata line + compressed body (zstd, or legacy base64+zlib);
-  `.scfareplay` = raw body — construct `ReplayLoadingStage.Decompressed(stream, null)` directly.
+  `.scfareplay` = raw body; construct `ReplayLoadingStage.Decompressed(stream, null)` directly.
 - `ProcessReplayStage(WithMetadata)` disposes the input stream; don't reuse it.
 - Command selections (`CommandUnits.EntityIds`) carry the entity ids the order went to. An entity id
   is `(army index << 20) | serial`; serial 0 is the army's commander (ACU), later serials follow the
@@ -42,7 +42,7 @@ parser in the browser is in [`../FAForever.Replay.Viewer/AGENTS.md`](../FAForeve
   3=Cybran/4=Seraphim, team where 1 = FFA, start spot, colors, rating MEAN/DEV, country, clan;
   `Raw` holds the full Lua table, e.g. `OwnerID`). `Armies[i].SourceId` links an army to
   `Header.Clients`; it is null for AI and civilian armies. Clients without an army are observers.
-  Game options live in `Header.Scenario.Options`. What a replay does **not** know is who won —
+  Game options live in `Header.Scenario.Options`. What a replay does **not** know is who won:
   that comes from the FAF API only.
 - Lua booleans on the wire are `0 = false`; lobby options additionally encode booleans as the
   strings `'true'/'false'`, `'On'/'Off'` or `'Yes'/'No'` (see the `GetFlexibleBool` reader in

@@ -18,7 +18,7 @@ public sealed class NotAuthenticatedException : Exception;
 /// The attribute and filter names were verified against live responses on 2026-10-03
 /// (search by login, totals, map/mod includes, ratings and factions). The cards also use
 /// game.validity/victoryCondition/replayTicks/replayAvailable and gamePlayerStats.result,
-/// afterMean/afterDeviation, color and ai — names taken from the published schema
+/// afterMean/afterDeviation, color and ai: names taken from the published schema
 /// (/v3/api-docs) and read defensively.
 /// </summary>
 public sealed class FafApiClient(HttpClient http, AuthService auth, IConfiguration configuration)

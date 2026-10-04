@@ -2,7 +2,7 @@
 namespace FAForever.Replay
 {
     /// <summary>
-    /// The faction indices as the lobby stores them in the replay header — the FAF API uses
+    /// The faction indices as the lobby stores them in the replay header; the FAF API uses
     /// the same numbering. 5 is the lobby's "random" slot; civilian armies carry it too.
     /// </summary>
     public enum Faction

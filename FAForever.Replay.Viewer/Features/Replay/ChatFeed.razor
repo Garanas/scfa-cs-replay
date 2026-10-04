@@ -14,7 +14,7 @@
     {
         <button type="button" @key="item.Key" id="@RowId(item.Key)" aria-pressed="@(Selected == item.Key ? "true" : "false")"
                 class="feed-row items-start py-1 @(Selected == item.Key ? "bg-raised ring-1 ring-primary" : "")"
-                title="@($"{ChatPanel.FormatTime(item.Timestamp)} · {item.Player}: {ChatPanel.Describe(item)} — click to highlight")"
+                title="@($"{ChatPanel.FormatTime(item.Timestamp)} · {item.Player}: {ChatPanel.Describe(item)} (click to highlight)")"
                 @onclick="() => OnSelect.InvokeAsync(item)"
                 @onmouseenter="() => OnHover.InvokeAsync(item.Key)" @onmouseleave="() => OnHover.InvokeAsync(null)">
             <span class="feed-time leading-4">@GameTime.Format(item.Timestamp)</span>

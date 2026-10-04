@@ -28,8 +28,8 @@ public sealed record ModerationEntry(TimeSpan Timestamp, string Player, Moderati
 
 /// <summary>
 /// Everything in a replay a moderator may want to read through: what the game itself logs for
-/// moderators (the ModeratorEvent sim callback), plus the inputs that log leaves out — chat, units
-/// given away, recall votes, pause requests, players leaving — and the pings and drawings with
+/// moderators (the ModeratorEvent sim callback), plus the inputs that log leaves out (chat, units
+/// given away, recall votes, pause requests, players leaving) and the pings and drawings with
 /// their position on the map.
 /// </summary>
 public static class ModerationLog

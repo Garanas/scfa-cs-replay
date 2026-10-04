@@ -1,16 +1,16 @@
-# Agent guide — FAForever.Replay.Viewer (the UI)
+# Agent guide: FAForever.Replay.Viewer (the UI)
 
 The Blazor WebAssembly app, hosted by `FAForever.Replay.Server`. The repository-wide guide is
 [`../AGENTS.md`](../AGENTS.md); the replay model's semantics (entity ids, `ClearQueue`, lobby data,
 drawings, game-data tables) are in [`../FAForever.Replay/AGENTS.md`](../FAForever.Replay/AGENTS.md).
 
-## Replay parsing in WebAssembly — hard rules
+## Replay parsing in WebAssembly: hard rules
 
-- **Never call `ReplayLoader.*FromDisk` in the Viewer** — there is no filesystem in the browser.
+- **Never call `ReplayLoader.*FromDisk` in the Viewer**: there is no filesystem in the browser.
   Use the staged API: `ReplayLoadingStage.NotStarted` → `ReplayLoader.ProcessReplayStage(...)` →
   … → `Complete`, looping while the stage is `AtInput` and yielding to the browser between batches
   (`await Task.Delay(1)`). `ReplayBodyInvariant.PercentageProcessed` drives progress UI.
-- **No `Task.Run` for CPU work in WASM** — it is single-threaded; `Task.Run` buys nothing and breaks
+- **No `Task.Run` for CPU work in WASM**: it is single-threaded; `Task.Run` buys nothing and breaks
   `StateHasChanged` expectations. Yield cooperatively instead.
 - Always handle `ReplayLoadingStage.Failed` and wrap the pump in try/catch: the loader throws on
   unknown input types and malformed Lua data.
@@ -21,11 +21,11 @@ drawings, game-data tables) are in [`../FAForever.Replay/AGENTS.md`](../FAForeve
   `tools/install-tailwind.ps1`. The Viewer's MSBuild target regenerates `wwwroot/css/app.css` on every
   build when the CLI is present; the generated file is **committed** so builds work without it (CI).
 - Keep **in-app links base-relative** (`href="replay/123"`, `NavigateTo("search")`, `href=""` for
-  home — no leading `/`), so the app also works below a path.
+  home, no leading `/`), so the app also works below a path.
 - Analytics: a self-hosted GoatCounter (in jipwijnia-vps, https://stats.jipwijnia.nl), no
   cookies or personal data. `Services/Analytics/AnalyticsService.cs` counts a page view per path
   change (query left out) and an event per replay-tab change (`tab/<name>`), only when
-  `Analytics:GoatCounter` is set — which only `wwwroot/appsettings.Production.json` does.
+  `Analytics:GoatCounter` is set, which only `wwwroot/appsettings.Production.json` does.
 
 ## Progressive web app
 
@@ -48,7 +48,7 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
   renders the favicon, manifest and Apple touch icons. Never edit the PNGs by hand.
 - `theme-color` follows the light/dark mode (`fafReplay.syncThemeColor` in `applyMode`, from `--th-base`).
 - Test PWA behaviour on a **published** build (`dotnet publish FAForever.Replay.Server -c Release`),
-  served from 127.0.0.1 or https — the development worker does nothing.
+  served from 127.0.0.1 or https; the development worker does nothing.
 
 ## Conventions
 
@@ -62,13 +62,13 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
     auto is resolved from `prefers-color-scheme` by the scripts (pre-boot in `index.html`, then
     `fafReplay.applyMode`, which also follows system changes), so CSS only ever sees dark or light.
   - **Faction** (`data-faction`: Cybran default, UEF, Aeon, Seraphim) owns the accents:
-    `primary*`, `on-primary`, `accent`, and through them the chrome — buttons, links, active tabs,
+    `primary*`, `on-primary`, `accent`, and through them the chrome: buttons, links, active tabs,
     navigation, the logo, focus rings. `edge` (borders), the glow and `nav` (the header background)
     are mixed from `primary` with the mode's neutrals, so they follow both. Every faction has a dark
     and a light step of its accent: a colour readable as text on one page is not on the other.
 
   **Always use the semantic utilities** (`bg-surface`, `text-ink-muted`, `border-edge`,
-  `bg-primary`, …) — never hardcode colours in components, or switching breaks. Never give a faction
+  `bg-primary`, …); never hardcode colours in components, or switching breaks. Never give a faction
   its own backgrounds, and never tie a colour to a faction being light or dark; check new UI in
   both modes.
 - Page width: header, page and footer share `MainLayout.Container` (`max-w-6xl`). The Build order
@@ -114,7 +114,7 @@ to those two players, on any machine.
 | `view` | Below the maps on the Build order tab: `timings` shows key moments and units ordered per minute, `units` the units (entities) of both players | The order ledger |
 | `at` | Playback position of the Playthrough tab (`12`, `12:30` or `1:02:30`); written on pause/seek only, never while playing | `0:00`, paused |
 
-**Window policy** (`TimeWindowFilter.ReadWindow`): one rule on every tab — a window is at most
+**Window policy** (`TimeWindowFilter.ReadWindow`): one rule on every tab: a window is at most
 **four minutes** (`TimeWindowFilter.MaxWindow`), self-correcting with no error states: reversed
 bounds swap, a single bound implies the other, To is pulled along when the window is too long.
 Events *requires* a window (default `0:00`–`4:00`, kept out of the URL); everywhere else it is
@@ -123,7 +123,7 @@ the first ten minutes. The stepper buttons are always visible and shift
 by the window length, shown as their label (−4:00 / +4:00); without an active window the forward
 stepper starts one at `0:00`–`4:00` (the back stepper is disabled until there is one).
 The **Playthrough tab is exempt** from the window policy: it is a playback view, not a filtered
-list — its shareable state is the single `at` instant and it deliberately has no `from`/`to`.
+list: its shareable state is the single `at` instant and it deliberately has no `from`/`to`.
 Playback state (playing, speed, current time while playing) lives in component fields; `at` is
 written only on pause or seek-while-paused, so playing never floods the URL or re-renders siblings.
 The **Moderation tab is exempt** too: moderators read through the whole game, so it ignores
@@ -133,16 +133,16 @@ Reuse `Features/Replay/TimeWindowFilter.razor` and `PlayerFilterList.razor` for 
 both own their query parameters, and parents re-derive state from the URL in `OnParametersSet`.
 
 **Every component that derives state from the URL must inherit `UrlStateComponent`**
-(`Services/UrlStateComponent.cs`, which also provides the protected `Navigation` property — don't
+(`Services/UrlStateComponent.cs`, which also provides the protected `Navigation` property; don't
 `@inject NavigationManager` on top of it). Gotcha it exists for: a query-only navigation does not
-re-render a page whose parameters are unchanged value types — Blazor skips the whole subtree — so a
+re-render a page whose parameters are unchanged value types (Blazor skips the whole subtree), so a
 filter written by one component would never reach its siblings. The base subscribes to
 `LocationChanged` and re-runs `OnParametersSet` + render.
 
 The pattern, for any new panel with a selection worth sharing:
 
 - **Read** with `UrlQuery.Get(Navigation, "name")` (`Services/UrlQuery.cs`) inside `OnParametersSet`,
-  and derive the full panel state from Model + URL there — every render is then idempotent, and a
+  and derive the full panel state from Model + URL there: every render is then idempotent, and a
   pasted link restores the exact view without extra plumbing.
 - **Write** with `Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("name", value), replace: true)`.
   Always `replace: true`: selections must not pollute the browser history.
@@ -150,7 +150,7 @@ The pattern, for any new panel with a selection worth sharing:
   selection equals the default (Overview tab, all players, top endpoint). Links stay short and the
   bare URL keeps working.
 - **Degrade gracefully**: unknown player names are ignored, an unknown endpoint falls back to the
-  default — a stale link to a different replay must never break the page.
+  default: a stale link to a different replay must never break the page.
 - Parameters are independent and may be combined; switching tabs leaves the other parameters alone.
 
 ### Guardrails: every view a moderator could point at is a link
@@ -160,23 +160,23 @@ based on, and they end up in moderation records. Treat them as a public contract
 
 - **Replay pages work signed out.** The replay download is anonymous and all analysis runs in the
   browser, so no tab, panel or parameter may require a login. Data that needs a token (match
-  outcome, ratings) is an optional enrichment that is left out silently when signed out — never a
+  outcome, ratings) is an optional enrichment that is left out silently when signed out, never a
   sign-in prompt in place of the replay.
-- **Sort every piece of state into one of two kinds.** Shareable: it changes *what* is shown — tab,
+- **Sort every piece of state into one of two kinds.** Shareable: it changes *what* is shown: tab,
   filters, time window, playback position, and any selection that points at something (a chat
   message, an order, a unit). It goes in the URL. Transient: hover, open menus, scroll position,
   playback while running, animations. It stays in fields. Rule of thumb: if a moderator would say
   "look at *this*", it is shareable.
 - **Selection keys come from the replay, not from the page.** Identify an item by data that is the
-  same on every machine and in every release — tick + player name (+ ordinal within that tick),
-  entity id, blueprint id — never by a list index, render order or a counter assigned while
+  same on every machine and in every release: tick + player name (+ ordinal within that tick),
+  entity id, blueprint id; never by a list index, render order or a counter assigned while
   loading. A link must select the same item after the list is filtered differently or the app is
   updated.
 - **A link restores the view, not just the state:** a selected item from the URL is highlighted
   *and* scrolled into view on load (`scrollToSelected`), on the map as well as in the list.
 - **Names and formats are stable.** Never rename or repurpose a parameter or a value; when one has
   to change, keep reading the old form. Players are referenced by name, times in game time
-  (`12:30`), tabs by their query value — not by indices that depend on lobby order.
+  (`12:30`), tabs by their query value, not by indices that depend on lobby order.
 - **No hidden inputs.** What is shown may depend only on the replay and the URL. Browser storage
   holds personal preferences only (faction, light/dark mode), never something that filters or selects.
 - **The login round trip keeps the full URL.** `AuthService.BeginLoginAsync` stores the address,
@@ -193,13 +193,13 @@ through; `Features/Replay/ModerationLog.cs` collects it and builds the AI prompt
 the prompt always show the same entries.
 
 - **Sources** (`ModerationLog.Collect`): the game's own `ModeratorEvent` log, plus what that log
-  leaves out — chat (`GetChatMessages`), pings and markers with their position (`GetPings`; the
+  leaves out: chat (`GetChatMessages`), pings and markers with their position (`GetPings`; the
   position-less copies in the moderator log are dropped), drawings with the area they cover
   (`GetDrawings`), units given away (`GiveUnitsToPlayer`), recall votes (`SetRecallVote`), pause
   requests and players leaving (`CommandSourceTerminated`). Left out on purpose: the resume every
   client sends at tick 0, chat to `notify` (automatic upgrade notices), and the content of
   `GpgNetSend 'JsonStats'` (kilobytes of end-of-game statistics; reduced to one line, the Callbacks
-  tab keeps the full text). Everything else is shown verbatim — it is evidence.
+  tab keeps the full text). Everything else is shown verbatim: it is evidence.
 - **Kinds** (`ModerationKind`): the query values of `kinds` are the lowercase enum names, so
   renaming a member breaks links (see "Names and formats are stable"). Every kind, chat included,
   is shown by default; chat, pings, markers and drawings are communication (`IsCommunication`).
@@ -266,10 +266,10 @@ The JSON index gives the top-left pixel of each cell:
   `background-size` = atlas width/height (`columns`/`rows` × `cellSize`) × `s`, position `-x·s -y·s`.
 - **Keys are lowercase blueprint ids** without the `_icon` suffix (`uel0101`, `xsl0401`). Normalise
   ids from replays with `ToLowerInvariant()`; fall back to `default` (a "Place Holder" icon) when an id
-  is missing from the index — mods and campaign units often have no icon.
+  is missing from the index; mods and campaign units often have no icon.
 - **Backgrounds:** the game draws a layer background behind each icon, from the blueprint's
   `General.Icon` (`land`, `air`, `sea`, `amph`) plus a state: `_up` (normal), `_over` (hover),
-  `_down` (pressed/selected) — `UnitIcon`'s `State` parameter. Replays carry no blueprints, so
+  `_down` (pressed/selected), `UnitIcon`'s `State` parameter. Replays carry no blueprints, so
   `UnitIconAtlas.Layer` derives the layer from the id's third letter (`a` air, `s` sea, else land);
   amphibious units therefore show the land background.
   `cons_bar` is the construction progress overlay, not a layer.
@@ -286,17 +286,17 @@ The JSON index gives the top-left pixel of each cell:
 can drive the Viewer in a real browser: navigate, snapshot the accessibility tree, click, read console
 output and inspect network traffic.
 
-- **Start the app first** — the MCP server only drives a browser, it does not host anything. Run the
+- **Start the app first**: the MCP server only drives a browser, it does not host anything. Run the
   `server` task (or `dotnet watch --project FAForever.Replay.Server`) and navigate to
   `http://127.0.0.1:5080`; the fixed port matters for OAuth (see the root guide).
 - Project-scoped MCP servers need a one-off approval per machine. Accept the prompt on the next
   Claude Code start, or run `claude mcp list` to check the connection.
 - Screenshots, traces and downloads land in `.playwright-mcp/` at the repo root (gitignored). The viewport defaults to
-  1440x900 — the Viewer's layout is desktop-first.
+  1440x900; the Viewer's layout is desktop-first.
 - `.claude/settings.json` pre-approves the navigation, inspection and interaction tools.
   `browser_evaluate`, `browser_run_code_unsafe` and `browser_file_upload` deliberately still prompt.
 - The browser profile is temporary: an FAF login does **not** survive a browser restart. For a
-  persistent session add `--user-data-dir=.playwright-mcp/profile` to the args — that stores real
+  persistent session add `--user-data-dir=.playwright-mcp/profile` to the args; that stores real
   session cookies on disk, so keep the directory gitignored.
 - This is an inspection tool, not a test suite. There is no Playwright test project; automated
   coverage lives in `FAForever.Replay.Test` (MSTest).

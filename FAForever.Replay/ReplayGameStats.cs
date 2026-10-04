@@ -26,7 +26,7 @@ namespace FAForever.Replay
     /// <param name="Type">The brain type: <c>Human</c> or <c>AI</c>.</param>
     /// <param name="Defeated">
     /// Absent while the army is alive. When it is defeated the game stores the game time (in
-    /// seconds) + 15, and once that moment has passed, -1 — after which its stats stop updating,
+    /// seconds) + 15, and once that moment has passed, -1, after which its stats stop updating,
     /// so <see cref="ReplayArmyGeneralStats.LastUpdateTick"/> tells when it was knocked out. At the
     /// end of the game every army counts as defeated, so the survivors carry the end time + 15.
     /// </param>

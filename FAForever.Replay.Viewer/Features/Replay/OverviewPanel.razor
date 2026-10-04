@@ -102,7 +102,7 @@
             facts.Add(("Game version", header.GameVersion.Replace("Supreme Commander ", string.Empty)));
             facts.Add(("Seed", header.Seed.ToString()));
             facts.Add(("Inputs parsed", Model.Replay.Body.UserInput.Count.ToString("N0")));
-            facts.Add(("In sync", Model.Replay.Body.InSync ? "yes" : "no — desync detected"));
+            facts.Add(("In sync", Model.Replay.Body.InSync ? "yes" : "no, desync detected"));
             return facts;
         }
     }

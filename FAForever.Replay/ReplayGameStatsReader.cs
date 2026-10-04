@@ -7,7 +7,7 @@ namespace FAForever.Replay
     /// Reads the JSON payload of a <c>GpgNetSend('JsonStats', …)</c> call into
     /// <see cref="ReplayArmyStats"/>. Tolerant by design: the payload comes from game code we
     /// do not control, so missing or mistyped fields read as 0 and anything that is not JSON
-    /// at all yields null — it never throws.
+    /// at all yields null: it never throws.
     /// </summary>
     public static class ReplayGameStatsReader
     {

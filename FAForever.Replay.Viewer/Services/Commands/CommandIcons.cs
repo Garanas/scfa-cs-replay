@@ -8,7 +8,7 @@ namespace FAForever.Replay.Viewer.Services.Commands;
 /// name (e.g. "move", "attack", "launch"), generated from the game's waypoint button textures
 /// by tools/convert-command-icons.ps1 (never edit them by hand). A category without a PNG
 /// falls back to the inline SVG glyph symbols in <c>PlaythroughMarkerLayer</c>. Adding an
-/// icon = extend the script mapping, re-run it, and add the slug to <see cref="Available"/> —
+/// icon = extend the script mapping, re-run it, and add the slug to <see cref="Available"/>:
 /// a manifest instead of an onerror fallback, because SVG &lt;image&gt; does not fire error
 /// events reliably.
 /// </summary>

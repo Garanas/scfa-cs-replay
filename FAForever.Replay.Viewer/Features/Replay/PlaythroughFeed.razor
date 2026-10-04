@@ -14,12 +14,12 @@
     }
     else if (VisibleCount == 0)
     {
-        <p class="px-3 py-2 text-xs text-ink-faint">Nothing yet — press play, or scrub the timeline.</p>
+        <p class="px-3 py-2 text-xs text-ink-faint">Nothing yet. Press play, or scrub the timeline.</p>
     }
     @for (int index = Suspended ? -1 : Math.Min(VisibleCount, Items.Count) - 1; index >= LowerBound; index--)
     {
         Item item = Items[index];
-        <button type="button" @key="index" title="@($"{item.Player}: {item.Text} — click to jump playback here")"
+        <button type="button" @key="index" title="@($"{item.Player}: {item.Text} (click to jump playback here)")"
                 class="pt-feed-row feed-row"
                 @onclick="() => OnSeek.InvokeAsync(item.Timestamp)">
             <span class="feed-time">@GameTime.Format(item.Timestamp)</span>

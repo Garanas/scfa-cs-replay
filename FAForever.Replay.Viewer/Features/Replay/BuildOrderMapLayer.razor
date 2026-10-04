@@ -79,7 +79,7 @@
         bool emphasised = item.Group == Highlighted;
         string color = Color ?? "var(--th-ink-muted)";
         <g @key="item.Key" class="cursor-pointer" @onclick="() => OnSelect.InvokeAsync(item)">
-            <title>@GameTime.Format(item.Timestamp) · @item.Text — click to highlight</title>
+            <title>@GameTime.Format(item.Timestamp) · @item.Text (click to highlight)</title>
             @if (item.IsBuild)
             {
                 <circle cx="@Fmt(position.X)" cy="@Fmt(position.Z)" r="@Fmt(size * 0.55)" fill="rgba(10, 12, 18, 0.6)"

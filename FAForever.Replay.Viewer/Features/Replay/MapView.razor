@@ -2,7 +2,7 @@
 
 @* Minimap: the map (see MapCanvas) with the estimated start position of every player on
    top. Positions are derived from the first construction orders, so they work for any
-   replay — including generated maps that have no preview at all. *@
+   replay, including generated maps that have no preview at all. *@
 
 <MapCanvas Model="Model" AriaLabel="@AriaLabel">
     @foreach (SpawnMarker marker in markers)
@@ -85,7 +85,7 @@
                 markerX,
                 markerY,
                 name,
-                $"{name} — {faction}{(army.DisplayTeam is { } team ? $", team {team}" : "")} (estimated start)",
+                $"{name}: {faction}{(army.DisplayTeam is { } team ? $", team {team}" : "")} (estimated start)",
                 Factions.IconPath(army.Faction),
                 Factions.Swatch(army.Faction),
                 army.Color));

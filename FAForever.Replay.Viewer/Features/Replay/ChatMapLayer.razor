@@ -13,7 +13,7 @@
         bool dimmed = Highlighted is { } key && key != item.Key;
         bool highlighted = Highlighted == item.Key;
         <g @key="item.Key" class="@(Selectable ? "cursor-pointer" : null)" opacity="@(dimmed ? "0.3" : "1")" @onclick="() => OnSelect.InvokeAsync(item)">
-            <title>@item.Player — @ChatPanel.Describe(item) at @ChatPanel.FormatTime(item.Timestamp)@(Selectable ? " — click to highlight" : "")</title>
+            <title>@item.Player: @ChatPanel.Describe(item) at @ChatPanel.FormatTime(item.Timestamp)@(Selectable ? " (click to highlight)" : "")</title>
             @if (item.Drawing is { } drawing)
             {
                 string points = string.Join(' ', drawing.Points.Select(point => $"{Fmt(point.X)},{Fmt(point.Z)}"));

@@ -14,7 +14,7 @@ Phases:
 - **Body**: `ParseBenchmark.Body` (input stream through the staged API, batches of 1000, as the Viewer does).
 - **End-to-end**: `FAForeverReplayBenchmark` / `SCFAReplayBenchmark` (`LoadFAFReplayFromMemory` / `LoadSCFAReplayFromStream`, one shot).
 
-## Step 0 — baseline (2026-10-03)
+## Step 0: baseline (2026-10-03)
 
 BenchmarkDotNet 0.14.0, .NET 10.0.3 (X64 RyuJIT AVX-512), Windows 11, DefaultJob.
 
@@ -46,7 +46,7 @@ Observations:
   identical. Possibly a GC/measurement effect (Body runs on a fresh non-expandable `MemoryStream`); to be
   investigated before attributing step results to the staged path.
 
-## Steps 1, 2, 3, 5 — screening with the short job (2026-10-03)
+## Steps 1, 2, 3, 5: screening with the short job (2026-10-03)
 
 Measured with `--job short` (3 iterations; error margins are wide, so only large effects count) on
 `--filter "*ParseBenchmark.Body*" "*DecompressBenchmark*" "*SCFAReplayBenchmark*"`, each step on its own
@@ -74,7 +74,7 @@ Notes:
   exact-size check made it always fall back. Using the bound as the buffer size fixed it.
 - Before merging into the main line: re-run the full (default job) suite for a definitive table.
 
-## Steps 1, 2, 3, 5 combined — full run (2026-10-03)
+## Steps 1, 2, 3, 5 combined: full run (2026-10-03)
 
 `perf/combined` (`1c73040`), DefaultJob, same machine and settings as the step 0 baseline. Mean / Allocated,
 with the change against the baseline.
@@ -108,7 +108,7 @@ Observations:
 - A rerun on a quiet machine would firm up the timings, especially 23225104 and 23225323, whose body
   results (13.4 / 4.9 ms) are slower than the screening run (9.7 / 3.4 ms).
 
-## Step 6 — entity ids of command selections (2026-10-03)
+## Step 6: entity ids of command selections (2026-10-03)
 
 Not an optimisation but a feature: the parser used to skip the entity ids of every command
 selection (`CommandUnits`); it now keeps them, for the per-unit analysis of the Build order tab.

@@ -6,8 +6,8 @@ namespace FAForever.Replay.Viewer.Services.Analytics;
 
 /// <summary>
 /// Counts visits with a self-hosted GoatCounter (compose.yaml in Garanas/jipwijnia-vps), when
-/// <c>Analytics:GoatCounter</c> is configured — only in appsettings.Production.json, so nothing
-/// is counted during development. GoatCounter sets no cookies and stores no personal data.
+/// <c>Analytics:GoatCounter</c> is configured (only in appsettings.Production.json, so nothing
+/// is counted during development). GoatCounter sets no cookies and stores no personal data.
 ///
 /// GoatCounter only counts the page load by itself; in this single-page app the navigations are
 /// counted here: a page view when the path changes (<c>/replay/123</c>, without the query, so

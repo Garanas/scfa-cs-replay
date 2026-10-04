@@ -100,7 +100,7 @@
         bool isSelected = Selected == item.Group;
         <button type="button" aria-pressed="@(isSelected ? "true" : "false")"
                 class="@(mirrored ? "flex-row-reverse" : "") flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-1 transition hover:bg-raised @(isSelected ? "bg-raised ring-1 ring-primary" : "")"
-                title="@($"{ChatPanel.FormatTime(item.Timestamp)} · {item.Text} — click to highlight on the map")"
+                title="@($"{ChatPanel.FormatTime(item.Timestamp)} · {item.Text} (click to highlight on the map)")"
                 @onclick="() => OnSelect.InvokeAsync(item)">
             <span class="h-5 w-1 shrink-0 rounded-full @(first ? "" : "opacity-0")" style="background: @(color ?? "var(--th-primary)")" aria-hidden="true"></span>
             <span class="font-mono text-sm @(first ? "font-semibold text-ink" : "text-ink-muted")">@GameTime.Format(item.Timestamp)</span>
