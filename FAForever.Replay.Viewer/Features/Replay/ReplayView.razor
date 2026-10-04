@@ -4,8 +4,9 @@
 
 <article>
     @* Two columns: what was played (map preview, map, player count) and which replay it is
-       (title, game length, vault number). *@
-    <header class="grid items-center gap-4 border-b border-edge pb-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+       (title, game length, vault number), plus a share button as large as the map preview. On
+       narrow screens the share button sits next to the map and the second column moves below. *@
+    <header class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-edge pb-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
         <div class="flex min-w-0 items-center gap-4">
             <div class="w-20 shrink-0">
                 <MapCanvas Model="Model" AriaLabel="@($"Map preview of {MapName}")" />
@@ -15,7 +16,7 @@
                 <p class="mt-1 text-lg font-semibold text-ink-muted">@PlayerCount @(PlayerCount == 1 ? "player" : "players")</p>
             </div>
         </div>
-        <div class="flex min-w-0 flex-col gap-2 sm:items-end sm:text-right">
+        <div class="col-span-2 flex min-w-0 flex-col gap-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:items-end sm:text-right">
             <p class="m-0 max-w-full truncate font-medium" title="@Title">@Title</p>
             <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                 <span class="badge" title="In-game duration">@FormatDuration(duration)</span>
@@ -25,13 +26,6 @@
                             title="Copy the replay id" @onclick="() => CopyReplayId(vault.ReplayId)">
                         @(copied ? "copied!" : OriginLabel)
                     </button>
-                    @if (canShare)
-                    {
-                        <button type="button" class="badge cursor-pointer transition hover:border-primary hover:text-primary"
-                                title="Share a link to this view" @onclick="() => ShareLink(vault.ReplayId)">
-                            share
-                        </button>
-                    }
                 }
                 else
                 {
@@ -43,6 +37,22 @@
                 }
             </div>
         </div>
+        @if (Model.Origin is ReplayOrigin.Vault shared)
+        {
+            @* A link to a local file means nothing to someone else, so only vault replays get one. *@
+            <button type="button"
+                    class="col-start-2 row-start-1 flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 justify-self-end rounded-lg sm:col-start-3 border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary"
+                    title="@(canShare ? "Share a link to this view" : "Copy a link to this view")"
+                    @onclick="() => ShareLink(shared.ReplayId)">
+                <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <path d="M16 6l-4-4-4 4" />
+                    <path d="M12 2v13" />
+                </svg>
+                <span class="text-xs font-semibold">@(linkCopied ? "Copied" : "Share")</span>
+            </button>
+        }
     </header>
 
     <nav class="mt-6 flex flex-wrap gap-1 border-b border-edge pb-px" aria-label="Replay sections">
@@ -113,6 +123,7 @@
     private TimeSpan duration;
     private bool copied;
     private bool canShare;
+    private bool linkCopied;
 
     protected override void OnParametersSet()
     {
@@ -145,9 +156,25 @@
         }
     }
 
-    /// <summary>Hands the address of this view to the system's share sheet.</summary>
+    /// <summary>Hands the address of this view to the system's share sheet, or copies it where there is none.</summary>
     private async Task ShareLink(int replayId)
-        => await JS.InvokeVoidAsync("fafReplay.shareLink", Navigation.Uri, LinkTitle(replayId));
+    {
+        if (canShare)
+        {
+            await JS.InvokeVoidAsync("fafReplay.shareLink", Navigation.Uri, LinkTitle(replayId));
+            return;
+        }
+
+        if (!await JS.InvokeAsync<bool>("fafReplay.copyText", Navigation.Uri))
+        {
+            return;
+        }
+
+        linkCopied = true;
+        StateHasChanged();
+        await Task.Delay(1500);
+        linkCopied = false;
+    }
 
     /// <summary>The title a shared link gets, e.g. "Replay #25717491 on Osiris · Chat".</summary>
     private string LinkTitle(int replayId)

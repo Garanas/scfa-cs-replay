@@ -211,8 +211,9 @@
         @apply fixed inset-auto top-14 right-4 m-0 flex-col gap-1 rounded-lg border border-edge bg-surface p-2 text-ink shadow-lg;
     }
 
+    /* Wide screens show everything in the header itself, so a menu left open there disappears. */
     .menu-popover:popover-open {
-        @apply flex;
+        @apply flex sm:hidden;
     }
 
     .btn-primary {

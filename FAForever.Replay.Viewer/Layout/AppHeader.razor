@@ -1,6 +1,6 @@
 <header class="sticky top-0 z-40 border-b border-edge bg-nav/85 backdrop-blur">
-    <div class="mx-auto flex h-14 w-full @Container items-center gap-6 px-4 sm:px-6">
-        <a href="" class="flex items-center gap-2.5 font-display text-lg font-bold tracking-wide">
+    <div class="mx-auto flex h-14 w-full @Container items-center gap-3 px-4 sm:gap-6 sm:px-6">
+        <a href="" class="flex items-center gap-2.5 whitespace-nowrap font-display text-lg font-bold tracking-wide">
             <span class="inline-block h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_14px_var(--th-glow)]" aria-hidden="true"></span>
             <span>Vault of <span class="text-primary">FAF</span></span>
         </a>
@@ -10,12 +10,13 @@
             <NavLink href="search" class="nav-link" ActiveClass="active">Search</NavLink>
         </nav>
 
-        <div class="ml-auto flex items-center gap-3">
+        <div class="ml-auto flex items-center gap-2 sm:gap-3">
             @* About sits apart from the main sections, with the settings on the right. *@
             <NavLink href="about" class="nav-link hidden sm:inline-flex" ActiveClass="active">About</NavLink>
 
-            @* Narrow screens: the sections in a menu, a popover (Popover API). The browser opens and
-               closes it, light dismiss and Escape included; js/app.js closes it when a link is taken. *@
+            @* Narrow screens: the sections and the settings in a menu, a popover (Popover API). The
+               browser opens and closes it, light dismiss and Escape included; js/app.js closes it
+               when a link is taken. *@
             <button type="button" popovertarget="main-menu"
                     class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary sm:hidden"
                     title="Menu">
@@ -25,14 +26,22 @@
                 </svg>
                 <span class="sr-only">Menu</span>
             </button>
-            <nav id="main-menu" popover class="menu-popover" aria-label="Main">
-                <NavLink href="" Match="NavLinkMatch.All" class="nav-link" ActiveClass="active">Home</NavLink>
-                <NavLink href="search" class="nav-link" ActiveClass="active">Search</NavLink>
-                <NavLink href="about" class="nav-link" ActiveClass="active">About</NavLink>
-            </nav>
+            <div id="main-menu" popover class="menu-popover">
+                <nav class="flex flex-col gap-1" aria-label="Main">
+                    <NavLink href="" Match="NavLinkMatch.All" class="nav-link" ActiveClass="active">Home</NavLink>
+                    <NavLink href="search" class="nav-link" ActiveClass="active">Search</NavLink>
+                    <NavLink href="about" class="nav-link" ActiveClass="active">About</NavLink>
+                </nav>
+                <div class="mt-1 flex items-center justify-between gap-3 border-t border-edge px-1 pt-3">
+                    <ModeToggle />
+                    <FactionSwitcher />
+                </div>
+            </div>
 
-            <ModeToggle />
-            <FactionSwitcher />
+            <div class="hidden items-center gap-3 sm:flex">
+                <ModeToggle />
+                <FactionSwitcher />
+            </div>
             <UserMenu />
         </div>
     </div>
