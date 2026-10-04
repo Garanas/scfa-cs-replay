@@ -129,6 +129,17 @@ window.fafReplay = {
         }
         return window.fafReplay.copyText(url);
     },
+    /* The Web Share API: the system's share sheet, where there is one. */
+    canShare: function () {
+        return typeof navigator.share === "function";
+    },
+    shareLink: async function (url, title) {
+        try {
+            await navigator.share({ title: title, url: url });
+        } catch (e) {
+            /* The user closed the share sheet, or sharing is not allowed here. */
+        }
+    },
     /*
      * PWA (see wwwroot/service-worker.published.js). A new version installs in the background and
      * waits; the app shows a banner (Layout/UpdateBanner.razor) and only switches over when the user
