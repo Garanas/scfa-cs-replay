@@ -321,6 +321,12 @@ roles, cost, build power, health, shield, intel ranges and its weapons. The data
   position from `MouseEventArgs.ClientX/Y`) and hides it with `Hide()` on `@onmouseleave`; navigation
   hides it too. Hover is transient state: never in the URL. Rows that show a card drop their `title`,
   or the browser's tooltip would cover it.
+- **The card must not wait for the tab to render.** Blazor re-renders a component after each of its
+  events, and a render of the Build order tab takes 150 to 250 ms in a debug build (two maps with
+  hundreds of markers, the ledger). `BuildOrderPanel` and `BuildOrderTimings` therefore implement
+  `IHandleEvent` and skip that render for hover events, so the card host renders alone (a few ms).
+  The maps highlight the hovered order once the pointer rests 60 ms (`HighlightWhenResting`), so
+  moving across the ledger renders the tab once where it stops, not twice per row.
 - `fafReplay.placeNear` puts the card beside the pointer and keeps it inside the viewport; the card
   ignores the pointer (`pointer-events-none`), so it never takes the hover away from the row.
 - `Features/Replay/UnitCard.razor` shows only real weapons (not `Death`, `Teleport` or weapons without

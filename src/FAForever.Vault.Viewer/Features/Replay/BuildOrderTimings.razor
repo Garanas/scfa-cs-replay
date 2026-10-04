@@ -1,4 +1,5 @@
 @using FAForever.FileFormats.Replay
+@implements IHandleEvent
 @inject FAForever.Vault.Viewer.Services.Units.UnitCardService Cards
 
 @* The simple variant of the Build order tab (view=timings), mirrored like the ledger: when each
@@ -127,7 +128,7 @@
                 class="@(mirrored ? "flex-row-reverse" : "") flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-1 transition hover:bg-raised @(isSelected ? "bg-raised ring-1 ring-primary" : "")"
                 title="@(item.IsBuild ? null : $"{ChatPanel.FormatTime(item.Timestamp)} · {item.Text} (click to highlight on the map)")"
                 @onclick="() => OnSelect.InvokeAsync(item)"
-                @onmouseenter="(MouseEventArgs pointer) => ShowCard(item.IsBuild ? item.BlueprintId : null, pointer)" @onmouseleave="Cards.Hide">
+                @onmouseenter="(MouseEventArgs pointer) => ShowCard(item.IsBuild ? item.BlueprintId : null, pointer)" @onmouseleave="HideCard">
             <span class="h-5 w-1 shrink-0 rounded-full @(first ? "" : "opacity-0")" style="background: @(color ?? "var(--th-primary)")" aria-hidden="true"></span>
             <span class="font-mono text-sm @(first ? "font-semibold text-ink" : "text-ink-muted")">@GameTime.Format(item.Timestamp)</span>
             @if (!first && other is not null)
@@ -153,7 +154,7 @@
             {
                 <span class="inline-flex items-center rounded bg-surface" aria-label="@($"{unit.Count} × {UnitNames.GetOrNull(unit.BlueprintId) ?? unit.BlueprintId}")"
                       style="box-shadow: 0 0 0 1px @(color ?? "var(--th-edge)")"
-                      @onmouseenter="(MouseEventArgs pointer) => ShowCard(unit.BlueprintId, pointer)" @onmouseleave="Cards.Hide">
+                      @onmouseenter="(MouseEventArgs pointer) => ShowCard(unit.BlueprintId, pointer)" @onmouseleave="HideCard">
                     <UnitIcon BlueprintId="@unit.BlueprintId" Size="20" />
                     <span class="px-1 font-mono text-[11px] text-ink">×@unit.Count</span>
                 </span>
@@ -161,11 +162,42 @@
         </div>
     };
 
+    /// <summary>Cleared by the card handlers: showing a card changes nothing here (see HandleEventAsync).</summary>
+    private bool renderAfterEvent = true;
+
     private void ShowCard(string? blueprintId, MouseEventArgs pointer)
     {
+        renderAfterEvent = false;
         if (blueprintId is not null)
         {
             Cards.Show(blueprintId, pointer.ClientX, pointer.ClientY);
         }
+    }
+
+    private void HideCard()
+    {
+        renderAfterEvent = false;
+        Cards.Hide();
+    }
+
+    // Blazor re-renders a component after each of its events; the unit card renders on its own,
+    // so hovering skips the re-render of these rows.
+    Task IHandleEvent.HandleEventAsync(EventCallbackWorkItem callback, object? arg)
+    {
+        renderAfterEvent = true;
+        Task task = callback.InvokeAsync(arg);
+        if (!renderAfterEvent)
+        {
+            return task;
+        }
+
+        StateHasChanged();
+        return task.IsCompleted ? task : RenderWhenDone(task);
+    }
+
+    private async Task RenderWhenDone(Task task)
+    {
+        await task;
+        StateHasChanged();
     }
 }
