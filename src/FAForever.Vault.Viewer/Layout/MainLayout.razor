@@ -29,11 +29,14 @@
 @code {
     /// <summary>
     /// The width of header, page and footer. Side-by-side views (the Build order tab compares
-    /// two players) get the width of a full HD screen; everything else keeps the reading width.
+    /// two players) and the unit database (a wide table) get the width of a full HD screen;
+    /// everything else keeps the reading width.
     /// </summary>
-    private string Container => string.Equals(UrlQuery.Get(Navigation, "tab"), "buildorder", StringComparison.OrdinalIgnoreCase)
-        ? "max-w-[1824px]"
-        : "max-w-6xl";
+    private string Container =>
+        string.Equals(UrlQuery.Get(Navigation, "tab"), "buildorder", StringComparison.OrdinalIgnoreCase)
+        || Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Equals("units", StringComparison.OrdinalIgnoreCase)
+            ? "max-w-[1824px]"
+            : "max-w-6xl";
 
     protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
 

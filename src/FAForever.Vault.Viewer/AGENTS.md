@@ -339,6 +339,40 @@ roles, cost, build power, health, shield, intel ranges and its weapons. The data
 - The published service worker caches `units.json` with the app shell (it matches `\.json$`), so
   cards work offline and new data arrives as an app update.
 
+## Unit database
+
+`Pages/Units.razor` (`/units`, the Units tab in the header) lists the units of `units.json`: a filter
+column, a sortable table, a comparison and a details panel. The pieces live in `Features/Units/`.
+The page widens to full HD like the Build order tab (`MainLayout.Container`).
+
+- **The URL holds every choice**, like the replay pages (same guardrails: replace, defaults stay out,
+  unknown values are ignored, names never change). Filter groups and their option slugs are defined
+  once in `UnitFilters` (roles come from `UnitRoles.All`); within a group a unit needs one of the
+  chosen options, across groups all of them.
+
+  | Parameter | Meaning | Default when absent |
+  |---|---|---|
+  | `q` | Text in the name, description or id (written after a 250 ms pause in typing) | No text filter |
+  | `faction` | `uef`, `aeon`, `cybran`, `seraphim` | All factions |
+  | `tech` | `1`, `2`, `3`, `4` (experimental); commanders have no tech level | All |
+  | `move` | `land`, `amphibious`, `hover`, `air`, `naval`, `sub`, `structure` (from `MotionType`) | All |
+  | `role` | The slugs of `UnitRoles.All`: `engineer`, `bomber`, `gunship`, `transport`, `shield`, ... | All |
+  | `weapon` | `direct`, `indirect`, `antiair`, `antinavy`, `defense` (the weapon's `RangeCategory`), `none` | All |
+  | `intel` | `radar`, `sonar`, `omni` | All |
+  | `all` | `1` also lists units no player can build (campaign, civilian, helpers) | Buildable units only |
+  | `sort` | `name`, `mass`, `energy`, `time`, `health`, `speed`, `range`, `vision`; a leading `-` sorts high to low | Faction, tech, name |
+  | `unit` | The unit in the details panel (lower case blueprint id); its row scrolls into view | None |
+  | `compare` | Up to six unit ids side by side, in order | No comparison |
+
+- The details panel (`UnitDetail`) shows the unit card and the build tree around the unit: upgrades
+  from and to, built by, builds. Every unit there is a link (`unit=`), so the tree can be walked; for a
+  buildable unit, builders that no player can build are left out.
+- The comparison (`UnitComparison`) marks the best value of a row (lowest cost, highest anything else)
+  only when at least two units have different values. "Range" is the longest range of the unit's real
+  weapons (`UnitRoles.IsRealWeapon`, the same rule as the card).
+- Reading the data takes about half a second and rendering all ~400 rows a few hundred ms in a debug
+  build; a filter change re-renders only the rows that pass.
+
 ## Browser automation (Playwright MCP)
 
 `.mcp.json` (repo root) registers the official Playwright MCP server (`npx -y @playwright/mcp@latest`), so agents

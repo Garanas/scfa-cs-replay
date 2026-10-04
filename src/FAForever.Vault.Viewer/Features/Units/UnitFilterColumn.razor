@@ -1,0 +1,88 @@
+@inherits UrlStateComponent
+@using FAForever.Vault.Viewer.Services.Units
+
+@* The filter column of the unit database: a search box and one row of toggle chips per group.
+   Every choice is a query parameter (UnitFilters), so the parent re-derives the list from the URL. *@
+
+<label class="block px-1 pb-3">
+    <span class="sr-only">Search units</span>
+    <input type="search" class="input-field" placeholder="Name, description or id" value="@text"
+           @oninput="OnTextInput" />
+</label>
+
+@foreach (UnitFilters.Group group in UnitFilters.Groups)
+{
+    <fieldset class="border-t border-edge px-1 py-3">
+        <legend class="sr-only">@group.Label</legend>
+        <div class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint" aria-hidden="true">@group.Label</div>
+        <div class="flex flex-wrap gap-1.5">
+            @foreach (UnitFilters.Option option in group.Options)
+            {
+                bool chosen = State.IsChosen(group, option);
+                <button type="button" aria-pressed="@(chosen ? "true" : "false")"
+                        class="@(chosen ? ChosenClass : OptionClass)"
+                        @onclick="() => UnitLinks.Set(Navigation, group.Parameter, UnitFilters.Toggled(State, group, option))">
+                    @if (group == UnitFilters.Factions && FactionIcon(option) is { } icon)
+                    {
+                        <img src="@icon" alt="" class="h-4 w-4" />
+                    }
+                    @option.Label
+                </button>
+            }
+        </div>
+    </fieldset>
+}
+
+<label class="flex cursor-pointer items-start gap-2 border-t border-edge px-1 pt-3 text-sm text-ink-muted">
+    <input type="checkbox" class="mt-0.5 accent-primary" checked="@State.All"
+           @onchange="@(() => UnitLinks.Set(Navigation, UnitFilters.AllParameter, State.All ? null : "1"))" />
+    <span>Campaign, civilian and helper units too <span class="block text-xs text-ink-faint">Units no player can build in a game</span></span>
+</label>
+
+@if (HasFilters)
+{
+    <button type="button" class="btn-secondary mt-3 w-full" @onclick="ClearFilters">Clear filters</button>
+}
+
+@code {
+    private const string OptionClass = "inline-flex cursor-pointer items-center gap-1 rounded-full border border-edge bg-raised px-2.5 py-1 text-xs text-ink-muted transition hover:border-primary hover:text-ink";
+    private const string ChosenClass = "inline-flex cursor-pointer items-center gap-1 rounded-full border border-primary bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary transition";
+
+    [Parameter, EditorRequired] public required UnitFilters.State State { get; set; }
+
+    private string? text;
+    private int textVersion;
+
+    protected override void OnParametersSet() => text = State.Text;
+
+    private bool HasFilters => State.Text is { Length: > 0 } || State.All || State.Chosen.Values.Any(chosen => chosen.Count > 0);
+
+    // Writing the URL on every key would re-filter the list while typing; wait for a short pause.
+    private async Task OnTextInput(ChangeEventArgs change)
+    {
+        text = change.Value as string;
+        int version = ++textVersion;
+        await Task.Delay(250);
+        if (version == textVersion)
+        {
+            UnitLinks.Set(Navigation, UnitFilters.TextParameter, string.IsNullOrWhiteSpace(text) ? null : text.Trim());
+        }
+    }
+
+    private void ClearFilters()
+    {
+        Dictionary<string, object?> cleared = UnitFilters.Groups.ToDictionary(group => group.Parameter, _ => (object?)null);
+        cleared[UnitFilters.TextParameter] = null;
+        cleared[UnitFilters.AllParameter] = null;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(cleared), replace: true);
+    }
+
+    private static string? FactionIcon(UnitFilters.Option option) => option.Slug switch
+    {
+        "uef" => Factions.IconPath(Faction.Uef),
+        "aeon" => Factions.IconPath(Faction.Aeon),
+        "cybran" => Factions.IconPath(Faction.Cybran),
+        "seraphim" => Factions.IconPath(Faction.Seraphim),
+        _ => null,
+    };
+}

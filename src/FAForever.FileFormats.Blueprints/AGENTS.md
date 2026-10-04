@@ -44,6 +44,12 @@ tools/generate-unit-data.cs -- <fa checkout>`) parses `units/*_unit.bp` of one F
 - `UnitData` is the file: `{"gameVersion":3839,"units":[...]}` with **one unit per line**, sorted by
   id, camel case, nulls left out, so a release's diff shows which units changed. JSON goes through the
   source-generated `UnitDataJsonContext` (no reflection, safe under trimming in WebAssembly).
+- `UnitBuildTree` mirrors who builds what: a builder can build every unit that has all categories of
+  one of its `Economy.BuildableCategory` expressions (space separated; a unit's own lower case id
+  counts as a category, so `"uab3101"` names a unit), commanders also what their enhancements add
+  (`BuildableCategoryAdds`). A unit is `Buildable` when a commander reaches it through builds and
+  `UpgradesTo`; that excludes campaign, civilian and helper units (404 of 606 units in 3839).
+  `UnitData.From` fills `Buildable` and `Builds` in; `UnitData.GetBuilders` is the inverse.
 - The game version comes from `version` in the FA repository's `mod_info.lua` (read with
   `LuaSourceParser`); it is also the release tag and the last number of a replay header's version.
 - Only the current release is kept. `.github/workflows/update-unit-data.yml` regenerates the file

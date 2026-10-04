@@ -3,7 +3,7 @@
 @using FAForever.Vault.Viewer.Services.Units
 
 @* The essentials of a unit from the unit data: what it is, what it costs, how tough it is, what it sees and its weapons. *@
-<div class="w-80 rounded-lg border border-edge bg-surface p-3 text-sm text-ink shadow-lg">
+<div class="rounded-lg border border-edge bg-surface p-3 text-sm text-ink @Class">
     <div class="flex items-center gap-3">
         <UnitIcon BlueprintId="@BlueprintId" Size="40" />
         <div class="min-w-0">
@@ -51,7 +51,7 @@
         }
 
         // Identical weapons (the two guns of a Prowler) share one row with a count; records compare by value.
-        var weapons = Unit.Weapons.Where(IsShown).GroupBy(weapon => weapon).Select(group => (Weapon: group.Key, Count: group.Count())).ToArray();
+        var weapons = Unit.Weapons.Where(UnitRoles.IsRealWeapon).GroupBy(weapon => weapon).Select(group => (Weapon: group.Key, Count: group.Count())).ToArray();
         @if (weapons.Length > 0)
         {
             <ul class="mt-2 flex flex-col gap-1.5 border-t border-edge pt-2">
@@ -85,6 +85,9 @@
 
 @code {
     [Parameter, EditorRequired] public required string BlueprintId { get; set; }
+
+    /// <summary>Width and shadow: a floating card by default; the unit database shows it full width.</summary>
+    [Parameter] public string Class { get; set; } = "w-80 shadow-lg";
 
     /// <summary>The unit's summary; null when the data does not have it (mods, campaign units).</summary>
     [Parameter] public UnitSummary? Unit { get; set; }
@@ -139,12 +142,6 @@
             .ToArray();
         return parts.Length > 0 ? string.Join(" · ", parts) : null;
     }
-
-    /// <summary>
-    /// Real weapons only: not the explosion when the unit dies, teleport effects, or aim-only dummies without damage.
-    /// </summary>
-    private static bool IsShown(UnitSummaryWeapon weapon) =>
-        weapon.WeaponCategory is not ("Death" or "Teleport") && weapon.Damage is > 0;
 
     /// <summary>E.g. "3 × 24 damage · area 1.5 · range 18 · every 1 s".</summary>
     private static string WeaponLine(UnitSummaryWeapon weapon)

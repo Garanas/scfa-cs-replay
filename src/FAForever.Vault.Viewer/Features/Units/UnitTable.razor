@@ -1,0 +1,125 @@
+@inherits UrlStateComponent
+@using System.Globalization
+@using FAForever.Vault.Viewer.Services.Units
+
+@* The units that pass the filters. A click on a row opens it in the detail panel ("unit"), the
+   column headers sort ("sort"); both are query parameters. Below sm the table turns into a list. *@
+
+<table class="list-table w-full text-sm">
+    <thead>
+        <tr class="border-b border-edge text-left text-xs text-ink-muted">
+            <th class="px-2 py-2 font-medium">@SortButton(UnitFilters.SortOrders[0])</th>
+            <th class="px-2 py-2 font-medium">Faction</th>
+            <th class="px-2 py-2 font-medium">Tech</th>
+            <th class="px-2 py-2 font-medium">Moves on</th>
+            @foreach (UnitFilters.SortOrder order in UnitFilters.SortOrders.Skip(1))
+            {
+                <th class="px-2 py-2 text-right font-medium">@SortButton(order)</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (UnitSummary unit in Units)
+        {
+            bool isSelected = unit.BlueprintId == Selected;
+            <tr @key="unit.BlueprintId" id="@RowId(unit.BlueprintId)"
+                class="cursor-pointer border-b border-edge/60 transition hover:bg-raised @(isSelected ? "bg-raised ring-1 ring-inset ring-primary" : "")"
+                aria-selected="@(isSelected ? "true" : "false")"
+                @onclick="() => UnitLinks.Select(Navigation, isSelected ? null : unit.BlueprintId)">
+                <td class="list-table-wide px-2 py-1.5 max-sm:p-0">
+                    <span class="flex min-w-0 items-center gap-2">
+                        <UnitIcon BlueprintId="@unit.BlueprintId" Size="28" />
+                        <span class="min-w-0">
+                            <span class="block truncate font-medium text-ink">@UnitFilters.DisplayName(unit)</span>
+                            @if (unit.Name is not null && unit.Description is not null)
+                            {
+                                <span class="block truncate text-xs text-ink-muted">@unit.Description</span>
+                            }
+                        </span>
+                    </span>
+                </td>
+                <td class="px-2 py-1.5 max-sm:p-0">
+                    @if (Factions.IconPath(UnitRoles.FactionOf(unit)) is { } icon)
+                    {
+                        <img src="@icon" alt="@unit.Faction" title="@unit.Faction" class="h-5 w-5" />
+                    }
+                </td>
+                <td class="whitespace-nowrap px-2 py-1.5 text-ink-muted max-sm:p-0">@Tech(unit)</td>
+                <td class="whitespace-nowrap px-2 py-1.5 text-ink-muted max-sm:p-0">@Movement(unit)</td>
+                @Number("Mass", unit.BuildCostMass)
+                @Number("Energy", unit.BuildCostEnergy)
+                @Number("Build time", unit.BuildTime)
+                @Number("Health", unit.MaxHealth)
+                @Number("Speed", unit.MaxSpeed)
+                @Number("Range", UnitRoles.MaxRange(unit))
+                @Number("Vision", unit.VisionRadius)
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<UnitSummary> Units { get; set; }
+
+    [Parameter, EditorRequired] public required UnitFilters.State State { get; set; }
+
+    /// <summary>The unit open in the detail panel, if any.</summary>
+    [Parameter] public string? Selected { get; set; }
+
+    public static string RowId(string blueprintId) => $"unit-row-{blueprintId}";
+
+    public static string Tech(UnitSummary unit) => unit.TechLevel switch
+    {
+        4 => "Exp",
+        { } tech => $"T{tech}",
+        null => "",
+    };
+
+    /// <summary>Where it moves, short: "Amphibious (floats)" becomes "Amphibious".</summary>
+    public static string Movement(UnitSummary unit) => UnitRoles.Layer(unit)?.Split(' ')[0] ?? "";
+
+    public static string Format(double? value) => value?.ToString("#,0.##", CultureInfo.InvariantCulture) ?? "";
+
+    // A number cell; below sm, where there is no header row, it carries its label.
+    private static RenderFragment Number(string label, double? value) => __builder =>
+    {
+        <td class="whitespace-nowrap px-2 py-1.5 text-right font-mono text-ink max-sm:p-0 max-sm:text-xs @(value is null ? "max-sm:hidden" : "")">
+            <span class="mr-1 font-sans text-ink-faint sm:hidden">@label</span>@Format(value)
+        </td>
+    };
+
+    // First click: the natural direction (names A to Z, numbers high to low); second: the other way; third: back to the default order.
+    private RenderFragment SortButton(UnitFilters.SortOrder order) => __builder =>
+    {
+        bool active = State.Sort == order;
+        bool descending = active && State.Descending;
+        <button type="button" class="inline-flex cursor-pointer items-center gap-1 transition hover:text-ink @(active ? "text-primary" : "")"
+                @onclick="() => Sort(order)" aria-label="@($"Sort by {order.Label}")">
+            @order.Label
+            @if (active)
+            {
+                <span aria-hidden="true">@(descending ? "▼" : "▲")</span>
+            }
+        </button>
+    };
+
+    private void Sort(UnitFilters.SortOrder order)
+    {
+        bool natural = order.Slug != "name"; // numbers start high to low
+        string? value;
+        if (State.Sort != order)
+        {
+            value = natural ? $"-{order.Slug}" : order.Slug;
+        }
+        else if (State.Descending == natural)
+        {
+            value = natural ? order.Slug : $"-{order.Slug}";
+        }
+        else
+        {
+            value = null;
+        }
+
+        UnitLinks.Set(Navigation, UnitFilters.SortParameter, value);
+    }
+}
