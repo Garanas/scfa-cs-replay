@@ -15,7 +15,7 @@
         <div class="ml-auto flex items-center gap-2">
             @if (states is { Count: > 0 })
             {
-                <a class="btn-secondary px-3 py-1 text-xs" href="@($"units?unit={Id}{VersionQuery(states[^1])}")">Show in the unit list</a>
+                <a class="btn-secondary px-3 py-1 text-xs" href="@($"{UnitLinks.Database}?unit={Id}{VersionQuery(states[^1])}")">Show in the database</a>
             }
             <button type="button" class="cursor-pointer rounded-md px-2 py-1 text-lg leading-none text-ink-muted transition hover:bg-raised hover:text-ink"
                     title="Remove from the page" aria-label="@($"Remove {Title} from the page")" @onclick="OnRemove">×</button>
@@ -46,8 +46,8 @@
                         @foreach (UnitState state in states)
                         {
                             <th class="px-3 py-2 align-bottom font-normal">
-                                <a class="font-mono font-semibold text-ink transition hover:text-primary" href="@($"units?unit={Id}{VersionQuery(state)}")"
-                                   title="Show this version in the unit list">@Range(state)</a>
+                                <a class="font-mono font-semibold text-ink transition hover:text-primary" href="@($"{UnitLinks.Database}?unit={Id}{VersionQuery(state)}")"
+                                   title="Show this version in the unit database">@Range(state)</a>
                                 @if (index.Versions.GetValueOrDefault(state.From)?.Released is { } released)
                                 {
                                     <span class="block text-[11px] text-ink-faint">@released.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</span>
@@ -149,7 +149,7 @@
 
     private static string Range(UnitState state) => state.From == state.To ? $"{state.From}" : $"{state.From}–{state.To}";
 
-    // A stretch of versions opens its last version in the unit list; the latest is the list's default.
+    // A stretch of versions opens its last version in the unit database; the latest is its default.
     private string VersionQuery(UnitState state) => state.To == index?.Latest ? "" : $"&version={state.To}";
 
     private static string Subtitle(UnitSummary unit) => string.Join(" · ", new[]

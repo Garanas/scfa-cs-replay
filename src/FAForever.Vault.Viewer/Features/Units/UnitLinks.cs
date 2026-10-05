@@ -13,6 +13,12 @@ public static class UnitLinks
     public const string UnitParameter = "unit";
     public const string CompareParameter = "compare";
 
+    /// <summary>The unit database: the units of one game version.</summary>
+    public const string Database = "units/database";
+
+    /// <summary>The history page, without units.</summary>
+    public const string HistoryPage = "units/history";
+
     /// <summary>The units of the history page (<c>units/history</c>).</summary>
     public const string HistoryParameter = "units";
 
@@ -21,7 +27,7 @@ public static class UnitLinks
 
     /// <summary>The address of the history page for these units, in this order.</summary>
     public static string History(IEnumerable<string> blueprintIds) =>
-        $"units/history?{HistoryParameter}={string.Join(',', blueprintIds.Select(Uri.EscapeDataString))}";
+        $"{HistoryPage}?{HistoryParameter}={string.Join(',', blueprintIds.Select(Uri.EscapeDataString))}";
 
     /// <summary>The units of the history page according to the URL, in order, without duplicates.</summary>
     public static IReadOnlyList<string> HistoryUnits(NavigationManager navigation) => Ids(navigation, HistoryParameter);

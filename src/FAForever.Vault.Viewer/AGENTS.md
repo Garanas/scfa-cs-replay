@@ -344,9 +344,18 @@ it, never edit it by hand.
 - The published service worker caches `data/units/index.json` with the app shell, and each data file
   the first time the app reads it (not all of them on install); an app update starts a new cache.
 
+## Units landing page
+
+`Pages/Units.razor` (`/units`, the Units tab in the header) is an entry page like About: a card for
+the unit database and one for the unit history, in the same writing style as the About pages. Both
+pages link back to it ("← Units") and to each other (History in the details panel and the
+comparison, "Show in the database" on a history card). It keeps the reading width; the pages below
+`units/` widen to full HD. `/units` used to be the database: a link to it with a query
+(`/units?unit=uel0201`) is sent on to `units/database` with that query, so old links keep working.
+
 ## Unit database
 
-`Pages/Units.razor` (`/units`, the Units tab in the header) lists the units of one game version, the
+`Pages/UnitDatabasePage.razor` (`units/database`, `UnitLinks.Database`) lists the units of one game version, the
 latest unless `version` says otherwise (a picker in the heading, with the release date and how many
 units changed since the previous version, from the index entry): a filter column, a sortable table, a
 comparison and a details panel. The pieces live in `Features/Units/`.
@@ -398,7 +407,7 @@ as you type (id prefix first, buildable units before others, at most 8), picked 
 and Enter or the mouse (on `mousedown`, which comes before the input's blur). A card has a column per stretch of versions in which the unit stayed the same,
 a row per value (`Services/Units/UnitStats.cs`: the same labels for every version, one line per weapon
 value), changed values marked against the column before (▲/▼ for numbers), and a Categories row with
-what was added or removed. Column headers link to that version in the unit list.
+what was added or removed. Column headers link to that version in the unit database.
 
 - `UnitDatabase.LoadHistoryAsync` finds the stretches from the index alone (a version starts a new
   one where its `changes` lists the unit as changed or added, ends one where removed) and reads only
