@@ -392,7 +392,10 @@ The page widens to full HD like the Build order tab (`MainLayout.Container`).
 a card each (`Features/Units/UnitHistoryCard.razor`), in the order of `units` (at most six, like the
 comparison; unknown ids get a short card; each card's × takes its unit out). The details panel's
 "History" opens it for that unit, the comparison's "History" for the compared ones
-(`UnitLinks.History`). A card has a column per stretch of versions in which the unit stayed the same,
+(`UnitLinks.History`), and a search box next to the heading (`Features/Units/UnitSearchBox.razor`)
+adds a unit: an ARIA combobox that suggests units of the latest version on id, name and description
+as you type (id prefix first, buildable units before others, at most 8), picked with the arrow keys
+and Enter or the mouse (on `mousedown`, which comes before the input's blur). A card has a column per stretch of versions in which the unit stayed the same,
 a row per value (`Services/Units/UnitStats.cs`: the same labels for every version, one line per weapon
 value), changed values marked against the column before (▲/▼ for numbers), and a Categories row with
 what was added or removed. Column headers link to that version in the unit list.

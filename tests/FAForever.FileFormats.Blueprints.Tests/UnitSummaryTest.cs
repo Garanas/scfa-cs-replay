@@ -99,6 +99,24 @@ namespace FAForever.FileFormats.Blueprints.Tests
             Assert.IsNull(gun.DoTTime);
         }
 
+        [TestMethod]
+        [DataRow(0.15, 0.1493)]   // 66.7 ticks: 67, the same as 10/67, how 3810 rewrote it
+        [DataRow(0.208, 0.2083)]  // 48 ticks, the same as 10/48
+        [DataRow(0.769, 0.7692)]  // 13 ticks; the Czar's 10/12 (0.8333) in 3810 is a real change
+        [DataRow(1.0, 1.0)]
+        [DataRow(20.0, 10.0)]     // never faster than one shot per tick
+        public void RoundsTheRateOfFireToWholeTicks(double written, double expected)
+        {
+            Assert.AreEqual(expected, UnitSummaryWeapon.TickRate(written));
+        }
+
+        [TestMethod]
+        public void LeavesOutAMissingRateOfFire()
+        {
+            Assert.IsNull(UnitSummaryWeapon.TickRate(null));
+            Assert.IsNull(UnitSummaryWeapon.TickRate(0));
+        }
+
         private static BlueprintUnit Unit(string lua) =>
             (BlueprintUnit)BlueprintParser.Parse($"UnitBlueprint {{ {lua} }}", "/units/x/x_unit.bp")[0];
 

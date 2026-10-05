@@ -241,7 +241,8 @@ namespace FAForever.FileFormats.Blueprints
         public double? MaxRadius { get; init; }
 
         /// <summary>
-        /// Shots (salvos) per second; the game rounds the interval to whole ticks of 0.1 s.
+        /// Shots (salvos) per second, as the game fires them: it rounds the interval to whole ticks of
+        /// 0.1 s, so this is 10 / ticks (see <see cref="TickRate"/>), e.g. 0.1493 for a written 0.15.
         /// </summary>
         public double? RateOfFire { get; init; }
 
@@ -263,6 +264,23 @@ namespace FAForever.FileFormats.Blueprints
         /// <summary>
         /// The summary of a weapon blueprint.
         /// </summary>
+        /// <summary>
+        /// The rate of fire the game uses: "Game logic rounds the timings to the nearest tick", the
+        /// interval being <c>floor(max(0.1, 1 / RateOfFire) * 10 + 0.5) / 10</c> seconds
+        /// (<c>lua/system/blueprints-units.lua</c>, <c>DetermineWeaponDPS</c>). Blueprints write the
+        /// same rate in different ways (0.15, or <c>10/67</c> since 3810), which all give the same ticks.
+        /// </summary>
+        public static double? TickRate(double? rateOfFire)
+        {
+            if (rateOfFire is not { } rate || rate <= 0)
+            {
+                return null;
+            }
+
+            double ticks = Math.Floor(Math.Max(0.1, 1 / rate) * 10 + 0.5);
+            return UnitSummary.Round(10 / ticks);
+        }
+
         public static UnitSummaryWeapon From(BlueprintWeapon weapon) => new UnitSummaryWeapon
         {
             DisplayName = weapon.DisplayName,
@@ -273,7 +291,7 @@ namespace FAForever.FileFormats.Blueprints
             DoTTime = UnitSummary.Positive(weapon.DoTTime),
             DamageRadius = UnitSummary.Positive(weapon.DamageRadius),
             MaxRadius = UnitSummary.Round(weapon.MaxRadius),
-            RateOfFire = UnitSummary.Round(weapon.RateOfFire),
+            RateOfFire = TickRate(weapon.RateOfFire),
             MuzzleSalvoSize = weapon.MuzzleSalvoSize,
             MuzzleSalvoDelay = UnitSummary.Positive(weapon.MuzzleSalvoDelay),
             EnabledByEnhancement = weapon.EnabledByEnhancement,

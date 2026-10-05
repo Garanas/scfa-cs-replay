@@ -1,0 +1,163 @@
+@using FAForever.Vault.Viewer.Services.Units
+@inject UnitDatabase Database
+
+@* A text box that suggests units as you type (on id, name and description) and hands the chosen one to
+   OnPick: an autocomplete, built as an ARIA combobox. The suggestions come from the latest game
+   version. Open or closed and the highlighted suggestion are pointer and keyboard aids: never in the URL. *@
+
+<div class="relative w-full sm:w-80">
+    <label for="@InputId" class="sr-only">@Placeholder</label>
+    <input id="@InputId" type="text" class="input-field" placeholder="@Placeholder" autocomplete="off"
+           role="combobox" aria-autocomplete="list" aria-expanded="@(IsOpen ? "true" : "false")" aria-controls="@ListId"
+           aria-activedescendant="@(IsOpen && highlighted >= 0 ? OptionId(highlighted) : null)"
+           disabled="@Disabled" value="@text"
+           @oninput="OnInput" @onkeydown="OnKeyDown" @onfocus="() => open = true" @onblur="() => open = false" />
+
+    @if (IsOpen)
+    {
+        <ul id="@ListId" role="listbox" aria-label="Units"
+            class="absolute top-full right-0 left-0 z-20 mt-1 max-h-80 overflow-y-auto rounded-lg border border-edge bg-surface p-1 shadow-lg">
+            @if (matches.Count == 0)
+            {
+                <li class="px-3 py-2 text-sm text-ink-muted">No unit matches "@text"</li>
+            }
+            @for (int position = 0; position < matches.Count; position++)
+            {
+                UnitSummary unit = matches[position];
+                int option = position;
+                @* mousedown, not click: a click would come after the input's blur, which closes the list *@
+                <li id="@OptionId(option)" role="option" aria-selected="@(option == highlighted ? "true" : "false")"
+                    class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm @(option == highlighted ? "bg-raised" : "")"
+                    @onmousedown="() => PickAsync(unit)" @onmousedown:preventDefault @onmouseenter="() => highlighted = option">
+                    <UnitIcon BlueprintId="@unit.BlueprintId" Size="28" />
+                    <span class="min-w-0 flex-1">
+                        <span class="block truncate font-medium text-ink">@UnitFilters.DisplayName(unit)</span>
+                        <span class="block truncate text-xs text-ink-muted">@Details(unit)</span>
+                    </span>
+                    <span class="shrink-0 font-mono text-[11px] text-ink-faint">@unit.BlueprintId</span>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    /// <summary>At most this many suggestions are shown.</summary>
+    private const int MaxMatches = 8;
+
+    [Parameter] public string Placeholder { get; set; } = "Add a unit: name or id";
+
+    /// <summary>Units not to suggest, e.g. those already on the page.</summary>
+    [Parameter] public IReadOnlyCollection<string> Exclude { get; set; } = [];
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Called with the chosen unit's blueprint id.</summary>
+    [Parameter] public EventCallback<string> OnPick { get; set; }
+
+    private static int instances;
+    private readonly int instance = ++instances;
+    private string InputId => $"unit-search-{instance}";
+    private string ListId => $"unit-search-{instance}-list";
+    private string OptionId(int option) => $"unit-search-{instance}-{option}";
+
+    private IReadOnlyList<UnitSummary> units = [];
+    private List<UnitSummary> matches = [];
+    private string text = "";
+    private bool open;
+    private int highlighted = -1;
+
+    private bool IsOpen => open && !Disabled && text.Trim().Length > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            units = (await Database.LoadAsync()).Data.Units;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            // Without the data there is nothing to suggest; the rest of the page still works.
+            Console.Error.WriteLine($"Unit data unavailable: {exception.Message}");
+        }
+    }
+
+    private void OnInput(ChangeEventArgs change)
+    {
+        text = change.Value as string ?? "";
+        open = true;
+        matches = Find(text);
+        highlighted = matches.Count > 0 ? 0 : -1;
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs key)
+    {
+        switch (key.Key)
+        {
+            case "ArrowDown" when matches.Count > 0:
+                open = true;
+                highlighted = (highlighted + 1) % matches.Count;
+                break;
+            case "ArrowUp" when matches.Count > 0:
+                highlighted = highlighted <= 0 ? matches.Count - 1 : highlighted - 1;
+                break;
+            case "Enter" when IsOpen && highlighted >= 0 && highlighted < matches.Count:
+                await PickAsync(matches[highlighted]);
+                break;
+            case "Escape":
+                open = false;
+                break;
+        }
+    }
+
+    private async Task PickAsync(UnitSummary unit)
+    {
+        text = "";
+        matches = [];
+        highlighted = -1;
+        await OnPick.InvokeAsync(unit.BlueprintId);
+    }
+
+    /// <summary>
+    /// The units that match the text, best first: an id that starts with it, then a name or description
+    /// that starts with it, then one that contains it. Buildable units before campaign and helper units.
+    /// </summary>
+    private List<UnitSummary> Find(string query)
+    {
+        string needle = query.Trim();
+        if (needle.Length == 0)
+        {
+            return [];
+        }
+
+        int Rank(UnitSummary unit)
+        {
+            string name = UnitFilters.DisplayName(unit);
+            if (unit.BlueprintId.StartsWith(needle, StringComparison.OrdinalIgnoreCase)) return 0;
+            if (name.StartsWith(needle, StringComparison.OrdinalIgnoreCase)) return 1;
+            if (unit.Description?.StartsWith(needle, StringComparison.OrdinalIgnoreCase) == true) return 2;
+            if (name.Contains(needle, StringComparison.OrdinalIgnoreCase) || unit.Description?.Contains(needle, StringComparison.OrdinalIgnoreCase) == true) return 3;
+            if (unit.BlueprintId.Contains(needle, StringComparison.OrdinalIgnoreCase)) return 4;
+            return -1;
+        }
+
+        return units
+            .Where(unit => !Exclude.Contains(unit.BlueprintId))
+            .Select(unit => (Unit: unit, Rank: Rank(unit)))
+            .Where(match => match.Rank >= 0)
+            .OrderBy(match => match.Rank)
+            .ThenBy(match => match.Unit.Buildable ? 0 : 1)
+            // matches on the id read best in id order (uel0201, uel0202, ...), the others by name
+            .ThenBy(match => match.Rank == 0 ? match.Unit.BlueprintId : UnitFilters.DisplayName(match.Unit), StringComparer.OrdinalIgnoreCase)
+            .Take(MaxMatches)
+            .Select(match => match.Unit)
+            .ToList();
+    }
+
+    private static string Details(UnitSummary unit) => string.Join(" · ", new[]
+    {
+        unit.Name is not null ? unit.Description : null,
+        unit.Faction,
+        unit.TechLevel switch { 4 => "Experimental", { } tech => $"Tech {tech}", null => null },
+    }.Where(part => part is not null));
+}

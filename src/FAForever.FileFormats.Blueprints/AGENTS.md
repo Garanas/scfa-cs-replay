@@ -44,7 +44,9 @@ Every release from 3801 (there is no 3800 tag) is there.
   maps a `BlueprintUnit`. Nothing is computed (no DPS), but values are **evened out** so that versions
   only differ where the meaning does: blueprints get rewritten (3810 dropped `RegenRate = 0` from 549
   units, others write `10/60` as `0.1667` or reorder categories), so numbers are rounded to 4 decimals,
-  0 reads as not set where it means "none", and categories are sorted. Without that, the history and
+  0 reads as not set where it means "none", categories are sorted, and the rate of fire is the one the
+  game fires at: 10 / whole ticks (`UnitSummaryWeapon.TickRate`, after `lua/system/blueprints-units.lua`),
+  since 3810 rewrote rates such as 0.15 as `10/67`. Without that, the history and
   the "changed" filter would mostly show rewrites.
 - A data file is `{"units":[...]}` with **one unit per line**, sorted by id, camel case, nulls left
   out; `UnitData` is exactly that, the units and nothing else. Which game versions a file belongs to
