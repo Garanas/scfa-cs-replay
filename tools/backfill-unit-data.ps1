@@ -36,8 +36,8 @@ try {
         $archive = Join-Path $work "$tag.tar"
         git -C $Source archive --format=tar -o $archive "refs/tags/$tag" units mod_info.lua
         if ($LASTEXITCODE -ne 0) { throw "git archive failed for $tag" }
-        tar -xf $archive -C $dir
-        if ($LASTEXITCODE -ne 0) { throw "tar failed for $tag" }
+        # .NET's reader, not tar on the path: from Git Bash that is GNU tar, which takes C:\ for a host
+        [System.Formats.Tar.TarFile]::ExtractToDirectory($archive, $dir, $true)
 
         # where the data comes from: the commit of the tag and its date
         $commit = git -C $Source rev-parse "refs/tags/$tag^{commit}"
