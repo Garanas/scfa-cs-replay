@@ -37,7 +37,8 @@ in the FA repo parses; tests use the copies in `tests/FAForever.FileFormats.Blue
 The browser does not parse blueprints: `tools/generate-unit-data.cs` (a file-based app, `dotnet run
 tools/generate-unit-data.cs -- <fa checkout>`) parses `units/*_unit.bp` of one FA release and adds it
 to `src/FAForever.Vault.Viewer/wwwroot/data/units/`, which the unit cards and the unit database read.
-Every release from 3801 (there is no 3800 tag) is there.
+Every release from 3801 (there is no 3800 tag) is there; the oldest version is also
+`UnitDatabase.FirstVersion` in the Viewer (the Units page shows it), so change both together.
 
 - `UnitSummary` is what a card shows (name, faction, tech, motion type, categories, cost, build power,
   health, shield, intel ranges, weapons with damage, salvo, range and rate of fire); `UnitSummary.From`

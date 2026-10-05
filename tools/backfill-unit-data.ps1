@@ -3,7 +3,8 @@
 # src/FAForever.Vault.Viewer/wwwroot/data/units/ (see tools/generate-unit-data.cs). Use it to add old
 # releases, or after a change to UnitSummary, which changes every data file. It reads each release
 # tag from a clone of github.com/FAForever/fa with git archive (only units/ and mod_info.lua), so the
-# clone itself is not touched; it needs the tags (git fetch --tags).
+# clone itself is not touched; it needs the tags (git fetch --tags). The oldest version is also
+# UnitDatabase.FirstVersion in the Viewer: change it when -From changes.
 #
 #   pwsh tools/backfill-unit-data.ps1 -Source D:\faf-development\fa -From 3801 -To 3839
 param(

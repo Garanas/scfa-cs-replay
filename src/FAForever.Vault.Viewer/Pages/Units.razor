@@ -1,5 +1,6 @@
 @page "/units"
 @using FAForever.Vault.Viewer.Features.Units
+@using FAForever.Vault.Viewer.Services.Units
 @inject NavigationManager Navigation
 
 @* The entry to the unit pages (the Units tab in the header): a card for the unit database and one
@@ -58,7 +59,7 @@
         <h2 class="mt-6 text-2xl font-bold text-ink">The unit history</h2>
         <p class="mt-1 font-mono text-sm text-primary">one unit · every game version</p>
         <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
-            Follow a unit through every release since @UnitHistoryFrom. See which values went up or down,
+            Follow a unit through every release since @UnitDatabase.FirstVersion. See which values went up or down,
             and when. Put up to six units on one page.
         </p>
         <p class="mt-6 text-sm font-semibold text-primary">
@@ -73,10 +74,7 @@
 
     // Decoration, not data: what a history looks like, a version and whether a value rose or fell.
     private static readonly (string Version, string Mark)[] HistorySteps =
-        [("3801", "•"), ("3812", "▲"), ("3824", "▼"), ("3839", "▲")];
-
-    /// <summary>The first game version with unit data.</summary>
-    private const int UnitHistoryFrom = 3801;
+        [(UnitDatabase.FirstVersion.ToString(), "•"), ("3812", "▲"), ("3824", "▼"), ("3839", "▲")];
 
     // Before the landing page, /units was the database: a link to it with a selection
     // (/units?unit=uel0201) still opens that view.
