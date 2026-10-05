@@ -7,7 +7,7 @@ namespace FAForever.FileFormats.Blueprints
     /// Values are those of the blueprint (see <see cref="BlueprintParser"/>), evened out so that two
     /// versions only differ where the meaning does: numbers rounded to 4 decimals, 0 read as not set
     /// where it means "none" (regeneration, shield, build power, production, speed, intel, damage
-    /// area, salvo delay), categories sorted. Null means not set.
+    /// area, salvo delay, damage over time), categories sorted. Null means not set.
     /// </summary>
     public sealed record UnitSummary
     {
@@ -220,6 +220,17 @@ namespace FAForever.FileFormats.Blueprints
         public double? Damage { get; init; }
 
         /// <summary>
+        /// Damage over time: the damage lands in this many pulses (<c>DoTPulses</c>), spread over
+        /// <see cref="DoTTime"/> seconds, e.g. a napalm bomb. Not set for a weapon that hits once.
+        /// </summary>
+        public double? DoTPulses { get; init; }
+
+        /// <summary>
+        /// The seconds over which the pulses of <see cref="DoTPulses"/> land (<c>DoTTime</c>).
+        /// </summary>
+        public double? DoTTime { get; init; }
+
+        /// <summary>
         /// The radius of the damage area; 0 hits only what the projectile touches.
         /// </summary>
         public double? DamageRadius { get; init; }
@@ -258,6 +269,8 @@ namespace FAForever.FileFormats.Blueprints
             WeaponCategory = weapon.WeaponCategory,
             RangeCategory = weapon.RangeCategory,
             Damage = UnitSummary.Round(weapon.Damage),
+            DoTPulses = UnitSummary.Positive(weapon.DoTPulses),
+            DoTTime = UnitSummary.Positive(weapon.DoTTime),
             DamageRadius = UnitSummary.Positive(weapon.DamageRadius),
             MaxRadius = UnitSummary.Round(weapon.MaxRadius),
             RateOfFire = UnitSummary.Round(weapon.RateOfFire),

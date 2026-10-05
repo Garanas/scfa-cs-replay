@@ -57,6 +57,8 @@ public static class UnitStats
             string name = $"{(count > 1 ? $"{count} × " : "")}{weapon.DisplayName ?? weapon.WeaponCategory ?? "Weapon"}";
             Number($"{name}: damage", weapon.Damage);
             Number($"{name}: salvo", weapon.MuzzleSalvoSize > 1 ? weapon.MuzzleSalvoSize : null);
+            Number($"{name}: damage pulses", weapon.DoTPulses > 1 ? weapon.DoTPulses : null);
+            Number($"{name}: seconds of damage over time", weapon.DoTTime);
             Number($"{name}: area", weapon.DamageRadius);
             Number($"{name}: range", weapon.MaxRadius);
             if (weapon.RateOfFire is > 0 and var rate)

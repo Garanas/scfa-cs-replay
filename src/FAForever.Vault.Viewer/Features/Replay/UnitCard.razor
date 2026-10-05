@@ -149,6 +149,11 @@
         List<string> parts = [];
         string damage = $"{Number(weapon.Damage)} damage";
         parts.Add(weapon.MuzzleSalvoSize is > 1 and var salvo ? $"{salvo} × {damage}" : damage);
+        if (weapon.DoTPulses is > 1 and var pulses)
+        {
+            // damage over time: Damage is per pulse (lua/system/blueprints-units.lua, CalculatedDamage)
+            parts[^1] += weapon.DoTTime is > 0 and var time ? $" × {Number(pulses)} pulses over {Number(time)} s" : $" × {Number(pulses)} pulses";
+        }
         if (weapon.DamageRadius is > 0)
         {
             parts.Add($"area {Number(weapon.DamageRadius)}");

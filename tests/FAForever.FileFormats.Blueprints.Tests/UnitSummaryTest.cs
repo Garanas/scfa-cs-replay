@@ -84,6 +84,21 @@ namespace FAForever.FileFormats.Blueprints.Tests
             Assert.IsTrue(new UnitData([before]).HasSameUnits(new UnitData([after])));
         }
 
+        [TestMethod]
+        public void SummarisesDamageOverTime()
+        {
+            // the Scorcher's napalm bomb (uea0103) after 3813, which changed DoTTime from 4.2 to 3.6
+            UnitSummaryWeapon bomb = UnitSummary.From(Unit("""
+                Weapon = { { DisplayName = "Napalm Carpet Bomb", Damage = 40, DoTPulses = 6, DoTTime = 3.6 } },
+                """)).Weapons[0];
+            UnitSummaryWeapon gun = UnitSummary.From(Unit("""Weapon = { { Damage = 24, DoTPulses = 0, DoTTime = 0 } },""")).Weapons[0];
+
+            Assert.AreEqual(6, bomb.DoTPulses);
+            Assert.AreEqual(3.6, bomb.DoTTime);
+            Assert.IsNull(gun.DoTPulses);
+            Assert.IsNull(gun.DoTTime);
+        }
+
         private static BlueprintUnit Unit(string lua) =>
             (BlueprintUnit)BlueprintParser.Parse($"UnitBlueprint {{ {lua} }}", "/units/x/x_unit.bp")[0];
 
