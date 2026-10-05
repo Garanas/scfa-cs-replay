@@ -1,0 +1,110 @@
+@inherits UrlStateComponent
+@using System.Globalization
+@using FAForever.Vault.Viewer.Services.Units
+
+@* The units of "compare" side by side: one column per unit, one row per value. The best value of a
+   row is marked (the lowest cost, the most health, the longest range), but only when the row
+   compares like with like, i.e. at least two units have the value. *@
+
+<section class="card overflow-x-auto p-3 sm:p-4" aria-label="Comparison">
+    <div class="mb-2 flex items-center gap-2">
+        <h2 class="text-sm font-semibold">Compare</h2>
+        <span class="text-xs text-ink-faint">@Units.Count of @UnitLinks.MaxCompared · the best value of each row is marked</span>
+        <a class="ml-auto text-xs text-ink-muted transition hover:text-primary" href="@UnitLinks.History(Units.Select(unit => unit.BlueprintId))"
+           title="These units in every game version">History</a>
+        <button type="button" class="cursor-pointer text-xs text-ink-muted transition hover:text-primary"
+                @onclick="() => UnitLinks.Set(Navigation, UnitLinks.CompareParameter, null)">Clear</button>
+    </div>
+    <table class="w-full min-w-max text-sm">
+        <thead>
+            <tr>
+                <th class="sticky left-0 bg-surface"></th>
+                @foreach (UnitSummary unit in Units)
+                {
+                    <th class="min-w-36 px-2 pb-2 text-left align-bottom font-normal">
+                        <div class="flex items-start gap-2">
+                            <button type="button" class="flex min-w-0 cursor-pointer items-center gap-2 text-left transition hover:text-primary"
+                                    @onclick="() => UnitLinks.Select(Navigation, unit.BlueprintId)" title="Show details">
+                                <UnitIcon BlueprintId="@unit.BlueprintId" Size="32" />
+                                <span class="min-w-0">
+                                    <span class="block truncate font-semibold">@UnitFilters.DisplayName(unit)</span>
+                                    <span class="block truncate text-xs text-ink-muted">@unit.Faction @UnitTable.Tech(unit)</span>
+                                </span>
+                            </button>
+                            <button type="button" class="ml-auto cursor-pointer px-1 text-ink-faint transition hover:text-primary"
+                                    title="Remove from the comparison" aria-label="@($"Remove {UnitFilters.DisplayName(unit)} from the comparison")"
+                                    @onclick="() => UnitLinks.ToggleCompare(Navigation, unit.BlueprintId)">×</button>
+                        </div>
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @Row("Moves on", unit => UnitRoles.Layer(unit))
+            @NumberRow("Mass", unit => unit.BuildCostMass, lowerIsBetter: true)
+            @NumberRow("Energy", unit => unit.BuildCostEnergy, lowerIsBetter: true)
+            @NumberRow("Build time", unit => unit.BuildTime, lowerIsBetter: true)
+            @NumberRow("Build power", unit => unit.BuildRate)
+            @NumberRow("Health", unit => unit.MaxHealth)
+            @NumberRow("Shield", unit => unit.ShieldMaxHealth)
+            @NumberRow("Speed", unit => unit.MaxSpeed)
+            @NumberRow("Range", unit => UnitRoles.MaxRange(unit))
+            @NumberRow("Vision", unit => unit.VisionRadius)
+            @NumberRow("Radar", unit => unit.RadarRadius)
+            @NumberRow("Sonar", unit => unit.SonarRadius)
+            @NumberRow("Omni", unit => unit.OmniRadius)
+            @NumberRow("Mass per second", unit => unit.ProductionPerSecondMass)
+            @NumberRow("Energy per second", unit => unit.ProductionPerSecondEnergy)
+            <tr class="border-t border-edge/60 align-top">
+                <th class="sticky left-0 bg-surface py-1.5 pr-3 text-left text-xs font-normal text-ink-faint">Weapons</th>
+                @foreach (UnitSummary unit in Units)
+                {
+                    <td class="px-2 py-1.5 text-xs">
+                        @foreach (var (weapon, count) in unit.Weapons.Where(UnitRoles.IsRealWeapon).GroupBy(weapon => weapon).Select(group => (group.Key, group.Count())))
+                        {
+                            <div class="mb-1">
+                                <div class="font-medium text-ink">@(count > 1 ? $"{count} × " : "")@(weapon.DisplayName ?? weapon.WeaponCategory)</div>
+                                <div class="text-ink-muted">@UnitTable.Format(weapon.Damage) damage@(weapon.MuzzleSalvoSize is > 1 ? $" × {weapon.MuzzleSalvoSize}" : "") · range @UnitTable.Format(weapon.MaxRadius)</div>
+                            </div>
+                        }
+                    </td>
+                }
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public required IReadOnlyList<UnitSummary> Units { get; set; }
+
+    private RenderFragment Row(string label, Func<UnitSummary, string?> value) => __builder =>
+    {
+        <tr class="border-t border-edge/60">
+            <th class="sticky left-0 bg-surface py-1.5 pr-3 text-left text-xs font-normal text-ink-faint">@label</th>
+            @foreach (UnitSummary unit in Units)
+            {
+                <td class="px-2 py-1.5 text-ink-muted">@value(unit)</td>
+            }
+        </tr>
+    };
+
+    private RenderFragment NumberRow(string label, Func<UnitSummary, double?> value, bool lowerIsBetter = false) => __builder =>
+    {
+        double?[] values = Units.Select(value).ToArray();
+        double[] present = values.Where(candidate => candidate is > 0).Select(candidate => candidate!.Value).ToArray();
+        if (present.Length == 0)
+        {
+            return;
+        }
+
+        double? best = present.Length >= 2 && present.Distinct().Count() > 1 ? (lowerIsBetter ? present.Min() : present.Max()) : null;
+        <tr class="border-t border-edge/60">
+            <th class="sticky left-0 bg-surface py-1.5 pr-3 text-left text-xs font-normal text-ink-faint">@label</th>
+            @foreach (double? cell in values)
+            {
+                bool isBest = cell is > 0 && cell == best;
+                <td class="px-2 py-1.5 font-mono @(isBest ? "font-semibold text-primary" : "text-ink")">@UnitTable.Format(cell is > 0 ? cell : null)</td>
+            }
+        </tr>
+    };
+}

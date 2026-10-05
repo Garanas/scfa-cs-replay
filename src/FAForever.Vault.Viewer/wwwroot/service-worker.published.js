@@ -1,8 +1,9 @@
 // Caches the app shell (framework, assemblies, styles, icons) so the installed app starts
 // offline and loads fast. Data is never cached: replays come from the FAF content server and
-// the vault from the FAF API, both straight from the network. Adapted from the Blazor PWA
-// template; the build replaces service-worker-assets.js with the list of published files and
-// their hashes, and a new list means a new cache.
+// the vault from the FAF API, both straight from the network. The unit data is part of the app:
+// its index is cached with the shell, each game version's file when the app first reads it.
+// Adapted from the Blazor PWA template; the build replaces service-worker-assets.js with the
+// list of published files and their hashes, and a new list means a new cache.
 self.importScripts('./service-worker-assets.js');
 self.addEventListener('install', event => event.waitUntil(onInstall(event)));
 self.addEventListener('activate', event => event.waitUntil(onActivate(event)));
@@ -22,7 +23,12 @@ const offlineAssetsExclude = [
     // The ~600 individual unit and background icons: the app draws units from the atlases.
     /^images\/units\/units\//,
     /^images\/units\/backgrounds\//,
+    // One unit data file per game version: cached on first use instead (unitDataFile below).
+    /^data\/units\/(?!index\.json$)/,
 ];
+
+// A unit data file of one game version (data/units/3839.json).
+const unitDataFile = /\/data\/units\/\d+\.json$/;
 
 // The scope, not the origin: the app may be hosted below a path.
 const baseUrl = new URL(self.registration.scope);
@@ -53,6 +59,13 @@ async function onFetch(event) {
         const request = shouldServeIndexHtml ? new URL('index.html', baseUrl).href : event.request;
         const cache = await caches.open(cacheName);
         cachedResponse = await cache.match(request);
+        if (!cachedResponse && unitDataFile.test(new URL(event.request.url).pathname)) {
+            const response = await fetch(event.request);
+            if (response.ok) {
+                await cache.put(event.request, response.clone());
+            }
+            return response;
+        }
     }
     return cachedResponse || fetch(event.request);
 }

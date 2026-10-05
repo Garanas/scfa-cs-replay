@@ -73,6 +73,24 @@ window.fafReplay = {
         document.getElementById(id)?.scrollIntoView({ block: "nearest" });
     },
     /*
+     * Places a floating element (the unit card, UnitCardHost.razor) next to a pointer position in
+     * viewport pixels: below right of it, flipped to the left or pulled up where it would leave
+     * the viewport. The element starts hidden, so it never shows at a stale spot.
+     */
+    placeNear: function (id, x, y) {
+        const element = document.getElementById(id);
+        if (!element) return;
+        const gap = 16, margin = 8;
+        const width = element.offsetWidth, height = element.offsetHeight;
+        let left = x + gap;
+        if (left + width > window.innerWidth - margin) left = x - gap - width;
+        let top = y + gap;
+        if (top + height > window.innerHeight - margin) top = window.innerHeight - margin - height;
+        element.style.left = Math.max(margin, left) + "px";
+        element.style.top = Math.max(margin, top) + "px";
+        element.style.visibility = "visible";
+    },
+    /*
      * GoatCounter (see Services/Analytics/AnalyticsService.cs). The script is only loaded when an
      * endpoint is configured; counts made before it has loaded wait in a queue. "no_onload": the
      * app counts every page itself, so the automatic count on load would be a duplicate.

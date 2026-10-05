@@ -1,0 +1,173 @@
+@using System.Globalization
+@using FAForever.FileFormats.Blueprints
+@using FAForever.Vault.Viewer.Services.Units
+
+@* The essentials of a unit from the unit data: what it is, what it costs, how tough it is, what it sees and its weapons. *@
+<div class="rounded-lg border border-edge bg-surface p-3 text-sm text-ink @Class">
+    <div class="flex items-center gap-3">
+        <UnitIcon BlueprintId="@BlueprintId" Size="40" />
+        <div class="min-w-0">
+            <div class="truncate font-semibold">@(Unit?.Name ?? Unit?.Description ?? BlueprintId)</div>
+            <div class="truncate text-xs text-ink-muted">@Subtitle</div>
+        </div>
+    </div>
+
+    @if (Unit is null)
+    {
+        <p class="mt-2 text-xs text-ink-muted">Not in the unit data of game version @DataVersion: a mod or campaign unit.</p>
+    }
+    else
+    {
+        string[] roles = UnitRoles.For(Unit).ToArray();
+        @if (roles.Length > 0)
+        {
+            <div class="mt-2 flex flex-wrap gap-1">
+                @foreach (string role in roles)
+                {
+                    <span class="rounded bg-raised px-1.5 py-0.5 text-[11px] text-ink-muted">@role</span>
+                }
+            </div>
+        }
+
+        <dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+            @Stat("Mass", Unit.BuildCostMass, icon: "images/stats/mass.png")
+            @Stat("Energy", Unit.BuildCostEnergy, icon: "images/stats/energy.png")
+            @Stat("Build time", Unit.BuildTime)
+            @if (Unit.BuildRate is > 0)
+            {
+                @Stat("Build power", Unit.BuildRate)
+            }
+            @Stat("Health", Unit.MaxHealth, Unit.RegenRate is > 0 ? $"+{Number(Unit.RegenRate)}/s" : null)
+            @if (Unit.ShieldMaxHealth is > 0)
+            {
+                @Stat("Shield", Unit.ShieldMaxHealth)
+            }
+        </dl>
+
+        string? intel = Intel(Unit);
+        @if (intel is not null)
+        {
+            <div class="mt-2 text-xs"><span class="text-ink-faint">Intel</span> <span class="text-ink-muted">@intel</span></div>
+        }
+
+        // Identical weapons (the two guns of a Prowler) share one row with a count; records compare by value.
+        var weapons = Unit.Weapons.Where(UnitRoles.IsRealWeapon).GroupBy(weapon => weapon).Select(group => (Weapon: group.Key, Count: group.Count())).ToArray();
+        @if (weapons.Length > 0)
+        {
+            <ul class="mt-2 flex flex-col gap-1.5 border-t border-edge pt-2">
+                @foreach ((UnitSummaryWeapon weapon, int count) in weapons)
+                {
+                    <li class="text-xs">
+                        <div class="flex items-baseline gap-1.5">
+                            <span class="truncate font-medium text-ink">@(count > 1 ? $"{count} × " : "")@(weapon.DisplayName ?? weapon.WeaponCategory ?? "Weapon")</span>
+                            @if (weapon.EnabledByEnhancement is not null)
+                            {
+                                <span class="shrink-0 rounded bg-raised px-1 text-[10px] text-ink-muted">upgrade</span>
+                            }
+                            @if (weapon.WeaponCategory is { } category && category != weapon.DisplayName)
+                            {
+                                <span class="ml-auto shrink-0 text-[11px] text-ink-faint">@category</span>
+                            }
+                        </div>
+                        <div class="text-ink-muted">@WeaponLine(weapon)</div>
+                    </li>
+                }
+            </ul>
+        }
+    }
+
+    <div class="mt-2 border-t border-edge pt-2 text-[11px] text-ink-faint">Game version @DataVersion</div>
+    @foreach (string note in Notes)
+    {
+        <p class="mt-1 text-[11px] text-primary">@note</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required string BlueprintId { get; set; }
+
+    /// <summary>Width and shadow: a floating card by default; the unit database shows it full width.</summary>
+    [Parameter] public string Class { get; set; } = "w-80 shadow-lg";
+
+    /// <summary>The unit's summary; null when the data does not have it (mods, campaign units).</summary>
+    [Parameter] public UnitSummary? Unit { get; set; }
+
+    [Parameter, EditorRequired] public int DataVersion { get; set; }
+
+    /// <summary>Why the values may not match the replay (<see cref="UnitDataNotes"/>).</summary>
+    [Parameter] public IReadOnlyList<string> Notes { get; set; } = [];
+
+    private string Subtitle => Unit is null
+        ? BlueprintId
+        : string.Join(" · ", new[]
+        {
+            Unit.Name is not null ? Unit.Description : null,
+            Unit.Faction,
+            Unit.TechLevel switch { 4 => "Experimental", { } tech => $"Tech {tech}", null => null },
+            UnitRoles.Layer(Unit),
+        }.Where(part => part is not null));
+
+    private static RenderFragment Stat(string label, double? value, string? extra = null, string? icon = null) => __builder =>
+    {
+        if (value is null)
+        {
+            return;
+        }
+
+        <div class="flex items-center justify-between gap-2">
+            <dt class="flex items-center gap-1 text-ink-faint">
+                @if (icon is not null)
+                {
+                    <img src="@icon" alt="" class="h-3.5 w-3.5" />
+                }
+                @label
+            </dt>
+            <dd class="m-0 font-mono text-ink">@Number(value)@if (extra is not null){<span class="ml-1 text-ink-faint">@extra</span>}</dd>
+        </div>
+    };
+
+    /// <summary>The non-zero intel ranges, e.g. "vision 26 · radar 65".</summary>
+    private static string? Intel(UnitSummary unit)
+    {
+        string[] parts = new (string Label, double? Radius)[]
+            {
+                ("vision", unit.VisionRadius),
+                ("water vision", unit.WaterVisionRadius),
+                ("radar", unit.RadarRadius),
+                ("sonar", unit.SonarRadius),
+                ("omni", unit.OmniRadius),
+            }
+            .Where(part => part.Radius is > 0)
+            .Select(part => $"{part.Label} {Number(part.Radius)}")
+            .ToArray();
+        return parts.Length > 0 ? string.Join(" · ", parts) : null;
+    }
+
+    /// <summary>E.g. "3 × 24 damage · area 1.5 · range 18 · every 1 s".</summary>
+    private static string WeaponLine(UnitSummaryWeapon weapon)
+    {
+        List<string> parts = [];
+        string damage = $"{Number(weapon.Damage)} damage";
+        parts.Add(weapon.MuzzleSalvoSize is > 1 and var salvo ? $"{salvo} × {damage}" : damage);
+        if (weapon.DoTPulses is > 1 and var pulses)
+        {
+            // damage over time: Damage is per pulse (lua/system/blueprints-units.lua, CalculatedDamage)
+            parts[^1] += weapon.DoTTime is > 0 and var time ? $" × {Number(pulses)} pulses over {Number(time)} s" : $" × {Number(pulses)} pulses";
+        }
+        if (weapon.DamageRadius is > 0)
+        {
+            parts.Add($"area {Number(weapon.DamageRadius)}");
+        }
+        if (weapon.MaxRadius is > 0)
+        {
+            parts.Add($"range {Number(weapon.MaxRadius)}");
+        }
+        if (weapon.RateOfFire is > 0 and var rate)
+        {
+            parts.Add($"every {Number(1 / rate)} s");
+        }
+        return string.Join(" · ", parts);
+    }
+
+    private static string Number(double? value) => value?.ToString("0.##", CultureInfo.InvariantCulture) ?? "";
+}

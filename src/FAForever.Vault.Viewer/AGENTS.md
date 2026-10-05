@@ -306,6 +306,108 @@ The JSON index gives the top-left pixel of each cell:
   and commit the result; output is deterministic (PNG timestamps are stripped), so the diff only
   shows real changes. Cell positions can shift when icons are added, so never hardcode coordinates.
 
+## Unit cards
+
+Hovering a unit on the Build order tab (the order ledger, the key moments and the "units ordered"
+chips of the Timings view) shows a card with what the unit is: name, faction, tech, where it moves,
+roles, cost, build power, health, shield, intel ranges and its weapons. The data is
+`wwwroot/data/units/`: an index and one file per distinct set of units, for every release from 3801
+(see the [Blueprints guide](../FAForever.FileFormats.Blueprints/AGENTS.md), "Unit data"); regenerate
+it, never edit it by hand.
+
+- `Services/Units/UnitDatabase.cs` (scoped, like `UnitIconAtlas`) fetches the index once and each data
+  file once, and hands out the data of a game version (`LoadAsync(version)`, resolved through the
+  index). `Features/Replay/UnitCardHost.razor` (placed once in `ReplayView`) loads the version the
+  replay was played on with the replay page, because reading a file takes about half a second in the
+  WebAssembly interpreter, and renders the card.
+- A row shows the card with `UnitCardService.Show(blueprintId, x, y)` from `@onmouseenter` (pointer
+  position from `MouseEventArgs.ClientX/Y`) and hides it with `Hide()` on `@onmouseleave`; navigation
+  hides it too. Hover is transient state: never in the URL. Rows that show a card drop their `title`,
+  or the browser's tooltip would cover it.
+- **The card must not wait for the tab to render.** Blazor re-renders a component after each of its
+  events, and a render of the Build order tab takes 150 to 250 ms in a debug build (two maps with
+  hundreds of markers, the ledger). `BuildOrderPanel` and `BuildOrderTimings` therefore implement
+  `IHandleEvent` and skip that render for hover events, so the card host renders alone (a few ms).
+  The maps highlight the hovered order once the pointer rests 60 ms (`HighlightWhenResting`), so
+  moving across the ledger renders the tab once where it stops, not twice per row.
+- `fafReplay.placeNear` puts the card beside the pointer and keeps it inside the viewport; the card
+  ignores the pointer (`pointer-events-none`), so it never takes the hover away from the row.
+- `Features/Replay/UnitCard.razor` shows only real weapons (not `Death`, `Teleport` or weapons without
+  damage) and merges identical ones ("2 × Electron Autocannon"). Roles and the motion type label come
+  from `Services/Units/UnitRoles.cs`; gunships have no category of their own (`AIR` + `GROUNDATTACK`).
+- **The data is of the FAF branch without mods.** The card uses the replay's own game version (from
+  the header, `UnitDataNotes.GameVersion`). `Services/Units/UnitDataNotes.cs` adds a note when a
+  replay ran on another featured mod (`Metadata.FeaturedMod` is not `faf`), outside FAF (header version
+  not `v1.50.x`, e.g. Steam), on a version without data of its own (before 3801, or newer than the
+  data), or with mods (`Header.Mods`). Units missing from the data (mods, campaign) get a short card
+  saying so.
+- The published service worker caches `data/units/index.json` with the app shell, and each data file
+  the first time the app reads it (not all of them on install); an app update starts a new cache.
+
+## Unit database
+
+`Pages/Units.razor` (`/units`, the Units tab in the header) lists the units of one game version, the
+latest unless `version` says otherwise (a picker in the heading, with the release date and how many
+units changed since the previous version, from the index entry): a filter column, a sortable table, a
+comparison and a details panel. The pieces live in `Features/Units/`.
+The page widens to full HD like the Build order tab (`MainLayout.Container`).
+
+- **The URL holds every choice**, like the replay pages (same guardrails: replace, defaults stay out,
+  unknown values are ignored, names never change). Filter groups and their option slugs are defined
+  once in `UnitFilters` (roles come from `UnitRoles.All`); within a group a unit needs one of the
+  chosen options, across groups all of them.
+
+  | Parameter | Meaning | Default when absent |
+  |---|---|---|
+  | `q` | Text in the name, description or id (written after a 250 ms pause in typing) | No text filter |
+  | `faction` | `uef`, `aeon`, `cybran`, `seraphim` | All factions |
+  | `tech` | `1`, `2`, `3`, `4` (experimental); commanders have no tech level | All |
+  | `move` | `land`, `amphibious`, `hover`, `air`, `naval`, `sub`, `structure` (from `MotionType`) | All |
+  | `role` | The slugs of `UnitRoles.All`: `engineer`, `bomber`, `gunship`, `transport`, `shield`, ... | All |
+  | `weapon` | `direct`, `indirect`, `antiair`, `antinavy`, `defense` (the weapon's `RangeCategory`), `none` | All |
+  | `intel` | `radar`, `sonar`, `omni` | All |
+  | `all` | `1` also lists units no player can build (campaign, civilian, helpers) | Buildable units only |
+  | `changed` | `1` lists only the units changed or added in this version (the index entry's `changes`) | All units |
+  | `sort` | `name`, `mass`, `energy`, `time`, `health`, `speed`, `range`, `vision`; a leading `-` sorts high to low | Faction, tech, name |
+  | `unit` | The unit in the details panel (lower case blueprint id); its row scrolls into view | None |
+  | `compare` | Up to six unit ids side by side, in order | No comparison |
+  | `version` | The game version, e.g. `3830`; one without data of its own shows the nearest (`UnitDataIndex.Resolve`) | The latest |
+
+  The history page (`units/history`, below) has one parameter: `units`, the unit ids in order.
+
+- The details panel (`UnitDetail`) shows the unit card and the build tree around the unit: upgrades
+  from and to, built by, builds. Every unit there is a link (`unit=`), so the tree can be walked; for a
+  buildable unit, builders that no player can build are left out.
+- The comparison (`UnitComparison`) marks the best value of a row (lowest cost, highest anything else)
+  only when at least two units have different values. "Range" is the longest range of the unit's real
+  weapons (`UnitRoles.IsRealWeapon`, the same rule as the card).
+- Reading a data file takes about half a second and rendering all ~400 rows a few hundred ms in a
+  debug build; a filter change re-renders only the rows that pass. `UrlStateComponent` re-runs only
+  the synchronous `OnParametersSet`, so the page derives its view there and starts loading another
+  version from there when `version` changes.
+
+## Unit history
+
+`Pages/UnitHistory.razor` (`units/history?units=uel0201,url0107`) shows units across every game version,
+a card each (`Features/Units/UnitHistoryCard.razor`), in the order of `units` (at most six, like the
+comparison; unknown ids get a short card; each card's × takes its unit out). The details panel's
+"History" opens it for that unit, the comparison's "History" for the compared ones
+(`UnitLinks.History`), and a search box next to the heading (`Features/Units/UnitSearchBox.razor`)
+adds a unit: an ARIA combobox that suggests units of the latest version on id, name and description
+as you type (id prefix first, buildable units before others, at most 8), picked with the arrow keys
+and Enter or the mouse (on `mousedown`, which comes before the input's blur). A card has a column per stretch of versions in which the unit stayed the same,
+a row per value (`Services/Units/UnitStats.cs`: the same labels for every version, one line per weapon
+value), changed values marked against the column before (▲/▼ for numbers), and a Categories row with
+what was added or removed. Column headers link to that version in the unit list.
+
+- `UnitDatabase.LoadHistoryAsync` finds the stretches from the index alone (a version starts a new
+  one where its `changes` lists the unit as changed or added, ends one where removed) and reads only
+  those versions, and of each file only the unit's line (`UnitData.ReadUnit`), so a unit that changed
+  ten times costs ten small reads, not ten files of 600 units.
+- A column that looks the same as the one before means a change in a value the table does not show;
+  `UnitSummary` evens out rewrites without a change in meaning (see the Blueprints guide), so this
+  should be rare.
+
 ## Browser automation (Playwright MCP)
 
 `.mcp.json` (repo root) registers the official Playwright MCP server (`npx -y @playwright/mcp@latest`), so agents

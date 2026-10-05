@@ -1,0 +1,164 @@
+@page "/units"
+@inherits UrlStateComponent
+@using FAForever.Vault.Viewer.Features.Units
+@using FAForever.Vault.Viewer.Services.Units
+@inject UnitDatabase Database
+@inject IJSRuntime JS
+
+<PageTitle>Units · Vault of FAF</PageTitle>
+
+<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+    <h1 class="text-2xl font-bold">Units</h1>
+    @if (loaded is not null && index is not null)
+    {
+        <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
+            Every unit of FAF game version
+            <label class="inline-flex items-center">
+                <span class="sr-only">Game version</span>
+                <select class="input-field w-auto py-1" value="@loaded.GameVersion" @onchange="ChangeVersion">
+                    @foreach (int version in index.Newest)
+                    {
+                        <option value="@version">@version@(version == index.Latest ? " (latest)" : "")</option>
+                    }
+                </select>
+            </label>
+            as its blueprints define it.
+            @if (Entry?.Released is { } released)
+            {
+                <span>Released @released.ToString("d MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture).</span>
+            }
+            @if (Entry?.Changes is { } changes)
+            {
+                <span>@UnitFilterColumn.ChangesLabel(changes).</span>
+            }
+            <a class="text-primary hover:underline" href="@($"https://github.com/FAForever/fa/releases/tag/{loaded.GameVersion}")" target="_blank" rel="noreferrer">Release notes</a>
+        </p>
+    }
+</div>
+
+@if (error is not null)
+{
+    <div class="card mt-6" role="alert">
+        <p class="font-semibold">The unit data could not be loaded</p>
+        <p class="mt-1 text-sm text-ink-muted">@error</p>
+    </div>
+}
+else if (loaded is null || state is null)
+{
+    <div class="card mt-6 animate-pulse text-center text-sm text-ink-muted">Loading the units&hellip;</div>
+}
+else
+{
+    @* With a unit selected, wide screens keep the details panel beside the list instead of over it. *@
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] @(selected is not null ? "xl:mr-[24rem]" : "")">
+        <FilterPanel Summary="@state.Summary()">
+            <UnitFilterColumn State="state" Changes="@Entry?.Changes" />
+        </FilterPanel>
+
+        <div class="flex min-w-0 flex-col gap-4">
+            @if (compared.Count > 0)
+            {
+                <UnitComparison Units="compared" />
+            }
+
+            <section class="card overflow-x-auto p-0 sm:p-2" aria-label="Units">
+                <p class="px-3 pt-3 text-xs text-ink-faint sm:px-2 sm:pt-1" aria-live="polite">
+                    @units.Count @(units.Count == 1 ? "unit" : "units")
+                </p>
+                @if (units.Count == 0)
+                {
+                    <p class="p-6 text-center text-sm text-ink-muted">No unit matches these filters.</p>
+                }
+                else
+                {
+                    <UnitTable Units="units" State="state" Selected="@selected?.BlueprintId" />
+                }
+            </section>
+        </div>
+    </div>
+
+    @if (selected is not null)
+    {
+        <UnitDetail Unit="selected" Data="loaded.Data" GameVersion="loaded.GameVersion" />
+    }
+}
+
+@code {
+    private const string VersionParameter = "version";
+
+    private UnitDataIndex? index;
+    private UnitDataVersion? loaded;
+    private string? error;
+    private UnitFilters.State? state;
+    private IReadOnlyList<UnitSummary> units = [];
+    private IReadOnlyList<UnitSummary> compared = [];
+    private UnitSummary? selected;
+    private string? scrolledTo;
+
+    /// <summary>The index entry of the shown version: its release, and what changed since the previous one.</summary>
+    private UnitDataIndex.Entry? Entry => loaded is not null ? index?.Versions.GetValueOrDefault(loaded.GameVersion) : null;
+
+    private int? RequestedVersion => int.TryParse(UrlQuery.Get(Navigation, VersionParameter), out int version) ? version : null;
+
+    // Everything on the page follows from the data and the URL (see the Viewer guide, "Unit database").
+    // UrlStateComponent re-runs this on every change of the query, so a version change goes through
+    // here too: the data of another version loads first, then the view follows.
+    protected override void OnParametersSet()
+    {
+        if (index is null || loaded is null || index.Resolve(RequestedVersion) != loaded.GameVersion)
+        {
+            _ = LoadAsync();
+            return;
+        }
+
+        Derive();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            index ??= await Database.LoadIndexAsync();
+            loaded = await Database.LoadAsync(RequestedVersion);
+            error = null;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            error = exception.Message;
+        }
+
+        if (loaded is not null)
+        {
+            Derive();
+        }
+        StateHasChanged();
+    }
+
+    private void Derive()
+    {
+        state = UnitFilters.Read(Navigation);
+        IReadOnlySet<string> changed = Entry?.Changes is { } changes ? changes.Changed.Concat(changes.Added).ToHashSet() : new HashSet<string>();
+        UnitData data = loaded!.Data;
+        units = state.Apply(data.Units, changed);
+        compared = UnitLinks.Compared(Navigation).Select(data.GetOrNull).OfType<UnitSummary>().ToList();
+        selected = data.GetOrNull(UrlQuery.Get(Navigation, UnitLinks.UnitParameter));
+    }
+
+    // The latest version is the default, so it stays out of the URL.
+    private void ChangeVersion(ChangeEventArgs change)
+    {
+        string? value = change.Value as string;
+        UnitLinks.Set(Navigation, VersionParameter, int.TryParse(value, out int version) && version != index?.Latest ? value : null);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // A shared link restores the view, and a unit picked in the details (a link in "Builds")
+        // comes into view in the list: the selected row scrolls into view when the selection changes.
+        if (selected is not null && selected.BlueprintId != scrolledTo && units.Contains(selected))
+        {
+            scrolledTo = selected.BlueprintId;
+            await JS.InvokeVoidAsync("fafReplay.scrollIntoView", UnitTable.RowId(selected.BlueprintId));
+        }
+    }
+}

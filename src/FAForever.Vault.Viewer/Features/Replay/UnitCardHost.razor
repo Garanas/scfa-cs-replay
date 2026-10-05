@@ -1,0 +1,94 @@
+@using FAForever.FileFormats.Blueprints
+@using FAForever.Vault.Viewer.Services.Replays
+@using FAForever.Vault.Viewer.Services.Units
+@implements IDisposable
+@inject UnitCardService Cards
+@inject UnitDatabase Database
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+@* The floating unit card of the replay page; rows ask for it through UnitCardService. It ignores the
+   pointer, so it never takes the hover away from the row that opened it. *@
+@if (Cards.Current is { } request && data is not null)
+{
+    <div id="@ElementId" class="pointer-events-none fixed left-0 top-0 z-50" style="visibility:hidden" aria-hidden="true">
+        <UnitCard BlueprintId="@request.BlueprintId" Unit="@data.Data.GetOrNull(request.BlueprintId)" DataVersion="@data.GameVersion" Notes="@notes" />
+    </div>
+}
+
+@code {
+    private const string ElementId = "unit-card";
+
+    [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
+
+    private UnitDataVersion? data;
+    private Replay? loadedFor;
+    private IReadOnlyList<string> notes = [];
+    private UnitCardService.Request? placed;
+
+    protected override void OnInitialized()
+    {
+        Cards.Changed += OnChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    // Load the data with the replay page rather than on the first hover: reading it takes about
+    // half a second in the WebAssembly interpreter, which would delay the first card. The page may
+    // show another replay without a new host, possibly of another game version.
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (data is not null && loadedFor == Model.Replay)
+        {
+            return;
+        }
+
+        try
+        {
+            // the data of the game version the replay was played on, or the nearest there is
+            loadedFor = Model.Replay;
+            data = await Database.LoadAsync(UnitDataNotes.GameVersion(Model.Replay.Header.GameVersion));
+            notes = UnitDataNotes.For(Model, data.GameVersion);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            // The card is an extra: without the data the rows keep working as before.
+            loadedFor = null;
+            Console.Error.WriteLine($"Unit data unavailable: {exception.Message}");
+        }
+    }
+
+    private async void OnChanged()
+    {
+        if (Cards.Current is not null)
+        {
+            await LoadAsync();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // A tab switch removes the rows without a mouseleave; never leave a card behind.
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) => Cards.Hide();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        UnitCardService.Request? request = Cards.Current;
+        if (request is null || data is null || request == placed)
+        {
+            placed = request;
+            return;
+        }
+
+        placed = request;
+        await JS.InvokeVoidAsync("fafReplay.placeNear", ElementId, request.X, request.Y);
+    }
+
+    public void Dispose()
+    {
+        Cards.Changed -= OnChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+        Cards.Hide();
+    }
+}

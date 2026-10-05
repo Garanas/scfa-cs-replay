@@ -32,6 +32,59 @@ Data is as written in the file, before the game's post-processing (mod merges, `
 units leave out `General.TechLevel`, so use `BlueprintUnit.TechLevel` (from the categories). Every `.bp`
 in the FA repo parses; tests use the copies in `tests/FAForever.FileFormats.Blueprints.Tests/assets/blueprints`.
 
+## Unit data (the unit cards)
+
+The browser does not parse blueprints: `tools/generate-unit-data.cs` (a file-based app, `dotnet run
+tools/generate-unit-data.cs -- <fa checkout>`) parses `units/*_unit.bp` of one FA release and adds it
+to `src/FAForever.Vault.Viewer/wwwroot/data/units/`, which the unit cards and the unit database read.
+Every release from 3801 (there is no 3800 tag) is there.
+
+- `UnitSummary` is what a card shows (name, faction, tech, motion type, categories, cost, build power,
+  health, shield, intel ranges, weapons with damage, salvo, range and rate of fire); `UnitSummary.From`
+  maps a `BlueprintUnit`. Nothing is computed (no DPS), but values are **evened out** so that versions
+  only differ where the meaning does: blueprints get rewritten (3810 dropped `RegenRate = 0` from 549
+  units, others write `10/60` as `0.1667` or reorder categories), so numbers are rounded to 4 decimals,
+  0 reads as not set where it means "none", categories are sorted, and the rate of fire is the one the
+  game fires at: 10 / whole ticks (`UnitSummaryWeapon.TickRate`, after `lua/system/blueprints-units.lua`),
+  since 3810 rewrote rates such as 0.15 as `10/67`. Without that, the history and
+  the "changed" filter would mostly show rewrites.
+- A data file is `{"units":[...]}` with **one unit per line**, sorted by id, camel case, nulls left
+  out; `UnitData` is exactly that, the units and nothing else. Which game versions a file belongs to
+  is only the index's business, so neither the file nor `UnitData` carries a version. JSON goes
+  through the source-generated `UnitDataJsonContext` (no reflection, safe under trimming in WebAssembly).
+- `UnitDataIndex` is `units/index.json`: an entry per game version, one per line, newest first:
+  `"3838":{"file":"3837.json","unitCount":606,"reusedFrom":3837,"changes":{"previous":3837,"changed":[],
+  "added":[],"removed":[]},"commit":"…","released":"2026-08-25","generated":"2026-10-05"}`.
+  - **A release that changed no unit reuses a file**: the generator compares the new units with every
+    file a version owns (`UnitData.HasSameUnits`) and only writes `<version>.json` when none matches, so
+    a file is named after the first version with its units; `reusedFrom` names that version.
+  - `changes` lists the ids changed, added and removed since the previous version (`UnitData.Compare`);
+    the Units page filters on it, and the generator prints it for the update workflow's pull request
+    (a new file has no useful diff).
+  - `commit` and `released` (the release tag's commit and its date) come from the generator's options,
+    which the backfill script and the workflow fill in; `generated` is the day of the run, so it only
+    changes when that version is regenerated. Nothing else in the files depends on when they were made.
+  - `Resolve` picks the data for a game: its own version, else the newest older one, else the oldest
+    (3800 and before). The Viewer's `UnitDatabase.LoadAsync(version)` returns that resolved version
+    next to the data (`UnitDataVersion`); versions that share a file share one `UnitData`.
+- `UnitBuildTree` mirrors who builds what: a builder can build every unit that has all categories of
+  one of its `Economy.BuildableCategory` expressions (space separated; a unit's own lower case id
+  counts as a category, so `"uab3101"` names a unit), commanders also what their enhancements add
+  (`BuildableCategoryAdds`). A unit is `Buildable` when a commander reaches it through builds and
+  `UpgradesTo`; that excludes campaign, civilian and helper units (404 of 606 units in 3839).
+  `UnitData.From` fills `Buildable` and `Builds` in; `UnitData.GetBuilders` is the inverse.
+- The game version is the release tag, which is also the last number of a replay header's version.
+  `mod_info.lua` usually says the same (`version`, read with `LuaSourceParser`), but not always:
+  release 3805 still says 3804. So the backfill script and the workflow pass the tag (`--version`); the
+  generator falls back to `mod_info.lua` without it and notes a mismatch.
+- `.github/workflows/update-unit-data.yml` adds a new release and opens a pull request when FA
+  publishes one (a `repository_dispatch` from the FA repository, by hand, or a daily check).
+- **Adding a field** (a property on `UnitSummary` or `UnitSummaryWeapon`, its line in `From`, a test)
+  changes every data file: regenerate them all from scratch with
+  `pwsh tools/backfill-unit-data.ps1 -Source <fa clone>` (it extracts each release tag with an archive
+  of `units/` and `mod_info.lua`, so the clone is left alone) and commit `data/units/`. The generator
+  refuses to overwrite a file that other versions share.
+
 ## Blueprint ids, unit names and factions
 
 - `BlueprintIds` decodes the id convention (`ueb0101` = [prefix u][faction e][layer b][number 0101]):

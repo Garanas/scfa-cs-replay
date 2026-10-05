@@ -1,0 +1,56 @@
+@page "/units/history"
+@inherits UrlStateComponent
+@using FAForever.Vault.Viewer.Features.Units
+
+@* The history of the units in "units" (comma separated ids, in order), a card each: from the unit
+   list's details panel for one unit, or from its comparison for the compared ones. *@
+
+<PageTitle>Unit history · Vault of FAF</PageTitle>
+
+<a href="units" class="text-sm text-ink-muted transition hover:text-primary">← Units</a>
+<div class="mt-2 flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold">Unit history</h1>
+    <UnitSearchBox Exclude="ids" Disabled="@(ids.Count >= UnitLinks.MaxCompared)" OnPick="Add"
+                   Placeholder="@(ids.Count >= UnitLinks.MaxCompared ? $"At most {UnitLinks.MaxCompared} units" : "Add a unit: name or id")" />
+</div>
+
+@if (ids.Count == 0)
+{
+    <div class="card mt-4">
+        <p class="font-semibold">No units chosen</p>
+        <p class="mt-1 text-sm text-ink-muted">
+            Search for a unit above, open one in the <a class="text-primary hover:underline" href="units">unit list</a> and
+            choose History, or compare units there and choose History in the comparison.
+        </p>
+    </div>
+}
+else
+{
+    <div class="mt-4 flex flex-col gap-4">
+        @foreach (string id in ids)
+        {
+            <UnitHistoryCard @key="id" BlueprintId="@id" OnRemove="() => Remove(id)" />
+        }
+    </div>
+}
+
+@code {
+    private IReadOnlyList<string> ids = [];
+
+    protected override void OnParametersSet() => ids = UnitLinks.HistoryUnits(Navigation);
+
+    // A unit picked in the search box joins the end of the page.
+    private void Add(string id)
+    {
+        if (!ids.Contains(id) && ids.Count < UnitLinks.MaxCompared)
+        {
+            UnitLinks.Set(Navigation, UnitLinks.HistoryParameter, string.Join(',', ids.Append(id)));
+        }
+    }
+
+    private void Remove(string id)
+    {
+        string[] remaining = ids.Where(other => other != id).ToArray();
+        UnitLinks.Set(Navigation, UnitLinks.HistoryParameter, remaining.Length > 0 ? string.Join(',', remaining) : null);
+    }
+}

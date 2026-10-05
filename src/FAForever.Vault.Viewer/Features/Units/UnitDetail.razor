@@ -1,0 +1,82 @@
+@inherits UrlStateComponent
+@using FAForever.Vault.Viewer.Services.Units
+
+@* The selected unit ("unit"): its card, and how it fits in the build tree. Every unit named here is
+   a link to its own details, so the tree can be walked. A panel on the right below the header;
+   on narrow screens it covers the page. *@
+
+<aside class="fixed top-14 right-0 bottom-0 z-30 flex w-full flex-col border-l border-edge bg-base shadow-xl sm:w-[24rem]"
+       aria-label="@($"Details of {UnitFilters.DisplayName(Unit)}")">
+    <div class="flex items-center gap-2 border-b border-edge px-4 py-2">
+        <span class="font-mono text-xs text-ink-faint">@Unit.BlueprintId</span>
+        <a class="btn-secondary ml-auto px-3 py-1 text-xs" href="@UnitLinks.History([Unit.BlueprintId])" title="This unit in every game version">History</a>
+        <button type="button" class="@(isCompared ? "btn-primary" : "btn-secondary") px-3 py-1 text-xs"
+                disabled="@(!isCompared && compared.Count >= UnitLinks.MaxCompared)"
+                @onclick="() => UnitLinks.ToggleCompare(Navigation, Unit.BlueprintId)">
+            @(isCompared ? "Compared" : "Compare")
+        </button>
+        <button type="button" class="cursor-pointer rounded-md px-2 py-1 text-lg leading-none text-ink-muted transition hover:bg-raised hover:text-ink"
+                title="Close" aria-label="Close the details" @onclick="() => UnitLinks.Select(Navigation, null)">×</button>
+    </div>
+
+    <div class="min-h-0 flex-1 overflow-y-auto p-4">
+        <UnitCard BlueprintId="@Unit.BlueprintId" Unit="@Unit" DataVersion="@GameVersion" Class="w-full" />
+
+        @if (Data.GetOrNull(Unit.UpgradesFrom) is { } from)
+        {
+            @Units("Upgrades from", [from])
+        }
+        @if (Data.GetOrNull(Unit.UpgradesTo) is { } to)
+        {
+            @Units("Upgrades to", [to])
+        }
+        @Units("Built by", Data.GetBuilders(Unit.BlueprintId).Where(builder => builder.Buildable || !Unit.Buildable).ToList())
+        @Units("Builds", Unit.Builds.Select(Data.GetOrNull).OfType<UnitSummary>().ToList())
+
+        @if (!Unit.Buildable)
+        {
+            <p class="mt-4 text-xs text-ink-muted">No player can build this unit in a game: it belongs to the campaign, a map or another unit.</p>
+        }
+    </div>
+</aside>
+
+@code {
+    [Parameter, EditorRequired] public required UnitSummary Unit { get; set; }
+
+    [Parameter, EditorRequired] public required UnitData Data { get; set; }
+
+    /// <summary>The game version the data is of, for the card.</summary>
+    [Parameter, EditorRequired] public int GameVersion { get; set; }
+
+    private IReadOnlyList<string> compared = [];
+    private bool isCompared;
+
+    protected override void OnParametersSet()
+    {
+        compared = UnitLinks.Compared(Navigation);
+        isCompared = compared.Contains(Unit.BlueprintId);
+    }
+
+    // A titled row of unit icons, each a link to that unit's details; grouped by faction and tech like the list.
+    private RenderFragment Units(string title, IReadOnlyList<UnitSummary> units) => __builder =>
+    {
+        if (units.Count == 0)
+        {
+            return;
+        }
+
+        <section class="mt-4">
+            <h3 class="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">@title <span class="font-normal normal-case">(@units.Count)</span></h3>
+            <div class="flex flex-wrap gap-1">
+                @foreach (UnitSummary unit in units.OrderBy(unit => unit.TechLevel ?? 0).ThenBy(UnitFilters.DisplayName))
+                {
+                    <button type="button" class="cursor-pointer rounded transition hover:ring-2 hover:ring-primary"
+                            title="@UnitFilters.DisplayName(unit)" aria-label="@UnitFilters.DisplayName(unit)"
+                            @onclick="() => UnitLinks.Select(Navigation, unit.BlueprintId)">
+                        <UnitIcon BlueprintId="@unit.BlueprintId" Size="36" Title="@UnitFilters.DisplayName(unit)" />
+                    </button>
+                }
+            </div>
+        </section>
+    };
+}
