@@ -16,6 +16,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The Fatboy's blueprint of release 3839, shown in full on the blueprint page (ExampleBlueprint). -->
+    <EmbeddedResource Include="Features\About\uel0401_unit.bp" LogicalName="uel0401_unit.bp" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\FAForever.FileFormats.Replay\FAForever.FileFormats.Replay.csproj" />
   </ItemGroup>
 

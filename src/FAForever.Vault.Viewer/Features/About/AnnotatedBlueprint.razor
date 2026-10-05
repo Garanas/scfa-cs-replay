@@ -1,0 +1,107 @@
+@using System.Globalization
+@using static FAForever.Vault.Viewer.Features.About.ExampleBlueprint
+@inject IJSRuntime JS
+
+@* The whole example blueprint in a scrolling box, split into its parts. Picking a part (a button
+   above the box, or the lines themselves) marks its lines and explains it below; the buttons also
+   scroll the box to the part. The selection is transient view state. *@
+
+<div>
+    <div class="flex flex-wrap gap-1.5" role="group" aria-label="Parts of the blueprint">
+        @for (int i = 0; i < Parts.Length; i++)
+        {
+            int index = i;
+            bool active = index == selected;
+            <button type="button" class="flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition @(active ? "border-primary bg-primary/10 text-ink" : "border-edge text-ink-muted hover:text-ink")"
+                    aria-pressed="@active" @onclick="() => ShowAsync(index)">
+                <span class="h-2 w-2 rounded-full @AnnotatedBytes.Swatch(Parts[index].Tone)" aria-hidden="true"></span>
+                @Parts[index].Title
+            </button>
+        }
+    </div>
+
+    <div class="mt-4 max-h-[22rem] overflow-auto rounded-xl border border-edge bg-raised/40 font-mono text-xs leading-5 sm:text-[13px]">
+        <div class="min-w-max py-2">
+            @for (int r = 0; r < runs.Count; r++)
+            {
+                (int part, string text) = runs[r];
+                if (part < 0)
+                {
+                    <div class="whitespace-pre border-l-2 border-transparent px-4 text-ink-faint">@text</div>
+                }
+                else
+                {
+                    bool active = part == selected;
+                    <button type="button" id="@RunId(r)" class="block w-full cursor-pointer whitespace-pre border-l-2 px-4 text-left transition @(active ? "border-primary bg-primary/10 text-ink" : "border-transparent text-ink-muted hover:bg-raised")"
+                            aria-label="@Parts[part].Title" @onclick="() => selected = part">@text</button>
+                }
+            }
+        </div>
+    </div>
+
+    @if (selected >= 0)
+    {
+        BlueprintPart current = Parts[selected];
+        (int lines, int bytes) = sizes[selected];
+        <div class="mt-4 flex items-start gap-4 rounded-lg border border-edge bg-raised p-4" aria-live="polite">
+            <span class="mt-1.5 h-3 w-3 shrink-0 rounded-full @AnnotatedBytes.Swatch(current.Tone)" aria-hidden="true"></span>
+            <div class="min-w-0">
+                <p class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span class="font-display text-[16px] font-bold text-ink">@current.Title</span>
+                    <span class="font-mono text-sm text-ink-faint">@lines.ToString("N0", CultureInfo.InvariantCulture) @(lines == 1 ? "line" : "lines") · @Percent(bytes) of the file</span>
+                </p>
+                <p class="mt-1.5 text-sm leading-relaxed text-ink-muted">@current.Text</p>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The id of the part explained before anything is picked.</summary>
+    [Parameter] public string InitialPart { get; set; } = "name";
+
+    private int selected = -1;
+
+    // Consecutive lines of the same part, so a part is one button per stretch and not one per line.
+    private readonly List<(int Part, string Text)> runs = [];
+
+    private readonly Dictionary<int, (int Lines, int Bytes)> sizes = [];
+
+    private static int TotalBytes => Lines.Sum(line => line.Text.Length + 1);
+
+    protected override void OnInitialized()
+    {
+        selected = Array.FindIndex(Parts, part => part.Id == InitialPart);
+
+        int start = 0;
+        for (int i = 1; i <= Lines.Count; i++)
+        {
+            if (i == Lines.Count || Lines[i].Part != Lines[start].Part)
+            {
+                runs.Add((Lines[start].Part, string.Join('\n', Lines.Skip(start).Take(i - start).Select(line => line.Text))));
+                start = i;
+            }
+        }
+
+        foreach (IGrouping<int, BlueprintLine> part in Lines.Where(line => line.Part >= 0).GroupBy(line => line.Part))
+        {
+            sizes[part.Key] = (part.Count(), part.Sum(line => line.Text.Length + 1));
+        }
+    }
+
+    private async Task ShowAsync(int part)
+    {
+        selected = part;
+        int first = runs.FindIndex(run => run.Part == part);
+        StateHasChanged();
+        await JS.InvokeVoidAsync("fafReplay.scrollIntoView", RunId(first));
+    }
+
+    private static string RunId(int run) => $"blueprint-run-{run}";
+
+    private static string Percent(int bytes)
+    {
+        double percent = bytes * 100.0 / TotalBytes;
+        return (percent < 1 ? "less than 1" : percent.ToString("0", CultureInfo.InvariantCulture)) + "%";
+    }
+}

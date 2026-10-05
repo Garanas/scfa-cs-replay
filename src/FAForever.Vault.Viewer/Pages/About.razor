@@ -41,12 +41,26 @@
             </p>
         </a>
 
-        <div class="card flex flex-col justify-center border-dashed bg-transparent text-center">
-            <p class="font-display text-lg font-bold text-ink-muted">More to come</p>
-            <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-faint">
-                The game has more files worth a look. They will get their own page here.
+        <a href="about/blueprints" class="card group relative flex flex-col overflow-hidden transition hover:border-primary hover:shadow-[0_0_60px_-24px_var(--th-glow)]">
+            @* The first line of a blueprint: a name and a value. *@
+            <div class="flex h-14 items-center gap-2 font-mono text-sm" aria-hidden="true">
+                <span class="rounded-md border border-edge bg-raised p-1 transition group-hover:border-primary">
+                    <UnitIcon BlueprintId="@ExampleBlueprint.BlueprintId" Size="28" Title="" />
+                </span>
+                <span class="rounded-md border border-edge bg-raised px-2 py-1.5 text-ink-muted">MaxHealth</span>
+                <span class="text-ink-faint">=</span>
+                <span class="rounded-md border border-edge bg-raised px-2 py-1.5 font-semibold text-primary transition group-hover:scale-110">12500</span>
+            </div>
+            <h3 class="mt-6 text-2xl font-bold text-ink">Blueprints</h3>
+            <p class="mt-1 font-mono text-sm text-primary">.bp · .lua</p>
+            <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
+                How a whole game is built from text files, told through the Fatboy: its blueprint,
+                its script, and what the game does with both.
             </p>
-        </div>
+            <p class="mt-6 text-sm font-semibold text-primary">
+                Read the story <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+            </p>
+        </a>
     </div>
 </section>
 
