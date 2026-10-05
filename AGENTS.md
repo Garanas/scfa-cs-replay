@@ -53,7 +53,7 @@ tools/tailwindcss.exe -i Styles/app.css -o wwwroot/css/app.css --watch   # from 
 
 VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: watch`, `benchmark`.
 
-- The server **must** run on `http://127.0.0.1:5080` in development: the temporary OAuth client only
+- The server **must** run on `http://127.0.0.1:5080` in development: the development OAuth client only
   accepts loopback redirect URIs, and `wwwroot/appsettings.json` pins `RedirectUri` to that origin.
 - Deployment: a container image (`Dockerfile`: the Server with the Viewer) is built and pushed to
   `ghcr.io/garanas/scfa-cs-replay` on every push to the `deploy/production` branch; releasing is
@@ -78,10 +78,14 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
 | `https://content.faforever.com/maps/previews/small/{map}.png` | anonymous | n/a for `<img>` | Map preview images (`large/` too, used for link previews). |
 | `https://mapgen.services.atlantishq.de/api-dev/request/preview/{map}` | anonymous | **none** (fine for `<img>`) | Previews of generated maps (`neroxis_map_generator_{version}_{seed}_{options}`), 256 px PNG of the whole map, transparent outside the playable area. Rendered on request (a new map takes seconds); only generator versions 1.19.0, 1.21.1 and 1.21.2, a 500 for anything else (verified 2026-10-05). |
 
-OAuth client: we temporarily reuse the official FAF client's **public** client
-(`2e8808cf-5889-469b-b2c3-01f0cc58c4af`, PKCE, loopback redirect without a path, hence the fixed dev
-port and a redirect URI of exactly `http://127.0.0.1:5080`). A dedicated client must be requested from
-the FAF team before any public deployment (see TODO.md).
+OAuth clients (both public, PKCE):
+- Production: our own client "Web vault by Jip Wijnia" (`54576b8e-14bc-473d-9f85-31e6327c9e3b`,
+  registered in [FAForever/gitops-stack#333](https://github.com/FAForever/gitops-stack/pull/333),
+  `apps/ory-hydra/values.yaml`), set in `wwwroot/appsettings.Production.json`. Its only redirect URI
+  is `https://vault.jipwijnia.nl/`; it does not accept loopback.
+- Development: the official FAF desktop client (`2e8808cf-5889-469b-b2c3-01f0cc58c4af`, in
+  `wwwroot/appsettings.json`), which accepts loopback redirects without a path, hence the fixed dev
+  port and a redirect URI of exactly `http://127.0.0.1:5080`.
 
 ## Conventions
 

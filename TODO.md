@@ -1,17 +1,17 @@
 # TODO: items that need the project owner
 
-- [ ] **Request a dedicated OAuth client from the FAForever team.** We currently reuse the official
-  desktop client's public client id (`2e8808cf-5889-469b-b2c3-01f0cc58c4af`), which only allows
-  loopback redirect URIs without a path (hence the fixed `http://127.0.0.1:5080` dev origin). A proper
-  client needs: public client, PKCE S256, redirect URIs for localhost + the production origin, scopes
-  `openid offline public_profile`, and ideally `allowed_cors_origins` so the token proxy can be dropped.
+- [x] ~~Request a dedicated OAuth client from the FAForever team~~: registered 2026-10-05 in
+  [FAForever/gitops-stack#333](https://github.com/FAForever/gitops-stack/pull/333) as
+  `54576b8e-14bc-473d-9f85-31e6327c9e3b` (`appsettings.Production.json`). It only has the redirect
+  URI `https://vault.jipwijnia.nl/` and no CORS origins, so development keeps the desktop client
+  (`2e8808cf-...`) on `http://127.0.0.1:5080` and the token proxy stays.
+- [ ] **Verify signing in on https://vault.jipwijnia.nl with the new client** after the next
+  release (Hydra already accepts the client and its redirect URI; checked 2026-10-05).
 - [x] ~~Host https://vault.jipwijnia.nl~~: live since 2026-10-03, with automated deploys from
   `deploy/production`; the server is configured in
   [Garanas/jipwijnia-vps](https://github.com/Garanas/jipwijnia-vps). Signing in (and so Search)
-  still needs the dedicated client above, registered with redirect URIs
-  `https://vault.jipwijnia.nl/` and `http://127.0.0.1`; the server proxies the token exchange, so
-  no CORS change at FAF is needed. `wwwroot/appsettings.Production.json` already holds the
-  production redirect URI.
+  uses the dedicated client above; the server proxies the token exchange, so no CORS change at FAF
+  is needed.
 - [x] ~~Retire the old GitHub Pages site~~ (https://garanas.github.io/scfa-cs-replay/, the old
   MudBlazor viewer): done 2026-10-05: Pages unpublished (the address returns 404), the branches
   `live/gh-pages` and `deploy/gh-pages` and the `github-pages` environment deleted.
