@@ -373,6 +373,8 @@ The page widens to full HD like the Build order tab (`MainLayout.Container`).
   | `compare` | Up to six unit ids side by side, in order | No comparison |
   | `version` | The game version, e.g. `3830`; one without data of its own shows the nearest (`UnitDataIndex.Resolve`) | The latest |
 
+  The history page (`units/history`, below) has one parameter: `units`, the unit ids in order.
+
 - The details panel (`UnitDetail`) shows the unit card and the build tree around the unit: upgrades
   from and to, built by, builds. Every unit there is a link (`unit=`), so the tree can be walked; for a
   buildable unit, builders that no player can build are left out.
@@ -386,9 +388,12 @@ The page widens to full HD like the Build order tab (`MainLayout.Container`).
 
 ## Unit history
 
-`Pages/UnitHistory.razor` (`/units/{id}`, the "History" link in the database's details panel) shows one
-unit across every game version: a column per stretch of versions in which it stayed the same, a row
-per value (`Services/Units/UnitStats.cs`: the same labels for every version, one line per weapon
+`Pages/UnitHistory.razor` (`units/history?units=uel0201,url0107`) shows units across every game version,
+a card each (`Features/Units/UnitHistoryCard.razor`), in the order of `units` (at most six, like the
+comparison; unknown ids get a short card; each card's × takes its unit out). The details panel's
+"History" opens it for that unit, the comparison's "History" for the compared ones
+(`UnitLinks.History`). A card has a column per stretch of versions in which the unit stayed the same,
+a row per value (`Services/Units/UnitStats.cs`: the same labels for every version, one line per weapon
 value), changed values marked against the column before (▲/▼ for numbers), and a Categories row with
 what was added or removed. Column headers link to that version in the unit list.
 

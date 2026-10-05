@@ -13,8 +13,18 @@ public static class UnitLinks
     public const string UnitParameter = "unit";
     public const string CompareParameter = "compare";
 
+    /// <summary>The units of the history page (<c>units/history</c>).</summary>
+    public const string HistoryParameter = "units";
+
     /// <summary>The comparison stays readable up to this many units side by side.</summary>
     public const int MaxCompared = 6;
+
+    /// <summary>The address of the history page for these units, in this order.</summary>
+    public static string History(IEnumerable<string> blueprintIds) =>
+        $"units/history?{HistoryParameter}={string.Join(',', blueprintIds.Select(Uri.EscapeDataString))}";
+
+    /// <summary>The units of the history page according to the URL, in order, without duplicates.</summary>
+    public static IReadOnlyList<string> HistoryUnits(NavigationManager navigation) => Ids(navigation, HistoryParameter);
 
     public static void Set(NavigationManager navigation, string parameter, string? value)
         => navigation.NavigateTo(navigation.GetUriWithQueryParameter(parameter, value), replace: true);
@@ -24,8 +34,11 @@ public static class UnitLinks
         => Set(navigation, UnitParameter, blueprintId);
 
     /// <summary>The compared unit ids according to the URL, in order, without duplicates.</summary>
-    public static IReadOnlyList<string> Compared(NavigationManager navigation)
-        => (UrlQuery.Get(navigation, CompareParameter) ?? "")
+    public static IReadOnlyList<string> Compared(NavigationManager navigation) => Ids(navigation, CompareParameter);
+
+    // A comma separated list of unit ids: lower case, no duplicates, at most MaxCompared.
+    private static IReadOnlyList<string> Ids(NavigationManager navigation, string parameter)
+        => (UrlQuery.Get(navigation, parameter) ?? "")
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(id => id.ToLowerInvariant())
             .Distinct()

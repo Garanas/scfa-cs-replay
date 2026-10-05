@@ -9,7 +9,7 @@
        aria-label="@($"Details of {UnitFilters.DisplayName(Unit)}")">
     <div class="flex items-center gap-2 border-b border-edge px-4 py-2">
         <span class="font-mono text-xs text-ink-faint">@Unit.BlueprintId</span>
-        <a class="btn-secondary ml-auto px-3 py-1 text-xs" href="@($"units/{Unit.BlueprintId}")" title="This unit in every game version">History</a>
+        <a class="btn-secondary ml-auto px-3 py-1 text-xs" href="@UnitLinks.History([Unit.BlueprintId])" title="This unit in every game version">History</a>
         <button type="button" class="@(isCompared ? "btn-primary" : "btn-secondary") px-3 py-1 text-xs"
                 disabled="@(!isCompared && compared.Count >= UnitLinks.MaxCompared)"
                 @onclick="() => UnitLinks.ToggleCompare(Navigation, Unit.BlueprintId)">

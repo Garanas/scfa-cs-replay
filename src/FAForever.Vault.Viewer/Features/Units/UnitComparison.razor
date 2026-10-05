@@ -10,7 +10,9 @@
     <div class="mb-2 flex items-center gap-2">
         <h2 class="text-sm font-semibold">Compare</h2>
         <span class="text-xs text-ink-faint">@Units.Count of @UnitLinks.MaxCompared · the best value of each row is marked</span>
-        <button type="button" class="ml-auto cursor-pointer text-xs text-ink-muted transition hover:text-primary"
+        <a class="ml-auto text-xs text-ink-muted transition hover:text-primary" href="@UnitLinks.History(Units.Select(unit => unit.BlueprintId))"
+           title="These units in every game version">History</a>
+        <button type="button" class="cursor-pointer text-xs text-ink-muted transition hover:text-primary"
                 @onclick="() => UnitLinks.Set(Navigation, UnitLinks.CompareParameter, null)">Clear</button>
     </div>
     <table class="w-full min-w-max text-sm">
