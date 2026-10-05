@@ -85,6 +85,7 @@ public static class UnitFilters
 
     public const string TextParameter = "q";
     public const string AllParameter = "all";
+    public const string ChangedParameter = "changed";
     public const string SortParameter = "sort";
 
     /// <summary>The filters and sort order of the page, as read from the URL.</summary>
@@ -92,15 +93,19 @@ public static class UnitFilters
         string? Text,
         IReadOnlyDictionary<Group, HashSet<string>> Chosen,
         bool All,
+        bool ChangedOnly,
         SortOrder? Sort,
         bool Descending)
     {
         public bool IsChosen(Group group, Option option) => Chosen[group].Contains(option.Slug);
 
-        /// <summary>The units that pass, in the chosen order.</summary>
-        public IReadOnlyList<UnitSummary> Apply(IEnumerable<UnitSummary> units)
+        /// <summary>
+        /// The units that pass, in the chosen order. <paramref name="changed"/> are the ids of the units
+        /// changed or added in this version, for <see cref="ChangedOnly"/>.
+        /// </summary>
+        public IReadOnlyList<UnitSummary> Apply(IEnumerable<UnitSummary> units, IReadOnlySet<string> changed)
         {
-            IEnumerable<UnitSummary> passing = units.Where(Passes);
+            IEnumerable<UnitSummary> passing = units.Where(Passes).Where(unit => !ChangedOnly || changed.Contains(unit.BlueprintId));
             if (Sort is null)
             {
                 // default: faction, then tech, then name, so related units sit together
@@ -163,6 +168,11 @@ public static class UnitFilters
                 }
             }
 
+            if (ChangedOnly)
+            {
+                parts.Add("changed in this version");
+            }
+
             if (All)
             {
                 parts.Add("campaign units too");
@@ -194,6 +204,7 @@ public static class UnitFilters
             UrlQuery.Get(navigation, TextParameter)?.Trim(),
             chosen,
             UrlQuery.Get(navigation, AllParameter) == "1",
+            UrlQuery.Get(navigation, ChangedParameter) == "1",
             order,
             descending && order is not null);
     }

@@ -96,7 +96,10 @@ jobs:
     - name: Generate the unit data
       if: steps.version.outputs.skip != 'true'
       # Its output says which units changed since the previous version: the pull request's description.
-      run: dotnet run tools/generate-unit-data.cs -- fa | tee "$RUNNER_TEMP/changes.txt"
+      run: |
+        commit="$(git -C fa rev-parse HEAD)"
+        released="$(git -C fa log -1 --format=%cs HEAD)"
+        dotnet run tools/generate-unit-data.cs -- fa --commit "$commit" --released "$released" | tee "$RUNNER_TEMP/changes.txt"
 
     - name: Open a pull request
       if: steps.version.outputs.skip != 'true'

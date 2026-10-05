@@ -33,6 +33,17 @@
     </fieldset>
 }
 
+@if (Changes is { } changes)
+{
+    <label class="flex cursor-pointer items-start gap-2 border-t border-edge px-1 py-3 text-sm text-ink-muted">
+        <input type="checkbox" class="mt-0.5 accent-primary" checked="@State.ChangedOnly"
+               @onchange="@(() => UnitLinks.Set(Navigation, UnitFilters.ChangedParameter, State.ChangedOnly ? null : "1"))" />
+        <span>Changed in this version
+            <span class="block text-xs text-ink-faint">@ChangesLabel(changes)</span>
+        </span>
+    </label>
+}
+
 <label class="flex cursor-pointer items-start gap-2 border-t border-edge px-1 pt-3 text-sm text-ink-muted">
     <input type="checkbox" class="mt-0.5 accent-primary" checked="@State.All"
            @onchange="@(() => UnitLinks.Set(Navigation, UnitFilters.AllParameter, State.All ? null : "1"))" />
@@ -50,12 +61,19 @@
 
     [Parameter, EditorRequired] public required UnitFilters.State State { get; set; }
 
+    /// <summary>What changed in the shown version since the previous one; null for the oldest.</summary>
+    [Parameter] public UnitDataIndex.UnitChanges? Changes { get; set; }
+
+    public static string ChangesLabel(UnitDataIndex.UnitChanges changes) => changes.IsEmpty
+        ? $"No unit changed since {changes.Previous}"
+        : $"{changes.Changed.Count} changed, {changes.Added.Count} added, {changes.Removed.Count} removed since {changes.Previous}";
+
     private string? text;
     private int textVersion;
 
     protected override void OnParametersSet() => text = State.Text;
 
-    private bool HasFilters => State.Text is { Length: > 0 } || State.All || State.Chosen.Values.Any(chosen => chosen.Count > 0);
+    private bool HasFilters => State.Text is { Length: > 0 } || State.All || State.ChangedOnly || State.Chosen.Values.Any(chosen => chosen.Count > 0);
 
     // Writing the URL on every key would re-filter the list while typing; wait for a short pause.
     private async Task OnTextInput(ChangeEventArgs change)
@@ -74,6 +92,7 @@
         Dictionary<string, object?> cleared = UnitFilters.Groups.ToDictionary(group => group.Parameter, _ => (object?)null);
         cleared[UnitFilters.TextParameter] = null;
         cleared[UnitFilters.AllParameter] = null;
+        cleared[UnitFilters.ChangedParameter] = null;
         Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(cleared), replace: true);
     }
 

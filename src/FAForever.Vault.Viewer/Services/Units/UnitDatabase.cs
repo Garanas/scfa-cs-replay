@@ -32,7 +32,7 @@ public sealed class UnitDatabase(HttpClient http)
             return known;
         }
 
-        string file = loadedIndex.Versions[version];
+        string file = loadedIndex.Versions[version].File;
         if (!files.TryGetValue(file, out Task<UnitData>? loading))
         {
             loading = Retry(LoadFileCoreAsync(file), () => files.Remove(file));

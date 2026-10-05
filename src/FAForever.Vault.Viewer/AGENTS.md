@@ -347,7 +347,8 @@ it, never edit it by hand.
 ## Unit database
 
 `Pages/Units.razor` (`/units`, the Units tab in the header) lists the units of one game version, the
-latest unless `version` says otherwise (a picker in the heading): a filter column, a sortable table, a
+latest unless `version` says otherwise (a picker in the heading, with the release date and how many
+units changed since the previous version, from the index entry): a filter column, a sortable table, a
 comparison and a details panel. The pieces live in `Features/Units/`.
 The page widens to full HD like the Build order tab (`MainLayout.Container`).
 
@@ -366,6 +367,7 @@ The page widens to full HD like the Build order tab (`MainLayout.Container`).
   | `weapon` | `direct`, `indirect`, `antiair`, `antinavy`, `defense` (the weapon's `RangeCategory`), `none` | All |
   | `intel` | `radar`, `sonar`, `omni` | All |
   | `all` | `1` also lists units no player can build (campaign, civilian, helpers) | Buildable units only |
+  | `changed` | `1` lists only the units changed or added in this version (the index entry's `changes`) | All units |
   | `sort` | `name`, `mass`, `energy`, `time`, `health`, `speed`, `range`, `vision`; a leading `-` sorts high to low | Faction, tech, name |
   | `unit` | The unit in the details panel (lower case blueprint id); its row scrolls into view | None |
   | `compare` | Up to six unit ids side by side, in order | No comparison |

@@ -45,14 +45,20 @@ Every release from 3801 (there is no 3800 tag) is there.
 - `UnitData` is a data file: `{"gameVersion":3837,"units":[...]}` with **one unit per line**, sorted
   by id, camel case, nulls left out. JSON goes through the source-generated `UnitDataJsonContext` (no
   reflection, safe under trimming in WebAssembly).
-- `UnitDataIndex` is `units/index.json`: the data file of every game version, one per line, newest
-  first. **A release that changed no unit shares a file**: the generator compares the new units with
-  every existing file (`UnitData.HasSameUnits`) and only writes `<version>.json` when none matches, so a
-  file is named after the first version that has its units (`"3838": "3837.json"`). `Resolve` picks
-  the data for a game: its own version, else the newest older one, else the oldest (3800 and before).
-  `UnitData.WithGameVersion` relabels shared data with the version it stands for.
-- The generator prints what changed since the previous version (`UnitData.Compare`: units changed,
-  added, removed); the update workflow puts that in its pull request, since a new file has no diff.
+- `UnitDataIndex` is `units/index.json`: an entry per game version, one per line, newest first:
+  `"3838":{"file":"3837.json","unitCount":606,"reusedFrom":3837,"changes":{"previous":3837,"changed":[],
+  "added":[],"removed":[]},"commit":"…","released":"2026-08-25","generated":"2026-10-05"}`.
+  - **A release that changed no unit reuses a file**: the generator compares the new units with every
+    file a version owns (`UnitData.HasSameUnits`) and only writes `<version>.json` when none matches, so
+    a file is named after the first version with its units; `reusedFrom` names that version.
+  - `changes` lists the ids changed, added and removed since the previous version (`UnitData.Compare`);
+    the Units page filters on it, and the generator prints it for the update workflow's pull request
+    (a new file has no useful diff).
+  - `commit` and `released` (the release tag's commit and its date) come from the generator's options,
+    which the backfill script and the workflow fill in; `generated` is the day of the run, so it only
+    changes when that version is regenerated. Nothing else in the files depends on when they were made.
+  - `Resolve` picks the data for a game: its own version, else the newest older one, else the oldest
+    (3800 and before). `UnitData.WithGameVersion` relabels reused data with the version it stands for.
 - `UnitBuildTree` mirrors who builds what: a builder can build every unit that has all categories of
   one of its `Economy.BuildableCategory` expressions (space separated; a unit's own lower case id
   counts as a category, so `"uab3101"` names a unit), commanders also what their enhancements add

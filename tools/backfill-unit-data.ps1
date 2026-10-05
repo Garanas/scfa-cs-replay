@@ -39,7 +39,11 @@ try {
         tar -xf $archive -C $dir
         if ($LASTEXITCODE -ne 0) { throw "tar failed for $tag" }
 
-        dotnet run @rebuild $generator -- $dir $output
+        # where the data comes from: the commit of the tag and its date
+        $commit = git -C $Source rev-parse "refs/tags/$tag^{commit}"
+        $released = git -C $Source log -1 --format=%cs "refs/tags/$tag"
+
+        dotnet run @rebuild $generator -- $dir $output --commit $commit --released $released
         if ($LASTEXITCODE -ne 0) { throw "generate-unit-data failed for $tag" }
         $rebuild = @()
         Remove-Item -Recurse -Force $dir, $archive

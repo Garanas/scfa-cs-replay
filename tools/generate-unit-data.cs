@@ -1,12 +1,13 @@
 #!/usr/bin/env dotnet
 // Adds one FAF release to the unit data of the Viewer: src/FAForever.Vault.Viewer/wwwroot/data/units/,
-// an index.json (UnitDataIndex) that maps every game version to a data file (UnitData), one unit per
-// line. The game version comes from the checkout's mod_info.lua, so point it at a release tag. A
-// release whose units equal those of a version already present shares that version's file; otherwise
+// an index.json (UnitDataIndex) with an entry per game version and the data files (UnitData), one unit
+// per line. The game version comes from the checkout's mod_info.lua, so point it at a release tag. A
+// release whose units equal those of a version already present reuses that version's file; otherwise
 // it gets <version>.json. It prints which units changed compared with the previous version.
 //
-//   dotnet run tools/generate-unit-data.cs -- <fa checkout> [output folder]
+//   dotnet run tools/generate-unit-data.cs -- <fa checkout> [output folder] [--commit <sha>] [--released <yyyy-mm-dd>]
 //
+// The two options record where the data comes from: the commit of the release tag and its date.
 // A release without a full checkout: git -C <fa> archive refs/tags/3839 units mod_info.lua | tar -x -C <dir>
 // Many releases at once, from scratch (after a change to UnitSummary): tools/backfill-unit-data.ps1
 
@@ -15,15 +16,43 @@
 using FAForever.FileFormats.Blueprints;
 using FAForever.FileFormats.Lua;
 
-if (args.Length is < 1 or > 2)
+const string Usage = "Usage: dotnet run tools/generate-unit-data.cs -- <fa checkout> [output folder] [--commit <sha>] [--released <yyyy-mm-dd>]";
+
+// positional arguments, and the options with their values
+List<string> positional = [];
+Dictionary<string, string> options = [];
+for (int position = 0; position < args.Length; position++)
 {
-    Console.Error.WriteLine("Usage: dotnet run tools/generate-unit-data.cs -- <fa checkout> [output folder]");
+    if (args[position].StartsWith("--", StringComparison.Ordinal) && position + 1 < args.Length)
+    {
+        options[args[position]] = args[++position];
+    }
+    else
+    {
+        positional.Add(args[position]);
+    }
+}
+
+if (positional.Count is < 1 or > 2 || options.Keys.Except(["--commit", "--released"]).Any())
+{
+    Console.Error.WriteLine(Usage);
     return 1;
 }
 
-string source = Path.GetFullPath(args[0]);
-string output = args.Length > 1
-    ? Path.GetFullPath(args[1])
+DateOnly? released = null;
+if (options.TryGetValue("--released", out string? releasedText))
+{
+    if (!DateOnly.TryParseExact(releasedText, "yyyy-MM-dd", out DateOnly date))
+    {
+        Console.Error.WriteLine($"--released is not a date (yyyy-mm-dd): {releasedText}");
+        return 1;
+    }
+    released = date;
+}
+
+string source = Path.GetFullPath(positional[0]);
+string output = positional.Count > 1
+    ? Path.GetFullPath(positional[1])
     : Path.GetFullPath(Path.Combine(AppContext.GetData("EntryPointFileDirectoryPath") as string ?? "tools", "..", "src", "FAForever.Vault.Viewer", "wwwroot", "data", "units"));
 string indexPath = Path.Combine(output, "index.json");
 
@@ -57,32 +86,35 @@ Directory.CreateDirectory(output);
 UnitDataIndex index = File.Exists(indexPath) ? UnitDataIndex.Deserialize(File.ReadAllText(indexPath)) : UnitDataIndex.Empty;
 UnitData Read(string file) => UnitData.Deserialize(File.ReadAllText(Path.Combine(output, file)));
 
-// What changed since the previous version (the newest older one), for the pull request.
-if (index.Versions.Keys.Where(candidate => candidate < version).DefaultIfEmpty().Max() is var previous and > 0)
+// What changed since the previous version (the newest older one), for the index and the pull request.
+UnitDataIndex.UnitChanges? changes = null;
+if (index.Previous(version) is { } previous)
 {
-    UnitData.Difference difference = UnitData.Compare(Read(index.Versions[previous]), data);
-    string Names(IEnumerable<string> ids) => string.Join(", ", ids.Select(id => $"{UnitFilterName(data.GetOrNull(id))} ({id})"));
-    Console.WriteLine(difference.IsEmpty
+    changes = UnitDataIndex.UnitChanges.From(previous, UnitData.Compare(Read(index.Versions[previous].File), data));
+    string Names(IEnumerable<string> ids) => string.Join(", ", ids.Select(id => $"{DisplayName(data.GetOrNull(id))} ({id})"));
+    Console.WriteLine(changes.IsEmpty
         ? $"No unit changed since {previous}."
-        : $"Since {previous}: {difference.Changed.Count} changed, {difference.Added.Count} added, {difference.Removed.Count} removed.");
-    if (difference.Changed.Count > 0) Console.WriteLine($"Changed: {Names(difference.Changed)}");
-    if (difference.Added.Count > 0) Console.WriteLine($"Added: {Names(difference.Added)}");
-    if (difference.Removed.Count > 0) Console.WriteLine($"Removed: {string.Join(", ", difference.Removed)}");
+        : $"Since {previous}: {changes.Changed.Count} changed, {changes.Added.Count} added, {changes.Removed.Count} removed.");
+    if (changes.Changed.Count > 0) Console.WriteLine($"Changed: {Names(changes.Changed)}");
+    if (changes.Added.Count > 0) Console.WriteLine($"Added: {Names(changes.Added)}");
+    if (changes.Removed.Count > 0) Console.WriteLine($"Removed: {string.Join(", ", changes.Removed)}");
 }
 
-// Share the file of a version with the same units; otherwise write this version's own file.
-string? shared = index.Versions
-    .Where(entry => entry.Key != version)
-    .Select(entry => entry.Value)
-    .Distinct()
-    .FirstOrDefault(file => File.Exists(Path.Combine(output, file)) && Read(file).HasSameUnits(data));
-string dataFile = shared ?? $"{version}.json";
-if (shared is null)
+// Reuse the file of a version with exactly these units (one that owns its file, the oldest first);
+// otherwise write this version's own file.
+int? reusedFrom = index.Versions
+    .Where(candidate => candidate.Key != version && candidate.Value.ReusedFrom is null && File.Exists(Path.Combine(output, candidate.Value.File)))
+    .OrderBy(candidate => candidate.Key)
+    .Where(candidate => Read(candidate.Value.File).HasSameUnits(data))
+    .Select(candidate => (int?)candidate.Key)
+    .FirstOrDefault();
+string dataFile = reusedFrom is { } owner ? index.Versions[owner].File : $"{version}.json";
+if (reusedFrom is null)
 {
-    // Another version may point at this version's file: it would change with it.
-    if (index.Versions.Any(entry => entry.Key != version && entry.Value == dataFile))
+    // Other versions may reuse this version's file: they would change with it.
+    if (index.Versions.Any(candidate => candidate.Key != version && candidate.Value.File == dataFile))
     {
-        Console.Error.WriteLine($"{dataFile} is shared with other versions; regenerate them all with tools/backfill-unit-data.ps1.");
+        Console.Error.WriteLine($"{dataFile} is reused by other versions; regenerate them all with tools/backfill-unit-data.ps1.");
         return 1;
     }
 
@@ -90,8 +122,16 @@ if (shared is null)
     File.WriteAllText(Path.Combine(output, dataFile), data.Serialize(), new System.Text.UTF8Encoding(false));
 }
 
-File.WriteAllText(indexPath, index.With(version, dataFile).Serialize(), new System.Text.UTF8Encoding(false));
-Console.WriteLine($"Game version {version}: {data.Units.Count} units in {dataFile}{(shared is not null ? " (shared, no unit changed)" : "")}");
+UnitDataIndex.Entry entry = new(
+    dataFile,
+    data.Units.Count,
+    reusedFrom,
+    changes,
+    options.GetValueOrDefault("--commit"),
+    released,
+    DateOnly.FromDateTime(DateTime.UtcNow));
+File.WriteAllText(indexPath, index.With(version, entry).Serialize(), new System.Text.UTF8Encoding(false));
+Console.WriteLine($"Game version {version}: {data.Units.Count} units in {dataFile}{(reusedFrom is not null ? $" (the units of {reusedFrom})" : "")}");
 return 0;
 
-static string UnitFilterName(UnitSummary? unit) => unit?.Name ?? unit?.Description ?? "?";
+static string DisplayName(UnitSummary? unit) => unit?.Name ?? unit?.Description ?? "?";
