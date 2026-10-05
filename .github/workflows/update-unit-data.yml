@@ -1,5 +1,6 @@
-# Regenerates src/FAForever.Vault.Viewer/wwwroot/data/units.json (tools/generate-unit-data.cs) for a
-# release of the FAF game repository and opens a pull request with the result.
+# Adds a release of the FAF game repository to the unit data of the Viewer
+# (src/FAForever.Vault.Viewer/wwwroot/data/units/, see tools/generate-unit-data.cs) and opens a pull
+# request: a new data file when units changed, otherwise only a line in the index.
 #
 # Triggers:
 # - repository_dispatch "fa-release": sent by the FA repository when it publishes a release, with
@@ -22,7 +23,7 @@
 # - workflow_dispatch: by hand, for a given version or the latest release.
 # - schedule: once a day, for the latest release, in case a dispatch did not arrive.
 #
-# It does nothing when units.json already holds that version. Creating the pull request needs
+# It does nothing when the index already holds that version. Creating the pull request needs
 # "Allow GitHub Actions to create and approve pull requests" (Settings → Actions → General). Pull
 # requests opened with the workflow's token do not start other workflows: run the tests by hand or
 # push a commit to the branch.
@@ -67,10 +68,9 @@ jobs:
           echo "Not a game version: '$version'" >&2
           exit 1
         fi
-        current="$(head -c 200 src/FAForever.Vault.Viewer/wwwroot/data/units.json | grep -oE '"gameVersion":[0-9]+' | grep -oE '[0-9]+' || true)"
-        echo "Requested $version, units.json has ${current:-nothing}"
         echo "version=$version" >> "$GITHUB_OUTPUT"
-        if [ "$version" = "$current" ]; then
+        if grep -q "\"$version\":" src/FAForever.Vault.Viewer/wwwroot/data/units/index.json; then
+          echo "The unit data already holds $version"
           echo "skip=true" >> "$GITHUB_OUTPUT"
         fi
 
@@ -95,7 +95,8 @@ jobs:
 
     - name: Generate the unit data
       if: steps.version.outputs.skip != 'true'
-      run: dotnet run tools/generate-unit-data.cs -- fa
+      # Its output says which units changed since the previous version: the pull request's description.
+      run: dotnet run tools/generate-unit-data.cs -- fa | tee "$RUNNER_TEMP/changes.txt"
 
     - name: Open a pull request
       if: steps.version.outputs.skip != 'true'
@@ -103,7 +104,8 @@ jobs:
         GH_TOKEN: ${{ github.token }}
         VERSION: ${{ steps.version.outputs.version }}
       run: |
-        if git diff --quiet -- src/FAForever.Vault.Viewer/wwwroot/data/units.json; then
+        data=src/FAForever.Vault.Viewer/wwwroot/data/units
+        if [ -z "$(git status --porcelain -- "$data")" ]; then
           echo "No changes"
           exit 0
         fi
@@ -111,11 +113,17 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git switch -c "$branch"
-        git add src/FAForever.Vault.Viewer/wwwroot/data/units.json
-        git commit -q -m "Update the unit data to game version $VERSION"
+        git add -- "$data"
+        git commit -q -m "Add game version $VERSION to the unit data"
         git push -q --force origin "$branch"
         if [ -z "$(gh pr list --head "$branch" --json number --jq '.[0].number')" ]; then
           gh pr create --base main --head "$branch" \
-            --title "Update the unit data to game version $VERSION" \
-            --body "Regenerated \`units.json\` from [FAForever/fa $VERSION](https://github.com/FAForever/fa/releases/tag/$VERSION) with \`tools/generate-unit-data.cs\`. The diff shows one line per changed unit."
+            --title "Add game version $VERSION to the unit data" \
+            --body-file - <<EOF
+        Adds [FAForever/fa $VERSION](https://github.com/FAForever/fa/releases/tag/$VERSION) to the unit data with \`tools/generate-unit-data.cs\`.
+
+        \`\`\`
+        $(cat "$RUNNER_TEMP/changes.txt")
+        \`\`\`
+        EOF
         fi

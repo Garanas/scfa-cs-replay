@@ -37,6 +37,32 @@ namespace FAForever.FileFormats.Blueprints.Tests
         }
 
         [TestMethod]
+        public void ComparesTheUnitsOfTwoVersions()
+        {
+            BlueprintUnit striker = ParseUnit("/units/UEL0201/UEL0201_unit.bp");
+            BlueprintUnit acu = ParseUnit("/units/UEL0001/UEL0001_unit.bp");
+            BlueprintUnit fatboy = ParseUnit("/units/UEL0401/UEL0401_unit.bp");
+            UnitData older = UnitData.From(3838, [striker, acu]);
+
+            // the same units under another version
+            Assert.IsTrue(older.HasSameUnits(UnitData.From(3839, [striker, acu])));
+            Assert.AreEqual(3839, older.WithGameVersion(3839).GameVersion);
+
+            // a balance change, a new unit and a removed one
+            UnitData newer = new UnitData(3839, [
+                UnitSummary.From(striker) with { MaxHealth = 350 },
+                UnitSummary.From(fatboy),
+            ]);
+            UnitData.Difference difference = UnitData.Compare(older, newer);
+
+            Assert.IsFalse(older.HasSameUnits(newer));
+            CollectionAssert.AreEqual(new[] { "uel0201" }, difference.Changed.ToArray());
+            CollectionAssert.AreEqual(new[] { "uel0401" }, difference.Added.ToArray());
+            CollectionAssert.AreEqual(new[] { "uel0001" }, difference.Removed.ToArray());
+            Assert.IsTrue(UnitData.Compare(older, older).IsEmpty);
+        }
+
+        [TestMethod]
         public void UnknownUnitsAreNull()
         {
             UnitData data = UnitData.From(3839, [ParseUnit("/units/UEL0201/UEL0201_unit.bp")]);

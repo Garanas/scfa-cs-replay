@@ -49,8 +49,8 @@
   and selecting an order still do. Idea: move the map markers and ledger rows into child components
   that only re-render when their own highlight or selection changes, and measure again in a
   release build.
-- [ ] **Turn on automatic unit data updates.** `.github/workflows/update-unit-data.yml` regenerates
-  `wwwroot/data/units.json` for a new FA release and opens a pull request. It needs: (1) Settings →
+- [ ] **Turn on automatic unit data updates.** `.github/workflows/update-unit-data.yml` adds a new
+  FA release to `wwwroot/data/units/` and opens a pull request. It needs: (1) Settings →
   Actions → General → "Allow GitHub Actions to create and approve pull requests"; (2) for an update
   right after a release instead of the daily check, a workflow in
   [FAForever/fa](https://github.com/FAForever/fa) that sends a `repository_dispatch` (`fa-release`,

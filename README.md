@@ -11,7 +11,7 @@ The libraries live in `src/`:
 ## Web app
 
 The repository also ships a web app to search, inspect and analyse replays, and to browse the
-units of the current game version (the Units tab, from `wwwroot/data/units.json`):
+units of every game version since 3801 (the Units tab, from `wwwroot/data/units/`):
 
 - `src/FAForever.Vault.Viewer`: a standalone Blazor WebAssembly app (Tailwind CSS v4, four
   faction colour themes, light and dark) that parses replays entirely in the browser.

@@ -35,15 +35,24 @@ in the FA repo parses; tests use the copies in `tests/FAForever.FileFormats.Blue
 ## Unit data (the unit cards)
 
 The browser does not parse blueprints: `tools/generate-unit-data.cs` (a file-based app, `dotnet run
-tools/generate-unit-data.cs -- <fa checkout>`) parses `units/*_unit.bp` of one FA release and writes
-`src/FAForever.Vault.Viewer/wwwroot/data/units.json`, which the Viewer's unit cards read.
+tools/generate-unit-data.cs -- <fa checkout>`) parses `units/*_unit.bp` of one FA release and adds it
+to `src/FAForever.Vault.Viewer/wwwroot/data/units/`, which the unit cards and the unit database read.
+Every release from 3801 (there is no 3800 tag) is there.
 
 - `UnitSummary` is what a card shows (name, faction, tech, motion type, categories, cost, build power,
   health, shield, intel ranges, weapons with damage, salvo, range and rate of fire); `UnitSummary.From`
   maps a `BlueprintUnit`. Values are as written in the blueprint; nothing is computed (no DPS).
-- `UnitData` is the file: `{"gameVersion":3839,"units":[...]}` with **one unit per line**, sorted by
-  id, camel case, nulls left out, so a release's diff shows which units changed. JSON goes through the
-  source-generated `UnitDataJsonContext` (no reflection, safe under trimming in WebAssembly).
+- `UnitData` is a data file: `{"gameVersion":3837,"units":[...]}` with **one unit per line**, sorted
+  by id, camel case, nulls left out. JSON goes through the source-generated `UnitDataJsonContext` (no
+  reflection, safe under trimming in WebAssembly).
+- `UnitDataIndex` is `units/index.json`: the data file of every game version, one per line, newest
+  first. **A release that changed no unit shares a file**: the generator compares the new units with
+  every existing file (`UnitData.HasSameUnits`) and only writes `<version>.json` when none matches, so a
+  file is named after the first version that has its units (`"3838": "3837.json"`). `Resolve` picks
+  the data for a game: its own version, else the newest older one, else the oldest (3800 and before).
+  `UnitData.WithGameVersion` relabels shared data with the version it stands for.
+- The generator prints what changed since the previous version (`UnitData.Compare`: units changed,
+  added, removed); the update workflow puts that in its pull request, since a new file has no diff.
 - `UnitBuildTree` mirrors who builds what: a builder can build every unit that has all categories of
   one of its `Economy.BuildableCategory` expressions (space separated; a unit's own lower case id
   counts as a category, so `"uab3101"` names a unit), commanders also what their enhancements add
@@ -52,11 +61,13 @@ tools/generate-unit-data.cs -- <fa checkout>`) parses `units/*_unit.bp` of one F
   `UnitData.From` fills `Buildable` and `Builds` in; `UnitData.GetBuilders` is the inverse.
 - The game version comes from `version` in the FA repository's `mod_info.lua` (read with
   `LuaSourceParser`); it is also the release tag and the last number of a replay header's version.
-- Only the current release is kept. `.github/workflows/update-unit-data.yml` regenerates the file
-  and opens a pull request when FA publishes a release (a `repository_dispatch` from the FA
-  repository, by hand, or a daily check of the latest release).
-- Adding a field: a property on `UnitSummary` (or `UnitSummaryWeapon`), its line in `From`, a test,
-  then re-run the generator and commit `units.json`.
+- `.github/workflows/update-unit-data.yml` adds a new release and opens a pull request when FA
+  publishes one (a `repository_dispatch` from the FA repository, by hand, or a daily check).
+- **Adding a field** (a property on `UnitSummary` or `UnitSummaryWeapon`, its line in `From`, a test)
+  changes every data file: regenerate them all from scratch with
+  `pwsh tools/backfill-unit-data.ps1 -Source <fa clone>` (it extracts each release tag with an archive
+  of `units/` and `mod_info.lua`, so the clone is left alone) and commit `data/units/`. The generator
+  refuses to overwrite a file that other versions share.
 
 ## Blueprint ids, unit names and factions
 

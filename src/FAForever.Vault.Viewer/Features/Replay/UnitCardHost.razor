@@ -22,43 +22,39 @@
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
     private UnitData? data;
+    private Replay? loadedFor;
     private IReadOnlyList<string> notes = [];
     private UnitCardService.Request? placed;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         Cards.Changed += OnChanged;
         Navigation.LocationChanged += OnLocationChanged;
-
-        // Load the data with the replay page rather than on the first hover: reading it takes
-        // about a second in the WebAssembly interpreter, which would delay the first card.
-        await LoadAsync();
     }
 
-    // The notes depend on the replay; the page may show another one without a new host.
-    protected override void OnParametersSet()
-    {
-        if (data is not null)
-        {
-            notes = UnitDataNotes.For(Model, data.GameVersion);
-        }
-    }
+    // Load the data with the replay page rather than on the first hover: reading it takes about
+    // half a second in the WebAssembly interpreter, which would delay the first card. The page may
+    // show another replay without a new host, possibly of another game version.
+    protected override Task OnParametersSetAsync() => LoadAsync();
 
     private async Task LoadAsync()
     {
-        if (data is not null)
+        if (data is not null && loadedFor == Model.Replay)
         {
             return;
         }
 
         try
         {
-            data = await Database.LoadAsync();
+            // the data of the game version the replay was played on, or the nearest there is
+            loadedFor = Model.Replay;
+            data = await Database.LoadAsync(UnitDataNotes.GameVersion(Model.Replay.Header.GameVersion));
             notes = UnitDataNotes.For(Model, data.GameVersion);
         }
-        catch (Exception exception) when (exception is HttpRequestException or System.Text.Json.JsonException)
+        catch (Exception exception) when (exception is HttpRequestException or System.Text.Json.JsonException or InvalidOperationException)
         {
             // The card is an extra: without the data the rows keep working as before.
+            loadedFor = null;
             Console.Error.WriteLine($"Unit data unavailable: {exception.Message}");
         }
     }

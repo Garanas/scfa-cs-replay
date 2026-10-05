@@ -9,12 +9,21 @@
 
 <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
     <h1 class="text-2xl font-bold">Units</h1>
-    @if (data is not null)
+    @if (data is not null && index is not null)
     {
-        <p class="text-sm text-ink-muted">
+        <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
             Every unit of FAF game version
-            <a class="text-primary hover:underline" href="@($"https://github.com/FAForever/fa/releases/tag/{data.GameVersion}")" target="_blank" rel="noreferrer">@data.GameVersion</a>,
-            as its blueprint defines it.
+            <label class="inline-flex items-center">
+                <span class="sr-only">Game version</span>
+                <select class="input-field w-auto py-1" value="@data.GameVersion" @onchange="ChangeVersion">
+                    @foreach (int version in index.Newest)
+                    {
+                        <option value="@version">@version@(version == index.Latest ? " (latest)" : "")</option>
+                    }
+                </select>
+            </label>
+            as its blueprints define it.
+            <a class="text-primary hover:underline" href="@($"https://github.com/FAForever/fa/releases/tag/{data.GameVersion}")" target="_blank" rel="noreferrer">Release notes</a>
         </p>
     }
 </div>
@@ -67,6 +76,9 @@ else
 }
 
 @code {
+    private const string VersionParameter = "version";
+
+    private UnitDataIndex? index;
     private UnitData? data;
     private string? error;
     private UnitFilters.State? state;
@@ -75,30 +87,55 @@ else
     private UnitSummary? selected;
     private string? scrolledTo;
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            data = await Database.LoadAsync();
-        }
-        catch (Exception exception) when (exception is HttpRequestException or System.Text.Json.JsonException)
-        {
-            error = exception.Message;
-        }
-    }
+    private int? RequestedVersion => int.TryParse(UrlQuery.Get(Navigation, VersionParameter), out int version) ? version : null;
 
     // Everything on the page follows from the data and the URL (see the Viewer guide, "Unit database").
+    // UrlStateComponent re-runs this on every change of the query, so a version change goes through
+    // here too: the data of another version loads first, then the view follows.
     protected override void OnParametersSet()
     {
-        if (data is null)
+        if (index is null || data is null || index.Resolve(RequestedVersion) != data.GameVersion)
         {
+            _ = LoadAsync();
             return;
         }
 
+        Derive();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            index ??= await Database.LoadIndexAsync();
+            data = await Database.LoadAsync(RequestedVersion);
+            error = null;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            error = exception.Message;
+        }
+
+        if (data is not null)
+        {
+            Derive();
+        }
+        StateHasChanged();
+    }
+
+    private void Derive()
+    {
         state = UnitFilters.Read(Navigation);
-        units = state.Apply(data.Units);
+        units = state.Apply(data!.Units);
         compared = UnitLinks.Compared(Navigation).Select(data.GetOrNull).OfType<UnitSummary>().ToList();
         selected = data.GetOrNull(UrlQuery.Get(Navigation, UnitLinks.UnitParameter));
+    }
+
+    // The latest version is the default, so it stays out of the URL.
+    private void ChangeVersion(ChangeEventArgs change)
+    {
+        string? value = change.Value as string;
+        UnitLinks.Set(Navigation, VersionParameter, int.TryParse(value, out int version) && version != index?.Latest ? value : null);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -311,12 +311,15 @@ The JSON index gives the top-left pixel of each cell:
 Hovering a unit on the Build order tab (the order ledger, the key moments and the "units ordered"
 chips of the Timings view) shows a card with what the unit is: name, faction, tech, where it moves,
 roles, cost, build power, health, shield, intel ranges and its weapons. The data is
-`wwwroot/data/units.json` (see the [Blueprints guide](../FAForever.FileFormats.Blueprints/AGENTS.md),
-"Unit data"); regenerate it, never edit it by hand.
+`wwwroot/data/units/`: an index and one file per distinct set of units, for every release from 3801
+(see the [Blueprints guide](../FAForever.FileFormats.Blueprints/AGENTS.md), "Unit data"); regenerate
+it, never edit it by hand.
 
-- `Services/Units/UnitDatabase.cs` fetches the file once (scoped, like `UnitIconAtlas`).
-  `Features/Replay/UnitCardHost.razor` (placed once in `ReplayView`) starts that load with the replay
-  page, because reading it takes about a second in the WebAssembly interpreter, and renders the card.
+- `Services/Units/UnitDatabase.cs` (scoped, like `UnitIconAtlas`) fetches the index once and each data
+  file once, and hands out the data of a game version (`LoadAsync(version)`, resolved through the
+  index). `Features/Replay/UnitCardHost.razor` (placed once in `ReplayView`) loads the version the
+  replay was played on with the replay page, because reading a file takes about half a second in the
+  WebAssembly interpreter, and renders the card.
 - A row shows the card with `UnitCardService.Show(blueprintId, x, y)` from `@onmouseenter` (pointer
   position from `MouseEventArgs.ClientX/Y`) and hides it with `Hide()` on `@onmouseleave`; navigation
   hides it too. Hover is transient state: never in the URL. Rows that show a card drop their `title`,
@@ -332,17 +335,20 @@ roles, cost, build power, health, shield, intel ranges and its weapons. The data
 - `Features/Replay/UnitCard.razor` shows only real weapons (not `Death`, `Teleport` or weapons without
   damage) and merges identical ones ("2 × Electron Autocannon"). Roles and the motion type label come
   from `Services/Units/UnitRoles.cs`; gunships have no category of their own (`AIR` + `GROUNDATTACK`).
-- **The data is one game version of the FAF branch.** `Services/Units/UnitDataNotes.cs` adds a note
-  to the card when a replay ran on another featured mod (`Metadata.FeaturedMod` is not `faf`), outside
-  FAF (header version not `v1.50.x`, e.g. Steam), on another game version, or with mods
-  (`Header.Mods`). Units missing from the data (mods, campaign) get a short card saying so.
-- The published service worker caches `units.json` with the app shell (it matches `\.json$`), so
-  cards work offline and new data arrives as an app update.
+- **The data is of the FAF branch without mods.** The card uses the replay's own game version (from
+  the header, `UnitDataNotes.GameVersion`). `Services/Units/UnitDataNotes.cs` adds a note when a
+  replay ran on another featured mod (`Metadata.FeaturedMod` is not `faf`), outside FAF (header version
+  not `v1.50.x`, e.g. Steam), on a version without data of its own (before 3801, or newer than the
+  data), or with mods (`Header.Mods`). Units missing from the data (mods, campaign) get a short card
+  saying so.
+- The published service worker caches `data/units/index.json` with the app shell, and each data file
+  the first time the app reads it (not all of them on install); an app update starts a new cache.
 
 ## Unit database
 
-`Pages/Units.razor` (`/units`, the Units tab in the header) lists the units of `units.json`: a filter
-column, a sortable table, a comparison and a details panel. The pieces live in `Features/Units/`.
+`Pages/Units.razor` (`/units`, the Units tab in the header) lists the units of one game version, the
+latest unless `version` says otherwise (a picker in the heading): a filter column, a sortable table, a
+comparison and a details panel. The pieces live in `Features/Units/`.
 The page widens to full HD like the Build order tab (`MainLayout.Container`).
 
 - **The URL holds every choice**, like the replay pages (same guardrails: replace, defaults stay out,
@@ -363,6 +369,7 @@ The page widens to full HD like the Build order tab (`MainLayout.Container`).
   | `sort` | `name`, `mass`, `energy`, `time`, `health`, `speed`, `range`, `vision`; a leading `-` sorts high to low | Faction, tech, name |
   | `unit` | The unit in the details panel (lower case blueprint id); its row scrolls into view | None |
   | `compare` | Up to six unit ids side by side, in order | No comparison |
+  | `version` | The game version, e.g. `3830`; one without data of its own shows the nearest (`UnitDataIndex.Resolve`) | The latest |
 
 - The details panel (`UnitDetail`) shows the unit card and the build tree around the unit: upgrades
   from and to, built by, builds. Every unit there is a link (`unit=`), so the tree can be walked; for a
@@ -370,8 +377,10 @@ The page widens to full HD like the Build order tab (`MainLayout.Container`).
 - The comparison (`UnitComparison`) marks the best value of a row (lowest cost, highest anything else)
   only when at least two units have different values. "Range" is the longest range of the unit's real
   weapons (`UnitRoles.IsRealWeapon`, the same rule as the card).
-- Reading the data takes about half a second and rendering all ~400 rows a few hundred ms in a debug
-  build; a filter change re-renders only the rows that pass.
+- Reading a data file takes about half a second and rendering all ~400 rows a few hundred ms in a
+  debug build; a filter change re-renders only the rows that pass. `UrlStateComponent` re-runs only
+  the synchronous `OnParametersSet`, so the page derives its view there and starts loading another
+  version from there when `version` changes.
 
 ## Browser automation (Playwright MCP)
 

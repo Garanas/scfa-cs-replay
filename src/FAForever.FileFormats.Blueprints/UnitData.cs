@@ -5,9 +5,9 @@ using System.Text.Json.Serialization;
 namespace FAForever.FileFormats.Blueprints
 {
     /// <summary>
-    /// The unit summaries of one game version: the content of a unit data file (<c>units.json</c>),
-    /// generated from the FA repository by <c>tools/generate-unit-data.cs</c> so the browser does not
-    /// have to parse blueprints itself.
+    /// The unit summaries of one game version: the content of a unit data file (<c>units/3839.json</c>,
+    /// found through <see cref="UnitDataIndex"/>), generated from the FA repository by
+    /// <c>tools/generate-unit-data.cs</c> so the browser does not have to parse blueprints itself.
     /// </summary>
     /// <param name="gameVersion">The FAF game version the data comes from, e.g. 3839 (<c>version</c>
     /// in the FA repository's <c>mod_info.lua</c>; also the release tag, and the last part of the
@@ -75,6 +75,41 @@ namespace FAForever.FileFormats.Blueprints
         }
 
         /// <summary>
+        /// The same units labelled with another game version: a release that changed no unit uses
+        /// the data file of an earlier one (see <see cref="UnitDataIndex"/>).
+        /// </summary>
+        public UnitData WithGameVersion(int gameVersion) => new UnitData(gameVersion, Units);
+
+        /// <summary>
+        /// Whether both hold exactly the same units, whatever their game versions.
+        /// </summary>
+        public bool HasSameUnits(UnitData other) => UnitLines().SequenceEqual(other.UnitLines());
+
+        /// <summary>What changed from one game version's units to another's, by blueprint id.</summary>
+        public sealed record Difference(IReadOnlyList<string> Added, IReadOnlyList<string> Removed, IReadOnlyList<string> Changed)
+        {
+            public bool IsEmpty => Added.Count == 0 && Removed.Count == 0 && Changed.Count == 0;
+        }
+
+        /// <summary>
+        /// The units added, removed and changed (any value of their summary) from <paramref name="older"/>
+        /// to <paramref name="newer"/>, each sorted by id.
+        /// </summary>
+        public static Difference Compare(UnitData older, UnitData newer)
+        {
+            Dictionary<string, string> before = older.Units.ToDictionary(unit => unit.BlueprintId, Line);
+            Dictionary<string, string> after = newer.Units.ToDictionary(unit => unit.BlueprintId, Line);
+            return new Difference(
+                after.Keys.Except(before.Keys).Order(StringComparer.Ordinal).ToList(),
+                before.Keys.Except(after.Keys).Order(StringComparer.Ordinal).ToList(),
+                after.Keys.Intersect(before.Keys).Where(id => after[id] != before[id]).Order(StringComparer.Ordinal).ToList());
+        }
+
+        private IEnumerable<string> UnitLines() => Units.Select(Line);
+
+        private static string Line(UnitSummary unit) => JsonSerializer.Serialize(unit, UnitDataJsonContext.Default.UnitSummary);
+
+        /// <summary>
         /// Writes the data as JSON with one unit per line, so the diff after a game update shows
         /// which units changed. Properties are camel case; null values are left out.
         /// </summary>
@@ -84,7 +119,7 @@ namespace FAForever.FileFormats.Blueprints
             builder.Append("{\"gameVersion\":").Append(GameVersion).Append(",\"units\":[\n");
             for (int index = 0; index < Units.Count; index++)
             {
-                builder.Append(JsonSerializer.Serialize(Units[index], UnitDataJsonContext.Default.UnitSummary));
+                builder.Append(Line(Units[index]));
                 builder.Append(index < Units.Count - 1 ? ",\n" : "\n");
             }
             builder.Append("]}\n");
