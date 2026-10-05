@@ -3,6 +3,12 @@ using FAForever.FileFormats.Blueprints;
 namespace FAForever.Vault.Viewer.Services.Units;
 
 /// <summary>
+/// The units of a game version: the version the index resolved to, and its data. Versions that
+/// share a data file share the same <see cref="UnitData"/>.
+/// </summary>
+public sealed record UnitDataVersion(int GameVersion, UnitData Data);
+
+/// <summary>
 /// The unit data of every supported game version (<c>wwwroot/data/units/</c>, generated from the FA
 /// repository by <c>tools/generate-unit-data.cs</c>): <c>index.json</c> says which file holds each
 /// version. The index and every file are fetched once, on first use, and shared by the whole app.
@@ -13,24 +19,19 @@ public sealed class UnitDatabase(HttpClient http)
 
     private Task<UnitDataIndex>? index;
     private readonly Dictionary<string, Task<UnitData>> files = [];
-    private readonly Dictionary<int, UnitData> versions = [];
 
     /// <summary>Which data file holds each game version.</summary>
     public Task<UnitDataIndex> LoadIndexAsync() => index ??= Retry(LoadIndexCoreAsync(), () => index = null);
 
     /// <summary>
-    /// The unit data for a game played on <paramref name="gameVersion"/>: that version's, or the
-    /// nearest one there is (<see cref="UnitDataIndex.Resolve"/>); the latest without a version.
-    /// <see cref="UnitData.GameVersion"/> says which version the data is of.
+    /// The units for a game played on <paramref name="gameVersion"/>: that version's, or the nearest
+    /// there is (<see cref="UnitDataIndex.Resolve"/>); the latest without a version. The result says
+    /// which version it resolved to.
     /// </summary>
-    public async Task<UnitData> LoadAsync(int? gameVersion = null)
+    public async Task<UnitDataVersion> LoadAsync(int? gameVersion = null)
     {
         UnitDataIndex loadedIndex = await LoadIndexAsync();
         int version = loadedIndex.Resolve(gameVersion) ?? throw new InvalidOperationException("The unit data index is empty.");
-        if (versions.TryGetValue(version, out UnitData? known))
-        {
-            return known;
-        }
 
         string file = loadedIndex.Versions[version].File;
         if (!files.TryGetValue(file, out Task<UnitData>? loading))
@@ -39,9 +40,7 @@ public sealed class UnitDatabase(HttpClient http)
             files[file] = loading;
         }
 
-        // A version without changes shares an earlier version's file: label it with its own version.
-        UnitData data = await loading;
-        return versions[version] = data.GameVersion == version ? data : data.WithGameVersion(version);
+        return new UnitDataVersion(version, await loading);
     }
 
     private async Task<UnitDataIndex> LoadIndexCoreAsync()

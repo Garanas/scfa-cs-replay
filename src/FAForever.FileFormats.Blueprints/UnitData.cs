@@ -5,18 +5,14 @@ using System.Text.Json.Serialization;
 namespace FAForever.FileFormats.Blueprints
 {
     /// <summary>
-    /// The unit summaries of one game version: the content of a unit data file (<c>units/3839.json</c>,
-    /// found through <see cref="UnitDataIndex"/>), generated from the FA repository by
-    /// <c>tools/generate-unit-data.cs</c> so the browser does not have to parse blueprints itself.
+    /// The unit summaries of a game release: the content of a unit data file (<c>units/3837.json</c>),
+    /// generated from the FA repository by <c>tools/generate-unit-data.cs</c> so the browser does not
+    /// have to parse blueprints itself. It holds only the units: which game versions they belong to is
+    /// up to the <see cref="UnitDataIndex"/>, since releases that change no unit share a file.
     /// </summary>
-    /// <param name="gameVersion">The FAF game version the data comes from, e.g. 3839 (<c>version</c>
-    /// in the FA repository's <c>mod_info.lua</c>; also the release tag, and the last part of the
-    /// version in a replay header such as "Supreme Commander v1.50.3839").</param>
     /// <param name="units">The units, sorted by blueprint id.</param>
-    public sealed class UnitData(int gameVersion, IReadOnlyList<UnitSummary> units)
+    public sealed class UnitData(IReadOnlyList<UnitSummary> units)
     {
-        public int GameVersion { get; } = gameVersion;
-
         public IReadOnlyList<UnitSummary> Units { get; } = units;
 
         /// <summary>
@@ -51,16 +47,15 @@ namespace FAForever.FileFormats.Blueprints
         private Dictionary<string, IReadOnlyList<UnitSummary>>? builders;
 
         /// <summary>
-        /// The data of a game version from its unit blueprints, with the build tree
+        /// The data of a release from its unit blueprints, with the build tree
         /// (<see cref="UnitBuildTree"/>) filled in.
         /// </summary>
-        public static UnitData From(int gameVersion, IEnumerable<BlueprintUnit> units)
+        public static UnitData From(IEnumerable<BlueprintUnit> units)
         {
             List<BlueprintUnit> all = units.ToList();
             IReadOnlyDictionary<string, IReadOnlyList<string>> builds = UnitBuildTree.Builds(all);
             IReadOnlySet<string> buildable = UnitBuildTree.Buildable(all, builds);
             return new UnitData(
-                gameVersion,
                 all.Select(unit =>
                     {
                         UnitSummary summary = UnitSummary.From(unit);
@@ -75,13 +70,7 @@ namespace FAForever.FileFormats.Blueprints
         }
 
         /// <summary>
-        /// The same units labelled with another game version: a release that changed no unit uses
-        /// the data file of an earlier one (see <see cref="UnitDataIndex"/>).
-        /// </summary>
-        public UnitData WithGameVersion(int gameVersion) => new UnitData(gameVersion, Units);
-
-        /// <summary>
-        /// Whether both hold exactly the same units, whatever their game versions.
+        /// Whether both hold exactly the same units.
         /// </summary>
         public bool HasSameUnits(UnitData other) => UnitLines().SequenceEqual(other.UnitLines());
 
@@ -110,13 +99,13 @@ namespace FAForever.FileFormats.Blueprints
         private static string Line(UnitSummary unit) => JsonSerializer.Serialize(unit, UnitDataJsonContext.Default.UnitSummary);
 
         /// <summary>
-        /// Writes the data as JSON with one unit per line, so the diff after a game update shows
-        /// which units changed. Properties are camel case; null values are left out.
+        /// Writes the units as a unit data file, <c>{"units":[...]}</c> with one unit per line.
+        /// Properties are camel case; null values are left out.
         /// </summary>
         public string Serialize()
         {
             StringBuilder builder = new StringBuilder();
-            builder.Append("{\"gameVersion\":").Append(GameVersion).Append(",\"units\":[\n");
+            builder.Append("{\"units\":[\n");
             for (int index = 0; index < Units.Count; index++)
             {
                 builder.Append(Line(Units[index]));

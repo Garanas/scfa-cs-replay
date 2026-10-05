@@ -42,9 +42,10 @@ Every release from 3801 (there is no 3800 tag) is there.
 - `UnitSummary` is what a card shows (name, faction, tech, motion type, categories, cost, build power,
   health, shield, intel ranges, weapons with damage, salvo, range and rate of fire); `UnitSummary.From`
   maps a `BlueprintUnit`. Values are as written in the blueprint; nothing is computed (no DPS).
-- `UnitData` is a data file: `{"gameVersion":3837,"units":[...]}` with **one unit per line**, sorted
-  by id, camel case, nulls left out. JSON goes through the source-generated `UnitDataJsonContext` (no
-  reflection, safe under trimming in WebAssembly).
+- A data file is `{"units":[...]}` with **one unit per line**, sorted by id, camel case, nulls left
+  out; `UnitData` is exactly that, the units and nothing else. Which game versions a file belongs to
+  is only the index's business, so neither the file nor `UnitData` carries a version. JSON goes
+  through the source-generated `UnitDataJsonContext` (no reflection, safe under trimming in WebAssembly).
 - `UnitDataIndex` is `units/index.json`: an entry per game version, one per line, newest first:
   `"3838":{"file":"3837.json","unitCount":606,"reusedFrom":3837,"changes":{"previous":3837,"changed":[],
   "added":[],"removed":[]},"commit":"…","released":"2026-08-25","generated":"2026-10-05"}`.
@@ -58,7 +59,8 @@ Every release from 3801 (there is no 3800 tag) is there.
     which the backfill script and the workflow fill in; `generated` is the day of the run, so it only
     changes when that version is regenerated. Nothing else in the files depends on when they were made.
   - `Resolve` picks the data for a game: its own version, else the newest older one, else the oldest
-    (3800 and before). `UnitData.WithGameVersion` relabels reused data with the version it stands for.
+    (3800 and before). The Viewer's `UnitDatabase.LoadAsync(version)` returns that resolved version
+    next to the data (`UnitDataVersion`); versions that share a file share one `UnitData`.
 - `UnitBuildTree` mirrors who builds what: a builder can build every unit that has all categories of
   one of its `Economy.BuildableCategory` expressions (space separated; a unit's own lower case id
   counts as a category, so `"uab3101"` names a unit), commanders also what their enhancements add

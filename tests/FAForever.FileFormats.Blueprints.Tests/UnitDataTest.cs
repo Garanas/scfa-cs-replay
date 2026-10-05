@@ -14,7 +14,7 @@ namespace FAForever.FileFormats.Blueprints.Tests
         [TestMethod]
         public void RoundTripsThroughJson()
         {
-            UnitData data = UnitData.From(3839, [
+            UnitData data = UnitData.From([
                 ParseUnit("/units/UEL0201/UEL0201_unit.bp"),
                 ParseUnit("/units/UEL0001/UEL0001_unit.bp"),
             ]);
@@ -22,7 +22,9 @@ namespace FAForever.FileFormats.Blueprints.Tests
             string json = data.Serialize();
             UnitData read = UnitData.Deserialize(json);
 
-            Assert.AreEqual(3839, read.GameVersion);
+            // the file holds only the units: which versions they belong to is the index's business
+            StringAssert.StartsWith(json, "{\"units\":[\n");
+            Assert.IsFalse(json.Contains("ersion"), json);
             // sorted by id, one unit per line, nulls left out
             CollectionAssert.AreEqual(new[] { "uel0001", "uel0201" }, read.Units.Select(unit => unit.BlueprintId).ToArray());
             Assert.AreEqual(4, json.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
@@ -42,14 +44,13 @@ namespace FAForever.FileFormats.Blueprints.Tests
             BlueprintUnit striker = ParseUnit("/units/UEL0201/UEL0201_unit.bp");
             BlueprintUnit acu = ParseUnit("/units/UEL0001/UEL0001_unit.bp");
             BlueprintUnit fatboy = ParseUnit("/units/UEL0401/UEL0401_unit.bp");
-            UnitData older = UnitData.From(3838, [striker, acu]);
+            UnitData older = UnitData.From([striker, acu]);
 
-            // the same units under another version
-            Assert.IsTrue(older.HasSameUnits(UnitData.From(3839, [striker, acu])));
-            Assert.AreEqual(3839, older.WithGameVersion(3839).GameVersion);
+            // the same units, as a release that changed nothing would have them
+            Assert.IsTrue(older.HasSameUnits(UnitData.From([striker, acu])));
 
             // a balance change, a new unit and a removed one
-            UnitData newer = new UnitData(3839, [
+            UnitData newer = new UnitData([
                 UnitSummary.From(striker) with { MaxHealth = 350 },
                 UnitSummary.From(fatboy),
             ]);
@@ -65,7 +66,7 @@ namespace FAForever.FileFormats.Blueprints.Tests
         [TestMethod]
         public void UnknownUnitsAreNull()
         {
-            UnitData data = UnitData.From(3839, [ParseUnit("/units/UEL0201/UEL0201_unit.bp")]);
+            UnitData data = UnitData.From([ParseUnit("/units/UEL0201/UEL0201_unit.bp")]);
 
             Assert.IsNull(data.GetOrNull("xxx0000"));
             Assert.IsNull(data.GetOrNull(null));

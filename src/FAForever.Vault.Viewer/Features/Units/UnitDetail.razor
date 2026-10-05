@@ -19,7 +19,7 @@
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto p-4">
-        <UnitCard BlueprintId="@Unit.BlueprintId" Unit="@Unit" DataVersion="@Data.GameVersion" Class="w-full" />
+        <UnitCard BlueprintId="@Unit.BlueprintId" Unit="@Unit" DataVersion="@GameVersion" Class="w-full" />
 
         @if (Data.GetOrNull(Unit.UpgradesFrom) is { } from)
         {
@@ -43,6 +43,9 @@
     [Parameter, EditorRequired] public required UnitSummary Unit { get; set; }
 
     [Parameter, EditorRequired] public required UnitData Data { get; set; }
+
+    /// <summary>The game version the data is of, for the card.</summary>
+    [Parameter, EditorRequired] public int GameVersion { get; set; }
 
     private IReadOnlyList<string> compared = [];
     private bool isCompared;

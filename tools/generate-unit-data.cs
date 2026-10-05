@@ -81,16 +81,16 @@ foreach (string file in Directory.GetFiles(Path.Combine(source, "units"), "*_uni
     }
 }
 
-UnitData data = UnitData.From(version, blueprints);
+UnitData data = UnitData.From(blueprints);
 Directory.CreateDirectory(output);
 UnitDataIndex index = File.Exists(indexPath) ? UnitDataIndex.Deserialize(File.ReadAllText(indexPath)) : UnitDataIndex.Empty;
-UnitData Read(string file) => UnitData.Deserialize(File.ReadAllText(Path.Combine(output, file)));
+UnitData Read(int owner) => UnitData.Deserialize(File.ReadAllText(Path.Combine(output, index.Versions[owner].File)));
 
 // What changed since the previous version (the newest older one), for the index and the pull request.
 UnitDataIndex.UnitChanges? changes = null;
 if (index.Previous(version) is { } previous)
 {
-    changes = UnitDataIndex.UnitChanges.From(previous, UnitData.Compare(Read(index.Versions[previous].File), data));
+    changes = UnitDataIndex.UnitChanges.From(previous, UnitData.Compare(Read(previous), data));
     string Names(IEnumerable<string> ids) => string.Join(", ", ids.Select(id => $"{DisplayName(data.GetOrNull(id))} ({id})"));
     Console.WriteLine(changes.IsEmpty
         ? $"No unit changed since {previous}."
@@ -105,7 +105,7 @@ if (index.Previous(version) is { } previous)
 int? reusedFrom = index.Versions
     .Where(candidate => candidate.Key != version && candidate.Value.ReusedFrom is null && File.Exists(Path.Combine(output, candidate.Value.File)))
     .OrderBy(candidate => candidate.Key)
-    .Where(candidate => Read(candidate.Value.File).HasSameUnits(data))
+    .Where(candidate => Read(candidate.Key).HasSameUnits(data))
     .Select(candidate => (int?)candidate.Key)
     .FirstOrDefault();
 string dataFile = reusedFrom is { } owner ? index.Versions[owner].File : $"{version}.json";

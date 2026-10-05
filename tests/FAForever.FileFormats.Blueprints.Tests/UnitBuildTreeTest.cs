@@ -66,7 +66,7 @@ namespace FAForever.FileFormats.Blueprints.Tests
         [TestMethod]
         public void UnitDataCarriesTheTree()
         {
-            UnitData data = UnitData.From(3839, Units);
+            UnitData data = UnitData.From(Units);
 
             Assert.IsTrue(data.GetOrNull("factoryhq")!.Buildable);
             Assert.IsFalse(data.GetOrNull("civilian")!.Buildable);

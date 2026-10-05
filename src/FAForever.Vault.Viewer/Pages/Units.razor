@@ -9,13 +9,13 @@
 
 <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
     <h1 class="text-2xl font-bold">Units</h1>
-    @if (data is not null && index is not null)
+    @if (loaded is not null && index is not null)
     {
         <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
             Every unit of FAF game version
             <label class="inline-flex items-center">
                 <span class="sr-only">Game version</span>
-                <select class="input-field w-auto py-1" value="@data.GameVersion" @onchange="ChangeVersion">
+                <select class="input-field w-auto py-1" value="@loaded.GameVersion" @onchange="ChangeVersion">
                     @foreach (int version in index.Newest)
                     {
                         <option value="@version">@version@(version == index.Latest ? " (latest)" : "")</option>
@@ -31,7 +31,7 @@
             {
                 <span>@UnitFilterColumn.ChangesLabel(changes).</span>
             }
-            <a class="text-primary hover:underline" href="@($"https://github.com/FAForever/fa/releases/tag/{data.GameVersion}")" target="_blank" rel="noreferrer">Release notes</a>
+            <a class="text-primary hover:underline" href="@($"https://github.com/FAForever/fa/releases/tag/{loaded.GameVersion}")" target="_blank" rel="noreferrer">Release notes</a>
         </p>
     }
 </div>
@@ -43,7 +43,7 @@
         <p class="mt-1 text-sm text-ink-muted">@error</p>
     </div>
 }
-else if (data is null || state is null)
+else if (loaded is null || state is null)
 {
     <div class="card mt-6 animate-pulse text-center text-sm text-ink-muted">Loading the units&hellip;</div>
 }
@@ -79,7 +79,7 @@ else
 
     @if (selected is not null)
     {
-        <UnitDetail Unit="selected" Data="data" />
+        <UnitDetail Unit="selected" Data="loaded.Data" GameVersion="loaded.GameVersion" />
     }
 }
 
@@ -87,7 +87,7 @@ else
     private const string VersionParameter = "version";
 
     private UnitDataIndex? index;
-    private UnitData? data;
+    private UnitDataVersion? loaded;
     private string? error;
     private UnitFilters.State? state;
     private IReadOnlyList<UnitSummary> units = [];
@@ -96,7 +96,7 @@ else
     private string? scrolledTo;
 
     /// <summary>The index entry of the shown version: its release, and what changed since the previous one.</summary>
-    private UnitDataIndex.Entry? Entry => data is not null ? index?.Versions.GetValueOrDefault(data.GameVersion) : null;
+    private UnitDataIndex.Entry? Entry => loaded is not null ? index?.Versions.GetValueOrDefault(loaded.GameVersion) : null;
 
     private int? RequestedVersion => int.TryParse(UrlQuery.Get(Navigation, VersionParameter), out int version) ? version : null;
 
@@ -105,7 +105,7 @@ else
     // here too: the data of another version loads first, then the view follows.
     protected override void OnParametersSet()
     {
-        if (index is null || data is null || index.Resolve(RequestedVersion) != data.GameVersion)
+        if (index is null || loaded is null || index.Resolve(RequestedVersion) != loaded.GameVersion)
         {
             _ = LoadAsync();
             return;
@@ -119,7 +119,7 @@ else
         try
         {
             index ??= await Database.LoadIndexAsync();
-            data = await Database.LoadAsync(RequestedVersion);
+            loaded = await Database.LoadAsync(RequestedVersion);
             error = null;
         }
         catch (Exception exception) when (exception is HttpRequestException or System.Text.Json.JsonException or InvalidOperationException)
@@ -127,7 +127,7 @@ else
             error = exception.Message;
         }
 
-        if (data is not null)
+        if (loaded is not null)
         {
             Derive();
         }
@@ -138,7 +138,8 @@ else
     {
         state = UnitFilters.Read(Navigation);
         IReadOnlySet<string> changed = Entry?.Changes is { } changes ? changes.Changed.Concat(changes.Added).ToHashSet() : new HashSet<string>();
-        units = state.Apply(data!.Units, changed);
+        UnitData data = loaded!.Data;
+        units = state.Apply(data.Units, changed);
         compared = UnitLinks.Compared(Navigation).Select(data.GetOrNull).OfType<UnitSummary>().ToList();
         selected = data.GetOrNull(UrlQuery.Get(Navigation, UnitLinks.UnitParameter));
     }

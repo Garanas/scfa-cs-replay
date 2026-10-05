@@ -12,7 +12,7 @@
 @if (Cards.Current is { } request && data is not null)
 {
     <div id="@ElementId" class="pointer-events-none fixed left-0 top-0 z-50" style="visibility:hidden" aria-hidden="true">
-        <UnitCard BlueprintId="@request.BlueprintId" Unit="@data.GetOrNull(request.BlueprintId)" DataVersion="@data.GameVersion" Notes="@notes" />
+        <UnitCard BlueprintId="@request.BlueprintId" Unit="@data.Data.GetOrNull(request.BlueprintId)" DataVersion="@data.GameVersion" Notes="@notes" />
     </div>
 }
 
@@ -21,7 +21,7 @@
 
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
-    private UnitData? data;
+    private UnitDataVersion? data;
     private Replay? loadedFor;
     private IReadOnlyList<string> notes = [];
     private UnitCardService.Request? placed;
