@@ -339,7 +339,7 @@
                 For the Fatboy that is <code class="font-mono text-ink">UEL0401_script.lua</code>, @ScriptLines lines long. All 606 units have one.
             </p>
             <p class="rounded-xl border-l-4 border-primary bg-raised px-5 py-4 text-[16px]">
-                The blueprint says <strong>what</strong> the Fatboy is. The script says <strong>how</strong> it behaves.
+                The blueprint sets how the Fatboy <strong>behaves</strong>. The script decides how it <strong>reacts</strong> to what happens in the game.
             </p>
             <p>Both files name the same weapons. The name in <strong>Label</strong> is the link between them:</p>
             <div class="grid gap-4 md:grid-cols-2">
@@ -353,13 +353,15 @@
                 </figure>
             </div>
             <p>
-                The blueprint gives the cannon its damage, its range and how often it fires.
-                The script gives it a <strong>kind of weapon</strong>: a Gauss cannon that knows how to aim, fire and flash at the muzzle.
+                The blueprint holds everything the engine needs to use the cannon: its damage, its range, how often it fires,
+                how fast the turret turns and what it shoots first. The engine aims with those numbers.
+                The script gives the cannon a <strong>kind of weapon</strong>, a Gauss cannon, which fires the shell and flashes at the muzzle.
                 Without that line in the script, the cannon would have all its numbers and never fire.
             </p>
             <p>
                 The rest of a script answers <strong>events</strong>. The game calls out when something happens to the unit,
-                and the script decides what to do. A few of the Fatboy's answers:
+                and the script decides what to do. That is also where a unit gets abilities the blueprint cannot describe.
+                A few of the Fatboy's answers:
             </p>
             <div class="grid gap-3 sm:grid-cols-2">
                 @foreach ((string name, string title, string text) in Events)
@@ -583,8 +585,8 @@
     private static readonly (string Title, string Text)[] Layers =
     [
         ("The engine", "The program you start. It draws the world, moves units and does the math. It is the same for every unit."),
-        ("The scripts", "Code in Lua that decides how units behave: what happens when one is built, fires or dies."),
-        ("The blueprints", "Data in Lua that says what each unit is: its health, its cost, its speed and its weapons."),
+        ("The blueprints", "Data in Lua that sets how each unit behaves: its health, its cost, how it moves and how its weapons fire."),
+        ("The scripts", "Code in Lua that reacts to what happens in the game: a unit is built, starts to build or dies."),
     ];
 
     private static readonly (string Title, string Example, string Result, string Text)[] BuildingBlocks =
