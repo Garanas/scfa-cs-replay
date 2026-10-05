@@ -3,15 +3,22 @@
 @* The map as an SVG in world coordinates: (0,0) is the top-left corner, X right, Z down, so
    overlays (ChildContent) can use positions from the replay as-is. The vault preview is an
    SVG image spanning the whole map, which keeps it aligned when ViewBox zooms in on a part of
-   the map; generated maps without a preview show the themed grid backdrop instead. *@
-
-<div class="map-grid relative w-full overflow-hidden rounded-lg border border-edge" style="aspect-ratio: @Fmt(view.Width) / @Fmt(view.Height)">
+   the map (generated maps get theirs from the map generator, see MapPreviews). The image says
+   how it went in data-preview (loading, loaded, failed), like the search cards: a pulse over the
+   grid while it loads, a question mark when there is none or it failed. *@
+<div class="map-grid group/map relative [container-type:inline-size] w-full overflow-hidden rounded-lg border border-edge"
+     style="aspect-ratio: @Fmt(view.Width) / @Fmt(view.Height)" data-preview="@(PreviewUrl is null ? "failed" : "loading")">
+    <div class="absolute inset-0 hidden animate-pulse bg-primary/15 group-data-[preview=loading]/map:block" aria-hidden="true"></div>
+    <div class="absolute inset-0 hidden items-center justify-center font-display text-[clamp(1.5rem,30cqw,8rem)] font-bold text-ink-faint group-data-[preview=failed]/map:flex" aria-hidden="true">?</div>
     <svg class="absolute inset-0 h-full w-full" viewBox="@Fmt(view.X) @Fmt(view.Z) @Fmt(view.Width) @Fmt(view.Height)"
          role="img" aria-label="@AriaLabel">
         @if (PreviewUrl is { } previewUrl)
         {
-            <image href="@previewUrl" x="0" y="0" width="@size.X" height="@size.Z" preserveAspectRatio="none"
-                   onerror="this.style.display='none'"><title>Map preview of @MapName</title></image>
+            @* The handlers come before href, so they are in place when a cached image loads. *@
+            <image onload="this.closest('[data-preview]').dataset.preview='loaded'"
+                   onerror="this.closest('[data-preview]').dataset.preview='failed'"
+                   href="@previewUrl" x="0" y="0" width="@size.X" height="@size.Z" preserveAspectRatio="none"
+                   class="opacity-0 transition-opacity group-data-[preview=loaded]/map:opacity-100"><title>Map preview of @MapName</title></image>
         }
         @ChildContent
     </svg>
@@ -36,22 +43,7 @@
 
     private string MapName => Model.Replay.Header.Scenario.Map.DisplayName ?? Model.Metadata?.mapname ?? "map";
 
-    private string? PreviewUrl
-    {
-        get
-        {
-            string? folder = Model.Metadata?.mapname;
-            if (folder is null && Model.Replay.Header.Scenario.Map.SCMapReference is { Length: > 0 } reference)
-            {
-                string[] segments = reference.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                folder = segments.Length >= 2 ? segments[^2] : null;
-            }
-
-            return folder is { Length: > 0 }
-                ? $"https://content.faforever.com/maps/previews/large/{folder.ToLowerInvariant()}.png"
-                : null;
-        }
-    }
+    private string? PreviewUrl => MapPreviews.Url(MapPreviews.Folder(Model));
 
     protected override void OnParametersSet()
     {

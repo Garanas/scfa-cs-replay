@@ -12,9 +12,9 @@
   `https://vault.jipwijnia.nl/` and `http://127.0.0.1`; the server proxies the token exchange, so
   no CORS change at FAF is needed. `wwwroot/appsettings.Production.json` already holds the
   production redirect URI.
-- [ ] **Retire the old GitHub Pages site** (https://garanas.github.io/scfa-cs-replay/, the old
-  MudBlazor viewer served from `live/gh-pages`): unpublish Pages, or replace it with a redirect to
-  the vault, and delete the branches `live/gh-pages` and `deploy/gh-pages`.
+- [x] ~~Retire the old GitHub Pages site~~ (https://garanas.github.io/scfa-cs-replay/, the old
+  MudBlazor viewer): done 2026-10-05: Pages unpublished (the address returns 404), the branches
+  `live/gh-pages` and `deploy/gh-pages` and the `github-pages` environment deleted.
 - [x] ~~Verify the login flow against Hydra with a real FAF account~~: verified 2026-10-03: sign-in
   via the loopback redirect works, `/me` resolves the player name, and `/search` returns live results.
 - [x] ~~Verify the FAF API attribute/filter names with live calls~~: verified 2026-10-03 with a real

@@ -129,7 +129,7 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
             game.GetDateTimeOffset("startTime"),
             game.GetDateTimeOffset("endTime"),
             map?.GetString("displayName") ?? mapVersion?.GetString("folderName"),
-            mapVersion?.GetString("thumbnailUrlSmall"),
+            MapPreviews.Url(mapVersion?.GetString("folderName"), mapVersion?.GetString("thumbnailUrlSmall")),
             featuredMod?.GetString("displayName") ?? featuredMod?.GetString("technicalName"),
             players)
         {

@@ -99,6 +99,10 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
 - Anything drawn on the map goes through `Features/Replay/MapCanvas.razor`: an SVG in world
   coordinates with the vault preview as backdrop, so replay positions (x, z) are used as-is; its
   `ViewBox` parameter zooms in on a part of the map.
+- Map previews come from `Services/MapPreviews.cs`. Generated maps are not in the vault: their
+  replay metadata says `"mapname":"None"`, so the folder comes from the scenario's map path, and the
+  preview from the map generator's service (supported generator versions only, see the root guide).
+  It sends no CORS headers: load it as an image, never with `fetch`. The grid shows until it arrives.
 - Faction icons live in `wwwroot/images/factions/` (copied from the FAF game
   repo, `textures/ui/common/faction_icon-lg`, `_med` variants); render them via the display helpers
   in `Services/Theming/Factions.cs` (icon path, name, swatch per faction index).

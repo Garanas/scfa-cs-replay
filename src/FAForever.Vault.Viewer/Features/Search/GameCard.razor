@@ -5,16 +5,21 @@
 <a href="@(Game.ReplayAvailable == false ? null : $"replay/{Game.Id}")"
    class="card flex flex-col gap-4 p-5 transition @(Game.ReplayAvailable == false ? "opacity-60" : "hover:border-primary")">
     <div class="flex gap-4">
-        @* The placeholder sits underneath the preview: it shows when the vault has no preview
-           (e.g. generated maps) or the image fails to load. *@
-        <div class="map-grid relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-edge"
+        @* The image says how it went in data-preview (loading, loaded, failed), and the
+           tile follows: a pulse while it loads (a new generated map takes seconds), the
+           image once it is there, the question mark when there is none or it failed. *@
+        <div class="map-grid group/map relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-edge"
+             data-preview="@(Game.MapPreviewUrl is null ? "failed" : "loading")"
              title="@(Game.MapPreviewUrl is null ? "No map preview" : null)">
-            <span class="font-display text-2xl font-bold text-ink-faint" aria-hidden="true">?</span>
+            <span class="absolute inset-0 hidden animate-pulse bg-primary/15 group-data-[preview=loading]/map:block" aria-hidden="true"></span>
+            <span class="hidden font-display text-2xl font-bold text-ink-faint group-data-[preview=failed]/map:inline" aria-hidden="true">?</span>
             @if (Game.MapPreviewUrl is { } previewUrl)
             {
-                <img src="@previewUrl" alt="" loading="lazy"
-                     class="absolute inset-0 h-full w-full object-cover"
-                     onerror="this.style.visibility='hidden'" />
+                @* The handlers come before src, so they are in place when a cached image loads. *@
+                <img onload="this.closest('[data-preview]').dataset.preview='loaded'"
+                     onerror="this.closest('[data-preview]').dataset.preview='failed'"
+                     src="@previewUrl" alt="" loading="lazy"
+                     class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity group-data-[preview=loaded]/map:opacity-100" />
             }
         </div>
         @* Two columns: what was played on the left (title, map and mode, date and duration),

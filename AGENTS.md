@@ -76,6 +76,7 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
 | `https://api.faforever.com/me` | Bearer token | `*` | Current user. |
 | `https://api.faforever.com/game/{id}/replay` | anonymous | `*` | 302 → `content.faforever.com/replays/...fafreplay`; browser fetch can follow it. Do **not** proxy replay downloads. |
 | `https://content.faforever.com/maps/previews/small/{map}.png` | anonymous | n/a for `<img>` | Map preview images (`large/` too, used for link previews). |
+| `https://mapgen.services.atlantishq.de/api-dev/request/preview/{map}` | anonymous | **none** (fine for `<img>`) | Previews of generated maps (`neroxis_map_generator_{version}_{seed}_{options}`), 256 px PNG of the whole map, transparent outside the playable area. Rendered on request (a new map takes seconds); only generator versions 1.19.0, 1.21.1 and 1.21.2, a 500 for anything else (verified 2026-10-05). |
 
 OAuth client: we temporarily reuse the official FAF client's **public** client
 (`2e8808cf-5889-469b-b2c3-01f0cc58c4af`, PKCE, loopback redirect without a path, hence the fixed dev
