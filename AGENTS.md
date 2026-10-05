@@ -104,10 +104,13 @@ the FAF team before any public deployment (see TODO.md).
 - Link previews of the other pages (`PageLinkPreview.cs`, same block, helpers in `LinkPreviewHtml.cs`):
   the unit pages get a card about the units in their address (`units/database?unit=`, `compare=`,
   `version=`, `units/history?units=`, the old `/units?unit=`), read from the app's own unit data with
-  FAForever.FileFormats.Blueprints, with the unit's icon as a small image; the About and Units pages
-  have a fixed card each (`PageLinkPreview.Paths`, mapped in `Program.cs`). Nothing is fetched, so no
-  rate limit; cards are cached for ten minutes. A new page with a card of its own goes into
-  `FixedCards`; a new unit page parameter that changes what is shown belongs in the card too.
+  FAForever.FileFormats.Blueprints, with the unit's icon as a small image; a search with criteria gets
+  a card about what it searched for (`player`, `map`, `mod`, `around`, `within`, `finished`; the
+  results need a login, so never what was found); the home page, Search, the local replay page, the
+  About and Units pages have a fixed card each (`PageLinkPreview.Paths`, mapped in `Program.cs`). A
+  card without a unit shows the app icon (`icons/icon-512.png`). Nothing is fetched, so no rate
+  limit; unit cards are cached for ten minutes. A new page gets a card in `FixedCards`; a new query
+  parameter that changes what a unit page or the search shows belongs in its card too.
 
 ## Gotchas
 

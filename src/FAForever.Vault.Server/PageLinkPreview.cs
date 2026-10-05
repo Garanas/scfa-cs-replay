@@ -8,11 +8,13 @@ using Microsoft.Extensions.FileProviders;
 /// <summary>
 /// Link previews for the pages of the app other than replays: the unit pages get a card about the
 /// units in their address (<c>units/database?unit=uel0401</c>, <c>units/history?units=uel0401</c>),
-/// with the unit's icon, and the About and Units pages a fixed card each.
+/// with the unit's icon; a search gets a card about what it searched for; the home page, the About
+/// and Units pages and the rest a fixed card each, with the app's icon.
 /// <para>
-/// Everything comes from the app's own files: the unit data (<c>data/units/</c>, read with
-/// FAForever.FileFormats.Blueprints) and the unit icons. Nothing is fetched, so there is no rate limit;
-/// cards are cached in memory. The query parameters mirror the Viewer's (UnitLinks, the guide's table).
+/// Everything comes from the address and the app's own files: the unit data (<c>data/units/</c>, read
+/// with FAForever.FileFormats.Blueprints) and the icons. Nothing is fetched, so there is no rate limit;
+/// unit cards are cached in memory. The query parameters mirror the Viewer's (UnitLinks, Search.razor,
+/// the guide's table).
 /// </para>
 /// </summary>
 public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment environment, ILogger<PageLinkPreview> logger)
@@ -25,8 +27,17 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
     // The data only changes with a deploy (or a regeneration in development).
     private static readonly TimeSpan DataLifetime = TimeSpan.FromMinutes(10);
 
+    /// <summary>The app's icon (512 px), the picture of every card without a unit of its own.</summary>
+    private const string AppIcon = "icons/icon-512.png";
+
     private static readonly IReadOnlyDictionary<string, LinkPreviewCard> FixedCards = new Dictionary<string, LinkPreviewCard>(StringComparer.OrdinalIgnoreCase)
     {
+        ["/"] = new("Vault of FAF",
+            "Explore FAForever replays: search the vault, replay the build orders and analyse every command, straight from your browser."),
+        ["/search"] = new("Search the vault",
+            "Find FAForever replays by player, map, featured mod and date, and open any of them in your browser."),
+        ["/replay/local"] = new("Open a replay from your computer",
+            "Drop a .fafreplay or .scfareplay file into Vault of FAF. It is read in your browser and never leaves your computer."),
         ["/about"] = new("About Vault of FAF",
             "How Vault of FAF reads your games: explainers for players, not programmers."),
         ["/about/replay-format"] = new("Inside a replay file",
@@ -59,24 +70,96 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
         }
 
         HttpRequest request = context.Request;
-        string path = request.Path.Value?.TrimEnd('/') ?? "";
-        LinkPreviewCard? card = null;
+        string path = request.Path.Value?.TrimEnd('/') is { Length: > 0 } trimmed ? trimmed : "/";
+        string imageBase = ImageBase(request);
+        LinkPreviewCard? card = SearchCard(path, request.Query);
         try
         {
-            card = await UnitCardAsync(path, request.Query, ImageBase(request), cancellationToken);
+            card ??= await UnitCardAsync(path, request.Query, imageBase, cancellationToken);
         }
         catch (Exception exception) when (exception is JsonException or IOException)
         {
             logger.LogWarning(exception, "No unit link preview for {Path}{Query}", path, request.QueryString);
         }
 
-        card ??= FixedCards.GetValueOrDefault(path) is { } fixedCard
-            ? FixedIcons.TryGetValue(path, out (string BlueprintId, string Name) icon) && IconUrl(ImageBase(request), icon.BlueprintId) is { } image
-                ? fixedCard with { Image = image, ImageAlt = $"Icon of the {icon.Name}" }
-                : fixedCard
-            : null;
+        card ??= FixedCards.GetValueOrDefault(path);
+        if (card is null)
+        {
+            return html;
+        }
 
-        return card is null ? html : LinkPreviewHtml.Render(html, card, request.GetEncodedUrl(), path.TrimStart('/'));
+        // Every card gets a picture: its unit, the page's own unit, or else the app's icon.
+        if (card.Image is null)
+        {
+            card = FixedIcons.TryGetValue(path, out (string BlueprintId, string Name) icon) && IconUrl(imageBase, icon.BlueprintId) is { } image
+                ? card with { Image = image, ImageAlt = $"Icon of the {icon.Name}" }
+                : card with { Image = imageBase + AppIcon, ImageAlt = "Vault of FAF" };
+        }
+
+        return LinkPreviewHtml.Render(html, card, request.GetEncodedUrl(), path == "/" ? "the home page" : path.TrimStart('/'));
+    }
+
+    /// <summary>
+    /// A search with criteria: "Replays of Morax on Osiris", described by the rest of the query. The
+    /// results need a FAF login, so the card tells what was searched for, not what was found. Null
+    /// without criteria, for the page's fixed card. Parameters as Search.razor reads them.
+    /// </summary>
+    internal static LinkPreviewCard? SearchCard(string path, IQueryCollection query)
+    {
+        if (!path.Equals("/search", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        string? player = Criterion(query["player"]);
+        string? map = Criterion(query["map"]);
+        string? mod = Criterion(query["mod"]);
+        DateOnly? around = DateOnly.TryParseExact(query["around"], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly date) ? date : null;
+        bool unfinished = string.Equals(query["finished"], "false", StringComparison.OrdinalIgnoreCase);
+        if (player is null && map is null && mod is null && around is null)
+        {
+            return null;
+        }
+
+        string title = (player, map) switch
+        {
+            ({ } p, { } m) => $"Replays of {p} on {m}",
+            ({ } p, null) => $"Replays of {p}",
+            (null, { } m) => $"Replays on {m}",
+            _ => mod is not null ? $"{mod} replays" : "Replays in the vault",
+        };
+
+        List<string> parts = [];
+        if (mod is not null && (player is not null || map is not null))
+        {
+            parts.Add($"featured mod {mod}");
+        }
+        if (around is { } day)
+        {
+            string window = query["within"].ToString().ToLowerInvariant() switch
+            {
+                "week" => "a week",
+                "month" => "a month",
+                "3months" => "three months",
+                _ => "a year",
+            };
+            parts.Add($"played around {day.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}, give or take {window}");
+        }
+        if (unfinished)
+        {
+            parts.Add("unfinished games included");
+        }
+        parts.Add("sign in with FAF to see the results");
+
+        string description = string.Join(" · ", parts);
+        return new LinkPreviewCard(title, char.ToUpperInvariant(description[0]) + description[1..] + ".");
+    }
+
+    /// <summary>A search term as typed, shortened and without control characters; null when empty.</summary>
+    private static string? Criterion(string? value)
+    {
+        string text = new string((value ?? "").Where(c => !char.IsControl(c)).ToArray()).Trim();
+        return text.Length == 0 ? null : text.Length <= 40 ? text : text[..40].TrimEnd() + "…";
     }
 
     /// <summary>The card of a unit page about particular units, or null for the page's fixed card.</summary>
