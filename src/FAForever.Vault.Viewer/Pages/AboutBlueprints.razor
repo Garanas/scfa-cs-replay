@@ -101,7 +101,7 @@
             </p>
             <p>
                 Programmers call this <strong>data driven</strong>. The program stays the same,
-                and the data makes every unit what it is. Supreme Commander is built from three layers:
+                and the data makes every unit feel different. Supreme Commander is built from three layers:
             </p>
             <ol class="grid gap-4 sm:grid-cols-3">
                 @for (int i = 0; i < Layers.Length; i++)
@@ -127,7 +127,7 @@
 
         <AboutChapter Id="text" Number="02" Title="Text you can read">
             <p>
-                A replay is a long row of bytes, glued together. To read it, you have to know the size and order of every piece.
+                <a href="about/replay-format" class="text-primary hover:underline">A replay</a> is a long row of bytes, glued together. To read it, you have to know the size and order of every piece.
                 A blueprint is the opposite. It is <strong>plain text</strong>. You could open it in Notepad.
             </p>
             <div class="card overflow-x-auto font-mono text-sm leading-6">
@@ -137,9 +137,13 @@
                 }
             </div>
             <p>
-                Every value has a <strong>name</strong> in front of it. You do not need to count anything:
-                <code class="font-mono text-ink">MaxHealth = 12500</code> says it all. Because of the names, the order does not matter either.
-                The game finds MaxHealth wherever it is.
+                Every value has a <strong>name</strong> in front of it. That is the big difference with a replay.
+                There, a number only means something because of where it sits, so you have to know every piece that comes before it.
+                Here, <code class="font-mono text-ink">MaxHealth = 12500</code> tells you what the number is.
+            </p>
+            <p>
+                Values live in <strong>groups</strong>. MaxHealth sits inside the Defense group, and that is where the game looks for it.
+                Inside a group the order does not matter: the game asks Defense for its MaxHealth, whichever line it is on.
             </p>
             <p>The file can even talk to people. Everything after two dashes is a note. The game skips it:</p>
             <div class="card overflow-x-auto font-mono text-sm leading-6">
