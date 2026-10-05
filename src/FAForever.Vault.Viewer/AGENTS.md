@@ -48,6 +48,11 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
 - **Share target:** the installed app takes shared links (`share_target`, GET to `./` with
   `title`, `text`, `url`). `Pages/Home.razor` opens a link into the app as is, a
   `replay.faforever.com` link or a bare id as that replay, and puts anything else in the replay input.
+- **Share buttons:** the installed app has no address bar, so a page with shareable view state gets
+  a `Layout/ShareButton.razor` (the system's share sheet where there is one, else a copy of the
+  address): the vault replay page, the unit database (in the heading, or in the details panel while
+  a unit is selected, since the panel covers the heading on phones) and the unit history. A new page
+  with state in its URL gets one too, with a link title that names what it shows.
 - **Shortcuts:** the manifest's `shortcuts` (Search, About) appear when right-clicking or
   long-pressing the installed app's icon. Keep their URLs relative, like the in-app links.
 - **Icons:** `wwwroot/icons/icon.svg` is the source; `tools/convert-app-icons.ps1` (ImageMagick 7)

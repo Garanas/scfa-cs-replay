@@ -35,6 +35,11 @@
             <a class="text-primary hover:underline" href="@($"https://github.com/FAForever/fa/releases/tag/{loaded.GameVersion}")" target="_blank" rel="noreferrer">Release notes</a>
         </p>
     }
+    @* With a unit selected, the details panel has the share button. *@
+    @if (selected is null)
+    {
+        <ShareButton Title="@LinkTitle" Class="btn-secondary ml-auto self-center px-3 py-1.5" />
+    }
 </div>
 
 @if (error is not null)
@@ -80,7 +85,7 @@ else
 
     @if (selected is not null)
     {
-        <UnitDetail Unit="selected" Data="loaded.Data" GameVersion="loaded.GameVersion" />
+        <UnitDetail Unit="selected" ShareTitle="@LinkTitle" Data="loaded.Data" GameVersion="loaded.GameVersion" />
     }
 }
 
@@ -98,6 +103,21 @@ else
 
     /// <summary>The index entry of the shown version: its release, and what changed since the previous one.</summary>
     private UnitDataIndex.Entry? Entry => loaded is not null ? index?.Versions.GetValueOrDefault(loaded.GameVersion) : null;
+
+    /// <summary>The title a shared link gets, e.g. "Mongoose · Unit database 3830".</summary>
+    private string LinkTitle
+    {
+        get
+        {
+            string page = loaded is not null && loaded.GameVersion != index?.Latest ? $"Unit database {loaded.GameVersion}" : "Unit database";
+            if (selected is not null)
+            {
+                return $"{UnitFilters.DisplayName(selected)} · {page}";
+            }
+
+            return compared.Count > 0 ? $"{string.Join(" vs ", compared.Select(UnitFilters.DisplayName))} · {page}" : page;
+        }
+    }
 
     private int? RequestedVersion => int.TryParse(UrlQuery.Get(Navigation, VersionParameter), out int version) ? version : null;
 

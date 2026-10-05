@@ -1,0 +1,64 @@
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+@* Shares the address of the current view: the system's share sheet where there is one (mobile,
+   Safari, Chromium on Windows and ChromeOS), otherwise a copy to the clipboard. The installed app
+   has no address bar, so this is the only way to pass a view on there. The address is read when
+   clicked, so whatever the URL holds at that moment (see "Shareable view state") goes along.
+   Class sets the button's look and place; without it, a small secondary button. *@
+<button type="button"
+        class="@(Class ?? "btn-secondary px-3 py-1.5")"
+        title="@(canShare ? "Share a link to this view" : "Copy a link to this view")"
+        @onclick="ShareLink">
+    <svg class="@IconClass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+        <path d="M16 6l-4-4-4 4" />
+        <path d="M12 2v13" />
+    </svg>
+    <span class="@LabelClass">@(linkCopied ? "Copied" : "Share")</span>
+</button>
+
+@code {
+    /// <summary>The title the shared link gets, e.g. "Replay #25717491 on Osiris · Chat".</summary>
+    [Parameter, EditorRequired] public required string Title { get; set; }
+
+    /// <summary>The button's classes, in place of the default small button.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string IconClass { get; set; } = "h-4 w-4";
+
+    [Parameter] public string? LabelClass { get; set; }
+
+    private bool canShare;
+    private bool linkCopied;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && await JS.InvokeAsync<bool>("fafReplay.canShare"))
+        {
+            canShare = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShareLink()
+    {
+        if (canShare)
+        {
+            await JS.InvokeVoidAsync("fafReplay.shareLink", Navigation.Uri, Title);
+            return;
+        }
+
+        if (!await JS.InvokeAsync<bool>("fafReplay.copyText", Navigation.Uri))
+        {
+            return;
+        }
+
+        linkCopied = true;
+        StateHasChanged();
+        await Task.Delay(1500);
+        linkCopied = false;
+        StateHasChanged();
+    }
+}
