@@ -32,7 +32,7 @@ product in the solution folders `FileFormats` and `Vault`.
 | `src/FAForever.FileFormats.Blueprints` | Blueprint files (`.bp`), blueprint ids, unit names and factions. References Lua. |
 | `src/FAForever.FileFormats.Replay` | Core replay parser (the crown jewel: change with care, it is benchmarked and heavily tested). References Lua and Blueprints. |
 | `src/FAForever.Vault.Viewer` | Standalone Blazor WebAssembly app (UI). Tailwind CSS v4, no component library. |
-| `src/FAForever.Vault.Server` | Minimal ASP.NET Core host: serves the Viewer's static files, proxies the OAuth token exchange **and** fills in link previews for replay pages. |
+| `src/FAForever.Vault.Server` | Minimal ASP.NET Core host: serves the Viewer's static files, proxies the OAuth token exchange **and** fills in link previews for replay, unit and About pages. |
 | `tests/FAForever.FileFormats.*.Tests` | MSTest suites, one per library, with real assets under `assets/`. |
 | `benchmarks/FAForever.FileFormats.Replay.Benchmarks` | BenchmarkDotNet harness. |
 | `sandbox/FAForever.FileFormats.Replay.Sandbox` | CLI scratch pad. |
@@ -101,6 +101,13 @@ the FAF team before any public deployment (see TODO.md).
   and uncached lookups are rate-limited per client address. Map names come from the vault folder
   (`osiris.v0006` becomes "Osiris"); the original maps (`scmp_009`, `x1mp_017`) have only a code, so
   their card shows no name.
+- Link previews of the other pages (`PageLinkPreview.cs`, same block, helpers in `LinkPreviewHtml.cs`):
+  the unit pages get a card about the units in their address (`units/database?unit=`, `compare=`,
+  `version=`, `units/history?units=`, the old `/units?unit=`), read from the app's own unit data with
+  FAForever.FileFormats.Blueprints, with the unit's icon as a small image; the About and Units pages
+  have a fixed card each (`PageLinkPreview.Paths`, mapped in `Program.cs`). Nothing is fetched, so no
+  rate limit; cards are cached for ten minutes. A new page with a card of its own goes into
+  `FixedCards`; a new unit page parameter that changes what is shown belongs in the card too.
 
 ## Gotchas
 

@@ -1,11 +1,9 @@
 using System.Globalization;
 using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.FileProviders;
 
 /// <summary>
 /// Link previews for replay pages. Discord, X, Slack and other link unfurlers read the Open Graph
@@ -25,9 +23,6 @@ public sealed class ReplayLinkPreview(
     ILogger<ReplayLinkPreview> logger)
 {
     public const string HttpClientName = "FafReplays";
-
-    private const string BlockStart = "<!-- Link preview";
-    private const string BlockEnd = "<!-- /Link preview -->";
 
     /// <summary>The metadata line is a few hundred bytes; anything longer is not a replay.</summary>
     private const int MaxMetadataBytes = 64 * 1024;
@@ -51,21 +46,13 @@ public sealed class ReplayLinkPreview(
     /// <summary>The app's entry page, with the link preview of the replay when it could be read.</summary>
     public async Task<string?> RenderAsync(int replayId, HttpContext context, CancellationToken cancellationToken)
     {
-        IFileInfo index = environment.WebRootFileProvider.GetFileInfo("index.html");
-        if (!index.Exists)
+        if (await LinkPreviewHtml.ReadIndexAsync(environment, cancellationToken) is not string html)
         {
             return null;
         }
 
-        string html;
-        await using (Stream stream = index.CreateReadStream())
-        using (StreamReader reader = new(stream))
-        {
-            html = await reader.ReadToEndAsync(cancellationToken);
-        }
-
         ReplayCard? card = await GetCardAsync(replayId, context.Connection.RemoteIpAddress?.ToString() ?? "unknown", cancellationToken);
-        return card is null ? html : ReplaceBlock(html, RenderTags(card, context.Request.GetEncodedUrl()));
+        return card is null ? html : LinkPreviewHtml.Render(html, ToPreview(card), context.Request.GetEncodedUrl(), $"replay #{card.ReplayId}");
     }
 
     private async Task<ReplayCard?> GetCardAsync(int replayId, string clientAddress, CancellationToken cancellationToken)
@@ -272,55 +259,17 @@ public sealed class ReplayLinkPreview(
             : string.Join("v", sizes);
     }
 
-    private string RenderTags(ReplayCard card, string pageUrl)
+    private LinkPreviewCard ToPreview(ReplayCard card)
     {
         // The map names the game best. The lobby title is not used: it is often just the players'
         // names ("Team A Vs Team B"), or nothing readable at all.
         string title = card.MapName ?? $"Replay #{card.ReplayId}";
-        string description = Summary(card);
-
-        StringBuilder tags = new();
-        tags.AppendLine($"{BlockStart} (Open Graph) for replay #{card.ReplayId}, filled in by FAForever.Vault.Server. -->");
-        Meta(tags, "og:type", "website");
-        Meta(tags, "og:site_name", "Vault of FAF");
-        Meta(tags, "og:title", title);
-        Meta(tags, "og:description", description);
-        Meta(tags, "og:url", pageUrl);
-        if (card.MapFolder is { Length: > 0 } folder)
-        {
-            Meta(tags, "og:image", string.Format(CultureInfo.InvariantCulture, MapPreviewUrlFormat, Uri.EscapeDataString(folder.ToLowerInvariant())));
-            Meta(tags, "og:image:alt", card.MapName is { } mapName ? $"Map preview of {mapName}" : "Map preview");
-            Meta(tags, "twitter:card", "summary_large_image", name: true);
-        }
-        else
-        {
-            Meta(tags, "twitter:card", "summary", name: true);
-        }
-        tags.Append("    ").Append(BlockEnd);
-        return tags.ToString();
-    }
-
-    private static void Meta(StringBuilder tags, string property, string content, bool name = false)
-        => tags.Append("    <meta ").Append(name ? "name" : "property").Append("=\"").Append(property)
-            .Append("\" content=\"").Append(EncodeAttribute(content)).AppendLine("\" />");
-
-    /// <summary>
-    /// Escapes a double-quoted attribute value. Only what HTML requires, so names and the separator
-    /// stay readable in the source (HtmlEncoder turns "·" and "+" into character references).
-    /// </summary>
-    private static string EncodeAttribute(string value) => value
-        .Replace("&", "&amp;")
-        .Replace("\"", "&quot;")
-        .Replace("<", "&lt;")
-        .Replace(">", "&gt;")
-        .Replace("\n", "&#10;");
-
-    /// <summary>Replaces the default link preview block of index.html; the page as is when it has none.</summary>
-    private static string ReplaceBlock(string html, string block)
-    {
-        int start = html.IndexOf(BlockStart, StringComparison.Ordinal);
-        int end = start < 0 ? -1 : html.IndexOf(BlockEnd, start, StringComparison.Ordinal);
-        return end < 0 ? html : string.Concat(html.AsSpan(0, start), block, html.AsSpan(end + BlockEnd.Length));
+        return card.MapFolder is { Length: > 0 } folder
+            ? new LinkPreviewCard(title, Summary(card),
+                string.Format(CultureInfo.InvariantCulture, MapPreviewUrlFormat, Uri.EscapeDataString(folder.ToLowerInvariant())),
+                card.MapName is { } mapName ? $"Map preview of {mapName}" : "Map preview",
+                LargeImage: true)
+            : new LinkPreviewCard(title, Summary(card));
     }
 
     private static string? String(JsonElement element, string name)

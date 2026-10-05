@@ -21,8 +21,9 @@ Vault.Server → Vault.Viewer → FileFormats.Replay → FileFormats.Blueprints 
 - A `FileFormats` library never references `Vault`, and a lower library never references a higher
   one. When two libraries need the same type, it moves down (that is why `Faction` lives in
   Blueprints and `LuaData` in Lua).
-- The Server only hosts: it does not reference the libraries for logic, and must hold no secrets
-  or session state.
+- The Server hosts: static files, the token proxy and link previews. It may use the FileFormats
+  libraries for those previews (the unit pages' cards read the unit data with Blueprints), and must
+  hold no secrets or session state.
 
 ## Rules for the FileFormats libraries
 

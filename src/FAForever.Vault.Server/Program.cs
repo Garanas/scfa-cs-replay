@@ -20,6 +20,8 @@ builder.Services.AddHttpClient(ReplayLinkPreview.HttpClientName, client =>
 });
 builder.Services.AddMemoryCache(options => options.SizeLimit = 10_000);
 builder.Services.AddSingleton<ReplayLinkPreview>();
+// ... and of the unit and About pages (PageLinkPreview.cs), from the app's own unit data.
+builder.Services.AddSingleton<PageLinkPreview>();
 
 // The token proxy is public once deployed: limit it per client address so it cannot be used
 // to hammer Hydra. A sign-in takes one request and a refresh one more per hour, so this is
@@ -97,6 +99,21 @@ app.MapGet("/replay/{replayId:int}", async (int replayId, HttpContext context, R
     context.Response.Headers.CacheControl = "no-cache";
     return Results.Content(html, "text/html; charset=utf-8");
 });
+
+// The unit pages get a card about the units in their address, the About pages a fixed one.
+foreach (string path in PageLinkPreview.Paths)
+{
+    app.MapGet(path, async (HttpContext context, PageLinkPreview preview, CancellationToken cancellationToken) =>
+    {
+        if (await preview.RenderAsync(context, cancellationToken) is not string html)
+        {
+            return Results.NotFound();
+        }
+
+        context.Response.Headers.CacheControl = "no-cache";
+        return Results.Content(html, "text/html; charset=utf-8");
+    });
+}
 
 app.MapFallbackToFile("index.html");
 

@@ -15,8 +15,9 @@ units of every game version since 3801 (the Units tab, from `wwwroot/data/units/
 
 - `src/FAForever.Vault.Viewer`: a standalone Blazor WebAssembly app (Tailwind CSS v4, four
   faction colour themes, light and dark) that parses replays entirely in the browser.
-- `src/FAForever.Vault.Server`: a minimal ASP.NET Core host that serves the viewer and proxies
-  the FAForever OAuth token exchange (Hydra does not send CORS headers).
+- `src/FAForever.Vault.Server`: a minimal ASP.NET Core host that serves the viewer, proxies
+  the FAForever OAuth token exchange (Hydra does not send CORS headers) and fills in link previews
+  for replay, unit and About pages.
 
 Run it locally:
 

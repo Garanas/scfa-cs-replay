@@ -6,6 +6,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FAForever.Vault.Viewer\FAForever.Vault.Viewer.csproj" />
+    <!-- Link previews of the unit pages read the unit data (PageLinkPreview.cs). -->
+    <ProjectReference Include="..\FAForever.FileFormats.Blueprints\FAForever.FileFormats.Blueprints.csproj" />
   </ItemGroup>
 
 </Project>
