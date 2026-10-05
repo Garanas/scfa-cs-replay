@@ -57,14 +57,25 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (string label in labels)
+                    @for (int row = 0; row < rows.Count; row++)
                     {
+                        (string key, string label, string? group) = rows[row];
+                        @* A weapon's name heads its values once, so the first column stays narrow on a phone;
+                           the name keeps to the left edge while the table scrolls sideways. *@
+                        if (group is not null && (row == 0 || rows[row - 1].Group != group))
+                        {
+                            <tr class="border-b border-edge/60">
+                                <th colspan="@(states.Count + 1)" class="bg-surface pb-1 pr-3 pt-3 text-left text-xs font-semibold text-ink">
+                                    <span class="sticky left-0 inline-block">@group</span>
+                                </th>
+                            </tr>
+                        }
                         <tr class="border-b border-edge/60">
-                            <th class="bg-surface py-1.5 pr-3 text-left text-xs font-normal text-ink-faint">@label</th>
+                            <th class="bg-surface py-1.5 pr-3 text-left text-xs font-normal text-ink-faint max-sm:min-w-24 max-sm:max-w-28 @(group is not null ? "pl-3" : "")">@label</th>
                             @for (int column = 0; column < states.Count; column++)
                             {
-                                UnitStats.Line? line = lines[column].GetValueOrDefault(label);
-                                UnitStats.Line? before = column > 0 ? lines[column - 1].GetValueOrDefault(label) : null;
+                                UnitStats.Line? line = lines[column].GetValueOrDefault(key);
+                                UnitStats.Line? before = column > 0 ? lines[column - 1].GetValueOrDefault(key) : null;
                                 bool changed = column > 0 && line?.Text != before?.Text;
                                 <td class="whitespace-nowrap px-3 py-1.5 @(line?.Number is not null ? "font-mono" : "") @(changed ? "font-semibold text-primary" : "text-ink")">
                                     @(line?.Text ?? "—")
@@ -104,7 +115,8 @@
     private UnitDataIndex? index;
     private IReadOnlyList<UnitState>? states;
     private UnitSummary? latest;
-    private List<string> labels = [];
+    // A row per value: its key across versions, its label, and the weapon it belongs to.
+    private List<(string Key, string Label, string? Group)> rows = [];
     private List<Dictionary<string, UnitStats.Line>> lines = [];
     private string? error;
     private string? loadedFor;
@@ -129,9 +141,15 @@
             IReadOnlyList<UnitState> history = await Database.LoadHistoryAsync(Id);
 
             List<IReadOnlyList<UnitStats.Line>> columns = history.Select(state => UnitStats.For(state.Unit)).ToList();
-            lines = columns.Select(column => column.ToDictionary(line => line.Label)).ToList();
-            // every label in the order it first appears, so a weapon added later comes last
-            labels = columns.SelectMany(column => column.Select(line => line.Label)).Distinct().ToList();
+            lines = columns.Select(column => column.ToDictionary(line => line.Key)).ToList();
+            // every value in the order it first appears, so a weapon added later comes last; a weapon's
+            // values stay together, even when a later version adds one (a salvo) to a weapon
+            rows = columns.SelectMany(column => column)
+                .DistinctBy(line => line.Key)
+                .GroupBy(line => line.Group)
+                .SelectMany(group => group)
+                .Select(line => (line.Key, line.Label, line.Group))
+                .ToList();
             latest = history.Count > 0 ? history[^1].Unit : null;
             states = history;
             error = null;

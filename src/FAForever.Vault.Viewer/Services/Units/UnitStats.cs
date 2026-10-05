@@ -5,13 +5,18 @@ namespace FAForever.Vault.Viewer.Services.Units;
 
 /// <summary>
 /// The values of a unit as labelled lines, the same labels for every version of it, so versions can
-/// be compared line by line (the unit page's history). Weapons get one line per value, labelled with
-/// the weapon's name; identical weapons are counted, as on the unit card.
+/// be compared line by line (the unit page's history). Weapons get one line per value in a group named
+/// after the weapon, so the history shows the name once, above its values; identical weapons are
+/// counted, as on the unit card.
 /// </summary>
 public static class UnitStats
 {
-    /// <summary>A value of a unit: its label, the text to show and, for numbers, the number.</summary>
-    public sealed record Line(string Label, string Text, double? Number = null);
+    /// <summary>A value of a unit: its label, the text to show, for numbers the number, and for a weapon's values the weapon.</summary>
+    public sealed record Line(string Label, string Text, double? Number = null, string? Group = null)
+    {
+        /// <summary>What identifies the line across versions: its label within its group.</summary>
+        public string Key => Group is null ? Label : $"{Group}: {Label}";
+    }
 
     public static IReadOnlyList<Line> For(UnitSummary unit)
     {
@@ -25,16 +30,15 @@ public static class UnitStats
             }
         }
 
-        void Number(string label, double? number)
+        void Number(string label, double? number, string? group = null)
         {
             if (number is > 0)
             {
-                lines.Add(new Line(label, Format(number), number));
+                lines.Add(new Line(label, Format(number), number, group));
             }
         }
 
         Text("Moves on", UnitRoles.Layer(unit));
-        Text("Roles", string.Join(", ", UnitRoles.For(unit)));
         Number("Mass", unit.BuildCostMass);
         Number("Energy", unit.BuildCostEnergy);
         Number("Build time", unit.BuildTime);
@@ -55,15 +59,15 @@ public static class UnitStats
         foreach (var (weapon, count) in unit.Weapons.Where(UnitRoles.IsRealWeapon).GroupBy(weapon => weapon).Select(group => (group.Key, group.Count())))
         {
             string name = $"{(count > 1 ? $"{count} × " : "")}{weapon.DisplayName ?? weapon.WeaponCategory ?? "Weapon"}";
-            Number($"{name}: damage", weapon.Damage);
-            Number($"{name}: salvo", weapon.MuzzleSalvoSize > 1 ? weapon.MuzzleSalvoSize : null);
-            Number($"{name}: damage pulses", weapon.DoTPulses > 1 ? weapon.DoTPulses : null);
-            Number($"{name}: seconds of damage over time", weapon.DoTTime);
-            Number($"{name}: area", weapon.DamageRadius);
-            Number($"{name}: range", weapon.MaxRadius);
+            Number("Damage", weapon.Damage, name);
+            Number("Salvo", weapon.MuzzleSalvoSize > 1 ? weapon.MuzzleSalvoSize : null, name);
+            Number("Damage pulses", weapon.DoTPulses > 1 ? weapon.DoTPulses : null, name);
+            Number("Seconds of damage over time", weapon.DoTTime, name);
+            Number("Area", weapon.DamageRadius, name);
+            Number("Range", weapon.MaxRadius, name);
             if (weapon.RateOfFire is > 0 and var rate)
             {
-                lines.Add(new Line($"{name}: seconds between shots", Format(1 / rate), 1 / rate));
+                lines.Add(new Line("Seconds between shots", Format(1 / rate), 1 / rate, name));
             }
         }
 
