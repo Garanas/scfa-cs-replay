@@ -384,6 +384,22 @@ The page widens to full HD like the Build order tab (`MainLayout.Container`).
   the synchronous `OnParametersSet`, so the page derives its view there and starts loading another
   version from there when `version` changes.
 
+## Unit history
+
+`Pages/UnitHistory.razor` (`/units/{id}`, the "History" link in the database's details panel) shows one
+unit across every game version: a column per stretch of versions in which it stayed the same, a row
+per value (`Services/Units/UnitStats.cs`: the same labels for every version, one line per weapon
+value), changed values marked against the column before (▲/▼ for numbers), and a Categories row with
+what was added or removed. Column headers link to that version in the unit list.
+
+- `UnitDatabase.LoadHistoryAsync` finds the stretches from the index alone (a version starts a new
+  one where its `changes` lists the unit as changed or added, ends one where removed) and reads only
+  those versions, and of each file only the unit's line (`UnitData.ReadUnit`), so a unit that changed
+  ten times costs ten small reads, not ten files of 600 units.
+- A column that looks the same as the one before means a change in a value the table does not show;
+  `UnitSummary` evens out rewrites without a change in meaning (see the Blueprints guide), so this
+  should be rare.
+
 ## Browser automation (Playwright MCP)
 
 `.mcp.json` (repo root) registers the official Playwright MCP server (`npx -y @playwright/mcp@latest`), so agents

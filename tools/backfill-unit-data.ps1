@@ -43,7 +43,8 @@ try {
         $commit = git -C $Source rev-parse "refs/tags/$tag^{commit}"
         $released = git -C $Source log -1 --format=%cs "refs/tags/$tag"
 
-        dotnet run @rebuild $generator -- $dir $output --commit $commit --released $released
+        # the tag is the release: its mod_info.lua does not always say so (3805 says 3804)
+        dotnet run @rebuild $generator -- $dir $output --version $tag --commit $commit --released $released
         if ($LASTEXITCODE -ne 0) { throw "generate-unit-data failed for $tag" }
         $rebuild = @()
         Remove-Item -Recurse -Force $dir, $archive

@@ -4,8 +4,10 @@ namespace FAForever.FileFormats.Blueprints
     /// The essentials of a unit for a unit card or a unit list: name, cost, health, intel and
     /// weapons. Built from a <see cref="BlueprintUnit"/> by <see cref="From"/> and stored per game
     /// version in a <see cref="UnitData"/> file, so the browser does not parse blueprints itself.
-    /// Values are as written in the blueprint (see <see cref="BlueprintParser"/>); null means the
-    /// blueprint does not set it.
+    /// Values are those of the blueprint (see <see cref="BlueprintParser"/>), evened out so that two
+    /// versions only differ where the meaning does: numbers rounded to 4 decimals, 0 read as not set
+    /// where it means "none" (regeneration, shield, build power, production, speed, intel, damage
+    /// area, salvo delay), categories sorted. Null means not set.
     /// </summary>
     public sealed record UnitSummary
     {
@@ -135,26 +137,34 @@ namespace FAForever.FileFormats.Blueprints
             Faction = unit.General.FactionName,
             TechLevel = unit.TechLevel,
             MotionType = unit.Physics.MotionType,
-            Categories = unit.Categories,
-            MaxHealth = unit.Defense.MaxHealth,
-            RegenRate = unit.Defense.RegenRate,
-            ShieldMaxHealth = unit.Defense.Shield?.ShieldMaxHealth,
-            BuildCostMass = unit.Economy.BuildCostMass,
-            BuildCostEnergy = unit.Economy.BuildCostEnergy,
-            BuildTime = unit.Economy.BuildTime,
-            BuildRate = unit.Economy.BuildRate,
-            ProductionPerSecondMass = unit.Economy.ProductionPerSecondMass,
-            ProductionPerSecondEnergy = unit.Economy.ProductionPerSecondEnergy,
-            MaxSpeed = unit.Physics.MotionType == "RULEUMT_None" ? null : unit.Air?.MaxAirspeed ?? unit.Physics.MaxSpeed,
+            Categories = unit.Categories.Order(StringComparer.Ordinal).ToList(),
+            MaxHealth = Round(unit.Defense.MaxHealth),
+            RegenRate = Positive(unit.Defense.RegenRate),
+            ShieldMaxHealth = Positive(unit.Defense.Shield?.ShieldMaxHealth),
+            BuildCostMass = Round(unit.Economy.BuildCostMass),
+            BuildCostEnergy = Round(unit.Economy.BuildCostEnergy),
+            BuildTime = Round(unit.Economy.BuildTime),
+            BuildRate = Positive(unit.Economy.BuildRate),
+            ProductionPerSecondMass = Positive(unit.Economy.ProductionPerSecondMass),
+            ProductionPerSecondEnergy = Positive(unit.Economy.ProductionPerSecondEnergy),
+            MaxSpeed = unit.Physics.MotionType == "RULEUMT_None" ? null : Positive(unit.Air?.MaxAirspeed ?? unit.Physics.MaxSpeed),
             UpgradesFrom = UnitId(unit.General.UpgradesFrom),
             UpgradesTo = UnitId(unit.General.UpgradesTo),
-            VisionRadius = unit.Intel.VisionRadius,
-            WaterVisionRadius = unit.Intel.WaterVisionRadius,
-            RadarRadius = unit.Intel.RadarRadius,
-            SonarRadius = unit.Intel.SonarRadius,
-            OmniRadius = unit.Intel.OmniRadius,
+            VisionRadius = Positive(unit.Intel.VisionRadius),
+            WaterVisionRadius = Positive(unit.Intel.WaterVisionRadius),
+            RadarRadius = Positive(unit.Intel.RadarRadius),
+            SonarRadius = Positive(unit.Intel.SonarRadius),
+            OmniRadius = Positive(unit.Intel.OmniRadius),
             Weapons = unit.Weapons.Select(UnitSummaryWeapon.From).ToList(),
         };
+
+        // Blueprints get rewritten without a change in meaning (a value of 0 left out, 10/60 written as
+        // 0.1667, categories reordered). The summary evens that out, so that a difference between two
+        // versions is a real change: numbers are rounded to 4 decimals, and where 0 means "none" it
+        // reads as not set.
+        internal static double? Round(double? value) => value is { } number ? Math.Round(number, 4) : null;
+
+        internal static double? Positive(double? value) => value is > 0 ? Round(value) : null;
 
         // An empty value and "none" (used by a few blueprints) mean no unit.
         private static string? UnitId(string? id) =>
@@ -247,12 +257,12 @@ namespace FAForever.FileFormats.Blueprints
             DisplayName = weapon.DisplayName,
             WeaponCategory = weapon.WeaponCategory,
             RangeCategory = weapon.RangeCategory,
-            Damage = weapon.Damage,
-            DamageRadius = weapon.DamageRadius,
-            MaxRadius = weapon.MaxRadius,
-            RateOfFire = weapon.RateOfFire,
+            Damage = UnitSummary.Round(weapon.Damage),
+            DamageRadius = UnitSummary.Positive(weapon.DamageRadius),
+            MaxRadius = UnitSummary.Round(weapon.MaxRadius),
+            RateOfFire = UnitSummary.Round(weapon.RateOfFire),
             MuzzleSalvoSize = weapon.MuzzleSalvoSize,
-            MuzzleSalvoDelay = weapon.MuzzleSalvoDelay,
+            MuzzleSalvoDelay = UnitSummary.Positive(weapon.MuzzleSalvoDelay),
             EnabledByEnhancement = weapon.EnabledByEnhancement,
         };
     }

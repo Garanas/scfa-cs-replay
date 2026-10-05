@@ -64,6 +64,27 @@ namespace FAForever.FileFormats.Blueprints.Tests
         }
 
         [TestMethod]
+        public void ReadsOneUnitWithoutTheOthers()
+        {
+            UnitData data = UnitData.From([
+                ParseUnit("/units/UEL0201/UEL0201_unit.bp"),
+                ParseUnit("/units/UEL0001/UEL0001_unit.bp"),
+                ParseUnit("/units/UEL0401/UEL0401_unit.bp"),
+            ]);
+            string json = data.Serialize();
+
+            UnitSummary? striker = UnitData.ReadUnit(json, "UEL0201");
+            Assert.IsNotNull(striker);
+            Assert.AreEqual("MA12 Striker", striker.Name);
+            Assert.AreEqual(24, striker.Weapons[0].Damage);
+            // the last line has no trailing comma
+            Assert.AreEqual("uel0401", UnitData.ReadUnit(json, "uel0401")?.BlueprintId);
+            Assert.IsNull(UnitData.ReadUnit(json, "xxx0000"));
+            // an id that only starts like another one is not that one
+            Assert.IsNull(UnitData.ReadUnit(json, "uel020"));
+        }
+
+        [TestMethod]
         public void UnknownUnitsAreNull()
         {
             UnitData data = UnitData.From([ParseUnit("/units/UEL0201/UEL0201_unit.bp")]);

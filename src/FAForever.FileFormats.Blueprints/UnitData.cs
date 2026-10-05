@@ -116,6 +116,26 @@ namespace FAForever.FileFormats.Blueprints
         }
 
         /// <summary>
+        /// Reads one unit from the text of a unit data file without reading the others: <see cref="Serialize"/>
+        /// writes one unit per line, starting with its id, so only that line is parsed. Falls back to
+        /// reading the whole file when no line starts that way. Null when the file has no such unit.
+        /// </summary>
+        /// <exception cref="JsonException">The text is not a unit data file.</exception>
+        public static UnitSummary? ReadUnit(string json, string blueprintId)
+        {
+            string start = $"{{\"blueprintId\":{JsonSerializer.Serialize(blueprintId.ToLowerInvariant(), UnitDataJsonContext.Default.String)},";
+            foreach (ReadOnlySpan<char> line in json.AsSpan().EnumerateLines())
+            {
+                if (line.StartsWith(start, StringComparison.Ordinal))
+                {
+                    return JsonSerializer.Deserialize(line.TrimEnd(',').ToString(), UnitDataJsonContext.Default.UnitSummary);
+                }
+            }
+
+            return Deserialize(json).GetOrNull(blueprintId);
+        }
+
+        /// <summary>
         /// Reads a unit data file.
         /// </summary>
         /// <exception cref="JsonException">The text is not a unit data file.</exception>
@@ -137,6 +157,7 @@ namespace FAForever.FileFormats.Blueprints
     /// </summary>
     [JsonSourceGenerationOptions(JsonSerializerDefaults.Web, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonSerializable(typeof(UnitData))]
+    [JsonSerializable(typeof(string))]
     internal sealed partial class UnitDataJsonContext : JsonSerializerContext
     {
     }

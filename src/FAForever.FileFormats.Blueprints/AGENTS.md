@@ -41,7 +41,11 @@ Every release from 3801 (there is no 3800 tag) is there.
 
 - `UnitSummary` is what a card shows (name, faction, tech, motion type, categories, cost, build power,
   health, shield, intel ranges, weapons with damage, salvo, range and rate of fire); `UnitSummary.From`
-  maps a `BlueprintUnit`. Values are as written in the blueprint; nothing is computed (no DPS).
+  maps a `BlueprintUnit`. Nothing is computed (no DPS), but values are **evened out** so that versions
+  only differ where the meaning does: blueprints get rewritten (3810 dropped `RegenRate = 0` from 549
+  units, others write `10/60` as `0.1667` or reorder categories), so numbers are rounded to 4 decimals,
+  0 reads as not set where it means "none", and categories are sorted. Without that, the history and
+  the "changed" filter would mostly show rewrites.
 - A data file is `{"units":[...]}` with **one unit per line**, sorted by id, camel case, nulls left
   out; `UnitData` is exactly that, the units and nothing else. Which game versions a file belongs to
   is only the index's business, so neither the file nor `UnitData` carries a version. JSON goes
@@ -67,8 +71,10 @@ Every release from 3801 (there is no 3800 tag) is there.
   (`BuildableCategoryAdds`). A unit is `Buildable` when a commander reaches it through builds and
   `UpgradesTo`; that excludes campaign, civilian and helper units (404 of 606 units in 3839).
   `UnitData.From` fills `Buildable` and `Builds` in; `UnitData.GetBuilders` is the inverse.
-- The game version comes from `version` in the FA repository's `mod_info.lua` (read with
-  `LuaSourceParser`); it is also the release tag and the last number of a replay header's version.
+- The game version is the release tag, which is also the last number of a replay header's version.
+  `mod_info.lua` usually says the same (`version`, read with `LuaSourceParser`), but not always:
+  release 3805 still says 3804. So the backfill script and the workflow pass the tag (`--version`); the
+  generator falls back to `mod_info.lua` without it and notes a mismatch.
 - `.github/workflows/update-unit-data.yml` adds a new release and opens a pull request when FA
   publishes one (a `repository_dispatch` from the FA repository, by hand, or a daily check).
 - **Adding a field** (a property on `UnitSummary` or `UnitSummaryWeapon`, its line in `From`, a test)

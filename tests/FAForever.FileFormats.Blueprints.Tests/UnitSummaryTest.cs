@@ -61,6 +61,33 @@ namespace FAForever.FileFormats.Blueprints.Tests
         }
 
         [TestMethod]
+        public void IgnoresRewritesWithoutAChangeInMeaning()
+        {
+            // the same unit written two ways, as happens between game versions
+            UnitSummary before = UnitSummary.From(Unit("""
+                Categories = { "TECH1", "LAND", "MOBILE" },
+                Defense = { MaxHealth = 300, RegenRate = 0 },
+                Intel = { VisionRadius = 20, RadarRadius = 0 },
+                Weapon = { { Damage = 24, DamageRadius = 0, RateOfFire = 0.1667 } },
+                """));
+            UnitSummary after = UnitSummary.From(Unit("""
+                Categories = { "LAND", "MOBILE", "TECH1" },
+                Defense = { MaxHealth = 300 },
+                Intel = { VisionRadius = 20 },
+                Weapon = { { Damage = 24, RateOfFire = 10/60 } },
+                """));
+
+            Assert.IsNull(before.RegenRate);
+            Assert.IsNull(before.RadarRadius);
+            Assert.AreEqual(0.1667, after.Weapons[0].RateOfFire);
+            CollectionAssert.AreEqual(new[] { "LAND", "MOBILE", "TECH1" }, before.Categories.ToArray());
+            Assert.IsTrue(new UnitData([before]).HasSameUnits(new UnitData([after])));
+        }
+
+        private static BlueprintUnit Unit(string lua) =>
+            (BlueprintUnit)BlueprintParser.Parse($"UnitBlueprint {{ {lua} }}", "/units/x/x_unit.bp")[0];
+
+        [TestMethod]
         [DataRow("<LOC uel0201_name>MA12 Striker", "MA12 Striker")]
         [DataRow("Plain text", "Plain text")]
         [DataRow("<LOC x_desc>", null)]

@@ -5,9 +5,11 @@
 // release whose units equal those of a version already present reuses that version's file; otherwise
 // it gets <version>.json. It prints which units changed compared with the previous version.
 //
-//   dotnet run tools/generate-unit-data.cs -- <fa checkout> [output folder] [--commit <sha>] [--released <yyyy-mm-dd>]
+//   dotnet run tools/generate-unit-data.cs -- <fa checkout> [output folder] [--version <n>] [--commit <sha>] [--released <yyyy-mm-dd>]
 //
-// The two options record where the data comes from: the commit of the release tag and its date.
+// --version is the release (its tag); without it, mod_info.lua says. They can differ: release 3805
+// still says 3804 there. --commit and --released record where the data comes from: the commit of the
+// release tag and its date.
 // A release without a full checkout: git -C <fa> archive refs/tags/3839 units mod_info.lua | tar -x -C <dir>
 // Many releases at once, from scratch (after a change to UnitSummary): tools/backfill-unit-data.ps1
 
@@ -16,7 +18,7 @@
 using FAForever.FileFormats.Blueprints;
 using FAForever.FileFormats.Lua;
 
-const string Usage = "Usage: dotnet run tools/generate-unit-data.cs -- <fa checkout> [output folder] [--commit <sha>] [--released <yyyy-mm-dd>]";
+const string Usage = "Usage: dotnet run tools/generate-unit-data.cs -- <fa checkout> [output folder] [--version <n>] [--commit <sha>] [--released <yyyy-mm-dd>]";
 
 // positional arguments, and the options with their values
 List<string> positional = [];
@@ -33,7 +35,7 @@ for (int position = 0; position < args.Length; position++)
     }
 }
 
-if (positional.Count is < 1 or > 2 || options.Keys.Except(["--commit", "--released"]).Any())
+if (positional.Count is < 1 or > 2 || options.Keys.Except(["--version", "--commit", "--released"]).Any())
 {
     Console.Error.WriteLine(Usage);
     return 1;
@@ -59,12 +61,22 @@ string indexPath = Path.Combine(output, "index.json");
 // mod_info.lua is plain data Lua: version = 3839
 IReadOnlyDictionary<string, LuaData> modInfo = LuaSourceParser.Execute(
     File.ReadAllText(Path.Combine(source, "mod_info.lua")), new Dictionary<string, LuaFunction>());
-if (modInfo.GetValueOrDefault("version") is not LuaData.Number { Value: var versionNumber })
+int? modInfoVersion = modInfo.GetValueOrDefault("version") is LuaData.Number { Value: var number } ? (int)number : null;
+int? requestedVersion = options.TryGetValue("--version", out string? versionText) && int.TryParse(versionText, out int parsed) ? parsed : null;
+if (options.ContainsKey("--version") && requestedVersion is null)
 {
-    Console.Error.WriteLine($"No version in {Path.Combine(source, "mod_info.lua")}");
+    Console.Error.WriteLine($"--version is not a number: {versionText}");
     return 1;
 }
-int version = (int)versionNumber;
+if ((requestedVersion ?? modInfoVersion) is not { } version)
+{
+    Console.Error.WriteLine($"No version in {Path.Combine(source, "mod_info.lua")}; pass --version");
+    return 1;
+}
+if (requestedVersion is not null && modInfoVersion is not null && requestedVersion != modInfoVersion)
+{
+    Console.WriteLine($"Note: mod_info.lua says {modInfoVersion}; using {version}.");
+}
 
 List<BlueprintUnit> blueprints = [];
 foreach (string file in Directory.GetFiles(Path.Combine(source, "units"), "*_unit.bp", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
