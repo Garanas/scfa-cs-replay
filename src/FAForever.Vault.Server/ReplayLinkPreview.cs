@@ -7,7 +7,7 @@ using Microsoft.Extensions.Caching.Memory;
 
 /// <summary>
 /// Link previews for replay pages. Discord, X, Slack and other link unfurlers read the Open Graph
-/// tags of the HTML without running the app, so the Server fills them in for <c>/replay/{id}</c>:
+/// tags of the HTML without running the app, so the Server fills them in for <c>/replays/{id}</c>:
 /// the map preview and name, replay id, team layout, date and length.
 /// <para>
 /// The data comes from the first line of the replay file, its JSON metadata, which the vault serves

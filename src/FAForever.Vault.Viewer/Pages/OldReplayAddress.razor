@@ -1,0 +1,12 @@
+@page "/replay/{*Rest}"
+@inject NavigationManager Navigation
+
+@code {
+    // Replay pages used to live below /replay/ (a replay, the local file). The server sends old
+    // links on, but the installed app's service worker answers navigations itself, so the app
+    // reroutes them too: same page, query included, without a history entry.
+    [Parameter] public string? Rest { get; set; }
+
+    protected override void OnInitialized()
+        => Navigation.NavigateTo("replays/" + Rest + new Uri(Navigation.Uri).Query, replace: true);
+}

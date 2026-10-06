@@ -89,7 +89,7 @@ app.MapPost("/api/oauth/token", async (HttpContext context, IHttpClientFactory h
 
 // A replay page is the app's index.html with that replay's link preview (Open Graph tags): link
 // unfurlers (Discord, X, Slack, ...) do not run the app. The app itself ignores the tags.
-app.MapGet("/replay/{replayId:int}", async (int replayId, HttpContext context, ReplayLinkPreview preview, CancellationToken cancellationToken) =>
+app.MapGet("/replays/{replayId:int}", async (int replayId, HttpContext context, ReplayLinkPreview preview, CancellationToken cancellationToken) =>
 {
     if (await preview.RenderAsync(replayId, context, cancellationToken) is not string html)
     {
@@ -99,6 +99,12 @@ app.MapGet("/replay/{replayId:int}", async (int replayId, HttpContext context, R
     context.Response.Headers.CacheControl = "no-cache";
     return Results.Content(html, "text/html; charset=utf-8");
 });
+
+// Replay pages used to live below /replay/ (a replay, the local file): old links are sent on, query
+// included, so the unfurlers find the card too. The app reroutes them as well (OldReplayAddress.razor),
+// for the installed app, whose service worker answers navigations without asking the server.
+app.MapGet("/replay/{**rest}", (string? rest, HttpContext context) =>
+    Results.Redirect($"{context.Request.PathBase}/replays/{rest}{context.Request.QueryString}", permanent: true));
 
 // The unit pages get a card about the units in their address, the About pages a fixed one.
 foreach (string path in PageLinkPreview.Paths)

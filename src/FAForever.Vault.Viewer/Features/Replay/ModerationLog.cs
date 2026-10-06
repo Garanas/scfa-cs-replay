@@ -132,7 +132,7 @@ public static class ModerationLog
     public static string BuildPrompt(LoadedReplay model, IReadOnlyList<ModerationEntry> entries, string link, string appBase)
     {
         FAForever.FileFormats.Replay.Replay replay = model.Replay;
-        string? replayUrl = model.Origin is ReplayOrigin.Vault vault ? $"{appBase}replay/{vault.ReplayId}" : null;
+        string? replayUrl = model.Origin is ReplayOrigin.Vault vault ? $"{appBase}replays/{vault.ReplayId}" : null;
         (int sizeX, int sizeZ) = MapCanvas.MapSize(replay.Header);
 
         StringBuilder prompt = new();

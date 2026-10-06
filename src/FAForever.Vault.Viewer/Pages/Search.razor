@@ -1,4 +1,4 @@
-@page "/search"
+@page "/replays"
 @inherits UrlStateComponent
 @using System.Globalization
 @inject FafApiClient Api
@@ -118,7 +118,7 @@
     // The URL is the source of truth (AGENTS.md § Shareable view state): the form writes the
     // criteria to the query string and OnParametersSet runs the search they describe, so the
     // browser's Back button and shared links restore both the form and the results. A bare
-    // /search lists the most recent games.
+    // /replays lists the most recent games.
     private string playerName = string.Empty;
     private string mapName = string.Empty;
     private string featuredMod = string.Empty;
@@ -135,7 +135,7 @@
     protected override void OnParametersSet()
     {
         // LocationChanged also fires when navigating away (e.g. to a replay); only react to our own URL.
-        if (!Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Equals("search", StringComparison.OrdinalIgnoreCase))
+        if (!Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Equals("replays", StringComparison.OrdinalIgnoreCase))
         {
             return;
         }

@@ -10,7 +10,7 @@ namespace FAForever.Vault.Viewer.Services.Analytics;
 /// is counted during development). GoatCounter sets no cookies and stores no personal data.
 ///
 /// GoatCounter only counts the page load by itself; in this single-page app the navigations are
-/// counted here: a page view when the path changes (<c>/replay/123</c>, without the query, so
+/// counted here: a page view when the path changes (<c>/replays/123</c>, without the query, so
 /// filters do not split a page into many), and an event when the replay tab changes
 /// (<c>tab/buildorder</c>), which is how we learn which tabs are used.
 /// </summary>
@@ -58,7 +58,7 @@ public sealed class AnalyticsService(IJSRuntime js, NavigationManager navigation
     {
         Uri uri = new(location);
         string path = "/" + navigation.ToBaseRelativePath(uri.GetLeftPart(UriPartial.Path));
-        string? tab = path.StartsWith("/replay/", StringComparison.Ordinal) ? UrlQuery.Get(uri, "tab") ?? "overview" : null;
+        string? tab = path.StartsWith("/replays/", StringComparison.Ordinal) ? UrlQuery.Get(uri, "tab") ?? "overview" : null;
 
         if (path != countedPath)
         {

@@ -20,7 +20,7 @@ drawings, game-data tables) are in [`../FAForever.FileFormats.Replay/AGENTS.md`]
 - Tailwind: the standalone CLI lives at `tools/tailwindcss.exe` (gitignored). Install it once with
   `tools/install-tailwind.ps1`. The Viewer's MSBuild target regenerates `wwwroot/css/app.css` on every
   build when the CLI is present; the generated file is **committed** so builds work without it (CI).
-- Keep **in-app links base-relative** (`href="replay/123"`, `NavigateTo("search")`, `href=""` for
+- Keep **in-app links base-relative** (`href="replays/123"`, `NavigateTo("replays")`, `href=""` for
   home, no leading `/`), so the app also works below a path.
 - Analytics: a self-hosted GoatCounter (in jipwijnia-vps, https://stats.jipwijnia.nl), no
   cookies or personal data. `Services/Analytics/AnalyticsService.cs` counts a page view per path
@@ -130,7 +130,7 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
 ## Shareable view state (query parameters)
 
 **The URL is the single source of truth for view state**, so any view of a replay can be shared by
-copying the address: `/replay/23225104?tab=chat&players=MarcusM,Printer` opens the Chat tab filtered
+copying the address: `/replays/23225104?tab=chat&players=MarcusM,Printer` opens the Chat tab filtered
 to those two players, on any machine.
 
 | Parameter | Meaning | Default when absent |
@@ -211,7 +211,10 @@ based on, and they end up in moderation records. Treat them as a public contract
   *and* scrolled into view on load (`scrollToSelected`), on the map as well as in the list.
 - **Names and formats are stable.** Never rename or repurpose a parameter or a value; when one has
   to change, keep reading the old form. Players are referenced by name, times in game time
-  (`12:30`), tabs by their query value, not by indices that depend on lobby order.
+  (`12:30`), tabs by their query value, not by indices that depend on lobby order. The same goes
+  for paths: replay pages moved from `/replay/` to `/replays/`, and old links are sent on twice, by
+  the server (a permanent redirect in `Program.cs`, for unfurlers and first loads) and by the app
+  (`Pages/OldReplayAddress.razor`, for the installed app, whose service worker never asks the server).
 - **No hidden inputs.** What is shown may depend only on the replay and the URL. Browser storage
   holds personal preferences only (faction, light/dark mode), never something that filters or selects.
 - **The login round trip keeps the full URL.** `AuthService.BeginLoginAsync` stores the address,

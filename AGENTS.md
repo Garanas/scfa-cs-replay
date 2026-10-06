@@ -102,7 +102,7 @@ OAuth clients (both public, PKCE):
 - Keep the Server minimal: static hosting, the token proxy and link previews. It must never hold
   secrets or session state.
 - Link previews (`src/FAForever.Vault.Server/ReplayLinkPreview.cs`): unfurlers (Discord, X, Slack) do not
-  run the app, so `/replay/{id}` is served as `index.html` with that replay's Open Graph tags in place
+  run the app, so `/replays/{id}` is served as `index.html` with that replay's Open Graph tags in place
   of the default block between `<!-- Link preview` and `<!-- /Link preview -->`. The data is the
   replay file's first line (its JSON metadata), fetched anonymously with a Range request; the replay
   itself is never downloaded or passed on. Cards are cached in memory (a day; failures five minutes)
@@ -114,7 +114,7 @@ OAuth clients (both public, PKCE):
   `version=`, `units/history?units=`, the old `/units?unit=`), read from the app's own unit data with
   FAForever.FileFormats.Blueprints, with the unit's icon as a small image; a search with criteria gets
   a card about what it searched for (`player`, `map`, `mod`, `around`, `within`, `finished`; the
-  results need a login, so never what was found); the home page, Search, the local replay page, the
+  results need a login, so never what was found); the home page, the replay search (`/replays`), the local replay page, the
   About and Units pages have a fixed card each (`PageLinkPreview.Paths`, mapped in `Program.cs`). A
   card without a unit shows the app icon (`icons/icon-512.png`). Nothing is fetched, so no rate
   limit; unit cards are cached for ten minutes. A new page gets a card in `FixedCards`; a new query

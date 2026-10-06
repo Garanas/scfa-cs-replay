@@ -75,7 +75,7 @@
     {
         if (NormalizeReplayId() is int replayId)
         {
-            Navigation.NavigateTo($"replay/{replayId}");
+            Navigation.NavigateTo($"replays/{replayId}");
         }
     }
 
@@ -138,7 +138,7 @@
                 if (TryParseFafReplayLink(word, out int replayId)
                     || words.Length == 1 && int.TryParse(word.TrimStart('#'), out replayId) && replayId > 0)
                 {
-                    Navigation.NavigateTo($"replay/{replayId}", replace: true);
+                    Navigation.NavigateTo($"replays/{replayId}", replace: true);
                     return;
                 }
             }
@@ -218,7 +218,7 @@
             {
                 case ReplayLoadResult.Success success:
                     Session.Set(new LoadedReplay(success.Replay, success.Metadata, new ReplayOrigin.LocalFile(fileName)));
-                    Navigation.NavigateTo("replay/local");
+                    Navigation.NavigateTo("replays/local");
                     break;
                 case ReplayLoadResult.Failure failure:
                     error = failure.Message;

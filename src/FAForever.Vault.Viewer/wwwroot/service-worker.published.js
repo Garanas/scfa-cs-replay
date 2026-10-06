@@ -53,7 +53,7 @@ async function onActivate(event) {
 async function onFetch(event) {
     let cachedResponse = null;
     if (event.request.method === 'GET') {
-        // Every in-app address (/replay/123?tab=chat, the OAuth callback) is the same index.html.
+        // Every in-app address (/replays/123?tab=chat, the OAuth callback) is the same index.html.
         const shouldServeIndexHtml = event.request.mode === 'navigate'
             && !manifestUrlList.some(url => url === event.request.url);
         const request = shouldServeIndexHtml ? new URL('index.html', baseUrl).href : event.request;
