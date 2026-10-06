@@ -158,4 +158,10 @@ public sealed class JsonApiResource
 
     public DateTimeOffset? GetDateTimeOffset(string attribute)
         => GetString(attribute) is { } text && DateTimeOffset.TryParse(text, out DateTimeOffset value) ? value : null;
+
+    /// <summary>An attribute that is a JSON object (e.g. a map pool assignment's mapParams).</summary>
+    public JsonElement? GetObject(string attribute)
+        => attributes.ValueKind == JsonValueKind.Object && attributes.TryGetProperty(attribute, out JsonElement value) && value.ValueKind == JsonValueKind.Object
+            ? value
+            : null;
 }

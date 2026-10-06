@@ -362,6 +362,69 @@ it, never edit it by hand.
 - The published service worker caches `data/units/index.json` with the app shell, and each data file
   the first time the app reads it (not all of them on install); an app update starts a new cache.
 
+## Maps tab
+
+The Maps tab is built like the Units tab: `Pages/Maps.razor` (`/maps`) is an entry page with a card
+per page below it (same writing style as the About pages, and it draws no data, so it works signed
+out), and each page links back ("← Maps"). Paths are in `Features/Maps/MapLinks.cs`.
+
+| Page | Path | What |
+|---|---|---|
+| `Pages/FeaturedMaps.razor` | `maps/featured` | The featured maps, chosen by the FAF team (`recommended` in the API, 33 visible), one page, most played first. The app calls them featured everywhere, never recommended. |
+| `Pages/LadderMaps.razor` | `maps/ladder` | The matchmaker's current pools: a tab per queue (`queue`, the technical name, default the first: 1v1), a chip per rating bracket (`bracket`, default all). |
+| `Pages/MapSearch.razor` | `maps/search` | Every visible map, with filters (parameters below). |
+
+Maps are cards (`Features/Maps/MapCard.razor`): the preview with size and players, name, version,
+author, games played, rating and the start of the description, and an optional slot at the bottom
+(the ladder page puts the brackets there). The data is `/data/map` with a version, author and review
+summary (`FafApiClient.SearchMapsAsync`, models in `Services/Api/MapModels.cs`), so the three pages
+need a login like the Replays tab. Cards do not link anywhere yet: a map page waits for the map parser.
+
+The ladder pools (`FafApiClient.GetLadderPoolsAsync`) are one request:
+`matchmakerQueueMapPool` with its queue, pool, assignments, versions and maps (0.3 s, 23 pools in 5
+queues). A pool holds a **version** of a map, which may be hidden in the vault (two were, on
+2026-10-06); the ladder page shows them anyway, as the matchmaker plays them. A bracket's label is the
+last word of the pool's name ("TMM 2v2 300-800" gives `300-800`): the pool's own `minRating` and
+`maxRating` are on another scale (that pool has 500 to 1000) and are not shown. Generated maps have
+no map, only `mapParams` (`neroxis`, size in game units, spawns, generator version), shown by
+`Features/Maps/GeneratedMapCard.razor`; the 3v3 queue has only those, in sizes between the steps
+(576 units is 11.25 km). Queue names come from `LadderQueue.Name` (a new queue shows its technical name).
+
+The search page's parameters:
+
+| Parameter | Meaning | Default when absent |
+|---|---|---|
+| `q` | Part of the map name | No name filter |
+| `author` | The author's exact login, `*` as wildcard | Any author |
+| `size` | Sizes in kilometres, comma separated: `1.25`, `2.5`, `5`, `10`, `20`, `40`, `81` | All sizes |
+| `players` | Player counts, comma separated: `2`, `4`, `6`, `8`, `10`, `12`, `16` | Any |
+| `ranked` | `1`: only maps whose latest version counts for rating | All |
+| `featured` | `1`: only the featured maps | All |
+| `sort` | `rating` (lower bound of the review score), `newest` (upload of the latest version), `name` | Most played |
+| `page` | Page of 24 maps | 1 |
+
+What the data is like (measured 2026-10-06, with a login):
+
+- **Hidden maps are never shown**, on request of the owner: every query filters on
+  `latestVersion.hidden==false`. That also leaves out the original game maps (Seton's Clutch is
+  `scmp_009`, hidden because it comes with the game, and the most played map of all): players do
+  not expect them here. `latestVersion` is the highest version number, hidden or not, so a map
+  whose newest upload is hidden is gone from the list. 14,803 maps, 9,277 visible.
+- **Sizes are game units, shown in kilometres** as the lobby does: 64 = 1.25 km, 128 = 2.5, 256 = 5,
+  512 = 10, 1024 = 20, 2048 = 40, 4096 = 81 km (`MapSizes`). Every visible map has one of these
+  widths. Filter like the FAF client: `latestVersion.width=in=("256")`.
+- **A map's `updateTime` changes with every game played on it**, so "newest" sorts on
+  `latestVersion.createTime`. `downloads` and `draws` are always 0 (a view since FAForever/db V116);
+  only `gamesPlayed` is real.
+- **Descriptions** may start with a `<LOC key>` (a translation key of the game) and run to about a
+  thousand characters with line breaks: `MapSummary.ReadableDescription` drops the key, the card
+  clamps it to three lines.
+- **Speed:** every filter and sort here answered in 0.1 to 0.2 s uncached; the slow map search of
+  the Replays tab (FAForever/faf-java-api#1182) is about games, not maps.
+- **Previews:** the vault's large preview (512 px; the small one is 128 px, too blurry for a card),
+  loaded lazily. The content server serves previews and map zips anonymously with CORS `*` and
+  Range requests, which the map parser can use to read single files from a zip.
+
 ## Units landing page
 
 `Pages/Units.razor` (`/units`, the Units tab in the header) is an entry page like About: a card for

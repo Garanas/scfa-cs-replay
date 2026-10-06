@@ -1,0 +1,85 @@
+@page "/maps"
+
+@* The entry to the map pages (the Maps tab in the header), like the Units tab: a card for the
+   featured maps, the ladder pools and the open search. Same writing style as the About pages:
+   simple English, short sentences, no hyphens, underscores or dashes in the visible text. The cards
+   draw no data: the map pages need a login, this one does not. *@
+
+<PageTitle>Maps · Vault of FAForever</PageTitle>
+
+<section class="py-10 sm:py-14">
+    <p class="font-display text-sm font-bold tracking-[0.2em] text-primary">MAPS</p>
+    <h1 class="mt-2 max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl">Every map in the vault</h1>
+    <p class="mt-5 max-w-2xl text-lg leading-relaxed text-ink-muted">
+        Thousands of maps were made for FAF. Start with the featured maps, see what the ladder plays
+        right now, or search them all.
+    </p>
+</section>
+
+<div class="grid gap-6 lg:grid-cols-3">
+    <a href="@MapLinks.Featured" class="@CardClass">
+        <div class="flex h-14 items-center gap-1.5" aria-hidden="true">
+            @for (int i = 0; i < 3; i++)
+            {
+                <span class="flex h-10 w-10 items-center justify-center rounded-md border border-edge bg-raised transition group-hover:border-primary">
+                    <svg viewBox="0 0 24 24" class="h-5 w-5 text-accent transition group-hover:scale-110" fill="currentColor">
+                        <path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9L12 2.5Z" />
+                    </svg>
+                </span>
+            }
+        </div>
+        <h2 class="mt-6 text-2xl font-bold text-ink">Featured maps</h2>
+        <p class="mt-1 font-mono text-sm text-primary">chosen by the FAF team</p>
+        <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
+            A short list of high quality maps, chosen by the FAF team. A good place to start.
+        </p>
+        <p class="mt-auto pt-6 text-sm font-semibold text-primary">
+            See the featured maps <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+        </p>
+    </a>
+
+    <a href="@MapLinks.Ladder" class="@CardClass">
+        <div class="flex h-14 flex-wrap items-center gap-1.5 font-mono text-sm" aria-hidden="true">
+            @foreach (string queue in Queues)
+            {
+                <span class="rounded-md border border-edge bg-raised px-2 py-1 text-ink-muted transition group-hover:border-primary group-hover:text-primary">@queue</span>
+            }
+        </div>
+        <h2 class="mt-6 text-2xl font-bold text-ink">Ladder maps</h2>
+        <p class="mt-1 font-mono text-sm text-primary">the matchmaker · right now</p>
+        <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
+            The maps the matchmaker picks from, for every queue and rating bracket. The pools change
+            from time to time; this shows the ones in use today.
+        </p>
+        <p class="mt-auto pt-6 text-sm font-semibold text-primary">
+            See the ladder maps <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+        </p>
+    </a>
+
+    <a href="@MapLinks.Search" class="@CardClass">
+        <div class="flex h-14 flex-wrap items-center gap-1.5" aria-hidden="true">
+            @foreach (int size in SizeExamples)
+            {
+                <span class="rounded-full border border-edge bg-raised px-2.5 py-1 text-xs text-ink-muted transition group-hover:border-primary group-hover:text-primary">@MapSizes.Kilometres(size)</span>
+            }
+        </div>
+        <h2 class="mt-6 text-2xl font-bold text-ink">Search maps</h2>
+        <p class="mt-1 font-mono text-sm text-primary">every map · your filters</p>
+        <p class="mt-3 text-[16px] leading-relaxed text-ink-muted">
+            All maps in the vault. Filter by name, author, size or players, and sort by how often they are
+            played, how they are rated, or how new they are.
+        </p>
+        <p class="mt-auto pt-6 text-sm font-semibold text-primary">
+            Search the maps <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+        </p>
+    </a>
+</div>
+
+@code {
+    private const string CardClass = "card group relative flex flex-col overflow-hidden transition hover:border-primary hover:shadow-[0_0_60px_-24px_var(--th-glow)]";
+
+    // Decoration, not data: what the ladder and the search are about.
+    private static readonly string[] Queues = ["1v1", "2v2", "3v3", "4v4"];
+
+    private static readonly int[] SizeExamples = [256, 512, 1024, 2048];
+}

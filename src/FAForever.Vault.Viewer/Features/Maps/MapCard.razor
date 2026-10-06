@@ -1,0 +1,93 @@
+@using System.Globalization
+
+@* A map of the vault as a search result: the preview with its size and players on top, then the
+   name, author, how often it is played and how it is rated, and the start of its description. Not
+   a link yet: a map page needs the map parser first. *@
+
+<article class="card flex flex-col overflow-hidden p-0">
+    @* The image says how it went in data-preview (loading, loaded, failed), as on the game cards. *@
+    <div class="map-grid group/map relative aspect-square w-full border-b border-edge"
+         data-preview="@(Map.PreviewUrl is null ? "failed" : "loading")">
+        <span class="absolute inset-0 hidden animate-pulse bg-primary/15 group-data-[preview=loading]/map:block" aria-hidden="true"></span>
+        <span class="absolute inset-0 hidden items-center justify-center font-display text-4xl font-bold text-ink-faint group-data-[preview=failed]/map:flex" aria-hidden="true">?</span>
+        @if (Map.PreviewUrl is { } previewUrl)
+        {
+            @* The handlers come before src, so they are in place when a cached image loads. *@
+            <img onload="this.closest('[data-preview]').dataset.preview='loaded'"
+                 onerror="this.closest('[data-preview]').dataset.preview='failed'"
+                 src="@previewUrl" alt="Preview of @Map.Name" loading="lazy"
+                 class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity group-data-[preview=loaded]/map:opacity-100" />
+        }
+        <div class="absolute inset-x-2 top-2 flex justify-between gap-2">
+            @if (Map.Size is { } size)
+            {
+                <span class="badge bg-surface/85 font-semibold text-ink backdrop-blur" title="Map size">@size</span>
+            }
+            @if (Map.MaxPlayers is { } players)
+            {
+                <span class="badge ml-auto bg-surface/85 font-semibold text-ink backdrop-blur" title="Players">
+                    <svg viewBox="0 0 24 24" class="mr-1 h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+                        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z" />
+                    </svg>
+                    @players
+                </span>
+            }
+        </div>
+        @if (Map.Featured)
+        {
+            <span class="badge absolute bottom-2 left-2 border-primary bg-primary font-semibold text-on-primary" title="A featured map, chosen by the FAF team">Featured</span>
+        }
+    </div>
+
+    <div class="flex flex-1 flex-col gap-2 p-4">
+        <div class="min-w-0">
+            <div class="flex items-baseline gap-2">
+                <h2 class="min-w-0 truncate font-semibold" title="@Map.Name">@Map.Name</h2>
+                @if (Map.Version is { } version)
+                {
+                    <span class="shrink-0 font-mono text-xs text-ink-faint" title="Latest version">v@(version)</span>
+                }
+            </div>
+            <p class="truncate text-sm text-ink-muted">@(Map.Author is { } author ? $"by {author}" : "Unknown author")</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
+            <span title="Games played on every version">@Map.GamesPlayed.ToString("N0", CultureInfo.InvariantCulture) @(Map.GamesPlayed == 1 ? "game" : "games")</span>
+            @if (Map.AverageScore is { } score && Map.Reviews > 0)
+            {
+                <span class="inline-flex items-center gap-1" title="Average of @Map.Reviews @(Map.Reviews == 1 ? "review" : "reviews"), out of 5">
+                    <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 text-accent" fill="currentColor" aria-hidden="true">
+                        <path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9L12 2.5Z" />
+                    </svg>
+                    <span class="font-medium text-ink">@score.ToString("0.0", CultureInfo.InvariantCulture)</span>
+                    <span class="text-ink-faint">(@Map.Reviews.ToString("N0", CultureInfo.InvariantCulture))</span>
+                </span>
+            }
+            else
+            {
+                <span class="text-ink-faint">No reviews</span>
+            }
+            @if (Map.Ranked == false)
+            {
+                <span class="badge ml-auto" title="Games on this map do not count for rating">Unranked</span>
+            }
+        </div>
+
+        @if (Map.ReadableDescription is { } description)
+        {
+            <p class="line-clamp-3 whitespace-pre-line text-xs leading-relaxed text-ink-faint" title="@description">@description</p>
+        }
+
+        @if (ChildContent is not null)
+        {
+            <div class="mt-auto border-t border-edge pt-3">@ChildContent</div>
+        }
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public required MapSummary Map { get; set; }
+
+    /// <summary>Extra lines at the bottom of the card, e.g. the ladder brackets a map is in.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

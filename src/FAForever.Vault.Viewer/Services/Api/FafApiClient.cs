@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text.Json;
 using FAForever.Vault.Viewer.Services.Auth;
 using Microsoft.Extensions.Configuration;
 
@@ -72,6 +74,148 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
         }
 
         return new GameSearchResult(games, Math.Max(query.Page, 1), document.TotalPages, document.TotalRecords);
+    }
+
+    /// <summary>
+    /// Maps of the vault, with their latest version. Maps whose latest version is hidden are always
+    /// left out: their author took them down, and the original game maps (Seton's Clutch,
+    /// <c>scmp_009</c>) are hidden too, as they come with the game. Every filter and sort here
+    /// answered in 0.1 to 0.2 s uncached on 2026-10-06, for about 9,300 visible maps.
+    /// </summary>
+    public async Task<MapSearchResult> SearchMapsAsync(MapSearchQuery query, CancellationToken cancellationToken)
+    {
+        List<string> filters = ["latestVersion.hidden==false"];
+        if (!string.IsNullOrWhiteSpace(query.Name))
+        {
+            filters.Add($"displayName=={Quote("*" + query.Name.Trim() + "*")}");
+        }
+        if (!string.IsNullOrWhiteSpace(query.Author))
+        {
+            filters.Add($"author.login=={Quote(query.Author.Trim())}");
+        }
+        if (query.Sizes.Count > 0)
+        {
+            filters.Add($"latestVersion.width=in=({string.Join(",", query.Sizes.Select(size => Quote(size.ToString(CultureInfo.InvariantCulture))))})");
+        }
+        if (query.Players.Count > 0)
+        {
+            filters.Add($"latestVersion.maxPlayers=in=({string.Join(",", query.Players.Select(players => Quote(players.ToString(CultureInfo.InvariantCulture))))})");
+        }
+        if (query.RankedOnly)
+        {
+            filters.Add("latestVersion.ranked==true");
+        }
+        if (query.FeaturedOnly)
+        {
+            filters.Add("recommended==true");
+        }
+
+        string sort = query.Sort switch
+        {
+            MapSortOrder.BestRated => "-reviewsSummary.lowerBound",
+            MapSortOrder.Newest => "-latestVersion.createTime",
+            MapSortOrder.Name => "displayName",
+            _ => "-gamesPlayed",
+        };
+
+        string url = $"{BaseUrl}/data/map"
+            + "?include=latestVersion,author,reviewsSummary"
+            + $"&sort={sort}"
+            + $"&page[size]={query.PageSize}"
+            + $"&page[number]={Math.Max(query.Page, 1)}"
+            + "&page[totals]"
+            + "&filter=" + Uri.EscapeDataString(string.Join(";", filters));
+
+        JsonApiDocument document = JsonApiDocument.Parse(await GetAsync(url, cancellationToken));
+
+        List<MapSummary> maps = [.. document.Data.Select(map => MapMap(map, document.FindIncluded(map.Relationship("latestVersion")), document))];
+        return new MapSearchResult(maps, Math.Max(query.Page, 1), document.TotalPages, document.TotalRecords);
+    }
+
+    /// <summary>
+    /// The current map pools of the matchmaker, per queue, in one request (0.3 s, 23 pools in 5 queues
+    /// on 2026-10-06). A pool holds a version of a map, which may be hidden in the vault: the pool is
+    /// what the matchmaker plays, so those stay in. Generated maps have only their parameters.
+    /// </summary>
+    public async Task<IReadOnlyList<LadderQueue>> GetLadderPoolsAsync(CancellationToken cancellationToken)
+    {
+        const string Assignments = "mapPool.mapPoolAssignments";
+        const string Versions = Assignments + ".mapVersion";
+        string url = $"{BaseUrl}/data/matchmakerQueueMapPool"
+            + $"?include=matchmakerQueue,mapPool,{Assignments},{Versions},{Versions}.map,{Versions}.map.author,{Versions}.map.reviewsSummary"
+            + "&page[size]=100";
+
+        JsonApiDocument document = JsonApiDocument.Parse(await GetAsync(url, cancellationToken));
+
+        List<(JsonApiResource Queue, LadderPool Pool)> pools = [];
+        foreach (JsonApiResource queuePool in document.Data)
+        {
+            if (document.FindIncluded(queuePool.Relationship("matchmakerQueue")) is not { } queue
+                || document.FindIncluded(queuePool.Relationship("mapPool")) is not { } pool)
+            {
+                continue;
+            }
+
+            List<LadderPoolEntry> entries = [];
+            foreach ((string Type, string Id) reference in pool.Relationships("mapPoolAssignments"))
+            {
+                if (document.FindIncluded(reference) is not { } assignment)
+                {
+                    continue;
+                }
+
+                int weight = assignment.GetInt32("weight") ?? 1;
+                if (document.FindIncluded(assignment.Relationship("mapVersion")) is { } version
+                    && document.FindIncluded(version.Relationship("map")) is { } map)
+                {
+                    entries.Add(new LadderPoolEntry(MapMap(map, version, document), null, weight));
+                }
+                else if (assignment.GetObject("mapParams") is { } parameters)
+                {
+                    entries.Add(new LadderPoolEntry(null, new GeneratedMapParams(
+                        parameters.TryGetProperty("size", out JsonElement size) && size.TryGetInt32(out int units) ? units : null,
+                        parameters.TryGetProperty("spawns", out JsonElement spawns) && spawns.TryGetInt32(out int count) ? count : null,
+                        parameters.TryGetProperty("version", out JsonElement generator) ? generator.GetString() : null), weight));
+                }
+            }
+
+            string name = pool.GetString("name") ?? $"Pool {pool.Id}";
+            pools.Add((queue, new LadderPool(name, LadderPool.LabelOf(name), queuePool.GetNumber("minRating"), queuePool.GetNumber("maxRating"), entries)));
+        }
+
+        return [.. pools
+            .GroupBy(entry => entry.Queue.Id)
+            .Select(group => new LadderQueue(
+                group.First().Queue.GetString("technicalName") ?? $"queue{group.Key}",
+                group.First().Queue.GetInt32("teamSize") ?? 0,
+                [.. group.Select(entry => entry.Pool).OrderBy(pool => pool.MinRating ?? double.MinValue)]))
+            .OrderBy(queue => queue.TeamSize)
+            .ThenBy(queue => queue.TechnicalName, StringComparer.Ordinal)];
+    }
+
+    /// <summary>A map resource and one of its versions (the latest, or the one in a pool) as a card.</summary>
+    private static MapSummary MapMap(JsonApiResource map, JsonApiResource? version, JsonApiDocument document)
+    {
+        JsonApiResource? author = document.FindIncluded(map.Relationship("author"));
+        JsonApiResource? reviews = document.FindIncluded(map.Relationship("reviewsSummary"));
+        string? folder = version?.GetString("folderName");
+
+        return new MapSummary(int.TryParse(map.Id, out int id) ? id : 0, map.GetString("displayName") ?? folder ?? $"Map {map.Id}", author?.GetString("login"))
+        {
+            GamesPlayed = map.GetInt32("gamesPlayed") ?? 0,
+            Featured = map.GetBoolean("recommended") ?? false,
+            Version = version?.GetInt32("version"),
+            FolderName = folder,
+            Description = version?.GetString("description"),
+            MaxPlayers = version?.GetInt32("maxPlayers"),
+            Width = version?.GetInt32("width"),
+            Height = version?.GetInt32("height"),
+            Ranked = version?.GetBoolean("ranked"),
+            PreviewUrl = MapPreviews.Url(folder, version?.GetString("thumbnailUrlLarge")),
+            UploadedAt = version?.GetDateTimeOffset("createTime"),
+            AverageScore = reviews?.GetNumber("averageScore"),
+            Reviews = reviews?.GetInt32("reviews") ?? 0,
+        };
     }
 
     private async Task<string> GetAsync(string url, CancellationToken cancellationToken)

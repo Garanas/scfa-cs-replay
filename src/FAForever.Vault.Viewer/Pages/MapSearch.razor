@@ -1,0 +1,289 @@
+@page "/maps/search"
+@inherits UrlStateComponent
+@using System.Globalization
+@inject FafApiClient Api
+@inject AuthService Auth
+
+<PageTitle>Search maps · Vault of FAForever</PageTitle>
+
+<a href="@MapLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Maps</a>
+<h1 class="mt-2 text-2xl font-bold">Search maps</h1>
+<p class="mt-1 text-sm text-ink-muted">Every map in the FAForever vault, with its size, players and how often it is played.</p>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <div class="card mt-6 max-w-xl text-center">
+            <p class="font-semibold">Sign in to browse the maps</p>
+            <p class="mt-2 text-sm text-ink-muted">
+                The FAForever API requires a signed-in account to browse the map vault.
+            </p>
+            <button type="button" class="btn-primary mt-4" @onclick="() => Auth.BeginLoginAsync()">Sign in with FAForever</button>
+        </div>
+    </NotAuthorized>
+    <Authorized>
+        @* The text fields search on Enter or the button; chips, the check boxes and the order apply at once. *@
+        <form class="card mt-6 grid gap-4" @onsubmit="SubmitSearch" @onsubmit:preventDefault>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+                <label class="block text-sm">
+                    <span class="mb-1 block font-medium text-ink-muted">Map</span>
+                    <input type="search" class="input-field" placeholder="Part of the map name" @bind="name" />
+                </label>
+                <label class="block text-sm">
+                    <span class="mb-1 block font-medium text-ink-muted">Author</span>
+                    <input class="input-field" placeholder="Exact name, * as wildcard" @bind="author" />
+                </label>
+                <label class="block text-sm">
+                    <span class="mb-1 block font-medium text-ink-muted">Order</span>
+                    <select class="input-field" value="@SortTokens[query.Sort]" @onchange="ChangeSort">
+                        @foreach ((MapSortOrder order, string token) in SortTokens)
+                        {
+                            <option value="@token">@SortName(order)</option>
+                        }
+                    </select>
+                </label>
+                <div class="flex items-end">
+                    <button type="submit" class="btn-primary w-full sm:w-auto" disabled="@isSearching">Search</button>
+                </div>
+            </div>
+
+            <fieldset class="border-t border-edge pt-3">
+                <legend class="sr-only">Size</legend>
+                <div class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint" aria-hidden="true">Size</div>
+                <div class="flex flex-wrap gap-1.5">
+                    @foreach (int size in MapSizes.Units)
+                    {
+                        bool chosen = query.Sizes.Contains(size);
+                        <button type="button" aria-pressed="@(chosen ? "true" : "false")" class="@(chosen ? ChosenClass : OptionClass)"
+                                @onclick="() => Navigate(query with { Sizes = Toggled(query.Sizes, size), Page = 1 })">@MapSizes.Kilometres(size)</button>
+                    }
+                </div>
+            </fieldset>
+
+            <fieldset class="border-t border-edge pt-3">
+                <legend class="sr-only">Players</legend>
+                <div class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint" aria-hidden="true">Players</div>
+                <div class="flex flex-wrap gap-1.5">
+                    @foreach (int players in PlayerCounts)
+                    {
+                        bool chosen = query.Players.Contains(players);
+                        <button type="button" aria-pressed="@(chosen ? "true" : "false")" class="@(chosen ? ChosenClass : OptionClass)"
+                                @onclick="() => Navigate(query with { Players = Toggled(query.Players, players), Page = 1 })">@players</button>
+                    }
+                </div>
+            </fieldset>
+
+            <div class="flex flex-wrap gap-x-6 gap-y-2 border-t border-edge pt-3 text-sm text-ink-muted">
+                <label class="flex cursor-pointer items-center gap-2">
+                    <input type="checkbox" class="accent-primary" checked="@query.RankedOnly"
+                           @onchange="() => Navigate(query with { RankedOnly = !query.RankedOnly, Page = 1 })" />
+                    Ranked maps only
+                </label>
+                <label class="flex cursor-pointer items-center gap-2">
+                    <input type="checkbox" class="accent-primary" checked="@query.FeaturedOnly"
+                           @onchange="() => Navigate(query with { FeaturedOnly = !query.FeaturedOnly, Page = 1 })" />
+                    Featured maps only
+                </label>
+            </div>
+        </form>
+
+        <section class="mt-6" aria-live="polite">
+            @if (isSearching && result is null)
+            {
+                <div class="card animate-pulse text-center text-sm text-ink-muted">Loading the maps&hellip;</div>
+            }
+            else if (error is not null)
+            {
+                <div class="card" role="alert">
+                    <p class="font-semibold">The maps could not be loaded</p>
+                    <p class="mt-1 text-sm text-ink-muted">@error</p>
+                </div>
+            }
+            else if (result is { } search)
+            {
+                @if (search.Maps.Count == 0)
+                {
+                    <div class="card text-center text-sm text-ink-muted">No maps match these filters.</div>
+                }
+                else
+                {
+                    <p class="text-sm text-ink-muted">
+                        @(search.TotalRecords is { } total ? $"{total.ToString("N0", CultureInfo.InvariantCulture)} {(total == 1 ? "map" : "maps")}" : "Results")
+                        @(search.TotalPages is { } pages ? $" · page {search.Page} of {pages.ToString("N0", CultureInfo.InvariantCulture)}" : $" · page {search.Page}")
+                    </p>
+                    @* While the next page loads, the current one fades instead of jumping away. *@
+                    <div class="mt-3 grid grid-cols-1 gap-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 @(isSearching ? "opacity-50" : "")">
+                        @foreach (MapSummary map in search.Maps)
+                        {
+                            <MapCard @key="map.Id" Map="map" />
+                        }
+                    </div>
+                    <div class="mt-6 flex items-center justify-center gap-3">
+                        <button type="button" class="btn-secondary" disabled="@(isSearching || search.Page <= 1)" @onclick="() => GoToPage(search.Page - 1)">Previous</button>
+                        <button type="button" class="btn-secondary" disabled="@(isSearching || (search.TotalPages is { } totalPages && search.Page >= totalPages))" @onclick="() => GoToPage(search.Page + 1)">Next</button>
+                    </div>
+                }
+            }
+        </section>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    // The URL is the source of truth (AGENTS.md § Shareable view state), as on the Replays tab:
+    // every choice writes the query string and OnParametersSet loads the maps it describes.
+    private const string OptionClass = "inline-flex cursor-pointer items-center gap-1 rounded-full border border-edge bg-raised px-2.5 py-1 text-xs text-ink-muted transition hover:border-primary hover:text-ink";
+    private const string ChosenClass = "inline-flex cursor-pointer items-center gap-1 rounded-full border border-primary bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary transition";
+
+    /// <summary>The player counts offered as filters: together about 92% of the visible maps (measured 2026-10-06).</summary>
+    private static readonly int[] PlayerCounts = [2, 4, 6, 8, 10, 12, 16];
+
+    /// <summary>URL tokens of the orders; the default (most played) stays out of the URL.</summary>
+    private static readonly Dictionary<MapSortOrder, string> SortTokens = new()
+    {
+        [MapSortOrder.MostPlayed] = "played",
+        [MapSortOrder.BestRated] = "rating",
+        [MapSortOrder.Newest] = "newest",
+        [MapSortOrder.Name] = "name",
+    };
+
+    private string name = string.Empty;
+    private string author = string.Empty;
+    private MapSearchQuery query = new();
+
+    private bool isSearching;
+    private string? error;
+    private MapSearchResult? result;
+    private MapSearchQuery? activeQuery;
+    private CancellationTokenSource? searchCancellation;
+
+    protected override void OnParametersSet()
+    {
+        // LocationChanged also fires when navigating away; only react to our own URL.
+        if (!Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Equals(MapLinks.Search, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        query = ReadQuery();
+        if (query.Equals(activeQuery))
+        {
+            return;
+        }
+
+        name = query.Name;
+        author = query.Author;
+        _ = SearchAsync(query);
+    }
+
+    // Unknown values are ignored, so a stale or hand-edited link still opens a list.
+    private MapSearchQuery ReadQuery() => new()
+    {
+        Name = UrlQuery.Get(Navigation, "q")?.Trim() ?? string.Empty,
+        Author = UrlQuery.Get(Navigation, "author")?.Trim() ?? string.Empty,
+        Sizes = [.. ReadList("size").Select(KilometresToUnits).OfType<int>().Distinct().Order()],
+        Players = [.. ReadList("players").Select(token => int.TryParse(token, out int players) ? players : 0).Where(PlayerCounts.Contains).Distinct().Order()],
+        RankedOnly = UrlQuery.Get(Navigation, "ranked") == "1",
+        FeaturedOnly = UrlQuery.Get(Navigation, "featured") == "1",
+        Sort = SortTokens.FirstOrDefault(entry => string.Equals(entry.Value, UrlQuery.Get(Navigation, "sort"), StringComparison.OrdinalIgnoreCase)).Key,
+        Page = int.TryParse(UrlQuery.Get(Navigation, "page"), out int page) && page > 1 ? page : 1,
+    };
+
+    private IEnumerable<string> ReadList(string parameter)
+        => (UrlQuery.Get(Navigation, parameter) ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    /// <summary>Sizes go in the URL as players know them, in kilometres: <c>size=5,10</c>.</summary>
+    private static string SizeToken(int units) => MapSizes.Kilometres(units).Replace(" km", "");
+
+    private static int? KilometresToUnits(string token)
+        => MapSizes.Units.Cast<int?>().FirstOrDefault(units => SizeToken(units!.Value) == token);
+
+    private static IReadOnlyList<int> Toggled(IReadOnlyList<int> values, int value)
+        => values.Contains(value) ? [.. values.Where(other => other != value)] : [.. values.Append(value).Order()];
+
+    private void SubmitSearch() => Navigate(query with { Name = name.Trim(), Author = author.Trim(), Page = 1 });
+
+    private void ChangeSort(ChangeEventArgs args)
+        => Navigate(query with { Sort = SortTokens.FirstOrDefault(entry => entry.Value == args.Value as string).Key, Page = 1 });
+
+    private void GoToPage(int page) => Navigate(query with { Page = Math.Max(page, 1) });
+
+    /// <summary>
+    /// Writes the query to the URL; defaults stay out of it. Re-submitting the current search
+    /// leaves the URL unchanged, so that case refreshes the results directly.
+    /// </summary>
+    private void Navigate(MapSearchQuery next)
+    {
+        string uri = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["q"] = NullIfEmpty(next.Name),
+            ["author"] = NullIfEmpty(next.Author),
+            ["size"] = next.Sizes.Count > 0 ? string.Join(",", next.Sizes.Select(SizeToken)) : null,
+            ["players"] = next.Players.Count > 0 ? string.Join(",", next.Players) : null,
+            ["ranked"] = next.RankedOnly ? "1" : null,
+            ["featured"] = next.FeaturedOnly ? "1" : null,
+            ["sort"] = next.Sort == MapSortOrder.MostPlayed ? null : SortTokens[next.Sort],
+            ["page"] = next.Page > 1 ? next.Page : null,
+        });
+
+        if (uri == Navigation.Uri)
+        {
+            _ = SearchAsync(next);
+        }
+        else
+        {
+            Navigation.NavigateTo(uri, replace: true);
+        }
+    }
+
+    private static string SortName(MapSortOrder order) => order switch
+    {
+        MapSortOrder.BestRated => "Best rated",
+        MapSortOrder.Newest => "Newest",
+        MapSortOrder.Name => "Name",
+        _ => "Most played",
+    };
+
+    private static string? NullIfEmpty(string value) => value.Length > 0 ? value : null;
+
+    private async Task SearchAsync(MapSearchQuery next)
+    {
+        searchCancellation?.Cancel();
+        using CancellationTokenSource cancellation = new();
+        searchCancellation = cancellation;
+
+        activeQuery = next;
+        isSearching = true;
+        error = null;
+        StateHasChanged();
+        try
+        {
+            result = await Api.SearchMapsAsync(next, cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer search or navigation.
+        }
+        catch (NotAuthenticatedException)
+        {
+            error = "Your session has expired. Sign in again to browse the maps.";
+        }
+        catch (HttpRequestException exception)
+        {
+            error = $"The FAForever API could not be reached: {exception.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(searchCancellation, cancellation))
+            {
+                searchCancellation = null;
+                isSearching = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        searchCancellation?.Cancel();
+    }
+}

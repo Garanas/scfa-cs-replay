@@ -1,0 +1,199 @@
+@page "/maps/ladder"
+@inherits UrlStateComponent
+@inject FafApiClient Api
+@inject AuthService Auth
+
+@* The current map pools of the matchmaker: a tab per queue, a chip per rating bracket. The queue and
+   the bracket are in the URL (queue=tmm2v2&bracket=300-800); the bracket is the label from the pool's
+   name, so an unknown one (after a pool was renamed) falls back to all brackets. *@
+
+<PageTitle>Ladder maps · Vault of FAForever</PageTitle>
+
+<a href="@MapLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Maps</a>
+<h1 class="mt-2 text-2xl font-bold">Ladder maps</h1>
+<p class="mt-1 text-sm text-ink-muted">
+    The maps the matchmaker picks from right now. Every rating bracket has a pool of its own.
+</p>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <div class="card mt-6 max-w-xl text-center">
+            <p class="font-semibold">Sign in to see the ladder maps</p>
+            <p class="mt-2 text-sm text-ink-muted">
+                The FAForever API requires a signed-in account to read the map pools.
+            </p>
+            <button type="button" class="btn-primary mt-4" @onclick="() => Auth.BeginLoginAsync()">Sign in with FAForever</button>
+        </div>
+    </NotAuthorized>
+    <Authorized>
+        @if (error is not null)
+        {
+            <div class="card mt-6" role="alert">
+                <p class="font-semibold">The map pools could not be loaded</p>
+                <p class="mt-1 text-sm text-ink-muted">@error</p>
+            </div>
+        }
+        else if (queues is null)
+        {
+            <div class="card mt-6 animate-pulse text-center text-sm text-ink-muted">Loading the map pools&hellip;</div>
+        }
+        else if (Selected is { } queue)
+        {
+            <nav class="tab-strip mt-6 border-b border-edge pb-px" aria-label="Queues">
+                @foreach (LadderQueue option in queues)
+                {
+                    <button type="button" class="@(option == queue ? ActiveTabClass : TabClass)" aria-current="@(option == queue ? "page" : null)"
+                            @onclick="() => SetQuery(option == queues[0] ? null : option.TechnicalName, null)">@option.Name</button>
+                }
+            </nav>
+
+            <div class="mt-4 flex flex-wrap items-center gap-1.5" role="group" aria-label="Rating bracket">
+                <button type="button" aria-pressed="@(bracket is null ? "true" : "false")" class="@(bracket is null ? ChosenClass : OptionClass)"
+                        @onclick="() => SetQuery(QueueToken, null)">All ratings</button>
+                @foreach (LadderPool pool in queue.Pools)
+                {
+                    bool chosen = pool.Label == bracket;
+                    <button type="button" aria-pressed="@(chosen ? "true" : "false")" class="@(chosen ? ChosenClass : OptionClass)" title="@pool.Name"
+                            @onclick="() => SetQuery(QueueToken, pool.Label)">@pool.Label</button>
+                }
+            </div>
+
+            var rows = Rows(queue);
+            <p class="mt-4 text-sm text-ink-muted">
+                @rows.Count @(rows.Count == 1 ? "map" : "maps")
+                @(bracket is { } label ? $"in the {label} pool" : $"in {queue.Pools.Count} {(queue.Pools.Count == 1 ? "pool" : "pools")}")
+            </p>
+            <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                @foreach (Row row in rows)
+                {
+                    @if (row.Entry.Map is { } map)
+                    {
+                        <MapCard @key="row.Key" Map="map">@Brackets(queue, row)</MapCard>
+                    }
+                    else if (row.Entry.Generated is { } generated)
+                    {
+                        <GeneratedMapCard @key="row.Key" Generated="generated">@Brackets(queue, row)</GeneratedMapCard>
+                    }
+                }
+            </div>
+        }
+        else
+        {
+            <div class="card mt-6 text-center text-sm text-ink-muted">The matchmaker has no map pools right now.</div>
+        }
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private const string TabClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md px-3 py-2 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink sm:px-4";
+    private const string ActiveTabClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md border-b-2 border-primary bg-raised px-3 py-2 text-sm font-semibold text-primary sm:px-4";
+    private const string OptionClass = "inline-flex cursor-pointer items-center gap-1 rounded-full border border-edge bg-raised px-2.5 py-1 text-xs text-ink-muted transition hover:border-primary hover:text-ink";
+    private const string ChosenClass = "inline-flex cursor-pointer items-center gap-1 rounded-full border border-primary bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary transition";
+
+    /// <summary>A map of the queue and the brackets whose pool holds it.</summary>
+    private sealed record Row(string Key, LadderPoolEntry Entry, IReadOnlySet<string> Brackets);
+
+    private IReadOnlyList<LadderQueue>? queues;
+    private string? error;
+    private string? queueToken;
+    private string? bracket;
+    private bool loading;
+
+    /// <summary>The queue from the URL; the first (1v1) when it is absent or unknown.</summary>
+    private LadderQueue? Selected => queues is { Count: > 0 }
+        ? queues.FirstOrDefault(queue => queue.TechnicalName == queueToken) ?? queues[0]
+        : null;
+
+    private string? QueueToken => Selected is { } queue && queue != queues![0] ? queue.TechnicalName : null;
+
+    protected override void OnParametersSet()
+    {
+        if (!Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Equals(MapLinks.Ladder, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        queueToken = UrlQuery.Get(Navigation, "queue");
+        string? requested = UrlQuery.Get(Navigation, "bracket");
+        bracket = Selected is { } queue && queue.Pools.Any(pool => pool.Label == requested) ? requested : null;
+
+        if (queues is null && !loading)
+        {
+            _ = LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        try
+        {
+            queues = await Api.GetLadderPoolsAsync(CancellationToken.None);
+            OnParametersSet();
+        }
+        catch (NotAuthenticatedException)
+        {
+            error = "Your session has expired. Sign in again to see the map pools.";
+        }
+        catch (HttpRequestException exception)
+        {
+            error = $"The FAForever API could not be reached: {exception.Message}";
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    // Defaults stay out of the URL: the first queue and all brackets.
+    private void SetQuery(string? queue, string? label)
+        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["queue"] = queue,
+            ["bracket"] = label,
+        }), replace: true);
+
+    /// <summary>
+    /// Each map once, with the brackets it is in, from the pools in view: vault maps by name, then the
+    /// generated maps by size. A map is the same entry in two pools when it is the same version.
+    /// </summary>
+    private IReadOnlyList<Row> Rows(LadderQueue queue)
+    {
+        Dictionary<string, (LadderPoolEntry Entry, HashSet<string> Brackets)> rows = [];
+        foreach (LadderPool pool in queue.Pools)
+        {
+            foreach (LadderPoolEntry entry in pool.Entries)
+            {
+                string key = entry.Map is { } map
+                    ? $"map:{map.Id}:{map.Version}"
+                    : $"generated:{entry.Generated?.Size}:{entry.Generated?.Spawns}:{entry.Generated?.GeneratorVersion}";
+                if (!rows.TryGetValue(key, out var row))
+                {
+                    rows[key] = row = (entry, []);
+                }
+                row.Brackets.Add(pool.Label);
+            }
+        }
+
+        return [.. rows
+            .Where(row => bracket is null || row.Value.Brackets.Contains(bracket))
+            .Select(row => new Row(row.Key, row.Value.Entry, row.Value.Brackets))
+            .OrderBy(row => row.Entry.Map is null)
+            .ThenBy(row => row.Entry.Map?.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(row => row.Entry.Generated?.Size)];
+    }
+
+    /// <summary>The queue's brackets under a card, the ones that hold this map lit up.</summary>
+    private RenderFragment Brackets(LadderQueue queue, Row row) => @<div>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Rating brackets</p>
+        <div class="flex flex-wrap gap-1">
+            @foreach (LadderPool pool in queue.Pools)
+            {
+                bool holds = row.Brackets.Contains(pool.Label);
+                <span class="rounded-full border px-2 py-0.5 text-[11px] @(holds ? "border-primary bg-primary/15 font-semibold text-primary" : "border-edge text-ink-faint line-through decoration-ink-faint/50")"
+                      title="@(holds ? $"In the {pool.Label} pool" : $"Not in the {pool.Label} pool")">@pool.Label</span>
+            }
+        </div>
+    </div>;
+}

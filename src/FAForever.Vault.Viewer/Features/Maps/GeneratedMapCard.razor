@@ -1,0 +1,47 @@
+@* A generated map in a ladder pool. There is no map yet: the matchmaker has the map generator make
+   a new one for every game, with these parameters, so the card shows the grid instead of a preview. *@
+
+<article class="card flex flex-col overflow-hidden p-0">
+    <div class="map-grid relative flex aspect-square w-full items-center justify-center border-b border-edge">
+        <span class="font-display text-lg font-bold tracking-wide text-ink-muted">A new map every game</span>
+        <div class="absolute inset-x-2 top-2 flex justify-between gap-2">
+            @if (Generated.Size is { } size)
+            {
+                <span class="badge bg-surface/85 font-semibold text-ink backdrop-blur" title="Map size">@MapSizes.Kilometres(size)</span>
+            }
+            @if (Generated.Spawns is { } spawns)
+            {
+                <span class="badge ml-auto bg-surface/85 font-semibold text-ink backdrop-blur" title="Spawns">
+                    <svg viewBox="0 0 24 24" class="mr-1 h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+                        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z" />
+                    </svg>
+                    @spawns
+                </span>
+            }
+        </div>
+    </div>
+
+    <div class="flex flex-1 flex-col gap-2 p-4">
+        <div>
+            <h2 class="font-semibold">Generated map</h2>
+            <p class="text-sm text-ink-muted">
+                by the map generator@(Generated.GeneratorVersion is { } version ? $", version {version}" : "")
+            </p>
+        </div>
+        <p class="text-xs leading-relaxed text-ink-faint">
+            The matchmaker has the Neroxis map generator make a new map for each game, so no two games are the same.
+        </p>
+
+        @if (ChildContent is not null)
+        {
+            <div class="mt-auto border-t border-edge pt-3">@ChildContent</div>
+        }
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public required GeneratedMapParams Generated { get; set; }
+
+    /// <summary>Extra lines at the bottom of the card, e.g. the ladder brackets it is in.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
