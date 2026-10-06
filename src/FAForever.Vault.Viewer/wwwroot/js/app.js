@@ -277,6 +277,53 @@ window.fafReplay = {
         const file = window.fafReplay.launchedFile;
         window.fafReplay.launchedFile = null;
         return file;
+    },
+    /* Whether the app runs installed (its own window), not in a browser tab. */
+    isInstalled: function () {
+        return window.matchMedia("(display-mode: standalone)").matches
+            || window.matchMedia("(display-mode: window-controls-overlay)").matches
+            || navigator.standalone === true;
+    },
+    /*
+     * The replay folder (Pages/ReplayFolder.razor). A folder input (webkitdirectory), because the
+     * File System Access API refuses the FAF client's folder (C:\ProgramData\FAForever\replays: "it
+     * contains system files"). The files stay here, in memory, until the page is reloaded; .NET gets
+     * their names, sizes, dates and the first line of each .fafreplay (its JSON metadata), never the
+     * replays themselves until one is opened (readFolderFile).
+     */
+    folderFiles: [],
+    watchReplayFolder: function (input, listener) {
+        input.addEventListener("change", async () => {
+            const files = Array.from(input.files ?? []).filter((file) => /\.(fafreplay|scfareplay)$/i.test(file.name));
+            window.fafReplay.folderFiles = files;
+            listener.invokeMethodAsync("OnFolderReading", files.length);
+            const firstLine = async (file) => {
+                if (!/\.fafreplay$/i.test(file.name)) {
+                    return null;
+                }
+                const head = await file.slice(0, 16384).text();
+                const end = head.indexOf("\n");
+                return head.startsWith("{") && end > 0 ? head.slice(0, end) : null;
+            };
+            const entries = [];
+            for (let start = 0; start < files.length; start += 64) {
+                const batch = files.slice(start, start + 64);
+                const lines = await Promise.all(batch.map((file) => firstLine(file).catch(() => null)));
+                batch.forEach((file, i) => entries.push({
+                    index: start + i,
+                    name: file.name,
+                    size: file.size,
+                    lastModified: file.lastModified,
+                    metadata: lines[i],
+                }));
+            }
+            const folder = files[0]?.webkitRelativePath?.split("/")[0] ?? null;
+            input.value = "";
+            listener.invokeMethodAsync("OnFolderRead", folder, JSON.stringify(entries));
+        });
+    },
+    readFolderFile: function (index) {
+        return window.fafReplay.folderFiles[index] ?? null;
     }
 };
 

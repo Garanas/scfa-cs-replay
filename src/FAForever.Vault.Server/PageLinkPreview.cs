@@ -34,8 +34,12 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
     {
         ["/"] = new("Vault of FAForever",
             "Explore FAForever replays: search the vault, replay the build orders and analyse every command, straight from your browser."),
-        ["/replays"] = new("Search the vault",
+        ["/replays"] = new("Watch any game again",
+            "Every game on FAF is saved as a replay. Search the vault, browse the replays on your own computer, or open a single file."),
+        ["/replays/search"] = new("Search the vault",
             "Find FAForever replays by player, map, featured mod and date, and open any of them in your browser."),
+        ["/replays/folder"] = new("Your replay folder",
+            "Browse every game the FAF client saved on your computer, in the installed Vault of FAForever app."),
         ["/maps"] = new("Every map in the vault",
             "Thousands of maps were made for FAF. Start with the featured maps, see what the ladder plays right now, or search them all."),
         ["/maps/featured"] = new("Featured maps",
@@ -114,7 +118,7 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
     /// </summary>
     internal static LinkPreviewCard? SearchCard(string path, IQueryCollection query)
     {
-        if (!path.Equals("/replays", StringComparison.OrdinalIgnoreCase))
+        if (!path.Equals("/replays/search", StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }

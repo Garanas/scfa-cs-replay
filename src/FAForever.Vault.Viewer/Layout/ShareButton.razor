@@ -5,7 +5,8 @@
    Safari, Chromium on Windows and ChromeOS), otherwise a copy to the clipboard. The installed app
    has no address bar, so this is the only way to pass a view on there. The address is read when
    clicked, so whatever the URL holds at that moment (see "Shareable view state") goes along.
-   Class sets the button's look and place; without it, a small secondary button. *@
+   Class sets the button's look and place; without it, a small secondary button. Path shares another
+   page with the current query (a local replay shares its vault page, same tab and filters). *@
 <button type="button"
         class="@(Class ?? "btn-secondary px-3 py-1.5")"
         title="@(canShare ? "Share a link to this view" : "Copy a link to this view")"
@@ -30,6 +31,11 @@
 
     [Parameter] public string? LabelClass { get; set; }
 
+    /// <summary>A base relative page to share in place of the current one, with the current query.</summary>
+    [Parameter] public string? Path { get; set; }
+
+    private string Address => Path is null ? Navigation.Uri : Navigation.ToAbsoluteUri(Path + new Uri(Navigation.Uri).Query).ToString();
+
     private bool canShare;
     private bool linkCopied;
 
@@ -46,11 +52,11 @@
     {
         if (canShare)
         {
-            await JS.InvokeVoidAsync("fafReplay.shareLink", Navigation.Uri, Title);
+            await JS.InvokeVoidAsync("fafReplay.shareLink", Address, Title);
             return;
         }
 
-        if (!await JS.InvokeAsync<bool>("fafReplay.copyText", Navigation.Uri))
+        if (!await JS.InvokeAsync<bool>("fafReplay.copyText", Address))
         {
             return;
         }

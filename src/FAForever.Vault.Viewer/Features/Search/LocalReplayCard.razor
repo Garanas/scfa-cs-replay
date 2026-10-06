@@ -1,0 +1,74 @@
+@using System.Globalization
+
+@* A replay in the picked folder: what its metadata line says (map, title, date, players), a button
+   that opens the file, and a link to the same game in the vault, the address to share. *@
+
+<article class="card flex flex-col gap-3 p-4">
+    <div class="flex gap-4">
+        @* As on the game cards: the image reports loading, loaded or failed in data-preview. *@
+        <div class="map-grid group/map relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-edge"
+             data-preview="@(PreviewUrl is null ? "failed" : "loading")">
+            <span class="absolute inset-0 hidden animate-pulse bg-primary/15 group-data-[preview=loading]/map:block" aria-hidden="true"></span>
+            <span class="hidden font-display text-xl font-bold text-ink-faint group-data-[preview=failed]/map:inline" aria-hidden="true">?</span>
+            @if (PreviewUrl is { } previewUrl)
+            {
+                <img onload="this.closest('[data-preview]').dataset.preview='loaded'"
+                     onerror="this.closest('[data-preview]').dataset.preview='failed'"
+                     src="@previewUrl" alt="" loading="lazy"
+                     class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity group-data-[preview=loaded]/map:opacity-100" />
+            }
+        </div>
+        <div class="min-w-0 flex-1">
+            <p class="truncate font-semibold" title="@Heading">@Heading</p>
+            <p class="truncate text-sm text-ink-muted">@(MapName ?? Entry.MapFolder ?? "Unknown map")</p>
+            <p class="truncate text-xs text-ink-faint" title="@(Entry.Duration is null ? null : "Time between start and end")">
+                @((Entry.PlayedAt ?? Entry.LastModified).ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture))@(Entry.Duration is { } duration ? $" · {ReplayView.FormatDuration(duration)}" : "")
+            </p>
+        </div>
+        <div class="flex shrink-0 flex-col items-end gap-1">
+            @if (Entry.GameId is { } id)
+            {
+                <span class="badge">#@id</span>
+            }
+            @if (Entry.FeaturedMod is { } mod && mod != "faf")
+            {
+                <span class="badge" title="Featured mod">@mod</span>
+            }
+        </div>
+    </div>
+
+    @if (Entry.Players.Count > 0)
+    {
+        <p class="line-clamp-2 text-sm text-ink-muted" title="@string.Join(", ", Entry.Players)">
+            @for (int i = 0; i < Entry.Players.Count; i++)
+            {
+                string player = Entry.Players[i];
+                <span class="@(player == Entry.Recorder ? "font-semibold text-ink" : "")">@player</span>@(i < Entry.Players.Count - 1 ? ", " : "")
+            }
+        </p>
+    }
+
+    <div class="mt-auto flex gap-2">
+        <button type="button" class="btn-primary flex-1" disabled="@Disabled" @onclick="() => OnOpen.InvokeAsync(Entry)">Open</button>
+        @if (Entry.GameId is { } gameId)
+        {
+            <a href="@ReplayLinks.Vault(gameId)" class="btn-secondary" title="The same game in the FAF vault: a link you can share">In the vault</a>
+        }
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public required LocalReplayEntry Entry { get; set; }
+
+    [Parameter] public EventCallback<LocalReplayEntry> OnOpen { get; set; }
+
+    /// <summary>While another replay is loading.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    // A generated map's folder is its generator version and seed: no name worth reading.
+    private string? MapName => MapPreviews.IsGenerated(Entry.MapFolder) ? "Generated map" : MapPreviews.DisplayName(Entry.MapFolder);
+
+    private string Heading => Entry.Title ?? MapName ?? Entry.FileName;
+
+    private string? PreviewUrl => MapPreviews.SmallUrl(Entry.MapFolder);
+}

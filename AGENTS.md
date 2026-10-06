@@ -114,7 +114,7 @@ OAuth clients (both public, PKCE):
   `version=`, `units/history?units=`, the old `/units?unit=`), read from the app's own unit data with
   FAForever.FileFormats.Blueprints, with the unit's icon as a small image; a search with criteria gets
   a card about what it searched for (`player`, `map`, `mod`, `around`, `within`, `rated`, `finished`; the
-  results need a login, so never what was found); the home page, the replay search (`/replays`), the map pages (`/maps`, `/maps/featured`, `/maps/ladder`, `/maps/search`), the local replay page, the
+  results need a login, so never what was found); the home page, the replay pages (`/replays`, `/replays/search`, `/replays/folder`), the map pages (`/maps`, `/maps/featured`, `/maps/ladder`, `/maps/search`), the local replay page, the
   About and Units pages have a fixed card each (`PageLinkPreview.Paths`, mapped in `Program.cs`). A
   card without a unit shows the app icon (`icons/icon-512.png`). Nothing is fetched, so no rate
   limit; unit cards are cached for ten minutes. A new page gets a card in `FixedCards`; a new query

@@ -27,6 +27,13 @@
                         @(copied ? "copied!" : OriginLabel)
                     </button>
                 }
+                else if (VaultId is { } inVault)
+                {
+                    @* A local .fafreplay knows its game: the vault page is the address to share. *@
+                    <span class="badge">@OriginLabel</span>
+                    <a href="@ReplayLinks.Vault(inVault)" class="badge transition hover:border-primary hover:text-primary"
+                       title="Open this game in the FAF vault: a link you can share">vault #@inVault</a>
+                }
                 else
                 {
                     <span class="badge">@OriginLabel</span>
@@ -37,10 +44,12 @@
                 }
             </div>
         </div>
-        @if (Model.Origin is ReplayOrigin.Vault shared)
+        @if (VaultId is { } shared)
         {
-            @* A link to a local file means nothing to someone else, so only vault replays get one. *@
-            <ShareButton Title="@LinkTitle(shared.ReplayId)" IconClass="h-8 w-8" LabelClass="text-xs font-semibold"
+            @* A link to a local file means nothing to someone else, so only games in the vault get one; a
+               local .fafreplay shares its vault page, with the same tab and filters. *@
+            <ShareButton Title="@LinkTitle(shared)" Path="@(Model.Origin is ReplayOrigin.LocalFile ? ReplayLinks.Vault(shared) : null)"
+                         IconClass="h-8 w-8" LabelClass="text-xs font-semibold"
                          Class="col-start-2 row-start-1 flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 justify-self-end rounded-lg sm:col-start-3 border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary" />
         }
     </header>
@@ -194,6 +203,17 @@
             return armies > 0 ? armies : Model.Metadata?.num_players ?? Model.Replay.Header.Clients.Length;
         }
     }
+
+    /// <summary>
+    /// The game's id in the FAF vault: the vault replay's own, or the one a local .fafreplay names in
+    /// its metadata (offline games have none).
+    /// </summary>
+    private int? VaultId => Model.Origin switch
+    {
+        ReplayOrigin.Vault vault => vault.ReplayId,
+        ReplayOrigin.LocalFile when Model.Metadata?.uid is int uid && uid > 0 => uid,
+        _ => null,
+    };
 
     private string OriginLabel => Model.Origin switch
     {

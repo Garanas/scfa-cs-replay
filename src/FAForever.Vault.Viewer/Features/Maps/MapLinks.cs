@@ -21,5 +21,5 @@ public static class MapLinks
     /// 0.3 s (measured 2026-10-06, FAForever/faf-java-api#1182). The search page can widen it.
     /// </summary>
     public static string Replays(string mapName) =>
-        $"replays?map={Uri.EscapeDataString(mapName)}&around={DateTime.Today:yyyy-MM-dd}&within=month";
+        $"replays/search?map={Uri.EscapeDataString(mapName)}&around={DateTime.Today:yyyy-MM-dd}&within=month";
 }

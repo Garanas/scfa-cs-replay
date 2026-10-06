@@ -41,6 +41,15 @@ public static class MapPreviews
         return null;
     }
 
+    /// <summary>
+    /// The small preview (128 px) of the map in this folder, for small tiles; generated maps only
+    /// have the one size of the generator's service.
+    /// </summary>
+    public static string? SmallUrl(string? folder)
+        => folder is not { Length: > 0 } || IsGenerated(folder)
+            ? Url(folder)
+            : $"https://content.faforever.com/maps/previews/small/{Uri.EscapeDataString(folder.ToLowerInvariant())}.png";
+
     /// <summary>Whether the map in this folder came from the map generator.</summary>
     public static bool IsGenerated(string? folder)
         => folder is not null && folder.StartsWith(GeneratedPrefix, StringComparison.OrdinalIgnoreCase);
@@ -73,5 +82,35 @@ public static class MapPreviews
     {
         string version = name[GeneratedPrefix.Length..].Split('_')[0];
         return SupportedGeneratorVersions.Contains(version) ? GeneratedPreviewUrl + Uri.EscapeDataString(name) : null;
+    }
+
+    /// <summary>
+    /// A readable map name from the vault folder ("setons_clutch.v0003" becomes "Setons Clutch"), for
+    /// when the real display name (in the replay's scenario, inside its body) is not at hand: link
+    /// previews, the replay folder. The original maps are codes ("scmp_009", "x1mp_017"), so they get no name.
+    /// </summary>
+    public static string? DisplayName(string? folder)
+    {
+        if (folder is not { Length: > 0 })
+        {
+            return null;
+        }
+
+        int version = folder.LastIndexOf(".v", StringComparison.OrdinalIgnoreCase);
+        string name = version > 0 && folder[(version + 2)..].All(char.IsAsciiDigit) ? folder[..version] : folder;
+        if (IsOriginalMapCode(name))
+        {
+            return null;
+        }
+
+        return System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name.Replace('_', ' ').Trim());
+    }
+
+    private static bool IsOriginalMapCode(string name)
+    {
+        int separator = name.IndexOf('_');
+        return separator > 0
+            && name[..separator].ToLowerInvariant() is "scmp" or "x1mp"
+            && name[(separator + 1)..].All(char.IsAsciiDigit);
     }
 }

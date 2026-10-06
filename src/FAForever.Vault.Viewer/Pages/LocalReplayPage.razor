@@ -1,5 +1,12 @@
 @page "/replays/local"
+@implements IDisposable
 @inject ReplaySessionState Session
+@inject LocalReplayLoader Opener
+
+@* A replay file from this computer. With one in memory (picked here, on the home page, from the
+   replay folder or opened with the installed app) it shows the replay; without one, the file
+   picker, the "Open a replay file" card of the Replays tab. A refresh clears it: local replays live
+   in memory only. A .fafreplay of a vault game shares its vault page (ReplayView). *@
 
 @if (Session.Current is { Origin: ReplayOrigin.LocalFile localFile } loaded)
 {
@@ -8,15 +15,65 @@
 }
 else
 {
-    <PageTitle>Local replay · Vault of FAForever</PageTitle>
-    <div class="mx-auto max-w-3xl py-8">
-        <div class="card text-center">
-            <h1 class="text-xl font-bold">No local replay loaded</h1>
-            <p class="mt-2 text-sm text-ink-muted">
-                Load a <span class="font-mono">.fafreplay</span> or <span class="font-mono">.scfareplay</span> file from the home page.
-                Local replays live in memory only, so a refresh clears them.
-            </p>
-            <a href="" class="btn-primary mt-6 inline-flex">Back to home</a>
+    <PageTitle>Open a replay file · Vault of FAForever</PageTitle>
+    <a href="@ReplayLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Replays</a>
+    <h1 class="mt-2 text-2xl font-bold">Open a replay file</h1>
+    <p class="mt-1 text-sm text-ink-muted">It is read in your browser and never leaves your computer.</p>
+
+    <div class="card mt-6 max-w-2xl">
+        <div class="relative flex min-h-32 cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-edge px-4 text-sm text-ink-muted transition hover:border-primary hover:text-ink">
+            <InputFile OnChange="OnFileSelected" accept=".fafreplay,.scfareplay" disabled="@IsLoading"
+                       class="absolute inset-0 cursor-pointer opacity-0" title="" />
+            <span>Choose a <span class="font-mono text-ink">.fafreplay</span> or <span class="font-mono text-ink">.scfareplay</span> file, or drop one here</span>
         </div>
+        <p class="mt-3 text-sm text-ink-muted">
+            The FAF client keeps its replays in <span class="font-mono text-ink">C:\ProgramData\FAForever\replays</span>.
+        </p>
     </div>
+
+    <section class="mt-6 max-w-2xl" aria-live="polite">
+        @if (IsLoading)
+        {
+            <LoadProgress Progress="progress" OnCancel="CancelLoad" />
+        }
+        @if (error is not null)
+        {
+            <div class="card border-primary/50" role="alert">
+                <p class="font-semibold">Could not load the replay</p>
+                <p class="mt-1 text-sm text-ink-muted">@error</p>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private string? error;
+    private ReplayLoadProgress? progress;
+    private CancellationTokenSource? loadCancellation;
+
+    private bool IsLoading => loadCancellation is not null;
+
+    private async Task OnFileSelected(InputFileChangeEventArgs args)
+    {
+        IBrowserFile file = args.File;
+        error = null;
+        using CancellationTokenSource cancellation = new();
+        loadCancellation = cancellation;
+        try
+        {
+            error = await Opener.OpenAsync(file.Name,
+                cancellationToken => Task.FromResult(file.OpenReadStream(LocalReplayLoader.MaxReplayFileBytes, cancellationToken)),
+                new Progress<ReplayLoadProgress>(update => { progress = update; StateHasChanged(); }),
+                cancellation.Token);
+        }
+        finally
+        {
+            loadCancellation = null;
+            progress = null;
+        }
+    }
+
+    private void CancelLoad() => loadCancellation?.Cancel();
+
+    public void Dispose() => loadCancellation?.Cancel();
 }

@@ -1,0 +1,203 @@
+@page "/replays/folder"
+@implements IAsyncDisposable
+@using System.Globalization
+@inject IJSRuntime JS
+@inject LocalReplayFolder Folder
+@inject LocalReplayLoader Opener
+
+@* The replays in a folder on this computer, by default the FAF client's C:\ProgramData\FAForever\replays.
+   Installed app only (the owner's choice; the folder input itself works in any browser). A folder
+   input, not the File System Access API, which refuses that folder for holding system files; the
+   price is that the folder is picked again after a reload. Nothing here is in the URL: the files only
+   exist on this computer. A replay's vault link is what can be shared. *@
+
+<PageTitle>Your replay folder · Vault of FAForever</PageTitle>
+
+<a href="@ReplayLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Replays</a>
+<h1 class="mt-2 text-2xl font-bold">Your replay folder</h1>
+<p class="mt-1 text-sm text-ink-muted">The games the FAF client saved on your computer. They are read here, and never leave it.</p>
+
+@if (installed is null)
+{
+    @* Waiting for the first render to ask the browser. *@
+}
+else if (installed == false)
+{
+    <div class="card mt-6 max-w-2xl">
+        <p class="font-semibold">This works in the installed app</p>
+        <p class="mt-2 text-sm leading-relaxed text-ink-muted">
+            Install Vault of FAForever to browse your replay folder. In Chrome or Edge on your computer: click the
+            install icon at the right of the address bar, or open the browser menu and choose to install
+            Vault of FAForever. Then open it from your start menu or desktop.
+        </p>
+        <a href="@ReplayLinks.Local" class="btn-secondary mt-4">Open a single replay file instead</a>
+    </div>
+}
+else
+{
+    @* The folder input is always there, so its change listener stays attached; the label is the button. *@
+    <input @ref="folderInput" type="file" webkitdirectory multiple class="sr-only" id="replay-folder-input" tabindex="-1" aria-hidden="true" />
+
+    @if (reading is { } count)
+    {
+        <div class="card mt-6 animate-pulse text-center text-sm text-ink-muted">Reading @count.ToString("N0", CultureInfo.InvariantCulture) replays&hellip;</div>
+    }
+    else if (Folder.FolderName is null)
+    {
+        <div class="card mt-6 max-w-2xl">
+            <label for="replay-folder-input" class="btn-primary cursor-pointer">Choose your replay folder</label>
+            <p class="mt-4 text-sm leading-relaxed text-ink-muted">
+                The FAF client keeps its replays in <span class="font-mono text-ink">C:\ProgramData\FAForever\replays</span>.
+                That folder is hidden, so paste this address into the address bar of the dialog and press Enter, then
+                choose the folder.
+            </p>
+            <p class="mt-2 text-sm leading-relaxed text-ink-muted">
+                Your browser then asks whether to upload the files to this site. Nothing is uploaded: the replays are
+                read on your computer, and only the one you open is read in full.
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+            <label class="block min-w-0 flex-1 text-sm sm:max-w-sm">
+                <span class="sr-only">Filter</span>
+                <input type="search" class="input-field" placeholder="Map, player or title" @bind="filter" @bind:event="oninput" disabled="@IsLoading" />
+            </label>
+            <label for="replay-folder-input" class="btn-secondary cursor-pointer">Choose another folder</label>
+        </div>
+
+        var shown = Folder.Entries.Where(entry => entry.Matches(filter.Trim())).ToList();
+        <p class="mt-3 text-sm text-ink-muted">
+            @(shown.Count == Folder.Entries.Count
+                ? $"{Folder.Entries.Count.ToString("N0", CultureInfo.InvariantCulture)} replays in {Folder.FolderName}, the newest first"
+                : $"{shown.Count.ToString("N0", CultureInfo.InvariantCulture)} of {Folder.Entries.Count.ToString("N0", CultureInfo.InvariantCulture)} replays")
+        </p>
+
+        <section class="mt-3" aria-live="polite">
+            @if (IsLoading)
+            {
+                <LoadProgress Progress="progress" OnCancel="CancelLoad" />
+            }
+            @if (error is not null)
+            {
+                <div class="card border-primary/50" role="alert">
+                    <p class="font-semibold">Could not open the replay</p>
+                    <p class="mt-1 text-sm text-ink-muted">@error</p>
+                </div>
+            }
+        </section>
+
+        @if (shown.Count == 0)
+        {
+            <div class="card mt-3 text-center text-sm text-ink-muted">
+                @(Folder.Entries.Count == 0 ? "This folder holds no .fafreplay or .scfareplay files." : "No replays match this filter.")
+            </div>
+        }
+        else
+        {
+            <div class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                @foreach (LocalReplayEntry entry in shown.Take(visible))
+                {
+                    <LocalReplayCard @key="entry.Index" Entry="entry" OnOpen="OpenAsync" Disabled="IsLoading" />
+                }
+            </div>
+            @if (shown.Count > visible)
+            {
+                <div class="mt-6 flex justify-center">
+                    <button type="button" class="btn-secondary" @onclick="() => visible += PageSize">
+                        Show more (@((shown.Count - visible).ToString("N0", CultureInfo.InvariantCulture)) left)
+                    </button>
+                </div>
+            }
+        }
+    }
+}
+
+@code {
+    // Hundreds of cards with previews at once make the page slow; more come on request.
+    private const int PageSize = 30;
+
+    private bool? installed;
+    private ElementReference folderInput;
+    private bool watching;
+    private DotNetObjectReference<ReplayFolder>? listener;
+
+    private int? reading;
+    private string filter = string.Empty;
+    private int visible = PageSize;
+
+    private string? error;
+    private ReplayLoadProgress? progress;
+    private CancellationTokenSource? loadCancellation;
+
+    private bool IsLoading => loadCancellation is not null;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            installed = await JS.InvokeAsync<bool>("fafReplay.isInstalled");
+            StateHasChanged();
+            return;
+        }
+
+        if (installed == true && !watching)
+        {
+            watching = true;
+            listener = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("fafReplay.watchReplayFolder", folderInput, listener);
+        }
+    }
+
+    [JSInvokable]
+    public void OnFolderReading(int count)
+    {
+        reading = count;
+        error = null;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnFolderRead(string? folderName, string entriesJson)
+    {
+        Folder.Set(folderName, entriesJson);
+        reading = null;
+        filter = string.Empty;
+        visible = PageSize;
+        StateHasChanged();
+    }
+
+    private async Task OpenAsync(LocalReplayEntry entry)
+    {
+        error = null;
+        using CancellationTokenSource cancellation = new();
+        loadCancellation = cancellation;
+        try
+        {
+            await using IJSStreamReference content = await JS.InvokeAsync<IJSStreamReference>("fafReplay.readFolderFile", entry.Index);
+            error = await Opener.OpenAsync(entry.FileName,
+                async cancellationToken => await content.OpenReadStreamAsync(LocalReplayLoader.MaxReplayFileBytes, cancellationToken),
+                new Progress<ReplayLoadProgress>(update => { progress = update; StateHasChanged(); }),
+                cancellation.Token);
+        }
+        catch (JSException)
+        {
+            error = "The file is gone. Choose the folder again.";
+        }
+        finally
+        {
+            loadCancellation = null;
+            progress = null;
+        }
+    }
+
+    private void CancelLoad() => loadCancellation?.Cancel();
+
+    public ValueTask DisposeAsync()
+    {
+        loadCancellation?.Cancel();
+        listener?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

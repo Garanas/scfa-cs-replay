@@ -43,7 +43,7 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
   `index.html`, the service worker, its asset list and the manifest.
 - **File handling:** the installed app is registered for `.fafreplay`/`.scfareplay` ("Open with").
   `js/app.js` takes the file from the `launchQueue` (which may deliver before Blazor runs) and
-  `Pages/Home.razor` loads it like a picked file. `launch_handler` (`navigate-existing`) opens it in
+  `Pages/Home.razor` loads it like a picked file (`Services/Replays/LocalReplayLoader.cs`, the one way every local file is opened). `launch_handler` (`navigate-existing`) opens it in
   the app window that is already open instead of a new one (Chromium; others ignore it).
 - **Share target:** the installed app takes shared links (`share_target`, GET to `./` with
   `title`, `text`, `url`). `Pages/Home.razor` opens a link into the app as is, a
@@ -361,6 +361,37 @@ it, never edit it by hand.
   saying so.
 - The published service worker caches `data/units/index.json` with the app shell, and each data file
   the first time the app reads it (not all of them on install); an app update starts a new cache.
+
+## Replays tab
+
+Built like the Maps and Units tabs: `Pages/Replays.razor` (`/replays`) is an entry page with a card
+per way to a replay (same writing style as the About pages), each page links back ("← Replays").
+Paths are in `Features/Search/ReplayLinks.cs`.
+
+| Page | Path | What |
+|---|---|---|
+| `Pages/Search.razor` | `replays/search` | The vault search (needs a login). Rated games only by default (`rated=false` to include the rest: 4.2 of 19.2 million games are rated, and the filter makes every search faster). |
+| `Pages/ReplayFolder.razor` | `replays/folder` | The replays in a folder on this computer. **Installed app only**, on request of the owner, to encourage installing (`fafReplay.isInstalled`, display mode standalone); in a browser tab the card and the page explain how to install. |
+| `Pages/LocalReplayPage.razor` | `replays/local` | One replay file: the replay when one is in memory, otherwise a file picker. |
+
+The replay folder:
+
+- **A folder input, not the File System Access API.** `showDirectoryPicker` refuses the FAF client's
+  folder, `C:\ProgramData\FAForever\replays` ("it contains system files", checked 2026-10-06); an
+  `<input type="file" webkitdirectory>` reads it (641 files). The price: no lasting access, so the
+  folder is picked again after a reload, and the browser asks whether to "upload" the files (nothing
+  is uploaded; the page says so). The folder is hidden: the page tells to paste the path into the
+  dialog's address bar.
+- **Only the first line of each file is read** (js/app.js `watchReplayFolder`): a .fafreplay starts
+  with its JSON metadata (title, map folder, teams, start and end, featured mod, `uid`). 641 files
+  take about a second. `Services/Replays/LocalReplayFolder.cs` parses it and keeps the list while
+  the app runs, so a replay and back keeps the folder; the files stay in JS (`folderFiles`) until one
+  is opened in full. The FAF client names its files `{game id}-{player}.fafreplay`, the id for files
+  without a metadata line (.scfareplay).
+- **Nothing of it is in the URL**: the files only exist on this computer. What can be shared is the
+  vault page of a game: every card links it (`replays/{uid}`), and a local .fafreplay with a `uid`
+  shows "vault #id" and a Share button for its vault page, with the current tab and filters
+  (`ReplayView.VaultId`, `ShareButton.Path`). Offline games have no `uid` and no link.
 
 ## Maps tab
 

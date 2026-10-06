@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Caching.Memory;
+using FAForever.Vault.Viewer.Services;
 
 /// <summary>
 /// Link previews for replay pages. Discord, X, Slack and other link unfurlers read the Open Graph
@@ -188,35 +189,8 @@ public sealed class ReplayLinkPreview(
         return sizes;
     }
 
-    /// <summary>
-    /// A readable map name from the vault folder ("setons_clutch.v0003" becomes "Setons Clutch"); the
-    /// real display name is in the replay's scenario, inside the compressed body, which a preview does
-    /// not download. The original maps are codes ("scmp_009", "x1mp_017"), so they get no name.
-    /// </summary>
-    internal static string? MapDisplayName(string? folder)
-    {
-        if (folder is not { Length: > 0 })
-        {
-            return null;
-        }
-
-        int version = folder.LastIndexOf(".v", StringComparison.OrdinalIgnoreCase);
-        string name = version > 0 && folder[(version + 2)..].All(char.IsAsciiDigit) ? folder[..version] : folder;
-        if (IsOriginalMapCode(name))
-        {
-            return null;
-        }
-
-        return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name.Replace('_', ' ').Trim());
-    }
-
-    private static bool IsOriginalMapCode(string name)
-    {
-        int separator = name.IndexOf('_');
-        return separator > 0
-            && name[..separator].ToLowerInvariant() is "scmp" or "x1mp"
-            && name[(separator + 1)..].All(char.IsAsciiDigit);
-    }
+    /// <summary>A readable map name from the vault folder; see <see cref="MapPreviews.DisplayName"/>.</summary>
+    internal static string? MapDisplayName(string? folder) => MapPreviews.DisplayName(folder);
 
     /// <summary>The description of a card, e.g. "#25717491 · 1v1 · 7 Oct 2025 · 1h 34m".</summary>
     internal static string Summary(ReplayCard card)

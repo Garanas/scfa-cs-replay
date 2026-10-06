@@ -1,8 +1,7 @@
 @page "/"
 @implements IDisposable
 @inject NavigationManager Navigation
-@inject ReplayLoadingService Loader
-@inject ReplaySessionState Session
+@inject LocalReplayLoader Opener
 @inject IJSRuntime JS
 
 <PageTitle>Vault of FAForever</PageTitle>
@@ -56,9 +55,6 @@
 
 @code {
     private const int ExampleReplayId = 25692731;
-
-    // Generous cap: the largest known .scfareplay files are tens of MB.
-    private const long MaxReplayFileBytes = 256L * 1024 * 1024;
 
     private string vaultReplayId = string.Empty;
     private ElementReference vaultReplayInput;
@@ -157,7 +153,7 @@
     private Task OnFileSelected(InputFileChangeEventArgs args)
     {
         IBrowserFile file = args.File;
-        return LoadFileAsync(file.Name, cancellationToken => Task.FromResult(file.OpenReadStream(MaxReplayFileBytes, cancellationToken)));
+        return LoadFileAsync(file.Name, cancellationToken => Task.FromResult(file.OpenReadStream(LocalReplayLoader.MaxReplayFileBytes, cancellationToken)));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -185,53 +181,18 @@
         }
 
         await using IJSStreamReference content = await JS.InvokeAsync<IJSStreamReference>("fafReplay.takeLaunchedFileContent");
-        await LoadFileAsync(fileName, async cancellationToken => await content.OpenReadStreamAsync(MaxReplayFileBytes, cancellationToken));
+        await LoadFileAsync(fileName, async cancellationToken => await content.OpenReadStreamAsync(LocalReplayLoader.MaxReplayFileBytes, cancellationToken));
         StateHasChanged();
     }
 
     private async Task LoadFileAsync(string fileName, Func<CancellationToken, Task<Stream>> openRead)
     {
         error = null;
-
-        if (ReplayFormats.FromFileName(fileName) is not ReplayFormat format)
-        {
-            error = $"'{fileName}' is not a .fafreplay or .scfareplay file.";
-            return;
-        }
-
         using CancellationTokenSource cancellation = new();
         loadCancellation = cancellation;
         try
         {
-            progress = new ReplayLoadProgress("Reading file", null);
-            StateHasChanged();
-
-            using MemoryStream buffer = new();
-            await using (Stream source = await openRead(cancellation.Token))
-            {
-                await source.CopyToAsync(buffer, cancellation.Token);
-            }
-            buffer.Position = 0;
-
-            ReplayLoadResult result = await Loader.LoadAsync(buffer, format, new Progress<ReplayLoadProgress>(OnProgress), cancellation.Token);
-            switch (result)
-            {
-                case ReplayLoadResult.Success success:
-                    Session.Set(new LoadedReplay(success.Replay, success.Metadata, new ReplayOrigin.LocalFile(fileName)));
-                    Navigation.NavigateTo("replays/local");
-                    break;
-                case ReplayLoadResult.Failure failure:
-                    error = failure.Message;
-                    break;
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // The user cancelled; nothing to report.
-        }
-        catch (Exception exception)
-        {
-            error = $"Could not read the file: {exception.Message}";
+            error = await Opener.OpenAsync(fileName, openRead, new Progress<ReplayLoadProgress>(OnProgress), cancellation.Token);
         }
         finally
         {

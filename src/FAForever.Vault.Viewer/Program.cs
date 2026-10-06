@@ -17,6 +17,8 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddScoped<ThemeService>();
 builder.Services.AddScoped<ReplayLoadingService>();
 builder.Services.AddScoped<ReplaySessionState>();
+builder.Services.AddScoped<LocalReplayLoader>();
+builder.Services.AddScoped<LocalReplayFolder>();
 builder.Services.AddScoped<UnitIconAtlas>();
 builder.Services.AddScoped<UnitDatabase>();
 builder.Services.AddScoped<UnitCardService>();
