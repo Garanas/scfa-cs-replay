@@ -124,6 +124,7 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
         string? mod = Criterion(query["mod"]);
         DateOnly? around = DateOnly.TryParseExact(query["around"], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly date) ? date : null;
         bool unfinished = string.Equals(query["finished"], "false", StringComparison.OrdinalIgnoreCase);
+        bool unrated = string.Equals(query["rated"], "false", StringComparison.OrdinalIgnoreCase);
         if (player is null && map is null && mod is null && around is null)
         {
             return null;
@@ -152,6 +153,10 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
                 _ => "a year",
             };
             parts.Add($"played around {day.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}, give or take {window}");
+        }
+        if (unrated)
+        {
+            parts.Add("unrated games included");
         }
         if (unfinished)
         {

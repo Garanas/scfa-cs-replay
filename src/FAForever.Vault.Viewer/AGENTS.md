@@ -379,6 +379,9 @@ author, games played, rating and the start of the description, and an optional s
 (the ladder page puts the brackets there). The data is `/data/map` with a version, author and review
 summary (`FafApiClient.SearchMapsAsync`, models in `Services/Api/MapModels.cs`), so the three pages
 need a login like the Replays tab. Cards do not link anywhere yet: a map page waits for the map parser.
+The one way out is "Replays on this map" (`MapLinks.Replays`): the replay search on the map's name in
+a month around today (`around` + `within=month`). Keep the window: without it a popular map takes
+14 s (FAForever/faf-java-api#1182), with it 0.3 s; the search page can widen it.
 
 The ladder pools (`FafApiClient.GetLadderPoolsAsync`) are one request:
 `matchmakerQueueMapPool` with its queue, pool, assignments, versions and maps (0.3 s, 23 pools in 5
@@ -473,6 +476,9 @@ The page widens to full HD like the Build order tab (`MainLayout.Container`).
 
   The history page (`units/history`, below) has one parameter: `units`, the unit ids in order.
 
+- A replay's overview links its game version here (`OverviewPanel`: the version number is the
+  link, with `version=`), for FAF versions from `UnitDatabase.FirstVersion` on; older ones would show another
+  version's units, so they get no link.
 - The details panel (`UnitDetail`) shows the unit card and the build tree around the unit: upgrades
   from and to, built by, builds. Every unit there is a link (`unit=`), so the tree can be walked; for a
   buildable unit, builders that no player can build are left out.

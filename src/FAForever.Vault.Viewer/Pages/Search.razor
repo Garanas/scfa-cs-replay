@@ -57,10 +57,16 @@
                 {
                     <button type="button" class="btn-secondary" disabled="@isSearching" @onclick="() => SearchOwnReplays(ownName)">My replays</button>
                 }
-                <label class="ml-auto flex items-center gap-2 text-sm text-ink-muted">
-                    <input type="checkbox" class="accent-primary" @bind="finishedOnly" />
-                    Finished games only
-                </label>
+                <span class="ml-auto flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-muted">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" class="accent-primary" @bind="ratedOnly" />
+                        Rated games only
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" class="accent-primary" @bind="finishedOnly" />
+                        Finished games only
+                    </label>
+                </span>
             </div>
         </form>
 
@@ -125,6 +131,7 @@
     private DateTime? playedAround;
     private SearchPeriod period = SearchPeriod.Year;
     private bool finishedOnly = true;
+    private bool ratedOnly = true;
 
     private bool isSearching;
     private string? error;
@@ -152,6 +159,7 @@
         playedAround = query.PlayedAround?.ToDateTime(TimeOnly.MinValue);
         period = query.Period;
         finishedOnly = query.FinishedOnly;
+        ratedOnly = query.RatedOnly;
         _ = SearchAsync(query);
     }
 
@@ -163,6 +171,7 @@
         PlayedAround = DateOnly.TryParseExact(UrlQuery.Get(Navigation, "around"), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly around) ? around : null,
         Period = ParsePeriod(UrlQuery.Get(Navigation, "within")),
         FinishedOnly = !string.Equals(UrlQuery.Get(Navigation, "finished"), "false", StringComparison.OrdinalIgnoreCase),
+        RatedOnly = !string.Equals(UrlQuery.Get(Navigation, "rated"), "false", StringComparison.OrdinalIgnoreCase),
         Page = int.TryParse(UrlQuery.Get(Navigation, "page"), out int page) && page > 1 ? page : 1,
     };
 
@@ -174,6 +183,7 @@
         PlayedAround = playedAround is { } around ? DateOnly.FromDateTime(around) : null,
         Period = period,
         FinishedOnly = finishedOnly,
+        RatedOnly = ratedOnly,
     };
 
     private void SubmitSearch() => Navigate(QueryFromForm());
@@ -202,6 +212,7 @@
             ["around"] = query.PlayedAround?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             ["within"] = query.PlayedAround is not null && query.Period != SearchPeriod.Year ? PeriodTokens[query.Period] : null,
             ["finished"] = query.FinishedOnly ? null : "false",
+            ["rated"] = query.RatedOnly ? null : "false",
             ["page"] = query.Page > 1 ? query.Page : null,
         });
 

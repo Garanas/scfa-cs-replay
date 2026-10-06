@@ -15,6 +15,12 @@ public sealed record GameSearchQuery
     /// <summary>Only games that actually finished (have an end time).</summary>
     public bool FinishedOnly { get; init; } = true;
 
+    /// <summary>
+    /// Only rated games (validity VALID): about 22% of all games, 4.2 of 19.2 million on 2026-10-06.
+    /// It also makes every search faster.
+    /// </summary>
+    public bool RatedOnly { get; init; } = true;
+
     /// <summary>Centre of the period to search in, or null for any date.</summary>
     public DateOnly? PlayedAround { get; init; }
 

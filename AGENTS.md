@@ -113,7 +113,7 @@ OAuth clients (both public, PKCE):
   the unit pages get a card about the units in their address (`units/database?unit=`, `compare=`,
   `version=`, `units/history?units=`, the old `/units?unit=`), read from the app's own unit data with
   FAForever.FileFormats.Blueprints, with the unit's icon as a small image; a search with criteria gets
-  a card about what it searched for (`player`, `map`, `mod`, `around`, `within`, `finished`; the
+  a card about what it searched for (`player`, `map`, `mod`, `around`, `within`, `rated`, `finished`; the
   results need a login, so never what was found); the home page, the replay search (`/replays`), the map pages (`/maps`, `/maps/featured`, `/maps/ladder`, `/maps/search`), the local replay page, the
   About and Units pages have a fixed card each (`PageLinkPreview.Paths`, mapped in `Program.cs`). A
   card without a unit shows the app icon (`icons/icon-512.png`). Nothing is fetched, so no rate

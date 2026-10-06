@@ -78,10 +78,15 @@
             <p class="line-clamp-3 whitespace-pre-line text-xs leading-relaxed text-ink-faint" title="@description">@description</p>
         }
 
-        @if (ChildContent is not null)
-        {
-            <div class="mt-auto border-t border-edge pt-3">@ChildContent</div>
-        }
+        <div class="mt-auto flex flex-col gap-3 pt-1">
+            @if (ChildContent is not null)
+            {
+                <div class="border-t border-edge pt-3">@ChildContent</div>
+            }
+            @* A month around today: the replay search is slow on popular maps without a window (MapLinks.Replays). *@
+            <a href="@MapLinks.Replays(Map.Name)" class="btn-secondary w-full"
+               title="Replays on @Map.Name from the last month; the search can widen the dates">Replays on this map</a>
+        </div>
     </div>
 </article>
 

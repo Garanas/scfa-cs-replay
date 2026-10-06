@@ -14,4 +14,12 @@ public static class MapLinks
 
     /// <summary>Every visible map, with filters.</summary>
     public const string Search = "maps/search";
+
+    /// <summary>
+    /// The replay search for games on this map, played in a month around today. The window is not
+    /// optional: without one a popular map takes 14 s (DualGap Adaptive, 889,230 games), with it
+    /// 0.3 s (measured 2026-10-06, FAForever/faf-java-api#1182). The search page can widen it.
+    /// </summary>
+    public static string Replays(string mapName) =>
+        $"replays?map={Uri.EscapeDataString(mapName)}&around={DateTime.Today:yyyy-MM-dd}&within=month";
 }

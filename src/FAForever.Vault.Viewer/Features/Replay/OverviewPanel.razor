@@ -1,4 +1,6 @@
 @using FAForever.FileFormats.Replay
+@using FAForever.Vault.Viewer.Features.Units
+@using FAForever.Vault.Viewer.Services.Units
 
 <ReplayStatTiles Model="Model" />
 
@@ -22,11 +24,20 @@
         <section class="card">
             <h3 class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Replay</h3>
             <dl class="mt-2 grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2">
-                @foreach ((string label, string value) in ReplayFacts)
+                @foreach ((string label, string value, (string Href, string Title)? link) in ReplayFacts)
                 {
                     <div class="flex justify-between gap-4 border-b border-edge/60 py-2 last:border-0 sm:last:border-b">
                         <dt class="text-ink-muted">@label</dt>
-                        <dd class="text-right font-medium">@value</dd>
+                        <dd class="text-right font-medium">
+                            @if (link is { } target)
+                            {
+                                <a href="@target.Href" class="text-primary hover:underline" title="@target.Title">@value</a>
+                            }
+                            else
+                            {
+                                @value
+                            }
+                        </dd>
                     </div>
                 }
             </dl>
@@ -78,31 +89,41 @@
     }
 
     /// <summary>
-    /// Facts about the recording itself: who made it, when, and what the parser found.
+    /// Facts about the recording itself: who made it, when, and what the parser found. A fact's value
+    /// may be a link: the game version opens the unit database of that version.
     /// </summary>
-    private List<(string Label, string Value)> ReplayFacts
+    private List<(string Label, string Value, (string Href, string Title)? Link)> ReplayFacts
     {
         get
         {
             ReplayHeader header = Model.Replay.Header;
 
-            List<(string, string)> facts = [];
+            List<(string, string, (string, string)?)> facts = [];
+            void Add(string label, string value) => facts.Add((label, value, null));
+
             if (Model.Origin is ReplayOrigin.Vault vault)
             {
-                facts.Add(("Replay ID", $"#{vault.ReplayId}"));
+                Add("Replay ID", $"#{vault.ReplayId}");
             }
             if (Model.Metadata is { } metadata)
             {
-                facts.Add(("Host", metadata.host));
-                facts.Add(("Recorded by", metadata.recorder));
-                facts.Add(("Played on", DateTimeOffset.FromUnixTimeSeconds((long)metadata.launched_at).ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
-                facts.Add(("Complete", metadata.Complete ? "yes" : "no"));
+                Add("Host", metadata.host);
+                Add("Recorded by", metadata.recorder);
+                Add("Played on", DateTimeOffset.FromUnixTimeSeconds((long)metadata.launched_at).ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
+                Add("Complete", metadata.Complete ? "yes" : "no");
             }
-            facts.Add(("Duration", ReplayView.FormatDuration(ReplayAnalysis.GetDuration(Model.Replay))));
-            facts.Add(("Game version", header.GameVersion.Replace("Supreme Commander ", string.Empty)));
-            facts.Add(("Seed", header.Seed.ToString()));
-            facts.Add(("Inputs parsed", Model.Replay.Body.UserInput.Count.ToString("N0")));
-            facts.Add(("In sync", Model.Replay.Body.InSync ? "yes" : "no, desync detected"));
+            Add("Duration", ReplayView.FormatDuration(ReplayAnalysis.GetDuration(Model.Replay)));
+
+            // The unit database of the version the game ran on. Only for FAF versions with unit data
+            // (from UnitDatabase.FirstVersion): for older ones the database would show another version.
+            string version = header.GameVersion.Replace("Supreme Commander ", string.Empty);
+            facts.Add(UnitDataNotes.GameVersion(header.GameVersion) is int gameVersion && gameVersion >= UnitDatabase.FirstVersion
+                ? ("Game version", version, ($"{UnitLinks.Database}?version={gameVersion}", $"Open the unit database of game version {gameVersion}"))
+                : ("Game version", version, null));
+
+            Add("Seed", header.Seed.ToString());
+            Add("Inputs parsed", Model.Replay.Body.UserInput.Count.ToString("N0"));
+            Add("In sync", Model.Replay.Body.InSync ? "yes" : "no, desync detected");
             return facts;
         }
     }

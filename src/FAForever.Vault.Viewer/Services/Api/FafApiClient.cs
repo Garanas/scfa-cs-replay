@@ -34,6 +34,10 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
         {
             filters.Add("endTime=isnull=false");
         }
+        if (query.RatedOnly)
+        {
+            filters.Add("validity==VALID");
+        }
         if (!string.IsNullOrWhiteSpace(query.PlayerName))
         {
             filters.Add($"playerStats.player.login=={Quote(query.PlayerName.Trim())}");
