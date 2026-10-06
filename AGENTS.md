@@ -94,6 +94,10 @@ OAuth clients (both public, PKCE):
   functions (`ReplaySemantics`, `ReplayAnalysis`).
 - NuGet versions live **only** in `Directory.Packages.props` (central package management).
 - UI text is English. Code identifiers are English.
+- Write text (UI, comments, docs) for a reader who never saw an earlier version. When a correction
+  rewrites it, state what is true; do not contrast with the wording it replaces ("not X", "no
+  longer", "instead of the old"), unless the reader would otherwise assume X. History belongs in
+  the commit message.
 - Tests: MSTest with `[DataRow]` over the real assets in each test project's `assets/` (replays in `tests/FAForever.FileFormats.Replay.Tests/assets/`).
 - Keep the Server minimal: static hosting, the token proxy and link previews. It must never hold
   secrets or session state.

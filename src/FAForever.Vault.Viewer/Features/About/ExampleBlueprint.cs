@@ -33,8 +33,14 @@ public static class ExampleBlueprint
     /// <summary>Commits that changed the Fatboy's blueprint file, in the history of the FA repository up to 3839.</summary>
     public const int BlueprintCommits = 63;
 
-    /// <summary>A part of the blueprint: the top level fields it covers and what they mean.</summary>
-    public sealed record BlueprintPart(string Id, string Title, string Group, Tone Tone, string Text, string[] Keys);
+    /// <summary>
+    /// A part of the blueprint: the top level fields it covers and what they mean, with an optional
+    /// link to where the game documents all of its fields.
+    /// </summary>
+    public sealed record BlueprintPart(string Id, string Title, string Group, Tone Tone, string Text, string[] Keys, PartLink? More = null);
+
+    /// <summary>A link under the explanation of a part.</summary>
+    public sealed record PartLink(string Label, string Url);
 
     public static readonly BlueprintPart[] Parts =
     [
@@ -42,8 +48,9 @@ public static class ExampleBlueprint
             "What the unit is called and which faction it belongs to. CommandCaps lists the orders it accepts: attack, move, patrol and more. ToggleCaps adds the button for its shield dome.",
             ["Description", "General"]),
         new("ai", "Hints for the AI", "Everything else", Tone.Unknown,
-            "Values for the computer players and for aircraft that land on it: which parts enemies aim at, and how fast a landed aircraft is repaired.",
-            ["AI"]),
+            "Parameters for behavior that the engine runs on its own. AttackAngle turns the Fatboy 20 degrees while it attacks, so all of its turrets can fire. TargetBones are the parts enemies aim at, and the rest sets how fast an aircraft that lands on it is refuelled and repaired. The Fatboy sets 7 of the 16 fields the engine knows.",
+            ["AI"],
+            new("All fields of the AI table", $"https://github.com/FAForever/fa/blob/{GameVersion}/engine/Core/Blueprints/UnitBlueprint.lua#L134")),
         new("sound", "Sounds", "Sounds", Tone.Blueprint,
             "Every sound the unit makes: driving on land and in water, opening its factory, building, dying. Each one names a sound bank and a cue in that bank.",
             ["Audio"]),

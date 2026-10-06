@@ -51,6 +51,10 @@
                     <span class="font-mono text-sm text-ink-faint">@lines.ToString("N0", CultureInfo.InvariantCulture) @(lines == 1 ? "line" : "lines") · @Percent(bytes) of the file</span>
                 </p>
                 <p class="mt-1.5 text-sm leading-relaxed text-ink-muted">@current.Text</p>
+                @if (current.More is { } more)
+                {
+                    <a href="@more.Url" target="_blank" rel="noreferrer" class="mt-1.5 inline-block text-sm text-primary hover:underline">@more.Label</a>
+                }
             </div>
         </div>
     }
