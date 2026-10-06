@@ -32,14 +32,14 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
 
     private static readonly IReadOnlyDictionary<string, LinkPreviewCard> FixedCards = new Dictionary<string, LinkPreviewCard>(StringComparer.OrdinalIgnoreCase)
     {
-        ["/"] = new("Vault of FAF",
+        ["/"] = new("Vault of FAForever",
             "Explore FAForever replays: search the vault, replay the build orders and analyse every command, straight from your browser."),
         ["/replays"] = new("Search the vault",
             "Find FAForever replays by player, map, featured mod and date, and open any of them in your browser."),
         ["/replays/local"] = new("Open a replay from your computer",
-            "Drop a .fafreplay or .scfareplay file into Vault of FAF. It is read in your browser and never leaves your computer."),
-        ["/about"] = new("About Vault of FAF",
-            "How Vault of FAF reads your games: explainers for players, not programmers."),
+            "Drop a .fafreplay or .scfareplay file into Vault of FAForever. It is read in your browser and never leaves your computer."),
+        ["/about"] = new("About Vault of FAForever",
+            "How Vault of FAForever reads your games: explainers for players, not programmers."),
         ["/about/replay-format"] = new("Inside a replay file",
             "Every game on FAF can be watched again. This page opens a replay and goes from loose bytes to build orders and APM, one step at a time."),
         ["/about/blueprints"] = new("Inside a blueprint",
@@ -93,7 +93,7 @@ public sealed class PageLinkPreview(IMemoryCache cache, IWebHostEnvironment envi
         {
             card = FixedIcons.TryGetValue(path, out (string BlueprintId, string Name) icon) && IconUrl(imageBase, icon.BlueprintId) is { } image
                 ? card with { Image = image, ImageAlt = $"Icon of the {icon.Name}" }
-                : card with { Image = imageBase + AppIcon, ImageAlt = "Vault of FAF" };
+                : card with { Image = imageBase + AppIcon, ImageAlt = "Vault of FAForever" };
         }
 
         return LinkPreviewHtml.Render(html, card, request.GetEncodedUrl(), path == "/" ? "the home page" : path.TrimStart('/'));

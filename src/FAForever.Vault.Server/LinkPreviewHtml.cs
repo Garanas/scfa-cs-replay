@@ -39,7 +39,7 @@ public static class LinkPreviewHtml
         StringBuilder tags = new();
         tags.AppendLine($"{BlockStart} (Open Graph) for {subject}, filled in by FAForever.Vault.Server. -->");
         Meta(tags, "og:type", "website");
-        Meta(tags, "og:site_name", "Vault of FAF");
+        Meta(tags, "og:site_name", "Vault of FAForever");
         Meta(tags, "og:title", card.Title);
         Meta(tags, "og:description", card.Description);
         Meta(tags, "og:url", pageUrl);

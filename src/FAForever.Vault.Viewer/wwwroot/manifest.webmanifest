@@ -1,6 +1,6 @@
 {
   "id": "./",
-  "name": "Vault of FAF",
+  "name": "Vault of FAForever",
   "short_name": "Vault of FAF",
   "description": "Search, inspect and analyse Supreme Commander: Forged Alliance Forever replays.",
   "start_url": "./",
@@ -19,7 +19,7 @@
   "shortcuts": [
     { "name": "Search the vault", "short_name": "Replays", "url": "./replays", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
     { "name": "Unit database", "short_name": "Units", "url": "./units/database", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "About Vault of FAF", "short_name": "About", "url": "./about", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+    { "name": "About Vault of FAForever", "short_name": "About", "url": "./about", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
   ],
   "share_target": {
     "action": "./",

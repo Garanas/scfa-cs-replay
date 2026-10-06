@@ -3,12 +3,12 @@
 
 @if (Session.Current is { Origin: ReplayOrigin.LocalFile localFile } loaded)
 {
-    <PageTitle>@localFile.FileName · Vault of FAF</PageTitle>
+    <PageTitle>@localFile.FileName · Vault of FAForever</PageTitle>
     <ReplayView Model="loaded" />
 }
 else
 {
-    <PageTitle>Local replay · Vault of FAF</PageTitle>
+    <PageTitle>Local replay · Vault of FAForever</PageTitle>
     <div class="mx-auto max-w-3xl py-8">
         <div class="card text-center">
             <h1 class="text-xl font-bold">No local replay loaded</h1>
