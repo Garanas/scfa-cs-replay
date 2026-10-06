@@ -265,7 +265,9 @@ the prompt always show the same entries.
 its own page below `about/`: `Pages/AboutReplayFormat.razor` (`/about/replay-format`) and
 `Pages/AboutBlueprints.razor` (`/about/blueprints`, told through the Fatboy). The illustrations live in
 `Features/About/` (`AnnotatedBytes`, `ByteViewer`, `MessageTape`, `ByteShareBar`, `AboutChapter`,
-`AnnotatedBlueprint`).
+`AnnotatedBlueprint`). Below them, "Get involved" links to the official FAF places (the client
+download, wiki, forums, Discord, YouTube, Twitch, Reddit, contributing, GitHub, donations), the
+addresses as linked from faforever.com; take a new or changed one from there too.
 
 - **Audience:** players without technical skills. Explain ideas, not code (no reader classes or
   method names in the text), and build up from what a byte is.

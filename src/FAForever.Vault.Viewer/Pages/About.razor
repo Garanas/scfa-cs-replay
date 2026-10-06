@@ -64,6 +64,38 @@
     </div>
 </section>
 
+@* The official FAF places, as linked from faforever.com (checked 2026-10-06). *@
+<section class="mt-14" aria-labelledby="get-involved">
+    <h2 id="get-involved" class="text-xs font-semibold uppercase tracking-wide text-ink-faint">Get involved</h2>
+    <p class="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-muted">
+        Forged Alliance Forever is made and run by its players. Here is where to find them,
+        whether you want to play, watch or help.
+    </p>
+    <div class="mt-6 grid gap-8 lg:grid-cols-3">
+        @foreach ((string group, Place[] places) in Places)
+        {
+            <div>
+                <h3 class="text-sm font-semibold text-ink">@group</h3>
+                <ul class="mt-3 space-y-3">
+                    @foreach (Place place in places)
+                    {
+                        <li>
+                            <a href="@place.Url" target="_blank" rel="noreferrer"
+                               class="card group flex flex-col p-4 transition hover:border-primary hover:shadow-[0_0_60px_-24px_var(--th-glow)]">
+                                <span class="flex items-baseline justify-between gap-3">
+                                    <span class="font-semibold text-ink transition group-hover:text-primary">@place.Name</span>
+                                    <span class="truncate font-mono text-xs text-ink-faint">@place.Site</span>
+                                </span>
+                                <span class="mt-1 text-sm leading-relaxed text-ink-muted">@place.Text</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+</section>
+
 <section class="mt-14 max-w-2xl text-[16px] leading-relaxed text-ink-muted">
     <h2 class="text-xs font-semibold uppercase tracking-wide text-ink-faint">This site</h2>
     <p class="mt-3">
@@ -80,3 +112,38 @@
         </li>
     </ul>
 </section>
+
+@code {
+    // A place to find FAF: its name, the address shown, the link and one line about it.
+    private sealed record Place(string Name, string Site, string Url, string Text);
+
+    private static (string Group, Place[] Places)[] Places =>
+    [
+        ("Play", [
+            new("Play FAF", "faforever.com/play", "https://www.faforever.com/play",
+                "Download the FAF client and start playing. You need Supreme Commander: Forged Alliance on Steam."),
+            new("Wiki", "wiki.faforever.com", "https://wiki.faforever.com/en/home",
+                "Guides for new players, and answers to most questions."),
+            new("Forums", "forum.faforever.com", "https://forum.faforever.com/",
+                "News from the team and longer discussions."),
+        ]),
+        ("Talk and watch", [
+            new("Discord", "discord.gg", "https://discord.gg/mXahVSKGVb",
+                "Chat with other players, find a game or ask for help."),
+            new("YouTube", "youtube.com", "https://www.youtube.com/c/ForgedAllianceForever",
+                "The official channel of FAF."),
+            new("Twitch", "twitch.tv/faflive", "https://www.twitch.tv/faflive",
+                "The official channel for live streams."),
+            new("Reddit", "reddit.com/r/FAF", "https://www.reddit.com/r/FAF",
+                "Posts and discussions from the community."),
+        ]),
+        ("Help build it", [
+            new("Contribute", "faforever.com/contribution", "https://www.faforever.com/contribution",
+                "FAF is run by volunteers. See where you can help."),
+            new("GitHub", "github.com/FAForever", "https://github.com/FAForever",
+                "The client, the server and the game code are open source."),
+            new("Donate", "faforever.com/donation", "https://www.faforever.com/donation",
+                "Help pay for the servers that keep FAF running."),
+        ]),
+    ];
+}
