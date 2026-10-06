@@ -1,4 +1,5 @@
 @using FAForever.FileFormats.Blueprints
+@using FAForever.Vault.Viewer.Features.About
 @using FAForever.Vault.Viewer.Services.Units
 @inject IJSRuntime JS
 
@@ -10,7 +11,7 @@
     <div class="flex items-end justify-between gap-4">
         <div>
             <h2 id="unit-facts-heading" class="text-2xl font-bold text-ink">Did you know?</h2>
-            <p class="mt-1 text-sm text-ink-muted">Counted from the unit data of every release since @Index.Versions.Keys.Min().</p>
+            <p class="mt-1 text-sm text-ink-muted">Counted from the unit data of most releases since @Index.Versions.Keys.Min().</p>
         </div>
         <div class="flex gap-2">
             <button type="button" class="btn-secondary px-3 py-1" aria-label="Previous facts" aria-controls="unit-facts" @onclick="() => Scroll(-1)">←</button>
@@ -60,6 +61,15 @@
     /// <summary>The latest units could not be loaded: leave out the facts that need them.</summary>
     [Parameter] public bool UnitsFailed { get; set; }
 
+    // Not counted from the data: where the data comes from, with the explainer's own example unit.
+    private static UnitFacts.Fact Blueprints => new(
+        "Where the numbers come from", "Blueprints",
+        "Every value here is read from the game's blueprints: one text file per unit. Learn how they work, told through the Fatboy.",
+        "about/blueprints", "Read the story", [ExampleBlueprint.BlueprintId]);
+
+    // The row is built again on every render: one seed per visit keeps the randomly picked units the same.
+    private readonly int seed = Random.Shared.Next();
+
     // A place in the row: its fact, or the title of one still waiting for the units.
     private sealed record Slot(string Title, UnitFacts.Fact? Fact);
 
@@ -73,10 +83,10 @@
         {
             WithUnits("The most changed unit", latest => UnitFacts.MostChanged(Index, latest)),
             Of(UnitFacts.LatestChanges(Index, Latest)),
-            Of(UnitFacts.BiggestPatch(Index)),
-            WithUnits("Untouched the longest", latest => UnitFacts.UntouchedLongest(Index, latest)),
+            WithUnits("Untouched the longest", latest => UnitFacts.UntouchedLongest(Index, latest, new Random(seed))),
             Of(UnitFacts.LongestWait(Index)),
             Of(UnitFacts.QuietReleases(Index)),
+            Of(Blueprints),
         }.OfType<Slot>();
     }
 

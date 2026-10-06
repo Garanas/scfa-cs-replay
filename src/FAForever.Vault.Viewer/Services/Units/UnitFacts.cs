@@ -18,6 +18,14 @@ public static class UnitFacts
     /// </summary>
     public sealed record Fact(string Title, string Headline, string Text, string? Link = null, string? LinkLabel = null, IReadOnlyList<string>? Units = null);
 
+    /// <summary>
+    /// Releases the facts leave out: 3761 took categories such as PRODUCTSC1 and OVERLAYDIRECTFIRE
+    /// off most units (398 changed, 312 of them only in categories) and 3762 put them back (394, all
+    /// but one only in categories). Counting them would make every unit look changed in July 2023.
+    /// The 86 units 3761 changed in other values lose that change too.
+    /// </summary>
+    public static bool IsLeftOut(int version) => version is 3761 or 3762;
+
     /// <summary>The unit that changed in the most versions, with the two after it.</summary>
     public static Fact? MostChanged(UnitDataIndex index, UnitData latest)
     {
@@ -32,7 +40,8 @@ public static class UnitFacts
             return null;
         }
 
-        string text = $"The {Name(latest, top[0].Id)} changed in {top[0].Count} of the {index.Versions.Count} releases with data.";
+        int releases = index.Versions.Keys.Count(version => !IsLeftOut(version));
+        string text = $"The {Name(latest, top[0].Id)} changed in {top[0].Count} of the {releases} releases with data.";
         if (top.Count > 1)
         {
             text += $" Next are {string.Join(" and ", top.Skip(1).Select(unit => $"the {Name(latest, unit.Id)} ({unit.Count})"))}.";
@@ -42,8 +51,12 @@ public static class UnitFacts
             UnitLinks.History(top.Select(unit => unit.Id)), "Follow them through history", top.Select(unit => unit.Id).ToList());
     }
 
-    /// <summary>The units that went the longest without a change, counted from the last version that changed them.</summary>
-    public static Fact? UntouchedLongest(UnitDataIndex index, UnitData latest)
+    /// <summary>
+    /// The units that went the longest without a change, counted from the last version that changed
+    /// them. The card shows up to six of them, picked with <paramref name="random"/>, so another visit
+    /// can show others; the same seed gives the same six.
+    /// </summary>
+    public static Fact? UntouchedLongest(UnitDataIndex index, UnitData latest, Random random)
     {
         int[] versions = index.Versions.Keys.Order().ToArray();
         if (versions.Length == 0)
@@ -55,7 +68,7 @@ public static class UnitFacts
         Dictionary<string, int> lastChange = [];
         foreach (int version in versions)
         {
-            if (index.Versions[version].Changes is { } changes)
+            if (!IsLeftOut(version) && index.Versions[version].Changes is { } changes)
             {
                 foreach (string id in changes.Changed.Concat(changes.Added))
                 {
@@ -71,17 +84,23 @@ public static class UnitFacts
         }
 
         int since = buildable.Min(unit => lastChange.GetValueOrDefault(unit.BlueprintId, versions[0]));
+        // Ordered by id first, so the same seed picks the same units whatever order the data has.
         List<UnitSummary> untouched = buildable
             .Where(unit => lastChange.GetValueOrDefault(unit.BlueprintId, versions[0]) == since)
-            .OrderByDescending(unit => unit.TechLevel ?? 0).ThenBy(unit => unit.BlueprintId, StringComparer.Ordinal)
+            .OrderBy(unit => unit.BlueprintId, StringComparer.Ordinal)
             .ToList();
         int releasesSince = versions.Count(version => version > since);
 
         string units = untouched.Count == 1 ? $"The {Name(latest, untouched[0].BlueprintId)} has" : $"{untouched.Count} units have";
         string text = since == versions[0]
-            ? $"{units} not changed since release {since}{Date(index, since)}, the oldest with data."
-            : $"{units} not changed since release {since}{Date(index, since)}, {releasesSince} releases ago.";
-        List<string> shown = untouched.Take(UnitLinks.MaxCompared).Select(unit => unit.BlueprintId).ToList();
+            ? $"{units} barely changed since release {since}{Date(index, since)}, the oldest with data."
+            : $"{units} barely changed since release {since}{Date(index, since)}, {releasesSince} releases ago.";
+        List<string> shown = untouched
+            .OrderBy(_ => random.Next())
+            .Take(UnitLinks.MaxCompared)
+            .OrderByDescending(unit => unit.TechLevel ?? 0).ThenBy(unit => unit.BlueprintId, StringComparer.Ordinal)
+            .Select(unit => unit.BlueprintId)
+            .ToList();
 
         return new Fact("Untouched the longest", untouched.Count == 1 ? "1 unit" : $"{untouched.Count} units", text,
             UnitLinks.History(shown), untouched.Count > shown.Count ? $"Follow {shown.Count} of them" : "Follow them through history", shown);
@@ -90,7 +109,7 @@ public static class UnitFacts
     /// <summary>The newest version that changed units. With the latest data, the units no player can build come last.</summary>
     public static Fact? LatestChanges(UnitDataIndex index, UnitData? latest)
     {
-        if (index.Newest.FirstOrDefault(version => index.Versions[version].Changes?.Changed.Count > 0) is not (> 0 and var version))
+        if (index.Newest.FirstOrDefault(version => !IsLeftOut(version) && index.Versions[version].Changes?.Changed.Count > 0) is not (> 0 and var version))
         {
             return null;
         }
@@ -106,27 +125,11 @@ public static class UnitFacts
             ChangedIn(index, version), $"See what changed in {version}", shown);
     }
 
-    /// <summary>The version that changed the most units at once.</summary>
-    public static Fact? BiggestPatch(UnitDataIndex index)
-    {
-        if (index.Versions.Where(entry => entry.Value.Changes?.Changed.Count > 0)
-                .OrderByDescending(entry => entry.Value.Changes!.Changed.Count).ThenBy(entry => entry.Key)
-                .FirstOrDefault() is not { Value: not null } biggest)
-        {
-            return null;
-        }
-
-        int count = biggest.Value.Changes!.Changed.Count;
-        return new Fact("The biggest patch", Units(count),
-            $"Release {biggest.Key}{Date(index, biggest.Key)} changed {count} of its {biggest.Value.UnitCount} units at once.",
-            ChangedIn(index, biggest.Key), $"See what changed in {biggest.Key}");
-    }
-
     /// <summary>The most days between two releases that changed units.</summary>
     public static Fact? LongestWait(UnitDataIndex index)
     {
         List<(int Version, DateOnly Released)> changing = index.Versions
-            .Where(entry => entry.Value.Changes is { IsEmpty: false } && entry.Value.Released is not null)
+            .Where(entry => !IsLeftOut(entry.Key) && entry.Value.Changes is { IsEmpty: false } && entry.Value.Released is not null)
             .Select(entry => (entry.Key, entry.Value.Released!.Value))
             .OrderBy(entry => entry.Key)
             .ToList();
@@ -155,7 +158,9 @@ public static class UnitFacts
     public static Fact? QuietReleases(UnitDataIndex index)
     {
         // The oldest version has nothing to compare with, so it counts as neither.
-        List<UnitDataIndex.UnitChanges> compared = index.Versions.Values.Select(entry => entry.Changes).OfType<UnitDataIndex.UnitChanges>().ToList();
+        List<UnitDataIndex.UnitChanges> compared = index.Versions
+            .Where(entry => !IsLeftOut(entry.Key))
+            .Select(entry => entry.Value.Changes).OfType<UnitDataIndex.UnitChanges>().ToList();
         int quiet = compared.Count(changes => changes.IsEmpty);
         if (compared.Count == 0)
         {
@@ -169,8 +174,13 @@ public static class UnitFacts
     private static Dictionary<string, int> ChangeCounts(UnitDataIndex index)
     {
         Dictionary<string, int> counts = [];
-        foreach (UnitDataIndex.Entry entry in index.Versions.Values)
+        foreach ((int version, UnitDataIndex.Entry entry) in index.Versions)
         {
+            if (IsLeftOut(version))
+            {
+                continue;
+            }
+
             foreach (string id in entry.Changes?.Changed ?? [])
             {
                 counts[id] = counts.GetValueOrDefault(id) + 1;
