@@ -73,6 +73,16 @@ window.fafReplay = {
         document.getElementById(id)?.scrollIntoView({ block: "nearest" });
     },
     /*
+     * Scrolls a sideways strip (the fact cards on the Units page) by most of its width, back for a
+     * negative direction. Smooth unless the user asked for reduced motion.
+     */
+    scrollStrip: function (id, direction) {
+        const element = document.getElementById(id);
+        if (!element) return;
+        const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        element.scrollBy({ left: direction * element.clientWidth * 0.9, behavior: smooth ? "smooth" : "auto" });
+    },
+    /*
      * Places a floating element (the unit card, UnitCardHost.razor) next to a pointer position in
      * viewport pixels: below right of it, flipped to the left or pulled up where it would leave
      * the viewport. The element starts hidden, so it never shows at a stale spot.

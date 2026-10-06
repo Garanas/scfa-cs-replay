@@ -6,8 +6,8 @@ namespace FAForever.Vault.Viewer.Services.Units;
 /// <summary>
 /// The values of a unit as labelled lines, the same labels for every version of it, so versions can
 /// be compared line by line (the unit page's history). Weapons get one line per value in a group named
-/// after the weapon, so the history shows the name once, above its values; identical weapons are
-/// counted, as on the unit card.
+/// after the weapon, so the history shows the name once, above its values; weapons with the same
+/// values are counted, like identical ones on the unit card.
 /// </summary>
 public static class UnitStats
 {
@@ -22,14 +22,6 @@ public static class UnitStats
     {
         List<Line> lines = [];
 
-        void Text(string label, string? text)
-        {
-            if (!string.IsNullOrEmpty(text))
-            {
-                lines.Add(new Line(label, text));
-            }
-        }
-
         void Number(string label, double? number, string? group = null)
         {
             if (number is > 0)
@@ -38,7 +30,6 @@ public static class UnitStats
             }
         }
 
-        Text("Moves on", UnitRoles.Layer(unit));
         Number("Mass", unit.BuildCostMass);
         Number("Energy", unit.BuildCostEnergy);
         Number("Build time", unit.BuildTime);
@@ -56,9 +47,21 @@ public static class UnitStats
         Number("Energy per second", unit.ProductionPerSecondEnergy);
         Number("Can build", unit.Builds.Count);
 
-        foreach (var (weapon, count) in unit.Weapons.Where(UnitRoles.IsRealWeapon).GroupBy(weapon => weapon).Select(group => (group.Key, group.Count())))
+        // Weapons count as the same when every value shown here is: the CZAR's Zealot AA Missiles differ
+        // only in their salvo delay. Groups that still share a name are numbered, so every key is unique.
+        Dictionary<string, int> names = [];
+        foreach (var (weapon, count) in unit.Weapons.Where(UnitRoles.IsRealWeapon)
+                     .GroupBy(weapon => (weapon.DisplayName, weapon.WeaponCategory, weapon.Damage, weapon.MuzzleSalvoSize,
+                         weapon.DoTPulses, weapon.DoTTime, weapon.DamageRadius, weapon.MaxRadius, weapon.RateOfFire))
+                     .Select(group => (group.First(), group.Count())))
         {
             string name = $"{(count > 1 ? $"{count} × " : "")}{weapon.DisplayName ?? weapon.WeaponCategory ?? "Weapon"}";
+            int seen = names[name] = names.GetValueOrDefault(name) + 1;
+            if (seen > 1)
+            {
+                name = $"{name} ({seen})";
+            }
+
             Number("Damage", weapon.Damage, name);
             Number("Salvo", weapon.MuzzleSalvoSize > 1 ? weapon.MuzzleSalvoSize : null, name);
             Number("Damage pulses", weapon.DoTPulses > 1 ? weapon.DoTPulses : null, name);

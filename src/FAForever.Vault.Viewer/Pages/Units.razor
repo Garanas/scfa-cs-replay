@@ -1,10 +1,12 @@
 @page "/units"
 @using FAForever.Vault.Viewer.Features.Units
 @using FAForever.Vault.Viewer.Services.Units
+@using FAForever.FileFormats.Blueprints
 @inject NavigationManager Navigation
+@inject UnitDatabase Database
 
-@* The entry to the unit pages (the Units tab in the header): a card for the unit database and one
-   for the unit history. Same writing style as the About pages: simple English, short sentences, no
+@* The entry to the unit pages (the Units tab in the header): a card for the unit database, one
+   for the unit history, and facts about how the units changed below them. Same writing style as the About pages: simple English, short sentences, no
    hyphens, underscores or dashes in the visible text. *@
 
 <PageTitle>Units · Vault of FAF</PageTitle>
@@ -68,6 +70,11 @@
     </a>
 </div>
 
+@if (index is { Versions.Count: > 0 })
+{
+    <UnitFactStrip Index="index" Latest="latest" UnitsFailed="unitsFailed" />
+}
+
 @code {
     private static readonly string[] DatabaseIcons =
         ["uel0201", "ual0201", "url0107", "xsl0201", "uel0001", "ual0001", "url0001", "xsl0001"];
@@ -78,12 +85,29 @@
 
     // Before the landing page, /units was the database: a link to it with a selection
     // (/units?unit=uel0201) still opens that view.
-    protected override void OnInitialized()
+    private UnitDataIndex? index;
+    private UnitData? latest;
+    private bool unitsFailed;
+
+    protected override async Task OnInitializedAsync()
     {
         string query = new Uri(Navigation.Uri).Query;
         if (query.Length > 1)
         {
             Navigation.NavigateTo(UnitLinks.Database + query, replace: true);
+            return;
+        }
+
+        // The facts are extras: without the data the page simply has none.
+        try
+        {
+            index = await Database.LoadIndexAsync();
+            StateHasChanged();
+            latest = (await Database.LoadAsync()).Data;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            unitsFailed = true;
         }
     }
 }

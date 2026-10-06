@@ -22,6 +22,11 @@
   `mapVersion.map.displayName`, `thumbnailUrlSmall`, `featuredMod`, `faction`/`team`/
   `beforeMean`/`beforeDeviation` all behave as modelled. Bonus for the future result feature:
   `gamePlayerStats` carries `result` ("VICTORY"/"DEFEAT"), `score` and `afterMean`/`afterDeviation`.
+- [ ] **Follow up on slow map searches**: a search with a map name takes up to 20 s for popular
+  maps (Seton's Clutch), from the sort on `startTime`; reported as
+  [FAForever/faf-java-api#1182](https://github.com/FAForever/faf-java-api/issues/1182) with the
+  timings (measured 2026-10-06). If the FAF team won't add an index, consider a default time window
+  for map searches on our side (measure it first).
 - [ ] **Show the match outcome on vault replays** (now unblocked): fetch `/data/game/{id}` with
   `playerStats.player` when signed in and merge into the replay page: winner badges in Players,
   rating changes (`beforeMean/afterMean`), validity. The replay file itself never knows who won.

@@ -94,8 +94,17 @@
                             <th class="bg-surface py-1.5 pr-3 text-left text-xs font-normal text-ink-faint">Categories</th>
                             @for (int column = 0; column < states.Count; column++)
                             {
-                                string change = column > 0 ? CategoryChange(states[column - 1].Unit, states[column].Unit) : "";
-                                <td class="max-w-64 px-3 py-1.5 text-xs @(change.Length > 0 ? "font-semibold text-primary" : "text-ink-faint")">@(column == 0 ? $"{states[0].Unit.Categories.Count} categories" : change)</td>
+                                List<string> changes = column > 0 ? CategoryChanges(states[column - 1].Unit, states[column].Unit) : [];
+                                <td class="whitespace-nowrap px-3 py-1.5 align-top text-xs @(changes.Count > 0 ? "font-semibold text-primary" : "text-ink-faint")">
+                                    @if (column == 0)
+                                    {
+                                        @($"{states[0].Unit.Categories.Count} categories")
+                                    }
+                                    @foreach (string change in changes)
+                                    {
+                                        <span class="block">@change</span>
+                                    }
+                                </td>
                             }
                         </tr>
                     }
@@ -161,9 +170,10 @@
     }
 
     /// <summary>The categories added (+) and removed (−) from one state to the next, e.g. "+VOLATILE −SNIPEMODE".</summary>
-    private static string CategoryChange(UnitSummary before, UnitSummary after) => string.Join(" ",
+    private static List<string> CategoryChanges(UnitSummary before, UnitSummary after) =>
         after.Categories.Except(before.Categories).Select(category => $"+{category}")
-            .Concat(before.Categories.Except(after.Categories).Select(category => $"−{category}")));
+            .Concat(before.Categories.Except(after.Categories).Select(category => $"−{category}"))
+            .ToList();
 
     private static string Range(UnitState state) => state.From == state.To ? $"{state.From}" : $"{state.From}–{state.To}";
 

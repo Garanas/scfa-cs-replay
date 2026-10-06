@@ -1,0 +1,102 @@
+@using FAForever.FileFormats.Blueprints
+@using FAForever.Vault.Viewer.Services.Units
+@inject IJSRuntime JS
+
+@* Facts about how the units changed (Services/Units/UnitFacts.cs), as a row of cards that scrolls
+   sideways. The facts from the index show at once; the ones about units wait for the latest data
+   file and hold a placeholder until then, so the cards do not move when it arrives. *@
+
+<section class="mt-12" aria-labelledby="unit-facts-heading">
+    <div class="flex items-end justify-between gap-4">
+        <div>
+            <h2 id="unit-facts-heading" class="text-2xl font-bold text-ink">Did you know?</h2>
+            <p class="mt-1 text-sm text-ink-muted">Counted from the unit data of every release since @Index.Versions.Keys.Min().</p>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" class="btn-secondary px-3 py-1" aria-label="Previous facts" aria-controls="unit-facts" @onclick="() => Scroll(-1)">←</button>
+            <button type="button" class="btn-secondary px-3 py-1" aria-label="Next facts" aria-controls="unit-facts" @onclick="() => Scroll(1)">→</button>
+        </div>
+    </div>
+
+    <ul id="unit-facts" class="tab-strip mt-4 snap-x snap-mandatory gap-4 pb-1">
+        @foreach (Slot slot in Slots())
+        {
+            <li class="flex w-[85%] shrink-0 snap-start sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]">
+                @if (slot.Fact is { } fact)
+                {
+                    @if (fact.Link is { } link)
+                    {
+                        <a href="@link" class="card group flex w-full flex-col transition hover:border-primary hover:shadow-[0_0_60px_-24px_var(--th-glow)]">
+                            @Body(fact)
+                            <p class="mt-auto pt-4 text-sm font-semibold text-primary">
+                                @fact.LinkLabel <span class="inline-block transition group-hover:translate-x-1" aria-hidden="true">→</span>
+                            </p>
+                        </a>
+                    }
+                    else
+                    {
+                        <div class="card flex w-full flex-col">@Body(fact)</div>
+                    }
+                }
+                else
+                {
+                    <div class="card flex w-full animate-pulse flex-col" aria-busy="true">
+                        <p class="text-xs font-semibold tracking-wider text-ink-faint uppercase">@slot.Title</p>
+                        <p class="mt-2 text-sm text-ink-muted">Reading the units&hellip;</p>
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+</section>
+
+@code {
+    /// <summary>The unit data index.</summary>
+    [Parameter, EditorRequired] public required UnitDataIndex Index { get; set; }
+
+    /// <summary>The units of the latest version; null while they load.</summary>
+    [Parameter] public UnitData? Latest { get; set; }
+
+    /// <summary>The latest units could not be loaded: leave out the facts that need them.</summary>
+    [Parameter] public bool UnitsFailed { get; set; }
+
+    // A place in the row: its fact, or the title of one still waiting for the units.
+    private sealed record Slot(string Title, UnitFacts.Fact? Fact);
+
+    private IEnumerable<Slot> Slots()
+    {
+        Slot? WithUnits(string title, Func<UnitData, UnitFacts.Fact?> fact) =>
+            Latest is null ? (UnitsFailed ? null : new Slot(title, null)) : fact(Latest) is { } done ? new Slot(title, done) : null;
+        Slot? Of(UnitFacts.Fact? fact) => fact is null ? null : new Slot(fact.Title, fact);
+
+        return new[]
+        {
+            WithUnits("The most changed unit", latest => UnitFacts.MostChanged(Index, latest)),
+            Of(UnitFacts.LatestChanges(Index, Latest)),
+            Of(UnitFacts.BiggestPatch(Index)),
+            WithUnits("Untouched the longest", latest => UnitFacts.UntouchedLongest(Index, latest)),
+            Of(UnitFacts.LongestWait(Index)),
+            Of(UnitFacts.QuietReleases(Index)),
+        }.OfType<Slot>();
+    }
+
+    private RenderFragment Body(UnitFacts.Fact fact) =>
+        @<text>
+            <p class="text-xs font-semibold tracking-wider text-ink-faint uppercase">@fact.Title</p>
+            <p class="mt-2 font-display text-3xl font-extrabold text-primary">@fact.Headline</p>
+            <p class="mt-2 text-[16px] leading-relaxed text-ink-muted">@fact.Text</p>
+            @if (fact.Units is { Count: > 0 } units)
+            {
+                <div class="mt-4 flex flex-wrap gap-1.5" aria-hidden="true">
+                    @foreach (string id in units)
+                    {
+                        <span class="rounded-md border border-edge bg-raised p-1">
+                            <UnitIcon BlueprintId="@id" Size="28" Title="" />
+                        </span>
+                    }
+                </div>
+            }
+        </text>;
+
+    private async Task Scroll(int direction) => await JS.InvokeVoidAsync("fafReplay.scrollStrip", "unit-facts", direction);
+}

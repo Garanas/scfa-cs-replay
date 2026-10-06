@@ -363,7 +363,13 @@ it, never edit it by hand.
 the unit database and one for the unit history, in the same writing style as the About pages. Both
 pages link back to it ("← Units") and to each other (History in the details panel and the
 comparison, "Show in the database" on a history card). It keeps the reading width; the pages below
-`units/` widen to full HD. `/units` used to be the database: a link to it with a query
+`units/` widen to full HD. Below the cards, "Did you know?" (`Features/Units/UnitFactStrip.razor`)
+shows facts counted from the data (`Services/Units/UnitFacts.cs`: most changed unit, latest and
+biggest patch, units untouched the longest, longest wait, releases without unit changes) as a row of
+cards that scrolls sideways (`fafReplay.scrollStrip`). The facts from the index show at once; those
+about units wait for the latest data file (names, buildable only) behind a placeholder. A fact links
+to what it is about: the history of its units, or the database of a version with `changed=1`.
+`/units` used to be the database: a link to it with a query
 (`/units?unit=uel0201`) is sent on to `units/database` with that query, so old links keep working.
 
 ## Unit database

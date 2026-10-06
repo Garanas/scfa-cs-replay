@@ -38,6 +38,8 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
         }
         if (!string.IsNullOrWhiteSpace(query.MapName))
         {
+            // Slow for popular maps combined with sort=-startTime (up to 20 s uncached on 2026-10-06),
+            // probably a missing index on game_stats (mapId, startTime): FAForever/faf-java-api#1182.
             filters.Add($"mapVersion.map.displayName=={Quote("*" + query.MapName.Trim() + "*")}");
         }
         if (!string.IsNullOrWhiteSpace(query.FeaturedMod))
