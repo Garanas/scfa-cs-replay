@@ -205,7 +205,7 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
     public async Task<MapVersionDetails?> GetMapVersionAsync(string folderName, CancellationToken cancellationToken)
     {
         string url = $"{BaseUrl}/data/mapVersion"
-            + "?include=map,map.author,map.versions,reviewsSummary"
+            + "?include=map,map.author,map.versions,map.versions.reviewsSummary,reviewsSummary"
             + "&filter=" + Uri.EscapeDataString($"folderName=={Quote(folderName)}");
 
         JsonApiDocument document = JsonApiDocument.Parse(await GetAsync(url, cancellationToken));
@@ -219,13 +219,19 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
         JsonApiResource? reviews = document.FindIncluded(version.Relationship("reviewsSummary"));
         int number = version.GetInt32("version") ?? 0;
 
-        MapVersionReference? newer = map is null ? null : map.Relationships("versions")
-            .Select(reference => document.FindIncluded(reference))
+        // the included versions; the one asked for is the primary resource, so it may not be among them
+        List<MapVersionReference> versions = map is null ? [] : [.. map.Relationships("versions")
+            .Select(reference => reference.Id == version.Id ? version : document.FindIncluded(reference))
             .OfType<JsonApiResource>()
-            .Where(other => other.GetBoolean("hidden") != true && (other.GetInt32("version") ?? 0) > number && other.GetString("folderName") is { Length: > 0 })
-            .OrderByDescending(other => other.GetInt32("version"))
-            .Select(other => new MapVersionReference(other.GetInt32("version") ?? 0, other.GetString("folderName")!))
-            .FirstOrDefault();
+            .Where(other => other.GetString("folderName") is { Length: > 0 })
+            .Select(other => ReadVersion(other, document))
+            .OrderByDescending(other => other.Version)];
+        if (versions.All(other => other.FolderName != version.GetString("folderName")) && version.GetString("folderName") is { Length: > 0 })
+        {
+            versions.Add(ReadVersion(version, document));
+            versions.Sort((a, b) => b.Version.CompareTo(a.Version));
+        }
+        MapVersionReference? newer = versions.FirstOrDefault(other => !other.Hidden && other.Version > number);
 
         return new MapVersionDetails(
             int.TryParse(version.Id, out int versionId) ? versionId : 0,
@@ -243,6 +249,19 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
             AverageScore = reviews?.GetNumber("averageScore"),
             Reviews = reviews?.GetInt32("reviews") ?? 0,
             NewerVersion = newer,
+            Versions = versions,
+        };
+    }
+
+    private static MapVersionReference ReadVersion(JsonApiResource version, JsonApiDocument document)
+    {
+        JsonApiResource? reviews = document.FindIncluded(version.Relationship("reviewsSummary"));
+        return new MapVersionReference(version.GetInt32("version") ?? 0, version.GetString("folderName")!, version.GetBoolean("hidden") ?? false)
+        {
+            UploadedAt = version.GetDateTimeOffset("createTime"),
+            GamesPlayed = version.GetInt32("gamesPlayed") ?? 0,
+            AverageScore = reviews?.GetNumber("averageScore"),
+            Reviews = reviews?.GetInt32("reviews") ?? 0,
         };
     }
 

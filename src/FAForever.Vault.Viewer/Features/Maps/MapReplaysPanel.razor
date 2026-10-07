@@ -3,7 +3,7 @@
 @inject AuthService Auth
 
 @* How the map plays, from the last 100 rated games on this version: wins by start position (is a
-   side favoured?), factions picked and game lengths, with the newest games as cards. The games
+   side favoured?), factions picked and game lengths, with the two newest games as cards. The games
    come from the FAF API, which answers logged-in players only. *@
 @if (!Auth.IsAuthenticated)
 {
@@ -87,7 +87,7 @@ else
                 <h2 class="text-[16px] font-bold">Latest games</h2>
                 <a href="@(games.FirstOrDefault()?.StartTime is { } newest ? MapLinks.Replays(Vault.Name, DateOnly.FromDateTime(newest.UtcDateTime)) : MapLinks.Replays(Vault.Name))" class="btn-secondary">Search the replays on this map</a>
             </div>
-            @foreach (GameSummary game in games.Take(6))
+            @foreach (GameSummary game in games.Take(2))
             {
                 <GameCard @key="game.Id" Game="game" />
             }

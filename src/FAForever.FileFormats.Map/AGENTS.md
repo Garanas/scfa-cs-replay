@@ -75,7 +75,7 @@ What the Viewer's map page shows beyond the files themselves:
   player). `Measure` is the expensive part and runs once, on the layer that links the start positions
   and in blocks of the game's compression threshold (`NavGrid.Coarsen`); `Classify` runs per set of
   thresholds. The guideline names the roles, not the distances: the defaults (base radius 60 ogrids,
-  contested within 15%, expansion spots within 20 ogrids) were checked with the owner on Theta Passage
+  contested within 15%, expansion spots within 25 ogrids) were checked with the owner on Theta Passage
   (4 safe, 0 expandable, 7 raidable, 1 contestable per player) and Glacier Valley.
 - `MapSymmetry`: rotational or mirrored, from the start positions and resource markers (2 ogrids of tolerance).
 - `MapArchive`: reads the vault's zip piece by piece: the directory from the end, then only the

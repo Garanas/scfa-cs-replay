@@ -1,25 +1,17 @@
 @using System.Globalization
 @using System.Numerics
 
-@* What a player wants to know first: how much mass, how far apart, water or not, and whether
-   land units reach the enemy. *@
+@* What a player wants to know first: the start positions and resources on the map, how much mass
+   and reclaim, how far apart, water or not, and whether land units reach the enemy. *@
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
     <div class="card self-start p-3 sm:p-3">
         <MapSurface Map="Map" AriaLabel="@($"{Map.Name} with start positions and resources")">
-            @if (Map.ConnectingRoute is { } route)
-            {
-                <MapRouteLine Route="route" Unit="unit" />
-            }
             <MapResourceMarkers Map="Map" Unit="unit" />
         </MapSurface>
         <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-muted">
             <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-primary"></span>Start position</span>
             <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 bg-[#7fe08a]"></span>Mass</span>
             <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full border-2 border-[#f5b83d]"></span>Hydrocarbon</span>
-            @if (Map.ConnectingRoute is not null)
-            {
-                <span class="inline-flex items-center gap-1.5"><span class="w-4 border-t-2 border-dashed border-ink"></span>Shortest route by @LayerName(Map.Extractors.Layer)</span>
-            }
         </div>
     </div>
 
@@ -47,11 +39,14 @@
             </div>
         </div>
 
-        <MapVerdict Title="@VerdictTitle" Tone="@VerdictTone">@VerdictText</MapVerdict>
-
         <div class="card">
             <h2 class="text-[16px] font-bold">About this map</h2>
             <dl class="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm">
+                @if (Vault is not null)
+                {
+                    <dt class="text-ink-muted">Ranked</dt>
+                    <dd>@(Vault.Ranked ? "Yes: games on it count for rating" : "No: games on it do not count for rating")</dd>
+                }
                 <dt class="text-ink-muted">Size</dt>
                 <dd>@Map.Width × @Map.Height ogrids (@MapSizes.Kilometres(Map.Width, Map.Height))</dd>
                 <dt class="text-ink-muted">Teams</dt>
@@ -60,8 +55,10 @@
                 <dd>@(Map.Scenario.Configurations.FirstOrDefault()?.ExtraArmies is { Count: > 0 } extra ? string.Join(", ", extra) : "None")</dd>
                 <dt class="text-ink-muted">No rush radius</dt>
                 <dd>@(Map.Scenario.NoRushRadius is > 0 and var radius ? $"{Fmt(radius)} ogrids" : "None")</dd>
+                <dt class="text-ink-muted">Between the bases</dt>
+                <dd>@ConnectionLabel</dd>
                 <dt class="text-ink-muted">Symmetry</dt>
-                <dd>@SymmetryLabel(Map.Symmetry)</dd>
+                <dd>@(Map.Symmetry is null ? "Not symmetric" : SymmetryLabel(Map.Symmetry))</dd>
                 <dt class="text-ink-muted">Terrain set</dt>
                 <dd>@string.Join(", ", Biomes)</dd>
                 <dt class="text-ink-muted">Playable area</dt>
@@ -75,11 +72,53 @@
             }
             <MapSource>From the map's <code>_scenario.lua</code>, the markers of its <code>_save.lua</code> and the <code>.scmap</code>.</MapSource>
         </div>
+
+        @if (Vault is { Versions.Count: > 0 } vault)
+        {
+            @* Every version of the map, the newest first; each opens its own page with the same tab. *@
+            <div class="card">
+                <h2 class="text-[16px] font-bold">Versions</h2>
+                <ul class="mt-3 divide-y divide-edge/60 text-sm">
+                    @foreach (MapVersionReference version in vault.Versions)
+                    {
+                        bool current = version.FolderName == Map.Folder;
+                        bool latest = version == vault.Versions.FirstOrDefault(v => !v.Hidden);
+                        <li>
+                            <a href="@MapLinks.Map(version.FolderName)" aria-current="@(current ? "page" : null)"
+                               class="grid grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-1.5 transition @(current ? "bg-raised font-semibold text-ink" : "text-ink-muted hover:bg-raised hover:text-ink")">
+                                <span class="font-mono">v@(version.Version)</span>
+                                <span class="min-w-0 truncate">
+                                    @(version.UploadedAt?.ToString("MMM yyyy", CultureInfo.InvariantCulture))
+                                    @if (latest)
+                                    {
+                                        <span class="badge ml-1">latest</span>
+                                    }
+                                    @if (version.Hidden)
+                                    {
+                                        <span class="badge ml-1" title="Taken out of the vault by its author">hidden</span>
+                                    }
+                                </span>
+                                <span class="whitespace-nowrap text-right tabular-nums">
+                                    @version.GamesPlayed.ToString("N0", CultureInfo.InvariantCulture) @(version.GamesPlayed == 1 ? "game" : "games")
+                                    @if (version.AverageScore is { } score)
+                                    {
+                                        <span class="ml-2"><span class="text-accent">★</span> @score.ToString("0.0", CultureInfo.InvariantCulture)</span>
+                                    }
+                                </span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
     </div>
 </div>
 
 @code {
     [Parameter, EditorRequired] public required LoadedMap Map { get; set; }
+
+    /// <summary>The vault's numbers of this version, when signed in: whether it is ranked, and every version of the map.</summary>
+    [Parameter] public MapVersionDetails? Vault { get; set; }
 
     private double unit;
 
@@ -96,25 +135,14 @@
     private string? Description => Map.Scenario.Description is { Length: > 0 } text
         && System.Text.RegularExpressions.Regex.Replace(text, @"^\s*<LOC[^>]*>", "").Trim() is { Length: > 0 } readable ? readable : null;
 
-    private string VerdictTitle => Map.Extractors.Layer switch
+    private string ConnectionLabel => Map.Extractors.Layer switch
     {
-        _ when Map.Starts.Count < 2 => "This map has one start position",
-        NavLayer.Land => "All start positions share one land mass",
-        NavLayer.Amphibious => "Only amphibious units reach the other start positions",
-        NavLayer.Hover => "Only hover units reach the other start positions",
-        _ => "No route over land or water links the start positions",
+        _ when Map.Starts.Count < 2 => "One start position",
+        NavLayer.Land => "Land units reach every start position",
+        NavLayer.Amphibious => "Amphibious crossing only",
+        NavLayer.Hover => "Hover crossing only",
+        _ => "Air only",
     };
-
-    private MapVerdict.VerdictTone VerdictTone => Map.Extractors.Layer switch
-    {
-        NavLayer.Land => MapVerdict.VerdictTone.Good,
-        null when Map.Starts.Count >= 2 => MapVerdict.VerdictTone.Problem,
-        _ => MapVerdict.VerdictTone.Notice,
-    };
-
-    private string VerdictText => Map.ConnectingRoute is { } route && Map.StraightDistance > 0
-        ? $"The route between the closest start positions is {Fmt(route.Length)} ogrids, {(route.Length / Map.StraightDistance).ToString("0.00", CultureInfo.InvariantCulture)} times the straight line. The Pathing tab shows where each kind of unit can go."
-        : Map.Starts.Count < 2 ? "" : "Expect a game in the air and on the water. The Pathing tab shows where each kind of unit can go.";
 
     public static string LayerName(NavLayer? layer) => layer switch
     {

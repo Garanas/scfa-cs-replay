@@ -3,8 +3,8 @@
 @inject MapImages Images
 
 @* Where each kind of unit can go: the regions (labels) of the navigational mesh that the game
-   generates for its AI (lua/sim/NavGenerator.lua, ported in NavGenerator), the route between the
-   closest start positions, and the markers the AI plans with. *@
+   generates for its AI (lua/sim/NavGenerator.lua, ported in NavGenerator), and the markers the AI
+   plans with. *@
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
     <div class="card self-start p-3 sm:p-3">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
@@ -21,28 +21,14 @@
             </span>
         </div>
         <MapSurface Map="Map" Terrain="muted" Overlay="overlay" AriaLabel="@($"Where {LayerLabel} can go on {Map.Name}")">
-            @if (Map.ClosestStarts is var (a, b) && selected != NavLayer.Water)
-            {
-                <line x1="@F(Map.Starts[a].Position.X)" y1="@F(Map.Starts[a].Position.Z)" x2="@F(Map.Starts[b].Position.X)" y2="@F(Map.Starts[b].Position.Z)"
-                      stroke="rgba(255,255,255,0.6)" stroke-width="@F(unit * 0.6)" stroke-dasharray="@F(unit * 1.5) @F(unit * 2.5)" />
-            }
-            @if (route is not null)
-            {
-                <MapRouteLine Route="route" Unit="unit" />
-            }
         </MapSurface>
         <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-muted">
             <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm border border-edge bg-black/60"></span>Cannot go</span>
             <span>Each colour is one connected region</span>
-            @if (route is not null)
-            {
-                <span class="inline-flex items-center gap-1.5"><span class="w-4 border-t-2 border-dashed border-ink"></span>Shortest route</span>
-            }
         </div>
     </div>
 
     <div class="grid grid-cols-1 content-start gap-4">
-        <MapVerdict Title="@VerdictTitle" Tone="@VerdictTone">@VerdictText</MapVerdict>
 
         <div class="card">
             <h2 class="text-[16px] font-bold">Regions</h2>
@@ -81,14 +67,20 @@
                 }
             </div>
             <MapSource>
-                A port of the game's navigational mesh (<code>lua/sim/NavGenerator.lua</code>): land units climb sides of up to 0.75, ships need water 1.5 deep,
+                A port of the game's navigational mesh (<FaSourceLink Path="lua/sim/NavGenerator.lua" />): land units climb sides of up to 0.75, ships need water 1.5 deep,
                 amphibious units go up to 25 deep. Regions under 0.16 km² without resources are left out, as in the game.@(selected == NavLayer.Water ? " The game counts no resources for ships." : "")
             </MapSource>
         </div>
 
         <div class="card">
             <h2 class="text-[16px] font-bold">For the AI</h2>
-            <p class="mt-1 text-sm text-ink-muted">The markers the game's AI plans with. Maps without path nodes play poorly against the AI.</p>
+            <p class="mt-1 text-sm text-ink-muted">
+                The markers the game's original AI plans with; without path nodes it plays poorly. Most modern AIs, such as
+                <a href="https://github.com/maudlin27/M27AI" target="_blank" rel="noreferrer" class="text-primary hover:underline">M27</a>,
+                <a href="https://github.com/maudlin27/M28AI" target="_blank" rel="noreferrer" class="text-primary hover:underline">M28</a> and
+                <a href="https://github.com/relent0r/RNGAI" target="_blank" rel="noreferrer" class="text-primary hover:underline">RNGAI</a>,
+                do not depend on them: they work out the map themselves.
+            </p>
             @if (aiMarkers.Count == 0)
             {
                 <p class="mt-3 text-sm">This map has no markers for the AI.</p>
@@ -127,7 +119,6 @@
 
     private NavLayer selected = NavLayer.Land;
     private NavGrid grid = default!;
-    private NavRoute? route;
     private Task<string>? overlay;
     private double unit;
     private List<(string Type, int Count)> aiMarkers = [];
@@ -138,7 +129,6 @@
         string? requested = UrlQuery.Get(Navigation, "layer")?.ToLowerInvariant();
         selected = Layers.FirstOrDefault(l => l.Value == requested, Layers[0]).Layer;
         grid = Map.Navigation[selected];
-        route = selected == NavLayer.Water ? null : Map.RouteFor(selected);
         overlay = Images.GridAsync(Map, "layer:" + selected, Map.Width, Map.Height, () =>
         {
             byte[] values = new byte[grid.Cells.Length];
@@ -162,20 +152,6 @@
         NavLayer.Hover => "hover units",
         _ => "ships",
     };
-
-    private string VerdictTitle => selected == NavLayer.Water
-        ? grid.Labels.Count switch { 0 => "No water is deep enough for ships", 1 => "One body of water for ships", var n => $"{n} separate bodies of water for ships" }
-        : Map.Starts.Count < 2 ? "This map has one start position"
-        : route is not null ? $"{Capitalized(LayerLabel)} reach the other start position"
-        : $"{Capitalized(LayerLabel)} cannot reach the other start position";
-
-    private MapVerdict.VerdictTone VerdictTone => selected == NavLayer.Water || route is not null || Map.Starts.Count < 2 ? MapVerdict.VerdictTone.Good : MapVerdict.VerdictTone.Problem;
-
-    private string VerdictText => route is not null && Map.StraightDistance > 0
-        ? $"{route.Length.ToString("N0", CultureInfo.InvariantCulture)} ogrids ({MapOverviewPanel.Km(route.Length)}), {(route.Length / Map.StraightDistance).ToString("0.00", CultureInfo.InvariantCulture)} times the straight line between the closest start positions."
-        : selected == NavLayer.Water ? "Ships need water at least 1.5 deep." : Map.Starts.Count < 2 ? "" : "The closest start positions lie in different regions for them.";
-
-    private static string Capitalized(string text) => char.ToUpperInvariant(text[0]) + text[1..];
 
     private string Width(int count) => (100.0 * count / Math.Max(1, aiMarkers[0].Count)).ToString("0.#", CultureInfo.InvariantCulture);
 

@@ -8,70 +8,69 @@
    (author, games, reviews) are added to the header when signed in, and left out silently
    otherwise, like the replay pages do with ratings. *@
 <article>
-    <header class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 border-b border-edge pb-6">
-        <div class="flex min-w-0 items-start gap-4">
-            <div class="w-20 shrink-0 sm:w-28">
+    @* Left what the map is (preview, name, author and version), right the facts about it (size,
+       players, the vault's numbers), then the share button, as on the replay pages; on narrow screens
+       the facts move below. What the analysis finds and the other versions are on the Overview tab. *@
+    <header class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 border-b border-edge pb-6 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+        <div class="flex min-w-0 items-center gap-4">
+            <div class="w-20 shrink-0 sm:w-24">
                 <MapSurface Map="Map" HideStarts="true" AriaLabel="@($"Preview of {Map.Name}")" />
             </div>
             <div class="min-w-0">
-                <a href="@MapLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Maps</a>
-                <h1 class="mt-1 text-2xl font-bold sm:text-3xl">@Map.Name</h1>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                    <span class="badge text-ink">@MapSizes.Kilometres(Map.Width, Map.Height)</span>
-                    <span class="badge text-ink">@Map.Starts.Count @(Map.Starts.Count == 1 ? "player" : "players")</span>
-                    @if (Map.Scenario.MapVersion is { } version)
-                    {
-                        <span class="badge" title="The version of the map in the vault">v@(version)</span>
-                    }
-                    <span class="badge @ConnectionTone">@ConnectionLabel</span>
-                    <span class="badge @(Map.Symmetry is null ? "border-accent/60 text-accent" : "")">@(Map.Symmetry is null ? "Not symmetric" : "Symmetric")</span>
-                    <span class="badge @(guidelines == 4 ? "" : "border-accent/60 text-accent")" title="Mass extractors per role against a map making guideline, on the Resources tab">Extractors: @guidelines of 4 guidelines</span>
-                    @if (Map.Navigation.HasWater)
-                    {
-                        <span class="badge">Water</span>
-                    }
-                    @if (Map.Scenario.Type is { Length: > 0 } type && type != "skirmish")
-                    {
-                        <span class="badge">@(type == "campaign_coop" ? "co-op mission" : type)</span>
-                    }
-                </div>
-                @if (vault is not null)
+                <h1 class="text-2xl font-bold sm:text-3xl">@Map.Name</h1>
+                @if (vault?.Author is not null || Map.Scenario.MapVersion is not null)
                 {
-                    <p class="mt-2 text-sm text-ink-muted">
-                        @if (vault.Author is { } author)
+                    <p class="mt-1 text-sm text-ink-muted">
+                        @if (vault?.Author is { } author)
                         {
-                            <span>by <span class="font-medium text-ink">@author</span> · </span>
+                            <span>by <span class="font-medium text-ink">@author</span></span>
                         }
-                        <span>@vault.GamesPlayed.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) games on this version</span>
-                        @if (vault.AverageScore is { } score)
+                        @if (vault?.Author is not null && Map.Scenario.MapVersion is not null)
                         {
-                            <span> · <span class="text-accent">★</span> @score.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) from @vault.Reviews @(vault.Reviews == 1 ? "review" : "reviews")</span>
+                            <span> · </span>
                         }
-                        @if (vault.Ranked)
+                        @if (Map.Scenario.MapVersion is { } version)
                         {
-                            <span> · ranked</span>
-                        }
-                        @if (vault.Featured)
-                        {
-                            <span> · featured</span>
+                            <span>version @version@(vault is { Versions.Count: > 1 } ? $" of {vault.Versions.Max(v => v.Version)}" : "")</span>
                         }
                     </p>
-                    @if (vault.NewerVersion is { } newer)
-                    {
-                        <p class="mt-2 text-sm">
-                            A newer version is in the vault:
-                            <a href="@MapLinks.Map(newer.FolderName)" class="font-medium text-primary hover:underline">version @newer.Version</a>.
-                        </p>
-                    }
-                    @if (vault.Hidden)
-                    {
-                        <p class="mt-2 text-sm text-ink-muted">Its author took this version out of the vault; games played on it remain.</p>
-                    }
                 }
             </div>
         </div>
+        <div class="col-span-2 flex min-w-0 flex-col gap-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:items-end sm:text-right">
+            <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                <span class="badge text-ink">@MapSizes.Kilometres(Map.Width, Map.Height)</span>
+                <span class="badge text-ink">@Map.Starts.Count @(Map.Starts.Count == 1 ? "player" : "players")</span>
+                @if (vault?.Featured == true)
+                {
+                    <span class="badge border-primary text-primary">featured</span>
+                }
+                @if (Map.Scenario.Type is { Length: > 0 } type && type != "skirmish")
+                {
+                    <span class="badge">@(type == "campaign_coop" ? "co-op mission" : type)</span>
+                }
+            </div>
+            @if (vault is not null)
+            {
+                <p class="text-sm text-ink-muted">
+                    @vault.GamesPlayed.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) games
+                    @if (vault.AverageScore is { } score)
+                    {
+                        <span> · <span class="text-accent">★</span> @score.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) from @vault.Reviews @(vault.Reviews == 1 ? "review" : "reviews")</span>
+                    }
+                </p>
+                @if (vault.NewerVersion is { } newer)
+                {
+                    <p class="text-sm">A newer version is in the vault: <a href="@MapLinks.Map(newer.FolderName)" class="font-medium text-primary hover:underline">version @newer.Version</a></p>
+                }
+                @if (vault.Hidden)
+                {
+                    <p class="text-sm text-ink-muted">Taken out of the vault by its author</p>
+                }
+            }
+        </div>
         <ShareButton Title="@LinkTitle" IconClass="h-6 w-6" LabelClass="text-xs font-semibold"
-                     Class="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary sm:h-20 sm:w-20" />
+                     Class="col-start-2 row-start-1 flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-1 justify-self-end rounded-lg border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary sm:col-start-3 sm:h-20 sm:w-20" />
     </header>
 
     <nav class="tab-strip mt-6 border-b border-edge pb-px" aria-label="Map sections">
@@ -88,10 +87,11 @@
     </nav>
 
     <div class="py-6">
+        @TabIntro(activeTab)
         @switch (activeTab)
         {
             case Tab.Overview:
-                <MapOverviewPanel Map="Map" />
+                <MapOverviewPanel Map="Map" Vault="vault" />
                 break;
             case Tab.Terrain:
                 <MapTerrainPanel Map="Map" />
@@ -134,7 +134,6 @@
 
     private Tab activeTab = Tab.Overview;
     private Tab? scrolledToTab;
-    private int guidelines;
     private MapVersionDetails? vault;
     private string? vaultError;
     private string? vaultFolder;
@@ -148,7 +147,6 @@
     protected override void OnParametersSet()
     {
         activeTab = ParseTab(UrlQuery.Get(Navigation, "tab"));
-        guidelines = ExtractorLayout.Classify(Map.Extractors, MapResourcesPanel.ReadThresholds(Navigation)).GuidelinesMet;
     }
 
     protected override async Task OnParametersSetAsync()
@@ -208,7 +206,12 @@
     private void SelectTab(Tab tab)
     {
         activeTab = tab;
-        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("tab", tab == Tab.Overview ? null : tab.ToString().ToLowerInvariant()), replace: true);
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["tab"] = tab == Tab.Overview ? null : tab.ToString().ToLowerInvariant(),
+            // the page of the reviews means nothing on another tab
+            ["page"] = null,
+        }), replace: true);
     }
 
     // The tab query values are part of the link contract: never rename one.
@@ -223,6 +226,30 @@
         _ => Tab.Overview,
     };
 
+    /// <summary>One or two lines on what a tab shows and where it comes from, as on the replay pages; none on the Overview.</summary>
+    private static RenderFragment TabIntro(Tab tab) => tab switch
+    {
+        Tab.Terrain => Intro(@<text>
+            The map as its maker's preview shows it, and as its heightmap shapes it: the relief, the spread of heights and the
+            cliffs that land units cannot climb.</text>),
+        Tab.Resources => Intro(@<text>
+            Where the mass and hydrocarbons are, and what each mass spot is for. A spot's role follows from how far it is from the
+            start positions along the routes units take.</text>),
+        Tab.Pathing => Intro(@<text>
+            Where each kind of unit can go, worked out the way the game does for its AI (<FaSourceLink Path="lua/sim/NavGenerator.lua" />).
+            Each colour is a region that units can cross without leaving it.</text>),
+        Tab.Reclaim => Intro(@<text>
+            What there is to reclaim: the trees, rocks and wrecks the map maker placed, and the units the map starts with.</text>),
+        Tab.Replays => Intro(@<text>
+            How the map plays, from the last 100 rated games on this version in the vault.</text>),
+        Tab.Reviews => Intro(@<text>
+            What players think of this version of the map. A new version of a map starts without reviews.</text>),
+        _ => _ => { },
+    };
+
+    private static RenderFragment Intro(RenderFragment content)
+        => @<p class="mb-4 text-sm text-ink-muted">@content</p>;
+
     private static bool NeedsLogin(Tab tab) => tab is Tab.Replays or Tab.Reviews;
 
     private static string TabId(Tab tab) => $"map-tab-{tab.ToString().ToLowerInvariant()}";
@@ -230,17 +257,6 @@
     private static string TabLabel(Tab tab) => tab.ToString();
 
     private string LinkTitle => $"{Map.Name}" + (activeTab == Tab.Overview ? "" : $" · {TabLabel(activeTab)}");
-
-    private string ConnectionLabel => Map.Extractors.Layer switch
-    {
-        NavLayer.Land => "Land map",
-        NavLayer.Amphibious => "Amphibious crossing only",
-        NavLayer.Hover => "Hover crossing only",
-        _ when Map.Starts.Count < 2 => "One start position",
-        _ => "Air only",
-    };
-
-    private string ConnectionTone => Map.Extractors.Layer == NavLayer.Land || Map.Starts.Count < 2 ? "" : "border-accent/60 text-accent";
 
     public override void Dispose()
     {

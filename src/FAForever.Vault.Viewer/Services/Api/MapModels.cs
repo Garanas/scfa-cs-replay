@@ -187,10 +187,23 @@ public sealed record MapVersionDetails(int VersionId, int MapId, string Name, st
 
     /// <summary>The newest version of the map that is not hidden, when it is not this one.</summary>
     public MapVersionReference? NewerVersion { get; init; }
+
+    /// <summary>Every version of the map, this one included, the newest first.</summary>
+    public IReadOnlyList<MapVersionReference> Versions { get; init; } = [];
 }
 
-/// <summary>Another version of a map: its number and folder.</summary>
-public sealed record MapVersionReference(int Version, string FolderName);
+/// <summary>A version of a map: its number and folder, and whether its author took it out of the vault.</summary>
+public sealed record MapVersionReference(int Version, string FolderName, bool Hidden = false)
+{
+    public DateTimeOffset? UploadedAt { get; init; }
+
+    public int GamesPlayed { get; init; }
+
+    /// <summary>Average review score of this version, 1 to 5; null without reviews.</summary>
+    public double? AverageScore { get; init; }
+
+    public int Reviews { get; init; }
+}
 
 /// <summary>A player's review of a map version: a score from 1 to 5 and an optional text.</summary>
 public sealed record MapReview(int Id, int? PlayerId, string Player, int Score, string? Text, DateTimeOffset? UpdatedAt);

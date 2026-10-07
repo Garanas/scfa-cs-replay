@@ -1,0 +1,9 @@
+@* A file of the FA repository (the game's code) as a link to it on GitHub, like the replay tabs'
+   FaSource: the path as written, in code type. *@
+<a href="https://github.com/FAForever/fa/blob/develop/@Path" target="_blank" rel="noreferrer"
+   class="font-mono text-primary hover:underline">@Path</a>
+
+@code {
+    /// <summary>The path in the repository, e.g. <c>lua/sim/NavGenerator.lua</c>.</summary>
+    [Parameter, EditorRequired] public required string Path { get; set; }
+}

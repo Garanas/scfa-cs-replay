@@ -1,4 +1,5 @@
 @using System.Globalization
+@inherits UrlStateComponent
 @inject FafApiClient Api
 @inject AuthService Auth
 
@@ -50,7 +51,7 @@ else
                     </div>
                 </div>
                 <div class="mt-4 divide-y divide-edge">
-                    @foreach (MapReview review in reviews)
+                    @foreach (MapReview review in reviews.Skip((CurrentPage - 1) * PageSize).Take(PageSize))
                     {
                         <article class="py-3">
                             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -65,8 +66,15 @@ else
                         </article>
                     }
                 </div>
+                @if (PageCount > 1)
+                {
+                    <nav class="mt-3 flex items-center justify-between gap-3 border-t border-edge pt-3 text-sm" aria-label="Pages of reviews">
+                        <button type="button" class="btn-secondary" disabled="@(CurrentPage == 1)" @onclick="() => SetPage(CurrentPage - 1)">← Newer</button>
+                        <span class="text-ink-muted">Page @CurrentPage of @PageCount</span>
+                        <button type="button" class="btn-secondary" disabled="@(CurrentPage == PageCount)" @onclick="() => SetPage(CurrentPage + 1)">Older →</button>
+                    </nav>
+                }
             }
-            <MapSource>The FAF API: the reviews of this map version (<code>mapVersionReview</code>), the 100 most recently changed.</MapSource>
         </div>
 
         <div class="card self-start">
@@ -118,7 +126,6 @@ else
                     <p class="text-sm text-primary" role="status">@saved</p>
                 }
             </form>
-            <MapSource>Posted to the FAF API as you: the score, and the text when there is one.</MapSource>
         </div>
     </div>
 }
@@ -143,6 +150,21 @@ else
     private bool confirmDelete;
     private string? formError;
     private string? saved;
+
+    private const int PageSize = 5;
+
+    private int requestedPage = 1;
+
+    private int PageCount => reviews is { Count: > 0 } list ? (list.Count + PageSize - 1) / PageSize : 1;
+
+    /// <summary>The page in the URL (<c>page</c>), within the pages there are.</summary>
+    private int CurrentPage => Math.Clamp(requestedPage, 1, PageCount);
+
+    protected override void OnParametersSet()
+        => requestedPage = int.TryParse(UrlQuery.Get(Navigation, "page"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int page) ? page : 1;
+
+    private void SetPage(int page)
+        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("page", page <= 1 ? null : page), replace: true);
 
     private double Average => reviews is { Count: > 0 } list ? list.Average(review => review.Score) : 0;
 

@@ -30,7 +30,7 @@ namespace FAForever.FileFormats.Map
     /// <param name="ContestedWithin">A spot is contestable when its two nearest start positions are this
     /// close in distance, as a fraction of their average distance.</param>
     /// <param name="ExpansionSpacing">Spots this close to each other, in ogrids, belong to one group.</param>
-    public sealed record ExtractorThresholds(float BaseRadius = 60, float ContestedWithin = 0.15f, float ExpansionSpacing = 20)
+    public sealed record ExtractorThresholds(float BaseRadius = 60, float ContestedWithin = 0.15f, float ExpansionSpacing = 25)
     {
         public static ExtractorThresholds Default { get; } = new ExtractorThresholds();
 

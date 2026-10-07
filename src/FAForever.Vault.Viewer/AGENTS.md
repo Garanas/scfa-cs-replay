@@ -478,11 +478,16 @@ generated maps, which are not in the vault). The pieces live in `Features/Maps/`
   navigational mesh and measures the distances (FAForever.FileFormats.Map), yielding to the browser
   between the steps. In a debug build: Theta Passage (5 km) under 1 s, Seton's Clutch (20 km) about 5 s, most of it
   the mesh. The last three maps stay in memory. Hot reload rebuilds the page and so loads the map again.
+- **The header** has what the map is on the left (preview, name, author and "version 3 of 4") and the
+  facts on the right (size, players, the vault's numbers, then Share), like the replay pages; what the
+  analysis finds (between the bases, symmetry) and whether it is ranked are on the Overview, the
+  extractor conventions on Resources. Signed in, the Overview lists every version of the map
+  (`MapVersionDetails.Versions`: upload, games, rating, hidden ones marked), each a link to its page.
 - **Signed out, everything but Replays and Reviews works**, as on the replay pages; the vault's numbers
-  in the header (author, games, reviews, a newer version) are added silently when signed in. Replays
+  in the header (author, games, reviews, the versions) are added silently when signed in. Replays
   shows the last 100 rated games of the version (wins by start position from `startSpot`, factions,
-  median length, the newest as cards); Reviews lists them and lets the player post, change or delete
-  their own (one per player and version, `FafApiClient.SaveMapReviewAsync`).
+  median length, the two newest as cards); Reviews lists them five per page and lets the player post,
+  change or delete their own (one per player and version, `FafApiClient.SaveMapReviewAsync`).
 - **Images** come from `Services/Maps/MapImages.cs` through `js/maps.js` (`fafMaps`): the map's own
   preview from the `.scmap` (the backdrop by default), views drawn from the heightmap (relief, elevation,
   cliffs, a grey one under overlays) and colour grids (regions, owners, prop density), each a blob URL at
@@ -497,9 +502,10 @@ generated maps, which are not in the vault). The pieces live in `Features/Maps/`
 | `tab` | `terrain`, `resources`, `pathing`, `reclaim`, `replays`, `reviews` | Overview |
 | `terrain` | Terrain view: `relief`, `elevation`, `cliffs` | The map's preview |
 | `resources` | `closest` tints each ogrid by its closest start position | The extractor roles |
-| `base`, `contested`, `spacing` | Thresholds of the extractor roles: base radius (ogrids, 20 to 120), contested within (percent, 5 to 40), expansion spots within (ogrids, 8 to 50) | 60, 15, 20 |
+| `base`, `contested`, `spacing` | Thresholds of the extractor roles: base radius (ogrids, 20 to 120), contested within (percent, 5 to 40), expansion spots within (ogrids, 8 to 50) | 60, 15, 25 |
 | `layer` | Pathing: `amphibious`, `hover`, `naval` | Land |
 | `props` | Reclaim: `trees`, `rocks`, `wrecks`, `other` | All props |
+| `page` | Reviews: the page of 5 reviews, newest first; dropped when the tab changes | 1 |
 
 ## 404 page
 
