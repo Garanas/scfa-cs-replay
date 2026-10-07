@@ -1,0 +1,61 @@
+@using FAForever.Vault.Viewer.Features.Units
+@implements IDisposable
+@inject ThemeService Theme
+
+@* The 404 page: a random message of the chosen faction (NotFoundMessages), with the unit it is
+   about. Switching faction here picks a message of the new faction; "Another message" picks a
+   different one of the same faction. *@
+<section class="mx-auto max-w-2xl py-16 text-center">
+    <p class="font-display text-6xl font-extrabold text-primary">404</p>
+    <p class="mt-6 text-xs font-semibold uppercase tracking-widest text-ink-faint">@NotFoundMessages.Sender(Theme.Current)</p>
+    <h1 class="mt-2 font-display text-2xl font-bold">@message.Title</h1>
+
+    <div class="mt-6 flex items-start gap-4 text-left">
+        <a href="@($"{UnitLinks.Database}?{UnitLinks.UnitParameter}={message.Unit}")" class="shrink-0 transition hover:opacity-80"
+           title="@($"{message.UnitName} in the unit database")">
+            <UnitIcon BlueprintId="@message.Unit" Size="64" Title="@message.UnitName" />
+        </a>
+        <p class="text-ink-muted">@message.Body</p>
+    </div>
+
+    @if (message.DataLink is { } tip)
+    {
+        <p class="mt-6 rounded-md border-l-4 border-primary bg-raised px-4 py-3 text-left text-sm text-ink-muted">
+            <span class="font-semibold text-ink">Data-Link:</span> @tip
+        </p>
+    }
+
+    <p class="mt-8 text-sm text-ink-faint">The address does not match any page of the vault.</p>
+    <div class="mt-4 flex flex-wrap justify-center gap-3">
+        <a href="" class="btn-primary inline-flex">Back to home</a>
+        @if (NotFoundMessages.For(Theme.Current).Count > 1)
+        {
+            <button type="button" class="btn-secondary inline-flex cursor-pointer" @onclick="Pick">Another message</button>
+        }
+    </div>
+</section>
+
+@code {
+    private NotFoundMessage message = null!;
+
+    protected override void OnInitialized()
+    {
+        Pick();
+        Theme.Changed += OnThemeChanged;
+    }
+
+    /// <summary>Picks a message of the current faction at random, other than the one shown.</summary>
+    private void Pick()
+    {
+        NotFoundMessage[] choices = NotFoundMessages.For(Theme.Current).Where(choice => choice != message).ToArray();
+        message = choices[Random.Shared.Next(choices.Length)];
+    }
+
+    private void OnThemeChanged()
+    {
+        Pick();
+        StateHasChanged();
+    }
+
+    public void Dispose() => Theme.Changed -= OnThemeChanged;
+}

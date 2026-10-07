@@ -459,6 +459,28 @@ What the data is like (measured 2026-10-06, with a login):
   loaded lazily. The content server serves previews and map zips anonymously with CORS `*` and
   Range requests, which the map parser can use to read single files from a zip.
 
+## 404 page
+
+`App.razor`'s `NotFound` renders `Features/NotFound/NotFoundView.razor`: a random message of the
+chosen faction (`NotFoundMessages.cs`, four or five per faction), with the icon of the unit it is about
+(linking to the unit database) and sometimes a "Data-Link" tip, the boxed tips of the manual.
+
+- The jokes come from the game manuals: the
+  [Supreme Commander manual](https://manuals.thqnordic.com/SupremeCommander/SupremeCommander_PC_Manual_EN.pdf)
+  for UEF, Cybran and Aeon (faction histories, characters, unit descriptions) and the
+  [Forged Alliance manual](https://manuals.thqnordic.com/SupremeCommander/SupremeCommanderFA_OnlineManual_DE.pdf)
+  (German), the Forged Alliance campaign (the commanders' lines and taunts in the FA repository's
+  `loc/US/strings_db.lua` and `lua/ui/game/taunt.lua`; untranslated Seraphim lines read "[Language Not Recognized]") and the Seraphim
+  language that their unit names are made of
+  ([word list](https://supcom.fandom.com/wiki/Seraphim_Language): `aez` command, `esel` radar,
+  `hyal` Mass, `atoh` extractor, ...). Keep new ones to what these sources say, so players recognise them.
+  The manuals predate the release and FAF's balance changes, so check a claim about a unit
+  against its blueprint in the FA repository (the manual's Mantis "repairs itself"; the game's
+  only repairs others).
+- Switching faction on the page picks a message of the new faction; "Another message" picks a
+  different one. The choice is not in the URL: the page has no state worth sharing.
+- The unit ids must be in the icon atlas (a missing one shows the placeholder icon).
+
 ## Units landing page
 
 `Pages/Units.razor` (`/units`, the Units tab in the header) is an entry page like About: a card for
