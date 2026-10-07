@@ -8,7 +8,15 @@
     <div class="card flex flex-col gap-3 self-start">
         <MapView Model="Model" />
         <div class="text-center">
-            <p class="font-display text-lg font-bold">@MapName</p>
+            @if (MapFolder is { } folder)
+            {
+                @* Generated maps are not in the vault, so only vault maps have a page. *@
+                <a href="@MapLinks.Map(folder)" class="font-display text-lg font-bold transition hover:text-primary" title="The map's page: terrain, resources, routes and reviews">@MapName</a>
+            }
+            else
+            {
+                <p class="font-display text-lg font-bold">@MapName</p>
+            }
             @if (MapSize is { } size)
             {
                 <p class="text-sm text-ink-muted">@size</p>
@@ -73,6 +81,8 @@
     [Parameter, EditorRequired] public required LoadedReplay Model { get; set; }
 
     private string MapName => Model.Replay.Header.Scenario.Map.DisplayName ?? Model.Metadata?.mapname ?? "Unknown map";
+
+    private string? MapFolder => MapPreviews.Folder(Model) is { } folder && !MapPreviews.IsGenerated(folder) ? folder : null;
 
     private string? MapSize
     {

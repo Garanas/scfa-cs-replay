@@ -136,6 +136,9 @@ public sealed record GamePlayer(string Login, int? Team, FAForever.FileFormats.B
 
     public bool IsAi { get; init; }
 
+    /// <summary>The start position the player had: 1 is <c>ARMY_1</c> of the map, and so on.</summary>
+    public int? StartSpot { get; init; }
+
     public int? RatingChange => Rating is { } before && RatingAfter is { } after ? after - before : null;
 
     public GameOutcome Outcome => Result switch

@@ -1,0 +1,24 @@
+@using System.Globalization
+
+@* Mass spots (squares) and hydrocarbons (rings) inside a MapSurface. A mass spot takes the colour
+   MassColor gives it, the green of the game's mass otherwise. *@
+@foreach (MapMarker hydro in Map.Hydrocarbons)
+{
+    <circle cx="@F(hydro.Position.X)" cy="@F(hydro.Position.Z)" r="@F(Unit * 3.2)" fill="rgba(0,0,0,0.45)" stroke="#f5b83d" stroke-width="@F(Unit * 1.1)"><title>@hydro.Name</title></circle>
+}
+@foreach (MapMarker mass in Map.Mass)
+{
+    double size = Unit * 3.4;
+    <rect x="@F(mass.Position.X - size / 2)" y="@F(mass.Position.Z - size / 2)" width="@F(size)" height="@F(size)"
+          fill="@(MassColor?.Invoke(mass) ?? "#7fe08a")" stroke="rgba(0,0,0,0.8)" stroke-width="@F(Unit * 0.5)"><title>@mass.Name</title></rect>
+}
+
+@code {
+    [Parameter, EditorRequired] public required LoadedMap Map { get; set; }
+
+    [Parameter] public double Unit { get; set; } = 1;
+
+    [Parameter] public Func<MapMarker, string>? MassColor { get; set; }
+
+    private static string F(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+}

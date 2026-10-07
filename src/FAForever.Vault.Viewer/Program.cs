@@ -2,6 +2,7 @@ using FAForever.Vault.Viewer;
 using FAForever.Vault.Viewer.Services.Analytics;
 using FAForever.Vault.Viewer.Services.Api;
 using FAForever.Vault.Viewer.Services.Auth;
+using FAForever.Vault.Viewer.Services.Maps;
 using FAForever.Vault.Viewer.Services.Replays;
 using FAForever.Vault.Viewer.Services.Theming;
 using FAForever.Vault.Viewer.Services.Units;
@@ -23,6 +24,8 @@ builder.Services.AddScoped<ReplayMapLookup>();
 builder.Services.AddScoped<UnitIconAtlas>();
 builder.Services.AddScoped<UnitDatabase>();
 builder.Services.AddScoped<UnitCardService>();
+builder.Services.AddScoped<MapLoader>();
+builder.Services.AddScoped<MapImages>();
 builder.Services.AddScoped<AnalyticsService>();
 
 builder.Services.AddSingleton(builder.Configuration.GetSection("OAuth").Get<OAuthOptions>() ?? new OAuthOptions());

@@ -1,0 +1,234 @@
+@using System.Globalization
+@inherits UrlStateComponent
+@inject MapImages Images
+
+@* What there is to reclaim: the props by kind and where they stand, the totals the map editor
+   counted, and the units the map places at the start (civilian buildings, wrecks). The mass of a
+   prop is in its blueprint, which the app does not have yet; the kinds come from the paths. *@
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+    <div class="card self-start p-3 sm:p-3">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+            <div class="inline-flex flex-wrap rounded-lg border border-edge bg-raised p-0.5" role="group" aria-label="Kind of prop">
+                @foreach (string kind in KindsShown)
+                {
+                    <button type="button" aria-pressed="@(selected == kind ? "true" : "false")"
+                            class="cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition @(selected == kind ? "bg-primary text-on-primary" : "text-ink-muted hover:text-ink")"
+                            @onclick="() => SetKind(kind)">@(kind == All ? "All props" : kind)</button>
+                }
+            </div>
+            <span class="text-xs text-ink-muted">Props per @Bin × @Bin ogrids</span>
+        </div>
+        <MapSurface Map="Map" Terrain="muted" Overlay="overlay" OverlayWidth="@(binsX * Bin)" OverlayHeight="@(binsZ * Bin)" AriaLabel="@($"Props on {Map.Name}")">
+            @foreach (MapUnit placed in units)
+            {
+                double s = unit * 2.6;
+                <polygon points="@F(placed.Position.X),@F(placed.Position.Z - s) @F(placed.Position.X + s),@F(placed.Position.Z) @F(placed.Position.X),@F(placed.Position.Z + s) @F(placed.Position.X - s),@F(placed.Position.Z)"
+                         fill="#e0703c" stroke="rgba(0,0,0,0.7)" stroke-width="@F(unit * 0.4)"><title>@(UnitNames.GetOrNull(placed.BlueprintId) ?? placed.BlueprintId)</title></polygon>
+            }
+        </MapSurface>
+        <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-muted">
+            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm @KindSwatch(selected)"></span>More props, brighter</span>
+            @if (units.Count > 0)
+            {
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rotate-45 bg-[#e0703c]"></span>Unit placed at the start</span>
+            }
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 content-start gap-4">
+        <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-lg border border-edge bg-raised p-3">
+                <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Mass in props</p>
+                <p class="font-display text-2xl font-bold">@(Map.Scenario.Reclaim is { } reclaim ? reclaim.Mass.ToString("N0", CultureInfo.InvariantCulture) : "Unknown")</p>
+                <p class="text-xs text-ink-muted">@(Map.Scenario.Reclaim is null ? "The map editor did not count it" : "as the map editor counted it")</p>
+            </div>
+            <div class="rounded-lg border border-edge bg-raised p-3">
+                <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Energy in props</p>
+                <p class="font-display text-2xl font-bold">@(Map.Scenario.Reclaim is { } reclaim2 ? reclaim2.Energy.ToString("N0", CultureInfo.InvariantCulture) : "Unknown")</p>
+                <p class="text-xs text-ink-muted">@Map.Scmap.Props.Count.ToString("N0", CultureInfo.InvariantCulture) props on the map</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="text-[16px] font-bold">Props by kind</h2>
+            <div class="mt-3 grid gap-1.5">
+                @foreach (string kind in Kinds.Where(kind => counts[kind] > 0))
+                {
+                    <div class="grid grid-cols-[6rem_minmax(0,1fr)_3rem] items-center gap-3 text-xs">
+                        <span><span class="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm @KindSwatch(kind)"></span>@kind</span>
+                        <span class="h-2 overflow-hidden rounded-full border border-edge bg-raised"><span class="block h-full rounded-full @KindSwatch(kind)" style="width: @Share(counts[kind])%"></span></span>
+                        <span class="text-right tabular-nums text-ink-muted">@counts[kind].ToString("N0", CultureInfo.InvariantCulture)</span>
+                    </div>
+                }
+            </div>
+            <MapSource>The props of the <code>.scmap</code>, sorted by the path of their blueprint. The totals are the <code>reclaim</code> of the <code>_scenario.lua</code>.</MapSource>
+        </div>
+
+        <div class="card">
+            <h2 class="text-[16px] font-bold">Units on the map at the start</h2>
+            @if (unitRows.Count == 0)
+            {
+                <p class="mt-2 text-sm text-ink-muted">This map places no units: no civilian buildings or wrecks.</p>
+            }
+            else
+            {
+                <div class="mt-3 overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-edge text-left text-xs text-ink-muted">
+                                <th class="py-1.5 pr-2 font-semibold">Unit</th>
+                                <th class="px-2 py-1.5 font-semibold">Army</th>
+                                <th class="py-1.5 pl-2 text-right font-semibold">Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ((string id, string army, int count) in unitRows.Take(10))
+                            {
+                                <tr class="border-b border-edge/60">
+                                    <td class="py-1.5 pr-2">
+                                        <a href="@($"{FAForever.Vault.Viewer.Features.Units.UnitLinks.Database}?unit={Uri.EscapeDataString(id.ToLowerInvariant())}")" class="inline-flex items-center gap-2 hover:text-primary">
+                                            <UnitIcon BlueprintId="@id" Size="24" />
+                                            <span>@(UnitNames.GetOrNull(id) ?? id)</span>
+                                        </a>
+                                    </td>
+                                    <td class="px-2 py-1.5 text-ink-muted">@army</td>
+                                    <td class="py-1.5 pl-2 text-right tabular-nums">@count</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (unitRows.Count > 10)
+                    {
+                        <p class="mt-2 text-xs text-ink-muted">@(unitRows.Count - 10) more kinds of units.</p>
+                    }
+                </div>
+            }
+            <MapSource>The unit groups of each army in the <code>_save.lua</code>.</MapSource>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string All = "all";
+    private const int Bin = 8;
+    private static readonly string[] Kinds = ["Trees", "Rocks", "Wrecks", "Other"];
+
+    [Parameter, EditorRequired] public required LoadedMap Map { get; set; }
+
+    private string selected = All;
+    private Dictionary<string, int> counts = [];
+    private List<MapUnit> units = [];
+    private List<(string Id, string Army, int Count)> unitRows = [];
+    private Task<string>? overlay;
+    private int binsX;
+    private int binsZ;
+    private double unit;
+    private LoadedMap? counted;
+
+    private IEnumerable<string> KindsShown => [All, .. Kinds.Where(kind => counts.GetValueOrDefault(kind) > 0)];
+
+    /// <summary>
+    /// The kind of a prop from the path of its blueprint below <c>props/</c>, e.g. <c>trees/pine06_s2_prop.bp</c>
+    /// of <c>/env/evergreen/props/trees/pine06_s2_prop.bp</c>: the terrain set before it can be a word
+    /// like "redrocks".
+    /// </summary>
+    public static string KindOf(string blueprint)
+    {
+        string path = blueprint.ToLowerInvariant().Replace('\\', '/');
+        int props = path.LastIndexOf("/props/", StringComparison.Ordinal);
+        path = props >= 0 ? path[(props + "/props/".Length)..] : path[(path.LastIndexOf('/') + 1)..];
+        return path.Contains("tree") ? "Trees"
+            : path.Contains("rock") || path.Contains("boulder") ? "Rocks"
+            : path.Contains("wreck") ? "Wrecks"
+            : "Other";
+    }
+
+    protected override void OnParametersSet()
+    {
+        unit = Math.Max(Map.Width, Map.Height) / 256.0;
+        if (!ReferenceEquals(counted, Map))
+        {
+            counted = Map;
+            counts = Kinds.ToDictionary(kind => kind, kind => 0);
+            foreach (ScmapProp prop in Map.Scmap.Props)
+            {
+                counts[KindOf(prop.Blueprint)]++;
+            }
+            List<(MapArmy Army, MapUnit Unit)> placed = [.. Map.Save.Armies.SelectMany(army => army.Units.AllUnits.Select(u => (army, u)))];
+            units = [.. placed.Select(p => p.Unit)];
+            unitRows = [.. placed
+                .GroupBy(p => (Id: p.Unit.BlueprintId.ToLowerInvariant(), p.Army.Name))
+                .Select(group => (group.Key.Id, group.Key.Name, group.Count()))
+                .OrderByDescending(row => row.Item3)];
+        }
+
+        string? requested = UrlQuery.Get(Navigation, "props");
+        selected = Kinds.FirstOrDefault(kind => string.Equals(kind, requested, StringComparison.OrdinalIgnoreCase)) ?? All;
+
+        binsX = (Map.Width + Bin - 1) / Bin;
+        binsZ = (Map.Height + Bin - 1) / Bin;
+        overlay = Images.GridAsync(Map, "props:" + selected, binsX, binsZ, Density, Palette(selected));
+    }
+
+    private byte[] Density()
+    {
+        int[] bins = new int[binsX * binsZ];
+        foreach (ScmapProp prop in Map.Scmap.Props)
+        {
+            if (selected != All && KindOf(prop.Blueprint) != selected)
+            {
+                continue;
+            }
+            int x = Math.Clamp((int)(prop.Position.X / Bin), 0, binsX - 1);
+            int z = Math.Clamp((int)(prop.Position.Z / Bin), 0, binsZ - 1);
+            bins[z * binsX + x]++;
+        }
+
+        int peak = Math.Max(1, bins.Max());
+        byte[] values = new byte[bins.Length];
+        for (int i = 0; i < bins.Length; i++)
+        {
+            // nine steps, by the square root so a few props still show
+            values[i] = bins[i] == 0 ? (byte)0 : (byte)Math.Clamp(1 + (int)(Math.Sqrt(bins[i] / (double)peak) * 8.99), 1, 9);
+        }
+        return values;
+    }
+
+    private static byte[] Palette(string kind)
+    {
+        (byte r, byte g, byte b) = kind switch
+        {
+            "Trees" => ((byte)95, (byte)191, (byte)90),
+            "Rocks" => ((byte)201, (byte)194, (byte)180),
+            "Wrecks" => ((byte)224, (byte)112, (byte)60),
+            "Other" => ((byte)154, (byte)164, (byte)184),
+            _ => ((byte)143, (byte)209, (byte)106),
+        };
+        byte[] palette = new byte[40];
+        for (int level = 1; level <= 9; level++)
+        {
+            palette[level * 4] = r;
+            palette[level * 4 + 1] = g;
+            palette[level * 4 + 2] = b;
+            palette[level * 4 + 3] = (byte)(40 + level * 22);
+        }
+        return palette;
+    }
+
+    // literal classes, so Tailwind finds them; the colours of the density map
+    private static string KindSwatch(string kind) => kind switch
+    {
+        "Trees" => "bg-[#5fbf5a]",
+        "Rocks" => "bg-[#c9c2b4]",
+        "Wrecks" => "bg-[#e0703c]",
+        "Other" => "bg-[#9aa4b8]",
+        _ => "bg-[#8fd16a]",
+    };
+
+    private string Share(int count) => (100.0 * count / Math.Max(1, Map.Scmap.Props.Count)).ToString("0.#", CultureInfo.InvariantCulture);
+
+    private void SetKind(string kind)
+        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("props", kind == All ? null : kind.ToLowerInvariant()), replace: true);
+
+    private static string F(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+}

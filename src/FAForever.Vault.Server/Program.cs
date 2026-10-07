@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -105,6 +106,26 @@ app.MapGet("/replays/{replayId:int}", async (int replayId, HttpContext context, 
 // for the installed app, whose service worker answers navigations without asking the server.
 app.MapGet("/replay/{**rest}", (string? rest, HttpContext context) =>
     Results.Redirect($"{context.Request.PathBase}/replays/{rest}{context.Request.QueryString}", permanent: true));
+
+// A map page is index.html with that map's card. The route is needed for the page itself too: a
+// folder like theta_passage.v0001 looks like a file name, which the fallback below leaves out. The
+// fixed map pages (/maps/featured, ...) are literal routes and win over this one.
+app.MapGet("/maps/{folder}", async (string folder, HttpContext context, IWebHostEnvironment environment, IConfiguration configuration, CancellationToken cancellationToken) =>
+{
+    if (await LinkPreviewHtml.ReadIndexAsync(environment, cancellationToken) is not string html)
+    {
+        return Results.NotFound();
+    }
+
+    string previewFormat = configuration["LinkPreview:MapPreviewUrl"] ?? "https://content.faforever.com/maps/previews/large/{0}.png";
+    if (MapLinkPreview.Card(folder, previewFormat) is { } card)
+    {
+        html = LinkPreviewHtml.Render(html, card, context.Request.GetEncodedUrl(), $"maps/{folder}");
+    }
+
+    context.Response.Headers.CacheControl = "no-cache";
+    return Results.Content(html, "text/html; charset=utf-8");
+});
 
 // The unit pages get a card about the units in their address, the About pages a fixed one.
 foreach (string path in PageLinkPreview.Paths)

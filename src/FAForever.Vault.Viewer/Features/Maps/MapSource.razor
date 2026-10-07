@@ -1,0 +1,7 @@
+@* The last line of a panel on the map page: where its data comes from in the map's files or the
+   game's code, so a player can check it. *@
+<p class="mt-4 border-t border-dashed border-edge pt-3 text-xs text-ink-faint">@ChildContent</p>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

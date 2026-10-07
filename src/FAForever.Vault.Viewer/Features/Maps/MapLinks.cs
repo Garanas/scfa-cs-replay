@@ -16,10 +16,19 @@ public static class MapLinks
     public const string Search = "maps/search";
 
     /// <summary>
+    /// The page of one map version, by its vault folder (<c>maps/theta_passage_-_faf_version.v0001</c>).
+    /// It reads the map's own files, so it works signed out.
+    /// </summary>
+    public static string Map(string folder) => "maps/" + Uri.EscapeDataString(folder.ToLowerInvariant());
+
+    /// <summary>
     /// The replay search for games on this map, played in a month around today. The window is not
     /// optional: without one a popular map takes 14 s (DualGap Adaptive, 889,230 games), with it
     /// 0.3 s (measured 2026-10-06, FAForever/faf-java-api#1182). The search page can widen it.
     /// </summary>
-    public static string Replays(string mapName) =>
-        $"replays/search?map={Uri.EscapeDataString(mapName)}&around={DateTime.Today:yyyy-MM-dd}&within=month";
+    public static string Replays(string mapName) => Replays(mapName, DateOnly.FromDateTime(DateTime.Today));
+
+    /// <summary>The replay search on this map in a month around a day, e.g. the newest game on it.</summary>
+    public static string Replays(string mapName, DateOnly around) =>
+        $"replays/search?map={Uri.EscapeDataString(mapName)}&around={around:yyyy-MM-dd}&within=month";
 }

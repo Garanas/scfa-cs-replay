@@ -1,0 +1,199 @@
+@using System.Globalization
+@inherits UrlStateComponent
+@inject MapImages Images
+
+@* Where each kind of unit can go: the regions (labels) of the navigational mesh that the game
+   generates for its AI (lua/sim/NavGenerator.lua, ported in NavGenerator), the route between the
+   closest start positions, and the markers the AI plans with. *@
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+    <div class="card self-start p-3 sm:p-3">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+            <div class="inline-flex rounded-lg border border-edge bg-raised p-0.5" role="group" aria-label="Kind of unit">
+                @foreach ((string value, NavLayer layer, string label) in Layers)
+                {
+                    <button type="button" aria-pressed="@(selected == layer ? "true" : "false")"
+                            class="cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition @(selected == layer ? "bg-primary text-on-primary" : "text-ink-muted hover:text-ink")"
+                            @onclick="() => SetLayer(value)">@label</button>
+                }
+            </div>
+            <span class="text-xs text-ink-muted">
+                @grid.Labels.Count @(grid.Labels.Count == 1 ? "region" : "regions")@(!Map.Navigation.HasWater && selected != NavLayer.Water ? "; without water every kind moves like land units" : "")
+            </span>
+        </div>
+        <MapSurface Map="Map" Terrain="muted" Overlay="overlay" AriaLabel="@($"Where {LayerLabel} can go on {Map.Name}")">
+            @if (Map.ClosestStarts is var (a, b) && selected != NavLayer.Water)
+            {
+                <line x1="@F(Map.Starts[a].Position.X)" y1="@F(Map.Starts[a].Position.Z)" x2="@F(Map.Starts[b].Position.X)" y2="@F(Map.Starts[b].Position.Z)"
+                      stroke="rgba(255,255,255,0.6)" stroke-width="@F(unit * 0.6)" stroke-dasharray="@F(unit * 1.5) @F(unit * 2.5)" />
+            }
+            @if (route is not null)
+            {
+                <MapRouteLine Route="route" Unit="unit" />
+            }
+        </MapSurface>
+        <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-muted">
+            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm border border-edge bg-black/60"></span>Cannot go</span>
+            <span>Each colour is one connected region</span>
+            @if (route is not null)
+            {
+                <span class="inline-flex items-center gap-1.5"><span class="w-4 border-t-2 border-dashed border-ink"></span>Shortest route</span>
+            }
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 content-start gap-4">
+        <MapVerdict Title="@VerdictTitle" Tone="@VerdictTone">@VerdictText</MapVerdict>
+
+        <div class="card">
+            <h2 class="text-[16px] font-bold">Regions</h2>
+            <div class="mt-3 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-edge text-left text-xs text-ink-muted">
+                            <th class="py-1.5 pr-2 font-semibold">Region</th>
+                            <th class="px-2 py-1.5 text-right font-semibold">Area</th>
+                            <th class="px-2 py-1.5 text-right font-semibold">Mass</th>
+                            <th class="px-2 py-1.5 text-right font-semibold">Hydro</th>
+                            <th class="py-1.5 pl-2 font-semibold">Starts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (NavLabel label in grid.Labels.OrderByDescending(label => label.Cells).Take(8))
+                        {
+                            List<int> starts = [.. Map.Starts.Select((start, i) => (start, i)).Where(s => grid.GetLabel(s.start.Position) == label).Select(s => s.i + 1)];
+                            <tr class="border-b border-edge/60">
+                                <td class="py-1.5 pr-2"><span class="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm @Swatch(label.Id)"></span>#@label.Id</td>
+                                <td class="px-2 py-1.5 text-right tabular-nums">@label.Area.ToString("0.00", CultureInfo.InvariantCulture) km²</td>
+                                <td class="px-2 py-1.5 text-right tabular-nums">@label.Extractors.Count</td>
+                                <td class="px-2 py-1.5 text-right tabular-nums">@label.Hydrocarbons.Count</td>
+                                <td class="py-1.5 pl-2">@(starts.Count > 0 ? string.Join(", ", starts) : "None")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (grid.Labels.Count == 0)
+                {
+                    <p class="mt-2 text-sm text-ink-muted">@(selected == NavLayer.Water ? "No water is deep enough for ships." : "These units cannot move anywhere on this map.")</p>
+                }
+                else if (grid.Labels.Count > 8)
+                {
+                    <p class="mt-2 text-xs text-ink-muted">@(grid.Labels.Count - 8) smaller regions are not listed.</p>
+                }
+            </div>
+            <MapSource>
+                A port of the game's navigational mesh (<code>lua/sim/NavGenerator.lua</code>): land units climb sides of up to 0.75, ships need water 1.5 deep,
+                amphibious units go up to 25 deep. Regions under 0.16 km² without resources are left out, as in the game.@(selected == NavLayer.Water ? " The game counts no resources for ships." : "")
+            </MapSource>
+        </div>
+
+        <div class="card">
+            <h2 class="text-[16px] font-bold">For the AI</h2>
+            <p class="mt-1 text-sm text-ink-muted">The markers the game's AI plans with. Maps without path nodes play poorly against the AI.</p>
+            @if (aiMarkers.Count == 0)
+            {
+                <p class="mt-3 text-sm">This map has no markers for the AI.</p>
+            }
+            else
+            {
+                <div class="mt-3 grid gap-1.5">
+                    @foreach ((string type, int count) in aiMarkers.Take(8))
+                    {
+                        <div class="grid grid-cols-[minmax(7rem,10rem)_minmax(0,1fr)_2.5rem] items-center gap-3 text-xs">
+                            <span>@type</span>
+                            <span class="h-2 overflow-hidden rounded-full border border-edge bg-raised"><span class="block h-full rounded-full bg-primary" style="width: @Width(count)%"></span></span>
+                            <span class="text-right tabular-nums text-ink-muted">@count</span>
+                        </div>
+                    }
+                </div>
+            }
+            <MapSource>The markers of the map's <code>_save.lua</code> by type.</MapSource>
+        </div>
+    </div>
+</div>
+
+@code {
+    private static readonly (string Value, NavLayer Layer, string Label)[] Layers =
+        [("land", NavLayer.Land, "Land"), ("amphibious", NavLayer.Amphibious, "Amphibious"), ("hover", NavLayer.Hover, "Hover"), ("naval", NavLayer.Water, "Naval")];
+
+    // the region colours of the map, as red, green, blue, alpha; index 0 is where units cannot go
+    private static readonly byte[] Palette =
+    [
+        0, 0, 0, 140,
+        57, 135, 229, 120, 25, 158, 112, 120, 217, 89, 38, 120, 144, 133, 233, 120,
+        201, 133, 0, 120, 213, 81, 129, 120, 0, 131, 0, 120, 230, 103, 103, 120,
+    ];
+
+    [Parameter, EditorRequired] public required LoadedMap Map { get; set; }
+
+    private NavLayer selected = NavLayer.Land;
+    private NavGrid grid = default!;
+    private NavRoute? route;
+    private Task<string>? overlay;
+    private double unit;
+    private List<(string Type, int Count)> aiMarkers = [];
+
+    protected override void OnParametersSet()
+    {
+        unit = Math.Max(Map.Width, Map.Height) / 256.0;
+        string? requested = UrlQuery.Get(Navigation, "layer")?.ToLowerInvariant();
+        selected = Layers.FirstOrDefault(l => l.Value == requested, Layers[0]).Layer;
+        grid = Map.Navigation[selected];
+        route = selected == NavLayer.Water ? null : Map.RouteFor(selected);
+        overlay = Images.GridAsync(Map, "layer:" + selected, Map.Width, Map.Height, () =>
+        {
+            byte[] values = new byte[grid.Cells.Length];
+            for (int i = 0; i < values.Length; i++)
+            {
+                values[i] = grid.Cells[i] > 0 ? (byte)((grid.Cells[i] - 1) % 8 + 1) : (byte)0;
+            }
+            return values;
+        }, Palette);
+        aiMarkers = [.. Map.Save.Markers
+            .Where(marker => marker.Type is not ("Mass" or "Hydrocarbon" or "Blank Marker" or ""))
+            .GroupBy(marker => marker.Type)
+            .Select(group => (group.Key, group.Count()))
+            .OrderByDescending(group => group.Item2)];
+    }
+
+    private string LayerLabel => selected switch
+    {
+        NavLayer.Land => "land units",
+        NavLayer.Amphibious => "amphibious units",
+        NavLayer.Hover => "hover units",
+        _ => "ships",
+    };
+
+    private string VerdictTitle => selected == NavLayer.Water
+        ? grid.Labels.Count switch { 0 => "No water is deep enough for ships", 1 => "One body of water for ships", var n => $"{n} separate bodies of water for ships" }
+        : Map.Starts.Count < 2 ? "This map has one start position"
+        : route is not null ? $"{Capitalized(LayerLabel)} reach the other start position"
+        : $"{Capitalized(LayerLabel)} cannot reach the other start position";
+
+    private MapVerdict.VerdictTone VerdictTone => selected == NavLayer.Water || route is not null || Map.Starts.Count < 2 ? MapVerdict.VerdictTone.Good : MapVerdict.VerdictTone.Problem;
+
+    private string VerdictText => route is not null && Map.StraightDistance > 0
+        ? $"{route.Length.ToString("N0", CultureInfo.InvariantCulture)} ogrids ({MapOverviewPanel.Km(route.Length)}), {(route.Length / Map.StraightDistance).ToString("0.00", CultureInfo.InvariantCulture)} times the straight line between the closest start positions."
+        : selected == NavLayer.Water ? "Ships need water at least 1.5 deep." : Map.Starts.Count < 2 ? "" : "The closest start positions lie in different regions for them.";
+
+    private static string Capitalized(string text) => char.ToUpperInvariant(text[0]) + text[1..];
+
+    private string Width(int count) => (100.0 * count / Math.Max(1, aiMarkers[0].Count)).ToString("0.#", CultureInfo.InvariantCulture);
+
+    // literal classes, so Tailwind finds them; the same colours as the palette of the map
+    private static string Swatch(int id) => ((id - 1) % 8) switch
+    {
+        0 => "bg-[#3987e5]",
+        1 => "bg-[#199e70]",
+        2 => "bg-[#d95926]",
+        3 => "bg-[#9085e9]",
+        4 => "bg-[#c98500]",
+        5 => "bg-[#d55181]",
+        6 => "bg-[#008300]",
+        _ => "bg-[#e66767]",
+    };
+
+    private void SetLayer(string value)
+        => Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("layer", value == "land" ? null : value), replace: true);
+
+    private static string F(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+}

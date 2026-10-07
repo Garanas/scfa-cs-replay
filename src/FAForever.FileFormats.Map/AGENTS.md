@@ -61,6 +61,29 @@ size) carry the Lua names; keep them in step with the file.
 - `TerrainTypes` is a copy of the type codes, names and `Blocking` flags of `lua/TerrainTypes.lua`
   as C# data; it names the FA commit it was copied from. Copy it again when the file changes.
 
+## Routes and the layout of a map
+
+What the Viewer's map page shows beyond the files themselves:
+
+- `NavPaths`: distances and routes over a layer, in eight directions (a diagonal only past two
+  pathable ogrids, the game's rule). `FindRoute` is an A* search; `NearestTwo` finds, in one search
+  from all start positions, the two nearest ones for every ogrid, with a ring of buckets instead of
+  a heap (steps of 1000 and 1414). Both matter in the browser: eight separate searches over a 20 km
+  map took 15 s in the WebAssembly interpreter, this takes 0.4 s.
+- `ExtractorLayout`: the roles of the mass spots after a guideline for map makers from the LOUD
+  Discord (safe, expandable, raidable, contestable; at least 4, at least 3, 2 to 6 and 1 to 2 per
+  player). `Measure` is the expensive part and runs once, on the layer that links the start positions
+  and in blocks of the game's compression threshold (`NavGrid.Coarsen`); `Classify` runs per set of
+  thresholds. The guideline names the roles, not the distances: the defaults (base radius 60 ogrids,
+  contested within 15%, expansion spots within 20 ogrids) were checked with the owner on Theta Passage
+  (4 safe, 0 expandable, 7 raidable, 1 contestable per player) and Glacier Valley.
+- `MapSymmetry`: rotational or mirrored, from the start positions and resource markers (2 ogrids of tolerance).
+- `MapArchive`: reads the vault's zip piece by piece: the directory from the end, then only the
+  entries asked for, so the browser fetches the three map files with range requests and skips the
+  textures. No ZIP64.
+- The `.scmap` starts with the map's preview, a DDS of 256 by 256 pixels, uncompressed A8R8G8B8 in all
+  100 maps of a local vault copy; the Viewer decodes it in `js/maps.js`.
+
 ## Tests
 
 `tests/FAForever.FileFormats.Map.Tests/assets/maps/` holds one map per version, with only the

@@ -1,0 +1,160 @@
+@using System.Globalization
+@inject FafApiClient Api
+@inject AuthService Auth
+
+@* How the map plays, from the last 100 rated games on this version: wins by start position (is a
+   side favoured?), factions picked and game lengths, with the newest games as cards. The games
+   come from the FAF API, which answers logged-in players only. *@
+@if (!Auth.IsAuthenticated)
+{
+    <MapLoginGate What="the games on this map" Why="Games come from the FAForever API, which only answers players who are signed in. The replay search works the same way." />
+}
+else if (VaultError is not null || error is not null)
+{
+    <div class="card" role="alert">
+        <p class="font-semibold">The games on this map could not be loaded</p>
+        <p class="mt-1 text-sm text-ink-muted">@(error ?? VaultError)</p>
+    </div>
+}
+else if (Vault is null || games is null)
+{
+    <div class="card animate-pulse text-center text-sm text-ink-muted">Loading the latest games on this map&hellip;</div>
+}
+else
+{
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div class="grid grid-cols-1 content-start gap-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-lg border border-edge bg-raised p-3">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Games, this version</p>
+                    <p class="font-display text-2xl font-bold">@Vault.GamesPlayed.ToString("N0", CultureInfo.InvariantCulture)</p>
+                    <p class="text-xs text-ink-muted">@Vault.MapGamesPlayed.ToString("N0", CultureInfo.InvariantCulture) on every version</p>
+                </div>
+                <div class="rounded-lg border border-edge bg-raised p-3">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Median length</p>
+                    <p class="font-display text-2xl font-bold">@(medianLength is { } median ? FormatDuration(median) : "Unknown")</p>
+                    <p class="text-xs text-ink-muted">of the last @games.Count rated games</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="text-[16px] font-bold">Wins by start position</h2>
+                <p class="mt-1 text-sm text-ink-muted">
+                    @(games.Count == 0 ? "No rated games on this version yet." : $"Of the last {games.Count} rated games, from {FormatDate(games[^1].StartTime)} to {FormatDate(games[0].StartTime)}. Is one side favoured?")
+                </p>
+                @if (spots.Count > 0)
+                {
+                    <div class="mt-3 grid gap-1.5">
+                        @foreach ((int spot, int played, int won) in spots)
+                        {
+                            double share = played == 0 ? 0 : 100.0 * won / played;
+                            <div class="grid grid-cols-[minmax(7rem,9rem)_minmax(0,1fr)_5.5rem] items-center gap-3 text-xs">
+                                <span>Start @spot @(spot <= Map.Starts.Count ? $"({Map.Starts[spot - 1].Name})" : "")</span>
+                                <span class="h-2 overflow-hidden rounded-full border border-edge bg-raised"><span class="block h-full rounded-full bg-primary" style="width: @share.ToString("0.#", CultureInfo.InvariantCulture)%"></span></span>
+                                <span class="text-right tabular-nums text-ink-muted">@share.ToString("0", CultureInfo.InvariantCulture)% of @played</span>
+                            </div>
+                        }
+                    </div>
+                }
+                <MapSource>The FAF API: the start spot and result of every player (<code>gamePlayerStats</code>). Draws and unknown results count as no win.</MapSource>
+            </div>
+
+            <div class="card">
+                <h2 class="text-[16px] font-bold">Factions picked</h2>
+                <div class="mt-3 grid gap-1.5">
+                    @foreach ((Faction faction, int picked) in factions)
+                    {
+                        double share = 100.0 * picked / Math.Max(1, factions.Sum(f => f.Picked));
+                        <div class="grid grid-cols-[6rem_minmax(0,1fr)_3rem] items-center gap-3 text-xs">
+                            <span class="inline-flex items-center gap-1.5">
+                                @if (Factions.IconPath(faction) is { } icon)
+                                {
+                                    <img src="@icon" alt="" class="h-4 w-4" />
+                                }
+                                @Factions.Name(faction)
+                            </span>
+                            <span class="h-2 overflow-hidden rounded-full border border-edge bg-raised"><span class="block h-full rounded-full bg-primary" style="width: @share.ToString("0.#", CultureInfo.InvariantCulture)%"></span></span>
+                            <span class="text-right tabular-nums text-ink-muted">@share.ToString("0", CultureInfo.InvariantCulture)%</span>
+                        </div>
+                    }
+                </div>
+                <MapSource>The faction of every player in the same games.</MapSource>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 content-start gap-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 class="text-[16px] font-bold">Latest games</h2>
+                <a href="@(games.FirstOrDefault()?.StartTime is { } newest ? MapLinks.Replays(Vault.Name, DateOnly.FromDateTime(newest.UtcDateTime)) : MapLinks.Replays(Vault.Name))" class="btn-secondary">Search the replays on this map</a>
+            </div>
+            @foreach (GameSummary game in games.Take(6))
+            {
+                <GameCard @key="game.Id" Game="game" />
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private const int Count = 100;
+
+    [Parameter, EditorRequired] public required LoadedMap Map { get; set; }
+
+    [Parameter] public MapVersionDetails? Vault { get; set; }
+
+    [Parameter] public string? VaultError { get; set; }
+
+    private IReadOnlyList<GameSummary>? games;
+    private int? loadedVersion;
+    private string? error;
+    private List<(int Spot, int Played, int Won)> spots = [];
+    private List<(Faction Faction, int Picked)> factions = [];
+    private TimeSpan? medianLength;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Vault is null || loadedVersion == Vault.VersionId)
+        {
+            return;
+        }
+
+        loadedVersion = Vault.VersionId;
+        games = null;
+        error = null;
+        try
+        {
+            games = await Api.GetRecentGamesOnMapVersionAsync(Vault.VersionId, Count, CancellationToken.None);
+            Summarize(games);
+        }
+        catch (NotAuthenticatedException)
+        {
+            error = "Your session has expired. Sign in again to see the games on this map.";
+        }
+        catch (HttpRequestException exception)
+        {
+            error = $"The FAF API could not be reached: {exception.Message}";
+        }
+    }
+
+    private void Summarize(IReadOnlyList<GameSummary> recent)
+    {
+        List<GamePlayer> players = [.. recent.SelectMany(game => game.Players).Where(player => !player.IsAi)];
+        spots = [.. players
+            .Where(player => player.StartSpot is > 0)
+            .GroupBy(player => player.StartSpot!.Value)
+            .OrderBy(group => group.Key)
+            .Select(group => (group.Key, group.Count(), group.Count(player => player.Outcome == GameOutcome.Victory)))];
+        factions = [.. players
+            .Where(player => player.Faction is { } faction && faction != Faction.Random)
+            .GroupBy(player => player.Faction!.Value)
+            .Select(group => (group.Key, group.Count()))
+            .OrderByDescending(group => group.Item2)];
+        List<TimeSpan> lengths = [.. recent.Select(game => game.Duration).OfType<TimeSpan>().Order()];
+        medianLength = lengths.Count == 0 ? null : lengths[lengths.Count / 2];
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+        => duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture) : duration.ToString(@"m\:ss", CultureInfo.InvariantCulture);
+
+    private static string FormatDate(DateTimeOffset? date) => date?.ToString("d MMM yyyy", CultureInfo.InvariantCulture) ?? "unknown";
+}

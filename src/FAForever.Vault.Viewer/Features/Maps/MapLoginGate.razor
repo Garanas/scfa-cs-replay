@@ -1,0 +1,17 @@
+@inject AuthService Auth
+
+@* In place of a tab that reads the FAF API: the API answers logged-in players only. The login
+   round trip returns to this address, tab included. *@
+<div class="card mx-auto max-w-xl text-center">
+    <svg class="mx-auto h-8 w-8 text-primary" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4.5 7V5a3.5 3.5 0 1 1 7 0v2h.5A1 1 0 0 1 13 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5a2 2 0 1 0-4 0v2Z" /></svg>
+    <p class="mt-3 font-semibold">Sign in to see @What</p>
+    <p class="mt-2 text-sm text-ink-muted">@Why</p>
+    <button type="button" class="btn-primary mt-4" @onclick="() => Auth.BeginLoginAsync()">Sign in with FAForever</button>
+    <p class="mt-3 text-xs text-ink-faint">The other tabs work without an account.</p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required string What { get; set; }
+
+    [Parameter, EditorRequired] public required string Why { get; set; }
+}

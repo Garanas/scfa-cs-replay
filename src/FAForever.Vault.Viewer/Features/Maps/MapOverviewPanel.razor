@@ -1,0 +1,144 @@
+@using System.Globalization
+@using System.Numerics
+
+@* What a player wants to know first: how much mass, how far apart, water or not, and whether
+   land units reach the enemy. *@
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+    <div class="card self-start p-3 sm:p-3">
+        <MapSurface Map="Map" AriaLabel="@($"{Map.Name} with start positions and resources")">
+            @if (Map.ConnectingRoute is { } route)
+            {
+                <MapRouteLine Route="route" Unit="unit" />
+            }
+            <MapResourceMarkers Map="Map" Unit="unit" />
+        </MapSurface>
+        <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-muted">
+            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-primary"></span>Start position</span>
+            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 bg-[#7fe08a]"></span>Mass</span>
+            <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full border-2 border-[#f5b83d]"></span>Hydrocarbon</span>
+            @if (Map.ConnectingRoute is not null)
+            {
+                <span class="inline-flex items-center gap-1.5"><span class="w-4 border-t-2 border-dashed border-ink"></span>Shortest route by @LayerName(Map.Extractors.Layer)</span>
+            }
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 content-start gap-4">
+        <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-lg border border-edge bg-raised p-3">
+                <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Mass per player</p>
+                <p class="font-display text-2xl font-bold">@MassPerPlayer</p>
+                <p class="text-xs text-ink-muted">@Map.Mass.Count spots, @Map.Hydrocarbons.Count hydrocarbons</p>
+            </div>
+            <div class="rounded-lg border border-edge bg-raised p-3">
+                <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Rush distance</p>
+                <p class="font-display text-2xl font-bold">@(Map.ConnectingRoute is { } r ? Km(r.Length) : "None")</p>
+                <p class="text-xs text-ink-muted">@(Map.ConnectingRoute is { } r2 ? $"{Fmt(r2.Length)} ogrids, {Fmt(Map.StraightDistance)} straight" : Map.Starts.Count < 2 ? "One start position" : "No route over land or water")</p>
+            </div>
+            <div class="rounded-lg border border-edge bg-raised p-3">
+                <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Under water</p>
+                <p class="font-display text-2xl font-bold">@Percent(Map.UnderWater)</p>
+                <p class="text-xs text-ink-muted">@(Map.Scmap.Water.HasWater ? $"Water at height {Map.Scmap.Water.Elevation.ToString("0.#", CultureInfo.InvariantCulture)}" : "No water")</p>
+            </div>
+            <div class="rounded-lg border border-edge bg-raised p-3">
+                <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Reclaim</p>
+                <p class="font-display text-2xl font-bold">@(Map.Scenario.Reclaim is { } reclaim ? Fmt(reclaim.Mass) : "Unknown")</p>
+                <p class="text-xs text-ink-muted">@(Map.Scenario.Reclaim is { } reclaim2 ? $"mass, {Fmt(reclaim2.Energy)} energy in props" : "The map editor did not count it")</p>
+            </div>
+        </div>
+
+        <MapVerdict Title="@VerdictTitle" Tone="@VerdictTone">@VerdictText</MapVerdict>
+
+        <div class="card">
+            <h2 class="text-[16px] font-bold">About this map</h2>
+            <dl class="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm">
+                <dt class="text-ink-muted">Size</dt>
+                <dd>@Map.Width × @Map.Height ogrids (@MapSizes.Kilometres(Map.Width, Map.Height))</dd>
+                <dt class="text-ink-muted">Teams</dt>
+                <dd>@string.Join(", ", Map.Scenario.Configurations.FirstOrDefault()?.Teams.Select(team => $"{team.Name}: {team.Armies.Count} armies") ?? [])</dd>
+                <dt class="text-ink-muted">Extra armies</dt>
+                <dd>@(Map.Scenario.Configurations.FirstOrDefault()?.ExtraArmies is { Count: > 0 } extra ? string.Join(", ", extra) : "None")</dd>
+                <dt class="text-ink-muted">No rush radius</dt>
+                <dd>@(Map.Scenario.NoRushRadius is > 0 and var radius ? $"{Fmt(radius)} ogrids" : "None")</dd>
+                <dt class="text-ink-muted">Symmetry</dt>
+                <dd>@SymmetryLabel(Map.Symmetry)</dd>
+                <dt class="text-ink-muted">Terrain set</dt>
+                <dd>@string.Join(", ", Biomes)</dd>
+                <dt class="text-ink-muted">Playable area</dt>
+                <dd>@(Map.PlayableArea is { } area ? $"{Fmt(area.X0)}, {Fmt(area.Z0)} to {Fmt(area.X1)}, {Fmt(area.Z1)}" : "The whole map")</dd>
+                <dt class="text-ink-muted">File format</dt>
+                <dd>scmap version @Map.Scmap.Version @(Map.Scmap.Version switch { 53 => "(Supreme Commander)", 56 => "(Forged Alliance)", >= 60 => "(FAF map editor)", _ => "" })</dd>
+            </dl>
+            @if (Description is { } description)
+            {
+                <p class="mt-4 whitespace-pre-line text-sm text-ink-muted">@description</p>
+            }
+            <MapSource>From the map's <code>_scenario.lua</code>, the markers of its <code>_save.lua</code> and the <code>.scmap</code>.</MapSource>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required LoadedMap Map { get; set; }
+
+    private double unit;
+
+    protected override void OnParametersSet() => unit = Math.Max(Map.Width, Map.Height) / 256.0;
+
+    private string MassPerPlayer => Map.Starts.Count == 0 ? "None" : (Map.Mass.Count / (double)Map.Starts.Count).ToString("0.#", CultureInfo.InvariantCulture);
+
+    private IEnumerable<string> Biomes => Map.Scmap.Layers
+        .Select(layer => layer.Albedo.Split('/', StringSplitOptions.RemoveEmptyEntries))
+        .Where(parts => parts.Length > 1 && parts[0].Equals("env", StringComparison.OrdinalIgnoreCase))
+        .Select(parts => parts[1])
+        .Distinct(StringComparer.OrdinalIgnoreCase);
+
+    private string? Description => Map.Scenario.Description is { Length: > 0 } text
+        && System.Text.RegularExpressions.Regex.Replace(text, @"^\s*<LOC[^>]*>", "").Trim() is { Length: > 0 } readable ? readable : null;
+
+    private string VerdictTitle => Map.Extractors.Layer switch
+    {
+        _ when Map.Starts.Count < 2 => "This map has one start position",
+        NavLayer.Land => "All start positions share one land mass",
+        NavLayer.Amphibious => "Only amphibious units reach the other start positions",
+        NavLayer.Hover => "Only hover units reach the other start positions",
+        _ => "No route over land or water links the start positions",
+    };
+
+    private MapVerdict.VerdictTone VerdictTone => Map.Extractors.Layer switch
+    {
+        NavLayer.Land => MapVerdict.VerdictTone.Good,
+        null when Map.Starts.Count >= 2 => MapVerdict.VerdictTone.Problem,
+        _ => MapVerdict.VerdictTone.Notice,
+    };
+
+    private string VerdictText => Map.ConnectingRoute is { } route && Map.StraightDistance > 0
+        ? $"The route between the closest start positions is {Fmt(route.Length)} ogrids, {(route.Length / Map.StraightDistance).ToString("0.00", CultureInfo.InvariantCulture)} times the straight line. The Pathing tab shows where each kind of unit can go."
+        : Map.Starts.Count < 2 ? "" : "Expect a game in the air and on the water. The Pathing tab shows where each kind of unit can go.";
+
+    public static string LayerName(NavLayer? layer) => layer switch
+    {
+        NavLayer.Land => "land",
+        NavLayer.Amphibious => "amphibious units",
+        NavLayer.Hover => "hover",
+        NavLayer.Water => "naval units",
+        _ => "air",
+    };
+
+    public static string SymmetryLabel(MapSymmetryKind? kind) => kind switch
+    {
+        MapSymmetryKind.Rotational => "Turned half a circle around the centre",
+        MapSymmetryKind.MirroredLeftRight => "Mirrored from left to right",
+        MapSymmetryKind.MirroredTopBottom => "Mirrored from top to bottom",
+        MapSymmetryKind.MirroredDiagonal => "Mirrored on a diagonal",
+        MapSymmetryKind.MirroredOtherDiagonal => "Mirrored on a diagonal",
+        _ => "None found in the start positions and resources",
+    };
+
+    public static string Fmt(double value) => value.ToString("N0", CultureInfo.InvariantCulture);
+
+    /// <summary>An ogrid is 20 metres.</summary>
+    public static string Km(double ogrids) => (ogrids * 0.02).ToString("0.0", CultureInfo.InvariantCulture) + " km";
+
+    public static string Percent(double share) => (share * 100).ToString("0", CultureInfo.InvariantCulture) + "%";
+}

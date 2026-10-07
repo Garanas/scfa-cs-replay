@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FAForever.FileFormats.Replay\FAForever.FileFormats.Replay.csproj" />
+    <ProjectReference Include="..\FAForever.FileFormats.Map\FAForever.FileFormats.Map.csproj" />
   </ItemGroup>
 
   <!--

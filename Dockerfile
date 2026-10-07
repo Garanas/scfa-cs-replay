@@ -13,6 +13,7 @@ WORKDIR /src
 COPY global.json Directory.Packages.props Directory.Build.props ./
 COPY src/FAForever.FileFormats.Lua/FAForever.FileFormats.Lua.csproj src/FAForever.FileFormats.Lua/
 COPY src/FAForever.FileFormats.Blueprints/FAForever.FileFormats.Blueprints.csproj src/FAForever.FileFormats.Blueprints/
+COPY src/FAForever.FileFormats.Map/FAForever.FileFormats.Map.csproj src/FAForever.FileFormats.Map/
 COPY src/FAForever.FileFormats.Replay/FAForever.FileFormats.Replay.csproj src/FAForever.FileFormats.Replay/
 COPY src/FAForever.Vault.Viewer/FAForever.Vault.Viewer.csproj src/FAForever.Vault.Viewer/
 COPY src/FAForever.Vault.Server/FAForever.Vault.Server.csproj src/FAForever.Vault.Server/

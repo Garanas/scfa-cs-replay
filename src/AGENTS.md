@@ -17,7 +17,7 @@ here have their own guide, read it before working in that project:
 
 ```
 Vault.Server → Vault.Viewer → FileFormats.Replay → FileFormats.Blueprints → FileFormats.Lua
-                                                   FileFormats.Map ────────→ FileFormats.Lua
+                     └──────→ FileFormats.Map ─────────────────────────→ FileFormats.Lua
 ```
 
 - A `FileFormats` library never references `Vault`, and a lower library never references a higher

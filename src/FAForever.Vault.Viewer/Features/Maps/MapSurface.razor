@@ -1,0 +1,89 @@
+@using FAForever.FileFormats.Map
+@using FAForever.Vault.Viewer.Services.Maps
+
+@* A map of the map page: an SVG in world coordinates ((0,0) the top-left corner, X right, Z down)
+   with an image from the map's own data as backdrop (MapImages: its preview, or a view drawn from
+   the heightmap), so markers and routes use
+   positions from the save file as-is. Grids stay sharp (one pixel per ogrid), the terrain smooth.
+   Start positions are drawn on top unless HideStarts. *@
+<div class="map-grid relative w-full overflow-hidden rounded-lg border border-edge bg-raised" style="aspect-ratio: @Map.Width / @Map.Height">
+    @if (backdropUrl is null)
+    {
+        <div class="absolute inset-0 animate-pulse bg-primary/15" aria-hidden="true"></div>
+    }
+    <svg class="absolute inset-0 h-full w-full" viewBox="0 0 @Map.Width @Map.Height" role="img" aria-label="@AriaLabel">
+        @if (backdropUrl is { } backdrop)
+        {
+            <image href="@backdrop" x="0" y="0" width="@Map.Width" height="@Map.Height" preserveAspectRatio="none" />
+        }
+        @if (overlayUrl is { } overlay)
+        {
+            <image href="@overlay" x="0" y="0" width="@(OverlayWidth ?? Map.Width)" height="@(OverlayHeight ?? Map.Height)" preserveAspectRatio="none" style="image-rendering: pixelated" />
+        }
+        @ChildContent
+        @if (!HideStarts)
+        {
+            @for (int i = 0; i < Map.Starts.Count; i++)
+            {
+                MapMarker start = Map.Starts[i];
+                <g>
+                    <title>Start @(i + 1) (@start.Name)</title>
+                    <circle cx="@Fmt(start.Position.X)" cy="@Fmt(start.Position.Z)" r="@Fmt(Unit * 4.2)" class="fill-primary" stroke="#ffffff" stroke-width="@Fmt(Unit * 0.8)" />
+                    @MapCanvasLabel(start.Position.X, start.Position.Z + Unit * 1.5, (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), Unit * 4.4)
+                </g>
+            }
+        }
+    </svg>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required LoadedMap Map { get; set; }
+
+    /// <summary>The terrain view as backdrop: preview (the map's own), relief, elevation, cliffs or muted.</summary>
+    [Parameter] public string Terrain { get; set; } = "preview";
+
+    /// <summary>An image drawn over the terrain, e.g. regions or owners (a blob URL from <see cref="MapImages"/>).</summary>
+    [Parameter] public Task<string>? Overlay { get; set; }
+
+    /// <summary>The overlay's size in world units when it does not cover the whole map.</summary>
+    [Parameter] public double? OverlayWidth { get; set; }
+
+    [Parameter] public double? OverlayHeight { get; set; }
+
+    [Parameter] public bool HideStarts { get; set; }
+
+    [Parameter] public string? AriaLabel { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Inject] private MapImages Images { get; set; } = default!;
+
+    private string? backdropUrl;
+    private string? overlayUrl;
+    private (LoadedMap, string)? drawnBackdrop;
+    private Task<string>? drawnOverlay;
+
+    /// <summary>A size in world units that reads the same on every map: a 5 km map is 256 units wide.</summary>
+    private double Unit => Math.Max(Map.Width, Map.Height) / 256.0;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (drawnBackdrop != (Map, Terrain))
+        {
+            drawnBackdrop = (Map, Terrain);
+            backdropUrl = null;
+            backdropUrl = await Images.TerrainAsync(Map, Terrain);
+        }
+
+        if (!ReferenceEquals(drawnOverlay, Overlay))
+        {
+            drawnOverlay = Overlay;
+            overlayUrl = Overlay is null ? null : await Overlay;
+        }
+    }
+
+    private static string Fmt(double value) => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static MarkupString MapCanvasLabel(double x, double y, string content, double size)
+        => FAForever.Vault.Viewer.Features.Replay.MapCanvas.SvgLabel(x, y, content, size);
+}

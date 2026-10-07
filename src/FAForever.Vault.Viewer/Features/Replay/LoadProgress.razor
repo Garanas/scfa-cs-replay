@@ -2,7 +2,7 @@
     <div class="flex items-center justify-between gap-4">
         <div class="min-w-0">
             <p class="font-semibold">@(Progress?.Phase ?? "Loading")&hellip;</p>
-            <p class="mt-0.5 text-sm text-ink-muted">Replays are parsed entirely in your browser.</p>
+            <p class="mt-0.5 text-sm text-ink-muted">@Note</p>
         </div>
         @if (OnCancel.HasDelegate)
         {
@@ -26,4 +26,7 @@
     [Parameter] public ReplayLoadProgress? Progress { get; set; }
 
     [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>The line under the phase.</summary>
+    [Parameter] public string Note { get; set; } = "Replays are parsed entirely in your browser.";
 }

@@ -1,0 +1,250 @@
+@inherits UrlStateComponent
+@inject FafApiClient Api
+@inject AuthService Auth
+@inject IJSRuntime JS
+
+@* The map page: what the map is (header) and a tab per way to look at it. Everything but Replays
+   and Reviews comes from the map's own files, so it works signed out; the vault's numbers
+   (author, games, reviews) are added to the header when signed in, and left out silently
+   otherwise, like the replay pages do with ratings. *@
+<article>
+    <header class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 border-b border-edge pb-6">
+        <div class="flex min-w-0 items-start gap-4">
+            <div class="w-20 shrink-0 sm:w-28">
+                <MapSurface Map="Map" HideStarts="true" AriaLabel="@($"Preview of {Map.Name}")" />
+            </div>
+            <div class="min-w-0">
+                <a href="@MapLinks.Landing" class="text-sm text-ink-muted transition hover:text-primary">← Maps</a>
+                <h1 class="mt-1 text-2xl font-bold sm:text-3xl">@Map.Name</h1>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <span class="badge text-ink">@MapSizes.Kilometres(Map.Width, Map.Height)</span>
+                    <span class="badge text-ink">@Map.Starts.Count @(Map.Starts.Count == 1 ? "player" : "players")</span>
+                    @if (Map.Scenario.MapVersion is { } version)
+                    {
+                        <span class="badge" title="The version of the map in the vault">v@(version)</span>
+                    }
+                    <span class="badge @ConnectionTone">@ConnectionLabel</span>
+                    <span class="badge @(Map.Symmetry is null ? "border-accent/60 text-accent" : "")">@(Map.Symmetry is null ? "Not symmetric" : "Symmetric")</span>
+                    <span class="badge @(guidelines == 4 ? "" : "border-accent/60 text-accent")" title="Mass extractors per role against a map making guideline, on the Resources tab">Extractors: @guidelines of 4 guidelines</span>
+                    @if (Map.Navigation.HasWater)
+                    {
+                        <span class="badge">Water</span>
+                    }
+                    @if (Map.Scenario.Type is { Length: > 0 } type && type != "skirmish")
+                    {
+                        <span class="badge">@(type == "campaign_coop" ? "co-op mission" : type)</span>
+                    }
+                </div>
+                @if (vault is not null)
+                {
+                    <p class="mt-2 text-sm text-ink-muted">
+                        @if (vault.Author is { } author)
+                        {
+                            <span>by <span class="font-medium text-ink">@author</span> · </span>
+                        }
+                        <span>@vault.GamesPlayed.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) games on this version</span>
+                        @if (vault.AverageScore is { } score)
+                        {
+                            <span> · <span class="text-accent">★</span> @score.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) from @vault.Reviews @(vault.Reviews == 1 ? "review" : "reviews")</span>
+                        }
+                        @if (vault.Ranked)
+                        {
+                            <span> · ranked</span>
+                        }
+                        @if (vault.Featured)
+                        {
+                            <span> · featured</span>
+                        }
+                    </p>
+                    @if (vault.NewerVersion is { } newer)
+                    {
+                        <p class="mt-2 text-sm">
+                            A newer version is in the vault:
+                            <a href="@MapLinks.Map(newer.FolderName)" class="font-medium text-primary hover:underline">version @newer.Version</a>.
+                        </p>
+                    }
+                    @if (vault.Hidden)
+                    {
+                        <p class="mt-2 text-sm text-ink-muted">Its author took this version out of the vault; games played on it remain.</p>
+                    }
+                }
+            </div>
+        </div>
+        <ShareButton Title="@LinkTitle" IconClass="h-6 w-6" LabelClass="text-xs font-semibold"
+                     Class="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-edge bg-raised/70 text-ink-muted transition hover:border-primary hover:text-primary sm:h-20 sm:w-20" />
+    </header>
+
+    <nav class="tab-strip mt-6 border-b border-edge pb-px" aria-label="Map sections">
+        @foreach (Tab tab in Enum.GetValues<Tab>())
+        {
+            <button type="button" id="@TabId(tab)" class="@(tab == activeTab ? ActiveTabClass : TabClass) inline-flex items-center gap-1.5" @onclick="() => SelectTab(tab)">
+                @TabLabel(tab)
+                @if (NeedsLogin(tab) && !Auth.IsAuthenticated)
+                {
+                    <svg class="h-3 w-3" viewBox="0 0 16 16" aria-label="needs a login"><path fill="currentColor" d="M4.5 7V5a3.5 3.5 0 1 1 7 0v2h.5A1 1 0 0 1 13 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5a2 2 0 1 0-4 0v2Z" /></svg>
+                }
+            </button>
+        }
+    </nav>
+
+    <div class="py-6">
+        @switch (activeTab)
+        {
+            case Tab.Overview:
+                <MapOverviewPanel Map="Map" />
+                break;
+            case Tab.Terrain:
+                <MapTerrainPanel Map="Map" />
+                break;
+            case Tab.Resources:
+                <MapResourcesPanel Map="Map" />
+                break;
+            case Tab.Pathing:
+                <MapPathingPanel Map="Map" />
+                break;
+            case Tab.Reclaim:
+                <MapReclaimPanel Map="Map" />
+                break;
+            case Tab.Replays:
+                <MapReplaysPanel Map="Map" Vault="vault" VaultError="@vaultError" />
+                break;
+            case Tab.Reviews:
+                <MapReviewsPanel Map="Map" Vault="vault" VaultError="@vaultError" OnChanged="ReloadVaultAsync" />
+                break;
+        }
+    </div>
+</article>
+
+@code {
+    private const string TabClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md px-3 py-2 text-sm font-medium text-ink-muted transition hover:bg-raised hover:text-ink sm:px-4";
+    private const string ActiveTabClass = "shrink-0 cursor-pointer whitespace-nowrap rounded-t-md border-b-2 border-primary bg-raised px-3 py-2 text-sm font-semibold text-primary sm:px-4";
+
+    private enum Tab
+    {
+        Overview,
+        Terrain,
+        Resources,
+        Pathing,
+        Reclaim,
+        Replays,
+        Reviews,
+    }
+
+    [Parameter, EditorRequired] public required LoadedMap Map { get; set; }
+
+    private Tab activeTab = Tab.Overview;
+    private Tab? scrolledToTab;
+    private int guidelines;
+    private MapVersionDetails? vault;
+    private string? vaultError;
+    private string? vaultFolder;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Auth.Changed += OnAuthChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        activeTab = ParseTab(UrlQuery.Get(Navigation, "tab"));
+        guidelines = ExtractorLayout.Classify(Map.Extractors, MapResourcesPanel.ReadThresholds(Navigation)).GuidelinesMet;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (vaultFolder != Map.Folder)
+        {
+            vaultFolder = Map.Folder;
+            vault = null;
+            await ReloadVaultAsync();
+        }
+    }
+
+    /// <summary>The vault's numbers of this version; only signed in, and silently absent when they cannot be had.</summary>
+    private async Task ReloadVaultAsync()
+    {
+        vaultError = null;
+        if (!Auth.IsAuthenticated)
+        {
+            vault = null;
+            return;
+        }
+
+        try
+        {
+            vault = await Api.GetMapVersionAsync(Map.Folder, CancellationToken.None);
+            if (vault is null)
+            {
+                vaultError = "The FAF API does not know this map version.";
+            }
+        }
+        catch (NotAuthenticatedException)
+        {
+            vault = null;
+        }
+        catch (HttpRequestException exception)
+        {
+            vaultError = $"The FAF API could not be reached: {exception.Message}";
+        }
+        StateHasChanged();
+    }
+
+    private void OnAuthChanged() => _ = InvokeAsync(async () =>
+    {
+        await ReloadVaultAsync();
+        StateHasChanged();
+    });
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (scrolledToTab != activeTab)
+        {
+            scrolledToTab = activeTab;
+            await JS.InvokeVoidAsync("fafReplay.scrollIntoView", TabId(activeTab));
+        }
+    }
+
+    private void SelectTab(Tab tab)
+    {
+        activeTab = tab;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("tab", tab == Tab.Overview ? null : tab.ToString().ToLowerInvariant()), replace: true);
+    }
+
+    // The tab query values are part of the link contract: never rename one.
+    private static Tab ParseTab(string? value) => value?.ToLowerInvariant() switch
+    {
+        "terrain" => Tab.Terrain,
+        "resources" => Tab.Resources,
+        "pathing" => Tab.Pathing,
+        "reclaim" => Tab.Reclaim,
+        "replays" => Tab.Replays,
+        "reviews" => Tab.Reviews,
+        _ => Tab.Overview,
+    };
+
+    private static bool NeedsLogin(Tab tab) => tab is Tab.Replays or Tab.Reviews;
+
+    private static string TabId(Tab tab) => $"map-tab-{tab.ToString().ToLowerInvariant()}";
+
+    private static string TabLabel(Tab tab) => tab.ToString();
+
+    private string LinkTitle => $"{Map.Name}" + (activeTab == Tab.Overview ? "" : $" · {TabLabel(activeTab)}");
+
+    private string ConnectionLabel => Map.Extractors.Layer switch
+    {
+        NavLayer.Land => "Land map",
+        NavLayer.Amphibious => "Amphibious crossing only",
+        NavLayer.Hover => "Hover crossing only",
+        _ when Map.Starts.Count < 2 => "One start position",
+        _ => "Air only",
+    };
+
+    private string ConnectionTone => Map.Extractors.Layer == NavLayer.Land || Map.Starts.Count < 2 ? "" : "border-accent/60 text-accent";
+
+    public override void Dispose()
+    {
+        Auth.Changed -= OnAuthChanged;
+        base.Dispose();
+    }
+}

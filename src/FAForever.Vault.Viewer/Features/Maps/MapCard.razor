@@ -1,10 +1,15 @@
 @using System.Globalization
 
 @* A map of the vault as a search result: the preview with its size and players on top, then the
-   name, author, how often it is played and how it is rated, and the start of its description. Not
-   a link yet: a map page needs the map parser first. *@
+   name, author, how often it is played and how it is rated, and the start of its description. A
+   link covers the card and opens the map's page (its latest version); the buttons at the bottom lie
+   above it, as on the game cards. *@
 
-<article class="card flex flex-col overflow-hidden p-0">
+<article class="card relative flex flex-col overflow-hidden p-0 @(Map.FolderName is null ? "" : "transition hover:border-primary")">
+    @if (Map.FolderName is { } folder)
+    {
+        <a href="@MapLinks.Map(folder)" class="absolute inset-0 z-[1] rounded-[inherit]" aria-label="@Map.Name"></a>
+    }
     @* The image says how it went in data-preview (loading, loaded, failed), as on the game cards. *@
     <div class="map-grid group/map relative aspect-square w-full border-b border-edge"
          data-preview="@(Map.PreviewUrl is null ? "failed" : "loading")">
@@ -81,10 +86,10 @@
         <div class="mt-auto flex flex-col gap-3 pt-1">
             @if (ChildContent is not null)
             {
-                <div class="border-t border-edge pt-3">@ChildContent</div>
+                <div class="relative z-[2] border-t border-edge pt-3">@ChildContent</div>
             }
             @* A month around today: the replay search is slow on popular maps without a window (MapLinks.Replays). *@
-            <a href="@MapLinks.Replays(Map.Name)" class="btn-secondary w-full"
+            <a href="@MapLinks.Replays(Map.Name)" class="btn-secondary relative z-[2] w-full"
                title="Replays on @Map.Name from the last month; the search can widen the dates">Replays on this map</a>
         </div>
     </div>

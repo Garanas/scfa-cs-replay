@@ -8,7 +8,7 @@ guide is [`../AGENTS.md`](../AGENTS.md); what the replay tests pin down is expla
 |---|---|---|
 | `FAForever.FileFormats.Lua.Tests` | `LuaSourceParser`, `LuaDataFormatter`, `LuaTableReader` | none (inline Lua) |
 | `FAForever.FileFormats.Blueprints.Tests` | `BlueprintParser`, `BlueprintIds`, `UnitNames`, `UnitSummary`, `UnitData`, `UnitBuildTree` | `.bp` files copied from the FA repo |
-| `FAForever.FileFormats.Map.Tests` | `ScmapParser`, `MapSaveParser`, `MapScenarioParser`, `NavGenerator`, `TerrainTypes` | one vault map per `.scmap` version (`.scmap`, `_save.lua`, `_scenario.lua`) |
+| `FAForever.FileFormats.Map.Tests` | `ScmapParser`, `MapSaveParser`, `MapScenarioParser`, `NavGenerator`, `NavPaths`, `ExtractorLayout`, `MapSymmetry`, `MapArchive`, `TerrainTypes` | one vault map per `.scmap` version (`.scmap`, `_save.lua`, `_scenario.lua`) |
 | `FAForever.FileFormats.Replay.Tests` | loader, header, inputs, semantics, fingerprints | `.fafreplay` / `.scfareplay` files |
 
 ## Running

@@ -80,6 +80,8 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
 | `https://api.faforever.com/me` | Bearer token | `*` | Current user. |
 | `https://api.faforever.com/game/{id}/replay` | anonymous | `*` | 302 → `content.faforever.com/replays/...fafreplay`; browser fetch can follow it. Do **not** proxy replay downloads. |
 | `https://content.faforever.com/maps/previews/small/{map}.png` | anonymous | n/a for `<img>` | Map preview images (`large/` too, used for link previews). |
+| `https://content.faforever.com/maps/{folder}.zip` | anonymous | `*` | A map version's archive; the folder is lower case (the server is case sensitive). Range requests work (206) with an explicit range; a suffix range (`bytes=-n`) is not a CORS-safelisted header and fails, so ask HEAD for `Content-Length` first. `Content-Range` is not exposed. |
+| `https://api.faforever.com/data/mapVersionReview` | Bearer token | `*` | Map reviews (score 1 to 5, text). Post to `/data/mapVersion/{id}/reviews` with the player as relationship, patch or delete `/data/mapVersionReview/{id}`; only the author may change one (as the FAF client does). |
 | `https://mapgen.services.atlantishq.de/api-dev/request/preview/{map}` | anonymous | **none** (fine for `<img>`) | Previews of generated maps (`neroxis_map_generator_{version}_{seed}_{options}`), 256 px PNG of the whole map, transparent outside the playable area. Rendered on request (a new map takes seconds); a 500 for a map it cannot render. Every generator version is accepted, but rendering can still fail: `1.22.2_vi45m3weufsq2_byhaf7yebubqe3kl` (replay 27907732) gets "The generation request failed for unknown reasons" while 1.21.2 maps render (verified 2026-10-07). |
 
 OAuth clients (both public, PKCE):
@@ -113,6 +115,9 @@ OAuth clients (both public, PKCE):
   and uncached lookups are rate-limited per client address. Map names come from the vault folder
   (`osiris.v0006` becomes "Osiris"); the original maps (`scmp_009`, `x1mp_017`) have only a code, so
   their card shows no name.
+- Map pages (`/maps/{folder}`, `MapLinkPreview.cs`): the map's name from the folder and the vault's large
+  preview, nothing fetched. The route is needed for the page itself too: a folder like
+  `theta_passage.v0001` looks like a file name, which `MapFallbackToFile` leaves out (a 404 without it).
 - Link previews of the other pages (`PageLinkPreview.cs`, same block, helpers in `LinkPreviewHtml.cs`):
   the unit pages get a card about the units in their address (`units/database?unit=`, `compare=`,
   `version=`, `units/history?units=`, the old `/units?unit=`), read from the app's own unit data with

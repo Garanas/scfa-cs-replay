@@ -1,0 +1,113 @@
+@page "/maps/{Folder}"
+@implements IDisposable
+@inject MapLoader Loader
+
+@* The page of one map version, by its vault folder. The map's own files come from the content
+   server without a login, so every tab but Replays and Reviews works signed out. *@
+
+<PageTitle>@(loaded?.Name ?? MapPreviews.DisplayName(Folder) ?? "Map") · Vault of FAForever</PageTitle>
+
+@if (loaded is not null)
+{
+    <MapDetailsView Map="loaded" />
+}
+else if (notFound)
+{
+    <div class="mx-auto max-w-3xl py-8">
+        <div class="card" role="alert">
+            <h1 class="text-xl font-bold">There is no map @Folder in the vault</h1>
+            <p class="mt-2 text-sm text-ink-muted">
+                The address names a map folder, like <code>theta_passage_-_faf_version.v0001</code>. Check it, or find the map in the search.
+            </p>
+            <div class="mt-6 flex gap-3">
+                <a href="@MapLinks.Search" class="btn-primary">Search the maps</a>
+            </div>
+        </div>
+    </div>
+}
+else if (error is not null)
+{
+    <div class="mx-auto max-w-3xl py-8">
+        <div class="card" role="alert">
+            <h1 class="text-xl font-bold">Could not read the map @Folder</h1>
+            <p class="mt-2 text-sm text-ink-muted">@error</p>
+            <div class="mt-6 flex gap-3">
+                <button type="button" class="btn-primary" @onclick="LoadAsync">Try again</button>
+                <a href="@MapLinks.Landing" class="btn-secondary">Back to the maps</a>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="mx-auto max-w-3xl py-8" aria-live="polite">
+        <LoadProgress Progress="progress" OnCancel="Cancel" Note="The map's files are read and analysed in your browser." />
+    </div>
+}
+
+@code {
+    [Parameter] public string Folder { get; set; } = string.Empty;
+
+    private LoadedMap? loaded;
+    private ReplayLoadProgress? progress;
+    private string? error;
+    private bool notFound;
+    private string? loadedFolder;
+    private CancellationTokenSource? cancellation;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedFolder == MapLoader.NormalizeFolder(Folder))
+        {
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        cancellation?.Cancel();
+        cancellation = new CancellationTokenSource();
+        CancellationToken token = cancellation.Token;
+        loadedFolder = MapLoader.NormalizeFolder(Folder);
+        loaded = Loader.Cached(Folder);
+        error = null;
+        notFound = false;
+        progress = null;
+        if (loaded is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            Progress<ReplayLoadProgress> reporter = new(update =>
+            {
+                progress = update;
+                StateHasChanged();
+            });
+            loaded = await Loader.LoadAsync(Folder, reporter, token);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            error = "Reading the map was cancelled.";
+        }
+        catch (MapNotFoundException)
+        {
+            notFound = true;
+        }
+        catch (HttpRequestException exception)
+        {
+            error = $"The vault could not be reached: {exception.Message}";
+        }
+        catch (Exception exception) when (exception is FormatException or LuaSyntaxException or InvalidOperationException)
+        {
+            error = $"The map's files could not be read: {exception.Message}";
+        }
+    }
+
+    private void Cancel() => cancellation?.Cancel();
+
+    public void Dispose() => cancellation?.Cancel();
+}

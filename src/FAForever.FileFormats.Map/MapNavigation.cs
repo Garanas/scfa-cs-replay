@@ -32,6 +32,24 @@ namespace FAForever.FileFormats.Map
             NavLayer.Amphibious => Amphibious,
             _ => throw new ArgumentOutOfRangeException(nameof(layer)),
         };
+
+        /// <summary>
+        /// The first layer of land, amphibious and hover over which units can path between all of
+        /// these positions, e.g. the start positions; null when only air units can.
+        /// </summary>
+        public NavLayer? FindConnectingLayer(IReadOnlyList<Vector3> positions)
+        {
+            foreach (NavLayer layer in new[] { NavLayer.Land, NavLayer.Amphibious, NavLayer.Hover })
+            {
+                NavGrid grid = this[layer];
+                NavLabel? first = positions.Count > 0 ? grid.GetLabel(positions[0]) : null;
+                if (first is not null && positions.All(position => grid.GetLabel(position) == first))
+                {
+                    return layer;
+                }
+            }
+            return null;
+        }
     }
 
     /// <summary>
@@ -56,6 +74,44 @@ namespace FAForever.FileFormats.Map
             }
             int id = Cells[z * Width + x];
             return id > 0 ? Labels[id - 1] : null;
+        }
+
+        /// <summary>
+        /// The grid in blocks of <paramref name="block"/> by <paramref name="block"/> ogrids: a block has
+        /// the label its ogrids share, and none when they are mixed, as the game's quadtrees treat
+        /// blocks of their compression threshold. Positions on it are positions on the map divided by
+        /// the block size; <see cref="Labels"/> stay those of this grid.
+        /// </summary>
+        public NavGrid Coarsen(int block)
+        {
+            if (block <= 1)
+            {
+                return this;
+            }
+
+            int width = (Width + block - 1) / block;
+            int height = (Height + block - 1) / block;
+            int[] cells = new int[width * height];
+            for (int bz = 0; bz < height; bz++)
+            {
+                for (int bx = 0; bx < width; bx++)
+                {
+                    int label = Cells[Math.Min(bz * block, Height - 1) * Width + Math.Min(bx * block, Width - 1)];
+                    for (int z = bz * block; z < Math.Min((bz + 1) * block, Height) && label > 0; z++)
+                    {
+                        for (int x = bx * block; x < Math.Min((bx + 1) * block, Width); x++)
+                        {
+                            if (Cells[z * Width + x] != label)
+                            {
+                                label = -1;
+                                break;
+                            }
+                        }
+                    }
+                    cells[bz * width + bx] = label;
+                }
+            }
+            return new NavGrid(Layer, width, height, cells, Labels);
         }
 
         /// <summary>

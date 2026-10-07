@@ -158,3 +158,39 @@ public sealed record MapSummary(int Id, string Name, string? Author)
             ? readable
             : null;
 }
+
+/// <summary>
+/// One version of a vault map, as the map page shows it: the map's name and author, the version's
+/// numbers and the summary of its reviews. Found by its folder (<c>theta_passage.v0001</c>).
+/// </summary>
+public sealed record MapVersionDetails(int VersionId, int MapId, string Name, string? Author, int Version)
+{
+    /// <summary>Games played on this version.</summary>
+    public int GamesPlayed { get; init; }
+
+    /// <summary>Games played on every version of the map together.</summary>
+    public int MapGamesPlayed { get; init; }
+
+    public bool Ranked { get; init; }
+
+    /// <summary>Taken out of the vault by its author; games on it stay in the vault.</summary>
+    public bool Hidden { get; init; }
+
+    public bool Featured { get; init; }
+
+    public DateTimeOffset? UploadedAt { get; init; }
+
+    /// <summary>Average review score of this version, 1 to 5; null without reviews.</summary>
+    public double? AverageScore { get; init; }
+
+    public int Reviews { get; init; }
+
+    /// <summary>The newest version of the map that is not hidden, when it is not this one.</summary>
+    public MapVersionReference? NewerVersion { get; init; }
+}
+
+/// <summary>Another version of a map: its number and folder.</summary>
+public sealed record MapVersionReference(int Version, string FolderName);
+
+/// <summary>A player's review of a map version: a score from 1 to 5 and an optional text.</summary>
+public sealed record MapReview(int Id, int? PlayerId, string Player, int Score, string? Text, DateTimeOffset? UpdatedAt);

@@ -416,7 +416,7 @@ Maps are cards (`Features/Maps/MapCard.razor`): the preview with size and player
 author, games played, rating and the start of the description, and an optional slot at the bottom
 (the ladder page puts the brackets there). The data is `/data/map` with a version, author and review
 summary (`FafApiClient.SearchMapsAsync`, models in `Services/Api/MapModels.cs`), so the three pages
-need a login like the Replays tab. Cards do not link anywhere yet: a map page waits for the map parser.
+need a login like the Replays tab. A card links to the page of the map's latest version (below).
 The one way out is "Replays on this map" (`MapLinks.Replays`): the replay search on the map's name in
 a month around today (`around` + `within=month`). Keep the window: without it a popular map takes
 14 s (FAForever/faf-java-api#1182), with it 0.3 s; the search page can widen it.
@@ -465,6 +465,41 @@ What the data is like (measured 2026-10-06, with a login):
 - **Previews:** the vault's large preview (512 px; the small one is 128 px, too blurry for a card),
   loaded lazily. The content server serves previews and map zips anonymously with CORS `*` and
   Range requests, which the map parser can use to read single files from a zip.
+
+## Map page
+
+`Pages/MapPage.razor` (`maps/{folder}`, `MapLinks.Map`) is the page of one map version, by its vault
+folder, lower case like the vault. Map cards link to it, and the replay overview links its map (not for
+generated maps, which are not in the vault). The pieces live in `Features/Maps/` (`MapDetailsView` and a
+`Map*Panel` per tab), the loading in `Services/Maps/`.
+
+- **It reads the map itself.** `MapLoader` asks the content server for the archive's size, its directory
+  and the three map files (`MapArchive`, range requests, anonymous), parses them, generates the
+  navigational mesh and measures the distances (FAForever.FileFormats.Map), yielding to the browser
+  between the steps. In a debug build: Theta Passage (5 km) under 1 s, Seton's Clutch (20 km) about 5 s, most of it
+  the mesh. The last three maps stay in memory. Hot reload rebuilds the page and so loads the map again.
+- **Signed out, everything but Replays and Reviews works**, as on the replay pages; the vault's numbers
+  in the header (author, games, reviews, a newer version) are added silently when signed in. Replays
+  shows the last 100 rated games of the version (wins by start position from `startSpot`, factions,
+  median length, the newest as cards); Reviews lists them and lets the player post, change or delete
+  their own (one per player and version, `FafApiClient.SaveMapReviewAsync`).
+- **Images** come from `Services/Maps/MapImages.cs` through `js/maps.js` (`fafMaps`): the map's own
+  preview from the `.scmap` (the backdrop by default), views drawn from the heightmap (relief, elevation,
+  cliffs, a grey one under overlays) and colour grids (regions, owners, prop density), each a blob URL at
+  one pixel per ogrid, released when another map is shown. `MapSurface` puts them under an SVG in world
+  coordinates, like `MapCanvas` for replays.
+- Colours on the map (roles, regions, kinds of props) are the same in both modes, as the map is; their
+  legends use literal Tailwind classes (`bg-[#5fd17a]`). Good states use `viz-3` (green in every
+  faction), never `primary`, which is red for Cybran.
+
+| Parameter | Meaning | Default when absent |
+|---|---|---|
+| `tab` | `terrain`, `resources`, `pathing`, `reclaim`, `replays`, `reviews` | Overview |
+| `terrain` | Terrain view: `relief`, `elevation`, `cliffs` | The map's preview |
+| `resources` | `closest` tints each ogrid by its closest start position | The extractor roles |
+| `base`, `contested`, `spacing` | Thresholds of the extractor roles: base radius (ogrids, 20 to 120), contested within (percent, 5 to 40), expansion spots within (ogrids, 8 to 50) | 60, 15, 20 |
+| `layer` | Pathing: `amphibious`, `hover`, `naval` | Land |
+| `props` | Reclaim: `trees`, `rocks`, `wrecks`, `other` | All props |
 
 ## 404 page
 

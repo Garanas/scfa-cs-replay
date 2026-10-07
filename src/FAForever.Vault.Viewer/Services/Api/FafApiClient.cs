@@ -197,6 +197,152 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
             .ThenBy(queue => queue.TechnicalName, StringComparer.Ordinal)];
     }
 
+    /// <summary>
+    /// A version of a vault map by its folder (lower case, as the vault stores them), with the map,
+    /// its author, its other versions and the version's review summary; null when the vault has no
+    /// such folder. Hidden versions are found too: games played on them link here.
+    /// </summary>
+    public async Task<MapVersionDetails?> GetMapVersionAsync(string folderName, CancellationToken cancellationToken)
+    {
+        string url = $"{BaseUrl}/data/mapVersion"
+            + "?include=map,map.author,map.versions,reviewsSummary"
+            + "&filter=" + Uri.EscapeDataString($"folderName=={Quote(folderName)}");
+
+        JsonApiDocument document = JsonApiDocument.Parse(await GetAsync(url, cancellationToken));
+        if (document.Data.FirstOrDefault() is not { } version)
+        {
+            return null;
+        }
+
+        JsonApiResource? map = document.FindIncluded(version.Relationship("map"));
+        JsonApiResource? author = document.FindIncluded(map?.Relationship("author"));
+        JsonApiResource? reviews = document.FindIncluded(version.Relationship("reviewsSummary"));
+        int number = version.GetInt32("version") ?? 0;
+
+        MapVersionReference? newer = map is null ? null : map.Relationships("versions")
+            .Select(reference => document.FindIncluded(reference))
+            .OfType<JsonApiResource>()
+            .Where(other => other.GetBoolean("hidden") != true && (other.GetInt32("version") ?? 0) > number && other.GetString("folderName") is { Length: > 0 })
+            .OrderByDescending(other => other.GetInt32("version"))
+            .Select(other => new MapVersionReference(other.GetInt32("version") ?? 0, other.GetString("folderName")!))
+            .FirstOrDefault();
+
+        return new MapVersionDetails(
+            int.TryParse(version.Id, out int versionId) ? versionId : 0,
+            int.TryParse(map?.Id, out int mapId) ? mapId : 0,
+            map?.GetString("displayName") ?? folderName,
+            author?.GetString("login"),
+            number)
+        {
+            GamesPlayed = version.GetInt32("gamesPlayed") ?? 0,
+            MapGamesPlayed = map?.GetInt32("gamesPlayed") ?? 0,
+            Ranked = version.GetBoolean("ranked") ?? false,
+            Hidden = version.GetBoolean("hidden") ?? false,
+            Featured = map?.GetBoolean("recommended") ?? false,
+            UploadedAt = version.GetDateTimeOffset("createTime"),
+            AverageScore = reviews?.GetNumber("averageScore"),
+            Reviews = reviews?.GetInt32("reviews") ?? 0,
+            NewerVersion = newer,
+        };
+    }
+
+    /// <summary>The reviews of a map version, the most recently changed first (at most 100).</summary>
+    public async Task<IReadOnlyList<MapReview>> GetMapReviewsAsync(int versionId, CancellationToken cancellationToken)
+    {
+        string url = $"{BaseUrl}/data/mapVersionReview"
+            + "?include=player&sort=-updateTime&page[size]=100"
+            + "&filter=" + Uri.EscapeDataString($"mapVersion.id=={versionId.ToString(CultureInfo.InvariantCulture)}");
+
+        JsonApiDocument document = JsonApiDocument.Parse(await GetAsync(url, cancellationToken));
+        return [.. document.Data.Select(review => ReadReview(review, document))];
+    }
+
+    /// <summary>
+    /// Writes the signed-in player's review of a map version: a new one, or the given one changed.
+    /// The same requests as the FAF client: a new review is posted to the version's reviews with the
+    /// player as its author, a change patches the score and the text.
+    /// </summary>
+    public async Task SaveMapReviewAsync(int versionId, int? reviewId, int score, string? text, CancellationToken cancellationToken)
+    {
+        Dictionary<string, object?> attributes = new() { ["score"] = score, ["text"] = string.IsNullOrWhiteSpace(text) ? null : text.Trim() };
+        if (reviewId is { } id)
+        {
+            string body = JsonSerializer.Serialize(new { data = new { type = "mapVersionReview", id = id.ToString(CultureInfo.InvariantCulture), attributes } });
+            await SendAsync(HttpMethod.Patch, $"{BaseUrl}/data/mapVersionReview/{id}", body, cancellationToken);
+        }
+        else
+        {
+            string playerId = auth.Session?.UserId ?? throw new NotAuthenticatedException();
+            string body = JsonSerializer.Serialize(new
+            {
+                data = new
+                {
+                    type = "mapVersionReview",
+                    attributes,
+                    relationships = new { player = new { data = new { type = "player", id = playerId } } },
+                },
+            });
+            await SendAsync(HttpMethod.Post, $"{BaseUrl}/data/mapVersion/{versionId}/reviews", body, cancellationToken);
+        }
+    }
+
+    /// <summary>Deletes a review; the API lets only its author do so.</summary>
+    public Task DeleteMapReviewAsync(int reviewId, CancellationToken cancellationToken)
+        => SendAsync(HttpMethod.Delete, $"{BaseUrl}/data/mapVersionReview/{reviewId}", null, cancellationToken);
+
+    /// <summary>
+    /// The most recent rated games on a map version, with their players and start spots. For the last
+    /// 100 games of Theta Passage this took 0.8 s (2026-10-07).
+    /// </summary>
+    public async Task<IReadOnlyList<GameSummary>> GetRecentGamesOnMapVersionAsync(int versionId, int count, CancellationToken cancellationToken)
+    {
+        string url = $"{BaseUrl}/data/game"
+            + "?include=playerStats,playerStats.player,mapVersion,mapVersion.map,featuredMod"
+            + "&sort=-startTime"
+            + $"&page[size]={count}"
+            + "&filter=" + Uri.EscapeDataString($"mapVersion.id=={versionId.ToString(CultureInfo.InvariantCulture)};validity==VALID");
+
+        JsonApiDocument document = JsonApiDocument.Parse(await GetAsync(url, cancellationToken));
+        return [.. document.Data.Select(game => MapGame(game, document))];
+    }
+
+    private static MapReview ReadReview(JsonApiResource review, JsonApiDocument document)
+    {
+        JsonApiResource? player = document.FindIncluded(review.Relationship("player"));
+        return new MapReview(
+            int.TryParse(review.Id, out int id) ? id : 0,
+            int.TryParse(player?.Id ?? review.Relationship("player")?.Id, out int playerId) ? playerId : null,
+            player?.GetString("login") ?? "Unknown",
+            (int)Math.Round(review.GetNumber("score") ?? 0),
+            review.GetString("text"),
+            review.GetDateTimeOffset("updateTime") ?? review.GetDateTimeOffset("createTime"));
+    }
+
+    private async Task SendAsync(HttpMethod method, string url, string? body, CancellationToken cancellationToken)
+    {
+        string accessToken = await auth.GetValidAccessTokenAsync() ?? throw new NotAuthenticatedException();
+
+        using HttpRequestMessage request = new(method, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.api+json"));
+        if (body is not null)
+        {
+            request.Content = new StringContent(body, System.Text.Encoding.UTF8);
+            request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/vnd.api+json");
+        }
+
+        using HttpResponseMessage response = await http.SendAsync(request, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new NotAuthenticatedException();
+        }
+        if (!response.IsSuccessStatusCode)
+        {
+            string detail = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new HttpRequestException($"{(int)response.StatusCode} {response.ReasonPhrase}: {detail[..Math.Min(detail.Length, 300)]}", null, response.StatusCode);
+        }
+    }
+
     /// <summary>A map resource and one of its versions (the latest, or the one in a pool) as a card.</summary>
     private static MapSummary MapMap(JsonApiResource map, JsonApiResource? version, JsonApiDocument document)
     {
@@ -268,6 +414,7 @@ public sealed class FafApiClient(HttpClient http, AuthService auth, IConfigurati
                 RatingAfter = FAForever.FileFormats.Replay.ReplayPlayerOptions.DisplayRating(stats.GetNumber("afterMean"), stats.GetNumber("afterDeviation")),
                 Color = FAForever.FileFormats.Replay.GameColors.ToCss(stats.GetInt32("color")),
                 IsAi = stats.GetBoolean("ai") ?? false,
+                StartSpot = stats.GetInt32("startSpot"),
             });
         }
 
