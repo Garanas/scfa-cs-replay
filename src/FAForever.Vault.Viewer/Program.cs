@@ -19,6 +19,7 @@ builder.Services.AddScoped<ReplayLoadingService>();
 builder.Services.AddScoped<ReplaySessionState>();
 builder.Services.AddScoped<LocalReplayLoader>();
 builder.Services.AddScoped<LocalReplayFolder>();
+builder.Services.AddScoped<ReplayMapLookup>();
 builder.Services.AddScoped<UnitIconAtlas>();
 builder.Services.AddScoped<UnitDatabase>();
 builder.Services.AddScoped<UnitCardService>();

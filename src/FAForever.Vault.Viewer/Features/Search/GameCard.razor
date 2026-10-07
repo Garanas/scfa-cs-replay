@@ -1,19 +1,33 @@
 @* A vault game as a search result: map, timing and status at the top, the players grouped
    into their sides below with the outcome and rating change the FAF API recorded. Games
-   without a replay file stay visible but are not links. *@
+   without a replay file stay visible but are not links. The link covers the whole card, so the
+   map tile can hold a button of its own (a button inside a link is not allowed). *@
 
-<a href="@(Game.ReplayAvailable == false ? null : $"replays/{Game.Id}")"
-   class="card flex flex-col gap-4 p-5 transition @(Game.ReplayAvailable == false ? "opacity-60" : "hover:border-primary")">
+<article class="card relative flex flex-col gap-4 p-5 transition @(Game.ReplayAvailable == false ? "opacity-60" : "hover:border-primary")">
+    @if (Game.ReplayAvailable != false)
+    {
+        <a href="replays/@Game.Id" class="absolute inset-0 rounded-[inherit]" aria-label="@Game.Title"></a>
+    }
     <div class="flex gap-4">
         @* The image says how it went in data-preview (loading, loaded, failed), and the
            tile follows: a pulse while it loads (a new generated map takes seconds), the
-           image once it is there, the question mark when there is none or it failed. *@
-        <div class="map-grid group/map relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-edge"
-             data-preview="@(Game.MapPreviewUrl is null ? "failed" : "loading")"
-             title="@(Game.MapPreviewUrl is null ? "No map preview" : null)">
+           image once it is there, the question mark when there is none or it failed.
+           Games the API links no map to (generated maps) get a button that reads the map
+           from the start of the replay file. The tile lets clicks through to the link. *@
+        <div class="map-grid group/map pointer-events-none relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-edge"
+             data-preview="@PreviewState">
             <span class="absolute inset-0 hidden animate-pulse bg-primary/15 group-data-[preview=loading]/map:block" aria-hidden="true"></span>
             <span class="hidden font-display text-2xl font-bold text-ink-faint group-data-[preview=failed]/map:inline" aria-hidden="true">?</span>
-            @if (Game.MapPreviewUrl is { } previewUrl)
+            @if (CanLookUpMap)
+            {
+                <button type="button" class="pointer-events-auto relative flex h-full w-full flex-col items-center justify-center text-ink-faint transition hover:bg-primary/10 hover:text-primary"
+                        title="@(lookupFailed ? "The replay could not be read. Try again" : "Read the map from the replay file")"
+                        @onclick="LookUpMapAsync">
+                    <span class="font-display text-2xl font-bold leading-none" aria-hidden="true">?</span>
+                    <span class="mt-1 text-[10px] font-semibold uppercase tracking-wide">@(lookupFailed ? "Retry" : "Show map")</span>
+                </button>
+            }
+            else if (PreviewUrl is { } previewUrl)
             {
                 @* The handlers come before src, so they are in place when a cached image loads. *@
                 <img onload="this.closest('[data-preview]').dataset.preview='loaded'"
@@ -27,7 +41,7 @@
         <div class="min-w-0 flex-1">
             <p class="truncate font-semibold" title="@Game.Title">@Game.Title</p>
             <div class="mt-0.5 flex items-baseline justify-between gap-2 text-sm text-ink-muted">
-                <span class="truncate">@(Game.MapName ?? "Unknown map")</span>
+                <span class="truncate">@(MapName ?? "Unknown map")</span>
                 @if (VictoryConditionName(Game.VictoryCondition) is { } condition)
                 {
                     <span class="shrink-0 text-xs" title="Victory condition">@condition</span>
@@ -110,12 +124,64 @@
             </div>
         }
     }
-</a>
+</article>
 
 @code {
     private const int MaxPlayersPerSide = 6;
 
+    [Inject] private ReplayMapLookup MapLookup { get; set; } = default!;
+
     [Parameter, EditorRequired] public required GameSummary Game { get; set; }
+
+    // The map read from the replay file, for games the API links no map to. Transient: the card
+    // asks again after a reload, and the replay page has its own map.
+    private int lookedUpGame;
+    private bool lookedUp;
+    private bool lookingUp;
+    private bool lookupFailed;
+    private string? lookedUpFolder;
+
+    private string? PreviewUrl => Game.MapPreviewUrl ?? MapPreviews.SmallUrl(lookedUpFolder);
+
+    private string? MapName => Game.MapName ?? MapPreviews.ReadableName(lookedUpFolder);
+
+    private bool CanLookUpMap => Game.MapPreviewUrl is null && Game.ReplayAvailable != false && !lookedUp && !lookingUp;
+
+    private string? PreviewState => CanLookUpMap ? null : lookingUp || PreviewUrl is not null ? "loading" : "failed";
+
+    protected override void OnParametersSet()
+    {
+        if (lookedUpGame != Game.Id)
+        {
+            lookedUpGame = Game.Id;
+            lookingUp = lookupFailed = false;
+            lookedUp = MapLookup.TryGetKnown(Game.Id, out lookedUpFolder);
+        }
+    }
+
+    private async Task LookUpMapAsync()
+    {
+        int gameId = Game.Id;
+        lookingUp = true;
+        lookupFailed = false;
+        try
+        {
+            string? folder = await MapLookup.FolderAsync(gameId);
+            if (gameId == Game.Id)
+            {
+                lookedUpFolder = folder;
+                lookedUp = true;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            lookupFailed = true;
+        }
+        finally
+        {
+            lookingUp = false;
+        }
+    }
 
     /// <summary>A player name to emphasise, e.g. the one that was searched for.</summary>
     [Parameter] public string? HighlightedPlayer { get; set; }

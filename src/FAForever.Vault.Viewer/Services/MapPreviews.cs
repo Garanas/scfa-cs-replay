@@ -30,14 +30,24 @@ public static class MapPreviews
             return name;
         }
 
-        if (model.Replay.Header.Scenario.Map.SCMapReference is { Length: > 0 } reference)
+        return FolderOfPath(model.Replay.Header.Scenario.Map.SCMapReference);
+    }
+
+    /// <summary>The map folder of a file in it: "/maps/osiris.v0006/osiris.scmap" gives "osiris.v0006".</summary>
+    public static string? FolderOfPath(string? path)
+    {
+        if (path is not { Length: > 0 })
         {
-            string[] segments = reference.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            return segments.Length >= 2 ? segments[^2] : null;
+            return null;
         }
 
-        return null;
+        string[] segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length >= 2 ? segments[^2] : null;
     }
+
+    /// <summary>A name to show for the map in this folder; a generated map's folder is its generator version and seed.</summary>
+    public static string? ReadableName(string? folder)
+        => IsGenerated(folder) ? "Generated map" : DisplayName(folder);
 
     /// <summary>
     /// The small preview (128 px) of the map in this folder, for small tiles; generated maps only

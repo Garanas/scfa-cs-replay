@@ -65,8 +65,7 @@
     /// <summary>While another replay is loading.</summary>
     [Parameter] public bool Disabled { get; set; }
 
-    // A generated map's folder is its generator version and seed: no name worth reading.
-    private string? MapName => MapPreviews.IsGenerated(Entry.MapFolder) ? "Generated map" : MapPreviews.DisplayName(Entry.MapFolder);
+    private string? MapName => MapPreviews.ReadableName(Entry.MapFolder);
 
     private string Heading => Entry.Title ?? MapName ?? Entry.FileName;
 

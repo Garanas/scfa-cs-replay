@@ -856,6 +856,93 @@ namespace FAForever.FileFormats.Replay
         }
 
         /// <summary>
+        /// Reads the path to the scenario ("/maps/{folder}/{folder}_scenario.lua") from the start of a
+        /// replay from FAForever, without the rest of the file: for when only the map is wanted, such as a
+        /// generated map, whose name the server leaves out of the metadata ("mapname":"None").
+        ///
+        /// The path is the third string of the header, so a few hundred decompressed bytes hold it. A zstd
+        /// body decompresses one block at a time and a block holds up to 128 KB, so the start may need the
+        /// first block in full: about 130 KB after the metadata line at most, often far less (32 KB for a
+        /// 10 player game). Returns null when the start is too short for it or is not a replay.
+        /// </summary>
+        public static string? TryReadPathToScenario(ReadOnlySpan<byte> start)
+        {
+            int endOfMetadata = start.IndexOf((byte)'\n');
+            if (endOfMetadata < 0)
+            {
+                return null;
+            }
+
+            ReplayMetadata? metadata;
+            try
+            {
+                metadata = JsonSerializer.Deserialize<ReplayMetadata>(start[..endOfMetadata]);
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+
+            if (metadata is null)
+            {
+                return null;
+            }
+
+            ReadOnlySpan<byte> body = start[(endOfMetadata + 1)..];
+            byte[] header = new byte[1024];
+            int length = 0;
+            try
+            {
+                using Stream decompressor = metadata.compression == "zstd"
+                    ? new DecompressionStream(new MemoryStream(body.ToArray(), false))
+                    : InflateBase64Start(body);
+
+                int read;
+                while (length < header.Length && (read = decompressor.Read(header, length, header.Length - length)) > 0)
+                {
+                    length += read;
+                }
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                // a decompressor throws where the start is cut off, after handing out what it had
+            }
+
+            // the game version, a line break, then the replay version and the path on two lines
+            ReadOnlySpan<byte> remaining = header.AsSpan(0, length);
+            for (int i = 0; i < 2; i++)
+            {
+                int end = remaining.IndexOf((byte)0);
+                if (end < 0)
+                {
+                    return null;
+                }
+
+                remaining = remaining[(end + 1)..];
+            }
+
+            int endOfVersionAndPath = remaining.IndexOf((byte)0);
+            if (endOfVersionAndPath < 0)
+            {
+                return null;
+            }
+
+            string[] versionAndPath = Encoding.UTF8.GetString(remaining[..endOfVersionAndPath]).Split("\r\n");
+            return versionAndPath.Length >= 2 && versionAndPath[1].Length > 0 ? versionAndPath[1] : null;
+        }
+
+        /// <summary>
+        /// The older body: base64 text of a zlib stream after four bytes of size. The start is cut to whole
+        /// groups of four characters, as base64 decodes only those.
+        /// </summary>
+        private static Stream InflateBase64Start(ReadOnlySpan<byte> body)
+        {
+            string base64 = Encoding.ASCII.GetString(body).TrimEnd();
+            byte[] bytes = Convert.FromBase64String(base64[..(base64.Length - base64.Length % 4)]);
+            return new InflaterInputStream(new MemoryStream(bytes, 4, Math.Max(0, bytes.Length - 4), false));
+        }
+
+        /// <summary>
         /// Loads a SCFA replay from memory.
         /// 
         /// Loads the replay from start to finish, if intermediate steps are required then please see the ProcessReplayStage methods.

@@ -24,6 +24,38 @@ public class ReplayLoaderTest
     }
 
     [TestMethod]
+    [DataRow("assets/faforever/zstd/22338092.fafreplay")]
+    [DataRow("assets/faforever/zstd/22373098.fafreplay")]
+    [DataRow("assets/faforever/gzip/22451957.fafreplay")]
+    [DataRow("assets/faforever/gzip/22453414.fafreplay")]
+    [DataRow("assets/faforever/mods.fafreplay")]
+    [DataRow("assets/faforever/TestCommands01.fafreplay")]
+    [DataRow("assets/faforever/23225104.fafreplay")]
+    [DataRow("assets/faforever/23225440.fafreplay")]
+    public void PathToScenarioFromStartTest(string file)
+    {
+        byte[] bytes = File.ReadAllBytes(file);
+        string expected = ReplayLoader.LoadFAFReplayFromDisk(file).Header.PathToScenario;
+
+        // the size the Viewer asks for first, and the whole file
+        Assert.AreEqual(expected, ReplayLoader.TryReadPathToScenario(bytes.AsSpan(0, Math.Min(bytes.Length, 64 * 1024))));
+        Assert.AreEqual(expected, ReplayLoader.TryReadPathToScenario(bytes));
+    }
+
+    [TestMethod]
+    [DataRow("assets/faforever/23225104.fafreplay")]
+    [DataRow("assets/faforever/gzip/22451957.fafreplay")]
+    public void PathToScenarioFromTooShortStartTest(string file)
+    {
+        byte[] bytes = File.ReadAllBytes(file);
+        int endOfMetadata = Array.IndexOf(bytes, (byte)'\n');
+
+        Assert.IsNull(ReplayLoader.TryReadPathToScenario(bytes.AsSpan(0, endOfMetadata)));
+        Assert.IsNull(ReplayLoader.TryReadPathToScenario(bytes.AsSpan(0, endOfMetadata + 8)));
+        Assert.IsNull(ReplayLoader.TryReadPathToScenario("not a replay\n"u8));
+    }
+
+    [TestMethod]
     [DataRow("assets/faforever/zstd/22338092.fafreplay", 12)]
     [DataRow("assets/faforever/zstd/22373098.fafreplay", 123)]
     [DataRow("assets/faforever/zstd/22425616.fafreplay", 99)]
