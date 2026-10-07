@@ -76,7 +76,7 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
 | `https://api.faforever.com/me` | Bearer token | `*` | Current user. |
 | `https://api.faforever.com/game/{id}/replay` | anonymous | `*` | 302 → `content.faforever.com/replays/...fafreplay`; browser fetch can follow it. Do **not** proxy replay downloads. |
 | `https://content.faforever.com/maps/previews/small/{map}.png` | anonymous | n/a for `<img>` | Map preview images (`large/` too, used for link previews). |
-| `https://mapgen.services.atlantishq.de/api-dev/request/preview/{map}` | anonymous | **none** (fine for `<img>`) | Previews of generated maps (`neroxis_map_generator_{version}_{seed}_{options}`), 256 px PNG of the whole map, transparent outside the playable area. Rendered on request (a new map takes seconds); only generator versions 1.19.0, 1.21.1 and 1.21.2, a 500 for anything else (verified 2026-10-05). |
+| `https://mapgen.services.atlantishq.de/api-dev/request/preview/{map}` | anonymous | **none** (fine for `<img>`) | Previews of generated maps (`neroxis_map_generator_{version}_{seed}_{options}`), 256 px PNG of the whole map, transparent outside the playable area. Rendered on request (a new map takes seconds); a 500 for a map it cannot render. Every generator version is accepted, but rendering can still fail: `1.22.2_vi45m3weufsq2_byhaf7yebubqe3kl` (replay 27907732) gets "The generation request failed for unknown reasons" while 1.21.2 maps render (verified 2026-10-07). |
 
 OAuth clients (both public, PKCE):
 - Production: our own client "Web vault by Jip Wijnia" (`54576b8e-14bc-473d-9f85-31e6327c9e3b`,

@@ -14,12 +14,10 @@ public static class MapPreviews
 
     /// <summary>
     /// The preview service renders a generated map on request: a map it has seen takes about half a
-    /// second, a new one several seconds. Any other name gets a 500.
+    /// second, a new one several seconds. A map it cannot render gets a 500, which the image shows as
+    /// a failed preview.
     /// </summary>
     private const string GeneratedPreviewUrl = "https://mapgen.services.atlantishq.de/api-dev/request/preview/";
-
-    /// <summary>The generator versions the preview service can render; it fails on any other.</summary>
-    private static readonly HashSet<string> SupportedGeneratorVersions = ["1.19.0", "1.21.1", "1.21.2"];
 
     /// <summary>
     /// The map folder of a replay ("osiris.v0006"): from the metadata, or from the scenario's map path
@@ -54,10 +52,7 @@ public static class MapPreviews
     public static bool IsGenerated(string? folder)
         => folder is not null && folder.StartsWith(GeneratedPrefix, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// The large preview of the map in this folder, or null when there is none to ask for: a
-    /// generated map of a version the preview service does not support.
-    /// </summary>
+    /// <summary>The large preview of the map in this folder, or null when there is no folder.</summary>
     public static string? Url(string? folder)
     {
         if (folder is not { Length: > 0 })
@@ -78,11 +73,7 @@ public static class MapPreviews
     public static string? Url(string? folder, string? vaultThumbnail)
         => IsGenerated(folder) ? GeneratedUrl(folder!.ToLowerInvariant()) : vaultThumbnail;
 
-    private static string? GeneratedUrl(string name)
-    {
-        string version = name[GeneratedPrefix.Length..].Split('_')[0];
-        return SupportedGeneratorVersions.Contains(version) ? GeneratedPreviewUrl + Uri.EscapeDataString(name) : null;
-    }
+    private static string GeneratedUrl(string name) => GeneratedPreviewUrl + Uri.EscapeDataString(name);
 
     /// <summary>
     /// A readable map name from the vault folder ("setons_clutch.v0003" becomes "Setons Clutch"), for
