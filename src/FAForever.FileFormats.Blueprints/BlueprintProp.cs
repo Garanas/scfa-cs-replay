@@ -1,3 +1,5 @@
+using FAForever.FileFormats.Lua;
+
 namespace FAForever.FileFormats.Blueprints
 {
     /// <summary>
@@ -21,7 +23,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public string? ScriptModule { get; init; }
 
-        internal static BlueprintProp Read(BlueprintTableReader t, string blueprintId, string source) => new BlueprintProp
+        internal static BlueprintProp Read(LuaTableReader t, string blueprintId, string source) => new BlueprintProp
         {
             Raw = t.Table,
             BlueprintId = blueprintId,
@@ -47,7 +49,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? MaxHealth { get; init; }
 
-        internal static BlueprintPropDefense Read(BlueprintTableReader t) => new BlueprintPropDefense
+        internal static BlueprintPropDefense Read(LuaTableReader t) => new BlueprintPropDefense
         {
             Raw = t.Table,
             Health = t.Number("Health"),
@@ -63,7 +65,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? ReclaimTime { get; init; }
 
-        internal static BlueprintPropEconomy Read(BlueprintTableReader t) => new BlueprintPropEconomy
+        internal static BlueprintPropEconomy Read(LuaTableReader t) => new BlueprintPropEconomy
         {
             Raw = t.Table,
             ReclaimMassMax = t.Number("ReclaimMassMax"),
@@ -80,7 +82,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? UniformScale { get; init; }
 
-        internal static BlueprintPropDisplay Read(BlueprintTableReader t) => new BlueprintPropDisplay
+        internal static BlueprintPropDisplay Read(LuaTableReader t) => new BlueprintPropDisplay
         {
             Raw = t.Table,
             Mesh = t.Section("Mesh", BlueprintDisplayMesh.Read),

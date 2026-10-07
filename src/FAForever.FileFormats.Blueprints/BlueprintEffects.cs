@@ -1,3 +1,5 @@
+using FAForever.FileFormats.Lua;
+
 namespace FAForever.FileFormats.Blueprints
 {
     /// <summary>
@@ -117,7 +119,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public BlueprintCurve? RampSelectionCurve { get; init; }
 
-        internal static BlueprintEmitter Read(BlueprintTableReader t, string blueprintId, string source) => new BlueprintEmitter
+        internal static BlueprintEmitter Read(LuaTableReader t, string blueprintId, string source) => new BlueprintEmitter
         {
             Raw = t.Table,
             BlueprintId = blueprintId,
@@ -194,7 +196,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? VShift { get; init; }
 
-        internal static BlueprintTrailEmitter Read(BlueprintTableReader t, string blueprintId, string source) => new BlueprintTrailEmitter
+        internal static BlueprintTrailEmitter Read(LuaTableReader t, string blueprintId, string source) => new BlueprintTrailEmitter
         {
             Raw = t.Table,
             BlueprintId = blueprintId,
@@ -239,7 +241,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? Blendmode { get; init; }
 
-        internal static BlueprintBeam Read(BlueprintTableReader t, string blueprintId, string source) => new BlueprintBeam
+        internal static BlueprintBeam Read(LuaTableReader t, string blueprintId, string source) => new BlueprintBeam
         {
             Raw = t.Table,
             BlueprintId = blueprintId,
@@ -271,7 +273,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public IReadOnlyList<BlueprintCurveKey> Keys { get; init; } = [];
 
-        internal static BlueprintCurve Read(BlueprintTableReader t) => new BlueprintCurve
+        internal static BlueprintCurve Read(LuaTableReader t) => new BlueprintCurve
         {
             Raw = t.Table,
             XRange = t.Number("XRange"),
@@ -294,7 +296,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? W { get; init; }
 
-        internal static BlueprintColor Read(BlueprintTableReader t) => new BlueprintColor
+        internal static BlueprintColor Read(LuaTableReader t) => new BlueprintColor
         {
             Raw = t.Table,
             X = t.Number("x"),

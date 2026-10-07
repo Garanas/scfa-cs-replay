@@ -1,14 +1,17 @@
-using FAForever.FileFormats.Lua;
+using System.Globalization;
 
-namespace FAForever.FileFormats.Blueprints
+namespace FAForever.FileFormats.Lua
 {
     /// <summary>
-    /// Typed access to a blueprint table, used to build the blueprint records. Every accessor
-    /// returns null (scalars, optional sections) or an empty collection when the key is missing
-    /// or holds a value of another type.
+    /// Typed access to the fields of a table, for building records from a data file such as a
+    /// blueprint or a map's save file. Every accessor returns null (scalars, optional sections) or
+    /// an empty collection when the key is missing or holds a value of another type.
     /// </summary>
-    internal readonly struct BlueprintTableReader(LuaData.Table table)
+    public readonly struct LuaTableReader(LuaData.Table table)
     {
+        /// <summary>
+        /// The table being read.
+        /// </summary>
         public LuaData.Table Table => table;
 
         private LuaData? Get(string key) => table.Value.TryGetValue(key, out LuaData? value) ? value : null;
@@ -24,14 +27,14 @@ namespace FAForever.FileFormats.Blueprints
         /// <summary>
         /// A nested table read as a record, or null when the table is missing.
         /// </summary>
-        public T? Section<T>(string key, Func<BlueprintTableReader, T> read) where T : class =>
-            Get(key) is LuaData.Table section ? read(new BlueprintTableReader(section)) : null;
+        public T? Section<T>(string key, Func<LuaTableReader, T> read) where T : class =>
+            Get(key) is LuaData.Table section ? read(new LuaTableReader(section)) : null;
 
         /// <summary>
         /// A nested table read as a record; a missing table reads as an empty one.
         /// </summary>
-        public T SectionOrEmpty<T>(string key, Func<BlueprintTableReader, T> read) =>
-            read(new BlueprintTableReader(Get(key) as LuaData.Table ?? new LuaData.Table(new Dictionary<string, LuaData>())));
+        public T SectionOrEmpty<T>(string key, Func<LuaTableReader, T> read) =>
+            read(new LuaTableReader(Get(key) as LuaData.Table ?? new LuaData.Table(new Dictionary<string, LuaData>())));
 
         /// <summary>
         /// The positional entries 1, 2, 3, ... (like Lua's ipairs) of a nested table.
@@ -42,14 +45,14 @@ namespace FAForever.FileFormats.Blueprints
             {
                 yield break;
             }
-            for (int index = 1; list.Value.TryGetValue(index.ToString(System.Globalization.CultureInfo.InvariantCulture), out LuaData? item); index++)
+            for (int index = 1; list.Value.TryGetValue(index.ToString(CultureInfo.InvariantCulture), out LuaData? item); index++)
             {
                 yield return item;
             }
         }
 
-        public IReadOnlyList<T> List<T>(string key, Func<BlueprintTableReader, T> read) =>
-            Positional(key).OfType<LuaData.Table>().Select(item => read(new BlueprintTableReader(item))).ToList();
+        public IReadOnlyList<T> List<T>(string key, Func<LuaTableReader, T> read) =>
+            Positional(key).OfType<LuaData.Table>().Select(item => read(new LuaTableReader(item))).ToList();
 
         public IReadOnlyList<string> Strings(string key) =>
             Positional(key).OfType<LuaData.String>().Select(item => item.Value).ToList();
@@ -68,11 +71,11 @@ namespace FAForever.FileFormats.Blueprints
         /// <summary>
         /// The entries of a nested table whose value is a table, read as records.
         /// </summary>
-        public IReadOnlyDictionary<string, T> Dictionary<T>(string key, Func<BlueprintTableReader, T> read, Func<string, bool>? include = null) =>
+        public IReadOnlyDictionary<string, T> Dictionary<T>(string key, Func<LuaTableReader, T> read, Func<string, bool>? include = null) =>
             Get(key) is LuaData.Table entries
                 ? entries.Value
                     .Where(entry => entry.Value is LuaData.Table && (include is null || include(entry.Key)))
-                    .ToDictionary(entry => entry.Key, entry => read(new BlueprintTableReader((LuaData.Table)entry.Value)))
+                    .ToDictionary(entry => entry.Key, entry => read(new LuaTableReader((LuaData.Table)entry.Value)))
                 : new Dictionary<string, T>();
 
         /// <summary>
@@ -82,7 +85,5 @@ namespace FAForever.FileFormats.Blueprints
             Get(key) is LuaData.Table entries
                 ? entries.Value.Where(entry => entry.Value is LuaData.String).ToDictionary(entry => entry.Key, entry => ((LuaData.String)entry.Value).Value)
                 : new Dictionary<string, string>();
-
-        public IReadOnlyDictionary<string, BlueprintSound> Sounds(string key) => Dictionary(key, BlueprintSound.Read);
     }
 }

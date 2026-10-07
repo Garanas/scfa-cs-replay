@@ -1,3 +1,5 @@
+using FAForever.FileFormats.Lua;
+
 namespace FAForever.FileFormats.Blueprints
 {
     /// <summary>
@@ -28,7 +30,7 @@ namespace FAForever.FileFormats.Blueprints
         /// </summary>
         public IReadOnlyDictionary<string, BlueprintSound> Audio { get; init; } = new Dictionary<string, BlueprintSound>();
 
-        internal static BlueprintProjectile Read(BlueprintTableReader t, string blueprintId, string source) => new BlueprintProjectile
+        internal static BlueprintProjectile Read(LuaTableReader t, string blueprintId, string source) => new BlueprintProjectile
         {
             Raw = t.Table,
             BlueprintId = blueprintId,
@@ -44,7 +46,7 @@ namespace FAForever.FileFormats.Blueprints
             Display = t.SectionOrEmpty("Display", BlueprintProjectileDisplay.Read),
             Defense = t.Section("Defense", BlueprintProjectileDefense.Read),
             Economy = t.Section("Economy", BlueprintProjectileEconomy.Read),
-            Audio = t.Sounds("Audio"),
+            Audio = t.Dictionary("Audio", BlueprintSound.Read),
         };
     }
 
@@ -69,7 +71,7 @@ namespace FAForever.FileFormats.Blueprints
         /// </summary>
         public string? Weapon { get; init; }
 
-        internal static BlueprintProjectileGeneral Read(BlueprintTableReader t) => new BlueprintProjectileGeneral
+        internal static BlueprintProjectileGeneral Read(LuaTableReader t) => new BlueprintProjectileGeneral
         {
             Raw = t.Table,
             Category = t.String("Category"),
@@ -146,7 +148,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? FragmentRadius { get; init; }
 
-        internal static BlueprintProjectilePhysics Read(BlueprintTableReader t) => new BlueprintProjectilePhysics
+        internal static BlueprintProjectilePhysics Read(LuaTableReader t) => new BlueprintProjectilePhysics
         {
             Raw = t.Table,
             InitialSpeed = t.Number("InitialSpeed"),
@@ -191,7 +193,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public bool? CameraFollowsProjectile { get; init; }
 
-        internal static BlueprintProjectileDisplay Read(BlueprintTableReader t) => new BlueprintProjectileDisplay
+        internal static BlueprintProjectileDisplay Read(LuaTableReader t) => new BlueprintProjectileDisplay
         {
             Raw = t.Table,
             Mesh = t.Section("Mesh", BlueprintDisplayMesh.Read),
@@ -208,7 +210,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? MaxHealth { get; init; }
 
-        internal static BlueprintProjectileDefense Read(BlueprintTableReader t) => new BlueprintProjectileDefense
+        internal static BlueprintProjectileDefense Read(LuaTableReader t) => new BlueprintProjectileDefense
         {
             Raw = t.Table,
             Health = t.Number("Health"),
@@ -224,7 +226,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? BuildTime { get; init; }
 
-        internal static BlueprintProjectileEconomy Read(BlueprintTableReader t) => new BlueprintProjectileEconomy
+        internal static BlueprintProjectileEconomy Read(LuaTableReader t) => new BlueprintProjectileEconomy
         {
             Raw = t.Table,
             BuildCostEnergy = t.Number("BuildCostEnergy"),

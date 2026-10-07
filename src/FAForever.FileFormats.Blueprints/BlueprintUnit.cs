@@ -1,3 +1,5 @@
+using FAForever.FileFormats.Lua;
+
 namespace FAForever.FileFormats.Blueprints
 {
     /// <summary>
@@ -70,7 +72,7 @@ namespace FAForever.FileFormats.Blueprints
         /// </summary>
         public IReadOnlyDictionary<string, BlueprintSound> Audio { get; init; } = new Dictionary<string, BlueprintSound>();
 
-        internal static BlueprintUnit Read(BlueprintTableReader t, string blueprintId, string source) => new BlueprintUnit
+        internal static BlueprintUnit Read(LuaTableReader t, string blueprintId, string source) => new BlueprintUnit
         {
             Raw = t.Table,
             BlueprintId = blueprintId,
@@ -97,7 +99,7 @@ namespace FAForever.FileFormats.Blueprints
             Wreckage = t.Section("Wreckage", BlueprintUnitWreckage.Read),
             Weapons = t.List("Weapon", BlueprintWeapon.Read),
             Enhancements = t.Dictionary("Enhancements", BlueprintUnitEnhancement.Read, name => name != "Slots"),
-            Audio = t.Sounds("Audio"),
+            Audio = t.Dictionary("Audio", BlueprintSound.Read),
         };
     }
 
@@ -152,7 +154,7 @@ namespace FAForever.FileFormats.Blueprints
         /// </summary>
         public IReadOnlySet<string> ToggleCaps { get; init; } = new HashSet<string>();
 
-        internal static BlueprintUnitGeneral Read(BlueprintTableReader t) => new BlueprintUnitGeneral
+        internal static BlueprintUnitGeneral Read(LuaTableReader t) => new BlueprintUnitGeneral
         {
             Raw = t.Table,
             UnitName = t.String("UnitName"),
@@ -205,7 +207,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? StorageMass { get; init; }
 
-        internal static BlueprintUnitEconomy Read(BlueprintTableReader t) => new BlueprintUnitEconomy
+        internal static BlueprintUnitEconomy Read(LuaTableReader t) => new BlueprintUnitEconomy
         {
             Raw = t.Table,
             BuildCostEnergy = t.Number("BuildCostEnergy"),
@@ -249,7 +251,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? SurfaceThreatLevel { get; init; }
 
-        internal static BlueprintUnitDefense Read(BlueprintTableReader t) => new BlueprintUnitDefense
+        internal static BlueprintUnitDefense Read(LuaTableReader t) => new BlueprintUnitDefense
         {
             Raw = t.Table,
             ArmorType = t.String("ArmorType"),
@@ -297,7 +299,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public bool? TransportShield { get; init; }
 
-        internal static BlueprintUnitShield Read(BlueprintTableReader t) => new BlueprintUnitShield
+        internal static BlueprintUnitShield Read(LuaTableReader t) => new BlueprintUnitShield
         {
             Raw = t.Table,
             ShieldMaxHealth = t.Number("ShieldMaxHealth"),
@@ -354,7 +356,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? SkirtSizeZ { get; init; }
 
-        internal static BlueprintUnitPhysics Read(BlueprintTableReader t) => new BlueprintUnitPhysics
+        internal static BlueprintUnitPhysics Read(LuaTableReader t) => new BlueprintUnitPhysics
         {
             Raw = t.Table,
             MotionType = t.String("MotionType"),
@@ -411,9 +413,9 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? JamRadiusMax { get; init; }
 
-        internal static BlueprintUnitIntel Read(BlueprintTableReader t)
+        internal static BlueprintUnitIntel Read(LuaTableReader t)
         {
-            BlueprintTableReader jam = t.SectionOrEmpty("JamRadius", jam => jam);
+            LuaTableReader jam = t.SectionOrEmpty("JamRadius", jam => jam);
             return new BlueprintUnitIntel
             {
                 Raw = t.Table,
@@ -449,7 +451,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? UniformScale { get; init; }
 
-        internal static BlueprintUnitDisplay Read(BlueprintTableReader t) => new BlueprintUnitDisplay
+        internal static BlueprintUnitDisplay Read(LuaTableReader t) => new BlueprintUnitDisplay
         {
             Raw = t.Table,
             Abilities = t.Strings("Abilities"),
@@ -481,7 +483,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? TransportHoverHeight { get; init; }
 
-        internal static BlueprintUnitAir Read(BlueprintTableReader t) => new BlueprintUnitAir
+        internal static BlueprintUnitAir Read(LuaTableReader t) => new BlueprintUnitAir
         {
             Raw = t.Table,
             CanFly = t.Bool("CanFly"),
@@ -520,7 +522,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? RepairRate { get; init; }
 
-        internal static BlueprintUnitTransport Read(BlueprintTableReader t) => new BlueprintUnitTransport
+        internal static BlueprintUnitTransport Read(LuaTableReader t) => new BlueprintUnitTransport
         {
             Raw = t.Table,
             TransportClass = t.Integer("TransportClass"),
@@ -547,7 +549,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public int? Level5 { get; init; }
 
-        internal static BlueprintUnitVeterancy Read(BlueprintTableReader t) => new BlueprintUnitVeterancy
+        internal static BlueprintUnitVeterancy Read(LuaTableReader t) => new BlueprintUnitVeterancy
         {
             Raw = t.Table,
             Level1 = t.Integer("Level1"),
@@ -581,7 +583,7 @@ namespace FAForever.FileFormats.Blueprints
         /// </summary>
         public IReadOnlySet<string> WreckageLayers { get; init; } = new HashSet<string>();
 
-        internal static BlueprintUnitWreckage Read(BlueprintTableReader t) => new BlueprintUnitWreckage
+        internal static BlueprintUnitWreckage Read(LuaTableReader t) => new BlueprintUnitWreckage
         {
             Raw = t.Table,
             Blueprint = t.String("Blueprint"),
@@ -658,7 +660,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? ShieldRechargeTime { get; init; }
 
-        internal static BlueprintUnitEnhancement Read(BlueprintTableReader t) => new BlueprintUnitEnhancement
+        internal static BlueprintUnitEnhancement Read(LuaTableReader t) => new BlueprintUnitEnhancement
         {
             Raw = t.Table,
             Name = t.String("Name"),

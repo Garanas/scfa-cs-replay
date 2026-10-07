@@ -39,22 +39,34 @@ namespace FAForever.FileFormats.Lua
         private readonly Lexer _lexer;
         private readonly IReadOnlyDictionary<string, LuaFunction> _functions;
         private readonly Dictionary<string, LuaData> _variables = new Dictionary<string, LuaData>();
+        private readonly HashSet<string> _assigned = new HashSet<string>();
 
-        private LuaSourceParser(string source, IReadOnlyDictionary<string, LuaFunction> functions)
+        private LuaSourceParser(string source, IReadOnlyDictionary<string, LuaFunction> functions, IReadOnlyDictionary<string, LuaData>? globals = null)
         {
             _lexer = new Lexer(source);
             _functions = functions;
+            foreach ((string name, LuaData value) in globals ?? new Dictionary<string, LuaData>())
+            {
+                _variables[name] = value;
+            }
         }
 
         /// <summary>
         /// Runs a chunk of Lua source: every top-level call invokes the matching function.
         /// </summary>
+        /// <param name="globals">Variables the chunk can read before it assigns them, such as the
+        /// game's <c>categories</c>.</param>
         /// <returns>The global variables the chunk assigned.</returns>
-        public static IReadOnlyDictionary<string, LuaData> Execute(string source, IReadOnlyDictionary<string, LuaFunction> functions)
+        public static IReadOnlyDictionary<string, LuaData> Execute(
+            string source,
+            IReadOnlyDictionary<string, LuaFunction> functions,
+            IReadOnlyDictionary<string, LuaData>? globals = null)
         {
-            LuaSourceParser parser = new LuaSourceParser(source, functions);
+            LuaSourceParser parser = new LuaSourceParser(source, functions, globals);
             parser.ParseChunk();
-            return parser._variables;
+            return parser._variables
+                .Where(variable => parser._assigned.Contains(variable.Key))
+                .ToDictionary(variable => variable.Key, variable => variable.Value);
         }
 
         /// <summary>
@@ -88,6 +100,7 @@ namespace FAForever.FileFormats.Lua
                 Token name = Expect(TokenKind.Name);
                 if (Accept("="))
                 {
+                    _assigned.Add(name.Text);
                     LuaData value = ParseExpression();
                     if (value is LuaData.Nil)
                     {

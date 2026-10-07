@@ -100,6 +100,23 @@ namespace FAForever.FileFormats.Lua.Tests
         }
 
         [TestMethod]
+        public void ReadsTheGlobalsOfTheCaller()
+        {
+            Dictionary<string, LuaData> predefined = new Dictionary<string, LuaData>
+            {
+                ["categories"] = new LuaData.Table(new Dictionary<string, LuaData> { ["ual0105"] = new LuaData.String("ual0105") }),
+            };
+
+            IReadOnlyDictionary<string, LuaData> globals = LuaSourceParser.Execute(
+                "Unit = categories.ual0105",
+                new Dictionary<string, LuaFunction>(),
+                predefined);
+
+            Assert.AreEqual("'ual0105'", LuaDataFormatter.Format(globals["Unit"]));
+            Assert.IsFalse(globals.ContainsKey("categories"), "only what the chunk assigned is returned");
+        }
+
+        [TestMethod]
         public void ReportsTheLineOfAnError()
         {
             LuaSyntaxException exception = Assert.ThrowsException<LuaSyntaxException>(() =>

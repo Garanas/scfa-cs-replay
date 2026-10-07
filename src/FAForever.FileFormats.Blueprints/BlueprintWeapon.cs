@@ -1,3 +1,5 @@
+using FAForever.FileFormats.Lua;
+
 namespace FAForever.FileFormats.Blueprints
 {
     /// <summary>
@@ -157,7 +159,7 @@ namespace FAForever.FileFormats.Blueprints
         /// </summary>
         public IReadOnlyDictionary<string, BlueprintSound> Audio { get; init; } = new Dictionary<string, BlueprintSound>();
 
-        internal static BlueprintWeapon Read(BlueprintTableReader t) => new BlueprintWeapon
+        internal static BlueprintWeapon Read(LuaTableReader t) => new BlueprintWeapon
         {
             Raw = t.Table,
             Label = t.String("Label"),
@@ -214,7 +216,7 @@ namespace FAForever.FileFormats.Blueprints
             BelowWaterFireOnly = t.Bool("BelowWaterFireOnly"),
             WeaponUnpacks = t.Bool("WeaponUnpacks"),
             Overcharge = t.Section("Overcharge", BlueprintWeaponOvercharge.Read),
-            Audio = t.Sounds("Audio"),
+            Audio = t.Dictionary("Audio", BlueprintSound.Read),
         };
     }
 
@@ -233,7 +235,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? MaxDamage { get; init; }
 
-        internal static BlueprintWeaponOvercharge Read(BlueprintTableReader t) => new BlueprintWeaponOvercharge
+        internal static BlueprintWeaponOvercharge Read(LuaTableReader t) => new BlueprintWeaponOvercharge
         {
             Raw = t.Table,
             EnergyMult = t.Number("energyMult"),

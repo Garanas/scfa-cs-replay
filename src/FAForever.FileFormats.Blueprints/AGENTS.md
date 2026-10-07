@@ -17,6 +17,9 @@ the text.
 - `LuaSourceParser` evaluates the data-only Lua subset (tables, constant expressions, named calls to
   functions the caller supplies; no function definitions or control flow) and throws
   `LuaSyntaxException` with a line number.
+- `LuaTableReader` reads typed fields from a table (`Number`, `String`, `Section`, `List`,
+  `Dictionary`, ...); a missing or mistyped field reads as absent. The blueprint and map records
+  are built with it, each by its own `Read` method or parser.
 - The replay's binary encoding of Lua values (`LuaDataLoader`, `LuaDataType`) belongs to the replay
   format and stays in the replay parser.
 
@@ -26,7 +29,7 @@ the text.
 (kinds, blueprint ids) on top of `LuaSourceParser`. It returns typed records (`BlueprintUnit` with
 `BlueprintUnitEconomy`, `BlueprintWeapon`, …; `BlueprintProjectile`, `BlueprintProp`, `BlueprintMesh`,
 `BlueprintEmitter`, `BlueprintTrailEmitter`, `BlueprintBeam`), each read by its own `Read` method through
-`BlueprintTableReader`. They hold a hand-picked subset of fields, named after the file's keys (field
+`LuaTableReader`. They hold a hand-picked subset of fields, named after the file's keys (field
 meanings: `engine/Core/Blueprints/*.lua` in the FA repo); every record keeps its full table in `Raw`.
 Data is as written in the file, before the game's post-processing (mod merges, `ModBlueprints`); most
 units leave out `General.TechLevel`, so use `BlueprintUnit.TechLevel` (from the categories). Every `.bp`

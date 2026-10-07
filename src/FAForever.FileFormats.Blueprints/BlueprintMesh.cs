@@ -1,3 +1,5 @@
+using FAForever.FileFormats.Lua;
+
 namespace FAForever.FileFormats.Blueprints
 {
     /// <summary>
@@ -19,7 +21,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public bool? StraddleWater { get; init; }
 
-        internal static BlueprintMesh Read(BlueprintTableReader t, string blueprintId, string source) => new BlueprintMesh
+        internal static BlueprintMesh Read(LuaTableReader t, string blueprintId, string source) => new BlueprintMesh
         {
             Raw = t.Table,
             BlueprintId = blueprintId,
@@ -59,7 +61,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public bool? Scrolling { get; init; }
 
-        internal static BlueprintMeshLod Read(BlueprintTableReader t) => new BlueprintMeshLod
+        internal static BlueprintMeshLod Read(LuaTableReader t) => new BlueprintMeshLod
         {
             Raw = t.Table,
             LODCutoff = t.Number("LODCutoff"),

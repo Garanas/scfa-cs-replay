@@ -71,7 +71,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public string? LodCutoff { get; init; }
 
-        internal static BlueprintSound Read(BlueprintTableReader t) => new BlueprintSound
+        internal static BlueprintSound Read(LuaTableReader t) => new BlueprintSound
         {
             Raw = t.Table,
             Bank = t.String("Bank"),
@@ -93,7 +93,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? MinWaterDepth { get; init; }
 
-        internal static BlueprintFootprint Read(BlueprintTableReader t) => new BlueprintFootprint
+        internal static BlueprintFootprint Read(LuaTableReader t) => new BlueprintFootprint
         {
             Raw = t.Table,
             SizeX = t.Number("SizeX"),
@@ -112,7 +112,7 @@ namespace FAForever.FileFormats.Blueprints
 
         public IReadOnlyList<BlueprintMeshLod> LODs { get; init; } = [];
 
-        internal static BlueprintDisplayMesh Read(BlueprintTableReader t) => new BlueprintDisplayMesh
+        internal static BlueprintDisplayMesh Read(LuaTableReader t) => new BlueprintDisplayMesh
         {
             Raw = t.Table,
             IconFadeInZoom = t.Number("IconFadeInZoom"),

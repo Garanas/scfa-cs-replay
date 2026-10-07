@@ -10,7 +10,7 @@ namespace FAForever.FileFormats.Blueprints
     /// </summary>
     public static class BlueprintParser
     {
-        private delegate Blueprint Reader(BlueprintTableReader table, string blueprintId, string source);
+        private delegate Blueprint Reader(LuaTableReader table, string blueprintId, string source);
 
         /// <summary>
         /// Parses the text of a blueprint file into <see cref="BlueprintUnit"/>,
@@ -33,7 +33,7 @@ namespace FAForever.FileFormats.Blueprints
                     throw new FormatException($"{function} expects a single table");
                 }
                 string blueprintSource = data.TryGetStringValue("Source", out string? explicitSource) ? explicitSource! : source;
-                blueprints.Add(read(new BlueprintTableReader(data), getId(data, blueprintSource), blueprintSource));
+                blueprints.Add(read(new LuaTableReader(data), getId(data, blueprintSource), blueprintSource));
                 return new LuaData.Nil();
             };
 
