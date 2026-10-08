@@ -72,4 +72,14 @@ public sealed partial class MainWindow : Window
     }
 
     private void OnFit(object? sender, RoutedEventArgs e) => Heightmap.Fit();
+
+    private void OnViewChosen(object? sender, SelectionChangedEventArgs e)
+    {
+        if (Heightmap is null || Terrain3D is null)
+        {
+            return;
+        }
+        Heightmap.IsVisible = Views.SelectedIndex == 0;
+        Terrain3D.IsVisible = Views.SelectedIndex == 1;
+    }
 }

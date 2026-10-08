@@ -1,3 +1,4 @@
+using FAForever.MapEditor.App.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.Project;
@@ -312,6 +313,7 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public void ContinueStroke(float x, float z)
     {
+        using Performance.Span measure = Performance.Measure("model.stroke");
         if (_stroke is null)
         {
             return;
@@ -568,6 +570,7 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private void ShowHistory()
     {
+        using Performance.Span measure = Performance.Measure("model.history");
         IReadOnlyList<HistoryStep> steps = Map?.Session.History ?? [];
         int current = -1;
         for (int i = 0; i < steps.Count; i++)
@@ -588,6 +591,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void Refresh(string? status)
     {
+        using Performance.Span measure = Performance.Measure("model.refresh");
         if (status is not null)
         {
             Status = status;

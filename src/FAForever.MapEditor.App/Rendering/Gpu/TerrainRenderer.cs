@@ -1,3 +1,4 @@
+using FAForever.MapEditor.App.Diagnostics;
 using System.Collections.Immutable;
 using System.Numerics;
 using FAForever.MapEditor.Project.Files;
@@ -101,8 +102,14 @@ internal sealed unsafe class TerrainRenderer : IDisposable
 
     public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture)
     {
-        _textures.Upload();
-        Update(document);
+        using (Performance.Measure("3d.upload-textures"))
+        {
+            _textures.Upload();
+        }
+        using (Performance.Measure("3d.update-buffers"))
+        {
+            Update(document);
+        }
 
         _gl.Enable(EnableCap.DepthTest);
         _gl.DepthFunc(DepthFunction.Lequal);
@@ -110,15 +117,21 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _gl.Disable(EnableCap.Blend);
         _gl.Disable(EnableCap.CullFace);
 
-        DrawTerrain(document, viewProjection, findTexture);
+        using (Performance.Measure("3d.draw-terrain"))
+        {
+            DrawTerrain(document, viewProjection, findTexture);
+        }
 
         // decals lie on the terrain: no depth writes, and pulled towards the camera so the ground does not hide them
         _gl.DepthMask(false);
         _gl.Enable(EnableCap.PolygonOffsetFill);
         _gl.PolygonOffset(-1, -4);
         _gl.Enable(EnableCap.Blend);
-        DrawDecals(document, viewProjection, findTexture, normals: false);
-        DrawDecals(document, viewProjection, findTexture, normals: true);
+        using (Performance.Measure("3d.draw-decals"))
+        {
+            DrawDecals(document, viewProjection, findTexture, normals: false);
+            DrawDecals(document, viewProjection, findTexture, normals: true);
+        }
         _gl.Disable(EnableCap.PolygonOffsetFill);
         DrawWater(document, viewProjection);
         _gl.DepthMask(true);
@@ -285,6 +298,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// </summary>
     private void UpdateHeights(TiledBuffer<ushort> heights)
     {
+        using Performance.Span measure = Performance.Measure("3d.update-heights");
         if (ReferenceEquals(heights, _heightsOf))
         {
             return;
@@ -328,6 +342,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// </summary>
     private void UpdateMasks(ImmutableArray<TiledBuffer<byte>> masks)
     {
+        using Performance.Span measure = Performance.Measure("3d.update-masks");
         if (masks == _masksOf)
         {
             return;
@@ -408,6 +423,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// </remarks>
     private void UpdateDecals(ImmutableArray<Decal> decals)
     {
+        using Performance.Span measure = Performance.Measure("3d.update-decals");
         _runs.Clear();
         List<float> instances = [];
         foreach (Decal decal in decals)

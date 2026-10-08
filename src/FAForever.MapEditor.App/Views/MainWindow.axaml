@@ -87,14 +87,17 @@
       </StackPanel>
     </Border>
 
-    <TabControl x:Name="Views" Padding="0">
-      <TabItem Header="Top">
+    <!-- the tabs only choose: both views stay in the tree, so the 3D view keeps its textures on the graphics card -->
+    <DockPanel>
+      <TabControl x:Name="Views" DockPanel.Dock="Top" Padding="0" SelectionChanged="OnViewChosen">
+        <TabItem Header="Top" />
+        <TabItem Header="3D" />
+      </TabControl>
+      <Grid>
         <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" />
-      </TabItem>
-      <TabItem Header="3D">
-        <controls:TerrainViewGpu x:Name="Terrain3D" />
-      </TabItem>
-    </TabControl>
+        <controls:TerrainViewGpu x:Name="Terrain3D" IsVisible="False" />
+      </Grid>
+    </DockPanel>
   </DockPanel>
 
   <!-- First start: set up the workspace -->

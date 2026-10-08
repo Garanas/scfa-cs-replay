@@ -1,3 +1,4 @@
+using FAForever.MapEditor.App.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -125,6 +126,7 @@ public sealed class HeightmapView : Control
 
     public override void Render(DrawingContext context)
     {
+        using Performance.Span measure = Performance.Measure("top.render");
         context.FillRectangle(Background, new Rect(Bounds.Size));
         if (_bitmap is null)
         {
@@ -239,8 +241,37 @@ public sealed class HeightmapView : Control
         Fit();
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        // a hidden view does no work; it catches up when it is shown
+        if (change.Property == IsVisibleProperty && IsVisible && _stale)
+        {
+            OnDocumentChanged(this, EventArgs.Empty);
+        }
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        // the tab control takes a tab's view out of the tree while another tab shows
+        if (_stale)
+        {
+            OnDocumentChanged(this, EventArgs.Empty);
+        }
+    }
+
+    private bool _stale;
+
     private void OnDocumentChanged(object? sender, EventArgs e)
     {
+        if (!IsEffectivelyVisible && _bitmap is not null)
+        {
+            _stale = true;
+            return;
+        }
+        _stale = false;
+        using Performance.Span measure = Performance.Measure("top.document-changed");
         MapDocument? document = _model?.ShownDocument;
         if (document is null)
         {

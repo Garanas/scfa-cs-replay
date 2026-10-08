@@ -109,6 +109,29 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
 - The window watches the project folder (`ProjectWatcher`) and reads back what other tools change;
   during a stroke the changes wait until it ends.
 
+## Performance: finding out why it lags
+
+`Diagnostics/Performance` measures named spans (`using Performance.Span measure =
+Performance.Measure("3d.frame");`) and runs a watchdog that asks the user interface's thread to
+answer every 50 ms: an answer 100 ms late or more is a stall, kept with the spans that ran
+meanwhile; stalls of 250 ms or more go to `%LOCALAPPDATA%\FAF Map Editor\performance.log`.
+Automation's `perf` gives per span the count, total, mean, 95th percentile and longest, and the
+recent stalls (`perf reset=true` starts over). Measure a change before and after, and put a span
+around new work that may grow with the map: `3d.*` (the 3D view's frame and its parts),
+`top.*`, `model.*`, `camera.smooth-ground`.
+
+What it found, and the rules that came of it:
+- Looking a texture up asks the file system (`File.Exists`, the time of the file); the 3D view
+  drew 533 decal runs a frame and spent 33 of 35 ms doing so. It keeps the sources by path and
+  looks them up again only when the map's files change or the asset watcher reports a change.
+  Nothing per frame may touch the disk.
+- The tab control takes the view of a hidden tab out of the tree, and the 3D view then drops its
+  OpenGL context: every switch rebuilt the context, the heights, masks and textures (110 ms
+  frames and stalls). The tabs only choose; both views stay in the tree and only their
+  visibility changes (`MainWindow.OnViewChosen`).
+- A hidden view does no work: the top view skips updating its picture while hidden and catches
+  up when shown.
+
 ## Automation: driving the running editor
 
 Started with `--automation <port>`, the editor takes commands over HTTP on
@@ -134,7 +157,7 @@ faf-map editor close                                      # closes without askin
   `workspace`, `setupError` and `assetReasons`; a command that opens, saves or converts answers
   when it is done. Start a test editor with `FAF_MAP_EDITOR_SETTINGS` set to a file of its own, so
   that its setup never changes the workspace the user's editor remembers.
-- Commands: `help`, `state`, `setup {folder, game?, faf?, vault?}` (the setup page; fields left
+- Commands: `help`, `state`, `perf {reset?}` (above), `setup {folder, game?, faf?, vault?}` (the setup page; fields left
   out keep what it suggests), `update-assets`, `open {path}`, `import {path}`, `save`, `save-as {path}`,
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,

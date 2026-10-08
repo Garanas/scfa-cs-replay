@@ -7,6 +7,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Avalonia.Input;
+using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
 using FAForever.MapEditor.Project.Editing;
@@ -123,9 +124,16 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "perf {reset?}", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
             case "state":
                 break;
+            case "perf":
+                // where the time goes: per measured span, and the recent stalls of the user interface
+                if (arguments["reset"]?.GetValue<bool>() == true)
+                {
+                    Performance.Reset();
+                }
+                return Performance.Snapshot();
             case "setup":
                 // the setup page as the person fills it in: the fields not given keep what it suggests
                 model.SetupFolder = Text(arguments, "folder");
@@ -256,7 +264,9 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 break;
             case "screenshot":
                 result["file"] = arguments["gpu"]?.GetValue<bool>() == true
-                    ? await window.View3D.CaptureAsync(Text(arguments, "path"))
+                    ? window.ShownView == "3d"
+                        ? await window.View3D.CaptureAsync(Text(arguments, "path")).WaitAsync(TimeSpan.FromSeconds(10))
+                        : throw new ArgumentException("The 3D view draws only while it shows: tab name=3d first")
                     : Screenshot(Text(arguments, "path"), arguments["map"]?.GetValue<bool>() == true);
                 break;
             case "close":

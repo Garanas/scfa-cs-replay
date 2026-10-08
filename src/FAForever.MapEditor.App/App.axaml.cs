@@ -18,6 +18,7 @@ public sealed class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            Diagnostics.Performance.StartWatchdog();
             MainWindow window = new MainWindow();
             MainViewModel model = new MainViewModel(new WindowDialogs(window));
             window.DataContext = model;

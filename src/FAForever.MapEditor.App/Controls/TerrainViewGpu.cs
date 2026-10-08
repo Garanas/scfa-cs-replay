@@ -1,3 +1,4 @@
+using FAForever.MapEditor.App.Diagnostics;
 using System.Numerics;
 using Vector = Avalonia.Vector;
 using Avalonia;
@@ -42,6 +43,26 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private TerrainRenderer? _renderer;
     private MainViewModel? _model;
     private ProjectWatcher? _assetWatcher;
+
+    // where each texture path comes from, as long as the map's files and the assets stay as they are:
+    // looking a source up asks the file system, and a frame draws hundreds of decal runs
+    private readonly Dictionary<string, TextureSource?> _sources = new Dictionary<string, TextureSource?>(StringComparer.OrdinalIgnoreCase);
+    private object? _sourcesOf;
+
+    private TextureSource? FindTexture(string path, MapDocument document, Workspace? workspace)
+    {
+        if (!ReferenceEquals(_sourcesOf, document.Files) || workspace?.AssetsFolder != _watched)
+        {
+            _sources.Clear();
+            _sourcesOf = document.Files;
+        }
+        if (!_sources.TryGetValue(path, out TextureSource? source))
+        {
+            source = GameTextures.Find(path, document, workspace);
+            _sources[path] = source;
+        }
+        return source;
+    }
     private string? _watched;
     private TaskCompletionSource<string>? _capture;
     private string? _capturePath;
@@ -146,6 +167,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
 
     protected override void OnOpenGlRender(GlInterface gl, int fb)
     {
+        using Performance.Span measure = Performance.Measure("3d.frame");
         if (_gl is null)
         {
             return;
@@ -177,7 +199,11 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _renderer.Debug = _debug;
             try
             {
-                _renderer.Render(document, camera.ViewProjection((float)width / height), path => GameTextures.Find(path, document, workspace));
+                _renderer.Render(document, camera.ViewProjection((float)width / height), path =>
+                {
+                    using Performance.Span lookup = Performance.Measure("3d.find-texture");
+                    return FindTexture(path, document, workspace);
+                });
             }
             catch (InvalidOperationException exception)
             {
@@ -231,6 +257,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
 
     private void ReportCursor()
     {
+        using Performance.Span measure = Performance.Measure("3d.cursor");
         if (_model?.ShownDocument is not MapDocument document || !_mouseInside)
         {
             return;
@@ -266,7 +293,12 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         if (folder is not null && Directory.Exists(folder))
         {
             _assetWatcher = new ProjectWatcher(folder);
-            _assetWatcher.Changed += _ => Dispatcher.UIThread.Post(RequestNextFrameRendering);
+            _assetWatcher.Changed += _ => Dispatcher.UIThread.Post(() =>
+            {
+                // look the textures up again: their versions changed
+                _sources.Clear();
+                RequestNextFrameRendering();
+            });
         }
     }
 
@@ -295,6 +327,16 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private void OnCameraMoved(object? sender, EventArgs e) => RequestNextFrameRendering();
 
     private void OnDocumentChanged(object? sender, EventArgs e) => RequestNextFrameRendering();
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        // shown again: the document may have changed meanwhile
+        if (change.Property == IsVisibleProperty && IsVisible)
+        {
+            RequestNextFrameRendering();
+        }
+    }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {

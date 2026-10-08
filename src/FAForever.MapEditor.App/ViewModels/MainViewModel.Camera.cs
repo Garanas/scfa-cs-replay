@@ -1,3 +1,4 @@
+using FAForever.MapEditor.App.Diagnostics;
 using System.Diagnostics;
 using System.Numerics;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -81,6 +82,7 @@ public sealed partial class MainViewModel
         if (!ReferenceEquals(heightmap, _smoothOf) && (_smooth is null || _smoothOf?.Width != heightmap.Width
             || _smoothOf.Height != heightmap.Height || _cameraClock.Elapsed - _smoothMade > TimeSpan.FromSeconds(0.5)))
         {
+            using Performance.Span measure = Performance.Measure("camera.smooth-ground");
             _smooth = SmoothGround.From(heightmap);
             _smoothOf = heightmap;
             _smoothMade = _cameraClock.Elapsed;
