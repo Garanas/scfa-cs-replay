@@ -9,6 +9,20 @@ The libraries live in `src/`:
 - `FAForever.FileFormats.Lua`: Lua values and the data-only Lua that game files are written in.
 - `FAForever.FileFormats.Map`: maps: the binary `.scmap` and its `_save.lua` and `_scenario.lua`.
 
+## Map editor
+
+The beginnings of a desktop map editor: a map as a project of JSON and PNG files that terrain
+tools and image editors work on, packed into the game's files on export.
+
+- `src/FAForever.MapEditor.Project`: the editor's model of a map and its project format.
+- `src/FAForever.MapEditor.Cli`: the `faf-map` tool.
+
+```sh
+faf-map unpack maps/theta_passage.v0004 theta_passage      # a map folder into a project
+faf-map pack theta_passage "<game>/maps" --version 5        # a project into maps/theta_passage.v0005
+faf-map pack theta_passage "<game>/maps" --watch            # pack again on every change
+```
+
 ## Web app
 
 The repository also ships a web app to search, inspect and analyse replays, and to browse the

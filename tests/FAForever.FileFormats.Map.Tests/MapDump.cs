@@ -17,7 +17,7 @@ namespace FAForever.FileFormats.Map.Tests
             StringBuilder b = new StringBuilder();
             foreach (MapMarker marker in save.Markers)
             {
-                b.AppendLine($"marker {marker.Name} | {marker.Type} | {V(marker.Position)} | {V(marker.Orientation)} | {Rest(marker.Raw, "type", "position", "orientation")}");
+                b.AppendLine($"marker {marker.Name} | {marker.Type} | {V(marker.Position)} | {V(marker.Orientation)} | {Rest(marker.Raw, MapMarker.TypedKeys)}");
             }
             foreach (MapArea area in save.Areas)
             {
@@ -31,7 +31,7 @@ namespace FAForever.FileFormats.Map.Tests
             {
                 b.AppendLine($"army {army.Name} | {army.Personality} | {army.Plans} | {army.Color} | {army.Faction} | {army.Economy}");
                 b.AppendLine($"  alliances {string.Join(" ", army.Alliances.Select(a => $"{a.Key}={a.Value}"))}");
-                b.AppendLine($"  rest {Rest(army.Raw, "personality", "plans", "color", "faction", "Economy", "Alliances", "Units", "PlatoonBuilders")}");
+                b.AppendLine($"  rest {Rest(army.Raw, MapArmy.TypedKeys)}");
                 Group(b, army.Units, "  ");
             }
             return b.ToString();
@@ -42,7 +42,7 @@ namespace FAForever.FileFormats.Map.Tests
             StringBuilder b = new StringBuilder();
             b.AppendLine($"{scenario.Name} | {scenario.Description} | {scenario.Type} | {scenario.Starts} | {scenario.Preview} | {scenario.Size}");
             b.AppendLine($"{scenario.Map} | {scenario.Save} | {scenario.Script} | {scenario.MapVersion} | {scenario.NoRushRadius} | {scenario.Reclaim} | {scenario.AdaptiveMap}");
-            b.AppendLine($"rest {Rest(scenario.Raw, "name", "description", "preview", "map_version", "AdaptiveMap", "type", "starts", "size", "reclaim", "map", "save", "script", "norushradius", "Configurations")}");
+            b.AppendLine($"rest {Rest(scenario.Raw, MapScenario.TypedKeys)}");
             foreach (MapConfiguration configuration in scenario.Configurations)
             {
                 b.AppendLine($"configuration {configuration.Name}");
@@ -51,10 +51,7 @@ namespace FAForever.FileFormats.Map.Tests
                     b.AppendLine($"  team {team.Name} | {string.Join(" ", team.Armies)}");
                 }
                 b.AppendLine($"  customprops {string.Join(" ", configuration.CustomProperties.Select(p => $"{p.Key}={p.Value}"))}");
-                if (scenario.Raw.TryGetTableValue("Configurations", out LuaData.Table? all) && all!.TryGetTableValue(configuration.Name, out LuaData.Table? raw))
-                {
-                    b.AppendLine($"  rest {Rest(raw!, "teams", "customprops")}");
-                }
+                b.AppendLine($"  rest {Rest(configuration.Raw, MapConfiguration.TypedKeys)}");
             }
             return b.ToString();
         }
@@ -72,7 +69,7 @@ namespace FAForever.FileFormats.Map.Tests
             }
         }
 
-        private static string Rest(LuaData.Table table, params string[] typed) =>
+        private static string Rest(LuaData.Table table, IReadOnlySet<string> typed) =>
             LuaSourceWriter.Format(new LuaData.Table(table.Value.Where(entry => !typed.Contains(entry.Key)).ToDictionary()));
 
         private static string V(System.Numerics.Vector3 v) => $"{v.X:R} {v.Y:R} {v.Z:R}";

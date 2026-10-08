@@ -1,5 +1,6 @@
 using CommandLine;
 using FAForever.MapEditor.Project;
+using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.Cli
 {
@@ -33,17 +34,25 @@ namespace FAForever.MapEditor.Cli
     {
         public static int Main(string[] args) =>
             Parser.Default.ParseArguments<UnpackOptions, PackOptions>(args).MapResult(
-                (UnpackOptions o) => Run(() =>
-                {
-                    MapUnpacker.Unpack(o.MapFolder, o.ProjectFolder);
-                    Console.WriteLine($"Unpacked {o.MapFolder} into {o.ProjectFolder}");
-                }),
+                (UnpackOptions o) => Run(() => Unpack(o)),
                 (PackOptions o) => o.Watch ? Watch(o) : Run(() => Pack(o)),
                 _ => 2);
 
+        private static void Unpack(UnpackOptions o)
+        {
+            if (Directory.Exists(o.ProjectFolder) && Directory.EnumerateFileSystemEntries(o.ProjectFolder).Any())
+            {
+                throw new MapProjectException($"The project folder {o.ProjectFolder} is not empty");
+            }
+            MapProjectStore.Save(MapImporter.ImportFolder(o.MapFolder), o.ProjectFolder);
+            Console.WriteLine($"Unpacked {o.MapFolder} into {o.ProjectFolder}");
+        }
+
         private static void Pack(PackOptions o)
         {
-            string folder = MapPacker.Pack(o.ProjectFolder, o.OutputFolder, o.Version);
+            MapDocument document = MapProjectStore.Load(o.ProjectFolder);
+            document = document with { Version = o.Version ?? document.Version };
+            string folder = MapExporter.WriteFolder(document, o.OutputFolder);
             Console.WriteLine($"{DateTime.Now:HH:mm:ss} Packed {folder}");
         }
 

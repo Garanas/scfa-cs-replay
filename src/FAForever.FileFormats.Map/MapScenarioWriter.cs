@@ -9,18 +9,10 @@ namespace FAForever.FileFormats.Map
     /// <remarks>
     /// The typed fields of <see cref="MapScenario"/> are the source; the keys it has no field for
     /// (<c>norushoffsetX_ARMY_1</c>, <c>author</c>, a configuration's <c>factions</c>, ...) come from
-    /// <see cref="MapScenario.Raw"/> as they are.
+    /// <see cref="MapScenario.Raw"/> and <see cref="MapConfiguration.Raw"/> as they are.
     /// </remarks>
     public static class MapScenarioWriter
     {
-        private static readonly HashSet<string> ScenarioFields =
-        [
-            "name", "description", "preview", "map_version", "AdaptiveMap", "type", "starts", "size",
-            "reclaim", "map", "save", "script", "norushradius", "Configurations",
-        ];
-
-        private static readonly HashSet<string> ConfigurationFields = ["teams", "customprops"];
-
         public static string Write(MapScenario scenario)
         {
             LuaSourceWriter w = new LuaSourceWriter();
@@ -58,7 +50,7 @@ namespace FAForever.FileFormats.Map
 
             foreach ((string key, LuaData value) in scenario.Raw.Value)
             {
-                if (!ScenarioFields.Contains(key))
+                if (!MapScenario.TypedKeys.Contains(key))
                 {
                     w.Field(key, value);
                 }
@@ -67,7 +59,7 @@ namespace FAForever.FileFormats.Map
             w.OpenField("Configurations");
             foreach (MapConfiguration configuration in scenario.Configurations)
             {
-                WriteConfiguration(w, configuration, RawConfiguration(scenario, configuration.Name));
+                WriteConfiguration(w, configuration);
             }
             w.Close();
 
@@ -75,7 +67,7 @@ namespace FAForever.FileFormats.Map
             return w.ToString();
         }
 
-        private static void WriteConfiguration(LuaSourceWriter w, MapConfiguration configuration, LuaData.Table? raw)
+        private static void WriteConfiguration(LuaSourceWriter w, MapConfiguration configuration)
         {
             w.OpenField(configuration.Name);
 
@@ -96,9 +88,9 @@ namespace FAForever.FileFormats.Map
             }
             w.Close();
 
-            foreach ((string key, LuaData value) in raw?.Value ?? [])
+            foreach ((string key, LuaData value) in configuration.Raw.Value)
             {
-                if (!ConfigurationFields.Contains(key))
+                if (!MapConfiguration.TypedKeys.Contains(key))
                 {
                     w.Field(key, value);
                 }
@@ -106,12 +98,6 @@ namespace FAForever.FileFormats.Map
 
             w.Close();
         }
-
-        private static LuaData.Table? RawConfiguration(MapScenario scenario, string name) =>
-            scenario.Raw.TryGetTableValue("Configurations", out LuaData.Table? configurations)
-            && configurations!.TryGetTableValue(name, out LuaData.Table? configuration)
-                ? configuration
-                : null;
 
         private static void OptionalString(LuaSourceWriter w, string key, string? value)
         {

@@ -1,8 +1,8 @@
 # Agent guide: src/ (the shipped code)
 
-Everything under `src/` ships: the libraries and the hosted app. Tests, benchmarks and the sandbox
-live next to this folder. The repository-wide guide is [`../AGENTS.md`](../AGENTS.md); five projects
-here have their own guide, read it before working in that project:
+Everything under `src/` ships: the libraries, the hosted app and the map editor. Tests, benchmarks
+and the sandbox live next to this folder. The repository-wide guide is [`../AGENTS.md`](../AGENTS.md);
+the table names each project's guide, read it before working in that project:
 
 | Project | Guide | What it is |
 |---|---|---|
@@ -12,12 +12,15 @@ here have their own guide, read it before working in that project:
 | `FAForever.FileFormats.Replay` | [its guide](FAForever.FileFormats.Replay/AGENTS.md) | The replay parser (benchmarked, fingerprint-tested) |
 | `FAForever.Vault.Viewer` | [its guide](FAForever.Vault.Viewer/AGENTS.md) | Blazor WebAssembly app |
 | `FAForever.Vault.Server` | the root guide | Static host, OAuth token proxy, link previews |
+| `FAForever.MapEditor.Project` | [its guide](FAForever.MapEditor.Project/AGENTS.md) | The map editor's model, its project format (JSON + PNG) and the export to the game's files |
+| `FAForever.MapEditor.Cli` | the editor's guide | `faf-map unpack` / `pack [--version N] [--watch]` |
 
 ## Dependencies point one way
 
 ```
 Vault.Server → Vault.Viewer → FileFormats.Replay → FileFormats.Blueprints → FileFormats.Lua
                      └──────→ FileFormats.Map ─────────────────────────→ FileFormats.Lua
+MapEditor.Cli → MapEditor.Project → FileFormats.Map
 ```
 
 - A `FileFormats` library never references `Vault`, and a lower library never references a higher

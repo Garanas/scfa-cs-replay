@@ -24,11 +24,6 @@ namespace FAForever.FileFormats.Map
     /// </remarks>
     public static class MapSaveWriter
     {
-        private static readonly HashSet<string> MarkerFields = ["type", "position", "orientation"];
-
-        private static readonly HashSet<string> ArmyFields =
-            ["personality", "plans", "color", "faction", "Economy", "Alliances", "Units", "PlatoonBuilders"];
-
         public static string Write(MapSave save)
         {
             LuaSourceWriter w = new LuaSourceWriter();
@@ -58,7 +53,7 @@ namespace FAForever.FileFormats.Map
                 w.OpenField(marker.Name);
                 foreach ((string key, LuaData value) in marker.Raw.Value)
                 {
-                    if (!MarkerFields.Contains(key))
+                    if (!MapMarker.TypedKeys.Contains(key))
                     {
                         w.Field(key, value, MapLuaFunctions.Wrap);
                     }
@@ -141,7 +136,7 @@ namespace FAForever.FileFormats.Map
             w.Close();
             foreach ((string key, LuaData value) in army.Raw.Value)
             {
-                if (!ArmyFields.Contains(key))
+                if (!MapArmy.TypedKeys.Contains(key))
                 {
                     w.Field(key, value);
                 }

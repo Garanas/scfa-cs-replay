@@ -1,0 +1,47 @@
+namespace FAForever.MapEditor.Project.Files.Serialized
+{
+    /// <summary>
+    /// <c>map.json</c>: the map's name, its scenario, and the settings of its terrain, light, water
+    /// and sky. The images, props, decals, markers and armies have files of their own
+    /// (<see cref="MapProjectLayout"/>).
+    /// </summary>
+    public sealed record MapProjectDto
+    {
+        public const int CurrentFormatVersion = 1;
+
+        /// <summary>
+        /// The layout of the project; <see cref="CurrentFormatVersion"/> for projects this library writes.
+        /// </summary>
+        public required int FormatVersion { get; init; }
+
+        /// <summary>
+        /// The name of the map's folder without its version, e.g. <c>theta_passage</c>.
+        /// </summary>
+        public required string Name { get; init; }
+
+        /// <summary>
+        /// The name the map's files start with: <c>&lt;FileName&gt;.scmap</c>, <c>&lt;FileName&gt;_save.lua</c>, ...
+        /// </summary>
+        public required string FileName { get; init; }
+
+        /// <summary>
+        /// The version of the map; the folder gets <c>.v0004</c> from it.
+        /// </summary>
+        public int? Version { get; init; }
+
+        public required ScenarioInfoDto Scenario { get; init; }
+
+        public required TerrainDto Terrain { get; init; }
+
+        public required LightingDto Lighting { get; init; }
+
+        public required WaterDto Water { get; init; }
+
+        public required SkyDto Sky { get; init; }
+
+        /// <summary>
+        /// The colours of the minimap; absent in version 53.
+        /// </summary>
+        public MinimapDto? Minimap { get; init; }
+    }
+}

@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using FAForever.MapEditor.Project.Files;
 using ImageMagick;
 
 namespace FAForever.MapEditor.Project
@@ -16,7 +17,7 @@ namespace FAForever.MapEditor.Project
         private const int HeaderSize = 128;
 
         /// <exception cref="MapProjectException">The texture is in another format.</exception>
-        public static (int Width, int Height, ScmapTextureFormat Format, byte[] Rgba) Read(byte[] dds, string name)
+        public static (int Width, int Height, TextureFormat Format, byte[] Rgba) Read(byte[] dds, string name)
         {
             if (dds.Length < HeaderSize || BinaryPrimitives.ReadUInt32LittleEndian(dds) != 0x20534444)
             {
@@ -35,7 +36,7 @@ namespace FAForever.MapEditor.Project
                 using MagickImage image = new MagickImage(dds, MagickFormat.Dds);
                 image.Alpha(AlphaOption.Set);
                 using IPixelCollection<ushort> pixels = image.GetPixels();
-                return (width, height, ScmapTextureFormat.Dxt5, pixels.ToByteArray(PixelMapping.RGBA)!);
+                return (width, height, TextureFormat.Dxt5, pixels.ToByteArray(PixelMapping.RGBA)!);
             }
 
             if ((pixelFlags & 0x40) != 0 && bits == 32 && redMask == 0xff0000)
@@ -54,18 +55,18 @@ namespace FAForever.MapEditor.Project
                     rgba[i + 2] = bgra[i];
                     rgba[i + 3] = bgra[i + 3];
                 }
-                return (width, height, ScmapTextureFormat.A8R8G8B8, rgba);
+                return (width, height, TextureFormat.A8R8G8B8, rgba);
             }
 
             throw new MapProjectException($"The {name} is in a DDS format this tool does not read (pixel flags {pixelFlags:x}, {bits} bits)");
         }
 
-        public static byte[] Write(int width, int height, ScmapTextureFormat format, byte[] rgba)
+        public static byte[] Write(int width, int height, TextureFormat format, byte[] rgba)
         {
             byte[] payload = format switch
             {
-                ScmapTextureFormat.A8R8G8B8 => ToBgra(rgba),
-                ScmapTextureFormat.Dxt5 => CompressDxt5(width, height, rgba),
+                TextureFormat.A8R8G8B8 => ToBgra(rgba),
+                TextureFormat.Dxt5 => CompressDxt5(width, height, rgba),
                 _ => throw new ArgumentOutOfRangeException(nameof(format)),
             };
 
@@ -77,7 +78,7 @@ namespace FAForever.MapEditor.Project
             BinaryPrimitives.WriteInt32LittleEndian(header[12..], height);
             BinaryPrimitives.WriteInt32LittleEndian(header[16..], width);
             BinaryPrimitives.WriteInt32LittleEndian(header[76..], 32);
-            if (format == ScmapTextureFormat.Dxt5)
+            if (format == TextureFormat.Dxt5)
             {
                 BinaryPrimitives.WriteInt32LittleEndian(header[80..], 0x4);
                 BinaryPrimitives.WriteUInt32LittleEndian(header[84..], 0x35545844);
