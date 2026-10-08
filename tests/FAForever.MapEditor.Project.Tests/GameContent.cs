@@ -32,7 +32,8 @@ namespace FAForever.MapEditor.Project.Tests
             }
             foreach (MapArmy army in save.Armies)
             {
-                b.AppendLine($"army {army.Name} | {army.Personality} | {army.Plans} | {army.Color} | {army.Faction} | {army.Economy}");
+                // a missing colour or faction is the first, as the export writes it
+                b.AppendLine($"army {army.Name} | {army.Personality} | {army.Plans} | {army.Color ?? 0} | {army.Faction ?? 0} | {army.Economy}");
                 b.AppendLine($"  alliances {string.Join(" ", army.Alliances.OrderBy(a => a.Key, StringComparer.Ordinal).Select(a => $"{a.Key}={a.Value}"))}");
                 Group(b, army.Units, "  ");
             }

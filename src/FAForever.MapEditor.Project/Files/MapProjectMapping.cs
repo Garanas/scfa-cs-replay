@@ -53,7 +53,6 @@ namespace FAForever.MapEditor.Project.Files
 
         public static DecalsDto ToDecalsDto(MapDocument document) => new DecalsDto
         {
-            Header = ToDto(document.DecalHeader),
             Decals = [.. document.Decals.Select(decal => ToDto(decal))],
             Groups = [.. document.DecalGroups.Select(group => ToDto(group))],
         };
@@ -84,7 +83,6 @@ namespace FAForever.MapEditor.Project.Files
                 Water = ToModel(map.Water, images),
                 Sky = ToModel(map.Sky),
                 Minimap = map.Minimap is null ? null : ToModel(map.Minimap),
-                DecalHeader = ToModel(decals.Header),
                 Decals = [.. decals.Decals.Select(decal => ToModel(decal))],
                 DecalGroups = [.. decals.Groups.Select(group => ToModel(group))],
                 Props = [.. props.Select((prop, index) => ToModel(prop, index + 1))],
@@ -146,7 +144,6 @@ namespace FAForever.MapEditor.Project.Files
         /// </summary>
         public static MapDocument WithDecals(MapDocument document, DecalsDto decals) => document with
         {
-            DecalHeader = ToModel(decals.Header),
             Decals = [.. decals.Decals.Select(decal => ToModel(decal))],
             DecalGroups = [.. decals.Groups.Select(group => ToModel(group))],
         };

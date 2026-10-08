@@ -16,5 +16,11 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// The rotation around each axis, in radians.
         /// </summary>
         public Vector3Dto? Orientation { get; init; }
+
+        /// <summary>
+        /// Where the no-rush circle of the army lies relative to the start position; absent for a
+        /// circle around it.
+        /// </summary>
+        public Vector2Dto? NoRushOffset { get; init; }
     }
 }

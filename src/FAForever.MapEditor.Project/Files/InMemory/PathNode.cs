@@ -1,27 +1,25 @@
 using System.Collections.Immutable;
-using System.Numerics;
 
 namespace FAForever.MapEditor.Project.Files.InMemory
 {
     /// <summary>
     /// A node of the graph the AI finds its way with on one layer.
     /// </summary>
-    public sealed record PathNode
+    public sealed record PathNode : Marker
     {
-        public required string Name { get; init; }
-
         public PathLayer Layer { get; init; }
 
-        public Vector3 Position { get; init; }
-
         /// <summary>
-        /// The rotation around each axis, in radians.
+        /// The ids of the nodes this one links to (<see cref="Marker.Id"/>).
         /// </summary>
-        public Vector3 Orientation { get; init; }
+        public ImmutableArray<int> AdjacentTo { get; init; } = [];
 
-        /// <summary>
-        /// The names of the nodes this one links to.
-        /// </summary>
-        public ImmutableArray<string> AdjacentTo { get; init; } = [];
+        public override Color32 Color => Color32.FromArgb(Layer switch
+        {
+            PathLayer.Land => 0xff00ff00,
+            PathLayer.Water => 0xff0000ff,
+            PathLayer.Amphibious => 0xff00ffff,
+            _ => 0xffffffff,
+        });
     }
 }

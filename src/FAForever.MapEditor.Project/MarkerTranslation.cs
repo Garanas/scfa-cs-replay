@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Numerics;
 using System.Text.RegularExpressions;
@@ -9,16 +10,16 @@ using FAForever.MapEditor.Project.Files.InMemory;
 namespace FAForever.MapEditor.Project
 {
     /// <summary>
-    /// Translates between the markers of a save file (a type name and a table of fields) and the
-    /// editor's <see cref="MarkerSet"/>, both ways.
+    /// Translates between the markers of a save file (a type name and a table of fields, linked by
+    /// name) and the editor's <see cref="MarkerSet"/> (records linked by id), both ways.
     /// </summary>
     /// <remarks>
     /// Most fields of a marker are decoration for the map editors and the same for every marker of
-    /// a type: its colour, editor prop, <c>hint</c>, and for deposits <c>resource</c>, <c>size</c> and
-    /// <c>amount</c> (100 in every map of the vault). The editor does not keep them; the export
-    /// writes them from <see cref="Decorations"/>, the values most maps of a local vault copy of 99
-    /// maps use. What differs per marker is kept: the links of path nodes, the army a deposit spawns
-    /// with, the settings of the weather.
+    /// a type: its colour (<see cref="Marker.Color"/>), editor prop and <c>hint</c>, and for deposits
+    /// <c>resource</c>, <c>size</c> and <c>amount</c> (100 in every map of the vault). The editor does
+    /// not keep them; the export writes them as most maps of a local vault copy of 99 maps do. What
+    /// differs per marker is kept: the links of path nodes, the army a deposit spawns with, the
+    /// settings of the weather.
     /// </remarks>
     internal static partial class MarkerTranslation
     {
@@ -33,32 +34,13 @@ namespace FAForever.MapEditor.Project
         ];
 
         /// <summary>
-        /// The colour of each type and whether it has a <c>hint</c>; other types get the colour of a
-        /// blank marker and no hint.
+        /// The types whose markers the map editors write with <c>hint = true</c>.
         /// </summary>
-        private static readonly Dictionary<string, (string Color, bool Hint)> Decorations = new Dictionary<string, (string, bool)>
+        private static readonly HashSet<string> Hinted = new HashSet<string>(StringComparer.Ordinal)
         {
-            ["Air Path Node"] = ("ffffffff", true),
-            ["Amphibious Path Node"] = ("ff00ffff", true),
-            ["Land Path Node"] = ("ff00ff00", true),
-            ["Water Path Node"] = ("ff0000ff", true),
-            ["Blank Marker"] = ("ff800080", false),
-            ["Mass"] = ("ff808080", false),
-            ["Hydrocarbon"] = ("ff008000", false),
-            ["Combat Zone"] = ("ff800000", true),
-            ["Defensive Point"] = ("ff008000", true),
-            ["Expansion Area"] = ("ff008080", true),
-            ["Large Expansion Area"] = ("ff008080", true),
-            ["Island"] = ("ff0000AA", true),
-            ["Naval Area"] = ("ff0000FF", true),
-            ["Naval Defensive Point"] = ("ff0080FF", true),
-            ["Naval Link"] = ("ffff0000", false),
-            ["Naval Rally Point"] = ("ff00FFFF", true),
-            ["Protected Experimental Construction"] = ("ff0000AA", true),
-            ["Rally Point"] = ("FF808000", true),
-            ["Transport Marker"] = ("ff80A088", false),
-            ["Weather Definition"] = ("FF808000", false),
-            ["Weather Generator"] = ("FF808000", false),
+            "Air Path Node", "Amphibious Path Node", "Land Path Node", "Water Path Node", "Combat Zone", "Defensive Point",
+            "Expansion Area", "Large Expansion Area", "Island", "Naval Area", "Naval Defensive Point", "Naval Rally Point",
+            "Protected Experimental Construction", "Rally Point",
         };
 
         private static readonly string[] WeatherGeneratorFields =
@@ -68,8 +50,22 @@ namespace FAForever.MapEditor.Project
 
         #region From the save
 
-        public static MarkerSet ToMarkerSet(IEnumerable<MapMarker> markers, IEnumerable<MapArea> areas, IEnumerable<MapChain> chains)
+        /// <summary>
+        /// The markers of a save, numbered from 1 in the order of the file.
+        /// </summary>
+        /// <param name="noRushOffsets">The no-rush offsets of the scenario, by army.</param>
+        public static MarkerSet ToMarkerSet(IEnumerable<MapMarker> markers, IEnumerable<MapArea> areas, IEnumerable<MapChain> chains, IReadOnlyDictionary<string, Vector2> noRushOffsets)
         {
+            List<MapMarker> list = [.. markers];
+
+            // the ids first: links name markers that come later in the file
+            Dictionary<string, int> ids = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < list.Count; i++)
+            {
+                ids.TryAdd(list[i].Name, i + 1);
+            }
+            ImmutableArray<int> Ids(IEnumerable<string> names) => [.. names.Where(ids.ContainsKey).Select(name => ids[name])];
+
             List<Spawn> spawns = [];
             List<ResourceMarker> resources = [];
             List<PathNode> pathNodes = [];
@@ -77,44 +73,57 @@ namespace FAForever.MapEditor.Project
             List<WeatherDefinition> weatherDefinitions = [];
             List<WeatherGenerator> weatherGenerators = [];
 
-            foreach (MapMarker marker in markers)
+            for (int i = 0; i < list.Count; i++)
             {
+                MapMarker marker = list[i];
+                int id = i + 1;
+                Vector3 orientation = Turn(marker.Orientation);
                 LuaTableReader fields = new LuaTableReader(marker.Raw);
                 switch (marker.Type)
                 {
                     case "Blank Marker" when ArmyName().IsMatch(marker.Name):
-                        spawns.Add(new Spawn { Army = marker.Name, Position = marker.Position, Orientation = Turn(marker.Orientation) });
+                        spawns.Add(new Spawn
+                        {
+                            Id = id,
+                            Name = marker.Name,
+                            Position = marker.Position,
+                            Orientation = orientation,
+                            NoRushOffset = noRushOffsets.TryGetValue(marker.Name, out Vector2 offset) ? offset : null,
+                        });
                         break;
                     case "Mass" or "Hydrocarbon":
                         resources.Add(new ResourceMarker
                         {
+                            Id = id,
                             Name = marker.Name,
                             Kind = marker.Type == "Mass" ? ResourceKind.Mass : ResourceKind.Hydrocarbon,
                             Position = marker.Position,
-                            Orientation = Turn(marker.Orientation),
+                            Orientation = orientation,
                             SpawnWithArmy = fields.String("SpawnWithArmy"),
                         });
                         break;
                     case "Weather Definition":
                         weatherDefinitions.Add(new WeatherDefinition
                         {
+                            Id = id,
                             Name = marker.Name,
                             Position = marker.Position,
-                            Orientation = Turn(marker.Orientation),
+                            Orientation = orientation,
                             MapStyle = fields.String("MapStyle") ?? "",
                             Description = fields.String("Description"),
                             DriftDirection = Vector(fields.Numbers("WeatherDriftDirection")),
                             Types = [.. Enumerable.Range(1, 4)
-                                .Where(i => fields.String(WeatherType(i)) is not null)
-                                .Select(i => new WeatherChance { Type = fields.String(WeatherType(i))!, Chance = fields.Number(WeatherType(i) + "Chance") ?? 0 })],
+                                .Where(index => fields.String(WeatherType(index)) is not null)
+                                .Select(index => new WeatherChance { Type = fields.String(WeatherType(index))!, Chance = fields.Number(WeatherType(index) + "Chance") ?? 0 })],
                         });
                         break;
                     case "Weather Generator":
                         weatherGenerators.Add(new WeatherGenerator
                         {
+                            Id = id,
                             Name = marker.Name,
                             Position = marker.Position,
-                            Orientation = Turn(marker.Orientation),
+                            Orientation = orientation,
                             ForceType = fields.String("ForceType"),
                             SpawnChance = fields.Number("spawnChance"),
                             CloudCount = fields.Number("cloudCount"),
@@ -131,16 +140,17 @@ namespace FAForever.MapEditor.Project
                         {
                             pathNodes.Add(new PathNode
                             {
+                                Id = id,
                                 Name = marker.Name,
                                 Layer = path.Layer,
                                 Position = marker.Position,
-                                Orientation = Turn(marker.Orientation),
-                                AdjacentTo = [.. (fields.String("adjacentTo") ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries)],
+                                Orientation = orientation,
+                                AdjacentTo = Ids((fields.String("adjacentTo") ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries)),
                             });
                         }
                         else
                         {
-                            aiMarkers.Add(new AiMarker { Name = marker.Name, Type = marker.Type, Position = marker.Position, Orientation = Turn(marker.Orientation) });
+                            aiMarkers.Add(new AiMarker { Id = id, Name = marker.Name, Type = marker.Type, Position = marker.Position, Orientation = orientation });
                         }
                         break;
                 }
@@ -155,7 +165,7 @@ namespace FAForever.MapEditor.Project
                 WeatherDefinitions = [.. weatherDefinitions],
                 WeatherGenerators = [.. weatherGenerators],
                 Areas = [.. areas.Select(a => new Area { Name = a.Name, X0 = a.X0, Z0 = a.Z0, X1 = a.X1, Z1 = a.Z1 })],
-                Chains = [.. chains.Select(c => new Chain { Name = c.Name, Markers = [.. c.Markers] })],
+                Chains = [.. chains.Select(c => new Chain { Name = c.Name, MarkerIds = Ids(c.Markers) })],
             };
         }
 
@@ -182,9 +192,11 @@ namespace FAForever.MapEditor.Project
         /// </summary>
         public static IEnumerable<MapMarker> ToMapMarkers(MarkerSet set)
         {
+            Dictionary<int, string> names = Names(set);
+
             foreach (Spawn spawn in set.Spawns)
             {
-                yield return Marker(spawn.Army, "Blank Marker", spawn.Position, spawn.Orientation, []);
+                yield return Marker(spawn, "Blank Marker", []);
             }
 
             foreach (ResourceMarker resource in set.Resources)
@@ -200,7 +212,7 @@ namespace FAForever.MapEditor.Project
                 {
                     fields.Add(("SpawnWithArmy", new LuaData.String(army)));
                 }
-                yield return Marker(resource.Name, mass ? "Mass" : "Hydrocarbon", resource.Position, resource.Orientation, fields);
+                yield return Marker(resource, mass ? "Mass" : "Hydrocarbon", fields);
             }
 
             foreach (PathNode node in set.PathNodes)
@@ -209,14 +221,14 @@ namespace FAForever.MapEditor.Project
                 List<(string, LuaData)> fields =
                 [
                     ("graph", new LuaData.String("Default" + node.Layer)),
-                    ("adjacentTo", new LuaData.String(string.Join(' ', node.AdjacentTo))),
+                    ("adjacentTo", new LuaData.String(string.Join(' ', NamesOf(names, node.AdjacentTo)))),
                 ];
-                yield return Marker(node.Name, PathTypes.First(p => p.Layer == node.Layer).Type, node.Position, node.Orientation, fields);
+                yield return Marker(node, PathTypes.First(p => p.Layer == node.Layer).Type, fields);
             }
 
             foreach (AiMarker marker in set.AiMarkers)
             {
-                yield return Marker(marker.Name, marker.Type, marker.Position, marker.Orientation, []);
+                yield return Marker(marker, marker.Type, []);
             }
 
             foreach (WeatherDefinition weather in set.WeatherDefinitions)
@@ -235,7 +247,7 @@ namespace FAForever.MapEditor.Project
                 {
                     fields.Add(("Description", new LuaData.String(description)));
                 }
-                yield return Marker(weather.Name, "Weather Definition", weather.Position, weather.Orientation, fields);
+                yield return Marker(weather, "Weather Definition", fields);
             }
 
             foreach (WeatherGenerator generator in set.WeatherGenerators)
@@ -252,18 +264,37 @@ namespace FAForever.MapEditor.Project
                 {
                     fields.Add(("ForceType", new LuaData.String(forceType)));
                 }
-                yield return Marker(generator.Name, "Weather Generator", generator.Position, generator.Orientation, fields);
+                yield return Marker(generator, "Weather Generator", fields);
             }
         }
 
         /// <summary>
+        /// The chains as the save file writes them: the markers by name.
+        /// </summary>
+        public static IEnumerable<MapChain> ToMapChains(MarkerSet set)
+        {
+            Dictionary<int, string> names = Names(set);
+            return set.Chains.Select(chain => new MapChain(chain.Name, NamesOf(names, chain.MarkerIds)));
+        }
+
+        private static Dictionary<int, string> Names(MarkerSet set) => set.All.ToDictionary(marker => marker.Id, marker => marker.Name);
+
+        /// <summary>
+        /// The names of markers by their ids, leaving out ids no marker has (any more).
+        /// </summary>
+        private static IReadOnlyList<string> NamesOf(Dictionary<int, string> names, IEnumerable<int> ids) =>
+            [.. ids.Where(names.ContainsKey).Select(id => names[id])];
+
+        /// <summary>
         /// A marker with its fields and the decoration of its type.
         /// </summary>
-        private static MapMarker Marker(string name, string type, Vector3 position, Vector3 orientation, IEnumerable<(string Key, LuaData Value)> fields)
+        private static MapMarker Marker(Marker marker, string type, IEnumerable<(string Key, LuaData Value)> fields)
         {
-            (string color, bool hint) = Decorations.GetValueOrDefault(type, Decorations["Blank Marker"]);
-            Dictionary<string, LuaData> table = new Dictionary<string, LuaData> { ["color"] = new LuaData.String(color) };
-            if (hint)
+            Dictionary<string, LuaData> table = new Dictionary<string, LuaData>
+            {
+                ["color"] = new LuaData.String(marker.Color.ToArgb().ToString("x8", CultureInfo.InvariantCulture)),
+            };
+            if (Hinted.Contains(type))
             {
                 table["hint"] = new LuaData.Bool(true);
             }
@@ -272,7 +303,7 @@ namespace FAForever.MapEditor.Project
                 table[key] = value;
             }
             table["prop"] = new LuaData.String(BlankProp);
-            return new MapMarker(name, type, position, orientation, new LuaData.Table(table));
+            return new MapMarker(marker.Name, type, marker.Position, marker.Orientation, new LuaData.Table(table));
         }
 
         private static LuaData.Number Number(double value) => new LuaData.Number(value);

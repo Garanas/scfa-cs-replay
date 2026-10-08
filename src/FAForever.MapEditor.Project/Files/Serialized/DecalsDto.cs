@@ -5,8 +5,6 @@ namespace FAForever.MapEditor.Project.Files.Serialized
     /// </summary>
     public sealed record DecalsDto
     {
-        public required DecalHeaderDto Header { get; init; }
-
         public required IReadOnlyList<DecalDto> Decals { get; init; }
 
         public required IReadOnlyList<DecalGroupDto> Groups { get; init; }

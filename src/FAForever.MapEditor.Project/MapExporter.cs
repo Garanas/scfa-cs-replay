@@ -1,4 +1,6 @@
+using System.Collections.Immutable;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using FAForever.FileFormats.Lua;
 using FAForever.FileFormats.Map;
@@ -68,7 +70,7 @@ namespace FAForever.MapEditor.Project
                     Raw = new LuaData.Table([]),
                     Markers = [.. MarkerTranslation.ToMapMarkers(document.Markers)],
                     Areas = [.. document.Markers.Areas.Select(a => new MapArea(a.Name, a.X0, a.Z0, a.X1, a.Z1))],
-                    Chains = [.. document.Markers.Chains.Select(c => new MapChain(c.Name, [.. c.Markers]))],
+                    Chains = [.. MarkerTranslation.ToMapChains(document.Markers)],
                     Armies = [.. document.Armies.Select(ToMapArmy)],
                 },
                 Scenario = ToMapScenario(document, root),
@@ -192,7 +194,7 @@ namespace FAForever.MapEditor.Project
                     : null,
                 Tileset = terrain.Tileset,
                 Layers = [.. terrain.Layers.Select(x => new ScmapTerrainLayer(x.AlbedoPath, x.AlbedoScale, x.NormalPath, x.NormalScale))],
-                DecalHeader = (d.DecalHeader.First, d.DecalHeader.Second),
+                DecalHeader = DecalHeader(d),
                 Decals = [.. d.Decals.Select(x => new ScmapDecal(x.Id, (int)x.Type, [.. x.Textures], x.Scale, x.Position, x.Rotation, x.CutOffLod, x.NearCutOffLod, x.OwnerArmy))],
                 DecalGroups = [.. d.DecalGroups.Select(g => new ScmapDecalGroup(g.Id, g.Name, [.. g.DecalIds]))],
                 NormalMaps = [Texture(terrain.NormalMap, terrain.NormalMapFormat)],
@@ -206,6 +208,13 @@ namespace FAForever.MapEditor.Project
                 Props = [.. d.Props.Select(p => new ScmapProp(p.Blueprint, p.Position, p.RotationX, p.RotationY, p.RotationZ, p.Scale))],
             };
         }
+
+        /// <summary>
+        /// The two numbers before the decals, which the map editors keep as counters (the FAF map
+        /// editor calls them Unknown7 and Unknown8): one more than the highest decal id and group id.
+        /// </summary>
+        private static (int, int) DecalHeader(MapDocument d) =>
+            (d.Decals.IsEmpty ? 0 : d.Decals.Max(decal => decal.Id) + 1, d.DecalGroups.IsEmpty ? 0 : d.DecalGroups.Max(group => group.Id) + 1);
 
         private static ScmapSkybox ToScmapSkybox(Skybox s) => new ScmapSkybox
         {
@@ -230,24 +239,44 @@ namespace FAForever.MapEditor.Project
             Clouds7 = s.Clouds7,
         };
 
+        /// <summary>
+        /// The factions any army may play, for the armies of a map that restricts some.
+        /// </summary>
+        private static readonly string[] AllFactions = ["uef", "aeon", "cybran", "seraphim"];
+
+        /// <summary>
+        /// The scenario as the game reads it: one configuration, <c>standard</c>, with one team,
+        /// <c>FFA</c>, of the playable armies, and the other armies in <c>customprops.ExtraArmies</c>.
+        /// </summary>
         private static MapScenario ToMapScenario(MapDocument d, string root)
         {
             ScenarioInfo s = d.Scenario;
             Dictionary<string, LuaData> extra = new Dictionary<string, LuaData>();
-            if (s.Author is string author)
+            if (s.Author.Length > 0)
             {
-                extra["author"] = new LuaData.String(author);
+                extra["author"] = new LuaData.String(s.Author);
             }
-            foreach ((string army, NoRushOffset offset) in s.NoRushOffsets)
+            foreach (Spawn spawn in d.Markers.Spawns)
             {
-                if (offset.X is double x)
+                if (spawn.NoRushOffset is Vector2 offset)
                 {
-                    extra[$"norushoffsetX_{army}"] = new LuaData.Number(x);
+                    extra[$"norushoffsetX_{spawn.Army}"] = new LuaData.Number(offset.X);
+                    extra[$"norushoffsetY_{spawn.Army}"] = new LuaData.Number(offset.Y);
                 }
-                if (offset.Y is double y)
-                {
-                    extra[$"norushoffsetY_{army}"] = new LuaData.Number(y);
-                }
+            }
+
+            Dictionary<string, LuaData> configuration = new Dictionary<string, LuaData>();
+            if (!s.ArmyFactions.IsEmpty)
+            {
+                // per playable army in order, up to the last that is restricted
+                int count = s.PlayableArmies.LastIndexOf(s.PlayableArmies.LastOrDefault(s.ArmyFactions.ContainsKey) ?? "") + 1;
+                configuration["factions"] = List(s.PlayableArmies.Take(count).Select(army =>
+                    List((s.ArmyFactions.TryGetValue(army, out ImmutableArray<string> allowed) ? allowed.AsEnumerable() : AllFactions).Select(f => new LuaData.String(f)))));
+            }
+            Dictionary<string, string> customProperties = new Dictionary<string, string>();
+            if (!s.ExtraArmies.IsEmpty)
+            {
+                customProperties["ExtraArmies"] = string.Join(' ', s.ExtraArmies);
             }
 
             return new MapScenario
@@ -255,8 +284,8 @@ namespace FAForever.MapEditor.Project
                 Raw = new LuaData.Table(extra),
                 Name = s.Name,
                 Description = s.Description,
-                Type = s.Type,
-                Starts = s.Starts,
+                Type = s.Type == ScenarioType.CampaignCoop ? "campaign_coop" : "skirmish",
+                Starts = true,
                 Preview = s.PreviewPath,
                 Size = (d.Width, d.Height),
                 Map = root + ".scmap",
@@ -265,22 +294,22 @@ namespace FAForever.MapEditor.Project
                 MapVersion = d.Version,
                 NoRushRadius = s.NoRushRadius,
                 Reclaim = s.Reclaim is Reclaim r ? (r.Mass, r.Energy) : null,
-                AdaptiveMap = s.AdaptiveMap,
-                Configurations = [.. s.Configurations.Select(c => new MapConfiguration(
-                    c.Name,
-                    [.. c.Teams.Select(t => new MapTeam(t.Name, [.. t.Armies]))],
-                    new Dictionary<string, string>(c.CustomProperties),
-                    new LuaData.Table(c.Factions is null ? [] : new Dictionary<string, LuaData> { ["factions"] = List(c.Factions.Value.Select(army => List(army.Select(f => new LuaData.String(f))))) })))],
+                AdaptiveMap = s.AdaptiveMap ? true : null,
+                Configurations = [new MapConfiguration("standard", [new MapTeam("FFA", [.. s.PlayableArmies])], customProperties, new LuaData.Table(configuration))],
             };
         }
 
+        /// <summary>
+        /// An army of the save file, with the economy (0 mass and energy) and personality (empty)
+        /// that every map of the vault gives its armies.
+        /// </summary>
         private static MapArmy ToMapArmy(Army a) => new MapArmy(
             a.Name,
-            a.Personality,
-            a.Plans,
+            "",
+            a.Plans ?? "",
             a.Color,
             a.Faction,
-            a.Economy is Economy e ? new MapEconomy(e.Mass, e.Energy) : null,
+            new MapEconomy(0, 0),
             new Dictionary<string, string>(a.Alliances),
             ToMapGroup(a.Units),
             new LuaData.Table([]));

@@ -8,36 +8,6 @@ namespace FAForever.MapEditor.Project.Files
     // The types that are the same in memory and on disk, property by property.
     internal static partial class MapProjectMapping
     {
-        public static ScenarioInfoDto ToDto(ScenarioInfo source) => new ScenarioInfoDto
-        {
-            Name = source.Name,
-            Description = source.Description,
-            Author = source.Author,
-            Type = source.Type,
-            Starts = source.Starts,
-            PreviewPath = source.PreviewPath,
-            NoRushRadius = source.NoRushRadius,
-            NoRushOffsets = source.NoRushOffsets.ToDictionary(entry => entry.Key, entry => ToDto(entry.Value)),
-            AdaptiveMap = source.AdaptiveMap,
-            Reclaim = source.Reclaim is null ? null : ToDto(source.Reclaim),
-            Configurations = [.. source.Configurations.Select(item => ToDto(item))],
-        };
-
-        public static ScenarioInfo ToModel(ScenarioInfoDto source) => new ScenarioInfo
-        {
-            Name = source.Name,
-            Description = source.Description,
-            Author = source.Author,
-            Type = source.Type,
-            Starts = source.Starts,
-            PreviewPath = source.PreviewPath,
-            NoRushRadius = source.NoRushRadius,
-            NoRushOffsets = source.NoRushOffsets.ToImmutableSortedDictionary(entry => entry.Key, entry => ToModel(entry.Value), StringComparer.Ordinal),
-            AdaptiveMap = source.AdaptiveMap,
-            Reclaim = source.Reclaim is null ? null : ToModel(source.Reclaim),
-            Configurations = [.. source.Configurations.Select(item => ToModel(item))],
-        };
-
         public static ReclaimDto ToDto(Reclaim source) => new ReclaimDto
         {
             Mass = source.Mass,
@@ -48,46 +18,6 @@ namespace FAForever.MapEditor.Project.Files
         {
             Mass = source.Mass,
             Energy = source.Energy,
-        };
-
-        public static NoRushOffsetDto ToDto(NoRushOffset source) => new NoRushOffsetDto
-        {
-            X = source.X,
-            Y = source.Y,
-        };
-
-        public static NoRushOffset ToModel(NoRushOffsetDto source) => new NoRushOffset
-        {
-            X = source.X,
-            Y = source.Y,
-        };
-
-        public static ConfigurationDto ToDto(Configuration source) => new ConfigurationDto
-        {
-            Name = source.Name,
-            Teams = [.. source.Teams.Select(item => ToDto(item))],
-            CustomProperties = new Dictionary<string, string>(source.CustomProperties),
-            Factions = source.Factions is null ? null : [.. source.Factions.Value.Select(list => list.ToList())],
-        };
-
-        public static Configuration ToModel(ConfigurationDto source) => new Configuration
-        {
-            Name = source.Name,
-            Teams = [.. source.Teams.Select(item => ToModel(item))],
-            CustomProperties = source.CustomProperties.ToImmutableSortedDictionary(StringComparer.Ordinal),
-            Factions = source.Factions is null ? null : ImmutableArray.CreateRange(source.Factions.Select(list => list.ToImmutableArray())),
-        };
-
-        public static TeamDto ToDto(Team source) => new TeamDto
-        {
-            Name = source.Name,
-            Armies = [.. source.Armies],
-        };
-
-        public static Team ToModel(TeamDto source) => new Team
-        {
-            Name = source.Name,
-            Armies = [.. source.Armies],
         };
 
         public static TerrainLayerDto ToDto(TerrainLayer source) => new TerrainLayerDto
@@ -352,130 +282,6 @@ namespace FAForever.MapEditor.Project.Files
             DecalIds = [.. source.DecalIds],
         };
 
-        public static DecalHeaderDto ToDto(DecalHeader source) => new DecalHeaderDto
-        {
-            First = source.First,
-            Second = source.Second,
-        };
-
-        public static DecalHeader ToModel(DecalHeaderDto source) => new DecalHeader
-        {
-            First = source.First,
-            Second = source.Second,
-        };
-
-        public static MarkerSetDto ToDto(MarkerSet source) => new MarkerSetDto
-        {
-            Spawns = [.. source.Spawns.Select(item => ToDto(item))],
-            Resources = [.. source.Resources.Select(item => ToDto(item))],
-            PathNodes = [.. source.PathNodes.Select(item => ToDto(item))],
-            AiMarkers = [.. source.AiMarkers.Select(item => ToDto(item))],
-            WeatherDefinitions = [.. source.WeatherDefinitions.Select(item => ToDto(item))],
-            WeatherGenerators = [.. source.WeatherGenerators.Select(item => ToDto(item))],
-            Areas = [.. source.Areas.Select(item => ToDto(item))],
-            Chains = [.. source.Chains.Select(item => ToDto(item))],
-        };
-
-        public static MarkerSet ToModel(MarkerSetDto source) => new MarkerSet
-        {
-            Spawns = [.. source.Spawns.Select(item => ToModel(item))],
-            Resources = [.. source.Resources.Select(item => ToModel(item))],
-            PathNodes = [.. source.PathNodes.Select(item => ToModel(item))],
-            AiMarkers = [.. source.AiMarkers.Select(item => ToModel(item))],
-            WeatherDefinitions = [.. source.WeatherDefinitions.Select(item => ToModel(item))],
-            WeatherGenerators = [.. source.WeatherGenerators.Select(item => ToModel(item))],
-            Areas = [.. source.Areas.Select(item => ToModel(item))],
-            Chains = [.. source.Chains.Select(item => ToModel(item))],
-        };
-
-        public static SpawnDto ToDto(Spawn source) => new SpawnDto
-        {
-            Army = source.Army,
-            Position = Dto(source.Position),
-            Orientation = Optional(source.Orientation),
-        };
-
-        public static Spawn ToModel(SpawnDto source) => new Spawn
-        {
-            Army = source.Army,
-            Position = Model(source.Position),
-            Orientation = source.Orientation is null ? Vector3.Zero : Model(source.Orientation),
-        };
-
-        public static ResourceMarkerDto ToDto(ResourceMarker source) => new ResourceMarkerDto
-        {
-            Name = source.Name,
-            Kind = source.Kind,
-            Position = Dto(source.Position),
-            Orientation = Optional(source.Orientation),
-            SpawnWithArmy = source.SpawnWithArmy,
-        };
-
-        public static ResourceMarker ToModel(ResourceMarkerDto source) => new ResourceMarker
-        {
-            Name = source.Name,
-            Kind = source.Kind,
-            Position = Model(source.Position),
-            Orientation = source.Orientation is null ? Vector3.Zero : Model(source.Orientation),
-            SpawnWithArmy = source.SpawnWithArmy,
-        };
-
-        public static PathNodeDto ToDto(PathNode source) => new PathNodeDto
-        {
-            Name = source.Name,
-            Layer = source.Layer,
-            Position = Dto(source.Position),
-            Orientation = Optional(source.Orientation),
-            AdjacentTo = [.. source.AdjacentTo],
-        };
-
-        public static PathNode ToModel(PathNodeDto source) => new PathNode
-        {
-            Name = source.Name,
-            Layer = source.Layer,
-            Position = Model(source.Position),
-            Orientation = source.Orientation is null ? Vector3.Zero : Model(source.Orientation),
-            AdjacentTo = [.. source.AdjacentTo],
-        };
-
-        public static AiMarkerDto ToDto(AiMarker source) => new AiMarkerDto
-        {
-            Name = source.Name,
-            Type = source.Type,
-            Position = Dto(source.Position),
-            Orientation = Optional(source.Orientation),
-        };
-
-        public static AiMarker ToModel(AiMarkerDto source) => new AiMarker
-        {
-            Name = source.Name,
-            Type = source.Type,
-            Position = Model(source.Position),
-            Orientation = source.Orientation is null ? Vector3.Zero : Model(source.Orientation),
-        };
-
-        public static WeatherDefinitionDto ToDto(WeatherDefinition source) => new WeatherDefinitionDto
-        {
-            Name = source.Name,
-            Position = Dto(source.Position),
-            Orientation = Optional(source.Orientation),
-            MapStyle = source.MapStyle,
-            Description = source.Description,
-            DriftDirection = Dto(source.DriftDirection),
-            Types = [.. source.Types.Select(item => ToDto(item))],
-        };
-
-        public static WeatherDefinition ToModel(WeatherDefinitionDto source) => new WeatherDefinition
-        {
-            Name = source.Name,
-            Position = Model(source.Position),
-            Orientation = source.Orientation is null ? Vector3.Zero : Model(source.Orientation),
-            MapStyle = source.MapStyle,
-            Description = source.Description,
-            DriftDirection = Model(source.DriftDirection),
-            Types = [.. source.Types.Select(item => ToModel(item))],
-        };
-
         public static WeatherChanceDto ToDto(WeatherChance source) => new WeatherChanceDto
         {
             Type = source.Type,
@@ -486,38 +292,6 @@ namespace FAForever.MapEditor.Project.Files
         {
             Type = source.Type,
             Chance = source.Chance,
-        };
-
-        public static WeatherGeneratorDto ToDto(WeatherGenerator source) => new WeatherGeneratorDto
-        {
-            Name = source.Name,
-            Position = Dto(source.Position),
-            Orientation = Optional(source.Orientation),
-            ForceType = source.ForceType,
-            SpawnChance = source.SpawnChance,
-            CloudCount = source.CloudCount,
-            CloudCountRange = source.CloudCountRange,
-            CloudEmitterScale = source.CloudEmitterScale,
-            CloudEmitterScaleRange = source.CloudEmitterScaleRange,
-            CloudHeight = source.CloudHeight,
-            CloudHeightRange = source.CloudHeightRange,
-            CloudSpread = source.CloudSpread,
-        };
-
-        public static WeatherGenerator ToModel(WeatherGeneratorDto source) => new WeatherGenerator
-        {
-            Name = source.Name,
-            Position = Model(source.Position),
-            Orientation = source.Orientation is null ? Vector3.Zero : Model(source.Orientation),
-            ForceType = source.ForceType,
-            SpawnChance = source.SpawnChance,
-            CloudCount = source.CloudCount,
-            CloudCountRange = source.CloudCountRange,
-            CloudEmitterScale = source.CloudEmitterScale,
-            CloudEmitterScaleRange = source.CloudEmitterScaleRange,
-            CloudHeight = source.CloudHeight,
-            CloudHeightRange = source.CloudHeightRange,
-            CloudSpread = source.CloudSpread,
         };
 
         public static AreaDto ToDto(Area source) => new AreaDto
@@ -536,54 +310,6 @@ namespace FAForever.MapEditor.Project.Files
             Z0 = source.Z0,
             X1 = source.X1,
             Z1 = source.Z1,
-        };
-
-        public static ChainDto ToDto(Chain source) => new ChainDto
-        {
-            Name = source.Name,
-            Markers = [.. source.Markers],
-        };
-
-        public static Chain ToModel(ChainDto source) => new Chain
-        {
-            Name = source.Name,
-            Markers = [.. source.Markers],
-        };
-
-        public static ArmyDto ToDto(Army source) => new ArmyDto
-        {
-            Name = source.Name,
-            Personality = source.Personality,
-            Plans = source.Plans,
-            Color = source.Color,
-            Faction = source.Faction,
-            Economy = source.Economy is null ? null : ToDto(source.Economy),
-            Alliances = new Dictionary<string, string>(source.Alliances),
-            Units = ToDto(source.Units),
-        };
-
-        public static Army ToModel(ArmyDto source) => new Army
-        {
-            Name = source.Name,
-            Personality = source.Personality,
-            Plans = source.Plans,
-            Color = source.Color,
-            Faction = source.Faction,
-            Economy = source.Economy is null ? null : ToModel(source.Economy),
-            Alliances = source.Alliances.ToImmutableSortedDictionary(StringComparer.Ordinal),
-            Units = ToModel(source.Units),
-        };
-
-        public static EconomyDto ToDto(Economy source) => new EconomyDto
-        {
-            Mass = source.Mass,
-            Energy = source.Energy,
-        };
-
-        public static Economy ToModel(EconomyDto source) => new Economy
-        {
-            Mass = source.Mass,
-            Energy = source.Energy,
         };
 
         public static UnitGroupDto ToDto(UnitGroup source) => new UnitGroupDto

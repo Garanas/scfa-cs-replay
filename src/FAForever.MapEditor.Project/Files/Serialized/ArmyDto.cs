@@ -7,18 +7,14 @@ namespace FAForever.MapEditor.Project.Files.Serialized
     {
         public required string Name { get; init; }
 
-        public string? Personality { get; init; }
-
+        /// <summary>
+        /// The AI plans of a co-op army, a path into the map's folder.
+        /// </summary>
         public string? Plans { get; init; }
 
-        public int? Color { get; init; }
+        public required int Color { get; init; }
 
-        public int? Faction { get; init; }
-
-        /// <summary>
-        /// The resources the army starts with.
-        /// </summary>
-        public EconomyDto? Economy { get; init; }
+        public required int Faction { get; init; }
 
         /// <summary>
         /// The stance towards other armies by name, e.g. <c>Enemy</c>.

@@ -64,8 +64,6 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// </summary>
         public Minimap? Minimap { get; init; }
 
-        public required DecalHeader DecalHeader { get; init; }
-
         public ImmutableArray<Decal> Decals { get; init; } = [];
 
         public ImmutableArray<DecalGroup> DecalGroups { get; init; } = [];

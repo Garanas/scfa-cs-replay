@@ -1,21 +1,10 @@
-using System.Numerics;
-
 namespace FAForever.MapEditor.Project.Files.InMemory
 {
     /// <summary>
     /// A place where clouds form. A setting it leaves out is left to the game.
     /// </summary>
-    public sealed record WeatherGenerator
+    public sealed record WeatherGenerator : Marker
     {
-        public required string Name { get; init; }
-
-        public Vector3 Position { get; init; }
-
-        /// <summary>
-        /// The rotation around each axis, in radians.
-        /// </summary>
-        public Vector3 Orientation { get; init; }
-
         /// <summary>
         /// The cloud type to form, or <c>None</c> for the weather definition's.
         /// </summary>
@@ -36,5 +25,7 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public double? CloudHeightRange { get; init; }
 
         public double? CloudSpread { get; init; }
+
+        public override Color32 Color => Color32.FromArgb(0xff808000);
     }
 }

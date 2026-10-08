@@ -32,7 +32,22 @@ project folder  ⇄  Files.Serialized  ⇄  Files.InMemory  ⇄  Scmap + MapSave
 The types that are the same in memory and on disk have the same properties on both sides, mapped
 property by property in `Files/MapProjectMapping.Records.cs`; adding a property means adding it to
 both records and both mapping methods. The document, terrain and water (which carry grids) and the
-prop (whose id exists in memory only) are mapped by hand in `Files/MapProjectMapping.cs`.
+prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and markers in
+`Files/MapProjectMapping.Markers.cs`. All of it is ordinary code: there is no generator.
+
+## The model, not the game's files
+
+- `ScenarioInfo` keeps the playable armies and the extra armies: every map of the vault has one
+  configuration, `standard`, with one team, `FFA`, and `customprops.ExtraArmies`; the export builds
+  them. Factions a playable army is limited to (two co-op missions) are in `ArmyFactions`. The type
+  is an enum, text fields are never null (empty instead), `Reclaim` is optional as a whole.
+- Markers derive from `Marker` (`Id`, `Name`, `Position`, `Orientation`, and a `Color` each kind
+  fixes). Links between markers (`PathNode.AdjacentTo`, `Chain.MarkerIds`) are ids; names are what
+  the files hold, on disk and in the game. A link to a name no marker has is dropped on import
+  (glacier_valley has a few). A spawn holds its army's no-rush offset, whole or not at all.
+- Left to the export, as every map of the vault has them: an army's economy (0, 0) and
+  personality (empty), `starts = true`, and the two numbers before the decals, which the FAF map
+  editor keeps as counters (`Unknown7`, `Unknown8`): one more than the highest decal and group id.
 
 ## Versions, undo and plugins
 

@@ -37,7 +37,7 @@ namespace FAForever.MapEditor.Project.Tests
                 GameContent.Scenario(MapScenarioParser.Parse(Original(map, file + "_scenario.lua"))),
                 GameContent.Scenario(MapScenarioParser.Parse(Text(exported[file + "_scenario.lua"]))));
 
-            // the .scmap is the same but for the encoding of its textures
+            // the .scmap is the same but for the encoding of its textures and the derived decal counters
             Scmap original = ScmapParser.Parse(File.ReadAllBytes(Path.Combine(map, file + ".scmap")));
             Scmap written = ScmapParser.Parse(exported[file + ".scmap"]);
             Scmap withTextures = original with
@@ -46,7 +46,11 @@ namespace FAForever.MapEditor.Project.Tests
                 NormalMaps = written.NormalMaps,
                 StratumMasks = written.StratumMasks,
                 WaterMap = written.WaterMap,
+                DecalHeader = written.DecalHeader,
             };
+            Assert.AreEqual(
+                (original.Decals.Count == 0 ? 0 : original.Decals.Max(d => d.Id) + 1, original.DecalGroups.Count == 0 ? 0 : original.DecalGroups.Max(g => g.Id) + 1),
+                written.DecalHeader);
             CollectionAssert.AreEqual(ScmapWriter.Write(withTextures), exported[file + ".scmap"]);
 
             // the uncompressed textures keep every pixel, the compressed ones nearly every
@@ -91,10 +95,12 @@ namespace FAForever.MapEditor.Project.Tests
         [TestMethod]
         public void KeepsTheNoRushOffsetsPerArmy()
         {
-            ScenarioInfo scenario = MapImporter.ImportFolder(ProjectFolders.HardFfa).Scenario;
+            MapDocument document = MapImporter.ImportFolder(ProjectFolders.HardFfa);
 
-            Assert.AreEqual(8, scenario.NoRushOffsets.Count);
-            Assert.AreEqual(-35, scenario.NoRushOffsets["ARMY_1"].X);
+            Assert.AreEqual(8, document.Markers.Spawns.Count(spawn => spawn.NoRushOffset is not null));
+            Assert.AreEqual(-35, document.Markers.Spawns.Single(spawn => spawn.Army == "ARMY_1").NoRushOffset!.Value.X);
+            CollectionAssert.AreEqual(new[] { "ARMY_9", "NEUTRAL_CIVILIAN" }, document.Scenario.ExtraArmies.ToList());
+            Assert.AreEqual(8, document.Scenario.PlayableArmies.Length);
         }
 
         [TestMethod]

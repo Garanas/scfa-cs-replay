@@ -10,8 +10,8 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public required string Name { get; init; }
 
         /// <summary>
-        /// The names of the markers, in order.
+        /// The ids of the markers, in order (<see cref="Marker.Id"/>).
         /// </summary>
-        public ImmutableArray<string> Markers { get; init; } = [];
+        public ImmutableArray<int> MarkerIds { get; init; } = [];
     }
 }

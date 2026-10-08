@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -107,7 +108,6 @@ namespace FAForever.MapEditor.Project
                         Unknown = m.Unknown,
                     }
                     : null,
-                DecalHeader = new DecalHeader { First = scmap.DecalHeader.First, Second = scmap.DecalHeader.Second },
                 Decals = [.. scmap.Decals.Select(d => new Decal
                 {
                     Id = d.Id,
@@ -131,7 +131,7 @@ namespace FAForever.MapEditor.Project
                     RotationZ = p.RotationZ,
                     Scale = p.Scale,
                 })],
-                Markers = MarkerTranslation.ToMarkerSet(save.Markers, save.Areas, save.Chains),
+                Markers = MarkerTranslation.ToMarkerSet(save.Markers, save.Areas, save.Chains, NoRushOffsets(scenario)),
                 Armies = [.. save.Armies.Select(ToArmy)],
                 Script = script is null ? null : ImmutableCollectionsMarshal.AsImmutableArray(script),
                 Files = (files ?? new Dictionary<string, byte[]>()).ToImmutableSortedDictionary(
@@ -141,51 +141,63 @@ namespace FAForever.MapEditor.Project
             };
         }
 
+        /// <summary>
+        /// The scenario in the editor's terms: the armies of its configuration (every map of the
+        /// vault has one, <c>standard</c>, with one team) as playable and extra armies.
+        /// </summary>
         private static ScenarioInfo ToScenario(MapScenario scenario)
         {
-            LuaTableReader raw = new LuaTableReader(scenario.Raw);
-            Dictionary<string, NoRushOffset> offsets = new Dictionary<string, NoRushOffset>();
-            foreach ((string key, LuaData value) in scenario.Raw.Value)
+            MapConfiguration? configuration = scenario.Configurations.FirstOrDefault(c => c.Name == "standard") ?? scenario.Configurations.FirstOrDefault();
+            ImmutableArray<string> playable = [.. configuration?.Teams.SelectMany(team => team.Armies) ?? []];
+
+            // the factions are listed per playable army, in order
+            ImmutableSortedDictionary<string, ImmutableArray<string>> factions = ImmutableSortedDictionary.Create<string, ImmutableArray<string>>(StringComparer.Ordinal);
+            if (configuration?.Raw.TryGetTableValue("factions", out LuaData.Table? table) == true)
             {
-                if (NoRushOffsetKey().Match(key) is { Success: true } match && value is LuaData.Number number)
+                List<LuaData> perArmy = [.. Positional(table!)];
+                for (int i = 0; i < perArmy.Count && i < playable.Length; i++)
                 {
-                    string army = match.Groups[2].Value;
-                    NoRushOffset offset = offsets.GetValueOrDefault(army) ?? new NoRushOffset();
-                    offsets[army] = match.Groups[1].Value == "X" ? offset with { X = number.Value } : offset with { Y = number.Value };
+                    if (perArmy[i] is LuaData.Table allowed)
+                    {
+                        factions = factions.SetItem(playable[i], [.. Positional(allowed).OfType<LuaData.String>().Select(faction => faction.Value)]);
+                    }
                 }
             }
 
             return new ScenarioInfo
             {
                 Name = scenario.Name,
-                Description = scenario.Description,
-                Author = raw.String("author"),
-                Type = scenario.Type,
-                Starts = scenario.Starts,
-                PreviewPath = scenario.Preview,
-                NoRushRadius = scenario.NoRushRadius,
-                NoRushOffsets = offsets.ToImmutableSortedDictionary(StringComparer.Ordinal),
-                AdaptiveMap = scenario.AdaptiveMap,
+                Description = scenario.Description ?? "",
+                Author = new LuaTableReader(scenario.Raw).String("author") ?? "",
+                Type = scenario.Type == "campaign_coop" ? ScenarioType.CampaignCoop : ScenarioType.Skirmish,
+                PreviewPath = scenario.Preview ?? "",
+                NoRushRadius = scenario.NoRushRadius ?? 0,
+                AdaptiveMap = scenario.AdaptiveMap ?? false,
                 Reclaim = scenario.Reclaim is (double mass, double energy) ? new Reclaim { Mass = mass, Energy = energy } : null,
-                Configurations = [.. scenario.Configurations.Select(c => new Configuration
-                {
-                    Name = c.Name,
-                    Teams = [.. c.Teams.Select(t => new Team { Name = t.Name, Armies = [.. t.Armies] })],
-                    CustomProperties = c.CustomProperties.ToImmutableSortedDictionary(StringComparer.Ordinal),
-                    Factions = ToFactions(c.Raw),
-                })],
+                PlayableArmies = playable,
+                ExtraArmies = [.. configuration?.ExtraArmies ?? []],
+                ArmyFactions = factions,
             };
         }
 
         /// <summary>
-        /// The factions each army may play (<c>factions = { { 'cybran' }, { 'uef', 'aeon' }, ... }</c>).
+        /// The no-rush offsets of the scenario by army (<c>norushoffsetX_ARMY_1</c>,
+        /// <c>norushoffsetY_ARMY_1</c>); a missing half is 0.
         /// </summary>
-        private static ImmutableArray<ImmutableArray<string>>? ToFactions(LuaData.Table configuration) =>
-            configuration.TryGetTableValue("factions", out LuaData.Table? factions)
-                ? ImmutableArray.CreateRange(Positional(factions!).Select(army => army is LuaData.Table table
-                    ? Positional(table).OfType<LuaData.String>().Select(faction => faction.Value).ToImmutableArray()
-                    : []))
-                : null;
+        private static Dictionary<string, Vector2> NoRushOffsets(MapScenario scenario)
+        {
+            Dictionary<string, Vector2> offsets = new Dictionary<string, Vector2>(StringComparer.Ordinal);
+            foreach ((string key, LuaData value) in scenario.Raw.Value)
+            {
+                if (NoRushOffsetKey().Match(key) is { Success: true } match && value is LuaData.Number number)
+                {
+                    string army = match.Groups[2].Value;
+                    Vector2 offset = offsets.GetValueOrDefault(army);
+                    offsets[army] = match.Groups[1].Value == "X" ? offset with { X = (float)number.Value } : offset with { Y = (float)number.Value };
+                }
+            }
+            return offsets;
+        }
 
         private static IEnumerable<LuaData> Positional(LuaData.Table table)
         {
@@ -315,11 +327,9 @@ namespace FAForever.MapEditor.Project
         private static Army ToArmy(MapArmy a) => new Army
         {
             Name = a.Name,
-            Personality = a.Personality,
-            Plans = a.Plans,
-            Color = a.Color,
-            Faction = a.Faction,
-            Economy = a.Economy is MapEconomy e ? new Economy { Mass = e.Mass, Energy = e.Energy } : null,
+            Plans = string.IsNullOrEmpty(a.Plans) ? null : a.Plans,
+            Color = a.Color ?? 0,
+            Faction = a.Faction ?? 0,
             Alliances = a.Alliances.ToImmutableSortedDictionary(StringComparer.Ordinal),
             Units = ToGroup(a.Units),
         };
