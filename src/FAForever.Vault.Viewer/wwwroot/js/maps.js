@@ -118,6 +118,39 @@ window.fafMaps = {
         return window.fafMaps.toUrl(canvas);
     },
 
+    // Each cell in the colour of the start position closest to it in a straight line. starts: x, z
+    // of each start position; palette: four bytes (r, g, b, a) per start position.
+    closest: function (width, height, starts, palette) {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        const image = context.createImageData(width, height);
+        const data = image.data;
+        const count = starts.length / 2;
+        for (let z = 0; z < height; z++) {
+            for (let x = 0; x < width; x++) {
+                let best = 0, bestDistance = Infinity;
+                for (let i = 0; i < count; i++) {
+                    const dx = x + 0.5 - starts[i * 2], dz = z + 0.5 - starts[i * 2 + 1];
+                    const distance = dx * dx + dz * dz;
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        best = i;
+                    }
+                }
+                const c = (best % (palette.length / 4)) * 4;
+                const p = (z * width + x) * 4;
+                data[p] = palette[c];
+                data[p + 1] = palette[c + 1];
+                data[p + 2] = palette[c + 2];
+                data[p + 3] = palette[c + 3];
+            }
+        }
+        context.putImageData(image, 0, 0);
+        return window.fafMaps.toUrl(canvas);
+    },
+
     // values: one byte per cell, row by row; palette: four bytes (r, g, b, a) per value.
     grid: function (values, width, height, palette) {
         const canvas = document.createElement('canvas');

@@ -35,6 +35,18 @@ public sealed class MapImages(IJSRuntime js)
     public Task<string> GridAsync(LoadedMap map, string key, int width, int height, Func<byte[]> values, byte[] palette)
         => Get(map, "grid:" + key, () => js.InvokeAsync<string>("fafMaps.grid", values(), width, height, palette).AsTask());
 
+    /// <summary>
+    /// Each ogrid in the colour of the start position closest to it in a straight line; the palette
+    /// has four bytes (red, green, blue, alpha) per start position. Drawn in JavaScript: millions of
+    /// distances (a 20 km map with 8 players) take seconds in the WebAssembly interpreter.
+    /// </summary>
+    public Task<string> ClosestStartAsync(LoadedMap map, byte[] palette)
+        => Get(map, "closest", () =>
+        {
+            float[] starts = [.. map.Starts.SelectMany(start => new[] { start.Position.X, start.Position.Z })];
+            return js.InvokeAsync<string>("fafMaps.closest", map.Width, map.Height, starts, palette).AsTask();
+        });
+
     private Task<string> Get(LoadedMap map, string key, Func<Task<string>> draw)
     {
         if (folder != map.Folder)
