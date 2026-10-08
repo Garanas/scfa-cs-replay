@@ -11,9 +11,18 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 /// camera glides to (<see cref="Update"/>), and after every move the pivot is again the ground
 /// the camera looks at.
 /// </summary>
-/// <param name="groundHeight">The height of the terrain at a place of the map, in ogrids.</param>
-public sealed class EditorCamera(Func<float, float, float> groundHeight)
+/// <remarks>
+/// The ground the camera rests on is the terrain blurred (<see cref="SmoothGround"/>), over about
+/// 15 % of the camera's distance: from far away a spike or a cliff does not move it, from close
+/// by it still follows hills. Only the eye keeps clear of the real terrain.
+/// </remarks>
+/// <param name="smoothHeight">The height of the blurred terrain at a place of the map (x, z) over a radius, in ogrids.</param>
+/// <param name="terrainHeight">The height of the terrain itself at a place of the map.</param>
+public sealed class EditorCamera(Func<float, float, float, float> smoothHeight, Func<float, float, float> terrainHeight)
 {
+    // the eye stays this far above the terrain itself
+    private const float Clearance = 2;
+
     public const float FieldOfView = 60 * MathF.PI / 180;
 
     // in the FAF map editor's units of ten ogrids: MinDistance 0.45, MaxDistance 1100, ScrollStep 0.033, three steps a notch
@@ -80,12 +89,12 @@ public sealed class EditorCamera(Func<float, float, float> groundHeight)
         for (int step = 0; step < Math.Abs(notches) * StepsPerNotch; step++)
         {
             Vector3 forward = Forward(_target);
-            float ahead = GroundAlong(eye, forward) ?? _target.Distance;
+            float ahead = GroundAlong(eye, forward, _target.Distance) ?? _target.Distance;
             float length = ScrollStep * Math.Max(50, ahead * 2.6f);
             if (notches > 0)
             {
                 Vector3 ray = Ray(_target, eye, mouse, aspect);
-                if (GroundAlong(eye, ray) is not float hit || hit <= MinDistance)
+                if (GroundAlong(eye, ray, _target.Distance) is not float hit || hit <= MinDistance)
                 {
                     break;
                 }
@@ -158,7 +167,7 @@ public sealed class EditorCamera(Func<float, float, float> groundHeight)
     private Matrix4x4 ViewProjectionOf(State state, float aspect)
     {
         Vector3 eye = EyeOf(state);
-        Vector3 target = Ground(state.Pivot);
+        Vector3 target = Ground(state.Pivot, state.Distance);
         // straight down, the screen's up is the direction the yaw faces
         (float sin, float cos) = MathF.SinCos(state.Yaw * MathF.PI / 180);
         Vector3 up = state.Pitch > 89.9f ? new Vector3(-sin, 0, -cos) : Vector3.UnitY;
@@ -167,9 +176,18 @@ public sealed class EditorCamera(Func<float, float, float> groundHeight)
         return Matrix4x4.CreateLookAt(eye, target, up) * Matrix4x4.CreatePerspectiveFieldOfView(FieldOfView, aspect, near, far);
     }
 
-    private Vector3 EyeOf(State state) => Ground(state.Pivot) - Forward(state) * state.Distance;
+    private Vector3 EyeOf(State state)
+    {
+        Vector3 eye = Ground(state.Pivot, state.Distance) - Forward(state) * state.Distance;
+        return eye with { Y = Math.Max(eye.Y, terrainHeight(eye.X, eye.Z) + Clearance) };
+    }
 
-    private Vector3 Ground(Vector2 place) => new Vector3(place.X, groundHeight(place.X, place.Y), place.Y);
+    /// <summary>
+    /// How far around a place the ground is blurred for a camera this far away.
+    /// </summary>
+    private static float Radius(float distance) => Math.Clamp(distance * 0.15f, 8, 2048);
+
+    private Vector3 Ground(Vector2 place, float distance) => new Vector3(place.X, smoothHeight(place.X, place.Y, Radius(distance)), place.Y);
 
     /// <summary>
     /// The direction the camera looks: down by the pitch, and across the ground against the yaw
@@ -201,21 +219,23 @@ public sealed class EditorCamera(Func<float, float, float> groundHeight)
     private State Aim(State state, Vector3 eye)
     {
         Vector3 forward = Forward(state);
-        float distance = Math.Clamp(GroundAlong(eye, forward) ?? state.Distance, MinDistance, MaxDistance);
+        float distance = Math.Clamp(GroundAlong(eye, forward, state.Distance) ?? state.Distance, MinDistance, MaxDistance);
         Vector3 pivot = eye + forward * distance;
         return state with { Pivot = new Vector2(pivot.X, pivot.Z), Distance = distance };
     }
 
     /// <summary>
-    /// How far along the ray the ground is: in steps, then halving the last one; null when the
-    /// ray points up or misses within 30 000 ogrids.
+    /// How far along the ray the blurred ground is, as a camera <paramref name="distance"/> away
+    /// sees it: in steps, then halving the last one; null when the ray points up or misses within
+    /// 30 000 ogrids.
     /// </summary>
-    private float? GroundAlong(Vector3 origin, Vector3 direction)
+    private float? GroundAlong(Vector3 origin, Vector3 direction, float distance)
     {
+        float radius = Radius(distance);
         bool Below(float t)
         {
             Vector3 p = origin + direction * t;
-            return p.Y <= groundHeight(p.X, p.Z);
+            return p.Y <= smoothHeight(p.X, p.Z, radius);
         }
 
         if (Below(0))

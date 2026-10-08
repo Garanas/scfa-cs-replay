@@ -56,7 +56,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
 
     public TerrainViewGpu()
     {
-        _camera = new EditorCamera(GroundHeight);
+        _camera = new EditorCamera((x, z, radius) => Smooth().Height(x, z, radius), GroundHeight);
         Focusable = true;
     }
 
@@ -240,6 +240,31 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         File.WriteAllBytes(path, image.ToByteArray(MagickFormat.Png));
         return path;
     }
+
+    /// <summary>
+    /// The blurred terrain the camera rests on, made again when the heights change; while they
+    /// keep changing (a brush stroke) at most twice a second, as making it reads every sample.
+    /// </summary>
+    private SmoothGround Smooth()
+    {
+        Heightmap? heightmap = _model?.ShownDocument?.Terrain.Heightmap;
+        if (heightmap is null)
+        {
+            return _smooth ??= SmoothGround.Flat(0);
+        }
+        if (!ReferenceEquals(heightmap, _smoothOf) && (_smooth is null || _smoothOf?.Width != heightmap.Width
+            || _smoothOf.Height != heightmap.Height || _clock.Elapsed - _smoothMade > TimeSpan.FromSeconds(0.5)))
+        {
+            _smooth = SmoothGround.From(heightmap);
+            _smoothOf = heightmap;
+            _smoothMade = _clock.Elapsed;
+        }
+        return _smooth!;
+    }
+
+    private SmoothGround? _smooth;
+    private Heightmap? _smoothOf;
+    private TimeSpan _smoothMade;
 
     /// <summary>
     /// The height of the shown terrain, between its samples; outside the map that of its edge.

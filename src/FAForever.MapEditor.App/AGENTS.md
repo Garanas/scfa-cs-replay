@@ -61,7 +61,12 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   from 4.5 to 11 000 ogrids; the middle mouse button drags the ground with the mouse; space and
   the mouse turn it around the pivot and tilt it from straight down (pitch 90) to 10 degrees
   above the horizon; Home shows the whole map again. It glides to where it is sent, and its
-  pivot is always the ground it looks at. The left mouse button is left for editing. `Rendering/Gpu/TerrainRenderer` draws the terrain, then the albedo decals, the
+  pivot is always the ground it looks at. The left mouse button is left for editing.
+  - That ground is the terrain blurred (`Rendering/Gpu/SmoothGround`: averages over squares of
+    8, 16, 32, ... ogrids, read between their centres and between sizes), over about 15 % of the
+    camera's distance (8 to 2048 ogrids): spikes and cliffs do not throw the camera up and down,
+    and from close by it still follows hills. Only the eye keeps 2 ogrids clear of the terrain
+    itself. The view makes it again when the heights change, at most twice a second. `Rendering/Gpu/TerrainRenderer` draws the terrain, then the albedo decals, the
   normal decals and the water; `TerrainShaders` follows the FAF map editor's port of the game's
   `TTerrainXP` (`Assets/GFX/Shaders/FaTerrainShader.shader` in `D:\faf-development\FAForeverMapEditor`):
   the lower albedo, the strata by their masks (`clamp(mask * 2 - 1)`), the upper albedo by its alpha,

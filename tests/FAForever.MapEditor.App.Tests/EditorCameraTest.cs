@@ -8,7 +8,7 @@ namespace FAForever.MapEditor.App.Tests
     {
         private static EditorCamera Flat(float height = 0)
         {
-            EditorCamera camera = new EditorCamera((_, _) => height);
+            EditorCamera camera = new EditorCamera((_, _, _) => height, (_, _) => height);
             camera.Reset(512, 512);
             return camera;
         }
