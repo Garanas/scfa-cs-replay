@@ -35,6 +35,9 @@
       </MenuItem>
       <MenuItem Header="_View">
         <MenuItem Header="_Fit the map" Click="OnFit" />
+        <Separator />
+        <MenuItem Header="_Markers" ToggleType="CheckBox" IsChecked="{Binding ShowMarkers}" />
+        <MenuItem Header="_Path nodes" ToggleType="CheckBox" IsChecked="{Binding ShowPathNodes}" />
       </MenuItem>
     </Menu>
 

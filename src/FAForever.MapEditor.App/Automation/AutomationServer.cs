@@ -23,7 +23,7 @@ namespace FAForever.MapEditor.App.Automation;
 /// body <c>POST /open {path}</c>, <c>/import {path}</c>, <c>/save</c>, <c>/save-as {path}</c>,
 /// <c>/export {output, version?}</c>, <c>/undo</c>, <c>/redo</c>, <c>/goto {step}</c> (a step of the history, -1 for the map as opened),
 /// <c>/brush {layer?, mode?, radius?, strength?, target?, erase?}</c> (layer 0 paints the heights, 1 to 8 a layer's mask), <c>/stroke {points: [[x, z], ...]}</c> (in
-/// ogrids), <c>/fit</c>, <c>/view {zoom, x, z}</c> (centre the view on a place of the map),
+/// ogrids), <c>/fit</c>, <c>/show {markers?, pathNodes?}</c> (what the view shows), <c>/view {zoom, x, z}</c> (centre the view on a place of the map),
 /// <c>/screenshot {path, map?}</c> (the window, or with <c>map: true</c> the map alone, as PNG) and
 /// <c>/close</c>. The method does not matter: a command without a body can be a GET
 /// (<c>curl localhost:port/undo</c>), and query parameters count as arguments; Windows refuses a
@@ -119,7 +119,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "fit", "view {zoom, x, z}", "screenshot {path, map?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "fit", "show {markers?, pathNodes?}", "view {zoom, x, z}", "screenshot {path, map?}", "close") };
             case "state":
                 break;
             case "open":
@@ -197,6 +197,16 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             case "fit":
                 window.MapView.Fit();
                 break;
+            case "show":
+                if (arguments["markers"] is JsonNode markers)
+                {
+                    model.ShowMarkers = markers.GetValue<bool>();
+                }
+                if (arguments["pathNodes"] is JsonNode pathNodes)
+                {
+                    model.ShowPathNodes = pathNodes.GetValue<bool>();
+                }
+                break;
             case "view":
                 window.MapView.Show(Number(arguments, "zoom") ?? window.MapView.Zoom, Number(arguments, "x") ?? 0, Number(arguments, "z") ?? 0);
                 break;
@@ -250,6 +260,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["target"] = model.BrushTarget,
             },
             ["zoom"] = window.MapView.Zoom,
+            ["show"] = new JsonObject { ["markers"] = model.ShowMarkers, ["pathNodes"] = model.ShowPathNodes },
         };
     }
 

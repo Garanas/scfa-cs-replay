@@ -27,9 +27,12 @@ The folder is a project (it holds `map.json`) or a map folder of the game, which
   save; reloads wait until a save or stroke ends. Keep the user interface's thread free of work
   that grows with the map: a full redraw of the view runs its rows in parallel.
 - `Controls/HeightmapView`: the terrain from above, one pixel per sample, shaded and coloured by
-  height and water; it draws again only the tiles a change touched. Left mouse paints (a stroke
-  is an `EditTransaction`, so one undo step, shown while it is painted), right or middle mouse
-  moves, the wheel zooms around the cursor.
+  height and water (`Rendering/TerrainPicture`, which the 3D view shares), with the mask of the
+  layer being painted in orange; it draws again only the tiles a change touched. The markers lie
+  over it at a fixed size on screen in the colour of their kind (spawns circles with their
+  number, deposits squares, AI markers diamonds, weather triangles, path nodes dots with their
+  links; View menu). Left mouse paints (a stroke is an `EditTransaction`, so one undo step, shown
+  while it is painted), right or middle mouse moves, the wheel zooms around the cursor.
 - `Views/MainWindow`: menu, brush panel, status bar; asks about unsaved changes before closing.
   `WindowDialogs` answers the view model's questions with the system's folder picker and a small
   save-changes dialog.
@@ -58,7 +61,8 @@ faf-map editor close                                      # closes without askin
 - Commands: `help`, `state`, `open {path}`, `import {path}`, `save`, `save-as {path}`,
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,
-  `stroke {points}`, `height {x, z}`, `fit`, `view {zoom, x, z}`, `screenshot {path, map?}`,
+  `stroke {points}`, `height {x, z}`, `fit`, `show {markers?, pathNodes?}`, `view {zoom, x, z}`,
+  `screenshot {path, map?}`,
   `close`. A new menu item gets a command here too.
 - The method does not matter, and a command without arguments works as a GET
   (`curl localhost:5371/undo`); Windows refuses a POST without a body, so the CLI always sends one.

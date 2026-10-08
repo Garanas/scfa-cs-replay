@@ -167,6 +167,22 @@ public sealed partial class MainViewModel : ObservableObject
     };
 
     /// <summary>
+    /// Whether the view shows the spawns, deposits, AI markers and weather.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ShowMarkers { get; set; } = true;
+
+    /// <summary>
+    /// Whether the view shows the path nodes and their links (thousands on a large map).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ShowPathNodes { get; set; }
+
+    partial void OnShowMarkersChanged(bool value) => DocumentChanged?.Invoke(this, EventArgs.Empty);
+
+    partial void OnShowPathNodesChanged(bool value) => DocumentChanged?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
     /// The heights and the terrain layers that have a mask, by the name of their texture.
     /// </summary>
     public IReadOnlyList<PaintTarget> PaintTargets { get; private set; } = [];
