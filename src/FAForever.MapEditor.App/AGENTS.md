@@ -10,7 +10,26 @@ project thin: what the menu does, the library does.
 dotnet run --project src/FAForever.MapEditor.App -- [folder] [--automation 5371]
 ```
 
-The folder is a project (it holds `map.json`) or a map folder of the game, which is imported.
+The folder is a project (it holds `map.json`) or a map folder of the game, which is imported
+once the workspace is ready.
+
+## The start: workspace first
+
+The editor works in a workspace (the library's guide explains it). `MainViewModel.StartAsync`
+reads the remembered one (`UserSettings`) and sets the window's `Stage`:
+
+- `SetUp`: no workspace, or the remembered one is gone. A page asks for the workspace folder, the
+  game, FAF's data and the vault, filled in from FAF's `fa_path.lua`; `SetUpWorkspaceAsync` checks
+  them, creates the workspace, remembers it and converts the assets.
+- `UpdateAssets`: the assets are missing or outdated (a new `.nx2` from FAF, another editor
+  version); the page says why, and its button converts them.
+- `Converting`: a progress bar. The editor waits until it is done; closing the window stops the
+  conversion, and the next start goes on where it was.
+- `Ready`: the editor. Open and Save As start in the workspace's `projects`, Import in the vault's
+  `maps`, and Export writes into the vault's `maps` without asking.
+
+The menu and the editor are hidden until `Ready`. To try the start without touching your own
+workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
 
 ## Structure
 
@@ -65,8 +84,12 @@ faf-map editor undo
 faf-map editor close                                      # closes without asking about changes
 ```
 
-- The state includes `busy`; a command that opens or saves answers when it is done.
-- Commands: `help`, `state`, `open {path}`, `import {path}`, `save`, `save-as {path}`,
+- The state includes `busy` and `stage` (`SetUp`, `UpdateAssets`, `Converting`, `Ready`), with
+  `workspace`, `setupError` and `assetReasons`; a command that opens, saves or converts answers
+  when it is done. Start a test editor with `FAF_MAP_EDITOR_SETTINGS` set to a file of its own, so
+  that its setup never changes the workspace the user's editor remembers.
+- Commands: `help`, `state`, `setup {folder, game?, faf?, vault?}` (the setup page; fields left
+  out keep what it suggests), `update-assets`, `open {path}`, `import {path}`, `save`, `save-as {path}`,
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,
   `stroke {points}`, `height {x, z}`, `fit`, `show {markers?, pathNodes?}`, `view {zoom, x, z}`,

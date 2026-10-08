@@ -32,7 +32,7 @@ namespace FAForever.MapEditor.App.Tests
 
             public int SaveQuestions { get; private set; }
 
-            public Task<string?> PickFolderAsync(string title) => Task.FromResult(Folders.Count > 0 ? Folders.Dequeue() : null);
+            public Task<string?> PickFolderAsync(string title, string? startIn = null) => Task.FromResult(Folders.Count > 0 ? Folders.Dequeue() : null);
 
             public Task<SaveChoice> AskToSaveChangesAsync(string mapName)
             {

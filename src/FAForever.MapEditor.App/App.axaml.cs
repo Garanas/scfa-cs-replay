@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using FAForever.MapEditor.App.Automation;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App;
 
@@ -23,10 +24,7 @@ public sealed class App : Application
             desktop.MainWindow = window;
 
             StartOptions options = Program.Options;
-            if (options.Folder is string folder)
-            {
-                _ = model.OpenOnStartAsync(folder);
-            }
+            _ = model.StartAsync(UserSettings.Default, options.Folder);
             if (options.AutomationPort is int port)
             {
                 _automation = new AutomationServer(window, model, port);

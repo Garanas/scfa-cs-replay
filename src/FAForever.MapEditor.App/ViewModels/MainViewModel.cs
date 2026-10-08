@@ -15,7 +15,8 @@ public interface IEditorDialogs
     /// <summary>
     /// A folder the person picks, or null when they cancel.
     /// </summary>
-    Task<string?> PickFolderAsync(string title);
+    /// <param name="startIn">The folder the picker starts in, when it exists.</param>
+    Task<string?> PickFolderAsync(string title, string? startIn = null);
 
     /// <summary>
     /// What to do with the unsaved changes of a map before it is closed.
@@ -410,7 +411,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task OpenProjectAsync()
     {
-        if (await ConfirmCloseAsync() && await _dialogs.PickFolderAsync("Open a project") is string folder)
+        if (await ConfirmCloseAsync() && await _dialogs.PickFolderAsync("Open a project", Workspace?.ProjectsFolder) is string folder)
         {
             await TryAsync(() => LoadProjectAsync(folder));
         }
@@ -419,7 +420,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task ImportMapAsync()
     {
-        if (await ConfirmCloseAsync() && await _dialogs.PickFolderAsync("Import a map folder of the game") is string folder)
+        if (await ConfirmCloseAsync() && await _dialogs.PickFolderAsync("Import a map folder of the game", Workspace?.MapsFolder) is string folder)
         {
             await TryAsync(() => ImportMapFolderAsync(folder));
         }
@@ -439,7 +440,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveProjectAsAsync()
     {
-        if (await _dialogs.PickFolderAsync("Save as a project in an empty folder") is string folder)
+        if (await _dialogs.PickFolderAsync("Save as a project in an empty folder", Workspace?.ProjectsFolder) is string folder)
         {
             await TryAsync(() => SaveAsAsync(folder));
         }
@@ -448,7 +449,8 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task ExportMapAsync()
     {
-        if (await _dialogs.PickFolderAsync("Export into a folder, e.g. the game's maps folder") is string folder)
+        string? folder = Workspace?.MapsFolder ?? await _dialogs.PickFolderAsync("Export into a folder, e.g. the game's maps folder");
+        if (folder is not null)
         {
             await TryAsync(() => ExportAsync(folder));
         }

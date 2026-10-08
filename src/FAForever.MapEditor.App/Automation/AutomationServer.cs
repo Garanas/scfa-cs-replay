@@ -20,7 +20,8 @@ namespace FAForever.MapEditor.App.Automation;
 /// <remarks>
 /// <para>
 /// The commands: <c>GET /state</c>, <c>GET /height?x=&amp;z=</c>, <c>GET /mask?layer=&amp;x=&amp;z=</c> (0 to 255), <c>GET /help</c>, and with a JSON
-/// body <c>POST /open {path}</c>, <c>/import {path}</c>, <c>/save</c>, <c>/save-as {path}</c>,
+/// body <c>POST /setup {folder, game?, faf?, vault?}</c> (the setup page of the first start, which converts the
+/// game's assets before it answers), <c>/update-assets</c>, <c>/open {path}</c>, <c>/import {path}</c>, <c>/save</c>, <c>/save-as {path}</c>,
 /// <c>/export {output, version?}</c>, <c>/undo</c>, <c>/redo</c>, <c>/goto {step}</c> (a step of the history, -1 for the map as opened),
 /// <c>/brush {layer?, mode?, radius?, strength?, target?, erase?}</c> (layer 0 paints the heights, 1 to 8 a layer's mask), <c>/stroke {points: [[x, z], ...]}</c> (in
 /// ogrids), <c>/fit</c>, <c>/tab {name}</c> (<c>top</c> or <c>3d</c>), <c>/camera {x?, z?, distance?, yaw?, pitch?}</c> (the 3D view's, in ogrids and degrees), <c>/show {markers?, pathNodes?}</c> (what the view shows), <c>/view {zoom, x, z}</c> (centre the view on a place of the map),
@@ -119,8 +120,19 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "show {markers?, pathNodes?}", "view {zoom, x, z}", "screenshot {path, map?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "show {markers?, pathNodes?}", "view {zoom, x, z}", "screenshot {path, map?}", "close") };
             case "state":
+                break;
+            case "setup":
+                // the setup page as the person fills it in: the fields not given keep what it suggests
+                model.SetupFolder = Text(arguments, "folder");
+                model.SetupGameFolder = arguments["game"]?.GetValue<string>() ?? model.SetupGameFolder;
+                model.SetupFafDataFolder = arguments["faf"]?.GetValue<string>() ?? model.SetupFafDataFolder;
+                model.SetupVaultFolder = arguments["vault"]?.GetValue<string>() ?? model.SetupVaultFolder;
+                result["setUp"] = await model.SetUpWorkspaceAsync();
+                break;
+            case "update-assets":
+                result["converted"] = await model.ConvertAssetsAsync();
                 break;
             case "open":
                 await model.OpenAsync(Text(arguments, "path"));
@@ -241,6 +253,11 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         return new JsonObject
         {
             ["title"] = model.Title,
+            ["stage"] = model.Stage.ToString(),
+            ["workspace"] = model.Workspace?.Folder,
+            ["setupError"] = model.SetupError,
+            ["assetReasons"] = new JsonArray([.. model.AssetReasons.Select(reason => (JsonNode)JsonValue.Create(reason))]),
+            ["conversion"] = model.IsConverting ? model.ConversionText : null,
             ["status"] = model.Status,
             ["projectFolder"] = model.Map?.ProjectFolder,
             ["map"] = document is null ? null : new JsonObject

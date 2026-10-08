@@ -18,7 +18,8 @@
     <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoEditCommand}" />
   </Window.KeyBindings>
 
-  <DockPanel>
+  <Grid>
+  <DockPanel IsVisible="{Binding IsReady}">
     <Menu DockPanel.Dock="Top">
       <MenuItem Header="_File">
         <MenuItem Header="_Open project..." InputGesture="Ctrl+O" Command="{Binding OpenProjectCommand}" />
@@ -27,7 +28,7 @@
         <MenuItem Header="_Save" InputGesture="Ctrl+S" Command="{Binding SaveProjectCommand}" />
         <MenuItem Header="Save _as project..." InputGesture="Ctrl+Shift+S" Command="{Binding SaveProjectAsCommand}" />
         <Separator />
-        <MenuItem Header="_Export map..." InputGesture="Ctrl+E" Command="{Binding ExportMapCommand}" />
+        <MenuItem Header="_Export to the vault" InputGesture="Ctrl+E" Command="{Binding ExportMapCommand}" />
       </MenuItem>
       <MenuItem Header="_Edit">
         <MenuItem Header="{Binding UndoHeader}" InputGesture="Ctrl+Z" Command="{Binding UndoEditCommand}" />
@@ -94,4 +95,74 @@
       </TabItem>
     </TabControl>
   </DockPanel>
+
+  <!-- First start: set up the workspace -->
+  <ScrollViewer IsVisible="{Binding IsSettingUp}">
+    <StackPanel MaxWidth="720" Margin="32" Spacing="14">
+      <TextBlock Text="Set up your workspace" FontSize="26" FontWeight="SemiBold" />
+      <TextBlock TextWrapping="Wrap" Opacity="0.8"
+                 Text="The workspace is a folder with your map projects and the game's textures, props and units, converted so that the editor and your other tools can read them. The editor remembers it for the next start." />
+
+      <TextBlock Text="Workspace folder" FontWeight="SemiBold" Margin="0,8,0,0" />
+      <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12" Text="An empty folder, or one that holds a workspace already." />
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseSetupFolderCommand}" />
+        <TextBox Text="{Binding SetupFolder}" />
+      </DockPanel>
+
+      <TextBlock Text="Supreme Commander: Forged Alliance" FontWeight="SemiBold" Margin="0,8,0,0" />
+      <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12" Text="The folder the game is installed in, with gamedata\env.scd and gamedata\units.scd." />
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseGameFolderCommand}" />
+        <TextBox Text="{Binding SetupGameFolder}" />
+      </DockPanel>
+
+      <TextBlock Text="FAF's data" FontWeight="SemiBold" Margin="0,8,0,0" />
+      <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12" Text="FAF's gamedata folder: its env.nx2 and units.nx2 replace files of the game. Empty without FAF." />
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseFafDataFolderCommand}" />
+        <TextBox Text="{Binding SetupFafDataFolder}" />
+      </DockPanel>
+
+      <TextBlock Text="Vault" FontWeight="SemiBold" Margin="0,8,0,0" />
+      <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12" Text="The folder the FAF client keeps maps and mods in. Maps are exported to its maps folder." />
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseVaultFolderCommand}" />
+        <TextBox Text="{Binding SetupVaultFolder}" />
+      </DockPanel>
+
+      <TextBlock Text="{Binding SetupError}" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Foreground="#ff8a7a" TextWrapping="Wrap" />
+      <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12"
+                 Text="Setting up converts the game's environment and units: about 3 GB, a minute or so. The editor waits until it is done." />
+      <Button Content="Set up" Classes="accent" HorizontalAlignment="Left" MinWidth="120" Command="{Binding SetUpCommand}" />
+    </StackPanel>
+  </ScrollViewer>
+
+  <!-- The assets are missing or outdated -->
+  <StackPanel IsVisible="{Binding IsAskingToUpdate}" MaxWidth="640" Margin="32" Spacing="14" VerticalAlignment="Center">
+    <TextBlock Text="The game's assets need updating" FontSize="26" FontWeight="SemiBold" />
+    <ItemsControl ItemsSource="{Binding AssetReasons}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="x:String">
+          <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,2" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <TextBlock Text="{Binding SetupError}" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}"
+               Foreground="#ff8a7a" TextWrapping="Wrap" />
+    <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12"
+               Text="The editor converts them again before it opens: a minute or so." />
+    <Button Content="Update the assets" Classes="accent" HorizontalAlignment="Left" MinWidth="160" Command="{Binding UpdateAssetsCommand}" />
+  </StackPanel>
+
+  <!-- Converting -->
+  <StackPanel IsVisible="{Binding IsConverting}" MaxWidth="640" Margin="32" Spacing="14" VerticalAlignment="Center">
+    <TextBlock Text="Converting the game's assets" FontSize="26" FontWeight="SemiBold" />
+    <ProgressBar Minimum="0" Maximum="1" Value="{Binding ConversionFraction}" Height="8" />
+    <TextBlock Text="{Binding ConversionText}" Opacity="0.8" />
+    <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12"
+               Text="Closing the editor stops the conversion; the next start goes on where it was." />
+  </StackPanel>
+  </Grid>
 </Window>
