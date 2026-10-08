@@ -242,7 +242,7 @@ public sealed class HeightmapView : Control
             ushort[] values = samples.ToArray();
             _low = values.Min() * _scale;
             _high = Math.Max(_low + 1, values.Max() * _scale);
-            Draw(samples, 0, 0, samples.Width - 1, samples.Height - 1);
+            DrawAll(values, samples.Width, samples.Height);
         }
         else if (!ReferenceEquals(samples, _shown))
         {
@@ -256,6 +256,32 @@ public sealed class HeightmapView : Control
         }
         _shown = samples;
         InvalidateVisual();
+    }
+
+    /// <summary>
+    /// Draws the whole picture from the samples row by row, the rows spread over the processors:
+    /// a 4097 by 4097 heightmap is 16.8 million samples.
+    /// </summary>
+    private unsafe void DrawAll(ushort[] values, int width, int height)
+    {
+        using ILockedFramebuffer frame = _bitmap!.Lock();
+        nint address = frame.Address;
+        int rowBytes = frame.RowBytes;
+        Parallel.For(0, height, y =>
+        {
+            uint* row = (uint*)(address + y * rowBytes);
+            int above = Math.Max(0, y - 1) * width;
+            int here = y * width;
+            int below = Math.Min(height - 1, y + 1) * width;
+            for (int x = 0; x < width; x++)
+            {
+                int left = Math.Max(0, x - 1);
+                int right = Math.Min(width - 1, x + 1);
+                float slopeX = (values[here + right] - values[here + left]) * _scale / 2;
+                float slopeZ = (values[below + x] - values[above + x]) * _scale / 2;
+                row[x] = Shade(values[here + x] * _scale, slopeX, slopeZ);
+            }
+        });
     }
 
     /// <summary>

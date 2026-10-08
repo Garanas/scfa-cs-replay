@@ -162,11 +162,12 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
-        /// Notes that the current document is the one on disk.
+        /// Notes that a version of the document is the one on disk: the current one, or the one a
+        /// save in the background wrote while the editing went on.
         /// </summary>
-        public void MarkSaved()
+        public void MarkSaved(MapDocument? saved = null)
         {
-            _saved = Document;
+            _saved = saved ?? Document;
             _mergeKey = null;
             StateChanged?.Invoke(this, EventArgs.Empty);
         }

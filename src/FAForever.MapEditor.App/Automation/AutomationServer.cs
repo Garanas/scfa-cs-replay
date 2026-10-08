@@ -95,7 +95,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 arguments[key] = context.Request.QueryString[key];
             }
             string command = context.Request.Url!.AbsolutePath.Trim('/');
-            response = await Dispatcher.UIThread.InvokeAsync(() => Run(command, arguments));
+            response = await Dispatcher.UIThread.InvokeAsync(() => RunAsync(command, arguments));
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
@@ -113,7 +113,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
     /// <summary>
     /// Runs a command on the user interface's thread.
     /// </summary>
-    private JsonNode Run(string command, JsonObject arguments)
+    private async Task<JsonNode> RunAsync(string command, JsonObject arguments)
     {
         JsonObject result = new JsonObject();
         switch (command)
@@ -123,19 +123,19 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             case "state":
                 break;
             case "open":
-                model.Open(Text(arguments, "path"));
+                await model.OpenAsync(Text(arguments, "path"));
                 break;
             case "import":
-                model.ImportMap(Text(arguments, "path"));
+                await model.ImportMapFolderAsync(Text(arguments, "path"));
                 break;
             case "save":
-                model.Save();
+                await model.SaveAsync();
                 break;
             case "save-as":
-                model.SaveAs(Text(arguments, "path"));
+                await model.SaveAsAsync(Text(arguments, "path"));
                 break;
             case "export":
-                result["folder"] = model.Export(Text(arguments, "output"), arguments["version"]?.GetValue<int>());
+                result["folder"] = await model.ExportAsync(Text(arguments, "output"), arguments["version"]?.GetValue<int>());
                 break;
             case "undo":
                 result["done"] = model.Undo();
@@ -206,6 +206,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["scmapVersion"] = document.Terrain.ScmapVersion,
             },
             ["modified"] = model.Workspace?.Session.IsModified ?? false,
+            ["busy"] = model.IsBusy,
             ["undo"] = model.Workspace?.Session.UndoDescription,
             ["redo"] = model.Workspace?.Session.RedoDescription,
             ["history"] = new JsonArray([.. (model.Workspace?.Session.History ?? []).Select(step => (JsonNode)JsonValue.Create(step.IsCurrent ? $"> {step.Description}" : step.Description))]),

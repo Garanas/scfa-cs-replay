@@ -8,6 +8,12 @@ namespace FAForever.MapEditor.Project
     /// operations of the editor's File menu, which the command-line tool and the editor's automation
     /// use as well.
     /// </summary>
+    /// <remarks>
+    /// The asynchronous operations read and write on a thread of the pool. Saving and exporting take
+    /// the version of the document that is current when they start; since versions never change,
+    /// the editing can go on meanwhile, and the save marks the version it wrote. Call them from the
+    /// thread the session is used on: they come back to it to touch the session.
+    /// </remarks>
     public sealed class MapWorkspace
     {
         private MapDocument _savedDocument;
@@ -42,6 +48,10 @@ namespace FAForever.MapEditor.Project
         /// <exception cref="MapProjectException">The folder holds no readable map.</exception>
         public static MapWorkspace ImportMap(string mapFolder) => new MapWorkspace(MapImporter.ImportFolder(mapFolder), null);
 
+        public static Task<MapWorkspace> OpenProjectAsync(string folder) => Task.Run(() => OpenProject(folder));
+
+        public static Task<MapWorkspace> ImportMapAsync(string mapFolder) => Task.Run(() => ImportMap(mapFolder));
+
         /// <summary>
         /// Saves the map in its project folder, writing only what changed since the last save.
         /// </summary>
@@ -64,6 +74,32 @@ namespace FAForever.MapEditor.Project
             Saved();
         }
 
+        /// <inheritdoc cref="Save"/>
+        public async Task SaveAsync()
+        {
+            string folder = ProjectFolder ?? throw new InvalidOperationException("The map has no project folder yet: save it as a project first");
+            MapDocument document = Document;
+            MapDocument previous = _savedDocument;
+            await Task.Run(() => MapProjectStore.Save(document, folder, previous));
+            Saved(document);
+        }
+
+        /// <inheritdoc cref="SaveAs"/>
+        public async Task SaveAsAsync(string folder)
+        {
+            MapDocument document = Document;
+            await Task.Run(() => MapProjectStore.Save(document, folder));
+            ProjectFolder = Path.GetFullPath(folder);
+            Saved(document);
+        }
+
+        /// <inheritdoc cref="Export"/>
+        public Task<string> ExportAsync(string outputFolder, int? version = null)
+        {
+            MapDocument document = version is null ? Document : Document with { Version = version };
+            return Task.Run(() => MapExporter.WriteFolder(document, outputFolder));
+        }
+
         /// <summary>
         /// Writes the map as the game reads it into <paramref name="outputFolder"/>, e.g. the
         /// game's <c>maps</c> folder.
@@ -74,9 +110,14 @@ namespace FAForever.MapEditor.Project
             MapExporter.WriteFolder(version is null ? Document : Document with { Version = version }, outputFolder);
 
         /// <summary>
-        /// Reads the changed files of the project folder again, as one edit that can be undone.
-        /// Files that hold what the document holds change nothing.
+        /// Reads the files another tool changed in the project folder again, as one edit that can
+        /// be undone.
         /// </summary>
+        /// <remarks>
+        /// A file that holds what the last save wrote is the editor's own and is left alone, also
+        /// when the document changed since (the editing goes on during a save in the background).
+        /// A file another tool changed replaces its part of the current document.
+        /// </remarks>
         /// <param name="changedFiles">The files, relative to the project folder.</param>
         /// <returns>Whether the document changed.</returns>
         public bool Reload(IReadOnlyCollection<string> changedFiles)
@@ -86,9 +127,18 @@ namespace FAForever.MapEditor.Project
                 return false;
             }
 
+            string folder = ProjectFolder;
+            string[] external = ReferenceEquals(Document, _savedDocument)
+                ? [.. changedFiles]
+                : [.. changedFiles.Where(file => !ReferenceEquals(MapProjectStore.Reload(_savedDocument, folder, [file]), _savedDocument))];
+            if (external.Length == 0)
+            {
+                return false;
+            }
+
             bool wasModified = Session.IsModified;
-            MapDocument reloaded = MapProjectStore.Reload(Document, ProjectFolder, changedFiles);
-            string names = string.Join(", ", changedFiles.Select(Path.GetFileName).Distinct().Take(3)) + (changedFiles.Count > 3 ? ", ..." : "");
+            MapDocument reloaded = MapProjectStore.Reload(Document, folder, external);
+            string names = string.Join(", ", external.Select(Path.GetFileName).Distinct().Take(3)) + (external.Length > 3 ? ", ..." : "");
             if (!Session.Edit($"Reload {names}", _ => reloaded))
             {
                 return false;
@@ -103,10 +153,10 @@ namespace FAForever.MapEditor.Project
             return true;
         }
 
-        private void Saved()
+        private void Saved(MapDocument? document = null)
         {
-            _savedDocument = Document;
-            Session.MarkSaved();
+            _savedDocument = document ?? Document;
+            Session.MarkSaved(_savedDocument);
         }
     }
 }

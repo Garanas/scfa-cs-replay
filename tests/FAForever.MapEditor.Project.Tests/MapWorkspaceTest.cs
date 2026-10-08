@@ -94,6 +94,25 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public async Task KeepsEditingDuringASaveInTheBackground()
+        {
+            MapWorkspace workspace = Saved();
+            Raise(workspace, 50, 50);
+
+            Task save = workspace.SaveAsync();
+            Raise(workspace, 150, 150);
+            await save;
+
+            Assert.IsTrue(workspace.Session.IsModified, "the second stroke came after the save started");
+            Assert.IsFalse(workspace.Reload([MapProjectLayout.Heightmap]), "the files of the save are no change from another tool");
+            ushort raised = workspace.Document.Terrain.Heightmap.Samples[150, 150];
+            Assert.AreNotEqual(raised, MapWorkspace.OpenProject(workspace.ProjectFolder!).Document.Terrain.Heightmap.Samples[150, 150], "the save wrote the version from when it started");
+
+            workspace.Save();
+            Assert.IsFalse(workspace.Session.IsModified);
+        }
+
+        [TestMethod]
         public void ReloadsTheMarkers()
         {
             MapWorkspace workspace = Saved();

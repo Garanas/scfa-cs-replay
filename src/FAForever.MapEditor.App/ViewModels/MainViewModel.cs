@@ -35,9 +35,14 @@ public enum SaveChoice
 
 /// <summary>
 /// The editor's window without the window: the map being edited, the brush, and every operation
-/// of the menu. The operations that take a folder (<see cref="OpenProject"/>, ...) are what the menu
-/// commands call after asking for one, and what automation and tests call directly.
+/// of the menu. The operations that take a folder (<see cref="LoadProjectAsync"/>, ...) are what the
+/// menu commands call after asking for one, and what automation and tests call directly.
 /// </summary>
+/// <remarks>
+/// Opening, importing, saving and exporting read and write on a thread of the pool while the
+/// editor is busy (<see cref="IsBusy"/>); painting goes on during a save, which writes the version
+/// of the map from when it started.
+/// </remarks>
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly IEditorDialogs _dialogs;
@@ -76,11 +81,21 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     public partial string Status { get; set; } = "Open a project or import a map folder of the game.";
 
+    /// <summary>
+    /// Whether a map is being opened, imported, saved or exported.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
     public string Title => Workspace is null
         ? "FAF map editor"
         : $"{(Workspace.Session.IsModified ? "* " : "")}{Workspace.Document.Scenario.Name} - {Workspace.ProjectFolder ?? "not saved as a project"} - FAF map editor";
 
     public bool HasMap => Workspace is not null;
+
+    public bool CanStart => !IsBusy;
+
+    public bool CanSave => HasMap && !IsBusy;
 
     public bool CanUndo => Workspace?.Session.CanUndo == true && _stroke is null;
 
@@ -130,48 +145,46 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>
     /// Opens a project, or imports a map folder of the game when the folder holds no project.
     /// </summary>
-    public void Open(string folder)
-    {
-        if (File.Exists(Path.Combine(folder, MapProjectLayout.Map)))
-        {
-            OpenProject(folder);
-        }
-        else
-        {
-            ImportMap(folder);
-        }
-    }
+    public Task OpenAsync(string folder) => File.Exists(Path.Combine(folder, MapProjectLayout.Map))
+        ? LoadProjectAsync(folder)
+        : ImportMapFolderAsync(folder);
 
-    public void OpenProject(string folder) => Attach(MapWorkspace.OpenProject(folder), $"Opened the project {folder}");
+    public Task LoadProjectAsync(string folder) => BusyAsync($"Opening {folder}...", async () =>
+        Attach(await MapWorkspace.OpenProjectAsync(folder), $"Opened the project {folder}"));
 
-    public void ImportMap(string folder) => Attach(MapWorkspace.ImportMap(folder), $"Imported {folder}; save it as a project to keep it");
+    public Task ImportMapFolderAsync(string folder) => BusyAsync($"Importing {folder}...", async () =>
+        Attach(await MapWorkspace.ImportMapAsync(folder), $"Imported {folder}; save it as a project to keep it"));
 
-    public void Save()
+    public Task SaveAsync() => BusyAsync("Saving...", async () =>
     {
         MapWorkspace workspace = RequireMap();
-        workspace.Save();
+        await workspace.SaveAsync();
         Refresh($"Saved {workspace.ProjectFolder}");
-    }
+    });
 
-    public void SaveAs(string folder)
+    public Task SaveAsAsync(string folder) => BusyAsync("Saving...", async () =>
     {
         MapWorkspace workspace = RequireMap();
-        workspace.SaveAs(folder);
+        await workspace.SaveAsAsync(folder);
         Watch(workspace.ProjectFolder!);
         Refresh($"Saved as {workspace.ProjectFolder}");
-    }
+    });
 
     /// <returns>The map folder that was written.</returns>
-    public string Export(string outputFolder, int? version = null)
+    public async Task<string> ExportAsync(string outputFolder, int? version = null)
     {
-        string folder = RequireMap().Export(outputFolder, version);
-        Status = $"Exported {folder}";
+        string folder = "";
+        await BusyAsync("Exporting...", async () =>
+        {
+            folder = await RequireMap().ExportAsync(outputFolder, version);
+            Status = $"Exported {folder}";
+        });
         return folder;
     }
 
-    public bool Undo() => Workspace?.Session.Undo() == true;
+    public bool Undo() => _stroke is null && Workspace?.Session.Undo() == true;
 
-    public bool Redo() => Workspace?.Session.Redo() == true;
+    public bool Redo() => _stroke is null && Workspace?.Session.Redo() == true;
 
     /// <summary>
     /// Starts a brush stroke at a place of the map, in ogrids.
@@ -266,6 +279,11 @@ public sealed partial class MainViewModel : ObservableObject
     #region Commands of the menu
 
     /// <summary>
+    /// Opens what the editor was started with, showing what went wrong in the status line.
+    /// </summary>
+    public Task OpenOnStartAsync(string folder) => TryAsync(() => OpenAsync(folder));
+
+    /// <summary>
     /// Asks what to do with unsaved changes before the map is closed, and saves when asked to.
     /// </summary>
     /// <returns>Whether the map may be closed.</returns>
@@ -287,25 +305,25 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task OpenProjectAsync()
     {
         if (await ConfirmCloseAsync() && await _dialogs.PickFolderAsync("Open a project") is string folder)
         {
-            Try(() => OpenProject(folder));
+            await TryAsync(() => LoadProjectAsync(folder));
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task ImportMapAsync()
     {
         if (await ConfirmCloseAsync() && await _dialogs.PickFolderAsync("Import a map folder of the game") is string folder)
         {
-            Try(() => ImportMap(folder));
+            await TryAsync(() => ImportMapFolderAsync(folder));
         }
     }
 
-    [RelayCommand(CanExecute = nameof(HasMap))]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveProjectAsync()
     {
         if (Workspace?.ProjectFolder is null)
@@ -313,24 +331,24 @@ public sealed partial class MainViewModel : ObservableObject
             await SaveProjectAsAsync();
             return;
         }
-        Try(Save);
+        await TryAsync(SaveAsync);
     }
 
-    [RelayCommand(CanExecute = nameof(HasMap))]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveProjectAsAsync()
     {
         if (await _dialogs.PickFolderAsync("Save as a project in an empty folder") is string folder)
         {
-            Try(() => SaveAs(folder));
+            await TryAsync(() => SaveAsAsync(folder));
         }
     }
 
-    [RelayCommand(CanExecute = nameof(HasMap))]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task ExportMapAsync()
     {
         if (await _dialogs.PickFolderAsync("Export into a folder, e.g. the game's maps folder") is string folder)
         {
-            Try(() => Export(folder));
+            await TryAsync(() => ExportAsync(folder));
         }
     }
 
@@ -351,6 +369,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
         Workspace = workspace;
         workspace.Session.StateChanged += OnSessionChanged;
+        _pendingReload.Clear();
         if (workspace.ProjectFolder is string folder)
         {
             Watch(folder);
@@ -379,10 +398,7 @@ public sealed partial class MainViewModel : ObservableObject
                 {
                     _pendingReload.Add(file);
                 }
-                if (_stroke is null)
-                {
-                    ReloadPending();
-                }
+                ReloadPending();
             }
             if (_ui is null)
             {
@@ -395,24 +411,33 @@ public sealed partial class MainViewModel : ObservableObject
         };
     }
 
+    /// <summary>
+    /// Reads the files that changed, unless a stroke or a save is going on: then after it.
+    /// </summary>
     private void ReloadPending()
     {
-        if (Workspace is null || _pendingReload.Count == 0)
+        if (Workspace is null || _pendingReload.Count == 0 || _stroke is not null || IsBusy)
         {
             return;
         }
         string[] files = [.. _pendingReload];
         _pendingReload.Clear();
-        Try(() =>
+        try
         {
             if (Workspace.Reload(files))
             {
                 Status = $"Read again what changed on disk: {string.Join(", ", files)}";
             }
-        });
+        }
+        catch (Exception exception) when (exception is MapProjectException or IOException or InvalidOperationException or ArgumentException)
+        {
+            Status = exception.Message;
+        }
     }
 
     private void OnSessionChanged(object? sender, EventArgs e) => Refresh(null);
+
+    partial void OnIsBusyChanged(bool value) => Refresh(null);
 
     private void Refresh(string? status)
     {
@@ -422,10 +447,14 @@ public sealed partial class MainViewModel : ObservableObject
         }
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(HasMap));
+        OnPropertyChanged(nameof(CanStart));
+        OnPropertyChanged(nameof(CanSave));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(CanRedo));
         OnPropertyChanged(nameof(UndoHeader));
         OnPropertyChanged(nameof(RedoHeader));
+        OpenProjectCommand.NotifyCanExecuteChanged();
+        ImportMapCommand.NotifyCanExecuteChanged();
         SaveProjectCommand.NotifyCanExecuteChanged();
         SaveProjectAsCommand.NotifyCanExecuteChanged();
         ExportMapCommand.NotifyCanExecuteChanged();
@@ -443,13 +472,36 @@ public sealed partial class MainViewModel : ObservableObject
     private MapWorkspace RequireMap() => Workspace ?? throw new InvalidOperationException("No map is open");
 
     /// <summary>
+    /// Runs an operation that reads or writes in the background, with the editor busy meanwhile.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Another such operation is still running.</exception>
+    private async Task BusyAsync(string status, Func<Task> operation)
+    {
+        if (IsBusy)
+        {
+            throw new InvalidOperationException("The editor is still busy with the previous operation");
+        }
+        IsBusy = true;
+        Status = status;
+        try
+        {
+            await operation();
+        }
+        finally
+        {
+            IsBusy = false;
+            ReloadPending();
+        }
+    }
+
+    /// <summary>
     /// Runs an operation of the menu, showing what went wrong in the status line.
     /// </summary>
-    private void Try(Action action)
+    private async Task TryAsync(Func<Task> operation)
     {
         try
         {
-            action();
+            await operation();
         }
         catch (Exception exception) when (exception is MapProjectException or IOException or InvalidOperationException or ArgumentException)
         {

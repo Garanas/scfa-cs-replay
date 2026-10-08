@@ -58,10 +58,15 @@ prop (whose id exists in memory only) are mapped by hand in `Files/MapProjectMap
 - `MapWorkspace.Save` passes the last saved document to `MapProjectStore.Save`, which writes only
   the images whose part changed since and only the JSON files whose text changed. A save after a
   brush stroke writes the heightmap, not the twenty other files.
+- The `...Async` operations of the workspace read and write on a pool thread. A save takes the
+  version current when it starts; the editing goes on meanwhile (versions never change), and the
+  save marks exactly that version as saved (`EditSession.MarkSaved(document)`). On an 81 km map
+  (4096 by 4096 ogrids) importing takes about 5 s, the first save 8 s, a save after a stroke 2 s.
 - `MapProjectStore.Reload` reads the files that changed on disk (another tool saved
   `heightmap.png`, `markers.json`, ...) into the document, part by part; a file that holds what the
-  document holds changes nothing, so the editor's own saves cause no edits. `MapWorkspace.Reload`
-  makes it one undoable edit. A `map.json` that changes the map's size is refused: the grids would
+  document holds changes nothing. `MapWorkspace.Reload` makes it one undoable edit, and first
+  leaves out the files that hold what the last save wrote: the editor's own, also when the
+  document changed since (an edit during a save in the background must not be undone by it). A `map.json` that changes the map's size is refused: the grids would
   no longer fit.
 - `ProjectWatcher` reports the changed files of a folder once it has been quiet for a moment
   (tools save in bursts), on a pool thread. `faf-map pack --watch` opens the project once and

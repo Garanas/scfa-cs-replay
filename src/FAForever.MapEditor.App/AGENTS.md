@@ -16,10 +16,16 @@ The folder is a project (it holds `map.json`) or a map folder of the game, which
 
 - `ViewModels/MainViewModel`: the window without the window. It holds the `MapWorkspace`, the
   brush settings and every operation of the menu as a plain method that takes its folder
-  (`OpenProject`, `ImportMap`, `Save`, `SaveAs`, `Export`, `Undo`, `Redo`, `BeginStroke`,
+  (`OpenAsync`, `LoadProjectAsync`, `ImportMapFolderAsync`, `SaveAsync`, `SaveAsAsync`,
+  `ExportAsync`, `Undo`, `Redo`, `BeginStroke`,
   `ContinueStroke`, `EndStroke`, `Stroke`). The menu's commands ask for the folder first
   (`IEditorDialogs`), then call those methods; automation and tests call them directly. It uses no
   Avalonia types, so `tests/FAForever.MapEditor.App.Tests` tests it without a window.
+- Opening, importing, saving and exporting are asynchronous (`LoadProjectAsync`,
+  `ImportMapFolderAsync`, `SaveAsync`, `SaveAsAsync`, `ExportAsync`): they read and write on a pool
+  thread while `IsBusy` disables the commands that cannot run alongside. Painting goes on during a
+  save; reloads wait until a save or stroke ends. Keep the user interface's thread free of work
+  that grows with the map: a full redraw of the view runs its rows in parallel.
 - `Controls/HeightmapView`: the terrain from above, one pixel per sample, shaded and coloured by
   height and water; it draws again only the tiles a change touched. Left mouse paints (a stroke
   is an `EditTransaction`, so one undo step, shown while it is painted), right or middle mouse
@@ -48,6 +54,7 @@ faf-map editor undo
 faf-map editor close                                      # closes without asking about changes
 ```
 
+- The state includes `busy`; a command that opens or saves answers when it is done.
 - Commands: `help`, `state`, `open {path}`, `import {path}`, `save`, `save-as {path}`,
   `export {output, version?}`, `undo`, `redo`, `brush {mode?, radius?, strength?, target?}`,
   `stroke {points}`, `height {x, z}`, `fit`, `view {zoom, x, z}`, `screenshot {path, map?}`,

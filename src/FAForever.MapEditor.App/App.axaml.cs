@@ -25,7 +25,7 @@ public sealed class App : Application
             StartOptions options = Program.Options;
             if (options.Folder is string folder)
             {
-                model.Open(folder);
+                _ = model.OpenOnStartAsync(folder);
             }
             if (options.AutomationPort is int port)
             {

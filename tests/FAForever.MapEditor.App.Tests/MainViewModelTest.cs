@@ -42,13 +42,13 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public void ImportsAMapFolder()
+        public async Task ImportsAMapFolder()
         {
             MainViewModel model = new MainViewModel(new Answers());
             int opened = 0;
             model.WorkspaceChanged += (_, _) => opened++;
 
-            model.Open(HardFfa);
+            await model.OpenAsync(HardFfa);
 
             Assert.IsTrue(model.HasMap);
             Assert.AreEqual(1, opened);
@@ -57,10 +57,10 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public void PaintsAStrokeThatIsOneStepOfUndo()
+        public async Task PaintsAStrokeThatIsOneStepOfUndo()
         {
             MainViewModel model = new MainViewModel(new Answers());
-            model.Open(HardFfa);
+            await model.OpenAsync(HardFfa);
             float before = model.ShownDocument!.Terrain.Heightmap.GetHeight(128, 40);
             model.BrushMode = HeightBrushMode.Raise;
             model.BrushRadius = 10;
@@ -84,7 +84,7 @@ namespace FAForever.MapEditor.App.Tests
         {
             Answers answers = new Answers();
             MainViewModel model = new MainViewModel(answers);
-            model.Open(HardFfa);
+            await model.OpenAsync(HardFfa);
             model.Stroke([(50, 50), (60, 60)]);
             string project = NewFolder();
             answers.Folders.Enqueue(project);
@@ -101,7 +101,7 @@ namespace FAForever.MapEditor.App.Tests
         {
             Answers answers = new Answers { SaveChoice = SaveChoice.Cancel };
             MainViewModel model = new MainViewModel(answers);
-            model.Open(HardFfa);
+            await model.OpenAsync(HardFfa);
             model.Stroke([(50, 50)]);
             answers.Folders.Enqueue(HardFfa);
 
@@ -115,12 +115,12 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public void ExportsTheMap()
+        public async Task ExportsTheMap()
         {
             MainViewModel model = new MainViewModel(new Answers());
-            model.Open(HardFfa);
+            await model.OpenAsync(HardFfa);
 
-            string folder = model.Export(NewFolder(), version: 4);
+            string folder = await model.ExportAsync(NewFolder(), version: 4);
 
             Assert.AreEqual("HardFFA.v0004", Path.GetFileName(folder));
             StringAssert.StartsWith(model.Status, "Exported");
