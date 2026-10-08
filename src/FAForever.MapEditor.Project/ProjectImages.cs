@@ -43,7 +43,7 @@ namespace FAForever.MapEditor.Project
         /// </summary>
         public static (int Width, int Height) Size(string path)
         {
-            MagickImageInfo info = new MagickImageInfo(path);
+            MagickImageInfo info = new MagickImageInfo(File.ReadAllBytes(path));
             return ((int)info.Width, (int)info.Height);
         }
 
@@ -79,7 +79,7 @@ namespace FAForever.MapEditor.Project
             MagickImage image;
             try
             {
-                image = new MagickImage(path);
+                image = new MagickImage(File.ReadAllBytes(path));
             }
             catch (MagickException exception)
             {
@@ -98,9 +98,9 @@ namespace FAForever.MapEditor.Project
         private static void Save(MagickImage image, string path, uint depth)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-            image.Format = MagickFormat.Png;
             image.Depth = depth;
-            image.Write(path);
+            // .NET reads and writes the files: ImageMagick's own file access fails on paths longer than Windows' old limit of 260
+            File.WriteAllBytes(path, image.ToByteArray(MagickFormat.Png));
         }
     }
 }
