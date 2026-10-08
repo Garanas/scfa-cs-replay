@@ -5,6 +5,8 @@ using System.Text.Json.Nodes;
 using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using Avalonia.Input;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
 using FAForever.MapEditor.Project.Editing;
@@ -121,7 +123,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
             case "state":
                 break;
             case "setup":
@@ -207,6 +209,10 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     Math.Clamp((int)(z * mask.Height / document.Height), 0, mask.Height - 1)];
                 break;
             }
+            case "hit":
+                // what the mouse would reach at a point of the window: the control that gets its events
+                result["hit"] = HitAt(Number(arguments, "x") ?? 0, Number(arguments, "y") ?? 0);
+                break;
             case "fit":
                 window.MapView.Fit();
                 break;
@@ -328,6 +334,17 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         Directory.CreateDirectory(Path.GetDirectoryName(full)!);
         bitmap.Save(full, new PngBitmapEncoderOptions());
         return full;
+    }
+
+    private string? HitAt(double x, double y)
+    {
+        Avalonia.Input.IInputElement? element = window.InputHitTest(new Point(x, y));
+        List<string> chain = [];
+        for (Visual? visual = element as Visual; visual is not null && chain.Count < 4; visual = visual.GetVisualParent())
+        {
+            chain.Add(visual is Avalonia.Controls.Control { Name: { Length: > 0 } name } ? $"{visual.GetType().Name} {name}" : visual.GetType().Name);
+        }
+        return chain.Count == 0 ? null : string.Join(" < ", chain);
     }
 
     private static string Text(JsonObject arguments, string name) =>

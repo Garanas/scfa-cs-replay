@@ -87,6 +87,9 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
     the heights (`usampler2D`), 1 a decal's texture, 2 to 11 the layers, 12 and 13 the masks.
     A sampler with a mipmapped filter on a texture without mipmaps reads as black: the masks have
     their own sampler.
+  - Avalonia's hit testing only finds what a control draws itself, and this one draws nothing
+    through `Render`: it claims its whole rectangle (`ICustomHitTest`), or the mouse would fall
+    through to the tab control. Check a new control with automation's `hit`.
 - `Views/MainWindow`: menu, brush panel (heights or a layer's mask), history panel, the Top and 3D
   tabs, status bar; asks about unsaved changes before closing.
   `WindowDialogs` answers the view model's questions with the system's folder picker and a small
@@ -123,7 +126,8 @@ faf-map editor close                                      # closes without askin
   out keep what it suggests), `update-assets`, `open {path}`, `import {path}`, `save`, `save-as {path}`,
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,
-  `stroke {points}`, `height {x, z}`, `fit`, `show {markers?, pathNodes?}`, `view {zoom, x, z}`,
+  `stroke {points}`, `height {x, z}`, `hit {x, y}` (the control the mouse reaches at a point of
+  the window, with its parents), `fit`, `show {markers?, pathNodes?}`, `view {zoom, x, z}`,
   `tab {name: top|3d}`, `camera {x?, z?, distance?, yaw?, pitch?}` (the 3D view, degrees),
   `screenshot {path, map?, gpu?}` (`gpu: true` reads a frame of the 3D view back from the card:
   a screenshot of the window does not reach it), `gpu-debug {mode}` (what the 3D view's terrain

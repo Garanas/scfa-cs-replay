@@ -3,6 +3,7 @@ using Vector = Avalonia.Vector;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Rendering;
 using Avalonia.OpenGL;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Threading;
@@ -28,8 +29,14 @@ namespace FAForever.MapEditor.App.Controls;
 /// whenever a texture of the workspace's assets changes on disk: a texture a tool saves shows a
 /// moment later. Each texture file is on the card once, however many decals use it.
 /// </remarks>
-public sealed class TerrainViewGpu : OpenGlControlBase
+public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
 {
+    /// <summary>
+    /// The whole view takes the mouse. Avalonia hits only what a control draws itself, and the
+    /// picture comes from the graphics card: without this, the mouse falls through to the tabs.
+    /// </summary>
+    public bool HitTest(Point point) => new Rect(Bounds.Size).Contains(point);
+
     private GL? _gl;
     private TerrainRenderer? _renderer;
     private MainViewModel? _model;
