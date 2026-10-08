@@ -16,6 +16,21 @@ public interface IEditorDialogs
     /// A folder the person picks, or null when they cancel.
     /// </summary>
     Task<string?> PickFolderAsync(string title);
+
+    /// <summary>
+    /// What to do with the unsaved changes of a map before it is closed.
+    /// </summary>
+    Task<SaveChoice> AskToSaveChangesAsync(string mapName);
+}
+
+/// <summary>
+/// The answers to <see cref="IEditorDialogs.AskToSaveChangesAsync"/>.
+/// </summary>
+public enum SaveChoice
+{
+    Save,
+    Discard,
+    Cancel,
 }
 
 /// <summary>
@@ -250,10 +265,32 @@ public sealed partial class MainViewModel : ObservableObject
 
     #region Commands of the menu
 
+    /// <summary>
+    /// Asks what to do with unsaved changes before the map is closed, and saves when asked to.
+    /// </summary>
+    /// <returns>Whether the map may be closed.</returns>
+    public async Task<bool> ConfirmCloseAsync()
+    {
+        if (Workspace?.Session.IsModified != true)
+        {
+            return true;
+        }
+        switch (await _dialogs.AskToSaveChangesAsync(Workspace.Document.Scenario.Name))
+        {
+            case SaveChoice.Discard:
+                return true;
+            case SaveChoice.Save:
+                await SaveProjectAsync();
+                return !Workspace.Session.IsModified;
+            default:
+                return false;
+        }
+    }
+
     [RelayCommand]
     private async Task OpenProjectAsync()
     {
-        if (await _dialogs.PickFolderAsync("Open a project") is string folder)
+        if (await ConfirmCloseAsync() && await _dialogs.PickFolderAsync("Open a project") is string folder)
         {
             Try(() => OpenProject(folder));
         }
@@ -262,7 +299,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task ImportMapAsync()
     {
-        if (await _dialogs.PickFolderAsync("Import a map folder of the game") is string folder)
+        if (await ConfirmCloseAsync() && await _dialogs.PickFolderAsync("Import a map folder of the game") is string folder)
         {
             Try(() => ImportMap(folder));
         }

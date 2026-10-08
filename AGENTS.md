@@ -3,7 +3,7 @@
 A .NET 10 solution for parsing and analysing Supreme Commander: Forged Alliance (Forever) replays,
 with a Blazor WebAssembly front-end for searching the FAForever vault and inspecting replays.
 
-This file holds what applies everywhere. Each top-level folder and five projects have their own
+This file holds what applies everywhere. Each top-level folder and six projects have their own
 guide, which agents that support nested guides pick up when they touch files there. Read it before
 planning work there:
 
@@ -22,7 +22,9 @@ planning work there:
   `.scmap` versions, the map's Lua files, the navigational mesh and the test maps.
 - **Map editor work** (`FAForever.MapEditor.Project`, `FAForever.MapEditor.Cli`):
   [`src/FAForever.MapEditor.Project/AGENTS.md`](src/FAForever.MapEditor.Project/AGENTS.md) covers the
-  editor's model, the project format and what the export to the game's files derives.
+  editor's model, the project format, undo and what the export to the game's files derives;
+  [`src/FAForever.MapEditor.App/AGENTS.md`](src/FAForever.MapEditor.App/AGENTS.md) the window and how
+  to drive a running editor (automation) to check a change.
 - **UI work** (`FAForever.Vault.Viewer`): [`src/FAForever.Vault.Viewer/AGENTS.md`](src/FAForever.Vault.Viewer/AGENTS.md)
   covers WebAssembly rules, styling and theming, icons, shareable view state (the URL guardrails),
   the Moderation tab and its AI prompt, analytics, Playwright.
@@ -40,7 +42,8 @@ product in the solution folders `FileFormats`, `Vault` and `MapEditor`.
 | `src/FAForever.FileFormats.Replay` | Core replay parser (the crown jewel: change with care, it is benchmarked and heavily tested). References Lua and Blueprints. |
 | `src/FAForever.Vault.Viewer` | Standalone Blazor WebAssembly app (UI). Tailwind CSS v4, no component library. |
 | `src/FAForever.MapEditor.Project` | The map editor's model of a map, its project format (JSON + PNG) and the import and export of the game's files. References Map; desktop only (Magick.NET). |
-| `src/FAForever.MapEditor.Cli` | `faf-map`: unpack a map folder into a project, pack a project into a map folder (`--watch` to repack on every change). |
+| `src/FAForever.MapEditor.Cli` | `faf-map`: unpack a map folder into a project, pack a project into a map folder (`--watch` to repack on every change), send commands to a running editor (`editor`). |
+| `src/FAForever.MapEditor.App` | `faf-map-editor`: the map editor's window (Avalonia 12), with an automation server (`--automation <port>`). |
 | `src/FAForever.Vault.Server` | Minimal ASP.NET Core host: serves the Viewer's static files, proxies the OAuth token exchange **and** fills in link previews for replay, unit and About pages. |
 | `tests/FAForever.FileFormats.*.Tests` | MSTest suites, one per library, with real assets under `assets/`. |
 | `benchmarks/FAForever.FileFormats.Replay.Benchmarks` | BenchmarkDotNet harness. |
@@ -57,6 +60,7 @@ project only lists its project reference.
 dotnet build FAForever.sln                              # build everything
 dotnet test FAForever.sln                               # run every test project
 dotnet watch --project src/FAForever.Vault.Server       # run the hosted app on http://127.0.0.1:5080
+dotnet run --project src/FAForever.MapEditor.App -- [folder] [--automation 5371]   # the map editor
 tools/tailwindcss.exe -i Styles/app.css -o wwwroot/css/app.css --watch   # from src/FAForever.Vault.Viewer/
 ```
 

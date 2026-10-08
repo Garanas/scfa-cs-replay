@@ -175,7 +175,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 break;
             case "close":
                 // after the answer has gone out
-                Dispatcher.UIThread.Post(window.Close, DispatcherPriority.Background);
+                Dispatcher.UIThread.Post(window.CloseWithoutAsking, DispatcherPriority.Background);
                 break;
             default:
                 throw new ArgumentException($"Unknown command '{command}'; GET /help lists them");

@@ -16,11 +16,15 @@ tools and image editors work on, packed into the game's files on export.
 
 - `src/FAForever.MapEditor.Project`: the editor's model of a map and its project format.
 - `src/FAForever.MapEditor.Cli`: the `faf-map` tool.
+- `src/FAForever.MapEditor.App`: the editor's window (Avalonia): open, import, save and export maps,
+  paint the heightmap, undo and redo; it reads back what other tools change in the project.
 
 ```sh
 faf-map unpack maps/theta_passage.v0004 theta_passage      # a map folder into a project
 faf-map pack theta_passage "<game>/maps" --version 5        # a project into maps/theta_passage.v0005
 faf-map pack theta_passage "<game>/maps" --watch            # pack again on every change
+faf-map-editor theta_passage --automation 5371              # the editor, driven by...
+faf-map editor stroke points=[[10,10],[50,50]]              # ...commands like these
 ```
 
 ## Web app
