@@ -9,7 +9,7 @@ guide is [`../AGENTS.md`](../AGENTS.md); what the replay tests pin down is expla
 | `FAForever.FileFormats.Lua.Tests` | `LuaSourceParser`, `LuaSourceWriter`, `LuaDataFormatter`, `LuaTableReader` | none (inline Lua) |
 | `FAForever.FileFormats.Blueprints.Tests` | `BlueprintParser`, `BlueprintIds`, `UnitNames`, `UnitSummary`, `UnitData`, `UnitBuildTree` | `.bp` files copied from the FA repo |
 | `FAForever.FileFormats.Map.Tests` | `ScmapParser`, `ScmapWriter`, `MapSaveParser`, `MapSaveWriter`, `MapScenarioParser`, `MapScenarioWriter`, `NavGenerator`, `NavPaths`, `ExtractorLayout`, `MapSymmetry`, `MapArchive`, `TerrainTypes` | one vault map per `.scmap` version (`.scmap`, `_save.lua`, `_scenario.lua`) |
-| `FAForever.MapEditor.Project.Tests` | `MapImporter`, `MapExporter`, `MapProjectStore`, `EditedMap`, `MapFolderName`, `TiledBuffer`, `EditSession`, `HeightBrush` | the map library's test maps, linked from its `assets/` |
+| `FAForever.MapEditor.Project.Tests` | `MapImporter`, `MapExporter`, `MapProjectStore`, `EditedMap`, `MapFolderName`, `TiledBuffer`, `EditSession`, `HeightBrush`, `Workspace`, `AssetConverter` | the map library's test maps, linked from its `assets/`; small archives in place of the game's, made by `GameFiles` |
 | `FAForever.MapEditor.App.Tests` | `MainViewModel` (the editor's operations without a window) | the map library's test maps, linked |
 | `FAForever.FileFormats.Replay.Tests` | loader, header, inputs, semantics, fingerprints | `.fafreplay` / `.scfareplay` files |
 

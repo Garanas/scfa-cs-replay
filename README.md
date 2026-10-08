@@ -20,6 +20,8 @@ tools and image editors work on, packed into the game's files on export.
   paint the heightmap, undo and redo; it reads back what other tools change in the project.
 
 ```sh
+faf-map workspace init "D:/FAF Map Editor"                 # the workspace: projects and the game's assets
+faf-map workspace convert                                  # env and units of the game and FAF, as PNG and JSON
 faf-map unpack maps/theta_passage.v0004 theta_passage      # a map folder into a project
 faf-map pack theta_passage "<game>/maps" --version 5        # a project into maps/theta_passage.v0005
 faf-map pack theta_passage "<game>/maps" --watch            # pack again on every change

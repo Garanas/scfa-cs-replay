@@ -13,7 +13,7 @@ the table names each project's guide, read it before working in that project:
 | `FAForever.Vault.Viewer` | [its guide](FAForever.Vault.Viewer/AGENTS.md) | Blazor WebAssembly app |
 | `FAForever.Vault.Server` | the root guide | Static host, OAuth token proxy, link previews |
 | `FAForever.MapEditor.Project` | [its guide](FAForever.MapEditor.Project/AGENTS.md) | The map editor's model, its project format (JSON + PNG) and the export to the game's files |
-| `FAForever.MapEditor.Cli` | the editor's guide | `faf-map unpack` / `pack [--version N] [--watch]` / `editor <command>` |
+| `FAForever.MapEditor.Cli` | the editor's guide | `faf-map unpack` / `pack [--version N] [--watch]` / `workspace init\|convert\|status` / `editor <command>` |
 | `FAForever.MapEditor.App` | [its guide](FAForever.MapEditor.App/AGENTS.md) | The map editor's window (Avalonia), its automation server |
 
 ## Dependencies point one way
@@ -21,7 +21,7 @@ the table names each project's guide, read it before working in that project:
 ```
 Vault.Server → Vault.Viewer → FileFormats.Replay → FileFormats.Blueprints → FileFormats.Lua
                      └──────→ FileFormats.Map ─────────────────────────→ FileFormats.Lua
-MapEditor.App → MapEditor.Project → FileFormats.Map
+MapEditor.App → MapEditor.Project → FileFormats.Map, FileFormats.Blueprints
 MapEditor.Cli ──┘
 ```
 

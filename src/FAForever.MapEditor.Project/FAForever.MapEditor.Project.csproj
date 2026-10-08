@@ -9,6 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FAForever.FileFormats.Blueprints\FAForever.FileFormats.Blueprints.csproj" />
     <ProjectReference Include="..\FAForever.FileFormats.Map\FAForever.FileFormats.Map.csproj" />
   </ItemGroup>
 

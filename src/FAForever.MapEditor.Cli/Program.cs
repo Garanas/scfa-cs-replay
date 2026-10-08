@@ -1,5 +1,6 @@
 using CommandLine;
 using FAForever.MapEditor.Project;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.Cli
 {
@@ -42,13 +43,33 @@ namespace FAForever.MapEditor.Cli
         public int Port { get; set; }
     }
 
+    [Verb("workspace", HelpText = "Set up the workspace, convert the game's assets into it, or show whether they are current.")]
+    public sealed class WorkspaceOptions
+    {
+        [Value(0, MetaName = "action", Required = true, HelpText = "init, convert or status.")]
+        public string Action { get; set; } = "";
+
+        [Value(1, MetaName = "folder", HelpText = "The workspace; by default the one the editor remembers.")]
+        public string? Folder { get; set; }
+
+        [Option("game", HelpText = "init: the game's installation; by default the one FAF's fa_path.lua names.")]
+        public string? GameFolder { get; set; }
+
+        [Option("faf", HelpText = "init: FAF's gamedata folder; by default the one next to fa_path.lua.")]
+        public string? FafDataFolder { get; set; }
+
+        [Option("vault", HelpText = "init: the vault on disk, where maps are exported to; by default the one fa_path.lua names.")]
+        public string? VaultFolder { get; set; }
+    }
+
     public static class Program
     {
         public static int Main(string[] args) =>
-            Parser.Default.ParseArguments<UnpackOptions, PackOptions, EditorOptions>(args).MapResult(
+            Parser.Default.ParseArguments<UnpackOptions, PackOptions, EditorOptions, WorkspaceOptions>(args).MapResult(
                 (UnpackOptions o) => Run(() => Unpack(o)),
                 (PackOptions o) => o.Watch ? Watch(o) : Run(() => Pack(o)),
                 (EditorOptions o) => EditorClient.Send(o.Port, o.Command, o.Arguments),
+                (WorkspaceOptions o) => Run(() => WorkspaceCommand.Run(o)),
                 _ => 2);
 
         private static void Unpack(UnpackOptions o)

@@ -1,8 +1,5 @@
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Files.Serialized;
@@ -15,19 +12,6 @@ namespace FAForever.MapEditor.Project
     /// </summary>
     public static class MapProjectStore
     {
-        private static readonly JsonSerializerOptions Json = new JsonSerializerOptions(JsonSerializerDefaults.Web)
-        {
-            WriteIndented = true,
-            // the files are read by people and their tools, never put in a web page: <LOC ...> stays as it is
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
-            RespectNullableAnnotations = true,
-            ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true,
-            Converters = { new JsonStringEnumConverter() },
-        };
-
         /// <summary>
         /// Writes the document into <paramref name="folder"/>, which must be absent, empty or a
         /// project. Files of an earlier save that the document no longer has are removed from
@@ -52,11 +36,11 @@ namespace FAForever.MapEditor.Project
             bool Stale(string file, Func<MapDocument, object> part) =>
                 previous is null || !ReferenceEquals(part(document), part(previous)) || !File.Exists(Of(file));
 
-            WriteJson(Of(MapProjectLayout.Map), MapProjectMapping.ToDto(document));
-            WriteJson(Of(MapProjectLayout.Props), document.Props.Select(MapProjectMapping.ToDto).ToList());
-            WriteJson(Of(MapProjectLayout.Decals), MapProjectMapping.ToDecalsDto(document));
-            WriteJson(Of(MapProjectLayout.Markers), MapProjectMapping.ToDto(document.Markers));
-            WriteJson(Of(MapProjectLayout.Armies), document.Armies.Select(MapProjectMapping.ToDto).ToList());
+            ProjectJson.Write(Of(MapProjectLayout.Map), MapProjectMapping.ToDto(document));
+            ProjectJson.Write(Of(MapProjectLayout.Props), document.Props.Select(MapProjectMapping.ToDto).ToList());
+            ProjectJson.Write(Of(MapProjectLayout.Decals), MapProjectMapping.ToDecalsDto(document));
+            ProjectJson.Write(Of(MapProjectLayout.Markers), MapProjectMapping.ToDto(document.Markers));
+            ProjectJson.Write(Of(MapProjectLayout.Armies), document.Armies.Select(MapProjectMapping.ToDto).ToList());
 
             Terrain terrain = document.Terrain;
             if (Stale(MapProjectLayout.Heightmap, d => d.Terrain.Heightmap.Samples))
@@ -136,11 +120,11 @@ namespace FAForever.MapEditor.Project
         {
             string Of(string file) => Path.Combine(folder, file);
 
-            MapProjectDto map = ReadJson<MapProjectDto>(Of(MapProjectLayout.Map));
-            List<PropDto> props = ReadJson<List<PropDto>>(Of(MapProjectLayout.Props));
-            DecalsDto decals = ReadJson<DecalsDto>(Of(MapProjectLayout.Decals));
-            MarkerSetDto markers = ReadJson<MarkerSetDto>(Of(MapProjectLayout.Markers));
-            List<ArmyDto> armies = ReadJson<List<ArmyDto>>(Of(MapProjectLayout.Armies));
+            MapProjectDto map = ProjectJson.Read<MapProjectDto>(Of(MapProjectLayout.Map));
+            List<PropDto> props = ProjectJson.Read<List<PropDto>>(Of(MapProjectLayout.Props));
+            DecalsDto decals = ProjectJson.Read<DecalsDto>(Of(MapProjectLayout.Decals));
+            MarkerSetDto markers = ProjectJson.Read<MarkerSetDto>(Of(MapProjectLayout.Markers));
+            List<ArmyDto> armies = ProjectJson.Read<List<ArmyDto>>(Of(MapProjectLayout.Armies));
 
             int width = map.Terrain.Width;
             int height = map.Terrain.Height;
@@ -283,11 +267,11 @@ namespace FAForever.MapEditor.Project
         /// </summary>
         private static MapDocument ReloadJson<T>(MapDocument document, string path, T held, Func<MapDocument, T, MapDocument> apply)
         {
-            if (!File.Exists(path) || File.ReadAllText(path).ReplaceLineEndings("\n") == (JsonSerializer.Serialize(held, Json) + "\n").ReplaceLineEndings("\n"))
+            if (!File.Exists(path) || File.ReadAllText(path).ReplaceLineEndings("\n") == ProjectJson.Serialize(held).ReplaceLineEndings("\n"))
             {
                 return document;
             }
-            return apply(document, ReadJson<T>(path));
+            return apply(document, ProjectJson.Read<T>(path));
         }
 
         private static MapDocument ReloadGray8(MapDocument document, string path, TiledBuffer<byte> held, int width, int height, Func<MapDocument, TiledBuffer<byte>, MapDocument> apply)
@@ -323,35 +307,6 @@ namespace FAForever.MapEditor.Project
             if (!File.Exists(path) || !File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes.AsSpan()))
             {
                 File.WriteAllBytes(path, ImmutableCollectionsMarshal.AsArray(bytes)!);
-            }
-        }
-
-        /// <summary>
-        /// Writes a JSON file unless it already holds this text.
-        /// </summary>
-        private static void WriteJson<T>(string path, T value)
-        {
-            string text = JsonSerializer.Serialize(value, Json) + "\n";
-            if (!File.Exists(path) || File.ReadAllText(path) != text)
-            {
-                File.WriteAllText(path, text);
-            }
-        }
-
-        private static T ReadJson<T>(string path)
-        {
-            if (!File.Exists(path))
-            {
-                throw new MapProjectException($"{path} is missing");
-            }
-            try
-            {
-                return JsonSerializer.Deserialize<T>(File.ReadAllText(path), Json)
-                    ?? throw new MapProjectException($"{path} is empty");
-            }
-            catch (JsonException exception)
-            {
-                throw new MapProjectException($"{path}: {exception.Message}", exception);
             }
         }
 

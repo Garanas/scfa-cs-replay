@@ -127,6 +127,32 @@ that a map leaves out stay absent (`double?`): the game decides what they defaul
 - Each stratum mask texture holds four layers, one per channel (red, green, blue, alpha): layer 1
   to 4 in the first, 5 to 8 in the second. A project keeps one grey PNG per layer.
 
+## The workspace and the game's assets
+
+One workspace per computer (`Workspaces/`): a folder with the map projects and the assets converted
+from the game's archives (`WorkspaceLayout` lists its files). `workspace.json` (`WorkspaceDto`) says
+where the game, FAF's data and the vault are; maps are exported to the vault's `maps` folder.
+`UserSettings` remembers where the workspace is, outside it (`%APPDATA%\FAF Map Editor\settings.json`;
+the environment variable `FAF_MAP_EDITOR_SETTINGS` names another file, which tests and automation
+use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.lua` for the defaults.
+
+- `GameArchives` lays the archives over each other as the game mounts them: per name (`env`,
+  `units`) the game's `.scd`, then FAF's `.nx2`, which wins. `props.scd` holds only placeholders.
+  Paths are compared in lower case.
+- `AssetConverter` turns them into `assets/`, keeping the game's paths in lower case: textures as
+  8-bit PNG with alpha, prop and unit blueprints as the editor's JSON (`PropBlueprintDto`,
+  `UnitBlueprintDto`, read with FileFormats.Blueprints by `AssetBlueprints`), meshes as they are;
+  scripts, animations and the rest are left out. The levels of detail get the names the engine
+  fills in (`<name>_lod<n>.scm`, `_albedo.dds`, `_normalsts.dds`, `_specteam.dds`), and a file the
+  archives lack is left out. It writes into `assets.new/` and replaces `assets/` when done; a stopped
+  conversion goes on where it was. For game version 3839: 32 s, 2.9 GB, 6256 textures, 2188 meshes,
+  563 props, 606 units.
+- `AssetCheck` tells whether the assets are current: converted by this editor version (and
+  `AssetConverter.FormatVersion`, raise it when the output changes) from the archives as they are.
+  Only FAF's `.nx2` are checked; same size and time is unchanged, otherwise the SHA-256 decides.
+- `Workspace.FindAsset("/env/Evergreen/layers/Eg_Grass001_albedo.dds")` gives the converted file.
+- `faf-map workspace init|convert|status` does the same without the editor.
+
 ## Tests
 
 `tests/FAForever.MapEditor.Project.Tests` uses the three maps of the map library's tests (linked,
