@@ -60,8 +60,15 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   at, three steps of 3.3 % of 2.6 times the distance to the ground a notch (out: straight back),
   from 4.5 to 11 000 ogrids; the middle mouse button drags the ground with the mouse; space and
   the mouse turn it around the pivot and tilt it from straight down (pitch 90) to 10 degrees
-  above the horizon; Home shows the whole map again. It glides to where it is sent, and its
-  pivot is always the ground it looks at. The left mouse button is left for editing.
+  above the horizon; F focuses on the place under the mouse (the FAF editor focuses on the
+  selection; there is none yet), from about half as far; Home shows the whole map again. It
+  glides to where it is sent (only while the 3D view draws), and its pivot is always the ground
+  it looks at. The left mouse button is left for editing.
+  - The camera belongs to the view model (`MainViewModel.Camera`, `CameraMoved`), so both views
+    share it: the top view draws what it sees (its footprint on the ground, the eye and a line to
+    the pivot; View menu), and control and a click there sends it to that place at once. Opening
+    a map puts it over the whole map. The status bar shows the place under the mouse in both
+    views (`EditorCamera.PointAt` on the terrain itself in 3D).
   - That ground is the terrain blurred (`Rendering/Gpu/SmoothGround`: averages over squares of
     8, 16, 32, ... ogrids, read between their centres and between sizes), over about 15 % of the
     camera's distance (8 to 2048 ogrids): spikes and cliffs do not throw the camera up and down,
@@ -95,7 +102,7 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   - Avalonia's hit testing only finds what a control draws itself, and this one draws nothing
     through `Render`: it claims its whole rectangle (`ICustomHitTest`), or the mouse would fall
     through to the tab control. Check a new control with automation's `hit`.
-- `Views/MainWindow`: menu, brush panel (heights or a layer's mask), history panel, the Top and 3D
+- `Views/MainWindow`: menu (View: markers, path nodes, the 3D camera in the top view), brush panel (heights or a layer's mask), history panel, the Top and 3D
   tabs, status bar; asks about unsaved changes before closing.
   `WindowDialogs` answers the view model's questions with the system's folder picker and a small
   save-changes dialog.
@@ -132,8 +139,10 @@ faf-map editor close                                      # closes without askin
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,
   `stroke {points}`, `height {x, z}`, `hit {x, y}` (the control the mouse reaches at a point of
-  the window, with its parents), `fit`, `show {markers?, pathNodes?}`, `view {zoom, x, z}`,
-  `tab {name: top|3d}`, `camera {x?, z?, distance?, yaw?, pitch?}` (the 3D view, degrees),
+  the window, with its parents), `fit`, `show {markers?, pathNodes?, camera?}`, `view {zoom, x, z}`,
+  `tab {name: top|3d}`, `camera {x?, z?, distance?, yaw?, pitch?}` (the 3D view, degrees; at once),
+  `focus {x, z, radius?}` (with a radius as F, gliding while the 3D view shows; without, as
+  control and a click in the top view),
   `screenshot {path, map?, gpu?}` (`gpu: true` reads a frame of the 3D view back from the card:
   a screenshot of the window does not reach it), `gpu-debug {mode}` (what the 3D view's terrain
   shows: 0 the picture, 1 the albedo, 2 the light, 3 the normals, 4 the heights, 5 the lower

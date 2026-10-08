@@ -494,6 +494,7 @@ public sealed partial class MainViewModel : ObservableObject
             _watcher?.Dispose();
             _watcher = null;
         }
+        ResetCamera();
         MapChanged?.Invoke(this, EventArgs.Empty);
         Refresh(status);
     }

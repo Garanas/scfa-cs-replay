@@ -123,7 +123,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
             case "state":
                 break;
             case "setup":
@@ -223,7 +223,19 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 window.ShownView = Text(arguments, "name");
                 break;
             case "camera":
-                window.View3D.Look(Number(arguments, "x"), Number(arguments, "z"), Number(arguments, "distance"), Number(arguments, "yaw"), Number(arguments, "pitch"));
+                model.Camera.Look((float?)Number(arguments, "x"), (float?)Number(arguments, "z"), (float?)Number(arguments, "distance"), (float?)Number(arguments, "yaw"), (float?)Number(arguments, "pitch"));
+                model.NotifyCameraMoved();
+                break;
+            case "focus":
+                // as F in the 3D view, or control and a click in the top view without a radius; the camera glides there
+                if (Number(arguments, "radius") is double radius)
+                {
+                    model.FocusCamera((float)(Number(arguments, "x") ?? 0), (float)(Number(arguments, "z") ?? 0), (float)radius);
+                }
+                else
+                {
+                    model.MoveCameraTo((float)(Number(arguments, "x") ?? 0), (float)(Number(arguments, "z") ?? 0));
+                }
                 break;
             case "show":
                 if (arguments["markers"] is JsonNode markers)
@@ -233,6 +245,10 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 if (arguments["pathNodes"] is JsonNode pathNodes)
                 {
                     model.ShowPathNodes = pathNodes.GetValue<bool>();
+                }
+                if (arguments["camera"] is JsonNode camera)
+                {
+                    model.ShowCamera = camera.GetValue<bool>();
                 }
                 break;
             case "view":
@@ -298,13 +314,13 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             ["tab"] = window.ShownView,
             ["camera"] = new JsonObject
             {
-                ["x"] = window.View3D.Camera.X,
-                ["z"] = window.View3D.Camera.Z,
-                ["distance"] = window.View3D.Camera.Distance,
-                ["yaw"] = window.View3D.Camera.Yaw,
-                ["pitch"] = window.View3D.Camera.Pitch,
+                ["x"] = model.Camera.Now.X,
+                ["z"] = model.Camera.Now.Z,
+                ["distance"] = model.Camera.Now.Distance,
+                ["yaw"] = model.Camera.Now.Yaw,
+                ["pitch"] = model.Camera.Now.Pitch,
             },
-            ["show"] = new JsonObject { ["markers"] = model.ShowMarkers, ["pathNodes"] = model.ShowPathNodes },
+            ["show"] = new JsonObject { ["markers"] = model.ShowMarkers, ["pathNodes"] = model.ShowPathNodes, ["camera"] = model.ShowCamera },
             ["gpu"] = new JsonObject
             {
                 ["renderer"] = window.View3D.Renderer,

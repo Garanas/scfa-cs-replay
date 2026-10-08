@@ -51,6 +51,12 @@ public sealed class EditorCamera(Func<float, float, float, float> smoothHeight, 
         (_current.Pivot.X, _current.Pivot.Y, _current.Distance, _current.Yaw, _current.Pitch);
 
     /// <summary>
+    /// The width of the view divided by its height, for the rays through the view
+    /// (<see cref="PointAt"/>, <see cref="Footprint"/>); the view sets it as it draws.
+    /// </summary>
+    public float Aspect { get; set; } = 1.5f;
+
+    /// <summary>
     /// Where the camera is: above and behind its pivot.
     /// </summary>
     public Vector3 Eye => EyeOf(_current);
@@ -76,6 +82,62 @@ public sealed class EditorCamera(Func<float, float, float, float> smoothHeight, 
             yaw ?? _target.Yaw,
             Math.Clamp(pitch ?? _target.Pitch, MinPitch, MaxPitch));
         _current = _target;
+    }
+
+    /// <summary>
+    /// Glides to look at <paramref name="center"/> (x and z in ogrids) from close enough to see
+    /// <paramref name="radius"/> ogrids around it, keeping its angles: the FAF map editor's
+    /// focus (F).
+    /// </summary>
+    public void Focus(Vector2 center, float radius) =>
+        _target = _target with
+        {
+            Pivot = center,
+            Distance = Math.Clamp(radius / MathF.Tan(FieldOfView / 2) * 1.1f, MinDistance, MaxDistance),
+        };
+
+    /// <summary>
+    /// Looks at <paramref name="center"/>, keeping its distance and angles: at once, or gliding
+    /// there (which takes a view that draws, see <see cref="Update"/>).
+    /// </summary>
+    public void MoveTo(Vector2 center, bool glide = false)
+    {
+        _target = _target with { Pivot = center };
+        if (!glide)
+        {
+            _current = _target;
+        }
+    }
+
+    /// <summary>
+    /// The place of the terrain itself under a point of the view (normalized device coordinates,
+    /// -1 to 1, y up), as the camera is now; null when the ray misses the map's ground.
+    /// </summary>
+    public Vector3? PointAt(Vector2 view)
+    {
+        Vector3 eye = EyeOf(_current);
+        Vector3 ray = Ray(_current, eye, view, Aspect);
+        return Along(eye, ray, terrainHeight) is float t ? eye + ray * t : null;
+    }
+
+    /// <summary>
+    /// What the camera sees of the ground, as the places (x, z) under the view's corners: top
+    /// left, top right, bottom right, bottom left. A corner above the horizon is cut off at four
+    /// times the camera's distance.
+    /// </summary>
+    public Vector2[] Footprint()
+    {
+        Vector3 eye = EyeOf(_current);
+        float ground = Ground(_current.Pivot, _current.Distance).Y;
+        Vector2[] corners = [new Vector2(-1, 1), new Vector2(1, 1), new Vector2(1, -1), new Vector2(-1, -1)];
+        return [.. corners.Select(corner =>
+        {
+            Vector3 ray = Ray(_current, eye, corner, Aspect);
+            float reach = _current.Distance * 4;
+            float t = ray.Y < -1e-4f ? Math.Min((eye.Y - ground) / -ray.Y, reach) : reach;
+            Vector3 place = eye + ray * t;
+            return new Vector2(place.X, place.Z);
+        })];
     }
 
     /// <summary>
@@ -232,10 +294,18 @@ public sealed class EditorCamera(Func<float, float, float, float> smoothHeight, 
     private float? GroundAlong(Vector3 origin, Vector3 direction, float distance)
     {
         float radius = Radius(distance);
+        return Along(origin, direction, (x, z) => smoothHeight(x, z, radius));
+    }
+
+    /// <summary>
+    /// How far along the ray a ground is.
+    /// </summary>
+    private static float? Along(Vector3 origin, Vector3 direction, Func<float, float, float> height)
+    {
         bool Below(float t)
         {
             Vector3 p = origin + direction * t;
-            return p.Y <= smoothHeight(p.X, p.Z, radius);
+            return p.Y <= height(p.X, p.Z);
         }
 
         if (Below(0))

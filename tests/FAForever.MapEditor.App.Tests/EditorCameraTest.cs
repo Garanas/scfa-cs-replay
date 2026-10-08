@@ -114,5 +114,65 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(halfway < before && halfway > camera.Now.Distance);
             Assert.IsFalse(camera.Update(0.01f));
         }
+
+        [TestMethod]
+        public void FocusesOnAPlaceAndWhatIsAroundIt()
+        {
+            EditorCamera camera = Flat();
+
+            camera.Focus(new Vector2(100, 400), 30);
+            Settle(camera);
+
+            Assert.AreEqual((100f, 400f), (camera.Now.X, camera.Now.Z));
+            Assert.AreEqual(30 / MathF.Tan(EditorCamera.FieldOfView / 2) * 1.1f, camera.Now.Distance, 0.01);
+            Assert.AreEqual(90, camera.Now.Pitch, "the angles stay");
+        }
+
+        [TestMethod]
+        public void MovesToAPlaceAtOnce()
+        {
+            EditorCamera camera = Flat();
+            float distance = camera.Now.Distance;
+
+            camera.MoveTo(new Vector2(10, 20));
+
+            Assert.AreEqual((10f, 20f, distance), (camera.Now.X, camera.Now.Z, camera.Now.Distance));
+            Assert.IsFalse(camera.Update(0.01f), "no gliding: the 3D view may be hidden");
+        }
+
+        [TestMethod]
+        public void FindsThePlaceUnderTheMouse()
+        {
+            EditorCamera camera = Flat(12);
+            camera.Aspect = 1;
+
+            Vector3 middle = camera.PointAt(Vector2.Zero)!.Value;
+            Vector3 right = camera.PointAt(new Vector2(1, 0))!.Value;
+            Vector3 top = camera.PointAt(new Vector2(0, 1))!.Value;
+
+            Assert.AreEqual(256, middle.X, 0.1);
+            Assert.AreEqual(256, middle.Z, 0.1);
+            Assert.AreEqual(12, middle.Y, 0.1);
+            Assert.IsTrue(right.X > 400, "the right of the view is east at yaw 0");
+            Assert.IsTrue(top.Z < 100, "the top of the view is north");
+        }
+
+        [TestMethod]
+        public void ItsFootprintIsWhatItSees()
+        {
+            EditorCamera camera = Flat();
+            camera.Aspect = 2;
+
+            Vector2[] straightDown = camera.Footprint();
+            float halfHeight = camera.Now.Distance * MathF.Tan(EditorCamera.FieldOfView / 2);
+            Assert.AreEqual(256 - halfHeight * 2, straightDown[0].X, 0.5, "top left, twice as wide as high");
+            Assert.AreEqual(256 - halfHeight, straightDown[0].Y, 0.5);
+            Assert.AreEqual(256 + halfHeight * 2, straightDown[2].X, 0.5, "bottom right");
+
+            camera.Look(pitch: 20);
+            Vector2[] tilted = camera.Footprint();
+            Assert.IsTrue(tilted[1].X - tilted[0].X > tilted[2].X - tilted[3].X, "a trapezoid: wider far away, at the top");
+            Assert.IsTrue(tilted[0].Y < 256 && tilted[3].Y > tilted[0].Y);
+        }
     }
 }

@@ -13,6 +13,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         Heightmap.CursorMoved += text => CursorText.Text = text;
+        Terrain3D.CursorMoved += text => CursorText.Text = text;
     }
 
     /// <summary>

@@ -21,8 +21,9 @@ namespace FAForever.MapEditor.App.Controls;
 /// The map in 3D on the graphics card (OpenGL, through ANGLE on Windows): the terrain with its
 /// layers and decals, lit as in the game (<see cref="TerrainRenderer"/>). The camera works as the
 /// FAF map editor's (<see cref="EditorCamera"/>): the wheel zooms towards the mouse, the middle
-/// mouse button moves over the map, space and the mouse turn and tilt, Home shows the whole map.
-/// The left mouse button is left for editing.
+/// mouse button moves over the map, space and the mouse turn and tilt, F focuses on the place
+/// under the mouse, Home shows the whole map. The left mouse button is left for editing. The
+/// camera is the view model's, which the top view shows and moves too.
 /// </summary>
 /// <remarks>
 /// It draws again whenever the document changes (an edit, an undo, a project file read again) and
@@ -45,18 +46,16 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private TaskCompletionSource<string>? _capture;
     private string? _capturePath;
 
-    private readonly EditorCamera _camera;
     private readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
     private TimeSpan _lastFrame;
-    private bool _placed;
     private bool _turning;
     private Point? _panFrom;
     private Point? _turnFrom;
     private Point _mouse;
+    private bool _mouseInside;
 
     public TerrainViewGpu()
     {
-        _camera = new EditorCamera((x, z, radius) => Smooth().Height(x, z, radius), GroundHeight);
         Focusable = true;
     }
 
@@ -97,27 +96,10 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private int _debug;
 
     /// <summary>
-    /// The camera: the point of the ground it looks at (in ogrids), how far it is, and its yaw
-    /// and pitch in degrees (90 is straight down).
+    /// The place of the terrain under the mouse, as "x 12, z 34, height 5.67", or empty; whenever the
+    /// mouse or the camera moves.
     /// </summary>
-    public (double X, double Z, double Distance, double Yaw, double Pitch) Camera
-    {
-        get
-        {
-            (float x, float z, float distance, float yaw, float pitch) = _camera.Now;
-            return (x, z, distance, yaw, pitch);
-        }
-    }
-
-    /// <summary>
-    /// Points the camera; null keeps a value as it is.
-    /// </summary>
-    public void Look(double? x = null, double? z = null, double? distance = null, double? yaw = null, double? pitch = null)
-    {
-        _camera.Look((float?)x, (float?)z, (float?)distance, (float?)yaw, (float?)pitch);
-        _placed = true;
-        RequestNextFrameRendering();
-    }
+    public event Action<string>? CursorMoved;
 
     /// <summary>
     /// Draws a frame and saves it as a PNG, for automation: the picture is on the graphics card,
@@ -180,23 +162,22 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         MapDocument? document = _model?.ShownDocument;
         if (document is not null && _renderer is not null)
         {
-            if (!_placed)
-            {
-                _camera.Reset(document.Width, document.Height);
-                _placed = true;
-            }
+            EditorCamera camera = _model!.Camera;
+            camera.Aspect = (float)width / height;
             TimeSpan now = _clock.Elapsed;
             float seconds = (float)Math.Min(0.1, (now - _lastFrame).TotalSeconds);
             _lastFrame = now;
-            if (_camera.Update(seconds))
+            if (camera.Update(seconds))
             {
                 RequestNextFrameRendering();
+                _model.NotifyCameraMoved();
+                ReportCursor();
             }
             Workspace? workspace = _model?.Workspace;
             _renderer.Debug = _debug;
             try
             {
-                _renderer.Render(document, _camera.ViewProjection((float)width / height), path => GameTextures.Find(path, document, workspace));
+                _renderer.Render(document, camera.ViewProjection((float)width / height), path => GameTextures.Find(path, document, workspace));
             }
             catch (InvalidOperationException exception)
             {
@@ -242,51 +223,31 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     }
 
     /// <summary>
-    /// The blurred terrain the camera rests on, made again when the heights change; while they
-    /// keep changing (a brush stroke) at most twice a second, as making it reads every sample.
+    /// A point of the view in normalized device coordinates: -1 to 1, y up.
     /// </summary>
-    private SmoothGround Smooth()
+    private Vector2 InView(Point at) => new Vector2(
+        (float)(2 * at.X / Math.Max(1, Bounds.Width) - 1),
+        (float)(1 - 2 * at.Y / Math.Max(1, Bounds.Height)));
+
+    private void ReportCursor()
     {
-        Heightmap? heightmap = _model?.ShownDocument?.Terrain.Heightmap;
-        if (heightmap is null)
+        if (_model?.ShownDocument is not MapDocument document || !_mouseInside)
         {
-            return _smooth ??= SmoothGround.Flat(0);
+            return;
         }
-        if (!ReferenceEquals(heightmap, _smoothOf) && (_smooth is null || _smoothOf?.Width != heightmap.Width
-            || _smoothOf.Height != heightmap.Height || _clock.Elapsed - _smoothMade > TimeSpan.FromSeconds(0.5)))
-        {
-            _smooth = SmoothGround.From(heightmap);
-            _smoothOf = heightmap;
-            _smoothMade = _clock.Elapsed;
-        }
-        return _smooth!;
+        CursorMoved?.Invoke(_model.Camera.PointAt(InView(_mouse)) is Vector3 place
+            && place.X >= 0 && place.Z >= 0 && place.X <= document.Width && place.Z <= document.Height
+            ? $"x {place.X:0}, z {place.Z:0}, height {place.Y:0.00}"
+            : "");
     }
 
-    private SmoothGround? _smooth;
-    private Heightmap? _smoothOf;
-    private TimeSpan _smoothMade;
-
     /// <summary>
-    /// The height of the shown terrain, between its samples; outside the map that of its edge.
+    /// The camera moved: draw again, and let the top view know.
     /// </summary>
-    private float GroundHeight(float x, float z)
+    private void Moved()
     {
-        Heightmap? heightmap = _model?.ShownDocument?.Terrain.Heightmap;
-        if (heightmap is null)
-        {
-            return 0;
-        }
-        float cx = Math.Clamp(x, 0, heightmap.Width - 1);
-        float cz = Math.Clamp(z, 0, heightmap.Height - 1);
-        int x0 = (int)cx;
-        int z0 = (int)cz;
-        int x1 = Math.Min(x0 + 1, heightmap.Width - 1);
-        int z1 = Math.Min(z0 + 1, heightmap.Height - 1);
-        float fx = cx - x0;
-        float fz = cz - z0;
-        float top = heightmap.GetHeight(x0, z0) * (1 - fx) + heightmap.GetHeight(x1, z0) * fx;
-        float bottom = heightmap.GetHeight(x0, z1) * (1 - fx) + heightmap.GetHeight(x1, z1) * fx;
-        return top * (1 - fz) + bottom * fz;
+        RequestNextFrameRendering();
+        _model?.NotifyCameraMoved();
     }
 
     /// <summary>
@@ -316,22 +277,22 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             _model.MapChanged -= OnMapChanged;
             _model.DocumentChanged -= OnDocumentChanged;
+            _model.CameraMoved -= OnCameraMoved;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
         {
             _model.MapChanged += OnMapChanged;
             _model.DocumentChanged += OnDocumentChanged;
+            _model.CameraMoved += OnCameraMoved;
         }
-        _placed = false;
         RequestNextFrameRendering();
     }
 
-    private void OnMapChanged(object? sender, EventArgs e)
-    {
-        _placed = false;
-        RequestNextFrameRendering();
-    }
+    private void OnMapChanged(object? sender, EventArgs e) => RequestNextFrameRendering();
+
+    // sent somewhere by the top view or automation: glide there
+    private void OnCameraMoved(object? sender, EventArgs e) => RequestNextFrameRendering();
 
     private void OnDocumentChanged(object? sender, EventArgs e) => RequestNextFrameRendering();
 
@@ -346,8 +307,16 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     protected override void OnPointerEntered(PointerEventArgs e)
     {
         base.OnPointerEntered(e);
+        _mouseInside = true;
         // space turns the camera while the mouse is over the view
         Focus();
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        _mouseInside = false;
+        CursorMoved?.Invoke("");
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -370,16 +339,17 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             Vector delta = _mouse - panFrom;
             _panFrom = _mouse;
-            _camera.Pan(new Vector2((float)delta.X, (float)delta.Y), (float)Bounds.Height);
-            RequestNextFrameRendering();
+            _model?.Camera.Pan(new Vector2((float)delta.X, (float)delta.Y), (float)Bounds.Height);
+            Moved();
         }
         if (_turning && _turnFrom is Point turnFrom)
         {
             Vector delta = _mouse - turnFrom;
             _turnFrom = _mouse;
-            _camera.Rotate(new Vector2((float)delta.X, (float)delta.Y));
-            RequestNextFrameRendering();
+            _model?.Camera.Rotate(new Vector2((float)delta.X, (float)delta.Y));
+            Moved();
         }
+        ReportCursor();
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
@@ -395,13 +365,9 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
-        Point at = e.GetPosition(this);
-        Vector2 mouse = new Vector2(
-            (float)(2 * at.X / Math.Max(1, Bounds.Width) - 1),
-            (float)(1 - 2 * at.Y / Math.Max(1, Bounds.Height)));
         int notches = Math.Sign(e.Delta.Y) * Math.Max(1, (int)Math.Round(Math.Abs(e.Delta.Y)));
-        _camera.Zoom(mouse, (float)(Bounds.Width / Math.Max(1, Bounds.Height)), notches);
-        RequestNextFrameRendering();
+        _model?.Camera.Zoom(InView(e.GetPosition(this)), (float)(Bounds.Width / Math.Max(1, Bounds.Height)), notches);
+        Moved();
         e.Handled = true;
     }
 
@@ -419,8 +385,14 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         }
         else if (e.Key == Key.Home && _model?.ShownDocument is MapDocument document)
         {
-            _camera.Reset(document.Width, document.Height);
-            RequestNextFrameRendering();
+            _model.Camera.Reset(document.Width, document.Height);
+            Moved();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.F && _model?.Camera.PointAt(InView(_mouse)) is Vector3 place)
+        {
+            // the FAF map editor focuses on the selection; with none, on what the mouse points at, half as far
+            _model.FocusCamera(place.X, place.Z, _model.Camera.Now.Distance * 0.26f);
             e.Handled = true;
         }
     }

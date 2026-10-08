@@ -5,6 +5,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using FAForever.MapEditor.App.Rendering;
+using FAForever.MapEditor.App.Rendering.Gpu;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -92,14 +93,25 @@ public sealed class HeightmapView : Control
         {
             _model.MapChanged -= OnMapChanged;
             _model.DocumentChanged -= OnDocumentChanged;
+            _model.CameraMoved -= OnCameraMoved;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
         {
             _model.MapChanged += OnMapChanged;
             _model.DocumentChanged += OnDocumentChanged;
+            _model.CameraMoved += OnCameraMoved;
         }
         OnMapChanged(this, EventArgs.Empty);
+    }
+
+    // only the overlay changes: the terrain's picture stays
+    private void OnCameraMoved(object? sender, EventArgs e)
+    {
+        if (IsVisible)
+        {
+            InvalidateVisual();
+        }
     }
 
     protected override void OnSizeChanged(SizeChangedEventArgs e)
@@ -131,6 +143,11 @@ public sealed class HeightmapView : Control
             _markers.Render(context, document.Markers, _model.ShowMarkers, _model.ShowPathNodes, _zoom, _offset);
         }
 
+        if (_model is { ShowCamera: true, HasMap: true })
+        {
+            DrawCamera(context, _model.Camera);
+        }
+
         if (_cursor is Point cursor && _model is not null)
         {
             double radius = _model.BrushRadius * _zoom;
@@ -154,7 +171,13 @@ public sealed class HeightmapView : Control
         base.OnPointerPressed(e);
         PointerPointProperties buttons = e.GetCurrentPoint(this).Properties;
         Point at = e.GetPosition(this);
-        if (buttons.IsLeftButtonPressed && _model?.HasMap == true)
+        if (buttons.IsLeftButtonPressed && _model?.HasMap == true && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            // control and a click: the 3D view looks here
+            Point place = ControlToMap(at);
+            _model.MoveCameraTo((float)place.X, (float)place.Y);
+        }
+        else if (buttons.IsLeftButtonPressed && _model?.HasMap == true)
         {
             Point map = ControlToMap(at);
             _painting = true;
@@ -408,6 +431,37 @@ public sealed class HeightmapView : Control
                 _linkPens[key] = pen;
             }
             return pen;
+        }
+    }
+
+    private static readonly IBrush CameraFill = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+    private static readonly IPen CameraOutline = new Pen(new SolidColorBrush(Color.FromArgb(200, 255, 255, 255)), 1.5);
+
+    /// <summary>
+    /// What the 3D view's camera sees of the ground, the camera itself as a dot, and a line to the
+    /// place it looks at.
+    /// </summary>
+    private void DrawCamera(DrawingContext context, EditorCamera camera)
+    {
+        System.Numerics.Vector2[] corners = camera.Footprint();
+        StreamGeometry footprint = new StreamGeometry();
+        using (StreamGeometryContext figure = footprint.Open())
+        {
+            figure.BeginFigure(MapToControl(corners[0].X, corners[0].Y), true);
+            for (int i = 1; i < corners.Length; i++)
+            {
+                figure.LineTo(MapToControl(corners[i].X, corners[i].Y));
+            }
+            figure.EndFigure(true);
+        }
+        using (context.PushClip(new Rect(Bounds.Size)))
+        {
+            context.DrawGeometry(CameraFill, CameraOutline, footprint);
+            System.Numerics.Vector3 eye = camera.Eye;
+            (float x, float z, _, _, _) = camera.Now;
+            Point at = MapToControl(eye.X, eye.Z);
+            context.DrawLine(CameraOutline, at, MapToControl(x, z));
+            context.DrawEllipse(Brushes.White, CameraOutline, at, 4, 4);
         }
     }
 

@@ -178,5 +178,21 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(model.HasMap);
             StringAssert.Contains(model.Status, "is missing");
         }
+
+        [TestMethod]
+        public async Task TheCameraStartsOverEachMapAndTheTopViewMovesIt()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            await model.OpenAsync(HardFfa);
+            int moved = 0;
+            model.CameraMoved += (_, _) => moved++;
+
+            Assert.AreEqual((128f, 128f, 90f), (model.Camera.Now.X, model.Camera.Now.Z, model.Camera.Now.Pitch), "over the middle of the 256 by 256 map");
+
+            model.MoveCameraTo(40, 60);
+
+            Assert.AreEqual((40f, 60f), (model.Camera.Now.X, model.Camera.Now.Z));
+            Assert.AreEqual(1, moved, "the views draw again");
+        }
     }
 }

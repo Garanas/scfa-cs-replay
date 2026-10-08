@@ -39,6 +39,7 @@
         <Separator />
         <MenuItem Header="_Markers" ToggleType="CheckBox" IsChecked="{Binding ShowMarkers}" />
         <MenuItem Header="_Path nodes" ToggleType="CheckBox" IsChecked="{Binding ShowPathNodes}" />
+        <MenuItem Header="3D _camera in the top view" ToggleType="CheckBox" IsChecked="{Binding ShowCamera}" />
       </MenuItem>
     </Menu>
 
@@ -68,7 +69,7 @@
           <CheckBox Content="Erase" IsChecked="{Binding MaskErase}" />
         </StackPanel>
         <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12"
-                   Text="Left mouse: paint. Right or middle mouse: move. Wheel: zoom. A stroke is one step of Undo." />
+                   Text="Top view: left mouse paints, right or middle moves, the wheel zooms, control and a click sends the 3D camera there. 3D view: the wheel zooms, middle moves, space and the mouse turn, F focuses, Home shows all. A stroke is one step of Undo." />
         <TextBlock Text="History" FontWeight="SemiBold" Margin="0,12,0,0" />
         <ListBox ItemsSource="{Binding History}" SelectedIndex="{Binding HistoryIndex, Mode=TwoWay}" MaxHeight="320">
           <ListBox.ItemTemplate>
