@@ -51,12 +51,6 @@
     </div>
 
     <div class="grid grid-cols-1 content-start gap-4">
-        <MapVerdict Title="@($"Meets {layout.GuidelinesMet} of 4 extractor conventions")"
-                    Tone="@(layout.GuidelinesMet == 4 ? MapVerdict.VerdictTone.Good : layout.GuidelinesMet >= 2 ? MapVerdict.VerdictTone.Notice : MapVerdict.VerdictTone.Problem)">
-            Each mass spot gets a role from its distance to the start positions@(Map.Extractors.Layer switch { NavLayer.Land => " over land", { } layer => $" by {MapOverviewPanel.LayerName(layer)}, the only way between the bases", null => " in a straight line, as no route links the bases" }).
-            @(Map.Symmetry is null ? "No symmetry found in the markers." : MapOverviewPanel.SymmetryLabel(Map.Symmetry) + ".")
-        </MapVerdict>
-
         <div class="card">
             <div class="flex items-baseline justify-between gap-3">
                 <h2 class="text-[16px] font-bold">Extractor layout</h2>
