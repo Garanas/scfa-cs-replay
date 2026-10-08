@@ -39,6 +39,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FAForever.MapEditor.Cli", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FAForever.MapEditor.Project.Tests", "tests\FAForever.MapEditor.Project.Tests\FAForever.MapEditor.Project.Tests.csproj", "{8CDA4F18-E19A-4501-B85B-AD2885F2F895}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FAForever.MapEditor.App", "src\FAForever.MapEditor.App\FAForever.MapEditor.App.csproj", "{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -229,6 +231,18 @@ Global
 		{8CDA4F18-E19A-4501-B85B-AD2885F2F895}.Release|x64.Build.0 = Release|Any CPU
 		{8CDA4F18-E19A-4501-B85B-AD2885F2F895}.Release|x86.ActiveCfg = Release|Any CPU
 		{8CDA4F18-E19A-4501-B85B-AD2885F2F895}.Release|x86.Build.0 = Release|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Debug|x64.Build.0 = Debug|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Debug|x86.Build.0 = Debug|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Release|x64.ActiveCfg = Release|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Release|x64.Build.0 = Release|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Release|x86.ActiveCfg = Release|Any CPU
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -249,6 +263,7 @@ Global
 		{4121BF7C-865C-4036-95D7-1E7893B16C17} = {29EACC2F-818A-7B0D-7D17-E18A715C659D}
 		{FA37C694-7D41-4C91-9FFE-B9AE1C4D2F33} = {29EACC2F-818A-7B0D-7D17-E18A715C659D}
 		{8CDA4F18-E19A-4501-B85B-AD2885F2F895} = {29EACC2F-818A-7B0D-7D17-E18A715C659D}
+		{D70E68EF-C28F-4DD3-82ED-6CC1338F6D19} = {29EACC2F-818A-7B0D-7D17-E18A715C659D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8994C6C6-3746-435D-9AC9-5C526C30650D}
