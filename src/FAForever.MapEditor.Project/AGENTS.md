@@ -67,19 +67,19 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
 
 ## Opening, saving and reloading
 
-- `MapWorkspace` is a map being edited: its session and its project folder, with the operations of
+- `EditedMap` is a map being edited: its session and its project folder, with the operations of
   the File menu (open, import, save, save as, export). The CLI, the editor and its automation all
   use it, so they behave the same.
-- `MapWorkspace.Save` passes the last saved document to `MapProjectStore.Save`, which writes only
+- `EditedMap.Save` passes the last saved document to `MapProjectStore.Save`, which writes only
   the images whose part changed since and only the JSON files whose text changed. A save after a
   brush stroke writes the heightmap, not the twenty other files.
-- The `...Async` operations of the workspace read and write on a pool thread. A save takes the
+- The `...Async` operations of `EditedMap` read and write on a pool thread. A save takes the
   version current when it starts; the editing goes on meanwhile (versions never change), and the
   save marks exactly that version as saved (`EditSession.MarkSaved(document)`). On an 81 km map
   (4096 by 4096 ogrids) importing takes about 5 s, the first save 8 s, a save after a stroke 2 s.
 - `MapProjectStore.Reload` reads the files that changed on disk (another tool saved
   `heightmap.png`, `markers.json`, ...) into the document, part by part; a file that holds what the
-  document holds changes nothing. `MapWorkspace.Reload` makes it one undoable edit, and first
+  document holds changes nothing. `EditedMap.Reload` makes it one undoable edit, and first
   leaves out the files that hold what the last save wrote: the editor's own, also when the
   document changed since (an edit during a save in the background must not be undone by it). A `map.json` that changes the map's size is refused: the grids would
   no longer fit.

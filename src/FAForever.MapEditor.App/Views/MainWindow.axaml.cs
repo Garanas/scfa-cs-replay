@@ -48,7 +48,7 @@ public sealed partial class MainWindow : Window
     protected override async void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
-        if (_mayClose || DataContext is not MainViewModel model || model.Workspace?.Session.IsModified != true)
+        if (_mayClose || DataContext is not MainViewModel model || model.Map?.Session.IsModified != true)
         {
             return;
         }

@@ -237,12 +237,12 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
 
     private JsonObject State()
     {
-        MapDocument? document = model.Workspace?.Document;
+        MapDocument? document = model.Map?.Document;
         return new JsonObject
         {
             ["title"] = model.Title,
             ["status"] = model.Status,
-            ["projectFolder"] = model.Workspace?.ProjectFolder,
+            ["projectFolder"] = model.Map?.ProjectFolder,
             ["map"] = document is null ? null : new JsonObject
             {
                 ["name"] = document.Scenario.Name,
@@ -251,11 +251,11 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["height"] = document.Height,
                 ["scmapVersion"] = document.Terrain.ScmapVersion,
             },
-            ["modified"] = model.Workspace?.Session.IsModified ?? false,
+            ["modified"] = model.Map?.Session.IsModified ?? false,
             ["busy"] = model.IsBusy,
-            ["undo"] = model.Workspace?.Session.UndoDescription,
-            ["redo"] = model.Workspace?.Session.RedoDescription,
-            ["history"] = new JsonArray([.. (model.Workspace?.Session.History ?? []).Select(step => (JsonNode)JsonValue.Create(step.IsCurrent ? $"> {step.Description}" : step.Description))]),
+            ["undo"] = model.Map?.Session.UndoDescription,
+            ["redo"] = model.Map?.Session.RedoDescription,
+            ["history"] = new JsonArray([.. (model.Map?.Session.History ?? []).Select(step => (JsonNode)JsonValue.Create(step.IsCurrent ? $"> {step.Description}" : step.Description))]),
             ["brush"] = new JsonObject
             {
                 ["paint"] = model.SelectedPaintTarget?.Name,

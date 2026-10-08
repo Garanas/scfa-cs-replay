@@ -90,16 +90,16 @@ public sealed class HeightmapView : Control
         base.OnDataContextChanged(e);
         if (_model is not null)
         {
-            _model.WorkspaceChanged -= OnWorkspaceChanged;
+            _model.MapChanged -= OnMapChanged;
             _model.DocumentChanged -= OnDocumentChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
         {
-            _model.WorkspaceChanged += OnWorkspaceChanged;
+            _model.MapChanged += OnMapChanged;
             _model.DocumentChanged += OnDocumentChanged;
         }
-        OnWorkspaceChanged(this, EventArgs.Empty);
+        OnMapChanged(this, EventArgs.Empty);
     }
 
     protected override void OnSizeChanged(SizeChangedEventArgs e)
@@ -207,7 +207,7 @@ public sealed class HeightmapView : Control
         InvalidateVisual();
     }
 
-    private void OnWorkspaceChanged(object? sender, EventArgs e)
+    private void OnMapChanged(object? sender, EventArgs e)
     {
         _bitmap?.Dispose();
         _bitmap = null;

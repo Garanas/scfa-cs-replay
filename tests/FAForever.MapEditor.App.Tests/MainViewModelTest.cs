@@ -46,7 +46,7 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = new MainViewModel(new Answers());
             int opened = 0;
-            model.WorkspaceChanged += (_, _) => opened++;
+            model.MapChanged += (_, _) => opened++;
 
             await model.OpenAsync(HardFfa);
 
@@ -93,7 +93,7 @@ namespace FAForever.MapEditor.App.Tests
 
             model.HistoryIndex = 0;
 
-            Assert.IsFalse(model.Workspace!.Session.CanUndo, "back at the map as it was opened");
+            Assert.IsFalse(model.Map!.Session.CanUndo, "back at the map as it was opened");
             Assert.IsTrue(model.History.Skip(1).All(entry => entry.IsUndone));
             Assert.AreEqual(0, model.HistoryIndex);
         }
@@ -131,8 +131,8 @@ namespace FAForever.MapEditor.App.Tests
 
             await model.SaveProjectCommand.ExecuteAsync(null);
 
-            Assert.AreEqual(Path.GetFullPath(project), model.Workspace!.ProjectFolder);
-            Assert.IsFalse(model.Workspace.Session.IsModified);
+            Assert.AreEqual(Path.GetFullPath(project), model.Map!.ProjectFolder);
+            Assert.IsFalse(model.Map.Session.IsModified);
             Assert.IsTrue(File.Exists(Path.Combine(project, "map.json")));
         }
 
@@ -147,11 +147,11 @@ namespace FAForever.MapEditor.App.Tests
 
             await model.ImportMapCommand.ExecuteAsync(null);
             Assert.AreEqual(1, answers.SaveQuestions);
-            Assert.IsTrue(model.Workspace!.Session.IsModified, "cancelled: the changes are still there");
+            Assert.IsTrue(model.Map!.Session.IsModified, "cancelled: the changes are still there");
 
             answers.SaveChoice = SaveChoice.Discard;
             await model.ImportMapCommand.ExecuteAsync(null);
-            Assert.IsFalse(model.Workspace!.Session.IsModified, "the map was imported again");
+            Assert.IsFalse(model.Map!.Session.IsModified, "the map was imported again");
         }
 
         [TestMethod]

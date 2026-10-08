@@ -7,7 +7,7 @@ namespace FAForever.MapEditor.Project
     /// </summary>
     /// <remarks>
     /// <see cref="Changed"/> is raised on a thread of the pool; a user interface hands it to its own
-    /// thread before it touches the workspace.
+    /// thread before it touches the map.
     /// </remarks>
     public sealed class ProjectWatcher : IDisposable
     {

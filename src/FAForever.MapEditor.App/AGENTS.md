@@ -14,7 +14,7 @@ The folder is a project (it holds `map.json`) or a map folder of the game, which
 
 ## Structure
 
-- `ViewModels/MainViewModel`: the window without the window. It holds the `MapWorkspace`, the
+- `ViewModels/MainViewModel`: the window without the window. It holds the `EditedMap`, the
   brush settings and every operation of the menu as a plain method that takes its folder
   (`OpenAsync`, `LoadProjectAsync`, `ImportMapFolderAsync`, `SaveAsync`, `SaveAsAsync`,
   `ExportAsync`, `Undo`, `Redo`, `BeginStroke`,

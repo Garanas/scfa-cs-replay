@@ -77,16 +77,16 @@ public sealed class TerrainView3D : Control
         base.OnDataContextChanged(e);
         if (_model is not null)
         {
-            _model.WorkspaceChanged -= OnWorkspaceChanged;
+            _model.MapChanged -= OnMapChanged;
             _model.DocumentChanged -= OnDocumentChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
         {
-            _model.WorkspaceChanged += OnWorkspaceChanged;
+            _model.MapChanged += OnMapChanged;
             _model.DocumentChanged += OnDocumentChanged;
         }
-        OnWorkspaceChanged(this, EventArgs.Empty);
+        OnMapChanged(this, EventArgs.Empty);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -187,7 +187,7 @@ public sealed class TerrainView3D : Control
         e.Handled = true;
     }
 
-    private void OnWorkspaceChanged(object? sender, EventArgs e)
+    private void OnMapChanged(object? sender, EventArgs e)
     {
         _placed = false;
         _heightsOf = null;

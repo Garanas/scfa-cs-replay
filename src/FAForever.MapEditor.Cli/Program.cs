@@ -57,13 +57,13 @@ namespace FAForever.MapEditor.Cli
             {
                 throw new MapProjectException($"The project folder {o.ProjectFolder} is not empty");
             }
-            MapWorkspace.ImportMap(o.MapFolder).SaveAs(o.ProjectFolder);
+            EditedMap.ImportMap(o.MapFolder).SaveAs(o.ProjectFolder);
             Console.WriteLine($"Unpacked {o.MapFolder} into {o.ProjectFolder}");
         }
 
         private static void Pack(PackOptions o)
         {
-            string folder = MapWorkspace.OpenProject(o.ProjectFolder).Export(o.OutputFolder, o.Version);
+            string folder = EditedMap.OpenProject(o.ProjectFolder).Export(o.OutputFolder, o.Version);
             Console.WriteLine($"{DateTime.Now:HH:mm:ss} Packed {folder}");
         }
 
@@ -88,22 +88,22 @@ namespace FAForever.MapEditor.Cli
         private static int Watch(PackOptions o)
         {
             object gate = new object();
-            MapWorkspace? workspace = null;
+            EditedMap? map = null;
             void PackAgain(IReadOnlyCollection<string>? changed)
             {
                 lock (gate)
                 {
                     try
                     {
-                        if (workspace is null || changed is null)
+                        if (map is null || changed is null)
                         {
-                            workspace = MapWorkspace.OpenProject(o.ProjectFolder);
+                            map = EditedMap.OpenProject(o.ProjectFolder);
                         }
-                        else if (!workspace.Reload(changed))
+                        else if (!map.Reload(changed))
                         {
                             return;
                         }
-                        string folder = workspace.Export(o.OutputFolder, o.Version);
+                        string folder = map.Export(o.OutputFolder, o.Version);
                         Console.WriteLine($"{DateTime.Now:HH:mm:ss} Packed {folder}");
                     }
                     catch (Exception exception) when (exception is MapProjectException or IOException)

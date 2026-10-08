@@ -14,11 +14,11 @@ namespace FAForever.MapEditor.Project
     /// the editing can go on meanwhile, and the save marks the version it wrote. Call them from the
     /// thread the session is used on: they come back to it to touch the session.
     /// </remarks>
-    public sealed class MapWorkspace
+    public sealed class EditedMap
     {
         private MapDocument _savedDocument;
 
-        private MapWorkspace(MapDocument document, string? projectFolder)
+        private EditedMap(MapDocument document, string? projectFolder)
         {
             Session = new EditSession(document);
             ProjectFolder = projectFolder is null ? null : Path.GetFullPath(projectFolder);
@@ -39,18 +39,18 @@ namespace FAForever.MapEditor.Project
         /// Opens the project in <paramref name="folder"/>.
         /// </summary>
         /// <exception cref="MapProjectException">The folder holds no readable project.</exception>
-        public static MapWorkspace OpenProject(string folder) => new MapWorkspace(MapProjectStore.Load(folder), folder);
+        public static EditedMap OpenProject(string folder) => new EditedMap(MapProjectStore.Load(folder), folder);
 
         /// <summary>
         /// Imports the map folder of the game or the vault, e.g. <c>maps/theta_passage.v0004</c>.
         /// It has no project folder until it is saved (<see cref="SaveAs"/>).
         /// </summary>
         /// <exception cref="MapProjectException">The folder holds no readable map.</exception>
-        public static MapWorkspace ImportMap(string mapFolder) => new MapWorkspace(MapImporter.ImportFolder(mapFolder), null);
+        public static EditedMap ImportMap(string mapFolder) => new EditedMap(MapImporter.ImportFolder(mapFolder), null);
 
-        public static Task<MapWorkspace> OpenProjectAsync(string folder) => Task.Run(() => OpenProject(folder));
+        public static Task<EditedMap> OpenProjectAsync(string folder) => Task.Run(() => OpenProject(folder));
 
-        public static Task<MapWorkspace> ImportMapAsync(string mapFolder) => Task.Run(() => ImportMap(mapFolder));
+        public static Task<EditedMap> ImportMapAsync(string mapFolder) => Task.Run(() => ImportMap(mapFolder));
 
         /// <summary>
         /// Saves the map in its project folder, writing only what changed since the last save.

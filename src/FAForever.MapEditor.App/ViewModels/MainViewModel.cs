@@ -76,17 +76,17 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>
     /// The map being edited, or null before one is opened.
     /// </summary>
-    public MapWorkspace? Workspace { get; private set; }
+    public EditedMap? Map { get; private set; }
 
     /// <summary>
     /// The document as it is shown: with the brush stroke in progress, if there is one.
     /// </summary>
-    public MapDocument? ShownDocument => _stroke?.Document ?? Workspace?.Document;
+    public MapDocument? ShownDocument => _stroke?.Document ?? Map?.Document;
 
     /// <summary>
     /// Raised when another map is opened.
     /// </summary>
-    public event EventHandler? WorkspaceChanged;
+    public event EventHandler? MapChanged;
 
     /// <summary>
     /// Raised when the shown document changes: an edit, an undo, a reload, or a dab of a stroke.
@@ -102,23 +102,23 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
 
-    public string Title => Workspace is null
+    public string Title => Map is null
         ? "FAF map editor"
-        : $"{(Workspace.Session.IsModified ? "* " : "")}{Workspace.Document.Scenario.Name} - {Workspace.ProjectFolder ?? "not saved as a project"} - FAF map editor";
+        : $"{(Map.Session.IsModified ? "* " : "")}{Map.Document.Scenario.Name} - {Map.ProjectFolder ?? "not saved as a project"} - FAF map editor";
 
-    public bool HasMap => Workspace is not null;
+    public bool HasMap => Map is not null;
 
     public bool CanStart => !IsBusy;
 
     public bool CanSave => HasMap && !IsBusy;
 
-    public bool CanUndo => Workspace?.Session.CanUndo == true && _stroke is null;
+    public bool CanUndo => Map?.Session.CanUndo == true && _stroke is null;
 
-    public bool CanRedo => Workspace?.Session.CanRedo == true && _stroke is null;
+    public bool CanRedo => Map?.Session.CanRedo == true && _stroke is null;
 
-    public string UndoHeader => Workspace?.Session.UndoDescription is string description ? $"_Undo {description}" : "_Undo";
+    public string UndoHeader => Map?.Session.UndoDescription is string description ? $"_Undo {description}" : "_Undo";
 
-    public string RedoHeader => Workspace?.Session.RedoDescription is string description ? $"_Redo {description}" : "_Redo";
+    public string RedoHeader => Map?.Session.RedoDescription is string description ? $"_Redo {description}" : "_Redo";
 
     /// <summary>
     /// The history panel: the map as it was opened, then every step, the undone ones last.
@@ -245,24 +245,24 @@ public sealed partial class MainViewModel : ObservableObject
         : ImportMapFolderAsync(folder);
 
     public Task LoadProjectAsync(string folder) => BusyAsync($"Opening {folder}...", async () =>
-        Attach(await MapWorkspace.OpenProjectAsync(folder), $"Opened the project {folder}"));
+        Attach(await EditedMap.OpenProjectAsync(folder), $"Opened the project {folder}"));
 
     public Task ImportMapFolderAsync(string folder) => BusyAsync($"Importing {folder}...", async () =>
-        Attach(await MapWorkspace.ImportMapAsync(folder), $"Imported {folder}; save it as a project to keep it"));
+        Attach(await EditedMap.ImportMapAsync(folder), $"Imported {folder}; save it as a project to keep it"));
 
     public Task SaveAsync() => BusyAsync("Saving...", async () =>
     {
-        MapWorkspace workspace = RequireMap();
-        await workspace.SaveAsync();
-        Refresh($"Saved {workspace.ProjectFolder}");
+        EditedMap map = RequireMap();
+        await map.SaveAsync();
+        Refresh($"Saved {map.ProjectFolder}");
     });
 
     public Task SaveAsAsync(string folder) => BusyAsync("Saving...", async () =>
     {
-        MapWorkspace workspace = RequireMap();
-        await workspace.SaveAsAsync(folder);
-        Watch(workspace.ProjectFolder!);
-        Refresh($"Saved as {workspace.ProjectFolder}");
+        EditedMap map = RequireMap();
+        await map.SaveAsAsync(folder);
+        Watch(map.ProjectFolder!);
+        Refresh($"Saved as {map.ProjectFolder}");
     });
 
     /// <returns>The map folder that was written.</returns>
@@ -277,23 +277,23 @@ public sealed partial class MainViewModel : ObservableObject
         return folder;
     }
 
-    public bool Undo() => _stroke is null && Workspace?.Session.Undo() == true;
+    public bool Undo() => _stroke is null && Map?.Session.Undo() == true;
 
-    public bool Redo() => _stroke is null && Workspace?.Session.Redo() == true;
+    public bool Redo() => _stroke is null && Map?.Session.Redo() == true;
 
     /// <summary>
     /// Undoes or redoes up to a step of the history (-1: the map as it was opened).
     /// </summary>
-    public bool GoTo(int step) => _stroke is null && Workspace?.Session.GoTo(step) == true;
+    public bool GoTo(int step) => _stroke is null && Map?.Session.GoTo(step) == true;
 
     /// <summary>
     /// Starts a brush stroke at a place of the map, in ogrids.
     /// </summary>
     public void BeginStroke(float x, float z)
     {
-        MapWorkspace workspace = RequireMap();
+        EditedMap map = RequireMap();
         CancelStroke();
-        _stroke = workspace.Session.Begin(PaintedLayer > 0
+        _stroke = map.Session.Begin(PaintedLayer > 0
             ? $"{(MaskErase ? "Erase" : "Paint")} layer {PaintedLayer}"
             : BrushMode switch
             {
@@ -391,17 +391,17 @@ public sealed partial class MainViewModel : ObservableObject
     /// <returns>Whether the map may be closed.</returns>
     public async Task<bool> ConfirmCloseAsync()
     {
-        if (Workspace?.Session.IsModified != true)
+        if (Map?.Session.IsModified != true)
         {
             return true;
         }
-        switch (await _dialogs.AskToSaveChangesAsync(Workspace.Document.Scenario.Name))
+        switch (await _dialogs.AskToSaveChangesAsync(Map.Document.Scenario.Name))
         {
             case SaveChoice.Discard:
                 return true;
             case SaveChoice.Save:
                 await SaveProjectAsync();
-                return !Workspace.Session.IsModified;
+                return !Map.Session.IsModified;
             default:
                 return false;
         }
@@ -428,7 +428,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveProjectAsync()
     {
-        if (Workspace?.ProjectFolder is null)
+        if (Map?.ProjectFolder is null)
         {
             await SaveProjectAsAsync();
             return;
@@ -462,16 +462,16 @@ public sealed partial class MainViewModel : ObservableObject
 
     #endregion
 
-    private void Attach(MapWorkspace workspace, string status)
+    private void Attach(EditedMap map, string status)
     {
         CancelStroke();
-        if (Workspace is not null)
+        if (Map is not null)
         {
-            Workspace.Session.StateChanged -= OnSessionChanged;
+            Map.Session.StateChanged -= OnSessionChanged;
         }
-        Workspace = workspace;
-        workspace.Session.StateChanged += OnSessionChanged;
-        Terrain terrain = workspace.Document.Terrain;
+        Map = map;
+        map.Session.StateChanged += OnSessionChanged;
+        Terrain terrain = map.Document.Terrain;
         PaintTargets =
         [
             new PaintTarget(0, "Height"),
@@ -483,7 +483,7 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(PaintTargets));
         SelectedPaintTarget = PaintTargets[0];
         _pendingReload.Clear();
-        if (workspace.ProjectFolder is string folder)
+        if (map.ProjectFolder is string folder)
         {
             Watch(folder);
         }
@@ -492,7 +492,7 @@ public sealed partial class MainViewModel : ObservableObject
             _watcher?.Dispose();
             _watcher = null;
         }
-        WorkspaceChanged?.Invoke(this, EventArgs.Empty);
+        MapChanged?.Invoke(this, EventArgs.Empty);
         Refresh(status);
     }
 
@@ -529,7 +529,7 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private void ReloadPending()
     {
-        if (Workspace is null || _pendingReload.Count == 0 || _stroke is not null || IsBusy)
+        if (Map is null || _pendingReload.Count == 0 || _stroke is not null || IsBusy)
         {
             return;
         }
@@ -537,7 +537,7 @@ public sealed partial class MainViewModel : ObservableObject
         _pendingReload.Clear();
         try
         {
-            if (Workspace.Reload(files))
+            if (Map.Reload(files))
             {
                 Status = $"Read again what changed on disk: {string.Join(", ", files)}";
             }
@@ -565,7 +565,7 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private void ShowHistory()
     {
-        IReadOnlyList<HistoryStep> steps = Workspace?.Session.History ?? [];
+        IReadOnlyList<HistoryStep> steps = Map?.Session.History ?? [];
         int current = -1;
         for (int i = 0; i < steps.Count; i++)
         {
@@ -574,12 +574,12 @@ public sealed partial class MainViewModel : ObservableObject
                 current = i;
             }
         }
-        History = Workspace is null
+        History = Map is null
             ? []
             : [new HistoryEntry(-1, "Opened", false), .. steps.Select((step, index) => new HistoryEntry(index, step.Description, index > current))];
         _showingHistory = true;
         OnPropertyChanged(nameof(History));
-        HistoryIndex = Workspace is null ? -1 : current + 1;
+        HistoryIndex = Map is null ? -1 : current + 1;
         _showingHistory = false;
     }
 
@@ -610,7 +610,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void Dab(float x, float z)
     {
-        MapDocument document = Workspace!.Document;
+        MapDocument document = Map!.Document;
         if (PaintedLayer > 0)
         {
             MaskBrush.Apply(_stroke!.StratumMask(PaintedLayer), document.Width, document.Height, x, z);
@@ -622,7 +622,7 @@ public sealed partial class MainViewModel : ObservableObject
         _lastDab = (x, z);
     }
 
-    private MapWorkspace RequireMap() => Workspace ?? throw new InvalidOperationException("No map is open");
+    private EditedMap RequireMap() => Map ?? throw new InvalidOperationException("No map is open");
 
     /// <summary>
     /// Runs an operation that reads or writes in the background, with the editor busy meanwhile.
