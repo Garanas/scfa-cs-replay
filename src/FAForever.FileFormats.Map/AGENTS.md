@@ -7,7 +7,7 @@ The files of a map folder in the vault (`/maps/<name>.v<version>/`). The reposit
 
 | File | Reader | Result |
 |---|---|---|
-| `<name>.scmap` (binary) | `ScmapParser.Parse(bytes or stream)` | `Scmap`: heightmap, layers, lighting, water, decals, props, embedded DDS textures |
+| `<name>.scmap` (binary) | `ScmapParser.Parse(bytes or stream)`, written by `ScmapWriter.Write` | `Scmap`: heightmap, layers, lighting, water, decals, props, embedded DDS textures |
 | `<name>_save.lua` | `MapSaveParser.Parse(text)` | `MapSave`: markers, areas, chains, armies with their unit groups |
 | `<name>_scenario.lua` | `MapScenarioParser.Parse(text)` | `MapScenario`: name, size, file paths, configurations with teams and armies |
 
@@ -22,6 +22,12 @@ The files of a map folder in the vault (`/maps/<name>.v<version>/`). The reposit
   garbage further on. Every map in a local vault copy of 100 maps (all three versions) parses.
 - A prop starts with its blueprint path, then position, three rotation axes and scale. A decal's
   far cut-off comes before the near one.
+- `ScmapWriter.Write(scmap)` is the reverse of the parser: a parsed map writes back to the same
+  bytes (all 100 maps of the local vault copy, and the test assets in `ScmapWriterTest`). The fields
+  the parser does not keep (the header constants, the zero byte after the heightmap, the size before
+  the normal maps, the counts of 1) are written as constants; if a map ever differs there, keep the
+  field in `Scmap` rather than guessing. The writer checks that the map fits its version and that
+  the arrays follow the map's size before it writes anything.
 - Unknown fields keep a neutral name (`ScmapMinimap.Unknown`, `Scmap.DecalHeader`); give them a
   meaning only with evidence.
 
