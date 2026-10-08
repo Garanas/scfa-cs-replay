@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="FAForever.MapEditor.Project.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FAForever.FileFormats.Map\FAForever.FileFormats.Map.csproj" />
+  </ItemGroup>
+
+</Project>

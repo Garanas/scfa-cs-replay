@@ -8,8 +8,8 @@ The files of a map folder in the vault (`/maps/<name>.v<version>/`). The reposit
 | File | Reader | Result |
 |---|---|---|
 | `<name>.scmap` (binary) | `ScmapParser.Parse(bytes or stream)`, written by `ScmapWriter.Write` | `Scmap`: heightmap, layers, lighting, water, decals, props, embedded DDS textures |
-| `<name>_save.lua` | `MapSaveParser.Parse(text)` | `MapSave`: markers, areas, chains, armies with their unit groups |
-| `<name>_scenario.lua` | `MapScenarioParser.Parse(text)` | `MapScenario`: name, size, file paths, configurations with teams and armies |
+| `<name>_save.lua` | `MapSaveParser.Parse(text)`, written by `MapSaveWriter.Write` | `MapSave`: markers, areas, chains, armies with their unit groups |
+| `<name>_scenario.lua` | `MapScenarioParser.Parse(text)`, written by `MapScenarioWriter.Write` | `MapScenario`: name, size, file paths, configurations with teams and armies |
 
 ## The binary format
 
@@ -44,6 +44,15 @@ The files of a map folder in the vault (`/maps/<name>.v<version>/`). The reposit
 - The parsers read the tables with `LuaTableReader` from the Lua library; a reading helper that
   more than one library needs belongs there, not here.
 - Every result keeps its full Lua table in `Raw` for the fields that have no property.
+- `MapSaveWriter` and `MapScenarioWriter` are the reverse of the parsers: what they write parses
+  back to the same content (the test assets, and all 99 saves and scenarios of the local vault copy;
+  `MapDump` in the tests compares them). The typed properties are the source; `Raw` supplies only
+  the keys without a property (a marker's `amount`, a scenario's `norushoffsetX_ARMY_1`). The save
+  writer wraps the fields of markers and areas as the map editors do (`MapLuaFunctions.Wrap`).
+- The platoons, orders and platoon builders of co-op saves are not kept: the writer leaves them
+  empty. Only four co-op missions of the vault fill them, and no map maker edits them.
+- The `next_*_id` counters of a save belong to the map editors, not the game: the writer keeps the
+  stored value and raises it past the names in use (`UNIT_302` gives at least 303).
 
 ## The navigational mesh
 

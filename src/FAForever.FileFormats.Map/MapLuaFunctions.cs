@@ -26,6 +26,49 @@ namespace FAForever.FileFormats.Map
             ["GROUP"] = Group,
         };
 
+        /// <summary>
+        /// The reverse of <see cref="All"/>, for <see cref="LuaSourceWriter"/>: a string, number or
+        /// boolean in its wrapper (<c>STRING( 'Mass' )</c>, <c>FLOAT( 100 )</c>, <c>BOOLEAN( true )</c>)
+        /// and a tagged table as its call (<c>VECTOR3( 1, 2, 3 )</c>), as the map editors write the
+        /// fields of markers and areas. Other values are left to the writer.
+        /// </summary>
+        public static string? Wrap(LuaData value) => value switch
+        {
+            LuaData.String text => $"STRING( {LuaSourceWriter.Literal(text.Value)} )",
+            LuaData.Number number => $"FLOAT( {LuaSourceWriter.Literal(number.Value)} )",
+            LuaData.Bool boolean => $"BOOLEAN( {LuaSourceWriter.Literal(boolean.Value)} )",
+            LuaData.Table table when TaggedCall(table) is string call => call,
+            _ => null,
+        };
+
+        /// <summary>
+        /// <c>VECTOR3( x, y, z )</c> for a position or orientation, each number as its shortest float.
+        /// </summary>
+        public static string Vector3(System.Numerics.Vector3 vector) =>
+            $"VECTOR3( {LuaSourceWriter.Literal(vector.X)}, {LuaSourceWriter.Literal(vector.Y)}, {LuaSourceWriter.Literal(vector.Z)} )";
+
+        /// <summary>
+        /// The call that made a table of <see cref="Tagged"/>, or null for any other table.
+        /// </summary>
+        private static string? TaggedCall(LuaData.Table table)
+        {
+            if (!table.TryGetStringValue("type", out string? type) || type is not ("VECTOR2" or "VECTOR3" or "RECTANGLE"))
+            {
+                return null;
+            }
+
+            List<string> arguments = new List<string>();
+            for (int i = 1; table.Value.TryGetValue(i.ToString(CultureInfo.InvariantCulture), out LuaData? argument); i++)
+            {
+                if (argument is not LuaData.Number number)
+                {
+                    return null;
+                }
+                arguments.Add(LuaSourceWriter.Literal(number.Value));
+            }
+            return arguments.Count + 1 == table.Value.Count ? $"{type}( {string.Join(", ", arguments)} )" : null;
+        }
+
         private static LuaData First(IReadOnlyList<LuaData> arguments) =>
             arguments.Count > 0 ? arguments[0] : new LuaData.Nil();
 
