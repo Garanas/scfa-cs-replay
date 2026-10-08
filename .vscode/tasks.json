@@ -175,6 +175,61 @@
         "panel": "dedicated"
       },
       "detail": "Rebuild wwwroot/css/app.css on every change (run next to 'server' or 'viewer')"
+    },
+    {
+      "label": "editor",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "src/FAForever.MapEditor.App",
+        "--",
+        "--automation",
+        "5371"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "detail": "Start the map editor, with automation on port 5371 (faf-map editor <command>)"
+    },
+    {
+      "label": "editor: open a map",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "src/FAForever.MapEditor.App",
+        "--",
+        "${input:editorFolder}",
+        "--automation",
+        "5371"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "detail": "Start the map editor with a project or a map folder of the game, with automation on port 5371"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "editorFolder",
+      "type": "promptString",
+      "description": "A project folder, or a map folder of the game to import",
+      "default": "tests/FAForever.FileFormats.Map.Tests/assets/maps/theta_passage_-_faf_version.v0001"
     }
   ]
 }

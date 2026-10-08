@@ -64,7 +64,8 @@ dotnet run --project src/FAForever.MapEditor.App -- [folder] [--automation 5371]
 tools/tailwindcss.exe -i Styles/app.css -o wwwroot/css/app.css --watch   # from src/FAForever.Vault.Viewer/
 ```
 
-VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: watch`, `benchmark`.
+VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: watch`, `benchmark`,
+`editor` and `editor: open a map` (asks for a folder; both with automation on port 5371).
 
 - The server **must** run on `http://127.0.0.1:5080` in development: the development OAuth client only
   accepts loopback redirect URIs, and `wwwroot/appsettings.json` pins `RedirectUri` to that origin.

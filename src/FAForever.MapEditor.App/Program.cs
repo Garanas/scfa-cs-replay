@@ -20,7 +20,7 @@ public sealed record StartOptions(string? Folder, int? AutomationPort)
                 port = value;
                 i++;
             }
-            else if (!args[i].StartsWith("--", StringComparison.Ordinal))
+            else if (!string.IsNullOrWhiteSpace(args[i]) && !args[i].StartsWith("--", StringComparison.Ordinal))
             {
                 folder = args[i];
             }

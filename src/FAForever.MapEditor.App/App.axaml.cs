@@ -30,7 +30,16 @@ public sealed class App : Application
             if (options.AutomationPort is int port)
             {
                 _automation = new AutomationServer(window, model, port);
-                _automation.Start();
+                try
+                {
+                    _automation.Start();
+                }
+                catch (System.Net.HttpListenerException exception)
+                {
+                    // another editor listens there: this one works without automation
+                    _automation = null;
+                    model.Status = $"Automation is off: port {port} is in use ({exception.Message})";
+                }
             }
             desktop.Exit += (_, _) => _automation?.Dispose();
         }
