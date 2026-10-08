@@ -29,12 +29,26 @@ namespace FAForever.MapEditor.Cli
         public bool Watch { get; set; }
     }
 
+    [Verb("editor", HelpText = "Send a command to a running editor started with --automation, e.g. 'editor stroke points=[[10,10],[50,50]]'.")]
+    public sealed class EditorOptions
+    {
+        [Value(0, MetaName = "command", Required = true, HelpText = "state, open, import, save, save-as, export, undo, redo, brush, stroke, height, fit, view, screenshot, close (help lists them).")]
+        public string Command { get; set; } = "";
+
+        [Value(1, MetaName = "arguments", HelpText = "name=value pairs; a value that reads as JSON (a number, [..], true) is sent as JSON, any other as text.")]
+        public IEnumerable<string> Arguments { get; set; } = [];
+
+        [Option('p', "port", Default = 5371, HelpText = "The port the editor listens on.")]
+        public int Port { get; set; }
+    }
+
     public static class Program
     {
         public static int Main(string[] args) =>
-            Parser.Default.ParseArguments<UnpackOptions, PackOptions>(args).MapResult(
+            Parser.Default.ParseArguments<UnpackOptions, PackOptions, EditorOptions>(args).MapResult(
                 (UnpackOptions o) => Run(() => Unpack(o)),
                 (PackOptions o) => o.Watch ? Watch(o) : Run(() => Pack(o)),
+                (EditorOptions o) => EditorClient.Send(o.Port, o.Command, o.Arguments),
                 _ => 2);
 
         private static void Unpack(UnpackOptions o)
