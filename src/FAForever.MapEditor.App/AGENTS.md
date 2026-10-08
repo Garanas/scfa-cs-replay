@@ -46,22 +46,22 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   save; reloads wait until a save or stroke ends. Keep the user interface's thread free of work
   that grows with the map: a full redraw of the view runs its rows in parallel.
 - `Controls/HeightmapView`: the terrain from above, one pixel per sample, shaded and coloured by
-  height and water (`Rendering/TerrainPicture`, which the 3D view shares), with the mask of the
+  height and water (`Rendering/TerrainPicture`), with the mask of the
   layer being painted in orange; it draws again only the tiles a change touched. The markers lie
   over it at a fixed size on screen in the colour of their kind (spawns circles with their
   number, deposits squares, AI markers diamonds, weather triangles, path nodes dots with their
   links; View menu). Left mouse paints (a stroke is an `EditTransaction`, so one undo step, shown
   while it is painted), right or middle mouse moves, the wheel zooms around the cursor.
-- `Controls/TerrainView3D` (the 3D tab): a heightfield renderer in software ("voxel space"): per
-  column of the picture, in parallel, it walks the ground away from the camera and fills the
-  column from the bottom up, at half the control's resolution, with heights and colours
-  (`TerrainPicture`) interpolated between samples, haze with distance and a flat water surface.
-  No graphics card, so automation's screenshots show it; a column is a vertical plane, exact for
-  a level camera and close for a tilted one. Left mouse turns, right or middle moves, the wheel
-  zooms. On the 81 km test map a picture takes 0.1 to 0.2 s. A hidden view does no work.
-- `Controls/TerrainViewGpu` (the 3D (GPU) tab): the map on the graphics card with OpenGL through
+- `Controls/TerrainViewGpu` (the 3D tab): the map on the graphics card with OpenGL through
   Avalonia's `OpenGlControlBase` (ANGLE, OpenGL ES 3.0, on Windows; OpenGL 3.3 elsewhere), bound
-  with Silk.NET. `Rendering/Gpu/TerrainRenderer` draws the terrain, then the albedo decals, the
+  with Silk.NET. The camera (`Rendering/Gpu/EditorCamera`, tested without a window) works as the
+  FAF map editor's (`Assets/Scripts/Camera/CameraControler*.cs`): it starts straight down over
+  the whole map; the wheel moves it along the ray under the mouse, towards what the mouse points
+  at, three steps of 3.3 % of 2.6 times the distance to the ground a notch (out: straight back),
+  from 4.5 to 11 000 ogrids; the middle mouse button drags the ground with the mouse; space and
+  the mouse turn it around the pivot and tilt it from straight down (pitch 90) to 10 degrees
+  above the horizon; Home shows the whole map again. It glides to where it is sent, and its
+  pivot is always the ground it looks at. The left mouse button is left for editing. `Rendering/Gpu/TerrainRenderer` draws the terrain, then the albedo decals, the
   normal decals and the water; `TerrainShaders` follows the FAF map editor's port of the game's
   `TTerrainXP` (`Assets/GFX/Shaders/FaTerrainShader.shader` in `D:\faf-development\FAForeverMapEditor`):
   the lower albedo, the strata by their masks (`clamp(mask * 2 - 1)`), the upper albedo by its alpha,
@@ -87,8 +87,8 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
     the heights (`usampler2D`), 1 a decal's texture, 2 to 11 the layers, 12 and 13 the masks.
     A sampler with a mipmapped filter on a texture without mipmaps reads as black: the masks have
     their own sampler.
-- `Views/MainWindow`: menu, brush panel (heights or a layer's mask), history panel, the Top, 3D and
-  3D (GPU) tabs, status bar; asks about unsaved changes before closing.
+- `Views/MainWindow`: menu, brush panel (heights or a layer's mask), history panel, the Top and 3D
+  tabs, status bar; asks about unsaved changes before closing.
   `WindowDialogs` answers the view model's questions with the system's folder picker and a small
   save-changes dialog.
 - The window watches the project folder (`ProjectWatcher`) and reads back what other tools change;
@@ -112,7 +112,7 @@ faf-map editor undo
 faf-map editor close                                      # closes without asking about changes
 ```
 
-- The state's `gpu` says which OpenGL the GPU view runs on, its error if it could not start, the
+- The state's `gpu` says which OpenGL the 3D view runs on, its error if it could not start, the
   textures on the card, the last texture that could not be read, and the decals with their draws
   and textures.
 - The state includes `busy` and `stage` (`SetUp`, `UpdateAssets`, `Converting`, `Ready`), with
@@ -124,9 +124,9 @@ faf-map editor close                                      # closes without askin
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,
   `stroke {points}`, `height {x, z}`, `fit`, `show {markers?, pathNodes?}`, `view {zoom, x, z}`,
-  `tab {name: top|3d|gpu}`, `camera {x?, z?, distance?, yaw?, pitch?}` (both 3D views, degrees),
-  `screenshot {path, map?, gpu?}` (`gpu: true` reads a frame of the GPU view back from the card:
-  a screenshot of the window does not reach it), `gpu-debug {mode}` (what the GPU view's terrain
+  `tab {name: top|3d}`, `camera {x?, z?, distance?, yaw?, pitch?}` (the 3D view, degrees),
+  `screenshot {path, map?, gpu?}` (`gpu: true` reads a frame of the 3D view back from the card:
+  a screenshot of the window does not reach it), `gpu-debug {mode}` (what the 3D view's terrain
   shows: 0 the picture, 1 the albedo, 2 the light, 3 the normals, 4 the heights, 5 the lower
   layer, 6 the first four masks after the remap, 7 as stored),
   `close`. A new menu item gets a command here too.

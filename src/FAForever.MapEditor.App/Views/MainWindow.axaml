@@ -91,10 +91,7 @@
         <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" />
       </TabItem>
       <TabItem Header="3D">
-        <controls:TerrainView3D x:Name="Terrain3D" ClipToBounds="True" />
-      </TabItem>
-      <TabItem Header="3D (GPU)">
-        <controls:TerrainViewGpu x:Name="TerrainGpu" />
+        <controls:TerrainViewGpu x:Name="Terrain3D" />
       </TabItem>
     </TabControl>
   </DockPanel>

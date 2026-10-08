@@ -24,9 +24,9 @@ namespace FAForever.MapEditor.App.Automation;
 /// game's assets before it answers), <c>/update-assets</c>, <c>/open {path}</c>, <c>/import {path}</c>, <c>/save</c>, <c>/save-as {path}</c>,
 /// <c>/export {output, version?}</c>, <c>/undo</c>, <c>/redo</c>, <c>/goto {step}</c> (a step of the history, -1 for the map as opened),
 /// <c>/brush {layer?, mode?, radius?, strength?, target?, erase?}</c> (layer 0 paints the heights, 1 to 8 a layer's mask), <c>/stroke {points: [[x, z], ...]}</c> (in
-/// ogrids), <c>/fit</c>, <c>/tab {name}</c> (<c>top</c>, <c>3d</c> or <c>gpu</c>), <c>/camera {x?, z?, distance?, yaw?, pitch?}</c> (the 3D view's, in ogrids and degrees), <c>/show {markers?, pathNodes?}</c> (what the view shows), <c>/view {zoom, x, z}</c> (centre the view on a place of the map),
+/// ogrids), <c>/fit</c>, <c>/tab {name}</c> (<c>top</c> or <c>3d</c>), <c>/camera {x?, z?, distance?, yaw?, pitch?}</c> (the 3D view's, in ogrids and degrees), <c>/show {markers?, pathNodes?}</c> (what the view shows), <c>/view {zoom, x, z}</c> (centre the view on a place of the map),
 /// <c>/screenshot {path, map?, gpu?}</c> (the window, or with <c>map: true</c> the map alone, or with
-/// <c>gpu: true</c> a frame of the GPU view, read back from the card, as PNG) and
+/// <c>gpu: true</c> a frame of the 3D view, read back from the graphics card, as PNG) and
 /// <c>/close</c>. The method does not matter: a command without a body can be a GET
 /// (<c>curl localhost:port/undo</c>), and query parameters count as arguments; Windows refuses a
 /// POST without a body.
@@ -121,7 +121,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "fit", "tab {name: top|3d|gpu}", "camera {x?, z?, distance?, yaw?, pitch?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights}", "show {markers?, pathNodes?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
             case "state":
                 break;
             case "setup":
@@ -211,15 +211,13 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 window.MapView.Fit();
                 break;
             case "gpu-debug":
-                window.ViewGpu.Debug = (int)(Number(arguments, "mode") ?? 0);
+                window.View3D.Debug = (int)(Number(arguments, "mode") ?? 0);
                 break;
             case "tab":
                 window.ShownView = Text(arguments, "name");
                 break;
             case "camera":
-                // both 3D views look the same way, so their pictures can be compared
                 window.View3D.Look(Number(arguments, "x"), Number(arguments, "z"), Number(arguments, "distance"), Number(arguments, "yaw"), Number(arguments, "pitch"));
-                window.ViewGpu.Look(Number(arguments, "x"), Number(arguments, "z"), Number(arguments, "distance"), Number(arguments, "yaw"), Number(arguments, "pitch"));
                 break;
             case "show":
                 if (arguments["markers"] is JsonNode markers)
@@ -236,7 +234,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 break;
             case "screenshot":
                 result["file"] = arguments["gpu"]?.GetValue<bool>() == true
-                    ? await window.ViewGpu.CaptureAsync(Text(arguments, "path"))
+                    ? await window.View3D.CaptureAsync(Text(arguments, "path"))
                     : Screenshot(Text(arguments, "path"), arguments["map"]?.GetValue<bool>() == true);
                 break;
             case "close":
@@ -303,13 +301,13 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             ["show"] = new JsonObject { ["markers"] = model.ShowMarkers, ["pathNodes"] = model.ShowPathNodes },
             ["gpu"] = new JsonObject
             {
-                ["renderer"] = window.ViewGpu.Renderer,
-                ["error"] = window.ViewGpu.Error,
-                ["textures"] = window.ViewGpu.TextureState.Textures,
-                ["textureError"] = window.ViewGpu.TextureState.Error,
-                ["decals"] = window.ViewGpu.DecalState.Decals,
-                ["decalDraws"] = window.ViewGpu.DecalState.Draws,
-                ["decalTextures"] = window.ViewGpu.DecalState.Textures,
+                ["renderer"] = window.View3D.Renderer,
+                ["error"] = window.View3D.Error,
+                ["textures"] = window.View3D.TextureState.Textures,
+                ["textureError"] = window.View3D.TextureState.Error,
+                ["decals"] = window.View3D.DecalState.Decals,
+                ["decalDraws"] = window.View3D.DecalState.Draws,
+                ["decalTextures"] = window.View3D.DecalState.Textures,
             },
         };
     }

@@ -21,27 +21,21 @@ public sealed partial class MainWindow : Window
     public HeightmapView MapView => Heightmap;
 
     /// <summary>
-    /// The view of the map in 3D, for automation.
+    /// The view of the map in 3D, on the graphics card, for automation.
     /// </summary>
-    public TerrainView3D View3D => Terrain3D;
+    public TerrainViewGpu View3D => Terrain3D;
 
     /// <summary>
-    /// The view of the map in 3D on the graphics card, for automation.
-    /// </summary>
-    public TerrainViewGpu ViewGpu => TerrainGpu;
-
-    /// <summary>
-    /// Which view shows: <c>top</c>, <c>3d</c> or <c>gpu</c>.
+    /// Which view shows: <c>top</c> or <c>3d</c>.
     /// </summary>
     public string ShownView
     {
-        get => Views.SelectedIndex switch { 1 => "3d", 2 => "gpu", _ => "top" };
+        get => Views.SelectedIndex == 1 ? "3d" : "top";
         set => Views.SelectedIndex = value.ToLowerInvariant() switch
         {
             "top" => 0,
             "3d" => 1,
-            "gpu" => 2,
-            _ => throw new ArgumentException($"There is no view '{value}': top, 3d or gpu"),
+            _ => throw new ArgumentException($"There is no view '{value}': top or 3d"),
         };
     }
 
