@@ -163,6 +163,61 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void MergesEditsWithTheSameKeyIntoOneStep()
+        {
+            EditSession session = new EditSession(original);
+
+            for (int i = 1; i <= 5; i++)
+            {
+                float elevation = i;
+                session.Edit("Water elevation", document => document with { Water = document.Water with { Elevation = elevation } }, mergeKey: "water.elevation");
+            }
+            session.Edit("Move a prop", MoveProp(1, Vector3.One));
+            session.Edit("Water elevation", document => document with { Water = document.Water with { Elevation = 9 } }, mergeKey: "water.elevation");
+
+            Assert.AreEqual(3, session.History.Count, "the slider, the prop, the slider again");
+            session.Undo();
+            session.Undo();
+            Assert.AreEqual(5, session.Document.Water.Elevation, "the first drag ended at its last value");
+            session.Undo();
+            Assert.AreSame(original, session.Document);
+        }
+
+        [TestMethod]
+        public void KnowsWhetherTheDocumentWasSaved()
+        {
+            EditSession session = new EditSession(original);
+            int notices = 0;
+            session.StateChanged += (_, _) => notices++;
+            Assert.IsFalse(session.IsModified);
+
+            session.Edit("Move a prop", MoveProp(1, Vector3.One));
+            Assert.IsTrue(session.IsModified);
+
+            session.MarkSaved();
+            Assert.IsFalse(session.IsModified);
+
+            session.Undo();
+            Assert.IsTrue(session.IsModified, "the saved version is the one undone");
+            session.Redo();
+            Assert.IsFalse(session.IsModified);
+            Assert.AreEqual(4, notices);
+        }
+
+        [TestMethod]
+        public void ListsItsHistory()
+        {
+            EditSession session = new EditSession(original);
+            session.Edit("First", MoveProp(1, Vector3.One));
+            session.Edit("Second", MoveProp(2, Vector3.One));
+            session.Undo();
+
+            CollectionAssert.AreEqual(
+                new[] { new HistoryStep("First", true), new HistoryStep("Second", false) },
+                session.History.ToList());
+        }
+
+        [TestMethod]
         public void NamesWhatAnEditCannotFind()
         {
             EditSession session = new EditSession(original);
