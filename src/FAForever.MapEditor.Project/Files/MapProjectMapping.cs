@@ -95,6 +95,62 @@ namespace FAForever.MapEditor.Project.Files
             };
         }
 
+        /// <summary>
+        /// The document with what <c>map.json</c> holds replaced: name, scenario and the settings of
+        /// terrain, light, water and sky. The grids stay, so the size cannot change.
+        /// </summary>
+        /// <exception cref="MapProjectException">The file gives the map another size.</exception>
+        public static MapDocument WithMap(MapDocument document, MapProjectDto map)
+        {
+            if (map.Terrain.Width != document.Width || map.Terrain.Height != document.Height)
+            {
+                throw new MapProjectException($"{MapProjectLayout.Map} makes the map {map.Terrain.Width} by {map.Terrain.Height}, not {document.Width} by {document.Height}: open the project again to change its size");
+            }
+
+            Terrain terrain = document.Terrain;
+            Water water = document.Water;
+            MapProjectImages images = new MapProjectImages
+            {
+                Heightmap = terrain.Heightmap.Samples,
+                TerrainTypes = terrain.Types,
+                StratumMasks = terrain.StratumMasks,
+                NormalMap = terrain.NormalMap,
+                Preview = terrain.Preview,
+                WaterMap = water.Map,
+                WaterFoamMask = water.FoamMask,
+                WaterFlatnessMask = water.FlatnessMask,
+                WaterDepthBiasMask = water.DepthBiasMask,
+            };
+            return document with
+            {
+                Name = map.Name,
+                FileName = map.FileName,
+                Version = map.Version,
+                Scenario = ToModel(map.Scenario),
+                Terrain = ToModel(map.Terrain, images),
+                Lighting = ToModel(map.Lighting),
+                Water = ToModel(map.Water, images),
+                Sky = ToModel(map.Sky),
+                Minimap = map.Minimap is null ? null : ToModel(map.Minimap),
+            };
+        }
+
+        /// <summary>
+        /// The document with the props of <c>props.json</c>, numbered anew.
+        /// </summary>
+        public static MapDocument WithProps(MapDocument document, List<PropDto> props) =>
+            document with { Props = [.. props.Select((prop, index) => ToModel(prop, index + 1))] };
+
+        /// <summary>
+        /// The document with the decals and groups of <c>decals.json</c>.
+        /// </summary>
+        public static MapDocument WithDecals(MapDocument document, DecalsDto decals) => document with
+        {
+            DecalHeader = ToModel(decals.Header),
+            Decals = [.. decals.Decals.Select(decal => ToModel(decal))],
+            DecalGroups = [.. decals.Groups.Select(group => ToModel(group))],
+        };
+
         private static TerrainDto ToDto(Terrain source) => new TerrainDto
         {
             ScmapVersion = source.ScmapVersion,

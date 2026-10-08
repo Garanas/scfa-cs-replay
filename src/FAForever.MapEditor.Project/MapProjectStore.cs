@@ -33,8 +33,11 @@ namespace FAForever.MapEditor.Project
         /// project. Files of an earlier save that the document no longer has are removed from
         /// <see cref="MapProjectLayout.Files"/>.
         /// </summary>
+        /// <param name="previous">The document as last saved in this folder: the images whose part
+        /// did not change since are not written again. A JSON file is only written when its text
+        /// changes.</param>
         /// <exception cref="MapProjectException">The folder holds something other than a project.</exception>
-        public static void Save(MapDocument document, string folder)
+        public static void Save(MapDocument document, string folder, MapDocument? previous = null)
         {
             if (Directory.Exists(folder)
                 && Directory.EnumerateFileSystemEntries(folder).Any()
@@ -45,6 +48,10 @@ namespace FAForever.MapEditor.Project
             Directory.CreateDirectory(folder);
             string Of(string file) => Path.Combine(folder, file);
 
+            // an image is written when its part changed since the previous save, or is not on disk
+            bool Stale(string file, Func<MapDocument, object> part) =>
+                previous is null || !ReferenceEquals(part(document), part(previous)) || !File.Exists(Of(file));
+
             WriteJson(Of(MapProjectLayout.Map), MapProjectMapping.ToDto(document));
             WriteJson(Of(MapProjectLayout.Props), document.Props.Select(MapProjectMapping.ToDto).ToList());
             WriteJson(Of(MapProjectLayout.Decals), MapProjectMapping.ToDecalsDto(document));
@@ -52,25 +59,53 @@ namespace FAForever.MapEditor.Project
             WriteJson(Of(MapProjectLayout.Armies), document.Armies.Select(MapProjectMapping.ToDto).ToList());
 
             Terrain terrain = document.Terrain;
-            TiledBuffer<ushort> heights = terrain.Heightmap.Samples;
-            ProjectImages.WriteGray16(Of(MapProjectLayout.Heightmap), heights.Width, heights.Height, heights.ToArray());
-            WriteGray8(Of(MapProjectLayout.TerrainTypes), terrain.Types);
-            WriteRgba(Of(MapProjectLayout.NormalMap), terrain.NormalMap);
-            WriteRgba(Of(MapProjectLayout.Preview), terrain.Preview);
+            if (Stale(MapProjectLayout.Heightmap, d => d.Terrain.Heightmap.Samples))
+            {
+                TiledBuffer<ushort> heights = terrain.Heightmap.Samples;
+                ProjectImages.WriteGray16(Of(MapProjectLayout.Heightmap), heights.Width, heights.Height, heights.ToArray());
+            }
+            if (Stale(MapProjectLayout.TerrainTypes, d => d.Terrain.Types))
+            {
+                WriteGray8(Of(MapProjectLayout.TerrainTypes), terrain.Types);
+            }
+            if (Stale(MapProjectLayout.NormalMap, d => d.Terrain.NormalMap))
+            {
+                WriteRgba(Of(MapProjectLayout.NormalMap), terrain.NormalMap);
+            }
+            if (Stale(MapProjectLayout.Preview, d => d.Terrain.Preview))
+            {
+                WriteRgba(Of(MapProjectLayout.Preview), terrain.Preview);
+            }
             for (int layer = 0; layer < terrain.StratumMasks.Layers.Length; layer++)
             {
-                WriteGray8(Of(MapProjectLayout.StratumMask(layer + 1)), terrain.StratumMasks.Layers[layer]);
+                int index = layer;
+                if (Stale(MapProjectLayout.StratumMask(layer + 1), d => d.Terrain.StratumMasks.Layers.Length > index ? d.Terrain.StratumMasks.Layers[index] : d))
+                {
+                    WriteGray8(Of(MapProjectLayout.StratumMask(layer + 1)), terrain.StratumMasks.Layers[layer]);
+                }
             }
 
             Water water = document.Water;
-            WriteRgba(Of(MapProjectLayout.WaterMap), water.Map);
-            WriteGray8(Of(MapProjectLayout.WaterFoam), water.FoamMask);
-            WriteGray8(Of(MapProjectLayout.WaterFlatness), water.FlatnessMask);
-            WriteGray8(Of(MapProjectLayout.WaterDepthBias), water.DepthBiasMask);
+            if (Stale(MapProjectLayout.WaterMap, d => d.Water.Map))
+            {
+                WriteRgba(Of(MapProjectLayout.WaterMap), water.Map);
+            }
+            if (Stale(MapProjectLayout.WaterFoam, d => d.Water.FoamMask))
+            {
+                WriteGray8(Of(MapProjectLayout.WaterFoam), water.FoamMask);
+            }
+            if (Stale(MapProjectLayout.WaterFlatness, d => d.Water.FlatnessMask))
+            {
+                WriteGray8(Of(MapProjectLayout.WaterFlatness), water.FlatnessMask);
+            }
+            if (Stale(MapProjectLayout.WaterDepthBias, d => d.Water.DepthBiasMask))
+            {
+                WriteGray8(Of(MapProjectLayout.WaterDepthBias), water.DepthBiasMask);
+            }
 
             if (document.Script is ImmutableArray<byte> script)
             {
-                File.WriteAllBytes(Of(MapProjectLayout.Script), ImmutableCollectionsMarshal.AsArray(script)!);
+                WriteBytes(Of(MapProjectLayout.Script), script);
             }
             else
             {
@@ -82,7 +117,7 @@ namespace FAForever.MapEditor.Project
             {
                 string target = Path.Combine(files, path);
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                File.WriteAllBytes(target, ImmutableCollectionsMarshal.AsArray(bytes)!);
+                WriteBytes(target, bytes);
             }
             foreach ((string path, string file) in FilesIn(files))
             {
@@ -137,7 +172,171 @@ namespace FAForever.MapEditor.Project
             }
         }
 
-        private static void WriteJson<T>(string path, T value) => File.WriteAllText(path, JsonSerializer.Serialize(value, Json) + "\n");
+        /// <summary>
+        /// The document with the parts that the changed files of the project hold read again, e.g.
+        /// after a map maker saved <c>heightmap.png</c> from another tool. A file whose content is
+        /// what the document already holds changes nothing, so the editor's own saves are no edits.
+        /// </summary>
+        /// <param name="changedFiles">The files that changed (or were removed), relative to the
+        /// project folder, with <c>/</c> or <c>\</c> between folders.</param>
+        /// <returns><paramref name="current"/> itself when nothing changed.</returns>
+        /// <exception cref="MapProjectException">A file does not read, or changes the map's size.</exception>
+        public static MapDocument Reload(MapDocument current, string folder, IEnumerable<string> changedFiles)
+        {
+            string Of(string file) => Path.Combine(folder, file);
+            MapDocument document = current;
+            int width = current.Width;
+            int height = current.Height;
+
+            foreach (string changed in changedFiles.Select(file => file.Replace('\\', '/')).Distinct())
+            {
+                switch (changed)
+                {
+                    case MapProjectLayout.Map:
+                        document = ReloadJson(document, Of(changed), MapProjectMapping.ToDto(document), (d, map) => MapProjectMapping.WithMap(d, map));
+                        break;
+                    case MapProjectLayout.Props:
+                        document = ReloadJson(document, Of(changed), document.Props.Select(MapProjectMapping.ToDto).ToList(), MapProjectMapping.WithProps);
+                        break;
+                    case MapProjectLayout.Decals:
+                        document = ReloadJson(document, Of(changed), MapProjectMapping.ToDecalsDto(document), MapProjectMapping.WithDecals);
+                        break;
+                    case MapProjectLayout.Markers:
+                        document = ReloadJson(document, Of(changed), MapProjectMapping.ToDto(document.Markers), (d, markers) => d with { Markers = MapProjectMapping.ToModel(markers) });
+                        break;
+                    case MapProjectLayout.Armies:
+                        document = ReloadJson(document, Of(changed), document.Armies.Select(MapProjectMapping.ToDto).ToList(), (d, armies) => d with { Armies = [.. armies.Select(MapProjectMapping.ToModel)] });
+                        break;
+                    case MapProjectLayout.Heightmap or MapProjectLayout.HeightmapRaw:
+                    {
+                        TiledBuffer<ushort> samples = document.Terrain.Heightmap.Samples;
+                        ushort[] heights = ReadHeightmap(folder, width, height);
+                        if (!heights.AsSpan().SequenceEqual(samples.ToArray()))
+                        {
+                            document = document with { Terrain = document.Terrain with { Heightmap = document.Terrain.Heightmap with { Samples = TiledBuffer<ushort>.FromArray(width + 1, height + 1, heights) } } };
+                        }
+                        break;
+                    }
+                    case MapProjectLayout.TerrainTypes:
+                        document = ReloadGray8(document, Of(changed), document.Terrain.Types, width, height, (d, types) => d with { Terrain = d.Terrain with { Types = types } });
+                        break;
+                    case MapProjectLayout.NormalMap:
+                        document = ReloadRgba(document, Of(changed), document.Terrain.NormalMap, (d, image) => d with { Terrain = d.Terrain with { NormalMap = image } });
+                        break;
+                    case MapProjectLayout.Preview:
+                        document = ReloadRgba(document, Of(changed), document.Terrain.Preview, (d, image) => d with { Terrain = d.Terrain with { Preview = image } });
+                        break;
+                    case MapProjectLayout.WaterMap:
+                        document = ReloadRgba(document, Of(changed), document.Water.Map, (d, image) => d with { Water = d.Water with { Map = image } });
+                        break;
+                    case MapProjectLayout.WaterFoam:
+                        document = ReloadGray8(document, Of(changed), document.Water.FoamMask, width / 2, height / 2, (d, mask) => d with { Water = d.Water with { FoamMask = mask } });
+                        break;
+                    case MapProjectLayout.WaterFlatness:
+                        document = ReloadGray8(document, Of(changed), document.Water.FlatnessMask, width / 2, height / 2, (d, mask) => d with { Water = d.Water with { FlatnessMask = mask } });
+                        break;
+                    case MapProjectLayout.WaterDepthBias:
+                        document = ReloadGray8(document, Of(changed), document.Water.DepthBiasMask, width / 2, height / 2, (d, mask) => d with { Water = d.Water with { DepthBiasMask = mask } });
+                        break;
+                    case MapProjectLayout.Script:
+                    {
+                        ImmutableArray<byte>? script = File.Exists(Of(changed)) ? ImmutableCollectionsMarshal.AsImmutableArray(File.ReadAllBytes(Of(changed))) : null;
+                        if (!SameBytes(script, document.Script))
+                        {
+                            document = document with { Script = script };
+                        }
+                        break;
+                    }
+                    default:
+                        if (changed.StartsWith(MapProjectLayout.StratumMasks + "/", StringComparison.Ordinal)
+                            && int.TryParse(Path.GetFileNameWithoutExtension(changed).Replace("stratum-", ""), out int layer)
+                            && changed == MapProjectLayout.StratumMask(layer)
+                            && layer >= 1 && layer <= document.Terrain.StratumMasks.Layers.Length)
+                        {
+                            StratumMasks masks = document.Terrain.StratumMasks;
+                            TiledBuffer<byte> mask = File.Exists(Of(changed))
+                                ? ReadGray8(Of(changed), masks.Width, masks.Height)
+                                : TiledBuffer<byte>.Create(masks.Width, masks.Height);
+                            if (!mask.ToArray().AsSpan().SequenceEqual(masks.Layers[layer - 1].ToArray()))
+                            {
+                                document = document with { Terrain = document.Terrain with { StratumMasks = masks with { Layers = masks.Layers.SetItem(layer - 1, mask) } } };
+                            }
+                        }
+                        else if (changed.StartsWith(MapProjectLayout.Files + "/", StringComparison.Ordinal))
+                        {
+                            string path = changed[(MapProjectLayout.Files.Length + 1)..];
+                            string file = Of(changed);
+                            ImmutableArray<byte>? bytes = File.Exists(file) ? ImmutableCollectionsMarshal.AsImmutableArray(File.ReadAllBytes(file)) : null;
+                            if (!SameBytes(bytes, document.Files.TryGetValue(path, out ImmutableArray<byte> held) ? held : null))
+                            {
+                                document = document with { Files = bytes is ImmutableArray<byte> value ? document.Files.SetItem(path, value) : document.Files.Remove(path) };
+                            }
+                        }
+                        break;
+                }
+            }
+            return document;
+        }
+
+        /// <summary>
+        /// Reads a JSON file again when its text is not what the document would write.
+        /// </summary>
+        private static MapDocument ReloadJson<T>(MapDocument document, string path, T held, Func<MapDocument, T, MapDocument> apply)
+        {
+            if (!File.Exists(path) || File.ReadAllText(path).ReplaceLineEndings("\n") == (JsonSerializer.Serialize(held, Json) + "\n").ReplaceLineEndings("\n"))
+            {
+                return document;
+            }
+            return apply(document, ReadJson<T>(path));
+        }
+
+        private static MapDocument ReloadGray8(MapDocument document, string path, TiledBuffer<byte> held, int width, int height, Func<MapDocument, TiledBuffer<byte>, MapDocument> apply)
+        {
+            if (!File.Exists(path))
+            {
+                return document;
+            }
+            TiledBuffer<byte> read = ReadGray8(path, width, height);
+            return read.ToArray().AsSpan().SequenceEqual(held.ToArray()) ? document : apply(document, read);
+        }
+
+        private static MapDocument ReloadRgba(MapDocument document, string path, TiledBuffer<Color32> held, Func<MapDocument, TiledBuffer<Color32>, MapDocument> apply)
+        {
+            if (!File.Exists(path))
+            {
+                return document;
+            }
+            TiledBuffer<Color32> read = ReadRgba(path);
+            return read.Width == held.Width && read.Height == held.Height && read.ToArray().AsSpan().SequenceEqual(held.ToArray())
+                ? document
+                : apply(document, read);
+        }
+
+        private static bool SameBytes(ImmutableArray<byte>? a, ImmutableArray<byte>? b) =>
+            a is null ? b is null : b is not null && a.Value.AsSpan().SequenceEqual(b.Value.AsSpan());
+
+        /// <summary>
+        /// Writes a file unless it already holds these bytes, so that tools watching it see no change.
+        /// </summary>
+        private static void WriteBytes(string path, ImmutableArray<byte> bytes)
+        {
+            if (!File.Exists(path) || !File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes.AsSpan()))
+            {
+                File.WriteAllBytes(path, ImmutableCollectionsMarshal.AsArray(bytes)!);
+            }
+        }
+
+        /// <summary>
+        /// Writes a JSON file unless it already holds this text.
+        /// </summary>
+        private static void WriteJson<T>(string path, T value)
+        {
+            string text = JsonSerializer.Serialize(value, Json) + "\n";
+            if (!File.Exists(path) || File.ReadAllText(path) != text)
+            {
+                File.WriteAllText(path, text);
+            }
+        }
 
         private static T ReadJson<T>(string path)
         {

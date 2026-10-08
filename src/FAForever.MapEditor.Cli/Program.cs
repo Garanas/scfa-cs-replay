@@ -1,6 +1,5 @@
 using CommandLine;
 using FAForever.MapEditor.Project;
-using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.Cli
 {
@@ -44,15 +43,13 @@ namespace FAForever.MapEditor.Cli
             {
                 throw new MapProjectException($"The project folder {o.ProjectFolder} is not empty");
             }
-            MapProjectStore.Save(MapImporter.ImportFolder(o.MapFolder), o.ProjectFolder);
+            MapWorkspace.ImportMap(o.MapFolder).SaveAs(o.ProjectFolder);
             Console.WriteLine($"Unpacked {o.MapFolder} into {o.ProjectFolder}");
         }
 
         private static void Pack(PackOptions o)
         {
-            MapDocument document = MapProjectStore.Load(o.ProjectFolder);
-            document = document with { Version = o.Version ?? document.Version };
-            string folder = MapExporter.WriteFolder(document, o.OutputFolder);
+            string folder = MapWorkspace.OpenProject(o.ProjectFolder).Export(o.OutputFolder, o.Version);
             Console.WriteLine($"{DateTime.Now:HH:mm:ss} Packed {folder}");
         }
 
@@ -71,41 +68,41 @@ namespace FAForever.MapEditor.Cli
         }
 
         /// <summary>
-        /// Packs, then packs again after every change to the project. Tools save in bursts (a temporary
-        /// file, then a rename), so a pack waits until the project has been quiet for a moment.
+        /// Packs, then packs again after every change to the project: the project is opened once,
+        /// and a change reads only the files that changed.
         /// </summary>
         private static int Watch(PackOptions o)
         {
             object gate = new object();
-            void PackAgain()
+            MapWorkspace? workspace = null;
+            void PackAgain(IReadOnlyCollection<string>? changed)
             {
                 lock (gate)
                 {
                     try
                     {
-                        Run(() => Pack(o));
+                        if (workspace is null || changed is null)
+                        {
+                            workspace = MapWorkspace.OpenProject(o.ProjectFolder);
+                        }
+                        else if (!workspace.Reload(changed))
+                        {
+                            return;
+                        }
+                        string folder = workspace.Export(o.OutputFolder, o.Version);
+                        Console.WriteLine($"{DateTime.Now:HH:mm:ss} Packed {folder}");
                     }
-                    catch (IOException exception)
+                    catch (Exception exception) when (exception is MapProjectException or IOException)
                     {
-                        // a tool still holds a file; its next save brings another change
+                        // a broken file, or one a tool still holds: the next save brings another change
                         Console.Error.WriteLine(exception.Message);
                     }
                 }
             }
 
-            PackAgain();
-            using Timer timer = new Timer(_ => PackAgain());
-            using FileSystemWatcher watcher = new FileSystemWatcher(o.ProjectFolder)
-            {
-                IncludeSubdirectories = true,
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size,
-            };
-            void Changed(object sender, FileSystemEventArgs e) => timer.Change(TimeSpan.FromMilliseconds(500), Timeout.InfiniteTimeSpan);
-            watcher.Changed += Changed;
-            watcher.Created += Changed;
-            watcher.Deleted += Changed;
-            watcher.Renamed += Changed;
-            watcher.EnableRaisingEvents = true;
+            PackAgain(null);
+            using ProjectWatcher watcher = new ProjectWatcher(o.ProjectFolder);
+            watcher.Changed += PackAgain;
 
             Console.WriteLine($"Watching {o.ProjectFolder}; press Ctrl+C to stop.");
             using ManualResetEventSlim stop = new ManualResetEventSlim();

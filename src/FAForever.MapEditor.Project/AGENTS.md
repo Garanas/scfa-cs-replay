@@ -50,6 +50,23 @@ prop (whose id exists in memory only) are mapped by hand in `Files/MapProjectMap
   values, writes happen inside a transaction, so each plugin run is one undo step and a failing
   plugin changes nothing.
 
+## Opening, saving and reloading
+
+- `MapWorkspace` is a map being edited: its session and its project folder, with the operations of
+  the File menu (open, import, save, save as, export). The CLI, the editor and its automation all
+  use it, so they behave the same.
+- `MapWorkspace.Save` passes the last saved document to `MapProjectStore.Save`, which writes only
+  the images whose part changed since and only the JSON files whose text changed. A save after a
+  brush stroke writes the heightmap, not the twenty other files.
+- `MapProjectStore.Reload` reads the files that changed on disk (another tool saved
+  `heightmap.png`, `markers.json`, ...) into the document, part by part; a file that holds what the
+  document holds changes nothing, so the editor's own saves cause no edits. `MapWorkspace.Reload`
+  makes it one undoable edit. A `map.json` that changes the map's size is refused: the grids would
+  no longer fit.
+- `ProjectWatcher` reports the changed files of a folder once it has been quiet for a moment
+  (tools save in bursts), on a pool thread. `faf-map pack --watch` opens the project once and
+  reloads only what changed before each export.
+
 ## What the export derives
 
 - The paths of the map's files in the scenario (`/maps/<folder>/<file>.scmap`, `_save.lua`,
