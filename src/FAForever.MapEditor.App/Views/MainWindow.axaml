@@ -93,6 +93,9 @@
       <TabItem Header="3D">
         <controls:TerrainView3D x:Name="Terrain3D" ClipToBounds="True" />
       </TabItem>
+      <TabItem Header="3D (GPU)">
+        <controls:TerrainViewGpu x:Name="TerrainGpu" />
+      </TabItem>
     </TabControl>
   </DockPanel>
 

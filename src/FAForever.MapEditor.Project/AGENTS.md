@@ -124,6 +124,8 @@ that a map leaves out stay absent (`double?`): the game decides what they defaul
   mipmaps (every texture in 100 vault maps), with the FAF map editor's header. Uncompressed
   textures survive unpacking and packing pixel for pixel; DXT5 is decoded once on import and
   compressed again on export (a mean error of about 0.02 per channel).
+- ImageMagick never opens or writes a file itself: its file access fails on paths longer than
+  260 characters. Read and write the bytes with .NET and hand them over.
 - Each stratum mask texture holds four layers, one per channel (red, green, blue, alpha): layer 1
   to 4 in the first, 5 to 8 in the second. A project keeps one grey PNG per layer.
 
@@ -151,6 +153,10 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   `AssetConverter.FormatVersion`, raise it when the output changes) from the archives as they are.
   Only FAF's `.nx2` are checked; same size and time is unchanged, otherwise the SHA-256 decides.
 - `Workspace.FindAsset("/env/Evergreen/layers/Eg_Grass001_albedo.dds")` gives the converted file.
+- `GameTextures.Find(path, document, workspace)` finds a texture a map names as the game does: a
+  path into `/maps/<any folder>/` is one of the map's own files (`MapDocument.Files`), any other
+  one of the workspace's assets. Its `Key` is the same for every spelling of the path and its
+  `Version` changes with the file, so a view can keep one copy per texture and reload it.
 - `faf-map workspace init|convert|status` does the same without the editor.
 
 ## Tests

@@ -26,14 +26,23 @@ public sealed partial class MainWindow : Window
     public TerrainView3D View3D => Terrain3D;
 
     /// <summary>
-    /// Which view shows: <c>top</c> or <c>3d</c>.
+    /// The view of the map in 3D on the graphics card, for automation.
+    /// </summary>
+    public TerrainViewGpu ViewGpu => TerrainGpu;
+
+    /// <summary>
+    /// Which view shows: <c>top</c>, <c>3d</c> or <c>gpu</c>.
     /// </summary>
     public string ShownView
     {
-        get => Views.SelectedIndex == 1 ? "3d" : "top";
-        set => Views.SelectedIndex = value.Equals("3d", StringComparison.OrdinalIgnoreCase) ? 1
-            : value.Equals("top", StringComparison.OrdinalIgnoreCase) ? 0
-            : throw new ArgumentException($"There is no view '{value}': top or 3d");
+        get => Views.SelectedIndex switch { 1 => "3d", 2 => "gpu", _ => "top" };
+        set => Views.SelectedIndex = value.ToLowerInvariant() switch
+        {
+            "top" => 0,
+            "3d" => 1,
+            "gpu" => 2,
+            _ => throw new ArgumentException($"There is no view '{value}': top, 3d or gpu"),
+        };
     }
 
     /// <summary>

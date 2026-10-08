@@ -59,8 +59,36 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   No graphics card, so automation's screenshots show it; a column is a vertical plane, exact for
   a level camera and close for a tilted one. Left mouse turns, right or middle moves, the wheel
   zooms. On the 81 km test map a picture takes 0.1 to 0.2 s. A hidden view does no work.
-- `Views/MainWindow`: menu, brush panel (heights or a layer's mask), history panel, the Top and 3D
-  tabs, status bar; asks about unsaved changes before closing.
+- `Controls/TerrainViewGpu` (the 3D (GPU) tab): the map on the graphics card with OpenGL through
+  Avalonia's `OpenGlControlBase` (ANGLE, OpenGL ES 3.0, on Windows; OpenGL 3.3 elsewhere), bound
+  with Silk.NET. `Rendering/Gpu/TerrainRenderer` draws the terrain, then the albedo decals, the
+  normal decals and the water; `TerrainShaders` follows the FAF map editor's port of the game's
+  `TTerrainXP` (`Assets/GFX/Shaders/FaTerrainShader.shader` in `D:\faf-development\FAForeverMapEditor`):
+  the lower albedo, the strata by their masks (`clamp(mask * 2 - 1)`), the upper albedo by its alpha,
+  each repeating every `AlbedoScale` ogrids, and the game's lighting (`CalculateXPLighting`
+  without specular). Normals come from the heightmap per pixel; the strata's normal maps are not
+  used (a fragment shader has 16 texture units).
+  - The heightmap is a 16-bit integer texture read with `texelFetch`, the masks two colour
+    textures of four layers each. A new document version uploads only the tiles that changed
+    (`TiledBuffer.ChangedTiles`), so a stroke on an 81 km map shows within 0.2 s.
+  - Textures (`GpuTextureCache`) are on the card once per file, whatever number of layers and
+    decals use them; they are decoded on a pool thread (`GameTextures`, from the map's own files
+    or the workspace's assets) and uploaded with the next frame. A texture whose source changes
+    (a project file read again, an asset a tool saves: the view watches `assets/`) is loaded
+    again; the old one shows until then. Textures no draw used are deleted.
+  - Decals keep the map's order (which lies on top) and are drawn instanced: a run of decals with
+    the same texture and size class is one draw (Seton's Clutch: 2230 decals, 48 textures, 523
+    draws). A decal's position is its corner, and it turns around that corner. Normal decals
+    (DXT5nm) change the lit colour below by the ratio of the light with and without them,
+    blended as `2 × source × destination`, since the view has no deferred lighting.
+  - The water is a surface at its elevation, drawn after the decals, darker and more opaque
+    with depth down to the abyss elevation.
+  - Uniforms of samplers must not share a texture unit with another sampler type: unit 0 holds
+    the heights (`usampler2D`), 1 a decal's texture, 2 to 11 the layers, 12 and 13 the masks.
+    A sampler with a mipmapped filter on a texture without mipmaps reads as black: the masks have
+    their own sampler.
+- `Views/MainWindow`: menu, brush panel (heights or a layer's mask), history panel, the Top, 3D and
+  3D (GPU) tabs, status bar; asks about unsaved changes before closing.
   `WindowDialogs` answers the view model's questions with the system's folder picker and a small
   save-changes dialog.
 - The window watches the project folder (`ProjectWatcher`) and reads back what other tools change;
@@ -84,6 +112,9 @@ faf-map editor undo
 faf-map editor close                                      # closes without asking about changes
 ```
 
+- The state's `gpu` says which OpenGL the GPU view runs on, its error if it could not start, the
+  textures on the card, the last texture that could not be read, and the decals with their draws
+  and textures.
 - The state includes `busy` and `stage` (`SetUp`, `UpdateAssets`, `Converting`, `Ready`), with
   `workspace`, `setupError` and `assetReasons`; a command that opens, saves or converts answers
   when it is done. Start a test editor with `FAF_MAP_EDITOR_SETTINGS` set to a file of its own, so
@@ -93,8 +124,11 @@ faf-map editor close                                      # closes without askin
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,
   `stroke {points}`, `height {x, z}`, `fit`, `show {markers?, pathNodes?}`, `view {zoom, x, z}`,
-  `tab {name: top|3d}`, `camera {x?, z?, distance?, yaw?, pitch?}` (the 3D view, degrees),
-  `screenshot {path, map?}`,
+  `tab {name: top|3d|gpu}`, `camera {x?, z?, distance?, yaw?, pitch?}` (both 3D views, degrees),
+  `screenshot {path, map?, gpu?}` (`gpu: true` reads a frame of the GPU view back from the card:
+  a screenshot of the window does not reach it), `gpu-debug {mode}` (what the GPU view's terrain
+  shows: 0 the picture, 1 the albedo, 2 the light, 3 the normals, 4 the heights, 5 the lower
+  layer, 6 the first four masks after the remap, 7 as stored),
   `close`. A new menu item gets a command here too.
 - The method does not matter, and a command without arguments works as a GET
   (`curl localhost:5371/undo`); Windows refuses a POST without a body, so the CLI always sends one.
