@@ -77,7 +77,7 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 for (int sx = x0; sx <= x1; sx++)
                 {
-                    float weight = Falloff(MathF.Sqrt((sx - x) * (sx - x) + (sz - z) * (sz - z)));
+                    float weight = BrushFalloff.Weight(MathF.Sqrt((sx - x) * (sx - x) + (sz - z) * (sz - z)), Radius);
                     if (weight <= 0)
                     {
                         continue;
@@ -96,12 +96,6 @@ namespace FAForever.MapEditor.Project.Editing
                 }
             }
         }
-
-        /// <summary>
-        /// A smooth bell: 1 at the centre, 0 from the radius on.
-        /// </summary>
-        private float Falloff(float distance) =>
-            distance >= Radius ? 0 : 0.5f * (1 + MathF.Cos(MathF.PI * distance / Radius));
 
         private static float Lerp(float from, float to, float amount) => from + (to - from) * Math.Clamp(amount, 0, 1);
 

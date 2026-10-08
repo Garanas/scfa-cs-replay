@@ -19,10 +19,10 @@ namespace FAForever.MapEditor.App.Automation;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The commands: <c>GET /state</c>, <c>GET /height?x=&amp;z=</c>, <c>GET /help</c>, and with a JSON
+/// The commands: <c>GET /state</c>, <c>GET /height?x=&amp;z=</c>, <c>GET /mask?layer=&amp;x=&amp;z=</c> (0 to 255), <c>GET /help</c>, and with a JSON
 /// body <c>POST /open {path}</c>, <c>/import {path}</c>, <c>/save</c>, <c>/save-as {path}</c>,
 /// <c>/export {output, version?}</c>, <c>/undo</c>, <c>/redo</c>, <c>/goto {step}</c> (a step of the history, -1 for the map as opened),
-/// <c>/brush {mode?, radius?, strength?, target?}</c>, <c>/stroke {points: [[x, z], ...]}</c> (in
+/// <c>/brush {layer?, mode?, radius?, strength?, target?, erase?}</c> (layer 0 paints the heights, 1 to 8 a layer's mask), <c>/stroke {points: [[x, z], ...]}</c> (in
 /// ogrids), <c>/fit</c>, <c>/view {zoom, x, z}</c> (centre the view on a place of the map),
 /// <c>/screenshot {path, map?}</c> (the window, or with <c>map: true</c> the map alone, as PNG) and
 /// <c>/close</c>. The method does not matter: a command without a body can be a GET
@@ -119,7 +119,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "height?x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {mode?, radius?, strength?, target?}", "stroke {points: [[x, z], ...]}", "fit", "view {zoom, x, z}", "screenshot {path, map?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "fit", "view {zoom, x, z}", "screenshot {path, map?}", "close") };
             case "state":
                 break;
             case "open":
@@ -147,12 +147,27 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 result["done"] = model.GoTo((int)(Number(arguments, "step") ?? throw new ArgumentException("step is missing (-1 for the map as it was opened)")));
                 break;
             case "brush":
+                if (Number(arguments, "layer") is double layer)
+                {
+                    model.SelectPaintTarget((int)layer);
+                }
                 if (arguments["mode"] is JsonNode mode)
                 {
                     model.BrushMode = Enum.Parse<HeightBrushMode>(mode.GetValue<string>(), ignoreCase: true);
                 }
+                if (arguments["erase"] is JsonNode erase)
+                {
+                    model.MaskErase = erase.GetValue<bool>();
+                }
                 model.BrushRadius = Number(arguments, "radius") ?? model.BrushRadius;
-                model.BrushStrength = Number(arguments, "strength") ?? model.BrushStrength;
+                if (model.IsPaintingLayer)
+                {
+                    model.MaskStrength = Number(arguments, "strength") ?? model.MaskStrength;
+                }
+                else
+                {
+                    model.BrushStrength = Number(arguments, "strength") ?? model.BrushStrength;
+                }
                 model.BrushTarget = Number(arguments, "target") ?? model.BrushTarget;
                 break;
             case "stroke":
@@ -165,6 +180,18 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 int x = (int)(Number(arguments, "x") ?? throw new ArgumentException("x is missing"));
                 int z = (int)(Number(arguments, "z") ?? throw new ArgumentException("z is missing"));
                 result["height"] = document.Terrain.Heightmap.GetHeight(x, z);
+                break;
+            }
+            case "mask":
+            {
+                MapDocument document = model.ShownDocument ?? throw new InvalidOperationException("No map is open");
+                int maskLayer = (int)(Number(arguments, "layer") ?? throw new ArgumentException("layer is missing"));
+                double x = Number(arguments, "x") ?? throw new ArgumentException("x is missing");
+                double z = Number(arguments, "z") ?? throw new ArgumentException("z is missing");
+                TiledBuffer<byte> mask = document.Terrain.StratumMasks.Layers[maskLayer - 1];
+                result["value"] = mask[
+                    Math.Clamp((int)(x * mask.Width / document.Width), 0, mask.Width - 1),
+                    Math.Clamp((int)(z * mask.Height / document.Height), 0, mask.Height - 1)];
                 break;
             }
             case "fit":
@@ -215,9 +242,11 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             ["history"] = new JsonArray([.. (model.Workspace?.Session.History ?? []).Select(step => (JsonNode)JsonValue.Create(step.IsCurrent ? $"> {step.Description}" : step.Description))]),
             ["brush"] = new JsonObject
             {
+                ["paint"] = model.SelectedPaintTarget?.Name,
                 ["mode"] = model.BrushMode.ToString(),
                 ["radius"] = model.BrushRadius,
-                ["strength"] = model.BrushStrength,
+                ["strength"] = model.IsPaintingLayer ? model.MaskStrength : model.BrushStrength,
+                ["erase"] = model.MaskErase,
                 ["target"] = model.BrushTarget,
             },
             ["zoom"] = window.MapView.Zoom,

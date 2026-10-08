@@ -99,6 +99,27 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task PaintsTheMaskOfALayer()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            await model.OpenAsync(HardFfa);
+            Assert.AreEqual(9, model.PaintTargets.Count, "the heights and eight layers");
+            byte before = model.ShownDocument!.Terrain.StratumMasks.Layers[2][64, 64];
+            var heights = model.ShownDocument.Terrain.Heightmap;
+
+            model.SelectPaintTarget(3);
+            model.BrushRadius = 10;
+            model.MaskStrength = 1;
+            model.Stroke([(120, 128), (136, 128)]);
+
+            Assert.AreEqual("_Undo Paint layer 3", model.UndoHeader);
+            Assert.AreEqual(255, model.ShownDocument!.Terrain.StratumMasks.Layers[2][64, 64], "ogrid (128, 128) is pixel (64, 64) of a mask of half the size");
+            Assert.AreSame(heights, model.ShownDocument.Terrain.Heightmap, "the heights are untouched");
+            model.Undo();
+            Assert.AreEqual(before, model.ShownDocument!.Terrain.StratumMasks.Layers[2][64, 64]);
+        }
+
+        [TestMethod]
         public async Task SavesAnImportedMapWhereThePersonSays()
         {
             Answers answers = new Answers();

@@ -41,6 +41,14 @@ public enum SaveChoice
 public sealed record HistoryEntry(int Step, string Description, bool IsUndone);
 
 /// <summary>
+/// What the brush paints: the heights (layer 0), or the mask of a terrain layer (1 to 8).
+/// </summary>
+public sealed record PaintTarget(int Layer, string Name)
+{
+    public override string ToString() => Name;
+}
+
+/// <summary>
 /// The editor's window without the window: the map being edited, the brush, and every operation
 /// of the menu. The operations that take a folder (<see cref="LoadProjectAsync"/>, ...) are what the
 /// menu commands call after asking for one, and what automation and tests call directly.
@@ -158,6 +166,57 @@ public sealed partial class MainViewModel : ObservableObject
         Target = (float)BrushTarget,
     };
 
+    /// <summary>
+    /// The heights and the terrain layers that have a mask, by the name of their texture.
+    /// </summary>
+    public IReadOnlyList<PaintTarget> PaintTargets { get; private set; } = [];
+
+    [ObservableProperty]
+    public partial PaintTarget? SelectedPaintTarget { get; set; }
+
+    /// <summary>
+    /// The terrain layer whose mask the brush paints, or 0 for the heights.
+    /// </summary>
+    public int PaintedLayer => SelectedPaintTarget?.Layer ?? 0;
+
+    public bool IsPaintingHeight => PaintedLayer == 0;
+
+    public bool IsPaintingLayer => PaintedLayer > 0;
+
+    /// <summary>
+    /// How far a dab moves a mask at the centre, from 0 to 1.
+    /// </summary>
+    [ObservableProperty]
+    public partial double MaskStrength { get; set; } = 0.3;
+
+    /// <summary>
+    /// Whether the brush takes the layer away instead of painting it.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool MaskErase { get; set; }
+
+    public MaskBrush MaskBrush => new MaskBrush
+    {
+        Radius = (float)BrushRadius,
+        Strength = (float)MaskStrength,
+        Erase = MaskErase,
+    };
+
+    /// <summary>
+    /// Paints the heights (0) or the mask of a terrain layer (1 to 8).
+    /// </summary>
+    public void SelectPaintTarget(int layer) =>
+        SelectedPaintTarget = PaintTargets.FirstOrDefault(target => target.Layer == layer)
+            ?? throw new ArgumentOutOfRangeException(nameof(layer), $"The map has no layer {layer} with a mask");
+
+    partial void OnSelectedPaintTargetChanged(PaintTarget? value)
+    {
+        OnPropertyChanged(nameof(PaintedLayer));
+        OnPropertyChanged(nameof(IsPaintingHeight));
+        OnPropertyChanged(nameof(IsPaintingLayer));
+        DocumentChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     #endregion
 
     #region Operations
@@ -218,13 +277,15 @@ public sealed partial class MainViewModel : ObservableObject
     {
         MapWorkspace workspace = RequireMap();
         CancelStroke();
-        _stroke = workspace.Session.Begin(BrushMode switch
-        {
-            HeightBrushMode.Raise => "Raise terrain",
-            HeightBrushMode.Lower => "Lower terrain",
-            HeightBrushMode.Smooth => "Smooth terrain",
-            _ => "Flatten terrain",
-        });
+        _stroke = workspace.Session.Begin(PaintedLayer > 0
+            ? $"{(MaskErase ? "Erase" : "Paint")} layer {PaintedLayer}"
+            : BrushMode switch
+            {
+                HeightBrushMode.Raise => "Raise terrain",
+                HeightBrushMode.Lower => "Lower terrain",
+                HeightBrushMode.Smooth => "Smooth terrain",
+                _ => "Flatten terrain",
+            });
         Dab(x, z);
         DocumentChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -394,6 +455,17 @@ public sealed partial class MainViewModel : ObservableObject
         }
         Workspace = workspace;
         workspace.Session.StateChanged += OnSessionChanged;
+        Terrain terrain = workspace.Document.Terrain;
+        PaintTargets =
+        [
+            new PaintTarget(0, "Height"),
+            .. Enumerable.Range(1, terrain.StratumMasks.Layers.Length).Select(layer => new PaintTarget(layer,
+                layer < terrain.Layers.Length && terrain.Layers[layer].AlbedoPath.Length > 0
+                    ? $"Layer {layer}: {Path.GetFileNameWithoutExtension(terrain.Layers[layer].AlbedoPath)}"
+                    : $"Layer {layer} (no texture)")),
+        ];
+        OnPropertyChanged(nameof(PaintTargets));
+        SelectedPaintTarget = PaintTargets[0];
         _pendingReload.Clear();
         if (workspace.ProjectFolder is string folder)
         {
@@ -522,7 +594,15 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void Dab(float x, float z)
     {
-        Brush.Apply(_stroke!.Heightmap, Workspace!.Document.Terrain.Heightmap.Scale, x, z);
+        MapDocument document = Workspace!.Document;
+        if (PaintedLayer > 0)
+        {
+            MaskBrush.Apply(_stroke!.StratumMask(PaintedLayer), document.Width, document.Height, x, z);
+        }
+        else
+        {
+            Brush.Apply(_stroke!.Heightmap, document.Terrain.Heightmap.Scale, x, z);
+        }
         _lastDab = (x, z);
     }
 
