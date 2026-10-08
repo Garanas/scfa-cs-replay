@@ -56,7 +56,7 @@ faf-map editor close                                      # closes without askin
 
 - The state includes `busy`; a command that opens or saves answers when it is done.
 - Commands: `help`, `state`, `open {path}`, `import {path}`, `save`, `save-as {path}`,
-  `export {output, version?}`, `undo`, `redo`, `brush {mode?, radius?, strength?, target?}`,
+  `export {output, version?}`, `undo`, `redo`, `goto {step}`, `brush {mode?, radius?, strength?, target?}`,
   `stroke {points}`, `height {x, z}`, `fit`, `view {zoom, x, z}`, `screenshot {path, map?}`,
   `close`. A new menu item gets a command here too.
 - The method does not matter, and a command without arguments works as a GET

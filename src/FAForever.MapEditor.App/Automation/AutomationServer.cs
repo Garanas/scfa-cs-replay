@@ -21,7 +21,7 @@ namespace FAForever.MapEditor.App.Automation;
 /// <para>
 /// The commands: <c>GET /state</c>, <c>GET /height?x=&amp;z=</c>, <c>GET /help</c>, and with a JSON
 /// body <c>POST /open {path}</c>, <c>/import {path}</c>, <c>/save</c>, <c>/save-as {path}</c>,
-/// <c>/export {output, version?}</c>, <c>/undo</c>, <c>/redo</c>,
+/// <c>/export {output, version?}</c>, <c>/undo</c>, <c>/redo</c>, <c>/goto {step}</c> (a step of the history, -1 for the map as opened),
 /// <c>/brush {mode?, radius?, strength?, target?}</c>, <c>/stroke {points: [[x, z], ...]}</c> (in
 /// ogrids), <c>/fit</c>, <c>/view {zoom, x, z}</c> (centre the view on a place of the map),
 /// <c>/screenshot {path, map?}</c> (the window, or with <c>map: true</c> the map alone, as PNG) and
@@ -119,7 +119,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "height?x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "brush {mode?, radius?, strength?, target?}", "stroke {points: [[x, z], ...]}", "fit", "view {zoom, x, z}", "screenshot {path, map?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "height?x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {mode?, radius?, strength?, target?}", "stroke {points: [[x, z], ...]}", "fit", "view {zoom, x, z}", "screenshot {path, map?}", "close") };
             case "state":
                 break;
             case "open":
@@ -142,6 +142,9 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 break;
             case "redo":
                 result["done"] = model.Redo();
+                break;
+            case "goto":
+                result["done"] = model.GoTo((int)(Number(arguments, "step") ?? throw new ArgumentException("step is missing (-1 for the map as it was opened)")));
                 break;
             case "brush":
                 if (arguments["mode"] is JsonNode mode)

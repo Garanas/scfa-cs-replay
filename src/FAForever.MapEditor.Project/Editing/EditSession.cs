@@ -162,6 +162,40 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// Undoes or redoes up to a step of <see cref="History"/> in one go, as a history panel does
+        /// when a step is clicked; -1 goes back to the document the session started with (or the
+        /// oldest it remembers).
+        /// </summary>
+        /// <returns>Whether the document changed.</returns>
+        public bool GoTo(int step)
+        {
+            EnsureNoTransaction();
+            ArgumentOutOfRangeException.ThrowIfLessThan(step, -1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(step, _versions.Count - 1);
+            int target = step + 1;
+            if (target == _current)
+            {
+                return false;
+            }
+
+            MapDocument previous = Document;
+            bool back = target < _current;
+            string description = back ? _versions[_current].Description : _versions[target].Description;
+            if (back && target + 1 < _current)
+            {
+                description = $"{_current - target} steps";
+            }
+            else if (!back && target - 1 > _current)
+            {
+                description = $"{target - _current} steps";
+            }
+            _current = target;
+            _mergeKey = null;
+            Raise(new DocumentChange(previous, Document, description, back ? ChangeReason.Undo : ChangeReason.Redo));
+            return true;
+        }
+
+        /// <summary>
         /// Notes that a version of the document is the one on disk: the current one, or the one a
         /// save in the background wrote while the editing went on.
         /// </summary>

@@ -80,6 +80,25 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task JumpsThroughTheHistoryFromThePanel()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            await model.OpenAsync(HardFfa);
+            model.Stroke([(50, 50), (60, 60)]);
+            model.BrushMode = HeightBrushMode.Lower;
+            model.Stroke([(100, 100), (110, 110)]);
+
+            CollectionAssert.AreEqual(new[] { "Opened", "Raise terrain", "Lower terrain" }, model.History.Select(entry => entry.Description).ToList());
+            Assert.AreEqual(2, model.HistoryIndex);
+
+            model.HistoryIndex = 0;
+
+            Assert.IsFalse(model.Workspace!.Session.CanUndo, "back at the map as it was opened");
+            Assert.IsTrue(model.History.Skip(1).All(entry => entry.IsUndone));
+            Assert.AreEqual(0, model.HistoryIndex);
+        }
+
+        [TestMethod]
         public async Task SavesAnImportedMapWhereThePersonSays()
         {
             Answers answers = new Answers();

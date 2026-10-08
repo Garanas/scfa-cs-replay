@@ -57,6 +57,20 @@
         <Slider Minimum="0" Maximum="256" Value="{Binding BrushTarget}" />
         <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12"
                    Text="Left mouse: paint. Right or middle mouse: move. Wheel: zoom. A stroke is one step of Undo." />
+        <TextBlock Text="History" FontWeight="SemiBold" Margin="0,12,0,0" />
+        <ListBox ItemsSource="{Binding History}" SelectedIndex="{Binding HistoryIndex, Mode=TwoWay}" MaxHeight="320">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:HistoryEntry">
+              <TextBlock Text="{Binding Description}" Classes.undone="{Binding IsUndone}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+          <ListBox.Styles>
+            <Style Selector="TextBlock.undone">
+              <Setter Property="Opacity" Value="0.4" />
+              <Setter Property="FontStyle" Value="Italic" />
+            </Style>
+          </ListBox.Styles>
+        </ListBox>
       </StackPanel>
     </Border>
 

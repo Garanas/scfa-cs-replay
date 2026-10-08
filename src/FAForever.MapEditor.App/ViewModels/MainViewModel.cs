@@ -34,6 +34,13 @@ public enum SaveChoice
 }
 
 /// <summary>
+/// A line of the history panel.
+/// </summary>
+/// <param name="Step">The step of <see cref="EditSession.History"/>, -1 for the map as it was opened.</param>
+/// <param name="IsUndone">Whether the step is undone: it can be redone.</param>
+public sealed record HistoryEntry(int Step, string Description, bool IsUndone);
+
+/// <summary>
 /// The editor's window without the window: the map being edited, the brush, and every operation
 /// of the menu. The operations that take a folder (<see cref="LoadProjectAsync"/>, ...) are what the
 /// menu commands call after asking for one, and what automation and tests call directly.
@@ -104,6 +111,19 @@ public sealed partial class MainViewModel : ObservableObject
     public string UndoHeader => Workspace?.Session.UndoDescription is string description ? $"_Undo {description}" : "_Undo";
 
     public string RedoHeader => Workspace?.Session.RedoDescription is string description ? $"_Redo {description}" : "_Redo";
+
+    /// <summary>
+    /// The history panel: the map as it was opened, then every step, the undone ones last.
+    /// </summary>
+    public IReadOnlyList<HistoryEntry> History { get; private set; } = [];
+
+    /// <summary>
+    /// The line of <see cref="History"/> the document is at; choosing another undoes or redoes up to it.
+    /// </summary>
+    [ObservableProperty]
+    public partial int HistoryIndex { get; set; } = -1;
+
+    private bool _showingHistory;
 
     #region Brush
 
@@ -185,6 +205,11 @@ public sealed partial class MainViewModel : ObservableObject
     public bool Undo() => _stroke is null && Workspace?.Session.Undo() == true;
 
     public bool Redo() => _stroke is null && Workspace?.Session.Redo() == true;
+
+    /// <summary>
+    /// Undoes or redoes up to a step of the history (-1: the map as it was opened).
+    /// </summary>
+    public bool GoTo(int step) => _stroke is null && Workspace?.Session.GoTo(step) == true;
 
     /// <summary>
     /// Starts a brush stroke at a place of the map, in ogrids.
@@ -439,6 +464,37 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnIsBusyChanged(bool value) => Refresh(null);
 
+    partial void OnHistoryIndexChanged(int value)
+    {
+        if (!_showingHistory && value >= 0 && value < History.Count)
+        {
+            GoTo(History[value].Step);
+        }
+    }
+
+    /// <summary>
+    /// Shows the history of the session, with the line it is at chosen.
+    /// </summary>
+    private void ShowHistory()
+    {
+        IReadOnlyList<HistoryStep> steps = Workspace?.Session.History ?? [];
+        int current = -1;
+        for (int i = 0; i < steps.Count; i++)
+        {
+            if (steps[i].IsCurrent)
+            {
+                current = i;
+            }
+        }
+        History = Workspace is null
+            ? []
+            : [new HistoryEntry(-1, "Opened", false), .. steps.Select((step, index) => new HistoryEntry(index, step.Description, index > current))];
+        _showingHistory = true;
+        OnPropertyChanged(nameof(History));
+        HistoryIndex = Workspace is null ? -1 : current + 1;
+        _showingHistory = false;
+    }
+
     private void Refresh(string? status)
     {
         if (status is not null)
@@ -453,6 +509,7 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CanRedo));
         OnPropertyChanged(nameof(UndoHeader));
         OnPropertyChanged(nameof(RedoHeader));
+        ShowHistory();
         OpenProjectCommand.NotifyCanExecuteChanged();
         ImportMapCommand.NotifyCanExecuteChanged();
         SaveProjectCommand.NotifyCanExecuteChanged();

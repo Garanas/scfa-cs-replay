@@ -218,6 +218,29 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void JumpsToAStepOfTheHistoryInOneGo()
+        {
+            EditSession session = new EditSession(original);
+            session.Edit("First", MoveProp(1, Vector3.One));
+            session.Edit("Second", MoveProp(2, Vector3.One));
+            session.Edit("Third", MoveProp(3, Vector3.One));
+            List<DocumentChange> changes = [];
+            session.Changed += (_, change) => changes.Add(change);
+
+            Assert.IsTrue(session.GoTo(-1));
+            Assert.AreSame(original, session.Document);
+            Assert.IsTrue(session.GoTo(1));
+            Assert.AreEqual("Second", session.UndoDescription);
+            Assert.IsFalse(session.GoTo(1), "already there");
+
+            Assert.AreEqual(2, changes.Count, "one change per jump");
+            Assert.AreEqual(ChangeReason.Undo, changes[0].Reason);
+            Assert.AreEqual("3 steps", changes[0].Description);
+            Assert.AreEqual(ChangeReason.Redo, changes[1].Reason);
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => session.GoTo(3));
+        }
+
+        [TestMethod]
         public void NamesWhatAnEditCannotFind()
         {
             EditSession session = new EditSession(original);
