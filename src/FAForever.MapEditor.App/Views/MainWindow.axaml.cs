@@ -16,9 +16,25 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The view of the map, for automation.
+    /// The view of the map from above, for automation.
     /// </summary>
     public HeightmapView MapView => Heightmap;
+
+    /// <summary>
+    /// The view of the map in 3D, for automation.
+    /// </summary>
+    public TerrainView3D View3D => Terrain3D;
+
+    /// <summary>
+    /// Which view shows: <c>top</c> or <c>3d</c>.
+    /// </summary>
+    public string ShownView
+    {
+        get => Views.SelectedIndex == 1 ? "3d" : "top";
+        set => Views.SelectedIndex = value.Equals("3d", StringComparison.OrdinalIgnoreCase) ? 1
+            : value.Equals("top", StringComparison.OrdinalIgnoreCase) ? 0
+            : throw new ArgumentException($"There is no view '{value}': top or 3d");
+    }
 
     /// <summary>
     /// Closes the window without asking about unsaved changes, for automation.

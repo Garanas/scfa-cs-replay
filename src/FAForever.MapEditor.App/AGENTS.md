@@ -33,7 +33,15 @@ The folder is a project (it holds `map.json`) or a map folder of the game, which
   number, deposits squares, AI markers diamonds, weather triangles, path nodes dots with their
   links; View menu). Left mouse paints (a stroke is an `EditTransaction`, so one undo step, shown
   while it is painted), right or middle mouse moves, the wheel zooms around the cursor.
-- `Views/MainWindow`: menu, brush panel, status bar; asks about unsaved changes before closing.
+- `Controls/TerrainView3D` (the 3D tab): a heightfield renderer in software ("voxel space"): per
+  column of the picture, in parallel, it walks the ground away from the camera and fills the
+  column from the bottom up, at half the control's resolution, with heights and colours
+  (`TerrainPicture`) interpolated between samples, haze with distance and a flat water surface.
+  No graphics card, so automation's screenshots show it; a column is a vertical plane, exact for
+  a level camera and close for a tilted one. Left mouse turns, right or middle moves, the wheel
+  zooms. On the 81 km test map a picture takes 0.1 to 0.2 s. A hidden view does no work.
+- `Views/MainWindow`: menu, brush panel (heights or a layer's mask), history panel, the Top and 3D
+  tabs, status bar; asks about unsaved changes before closing.
   `WindowDialogs` answers the view model's questions with the system's folder picker and a small
   save-changes dialog.
 - The window watches the project folder (`ProjectWatcher`) and reads back what other tools change;
@@ -62,6 +70,7 @@ faf-map editor close                                      # closes without askin
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,
   `stroke {points}`, `height {x, z}`, `fit`, `show {markers?, pathNodes?}`, `view {zoom, x, z}`,
+  `tab {name: top|3d}`, `camera {x?, z?, distance?, yaw?, pitch?}` (the 3D view, degrees),
   `screenshot {path, map?}`,
   `close`. A new menu item gets a command here too.
 - The method does not matter, and a command without arguments works as a GET

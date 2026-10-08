@@ -23,7 +23,7 @@ namespace FAForever.MapEditor.App.Automation;
 /// body <c>POST /open {path}</c>, <c>/import {path}</c>, <c>/save</c>, <c>/save-as {path}</c>,
 /// <c>/export {output, version?}</c>, <c>/undo</c>, <c>/redo</c>, <c>/goto {step}</c> (a step of the history, -1 for the map as opened),
 /// <c>/brush {layer?, mode?, radius?, strength?, target?, erase?}</c> (layer 0 paints the heights, 1 to 8 a layer's mask), <c>/stroke {points: [[x, z], ...]}</c> (in
-/// ogrids), <c>/fit</c>, <c>/show {markers?, pathNodes?}</c> (what the view shows), <c>/view {zoom, x, z}</c> (centre the view on a place of the map),
+/// ogrids), <c>/fit</c>, <c>/tab {name}</c> (<c>top</c> or <c>3d</c>), <c>/camera {x?, z?, distance?, yaw?, pitch?}</c> (the 3D view's, in ogrids and degrees), <c>/show {markers?, pathNodes?}</c> (what the view shows), <c>/view {zoom, x, z}</c> (centre the view on a place of the map),
 /// <c>/screenshot {path, map?}</c> (the window, or with <c>map: true</c> the map alone, as PNG) and
 /// <c>/close</c>. The method does not matter: a command without a body can be a GET
 /// (<c>curl localhost:port/undo</c>), and query parameters count as arguments; Windows refuses a
@@ -119,7 +119,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "fit", "show {markers?, pathNodes?}", "view {zoom, x, z}", "screenshot {path, map?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "show {markers?, pathNodes?}", "view {zoom, x, z}", "screenshot {path, map?}", "close") };
             case "state":
                 break;
             case "open":
@@ -197,6 +197,12 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             case "fit":
                 window.MapView.Fit();
                 break;
+            case "tab":
+                window.ShownView = Text(arguments, "name");
+                break;
+            case "camera":
+                window.View3D.Look(Number(arguments, "x"), Number(arguments, "z"), Number(arguments, "distance"), Number(arguments, "yaw"), Number(arguments, "pitch"));
+                break;
             case "show":
                 if (arguments["markers"] is JsonNode markers)
                 {
@@ -260,6 +266,15 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["target"] = model.BrushTarget,
             },
             ["zoom"] = window.MapView.Zoom,
+            ["tab"] = window.ShownView,
+            ["camera"] = new JsonObject
+            {
+                ["x"] = window.View3D.Camera.X,
+                ["z"] = window.View3D.Camera.Z,
+                ["distance"] = window.View3D.Camera.Distance,
+                ["yaw"] = window.View3D.Camera.Yaw,
+                ["pitch"] = window.View3D.Camera.Pitch,
+            },
             ["show"] = new JsonObject { ["markers"] = model.ShowMarkers, ["pathNodes"] = model.ShowPathNodes },
         };
     }

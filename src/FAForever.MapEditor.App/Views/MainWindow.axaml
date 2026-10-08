@@ -85,6 +85,13 @@
       </StackPanel>
     </Border>
 
-    <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" />
+    <TabControl x:Name="Views" Padding="0">
+      <TabItem Header="Top">
+        <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" />
+      </TabItem>
+      <TabItem Header="3D">
+        <controls:TerrainView3D x:Name="Terrain3D" ClipToBounds="True" />
+      </TabItem>
+    </TabControl>
   </DockPanel>
 </Window>
