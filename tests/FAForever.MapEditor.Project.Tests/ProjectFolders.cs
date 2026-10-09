@@ -18,6 +18,11 @@ namespace FAForever.MapEditor.Project.Tests
         {
             if (Directory.Exists(Root))
             {
+                // git's objects are read-only, which stops a delete on Windows
+                foreach (string file in Directory.EnumerateFiles(Root, "*", SearchOption.AllDirectories))
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                }
                 Directory.Delete(Root, recursive: true);
             }
         }

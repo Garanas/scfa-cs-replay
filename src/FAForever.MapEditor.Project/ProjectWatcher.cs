@@ -55,8 +55,8 @@ namespace FAForever.MapEditor.Project
         private void Note(string path)
         {
             string relative = Path.GetRelativePath(_folder, path).Replace('\\', '/');
-            // temporary files of tools and of the editor's own writes
-            if (relative.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase) || relative.EndsWith('~') || Path.GetFileName(relative).StartsWith('.'))
+            // temporary files of tools and of the editor's own writes; hidden files and folders (.git)
+            if (relative.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase) || relative.EndsWith('~') || relative.Split('/').Any(part => part.StartsWith('.')))
             {
                 return;
             }

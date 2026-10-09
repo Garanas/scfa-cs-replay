@@ -91,6 +91,19 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
   (tools save in bursts), on a pool thread. `faf-map pack --watch` opens the project once and
   reloads only what changed before each export.
 
+## Version control
+
+One git repository per project folder (`Versioning/ProjectRepository`, user story F-18), with the
+computer's `git`, so every other git tool works on it too. Nothing is under version control until
+the map maker turns it on (`Enable`, with `RepositorySettings`): `git init` on `main`,
+`core.longpaths` (Windows' 260 characters), Git LFS for the binary files when chosen (the default:
+a 16-bit heightmap of 81 km is tens of megabytes, and every save of it would stay in the history),
+a `.gitignore` (`procedural/temp/`) and `.gitattributes` (JSON and Lua with LF line endings, the
+binary patterns to LFS or as binary) unless the folder has them, the author and `origin`; then
+the first commit of everything on disk. `Commit` adds everything and commits, or returns null when
+nothing changed. Git runs without a terminal prompt or an editor; what it says when it fails is the
+exception's message. Hidden folders (`.git`) are no files of the project: `ProjectWatcher` skips them.
+
 ## What the export derives
 
 - The paths of the map's files in the scenario (`/maps/<folder>/<file>.scmap`, `_save.lua`,
