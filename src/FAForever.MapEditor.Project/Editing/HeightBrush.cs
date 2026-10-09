@@ -31,9 +31,9 @@ namespace FAForever.MapEditor.Project.Editing
     }
 
     /// <summary>
-    /// A round brush that changes the heights of the terrain: one <see cref="Apply"/> is one dab,
-    /// strongest at the centre and fading to nothing at <see cref="Radius"/>. A stroke is a series
-    /// of dabs in one <see cref="EditTransaction"/>, so that it is one undo step.
+    /// A brush that changes the heights of the terrain: one <see cref="Apply"/> is one dab, round or
+    /// of a <see cref="Shape"/>. A stroke is a series of dabs in one <see cref="EditTransaction"/>,
+    /// so that it is one undo step.
     /// </summary>
     public sealed record HeightBrush
     {
@@ -56,15 +56,27 @@ namespace FAForever.MapEditor.Project.Editing
         public float Target { get; init; }
 
         /// <summary>
+        /// The brush's shape: null for round, strongest at the centre and fading to nothing at the
+        /// radius; a picture fills the square around the radius.
+        /// </summary>
+        public BrushShape? Shape { get; init; }
+
+        /// <summary>
+        /// How far the shape is turned, in degrees clockwise as the top view shows the map.
+        /// </summary>
+        public float Rotation { get; init; }
+
+        /// <summary>
         /// One dab centred on (<paramref name="x"/>, <paramref name="z"/>) in ogrids.
         /// </summary>
         /// <param name="scale">The height of one step of a sample (<see cref="Heightmap.Scale"/>).</param>
         public void Apply(TiledBuffer<ushort>.Builder samples, float scale, float x, float z)
         {
-            int x0 = Math.Max(0, (int)MathF.Floor(x - Radius));
-            int z0 = Math.Max(0, (int)MathF.Floor(z - Radius));
-            int x1 = Math.Min(samples.Width - 1, (int)MathF.Ceiling(x + Radius));
-            int z1 = Math.Min(samples.Height - 1, (int)MathF.Ceiling(z + Radius));
+            BrushFootprint footprint = new BrushFootprint(Radius, Shape, Rotation);
+            int x0 = Math.Max(0, (int)MathF.Floor(x - footprint.Reach));
+            int z0 = Math.Max(0, (int)MathF.Floor(z - footprint.Reach));
+            int x1 = Math.Min(samples.Width - 1, (int)MathF.Ceiling(x + footprint.Reach));
+            int z1 = Math.Min(samples.Height - 1, (int)MathF.Ceiling(z + footprint.Reach));
             if (x0 > x1 || z0 > z1 || Radius <= 0)
             {
                 return;
@@ -77,7 +89,7 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 for (int sx = x0; sx <= x1; sx++)
                 {
-                    float weight = BrushFalloff.Weight(MathF.Sqrt((sx - x) * (sx - x) + (sz - z) * (sz - z)), Radius);
+                    float weight = footprint.Weight(sx - x, sz - z);
                     if (weight <= 0)
                     {
                         continue;
