@@ -32,6 +32,11 @@ namespace FAForever.MapEditor.Project.Workspaces
         public string AssetsFolder => Path.Combine(Folder, WorkspaceLayout.Assets);
 
         /// <summary>
+        /// The map maker's brush shapes (greyscale PNGs), chosen per workspace.
+        /// </summary>
+        public string BrushesFolder => Path.Combine(Folder, WorkspaceLayout.Brushes);
+
+        /// <summary>
         /// Where maps are exported to: the vault's <c>maps</c> folder, where the game and the FAF
         /// client find them.
         /// </summary>

@@ -115,6 +115,36 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public void TheTerrainShowsTheWorkspacesBrushes()
+        {
+            AssetsViewModel shelf = Shelf();
+
+            shelf.FollowMode("terrain");
+
+            Assert.AreEqual(AssetKind.Brush, shelf.Kind);
+            CollectionAssert.AreEquivalent(new[] { "crater01", "ridge" }, shelf.Tiles.Select(tile => tile.Title).ToArray());
+            CollectionAssert.AreEquivalent(new[] { "brushes", "craters" }, shelf.Groups.Select(group => group.Value).ToArray());
+            Assert.AreEqual("Folder", shelf.GroupsTitle);
+            Assert.AreEqual("2 brushes", shelf.Summary);
+            Assert.IsTrue(shelf.Tiles.All(tile => tile.HasImage));
+
+            shelf.Select("brushes/craters/crater01.png");
+            Assert.AreEqual("Brush · Craters · shape", shelf.ShownDetail);
+            StringAssert.Contains(shelf.ShownPlanned, "T-1");
+            Assert.AreEqual("In the workspace", shelf.ShownKeyLabel);
+            Assert.AreEqual("", shelf.ShownUses, "a map holds no brushes");
+
+            shelf.Use(TestAssets.Catalog());
+            Assert.AreEqual("crater01", shelf.Shown?.Name, "the selection stays when the assets are read again");
+
+            AssetsViewModel empty = new AssetsViewModel(NullLogger.Instance);
+            empty.Use(TestAssets.WithoutBrushes());
+            empty.FollowMode("terrain");
+            Assert.IsTrue(empty.IsEmpty);
+            StringAssert.Contains(empty.EmptyText, "brushes folder");
+        }
+
+        [TestMethod]
         public void TheArrowKeysMoveThroughTheRows()
         {
             AssetsViewModel shelf = Shelf();

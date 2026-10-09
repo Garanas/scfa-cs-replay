@@ -16,6 +16,11 @@ namespace FAForever.MapEditor.Project.Workspaces
         Unit,
         Decal,
         Texture,
+
+        /// <summary>
+        /// A brush's shape: a greyscale picture of the workspace's own (<see cref="WorkspaceLayout.Brushes"/>).
+        /// </summary>
+        Brush,
     }
 
     /// <summary>
@@ -34,7 +39,8 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <summary>
         /// How a map names it, as <see cref="GameArchives.Normalize"/> writes a game path: a prop's
         /// blueprint (<c>env/evergreen/props/trees/pine06_prop.bp</c>), a decal's or a stratum's
-        /// albedo texture (<c>env/tundra/layers/tund_rock_albedo.dds</c>), a unit's id (<c>uec1101</c>).
+        /// albedo texture (<c>env/tundra/layers/tund_rock_albedo.dds</c>), a unit's id (<c>uec1101</c>);
+        /// a brush by its path in the workspace (<c>brushes/craters/crater01.png</c>).
         /// </summary>
         public required string Key { get; init; }
 
@@ -56,7 +62,8 @@ namespace FAForever.MapEditor.Project.Workspaces
 
         /// <summary>
         /// Where it belongs: the biome of the game's <c>env</c> folder (<c>evergreen</c>, <c>red barrens</c>),
-        /// or a unit's faction (<c>UEF</c>, <c>Other</c>).
+        /// a unit's faction (<c>UEF</c>, <c>Other</c>), or a brush's folder in <c>brushes</c>
+        /// (<c>craters</c>; <c>brushes</c> for one directly in it).
         /// </summary>
         public required string Group { get; init; }
 
@@ -103,7 +110,8 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// The assets of a workspace by kind, read from its converted <c>assets</c> folder
     /// (<see cref="WorkspaceLayout"/>): the props and units from their blueprints, the decals and
     /// stratum textures from the PNGs of the biomes' <c>decals</c>, <c>splats</c> and <c>layers</c>
-    /// folders.
+    /// folders; and the brushes, the PNGs of its <c>brushes</c> folder, which are the map maker's
+    /// own and not the game's.
     /// </summary>
     public sealed partial class AssetCatalog
     {
@@ -138,25 +146,37 @@ namespace FAForever.MapEditor.Project.Workspaces
 
         /// <summary>
         /// How a game path or unit id is written as a key: <see cref="GameArchives.Normalize"/>, and a
-        /// <c>.png</c> of the assets is named by the game's <c>.dds</c>.
+        /// <c>.png</c> of the assets is named by the game's <c>.dds</c>; a brush keeps its <c>.png</c>.
         /// </summary>
         public static string KeyOf(string gamePath)
         {
             string key = GameArchives.Normalize(gamePath);
-            return key.EndsWith(".png", StringComparison.Ordinal) ? key[..^4] + ".dds" : key;
+            return key.EndsWith(".png", StringComparison.Ordinal) && !key.StartsWith(WorkspaceLayout.Brushes + "/", StringComparison.Ordinal)
+                ? key[..^4] + ".dds"
+                : key;
         }
 
         /// <summary>
-        /// Reads the assets of a workspace's <c>assets</c> folder; an empty catalogue when there is none.
-        /// A blueprint that cannot be read is left out.
+        /// Reads the assets of a workspace: its converted <c>assets</c> folder and its brushes.
         /// </summary>
-        public static AssetCatalog Load(string assetsFolder)
+        public static AssetCatalog Load(Workspace workspace) => Load(workspace.AssetsFolder, workspace.BrushesFolder);
+
+        /// <summary>
+        /// Reads the assets of a workspace's <c>assets</c> folder, and the brushes of
+        /// <paramref name="brushesFolder"/>; a folder that is not there has none. A blueprint that
+        /// cannot be read is left out.
+        /// </summary>
+        public static AssetCatalog Load(string assetsFolder, string? brushesFolder = null)
         {
+            List<AssetEntry> entries = [];
+            if (brushesFolder is not null && Directory.Exists(brushesFolder))
+            {
+                entries.AddRange(Brushes(brushesFolder));
+            }
             if (!Directory.Exists(assetsFolder))
             {
-                return Empty;
+                return entries.Count == 0 ? Empty : new AssetCatalog(entries);
             }
-            List<AssetEntry> entries = [];
             string env = Path.Combine(assetsFolder, "env");
             if (Directory.Exists(env))
             {
@@ -343,6 +363,62 @@ namespace FAForever.MapEditor.Project.Workspaces
                     File = file,
                     Facts = [.. facts],
                 };
+            }
+        }
+
+        private static IEnumerable<AssetEntry> Brushes(string folder)
+        {
+            foreach (string file in Directory.EnumerateFiles(folder, "*.png", SearchOption.AllDirectories))
+            {
+                string relative = Path.GetRelativePath(folder, file).Replace('\\', '/');
+                string name = Path.GetFileNameWithoutExtension(file);
+                int slash = relative.IndexOf('/');
+                List<AssetFact> facts = [];
+                if (PngHeader(file) is (int width, int height, int depth, bool grey))
+                {
+                    facts.Add(new AssetFact("Size", $"{width} × {height} pixels"));
+                    facts.Add(new AssetFact("Values", $"{depth}-bit {(grey ? "grey" : "colour")}"));
+                }
+                string key = WorkspaceLayout.Brushes + "/" + relative.ToLowerInvariant();
+                yield return new AssetEntry
+                {
+                    Kind = AssetKind.Brush,
+                    Key = key,
+                    Keys = [key],
+                    Name = name,
+                    Code = name,
+                    Group = slash < 0 ? WorkspaceLayout.Brushes : relative[..slash].ToLowerInvariant(),
+                    Category = "shape",
+                    Family = name,
+                    Image = file,
+                    File = file,
+                    Facts = [.. facts],
+                };
+            }
+        }
+
+        /// <summary>
+        /// A PNG's width, height, bits per value and whether it is grey, from its header; null for
+        /// a file that is no PNG.
+        /// </summary>
+        private static (int Width, int Height, int Depth, bool Grey)? PngHeader(string file)
+        {
+            try
+            {
+                Span<byte> header = stackalloc byte[26];
+                using FileStream stream = File.OpenRead(file);
+                if (stream.Read(header) < header.Length || header[12] != 'I' || header[13] != 'H' || header[14] != 'D' || header[15] != 'R')
+                {
+                    return null;
+                }
+                int width = System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(header[16..]);
+                int height = System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(header[20..]);
+                // colour types 0 and 4 are grey, without and with alpha
+                return (width, height, header[24], header[25] is 0 or 4);
+            }
+            catch (IOException)
+            {
+                return null;
             }
         }
 

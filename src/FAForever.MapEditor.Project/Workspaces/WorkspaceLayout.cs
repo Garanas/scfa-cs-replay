@@ -7,7 +7,8 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// <code>
     /// workspace.json         where the game, FAF's data and the vault are (WorkspaceDto)
     /// projects/              the map projects (MapProjectLayout)
-    /// brushes/, templates/, plugins/   the user's own, for later
+    /// brushes/               the map maker's brush shapes: greyscale PNGs, in folders as they like
+    /// templates/, plugins/   the user's own, for later
     /// assets/                converted from the game's archives; made again whenever they change
     ///   manifest.json        what they were converted from, and by which editor (AssetManifestDto)
     ///   env/..., units/...   the game's paths in lower case: textures as PNG, blueprints as JSON

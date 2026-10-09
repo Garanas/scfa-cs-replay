@@ -34,7 +34,8 @@
                 </Border>
                 <TextBlock Classes="caption" Text="Normal map" />
               </StackPanel>
-              <TextBlock Classes="caption" Text="{Binding Assets.ShownUses}" AutomationProperties.Name="Uses of the asset" />
+              <TextBlock Classes="caption" Text="{Binding Assets.ShownUses}" IsVisible="{Binding Assets.ShownUses, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                         AutomationProperties.Name="Uses of the asset" />
             </StackPanel>
           </Border>
           <Border Classes="group" IsVisible="{Binding Assets.IsFamilySelected}">
@@ -61,9 +62,9 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Classes="label" Text="In the game" />
+              <TextBlock Classes="label" Text="{Binding Assets.ShownKeyLabel}" />
               <TextBox Classes="mono" Text="{Binding Assets.Shown.Key, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
-                       AutomationProperties.Name="Path in the game" AutomationProperties.HelpText="How a map names it; select it to copy" />
+                       AutomationProperties.Name="Path of the asset" AutomationProperties.HelpText="How a map or the workspace names it; select it to copy" />
             </StackPanel>
           </Border>
           <Border Classes="group">

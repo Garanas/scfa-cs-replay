@@ -408,6 +408,7 @@ namespace FAForever.MapEditor.App.Tests
         {
             (MainWindow window, MainViewModel model) = await Open();
             model.Assets.Use(TestAssets.Catalog());
+            model.Assets.Kind = Project.Workspaces.AssetKind.Prop;
             model.Assets.Scope = AssetScope.Everything;
             model.Dock = DockTab.Assets;
             Dispatcher.UIThread.RunJobs();

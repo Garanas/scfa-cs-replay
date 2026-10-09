@@ -119,6 +119,26 @@ public sealed class ShowAssetFileHandler(MainViewModel model, AssetsViewModel as
 }
 
 /// <summary>
+/// Shows the workspace's brushes folder in the system's file manager, to put brushes in: greyscale
+/// PNGs, in folders as one likes (user story T-2). The shelf reads them as they change.
+/// </summary>
+[EditorCommand("assets.brushesFolder", "Show the brushes folder", Story = "T-2", Needs = Needs.Workspace)]
+public sealed record ShowBrushesFolder : IRequest;
+
+public sealed class ShowBrushesFolderHandler(MainViewModel model, WorkspaceSetupViewModel setup) : IRequestHandler<ShowBrushesFolder>
+{
+    public Task Handle(ShowBrushesFolder request, CancellationToken cancellationToken)
+    {
+        if (setup.Workspace is { } workspace)
+        {
+            Directory.CreateDirectory(workspace.BrushesFolder);
+            model.ShowFolder(workspace.BrushesFolder);
+        }
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>
 /// Reads the workspace's assets again, after a tool changed them (user story F-8).
 /// </summary>
 [EditorCommand("assets.reload", "Read the assets again", Story = "F-8", Needs = Needs.Workspace)]

@@ -70,7 +70,8 @@ public sealed class AssetThumbnail : Control
 
     private void Load()
     {
-        if (Source is string source && VisualRoot is not null && Cache.Get(source, DecodeWidth) is null)
+        // the cache reads it again when the file changed since (a brush the map maker saved)
+        if (Source is string source && VisualRoot is not null)
         {
             _ = LoadAsync(source, DecodeWidth);
         }
@@ -121,14 +122,15 @@ public sealed class AssetThumbnail : Control
     }
 
     /// <summary>
-    /// The pictures read, small, by file and width: the most recent few hundred.
+    /// The pictures read, small, by file and width, with the time the file was written: the most
+    /// recent few hundred.
     /// </summary>
     public static class Cache
     {
         private const int Capacity = 600;
         private static readonly object Gate = new object();
-        private static readonly Dictionary<(string, int), LinkedListNode<((string, int) Key, Bitmap? Bitmap)>> Entries = [];
-        private static readonly LinkedList<((string, int) Key, Bitmap? Bitmap)> Order = new();
+        private static readonly Dictionary<(string, int), LinkedListNode<((string, int) Key, Bitmap? Bitmap, DateTime Written)>> Entries = [];
+        private static readonly LinkedList<((string, int) Key, Bitmap? Bitmap, DateTime Written)> Order = new();
         private static readonly Dictionary<(string, int), Task> Loading = [];
         private static readonly SemaphoreSlim Readers = new SemaphoreSlim(Math.Max(2, Environment.ProcessorCount / 2));
 
@@ -150,16 +152,23 @@ public sealed class AssetThumbnail : Control
         }
 
         /// <summary>
-        /// Reads the picture unless it is read or being read; a file that cannot be read is kept as none.
+        /// Reads the picture unless it is read (from the file as it is now) or being read; a file
+        /// that cannot be read is kept as none.
         /// </summary>
         public static Task LoadAsync(string file, int width)
         {
             (string, int) key = (file, width);
+            DateTime written = File.GetLastWriteTimeUtc(file);
             lock (Gate)
             {
-                if (Entries.ContainsKey(key))
+                if (Entries.TryGetValue(key, out var node))
                 {
-                    return Task.CompletedTask;
+                    if (node.Value.Written == written)
+                    {
+                        return Task.CompletedTask;
+                    }
+                    Entries.Remove(key);
+                    Order.Remove(node);
                 }
                 if (Loading.TryGetValue(key, out Task? loading))
                 {
@@ -187,7 +196,11 @@ public sealed class AssetThumbnail : Control
                     lock (Gate)
                     {
                         Loading.Remove(key);
-                        Entries[key] = Order.AddFirst((key, bitmap));
+                        if (Entries.Remove(key, out var stale))
+                        {
+                            Order.Remove(stale);
+                        }
+                        Entries[key] = Order.AddFirst((key, bitmap, written));
                         while (Order.Count > Capacity)
                         {
                             // not disposed: a control may be drawing it on the window's thread

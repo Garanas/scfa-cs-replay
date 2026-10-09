@@ -86,7 +86,9 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **T-1 Sculpt.** Raise, lower, smooth and flatten with a round brush. Missing: set height, add,
       scale, noise, erosion; a choice of falloff; brushes from images (stamps) with rotation;
       limits on the lowest and highest height.
-- [ ] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace.
+- [ ] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace. Today: the
+      brush shapes, greyscale PNGs of the workspace's `brushes` folder, in the asset shelf of the
+      Terrain mode, read again when they change; missing: using them (T-1), presets of settings.
 - [x] **T-3 Heightmap from other tools.** `heightmap.png` or `.r16` in the project is read again
       when World Machine or Gaea writes it. Missing: import or export with a different size.
 - [ ] **T-4 Curves.** Draw a curve (spline) and shape the terrain along it: a ridge, a valley, a

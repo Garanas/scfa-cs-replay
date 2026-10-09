@@ -363,8 +363,13 @@ picker C2, the atlas C3 and the interactions C4). `AssetsViewModel` (`model.Asse
 workspace's `AssetCatalog` (the library's guide), read on a pool thread when the workspace is
 ready and again with Modes, Assets, Read the assets again (`assets.reload`):
 
-- **Kind** follows the mode (Paint textures, Props props, Decals decals, Units units; another
-  mode keeps it); the chips above choose it by hand, with how many each shows.
+- **Kind** follows the mode (Terrain brushes, Paint textures, Props props, Decals decals, Units
+  units; another mode keeps it); the chips above choose it by hand, with how many each shows.
+- **Brushes** are the workspace's own, not the game's: the greyscale PNGs of its `brushes` folder,
+  in folders as the map maker likes (the folders are the shelf's groups; Modes, Assets, Show the
+  brushes folder, `assets.brushesFolder`). The editor watches the folder and reads the brushes
+  again when a file changes; a thumbnail whose file changed is read again too. Sculpting with one
+  (stamps) is not built yet (T-1).
 - **Show**: what the map uses (`InMap`), the map's biomes (`Narrow`: the biomes of the props,
   decals and strata it uses, all when none; for units the civilian ones), or `Everything`. Then
   the biome (or faction) and the category: the left column holds what filters, nothing else. The

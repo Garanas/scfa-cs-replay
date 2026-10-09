@@ -75,6 +75,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly SynchronizationContext? _ui;
     private string? _openWhenReady;
     private ProjectWatcher? _watcher;
+    private ProjectWatcher? _brushWatcher;
     private EditTransaction? _stroke;
     private readonly HashSet<string> _pendingReload = new HashSet<string>(StringComparer.Ordinal);
 
@@ -152,6 +153,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void OnWorkspaceReady(Workspace workspace)
     {
+        WatchBrushes(workspace);
         _ = LoadAssetsAsync(workspace);
         Refresh(null);
         if (_openWhenReady is string folder)
@@ -159,6 +161,31 @@ public sealed partial class MainViewModel : ObservableObject
             _openWhenReady = null;
             _ = OpenOnStartAsync(folder);
         }
+    }
+
+    /// <summary>
+    /// Reads the brushes again when a file of the workspace's brushes folder changes: the map
+    /// maker adds and changes them with other tools (user stories F-6, T-2).
+    /// </summary>
+    private void WatchBrushes(Workspace workspace)
+    {
+        _brushWatcher?.Dispose();
+        _brushWatcher = null;
+        try
+        {
+            Directory.CreateDirectory(workspace.BrushesFolder);
+            _brushWatcher = new ProjectWatcher(workspace.BrushesFolder);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            Logger("Assets").LogWarning(exception, "Cannot watch the brushes in {Folder}: {Reason}", workspace.BrushesFolder, exception.Message);
+            return;
+        }
+        _brushWatcher.Changed += files => UiThread.Run(_ui, () =>
+        {
+            Logger("Assets").LogInformation("The brushes changed on disk: {Files}", string.Join(", ", files));
+            _ = LoadAssetsAsync(workspace);
+        });
     }
 
     /// <summary>

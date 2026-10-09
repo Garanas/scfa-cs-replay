@@ -101,8 +101,8 @@ public sealed record AssetChoice(string? Value, string Title, int Count, bool Is
 }
 
 /// <summary>
-/// The asset shelf (concept C1, user stories F-8 and F-9): the workspace's props, units, decals
-/// and stratum textures to look through, by kind (which follows the mode), scope (what the map
+/// The asset shelf (concept C1, user stories F-8 and F-9): the workspace's props, units, decals,
+/// stratum textures and brushes to look through, by kind (which follows the mode), scope (what the map
 /// uses, its biomes, everything), search, biome or faction, and category; a prop's variants as one
 /// tile. What is selected shows in the inspector.
 /// </summary>
@@ -135,7 +135,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// <summary>
     /// What the groups are: the biomes, or the units' factions.
     /// </summary>
-    public string GroupsTitle => Kind == AssetKind.Unit ? "Faction" : "Biome";
+    public string GroupsTitle => Kind switch { AssetKind.Unit => "Faction", AssetKind.Brush => "Folder", _ => "Biome" };
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsInMap), nameof(IsNarrow), nameof(IsEverything))]
@@ -201,7 +201,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// The variant of the selected family the inspector shows.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownPlanned))]
+    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownPlanned), nameof(ShownKeyLabel))]
     public partial AssetEntry? SelectedMember { get; set; }
 
     public bool HasSelection => Selected is not null;
@@ -217,13 +217,18 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// What the shown asset is, in a line: <c>Prop · Evergreen · trees</c>.
     /// </summary>
     public string ShownDetail => Shown is AssetEntry shown
-        ? $"{KindTitle(shown.Kind).TrimEnd('s')} · {Title(shown.Group)} · {shown.Category}"
+        ? $"{Noun(shown.Kind, 1)} · {Title(shown.Group)} · {shown.Category}"
         : "";
 
-    public string ShownUses => Shown is AssetEntry shown
+    public string ShownUses => Shown is AssetEntry shown && shown.Kind != AssetKind.Brush
         ? (shown.Keys.Sum(key => _uses.GetValueOrDefault(key)) switch { 0 => "Not used by this map", 1 => "Used once by this map", int n => $"Used {n} times by this map" })
             + (IsFamilySelected && Selected!.Uses > 0 ? $"; its family {Selected.Uses} times" : "")
         : "";
+
+    /// <summary>
+    /// Where the shown asset's name points: the game's files, or the workspace's for a brush.
+    /// </summary>
+    public string ShownKeyLabel => Shown?.Kind == AssetKind.Brush ? "In the workspace" : "In the game";
 
     public string? ShownImage => Shown?.Image;
 
@@ -244,6 +249,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         AssetKind.Unit => "Placing it for an army: user story U-2",
         AssetKind.Decal => "Placing it on the terrain: user story D-1",
         AssetKind.Texture => "Using it for a stratum: user story S-2",
+        AssetKind.Brush => "Sculpting with it as a stamp: user story T-1",
         _ => "",
     };
 
@@ -251,6 +257,9 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// Why the shelf is empty, or empty when it is not.
     /// </summary>
     public string EmptyText => Tiles.Count > 0 ? ""
+        : Kind == AssetKind.Brush && !Catalog.Entries.Any(entry => entry.Kind == AssetKind.Brush)
+            ? "No brushes yet: put greyscale PNGs in the workspace's brushes folder (Modes, Assets, Show the brushes folder), in folders as you like."
+        : Kind == AssetKind.Brush && Scope == AssetScope.InMap ? "A map holds no brushes: choose The workspace's."
         : Catalog.Entries.Count == 0 ? "The workspace has no converted assets."
         : Scope == AssetScope.InMap ? "The map uses none of these. Choose Map's biomes or Everything."
         : "Nothing matches. Search in Everything, or clear the biome and category.";
@@ -278,12 +287,13 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// </summary>
     public int InMapCount => _uses.Keys.Select(Catalog.Find).Where(entry => entry?.Kind == Kind).Distinct().Count();
 
-    public string NarrowTitle => Kind == AssetKind.Unit ? "Civilian" : "Map's biomes";
+    public string NarrowTitle => Kind switch { AssetKind.Unit => "Civilian", AssetKind.Brush => "The workspace's", _ => "Map's biomes" };
 
     /// <summary>
     /// Which assets <see cref="AssetScope.Narrow"/> shows, said in full.
     /// </summary>
     public string NarrowHelp => Kind == AssetKind.Unit ? "The civilian units"
+        : Kind == AssetKind.Brush ? "Every brush of the workspace's brushes folder"
         : _biomes.Count == 0 ? "Every biome: the map uses none yet"
         : $"The biomes the map uses: {string.Join(", ", _biomes.Select(Title))}";
 
@@ -295,13 +305,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         get
         {
             int assets = Tiles.Sum(tile => tile.Members.Count);
-            string noun = Kind switch
-            {
-                AssetKind.Prop => assets == 1 ? "prop" : "props",
-                AssetKind.Unit => assets == 1 ? "unit" : "units",
-                AssetKind.Decal => assets == 1 ? "decal" : "decals",
-                _ => assets == 1 ? "texture" : "textures",
-            };
+            string noun = Noun(Kind, assets).ToLowerInvariant();
             if (Catalog.Entries.Count == 0)
             {
                 return "No assets: the workspace has none converted";
@@ -324,7 +328,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         AssetCatalog catalog = await Task.Run(() =>
         {
             using Performance.Span measure = Performance.Measure("assets.load");
-            return AssetCatalog.Load(workspace.AssetsFolder);
+            return AssetCatalog.Load(workspace);
         });
         Catalog = catalog;
         _log.LogInformation("Read {Assets} assets of the workspace in {Milliseconds} ms", catalog.Entries.Count, Math.Round(Stopwatch.GetElapsedTime(start).TotalMilliseconds));
@@ -371,12 +375,14 @@ public sealed partial class AssetsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The kind of the mode the map maker chose: the shelf follows Paint, Props, Decals and Units.
+    /// The kind of the mode the map maker chose: the shelf follows Terrain (brushes), Paint, Props,
+    /// Decals and Units.
     /// </summary>
     public void FollowMode(string mode)
     {
         AssetKind? kind = mode switch
         {
+            "terrain" => AssetKind.Brush,
             "paint" => AssetKind.Texture,
             "props" => AssetKind.Prop,
             "decals" => AssetKind.Decal,
@@ -560,11 +566,13 @@ public sealed partial class AssetsViewModel : ObservableObject
         OnPropertyChanged(nameof(NarrowTitle));
         OnPropertyChanged(nameof(NarrowHelp));
 
-        AssetTile? again = selected is null ? null : TileOf(selected);
+        // by its key: read again, the catalogue holds other objects for the same assets
+        AssetEntry? current = selected is null ? null : Catalog.Find(selected.Key);
+        AssetTile? again = current is null ? null : TileOf(current);
         Select(again);
-        if (again is not null && selected is not null)
+        if (again is not null)
         {
-            SelectedMember = selected;
+            SelectedMember = current;
         }
     }
 
@@ -578,7 +586,12 @@ public sealed partial class AssetsViewModel : ObservableObject
     private bool IsInScope(AssetEntry entry) => Scope switch
     {
         AssetScope.InMap => entry.Keys.Any(_uses.ContainsKey),
-        AssetScope.Narrow => entry.Kind == AssetKind.Unit ? entry.IsCivilian : _biomes.Count == 0 || _biomes.Contains(entry.Group),
+        AssetScope.Narrow => entry.Kind switch
+        {
+            AssetKind.Unit => entry.IsCivilian,
+            AssetKind.Brush => true,
+            _ => _biomes.Count == 0 || _biomes.Contains(entry.Group),
+        },
         _ => true,
     };
 
@@ -610,11 +623,22 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// </summary>
     public static string Title(string name) => name.Length == 0 ? name : char.ToUpperInvariant(name[0]) + name[1..];
 
-    public static string KindTitle(AssetKind kind) => kind switch
+    public static string KindTitle(AssetKind kind) => Noun(kind, 2);
+
+    /// <summary>
+    /// The kind's name for <paramref name="count"/> of it: <c>Prop</c>, <c>Brushes</c>.
+    /// </summary>
+    public static string Noun(AssetKind kind, int count) => (kind, count == 1) switch
     {
-        AssetKind.Prop => "Props",
-        AssetKind.Unit => "Units",
-        AssetKind.Decal => "Decals",
+        (AssetKind.Prop, true) => "Prop",
+        (AssetKind.Prop, false) => "Props",
+        (AssetKind.Unit, true) => "Unit",
+        (AssetKind.Unit, false) => "Units",
+        (AssetKind.Decal, true) => "Decal",
+        (AssetKind.Decal, false) => "Decals",
+        (AssetKind.Brush, true) => "Brush",
+        (AssetKind.Brush, false) => "Brushes",
+        (_, true) => "Texture",
         _ => "Textures",
     };
 
@@ -623,6 +647,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         AssetKind.Prop => "Icon.Props",
         AssetKind.Unit => "Icon.Units",
         AssetKind.Decal => "Icon.Decals",
+        AssetKind.Brush => "Icon.Terrain",
         _ => "Icon.Paint",
     };
 }

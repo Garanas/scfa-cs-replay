@@ -73,6 +73,28 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void ReadsTheWorkspacesBrushesInTheirFolders()
+        {
+            string brushes = ProjectFolders.New("brushes");
+            Directory.CreateDirectory(Path.Combine(brushes, "Craters"));
+            // a PNG of one grey pixel, 8 bits
+            byte[] pixel = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==");
+            File.WriteAllBytes(Path.Combine(brushes, "Craters", "Crater01.png"), pixel);
+            File.WriteAllBytes(Path.Combine(brushes, "ridge.png"), pixel);
+            File.WriteAllText(Path.Combine(brushes, "notes.txt"), "not a brush");
+
+            AssetCatalog catalog = AssetCatalog.Load(ProjectFolders.New("no-assets"), brushes);
+
+            Assert.AreEqual(2, catalog.Entries.Count);
+            AssetEntry crater = catalog.Find("brushes/craters/crater01.png")!;
+            Assert.AreEqual((AssetKind.Brush, "craters", "Crater01"), (crater.Kind, crater.Group, crater.Name));
+            Assert.IsTrue(crater.Facts.Contains(new AssetFact("Size", "1 × 1 pixels")));
+            Assert.IsTrue(crater.Facts.Contains(new AssetFact("Values", "8-bit grey")));
+            Assert.AreEqual("brushes", catalog.Find("brushes/ridge.png")!.Group, "a brush directly in the folder");
+            Assert.AreEqual(Path.Combine(brushes, "ridge.png"), catalog.Find("brushes/ridge.png")!.Image);
+        }
+
+        [TestMethod]
         public void AnAbsentFolderHasNoAssets()
         {
             Assert.AreEqual(0, AssetCatalog.Load(ProjectFolders.New("none")).Entries.Count);
