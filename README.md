@@ -8,6 +8,7 @@ The libraries live in `src/`:
 - `FAForever.FileFormats.Blueprints`: blueprint files (`.bp`) of units, projectiles, props and effects.
 - `FAForever.FileFormats.Lua`: Lua values and the data-only Lua that game files are written in.
 - `FAForever.FileFormats.Map`: maps: the binary `.scmap` and its `_save.lua` and `_scenario.lua`.
+- `FAForever.FileFormats.Mesh`: meshes of units and props (`.scm`).
 
 ## Map editor
 

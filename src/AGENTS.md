@@ -9,6 +9,7 @@ the table names each project's guide, read it before working in that project:
 | `FAForever.FileFormats.Lua` | [Blueprints guide](FAForever.FileFormats.Blueprints/AGENTS.md) | Lua values and the data-only Lua evaluator |
 | `FAForever.FileFormats.Blueprints` | [its guide](FAForever.FileFormats.Blueprints/AGENTS.md) | Blueprint files, blueprint ids, unit names, factions |
 | `FAForever.FileFormats.Map` | [its guide](FAForever.FileFormats.Map/AGENTS.md) | Map files: `.scmap`, `_save.lua`, `_scenario.lua` |
+| `FAForever.FileFormats.Mesh` | the doc comments of `ScmParser` | Meshes (`.scm`): read with `ScmParser`, write with `ScmWriter` |
 | `FAForever.FileFormats.Replay` | [its guide](FAForever.FileFormats.Replay/AGENTS.md) | The replay parser (benchmarked, fingerprint-tested) |
 | `FAForever.Vault.Viewer` | [its guide](FAForever.Vault.Viewer/AGENTS.md) | Blazor WebAssembly app |
 | `FAForever.Vault.Server` | the root guide | Static host, OAuth token proxy, link previews |
@@ -23,6 +24,7 @@ Vault.Server → Vault.Viewer → FileFormats.Replay → FileFormats.Blueprints 
                      └──────→ FileFormats.Map ─────────────────────────→ FileFormats.Lua
 MapEditor.App → MapEditor.Project → FileFormats.Map, FileFormats.Blueprints
 MapEditor.Cli ──┘
+FileFormats.Mesh (no references)
 ```
 
 - A `FileFormats` library never references `Vault`, and a lower library never references a higher
