@@ -27,7 +27,7 @@
       <TextBlock Classes="error" Text="{Binding SetupError}" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
       <TextBlock Classes="caption"
                  Text="Setting up converts the game's environment and units: about 3 GB, a minute or so. The editor waits until it is done." />
-      <Button Content="Set up" Classes="accent" HorizontalAlignment="Left" MinWidth="120" Command="{Binding SetUpCommand}" />
+      <Button Content="Set up" Classes="accent" HorizontalAlignment="Left" MinWidth="120" Command="{Binding RunCommand}" CommandParameter="workspace.setUp" />
     </StackPanel>
   </ScrollViewer>
 </UserControl>

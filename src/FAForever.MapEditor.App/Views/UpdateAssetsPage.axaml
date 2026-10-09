@@ -15,6 +15,6 @@
     </ItemsControl>
     <TextBlock Classes="error" Text="{Binding SetupError}" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
     <TextBlock Classes="caption" Text="The editor converts them again before it opens: a minute or so." />
-    <Button Content="Update the assets" Classes="accent" HorizontalAlignment="Left" MinWidth="160" Command="{Binding UpdateAssetsCommand}" />
+    <Button Content="Update the assets" Classes="accent" HorizontalAlignment="Left" MinWidth="160" Command="{Binding RunCommand}" CommandParameter="workspace.convert" />
   </StackPanel>
 </UserControl>

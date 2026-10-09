@@ -12,11 +12,6 @@ namespace FAForever.MapEditor.App.Views;
 
 public sealed partial class MainWindow : Window
 {
-    /// <summary>
-    /// The menus of the menu bar, in order; the commands of the modes go under Modes, by mode.
-    /// </summary>
-    private static readonly string[] MenuBar = ["File", "Edit", "Select", "View", "Map", "Modes", "Generate", "Plugins", "Help"];
-
     private bool _mayClose;
     private MainViewModel? _model;
     private readonly List<CommandAdapter> _adapters = [];
@@ -82,69 +77,59 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The menu bar and the window's shortcuts, from the controller's commands: a command added
-    /// to a controller shows up in its menu with its shortcut without a change here.
+    /// The menu bar (<see cref="Menus.Bar"/>) and the window's shortcuts, from the commands: one
+    /// adapter per command, used by its menu item and its shortcut.
     /// </summary>
     private void BuildMenusAndShortcuts(MainViewModel model)
     {
         _adapters.Clear();
         KeyBindings.Clear();
-        List<MenuItem> menus = [];
-        Dictionary<string, MenuItem> modeMenus = [];
-
-        MenuItem MenuOf(string name)
+        Dictionary<string, CommandAdapter> adapters = [];
+        foreach (EditorCommand command in model.Commands.All)
         {
-            string top = MenuBar.Contains(name) ? name : "Modes";
-            MenuItem menu = menus.FirstOrDefault(m => (string?)m.Tag == top) ?? Add(top);
-            if (top != "Modes")
+            CommandAdapter adapter = new CommandAdapter(model, command);
+            adapters[command.Id] = adapter;
+            _adapters.Add(adapter);
+            if (command.Gesture is string gesture)
             {
-                return menu;
+                KeyBindings.Add(new KeyBinding { Gesture = KeyGesture.Parse(gesture), Command = adapter });
             }
-            if (!modeMenus.TryGetValue(name, out MenuItem? sub))
-            {
-                sub = new MenuItem { Header = name };
-                menu.Items.Add(sub);
-                modeMenus[name] = sub;
-            }
-            return sub;
         }
+        KeyBindings.Add(new KeyBinding { Gesture = KeyGesture.Parse("Ctrl+Shift+Z"), Command = adapters["edit.redo"] });
 
-        MenuItem Add(string name)
+        MenuItem Menu(MenuLayout layout, bool top)
         {
-            MenuItem menu = new MenuItem { Header = "_" + name, Tag = name };
-            menus.Add(menu);
+            MenuItem menu = new MenuItem { Header = top ? "_" + layout.Title : layout.Title };
+            foreach (object entry in layout.Items)
+            {
+                menu.Items.Add(entry switch
+                {
+                    MenuLayout submenu => Menu(submenu, top: false),
+                    Menus.Separator => new Separator(),
+                    string id => Item(adapters[id]),
+                    _ => throw new InvalidOperationException($"The menu {layout.Title} holds {entry}"),
+                });
+            }
             return menu;
         }
 
-        foreach (string name in MenuBar)
+        MainMenu.ItemsSource = Menus.Bar.Select(layout => Menu(layout, top: true)).ToList();
+    }
+
+    private static MenuItem Item(CommandAdapter adapter)
+    {
+        EditorCommand command = adapter.Command;
+        MenuItem item = new MenuItem { Header = command.Title, Command = adapter };
+        if (command.Incomplete is IncompleteAttribute incomplete)
         {
-            Add(name);
+            item.Classes.Add("planned");
+            ToolTip.SetTip(item, $"Not built yet: user story {incomplete.Story}. {incomplete.Missing}");
         }
-        foreach (EditorCommand command in model.Commands.All.Where(c => c.Menu.Length > 0))
+        if (command.Gesture is string gesture)
         {
-            MenuItem menu = MenuOf(command.Menu);
-            if (command.SeparatorBefore && menu.Items.Count > 0)
-            {
-                menu.Items.Add(new Separator());
-            }
-            CommandAdapter adapter = new CommandAdapter(model, command);
-            _adapters.Add(adapter);
-            MenuItem item = new MenuItem { Header = command.Title, Command = adapter };
-            if (command.Incomplete is IncompleteAttribute incomplete)
-            {
-                item.Classes.Add("planned");
-                ToolTip.SetTip(item, $"Not built yet: user story {incomplete.Story}. {incomplete.Missing}");
-            }
-            if (command.Gesture is string gesture)
-            {
-                KeyGesture keys = KeyGesture.Parse(gesture);
-                item.InputGesture = keys;
-                KeyBindings.Add(new KeyBinding { Gesture = keys, Command = adapter });
-            }
-            menu.Items.Add(item);
+            item.InputGesture = KeyGesture.Parse(gesture);
         }
-        KeyBindings.Add(new KeyBinding { Gesture = KeyGesture.Parse("Ctrl+Shift+Z"), Command = new CommandAdapter(model, model.Commands.Find("edit.redo")!) });
-        MainMenu.ItemsSource = menus.Where(menu => menu.Items.Count > 0).ToList();
+        return item;
     }
 
     private void OnModelChanged(object? sender, PropertyChangedEventArgs e)
@@ -200,16 +185,18 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// A command of the controller as a menu item's or shortcut's command: it runs through the
-    /// controller, so a command not built yet reports what it is to do.
+    /// A command as a menu item's or shortcut's command: it runs through the registry, so a command
+    /// not built yet reports what it is to do.
     /// </summary>
     private sealed class CommandAdapter(MainViewModel model, EditorCommand command) : ICommand
     {
         public event EventHandler? CanExecuteChanged;
 
-        public bool CanExecute(object? parameter) => command.IsIncomplete || command.CanRun();
+        public EditorCommand Command => command;
 
-        public void Execute(object? parameter) => _ = model.Commands.RunAsync(command.Id);
+        public bool CanExecute(object? parameter) => command.IsIncomplete || model.Commands.CanRun(command);
+
+        public void Execute(object? parameter) => _ = model.RunAsync(command.Id);
 
         public void Refresh() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }

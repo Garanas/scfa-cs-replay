@@ -28,8 +28,8 @@
                 <DataTemplate x:DataType="vm:ToolItem">
                   <Button Classes="tool" Classes.active="{Binding IsActive}" Classes.planned="{Binding Definition.IsIncomplete}"
                           Content="{Binding Definition.Title}"
-                          Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ChooseToolCommand}"
-                          CommandParameter="{Binding Definition.Id}"
+                          Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}"
+                          CommandParameter="{Binding Definition.CommandId}"
                           ToolTip.Tip="{Binding Definition.Missing}"
                           AutomationProperties.Name="{Binding Definition.Title}" />
                 </DataTemplate>

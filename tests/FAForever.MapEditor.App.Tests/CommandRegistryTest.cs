@@ -1,8 +1,10 @@
 using System.Reflection;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Avalonia.Input;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.ViewModels;
+using MediatR;
 
 namespace FAForever.MapEditor.App.Tests
 {
@@ -53,22 +55,68 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public void EveryIncompleteFunctionNamesItsStory()
+        public void EveryCommandNotBuiltNamesItsStory()
         {
-            // the [Incomplete] functions of the whole editor, for the list of what is left
-            (string Function, IncompleteAttribute Incomplete)[] incomplete = [.. typeof(MainViewModel).Assembly.GetTypes()
-                .SelectMany(type => type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-                    .Select(method => (Function: $"{type.Name}.{method.Name}", Incomplete: method.GetCustomAttribute<IncompleteAttribute>()))
-                    .Where(found => found.Incomplete is not null))
-                .Select(found => (found.Function, found.Incomplete!))];
+            // the commands of the whole editor that are not built yet, for the list of what is left
+            EditorCommand[] incomplete = [.. NewModel().Commands.All.Where(command => command.IsIncomplete)];
             HashSet<string> stories = Stories();
 
             Assert.IsTrue(incomplete.Length > 40);
-            foreach ((string function, IncompleteAttribute attribute) in incomplete)
+            foreach (EditorCommand command in incomplete)
             {
-                Assert.IsTrue(stories.Contains(attribute.Story), $"{function} names {attribute.Story}, which is not in USER_STORIES.md");
-                Assert.IsFalse(string.IsNullOrWhiteSpace(attribute.Missing), $"{function} says what is missing");
+                Assert.IsTrue(stories.Contains(command.Incomplete!.Story), $"{command.Id} names {command.Incomplete.Story}, which is not in USER_STORIES.md");
+                Assert.IsFalse(string.IsNullOrWhiteSpace(command.Incomplete.Missing), $"{command.Id} says what is missing");
             }
+        }
+
+        [TestMethod]
+        public void EveryCommandBuiltHasAHandlerAndNoneNotBuiltHasOne()
+        {
+            Type[] types = typeof(MainViewModel).Assembly.GetTypes();
+            HashSet<Type> handled = [.. types
+                .SelectMany(type => type.GetInterfaces())
+                .Where(contract => contract.IsGenericType && contract.GetGenericTypeDefinition() is Type definition
+                    && (definition == typeof(IRequestHandler<>) || definition == typeof(IRequestHandler<,>)))
+                .Select(contract => contract.GetGenericArguments()[0])];
+
+            foreach (Type request in types.Where(type => type.GetCustomAttribute<EditorCommandAttribute>() is not null))
+            {
+                bool incomplete = request.GetCustomAttribute<IncompleteAttribute>() is not null;
+                Assert.AreEqual(!incomplete, handled.Contains(request),
+                    incomplete ? $"{request.Name} is not built yet and has a handler" : $"{request.Name} has no handler");
+            }
+        }
+
+        [TestMethod]
+        public void TheMenusHoldEveryCommandOnce()
+        {
+            MainViewModel model = NewModel();
+            List<string> ids = [];
+            void Collect(MenuLayout menu)
+            {
+                foreach (object item in menu.Items)
+                {
+                    if (item is MenuLayout submenu)
+                    {
+                        Collect(submenu);
+                    }
+                    else if (item is string id && id != Menus.Separator)
+                    {
+                        ids.Add(id);
+                    }
+                }
+            }
+            foreach (MenuLayout menu in Menus.Bar)
+            {
+                Collect(menu);
+            }
+
+            CollectionAssert.AllItemsAreUnique(ids, "a command shows in one menu");
+            string[] outside = [.. model.Commands.All.Where(command => !ids.Contains(command.Id)).Select(command => command.Id).Order()];
+            CollectionAssert.AreEqual(
+                new[] { "brush.set", "edit.goTo", "file.enableVersionControl", "workspace.convert", "workspace.setUp" }, outside,
+                "the commands outside the menus are for automation and plugins: their buttons are on a page or panel");
+            Assert.AreEqual("Terrain", model.Commands.Find("tool.terrain.curve")!.Menu, "a tool is in its mode's menu");
         }
 
         [TestMethod]
@@ -134,6 +182,50 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task ACommandTakesItsArgumentsByName()
+        {
+            MainViewModel model = NewModel();
+
+            CommandRun opened = await model.Commands.RunAsync("file.open", new JsonObject { ["folder"] = "assets/maps/HardFFA.v0001" }, interactive: false);
+            Assert.IsTrue(opened.Ran);
+            Assert.IsTrue(model.HasMap);
+
+            model.Stroke([(50, 50), (60, 60)]);
+            CommandRun undone = await model.Commands.RunAsync("edit.undo", null, interactive: false);
+            Assert.AreEqual(true, undone.Result, "a command answers");
+
+            Assert.ThrowsException<ArgumentException>(() => model.Commands.RunAsync("edit.goTo", [], interactive: false).GetAwaiter().GetResult(),
+                "an argument it needs is missing");
+            Assert.ThrowsException<ArgumentException>(() => model.Commands.RunAsync("file.open", new JsonObject { ["path"] = "x" }, interactive: false).GetAwaiter().GetResult(),
+                "an argument it does not take");
+            Assert.AreEqual("file.open {folder?}", model.Commands.Find("file.open")!.Usage);
+        }
+
+        [TestMethod]
+        public async Task ACommandWithoutAPersonAsksNothing()
+        {
+            MainViewModel model = NewModel();
+            await model.OpenAsync("assets/maps/HardFFA.v0001");
+
+            InvalidOperationException asked = Assert.ThrowsException<InvalidOperationException>(
+                () => model.Commands.RunAsync("file.saveAs", null, interactive: false).GetAwaiter().GetResult());
+
+            StringAssert.Contains(asked.Message, "Give the folder as an argument");
+        }
+
+        [TestMethod]
+        public void ACommandWaitsForWhatItNeeds()
+        {
+            MainViewModel model = NewModel();
+
+            Assert.IsFalse(model.Commands.CanRun(model.Commands.Find("file.save")!), "no map");
+            Assert.IsFalse(model.Commands.CanRun(model.Commands.Find("edit.undo")!), "nothing to undo");
+            Assert.IsFalse(model.Commands.CanRun(model.Commands.Find("file.commit")!), "no project");
+            Assert.IsTrue(model.Commands.CanRun(model.Commands.Find("file.open")!));
+            Assert.IsFalse(model.Commands.CanRun(model.Commands.Find("terrain.addLayer")!), "not built");
+        }
+
+        [TestMethod]
         public void ThePaletteFindsCommandsBuiltFirst()
         {
             MainViewModel model = NewModel();
@@ -146,6 +238,69 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(model.PaletteResults.All(c => c.FullTitle.Contains("layer", StringComparison.OrdinalIgnoreCase) || c.Id.Contains("layer", StringComparison.OrdinalIgnoreCase)));
             Assert.IsFalse(model.PaletteResults.SkipWhile(c => !c.IsIncomplete).Any(c => !c.IsIncomplete), "the commands that work come first");
             Assert.AreSame(model.PaletteResults[0], model.PaletteSelection);
+        }
+
+        [TestMethod]
+        public async Task ACommandWithUndoStepIsOneStepAndLeavesNothingWhenItFails()
+        {
+            MainViewModel model = NewModel();
+            await model.OpenAsync("assets/maps/HardFFA.v0001");
+            CommandRegistry commands = CommandServices.Create(model, new DialogGuard(new NoDialogs()), typeof(CommandRegistryTest).Assembly);
+            ushort before = model.Map!.Document.Terrain.Heightmap.Samples[40, 40];
+
+            Assert.IsTrue(await commands.RunAsync("test.raise"));
+
+            Assert.AreEqual(before + 100, model.Map.Document.Terrain.Heightmap.Samples[40, 40]);
+            Assert.AreEqual("Raise a square", model.Map.Session.UndoDescription, "named after the command");
+            Assert.AreEqual(1, model.Map.Session.History.Count);
+
+            InvalidOperationException failed = Assert.ThrowsException<InvalidOperationException>(
+                () => commands.RunAsync("test.raise", new JsonObject { ["fail"] = true }, interactive: false).GetAwaiter().GetResult());
+            Assert.AreEqual("Failed halfway", failed.Message);
+            Assert.AreEqual(before + 100, model.Map.Document.Terrain.Heightmap.Samples[40, 40], "the half-made edit is gone");
+            Assert.AreEqual(1, model.Map.Session.History.Count, "and is no step of the history");
+
+            model.BeginStroke(10, 10);
+            Assert.IsFalse(await commands.RunAsync("test.raise"), "a stroke holds the map's transaction");
+            model.EndStroke();
+
+            Assert.ThrowsException<InvalidOperationException>(() => commands.RunAsync("test.edit-without-step").GetAwaiter().GetResult(),
+                "a command edits only with [UndoStep]");
+        }
+    }
+
+    /// <summary>
+    /// Raises a square of the heightmap by 100 as one step of undo; fails halfway when asked to.
+    /// </summary>
+    [UndoStep]
+    [EditorCommand("test.raise", "Raise a square")]
+    public sealed record RaiseSquare(bool Fail = false) : IRequest;
+
+    public sealed class RaiseSquareHandler(CurrentEdit edit) : IRequestHandler<RaiseSquare>
+    {
+        public Task Handle(RaiseSquare request, CancellationToken cancellationToken)
+        {
+            var heights = edit.Transaction.Heightmap;
+            for (int z = 40; z < 48; z++)
+            {
+                for (int x = 40; x < 48; x++)
+                {
+                    heights[x, z] = (ushort)(heights[x, z] + 100);
+                }
+            }
+            return request.Fail ? throw new InvalidOperationException("Failed halfway") : Task.CompletedTask;
+        }
+    }
+
+    [EditorCommand("test.edit-without-step", "Edit without a step")]
+    public sealed record EditWithoutStep : IRequest;
+
+    public sealed class EditWithoutStepHandler(CurrentEdit edit) : IRequestHandler<EditWithoutStep>
+    {
+        public Task Handle(EditWithoutStep request, CancellationToken cancellationToken)
+        {
+            _ = edit.Transaction;
+            return Task.CompletedTask;
         }
     }
 }

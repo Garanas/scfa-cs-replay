@@ -154,7 +154,7 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = await SetUp(machine);
             await model.OpenAsync("assets/maps/HardFFA.v0001");
 
-            await model.ExportMapCommand.ExecuteAsync(null);
+            await model.RunAsync("file.export");
 
             Assert.IsTrue(Directory.EnumerateDirectories(Path.Combine(machine.Vault, "maps")).Any(), model.Status);
         }

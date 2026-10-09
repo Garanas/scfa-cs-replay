@@ -216,6 +216,28 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task TheMenusAndShortcutsComeFromTheLayout() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Menu menu = window.FindControl<Menu>("MainMenu")!;
+            MenuItem[] bar = [.. menu.Items.OfType<MenuItem>()];
+            MenuItem Item(MenuItem parent, string header) => parent.Items.OfType<MenuItem>().Single(item => (string?)item.Header == header);
+
+            CollectionAssert.AreEqual(new[] { "_File", "_Edit", "_Select", "_View", "_Map", "_Modes", "_Generate", "_Plugins", "_Help" },
+                bar.Select(item => (string?)item.Header).ToArray());
+            MenuItem terrain = Item(bar[5], "Terrain");
+            Assert.IsTrue(Item(terrain, "Add a height layer...").Classes.Contains("planned"), "a command not built yet shows as planned");
+            Assert.IsNotNull(Item(terrain, "Curve"), "the tools of the mode follow");
+            Assert.AreEqual(KeyGesture.Parse("F2"), Item(terrain, "Terrain mode").InputGesture);
+            Assert.IsInstanceOfType<Separator>(bar[0].Items[3], "the separators of the layout");
+
+            window.KeyPress(Key.F6, RawInputModifiers.None, PhysicalKey.F6, null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual("markers", model.SelectedMode!.Definition.Id, "a mode's shortcut runs its command");
+            window.Close();
+        });
+
+        [TestMethod]
         public Task TheRailChoosesTheMode() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();

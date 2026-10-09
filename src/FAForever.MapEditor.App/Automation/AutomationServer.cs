@@ -7,6 +7,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Avalonia.Input;
+using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
@@ -99,7 +100,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             JsonObject arguments = body.Length > 0 ? JsonNode.Parse(body) as JsonObject ?? [] : [];
             foreach (string key in context.Request.QueryString.AllKeys.OfType<string>())
             {
-                arguments[key] = context.Request.QueryString[key];
+                arguments[key] = Value(context.Request.QueryString[key] ?? "");
             }
             string command = context.Request.Url!.AbsolutePath.Trim('/');
             response = await Dispatcher.UIThread.InvokeAsync(() => RunAsync(command, arguments));
@@ -118,6 +119,41 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
     }
 
     /// <summary>
+    /// The names automation had before its operations became commands of the registry, with the
+    /// command each runs, how its arguments are named there, and where the answer goes in the reply.
+    /// </summary>
+    private static readonly Dictionary<string, (string Runs, (string From, string To)[] Renamed, string? Answer)> Aliases = new()
+    {
+        ["setup"] = ("workspace.setUp", [], "setUp"),
+        ["update-assets"] = ("workspace.convert", [], "converted"),
+        ["open"] = ("file.open", [("path", "folder")], null),
+        ["import"] = ("file.import", [("path", "folder")], null),
+        ["save"] = ("file.save", [("path", "folder")], null),
+        ["save-as"] = ("file.saveAs", [("path", "folder")], null),
+        ["commit"] = ("file.commit", [], "commit"),
+        ["export"] = ("file.export", [("output", "folder")], "folder"),
+        ["undo"] = ("edit.undo", [], "done"),
+        ["redo"] = ("edit.redo", [], "done"),
+        ["goto"] = ("edit.goTo", [], "done"),
+        ["brush"] = ("brush.set", [], null),
+        ["fit"] = ("view.fit", [], null),
+    };
+
+    /// <summary>
+    /// What automation itself answers: reads of the window and the map, and input as the mouse
+    /// gives it. Every operation is a command of the registry (<c>commands</c>, <c>run</c>).
+    /// </summary>
+    private static readonly string[] Own =
+    [
+        "state", "commands", "run {id, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?}", "perf {reset?}", "logs {problems?, count?}",
+        "diagnostics {record?, send?, endpoint?, flush?, upload?}", "version-control {open?, enable?, name?, email?, lfs?, remote?}",
+        "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}",
+        "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}",
+        "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}",
+        "screenshot {path, map?, gpu?}", "close",
+    ];
+
+    /// <summary>
     /// Runs a command on the user interface's thread.
     /// </summary>
     private async Task<JsonNode> RunAsync(string command, JsonObject arguments)
@@ -126,32 +162,49 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "commands", "run {id}", "mode {id}", "tool {id}", "ui {hidden?}", "perf {reset?}", "logs {problems?, count?}", "diagnostics {record?, send?, endpoint?, flush?, upload?}", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "version-control {open?, enable?, name?, email?, lfs?, remote?}", "commit {message}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
+                return new JsonObject
+                {
+                    ["automation"] = new JsonArray([.. Own.Select(line => (JsonNode)JsonValue.Create(line))]),
+                    ["commands"] = new JsonArray([.. model.Commands.All.Where(c => !c.IsIncomplete).Select(c => (JsonNode)JsonValue.Create(c.Usage))]),
+                    ["aliases"] = new JsonObject([.. Aliases.Select(alias => KeyValuePair.Create(alias.Key, (JsonNode?)JsonValue.Create(alias.Value.Runs)))]),
+                };
             case "state":
                 break;
             case "commands":
-                // the controller's commands: those not built yet with their user story
+                // every command of the registry: those not built yet with their user story
                 return new JsonObject
                 {
                     ["commands"] = new JsonArray([.. model.Commands.All.Select(command => (JsonNode)new JsonObject
                     {
                         ["id"] = command.Id,
                         ["title"] = command.FullTitle,
+                        ["arguments"] = new JsonArray([.. command.Parameters.Select(parameter => (JsonNode)JsonValue.Create(parameter.ToString()))]),
                         ["gesture"] = command.Gesture,
                         ["story"] = command.Story,
                         ["notBuilt"] = command.Incomplete?.Missing,
-                        ["canRun"] = command.IsIncomplete ? false : command.CanRun(),
+                        ["canRun"] = model.Commands.CanRun(command),
                     })]),
                 };
             case "run":
-                // a command of the controller, as a menu item or shortcut runs it
-                result["ran"] = await model.Commands.RunAsync(Text(arguments, "id"));
+            {
+                // a command of the registry with its arguments; it asks nothing, a missing argument fails
+                string id = Take(arguments, "id");
+                await RunCommandAsync(id, arguments, result, "result");
                 break;
+            }
             case "mode":
-                model.SelectMode(Text(arguments, "id"));
+                await RunCommandAsync($"{Take(arguments, "id")}.mode", arguments, result, null);
                 break;
             case "tool":
-                model.SelectTool(Text(arguments, "id"));
+                await RunCommandAsync($"tool.{Take(arguments, "id")}", arguments, result, null);
+                break;
+            case "tab":
+                await RunCommandAsync(Take(arguments, "name").ToLowerInvariant() switch
+                {
+                    "top" => "view.top",
+                    "3d" => "view.3d",
+                    string other => throw new ArgumentException($"There is no view '{other}': top or 3d"),
+                }, arguments, result, null);
                 break;
             case "ui":
                 // the window's controls: what an agent can read and use, with their places for hit and the mouse
@@ -212,31 +265,8 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     ["uploaded"] = uploaded,
                     ["uploadError"] = model.Telemetry.LastUploadError,
                 };
-            case "setup":
-                // the setup page as the person fills it in: the fields not given keep what it suggests
-                model.SetupFolder = Text(arguments, "folder");
-                model.SetupGameFolder = arguments["game"]?.GetValue<string>() ?? model.SetupGameFolder;
-                model.SetupFafDataFolder = arguments["faf"]?.GetValue<string>() ?? model.SetupFafDataFolder;
-                model.SetupVaultFolder = arguments["vault"]?.GetValue<string>() ?? model.SetupVaultFolder;
-                result["setUp"] = await model.SetUpWorkspaceAsync();
-                break;
-            case "update-assets":
-                result["converted"] = await model.ConvertAssetsAsync();
-                break;
-            case "open":
-                await model.OpenAsync(Text(arguments, "path"));
-                break;
-            case "import":
-                await model.ImportMapFolderAsync(Text(arguments, "path"));
-                break;
-            case "save":
-                await model.SaveAsync();
-                break;
-            case "save-as":
-                await model.SaveAsAsync(Text(arguments, "path"));
-                break;
             case "version-control":
-                // the version control of the open project; enable turns it on with the given choices
+                // how the open project stands in git, and the page's choices; enable turns it on with them
                 if (arguments["name"] is JsonNode name)
                 {
                     model.GitAuthorName = name.GetValue<string>();
@@ -259,7 +289,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 }
                 if (arguments["enable"]?.GetValue<bool>() == true)
                 {
-                    await model.EnableVersionControlAsync();
+                    await RunCommandAsync("file.enableVersionControl", [], result, null);
                 }
                 result["versionControl"] = new JsonObject
                 {
@@ -275,46 +305,8 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     ["error"] = model.VersionControlError,
                 };
                 break;
-            case "commit":
-                result["commit"] = await model.CommitAsync(Text(arguments, "message"));
-                break;
-            case "export":
-                result["folder"] = await model.ExportAsync(Text(arguments, "output"), arguments["version"]?.GetValue<int>());
-                break;
-            case "undo":
-                result["done"] = model.Undo();
-                break;
-            case "redo":
-                result["done"] = model.Redo();
-                break;
-            case "goto":
-                result["done"] = model.GoTo((int)(Number(arguments, "step") ?? throw new ArgumentException("step is missing (-1 for the map as it was opened)")));
-                break;
-            case "brush":
-                if (Number(arguments, "layer") is double layer)
-                {
-                    model.SelectPaintTarget((int)layer);
-                }
-                if (arguments["mode"] is JsonNode mode)
-                {
-                    model.BrushMode = Enum.Parse<HeightBrushMode>(mode.GetValue<string>(), ignoreCase: true);
-                }
-                if (arguments["erase"] is JsonNode erase)
-                {
-                    model.MaskErase = erase.GetValue<bool>();
-                }
-                model.BrushRadius = Number(arguments, "radius") ?? model.BrushRadius;
-                if (model.IsPaintingLayer)
-                {
-                    model.MaskStrength = Number(arguments, "strength") ?? model.MaskStrength;
-                }
-                else
-                {
-                    model.BrushStrength = Number(arguments, "strength") ?? model.BrushStrength;
-                }
-                model.BrushTarget = Number(arguments, "target") ?? model.BrushTarget;
-                break;
             case "stroke":
+                // input: the left mouse down, dragged along the points and up again
                 model.Stroke([.. (arguments["points"] as JsonArray ?? throw new ArgumentException("points: [[x, z], ...] is missing"))
                     .Select(point => (point![0]!.GetValue<float>(), point[1]!.GetValue<float>()))]);
                 break;
@@ -342,14 +334,8 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 // what the mouse would reach at a point of the window: the control that gets its events
                 result["hit"] = HitAt(Number(arguments, "x") ?? 0, Number(arguments, "y") ?? 0);
                 break;
-            case "fit":
-                window.MapView.Fit();
-                break;
             case "gpu-debug":
                 window.View3D.Debug = (int)(Number(arguments, "mode") ?? 0);
-                break;
-            case "tab":
-                window.ShownView = Text(arguments, "name");
                 break;
             case "camera":
                 model.Camera.Look((float?)Number(arguments, "x"), (float?)Number(arguments, "z"), (float?)Number(arguments, "distance"), (float?)Number(arguments, "yaw"), (float?)Number(arguments, "pitch"));
@@ -367,17 +353,10 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 }
                 break;
             case "show":
-                if (arguments["markers"] is JsonNode markers)
+                // the overlays' commands, each with whether to show it
+                foreach ((string key, JsonNode? on) in arguments)
                 {
-                    model.ShowMarkers = markers.GetValue<bool>();
-                }
-                if (arguments["pathNodes"] is JsonNode pathNodes)
-                {
-                    model.ShowPathNodes = pathNodes.GetValue<bool>();
-                }
-                if (arguments["camera"] is JsonNode camera)
-                {
-                    model.ShowCamera = camera.GetValue<bool>();
+                    await RunCommandAsync($"view.overlay.{key}", new JsonObject { ["on"] = on?.DeepClone() }, result, null);
                 }
                 break;
             case "view":
@@ -395,7 +374,27 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 Dispatcher.UIThread.Post(window.CloseWithoutAsking, DispatcherPriority.Background);
                 break;
             default:
-                throw new ArgumentException($"Unknown command '{command}'; GET /help lists them");
+                if (Aliases.TryGetValue(command, out var alias))
+                {
+                    foreach ((string from, string to) in alias.Renamed)
+                    {
+                        if (arguments[from] is JsonNode value)
+                        {
+                            arguments.Remove(from);
+                            arguments[to] = value.DeepClone();
+                        }
+                    }
+                    await RunCommandAsync(alias.Runs, arguments, result, alias.Answer);
+                }
+                else if (model.Commands.Find(command) is not null)
+                {
+                    await RunCommandAsync(command, arguments, result, "result");
+                }
+                else
+                {
+                    throw new ArgumentException($"Unknown command '{command}'; GET /help lists them");
+                }
+                break;
         }
 
         foreach ((string key, JsonNode? value) in State())
@@ -496,6 +495,45 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             chain.Add(visual is Avalonia.Controls.Control { Name: { Length: > 0 } name } ? $"{visual.GetType().Name} {name}" : visual.GetType().Name);
         }
         return chain.Count == 0 ? null : string.Join(" < ", chain);
+    }
+
+    /// <summary>
+    /// Runs a command of the registry as automation does: without a person, so it asks nothing.
+    /// </summary>
+    /// <param name="answer">Where its answer goes in the reply; null to leave it out.</param>
+    private async Task RunCommandAsync(string id, JsonObject arguments, JsonObject result, string? answer)
+    {
+        CommandRun run = await model.Commands.RunAsync(id, arguments, interactive: false);
+        result["ran"] = run.Ran;
+        if (answer is not null)
+        {
+            result[answer] = run.Result is null ? null : JsonSerializer.SerializeToNode(run.Result, run.Result.GetType());
+        }
+    }
+
+    /// <summary>
+    /// Takes an argument out of the arguments, which then go to the command without it.
+    /// </summary>
+    private static string Take(JsonObject arguments, string name)
+    {
+        string value = Text(arguments, name);
+        arguments.Remove(name);
+        return value;
+    }
+
+    /// <summary>
+    /// A query parameter that reads as JSON (a number, true) as such, any other as text, as the CLI sends them.
+    /// </summary>
+    private static JsonNode? Value(string text)
+    {
+        try
+        {
+            return JsonNode.Parse(text);
+        }
+        catch (JsonException)
+        {
+            return JsonValue.Create(text);
+        }
     }
 
     private static string Text(JsonObject arguments, string name) =>

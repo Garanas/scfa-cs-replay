@@ -71,7 +71,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:OverlayItem">
                   <Button Classes="chip" Classes.on="{Binding IsOn}" Classes.planned="{Binding IsIncomplete}" Content="{Binding Title}"
-                          Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleOverlayCommand}" CommandParameter="{Binding}"
+                          Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding Definition.CommandId}"
                           AutomationProperties.Name="{Binding Title, StringFormat='Show {0}'}" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>

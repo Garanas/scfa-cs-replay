@@ -61,7 +61,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(model.HasMap);
             Assert.AreEqual(1, opened);
             StringAssert.StartsWith(model.Title, "HardFFA - not saved as a project");
-            Assert.IsTrue(model.SaveProjectCommand.CanExecute(null));
+            Assert.IsTrue(model.Commands.CanRun(model.Commands.Find("file.save")!));
         }
 
         [TestMethod]
@@ -117,11 +117,11 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(model.CanUndo, "nothing to undo until the stroke ends");
             model.EndStroke();
 
-            Assert.AreEqual("_Undo Raise terrain", model.UndoHeader);
+            Assert.AreEqual("Raise terrain", model.Map!.Session.UndoDescription);
             StringAssert.StartsWith(model.Title, "* HardFFA");
-            model.UndoEditCommand.Execute(null);
+            Assert.IsTrue(await model.Commands.RunAsync("edit.undo"));
             Assert.AreEqual(before, model.ShownDocument!.Terrain.Heightmap.GetHeight(128, 40));
-            Assert.AreEqual("_Redo Raise terrain", model.RedoHeader);
+            Assert.AreEqual("Raise terrain", model.Map!.Session.RedoDescription);
         }
 
         [TestMethod]
@@ -157,7 +157,7 @@ namespace FAForever.MapEditor.App.Tests
             model.MaskStrength = 1;
             model.Stroke([(120, 128), (136, 128)]);
 
-            Assert.AreEqual("_Undo Paint layer 3", model.UndoHeader);
+            Assert.AreEqual("Paint layer 3", model.Map!.Session.UndoDescription);
             Assert.AreEqual(255, model.ShownDocument!.Terrain.StratumMasks.Layers[2][64, 64], "ogrid (128, 128) is pixel (64, 64) of a mask of half the size");
             Assert.AreSame(heights, model.ShownDocument.Terrain.Heightmap, "the heights are untouched");
             model.Undo();
@@ -174,7 +174,7 @@ namespace FAForever.MapEditor.App.Tests
             string project = NewFolder();
             answers.Folders.Enqueue(project);
 
-            await model.SaveProjectCommand.ExecuteAsync(null);
+            await model.RunAsync("file.save");
 
             Assert.AreEqual(Path.GetFullPath(project), model.Map!.ProjectFolder);
             Assert.IsFalse(model.Map.Session.IsModified);
@@ -190,12 +190,12 @@ namespace FAForever.MapEditor.App.Tests
             model.Stroke([(50, 50)]);
             answers.Folders.Enqueue(HardFfa);
 
-            await model.ImportMapCommand.ExecuteAsync(null);
+            await model.RunAsync("file.import");
             Assert.AreEqual(1, answers.SaveQuestions);
             Assert.IsTrue(model.Map!.Session.IsModified, "cancelled: the changes are still there");
 
             answers.SaveChoice = SaveChoice.Discard;
-            await model.ImportMapCommand.ExecuteAsync(null);
+            await model.RunAsync("file.import");
             Assert.IsFalse(model.Map!.Session.IsModified, "the map was imported again");
         }
 
@@ -218,7 +218,7 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = new MainViewModel(answers);
             answers.Folders.Enqueue(Path.Combine(Root, "does-not-exist"));
 
-            await model.OpenProjectCommand.ExecuteAsync(null);
+            await model.RunAsync("file.open");
 
             Assert.IsFalse(model.HasMap);
             StringAssert.Contains(model.Status, "is missing");

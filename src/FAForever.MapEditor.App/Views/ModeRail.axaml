@@ -16,8 +16,8 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:ModeItem">
             <Button Classes="rail" Classes.selected="{Binding IsSelected}"
-                    Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ChooseModeCommand}"
-                    CommandParameter="{Binding Definition.Id}"
+                    Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}"
+                    CommandParameter="{Binding Definition.CommandId}"
                     ToolTip.Tip="{Binding Definition.Help}"
                     AutomationProperties.Name="{Binding Definition.Title}"
                     AutomationProperties.HelpText="{Binding Definition.Help}">

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -64,7 +65,7 @@ public sealed record PaintTarget(int Layer, string Name)
 /// </remarks>
 public sealed partial class MainViewModel : ObservableObject
 {
-    private readonly IEditorDialogs _dialogs;
+    private readonly DialogGuard _dialogs;
     private readonly SynchronizationContext? _ui;
     private ProjectWatcher? _watcher;
     private EditTransaction? _stroke;
@@ -74,10 +75,11 @@ public sealed partial class MainViewModel : ObservableObject
     /// <param name="telemetry">Where the logs and metrics go; without it the Console alone shows them.</param>
     public MainViewModel(IEditorDialogs dialogs, Telemetry? telemetry = null)
     {
-        _dialogs = dialogs;
+        _dialogs = new DialogGuard(dialogs);
         _ui = SynchronizationContext.Current;
         Telemetry = telemetry ?? new Telemetry();
         Telemetry.Logged += OnLogged;
+        Commands = CommandServices.Create(this, _dialogs, typeof(MainViewModel).Assembly);
         InitializeShell();
     }
 
@@ -129,9 +131,17 @@ public sealed partial class MainViewModel : ObservableObject
 
     public bool CanRedo => Map?.Session.CanRedo == true && _stroke is null;
 
-    public string UndoHeader => Map?.Session.UndoDescription is string description ? $"_Undo {description}" : "_Undo";
-
-    public string RedoHeader => Map?.Session.RedoDescription is string description ? $"_Redo {description}" : "_Redo";
+    /// <summary>
+    /// Whether the editor has what a command needs (<see cref="CommandRegistry.CanRun"/>).
+    /// </summary>
+    public bool Meets(Needs needs) =>
+        (!needs.HasFlag(Needs.Map) || HasMap)
+        && (!needs.HasFlag(Needs.Idle) || !IsBusy)
+        && (!needs.HasFlag(Needs.Undo) || CanUndo)
+        && (!needs.HasFlag(Needs.Redo) || CanRedo)
+        && (!needs.HasFlag(Needs.Workspace) || Workspace is not null)
+        && (!needs.HasFlag(Needs.Project) || Map?.ProjectFolder is not null)
+        && (!needs.HasFlag(Needs.NoStroke) || _stroke is null);
 
     /// <summary>
     /// The history panel: the map as it was opened, then every step, the undone ones last.
@@ -429,66 +439,28 @@ public sealed partial class MainViewModel : ObservableObject
             case SaveChoice.Discard:
                 return true;
             case SaveChoice.Save:
-                await SaveProjectAsync();
+                await TryAsync(() => SaveProjectAsync());
                 return !Map.Session.IsModified;
             default:
                 return false;
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanStart))]
-    private async Task OpenProjectAsync()
+    /// <summary>
+    /// Saves the project; a map that is no project yet is saved as one in <paramref name="folder"/>,
+    /// or in a folder the editor asks for.
+    /// </summary>
+    public async Task SaveProjectAsync(string? folder = null)
     {
-        if (await ConfirmCloseAsync() && await _dialogs.PickFolderAsync("Open a project", Workspace?.ProjectsFolder) is string folder)
+        if (RequireMap().ProjectFolder is not null && folder is null)
         {
-            await TryAsync(() => LoadProjectAsync(folder));
+            await SaveAsync();
+        }
+        else if ((folder ?? await _dialogs.PickFolderAsync("Save as a project in an empty folder", Workspace?.ProjectsFolder)) is string chosen)
+        {
+            await SaveAsAsync(chosen);
         }
     }
-
-    [RelayCommand(CanExecute = nameof(CanStart))]
-    private async Task ImportMapAsync()
-    {
-        if (await ConfirmCloseAsync() && await _dialogs.PickFolderAsync("Import a map folder of the game", Workspace?.MapsFolder) is string folder)
-        {
-            await TryAsync(() => ImportMapFolderAsync(folder));
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanSave))]
-    private async Task SaveProjectAsync()
-    {
-        if (Map?.ProjectFolder is null)
-        {
-            await SaveProjectAsAsync();
-            return;
-        }
-        await TryAsync(SaveAsync);
-    }
-
-    [RelayCommand(CanExecute = nameof(CanSave))]
-    private async Task SaveProjectAsAsync()
-    {
-        if (await _dialogs.PickFolderAsync("Save as a project in an empty folder", Workspace?.ProjectsFolder) is string folder)
-        {
-            await TryAsync(() => SaveAsAsync(folder));
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanSave))]
-    private async Task ExportMapAsync()
-    {
-        string? folder = Workspace?.MapsFolder ?? await _dialogs.PickFolderAsync("Export into a folder, e.g. the game's maps folder");
-        if (folder is not null)
-        {
-            await TryAsync(() => ExportAsync(folder));
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanUndo))]
-    private void UndoEdit() => Undo();
-
-    [RelayCommand(CanExecute = nameof(CanRedo))]
-    private void RedoEdit() => Redo();
 
     #endregion
 
@@ -633,18 +605,9 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CanCommit));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(CanRedo));
-        OnPropertyChanged(nameof(UndoHeader));
-        OnPropertyChanged(nameof(RedoHeader));
         OnPropertyChanged(nameof(CanPaint));
         RefreshOverlays();
         ShowHistory();
-        OpenProjectCommand.NotifyCanExecuteChanged();
-        ImportMapCommand.NotifyCanExecuteChanged();
-        SaveProjectCommand.NotifyCanExecuteChanged();
-        SaveProjectAsCommand.NotifyCanExecuteChanged();
-        ExportMapCommand.NotifyCanExecuteChanged();
-        UndoEditCommand.NotifyCanExecuteChanged();
-        RedoEditCommand.NotifyCanExecuteChanged();
         DocumentChanged?.Invoke(this, EventArgs.Empty);
     }
 

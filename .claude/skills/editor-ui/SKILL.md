@@ -51,9 +51,12 @@ is an extension in `Avalonia.Input`; `Bitmap.Save` takes encoder options).
 
 ## Every operation a person can do
 
-- A method with `[EditorCommand(id, title, Menu = ..., Gesture = ..., Story = ...)]` on a
-  controller in `Controllers/`: it is in the menus, the palette, the shortcuts and automation
-  (`run id=...`) at once. Not built yet: an empty method with `[Incomplete("T-4", "what it is to do")]`.
+- A request with `[EditorCommand(id, title, Gesture = ..., Story = ..., Needs = ...)]` and its
+  handler in one file under `Commands/<menu>/`, and its id in `Commands/Menus.cs`: it is in the
+  menus, the palette, the shortcuts and automation (`run id=... ...arguments`) at once. Its
+  arguments are the record's properties; a folder left out is asked for, but never without a
+  person. An edit of the map: `[UndoStep]`, edit through `CurrentEdit`. Not built yet: a request
+  without a handler with `[Incomplete("T-4", "what it is to do")]`, in the menu's `Planned.cs`.
   A tool: a `ToolDefinition` in `ViewModels/EditorModes.cs` (`Missing` until it works); a part of
   a panel not built yet: a `PlannedSection`. Every story named must be in `USER_STORIES.md`
   (`CommandRegistryTest`). Its state in automation's `state`.

@@ -317,12 +317,6 @@ public sealed partial class MainViewModel
     private static string? NullIfEmpty(string text) => string.IsNullOrWhiteSpace(text) ? null : text;
 
     [RelayCommand]
-    private Task SetUp() => SetUpWorkspaceAsync();
-
-    [RelayCommand]
-    private Task UpdateAssets() => ConvertAssetsAsync();
-
-    [RelayCommand]
     private async Task BrowseSetupFolder()
     {
         if (await _dialogs.PickFolderAsync("The folder of the workspace", SetupFolder) is string folder)

@@ -18,13 +18,14 @@ once the workspace is ready.
 The editor is built to be checked and used by agents as well as people. A feature is done when it
 keeps that up; go through this list with every change to the window, not only at the end:
 
-1. **A command of the controller**: every operation a person can do is a method with
-   `[EditorCommand]` on a controller (`Controllers/`), with its menu, shortcut and user story. It
-   then is in the menus, the palette, the shortcuts and automation (`run id=...`) at once. Not
-   built yet? Leave the method empty and mark it `[Incomplete(story, what it is to do)]`. A tool
-   is a `ToolDefinition` of its mode (`ViewModels/EditorModes.cs`), with `Missing` until it works;
-   a part of a panel not built yet a `PlannedSection`. What the feature shows or holds is in
-   `state` (or its own automation command when it is large).
+1. **A command**: every operation a person can do is a request with `[EditorCommand]` and its
+   handler, in one file under `Commands/<menu>/` (the controller, below), with its shortcut, user
+   story and `Needs`, and its id in its menu in `Commands/Menus.cs`. It then is in the menus, the
+   palette, the shortcuts and automation (`run id=... ...arguments`) at once. Not built yet? A
+   request without a handler, marked `[Incomplete(story, what it is to do)]`, in its menu's
+   `Planned.cs`. A tool is a `ToolDefinition` of its mode (`ViewModels/EditorModes.cs`), with
+   `Missing` until it works; a part of a panel not built yet a `PlannedSection`. What the feature
+   shows or holds is in `state` (or its own automation command when it is large).
 2. **Labels**: every new control one can read or use gets `AutomationProperties.Name` (and
    `HelpText` when its use is not obvious), unless its own text says what it is. A new kind of
    control (one `UiTree` does not know as usable, or whose text it cannot read) gets a line in
@@ -56,20 +57,45 @@ dock under them (`Dock`: Problems, History, Assets, Console), the inspector on t
 (`Inspector`), the status bar, and the command palette over everything (`CommandPalette`,
 Ctrl+K). Where the user stories go in it is on the design's anatomy board.
 
-- **The controller** (`Commands/CommandRegistry`, user story F-1) holds every command: methods
-  with `[EditorCommand(id, title, Menu, Gesture, Story, CanRun)]` on the controllers in
-  `Controllers/` (File, Edit and Select, View, Map, Terrain, Paint, Water and Lighting, Markers,
-  Props, Decals, Units, Generate, Assets, Plugins, Help), plus one `tool.<id>` command per tool. The
-  window makes the menu bar and its shortcuts from them (`MainWindow.BuildMenusAndShortcuts`:
-  File, Edit, Select, View, Map, Modes with a submenu per mode, Generate, Plugins, Help); the palette
-  searches them, the ones that work first; automation lists and runs them (`commands`,
-  `run id=`). A controller only calls the view model, which owns the state and the document.
+- **The controller** (`Commands/`, user story F-1) holds every command, sent through MediatR.
+  A command is a request, a record whose properties are its arguments, with
+  `[EditorCommand(id, title, Gesture, Story, Needs)]`, and its handler in the same file, in a
+  folder per menu (`Commands/File/Save.cs`). The handler calls the view model, which owns the
+  state and the document; it never sends another command. All of them share the namespace
+  `FAForever.MapEditor.App.Commands` (a namespace `...Commands.File` would hide `System.IO.File`).
+  - `CommandRegistry` is the catalogue: it finds the requests with `[EditorCommand]`, makes a
+    request from arguments by name (JSON: an argument the request does not take, or a missing one
+    it needs, is an error), checks `Needs` (`Map`, `Idle`, `Undo`, `Redo`, `Workspace`, `Project`,
+    `NoStroke`, answered by `MainViewModel.Meets`), sends it, counts it (`editor.commands`) and
+    logs it. Commands made from data are registered by the view model with a request that takes
+    the id: `<mode>.mode` (`ChooseMode`, shortcut and story from `EditorModes`), `tool.<id>`
+    (`ChooseTool`), `view.overlay.<id>` (`ToggleOverlay`, from `EditorOverlays`).
+  - `CommandServices` puts it together: the one container of the app, holding MediatR, the
+    handlers of the assembly, the pipeline and what the handlers take (`MainViewModel`, the
+    dialogs, `CurrentEdit`); `MainViewModel` makes it. MediatR runs without a licence key, which a
+    desktop application needs not set; it would log only that, and its logging is off.
+  - `Commands/Menus.cs` is the menu bar: each menu's command ids in order, separators, the modes'
+    submenus (the mode, its commands, its tools). A request says what a command is, the layout
+    where it shows. A command in no menu (`brush.set`, `edit.goTo`, `workspace.setUp`,
+    `workspace.convert`, `file.enableVersionControl`) is for automation and plugins and the
+    palette leaves it out; its button is on a page or panel. The window makes the menus and the
+    shortcuts from it (`MainWindow.BuildMenusAndShortcuts`); the palette searches the commands in
+    menus, the ones that work first.
+  - Run without a person (automation, later Lua: `RunAsync(id, arguments, interactive: false)`),
+    a command asks nothing: `DialogGuard` refuses the question with what argument to give. The
+    menus, shortcuts, palette and buttons run `MainViewModel.RunAsync(id)` (`RunCommand` in XAML),
+    which shows what went wrong in the status line.
+  - **One undo step**: a request with `[UndoStep]` runs inside a transaction named after the
+    command (`UndoStepBehavior`, the pipeline), kept when the handler returns and thrown away when
+    it fails; the handler edits through `CurrentEdit.Transaction`. Transactions do not nest: such a
+    command needs a map and no brush stroke going on (the registry adds `Map | NoStroke`).
 - **Not built yet** is visible and traceable: a command with `[Incomplete(story, missing)]`
   only says what it is to do (status bar, Console, `run` answers `ran: false`) and shows in
   italics in the menus; a tool with `Missing` shows it in the tool options and does nothing in
   the views (`CanPaint` is true only for sculpting and painting strata); a `PlannedSection`
   shows a dashed box with its story. `CommandRegistryTest` checks that every story named
-  anywhere exists in `USER_STORIES.md`, and lists the `[Incomplete]` functions.
+  anywhere exists in `USER_STORIES.md`, that every request has a handler unless it is
+  `[Incomplete]` (and then none), and that the menus hold each command once.
 - **Modes and tools** are data (`EditorModes`): a mode's id, title, icon (`Styles/Icons.axaml`),
   tools, panel sections and inspector sections. Choosing the sculpt tool paints the heights,
   the strata tool a layer's mask; choosing a layer to paint (automation's `brush layer=`)
@@ -157,10 +183,10 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
 - `ViewModels/MainViewModel`: the window without the window. It holds the `EditedMap`, the
   brush settings and every operation of the menu as a plain method that takes its folder
   (`OpenAsync`, `LoadProjectAsync`, `ImportMapFolderAsync`, `SaveAsync`, `SaveAsAsync`,
-  `ExportAsync`, `Undo`, `Redo`, `BeginStroke`,
-  `ContinueStroke`, `EndStroke`, `Stroke`). The menu's commands ask for the folder first
-  (`IEditorDialogs`), then call those methods; automation and tests call them directly. It uses no
-  Avalonia types, so `tests/FAForever.MapEditor.App.Tests` tests it without a window.
+  `SaveProjectAsync`, `ExportAsync`, `Undo`, `Redo`, `BeginStroke`, `ContinueStroke`, `EndStroke`,
+  `Stroke`). A command's handler asks for a folder its request left out (`IEditorDialogs`), then
+  calls those methods; tests call them directly too. It uses no Avalonia types, so
+  `tests/FAForever.MapEditor.App.Tests` tests it without a window.
 - Opening, importing, saving and exporting are asynchronous (`LoadProjectAsync`,
   `ImportMapFolderAsync`, `SaveAsync`, `SaveAsAsync`, `ExportAsync`): they read and write on a pool
   thread while `IsBusy` disables the commands that cannot run alongside. Painting goes on during a
@@ -326,7 +352,7 @@ undo/redo, history, brush, zoom). Use it to check a change in the real editor:
 ```sh
 faf-map-editor tests/FAForever.FileFormats.Map.Tests/assets/maps/HardFFA.v0001 --automation 5371 &
 faf-map editor state                                      # the CLI is the client
-faf-map editor brush mode=Flatten radius=30 strength=1 target=6
+faf-map editor brush mode=Flatten radius=30 strength=1 target=6   # runs brush.set
 faf-map editor stroke points=[[60,128],[196,128]]         # in ogrids; one undo step
 faf-map editor height x=128 z=128
 faf-map editor screenshot path=shot.png map=true          # then look at the PNG
@@ -347,29 +373,37 @@ faf-map editor close                                      # closes without askin
   window (`[x, y, width, height]`, for `hit` and the mouse). Layout without anything to read or
   use is left out, and a control's template is not opened up. Read it before guessing from a
   screenshot.
-- Commands: `help`, `state` (with `mode`, `tool`, `toolNotBuilt`, `palette`), `commands` (every
-  command of the controller: id, title, shortcut, story, `notBuilt`, `canRun`), `run {id}` (runs
-  one as a menu item would; `ran: false` when it cannot run or is not built yet), `mode {id}`,
-  `tool {id}`, `ui {hidden?}`, `perf {reset?}` (above), `logs {problems?, count?}` (what the
-  Console shows), `diagnostics {record?, send?, endpoint?, flush?, upload?}` (the choices, the
-  session's files, and with `flush`/`upload` writes or sends at once), `setup {folder, game?, faf?, vault?}` (the setup page; fields left
-  out keep what it suggests), `update-assets`, `open {path}`, `import {path}`, `save`, `save-as {path}`, `version-control {open?, enable?, name?, email?, lfs?, remote?}` (how the project
-  stands in git; `enable` turns it on with the choices), `commit {message}` (the commit's hash, or null
-  when nothing changed),
-  `export {output, version?}`, `undo`, `redo`, `goto {step}`,
-  `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,
-  `stroke {points}`, `height {x, z}`, `hit {x, y}` (the control the mouse reaches at a point of
-  the window, with its parents), `fit`, `show {markers?, pathNodes?, camera?}`, `view {zoom, x, z}`,
-  `tab {name: top|3d}`, `camera {x?, z?, distance?, yaw?, pitch?}` (the 3D view, degrees; at once),
-  `focus {x, z, radius?}` (with a radius as F, gliding while the 3D view shows; without, as
-  control and a click in the top view),
+- **Operations are the registry's commands**: `commands` lists them (id, title, arguments,
+  shortcut, story, `notBuilt`, `canRun`), and `run {id, ...arguments}` runs one without a person:
+  it asks nothing, so a folder it would ask for is an argument (`ran: false` when it cannot run
+  now or is not built yet; its answer in `result`). A command's id works as the path too
+  (`/view.fit`). `help` lists automation's own commands, the registry's and the aliases.
+- **Aliases**, the names from before the registry, run a command with their arguments renamed:
+  `setup {folder, game?, faf?, vault?}` (`workspace.setUp`, answer in `setUp`), `update-assets`
+  (`workspace.convert`, `converted`), `open {path}`, `import {path}`, `save {path?}`,
+  `save-as {path}` (the path is the command's `folder`), `commit {message}` (`commit`: the hash, or
+  null when nothing changed), `export {output, version?}` (`folder`), `undo`, `redo`,
+  `goto {step}` (`done`), `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0
+  the heights, 1 to 8 a mask), `fit`, `mode {id}`, `tool {id}`, `tab {name: top|3d}`,
+  `show {markers?, pathNodes?, camera?}` (each overlay's command with `on`).
+- **Automation's own**, reads and input: `state` (with `mode`, `tool`, `toolNotBuilt`, `palette`),
+  `ui {hidden?}`, `perf {reset?}` (above), `logs {problems?, count?}` (what the Console shows),
+  `diagnostics {record?, send?, endpoint?, flush?, upload?}` (the choices, the session's files,
+  and with `flush`/`upload` writes or sends at once), `version-control {open?, enable?, name?,
+  email?, lfs?, remote?}` (how the project stands in git; `enable` runs
+  `file.enableVersionControl` with the choices), `mask {layer, x, z}`, `stroke {points}` (the
+  mouse, so no command), `height {x, z}`, `hit {x, y}` (the control the mouse reaches at a point
+  of the window, with its parents), `view {zoom, x, z}`, `camera {x?, z?, distance?, yaw?,
+  pitch?}` (the 3D view, degrees; at once), `focus {x, z, radius?}` (with a radius as F, gliding
+  while the 3D view shows; without, as control and a click in the top view),
   `screenshot {path, map?, gpu?}` (`gpu: true` reads a frame of the 3D view back from the card:
   a screenshot of the window does not reach it), `gpu-debug {mode}` (what the 3D view's terrain
   shows: 0 the picture, 1 the albedo, 2 the light, 3 the normals, 4 the heights, 5 the lower
-  layer, 6 the first four masks after the remap, 7 as stored),
-  `close`. A new menu item gets a command here too.
+  layer, 6 the first four masks after the remap, 7 as stored), `close`. A new operation is a
+  command of the registry, not a case here.
 - The method does not matter, and a command without arguments works as a GET
   (`curl localhost:5371/undo`); Windows refuses a POST without a body, so the CLI always sends one.
 - It listens on the loopback address only and only when asked to. Commands do not show dialogs:
   `close` does not ask about unsaved changes.
+- Query parameters read as JSON where they can (`?step=3`, `?on=true`), as the CLI sends them.
 - An MCP server for agents would be a thin layer over these same commands.

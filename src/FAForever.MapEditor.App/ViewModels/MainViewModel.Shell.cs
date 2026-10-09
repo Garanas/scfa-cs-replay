@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.App.Commands;
-using FAForever.MapEditor.App.Controllers;
+using FAForever.MapEditor.Project;
 using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.ViewModels;
@@ -36,13 +36,16 @@ public sealed partial class ToolItem(ToolDefinition definition) : ObservableObje
 /// <summary>
 /// Something the views can show over the terrain; a chip above the views and the View menu.
 /// </summary>
-public sealed partial class OverlayItem(string id, string title, string story, Func<bool> get, Action<bool>? set) : ObservableObject
+/// <param name="set">Null while the views cannot show it (<see cref="OverlayDefinition.Missing"/>).</param>
+public sealed partial class OverlayItem(OverlayDefinition definition, Func<bool> get, Action<bool>? set) : ObservableObject
 {
-    public string Id => id;
+    public OverlayDefinition Definition => definition;
 
-    public string Title => title;
+    public string Id => definition.Id;
 
-    public string Story => story;
+    public string Title => definition.Title;
+
+    public string Story => definition.Story;
 
     /// <summary>
     /// Whether the views cannot show it yet.
@@ -76,7 +79,7 @@ public sealed partial class MainViewModel
     /// <summary>
     /// The controller: every command of the editor (user story F-1).
     /// </summary>
-    public CommandRegistry Commands { get; } = new CommandRegistry();
+    public CommandRegistry Commands { get; }
 
     public IReadOnlyList<ModeItem> Modes { get; private set; } = [];
 
@@ -136,16 +139,6 @@ public sealed partial class MainViewModel
 
     private void InitializeShell()
     {
-        foreach (object controller in (object[])
-        [
-            new FileController(this), new EditController(this), new ViewController(this), new MapController(this),
-            new TerrainController(this), new PaintController(this), new AtmosphereController(this), new MarkersController(this),
-            new PropsController(this), new DecalsController(this), new UnitsController(this), new GenerateController(this),
-            new AssetsController(this), new PluginsController(this), new HelpController(this),
-        ])
-        {
-            Commands.Add(controller);
-        }
         ILogger commandsLog = Logger("Commands");
         Commands.IncompleteRun += command =>
         {
@@ -154,35 +147,44 @@ public sealed partial class MainViewModel
         };
         Commands.Ran += command => commandsLog.LogInformation("Ran {Command}", command.Id);
 
+        // the commands made from data: a mode, a tool, an overlay each
         Modes = [.. EditorModes.All.Select(mode => new ModeItem(mode))];
-        foreach (ModeItem mode in Modes)
+        foreach (ModeDefinition mode in EditorModes.All)
         {
-            foreach (ToolDefinition tool in mode.Definition.Tools)
+            Commands.Register(new EditorCommand
             {
-                string id = tool.Id;
-                Commands.Register(new EditorCommand($"tool.{id}", tool.Title, mode.Definition.Title, false, null, tool.Story, null,
-                    () => true, () =>
-                    {
-                        SelectTool(id);
-                        return Task.CompletedTask;
-                    }));
+                Id = mode.CommandId, Title = $"{mode.Title} mode", Gesture = mode.Gesture, Story = mode.Story,
+                MakeRequest = _ => new ChooseMode(mode.Id),
+            });
+            foreach (ToolDefinition tool in mode.Tools)
+            {
+                Commands.Register(new EditorCommand
+                {
+                    Id = tool.CommandId, Title = tool.Title, Story = tool.Story,
+                    MakeRequest = _ => new ChooseTool(tool.Id),
+                });
             }
         }
 
-        Overlays =
-        [
-            new OverlayItem("markers", "Markers", "R-6", () => ShowMarkers, value => ShowMarkers = value),
-            new OverlayItem("pathNodes", "Path nodes", "R-6", () => ShowPathNodes, value => ShowPathNodes = value),
-            new OverlayItem("camera", "3D camera", "V-1", () => ShowCamera, value => ShowCamera = value),
-            new OverlayItem("walkability", "Walkability", "T-7", () => false, null),
-            new OverlayItem("mask", "Mask", "K-1", () => false, null),
-            new OverlayItem("symmetry", "Symmetry", "F-12", () => false, null),
-            new OverlayItem("grid", "Grid", "V-3", () => false, null),
-            new OverlayItem("areas", "Areas", "M-5", () => false, null),
-            new OverlayItem("props", "Props", "P-1", () => false, null),
-            new OverlayItem("units", "Units", "U-2", () => false, null),
-        ];
+        Overlays = [.. EditorOverlays.All.Select(overlay => overlay.Id switch
+        {
+            "markers" => new OverlayItem(overlay, () => ShowMarkers, value => ShowMarkers = value),
+            "pathNodes" => new OverlayItem(overlay, () => ShowPathNodes, value => ShowPathNodes = value),
+            "camera" => new OverlayItem(overlay, () => ShowCamera, value => ShowCamera = value),
+            _ => new OverlayItem(overlay, () => false, null),
+        })];
+        foreach (OverlayDefinition overlay in EditorOverlays.All)
+        {
+            Commands.Register(new EditorCommand
+            {
+                Id = overlay.CommandId, Title = overlay.CommandTitle, Story = overlay.Story,
+                Incomplete = overlay.Missing is string missing ? new IncompleteAttribute(overlay.Story, missing) : null,
+                Parameters = [new CommandParameter("on", typeof(bool?), true)],
+                MakeRequest = overlay.IsIncomplete ? null : arguments => new ToggleOverlay(overlay.Id, arguments["on"]?.GetValue<bool>()),
+            });
+        }
 
+        Commands.Arrange(Menus.Bar);
         SelectMode("terrain");
     }
 
@@ -297,33 +299,16 @@ public sealed partial class MainViewModel
         IsPaletteOpen = false;
         if (command is not null)
         {
-            await Commands.RunAsync(command.Id);
+            await RunAsync(command.Id);
         }
     }
 
     /// <summary>
-    /// Runs a command by its id, as a button, menu item, shortcut or automation does.
+    /// Runs a command by its id, as a button, menu item or shortcut does: what goes wrong shows in
+    /// the status line (and the Console) rather than stopping the editor.
     /// </summary>
     [RelayCommand]
-    private Task Run(string id) => Commands.RunAsync(id);
-
-    [RelayCommand]
-    private void ChooseMode(string id) => SelectMode(id);
-
-    [RelayCommand]
-    private void ChooseTool(string id) => SelectTool(id);
-
-    [RelayCommand]
-    private Task ToggleOverlay(OverlayItem overlay)
-    {
-        if (overlay.IsIncomplete)
-        {
-            overlay.Refresh();
-            return Commands.RunAsync($"view.overlay.{overlay.Id}");
-        }
-        overlay.IsOn = !overlay.IsOn;
-        return Task.CompletedTask;
-    }
+    public Task RunAsync(string id) => TryAsync(() => Commands.RunAsync(id));
 
     [RelayCommand]
     private void ClosePalette() => IsPaletteOpen = false;

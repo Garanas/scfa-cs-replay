@@ -13,8 +13,9 @@ reads again when it changes; and nothing that generates runs by itself.
 - [ ] **F-1 One controller.** Every operation is a command with a name, arguments and a
       description, in one registry (the controller of model, view, controller). Menus, toolbars,
       shortcuts, the command palette, automation, the CLI and Lua plugins all run the same commands.
-      Today: the registry and the controllers (`[EditorCommand]`) make the menus, shortcuts and
-      palette, and automation runs them; missing: arguments, toolbars, the CLI and Lua.
+      Today: every command is a request with its arguments and a handler, sent through MediatR
+      by the registry; the menus, shortcuts and palette come from it, and automation and the CLI
+      run it (`faf-map editor run id=...`); missing: toolbars and Lua.
 - [x] **F-2 Command palette.** Find and run any command by typing (`Ctrl+K`), with its shortcut shown.
 - [x] **F-3 Undo and redo.** Every change is a step; a brush stroke or a plugin run is one step.
 - [x] **F-4 History.** The steps in a panel; choosing one goes back or forward to it.
