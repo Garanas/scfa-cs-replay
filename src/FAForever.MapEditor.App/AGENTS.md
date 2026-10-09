@@ -13,6 +13,29 @@ dotnet run --project src/FAForever.MapEditor.App -- [folder] [--automation 5371]
 The folder is a project (it holds `map.json`) or a map folder of the game, which is imported
 once the workspace is ready.
 
+## Every feature: the checklist
+
+The editor is built to be checked and used by agents as well as people. A feature is done when it
+keeps that up; go through this list with every change to the window, not only at the end:
+
+1. **Automation**: every operation a person can do (a menu item, a button, a key, a mouse gesture
+   with a meaning) has an automation command that does the same through the view model, listed
+   in `help`, in `AutomationServer`'s summary and under Automation below. What the feature shows
+   or holds is in `state` (or its own command when it is large).
+2. **Labels**: every new control one can read or use gets `AutomationProperties.Name` (and
+   `HelpText` when its use is not obvious), unless its own text says what it is. A new kind of
+   control (one `UiTree` does not know as usable, or whose text it cannot read) gets a line in
+   `Automation/UiTree.cs`, so `ui` describes it.
+3. **Tests**: the operation in `MainViewModelTest` (or the library's tests), and its input in
+   `MainWindowTest` (headless: the mouse, keys, what the view then shows). A view drawn on the
+   graphics card is checked with automation in a real editor instead (`screenshot gpu=true`).
+4. **Performance**: work that grows with the map, or runs per frame or per mouse move, gets a
+   span (`Performance.Measure`); check `perf` before and after on the 81 km and the decal-heavy
+   test maps. Nothing per frame touches the disk; a hidden view does no work.
+5. **Check it running**: in a test editor on port 5372 with `FAF_MAP_EDITOR_SETTINGS` pointing
+   at a settings file of its own, read `ui` and `state`, and look at a screenshot.
+6. **This guide**: what the feature does and its rules, where a later reader looks for them.
+
 ## The start: workspace first
 
 The editor works in a workspace (the library's guide explains it). `MainViewModel.StartAsync`

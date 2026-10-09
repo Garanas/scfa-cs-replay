@@ -23,8 +23,9 @@ planning work there:
 - **Map editor work** (`FAForever.MapEditor.Project`, `FAForever.MapEditor.Cli`):
   [`src/FAForever.MapEditor.Project/AGENTS.md`](src/FAForever.MapEditor.Project/AGENTS.md) covers the
   editor's model, the project format, undo and what the export to the game's files derives;
-  [`src/FAForever.MapEditor.App/AGENTS.md`](src/FAForever.MapEditor.App/AGENTS.md) the window and how
-  to drive a running editor (automation) to check a change.
+  [`src/FAForever.MapEditor.App/AGENTS.md`](src/FAForever.MapEditor.App/AGENTS.md) the window, how
+  to drive a running editor (automation) to check a change, and the checklist every feature of
+  the window goes through (automation command, labels, headless test, performance spans).
 - **UI work** (`FAForever.Vault.Viewer`): [`src/FAForever.Vault.Viewer/AGENTS.md`](src/FAForever.Vault.Viewer/AGENTS.md)
   covers WebAssembly rules, styling and theming, icons, shareable view state (the URL guardrails),
   the Moderation tab and its AI prompt, analytics, Playwright.
