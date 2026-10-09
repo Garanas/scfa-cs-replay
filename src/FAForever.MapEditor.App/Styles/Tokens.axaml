@@ -1,0 +1,82 @@
+<!--
+  The design tokens: every colour, size and distance the editor's own views use, by what it is
+  for. Views and controls refer to these keys and never to a value; a change of look is a change
+  here. Colours come in two layers: the palette (the raw colours) and the brushes named after
+  their use, which differ per theme variant. The editor runs dark; the light values keep a light
+  variant working.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- the palette -->
+  <Color x:Key="Gray900">#FF181818</Color>
+  <Color x:Key="Gray850">#FF1A1A1A</Color>
+  <Color x:Key="Gray800">#FF202020</Color>
+  <Color x:Key="Gray100">#FFF3F3F3</Color>
+  <Color x:Key="Gray150">#FFEBEBEB</Color>
+  <Color x:Key="Gray200">#FFE0E0E0</Color>
+  <Color x:Key="Coral300">#FFFF8A7A</Color>
+  <Color x:Key="Red700">#FFC42B1C</Color>
+
+  <!-- the accent of buttons, selections and sliders, the same on every computer (Fluent takes the system's otherwise) -->
+  <Color x:Key="AccentColor">#FF0078D4</Color>
+
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Dark">
+      <!-- behind the map, in the views and the 3D view's sky -->
+      <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource Gray900}" />
+      <!-- panels beside the map -->
+      <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Gray850}" />
+      <!-- bars over and under everything: the status bar -->
+      <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="{StaticResource Gray800}" />
+      <!-- text that explains rather than says: introductions, captions -->
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCFFFFFF" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#B3FFFFFF" />
+      <!-- what does not count now: an undone step -->
+      <SolidColorBrush x:Key="TextDisabledBrush" Color="#66FFFFFF" />
+      <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource Coral300}" />
+      <!-- drawn over the map: the brush, the 3D camera, outlines and labels of markers -->
+      <SolidColorBrush x:Key="OverlayBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
+      <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
+      <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource Gray200}" />
+      <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Gray100}" />
+      <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="{StaticResource Gray150}" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CC000000" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#99000000" />
+      <SolidColorBrush x:Key="TextDisabledBrush" Color="#66000000" />
+      <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource Red700}" />
+      <SolidColorBrush x:Key="OverlayBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
+      <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
+      <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- type: Inter, at these sizes -->
+  <x:Double x:Key="FontSizeCaption">12</x:Double>
+  <x:Double x:Key="FontSizeBody">14</x:Double>
+  <x:Double x:Key="FontSizeTitle">26</x:Double>
+  <!-- the numbers on spawns in the top view -->
+  <x:Double x:Key="FontSizeMapLabel">11</x:Double>
+
+  <!-- distances, on a grid of 4 -->
+  <x:Double x:Key="SpaceSmall">4</x:Double>
+  <x:Double x:Key="SpaceMedium">8</x:Double>
+  <x:Double x:Key="SpaceLarge">16</x:Double>
+  <Thickness x:Key="PagePadding">32</Thickness>
+  <Thickness x:Key="PanelPadding">12</Thickness>
+  <Thickness x:Key="BarPadding">8,4</Thickness>
+  <!-- before a heading that starts a new part of a panel or page -->
+  <Thickness x:Key="SectionGap">0,12,0,0</Thickness>
+  <Thickness x:Key="InlineGap">8,0,0,0</Thickness>
+  <Thickness x:Key="ListGap">0,2</Thickness>
+
+  <!-- widths -->
+  <x:Double x:Key="SidePanelWidth">240</x:Double>
+  <x:Double x:Key="PageWidth">720</x:Double>
+  <x:Double x:Key="NarrowPageWidth">640</x:Double>
+</ResourceDictionary>

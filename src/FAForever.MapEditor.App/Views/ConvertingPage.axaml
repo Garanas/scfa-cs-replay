@@ -1,0 +1,13 @@
+<!-- Converting the game's assets: the editor waits until it is done. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.ConvertingPage"
+             x:DataType="vm:MainViewModel">
+  <StackPanel Classes="page" VerticalAlignment="Center">
+    <TextBlock Classes="title" Text="Converting the game's assets" />
+    <ProgressBar Minimum="0" Maximum="1" Value="{Binding ConversionFraction}" Height="8" AutomationProperties.Name="Conversion progress" />
+    <TextBlock Classes="secondary" Text="{Binding ConversionText}" />
+    <TextBlock Classes="caption" Text="Closing the editor stops the conversion; the next start goes on where it was." />
+  </StackPanel>
+</UserControl>

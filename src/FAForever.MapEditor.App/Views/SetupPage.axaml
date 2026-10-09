@@ -1,0 +1,33 @@
+<!-- The first start: set up the workspace. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.SetupPage"
+             x:DataType="vm:MainViewModel">
+  <ScrollViewer>
+    <StackPanel Classes="page wide">
+      <TextBlock Classes="title" Text="Set up your workspace" />
+      <TextBlock Classes="lead"
+                 Text="The workspace is a folder with your map projects and the game's textures, props and units, converted so that the editor and your other tools can read them. The editor remembers it for the next start." />
+
+      <controls:FolderField Heading="Workspace folder" Label="workspace folder"
+                            Help="An empty folder, or one that holds a workspace already."
+                            Folder="{Binding SetupFolder}" BrowseCommand="{Binding BrowseSetupFolderCommand}" />
+      <controls:FolderField Heading="Supreme Commander: Forged Alliance" Label="game folder"
+                            Help="The folder the game is installed in, with gamedata\env.scd and gamedata\units.scd."
+                            Folder="{Binding SetupGameFolder}" BrowseCommand="{Binding BrowseGameFolderCommand}" />
+      <controls:FolderField Heading="FAF's data" Label="FAF data folder"
+                            Help="FAF's gamedata folder: its env.nx2 and units.nx2 replace files of the game. Empty without FAF."
+                            Folder="{Binding SetupFafDataFolder}" BrowseCommand="{Binding BrowseFafDataFolderCommand}" />
+      <controls:FolderField Heading="Vault" Label="vault folder"
+                            Help="The folder the FAF client keeps maps and mods in. Maps are exported to its maps folder."
+                            Folder="{Binding SetupVaultFolder}" BrowseCommand="{Binding BrowseVaultFolderCommand}" />
+
+      <TextBlock Classes="error" Text="{Binding SetupError}" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <TextBlock Classes="caption"
+                 Text="Setting up converts the game's environment and units: about 3 GB, a minute or so. The editor waits until it is done." />
+      <Button Content="Set up" Classes="accent" HorizontalAlignment="Left" MinWidth="120" Command="{Binding SetUpCommand}" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

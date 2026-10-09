@@ -24,9 +24,41 @@ namespace FAForever.MapEditor.App.Controls;
 /// </remarks>
 public sealed class HeightmapView : Control
 {
-    private static readonly IBrush Background = new SolidColorBrush(Color.FromRgb(24, 24, 24));
-    private static readonly IPen BrushOutline = new Pen(Brushes.White, 1.5);
-    private static readonly IPen MarkerOutline = new Pen(new SolidColorBrush(Color.FromArgb(220, 0, 0, 0)), 1);
+    /// <summary>
+    /// What the view draws besides the terrain and the markers' own colours, from the theme's
+    /// tokens (<c>Styles/Tokens.axaml</c>).
+    /// </summary>
+    internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, double LabelSize);
+
+    private Overlay? _overlay;
+
+    protected override void OnAttachedToLogicalTree(Avalonia.LogicalTree.LogicalTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToLogicalTree(e);
+        // another theme variant: read the tokens again
+        ActualThemeVariantChanged -= OnThemeChanged;
+        ActualThemeVariantChanged += OnThemeChanged;
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        _overlay = null;
+        InvalidateVisual();
+    }
+
+    private Overlay Tokens() => _overlay ??= new Overlay(
+        Token<IBrush>("CanvasBrush"),
+        Token<IBrush>("OverlayBrush"),
+        new Pen(Token<IBrush>("OverlayBrush"), 1.5),
+        new Pen(Token<IBrush>("OverlayStrokeBrush"), 1.5),
+        Token<IBrush>("OverlayFillBrush"),
+        new Pen(Token<IBrush>("OverlayShadowBrush"), 1),
+        new Pen(Token<IBrush>("OverlayBrush"), 2),
+        Token<double>("FontSizeMapLabel"));
+
+    private T Token<T>(string key) => this.TryFindResource(key, ActualThemeVariant, out object? value) && value is T token
+        ? token
+        : throw new KeyNotFoundException($"The theme has no token {key} (Styles/Tokens.axaml)");
     private static readonly Typeface LabelFont = new Typeface("Inter", FontStyle.Normal, FontWeight.Bold);
 
     private readonly MarkerLayer _markers = new MarkerLayer();
@@ -127,7 +159,8 @@ public sealed class HeightmapView : Control
     public override void Render(DrawingContext context)
     {
         using Performance.Span measure = Performance.Measure("top.render");
-        context.FillRectangle(Background, new Rect(Bounds.Size));
+        Overlay overlay = Tokens();
+        context.FillRectangle(overlay.Canvas, new Rect(Bounds.Size));
         if (_bitmap is null)
         {
             return;
@@ -142,18 +175,18 @@ public sealed class HeightmapView : Control
 
         if (_model?.ShownDocument is MapDocument document)
         {
-            _markers.Render(context, document.Markers, _model.ShowMarkers, _model.ShowPathNodes, _zoom, _offset);
+            _markers.Render(context, overlay, document.Markers, _model.ShowMarkers, _model.ShowPathNodes, _zoom, _offset);
         }
 
         if (_model is { ShowCamera: true, HasMap: true })
         {
-            DrawCamera(context, _model.Camera);
+            DrawCamera(context, overlay, _model.Camera);
         }
 
         if (_cursor is Point cursor && _model is not null)
         {
             double radius = _model.BrushRadius * _zoom;
-            context.DrawEllipse(null, BrushOutline, cursor, radius, radius);
+            context.DrawEllipse(null, overlay.Brush, cursor, radius, radius);
         }
     }
 
@@ -327,7 +360,7 @@ public sealed class HeightmapView : Control
         private MarkerSet? _linked;
         private List<(Color32 Color, StreamGeometry Lines)> _links = [];
 
-        public void Render(DrawingContext context, MarkerSet markers, bool showMarkers, bool showPathNodes, double zoom, Vector offset)
+        public void Render(DrawingContext context, Overlay overlay, MarkerSet markers, bool showMarkers, bool showPathNodes, double zoom, Vector offset)
         {
             Point At(Marker marker) => new Point(marker.Position.X * zoom + offset.X, marker.Position.Z * zoom + offset.Y);
 
@@ -348,7 +381,7 @@ public sealed class HeightmapView : Control
                 }
                 foreach (PathNode node in markers.PathNodes)
                 {
-                    context.DrawEllipse(Fill(node.Color), MarkerOutline, At(node), 2.5, 2.5);
+                    context.DrawEllipse(Fill(node.Color), overlay.Shadow, At(node), 2.5, 2.5);
                 }
             }
 
@@ -359,11 +392,11 @@ public sealed class HeightmapView : Control
 
             foreach (WeatherGenerator weather in markers.WeatherGenerators)
             {
-                Triangle(context, Fill(weather.Color), At(weather), 6);
+                Triangle(context, overlay, Fill(weather.Color), At(weather), 6);
             }
             foreach (WeatherDefinition weather in markers.WeatherDefinitions)
             {
-                Triangle(context, Fill(weather.Color), At(weather), 8);
+                Triangle(context, overlay, Fill(weather.Color), At(weather), 8);
             }
             foreach (AiMarker marker in markers.AiMarkers)
             {
@@ -377,25 +410,25 @@ public sealed class HeightmapView : Control
                     g.LineTo(new Point(at.X - 5, at.Y));
                     g.EndFigure(true);
                 }
-                context.DrawGeometry(Fill(marker.Color), MarkerOutline, diamond);
+                context.DrawGeometry(Fill(marker.Color), overlay.Shadow, diamond);
             }
             foreach (ResourceMarker resource in markers.Resources)
             {
                 double half = resource.Kind == ResourceKind.Mass ? 4 : 6;
                 Point at = At(resource);
-                context.DrawRectangle(Fill(resource.Color), MarkerOutline, new Rect(at.X - half, at.Y - half, half * 2, half * 2));
+                context.DrawRectangle(Fill(resource.Color), overlay.Shadow, new Rect(at.X - half, at.Y - half, half * 2, half * 2));
             }
             foreach (Spawn spawn in markers.Spawns)
             {
                 Point at = At(spawn);
-                context.DrawEllipse(Fill(spawn.Color), new Pen(Brushes.White, 2), at, 10, 10);
+                context.DrawEllipse(Fill(spawn.Color), overlay.Ring, at, 10, 10);
                 string label = spawn.Army.StartsWith("ARMY_", StringComparison.Ordinal) ? spawn.Army[5..] : spawn.Army;
-                FormattedText text = new FormattedText(label, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, LabelFont, 11, Brushes.White);
+                FormattedText text = new FormattedText(label, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, LabelFont, overlay.LabelSize, overlay.Strong);
                 context.DrawText(text, new Point(at.X - text.Width / 2, at.Y - text.Height / 2));
             }
         }
 
-        private static void Triangle(DrawingContext context, IBrush fill, Point at, double size)
+        private static void Triangle(DrawingContext context, Overlay overlay, IBrush fill, Point at, double size)
         {
             StreamGeometry triangle = new StreamGeometry();
             using (StreamGeometryContext g = triangle.Open())
@@ -405,7 +438,7 @@ public sealed class HeightmapView : Control
                 g.LineTo(new Point(at.X - size, at.Y + size * 0.7));
                 g.EndFigure(true);
             }
-            context.DrawGeometry(fill, MarkerOutline, triangle);
+            context.DrawGeometry(fill, overlay.Shadow, triangle);
         }
 
         /// <summary>
@@ -465,14 +498,12 @@ public sealed class HeightmapView : Control
         }
     }
 
-    private static readonly IBrush CameraFill = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
-    private static readonly IPen CameraOutline = new Pen(new SolidColorBrush(Color.FromArgb(200, 255, 255, 255)), 1.5);
 
     /// <summary>
     /// What the 3D view's camera sees of the ground, the camera itself as a dot, and a line to the
     /// place it looks at.
     /// </summary>
-    private void DrawCamera(DrawingContext context, EditorCamera camera)
+    private void DrawCamera(DrawingContext context, Overlay overlay, EditorCamera camera)
     {
         System.Numerics.Vector2[] corners = camera.Footprint();
         StreamGeometry footprint = new StreamGeometry();
@@ -487,12 +518,12 @@ public sealed class HeightmapView : Control
         }
         using (context.PushClip(new Rect(Bounds.Size)))
         {
-            context.DrawGeometry(CameraFill, CameraOutline, footprint);
+            context.DrawGeometry(overlay.Fill, overlay.Stroke, footprint);
             System.Numerics.Vector3 eye = camera.Eye;
             (float x, float z, _, _, _) = camera.Now;
             Point at = MapToControl(eye.X, eye.Z);
-            context.DrawLine(CameraOutline, at, MapToControl(x, z));
-            context.DrawEllipse(Brushes.White, CameraOutline, at, 4, 4);
+            context.DrawLine(overlay.Stroke, at, MapToControl(x, z));
+            context.DrawEllipse(overlay.Strong, overlay.Stroke, at, 4, 4);
         }
     }
 

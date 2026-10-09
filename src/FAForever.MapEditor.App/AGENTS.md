@@ -34,7 +34,44 @@ keeps that up; go through this list with every change to the window, not only at
    test maps. Nothing per frame touches the disk; a hidden view does no work.
 5. **Check it running**: in a test editor on port 5372 with `FAF_MAP_EDITOR_SETTINGS` pointing
    at a settings file of its own, read `ui` and `state`, and look at a screenshot.
-6. **This guide**: what the feature does and its rules, where a later reader looks for them.
+6. **Look**: the views use tokens and style classes, never loose values (UI rules below); a
+   change of look updates the snapshots on purpose (`UPDATE_SNAPSHOTS=1`), checked by eye.
+7. **This guide**: what the feature does and its rules, where a later reader looks for them.
+
+The project skill `.claude/skills/editor-ui` holds the same rules in short, for agents.
+
+## UI rules: one look, kept in one place
+
+Fluent (Avalonia's theme, dark) draws the controls; the editor's own look lives in `Styles/`:
+
+- `Styles/Tokens.axaml`, the design tokens: the palette, the brushes named after their use
+  (`CanvasBrush`, `SurfaceBrush`, `SurfaceRaisedBrush`, `TextSecondaryBrush`, `TextTertiaryBrush`,
+  `TextDisabledBrush`, `DangerBrush`, `Overlay*Brush`), per theme variant, and the sizes
+  (`FontSize*`, `Space*`, `*Padding`, `*Gap`, `*Width`). The accent is pinned (`AccentColor`,
+  through Fluent's palette), so the editor looks the same on every computer.
+- `Styles/Classes.axaml`, the classes the views say what a thing is with: text `title`,
+  `heading`, `lead`, `secondary`, `caption`, `error`, `undone`, `item`; surfaces `Border.panel`,
+  `Border.bar`; layout `StackPanel.page` (`wide`), `StackPanel.stack`, `section` (a gap before),
+  `Button.beside`.
+- `Styles/Controls.axaml`, the control themes of the editor's own controls (`Section`: a
+  heading with its content).
+- Reusable pieces are controls: `Controls/FolderField` (a folder to choose: heading,
+  explanation, path, Browse, with the labels for screen readers), `Controls/Section`. A pattern
+  used twice becomes one.
+- The views are split by what they are: `MainWindow` (menu, status bar, the two map views, the
+  pages by stage), `SidePanel` (brush, history), `SetupPage`, `UpdateAssetsPage`,
+  `ConvertingPage`.
+- Code that draws (the overlays of the top view, the 3D view's sky) reads the tokens with
+  `TryFindResource` and reads them again when the theme variant changes. Only colours that come
+  from the map (a marker's) are made in code.
+- `StyleRulesTest` fails on a colour, font size or weight, opacity or non-zero distance written
+  in a view or control, and on a fixed colour in their code. `SnapshotTest` draws the setup page,
+  the assets page and the editor with HardFFA headless (Skia, Inter, 1280 by 800) and compares
+  them with `tests/FAForever.MapEditor.App.Tests/snapshots/*.png` (a channel may differ by 24, 0.2 %
+  of the pixels may differ); a failure writes the new picture into the tests' output
+  (`snapshot-results/`). Look at it, and run the tests with `UPDATE_SNAPSHOTS=1` to accept it.
+- Avalonia's documentation is at hand through the `avalonia-docs` MCP server (`.mcp.json`):
+  ask it before writing Avalonia code from memory; WPF habits and older versions differ.
 
 ## The start: workspace first
 
@@ -125,8 +162,10 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   - Avalonia's hit testing only finds what a control draws itself, and this one draws nothing
     through `Render`: it claims its whole rectangle (`ICustomHitTest`), or the mouse would fall
     through to the tab control. Check a new control with automation's `hit`.
-- `Views/MainWindow`: menu (View: markers, path nodes, the 3D camera in the top view), brush panel (heights or a layer's mask), history panel, the Top and 3D
-  tabs, status bar; asks about unsaved changes before closing.
+- `Views/MainWindow`: menu (View: markers, path nodes, the 3D camera in the top view), status
+  bar, the side panel (`Views/SidePanel`: brush for heights or a layer's mask, history), the Top
+  and 3D tabs, and the pages of the start (`SetupPage`, `UpdateAssetsPage`, `ConvertingPage`);
+  asks about unsaved changes before closing.
   `WindowDialogs` answers the view model's questions with the system's folder picker and a small
   save-changes dialog.
 - The window watches the project folder (`ProjectWatcher`) and reads back what other tools change;

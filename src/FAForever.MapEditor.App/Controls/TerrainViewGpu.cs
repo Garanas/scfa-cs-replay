@@ -177,7 +177,11 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         int height = Math.Max(1, (int)(Bounds.Height * scaling));
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)fb);
         _gl.Viewport(0, 0, (uint)width, (uint)height);
-        _gl.ClearColor(24 / 255f, 24 / 255f, 24 / 255f, 1);
+        // the sky: the canvas of the views (Styles/Tokens.axaml)
+        Avalonia.Media.Color sky = this.TryFindResource("CanvasBrush", ActualThemeVariant, out object? canvas) && canvas is Avalonia.Media.ISolidColorBrush brush
+            ? brush.Color
+            : default;
+        _gl.ClearColor(sky.R / 255f, sky.G / 255f, sky.B / 255f, 1);
         _gl.ClearDepth(1);
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 

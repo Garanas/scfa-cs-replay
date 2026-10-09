@@ -1,0 +1,16 @@
+<!-- A folder to choose: its heading, what it is for, the path and a button to browse for it. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Controls.FolderField"
+             x:DataType="controls:FolderField"
+             x:Name="Root">
+  <StackPanel Classes="stack">
+    <TextBlock Classes="heading" Text="{Binding #Root.Heading}" />
+    <TextBlock Classes="caption" Text="{Binding #Root.Help}" />
+    <DockPanel>
+      <Button x:Name="Browse" DockPanel.Dock="Right" Classes="beside" Content="Browse..." Command="{Binding #Root.BrowseCommand}" />
+      <TextBox x:Name="Path" Text="{Binding #Root.Folder, Mode=TwoWay}" />
+    </DockPanel>
+  </StackPanel>
+</UserControl>

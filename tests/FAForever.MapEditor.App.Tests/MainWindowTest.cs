@@ -22,21 +22,6 @@ namespace FAForever.MapEditor.App.Tests
     {
         private const string HardFfa = "assets/maps/HardFFA.v0001";
 
-        private static HeadlessUnitTestSession? _session;
-
-        public static class HeadlessApp
-        {
-            public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
-                .UseSkia()
-                .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
-        }
-
-        [ClassInitialize]
-        public static void Start(TestContext context) => _session = HeadlessUnitTestSession.StartNew(typeof(HeadlessApp));
-
-        [ClassCleanup]
-        public static void Stop() => _session?.Dispose();
-
         private sealed class NoDialogs : IEditorDialogs
         {
             public Task<string?> PickFolderAsync(string title, string? startIn = null) => Task.FromResult<string?>(null);
@@ -44,14 +29,7 @@ namespace FAForever.MapEditor.App.Tests
             public Task<SaveChoice> AskToSaveChangesAsync(string mapName) => Task.FromResult(SaveChoice.Discard);
         }
 
-        /// <summary>
-        /// Runs a test on the user interface's thread of the headless application.
-        /// </summary>
-        private static Task Run(Func<Task> test) => _session!.Dispatch(async () =>
-        {
-            await test();
-            return true;
-        }, CancellationToken.None);
+        private static Task Run(Func<Task> test) => HeadlessApp.Run(test);
 
         private static async Task<(MainWindow Window, MainViewModel Model)> Open()
         {
