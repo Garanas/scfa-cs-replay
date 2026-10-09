@@ -83,6 +83,10 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
   leaves out the files that hold what the last save wrote: the editor's own, also when the
   document changed since (an edit during a save in the background must not be undone by it). A `map.json` that changes the map's size is refused: the grids would
   no longer fit.
+- `procedural/` holds the procedural work: `sources/` the map maker's World Machine and Gaea files
+  (versioned with the project), `temp/` what those tools build from them (heightmaps, masks; left
+  out of version control). Every save makes both folders; the editor reads nothing in them by
+  itself: a result comes into the map when the map maker brings it in (T-3, later T-5).
 - `ProjectWatcher` reports the changed files of a folder once it has been quiet for a moment
   (tools save in bursts), on a pool thread. `faf-map pack --watch` opens the project once and
   reloads only what changed before each export.

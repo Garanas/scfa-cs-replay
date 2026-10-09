@@ -32,6 +32,9 @@ namespace FAForever.MapEditor.Project
             Directory.CreateDirectory(folder);
             string Of(string file) => Path.Combine(folder, file);
 
+            Directory.CreateDirectory(Of(MapProjectLayout.ProceduralSources));
+            Directory.CreateDirectory(Of(MapProjectLayout.ProceduralTemp));
+
             // an image is written when its part changed since the previous save, or is not on disk
             bool Stale(string file, Func<MapDocument, object> part) =>
                 previous is null || !ReferenceEquals(part(document), part(previous)) || !File.Exists(Of(file));

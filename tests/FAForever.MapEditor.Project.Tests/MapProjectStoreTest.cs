@@ -71,6 +71,23 @@ namespace FAForever.MapEditor.Project.Tests
                 "water/foam.png",
                 "water/water-map.png",
             }, files);
+            Assert.IsTrue(Directory.Exists(Path.Combine(project, "procedural", "sources")));
+            Assert.IsTrue(Directory.Exists(Path.Combine(project, "procedural", "temp")));
+        }
+
+        [TestMethod]
+        public void KeepsTheProceduralWork()
+        {
+            string project = Saved(ProjectFolders.ThetaPassage);
+            File.WriteAllText(Path.Combine(project, "procedural", "sources", "theta.tmd"), "source");
+            File.WriteAllText(Path.Combine(project, "procedural", "temp", "height.r16"), "built");
+
+            MapDocument document = MapProjectStore.Load(project);
+            MapProjectStore.Save(document, project, document);
+
+            Assert.AreEqual("source", File.ReadAllText(Path.Combine(project, "procedural", "sources", "theta.tmd")));
+            Assert.AreEqual("built", File.ReadAllText(Path.Combine(project, "procedural", "temp", "height.r16")));
+            Assert.IsFalse(document.Files.Keys.Any(path => path.Contains("procedural", StringComparison.Ordinal)), "the procedural work is no file of the map");
         }
 
         [TestMethod]

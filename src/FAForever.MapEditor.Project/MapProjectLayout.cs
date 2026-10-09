@@ -19,6 +19,9 @@ namespace FAForever.MapEditor.Project
     /// water/foam.png, flatness.png, depth-bias.png   8-bit grey, half the map's size
     /// script.lua                   the map's script, if it has one
     /// files/                       the other files of the map folder, as they are
+    /// procedural/sources/          the map maker's World Machine and Gaea files (.tmd, .terrain)
+    /// procedural/temp/             what those tools build, made again from the sources; not versioned
+    /// .gitignore, .gitattributes   written when version control is turned on (ProjectRepository)
     /// </code>
     /// </remarks>
     public static class MapProjectLayout
@@ -51,6 +54,26 @@ namespace FAForever.MapEditor.Project
         /// The folder with the other files of the map folder, copied as they are.
         /// </summary>
         public const string Files = "files";
+
+        /// <summary>
+        /// The folder of the procedural work: <see cref="ProceduralSources"/> and <see cref="ProceduralTemp"/>.
+        /// The editor reads nothing in it by itself.
+        /// </summary>
+        public const string Procedural = "procedural";
+
+        /// <summary>
+        /// The files of World Machine, Gaea and other tools that make the terrain: kept with the project.
+        /// </summary>
+        public const string ProceduralSources = "procedural/sources";
+
+        /// <summary>
+        /// What those tools build (heightmaps, masks at any size): made again from the sources, so
+        /// left out of version control.
+        /// </summary>
+        public const string ProceduralTemp = "procedural/temp";
+
+        public const string GitIgnore = ".gitignore";
+        public const string GitAttributes = ".gitattributes";
 
         /// <summary>
         /// The mask of terrain layer <paramref name="layer"/>: 1 to 8, or 1 to 4 in version 53.
