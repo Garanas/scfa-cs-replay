@@ -3,9 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:views="using:FAForever.MapEditor.App.Views"
              x:Class="FAForever.MapEditor.App.Views.Dock"
              x:DataType="vm:MainViewModel">
-  <Border Classes="dock">
+  <Border Classes="dock" Classes.tall="{Binding IsDockTall}">
     <TabControl Classes="compact" SelectedIndex="{Binding Dock, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="Dock">
       <TabItem Header="Problems">
         <Border Classes="panel">
@@ -28,14 +29,7 @@
         </ListBox>
       </TabItem>
       <TabItem Header="Assets">
-        <Border Classes="panel">
-          <Border Classes="planned">
-            <StackPanel Classes="stack">
-              <TextBlock Classes="caption" Text="Which assets are loaded and where each comes from: the game, FAF, the workspace's own, the map's own files; which the map uses, which are missing." />
-              <TextBlock Classes="story" Text="Not built yet: user story F-8" />
-            </StackPanel>
-          </Border>
-        </Border>
+        <views:AssetShelf DataContext="{Binding Assets}" />
       </TabItem>
       <TabItem Header="{Binding Diagnostics.ConsoleHeader}">
         <DockPanel>

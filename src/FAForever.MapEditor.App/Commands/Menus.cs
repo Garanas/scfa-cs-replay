@@ -56,7 +56,7 @@ public static class Menus
             Mode("props", "props.addPalette", "props.addRule", "props.reclaim"),
             Mode("decals", "decals.addGroup"),
             Mode("units", "units.pick", "units.addGroup", "units.placePreset", "units.asWrecks"),
-            new MenuLayout("Assets", ["assets.reload", "assets.pick"]),
+            new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.reload"]),
         ]),
         new MenuLayout("Generate",
         [

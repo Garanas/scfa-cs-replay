@@ -403,5 +403,33 @@ namespace FAForever.MapEditor.App.Tests
             frame.Save(stream, new PngBitmapEncoderOptions());
             return stream.ToArray();
         }
+        [TestMethod]
+        public Task ATileOfTheShelfShowsInTheInspector() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            model.Assets.Use(TestAssets.Catalog());
+            model.Assets.Scope = AssetScope.Everything;
+            model.Dock = DockTab.Assets;
+            Dispatcher.UIThread.RunJobs();
+
+            Button pine = window.GetVisualDescendants().OfType<Button>()
+                .Single(button => Avalonia.Automation.AutomationProperties.GetName(button)?.StartsWith("pine06,", StringComparison.Ordinal) == true);
+            Click(window, pine);
+
+            Assert.AreEqual("pine06", model.Assets.Selected?.Title);
+            TextBlock name = window.GetVisualDescendants().OfType<TextBlock>()
+                .Single(text => Avalonia.Automation.AutomationProperties.GetName(text) == "Asset name");
+            Assert.IsTrue(name.IsEffectivelyVisible);
+            Assert.AreEqual("pine06", name.Text);
+
+            window.KeyPress(Key.Right, RawInputModifiers.None, PhysicalKey.ArrowRight, null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreNotEqual("pine06", model.Assets.Selected?.Title, "the arrow key moves to the next tile");
+            window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.IsFalse(model.Assets.HasSelection);
+            Assert.IsFalse(name.IsEffectivelyVisible, "the inspector shows the mode again");
+            window.Close();
+        });
     }
 }

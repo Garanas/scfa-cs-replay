@@ -82,7 +82,8 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     submenus (the mode, its commands, its tools). A request says what a command is, the layout
     where it shows. A command in no menu is for automation and plugins, and the palette leaves
     it out: its control is on a page or panel (`workspace.setUp`, `workspace.convert`,
-    `file.enableVersionControl`, `diagnostics.set`), it is the mouse's or a view's own key in
+    `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`), it selects what one
+    clicks (`assets.select`), it is the mouse's or a view's own key in
     the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
     for finding faults (`view.gpuDebug`, `diagnostics.flush`, `diagnostics.upload`). The window makes the menus and the
     shortcuts from it (`MainWindow.BuildMenusAndShortcuts`); the palette searches the commands in
@@ -175,7 +176,7 @@ compact density) draws the standard controls; `Styles/` holds the look of everyt
   explanation, path, Browse, with the labels for screen readers), `Controls/Section`. A pattern
   used twice becomes one.
 - The views are split by what they are: `MainWindow` (menu, status bar, the two map views, the
-  pages by stage), `ModeRail`, `ModePanel`, `ToolOptions`, `Inspector`, `Dock`,
+  pages by stage), `ModeRail`, `ModePanel`, `ToolOptions`, `Inspector`, `Dock`, `AssetShelf`,
   `CommandPalette`, `DiagnosticsPage`, `VersionControlPage`, `SetupPage`, `UpdateAssetsPage`,
   `ConvertingPage`.
 - Code that draws (the overlays of the top view, the 3D view's sky) reads the tokens with
@@ -355,6 +356,34 @@ the commit, with how the repository stands (branch, changed files, unsaved chang
 commit) and a message (`CommitAsync`: saves first when the map has changes). What fails shows on
 the page.
 
+## Assets: the shelf in the dock
+
+User stories F-8 and F-9, concept C1 of the canvas "Map editor UI concepts" (row C, with the
+picker C2, the atlas C3 and the interactions C4). `AssetsViewModel` (`model.Assets`) shows the
+workspace's `AssetCatalog` (the library's guide), read on a pool thread when the workspace is
+ready and again with Modes, Assets, Read the assets again (`assets.reload`):
+
+- **Kind** follows the mode (Paint textures, Props props, Decals decals, Units units; another
+  mode keeps it); the chips above choose it by hand, with how many each shows.
+- **Show**: what the map uses (`InMap`), the map's biomes (`Narrow`: the biomes of the props,
+  decals and strata it uses, all when none; for units the civilian ones), or `Everything`. Then
+  the biome (or faction) and the category on the left, a search (each word in the name, code,
+  biome or category), a prop's sizes and variants as one tile (`Families`: `pine06` with `_s2`,
+  `_v1`; the inspector lists them) and the tile size.
+- **Tiles** in rows of as many as fit (`Columns`, measured by the view): the list makes only the
+  rows in sight, and `Controls/AssetThumbnail` reads a picture small on a pool thread when its
+  tile first shows, keeping the last 600. Decals and textures show their PNG over a checker; props
+  and units their kind's icon (their meshes are not drawn yet). A badge counts the map's uses
+  (`AssetUse`, counted again after every step), another the variants. The tool tip shows a tile
+  larger.
+- **Choosing** a tile (click, the arrow keys) shows it in the inspector, in place of the mode's
+  parts until Clear or Escape: its picture and normal map, its variants, facts, uses, how a map
+  names it (selectable, to copy), Show the file (`assets.showFile`), and what it will be for, with
+  its story (placing: P-1, U-2, D-1; a stratum's texture: S-2). Ctrl+Shift+A (`assets.browse`)
+  shows the shelf with the search field taken; its arguments set the filters.
+- The dock is higher (`DockTallHeight`) while the shelf shows (`IsDockTall`).
+- Not built yet: the picker for a slot (`assets.pick`, C2), dragging onto the map, stars and recents.
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session
@@ -362,7 +391,7 @@ User story F-17. The editor keeps what a service keeps for Loki and Prometheus, 
 
 - **Logs**: every `ILogger` of the editor (`Microsoft.Extensions.Logging.Abstractions`; get one
   with `MainViewModel.Logger(category)`, categories `Commands`, `Files`, `Workspace`,
-  `Rendering`, `Performance`, `Automation`, `VersionControl`, `Editor`). The Console of the dock shows them, with
+  `Rendering`, `Performance`, `Automation`, `VersionControl`, `Assets`, `Editor`). The Console of the dock shows them, with
   their level, newest last; its tab counts the warnings and errors, and it can show only those.
   Logged now: commands run and asked for while not built; opening, importing, saving, exporting
   with their duration, or why they failed; files read again; the workspace and the conversion of
@@ -442,6 +471,10 @@ faf-map editor close                                      # closes without askin
   heights, 5 the lower layer, 6 the first four masks after the remap, 7 as stored), `mode {id}`,
   `tool {id}`, `tab {name: top|3d}`, `show {markers?, pathNodes?, camera?}` (each overlay's
   command with `on`).
+- The shelf: `run id=assets.browse kind=texture scope=everything query=rock` answers with what it
+  shows (filters, counts per kind, biome and category, the first 200 tiles with their keys);
+  `run id=assets.select key=uec1101` selects one; `state` has `dock` and `assets` (kind, scope,
+  query, group, category, summary, the selected key).
 - **Automation's own**, reads and input: `state` (with `mode`, `tool`, `toolNotBuilt`, `palette`),
   `ui {hidden?}`, `perf {reset?}` (above), `logs {problems?, count?}` (what the Console shows),
   `diagnostics {record?, send?, endpoint?, flush?, upload?}` (the session's files and choices;

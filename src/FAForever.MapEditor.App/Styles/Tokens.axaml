@@ -184,6 +184,19 @@
   <x:Double x:Key="ModePanelWidth">280</x:Double>
   <x:Double x:Key="InspectorWidth">300</x:Double>
   <x:Double x:Key="DockHeight">190</x:Double>
+  <!-- the dock while it shows the asset shelf: two rows of tiles and more -->
+  <x:Double x:Key="DockTallHeight">290</x:Double>
+  <x:Double x:Key="AssetFacetsWidth">180</x:Double>
+  <x:Double x:Key="AssetSearchWidth">180</x:Double>
+  <x:Double x:Key="AssetPreviewHeight">200</x:Double>
+  <x:Double x:Key="AssetNormalPreviewSize">72</x:Double>
+  <x:Double x:Key="AssetTooltipPreviewSize">180</x:Double>
+  <x:Double x:Key="FactLabelWidth">90</x:Double>
+  <Thickness x:Key="TilePadding">4</Thickness>
+  <!-- the room right of and under each tile of the shelf -->
+  <Thickness x:Key="TileGap">0,0,8,8</Thickness>
+  <Thickness x:Key="ShelfPadding">12,8</Thickness>
+  <Thickness x:Key="BadgeGap">4</Thickness>
   <x:Double x:Key="MenuBarHeight">36</x:Double>
   <x:Double x:Key="ToolbarHeight">40</x:Double>
   <x:Double x:Key="ToolButtonHeight">30</x:Double>

@@ -449,6 +449,17 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["pitch"] = model.Camera.Now.Pitch,
             },
             ["show"] = new JsonObject { ["markers"] = model.ShowMarkers, ["pathNodes"] = model.ShowPathNodes, ["camera"] = model.ShowCamera },
+            ["dock"] = model.Dock.ToString(),
+            ["assets"] = new JsonObject
+            {
+                ["kind"] = model.Assets.Kind.ToString(),
+                ["scope"] = model.Assets.Scope.ToString(),
+                ["query"] = model.Assets.Query,
+                ["group"] = model.Assets.Group,
+                ["category"] = model.Assets.Category,
+                ["summary"] = model.Assets.Summary,
+                ["selected"] = model.Assets.Shown?.Key,
+            },
             ["gpu"] = new JsonObject
             {
                 ["renderer"] = window.View3D.Renderer,

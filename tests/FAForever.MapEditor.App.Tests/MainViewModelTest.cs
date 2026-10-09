@@ -1,3 +1,4 @@
+using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
@@ -290,6 +291,27 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.AreEqual((40f, 60f), (model.Camera.Now.X, model.Camera.Now.Z));
             Assert.AreEqual(1, moved, "the views draw again");
+        }
+        [TestMethod]
+        public async Task TheShelfFollowsTheModeAndItsCommandsSetIt()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            model.Assets.Use(TestAssets.Catalog());
+
+            model.SelectMode("decals");
+            Assert.AreEqual(AssetKind.Decal, model.Assets.Kind);
+
+            CommandRun browse = await model.Commands.RunAsync("assets.browse",
+                new System.Text.Json.Nodes.JsonObject { ["kind"] = "texture", ["scope"] = "everything", ["query"] = "rock" }, interactive: false);
+            Assert.IsTrue(browse.Ran);
+            Assert.AreEqual(DockTab.Assets, model.Dock);
+            Assert.AreEqual("tund_rock", ((System.Text.Json.Nodes.JsonObject)browse.Result!)["tiles"]![0]!["title"]!.GetValue<string>());
+
+            Assert.IsTrue((await model.Commands.RunAsync("assets.select", new System.Text.Json.Nodes.JsonObject { ["key"] = "uec1101" }, interactive: false)).Ran);
+            Assert.AreEqual("UEF Residential Building", model.Assets.Shown!.Name);
+
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+                model.Commands.RunAsync("assets.browse", new System.Text.Json.Nodes.JsonObject { ["kind"] = "tree" }, interactive: false));
         }
     }
 }

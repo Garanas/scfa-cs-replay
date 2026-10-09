@@ -155,7 +155,13 @@ public sealed partial class MainViewModel
     /// Which tab of the dock shows.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDockTall))]
     public partial DockTab Dock { get; set; } = DockTab.History;
+
+    /// <summary>
+    /// Whether the dock is higher: while it shows the asset shelf.
+    /// </summary>
+    public bool IsDockTall => Dock == DockTab.Assets;
 
     /// <summary>
     /// The overlays the selected mode's panel lists (<see cref="OverlayDefinition.Panel"/>).
@@ -242,6 +248,7 @@ public sealed partial class MainViewModel
             m.IsSelected = m == mode;
         }
         SelectedMode = mode;
+        Assets.FollowMode(id);
         Tools = [.. mode.Definition.Tools.Select(tool => new ToolItem(tool, _tools.GetValueOrDefault(tool.Id)))];
         OnPropertyChanged(nameof(Tools));
         SelectTool(mode.LastTool ?? mode.Definition.Tools[0].Id);

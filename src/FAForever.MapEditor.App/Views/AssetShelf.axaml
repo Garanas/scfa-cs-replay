@@ -1,0 +1,150 @@
+<!--
+  The asset shelf in the dock (concept C1, user stories F-8 and F-9): the kind (which follows the
+  mode) and a search above; on the left what it shows (the map's assets, its biomes, everything),
+  the biomes or factions, the categories, the families and the tile size; the tiles in rows, of
+  which the list makes only those in sight. A tile's tool tip shows it larger; the chosen
+  one shows in the inspector.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.AssetShelf"
+             x:DataType="vm:AssetsViewModel">
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Classes="shelfbar">
+      <DockPanel>
+        <ItemsControl DockPanel.Dock="Left" ItemsSource="{Binding Kinds}" AutomationProperties.Name="Kind of asset">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Classes="chips" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:AssetChoice">
+              <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Text}"
+                      Command="{Binding $parent[UserControl].((vm:AssetsViewModel)DataContext).ChooseKindCommand}" CommandParameter="{Binding}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Border DockPanel.Dock="Left" Classes="barseparator" />
+        <TextBox x:Name="Search" Classes="assetsearch" HorizontalAlignment="Left" Text="{Binding Query}" PlaceholderText="Search: name, biome, id"
+                 AutomationProperties.Name="Search the assets" />
+      </DockPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Left" Classes="facets">
+      <ScrollViewer>
+        <StackPanel Classes="stack">
+          <TextBlock Classes="caption" Text="{Binding Summary}" AutomationProperties.Name="Assets shown" />
+          <TextBlock Classes="overline" Text="{Binding Source=Show, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+          <StackPanel>
+            <Button Classes="facet" Classes.on="{Binding IsInMap}" Command="{Binding ChooseScopeCommand}" CommandParameter="{x:Static vm:AssetScope.InMap}"
+                    AutomationProperties.Name="In this map" AutomationProperties.HelpText="Only what the open map uses">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Classes="shortcut" Text="{Binding InMapCount}" />
+                <TextBlock Text="In this map" />
+              </DockPanel>
+            </Button>
+            <Button Classes="facet" Classes.on="{Binding IsNarrow}" Command="{Binding ChooseScopeCommand}" CommandParameter="{x:Static vm:AssetScope.Narrow}"
+                    ToolTip.Tip="{Binding NarrowHelp}" AutomationProperties.Name="{Binding NarrowTitle}" AutomationProperties.HelpText="{Binding NarrowHelp}">
+              <TextBlock Text="{Binding NarrowTitle}" />
+            </Button>
+            <Button Classes="facet" Classes.on="{Binding IsEverything}" Command="{Binding ChooseScopeCommand}" CommandParameter="{x:Static vm:AssetScope.Everything}"
+                    AutomationProperties.Name="Everything">
+              <TextBlock Text="Everything" />
+            </Button>
+          </StackPanel>
+          <TextBlock Classes="overline section" Text="{Binding GroupsTitle, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+          <ItemsControl ItemsSource="{Binding Groups}" AutomationProperties.Name="{Binding GroupsTitle}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AssetChoice">
+                <Button Classes="facet" Classes.on="{Binding IsOn}"
+                        Command="{Binding $parent[UserControl].((vm:AssetsViewModel)DataContext).ChooseGroupCommand}" CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding Text}">
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Right" Classes="shortcut" Text="{Binding Count}" />
+                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                  </DockPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="overline section" Text="{Binding Source=Category, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+          <ItemsControl ItemsSource="{Binding Categories}" AutomationProperties.Name="Category">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Classes="chips" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AssetChoice">
+                <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Text}"
+                        Command="{Binding $parent[UserControl].((vm:AssetsViewModel)DataContext).ChooseCategoryCommand}" CommandParameter="{Binding}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <CheckBox Classes="section" IsChecked="{Binding Families}" IsVisible="{Binding IsProps}" Content="Variants as one"
+                    AutomationProperties.HelpText="A prop's sizes and variants share a tile" />
+          <TextBlock Classes="label" Text="Tile size" />
+          <Slider Minimum="0" Maximum="2" TickFrequency="1" IsSnapToTickEnabled="True"
+                  Value="{Binding TileSize}" AutomationProperties.Name="Tile size" />
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <Panel>
+      <TextBlock Classes="caption" Text="{Binding EmptyText}" IsVisible="{Binding IsEmpty}" Margin="{StaticResource ShelfPadding}"
+                 AutomationProperties.Name="No assets" />
+      <ListBox x:Name="Grid" Classes="shelf" ItemsSource="{Binding Rows}" AutomationProperties.Name="Assets"
+               AutomationProperties.HelpText="Arrow keys move through the assets; Escape clears the choice">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:AssetRow">
+            <ItemsControl ItemsSource="{Binding Tiles}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:AssetTile">
+                  <Button Classes="tile" Classes.selected="{Binding IsSelected}"
+                          Width="{Binding $parent[UserControl].((vm:AssetsViewModel)DataContext).TileWidth}"
+                          Command="{Binding $parent[UserControl].((vm:AssetsViewModel)DataContext).ChooseTileCommand}" CommandParameter="{Binding}"
+                          AutomationProperties.Name="{Binding Label}">
+                    <ToolTip.Tip>
+                      <StackPanel Classes="stack" x:DataType="vm:AssetTile">
+                        <Border Classes="thumbnail tooltippreview" IsVisible="{Binding HasImage}">
+                          <controls:AssetThumbnail Source="{Binding Image}" DecodeWidth="256" />
+                        </Border>
+                        <TextBlock Classes="heading" Text="{Binding Title}" />
+                        <TextBlock Classes="caption" Text="{Binding Label}" />
+                      </StackPanel>
+                    </ToolTip.Tip>
+                    <StackPanel Spacing="{StaticResource SpaceTiny}">
+                      <Border Classes="thumbnail" Height="{Binding $parent[UserControl].((vm:AssetsViewModel)DataContext).ThumbnailSize}">
+                        <Panel>
+                          <controls:AssetThumbnail Source="{Binding Image}" IsVisible="{Binding HasImage}" />
+                          <Path Classes="icon" Data="{Binding Glyph, Converter={x:Static controls:IconConverter.Instance}}" IsVisible="{Binding !HasImage}"
+                                HorizontalAlignment="Center" VerticalAlignment="Center" />
+                          <Border Classes="badge uses" HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding IsUsed}">
+                            <TextBlock Text="{Binding Uses}" />
+                          </Border>
+                          <Border Classes="badge" HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding IsFamily}">
+                            <TextBlock Text="{Binding Members.Count}" />
+                          </Border>
+                        </Panel>
+                      </Border>
+                      <TextBlock Text="{Binding Title}" />
+                      <TextBlock Classes="caption" Text="{Binding Detail}" TextWrapping="NoWrap" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Panel>
+  </DockPanel>
+</UserControl>

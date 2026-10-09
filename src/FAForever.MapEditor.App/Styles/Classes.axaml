@@ -489,6 +489,128 @@
     <Setter Property="IsVisible" Value="False" />
   </Style>
 
+  <!-- the asset shelf (concept C1): the dock grows while it shows -->
+  <Style Selector="Border.dock.tall">
+    <Setter Property="Height" Value="{StaticResource DockTallHeight}" />
+  </Style>
+  <!-- the biomes or factions and the categories, left of the tiles -->
+  <Style Selector="Border.facets">
+    <Setter Property="Width" Value="{StaticResource AssetFacetsWidth}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GroupDividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerRight}" />
+    <Setter Property="Padding" Value="{StaticResource ShelfPadding}" />
+  </Style>
+  <Style Selector="Border.shelfbar">
+    <Setter Property="Padding" Value="{StaticResource ShelfPadding}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GroupDividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerBottom}" />
+  </Style>
+  <Style Selector="TextBox.assetsearch">
+    <Setter Property="Width" Value="{StaticResource AssetSearchWidth}" />
+  </Style>
+  <!-- a biome or faction to show alone: a line with its count -->
+  <Style Selector="Button.facet">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="{StaticResource BadgePadding}" />
+    <Setter Property="MinHeight" Value="{StaticResource ChipHeight}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.facet.on">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.facet.on:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectedHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <!-- the rows of tiles: the list only makes the rows in sight, and shows no row as chosen -->
+  <Style Selector="ListBox.shelf">
+    <Setter Property="Padding" Value="{StaticResource ShelfPadding}" />
+  </Style>
+  <Style Selector="ListBox.shelf ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Focusable" Value="False" />
+  </Style>
+  <Style Selector="ListBox.shelf ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.shelf ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <!-- an asset: its picture or glyph, its name, what it is -->
+  <Style Selector="Button.tile">
+    <Setter Property="Margin" Value="{StaticResource TileGap}" />
+    <Setter Property="Padding" Value="{StaticResource TilePadding}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Top" />
+    <Setter Property="CornerRadius" Value="{StaticResource RailButtonRadius}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlRaisedBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.tile.selected">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.tile.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectedHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.tile TextBlock">
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <!-- the place of a picture, where the glyph of its kind shows when it has none -->
+  <Style Selector="Border.thumbnail">
+    <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.thumbnail Path.icon">
+    <Setter Property="Stroke" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <!-- a small count on a picture: the uses, the variants -->
+  <Style Selector="Border.badge">
+    <Setter Property="Padding" Value="{StaticResource BadgePadding}" />
+    <Setter Property="CornerRadius" Value="{StaticResource BadgeRadius}" />
+    <Setter Property="Margin" Value="{StaticResource BadgeGap}" />
+    <Setter Property="Background" Value="{DynamicResource InputBrush}" />
+  </Style>
+  <Style Selector="Border.badge.uses">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+  </Style>
+  <Style Selector="Border.badge TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Border.badge.uses TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <!-- the asset in the inspector, and in the tool tip of a tile -->
+  <Style Selector="Border.preview">
+    <Setter Property="Height" Value="{StaticResource AssetPreviewHeight}" />
+  </Style>
+  <Style Selector="Border.preview Path.icon">
+    <Setter Property="Width" Value="{StaticResource AssetNormalPreviewSize}" />
+    <Setter Property="Height" Value="{StaticResource AssetNormalPreviewSize}" />
+  </Style>
+  <Style Selector="Border.normalpreview">
+    <Setter Property="Width" Value="{StaticResource AssetNormalPreviewSize}" />
+    <Setter Property="Height" Value="{StaticResource AssetNormalPreviewSize}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Border.tooltippreview">
+    <Setter Property="Width" Value="{StaticResource AssetTooltipPreviewSize}" />
+    <Setter Property="Height" Value="{StaticResource AssetTooltipPreviewSize}" />
+  </Style>
+
   <!-- a list of many short lines: the Console -->
   <Style Selector="ListBox.log ListBoxItem">
     <Setter Property="Padding" Value="{StaticResource BarPadding}" />

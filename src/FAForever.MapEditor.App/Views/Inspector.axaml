@@ -1,48 +1,123 @@
-<!-- The inspector: the properties of what is selected or active (F-11), by mode; its parts a line apart. -->
+<!-- The inspector: the properties of what is selected or active (F-11), by mode; its parts a line apart.
+     An asset chosen in the shelf shows here until the choice is cleared (F-8, F-9). -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:workspaces="using:FAForever.MapEditor.Project.Workspaces"
              x:Class="FAForever.MapEditor.App.Views.Inspector"
              x:DataType="vm:MainViewModel">
   <Border Classes="inspector">
     <ScrollViewer>
-      <StackPanel>
-        <Border Classes="panelhead">
-          <StackPanel>
-            <TextBlock Classes="overline" Text="{Binding Source=Inspector, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-            <TextBlock Classes="panelname" Text="{Binding SelectedMode.Definition.Title}" />
-          </StackPanel>
-        </Border>
-        <ItemsControl ItemsSource="{Binding SelectedMode.Definition.Inspector}" AutomationProperties.Name="Inspector">
-          <ItemsControl.DataTemplates>
-            <DataTemplate DataType="vm:PlannedSection">
-              <Border Classes="group">
+      <Panel>
+        <StackPanel IsVisible="{Binding Assets.HasSelection}" AutomationProperties.Name="Asset">
+          <Border Classes="panelhead">
+            <StackPanel>
+              <TextBlock Classes="overline" Text="{Binding Source=Inspector, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <TextBlock Classes="panelname" Text="{Binding Assets.Shown.Name}" TextWrapping="Wrap" AutomationProperties.Name="Asset name" />
+              <TextBlock Classes="caption" Text="{Binding Assets.ShownDetail}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <Border Classes="thumbnail preview">
+                <Panel>
+                  <controls:AssetThumbnail Source="{Binding Assets.ShownImage}" DecodeWidth="512" IsVisible="{Binding Assets.HasShownImage}"
+                                           AutomationProperties.Name="Picture of the asset" />
+                  <Path Classes="icon" Data="{Binding Assets.ShownGlyph, Converter={x:Static controls:IconConverter.Instance}}" IsVisible="{Binding !Assets.HasShownImage}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Panel>
+              </Border>
+              <StackPanel Classes="inline" IsVisible="{Binding Assets.HasShownNormalImage}">
+                <Border Classes="thumbnail normalpreview">
+                  <controls:AssetThumbnail Source="{Binding Assets.ShownNormalImage}" AutomationProperties.Name="Normal map of the asset" />
+                </Border>
+                <TextBlock Classes="caption" Text="Normal map" />
+              </StackPanel>
+              <TextBlock Classes="caption" Text="{Binding Assets.ShownUses}" AutomationProperties.Name="Uses of the asset" />
+            </StackPanel>
+          </Border>
+          <Border Classes="group" IsVisible="{Binding Assets.IsFamilySelected}">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="heading" Text="Variants" />
+              <ListBox ItemsSource="{Binding Assets.Selected.Members}" SelectedItem="{Binding Assets.SelectedMember}" AutomationProperties.Name="Variants">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="workspaces:AssetEntry">
+                    <TextBlock Text="{Binding Name}" />
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </Border>
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <ItemsControl ItemsSource="{Binding Assets.Shown.Facts}" AutomationProperties.Name="Facts">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="workspaces:AssetFact">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="{Binding Label}" Width="{StaticResource FactLabelWidth}" />
+                      <TextBlock Text="{Binding Value}" TextWrapping="Wrap" />
+                    </DockPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="label" Text="In the game" />
+              <TextBox Classes="mono" Text="{Binding Assets.Shown.Key, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                       AutomationProperties.Name="Path in the game" AutomationProperties.HelpText="How a map names it; select it to copy" />
+            </StackPanel>
+          </Border>
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <Border Classes="planned">
                 <StackPanel Classes="stack">
-                  <TextBlock Classes="heading" Text="{Binding Title}" />
-                  <Border Classes="planned">
-                    <StackPanel Classes="stack">
-                      <TextBlock Classes="caption" Text="{Binding Missing}" />
-                      <TextBlock Classes="story" Text="{Binding Story, StringFormat='Not built yet: user story {0}'}" />
-                    </StackPanel>
-                  </Border>
+                  <TextBlock Classes="caption" Text="{Binding Assets.ShownPlanned}" />
+                  <TextBlock Classes="story" Text="Not built yet" />
                 </StackPanel>
               </Border>
-            </DataTemplate>
-          </ItemsControl.DataTemplates>
-        </ItemsControl>
-        <Border Classes="group">
-          <StackPanel Classes="stack">
-            <TextBlock Classes="heading" Text="Selection" />
-            <Border Classes="planned">
-              <StackPanel Classes="stack">
-                <TextBlock Classes="caption" Text="Select markers, props, decals, units and areas in the views; move, rotate and scale them with handles." />
-                <TextBlock Classes="story" Text="Not built yet: user story F-11" />
+              <StackPanel Classes="inline">
+                <Button Content="Show the file" Command="{Binding RunCommand}" CommandParameter="assets.showFile" />
+                <Button Content="Clear" Command="{Binding Assets.ClearSelectionCommand}" AutomationProperties.HelpText="The inspector shows the mode again" />
               </StackPanel>
-            </Border>
-          </StackPanel>
-        </Border>
-      </StackPanel>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+        <StackPanel IsVisible="{Binding !Assets.HasSelection}">
+          <Border Classes="panelhead">
+            <StackPanel>
+              <TextBlock Classes="overline" Text="{Binding Source=Inspector, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <TextBlock Classes="panelname" Text="{Binding SelectedMode.Definition.Title}" />
+            </StackPanel>
+          </Border>
+          <ItemsControl ItemsSource="{Binding SelectedMode.Definition.Inspector}" AutomationProperties.Name="Inspector">
+            <ItemsControl.DataTemplates>
+              <DataTemplate DataType="vm:PlannedSection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <Border Classes="planned">
+                      <StackPanel Classes="stack">
+                        <TextBlock Classes="caption" Text="{Binding Missing}" />
+                        <TextBlock Classes="story" Text="{Binding Story, StringFormat='Not built yet: user story {0}'}" />
+                      </StackPanel>
+                    </Border>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.DataTemplates>
+          </ItemsControl>
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="heading" Text="Selection" />
+              <Border Classes="planned">
+                <StackPanel Classes="stack">
+                  <TextBlock Classes="caption" Text="Select markers, props, decals, units and areas in the views; move, rotate and scale them with handles." />
+                  <TextBlock Classes="story" Text="Not built yet: user story F-11" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Panel>
     </ScrollViewer>
   </Border>
 </UserControl>

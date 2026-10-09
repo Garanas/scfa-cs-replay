@@ -29,9 +29,15 @@ reads again when it changes; and nothing that generates runs by itself.
       never runs by itself.
 - [ ] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
-      missing; open an asset's file; reload one.
+      missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map
+      uses and how often, shows an asset's file and reads the assets again; missing: where each
+      comes from, the missing ones.
 - [ ] **F-9 Pickers.** One way to choose an asset everywhere: a searchable picker with thumbnails
-      and filters, for textures, decals, props and units (see UNT-1).
+      and filters, for textures, decals, props and units (see UNT-1). Today: the asset shelf in the
+      dock (Ctrl+Shift+A): the kind follows the mode; what the map uses, its biomes or everything;
+      biome or faction, category, search; a prop's variants as one tile; pictures of decals and
+      textures; the chosen asset in the inspector. Missing: the picker a slot or tool opens
+      (Ctrl+P), pictures of props and units, dragging onto the map.
 - [ ] **F-10 Presets.** Save a set of things and place or apply it again: a civilian base (units in
       a group), a brush, a prop palette, a set of markers, a lighting and water setup. Presets are
       files in the workspace, shared like the rest of it.

@@ -88,6 +88,7 @@ public sealed partial class MainViewModel : ObservableObject
         Setup = new WorkspaceSetupViewModel(_dialogs, Logger("Workspace"), text => Status = text);
         Setup.WorkspaceReady += OnWorkspaceReady;
         VersionControl = new VersionControlViewModel(this);
+        Assets = new AssetsViewModel(Logger("Assets"));
         Commands = CommandServices.Create(this, _dialogs, typeof(MainViewModel).Assembly);
         Palette = new PaletteViewModel(Commands, RunAsync);
         InitializeShell();
@@ -119,8 +120,13 @@ public sealed partial class MainViewModel : ObservableObject
     public PaletteViewModel Palette { get; }
 
     /// <summary>
+    /// The asset shelf in the dock, and the asset the inspector shows (user stories F-8, F-9).
+    /// </summary>
+    public AssetsViewModel Assets { get; }
+
+    /// <summary>
     /// A logger of the editor, by what it is about: <c>Commands</c>, <c>Files</c>, <c>Workspace</c>,
-    /// <c>Rendering</c>, <c>Performance</c>, <c>Automation</c>, <c>VersionControl</c>, <c>Editor</c>.
+    /// <c>Rendering</c>, <c>Performance</c>, <c>Automation</c>, <c>VersionControl</c>, <c>Assets</c>, <c>Editor</c>.
     /// </summary>
     public ILogger Logger(string category) => Telemetry.CreateLogger(category);
 
@@ -146,11 +152,28 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void OnWorkspaceReady(Workspace workspace)
     {
+        _ = LoadAssetsAsync(workspace);
         Refresh(null);
         if (_openWhenReady is string folder)
         {
             _openWhenReady = null;
             _ = OpenOnStartAsync(folder);
+        }
+    }
+
+    /// <summary>
+    /// Reads the workspace's assets into the shelf; what fails shows in the status line.
+    /// </summary>
+    public async Task LoadAssetsAsync(Workspace workspace)
+    {
+        try
+        {
+            await Assets.LoadAsync(workspace);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            Status = $"Could not read the workspace's assets: {exception.Message}";
+            Logger("Assets").LogError(exception, "Reading the assets of {Folder} failed: {Reason}", workspace.AssetsFolder, exception.Message);
         }
     }
 
@@ -540,6 +563,7 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CanRedo));
         RefreshOverlays();
         ShowHistory();
+        Assets.UseMap(Map?.Document);
         DocumentChanged?.Invoke(this, EventArgs.Empty);
     }
 

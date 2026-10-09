@@ -1,0 +1,54 @@
+using FAForever.MapEditor.Project.Workspaces;
+
+namespace FAForever.MapEditor.App.Tests
+{
+    /// <summary>
+    /// A workspace's assets folder with a few of each kind, as the conversion writes them, for the
+    /// asset shelf.
+    /// </summary>
+    internal static class TestAssets
+    {
+        /// <summary>
+        /// A PNG of one grey pixel.
+        /// </summary>
+        private static readonly byte[] Pixel = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==");
+
+        private static readonly string Root = Path.Combine(AppContext.BaseDirectory, "assets-shelf");
+
+        public static AssetCatalog Catalog() => AssetCatalog.Load(Folder());
+
+        public static string Folder()
+        {
+            string assets = Path.Combine(Root, Guid.NewGuid().ToString("N"));
+            void Write(string path, string? text = null)
+            {
+                string file = Path.Combine(assets, path);
+                Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+                if (text is null)
+                {
+                    File.WriteAllBytes(file, Pixel);
+                }
+                else
+                {
+                    File.WriteAllText(file, text);
+                }
+            }
+            const string tree = """{ "id": "x", "size": { "x": 1, "y": 9, "z": 1 }, "reclaimEnergy": 30 }""";
+            Write("env/evergreen/props/trees/pine06_prop.json", tree);
+            Write("env/evergreen/props/trees/pine06_s2_prop.json", tree);
+            Write("env/evergreen/props/trees/pine06_v1_prop.json", tree);
+            Write("env/evergreen/props/trees/oak01_prop.json", tree);
+            Write("env/evergreen/props/rocks/rock01_prop.json", """{ "id": "x", "reclaimMass": 20 }""");
+            Write("env/tundra/props/rocks/tund_rock01_prop.json", """{ "id": "x", "reclaimMass": 20 }""");
+            Write("env/evergreen/decals/e_mud001_albedo.png");
+            Write("env/evergreen/decals/e_mud002_albedo.png");
+            Write("env/tundra/layers/tund_rock_albedo.png");
+            Write("env/tundra/layers/tund_rock_normal.png");
+            Write("env/evergreen/layers/eg_grass001_albedo.png");
+            Write("units/uec1101/uec1101_unit.json", """{ "id": "UEC1101", "name": "UEF Residential Building", "faction": "Uef", "techLevel": 1, "categories": ["UEF", "STRUCTURE", "CIVILIAN"] }""");
+            Write("units/uel0101/uel0101_unit.json", """{ "id": "UEL0101", "name": "Snoop", "faction": "Uef", "techLevel": 1, "categories": ["UEF", "LAND"] }""");
+            return assets;
+        }
+    }
+}
