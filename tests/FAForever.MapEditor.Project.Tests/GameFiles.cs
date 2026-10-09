@@ -1,5 +1,7 @@
 using System.IO.Compression;
+using System.Numerics;
 using System.Text;
+using FAForever.FileFormats.Mesh;
 using FAForever.MapEditor.Project.Files;
 
 namespace FAForever.MapEditor.Project.Tests
@@ -48,16 +50,17 @@ namespace FAForever.MapEditor.Project.Tests
             WriteArchive(Path.Combine(GameFolder, "gamedata", "env.scd"), new Dictionary<string, byte[]>
             {
                 ["env/Evergreen/props/Pine_prop.bp"] = Encoding.UTF8.GetBytes(PropBlueprint),
-                ["env/Evergreen/props/Pine_lod0.scm"] = Encoding.UTF8.GetBytes("game lod0"),
-                ["env/Evergreen/props/pine_far.scm"] = Encoding.UTF8.GetBytes("game far"),
+                ["env/Evergreen/props/Pine_lod0.scm"] = Mesh("game lod0"),
+                ["env/Evergreen/props/pine_far.scm"] = Mesh("game far"),
                 ["env/Evergreen/props/Pine_albedo.dds"] = Texture(0x10),
                 ["env/Evergreen/layers/Eg_Grass001_albedo.dds"] = Texture(0x20),
                 ["env/Evergreen/props/Broken_prop.bp"] = Encoding.UTF8.GetBytes("PropBlueprint { Description = "),
+                ["env/Evergreen/props/Broken_lod0.scm"] = Encoding.UTF8.GetBytes("not a mesh"),
             });
             WriteArchive(Path.Combine(GameFolder, "gamedata", "units.scd"), new Dictionary<string, byte[]>
             {
                 ["units/UEL0001/UEL0001_unit.bp"] = Encoding.UTF8.GetBytes(UnitBlueprint),
-                ["units/UEL0001/UEL0001_lod0.scm"] = Encoding.UTF8.GetBytes("unit lod0"),
+                ["units/UEL0001/UEL0001_lod0.scm"] = Mesh("unit lod0"),
                 ["units/UEL0001/UEL0001_Albedo.dds"] = Texture(0x30),
                 ["units/UEL0001/UEL0001_NormalsTS.dds"] = Texture(0x40),
                 ["units/UEL0001/UEL0001_script.lua"] = Encoding.UTF8.GetBytes("-- not converted"),
@@ -85,10 +88,26 @@ namespace FAForever.MapEditor.Project.Tests
             };
             if (withExtraFile)
             {
-                files["env/evergreen/props/new_lod0.scm"] = Encoding.UTF8.GetBytes("new");
+                files["env/evergreen/props/new_lod0.scm"] = Mesh("new");
             }
             WriteArchive(FafEnv, files);
         }
+
+        /// <summary>
+        /// A mesh of one triangle, with one bone that is named to tell the meshes apart.
+        /// </summary>
+        public static byte[] Mesh(string bone) => ScmWriter.Write(new Scm
+        {
+            Bones = [new ScmBone(bone, Matrix4x4.Identity, Vector3.Zero, Quaternion.Identity, -1)],
+            Vertices =
+            [
+                new ScmVertex(Vector3.Zero, Vector3.UnitY, Vector3.UnitX, Vector3.UnitZ, Vector2.Zero, Vector2.Zero, 0),
+                new ScmVertex(Vector3.UnitX, Vector3.UnitY, Vector3.UnitX, Vector3.UnitZ, Vector2.UnitX, Vector2.Zero, 0),
+                new ScmVertex(Vector3.UnitZ, Vector3.UnitY, Vector3.UnitX, Vector3.UnitZ, Vector2.UnitY, Vector2.Zero, 0),
+            ],
+            Indices = [0, 2, 1],
+            Information = [],
+        });
 
         /// <summary>
         /// A 4 by 4 texture of one colour, half transparent.

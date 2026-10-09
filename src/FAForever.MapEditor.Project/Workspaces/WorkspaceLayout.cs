@@ -12,7 +12,7 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// assets/                converted from the game's archives; made again whenever they change
     ///   manifest.json        what they were converted from, and by which editor (AssetManifestDto)
     ///   env/..., units/...   the game's paths in lower case: textures as PNG, blueprints as JSON
-    ///                        (PropBlueprintDto, UnitBlueprintDto), meshes (.scm) as they are
+    ///                        (PropBlueprintDto, UnitBlueprintDto), meshes as glTF (.glb)
     /// assets.new/            a conversion in progress, which replaces assets/ when it is done
     /// .gitignore             keeps assets/ out of git: the game's files are not ours to share
     /// </code>
@@ -36,13 +36,15 @@ namespace FAForever.MapEditor.Project.Workspaces
 
         /// <summary>
         /// Where the conversion puts the file of a game path, relative to <see cref="Assets"/>:
-        /// lower case, and a texture (<c>.dds</c>) as a PNG.
+        /// lower case, a texture (<c>.dds</c>) as a PNG, a blueprint (<c>.bp</c>) as JSON and a mesh
+        /// (<c>.scm</c>) as glTF (<c>.glb</c>).
         /// </summary>
         public static string AssetOf(string gamePath)
         {
             string path = GameArchives.Normalize(gamePath);
             return path.EndsWith(".dds", StringComparison.Ordinal) ? path[..^4] + ".png"
                 : path.EndsWith(".bp", StringComparison.Ordinal) ? path[..^3] + ".json"
+                : path.EndsWith(".scm", StringComparison.Ordinal) ? path[..^4] + ".glb"
                 : path;
         }
     }

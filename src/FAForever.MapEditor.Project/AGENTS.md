@@ -160,7 +160,8 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   Paths are compared in lower case.
 - `AssetConverter` turns them into `assets/`, keeping the game's paths in lower case: textures as
   8-bit PNG with alpha, prop and unit blueprints as the editor's JSON (`PropBlueprintDto`,
-  `UnitBlueprintDto`, read with FileFormats.Blueprints by `AssetBlueprints`), meshes as they are;
+  `UnitBlueprintDto`, read with FileFormats.Blueprints by `AssetBlueprints`), meshes as glTF
+  (`.glb`, by `GlbWriter` of FileFormats.Mesh: the triangles, the skeleton as a skin, no material);
   scripts, animations and the rest are left out. The levels of detail get the names the engine
   fills in (`<name>_lod<n>.scm`, `_albedo.dds`, `_normalsts.dds`, `_specteam.dds`), and a file the
   archives lack is left out. It writes into `assets.new/` and replaces `assets/` when done; a stopped

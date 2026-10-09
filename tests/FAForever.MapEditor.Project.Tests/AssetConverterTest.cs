@@ -1,3 +1,4 @@
+using System.Text;
 using FAForever.FileFormats.Blueprints;
 using FAForever.MapEditor.Project.Workspaces;
 using FAForever.MapEditor.Project.Workspaces.Serialized;
@@ -25,6 +26,16 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         private static T Read<T>(Workspace workspace, string asset) => ProjectJson.Read<T>(Path.Combine(workspace.AssetsFolder, asset));
+
+        /// <summary>
+        /// The JSON of a converted mesh, which names its bones.
+        /// </summary>
+        private static string GlbJson(string path)
+        {
+            byte[] glb = File.ReadAllBytes(path);
+            Assert.AreEqual("glTF", Encoding.ASCII.GetString(glb, 0, 4));
+            return Encoding.UTF8.GetString(glb, 20, BitConverter.ToInt32(glb, 12));
+        }
 
         [TestMethod]
         public void ConvertsTexturesToPngWithAlpha()
@@ -63,16 +74,19 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(10, pine.ReclaimEnergy);
             Assert.AreEqual(0.5, pine.UniformScale);
             Assert.AreEqual(2, pine.Lods.Count);
-            Assert.AreEqual("/env/evergreen/props/pine_lod0.scm", pine.Lods[0].Mesh, "the default name of the first level");
+            Assert.AreEqual("/env/evergreen/props/pine_lod0.glb", pine.Lods[0].Mesh, "the default name of the first level");
             Assert.AreEqual("/env/evergreen/props/pine_albedo.png", pine.Lods[0].Albedo);
             Assert.AreEqual("TMeshAlpha", pine.Lods[0].Shader);
             Assert.IsNull(pine.Lods[0].Normals, "the archives have no normals");
-            Assert.AreEqual("/env/evergreen/props/pine_far.scm", pine.Lods[1].Mesh);
+            Assert.AreEqual("/env/evergreen/props/pine_far.glb", pine.Lods[1].Mesh);
             Assert.IsNull(pine.Lods[1].Albedo, "a texture the archives lack is left out");
-            Assert.AreEqual("game far", File.ReadAllText(workspace.FindAsset("/env/evergreen/props/pine_far.scm")!));
+            string far = workspace.FindAsset("/env/evergreen/props/pine_far.scm")!;
+            Assert.AreEqual(Path.Combine(workspace.AssetsFolder, "env", "evergreen", "props", "pine_far.glb"), far);
+            StringAssert.Contains(GlbJson(far), "\"game far\"", "the mesh as glTF, with its bone");
 
-            Assert.AreEqual(1, conversion.Skipped.Count, string.Join(Environment.NewLine, conversion.Skipped));
-            StringAssert.StartsWith(conversion.Skipped[0], "env/evergreen/props/broken_prop.bp");
+            Assert.AreEqual(2, conversion.Skipped.Count, string.Join(Environment.NewLine, conversion.Skipped));
+            StringAssert.StartsWith(conversion.Skipped[0], "env/evergreen/props/broken_lod0.scm: At byte 0: Not a mesh");
+            StringAssert.StartsWith(conversion.Skipped[1], "env/evergreen/props/broken_prop.bp");
         }
 
         [TestMethod]
@@ -89,7 +103,7 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(18000, acu.MassCost);
             Assert.AreEqual(0.9, acu.WreckageMass);
             Assert.AreEqual(1, acu.Footprint!.SizeX);
-            Assert.AreEqual("/units/uel0001/uel0001_lod0.scm", acu.Lods.Single().Mesh);
+            Assert.AreEqual("/units/uel0001/uel0001_lod0.glb", acu.Lods.Single().Mesh);
             Assert.AreEqual("/units/uel0001/uel0001_albedo.png", acu.Lods[0].Albedo);
             Assert.AreEqual("/units/uel0001/uel0001_normalsts.png", acu.Lods[0].Normals);
             Assert.IsFalse(File.Exists(Path.Combine(workspace.AssetsFolder, "units", "uel0001", "uel0001_script.lua")), "scripts are not needed");
@@ -117,7 +131,7 @@ namespace FAForever.MapEditor.Project.Tests
         public void GoesOnWhereAStoppedConversionWas()
         {
             (_, Workspace workspace) = Setup();
-            string done = Path.Combine(workspace.Folder, WorkspaceLayout.AssetsInProgress, "units", "uel0001", "uel0001_lod0.scm");
+            string done = Path.Combine(workspace.Folder, WorkspaceLayout.AssetsInProgress, "units", "uel0001", "uel0001_lod0.glb");
             Directory.CreateDirectory(Path.GetDirectoryName(done)!);
             File.WriteAllText(done, "converted before it stopped");
             Assert.AreEqual(AssetState.Missing, workspace.CheckAssets().State);

@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text;
 using FAForever.FileFormats.Blueprints;
 using FAForever.FileFormats.Lua;
+using FAForever.FileFormats.Mesh;
 using FAForever.MapEditor.Project.Workspaces.Serialized;
 using ImageMagick;
 
@@ -26,7 +27,8 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// <summary>
     /// Converts the game's archives (<see cref="GameArchives"/>) into a workspace's assets:
     /// textures (<c>.dds</c>) to PNG with their alpha channel, prop and unit blueprints (<c>.bp</c>)
-    /// to the editor's JSON (<see cref="AssetBlueprints"/>), meshes (<c>.scm</c>) as they are. The
+    /// to the editor's JSON (<see cref="AssetBlueprints"/>), meshes (<c>.scm</c>) to glTF
+    /// (<c>.glb</c>, <see cref="GlbWriter"/>) with their skeleton. The
     /// rest (scripts, animations, sounds) is not needed for making maps and left out.
     /// </summary>
     /// <remarks>
@@ -41,7 +43,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// The version of what the conversion writes. Raise it whenever that changes, so that
         /// every workspace converts again.
         /// </summary>
-        public const int FormatVersion = 1;
+        public const int FormatVersion = 2;
 
         /// <summary>
         /// The version of the editor, without the commit it was built from, e.g. <c>1.2.0</c>.
@@ -101,10 +103,10 @@ namespace FAForever.MapEditor.Project.Workspaces
                             }
                             else
                             {
-                                WriteComplete(output, part => File.WriteAllBytes(part, bytes));
+                                WriteComplete(output, part => File.WriteAllBytes(part, GlbWriter.Write(ScmParser.Parse(bytes))));
                             }
                         }
-                        catch (Exception exception) when (exception is MagickException or InvalidDataException)
+                        catch (Exception exception) when (exception is MagickException or InvalidDataException or ScmFormatException or ArgumentException)
                         {
                             skipped.Add($"{file}: {exception.Message}");
                         }
@@ -120,7 +122,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                 Converted = DateTimeOffset.Now,
                 Archives = archives,
                 Textures = Count(staging, "*.png"),
-                Meshes = Count(staging, "*.scm"),
+                Meshes = Count(staging, "*.glb"),
                 Props = Count(staging, "*_prop.json"),
                 Units = Count(staging, "*_unit.json"),
             };
