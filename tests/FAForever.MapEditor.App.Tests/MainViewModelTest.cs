@@ -1,4 +1,5 @@
 using FAForever.MapEditor.App.Diagnostics;
+using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Workspaces;
@@ -107,15 +108,16 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = new MainViewModel(new Answers());
             await model.OpenAsync(HardFfa);
             float before = model.ShownDocument!.Terrain.Heightmap.GetHeight(128, 40);
-            model.BrushMode = HeightBrushMode.Raise;
-            model.BrushRadius = 10;
-            model.BrushStrength = 2;
+            SculptTool sculpt = model.Tool<SculptTool>();
+            sculpt.Mode = HeightBrushMode.Raise;
+            sculpt.Radius = 10;
+            sculpt.Strength = 2;
 
-            model.BeginStroke(100, 40);
-            model.ContinueStroke(130, 40);
+            sculpt.Press(100, 40);
+            sculpt.Drag(130, 40);
             Assert.IsTrue(model.ShownDocument!.Terrain.Heightmap.GetHeight(128, 40) > before, "the stroke shows while it is painted");
             Assert.IsFalse(model.CanUndo, "nothing to undo until the stroke ends");
-            model.EndStroke();
+            sculpt.Release();
 
             Assert.AreEqual("Raise terrain", model.Map!.Session.UndoDescription);
             StringAssert.StartsWith(model.Title, "* HardFFA");
@@ -130,7 +132,7 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = new MainViewModel(new Answers());
             await model.OpenAsync(HardFfa);
             model.Stroke([(50, 50), (60, 60)]);
-            model.BrushMode = HeightBrushMode.Lower;
+            model.Tool<SculptTool>().Mode = HeightBrushMode.Lower;
             model.Stroke([(100, 100), (110, 110)]);
 
             CollectionAssert.AreEqual(new[] { "Opened", "Raise terrain", "Lower terrain" }, model.History.Select(entry => entry.Description).ToList());
@@ -148,13 +150,15 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = new MainViewModel(new Answers());
             await model.OpenAsync(HardFfa);
-            Assert.AreEqual(9, model.PaintTargets.Count, "the heights and eight layers");
+            StrataTool strata = model.StrataTool;
+            Assert.AreEqual(8, strata.Strata.Count, "eight layers with a mask");
             byte before = model.ShownDocument!.Terrain.StratumMasks.Layers[2][64, 64];
             var heights = model.ShownDocument.Terrain.Heightmap;
 
-            model.SelectPaintTarget(3);
-            model.BrushRadius = 10;
-            model.MaskStrength = 1;
+            model.SelectTool("paint.strata");
+            strata.Choose(3);
+            strata.Radius = 10;
+            strata.Strength = 1;
             model.Stroke([(120, 128), (136, 128)]);
 
             Assert.AreEqual("Paint layer 3", model.Map!.Session.UndoDescription);

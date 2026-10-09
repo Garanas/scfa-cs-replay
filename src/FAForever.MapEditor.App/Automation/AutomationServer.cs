@@ -9,6 +9,7 @@ using Avalonia.VisualTree;
 using Avalonia.Input;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Diagnostics;
+using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
 using FAForever.MapEditor.Project.Editing;
@@ -381,6 +382,8 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
     private JsonObject State()
     {
         MapDocument? document = model.Map?.Document;
+        SculptTool sculpt = model.Tool<SculptTool>();
+        StrataTool strata = model.Tool<StrataTool>();
         return new JsonObject
         {
             ["title"] = model.Title,
@@ -410,12 +413,20 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             ["history"] = new JsonArray([.. (model.Map?.Session.History ?? []).Select(step => (JsonNode)JsonValue.Create(step.IsCurrent ? $"> {step.Description}" : step.Description))]),
             ["brush"] = new JsonObject
             {
-                ["paint"] = model.SelectedPaintTarget?.Name,
-                ["mode"] = model.BrushMode.ToString(),
-                ["radius"] = model.BrushRadius,
-                ["strength"] = model.IsPaintingLayer ? model.MaskStrength : model.BrushStrength,
-                ["erase"] = model.MaskErase,
-                ["target"] = model.BrushTarget,
+                ["sculpt"] = new JsonObject
+                {
+                    ["mode"] = sculpt.Mode.ToString(),
+                    ["radius"] = sculpt.Radius,
+                    ["strength"] = sculpt.Strength,
+                    ["target"] = sculpt.Target,
+                },
+                ["strata"] = new JsonObject
+                {
+                    ["layer"] = strata.Painted?.Name,
+                    ["radius"] = strata.Radius,
+                    ["strength"] = strata.Strength,
+                    ["erase"] = strata.Erase,
+                },
             },
             ["zoom"] = window.MapView.Zoom,
             ["tab"] = window.ShownView,

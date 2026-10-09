@@ -2,6 +2,10 @@
 
 Priority high, effort medium. Do it before the next tool is built.
 
+**Built** (2026-10-09): `src/FAForever.MapEditor.App/Tools/`, and the App's guide describes it.
+"Today" says what it replaced; the direction below is what was built, with "As built" where it
+differs from the plan.
+
 ## Today
 
 A tool is a `ToolDefinition` (`ViewModels/EditorModes.cs`): id, title, story, and what it is to
@@ -73,12 +77,21 @@ exist. That is knowledge taken out of them, not added.
   `StrataTool.Layer`; the link from paint target back to tool goes. The top view shows the mask
   of `(ActiveTool?.Tool as StrataTool)?.Layer`, through one property on the view model.
   Automation's `brush layer=` becomes a command with an argument (`paint.layer {layer}`, file 01).
+  *As built*: `brush.set` keeps its arguments, so scripts and agents work as before; a layer
+  chooses its tool on purpose there, and radius and strength go to the active tool. The view
+  model has `StrataTool` as a property, for the Paint panel's list to bind to.
 - **The 3D view can edit later** with no tool changes: it turns the mouse into a place on the
   ground (`Camera.PointAt`) and calls the same three methods.
 
 A decision for the owner: the radius is shared between sculpting and painting today. Per tool is
 simpler to reason about; if a shared radius is wanted, both tools read one `BrushRadius` that the
-view model keeps.
+view model keeps. *As built*: per tool.
+
+*As built*, beyond the plan: `IMapTool` also gives the radius of the circle the views draw
+around the mouse (`CursorRadius`, 0 for none), and the view model keeps the stroke's transaction
+(`StartStroke`, `EndStroke`, `StrokeInProgress`), since the shown document, undo, reloads and
+`Needs.NoStroke` depend on it. A stroke the editor ends (another map opens) is left alone by the
+tool that held it.
 
 ## Avoid
 

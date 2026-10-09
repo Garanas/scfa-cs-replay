@@ -3,7 +3,9 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Avalonia.Input;
 using FAForever.MapEditor.App.Commands;
+using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Editing;
 using MediatR;
 
 namespace FAForever.MapEditor.App.Tests
@@ -164,25 +166,64 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public async Task ToolsAreCommandsAndFollowTheBrush()
+        public async Task ToolsAreCommandsAndKeepTheirSettings()
         {
             MainViewModel model = NewModel();
             await model.OpenAsync("assets/maps/HardFFA.v0001");
             Assert.AreEqual("terrain.sculpt", model.ActiveTool!.Definition.Id, "the editor starts sculpting");
-            Assert.IsTrue(model.CanPaint);
+            Assert.IsInstanceOfType<SculptTool>(model.ActiveTool.Tool);
+            Assert.AreEqual(0, model.ShownMask, "sculpting shows no mask");
+            model.Tool<SculptTool>().Radius = 30;
 
             await model.Commands.RunAsync("tool.terrain.curve");
 
             Assert.AreEqual("terrain", model.SelectedMode!.Definition.Id);
             Assert.IsTrue(model.IsToolIncomplete);
-            Assert.IsFalse(model.CanPaint, "a tool not built yet does nothing in the views");
+            Assert.IsNull(model.ActiveTool!.Tool, "a tool not built yet does nothing in the views");
+            Assert.ThrowsException<InvalidOperationException>(() => model.Stroke([(50, 50)]));
 
-            model.SelectPaintTarget(1);
-            Assert.AreEqual("paint.strata", model.ActiveTool!.Definition.Id, "painting a mask is the strata tool");
+            await model.Commands.RunAsync("tool.paint.strata");
             Assert.AreEqual("paint", model.SelectedMode!.Definition.Id);
+            Assert.AreEqual(1, model.ShownMask, "the strata tool paints the first layer of a map that opens");
+            model.StrataTool.Choose(3);
+            Assert.AreEqual(3, model.ShownMask, "the top view shows the mask it paints");
 
             model.SelectTool("terrain.sculpt");
-            Assert.AreEqual(0, model.PaintedLayer, "sculpting paints the heights");
+            Assert.AreEqual(30, model.Tool<SculptTool>().Radius, "a tool keeps its settings");
+            Assert.AreEqual(12, model.StrataTool.Radius, "each tool has its own radius");
+            Assert.AreEqual(3, model.StrataTool.Layer, "and the strata tool its layer");
+        }
+
+        [TestMethod]
+        public void AToolIsBuiltWhenItCanBeMadeAndElseSaysWhatItWillDo()
+        {
+            foreach (ToolDefinition tool in EditorModes.All.SelectMany(mode => mode.Tools))
+            {
+                Assert.AreNotEqual(tool.Make is null, tool.Missing is null, $"{tool.Id}: Make or Missing, not both");
+            }
+        }
+
+        [TestMethod]
+        public async Task BrushSetChoosesTheToolOfALayerAndSetsTheActiveBrush()
+        {
+            MainViewModel model = NewModel();
+            await model.OpenAsync("assets/maps/HardFFA.v0001");
+
+            await model.Commands.RunAsync("brush.set", new JsonObject { ["layer"] = 2, ["radius"] = 20, ["erase"] = true }, interactive: false);
+            Assert.AreEqual("paint.strata", model.ActiveTool!.Definition.Id);
+            Assert.AreEqual(2, model.StrataTool.Layer);
+            Assert.AreEqual(20, model.StrataTool.Radius);
+            Assert.IsTrue(model.StrataTool.Erase);
+            Assert.AreEqual(12, model.Tool<SculptTool>().Radius, "only the active tool's brush");
+
+            await model.Commands.RunAsync("brush.set", new JsonObject { ["layer"] = 0, ["mode"] = "flatten", ["strength"] = 1 }, interactive: false);
+            Assert.AreEqual("terrain.sculpt", model.ActiveTool!.Definition.Id);
+            Assert.AreEqual(HeightBrushMode.Flatten, model.Tool<SculptTool>().Mode);
+            Assert.AreEqual(1, model.Tool<SculptTool>().Strength);
+
+            model.SelectTool("terrain.curve");
+            Assert.ThrowsException<ArgumentException>(() => model.Commands.RunAsync("brush.set", new JsonObject { ["radius"] = 5 }, interactive: false).GetAwaiter().GetResult(),
+                "a tool not built yet has no brush");
         }
 
         [TestMethod]
@@ -294,9 +335,9 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(before + 100, model.Map.Document.Terrain.Heightmap.Samples[40, 40], "the half-made edit is gone");
             Assert.AreEqual(1, model.Map.Session.History.Count, "and is no step of the history");
 
-            model.BeginStroke(10, 10);
+            model.ActiveTool!.Tool!.Press(10, 10);
             Assert.IsFalse(await commands.RunAsync("test.raise"), "a stroke holds the map's transaction");
-            model.EndStroke();
+            model.ActiveTool.Tool.Release();
 
             Assert.ThrowsException<InvalidOperationException>(() => commands.RunAsync("test.edit-without-step").GetAwaiter().GetResult(),
                 "a command edits only with [UndoStep]");

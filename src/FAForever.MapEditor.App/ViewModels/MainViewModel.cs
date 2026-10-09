@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Diagnostics;
+using FAForever.MapEditor.App.Tools;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.Project;
@@ -46,15 +47,7 @@ public enum SaveChoice
 public sealed record HistoryEntry(int Step, string Description, bool IsUndone);
 
 /// <summary>
-/// What the brush paints: the heights (layer 0), or the mask of a terrain layer (1 to 8).
-/// </summary>
-public sealed record PaintTarget(int Layer, string Name)
-{
-    public override string ToString() => Name;
-}
-
-/// <summary>
-/// The editor's window without the window: the map being edited, the brush, and every operation
+/// The editor's window without the window: the map being edited, the tools, and every operation
 /// of the menu. The operations that take a folder (<see cref="LoadProjectAsync"/>, ...) are what the
 /// menu commands call after asking for one, and what automation and tests call directly.
 /// </summary>
@@ -69,7 +62,6 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly SynchronizationContext? _ui;
     private ProjectWatcher? _watcher;
     private EditTransaction? _stroke;
-    private (float X, float Z) _lastDab;
     private readonly HashSet<string> _pendingReload = new HashSet<string>(StringComparer.Ordinal);
 
     /// <param name="telemetry">Where the logs and metrics go; without it the Console alone shows them.</param>
@@ -156,44 +148,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private bool _showingHistory;
 
-    #region Brush
-
-    public IReadOnlyList<HeightBrushMode> BrushModes { get; } = Enum.GetValues<HeightBrushMode>();
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsFlattening))]
-    public partial HeightBrushMode BrushMode { get; set; } = HeightBrushMode.Raise;
-
-    /// <summary>
-    /// Whether the sculpt tool flattens: only then does the height to flatten to matter.
-    /// </summary>
-    public bool IsFlattening => IsSculpting && BrushMode == HeightBrushMode.Flatten;
-
-    /// <summary>
-    /// The radius in ogrids.
-    /// </summary>
-    [ObservableProperty]
-    public partial double BrushRadius { get; set; } = 12;
-
-    /// <summary>
-    /// Game units at the centre for raising and lowering, 0 to 1 for smoothing and flattening.
-    /// </summary>
-    [ObservableProperty]
-    public partial double BrushStrength { get; set; } = 0.5;
-
-    /// <summary>
-    /// The height in game units that flattening moves towards.
-    /// </summary>
-    [ObservableProperty]
-    public partial double BrushTarget { get; set; } = 20;
-
-    public HeightBrush Brush => new HeightBrush
-    {
-        Mode = BrushMode,
-        Radius = (float)BrushRadius,
-        Strength = (float)BrushStrength,
-        Target = (float)BrushTarget,
-    };
+    #region Overlays
 
     /// <summary>
     /// Whether the view shows the spawns, deposits, AI markers and weather.
@@ -216,58 +171,6 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnShowPathNodesChanged(bool value)
     {
         RefreshOverlays();
-        DocumentChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
-    /// The heights and the terrain layers that have a mask, by the name of their texture.
-    /// </summary>
-    public IReadOnlyList<PaintTarget> PaintTargets { get; private set; } = [];
-
-    [ObservableProperty]
-    public partial PaintTarget? SelectedPaintTarget { get; set; }
-
-    /// <summary>
-    /// The terrain layer whose mask the brush paints, or 0 for the heights.
-    /// </summary>
-    public int PaintedLayer => SelectedPaintTarget?.Layer ?? 0;
-
-    public bool IsPaintingHeight => PaintedLayer == 0;
-
-    public bool IsPaintingLayer => PaintedLayer > 0;
-
-    /// <summary>
-    /// How far a dab moves a mask at the centre, from 0 to 1.
-    /// </summary>
-    [ObservableProperty]
-    public partial double MaskStrength { get; set; } = 0.3;
-
-    /// <summary>
-    /// Whether the brush takes the layer away instead of painting it.
-    /// </summary>
-    [ObservableProperty]
-    public partial bool MaskErase { get; set; }
-
-    public MaskBrush MaskBrush => new MaskBrush
-    {
-        Radius = (float)BrushRadius,
-        Strength = (float)MaskStrength,
-        Erase = MaskErase,
-    };
-
-    /// <summary>
-    /// Paints the heights (0) or the mask of a terrain layer (1 to 8).
-    /// </summary>
-    public void SelectPaintTarget(int layer) =>
-        SelectedPaintTarget = PaintTargets.FirstOrDefault(target => target.Layer == layer)
-            ?? throw new ArgumentOutOfRangeException(nameof(layer), $"The map has no layer {layer} with a mask");
-
-    partial void OnSelectedPaintTargetChanged(PaintTarget? value)
-    {
-        OnPropertyChanged(nameof(PaintedLayer));
-        OnPropertyChanged(nameof(IsPaintingHeight));
-        OnPropertyChanged(nameof(IsPaintingLayer));
-        FollowPaintTarget();
         DocumentChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -325,94 +228,69 @@ public sealed partial class MainViewModel : ObservableObject
     public bool GoTo(int step) => _stroke is null && Map?.Session.GoTo(step) == true;
 
     /// <summary>
-    /// Starts a brush stroke at a place of the map, in ogrids.
+    /// The edit a tool holds while the mouse is down (a brush stroke), or null. It shows in the
+    /// views; undo, reloads and the commands that edit wait until it ends.
     /// </summary>
-    public void BeginStroke(float x, float z)
+    public EditTransaction? StrokeInProgress => _stroke;
+
+    /// <summary>
+    /// Starts the edit of a stroke (<see cref="BrushStroke"/>), which becomes one step of the history.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">No map is open.</exception>
+    public EditTransaction StartStroke(string description)
     {
         EditedMap map = RequireMap();
         CancelStroke();
-        _stroke = map.Session.Begin(PaintedLayer > 0
-            ? $"{(MaskErase ? "Erase" : "Paint")} layer {PaintedLayer}"
-            : BrushMode switch
-            {
-                HeightBrushMode.Raise => "Raise terrain",
-                HeightBrushMode.Lower => "Lower terrain",
-                HeightBrushMode.Smooth => "Smooth terrain",
-                _ => "Flatten terrain",
-            });
-        Dab(x, z);
-        DocumentChanged?.Invoke(this, EventArgs.Empty);
+        _stroke = map.Session.Begin(description);
+        return _stroke;
     }
 
     /// <summary>
-    /// Moves the stroke on, with dabs a quarter of the radius apart along the way.
+    /// Ends a stroke: kept, it becomes one step of the history; else it is thrown away. A stroke
+    /// the editor already ended (another map was opened) is left as it is.
     /// </summary>
-    public void ContinueStroke(float x, float z)
+    public void EndStroke(EditTransaction stroke, bool keep = true)
     {
-        using Performance.Span measure = Performance.Measure("model.stroke");
-        if (_stroke is null)
+        if (_stroke != stroke)
         {
             return;
         }
-        float spacing = Math.Max(0.5f, (float)BrushRadius / 4);
-        float dx = x - _lastDab.X;
-        float dz = z - _lastDab.Z;
-        int steps = (int)(MathF.Sqrt(dx * dx + dz * dz) / spacing);
-        if (steps == 0)
-        {
-            return;
-        }
-        (float x0, float z0) = _lastDab;
-        for (int i = 1; i <= steps; i++)
-        {
-            Dab(x0 + dx * i / steps, z0 + dz * i / steps);
-        }
-        DocumentChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
-    /// Ends the stroke: it becomes one step of the history.
-    /// </summary>
-    public void EndStroke()
-    {
-        if (_stroke is null)
-        {
-            return;
-        }
-        EditTransaction stroke = _stroke;
         _stroke = null;
-        stroke.Commit();
-        ReloadPending();
-    }
-
-    public void CancelStroke()
-    {
-        if (_stroke is null)
+        if (keep)
         {
-            return;
+            stroke.Commit();
         }
-        EditTransaction stroke = _stroke;
-        _stroke = null;
-        stroke.Dispose();
-        DocumentChanged?.Invoke(this, EventArgs.Empty);
+        else
+        {
+            stroke.Dispose();
+            Redraw();
+        }
         ReloadPending();
     }
 
     /// <summary>
-    /// A whole stroke through places of the map, in ogrids.
+    /// The views draw the shown document again: a stroke went on, or what a tool shows over it changed.
     /// </summary>
+    public void Redraw() => DocumentChanged?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    /// Input to the active tool: the left mouse down at the first place, dragged through the others
+    /// and up at the last, in ogrids.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The active tool is not built yet.</exception>
     public void Stroke(IReadOnlyList<(float X, float Z)> points)
     {
         if (points.Count == 0)
         {
             return;
         }
-        BeginStroke(points[0].X, points[0].Z);
+        IMapTool tool = ActiveTool?.Tool ?? throw new InvalidOperationException($"The tool {ActiveTool?.Definition.Title} is not built yet");
+        tool.Press(points[0].X, points[0].Z);
         foreach ((float x, float z) in points.Skip(1))
         {
-            ContinueStroke(x, z);
+            tool.Drag(x, z);
         }
-        EndStroke();
+        tool.Release();
     }
 
     #endregion
@@ -473,18 +351,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         Map = map;
         map.Session.StateChanged += OnSessionChanged;
-        Terrain terrain = map.Document.Terrain;
-        PaintTargets =
-        [
-            new PaintTarget(0, "Height"),
-            .. Enumerable.Range(1, terrain.StratumMasks.Layers.Length).Select(layer => new PaintTarget(layer,
-                layer < terrain.Layers.Length && terrain.Layers[layer].AlbedoPath.Length > 0
-                    ? $"Layer {layer}: {Path.GetFileNameWithoutExtension(terrain.Layers[layer].AlbedoPath)}"
-                    : $"Layer {layer} (no texture)")),
-        ];
-        OnPropertyChanged(nameof(PaintTargets));
-        OnPropertyChanged(nameof(StrataTargets));
-        SelectedPaintTarget = PaintTargets[0];
         _pendingReload.Clear();
         if (map.ProjectFolder is string folder)
         {
@@ -605,24 +471,17 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CanCommit));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(CanRedo));
-        OnPropertyChanged(nameof(CanPaint));
         RefreshOverlays();
         ShowHistory();
         DocumentChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void Dab(float x, float z)
+    private void CancelStroke()
     {
-        MapDocument document = Map!.Document;
-        if (PaintedLayer > 0)
+        if (_stroke is EditTransaction stroke)
         {
-            MaskBrush.Apply(_stroke!.StratumMask(PaintedLayer), document.Width, document.Height, x, z);
+            EndStroke(stroke, keep: false);
         }
-        else
-        {
-            Brush.Apply(_stroke!.Heightmap, document.Terrain.Heightmap.Scale, x, z);
-        }
-        _lastDab = (x, z);
     }
 
     private EditedMap RequireMap() => Map ?? throw new InvalidOperationException("No map is open");

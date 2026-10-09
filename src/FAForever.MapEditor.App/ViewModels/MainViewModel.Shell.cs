@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.App.Commands;
+using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.Project;
 using Microsoft.Extensions.Logging;
 
@@ -25,9 +26,12 @@ public sealed partial class ModeItem(ModeDefinition definition) : ObservableObje
 /// <summary>
 /// A tool in the mode panel.
 /// </summary>
-public sealed partial class ToolItem(ToolDefinition definition) : ObservableObject
+/// <param name="tool">What it does; null while it is not built.</param>
+public sealed partial class ToolItem(ToolDefinition definition, IMapTool? tool) : ObservableObject
 {
     public ToolDefinition Definition => definition;
+
+    public IMapTool? Tool => tool;
 
     [ObservableProperty]
     public partial bool IsActive { get; set; }
@@ -92,19 +96,32 @@ public sealed partial class MainViewModel
     public IReadOnlyList<ToolItem> Tools { get; private set; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanPaint), nameof(IsSculpting), nameof(IsFlattening), nameof(IsPaintingStrata), nameof(IsToolIncomplete))]
+    [NotifyPropertyChangedFor(nameof(IsToolIncomplete), nameof(ShownMask))]
     public partial ToolItem? ActiveTool { get; private set; }
 
-    /// <summary>
-    /// Whether the left mouse paints in the top view: the sculpt or strata tool is active.
-    /// </summary>
-    public bool CanPaint => HasMap && (IsSculpting || IsPaintingStrata);
-
-    public bool IsSculpting => ActiveTool?.Definition.Id == "terrain.sculpt";
-
-    public bool IsPaintingStrata => ActiveTool?.Definition.Id == "paint.strata";
-
     public bool IsToolIncomplete => ActiveTool?.Definition.IsIncomplete == true;
+
+    /// <summary>
+    /// The tools that are built, made once (<see cref="ToolDefinition.Make"/>), by id.
+    /// </summary>
+    private readonly Dictionary<string, IMapTool> _tools = new Dictionary<string, IMapTool>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The tool of a class, whether it is active or not: for the commands that set it up, and tests.
+    /// </summary>
+    public T Tool<T>() where T : IMapTool => _tools.Values.OfType<T>().Single();
+
+    /// <summary>
+    /// The strata tool, whose layer the Paint mode's panel chooses.
+    /// </summary>
+    public StrataTool StrataTool => Tool<StrataTool>();
+
+    /// <summary>
+    /// The terrain layer whose mask the top view shows: the strata tool's while it is active, else 0.
+    /// </summary>
+    public int ShownMask => (ActiveTool?.Tool as StrataTool)?.Layer ?? 0;
+
+    partial void OnActiveToolChanged(ToolItem? value) => Redraw();
 
     public IReadOnlyList<OverlayItem> Overlays { get; private set; } = [];
 
@@ -146,6 +163,14 @@ public sealed partial class MainViewModel
             commandsLog.LogInformation("{Command}: not built yet, user story {Story}: {Missing}", command.Id, command.Incomplete.Story, command.Incomplete.Missing);
         };
         Commands.Ran += command => commandsLog.LogInformation("Ran {Command}", command.Id);
+
+        foreach (ToolDefinition tool in EditorModes.All.SelectMany(mode => mode.Tools))
+        {
+            if (tool.Make is not null)
+            {
+                _tools[tool.Id] = tool.Make(this);
+            }
+        }
 
         // the commands made from data: a mode, a tool, an overlay each
         Modes = [.. EditorModes.All.Select(mode => new ModeItem(mode))];
@@ -201,7 +226,7 @@ public sealed partial class MainViewModel
             m.IsSelected = m == mode;
         }
         SelectedMode = mode;
-        Tools = [.. mode.Definition.Tools.Select(tool => new ToolItem(tool))];
+        Tools = [.. mode.Definition.Tools.Select(tool => new ToolItem(tool, _tools.GetValueOrDefault(tool.Id)))];
         OnPropertyChanged(nameof(Tools));
         SelectTool(mode.LastTool ?? mode.Definition.Tools[0].Id);
     }
@@ -226,35 +251,6 @@ public sealed partial class MainViewModel
             tool.IsActive = tool.Definition.Id == id;
         }
         ActiveTool = Tools.First(tool => tool.IsActive);
-
-        // the brush follows the tool: sculpting paints the heights, the strata tool a layer's mask
-        if (IsSculpting && PaintedLayer != 0)
-        {
-            SelectPaintTarget(0);
-        }
-        else if (IsPaintingStrata && PaintedLayer == 0 && PaintTargets.Count > 1)
-        {
-            SelectPaintTarget(PaintTargets[1].Layer);
-        }
-    }
-
-    /// <summary>
-    /// The tool follows the brush, when automation or a test chooses what to paint.
-    /// </summary>
-    private void FollowPaintTarget()
-    {
-        if (Modes.Count == 0)
-        {
-            return;
-        }
-        if (PaintedLayer == 0 && !IsSculpting)
-        {
-            SelectTool("terrain.sculpt");
-        }
-        else if (PaintedLayer > 0 && !IsPaintingStrata)
-        {
-            SelectTool("paint.strata");
-        }
     }
 
     public void RequestFit() => FitRequested?.Invoke(this, EventArgs.Empty);
@@ -271,11 +267,6 @@ public sealed partial class MainViewModel
     /// </summary>
     [ObservableProperty]
     public partial int GpuDebug { get; set; }
-
-    /// <summary>
-    /// The terrain layers whose masks the strata tool paints: all but the heights.
-    /// </summary>
-    public IReadOnlyList<PaintTarget> StrataTargets => [.. PaintTargets.Where(target => target.Layer > 0)];
 
     private void RefreshOverlays()
     {

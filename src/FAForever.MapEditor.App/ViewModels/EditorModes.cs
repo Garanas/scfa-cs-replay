@@ -1,3 +1,5 @@
+using FAForever.MapEditor.App.Tools;
+
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
@@ -9,6 +11,11 @@ namespace FAForever.MapEditor.App.ViewModels;
 public sealed record ToolDefinition(string Id, string Title, string Story, string? Missing = null)
 {
     public bool IsIncomplete => Missing is not null;
+
+    /// <summary>
+    /// Makes what it does, once per editor (<c>Tools/</c>); null while it is not built.
+    /// </summary>
+    public Func<MainViewModel, IMapTool>? Make { get; init; }
 
     /// <summary>
     /// The command that chooses it.
@@ -83,7 +90,7 @@ public static class EditorModes
 
         new ModeDefinition("terrain", "Terrain", "Icon.Terrain", "Height layers, sculpting, curves, terrain types, walkability", 0, "F2", "T-1",
             [
-                new ToolDefinition("terrain.sculpt", "Sculpt", "T-1"),
+                new ToolDefinition("terrain.sculpt", "Sculpt", "T-1") { Make = model => new SculptTool(model) },
                 new ToolDefinition("terrain.stamp", "Stamp", "T-1", "Brushes from images, with rotation"),
                 new ToolDefinition("terrain.curve", "Curve", "T-4", "Draw a curve and shape the terrain along it: ridge, valley, road, cliff edge"),
                 new ToolDefinition("terrain.types", "Terrain types", "T-6", "Paint the terrain type of each ogrid"),
@@ -98,7 +105,7 @@ public static class EditorModes
 
         new ModeDefinition("paint", "Paint", "Icon.Paint", "Strata and masks for tools", 0, "F3", "S-1",
             [
-                new ToolDefinition("paint.strata", "Strata", "S-1"),
+                new ToolDefinition("paint.strata", "Strata", "S-1") { Make = model => new StrataTool(model) },
                 new ToolDefinition("paint.masks", "Masks", "K-1", "Paint the masks for World Machine, Gaea and the rules"),
             ],
             [

@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FAForever.MapEditor.App.Automation;
 using FAForever.MapEditor.App.Controls;
+using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
 
@@ -72,7 +73,7 @@ namespace FAForever.MapEditor.App.Tests
             }
             double sculpting = Top();
 
-            model.BrushMode = Project.Editing.HeightBrushMode.Flatten;
+            model.Tool<SculptTool>().Mode = Project.Editing.HeightBrushMode.Flatten;
             double flattening = Top();
             model.SelectTool("paint.strata");
             double painting = Top();

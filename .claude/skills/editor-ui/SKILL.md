@@ -57,8 +57,10 @@ is an extension in `Avalonia.Input`; `Bitmap.Save` takes encoder options).
   arguments are the record's properties; a folder left out is asked for, but never without a
   person. An edit of the map: `[UndoStep]`, edit through `CurrentEdit`. Not built yet: a request
   without a handler with `[Incomplete("T-4", "what it is to do")]`, in the menu's `Planned.cs`.
-  A tool: a `ToolDefinition` in `ViewModels/EditorModes.cs` (`Missing` until it works); a part of
-  a panel not built yet: a `PlannedSection`. Every story named must be in `USER_STORIES.md`
+  A tool: a `ToolDefinition` in `ViewModels/EditorModes.cs` (`Missing` until it works, then
+  `Make`), a class in `Tools/` implementing `IMapTool` (the left mouse; a brush uses
+  `BrushStroke`), and a `DataTemplate` for its settings in `Views/ToolOptions.axaml`; the views
+  never name a tool. A part of a panel not built yet: a `PlannedSection`. Every story named must be in `USER_STORIES.md`
   (`CommandRegistryTest`). Its state in automation's `state`.
 - Tests: the operation in `MainViewModelTest`; the mouse, keys and what the window shows in
   `MainWindowTest` (headless, `HeadlessApp.Run`). The 3D view needs a graphics card: check it in a

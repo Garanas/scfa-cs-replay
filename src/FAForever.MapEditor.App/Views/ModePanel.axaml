@@ -57,8 +57,8 @@
               <Border Classes="group">
                 <StackPanel Classes="stack">
                   <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-                  <ListBox ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StrataTargets}"
-                           SelectedItem="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).SelectedPaintTarget}"
+                  <ListBox ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StrataTool.Strata}"
+                           SelectedItem="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StrataTool.Painted}"
                            AutomationProperties.Name="Strata" />
                 </StackPanel>
               </Border>

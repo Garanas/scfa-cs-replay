@@ -60,7 +60,8 @@ Each step can be merged on its own and leaves the editor working.
 1. **Built**: commands as requests with handlers through MediatR, the undo step in the pipeline,
    automation through the registry, the duplicate `RelayCommand`s gone (01). The modes', tools'
    and overlays' commands are made from their data, as file 04 proposed.
-2. Tools as classes (02). Do it before the next tool is built, or that tool adds to the spread.
+2. **Built**: tools as classes (02), each with its own settings and radius; the views send the
+   left mouse to the active tool.
 3. The lists generated from one source: overlays, modes, dock tabs (04).
 4. The loose parts out of `MainViewModel`: diagnostics and console, palette, workspace setup (03).
 5. Measure, then make the notifications finer where it shows (05).

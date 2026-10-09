@@ -24,8 +24,10 @@ keeps that up; go through this list with every change to the window, not only at
    palette, the shortcuts and automation (`run id=... ...arguments`) at once. Not built yet? A
    request without a handler, marked `[Incomplete(story, what it is to do)]`, in its menu's
    `Planned.cs`. A tool is a `ToolDefinition` of its mode (`ViewModels/EditorModes.cs`), with
-   `Missing` until it works; a part of a panel not built yet a `PlannedSection`. What the feature
-   shows or holds is in `state` (or its own automation command when it is large).
+   `Missing` until it works and then `Make`, its class in `Tools/` (below) and a `DataTemplate`
+   for its settings in `Views/ToolOptions.axaml`; a part of a panel not built yet a
+   `PlannedSection`. What the feature shows or holds is in `state` (or its own automation
+   command when it is large).
 2. **Labels**: every new control one can read or use gets `AutomationProperties.Name` (and
    `HelpText` when its use is not obvious), unless its own text says what it is. A new kind of
    control (one `UiTree` does not know as usable, or whose text it cannot read) gets a line in
@@ -98,14 +100,30 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
 - **Not built yet** is visible and traceable: a command with `[Incomplete(story, missing)]`
   only says what it is to do (status bar, Console, `run` answers `ran: false`) and shows in
   italics in the menus; a tool with `Missing` shows it in the tool options and does nothing in
-  the views (`CanPaint` is true only for sculpting and painting strata); a `PlannedSection`
+  the views (it has no class, so the left mouse goes nowhere); a `PlannedSection`
   shows a dashed box with its story. `CommandRegistryTest` checks that every story named
   anywhere exists in `USER_STORIES.md`, that every request has a handler unless it is
   `[Incomplete]` (and then none), and that the menus hold each command once.
 - **Modes and tools** are data (`EditorModes`): a mode's id, title, icon (`Styles/Icons.axaml`),
-  tools, panel sections and inspector sections. Choosing the sculpt tool paints the heights,
-  the strata tool a layer's mask; choosing a layer to paint (automation's `brush layer=`)
-  chooses the tool. A mode remembers its last tool.
+  tools, panel sections and inspector sections. A mode remembers its last tool.
+- **What a tool does is one class** in `Tools/`, made once per editor by its definition's `Make`,
+  so its settings last while the person switches tools (`ToolItem.Tool`; `MainViewModel.Tool<T>()`
+  finds one by class). It implements `IMapTool`: `Press`, `Drag` and `Release` of the left mouse,
+  in ogrids, and the radius of the circle drawn around the mouse. The views keep the rest of the
+  mouse (moving, zooming, control and a click for the camera) and send the left button to the
+  active tool, without knowing which tools exist. Its settings are observable properties; the
+  options bar picks the tool's `DataTemplate` by class.
+  - `BrushStroke`, which both brushes use, holds the stroke's `EditTransaction` from press to
+    release (`MainViewModel.StartStroke`, `EndStroke`): one undo step, shown while it is painted,
+    dabs a quarter of the radius apart. A stroke is input, not a command, so it opens its own
+    transaction; the commands that edit wait until it ends (`Needs.NoStroke`).
+  - `SculptTool` (T-1): mode, radius, strength, the height to flatten to. `StrataTool` (S-1):
+    the layer it paints (chosen in the Paint panel's list, `Strata`/`Painted`), radius, strength,
+    erase; the top view shows that layer's mask while it is active (`MainViewModel.ShownMask`).
+    Each tool has its own radius.
+  - `brush.set {layer?, mode?, radius?, strength?, target?, erase?}` sets them up for
+    automation: a layer chooses its tool (0 sculpting, 1 to 8 the strata tool with that layer),
+    radius and strength go to the active tool's brush.
 - Shortcuts are never a single letter (`IdsAndShortcutsAreUnique`): it would fire while typing.
 
 ## UI rules: one look, kept in one place
@@ -187,24 +205,25 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
 ## Structure
 
 - `ViewModels/MainViewModel`: the window without the window. It holds the `EditedMap`, the
-  brush settings and every operation of the menu as a plain method that takes its folder
-  (`OpenAsync`, `LoadProjectAsync`, `ImportMapFolderAsync`, `SaveAsync`, `SaveAsAsync`,
-  `SaveProjectAsync`, `ExportAsync`, `Undo`, `Redo`, `BeginStroke`, `ContinueStroke`, `EndStroke`,
-  `Stroke`). A command's handler asks for a folder its request left out (`IEditorDialogs`), then
-  calls those methods; tests call them directly too. It uses no Avalonia types, so
-  `tests/FAForever.MapEditor.App.Tests` tests it without a window.
+  tools, the stroke in progress (`StrokeInProgress`) and every operation of the menu as a plain
+  method that takes its folder (`OpenAsync`, `LoadProjectAsync`, `ImportMapFolderAsync`,
+  `SaveAsync`, `SaveAsAsync`, `SaveProjectAsync`, `ExportAsync`, `Undo`, `Redo`); `Stroke(points)`
+  is the left mouse dragged through places, sent to the active tool. A command's handler asks
+  for a folder its request left out (`IEditorDialogs`), then calls those methods; tests call
+  them directly too. It uses no Avalonia types, so `tests/FAForever.MapEditor.App.Tests` tests
+  it without a window.
 - Opening, importing, saving and exporting are asynchronous (`LoadProjectAsync`,
   `ImportMapFolderAsync`, `SaveAsync`, `SaveAsAsync`, `ExportAsync`): they read and write on a pool
   thread while `IsBusy` disables the commands that cannot run alongside. Painting goes on during a
   save; reloads wait until a save or stroke ends. Keep the user interface's thread free of work
   that grows with the map: a full redraw of the view runs its rows in parallel.
 - `Controls/HeightmapView`: the terrain from above, one pixel per sample, shaded and coloured by
-  height and water (`Rendering/TerrainPicture`), with the mask of the
-  layer being painted in orange; it draws again only the tiles a change touched. The markers lie
+  height and water (`Rendering/TerrainPicture`), with the mask of the layer the strata tool
+  paints in orange (`ShownMask`); it draws again only the tiles a change touched. The markers lie
   over it at a fixed size on screen in the colour of their kind (spawns circles with their
   number, deposits squares, AI markers diamonds, weather triangles, path nodes dots with their
-  links; View menu). Left mouse paints (a stroke is an `EditTransaction`, so one undo step, shown
-  while it is painted), right or middle mouse moves, the wheel zooms around the cursor.
+  links; View menu). The left mouse is the active tool's, right or middle mouse moves, the
+  wheel zooms around the cursor.
 - `Controls/TerrainViewGpu` (the 3D tab): the map on the graphics card with OpenGL through
   Avalonia's `OpenGlControlBase` (ANGLE, OpenGL ES 3.0, on Windows; OpenGL 3.3 elsewhere), bound
   with Silk.NET. The camera (`Rendering/Gpu/EditorCamera`, tested without a window) works as the
@@ -287,7 +306,7 @@ meanwhile; stalls of 250 ms or more are a warning in the log (Diagnostics, below
 Automation's `perf` gives per span the count, total, mean, 95th percentile and longest, and the
 recent stalls (`perf reset=true` starts over). Measure a change before and after, and put a span
 around new work that may grow with the map: `3d.*` (the 3D view's frame and its parts),
-`top.*`, `model.*`, `camera.smooth-ground`.
+`top.*`, `model.*`, `tool.*`, `camera.smooth-ground`.
 
 What it found, and the rules that came of it:
 - Looking a texture up asks the file system (`File.Exists`, the time of the file); the 3D view
@@ -353,7 +372,7 @@ User story F-17. The editor keeps what a service keeps for Loki and Prometheus, 
 Started with `--automation <port>`, the editor takes commands over HTTP on
 `http://localhost:<port>/` (`Automation/AutomationServer`): the operations of the menu, each run on
 the user interface's thread and answered with the editor's state as JSON (title, map, modified,
-undo/redo, history, brush, zoom). Use it to check a change in the real editor:
+undo/redo, history, the brush tools' settings, zoom). Use it to check a change in the real editor:
 
 ```sh
 faf-map-editor tests/FAForever.FileFormats.Map.Tests/assets/maps/HardFFA.v0001 --automation 5371 &
@@ -389,8 +408,8 @@ faf-map editor close                                      # closes without askin
   (`workspace.convert`, `converted`), `open {path}`, `import {path}`, `save {path?}`,
   `save-as {path}` (the path is the command's `folder`), `commit {message}` (`commit`: the hash, or
   null when nothing changed), `export {output, version?}` (`folder`), `undo`, `redo`,
-  `goto {step}` (`done`), `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0
-  the heights, 1 to 8 a mask), `fit`, `camera {x?, z?, distance?, yaw?, pitch?}`
+  `goto {step}` (`done`), `brush {layer?, mode?, radius?, strength?, target?, erase?}`
+  (`brush.set`, above), `fit`, `camera {x?, z?, distance?, yaw?, pitch?}`
   (`camera.look`: the 3D view, degrees; at once), `focus {x, z, radius?}` (`camera.focus`: with a
   radius as F, gliding while the 3D view shows; without, as control and a click in the top view),
   `view {x, z, zoom?}` (`view.zoomTo`: the top view), `gpu-debug {mode}` (`view.gpuDebug`: what
@@ -405,7 +424,7 @@ faf-map editor close                                      # closes without askin
   `version-control {open?, enable?, name?, email?, lfs?, remote?}` (how the project stands in
   git; `open` runs `file.commit` without a message, which shows the page, `enable` runs
   `file.enableVersionControl` with the choices, which go only with it), `mask {layer, x, z}`,
-  `stroke {points}` (the mouse, so no command), `height {x, z}`, `hit {x, y}` (the control the
+  `stroke {points}` (the left mouse, so the active tool, no command), `height {x, z}`, `hit {x, y}` (the control the
   mouse reaches at a point of the window, with its parents), `screenshot {path, map?, gpu?}`
   (`gpu: true` reads a frame of the 3D view back from the card: a screenshot of the window does
   not reach it), `close`. A new operation is a

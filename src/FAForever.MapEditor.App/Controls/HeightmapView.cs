@@ -7,6 +7,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.App.Rendering.Gpu;
+using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -71,7 +72,8 @@ public sealed class HeightmapView : Control
     private Vector _offset;
     private bool _fitted;
     private Point? _panFrom;
-    private bool _painting;
+    // the tool the left mouse was pressed with, until it is released
+    private IMapTool? _pressed;
     private Point? _cursor;
 
     /// <summary>
@@ -182,9 +184,9 @@ public sealed class HeightmapView : Control
             DrawCamera(context, overlay, _model.Camera);
         }
 
-        if (_cursor is Point cursor && _model is not null)
+        if (_cursor is Point cursor && _model?.ActiveTool?.Tool is { CursorRadius: > 0 } tool)
         {
-            double radius = _model.BrushRadius * _zoom;
+            double radius = tool.CursorRadius * _zoom;
             context.DrawEllipse(null, overlay.Brush, cursor, radius, radius);
         }
     }
@@ -211,11 +213,12 @@ public sealed class HeightmapView : Control
             Point place = ControlToMap(at);
             _model.MoveCameraTo((float)place.X, (float)place.Y);
         }
-        else if (buttons.IsLeftButtonPressed && _model?.CanPaint == true)
+        else if (buttons.IsLeftButtonPressed && _model is { HasMap: true, ActiveTool.Tool: IMapTool tool })
         {
+            // the left mouse is the active tool's
             Point map = ControlToMap(at);
-            _painting = true;
-            _model.BeginStroke((float)map.X, (float)map.Y);
+            _pressed = tool;
+            tool.Press((float)map.X, (float)map.Y);
             e.Pointer.Capture(this);
         }
         else if (buttons.IsRightButtonPressed || buttons.IsMiddleButtonPressed)
@@ -236,10 +239,10 @@ public sealed class HeightmapView : Control
             _offset += at - from;
             _panFrom = at;
         }
-        else if (_painting)
+        else if (_pressed is IMapTool tool)
         {
             Point map = ControlToMap(at);
-            _model?.ContinueStroke((float)map.X, (float)map.Y);
+            tool.Drag((float)map.X, (float)map.Y);
         }
         ReportCursor(at);
         InvalidateVisual();
@@ -248,10 +251,10 @@ public sealed class HeightmapView : Control
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
-        if (_painting)
+        if (_pressed is IMapTool tool)
         {
-            _painting = false;
-            _model?.EndStroke();
+            _pressed = null;
+            tool.Release();
         }
         _panFrom = null;
         e.Pointer.Capture(null);
@@ -313,7 +316,7 @@ public sealed class HeightmapView : Control
             return;
         }
 
-        IReadOnlyList<SampleRect> changed = _picture.Update(document, _model!.PaintedLayer);
+        IReadOnlyList<SampleRect> changed = _picture.Update(document, _model!.ShownMask);
         if (_bitmap is null || _bitmap.PixelSize.Width != _picture.Width || _bitmap.PixelSize.Height != _picture.Height)
         {
             _bitmap?.Dispose();
