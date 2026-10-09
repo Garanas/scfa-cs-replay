@@ -16,7 +16,7 @@ public sealed class ExportHandler(MainViewModel model, IEditorDialogs dialogs) :
 {
     public async Task<string?> Handle(Export request, CancellationToken cancellationToken)
     {
-        string? folder = request.Folder ?? model.Workspace?.MapsFolder ?? await dialogs.PickFolderAsync("Export into a folder, e.g. the game's maps folder");
+        string? folder = request.Folder ?? model.Setup.Workspace?.MapsFolder ?? await dialogs.PickFolderAsync("Export into a folder, e.g. the game's maps folder");
         return folder is null ? null : await model.ExportAsync(folder, request.Version);
     }
 }

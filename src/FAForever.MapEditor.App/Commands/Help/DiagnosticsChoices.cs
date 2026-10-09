@@ -13,13 +13,13 @@ namespace FAForever.MapEditor.App.Commands;
 [EditorCommand("diagnostics.set", "Choose what diagnostics keep and send", Story = "F-17")]
 public sealed record SetDiagnostics(bool? Record = null, bool? Send = null, string? Endpoint = null) : IRequest;
 
-public sealed class SetDiagnosticsHandler(MainViewModel model) : IRequestHandler<SetDiagnostics>
+public sealed class SetDiagnosticsHandler(DiagnosticsViewModel diagnostics) : IRequestHandler<SetDiagnostics>
 {
     public Task Handle(SetDiagnostics request, CancellationToken cancellationToken)
     {
-        model.RecordDiagnostics = request.Record ?? model.RecordDiagnostics;
-        model.SendDiagnostics = request.Send ?? model.SendDiagnostics;
-        model.DiagnosticsEndpoint = request.Endpoint ?? model.DiagnosticsEndpoint;
+        diagnostics.Record = request.Record ?? diagnostics.Record;
+        diagnostics.Send = request.Send ?? diagnostics.Send;
+        diagnostics.Endpoint = request.Endpoint ?? diagnostics.Endpoint;
         return Task.CompletedTask;
     }
 }
@@ -30,11 +30,11 @@ public sealed class SetDiagnosticsHandler(MainViewModel model) : IRequestHandler
 [EditorCommand("diagnostics.flush", "Write the diagnostics now", Story = "F-17")]
 public sealed record FlushDiagnostics : IRequest;
 
-public sealed class FlushDiagnosticsHandler(MainViewModel model) : IRequestHandler<FlushDiagnostics>
+public sealed class FlushDiagnosticsHandler(DiagnosticsViewModel diagnostics) : IRequestHandler<FlushDiagnostics>
 {
     public Task Handle(FlushDiagnostics request, CancellationToken cancellationToken)
     {
-        model.Telemetry.Flush();
+        diagnostics.Telemetry.Flush();
         return Task.CompletedTask;
     }
 }
@@ -46,7 +46,7 @@ public sealed class FlushDiagnosticsHandler(MainViewModel model) : IRequestHandl
 [EditorCommand("diagnostics.upload", "Send the diagnostics now", Story = "F-17")]
 public sealed record UploadDiagnostics : IRequest<int>;
 
-public sealed class UploadDiagnosticsHandler(MainViewModel model) : IRequestHandler<UploadDiagnostics, int>
+public sealed class UploadDiagnosticsHandler(DiagnosticsViewModel diagnostics) : IRequestHandler<UploadDiagnostics, int>
 {
-    public Task<int> Handle(UploadDiagnostics request, CancellationToken cancellationToken) => model.Telemetry.UploadAsync(cancellationToken);
+    public Task<int> Handle(UploadDiagnostics request, CancellationToken cancellationToken) => diagnostics.Telemetry.UploadAsync(cancellationToken);
 }

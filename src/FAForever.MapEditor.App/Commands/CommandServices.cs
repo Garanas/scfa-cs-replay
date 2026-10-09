@@ -22,6 +22,11 @@ public static class CommandServices
     {
         ServiceCollection services = new ServiceCollection();
         services.AddSingleton(model);
+        // the parts are made after the registry (the palette needs it), so asked for when a handler is
+        services.AddSingleton(_ => model.Diagnostics);
+        services.AddSingleton(_ => model.Setup);
+        services.AddSingleton(_ => model.VersionControl);
+        services.AddSingleton(_ => model.Palette);
         services.AddSingleton<IEditorDialogs>(dialogs);
         services.AddSingleton<CurrentEdit>();
         // MediatR logs only that it runs without a licence key, which a desktop application needs

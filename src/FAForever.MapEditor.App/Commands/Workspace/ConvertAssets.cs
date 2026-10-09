@@ -10,7 +10,7 @@ namespace FAForever.MapEditor.App.Commands;
 [EditorCommand("workspace.convert", "Update the assets", Story = "F-5")]
 public sealed record ConvertAssets : IRequest<bool>;
 
-public sealed class ConvertAssetsHandler(MainViewModel model) : IRequestHandler<ConvertAssets, bool>
+public sealed class ConvertAssetsHandler(WorkspaceSetupViewModel setup) : IRequestHandler<ConvertAssets, bool>
 {
-    public Task<bool> Handle(ConvertAssets request, CancellationToken cancellationToken) => model.ConvertAssetsAsync();
+    public Task<bool> Handle(ConvertAssets request, CancellationToken cancellationToken) => setup.ConvertAssetsAsync();
 }

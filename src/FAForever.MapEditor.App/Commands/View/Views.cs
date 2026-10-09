@@ -54,11 +54,11 @@ public sealed class FitMapHandler(MainViewModel model) : IRequestHandler<FitMap>
 [EditorCommand("view.palette", "Command palette", Gesture = "Ctrl+K", Story = "F-2")]
 public sealed record OpenPalette : IRequest;
 
-public sealed class OpenPaletteHandler(MainViewModel model) : IRequestHandler<OpenPalette>
+public sealed class OpenPaletteHandler(PaletteViewModel palette) : IRequestHandler<OpenPalette>
 {
     public Task Handle(OpenPalette request, CancellationToken cancellationToken)
     {
-        model.OpenPalette();
+        palette.Open();
         return Task.CompletedTask;
     }
 }

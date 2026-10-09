@@ -31,7 +31,12 @@ namespace FAForever.MapEditor.App.Tests
             public Task<SaveChoice> AskToSaveChangesAsync(string mapName) => Task.FromResult(SaveChoice.Discard);
         }
 
-        private static MainViewModel NewModel() => new MainViewModel(new NoDialogs()) { FindFaf = () => null };
+        private static MainViewModel NewModel()
+        {
+            MainViewModel model = new MainViewModel(new NoDialogs());
+            model.Setup.FindFaf = () => null;
+            return model;
+        }
 
         private static string NewFolder(string name) => Path.Combine(AppContext.BaseDirectory, "snapshot-runs", $"{name}-{Guid.NewGuid():N}");
 
@@ -40,10 +45,10 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = NewModel();
             await model.StartAsync(new UserSettings(Path.Combine(NewFolder("settings"), "settings.json")));
-            model.SetupFolder = @"D:\FAF Map Editor";
-            model.SetupGameFolder = @"D:\Games\Supreme Commander Forged Alliance";
-            model.SetupFafDataFolder = @"C:\ProgramData\FAForever\gamedata";
-            model.SetupVaultFolder = @"D:\faf-vault";
+            model.Setup.Folder = @"D:\FAF Map Editor";
+            model.Setup.GameFolder = @"D:\Games\Supreme Commander Forged Alliance";
+            model.Setup.FafDataFolder = @"C:\ProgramData\FAForever\gamedata";
+            model.Setup.VaultFolder = @"D:\faf-vault";
 
             Compare("setup", model);
         });
@@ -66,7 +71,7 @@ namespace FAForever.MapEditor.App.Tests
 
             MainViewModel model = NewModel();
             await model.StartAsync(settings);
-            Assert.AreEqual(EditorStage.UpdateAssets, model.Stage);
+            Assert.AreEqual(EditorStage.UpdateAssets, model.Setup.Stage);
 
             Compare("assets", model);
         });

@@ -2,6 +2,11 @@
 
 Priority medium, effort medium. Easier after 01 and 02, which take parts of it away.
 
+**Built** (2026-10-09): `DiagnosticsViewModel`, `PaletteViewModel`, `WorkspaceSetupViewModel` and
+`VersionControlViewModel` in `ViewModels/`, `CameraGround` in `Rendering/Gpu/`; the App's guide
+describes them. "Today" says what it replaced; the direction below is what was built, with "As
+built" where it differs from the plan.
+
 ## Today
 
 One class in five partial files, 1747 lines:
@@ -50,9 +55,18 @@ stroke moved to the tools (file 02), that is the editor's core, around 500 to 70
 **The status line** is written by most parts. It stays on `MainViewModel`; a part that writes it
 gets an `Action<string>` in its constructor. That keeps who writes it visible without a service.
 
+*As built*, beyond the plan: version control is a part too (`VersionControlViewModel`). It saves
+the open map before a commit, while the editor is busy, so it takes the core itself and uses its
+`BusyAsync` and `TryAsync` (internal for the parts): one way, the core does not know it. The
+workspace is the setup's alone (`model.Setup.Workspace`); the core reads it there, and refreshes
+when the setup raises `WorkspaceReady`. `CanCommit` is gone: `file.commit`'s `Needs.Project`
+answers it. The parts are made in `MainViewModel`'s constructor and handed to the container by
+`CommandServices` for the handlers that take them.
+
 **Marshalling to the window's thread** is written twice (`Watch` at `MainViewModel.cs:548`,
 `OnLogged` in the Diagnostics partial): one private helper `OnUi(Action)`, or one in the
-diagnostics class if that is the only user after the split.
+diagnostics class if that is the only user after the split. *As built*: `ViewModels/UiThread.Run`,
+used by both.
 
 ## Avoid
 

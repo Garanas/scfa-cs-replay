@@ -48,6 +48,7 @@ public sealed partial class MainWindow : Window
         if (_model is not null)
         {
             _model.PropertyChanged -= OnModelChanged;
+            _model.Palette.PropertyChanged -= OnPaletteChanged;
             _model.FitRequested -= OnFitRequested;
             _model.TopViewRequested -= OnTopViewRequested;
             _model.ShowFolderRequested -= OnShowFolderRequested;
@@ -56,6 +57,7 @@ public sealed partial class MainWindow : Window
         if (_model is not null)
         {
             _model.PropertyChanged += OnModelChanged;
+            _model.Palette.PropertyChanged += OnPaletteChanged;
             _model.FitRequested += OnFitRequested;
             _model.TopViewRequested += OnTopViewRequested;
             _model.ShowFolderRequested += OnShowFolderRequested;
@@ -130,15 +132,20 @@ public sealed partial class MainWindow : Window
             case nameof(MainViewModel.GpuDebug):
                 Terrain3D.Debug = _model!.GpuDebug;
                 break;
-            case nameof(MainViewModel.IsPaletteOpen) when _model?.IsPaletteOpen == true:
-                Dispatcher.UIThread.Post(Palette.FocusQuery, DispatcherPriority.Input);
-                break;
             default:
                 foreach (CommandAdapter adapter in _adapters)
                 {
                     adapter.Refresh();
                 }
                 break;
+        }
+    }
+
+    private void OnPaletteChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PaletteViewModel.IsOpen) && _model?.Palette.IsOpen == true)
+        {
+            Dispatcher.UIThread.Post(Palette.FocusQuery, DispatcherPriority.Input);
         }
     }
 
@@ -158,9 +165,9 @@ public sealed partial class MainWindow : Window
     protected override async void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
-        if (DataContext is MainViewModel { IsConverting: true } converting)
+        if (DataContext is MainViewModel { Setup.IsConverting: true } converting)
         {
-            converting.StopWork();
+            converting.Setup.StopWork();
             return;
         }
         if (_mayClose || DataContext is not MainViewModel model || model.Map?.Session.IsModified != true)

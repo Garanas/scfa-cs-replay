@@ -207,7 +207,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                 _model.NotifyCameraMoved();
                 ReportCursor();
             }
-            Workspace? workspace = _model?.Workspace;
+            Workspace? workspace = _model?.Setup.Workspace;
             _renderer.Debug = _debug;
             try
             {

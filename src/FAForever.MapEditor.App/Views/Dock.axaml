@@ -37,13 +37,13 @@
           </Border>
         </Border>
       </TabItem>
-      <TabItem Header="{Binding ConsoleHeader}">
+      <TabItem Header="{Binding Diagnostics.ConsoleHeader}">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Classes="inline">
-            <CheckBox IsChecked="{Binding ConsoleShowsProblemsOnly}" Content="Only warnings and errors" />
+            <CheckBox IsChecked="{Binding Diagnostics.ConsoleShowsProblemsOnly}" Content="Only warnings and errors" />
             <Button Classes="chip" Content="Diagnostics..." Command="{Binding RunCommand}" CommandParameter="help.diagnostics" />
           </StackPanel>
-          <ListBox x:Name="ConsoleList" Classes="log" ItemsSource="{Binding ShownConsole}" AutomationProperties.Name="Console">
+          <ListBox x:Name="ConsoleList" Classes="log" ItemsSource="{Binding Diagnostics.ShownConsole}" AutomationProperties.Name="Console">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:ConsoleEntry">
                 <DockPanel>

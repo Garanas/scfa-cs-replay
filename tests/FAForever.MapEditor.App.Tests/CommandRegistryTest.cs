@@ -149,7 +149,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(ran);
             StringAssert.Contains(model.Status, "Not built yet: Terrain: Add a height layer");
             StringAssert.Contains(model.Status, "user story T-5");
-            StringAssert.Contains(model.Console.Last().Message, "terrain.addLayer: not built yet, user story T-5");
+            StringAssert.Contains(model.Diagnostics.Console.Last().Message, "terrain.addLayer: not built yet, user story T-5");
         }
 
         [TestMethod]
@@ -303,16 +303,25 @@ namespace FAForever.MapEditor.App.Tests
         [TestMethod]
         public void ThePaletteFindsCommandsBuiltFirst()
         {
-            MainViewModel model = NewModel();
+            List<string> ran = [];
+            PaletteViewModel palette = new PaletteViewModel(NewModel().Commands, id =>
+            {
+                ran.Add(id);
+                return Task.CompletedTask;
+            });
 
-            model.OpenPalette();
-            model.PaletteQuery = "layer";
+            palette.Open();
+            palette.Query = "layer";
 
-            Assert.IsTrue(model.IsPaletteOpen);
-            Assert.IsTrue(model.PaletteResults.Count > 1);
-            Assert.IsTrue(model.PaletteResults.All(c => c.FullTitle.Contains("layer", StringComparison.OrdinalIgnoreCase) || c.Id.Contains("layer", StringComparison.OrdinalIgnoreCase)));
-            Assert.IsFalse(model.PaletteResults.SkipWhile(c => !c.IsIncomplete).Any(c => !c.IsIncomplete), "the commands that work come first");
-            Assert.AreSame(model.PaletteResults[0], model.PaletteSelection);
+            Assert.IsTrue(palette.IsOpen);
+            Assert.IsTrue(palette.Results.Count > 1);
+            Assert.IsTrue(palette.Results.All(c => c.FullTitle.Contains("layer", StringComparison.OrdinalIgnoreCase) || c.Id.Contains("layer", StringComparison.OrdinalIgnoreCase)));
+            Assert.IsFalse(palette.Results.SkipWhile(c => !c.IsIncomplete).Any(c => !c.IsIncomplete), "the commands that work come first");
+            Assert.AreSame(palette.Results[0], palette.Selection);
+
+            palette.RunSelectionAsync().GetAwaiter().GetResult();
+            Assert.IsFalse(palette.IsOpen);
+            CollectionAssert.AreEqual(new[] { palette.Results[0].Id }, ran);
         }
 
         [TestMethod]

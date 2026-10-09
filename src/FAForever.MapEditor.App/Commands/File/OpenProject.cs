@@ -19,7 +19,7 @@ public sealed class OpenProjectHandler(MainViewModel model, IEditorDialogs dialo
             await model.OpenAsync(folder);
             return;
         }
-        if (await model.ConfirmCloseAsync() && await dialogs.PickFolderAsync("Open a project", model.Workspace?.ProjectsFolder) is string picked)
+        if (await model.ConfirmCloseAsync() && await dialogs.PickFolderAsync("Open a project", model.Setup.Workspace?.ProjectsFolder) is string picked)
         {
             await model.LoadProjectAsync(picked);
         }

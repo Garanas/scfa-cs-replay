@@ -10,22 +10,25 @@ namespace FAForever.MapEditor.App.ViewModels;
 /// Version control of the open project (user story F-18): one git repository per project, turned
 /// on by the map maker's choice on the version control page, then a commit beside each save.
 /// </summary>
-public sealed partial class MainViewModel
+/// <remarks>
+/// It works on the editor's open map: it saves it before a commit, while the editor is busy.
+/// </remarks>
+public sealed partial class VersionControlViewModel(MainViewModel editor) : ObservableObject
 {
-    private ILogger VersionControlLog => Logger("VersionControl");
+    private ILogger Log => editor.Logger("VersionControl");
 
     /// <summary>
     /// Whether the version control page shows: the setup until the project is a repository, then
     /// the commit.
     /// </summary>
     [ObservableProperty]
-    public partial bool IsVersionControlOpen { get; set; }
+    public partial bool IsOpen { get; set; }
 
     /// <summary>
     /// How the project stands in git, read when the page opens and after each operation.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsVersioned), nameof(IsNotVersioned), nameof(RepositorySummary), nameof(LfsNote))]
+    [NotifyPropertyChangedFor(nameof(IsVersioned), nameof(IsNotVersioned), nameof(Summary), nameof(LfsNote))]
     public partial RepositoryStatus? Repository { get; private set; }
 
     public bool IsVersioned => Repository?.IsRepository == true;
@@ -36,23 +39,23 @@ public sealed partial class MainViewModel
     /// The author of the commits, suggested from git's own settings.
     /// </summary>
     [ObservableProperty]
-    public partial string GitAuthorName { get; set; } = "";
+    public partial string AuthorName { get; set; } = "";
 
     [ObservableProperty]
-    public partial string GitAuthorEmail { get; set; } = "";
+    public partial string AuthorEmail { get; set; } = "";
 
     /// <summary>
     /// Whether the images and the procedural sources go to Git LFS; on unless the map maker turns it off.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(LfsNote))]
-    public partial bool GitUseLfs { get; set; } = true;
+    public partial bool UseLfs { get; set; } = true;
 
     /// <summary>
     /// The address of a repository to share the project through; empty for none.
     /// </summary>
     [ObservableProperty]
-    public partial string GitRemote { get; set; } = "";
+    public partial string Remote { get; set; } = "";
 
     /// <summary>
     /// What the next commit changes, in the map maker's words.
@@ -64,22 +67,17 @@ public sealed partial class MainViewModel
     /// Why the last operation of the page failed, shown on it.
     /// </summary>
     [ObservableProperty]
-    public partial string? VersionControlError { get; private set; }
+    public partial string? Error { get; private set; }
 
-    /// <summary>
-    /// Whether the open map is a project on disk, which a repository can hold.
-    /// </summary>
-    public bool CanCommit => CanSave && Map?.ProjectFolder is not null;
-
-    public string RepositorySummary => Repository switch
+    public string Summary => Repository switch
     {
         { IsRepository: true } status => string.Join(" · ", new[]
         {
             status.Branch is string branch ? $"On {branch}" : null,
-            Map?.Session.IsModified == true ? "unsaved changes, saved before the commit" : null,
+            editor.Map?.Session.IsModified == true ? "unsaved changes, saved before the commit" : null,
             status.Changes switch
             {
-                0 when Map?.Session.IsModified == true => null,
+                0 when editor.Map?.Session.IsModified == true => null,
                 0 => "nothing changed since the last commit",
                 1 => "1 file changed",
                 int count => $"{count} files changed",
@@ -91,53 +89,53 @@ public sealed partial class MainViewModel
         _ => "",
     };
 
-    public string LfsNote => Repository is { LfsInstalled: false } && GitUseLfs
+    public string LfsNote => Repository is { LfsInstalled: false } && UseLfs
         ? "Git LFS is not installed on this computer: install it from git-lfs.com, or turn this off."
         : "Images, raw heightmaps and the World Machine and Gaea files go to Git LFS: every saved version stays in the history without making the repository heavy.";
 
     /// <summary>
-    /// Opens the version control page for the open project: the setup when it is no repository
-    /// yet, with the author git knows; otherwise the commit.
+    /// Opens the page for the open project: the setup when it is no repository yet, with the
+    /// author git knows; otherwise the commit.
     /// </summary>
-    public async Task OpenVersionControlAsync()
+    public async Task OpenAsync()
     {
-        if (Map?.ProjectFolder is not string folder)
+        if (editor.Map?.ProjectFolder is not string folder)
         {
-            Status = "Save the map as a project first: version control keeps the project's folder";
+            editor.Status = "Save the map as a project first: version control keeps the project's folder";
             return;
         }
-        VersionControlError = null;
+        Error = null;
         RepositoryStatus status = await Task.Run(() => ProjectRepository.Status(folder));
         Repository = status;
         // the same status still reads differently with the map's unsaved changes
-        OnPropertyChanged(nameof(RepositorySummary));
+        OnPropertyChanged(nameof(Summary));
         if (!status.GitInstalled)
         {
-            VersionControlError = "Git is not installed on this computer: install it from git-scm.com.";
+            Error = "Git is not installed on this computer: install it from git-scm.com.";
         }
-        else if (!status.IsRepository && GitAuthorName.Length == 0 && GitAuthorEmail.Length == 0)
+        else if (!status.IsRepository && AuthorName.Length == 0 && AuthorEmail.Length == 0)
         {
-            (GitAuthorName, GitAuthorEmail) = await Task.Run(() => ProjectRepository.DefaultAuthor(folder));
+            (AuthorName, AuthorEmail) = await Task.Run(() => ProjectRepository.DefaultAuthor(folder));
         }
-        IsVersionControlOpen = true;
+        IsOpen = true;
     }
 
     /// <summary>
     /// Makes the project a repository with the page's choices and commits it as it is, saved first.
     /// </summary>
-    public Task EnableVersionControlAsync() => BusyAsync("git-enable", "Turning on version control...", async () =>
+    public Task EnableAsync() => editor.BusyAsync("git-enable", "Turning on version control...", async () =>
     {
-        EditedMap map = RequireMap();
+        EditedMap map = editor.Map ?? throw new InvalidOperationException("No map is open");
         string folder = map.ProjectFolder ?? throw new InvalidOperationException("Save the map as a project first");
         if (map.Session.IsModified)
         {
             await map.SaveAsync();
         }
-        RepositorySettings settings = new RepositorySettings { Name = GitAuthorName, Email = GitAuthorEmail, Lfs = GitUseLfs, Remote = GitRemote };
+        RepositorySettings settings = new RepositorySettings { Name = AuthorName, Email = AuthorEmail, Lfs = UseLfs, Remote = Remote };
         await Task.Run(() => ProjectRepository.Enable(folder, settings));
         Repository = await Task.Run(() => ProjectRepository.Status(folder));
-        VersionControlLog.LogInformation("Version control is on (LFS {Lfs}, shared {Shared})", settings.Lfs, settings.Remote.Length > 0);
-        Refresh($"Version control is on: {Repository.LastCommit}");
+        Log.LogInformation("Version control is on (LFS {Lfs}, shared {Shared})", settings.Lfs, settings.Remote.Length > 0);
+        editor.Status = $"Version control is on: {Repository.LastCommit}";
     });
 
     /// <summary>
@@ -148,9 +146,9 @@ public sealed partial class MainViewModel
     public async Task<string?> CommitAsync(string? message = null)
     {
         string? commit = null;
-        await BusyAsync("commit", "Committing...", async () =>
+        await editor.BusyAsync("commit", "Committing...", async () =>
         {
-            EditedMap map = RequireMap();
+            EditedMap map = editor.Map ?? throw new InvalidOperationException("No map is open");
             string folder = map.ProjectFolder ?? throw new InvalidOperationException("Save the map as a project first");
             string text = message ?? CommitMessage;
             if (string.IsNullOrWhiteSpace(text))
@@ -166,18 +164,18 @@ public sealed partial class MainViewModel
             if (commit is not null)
             {
                 CommitMessage = "";
-                VersionControlLog.LogInformation("Committed {Commit}", commit);
+                Log.LogInformation("Committed {Commit}", commit);
             }
-            Refresh(commit is null ? "Nothing changed since the last commit" : $"Committed {commit}: {text.Trim()}");
+            editor.Status = commit is null ? "Nothing changed since the last commit" : $"Committed {commit}: {text.Trim()}";
         });
         return commit;
     }
 
     [RelayCommand]
-    private Task TurnOnVersionControl() => OnPageAsync(async () =>
+    private Task TurnOn() => OnPageAsync(async () =>
     {
-        await EnableVersionControlAsync();
-        IsVersionControlOpen = false;
+        await EnableAsync();
+        IsOpen = false;
     });
 
     [RelayCommand]
@@ -185,26 +183,26 @@ public sealed partial class MainViewModel
     {
         if (await CommitAsync() is not null)
         {
-            IsVersionControlOpen = false;
+            IsOpen = false;
         }
     });
 
     [RelayCommand]
-    private void CloseVersionControl() => IsVersionControlOpen = false;
+    private void Close() => IsOpen = false;
 
     /// <summary>
     /// Runs an operation of the page, showing on it why it failed.
     /// </summary>
-    private Task OnPageAsync(Func<Task> operation) => TryAsync(async () =>
+    private Task OnPageAsync(Func<Task> operation) => editor.TryAsync(async () =>
     {
-        VersionControlError = null;
+        Error = null;
         try
         {
             await operation();
         }
         catch (Exception exception)
         {
-            VersionControlError = exception.Message;
+            Error = exception.Message;
             throw;
         }
     });

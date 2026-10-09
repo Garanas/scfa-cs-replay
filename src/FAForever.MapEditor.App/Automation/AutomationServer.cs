@@ -232,7 +232,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     bool problems = arguments["problems"]?.GetValue<bool>() == true;
                     return new JsonObject
                     {
-                        ["logs"] = new JsonArray([.. (problems ? model.ConsoleProblems : model.Console).TakeLast(count).Select(entry => (JsonNode)new JsonObject
+                        ["logs"] = new JsonArray([.. (problems ? model.Diagnostics.ConsoleProblems : model.Diagnostics.Console).TakeLast(count).Select(entry => (JsonNode)new JsonObject
                         {
                             ["time"] = entry.Time.ToString("O"),
                             ["level"] = entry.Level.ToString(),
@@ -262,8 +262,8 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 }
                 return new JsonObject
                 {
-                    ["record"] = model.RecordDiagnostics,
-                    ["send"] = model.SendDiagnostics,
+                    ["record"] = model.Diagnostics.Record,
+                    ["send"] = model.Diagnostics.Send,
                     ["endpoint"] = model.Telemetry.Settings.Endpoint,
                     ["folder"] = model.Telemetry.Folder,
                     ["session"] = model.Telemetry.SessionId,
@@ -287,7 +287,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 {
                     throw new ArgumentException("The choices (name, email, lfs, remote) go with enable: true");
                 }
-                if (open || model.Repository is null)
+                if (open || model.VersionControl.Repository is null)
                 {
                     await RunCommandAsync("file.commit", [], result, null);
                 }
@@ -297,16 +297,16 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 }
                 result["versionControl"] = new JsonObject
                 {
-                    ["git"] = model.Repository?.GitInstalled,
-                    ["lfsInstalled"] = model.Repository?.LfsInstalled,
-                    ["repository"] = model.Repository?.IsRepository,
-                    ["usesLfs"] = model.Repository?.UsesLfs,
-                    ["changes"] = model.Repository?.Changes,
-                    ["branch"] = model.Repository?.Branch,
-                    ["lastCommit"] = model.Repository?.LastCommit,
-                    ["remote"] = model.Repository?.Remote,
-                    ["pageOpen"] = model.IsVersionControlOpen,
-                    ["error"] = model.VersionControlError,
+                    ["git"] = model.VersionControl.Repository?.GitInstalled,
+                    ["lfsInstalled"] = model.VersionControl.Repository?.LfsInstalled,
+                    ["repository"] = model.VersionControl.Repository?.IsRepository,
+                    ["usesLfs"] = model.VersionControl.Repository?.UsesLfs,
+                    ["changes"] = model.VersionControl.Repository?.Changes,
+                    ["branch"] = model.VersionControl.Repository?.Branch,
+                    ["lastCommit"] = model.VersionControl.Repository?.LastCommit,
+                    ["remote"] = model.VersionControl.Repository?.Remote,
+                    ["pageOpen"] = model.VersionControl.IsOpen,
+                    ["error"] = model.VersionControl.Error,
                 };
                 break;
             }
@@ -397,15 +397,15 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         return new JsonObject
         {
             ["title"] = model.Title,
-            ["stage"] = model.Stage.ToString(),
+            ["stage"] = model.Setup.Stage.ToString(),
             ["mode"] = model.SelectedMode?.Definition.Id,
             ["tool"] = model.ActiveTool?.Definition.Id,
             ["toolNotBuilt"] = model.ActiveTool?.Definition.Missing,
-            ["palette"] = model.IsPaletteOpen,
-            ["workspace"] = model.Workspace?.Folder,
-            ["setupError"] = model.SetupError,
-            ["assetReasons"] = new JsonArray([.. model.AssetReasons.Select(reason => (JsonNode)JsonValue.Create(reason))]),
-            ["conversion"] = model.IsConverting ? model.ConversionText : null,
+            ["palette"] = model.Palette.IsOpen,
+            ["workspace"] = model.Setup.Workspace?.Folder,
+            ["setupError"] = model.Setup.Error,
+            ["assetReasons"] = new JsonArray([.. model.Setup.AssetReasons.Select(reason => (JsonNode)JsonValue.Create(reason))]),
+            ["conversion"] = model.Setup.IsConverting ? model.Setup.ConversionText : null,
             ["status"] = model.Status,
             ["projectFolder"] = model.Map?.ProjectFolder,
             ["map"] = document is null ? null : new JsonObject

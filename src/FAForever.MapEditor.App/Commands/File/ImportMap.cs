@@ -19,7 +19,7 @@ public sealed class ImportMapHandler(MainViewModel model, IEditorDialogs dialogs
             await model.ImportMapFolderAsync(folder);
             return;
         }
-        if (await model.ConfirmCloseAsync() && await dialogs.PickFolderAsync("Import a map folder of the game", model.Workspace?.MapsFolder) is string picked)
+        if (await model.ConfirmCloseAsync() && await dialogs.PickFolderAsync("Import a map folder of the game", model.Setup.Workspace?.MapsFolder) is string picked)
         {
             await model.ImportMapFolderAsync(picked);
         }

@@ -14,7 +14,7 @@ public sealed class SaveAsHandler(MainViewModel model, IEditorDialogs dialogs) :
 {
     public async Task Handle(SaveAs request, CancellationToken cancellationToken)
     {
-        if ((request.Folder ?? await dialogs.PickFolderAsync("Save as a project in an empty folder", model.Workspace?.ProjectsFolder)) is string folder)
+        if ((request.Folder ?? await dialogs.PickFolderAsync("Save as a project in an empty folder", model.Setup.Workspace?.ProjectsFolder)) is string folder)
         {
             await model.SaveAsAsync(folder);
         }

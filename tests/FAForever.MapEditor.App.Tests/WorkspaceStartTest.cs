@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Workspaces;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FAForever.MapEditor.App.Tests
 {
@@ -34,10 +35,20 @@ namespace FAForever.MapEditor.App.Tests
         {
             public string WorkspaceFolder => Path.Combine(Folder, "workspace");
 
-            public MainViewModel NewEditor() => new MainViewModel(new NoDialogs())
+            public MainViewModel NewEditor()
             {
-                FindFaf = () => new FafInstallation(Game, Vault, null, "3839"),
-            };
+                MainViewModel model = new MainViewModel(new NoDialogs());
+                model.Setup.FindFaf = FindFaf;
+                return model;
+            }
+
+            /// <summary>
+            /// The setup page without the editor around it.
+            /// </summary>
+            public WorkspaceSetupViewModel NewSetup() =>
+                new WorkspaceSetupViewModel(new NoDialogs(), NullLogger.Instance, _ => { }) { FindFaf = FindFaf };
+
+            private FafInstallation FindFaf() => new FafInstallation(Game, Vault, null, "3839");
         }
 
         private static Machine NewMachine()
@@ -58,8 +69,8 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = machine.NewEditor();
             await model.StartAsync(machine.Settings);
-            model.SetupFolder = machine.WorkspaceFolder;
-            Assert.IsTrue(await model.SetUpWorkspaceAsync(), model.SetupError);
+            model.Setup.Folder = machine.WorkspaceFolder;
+            Assert.IsTrue(await model.Setup.SetUpAsync(), model.Setup.Error);
             return model;
         }
 
@@ -72,43 +83,43 @@ namespace FAForever.MapEditor.App.Tests
             model.ShowFolderRequested += shown.Add;
 
             await model.StartAsync(machine.Settings);
-            model.ShowWorkspaceFolder();
-            CollectionAssert.AreEqual(Array.Empty<string>(), shown, "no workspace yet");
+            Assert.IsFalse(await model.Commands.RunAsync("help.workspaceFolder"), "no workspace yet");
+            CollectionAssert.AreEqual(Array.Empty<string>(), shown);
 
-            model.SetupFolder = machine.WorkspaceFolder;
-            Assert.IsTrue(await model.SetUpWorkspaceAsync(), model.SetupError);
+            model.Setup.Folder = machine.WorkspaceFolder;
+            Assert.IsTrue(await model.Setup.SetUpAsync(), model.Setup.Error);
             Assert.IsTrue(await model.Commands.RunAsync("help.workspaceFolder"));
 
-            CollectionAssert.AreEqual(new[] { model.Workspace!.Folder }, shown);
+            CollectionAssert.AreEqual(new[] { model.Setup.Workspace!.Folder }, shown);
         }
 
         [TestMethod]
         public async Task StartsWithTheSetupFilledInFromFaf()
         {
             Machine machine = NewMachine();
-            MainViewModel model = machine.NewEditor();
+            WorkspaceSetupViewModel setup = machine.NewSetup();
 
-            await model.StartAsync(machine.Settings);
+            await setup.StartAsync(machine.Settings);
 
-            Assert.AreEqual(EditorStage.SetUp, model.Stage);
-            Assert.IsFalse(model.IsReady);
-            Assert.AreEqual(machine.Game, model.SetupGameFolder);
-            Assert.AreEqual(machine.Vault, model.SetupVaultFolder);
+            Assert.AreEqual(EditorStage.SetUp, setup.Stage);
+            Assert.IsFalse(setup.IsReady);
+            Assert.AreEqual(machine.Game, setup.GameFolder);
+            Assert.AreEqual(machine.Vault, setup.VaultFolder);
         }
 
         [TestMethod]
         public async Task RefusesAGameFolderWithoutItsArchives()
         {
             Machine machine = NewMachine();
-            MainViewModel model = machine.NewEditor();
-            await model.StartAsync(machine.Settings);
-            model.SetupFolder = machine.WorkspaceFolder;
-            model.SetupGameFolder = machine.Vault;
+            WorkspaceSetupViewModel setup = machine.NewSetup();
+            await setup.StartAsync(machine.Settings);
+            setup.Folder = machine.WorkspaceFolder;
+            setup.GameFolder = machine.Vault;
 
-            Assert.IsFalse(await model.SetUpWorkspaceAsync());
+            Assert.IsFalse(await setup.SetUpAsync());
 
-            StringAssert.Contains(model.SetupError, "env.scd");
-            Assert.AreEqual(EditorStage.SetUp, model.Stage);
+            StringAssert.Contains(setup.Error, "env.scd");
+            Assert.AreEqual(EditorStage.SetUp, setup.Stage);
             Assert.IsNull(machine.Settings.Workspace);
         }
 
@@ -118,14 +129,14 @@ namespace FAForever.MapEditor.App.Tests
             Machine machine = NewMachine();
             MainViewModel model = await SetUp(machine);
 
-            Assert.AreEqual(EditorStage.Ready, model.Stage);
-            Assert.AreEqual(Path.GetFullPath(machine.WorkspaceFolder), model.Workspace!.Folder);
+            Assert.AreEqual(EditorStage.Ready, model.Setup.Stage);
+            Assert.AreEqual(Path.GetFullPath(machine.WorkspaceFolder), model.Setup.Workspace!.Folder);
             Assert.AreEqual(Path.GetFullPath(machine.WorkspaceFolder), machine.Settings.Workspace);
-            Assert.IsTrue(model.Workspace.CheckAssets().IsCurrent);
+            Assert.IsTrue(model.Setup.Workspace.CheckAssets().IsCurrent);
 
             MainViewModel again = machine.NewEditor();
             await again.StartAsync(machine.Settings);
-            Assert.AreEqual(EditorStage.Ready, again.Stage, "the next start goes straight to the editor");
+            Assert.AreEqual(EditorStage.Ready, again.Setup.Stage, "the next start goes straight to the editor");
         }
 
         [TestMethod]
@@ -139,12 +150,17 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = machine.NewEditor();
             await model.StartAsync(machine.Settings, "assets/maps/HardFFA.v0001");
 
-            Assert.AreEqual(EditorStage.UpdateAssets, model.Stage);
-            StringAssert.Contains(model.AssetReasons.Single(), "0.0.1");
+            Assert.AreEqual(EditorStage.UpdateAssets, model.Setup.Stage);
+            StringAssert.Contains(model.Setup.AssetReasons.Single(), "0.0.1");
             Assert.IsFalse(model.HasMap, "the map waits for the assets");
 
-            Assert.IsTrue(await model.ConvertAssetsAsync());
-            Assert.AreEqual(EditorStage.Ready, model.Stage);
+            Assert.IsTrue(await model.Commands.RunAsync("workspace.convert"));
+            Assert.AreEqual(EditorStage.Ready, model.Setup.Stage);
+            for (int i = 0; i < 100 && !model.HasMap; i++)
+            {
+                await Task.Delay(50);
+            }
+            Assert.IsTrue(model.HasMap, "and opens once they are converted");
         }
 
         [TestMethod]

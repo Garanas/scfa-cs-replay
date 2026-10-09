@@ -6,8 +6,8 @@
              x:DataType="vm:MainViewModel">
   <StackPanel Classes="page" VerticalAlignment="Center">
     <TextBlock Classes="title" Text="Converting the game's assets" />
-    <ProgressBar Minimum="0" Maximum="1" Value="{Binding ConversionFraction}" Height="8" AutomationProperties.Name="Conversion progress" />
-    <TextBlock Classes="secondary" Text="{Binding ConversionText}" />
+    <ProgressBar Minimum="0" Maximum="1" Value="{Binding Setup.ConversionFraction}" Height="8" AutomationProperties.Name="Conversion progress" />
+    <TextBlock Classes="secondary" Text="{Binding Setup.ConversionText}" />
     <TextBlock Classes="caption" Text="Closing the editor stops the conversion; the next start goes on where it was." />
   </StackPanel>
 </UserControl>

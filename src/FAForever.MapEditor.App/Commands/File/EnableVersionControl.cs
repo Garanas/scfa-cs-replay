@@ -12,14 +12,14 @@ namespace FAForever.MapEditor.App.Commands;
 [EditorCommand("file.enableVersionControl", "Turn on version control", Story = "F-18", Needs = Needs.Project | Needs.Idle)]
 public sealed record EnableVersionControl(string? Name = null, string? Email = null, bool? Lfs = null, string? Remote = null) : IRequest;
 
-public sealed class EnableVersionControlHandler(MainViewModel model) : IRequestHandler<EnableVersionControl>
+public sealed class EnableVersionControlHandler(VersionControlViewModel versionControl) : IRequestHandler<EnableVersionControl>
 {
     public async Task Handle(EnableVersionControl request, CancellationToken cancellationToken)
     {
-        model.GitAuthorName = request.Name ?? model.GitAuthorName;
-        model.GitAuthorEmail = request.Email ?? model.GitAuthorEmail;
-        model.GitUseLfs = request.Lfs ?? model.GitUseLfs;
-        model.GitRemote = request.Remote ?? model.GitRemote;
-        await model.EnableVersionControlAsync();
+        versionControl.AuthorName = request.Name ?? versionControl.AuthorName;
+        versionControl.AuthorEmail = request.Email ?? versionControl.AuthorEmail;
+        versionControl.UseLfs = request.Lfs ?? versionControl.UseLfs;
+        versionControl.Remote = request.Remote ?? versionControl.Remote;
+        await versionControl.EnableAsync();
     }
 }

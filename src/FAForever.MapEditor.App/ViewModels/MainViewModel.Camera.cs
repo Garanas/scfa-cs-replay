@@ -1,5 +1,3 @@
-using FAForever.MapEditor.App.Diagnostics;
-using System.Diagnostics;
 using System.Numerics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FAForever.MapEditor.App.Rendering.Gpu;
@@ -9,17 +7,19 @@ namespace FAForever.MapEditor.App.ViewModels;
 
 public sealed partial class MainViewModel
 {
-    private readonly Stopwatch _cameraClock = Stopwatch.StartNew();
     private EditorCamera? _camera;
-    private SmoothGround? _smooth;
-    private Heightmap? _smoothOf;
-    private TimeSpan _smoothMade;
 
     /// <summary>
-    /// The 3D view's camera. The top view shows what it sees and moves it (control and click).
-    /// It starts over the whole map whenever another map is opened.
+    /// The 3D view's camera, on the shown terrain. The top view shows what it sees and moves it
+    /// (control and click). It starts over the whole map whenever another map is opened.
     /// </summary>
-    public EditorCamera Camera => _camera ??= new EditorCamera((x, z, radius) => Smooth().Height(x, z, radius), TerrainHeight);
+    public EditorCamera Camera => _camera ??= NewCamera();
+
+    private EditorCamera NewCamera()
+    {
+        CameraGround ground = new CameraGround(() => ShownDocument?.Terrain.Heightmap);
+        return new EditorCamera(ground.Smooth, ground.Exact);
+    }
 
     /// <summary>
     /// Raised when the camera moved: the top view draws what it sees again.
@@ -73,50 +73,5 @@ public sealed partial class MainViewModel
             Camera.Reset(document.Width, document.Height);
             NotifyCameraMoved();
         }
-    }
-
-    /// <summary>
-    /// The blurred terrain the camera rests on, made again when the heights change; while they
-    /// keep changing (a brush stroke) at most twice a second, as making it reads every sample.
-    /// </summary>
-    private SmoothGround Smooth()
-    {
-        Heightmap? heightmap = ShownDocument?.Terrain.Heightmap;
-        if (heightmap is null)
-        {
-            return _smooth ??= SmoothGround.Flat(0);
-        }
-        if (!ReferenceEquals(heightmap, _smoothOf) && (_smooth is null || _smoothOf?.Width != heightmap.Width
-            || _smoothOf.Height != heightmap.Height || _cameraClock.Elapsed - _smoothMade > TimeSpan.FromSeconds(0.5)))
-        {
-            using Performance.Span measure = Performance.Measure("camera.smooth-ground");
-            _smooth = SmoothGround.From(heightmap);
-            _smoothOf = heightmap;
-            _smoothMade = _cameraClock.Elapsed;
-        }
-        return _smooth!;
-    }
-
-    /// <summary>
-    /// The height of the shown terrain, between its samples; outside the map that of its edge.
-    /// </summary>
-    private float TerrainHeight(float x, float z)
-    {
-        Heightmap? heightmap = ShownDocument?.Terrain.Heightmap;
-        if (heightmap is null)
-        {
-            return 0;
-        }
-        float cx = Math.Clamp(x, 0, heightmap.Width - 1);
-        float cz = Math.Clamp(z, 0, heightmap.Height - 1);
-        int x0 = (int)cx;
-        int z0 = (int)cz;
-        int x1 = Math.Min(x0 + 1, heightmap.Width - 1);
-        int z1 = Math.Min(z0 + 1, heightmap.Height - 1);
-        float fx = cx - x0;
-        float fz = cz - z0;
-        float top = heightmap.GetHeight(x0, z0) * (1 - fx) + heightmap.GetHeight(x1, z0) * fx;
-        float bottom = heightmap.GetHeight(x0, z1) * (1 - fx) + heightmap.GetHeight(x1, z1) * fx;
-        return top * (1 - fz) + bottom * fz;
     }
 }

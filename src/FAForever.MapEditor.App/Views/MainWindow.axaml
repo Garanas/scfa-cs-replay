@@ -15,7 +15,7 @@
         Width="1280" Height="800">
 
   <Grid>
-    <DockPanel IsVisible="{Binding IsReady}">
+    <DockPanel IsVisible="{Binding Setup.IsReady}">
       <Border DockPanel.Dock="Top" Classes="menubar">
         <DockPanel>
           <TextBlock DockPanel.Dock="Left" Classes="mapname" Text="{Binding MapName}" IsVisible="{Binding HasMap}" AutomationProperties.Name="Map" />
@@ -91,11 +91,11 @@
       </DockPanel>
     </DockPanel>
 
-    <views:SetupPage IsVisible="{Binding IsSettingUp}" />
-    <views:UpdateAssetsPage IsVisible="{Binding IsAskingToUpdate}" />
-    <views:ConvertingPage IsVisible="{Binding IsConverting}" />
-    <views:CommandPalette x:Name="Palette" IsVisible="{Binding IsPaletteOpen}" />
-    <views:DiagnosticsPage IsVisible="{Binding IsDiagnosticsOpen}" />
-    <views:VersionControlPage IsVisible="{Binding IsVersionControlOpen}" />
+    <views:SetupPage IsVisible="{Binding Setup.IsSettingUp}" />
+    <views:UpdateAssetsPage IsVisible="{Binding Setup.IsAskingToUpdate}" />
+    <views:ConvertingPage IsVisible="{Binding Setup.IsConverting}" />
+    <views:CommandPalette x:Name="Palette" IsVisible="{Binding Palette.IsOpen}" />
+    <views:DiagnosticsPage IsVisible="{Binding Diagnostics.IsOpen}" />
+    <views:VersionControlPage IsVisible="{Binding VersionControl.IsOpen}" />
   </Grid>
 </Window>

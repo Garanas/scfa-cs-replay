@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Workspaces;
 using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.ViewModels;
@@ -52,14 +53,27 @@ public sealed record HistoryEntry(int Step, string Description, bool IsUndone);
 /// menu commands call after asking for one, and what automation and tests call directly.
 /// </summary>
 /// <remarks>
+/// <para>
+/// The parts with state of their own are classes it makes and holds: <see cref="Diagnostics"/>,
+/// <see cref="Setup"/>, <see cref="VersionControl"/> and <see cref="Palette"/>. They write the
+/// status line through it; the views bind through them (<c>{Binding Setup.Folder}</c>).
+/// </para>
+/// <para>
 /// Opening, importing, saving and exporting read and write on a thread of the pool while the
 /// editor is busy (<see cref="IsBusy"/>); painting goes on during a save, which writes the version
 /// of the map from when it started.
+/// </para>
 /// </remarks>
 public sealed partial class MainViewModel : ObservableObject
 {
+    /// <summary>
+    /// The key in an exception's data that says it is logged already.
+    /// </summary>
+    private const string Logged = "FAForever.MapEditor.Logged";
+
     private readonly DialogGuard _dialogs;
     private readonly SynchronizationContext? _ui;
+    private string? _openWhenReady;
     private ProjectWatcher? _watcher;
     private EditTransaction? _stroke;
     private readonly HashSet<string> _pendingReload = new HashSet<string>(StringComparer.Ordinal);
@@ -70,9 +84,74 @@ public sealed partial class MainViewModel : ObservableObject
         _dialogs = new DialogGuard(dialogs);
         _ui = SynchronizationContext.Current;
         Telemetry = telemetry ?? new Telemetry();
-        Telemetry.Logged += OnLogged;
+        Diagnostics = new DiagnosticsViewModel(Telemetry, _ui, ShowFolder);
+        Setup = new WorkspaceSetupViewModel(_dialogs, Logger("Workspace"), text => Status = text);
+        Setup.WorkspaceReady += OnWorkspaceReady;
+        VersionControl = new VersionControlViewModel(this);
         Commands = CommandServices.Create(this, _dialogs, typeof(MainViewModel).Assembly);
+        Palette = new PaletteViewModel(Commands, RunAsync);
         InitializeShell();
+    }
+
+    /// <summary>
+    /// Where the logs and metrics of this session go.
+    /// </summary>
+    public Telemetry Telemetry { get; }
+
+    /// <summary>
+    /// The Console and the Diagnostics page (user story F-17).
+    /// </summary>
+    public DiagnosticsViewModel Diagnostics { get; }
+
+    /// <summary>
+    /// The start: the workspace, its setup page and the conversion of the assets (user story F-5).
+    /// </summary>
+    public WorkspaceSetupViewModel Setup { get; }
+
+    /// <summary>
+    /// The version control page of the open project (user story F-18).
+    /// </summary>
+    public VersionControlViewModel VersionControl { get; }
+
+    /// <summary>
+    /// The command palette (user story F-2).
+    /// </summary>
+    public PaletteViewModel Palette { get; }
+
+    /// <summary>
+    /// A logger of the editor, by what it is about: <c>Commands</c>, <c>Files</c>, <c>Workspace</c>,
+    /// <c>Rendering</c>, <c>Performance</c>, <c>Automation</c>, <c>VersionControl</c>, <c>Editor</c>.
+    /// </summary>
+    public ILogger Logger(string category) => Telemetry.CreateLogger(category);
+
+    private ILogger FilesLog => Logger("Files");
+
+    /// <summary>
+    /// Raised when the window is to show a folder in the system's file manager.
+    /// </summary>
+    public event Action<string>? ShowFolderRequested;
+
+    public void ShowFolder(string folder) => ShowFolderRequested?.Invoke(folder);
+
+    /// <summary>
+    /// Starts the editor with the workspace remembered in <paramref name="settings"/>, or its setup.
+    /// </summary>
+    /// <param name="openFolder">A project or map folder to open once the workspace is ready.</param>
+    public Task StartAsync(UserSettings settings, string? openFolder = null)
+    {
+        Diagnostics.Settings = settings;
+        _openWhenReady = openFolder;
+        return Setup.StartAsync(settings);
+    }
+
+    private void OnWorkspaceReady(Workspace workspace)
+    {
+        Refresh(null);
+        if (_openWhenReady is string folder)
+        {
+            _openWhenReady = null;
+            _ = OpenOnStartAsync(folder);
+        }
     }
 
     /// <summary>
@@ -131,7 +210,7 @@ public sealed partial class MainViewModel : ObservableObject
         && (!needs.HasFlag(Needs.Idle) || !IsBusy)
         && (!needs.HasFlag(Needs.Undo) || CanUndo)
         && (!needs.HasFlag(Needs.Redo) || CanRedo)
-        && (!needs.HasFlag(Needs.Workspace) || Workspace is not null)
+        && (!needs.HasFlag(Needs.Workspace) || Setup.Workspace is not null)
         && (!needs.HasFlag(Needs.Project) || Map?.ProjectFolder is not null)
         && (!needs.HasFlag(Needs.NoStroke) || _stroke is null);
 
@@ -334,7 +413,7 @@ public sealed partial class MainViewModel : ObservableObject
         {
             await SaveAsync();
         }
-        else if ((folder ?? await _dialogs.PickFolderAsync("Save as a project in an empty folder", Workspace?.ProjectsFolder)) is string chosen)
+        else if ((folder ?? await _dialogs.PickFolderAsync("Save as a project in an empty folder", Setup.Workspace?.ProjectsFolder)) is string chosen)
         {
             await SaveAsAsync(chosen);
         }
@@ -373,25 +452,14 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _watcher?.Dispose();
         _watcher = new ProjectWatcher(folder);
-        _watcher.Changed += files =>
+        _watcher.Changed += files => UiThread.Run(_ui, () =>
         {
-            void Reload()
+            foreach (string file in files)
             {
-                foreach (string file in files)
-                {
-                    _pendingReload.Add(file);
-                }
-                ReloadPending();
+                _pendingReload.Add(file);
             }
-            if (_ui is null)
-            {
-                Reload();
-            }
-            else
-            {
-                _ui.Post(_ => Reload(), null);
-            }
-        };
+            ReloadPending();
+        });
     }
 
     /// <summary>
@@ -468,7 +536,6 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HasMap));
         OnPropertyChanged(nameof(CanStart));
         OnPropertyChanged(nameof(CanSave));
-        OnPropertyChanged(nameof(CanCommit));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(CanRedo));
         RefreshOverlays();
@@ -489,11 +556,11 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>
     /// Runs an operation that reads or writes in the background, with the editor busy meanwhile;
     /// logs how long it took, or why it failed, and measures it
-    /// (<see cref="EditorMetrics.OperationDuration"/>).
+    /// (<see cref="EditorMetrics.OperationDuration"/>). For the parts that work on the open map.
     /// </summary>
     /// <param name="name">What it is, for the metrics: <c>open</c>, <c>save</c>, ...</param>
     /// <exception cref="InvalidOperationException">Another such operation is still running.</exception>
-    private async Task BusyAsync(string name, string status, Func<Task> operation)
+    internal async Task BusyAsync(string name, string status, Func<Task> operation)
     {
         if (IsBusy)
         {
@@ -526,9 +593,9 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Runs an operation of the menu, showing what went wrong in the status line.
+    /// Runs an operation of the menu or a page, showing what went wrong in the status line.
     /// </summary>
-    private async Task TryAsync(Func<Task> operation)
+    internal async Task TryAsync(Func<Task> operation)
     {
         try
         {

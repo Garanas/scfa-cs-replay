@@ -8,7 +8,7 @@
     <Border Classes="dialog">
       <StackPanel>
         <!-- The setup, shown before version control is on. -->
-        <StackPanel IsVisible="{Binding IsNotVersioned}">
+        <StackPanel IsVisible="{Binding VersionControl.IsNotVersioned}">
           <Border Classes="dialogpart">
             <StackPanel Classes="stack">
               <TextBlock Classes="heading" Text="Turn on version control" />
@@ -19,22 +19,22 @@
           <Border Classes="dialogpart">
             <StackPanel Classes="stack">
               <TextBlock Classes="label" Text="Author of the commits" />
-              <TextBox Text="{Binding GitAuthorName}" PlaceholderText="Your name"
+              <TextBox Text="{Binding VersionControl.AuthorName}" PlaceholderText="Your name"
                        AutomationProperties.Name="Author name" />
-              <TextBox Text="{Binding GitAuthorEmail}" PlaceholderText="Your email address"
+              <TextBox Text="{Binding VersionControl.AuthorEmail}" PlaceholderText="Your email address"
                        AutomationProperties.Name="Author email" />
             </StackPanel>
           </Border>
           <Border Classes="dialogpart">
             <StackPanel Classes="stack">
-              <CheckBox IsChecked="{Binding GitUseLfs}" Content="Keep the images and procedural sources in Git LFS" />
-              <TextBlock Classes="caption" Text="{Binding LfsNote}" />
+              <CheckBox IsChecked="{Binding VersionControl.UseLfs}" Content="Keep the images and procedural sources in Git LFS" />
+              <TextBlock Classes="caption" Text="{Binding VersionControl.LfsNote}" />
             </StackPanel>
           </Border>
           <Border Classes="dialogpart">
             <StackPanel Classes="stack">
               <TextBlock Classes="label" Text="Share through (optional)" />
-              <TextBox Text="{Binding GitRemote}" PlaceholderText="e.g. https://github.com/you/your-map.git"
+              <TextBox Text="{Binding VersionControl.Remote}" PlaceholderText="e.g. https://github.com/you/your-map.git"
                        AutomationProperties.Name="Remote repository" />
               <TextBlock Classes="caption"
                          Text="Also written: a .gitignore that leaves procedural/temp out (what World Machine and Gaea build), and a .gitattributes. The first commit holds the project as it is saved." />
@@ -43,27 +43,27 @@
           <Border Classes="dialogpart">
             <DockPanel>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="{StaticResource SpaceRow}">
-                <Button Content="Cancel" Command="{Binding CloseVersionControlCommand}" />
-                <Button Classes="accent" Content="Turn on version control" Command="{Binding TurnOnVersionControlCommand}" />
+                <Button Content="Cancel" Command="{Binding VersionControl.CloseCommand}" />
+                <Button Classes="accent" Content="Turn on version control" Command="{Binding VersionControl.TurnOnCommand}" />
               </StackPanel>
-              <TextBlock Classes="error" Text="{Binding VersionControlError}" IsVisible="{Binding VersionControlError, Converter={x:Static ObjectConverters.IsNotNull}}"
+              <TextBlock Classes="error" Text="{Binding VersionControl.Error}" IsVisible="{Binding VersionControl.Error, Converter={x:Static ObjectConverters.IsNotNull}}"
                          VerticalAlignment="Center" AutomationProperties.Name="Version control error" />
             </DockPanel>
           </Border>
         </StackPanel>
 
         <!-- The commit, once version control is on. -->
-        <StackPanel IsVisible="{Binding IsVersioned}">
+        <StackPanel IsVisible="{Binding VersionControl.IsVersioned}">
           <Border Classes="dialogpart">
             <StackPanel Classes="stack">
               <TextBlock Classes="heading" Text="Commit" />
-              <TextBlock Classes="caption" Text="{Binding RepositorySummary}" AutomationProperties.Name="Repository" />
+              <TextBlock Classes="caption" Text="{Binding VersionControl.Summary}" AutomationProperties.Name="Repository" />
             </StackPanel>
           </Border>
           <Border Classes="dialogpart">
             <StackPanel Classes="stack">
               <TextBlock Classes="label" Text="What changed" />
-              <TextBox x:Name="Message" Text="{Binding CommitMessage}" PlaceholderText="e.g. Raise the plateau in the north"
+              <TextBox x:Name="Message" Text="{Binding VersionControl.CommitMessage}" PlaceholderText="e.g. Raise the plateau in the north"
                        AutomationProperties.Name="Commit message" />
               <TextBlock Classes="caption" Text="Saves the map first when it has unsaved changes, then commits everything that changed in the project." />
             </StackPanel>
@@ -71,10 +71,10 @@
           <Border Classes="dialogpart">
             <DockPanel>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="{StaticResource SpaceRow}">
-                <Button Content="Close" Command="{Binding CloseVersionControlCommand}" />
-                <Button Classes="accent" Content="Commit" Command="{Binding CommitChangesCommand}" IsDefault="True" />
+                <Button Content="Close" Command="{Binding VersionControl.CloseCommand}" />
+                <Button Classes="accent" Content="Commit" Command="{Binding VersionControl.CommitChangesCommand}" IsDefault="True" />
               </StackPanel>
-              <TextBlock Classes="error" Text="{Binding VersionControlError}" IsVisible="{Binding VersionControlError, Converter={x:Static ObjectConverters.IsNotNull}}"
+              <TextBlock Classes="error" Text="{Binding VersionControl.Error}" IsVisible="{Binding VersionControl.Error, Converter={x:Static ObjectConverters.IsNotNull}}"
                          VerticalAlignment="Center" AutomationProperties.Name="Commit error" />
             </DockPanel>
           </Border>

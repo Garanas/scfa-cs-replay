@@ -6,14 +6,14 @@
              x:DataType="vm:MainViewModel">
   <StackPanel Classes="page" VerticalAlignment="Center">
     <TextBlock Classes="title" Text="The game's assets need updating" />
-    <ItemsControl ItemsSource="{Binding AssetReasons}" AutomationProperties.Name="Why">
+    <ItemsControl ItemsSource="{Binding Setup.AssetReasons}" AutomationProperties.Name="Why">
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="x:String">
           <TextBlock Classes="item" Text="{Binding}" />
         </DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>
-    <TextBlock Classes="error" Text="{Binding SetupError}" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+    <TextBlock Classes="error" Text="{Binding Setup.Error}" IsVisible="{Binding Setup.Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
     <TextBlock Classes="caption" Text="The editor converts them again before it opens: a minute or so." />
     <Button Content="Update the assets" Classes="accent" HorizontalAlignment="Left" MinWidth="160" Command="{Binding RunCommand}" CommandParameter="workspace.convert" />
   </StackPanel>

@@ -15,14 +15,14 @@ namespace FAForever.MapEditor.App.Commands;
 [EditorCommand("workspace.setUp", "Set up the workspace", Story = "F-5")]
 public sealed record SetUpWorkspace(string? Folder = null, string? Game = null, string? Faf = null, string? Vault = null) : IRequest<bool>;
 
-public sealed class SetUpWorkspaceHandler(MainViewModel model) : IRequestHandler<SetUpWorkspace, bool>
+public sealed class SetUpWorkspaceHandler(WorkspaceSetupViewModel setup) : IRequestHandler<SetUpWorkspace, bool>
 {
     public Task<bool> Handle(SetUpWorkspace request, CancellationToken cancellationToken)
     {
-        model.SetupFolder = request.Folder ?? model.SetupFolder;
-        model.SetupGameFolder = request.Game ?? model.SetupGameFolder;
-        model.SetupFafDataFolder = request.Faf ?? model.SetupFafDataFolder;
-        model.SetupVaultFolder = request.Vault ?? model.SetupVaultFolder;
-        return model.SetUpWorkspaceAsync();
+        setup.Folder = request.Folder ?? setup.Folder;
+        setup.GameFolder = request.Game ?? setup.GameFolder;
+        setup.FafDataFolder = request.Faf ?? setup.FafDataFolder;
+        setup.VaultFolder = request.Vault ?? setup.VaultFolder;
+        return setup.SetUpAsync();
     }
 }

@@ -9,11 +9,11 @@ namespace FAForever.MapEditor.App.Commands;
 [EditorCommand("help.diagnostics", "Diagnostics...", Story = "F-17")]
 public sealed record OpenDiagnostics : IRequest;
 
-public sealed class OpenDiagnosticsHandler(MainViewModel model) : IRequestHandler<OpenDiagnostics>
+public sealed class OpenDiagnosticsHandler(DiagnosticsViewModel diagnostics) : IRequestHandler<OpenDiagnostics>
 {
     public Task Handle(OpenDiagnostics request, CancellationToken cancellationToken)
     {
-        model.OpenDiagnostics();
+        diagnostics.Open();
         return Task.CompletedTask;
     }
 }

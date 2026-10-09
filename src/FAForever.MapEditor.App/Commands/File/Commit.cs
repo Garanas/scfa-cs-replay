@@ -12,15 +12,15 @@ namespace FAForever.MapEditor.App.Commands;
 [EditorCommand("file.commit", "Commit...", Gesture = "Ctrl+Shift+C", Story = "F-18", Needs = Needs.Project | Needs.Idle)]
 public sealed record Commit(string? Message = null) : IRequest<string?>;
 
-public sealed class CommitHandler(MainViewModel model) : IRequestHandler<Commit, string?>
+public sealed class CommitHandler(VersionControlViewModel versionControl) : IRequestHandler<Commit, string?>
 {
     public async Task<string?> Handle(Commit request, CancellationToken cancellationToken)
     {
         if (request.Message is null)
         {
-            await model.OpenVersionControlAsync();
+            await versionControl.OpenAsync();
             return null;
         }
-        return await model.CommitAsync(request.Message);
+        return await versionControl.CommitAsync(request.Message);
     }
 }

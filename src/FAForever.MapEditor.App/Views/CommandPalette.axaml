@@ -9,10 +9,10 @@
     <Border Classes="dialog" PointerPressed="OnDialogPressed">
       <StackPanel>
         <Border Classes="dialogpart">
-          <TextBox x:Name="Query" Text="{Binding PaletteQuery}" PlaceholderText="Run a command" KeyDown="OnQueryKeyDown"
+          <TextBox x:Name="Query" Text="{Binding Palette.Query}" PlaceholderText="Run a command" KeyDown="OnQueryKeyDown"
                    AutomationProperties.Name="Run a command" />
         </Border>
-        <ListBox x:Name="Results" ItemsSource="{Binding PaletteResults}" SelectedItem="{Binding PaletteSelection}"
+        <ListBox x:Name="Results" ItemsSource="{Binding Palette.Results}" SelectedItem="{Binding Palette.Selection}"
                  MaxHeight="{StaticResource PaletteListHeight}" DoubleTapped="OnResultChosen" AutomationProperties.Name="Commands">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="commands:EditorCommand">

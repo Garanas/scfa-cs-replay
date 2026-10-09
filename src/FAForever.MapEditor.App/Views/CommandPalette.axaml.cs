@@ -31,17 +31,17 @@ public sealed partial class CommandPalette : UserControl
         switch (e.Key)
         {
             case Key.Down or Key.Up:
-                int index = Math.Clamp(Results.SelectedIndex + (e.Key == Key.Down ? 1 : -1), 0, Math.Max(0, model.PaletteResults.Count - 1));
+                int index = Math.Clamp(Results.SelectedIndex + (e.Key == Key.Down ? 1 : -1), 0, Math.Max(0, model.Palette.Results.Count - 1));
                 Results.SelectedIndex = index;
                 Results.ScrollIntoView(index);
                 e.Handled = true;
                 break;
             case Key.Enter:
                 e.Handled = true;
-                await model.RunPaletteSelectionAsync();
+                await model.Palette.RunSelectionAsync();
                 break;
             case Key.Escape:
-                model.IsPaletteOpen = false;
+                model.Palette.IsOpen = false;
                 e.Handled = true;
                 break;
         }
@@ -51,7 +51,7 @@ public sealed partial class CommandPalette : UserControl
     {
         if (Model is MainViewModel model)
         {
-            await model.RunPaletteSelectionAsync();
+            await model.Palette.RunSelectionAsync();
         }
     }
 
@@ -59,7 +59,7 @@ public sealed partial class CommandPalette : UserControl
     {
         if (Model is MainViewModel model)
         {
-            model.IsPaletteOpen = false;
+            model.Palette.IsOpen = false;
         }
     }
 

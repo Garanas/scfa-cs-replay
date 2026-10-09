@@ -94,9 +94,9 @@ public sealed partial class OverlayItem(OverlayDefinition definition, Func<bool>
 
 /// <summary>
 /// The window's frame around the map (concept A of the UI design): the controller with its
-/// commands, the modes and their tools, the overlays, the dock, the command palette and the
-/// console. Things that are not built yet carry their user story (<see cref="IncompleteAttribute"/>,
-/// <see cref="ToolDefinition.Missing"/>, <see cref="PlannedSection"/>).
+/// commands, the modes and their tools, the overlays and the tabs. Things that are not built yet
+/// carry their user story (<see cref="IncompleteAttribute"/>, <see cref="ToolDefinition.Missing"/>,
+/// <see cref="PlannedSection"/>).
 /// </summary>
 public sealed partial class MainViewModel
 {
@@ -169,18 +169,6 @@ public sealed partial class MainViewModel
     /// Raised when the top view is to show the whole map.
     /// </summary>
     public event EventHandler? FitRequested;
-
-    [ObservableProperty]
-    public partial bool IsPaletteOpen { get; set; }
-
-    [ObservableProperty]
-    public partial string PaletteQuery { get; set; } = "";
-
-    [ObservableProperty]
-    public partial IReadOnlyList<EditorCommand> PaletteResults { get; private set; } = [];
-
-    [ObservableProperty]
-    public partial EditorCommand? PaletteSelection { get; set; }
 
     private void InitializeShell()
     {
@@ -304,47 +292,10 @@ public sealed partial class MainViewModel
         }
     }
 
-    partial void OnPaletteQueryChanged(string value) => SearchPalette();
-
-    private void SearchPalette()
-    {
-        PaletteResults = [.. Commands.Search(PaletteQuery).Take(60)];
-        PaletteSelection = PaletteResults.FirstOrDefault();
-    }
-
-    /// <summary>
-    /// Opens the command palette (user story F-2), empty.
-    /// </summary>
-    public void OpenPalette()
-    {
-        PaletteQuery = "";
-        SearchPalette();
-        IsPaletteOpen = true;
-    }
-
-    /// <summary>
-    /// Runs the command chosen in the palette, and closes it.
-    /// </summary>
-    public async Task RunPaletteSelectionAsync()
-    {
-        EditorCommand? command = PaletteSelection;
-        IsPaletteOpen = false;
-        if (command is not null)
-        {
-            await RunAsync(command.Id);
-        }
-    }
-
     /// <summary>
     /// Runs a command by its id, as a button, menu item or shortcut does: what goes wrong shows in
     /// the status line (and the Console) rather than stopping the editor.
     /// </summary>
     [RelayCommand]
     public Task RunAsync(string id) => TryAsync(() => Commands.RunAsync(id));
-
-    [RelayCommand]
-    private void ClosePalette() => IsPaletteOpen = false;
-
-    [RelayCommand]
-    private Task RunPalette() => RunPaletteSelectionAsync();
 }

@@ -70,36 +70,37 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = new MainViewModel(new Answers());
             await model.OpenAsync(HardFfa);
-            Assert.IsFalse(model.CanCommit, "an imported map is no project yet");
-            await model.OpenVersionControlAsync();
-            Assert.IsFalse(model.IsVersionControlOpen);
+            VersionControlViewModel versionControl = model.VersionControl;
+            Assert.IsFalse(model.Commands.CanRun(model.Commands.Find("file.commit")!), "an imported map is no project yet");
+            await versionControl.OpenAsync();
+            Assert.IsFalse(versionControl.IsOpen);
 
             await model.SaveAsAsync(NewFolder());
             Assert.IsTrue(await model.Commands.RunAsync("file.commit"));
-            Assert.IsTrue(model.IsVersionControlOpen);
-            Assert.IsTrue(model.IsNotVersioned, "the setup shows before version control is on");
-            Assert.IsTrue(model.GitUseLfs, "LFS is on unless turned off");
-            model.GitAuthorName = "Map maker";
-            model.GitAuthorEmail = "maker@example.org";
-            model.GitUseLfs = false;
-            await model.TurnOnVersionControlCommand.ExecuteAsync(null);
-            Assert.IsNull(model.VersionControlError);
-            Assert.IsTrue(model.IsVersioned);
-            Assert.IsFalse(model.IsVersionControlOpen);
+            Assert.IsTrue(versionControl.IsOpen);
+            Assert.IsTrue(versionControl.IsNotVersioned, "the setup shows before version control is on");
+            Assert.IsTrue(versionControl.UseLfs, "LFS is on unless turned off");
+            versionControl.AuthorName = "Map maker";
+            versionControl.AuthorEmail = "maker@example.org";
+            versionControl.UseLfs = false;
+            await versionControl.TurnOnCommand.ExecuteAsync(null);
+            Assert.IsNull(versionControl.Error);
+            Assert.IsTrue(versionControl.IsVersioned);
+            Assert.IsFalse(versionControl.IsOpen);
 
             model.Stroke([(100, 40), (130, 40)]);
-            await model.OpenVersionControlAsync();
-            await model.CommitChangesCommand.ExecuteAsync(null);
-            Assert.AreEqual("Say what the commit changes", model.VersionControlError);
-            model.CommitMessage = "Raise a ridge";
-            await model.CommitChangesCommand.ExecuteAsync(null);
+            await versionControl.OpenAsync();
+            await versionControl.CommitChangesCommand.ExecuteAsync(null);
+            Assert.AreEqual("Say what the commit changes", versionControl.Error);
+            versionControl.CommitMessage = "Raise a ridge";
+            await versionControl.CommitChangesCommand.ExecuteAsync(null);
 
-            Assert.IsNull(model.VersionControlError);
+            Assert.IsNull(versionControl.Error);
             StringAssert.StartsWith(model.Status, "Committed ");
-            StringAssert.EndsWith(model.Repository!.LastCommit, "Raise a ridge");
-            Assert.AreEqual(0, model.Repository.Changes, "the commit saved the stroke first");
+            StringAssert.EndsWith(versionControl.Repository!.LastCommit, "Raise a ridge");
+            Assert.AreEqual(0, versionControl.Repository.Changes, "the commit saved the stroke first");
             StringAssert.StartsWith(model.Title, "HardFFA", "saved");
-            Assert.IsNull(await model.CommitAsync("Nothing"));
+            Assert.IsNull(await versionControl.CommitAsync("Nothing"));
         }
 
         [TestMethod]
@@ -226,7 +227,7 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.IsFalse(model.HasMap);
             StringAssert.Contains(model.Status, "is missing");
-            ConsoleEntry error = model.ConsoleProblems.Single();
+            ConsoleEntry error = model.Diagnostics.ConsoleProblems.Single();
             Assert.AreEqual(LogLevel.Error, error.Level, "logged once, as an error of the operation");
             Assert.AreEqual("Files", error.Category);
             StringAssert.Contains(error.Message, "open failed after");
@@ -235,41 +236,44 @@ namespace FAForever.MapEditor.App.Tests
         [TestMethod]
         public void TheConsoleShowsWhatIsLoggedAndCanShowOnlyProblems()
         {
-            MainViewModel model = new MainViewModel(new Answers());
-            ILogger log = model.Logger("Rendering");
+            Telemetry telemetry = new Telemetry(background: false);
+            DiagnosticsViewModel diagnostics = new DiagnosticsViewModel(telemetry, ui: null, showFolder: _ => { });
+            ILogger log = telemetry.CreateLogger("Rendering");
 
             log.LogInformation("The 3D view runs on {Renderer}", "OpenGLES 3.0");
             log.LogWarning("A texture could not be read: {Reason}", "no such file");
 
-            Assert.AreEqual("The 3D view runs on OpenGLES 3.0", model.Console[^2].Message);
-            Assert.AreEqual("warning", model.Console[^1].LevelText);
-            Assert.IsTrue(model.Console[^1].IsWarning && !model.Console[^1].IsError, "a warning has its own colour");
-            Assert.AreEqual("Console (1)", model.ConsoleHeader);
-            Assert.AreSame(model.Console, model.ShownConsole);
+            Assert.AreEqual("The 3D view runs on OpenGLES 3.0", diagnostics.Console[^2].Message);
+            Assert.AreEqual("warning", diagnostics.Console[^1].LevelText);
+            Assert.IsTrue(diagnostics.Console[^1].IsWarning && !diagnostics.Console[^1].IsError, "a warning has its own colour");
+            Assert.AreEqual("Console (1)", diagnostics.ConsoleHeader);
+            Assert.AreSame(diagnostics.Console, diagnostics.ShownConsole);
 
-            model.ConsoleShowsProblemsOnly = true;
+            diagnostics.ConsoleShowsProblemsOnly = true;
 
-            Assert.AreEqual("A texture could not be read: no such file", model.ShownConsole.Single().Message);
+            Assert.AreEqual("A texture could not be read: no such file", diagnostics.ShownConsole.Single().Message);
         }
 
         [TestMethod]
         public async Task RemembersTheChoicesAboutDiagnostics()
         {
             UserSettings settings = new UserSettings(Path.Combine(NewFolder(), "settings.json"));
-            MainViewModel model = new MainViewModel(new Answers(), new Telemetry(settings: settings.Telemetry, background: false)) { FindFaf = () => null };
+            MainViewModel model = new MainViewModel(new Answers(), new Telemetry(settings: settings.Telemetry, background: false));
+            model.Setup.FindFaf = () => null;
             await model.StartAsync(settings);
+            DiagnosticsViewModel diagnostics = model.Diagnostics;
 
-            Assert.IsTrue(model.RecordDiagnostics);
-            Assert.IsFalse(model.SendDiagnostics);
-            StringAssert.Contains(model.DiagnosticsSummary, "Nothing is sent");
+            Assert.IsTrue(diagnostics.Record);
+            Assert.IsFalse(diagnostics.Send);
+            StringAssert.Contains(diagnostics.Summary, "Nothing is sent");
 
-            model.DiagnosticsEndpoint = " http://localhost:4318 ";
-            model.SendDiagnostics = true;
+            diagnostics.Endpoint = " http://localhost:4318 ";
+            diagnostics.Send = true;
 
             Assert.AreEqual(new TelemetrySettings(true, true, "http://localhost:4318", settings.Telemetry.InstallId), settings.Telemetry);
             Assert.IsTrue(model.Telemetry.Settings.Send);
             Assert.IsTrue(await model.Commands.RunAsync("help.diagnostics"));
-            Assert.IsTrue(model.IsDiagnosticsOpen);
+            Assert.IsTrue(diagnostics.IsOpen);
         }
 
         [TestMethod]

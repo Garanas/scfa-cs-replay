@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FAForever.MapEditor.Project;
 using FAForever.MapEditor.App.Diagnostics;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Workspaces;
 using Microsoft.Extensions.Logging;
 
@@ -31,16 +31,28 @@ public enum EditorStage
     Ready,
 }
 
-public sealed partial class MainViewModel
+/// <summary>
+/// The start of the editor (user story F-5): the workspace remembered, or its setup page; checking
+/// and converting the game's assets into it. Raises <see cref="WorkspaceReady"/> once the editor
+/// can work in it.
+/// </summary>
+/// <param name="dialogs">Asks for the folders of the Browse buttons.</param>
+/// <param name="status">Writes the editor's status line.</param>
+public sealed partial class WorkspaceSetupViewModel(IEditorDialogs dialogs, ILogger log, Action<string> status) : ObservableObject
 {
     private UserSettings? _settings;
-    private string? _openWhenReady;
+    private Workspace? _pending;
     private readonly CancellationTokenSource _closing = new CancellationTokenSource();
 
     /// <summary>
     /// Reads FAF's <c>fa_path.lua</c> for what the setup suggests; tests give their own.
     /// </summary>
-    public Func<FafInstallation?> FindFaf { get; init; } = () => FafInstallation.Find();
+    public Func<FafInstallation?> FindFaf { get; set; } = () => FafInstallation.Find();
+
+    /// <summary>
+    /// Raised when the workspace is set up and its assets are converted.
+    /// </summary>
+    public event Action<Workspace>? WorkspaceReady;
 
     /// <summary>
     /// The workspace, once it is set up and its assets are converted.
@@ -64,31 +76,31 @@ public sealed partial class MainViewModel
     /// Where the workspace goes; a folder that holds one already is used as it is.
     /// </summary>
     [ObservableProperty]
-    public partial string SetupFolder { get; set; } = "";
+    public partial string Folder { get; set; } = "";
 
     /// <summary>
     /// The game's installation, with <c>gamedata/env.scd</c> and <c>gamedata/units.scd</c>.
     /// </summary>
     [ObservableProperty]
-    public partial string SetupGameFolder { get; set; } = "";
+    public partial string GameFolder { get; set; } = "";
 
     /// <summary>
     /// FAF's <c>gamedata</c> folder; empty without FAF.
     /// </summary>
     [ObservableProperty]
-    public partial string SetupFafDataFolder { get; set; } = "";
+    public partial string FafDataFolder { get; set; } = "";
 
     /// <summary>
     /// The vault on disk, where maps are exported to.
     /// </summary>
     [ObservableProperty]
-    public partial string SetupVaultFolder { get; set; } = "";
+    public partial string VaultFolder { get; set; } = "";
 
     /// <summary>
     /// What is wrong with the setup or the conversion, shown on its page.
     /// </summary>
     [ObservableProperty]
-    public partial string? SetupError { get; set; }
+    public partial string? Error { get; set; }
 
     /// <summary>
     /// Why the assets need converting again.
@@ -106,63 +118,50 @@ public sealed partial class MainViewModel
     public partial string ConversionText { get; private set; } = "";
 
     /// <summary>
-    /// Shows the workspace's folder (its projects, assets and settings) in the system's file manager.
-    /// </summary>
-    public void ShowWorkspaceFolder()
-    {
-        if (Workspace is Workspace workspace)
-        {
-            ShowFolderRequested?.Invoke(workspace.Folder);
-        }
-    }
-
-    /// <summary>
     /// Starts with the workspace remembered in <paramref name="settings"/>, or asks to set one up.
     /// </summary>
-    /// <param name="openFolder">A project or map folder to open once the workspace is ready.</param>
-    public async Task StartAsync(UserSettings settings, string? openFolder = null)
+    public async Task StartAsync(UserSettings settings)
     {
         _settings = settings;
-        _openWhenReady = openFolder;
         if (settings.Workspace is string folder && Workspace.Exists(folder))
         {
             try
             {
-                await UseWorkspaceAsync(Workspace.Open(folder), convertWhenMissing: false);
+                await UseAsync(Workspace.Open(folder), convertWhenMissing: false);
                 return;
             }
             catch (MapProjectException exception)
             {
-                SetupError = exception.Message;
-                WorkspaceLog.LogError(exception, "The workspace {Folder} could not be opened: {Reason}", folder, exception.Message);
+                Error = exception.Message;
+                log.LogError(exception, "The workspace {Folder} could not be opened: {Reason}", folder, exception.Message);
             }
         }
-        ShowSetup();
+        Show();
     }
 
     /// <summary>
     /// Shows the setup, filled in from FAF's <c>fa_path.lua</c> where it can.
     /// </summary>
-    public void ShowSetup()
+    public void Show()
     {
         FafInstallation? faf = FindFaf();
-        SetupFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FAF Map Editor");
-        SetupGameFolder = faf?.GameFolder ?? "";
-        SetupFafDataFolder = faf?.DataFolder ?? "";
-        SetupVaultFolder = faf?.VaultFolder ?? "";
+        Folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FAF Map Editor");
+        GameFolder = faf?.GameFolder ?? "";
+        FafDataFolder = faf?.DataFolder ?? "";
+        VaultFolder = faf?.VaultFolder ?? "";
         Stage = EditorStage.SetUp;
-        Status = "Set up a workspace to start.";
+        status("Set up a workspace to start.");
     }
 
     /// <summary>
-    /// Sets up the workspace as filled in (<see cref="SetupFolder"/>, ...), remembers it and
-    /// converts the game's assets into it.
+    /// Sets up the workspace as filled in (<see cref="Folder"/>, ...), remembers it and converts the
+    /// game's assets into it.
     /// </summary>
-    /// <returns>Whether it is set up; <see cref="SetupError"/> says why not.</returns>
-    public async Task<bool> SetUpWorkspaceAsync()
+    /// <returns>Whether it is set up; <see cref="Error"/> says why not.</returns>
+    public async Task<bool> SetUpAsync()
     {
-        SetupError = Validate();
-        if (SetupError is not null)
+        Error = Validate();
+        if (Error is not null)
         {
             return false;
         }
@@ -170,18 +169,18 @@ public sealed partial class MainViewModel
         Workspace workspace;
         try
         {
-            workspace = Workspace.Exists(SetupFolder) && string.IsNullOrWhiteSpace(SetupGameFolder)
-                ? Workspace.Open(SetupFolder)
-                : Workspace.Create(SetupFolder, SetupGameFolder, NullIfEmpty(SetupFafDataFolder), SetupVaultFolder);
+            workspace = Workspace.Exists(Folder) && string.IsNullOrWhiteSpace(GameFolder)
+                ? Workspace.Open(Folder)
+                : Workspace.Create(Folder, GameFolder, NullIfEmpty(FafDataFolder), VaultFolder);
         }
         catch (Exception exception) when (exception is MapProjectException or IOException or UnauthorizedAccessException)
         {
-            SetupError = exception.Message;
-            WorkspaceLog.LogError(exception, "Setting up the workspace {Folder} failed: {Reason}", SetupFolder, exception.Message);
+            Error = exception.Message;
+            log.LogError(exception, "Setting up the workspace {Folder} failed: {Reason}", Folder, exception.Message);
             return false;
         }
         _settings?.SetWorkspace(workspace.Folder);
-        await UseWorkspaceAsync(workspace, convertWhenMissing: true);
+        await UseAsync(workspace, convertWhenMissing: true);
         return true;
     }
 
@@ -191,12 +190,12 @@ public sealed partial class MainViewModel
     /// <returns>Whether the conversion finished.</returns>
     public async Task<bool> ConvertAssetsAsync()
     {
-        Workspace workspace = _pendingWorkspace ?? Workspace ?? throw new InvalidOperationException("No workspace is set up");
+        Workspace workspace = _pending ?? Workspace ?? throw new InvalidOperationException("No workspace is set up");
         Stage = EditorStage.Converting;
-        SetupError = null;
+        Error = null;
         ConversionFraction = 0;
         ConversionText = "Starting";
-        Status = $"Converting the game's assets into {workspace.AssetsFolder}...";
+        status($"Converting the game's assets into {workspace.AssetsFolder}...");
 
         Progress<AssetProgress> progress = new Progress<AssetProgress>(p =>
         {
@@ -210,11 +209,11 @@ public sealed partial class MainViewModel
             AssetConversion conversion = await AssetConverter.ConvertAsync(workspace, progress, _closing.Token);
             double milliseconds = Milliseconds();
             EditorMetrics.OperationDuration.Record(milliseconds, EditorMetrics.Tag("operation", "convert"), EditorMetrics.Tag("result", "ok"));
-            WorkspaceLog.LogInformation("Converted the game's assets in {Milliseconds} ms: {Textures} textures, {Props} props, {Units} units",
+            log.LogInformation("Converted the game's assets in {Milliseconds} ms: {Textures} textures, {Props} props, {Units} units",
                 milliseconds, conversion.Manifest.Textures, conversion.Manifest.Props, conversion.Manifest.Units);
             if (conversion.Skipped.Count > 0)
             {
-                WorkspaceLog.LogWarning("Skipped {Count} files while converting the game's assets, such as {Examples}",
+                log.LogWarning("Skipped {Count} files while converting the game's assets, such as {Examples}",
                     conversion.Skipped.Count, string.Join("; ", conversion.Skipped.Take(5)));
             }
             Ready(workspace, $"Converted the game's assets: {conversion.Manifest.Textures} textures, {conversion.Manifest.Props} props, " +
@@ -223,16 +222,16 @@ public sealed partial class MainViewModel
         }
         catch (OperationCanceledException)
         {
-            WorkspaceLog.LogInformation("Converting the game's assets stopped after {Milliseconds} ms", Milliseconds());
+            log.LogInformation("Converting the game's assets stopped after {Milliseconds} ms", Milliseconds());
             return false;
         }
         catch (Exception exception) when (exception is MapProjectException or IOException or UnauthorizedAccessException)
         {
             EditorMetrics.OperationDuration.Record(Milliseconds(), EditorMetrics.Tag("operation", "convert"), EditorMetrics.Tag("result", "failed"));
-            WorkspaceLog.LogError(exception, "Converting the game's assets failed: {Reason}", exception.Message);
+            log.LogError(exception, "Converting the game's assets failed: {Reason}", exception.Message);
             AssetReasons = [exception.Message];
             Stage = EditorStage.UpdateAssets;
-            SetupError = exception.Message;
+            Error = exception.Message;
             return false;
         }
     }
@@ -242,9 +241,7 @@ public sealed partial class MainViewModel
     /// </summary>
     public void StopWork() => _closing.Cancel();
 
-    private Workspace? _pendingWorkspace;
-
-    private async Task UseWorkspaceAsync(Workspace workspace, bool convertWhenMissing)
+    private async Task UseAsync(Workspace workspace, bool convertWhenMissing)
     {
         // reading FAF's archives for their checksum takes a moment
         AssetCheck check = await Task.Run(workspace.CheckAssets);
@@ -254,9 +251,9 @@ public sealed partial class MainViewModel
             return;
         }
 
-        _pendingWorkspace = workspace;
+        _pending = workspace;
         AssetReasons = check.Reasons;
-        WorkspaceLog.LogInformation("The game's assets are to be converted ({State}): {Reasons}", check.State, string.Join("; ", check.Reasons));
+        log.LogInformation("The game's assets are to be converted ({State}): {Reasons}", check.State, string.Join("; ", check.Reasons));
         if (convertWhenMissing && check.State == AssetState.Missing)
         {
             await ConvertAssetsAsync();
@@ -264,50 +261,46 @@ public sealed partial class MainViewModel
         else
         {
             Stage = EditorStage.UpdateAssets;
-            Status = "The game's assets need to be converted again.";
+            status("The game's assets need to be converted again.");
         }
     }
 
-    private void Ready(Workspace workspace, string status)
+    private void Ready(Workspace workspace, string text)
     {
-        _pendingWorkspace = null;
+        _pending = null;
         Workspace = workspace;
-        WorkspaceLog.LogInformation("Working in {Folder}", workspace.Folder);
+        log.LogInformation("Working in {Folder}", workspace.Folder);
         Stage = EditorStage.Ready;
-        Status = status;
-        if (_openWhenReady is string folder)
-        {
-            _openWhenReady = null;
-            _ = OpenOnStartAsync(folder);
-        }
+        status(text);
+        WorkspaceReady?.Invoke(workspace);
     }
 
     private string? Validate()
     {
-        if (string.IsNullOrWhiteSpace(SetupFolder))
+        if (string.IsNullOrWhiteSpace(Folder))
         {
             return "Choose a folder for the workspace.";
         }
-        if (Workspace.Exists(SetupFolder) && string.IsNullOrWhiteSpace(SetupGameFolder))
+        if (Workspace.Exists(Folder) && string.IsNullOrWhiteSpace(GameFolder))
         {
             return null;
         }
-        if (Directory.Exists(SetupFolder) && !Workspace.Exists(SetupFolder) && Directory.EnumerateFileSystemEntries(SetupFolder).Any())
+        if (Directory.Exists(Folder) && !Workspace.Exists(Folder) && Directory.EnumerateFileSystemEntries(Folder).Any())
         {
-            return $"{SetupFolder} holds other files: choose an empty folder or an existing workspace.";
+            return $"{Folder} holds other files: choose an empty folder or an existing workspace.";
         }
         foreach (string name in GameArchives.Names)
         {
-            if (!File.Exists(Path.Combine(SetupGameFolder, "gamedata", name + ".scd")))
+            if (!File.Exists(Path.Combine(GameFolder, "gamedata", name + ".scd")))
             {
                 return $"The game folder has no gamedata\\{name}.scd: choose the folder Supreme Commander: Forged Alliance is installed in.";
             }
         }
-        if (!string.IsNullOrWhiteSpace(SetupFafDataFolder) && !Directory.Exists(SetupFafDataFolder))
+        if (!string.IsNullOrWhiteSpace(FafDataFolder) && !Directory.Exists(FafDataFolder))
         {
-            return $"FAF's data folder {SetupFafDataFolder} does not exist; leave it empty without FAF.";
+            return $"FAF's data folder {FafDataFolder} does not exist; leave it empty without FAF.";
         }
-        if (string.IsNullOrWhiteSpace(SetupVaultFolder) || !Directory.Exists(SetupVaultFolder))
+        if (string.IsNullOrWhiteSpace(VaultFolder) || !Directory.Exists(VaultFolder))
         {
             return "Choose the vault folder: the one the FAF client keeps maps and mods in.";
         }
@@ -317,23 +310,23 @@ public sealed partial class MainViewModel
     private static string? NullIfEmpty(string text) => string.IsNullOrWhiteSpace(text) ? null : text;
 
     [RelayCommand]
-    private async Task BrowseSetupFolder()
+    private async Task BrowseFolder()
     {
-        if (await _dialogs.PickFolderAsync("The folder of the workspace", SetupFolder) is string folder)
+        if (await dialogs.PickFolderAsync("The folder of the workspace", Folder) is string folder)
         {
-            SetupFolder = folder;
+            Folder = folder;
             if (Workspace.Exists(folder))
             {
                 try
                 {
                     Workspace existing = Workspace.Open(folder);
-                    SetupGameFolder = existing.GameFolder;
-                    SetupFafDataFolder = existing.FafDataFolder ?? "";
-                    SetupVaultFolder = existing.VaultFolder;
+                    GameFolder = existing.GameFolder;
+                    FafDataFolder = existing.FafDataFolder ?? "";
+                    VaultFolder = existing.VaultFolder;
                 }
                 catch (MapProjectException exception)
                 {
-                    SetupError = exception.Message;
+                    Error = exception.Message;
                 }
             }
         }
@@ -342,27 +335,27 @@ public sealed partial class MainViewModel
     [RelayCommand]
     private async Task BrowseGameFolder()
     {
-        if (await _dialogs.PickFolderAsync("The folder the game is installed in", SetupGameFolder) is string folder)
+        if (await dialogs.PickFolderAsync("The folder the game is installed in", GameFolder) is string folder)
         {
-            SetupGameFolder = folder;
+            GameFolder = folder;
         }
     }
 
     [RelayCommand]
     private async Task BrowseFafDataFolder()
     {
-        if (await _dialogs.PickFolderAsync("FAF's gamedata folder", SetupFafDataFolder) is string folder)
+        if (await dialogs.PickFolderAsync("FAF's gamedata folder", FafDataFolder) is string folder)
         {
-            SetupFafDataFolder = folder;
+            FafDataFolder = folder;
         }
     }
 
     [RelayCommand]
     private async Task BrowseVaultFolder()
     {
-        if (await _dialogs.PickFolderAsync("The vault folder", SetupVaultFolder) is string folder)
+        if (await dialogs.PickFolderAsync("The vault folder", VaultFolder) is string folder)
         {
-            SetupVaultFolder = folder;
+            VaultFolder = folder;
         }
     }
 }

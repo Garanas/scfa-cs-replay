@@ -215,15 +215,15 @@ namespace FAForever.MapEditor.App.Tests
 
             window.KeyPress(Key.K, RawInputModifiers.Control, PhysicalKey.K, "k");
             Dispatcher.UIThread.RunJobs();
-            Assert.IsTrue(model.IsPaletteOpen);
+            Assert.IsTrue(model.Palette.IsOpen);
 
             window.KeyTextInput("3d view");
             Dispatcher.UIThread.RunJobs();
-            Assert.AreEqual("view.3d", model.PaletteSelection?.Id, "the search box has the keyboard");
+            Assert.AreEqual("view.3d", model.Palette.Selection?.Id, "the search box has the keyboard");
             window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
             Dispatcher.UIThread.RunJobs();
 
-            Assert.IsFalse(model.IsPaletteOpen);
+            Assert.IsFalse(model.Palette.IsOpen);
             Assert.AreEqual(MapViewTab.ThreeD, model.View);
             window.Close();
         });

@@ -23,22 +23,22 @@ public sealed partial class Dock : UserControl
         base.OnDataContextChanged(e);
         if (_model is not null)
         {
-            _model.Console.CollectionChanged -= OnConsoleChanged;
-            _model.ConsoleProblems.CollectionChanged -= OnConsoleChanged;
-            _model.PropertyChanged -= OnModelChanged;
+            _model.Diagnostics.Console.CollectionChanged -= OnConsoleChanged;
+            _model.Diagnostics.ConsoleProblems.CollectionChanged -= OnConsoleChanged;
+            _model.Diagnostics.PropertyChanged -= OnDiagnosticsChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
         {
-            _model.Console.CollectionChanged += OnConsoleChanged;
-            _model.ConsoleProblems.CollectionChanged += OnConsoleChanged;
-            _model.PropertyChanged += OnModelChanged;
+            _model.Diagnostics.Console.CollectionChanged += OnConsoleChanged;
+            _model.Diagnostics.ConsoleProblems.CollectionChanged += OnConsoleChanged;
+            _model.Diagnostics.PropertyChanged += OnDiagnosticsChanged;
         }
     }
 
-    private void OnModelChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnDiagnosticsChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.ShownConsole))
+        if (e.PropertyName == nameof(DiagnosticsViewModel.ShownConsole))
         {
             Dispatcher.UIThread.Post(ShowNewest, DispatcherPriority.Background);
         }
@@ -46,7 +46,7 @@ public sealed partial class Dock : UserControl
 
     private void OnConsoleChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (e.Action == NotifyCollectionChangedAction.Add && ReferenceEquals(sender, _model?.ShownConsole) && AtTheEnd())
+        if (e.Action == NotifyCollectionChangedAction.Add && ReferenceEquals(sender, _model?.Diagnostics.ShownConsole) && AtTheEnd())
         {
             Dispatcher.UIThread.Post(ShowNewest, DispatcherPriority.Background);
         }
@@ -59,7 +59,7 @@ public sealed partial class Dock : UserControl
 
     private void ShowNewest()
     {
-        if (_model?.ShownConsole is { Count: > 0 } lines)
+        if (_model?.Diagnostics.ShownConsole is { Count: > 0 } lines)
         {
             ConsoleList.ScrollIntoView(lines.Count - 1);
         }

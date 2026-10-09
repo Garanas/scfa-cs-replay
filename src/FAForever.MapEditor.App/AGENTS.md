@@ -193,10 +193,12 @@ compact density) draws the standard controls; `Styles/` holds the look of everyt
 ## The start: workspace first
 
 The editor works in a workspace (the library's guide explains it). `MainViewModel.StartAsync`
-reads the remembered one (`UserSettings`) and sets the window's `Stage`:
+hands the remembered one (`UserSettings`) to `WorkspaceSetupViewModel` (`model.Setup`), which
+sets the window's `Stage` and raises `WorkspaceReady`, after which the editor opens the folder it
+was started with:
 
 - `SetUp`: no workspace, or the remembered one is gone. A page asks for the workspace folder, the
-  game, FAF's data and the vault, filled in from FAF's `fa_path.lua`; `SetUpWorkspaceAsync` checks
+  game, FAF's data and the vault, filled in from FAF's `fa_path.lua`; `SetUpAsync` checks
   them, creates the workspace, remembers it and converts the assets.
 - `UpdateAssets`: the assets are missing or outdated (a new `.nx2` from FAF, another editor
   version); the page says why, and its button converts them.
@@ -211,11 +213,24 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
 
 ## Structure
 
-- `ViewModels/MainViewModel`: the window without the window. It holds the `EditedMap`, the
-  tools, the stroke in progress (`StrokeInProgress`) and every operation of the menu as a plain
-  method that takes its folder (`OpenAsync`, `LoadProjectAsync`, `ImportMapFolderAsync`,
-  `SaveAsync`, `SaveAsAsync`, `SaveProjectAsync`, `ExportAsync`, `Undo`, `Redo`); `Stroke(points)`
-  is the left mouse dragged through places, sent to the active tool. A command's handler asks
+- `ViewModels/MainViewModel`: the window without the window, and the editor's core. It holds
+  the `EditedMap`, busy, the history, the tools, the stroke in progress (`StrokeInProgress`), the
+  modes, overlays and tabs, the camera, and every operation of the menu as a plain method that
+  takes its folder (`OpenAsync`, `LoadProjectAsync`, `ImportMapFolderAsync`, `SaveAsync`,
+  `SaveAsAsync`, `SaveProjectAsync`, `ExportAsync`, `Undo`, `Redo`); `Stroke(points)` is the left
+  mouse dragged through places, sent to the active tool.
+- **The parts** with state of their own are classes it makes in its constructor and holds as
+  properties, each one user story's area, readable without opening `MainViewModel`:
+  `Diagnostics` (`DiagnosticsViewModel`: the Console and the Diagnostics page), `Setup`
+  (`WorkspaceSetupViewModel`: the start, the setup page, the conversion of the assets),
+  `VersionControl` (`VersionControlViewModel`: the git page) and `Palette` (`PaletteViewModel`).
+  Each is the one place its state lives: the views bind through it (`{Binding Setup.Folder}`),
+  automation reads it there, and a handler that works on one part takes that part
+  (`SetUpWorkspaceHandler(WorkspaceSetupViewModel setup)`; `CommandServices` holds them). A part
+  writes the status line through an `Action<string>`, or through the core when it works on the
+  open map (`VersionControlViewModel` saves before a commit inside the core's `BusyAsync`). Tests
+  of a part make the part itself where they can. A new area with state of its own becomes a part
+  the same way; no interfaces, messenger or container for them. A command's handler asks
   for a folder its request left out (`IEditorDialogs`), then calls those methods; tests call
   them directly too. It uses no Avalonia types, so `tests/FAForever.MapEditor.App.Tests` tests
   it without a window.
@@ -252,8 +267,10 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
     8, 16, 32, ... ogrids, read between their centres and between sizes), over about 15 % of the
     camera's distance (8 to 2048 ogrids): spikes and cliffs do not throw the camera up and down,
     and from close by it still follows hills. Only the eye keeps 2 ogrids clear of the terrain
-    itself. The view makes it again when the heights change, at most twice a second. `Rendering/Gpu/TerrainRenderer` draws the terrain, then the albedo decals, the
-  normal decals and the water; `TerrainShaders` follows the FAF map editor's port of the game's
+    itself. The view makes it again when the heights change, at most twice a second
+    (`Rendering/Gpu/CameraGround`, which the camera reads its heights from).
+  `Rendering/Gpu/TerrainRenderer` draws the terrain, then the albedo decals, the normal decals
+  and the water; `TerrainShaders` follows the FAF map editor's port of the game's
   `TTerrainXP` (`Assets/GFX/Shaders/FaTerrainShader.shader` in `D:\faf-development\FAForeverMapEditor`):
   the lower albedo, the strata by their masks (`clamp(mask * 2 - 1)`), the upper albedo by its alpha,
   each repeating every `AlbedoScale` ogrids, and the game's lighting (`CalculateXPLighting`
@@ -333,9 +350,10 @@ User story F-18; the library's guide explains the repository (`ProjectRepository
 (`file.commit`, Ctrl+Shift+C, for a map saved as a project) opens `VersionControlPage`: while the
 project is no repository, its setup with the choices first (the author, suggested from git's
 global settings; Git LFS, on; a repository to share through), and "Turn on version control"
-makes the repository and its first commit (`EnableVersionControlAsync`); afterwards the commit,
-with how the repository stands (branch, changed files, unsaved changes, the last commit) and a
-message (`CommitAsync`: saves first when the map has changes). What fails shows on the page.
+makes the repository and its first commit (`VersionControlViewModel.EnableAsync`); afterwards
+the commit, with how the repository stands (branch, changed files, unsaved changes, the last
+commit) and a message (`CommitAsync`: saves first when the map has changes). What fails shows on
+the page.
 
 ## Diagnostics: what goes well and wrong
 
