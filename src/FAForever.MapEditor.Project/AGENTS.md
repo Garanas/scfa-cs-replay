@@ -170,6 +170,14 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   `AssetConverter.FormatVersion`, raise it when the output changes) from the archives as they are.
   Only FAF's `.nx2` are checked; same size and time is unchanged, otherwise the SHA-256 decides.
 - `Workspace.FindAsset("/env/Evergreen/layers/Eg_Grass001_albedo.dds")` gives the converted file.
+- `AssetCatalog.Load(assets)` lists what a map maker chooses from (user stories F-8, F-9): the
+  props and units from their converted blueprints, the decals (`decals/`, `splats/`) and the
+  stratum textures (`layers/`, albedo and normal map as one) from their PNGs. Each `AssetEntry`
+  has its kind, the keys a map names it by (`AssetCatalog.KeyOf`: the game path as
+  `GameArchives.Normalize` writes it, `.dds`; a unit's id), its group (the biome of `env/`, or a
+  unit's faction), its category (a prop's folder, a unit's layer, ...), its family (a prop without
+  `_v1`, `_s2`: the variants share a tile) and its facts. `AssetUse.Count(document)` counts what a
+  map uses by those keys, and `AssetUse.Biomes` gives the biomes of that, most used first.
 - `GameTextures.Find(path, document, workspace)` finds a texture a map names as the game does: a
   path into `/maps/<any folder>/` is one of the map's own files (`MapDocument.Files`), any other
   one of the workspace's assets. Its `Key` is the same for every spelling of the path and its
