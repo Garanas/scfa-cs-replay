@@ -191,6 +191,8 @@
   <x:Double x:Key="AssetPreviewHeight">200</x:Double>
   <x:Double x:Key="AssetNormalPreviewSize">72</x:Double>
   <x:Double x:Key="AssetTooltipPreviewSize">180</x:Double>
+  <!-- how far above its tile a tile's tool tip shows (negative is up) -->
+  <x:Double x:Key="TileTooltipOffset">-4</x:Double>
   <x:Double x:Key="FactLabelWidth">90</x:Double>
   <Thickness x:Key="TilePadding">4</Thickness>
   <!-- the room right of and under each tile of the shelf -->

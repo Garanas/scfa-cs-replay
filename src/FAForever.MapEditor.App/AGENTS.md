@@ -410,7 +410,8 @@ ready and again with Modes, Assets, Read the assets again (`assets.reload`):
   at the control's `DecodeWidth`, and their kind's icon when the blueprint names no mesh. A badge
   counts the map's uses
   (`AssetUse`, counted again after every step), another the variants. The tool tip shows a tile
-  larger.
+  larger, above the tile (`ToolTip.Placement` Top in the tile's style): under the pointer it
+  would take the wheel and stop the shelf from scrolling.
 - **Choosing** a tile (click, the arrow keys) shows it in the inspector, in place of the mode's
   parts until Clear or Escape: its picture and normal map, its variants, facts, uses, how a map
   names it (selectable, to copy), Show the file (`assets.showFile`), and what it will be for, with

@@ -456,6 +456,8 @@ namespace FAForever.MapEditor.App.Tests
             AssetThumbnail rock = window.GetVisualDescendants().OfType<AssetThumbnail>()
                 .Single(thumbnail => thumbnail.Model?.Mesh.EndsWith("rock01_lod0.glb", StringComparison.Ordinal) == true);
             Assert.IsTrue(rock.IsEffectivelyVisible);
+            Button tile = rock.FindAncestorOfType<Button>()!;
+            Assert.AreEqual(PlacementMode.Top, ToolTip.GetPlacement(tile), "the larger picture shows above the tile, clear of the pointer");
             await AssetThumbnail.Cache.LoadAsync(rock.Model!, rock.DecodeWidth);
 
             Bitmap? picture = AssetThumbnail.Cache.Get(rock.Model!, rock.DecodeWidth);

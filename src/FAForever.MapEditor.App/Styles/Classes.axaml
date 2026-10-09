@@ -557,6 +557,9 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlRaisedBrush}" />
     <Setter Property="BorderThickness" Value="1" />
+    <!-- the larger picture shows above the tile, not under the pointer, which keeps scrolling the shelf -->
+    <Setter Property="ToolTip.Placement" Value="Top" />
+    <Setter Property="ToolTip.VerticalOffset" Value="{StaticResource TileTooltipOffset}" />
   </Style>
   <Style Selector="Button.tile.selected">
     <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
