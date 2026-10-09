@@ -1,7 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.Project;
+using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.Project.Workspaces;
+using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
@@ -121,6 +123,7 @@ public sealed partial class MainViewModel
             catch (MapProjectException exception)
             {
                 SetupError = exception.Message;
+                WorkspaceLog.LogError(exception, "The workspace {Folder} could not be opened: {Reason}", folder, exception.Message);
             }
         }
         ShowSetup();
@@ -163,6 +166,7 @@ public sealed partial class MainViewModel
         catch (Exception exception) when (exception is MapProjectException or IOException or UnauthorizedAccessException)
         {
             SetupError = exception.Message;
+            WorkspaceLog.LogError(exception, "Setting up the workspace {Folder} failed: {Reason}", SetupFolder, exception.Message);
             return false;
         }
         _settings?.SetWorkspace(workspace.Folder);
@@ -188,19 +192,33 @@ public sealed partial class MainViewModel
             ConversionFraction = p.Fraction;
             ConversionText = p.Total > 1 ? $"{p.Stage}: {p.Done} of {p.Total} files" : p.Stage;
         });
+        long start = System.Diagnostics.Stopwatch.GetTimestamp();
+        double Milliseconds() => Math.Round(System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds);
         try
         {
             AssetConversion conversion = await AssetConverter.ConvertAsync(workspace, progress, _closing.Token);
+            double milliseconds = Milliseconds();
+            EditorMetrics.OperationDuration.Record(milliseconds, EditorMetrics.Tag("operation", "convert"), EditorMetrics.Tag("result", "ok"));
+            WorkspaceLog.LogInformation("Converted the game's assets in {Milliseconds} ms: {Textures} textures, {Props} props, {Units} units",
+                milliseconds, conversion.Manifest.Textures, conversion.Manifest.Props, conversion.Manifest.Units);
+            if (conversion.Skipped.Count > 0)
+            {
+                WorkspaceLog.LogWarning("Skipped {Count} files while converting the game's assets, such as {Examples}",
+                    conversion.Skipped.Count, string.Join("; ", conversion.Skipped.Take(5)));
+            }
             Ready(workspace, $"Converted the game's assets: {conversion.Manifest.Textures} textures, {conversion.Manifest.Props} props, " +
                 $"{conversion.Manifest.Units} units{(conversion.Skipped.Count > 0 ? $"; {conversion.Skipped.Count} files skipped" : "")}");
             return true;
         }
         catch (OperationCanceledException)
         {
+            WorkspaceLog.LogInformation("Converting the game's assets stopped after {Milliseconds} ms", Milliseconds());
             return false;
         }
         catch (Exception exception) when (exception is MapProjectException or IOException or UnauthorizedAccessException)
         {
+            EditorMetrics.OperationDuration.Record(Milliseconds(), EditorMetrics.Tag("operation", "convert"), EditorMetrics.Tag("result", "failed"));
+            WorkspaceLog.LogError(exception, "Converting the game's assets failed: {Reason}", exception.Message);
             AssetReasons = [exception.Message];
             Stage = EditorStage.UpdateAssets;
             SetupError = exception.Message;
@@ -227,6 +245,7 @@ public sealed partial class MainViewModel
 
         _pendingWorkspace = workspace;
         AssetReasons = check.Reasons;
+        WorkspaceLog.LogInformation("The game's assets are to be converted ({State}): {Reasons}", check.State, string.Join("; ", check.Reasons));
         if (convertWhenMissing && check.State == AssetState.Missing)
         {
             await ConvertAssetsAsync();
@@ -242,6 +261,7 @@ public sealed partial class MainViewModel
     {
         _pendingWorkspace = null;
         Workspace = workspace;
+        WorkspaceLog.LogInformation("Working in {Folder}", workspace.Folder);
         Stage = EditorStage.Ready;
         Status = status;
         if (_openWhenReady is string folder)

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Controls;
@@ -14,7 +15,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// The menus of the menu bar, in order; the commands of the modes go under Modes, by mode.
     /// </summary>
-    private static readonly string[] MenuBar = ["File", "Edit", "Select", "View", "Map", "Modes", "Generate", "Plugins"];
+    private static readonly string[] MenuBar = ["File", "Edit", "Select", "View", "Map", "Modes", "Generate", "Plugins", "Help"];
 
     private bool _mayClose;
     private MainViewModel? _model;
@@ -67,12 +68,14 @@ public sealed partial class MainWindow : Window
         {
             _model.PropertyChanged -= OnModelChanged;
             _model.FitRequested -= OnFitRequested;
+            _model.ShowFolderRequested -= OnShowFolderRequested;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
         {
             _model.PropertyChanged += OnModelChanged;
             _model.FitRequested += OnFitRequested;
+            _model.ShowFolderRequested += OnShowFolderRequested;
             BuildMenusAndShortcuts(_model);
             ShowChosenView();
         }
@@ -164,6 +167,8 @@ public sealed partial class MainWindow : Window
     }
 
     private void OnFitRequested(object? sender, EventArgs e) => Heightmap.Fit();
+
+    private async void OnShowFolderRequested(string folder) => await Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(folder));
 
     private void ShowChosenView()
     {

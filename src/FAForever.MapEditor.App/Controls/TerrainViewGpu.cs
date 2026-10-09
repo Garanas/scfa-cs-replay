@@ -14,6 +14,8 @@ using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
 using ImageMagick;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Silk.NET.OpenGL;
 
 namespace FAForever.MapEditor.App.Controls;
@@ -75,10 +77,14 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private Point _mouse;
     private bool _mouseInside;
 
+    private string? _loggedTextureError;
+
     public TerrainViewGpu()
     {
         Focusable = true;
     }
+
+    private ILogger Log => _model?.Logger("Rendering") ?? NullLogger.Instance;
 
     /// <summary>
     /// What went wrong when the view started (no OpenGL 3, a shader that did not compile), or null.
@@ -149,11 +155,13 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             }
             _renderer = new TerrainRenderer(_gl, es, () => Dispatcher.UIThread.Post(RequestNextFrameRendering));
             Error = null;
+            Log.LogInformation("The 3D view runs on {Renderer}", Renderer);
         }
         catch (Exception exception) when (exception is InvalidOperationException or Silk.NET.Core.Loader.SymbolLoadingException)
         {
             Error = exception.Message;
             _renderer = null;
+            Log.LogError(exception, "The 3D view could not start on {Renderer}: {Reason}", Renderer, exception.Message);
         }
     }
 
@@ -211,7 +219,16 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             }
             catch (InvalidOperationException exception)
             {
+                if (exception.Message != Error)
+                {
+                    Log.LogError(exception, "The 3D view could not draw: {Reason}", exception.Message);
+                }
                 Error = exception.Message;
+            }
+            if (_renderer.TextureState.Error is string textureError && textureError != _loggedTextureError)
+            {
+                _loggedTextureError = textureError;
+                Log.LogWarning("A texture could not be read: {Reason}", textureError);
             }
             WatchAssets(workspace);
         }

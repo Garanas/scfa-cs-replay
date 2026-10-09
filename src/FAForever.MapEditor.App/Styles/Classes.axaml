@@ -470,4 +470,10 @@
   <Style Selector="TabControl.segmented TabItem /template/ Border#PART_SelectedPipe">
     <Setter Property="IsVisible" Value="False" />
   </Style>
+
+  <!-- a list of many short lines: the Console -->
+  <Style Selector="ListBox.log ListBoxItem">
+    <Setter Property="Padding" Value="{StaticResource BarPadding}" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
 </Styles>

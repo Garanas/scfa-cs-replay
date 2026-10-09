@@ -36,8 +36,25 @@
           </Border>
         </Border>
       </TabItem>
-      <TabItem Header="Console">
-        <ListBox ItemsSource="{Binding Console}" AutomationProperties.Name="Console" />
+      <TabItem Header="{Binding ConsoleHeader}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Classes="inline">
+            <CheckBox IsChecked="{Binding ConsoleShowsProblemsOnly}" Content="Only warnings and errors" />
+            <Button Classes="chip" Content="Diagnostics..." Command="{Binding RunCommand}" CommandParameter="help.diagnostics" />
+          </StackPanel>
+          <ListBox x:Name="ConsoleList" Classes="log" ItemsSource="{Binding ShownConsole}" AutomationProperties.Name="Console">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ConsoleEntry">
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="{Binding TimeText}" />
+                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Classes.error="{Binding IsError}" Margin="{StaticResource InlineGap}"
+                             Text="{Binding LevelText}" IsVisible="{Binding IsProblem}" />
+                  <TextBlock Classes.error="{Binding IsError}" Margin="{StaticResource InlineGap}" Text="{Binding Message}" TextWrapping="Wrap" />
+                </DockPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
       </TabItem>
     </TabControl>
   </Border>

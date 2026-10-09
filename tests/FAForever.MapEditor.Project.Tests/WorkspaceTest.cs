@@ -93,6 +93,25 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void RemembersTheChoicesAboutDiagnosticsBesideTheWorkspace()
+        {
+            UserSettings settings = new UserSettings(Path.Combine(ProjectFolders.New("settings"), "settings.json"));
+
+            TelemetrySettings first = settings.Telemetry;
+            Assert.IsTrue(first.Record, "recorded on disk unless the user turns it off");
+            Assert.IsFalse(first.Send, "sent only when the user turns it on");
+            Assert.AreEqual(32, first.InstallId.Length);
+            Assert.AreEqual(first.InstallId, settings.Telemetry.InstallId, "the install id is remembered");
+
+            settings.SetWorkspace("D:/maps/workspace");
+            settings.SetTelemetry(first with { Send = true, Endpoint = " http://localhost:4318 " });
+            settings.SetWorkspace("D:/maps/other");
+
+            Assert.AreEqual(first with { Send = true, Endpoint = "http://localhost:4318" }, settings.Telemetry);
+            Assert.AreEqual(Path.GetFullPath("D:/maps/other"), settings.Workspace);
+        }
+
+        [TestMethod]
         public void AnUnreadableSettingsFileRemembersNothing()
         {
             UserSettings settings = new UserSettings(Path.Combine(ProjectFolders.New("settings"), "settings.json"));

@@ -95,7 +95,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(ran);
             StringAssert.Contains(model.Status, "Not built yet: Terrain: Add a height layer");
             StringAssert.Contains(model.Status, "user story T-5");
-            StringAssert.Contains(model.Console.Last(), "terrain.addLayer: not built yet, user story T-5");
+            StringAssert.Contains(model.Console.Last().Message, "terrain.addLayer: not built yet, user story T-5");
         }
 
         [TestMethod]

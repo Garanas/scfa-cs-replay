@@ -1,8 +1,8 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Controllers;
+using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
@@ -122,11 +122,6 @@ public sealed partial class MainViewModel
     /// </summary>
     public event EventHandler? FitRequested;
 
-    /// <summary>
-    /// What happened, newest last: the commands run, and what was asked of things not built yet.
-    /// </summary>
-    public ObservableCollection<string> Console { get; } = [];
-
     [ObservableProperty]
     public partial bool IsPaletteOpen { get; set; }
 
@@ -146,17 +141,18 @@ public sealed partial class MainViewModel
             new FileController(this), new EditController(this), new ViewController(this), new MapController(this),
             new TerrainController(this), new PaintController(this), new AtmosphereController(this), new MarkersController(this),
             new PropsController(this), new DecalsController(this), new UnitsController(this), new GenerateController(this),
-            new AssetsController(this), new PluginsController(this),
+            new AssetsController(this), new PluginsController(this), new HelpController(this),
         ])
         {
             Commands.Add(controller);
         }
+        ILogger commandsLog = Logger("Commands");
         Commands.IncompleteRun += command =>
         {
             Status = $"Not built yet: {command.FullTitle.TrimEnd('.')}. {command.Incomplete!.Missing} (user story {command.Incomplete.Story})";
-            Log($"{command.Id}: not built yet, user story {command.Incomplete.Story}: {command.Incomplete.Missing}");
+            commandsLog.LogInformation("{Command}: not built yet, user story {Story}: {Missing}", command.Id, command.Incomplete.Story, command.Incomplete.Missing);
         };
-        Commands.Ran += command => Log(command.Id);
+        Commands.Ran += command => commandsLog.LogInformation("Ran {Command}", command.Id);
 
         Modes = [.. EditorModes.All.Select(mode => new ModeItem(mode))];
         foreach (ModeItem mode in Modes)
@@ -271,15 +267,6 @@ public sealed partial class MainViewModel
         foreach (OverlayItem overlay in Overlays)
         {
             overlay.Refresh();
-        }
-    }
-
-    private void Log(string line)
-    {
-        Console.Add($"{DateTime.Now:HH:mm:ss} {line}");
-        while (Console.Count > 500)
-        {
-            Console.RemoveAt(0);
         }
     }
 

@@ -35,11 +35,15 @@ keeps that up; go through this list with every change to the window, not only at
 4. **Performance**: work that grows with the map, or runs per frame or per mouse move, gets a
    span (`Performance.Measure`); check `perf` before and after on the 81 km and the decal-heavy
    test maps. Nothing per frame touches the disk; a hidden view does no work.
-5. **Check it running**: in a test editor on port 5372 with `FAF_MAP_EDITOR_SETTINGS` pointing
+5. **Diagnostics**: what can go wrong is logged (`model.Logger(category)`, a message template
+   with named values, never a value glued into the text), at the level it deserves: what the
+   user asked that failed is an error, what the editor worked around a warning. A new kind of
+   operation that takes time is measured (`EditorMetrics`). Section "Diagnostics" below.
+6. **Check it running**: in a test editor on port 5372 with `FAF_MAP_EDITOR_SETTINGS` pointing
    at a settings file of its own, read `ui` and `state`, and look at a screenshot.
-6. **Look**: the views use tokens and style classes, never loose values (UI rules below); a
+7. **Look**: the views use tokens and style classes, never loose values (UI rules below); a
    change of look updates the snapshots on purpose (`UPDATE_SNAPSHOTS=1`), checked by eye.
-7. **This guide**: what the feature does and its rules, where a later reader looks for them.
+8. **This guide**: what the feature does and its rules, where a later reader looks for them.
 
 The project skill `.claude/skills/editor-ui` holds the same rules in short, for agents.
 
@@ -55,9 +59,9 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
 - **The controller** (`Commands/CommandRegistry`, user story F-1) holds every command: methods
   with `[EditorCommand(id, title, Menu, Gesture, Story, CanRun)]` on the controllers in
   `Controllers/` (File, Edit and Select, View, Map, Terrain, Paint, Water and Lighting, Markers,
-  Props, Decals, Units, Generate, Assets, Plugins), plus one `tool.<id>` command per tool. The
+  Props, Decals, Units, Generate, Assets, Plugins, Help), plus one `tool.<id>` command per tool. The
   window makes the menu bar and its shortcuts from them (`MainWindow.BuildMenusAndShortcuts`:
-  File, Edit, Select, View, Map, Modes with a submenu per mode, Generate, Plugins); the palette
+  File, Edit, Select, View, Map, Modes with a submenu per mode, Generate, Plugins, Help); the palette
   searches them, the ones that work first; automation lists and runs them (`commands`,
   `run id=`). A controller only calls the view model, which owns the state and the document.
 - **Not built yet** is visible and traceable: a command with `[Incomplete(story, missing)]`
@@ -115,7 +119,7 @@ compact density) draws the standard controls; `Styles/` holds the look of everyt
   used twice becomes one.
 - The views are split by what they are: `MainWindow` (menu, status bar, the two map views, the
   pages by stage), `ModeRail`, `ModePanel`, `ToolOptions`, `Inspector`, `Dock`,
-  `CommandPalette`, `SetupPage`, `UpdateAssetsPage`,
+  `CommandPalette`, `DiagnosticsPage`, `SetupPage`, `UpdateAssetsPage`,
   `ConvertingPage`.
 - Code that draws (the overlays of the top view, the 3D view's sky) reads the tokens with
   `TryFindResource` and reads them again when the theme variant changes. Only colours that come
@@ -246,7 +250,7 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
 `Diagnostics/Performance` measures named spans (`using Performance.Span measure =
 Performance.Measure("3d.frame");`) and runs a watchdog that asks the user interface's thread to
 answer every 50 ms: an answer 100 ms late or more is a stall, kept with the spans that ran
-meanwhile; stalls of 250 ms or more go to `%LOCALAPPDATA%\FAF Map Editor\performance.log`.
+meanwhile; stalls of 250 ms or more are a warning in the log (Diagnostics, below).
 Automation's `perf` gives per span the count, total, mean, 95th percentile and longest, and the
 recent stalls (`perf reset=true` starts over). Measure a change before and after, and put a span
 around new work that may grow with the map: `3d.*` (the 3D view's frame and its parts),
@@ -263,6 +267,43 @@ What it found, and the rules that came of it:
   visibility changes (`MainWindow.OnViewChosen`).
 - A hidden view does no work: the top view skips updating its picture while hidden and catches
   up when shown.
+
+## Diagnostics: what goes well and wrong
+
+User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session
+(`Diagnostics/Telemetry`):
+
+- **Logs**: every `ILogger` of the editor (`Microsoft.Extensions.Logging.Abstractions`; get one
+  with `MainViewModel.Logger(category)`, categories `Commands`, `Files`, `Workspace`,
+  `Rendering`, `Performance`, `Automation`, `Editor`). The Console of the dock shows them, with
+  their level, newest last; its tab counts the warnings and errors, and it can show only those.
+  Logged now: commands run and asked for while not built; opening, importing, saving, exporting
+  with their duration, or why they failed; files read again; the workspace and the conversion of
+  the assets (files skipped); the OpenGL the 3D view runs on, why it could not start or draw, a
+  texture that could not be read; stalls of 250 ms or more; crashes (unhandled exceptions, also
+  of the window's thread, written at once).
+- **Metrics** (`Diagnostics/EditorMetrics`, `System.Diagnostics.Metrics`): `editor.commands`
+  (command, result), `editor.log.records` (level, category), `editor.span.duration` (the
+  `Performance` spans), `editor.ui.latency`, `editor.ui.stalls`, `editor.operation.duration`
+  (operation, result), memory. Attributes only take values from a known, small set (a command's
+  id, a span's name), never a path or a map's name. `MetricCollector` adds them up since the
+  session started.
+- **On disk**: `%LOCALAPPDATA%\FAF Map Editor\telemetry\<start>-<session>.logs.jsonl` and
+  `.metrics.jsonl`, OpenTelemetry's JSON (`Diagnostics/OtlpJson`), one export request a line: logs
+  every two seconds, the metrics (cumulative) every minute and at the close. The newest 30
+  sessions are kept, each file up to 20 MB; the home folder is written as `~`. With
+  `FAF_MAP_EDITOR_SETTINGS` set, the folder is `telemetry` next to that settings file, so test
+  editors keep theirs apart.
+- **The user's choice** (Help, Diagnostics; remembered in the user's settings with a random
+  install id): recording on unless turned off; sending off unless turned on, and then only what
+  is recorded from that moment, line by line to the endpoint's `/v1/logs` and `/v1/metrics`
+  (OTLP over HTTP, JSON) every half minute and at the close, going on where it stopped
+  (`<file>.sent`). `FAF_MAP_EDITOR_LOG=Debug` logs more.
+- `tools/telemetry` runs a collector, Loki, Prometheus and Grafana with a dashboard on this
+  computer (`docker compose up -d`): it reads the sessions' files and takes what an editor
+  sends. Its README says what to look at.
+- Not built yet: a report of a problem that bundles the recent sessions (`help.reportProblem`),
+  and a collector on a server for everyone's sessions.
 
 ## Automation: driving the running editor
 
@@ -298,7 +339,9 @@ faf-map editor close                                      # closes without askin
 - Commands: `help`, `state` (with `mode`, `tool`, `toolNotBuilt`, `palette`), `commands` (every
   command of the controller: id, title, shortcut, story, `notBuilt`, `canRun`), `run {id}` (runs
   one as a menu item would; `ran: false` when it cannot run or is not built yet), `mode {id}`,
-  `tool {id}`, `ui {hidden?}`, `perf {reset?}` (above), `setup {folder, game?, faf?, vault?}` (the setup page; fields left
+  `tool {id}`, `ui {hidden?}`, `perf {reset?}` (above), `logs {problems?, count?}` (what the
+  Console shows), `diagnostics {record?, send?, endpoint?, flush?, upload?}` (the choices, the
+  session's files, and with `flush`/`upload` writes or sends at once), `setup {folder, game?, faf?, vault?}` (the setup page; fields left
   out keep what it suggests), `update-assets`, `open {path}`, `import {path}`, `save`, `save-as {path}`,
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,
