@@ -1,0 +1,35 @@
+<!-- The command palette (F-2): every command of the controller, found by typing. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:commands="using:FAForever.MapEditor.App.Commands"
+             x:Class="FAForever.MapEditor.App.Views.CommandPalette"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="scrim" PointerPressed="OnScrimPressed">
+    <Border Classes="dialog" PointerPressed="OnDialogPressed">
+      <StackPanel>
+        <Border Classes="dialogpart">
+          <TextBox x:Name="Query" Text="{Binding PaletteQuery}" PlaceholderText="Run a command" KeyDown="OnQueryKeyDown"
+                   AutomationProperties.Name="Run a command" />
+        </Border>
+        <ListBox x:Name="Results" ItemsSource="{Binding PaletteResults}" SelectedItem="{Binding PaletteSelection}"
+                 MaxHeight="{StaticResource PaletteListHeight}" DoubleTapped="OnResultChosen" AutomationProperties.Name="Commands">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="commands:EditorCommand">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Classes="caption" Text="{Binding Gesture}" />
+                <StackPanel>
+                  <TextBlock Text="{Binding FullTitle}" />
+                  <TextBlock Classes="story" IsVisible="{Binding IsIncomplete}" Text="{Binding Incomplete.Story, StringFormat='Not built yet: user story {0}'}" />
+                </StackPanel>
+              </DockPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <Border Classes="dialogpart">
+          <TextBlock Classes="caption" Text="Enter runs the command; the menus, shortcuts, automation and Lua run the same ones." />
+        </Border>
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

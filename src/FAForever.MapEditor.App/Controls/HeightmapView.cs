@@ -212,7 +212,7 @@ public sealed class HeightmapView : Control
             Point place = ControlToMap(at);
             _model.MoveCameraTo((float)place.X, (float)place.Y);
         }
-        else if (buttons.IsLeftButtonPressed && _model?.HasMap == true)
+        else if (buttons.IsLeftButtonPressed && _model?.CanPaint == true)
         {
             Point map = ControlToMap(at);
             _painting = true;

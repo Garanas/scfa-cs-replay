@@ -47,8 +47,12 @@ is an extension in `Avalonia.Input`; `Bitmap.Save` takes encoder options).
 
 ## Every operation a person can do
 
-- An automation command (`Automation/AutomationServer.cs`, `help`, the guide) that does the same
-  through `MainViewModel`; its state in `state`.
+- A method with `[EditorCommand(id, title, Menu = ..., Gesture = ..., Story = ...)]` on a
+  controller in `Controllers/`: it is in the menus, the palette, the shortcuts and automation
+  (`run id=...`) at once. Not built yet: an empty method with `[Incomplete("T-4", "what it is to do")]`.
+  A tool: a `ToolDefinition` in `ViewModels/EditorModes.cs` (`Missing` until it works); a part of
+  a panel not built yet: a `PlannedSection`. Every story named must be in `USER_STORIES.md`
+  (`CommandRegistryTest`). Its state in automation's `state`.
 - Tests: the operation in `MainViewModelTest`; the mouse, keys and what the window shows in
   `MainWindowTest` (headless, `HeadlessApp.Run`). The 3D view needs a graphics card: check it in a
   running editor.

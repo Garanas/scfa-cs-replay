@@ -5,6 +5,7 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using FAForever.MapEditor.App.Automation;
 using FAForever.MapEditor.App.Controls;
 using FAForever.MapEditor.App.ViewModels;
@@ -108,13 +109,13 @@ namespace FAForever.MapEditor.App.Tests
 
             window.MouseMove(middle);
             window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
-            window.MouseMove(middle + new Vector(40, -200));
+            window.MouseMove(middle + new Vector(40, -60));
             window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
-            window.MouseMove(middle + new Vector(400, -200));
+            window.MouseMove(middle + new Vector(100, -60));
             Settle(model);
 
             Assert.AreEqual(-10, model.Camera.Now.Yaw, 0.01, "a quarter degree a pixel, clockwise to the right");
-            Assert.AreEqual(40, model.Camera.Now.Pitch, 0.01, "up tilts towards the horizon");
+            Assert.AreEqual(75, model.Camera.Now.Pitch, 0.01, "up tilts towards the horizon");
             window.Close();
         });
 
@@ -168,6 +169,60 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.IsTrue(model.CanUndo);
             Assert.AreEqual(2, model.History.Count, "opened, and the stroke");
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task ControlKOpensThePaletteAndEnterRunsTheCommand() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+
+            window.KeyPress(Key.K, RawInputModifiers.Control, PhysicalKey.K, "k");
+            Dispatcher.UIThread.RunJobs();
+            Assert.IsTrue(model.IsPaletteOpen);
+
+            window.KeyTextInput("3d view");
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual("view.3d", model.PaletteSelection?.Id, "the search box has the keyboard");
+            window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.IsFalse(model.IsPaletteOpen);
+            Assert.AreEqual("3d", window.ShownView);
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task TheRailChoosesTheMode() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Button markers = window.GetVisualDescendants().OfType<Button>()
+                .Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == "Markers" && button.Classes.Contains("rail"));
+            Point at = Middle(markers, window);
+
+            window.MouseMove(at);
+            window.MouseDown(at, MouseButton.Left);
+            window.MouseUp(at, MouseButton.Left);
+
+            Assert.AreEqual("markers", model.SelectedMode!.Definition.Id);
+            Assert.AreEqual("markers.select", model.ActiveTool!.Definition.Id);
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task AToolNotBuiltYetDoesNotPaint() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, "top");
+            model.SelectTool("terrain.curve");
+            Point middle = Middle(window.MapView, window);
+
+            window.MouseMove(middle);
+            window.MouseDown(middle, MouseButton.Left);
+            window.MouseMove(middle + new Vector(60, 0));
+            window.MouseUp(middle + new Vector(60, 0), MouseButton.Left);
+
+            Assert.IsFalse(model.CanUndo);
             window.Close();
         });
 

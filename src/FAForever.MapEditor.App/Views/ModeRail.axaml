@@ -1,0 +1,36 @@
+<!-- The rail of modes: one button per mode, groups apart, plugins under them (F-15). -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.ModeRail"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="rail">
+    <StackPanel Classes="stack">
+      <ItemsControl ItemsSource="{Binding Modes}" AutomationProperties.Name="Modes">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Classes="stack" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ModeItem">
+            <Button Classes="rail" Classes.selected="{Binding IsSelected}"
+                    Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ChooseModeCommand}"
+                    CommandParameter="{Binding Definition.Id}"
+                    ToolTip.Tip="{Binding Definition.Help}"
+                    AutomationProperties.Name="{Binding Definition.Title}"
+                    AutomationProperties.HelpText="{Binding Definition.Help}">
+              <Path Classes="icon" Data="{Binding Definition.Icon, Converter={x:Static controls:IconConverter.Instance}}" />
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <Border Classes="divider" />
+      <Button Classes="rail planned" Command="{Binding RunCommand}" CommandParameter="plugins.manage"
+              ToolTip.Tip="Plugins: not built yet (F-15)" AutomationProperties.Name="Plugins">
+        <Path Classes="icon" Data="{StaticResource Icon.Plus}" />
+      </Button>
+    </StackPanel>
+  </Border>
+</UserControl>

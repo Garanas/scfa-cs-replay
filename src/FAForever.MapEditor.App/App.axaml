@@ -8,6 +8,7 @@
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://faf-map-editor/Styles/Tokens.axaml" />
         <ResourceInclude Source="avares://faf-map-editor/Styles/Controls.axaml" />
+        <ResourceInclude Source="avares://faf-map-editor/Styles/Icons.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>

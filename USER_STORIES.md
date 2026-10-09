@@ -13,8 +13,9 @@ reads again when it changes; and nothing that generates runs by itself.
 - [ ] **F-1 One controller.** Every operation is a command with a name, arguments and a
       description, in one registry (the controller of model, view, controller). Menus, toolbars,
       shortcuts, the command palette, automation, the CLI and Lua plugins all run the same commands.
-      Today: the view model's methods, with automation commands written by hand for each.
-- [ ] **F-2 Command palette.** Find and run any command by typing (`Ctrl+K`), with its shortcut shown.
+      Today: the registry and the controllers (`[EditorCommand]`) make the menus, shortcuts and
+      palette, and automation runs them; missing: arguments, toolbars, the CLI and Lua.
+- [x] **F-2 Command palette.** Find and run any command by typing (`Ctrl+K`), with its shortcut shown.
 - [x] **F-3 Undo and redo.** Every change is a step; a brush stroke or a plugin run is one step.
 - [x] **F-4 History.** The steps in a panel; choosing one goes back or forward to it.
 - [x] **F-5 Workspace.** One folder per computer with the projects and the game's assets converted

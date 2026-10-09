@@ -40,6 +40,15 @@
       <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
       <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
+      <!-- lines between parts of the window -->
+      <SolidColorBrush x:Key="DividerBrush" Color="#FF2E2E2E" />
+      <!-- the chosen mode, tool or overlay -->
+      <SolidColorBrush x:Key="SelectedBrush" Color="#FF0B3A5E" />
+      <SolidColorBrush x:Key="SelectedStrokeBrush" Color="#FF2B8FE0" />
+      <!-- the outline of what is not built yet -->
+      <SolidColorBrush x:Key="PlannedStrokeBrush" Color="#FF4A4A4A" />
+      <!-- behind a dialog over the window -->
+      <SolidColorBrush x:Key="ScrimBrush" Color="#99000000" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Light">
       <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource Gray200}" />
@@ -53,6 +62,11 @@
       <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
       <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
+      <SolidColorBrush x:Key="DividerBrush" Color="#FFD6D6D6" />
+      <SolidColorBrush x:Key="SelectedBrush" Color="#FFCCE4F7" />
+      <SolidColorBrush x:Key="SelectedStrokeBrush" Color="#FF0078D4" />
+      <SolidColorBrush x:Key="PlannedStrokeBrush" Color="#FFB0B0B0" />
+      <SolidColorBrush x:Key="ScrimBrush" Color="#66000000" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
@@ -75,8 +89,32 @@
   <Thickness x:Key="InlineGap">8,0,0,0</Thickness>
   <Thickness x:Key="ListGap">0,2</Thickness>
 
-  <!-- widths -->
+  <!-- widths and heights -->
   <x:Double x:Key="SidePanelWidth">240</x:Double>
+  <x:Double x:Key="RailWidth">52</x:Double>
+  <x:Double x:Key="RailButtonSize">40</x:Double>
+  <x:Double x:Key="ModePanelWidth">260</x:Double>
+  <x:Double x:Key="InspectorWidth">280</x:Double>
+  <x:Double x:Key="DockHeight">190</x:Double>
+  <x:Double x:Key="ToolButtonHeight">30</x:Double>
+  <x:Double x:Key="ChipHeight">24</x:Double>
+  <x:Double x:Key="ToolSliderWidth">140</x:Double>
+  <x:Double x:Key="TabHeight">32</x:Double>
+  <Thickness x:Key="TabPadding">10,0</Thickness>
+  <x:Double x:Key="IconSize">18</x:Double>
+  <x:Double x:Key="PaletteWidth">640</x:Double>
+  <x:Double x:Key="PaletteListHeight">360</x:Double>
+  <Thickness x:Key="DialogPadding">14,10</Thickness>
+  <Thickness x:Key="DividerGap">8,4</Thickness>
+  <Thickness x:Key="DividerTop">0,1,0,0</Thickness>
+  <Thickness x:Key="DividerBottom">0,0,0,1</Thickness>
+  <Thickness x:Key="DividerLeft">1,0,0,0</Thickness>
+  <Thickness x:Key="DividerRight">0,0,1,0</Thickness>
+  <Thickness x:Key="ChipPadding">10,0</Thickness>
+  <Thickness x:Key="RailPadding">0,8</Thickness>
+  <CornerRadius x:Key="ControlRadius">4</CornerRadius>
+  <CornerRadius x:Key="ChipRadius">12</CornerRadius>
+  <CornerRadius x:Key="DialogRadius">8</CornerRadius>
   <x:Double x:Key="PageWidth">720</x:Double>
   <x:Double x:Key="NarrowPageWidth">640</x:Double>
 </ResourceDictionary>

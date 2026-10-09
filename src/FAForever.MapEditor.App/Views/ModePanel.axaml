@@ -1,0 +1,70 @@
+<!-- The selected mode's panel: its tools, then its sections; what is not built yet says its story. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.ModePanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="modepanel">
+    <ScrollViewer>
+      <StackPanel Classes="stack">
+        <TextBlock Classes="heading" Text="{Binding SelectedMode.Definition.Title}" />
+        <TextBlock Classes="caption" Text="{Binding SelectedMode.Definition.Help}" />
+
+        <TextBlock Classes="overline section" Text="Tools" />
+        <ItemsControl ItemsSource="{Binding Tools}" AutomationProperties.Name="Tools">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="2" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ToolItem">
+              <Button Classes="tool" Classes.active="{Binding IsActive}" Classes.planned="{Binding Definition.IsIncomplete}"
+                      Content="{Binding Definition.Title}"
+                      Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ChooseToolCommand}"
+                      CommandParameter="{Binding Definition.Id}"
+                      ToolTip.Tip="{Binding Definition.Missing}"
+                      AutomationProperties.Name="{Binding Definition.Title}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <ItemsControl ItemsSource="{Binding SelectedMode.Definition.Sections}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Classes="stack" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.DataTemplates>
+            <DataTemplate DataType="vm:PlannedSection">
+              <StackPanel Classes="stack section">
+                <TextBlock Classes="overline" Text="{Binding Title}" />
+                <Border Classes="planned">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="caption" Text="{Binding Missing}" />
+                    <TextBlock Classes="story" Text="{Binding Story, StringFormat='Not built yet: user story {0}'}" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </DataTemplate>
+            <DataTemplate DataType="vm:StrataSection">
+              <StackPanel Classes="stack section">
+                <TextBlock Classes="overline" Text="{Binding Title}" />
+                <ListBox ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StrataTargets}"
+                         SelectedItem="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).SelectedPaintTarget}"
+                         AutomationProperties.Name="Strata" />
+              </StackPanel>
+            </DataTemplate>
+            <DataTemplate DataType="vm:MarkerVisibilitySection">
+              <StackPanel Classes="stack section">
+                <TextBlock Classes="overline" Text="{Binding Title}" />
+                <CheckBox Content="Markers" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ShowMarkers}" />
+                <CheckBox Content="Path nodes" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ShowPathNodes}" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.DataTemplates>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+</UserControl>

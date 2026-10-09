@@ -1,0 +1,40 @@
+<!-- The dock under the views: lists that span the map. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.Dock"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="dock">
+    <TabControl Classes="compact" SelectedIndex="{Binding DockIndex}" AutomationProperties.Name="Dock">
+      <TabItem Header="Problems">
+        <Border Classes="planned">
+          <StackPanel Classes="stack">
+            <TextBlock Classes="caption" Text="What is wrong or doubtful: a missing texture, a spawn without mass, a new passage through a cliff, a check of a plugin; each leading to its place." />
+            <TextBlock Classes="story" Text="Not built yet: user story F-14" />
+          </StackPanel>
+        </Border>
+      </TabItem>
+      <TabItem Header="History">
+        <ListBox ItemsSource="{Binding History}" SelectedIndex="{Binding HistoryIndex, Mode=TwoWay}" AutomationProperties.Name="History"
+                 AutomationProperties.HelpText="Choosing a step undoes or redoes up to it">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:HistoryEntry">
+              <TextBlock Text="{Binding Description}" Classes.undone="{Binding IsUndone}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Assets">
+        <Border Classes="planned">
+          <StackPanel Classes="stack">
+            <TextBlock Classes="caption" Text="Which assets are loaded and where each comes from: the game, FAF, the workspace's own, the map's own files; which the map uses, which are missing." />
+            <TextBlock Classes="story" Text="Not built yet: user story F-8" />
+          </StackPanel>
+        </Border>
+      </TabItem>
+      <TabItem Header="Console">
+        <ListBox ItemsSource="{Binding Console}" AutomationProperties.Name="Console" />
+      </TabItem>
+    </TabControl>
+  </Border>
+</UserControl>

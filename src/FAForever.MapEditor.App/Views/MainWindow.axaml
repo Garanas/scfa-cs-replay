@@ -1,3 +1,9 @@
+<!--
+  The editor's window (concept A of the UI design): the menu, the rail of modes, the mode's panel,
+  the tool's options, the views with their overlays, the dock, the inspector and the status bar;
+  over them the pages of the start and the command palette. The menus and shortcuts are made from
+  the controller's commands (MainWindow.axaml.cs).
+-->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -8,68 +14,72 @@
         Title="{Binding Title}"
         Width="1280" Height="800">
 
-  <Window.KeyBindings>
-    <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenProjectCommand}" />
-    <KeyBinding Gesture="Ctrl+I" Command="{Binding ImportMapCommand}" />
-    <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveProjectCommand}" />
-    <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveProjectAsCommand}" />
-    <KeyBinding Gesture="Ctrl+E" Command="{Binding ExportMapCommand}" />
-    <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoEditCommand}" />
-    <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoEditCommand}" />
-    <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoEditCommand}" />
-  </Window.KeyBindings>
-
   <Grid>
-  <DockPanel IsVisible="{Binding IsReady}">
-    <Menu DockPanel.Dock="Top">
-      <MenuItem Header="_File">
-        <MenuItem Header="_Open project..." InputGesture="Ctrl+O" Command="{Binding OpenProjectCommand}" />
-        <MenuItem Header="_Import map folder..." InputGesture="Ctrl+I" Command="{Binding ImportMapCommand}" />
-        <Separator />
-        <MenuItem Header="_Save" InputGesture="Ctrl+S" Command="{Binding SaveProjectCommand}" />
-        <MenuItem Header="Save _as project..." InputGesture="Ctrl+Shift+S" Command="{Binding SaveProjectAsCommand}" />
-        <Separator />
-        <MenuItem Header="_Export to the vault" InputGesture="Ctrl+E" Command="{Binding ExportMapCommand}" />
-      </MenuItem>
-      <MenuItem Header="_Edit">
-        <MenuItem Header="{Binding UndoHeader}" InputGesture="Ctrl+Z" Command="{Binding UndoEditCommand}" />
-        <MenuItem Header="{Binding RedoHeader}" InputGesture="Ctrl+Y" Command="{Binding RedoEditCommand}" />
-      </MenuItem>
-      <MenuItem Header="_View">
-        <MenuItem Header="_Fit the map" Click="OnFit" />
-        <Separator />
-        <MenuItem Header="_Markers" ToggleType="CheckBox" IsChecked="{Binding ShowMarkers}" />
-        <MenuItem Header="_Path nodes" ToggleType="CheckBox" IsChecked="{Binding ShowPathNodes}" />
-        <MenuItem Header="3D _camera in the top view" ToggleType="CheckBox" IsChecked="{Binding ShowCamera}" />
-      </MenuItem>
-    </Menu>
-
-    <Border DockPanel.Dock="Bottom" Classes="bar">
-      <DockPanel>
-        <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Margin="{StaticResource InlineGap}" AutomationProperties.Name="Place under the mouse" />
-        <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Status" AutomationProperties.LiveSetting="Polite" />
+    <DockPanel IsVisible="{Binding IsReady}">
+      <DockPanel DockPanel.Dock="Top">
+        <Button DockPanel.Dock="Right" Classes="chip beside" Command="{Binding RunCommand}" CommandParameter="view.palette"
+                Content="Run a command  ·  Ctrl K" AutomationProperties.Name="Command palette" />
+        <Menu x:Name="MainMenu" />
       </DockPanel>
-    </Border>
 
-    <views:SidePanel DockPanel.Dock="Right" />
+      <Border DockPanel.Dock="Bottom" Classes="bar">
+        <DockPanel>
+          <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Margin="{StaticResource InlineGap}" AutomationProperties.Name="Place under the mouse" />
+          <TextBlock DockPanel.Dock="Right" Classes="secondary" Margin="{StaticResource InlineGap}" AutomationProperties.Name="Mode and tool">
+            <Run Text="{Binding SelectedMode.Definition.Title}" /><Run Text=" · " /><Run Text="{Binding ActiveTool.Definition.Title}" />
+          </TextBlock>
+          <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Status" AutomationProperties.LiveSetting="Polite" />
+        </DockPanel>
+      </Border>
 
-    <!-- the tabs only choose: both views stay in the tree, so the 3D view keeps its textures on the graphics card -->
-    <DockPanel>
-      <TabControl x:Name="Views" DockPanel.Dock="Top" Padding="0" SelectionChanged="OnViewChosen" AutomationProperties.Name="View">
-        <TabItem Header="Top" />
-        <TabItem Header="3D" />
-      </TabControl>
-      <Grid>
-        <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" AutomationProperties.Name="Top view"
-                                 AutomationProperties.HelpText="Left mouse paints; right or middle moves; the wheel zooms; control and a click sends the 3D camera there" />
-        <controls:TerrainViewGpu x:Name="Terrain3D" IsVisible="False" AutomationProperties.Name="3D view"
-                                  AutomationProperties.HelpText="The wheel zooms towards the mouse; middle moves; space and the mouse turn; F focuses; Home shows the whole map" />
-      </Grid>
+      <views:ModeRail DockPanel.Dock="Left" />
+      <views:ModePanel DockPanel.Dock="Left" />
+      <views:Inspector DockPanel.Dock="Right" />
+
+      <DockPanel>
+        <views:ToolOptions DockPanel.Dock="Top" />
+
+        <!-- which view, and what it shows over the terrain; the tabs only choose: both views stay in the tree,
+             so the 3D view keeps its textures on the graphics card -->
+        <Border DockPanel.Dock="Top" Classes="toolbar">
+          <WrapPanel Classes="row">
+            <TabControl x:Name="Views" Classes="compact" SelectedIndex="{Binding ViewIndex}" AutomationProperties.Name="View">
+              <TabItem Header="Top" />
+              <TabItem Header="3D" />
+            </TabControl>
+            <Button Classes="chip planned" VerticalAlignment="Center" Content="Side by side" Command="{Binding RunCommand}" CommandParameter="view.sideBySide"
+                    ToolTip.Tip="Not built yet: user story V-4" />
+            <ItemsControl ItemsSource="{Binding Overlays}" VerticalAlignment="Center" AutomationProperties.Name="Shown over the terrain">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel Classes="chips" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:OverlayItem">
+                  <Button Classes="chip" Classes.on="{Binding IsOn}" Classes.planned="{Binding IsIncomplete}" Content="{Binding Title}"
+                          Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleOverlayCommand}" CommandParameter="{Binding}"
+                          AutomationProperties.Name="{Binding Title, StringFormat='Show {0}'}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </WrapPanel>
+        </Border>
+
+        <views:Dock DockPanel.Dock="Bottom" />
+
+        <Grid>
+          <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" AutomationProperties.Name="Top view"
+                                   AutomationProperties.HelpText="The left mouse uses the tool; right or middle moves; the wheel zooms; control and a click sends the 3D camera there" />
+          <controls:TerrainViewGpu x:Name="Terrain3D" IsVisible="False" AutomationProperties.Name="3D view"
+                                    AutomationProperties.HelpText="The wheel zooms towards the mouse; middle moves; space and the mouse turn; F focuses; Home shows the whole map" />
+        </Grid>
+      </DockPanel>
     </DockPanel>
-  </DockPanel>
 
-  <views:SetupPage IsVisible="{Binding IsSettingUp}" />
-  <views:UpdateAssetsPage IsVisible="{Binding IsAskingToUpdate}" />
-  <views:ConvertingPage IsVisible="{Binding IsConverting}" />
+    <views:SetupPage IsVisible="{Binding IsSettingUp}" />
+    <views:UpdateAssetsPage IsVisible="{Binding IsAskingToUpdate}" />
+    <views:ConvertingPage IsVisible="{Binding IsConverting}" />
+    <views:CommandPalette x:Name="Palette" IsVisible="{Binding IsPaletteOpen}" />
   </Grid>
 </Window>

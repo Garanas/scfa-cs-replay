@@ -73,6 +73,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _dialogs = dialogs;
         _ui = SynchronizationContext.Current;
+        InitializeShell();
     }
 
     /// <summary>
@@ -180,9 +181,17 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowPathNodes { get; set; }
 
-    partial void OnShowMarkersChanged(bool value) => DocumentChanged?.Invoke(this, EventArgs.Empty);
+    partial void OnShowMarkersChanged(bool value)
+    {
+        RefreshOverlays();
+        DocumentChanged?.Invoke(this, EventArgs.Empty);
+    }
 
-    partial void OnShowPathNodesChanged(bool value) => DocumentChanged?.Invoke(this, EventArgs.Empty);
+    partial void OnShowPathNodesChanged(bool value)
+    {
+        RefreshOverlays();
+        DocumentChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>
     /// The heights and the terrain layers that have a mask, by the name of their texture.
@@ -232,6 +241,7 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(PaintedLayer));
         OnPropertyChanged(nameof(IsPaintingHeight));
         OnPropertyChanged(nameof(IsPaintingLayer));
+        FollowPaintTarget();
         DocumentChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -485,6 +495,7 @@ public sealed partial class MainViewModel : ObservableObject
                     : $"Layer {layer} (no texture)")),
         ];
         OnPropertyChanged(nameof(PaintTargets));
+        OnPropertyChanged(nameof(StrataTargets));
         SelectedPaintTarget = PaintTargets[0];
         _pendingReload.Clear();
         if (map.ProjectFolder is string folder)
@@ -604,6 +615,8 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CanRedo));
         OnPropertyChanged(nameof(UndoHeader));
         OnPropertyChanged(nameof(RedoHeader));
+        OnPropertyChanged(nameof(CanPaint));
+        RefreshOverlays();
         ShowHistory();
         OpenProjectCommand.NotifyCanExecuteChanged();
         ImportMapCommand.NotifyCanExecuteChanged();

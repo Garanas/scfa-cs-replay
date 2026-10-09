@@ -124,8 +124,32 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "ui {hidden?}", "perf {reset?}", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "commands", "run {id}", "mode {id}", "tool {id}", "ui {hidden?}", "perf {reset?}", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
             case "state":
+                break;
+            case "commands":
+                // the controller's commands: those not built yet with their user story
+                return new JsonObject
+                {
+                    ["commands"] = new JsonArray([.. model.Commands.All.Select(command => (JsonNode)new JsonObject
+                    {
+                        ["id"] = command.Id,
+                        ["title"] = command.FullTitle,
+                        ["gesture"] = command.Gesture,
+                        ["story"] = command.Story,
+                        ["notBuilt"] = command.Incomplete?.Missing,
+                        ["canRun"] = command.IsIncomplete ? false : command.CanRun(),
+                    })]),
+                };
+            case "run":
+                // a command of the controller, as a menu item or shortcut runs it
+                result["ran"] = await model.Commands.RunAsync(Text(arguments, "id"));
+                break;
+            case "mode":
+                model.SelectMode(Text(arguments, "id"));
+                break;
+            case "tool":
+                model.SelectTool(Text(arguments, "id"));
                 break;
             case "ui":
                 // the window's controls: what an agent can read and use, with their places for hit and the mouse
@@ -295,6 +319,10 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         {
             ["title"] = model.Title,
             ["stage"] = model.Stage.ToString(),
+            ["mode"] = model.SelectedMode?.Definition.Id,
+            ["tool"] = model.ActiveTool?.Definition.Id,
+            ["toolNotBuilt"] = model.ActiveTool?.Definition.Missing,
+            ["palette"] = model.IsPaletteOpen,
             ["workspace"] = model.Workspace?.Folder,
             ["setupError"] = model.SetupError,
             ["assetReasons"] = new JsonArray([.. model.AssetReasons.Select(reason => (JsonNode)JsonValue.Create(reason))]),

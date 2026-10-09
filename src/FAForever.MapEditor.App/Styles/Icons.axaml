@@ -1,0 +1,18 @@
+<!--
+  The editor's icons: line drawings on a grid of 24, drawn with a stroke (Path.icon in
+  Classes.axaml). A mode names its icon by key (EditorModes).
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <StreamGeometry x:Key="Icon.Map">M9 4 L3 6 L3 20 L9 18 L15 20 L21 18 L21 4 L15 6 Z M9 4 L9 18 M15 6 L15 20</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Terrain">M3 19 L9 10 L13 16 L16 12 L21 19 Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Paint">M12 4 L20 8 L12 12 L4 8 Z M4 12 L12 16 L20 12 M4 16 L12 20 L20 16</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Water">M3 9 C6 7 9 11 12 9 S18 7 21 9 M3 14 C6 12 9 16 12 14 S18 12 21 14 M3 19 C6 17 9 21 12 19 S18 17 21 19</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Lighting">M16 12 A4 4 0 1 1 8 12 A4 4 0 1 1 16 12 Z M12 2 L12 4 M12 20 L12 22 M2 12 L4 12 M20 12 L22 12 M5 5 L6.5 6.5 M17.5 17.5 L19 19 M5 19 L6.5 17.5 M17.5 6.5 L19 5</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Markers">M12 21 C12 21 6 15 6 10 A6 6 0 0 1 18 10 C18 15 12 21 12 21 Z M14 10 A2 2 0 1 1 10 10 A2 2 0 1 1 14 10 Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Props">M12 3 L18 12 L14 12 L18 18 L6 18 L10 12 L6 12 Z M12 18 L12 21</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Decals">M6 4 L18 4 A2 2 0 0 1 20 6 L20 18 A2 2 0 0 1 18 20 L6 20 A2 2 0 0 1 4 18 L4 6 A2 2 0 0 1 6 4 Z M15 12 A3 3 0 1 1 9 12 A3 3 0 1 1 15 12 Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Units">M5 12 L19 12 A2 2 0 0 1 21 14 L21 16 A2 2 0 0 1 19 18 L5 18 A2 2 0 0 1 3 16 L3 14 A2 2 0 0 1 5 12 Z M8 8 L15 8 L15 12 L8 12 Z M15 10 L20 10</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Plus">M12 5 L12 19 M5 12 L19 12</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Search">M17 11 A6 6 0 1 1 5 11 A6 6 0 1 1 17 11 Z M20 20 L15.5 15.5</StreamGeometry>
+</ResourceDictionary>

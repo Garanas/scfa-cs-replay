@@ -18,10 +18,13 @@ once the workspace is ready.
 The editor is built to be checked and used by agents as well as people. A feature is done when it
 keeps that up; go through this list with every change to the window, not only at the end:
 
-1. **Automation**: every operation a person can do (a menu item, a button, a key, a mouse gesture
-   with a meaning) has an automation command that does the same through the view model, listed
-   in `help`, in `AutomationServer`'s summary and under Automation below. What the feature shows
-   or holds is in `state` (or its own command when it is large).
+1. **A command of the controller**: every operation a person can do is a method with
+   `[EditorCommand]` on a controller (`Controllers/`), with its menu, shortcut and user story. It
+   then is in the menus, the palette, the shortcuts and automation (`run id=...`) at once. Not
+   built yet? Leave the method empty and mark it `[Incomplete(story, what it is to do)]`. A tool
+   is a `ToolDefinition` of its mode (`ViewModels/EditorModes.cs`), with `Missing` until it works;
+   a part of a panel not built yet a `PlannedSection`. What the feature shows or holds is in
+   `state` (or its own automation command when it is large).
 2. **Labels**: every new control one can read or use gets `AutomationProperties.Name` (and
    `HelpText` when its use is not obvious), unless its own text says what it is. A new kind of
    control (one `UiTree` does not know as usable, or whose text it cannot read) gets a line in
@@ -39,6 +42,35 @@ keeps that up; go through this list with every change to the window, not only at
 7. **This guide**: what the feature does and its rules, where a later reader looks for them.
 
 The project skill `.claude/skills/editor-ui` holds the same rules in short, for agents.
+
+## The shell: concept A, and the controller
+
+The window follows concept A of the UI design (the canvas "Map editor UI concepts"): a rail of
+modes on the left (`ModeRail`), the mode's tools and sections (`ModePanel`), the active tool's
+settings above the views (`ToolOptions`), the view tabs with the overlay chips, the views, the
+dock under them (`Dock`: Problems, History, Assets, Console), the inspector on the right
+(`Inspector`), the status bar, and the command palette over everything (`CommandPalette`,
+Ctrl+K). Where the user stories go in it is on the design's anatomy board.
+
+- **The controller** (`Commands/CommandRegistry`, user story F-1) holds every command: methods
+  with `[EditorCommand(id, title, Menu, Gesture, Story, CanRun)]` on the controllers in
+  `Controllers/` (File, Edit and Select, View, Map, Terrain, Paint, Water and Lighting, Markers,
+  Props, Decals, Units, Generate, Assets, Plugins), plus one `tool.<id>` command per tool. The
+  window makes the menu bar and its shortcuts from them (`MainWindow.BuildMenusAndShortcuts`:
+  File, Edit, Select, View, Map, Modes with a submenu per mode, Generate, Plugins); the palette
+  searches them, the ones that work first; automation lists and runs them (`commands`,
+  `run id=`). A controller only calls the view model, which owns the state and the document.
+- **Not built yet** is visible and traceable: a command with `[Incomplete(story, missing)]`
+  only says what it is to do (status bar, Console, `run` answers `ran: false`) and shows in
+  italics in the menus; a tool with `Missing` shows it in the tool options and does nothing in
+  the views (`CanPaint` is true only for sculpting and painting strata); a `PlannedSection`
+  shows a dashed box with its story. `CommandRegistryTest` checks that every story named
+  anywhere exists in `USER_STORIES.md`, and lists the `[Incomplete]` functions.
+- **Modes and tools** are data (`EditorModes`): a mode's id, title, icon (`Styles/Icons.axaml`),
+  tools, panel sections and inspector sections. Choosing the sculpt tool paints the heights,
+  the strata tool a layer's mask; choosing a layer to paint (automation's `brush layer=`)
+  chooses the tool. A mode remembers its last tool.
+- Shortcuts are never a single letter (`IdsAndShortcutsAreUnique`): it would fire while typing.
 
 ## UI rules: one look, kept in one place
 
@@ -59,7 +91,8 @@ Fluent (Avalonia's theme, dark) draws the controls; the editor's own look lives 
   explanation, path, Browse, with the labels for screen readers), `Controls/Section`. A pattern
   used twice becomes one.
 - The views are split by what they are: `MainWindow` (menu, status bar, the two map views, the
-  pages by stage), `SidePanel` (brush, history), `SetupPage`, `UpdateAssetsPage`,
+  pages by stage), `ModeRail`, `ModePanel`, `ToolOptions`, `Inspector`, `Dock`,
+  `CommandPalette`, `SetupPage`, `UpdateAssetsPage`,
   `ConvertingPage`.
 - Code that draws (the overlays of the top view, the 3D view's sky) reads the tokens with
   `TryFindResource` and reads them again when the theme variant changes. Only colours that come
@@ -162,10 +195,9 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   - Avalonia's hit testing only finds what a control draws itself, and this one draws nothing
     through `Render`: it claims its whole rectangle (`ICustomHitTest`), or the mouse would fall
     through to the tab control. Check a new control with automation's `hit`.
-- `Views/MainWindow`: menu (View: markers, path nodes, the 3D camera in the top view), status
-  bar, the side panel (`Views/SidePanel`: brush for heights or a layer's mask, history), the Top
-  and 3D tabs, and the pages of the start (`SetupPage`, `UpdateAssetsPage`, `ConvertingPage`);
-  asks about unsaved changes before closing.
+- `Views/MainWindow`: the shell of concept A (below), the pages of the start (`SetupPage`,
+  `UpdateAssetsPage`, `ConvertingPage`) and the command palette over it; asks about unsaved
+  changes before closing.
   `WindowDialogs` answers the view model's questions with the system's folder picker and a small
   save-changes dialog.
 - The window watches the project folder (`ProjectWatcher`) and reads back what other tools change;
@@ -240,7 +272,10 @@ faf-map editor close                                      # closes without askin
   window (`[x, y, width, height]`, for `hit` and the mouse). Layout without anything to read or
   use is left out, and a control's template is not opened up. Read it before guessing from a
   screenshot.
-- Commands: `help`, `state`, `ui {hidden?}`, `perf {reset?}` (above), `setup {folder, game?, faf?, vault?}` (the setup page; fields left
+- Commands: `help`, `state` (with `mode`, `tool`, `toolNotBuilt`, `palette`), `commands` (every
+  command of the controller: id, title, shortcut, story, `notBuilt`, `canRun`), `run {id}` (runs
+  one as a menu item would; `ran: false` when it cannot run or is not built yet), `mode {id}`,
+  `tool {id}`, `ui {hidden?}`, `perf {reset?}` (above), `setup {folder, game?, faf?, vault?}` (the setup page; fields left
   out keep what it suggests), `update-assets`, `open {path}`, `import {path}`, `save`, `save-as {path}`,
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,

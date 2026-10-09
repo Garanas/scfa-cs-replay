@@ -94,4 +94,196 @@
     <Setter Property="Margin" Value="{StaticResource ListGap}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
+
+  <!-- the shell (concept A) -->
+
+  <!-- a small heading of a group in a panel -->
+  <Style Selector="TextBlock.overline">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+
+  <!-- the user story of something not built yet -->
+  <Style Selector="TextBlock.story">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="FontStyle" Value="Italic" />
+  </Style>
+
+  <!-- a line drawing on a grid of 24 (Styles/Icons.axaml) -->
+  <Style Selector="Path.icon">
+    <Setter Property="Width" Value="{StaticResource IconSize}" />
+    <Setter Property="Height" Value="{StaticResource IconSize}" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="StrokeThickness" Value="1.6" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="Stroke" Value="{Binding $parent[ContentControl].Foreground}" />
+  </Style>
+
+  <!-- the rail of modes -->
+  <Style Selector="Border.rail">
+    <Setter Property="Background" Value="{DynamicResource CanvasBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerRight}" />
+    <Setter Property="Width" Value="{StaticResource RailWidth}" />
+    <Setter Property="Padding" Value="{StaticResource RailPadding}" />
+  </Style>
+  <Style Selector="Button.rail">
+    <Setter Property="Width" Value="{StaticResource RailButtonSize}" />
+    <Setter Property="Height" Value="{StaticResource RailButtonSize}" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+  </Style>
+  <Style Selector="Button.rail.selected">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OverlayBrush}" />
+  </Style>
+  <Style Selector="Button.rail.planned">
+    <Setter Property="BorderBrush" Value="{DynamicResource PlannedStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <!-- the panels around the views -->
+  <Style Selector="Border.modepanel">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerRight}" />
+    <Setter Property="Width" Value="{StaticResource ModePanelWidth}" />
+    <Setter Property="Padding" Value="{StaticResource PanelPadding}" />
+  </Style>
+  <Style Selector="Border.inspector">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerLeft}" />
+    <Setter Property="Width" Value="{StaticResource InspectorWidth}" />
+    <Setter Property="Padding" Value="{StaticResource PanelPadding}" />
+  </Style>
+  <Style Selector="Border.toolbar">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerBottom}" />
+    <Setter Property="Padding" Value="{StaticResource BarPadding}" />
+  </Style>
+  <Style Selector="Border.dock">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerTop}" />
+    <Setter Property="Height" Value="{StaticResource DockHeight}" />
+  </Style>
+
+  <!-- a row of controls that wraps -->
+  <Style Selector="WrapPanel.row">
+    <Setter Property="ItemSpacing" Value="{StaticResource SpaceLarge}" />
+    <Setter Property="LineSpacing" Value="{StaticResource SpaceSmall}" />
+  </Style>
+
+  <!-- a tool of a mode -->
+  <Style Selector="Button.tool">
+    <Setter Property="Height" Value="{StaticResource ToolButtonHeight}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+  </Style>
+  <Style Selector="Button.tool.active">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.tool.planned">
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="FontStyle" Value="Italic" />
+  </Style>
+
+  <!-- something the views show, on or off -->
+  <Style Selector="Button.chip">
+    <Setter Property="Height" Value="{StaticResource ChipHeight}" />
+    <Setter Property="Padding" Value="{StaticResource ChipPadding}" />
+    <Setter Property="CornerRadius" Value="{StaticResource ChipRadius}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PlannedStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.chip.on">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OverlayBrush}" />
+  </Style>
+  <Style Selector="Button.chip.planned">
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="FontStyle" Value="Italic" />
+  </Style>
+
+  <!-- a part of a panel that is not built yet -->
+  <Style Selector="Border.planned">
+    <Setter Property="BorderBrush" Value="{DynamicResource PlannedStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="Padding" Value="{StaticResource BarPadding}" />
+  </Style>
+
+  <!-- the command palette over the window -->
+  <Style Selector="Border.scrim">
+    <Setter Property="Background" Value="{DynamicResource ScrimBrush}" />
+  </Style>
+  <Style Selector="Border.dialog">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PlannedStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource DialogRadius}" />
+    <Setter Property="Width" Value="{StaticResource PaletteWidth}" />
+    <Setter Property="Margin" Value="{StaticResource PagePadding}" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+  </Style>
+  <Style Selector="Border.dialogpart">
+    <Setter Property="Padding" Value="{StaticResource DialogPadding}" />
+  </Style>
+
+  <!-- a line between groups -->
+  <Style Selector="Border.divider">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="Margin" Value="{StaticResource DividerGap}" />
+  </Style>
+
+  <!-- chips side by side -->
+  <Style Selector="WrapPanel.chips">
+    <Setter Property="ItemSpacing" Value="{StaticResource SpaceSmall}" />
+    <Setter Property="LineSpacing" Value="{StaticResource SpaceSmall}" />
+  </Style>
+
+  <!-- a menu item of a command not built yet -->
+  <Style Selector="MenuItem.planned">
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="FontStyle" Value="Italic" />
+  </Style>
+
+  <!-- a label and its control side by side -->
+  <Style Selector="StackPanel.inline">
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="Spacing" Value="{StaticResource SpaceMedium}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="StackPanel.inline > TextBlock">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- tabs as small as the rest of the window: the views and the dock -->
+  <Style Selector="TabControl.compact">
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="TabControl.compact TabItem">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+    <Setter Property="MinHeight" Value="{StaticResource TabHeight}" />
+    <Setter Property="Padding" Value="{StaticResource TabPadding}" />
+  </Style>
 </Styles>

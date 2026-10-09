@@ -1,0 +1,43 @@
+<!-- The inspector: the properties of what is selected or active (F-11), by mode. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.Inspector"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="inspector">
+    <ScrollViewer>
+      <StackPanel Classes="stack">
+        <TextBlock Classes="overline" Text="Inspector" />
+        <ItemsControl ItemsSource="{Binding SelectedMode.Definition.Inspector}" AutomationProperties.Name="Inspector">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Classes="stack" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.DataTemplates>
+            <DataTemplate DataType="vm:PlannedSection">
+              <StackPanel Classes="stack">
+                <TextBlock Classes="heading" Text="{Binding Title}" />
+                <Border Classes="planned">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="caption" Text="{Binding Missing}" />
+                    <TextBlock Classes="story" Text="{Binding Story, StringFormat='Not built yet: user story {0}'}" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.DataTemplates>
+        </ItemsControl>
+        <StackPanel Classes="stack section">
+          <TextBlock Classes="heading" Text="Selection" />
+          <Border Classes="planned">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="caption" Text="Select markers, props, decals, units and areas in the views; move, rotate and scale them with handles." />
+              <TextBlock Classes="story" Text="Not built yet: user story F-11" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+</UserControl>
