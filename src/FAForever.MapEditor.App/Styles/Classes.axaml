@@ -295,6 +295,18 @@
     <Setter Property="Padding" Value="{StaticResource BarPadding}" />
     <Setter Property="MinHeight" Value="{StaticResource ToolbarHeight}" />
   </Style>
+  <!-- the active tool's options: one row, as high for every tool -->
+  <Style Selector="Border.toolbar.options">
+    <Setter Property="Height" Value="{StaticResource ToolbarHeight}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="StackPanel.toolrow">
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="Spacing" Value="{StaticResource SpaceRow}" />
+  </Style>
+  <Style Selector="StackPanel.toolrow > :is(Control)">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
   <!-- the bar of the views lies on the window, as the menu bar -->
   <Style Selector="Border.toolbar.views">
     <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />

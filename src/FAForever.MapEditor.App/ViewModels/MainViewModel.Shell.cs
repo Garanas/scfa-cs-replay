@@ -89,7 +89,7 @@ public sealed partial class MainViewModel
     public IReadOnlyList<ToolItem> Tools { get; private set; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanPaint), nameof(IsSculpting), nameof(IsPaintingStrata), nameof(IsToolIncomplete))]
+    [NotifyPropertyChangedFor(nameof(CanPaint), nameof(IsSculpting), nameof(IsFlattening), nameof(IsPaintingStrata), nameof(IsToolIncomplete))]
     public partial ToolItem? ActiveTool { get; private set; }
 
     /// <summary>

@@ -1,42 +1,47 @@
-<!-- The active tool's settings, in one row that wraps; a tool not built yet says what it will do. -->
+<!-- The active tool's settings, in one row of a fixed height whatever the tool, so the views never move;
+     a tool not built yet says what it will do. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              x:Class="FAForever.MapEditor.App.Views.ToolOptions"
              x:DataType="vm:MainViewModel">
-  <Border Classes="toolbar">
-    <WrapPanel Classes="row" IsEnabled="{Binding HasMap}">
-      <TextBlock Classes="heading" Text="{Binding ActiveTool.Definition.Title}" />
+  <Border Classes="toolbar options">
+    <!-- a window too narrow scrolls the row; Fluent's scroll bar lies over it, so the height stays -->
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+      <StackPanel Classes="toolrow" IsEnabled="{Binding HasMap}">
+        <TextBlock Classes="heading" Text="{Binding ActiveTool.Definition.Title}" />
 
-      <!-- sculpting the heights (T-1) -->
-      <ComboBox IsVisible="{Binding IsSculpting}" ItemsSource="{Binding BrushModes}" SelectedItem="{Binding BrushMode}" AutomationProperties.Name="Height brush mode" />
-      <StackPanel Classes="inline" IsVisible="{Binding IsSculpting}">
-        <TextBlock Classes="label" Text="{Binding BrushStrength, StringFormat='Strength: {0:0.00}'}" />
-        <Slider Minimum="0.01" Maximum="5" Value="{Binding BrushStrength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height brush strength" />
-      </StackPanel>
-      <StackPanel Classes="inline" IsVisible="{Binding IsSculpting}">
-        <TextBlock Classes="label" Text="{Binding BrushTarget, StringFormat='Flatten to: {0:0.0}'}" />
-        <Slider Minimum="0" Maximum="256" Value="{Binding BrushTarget}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height to flatten to" />
-      </StackPanel>
+        <!-- sculpting the heights (T-1) -->
+        <ComboBox IsVisible="{Binding IsSculpting}" ItemsSource="{Binding BrushModes}" SelectedItem="{Binding BrushMode}" AutomationProperties.Name="Height brush mode" />
+        <!-- both brushes, first: what they are most changed by -->
+        <StackPanel Classes="inline" IsVisible="{Binding CanPaint}">
+          <TextBlock Classes="label" Text="{Binding BrushRadius, StringFormat='Radius: {0:0} ogrids'}" />
+          <Slider Minimum="1" Maximum="128" Value="{Binding BrushRadius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
+        </StackPanel>
 
-      <!-- painting a stratum's mask (S-1) -->
-      <StackPanel Classes="inline" IsVisible="{Binding IsPaintingStrata}">
-        <TextBlock Classes="label" Text="{Binding MaskStrength, StringFormat='Strength: {0:0.00}'}" />
-        <Slider Minimum="0.01" Maximum="1" Value="{Binding MaskStrength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Mask brush strength" />
-      </StackPanel>
-      <CheckBox IsVisible="{Binding IsPaintingStrata}" Content="Erase" IsChecked="{Binding MaskErase}" AutomationProperties.Name="Erase the layer" />
+        <StackPanel Classes="inline" IsVisible="{Binding IsSculpting}">
+          <TextBlock Classes="label" Text="{Binding BrushStrength, StringFormat='Strength: {0:0.00}'}" />
+          <Slider Minimum="0.01" Maximum="5" Value="{Binding BrushStrength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height brush strength" />
+        </StackPanel>
+        <StackPanel Classes="inline" IsVisible="{Binding IsFlattening}">
+          <TextBlock Classes="label" Text="{Binding BrushTarget, StringFormat='Flatten to: {0:0.0}'}" />
+          <Slider Minimum="0" Maximum="256" Value="{Binding BrushTarget}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height to flatten to" />
+        </StackPanel>
 
-      <!-- both brushes -->
-      <StackPanel Classes="inline" IsVisible="{Binding CanPaint}">
-        <TextBlock Classes="label" Text="{Binding BrushRadius, StringFormat='Radius: {0:0} ogrids'}" />
-        <Slider Minimum="1" Maximum="128" Value="{Binding BrushRadius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
-      </StackPanel>
+        <!-- painting a stratum's mask (S-1) -->
+        <StackPanel Classes="inline" IsVisible="{Binding IsPaintingStrata}">
+          <TextBlock Classes="label" Text="{Binding MaskStrength, StringFormat='Strength: {0:0.00}'}" />
+          <Slider Minimum="0.01" Maximum="1" Value="{Binding MaskStrength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Mask brush strength" />
+        </StackPanel>
+        <CheckBox IsVisible="{Binding IsPaintingStrata}" Content="Erase" IsChecked="{Binding MaskErase}" AutomationProperties.Name="Erase the layer" />
 
-      <!-- a tool not built yet -->
-      <StackPanel Classes="inline" IsVisible="{Binding IsToolIncomplete}">
-        <TextBlock Classes="caption" Text="{Binding ActiveTool.Definition.Missing}" />
-        <TextBlock Classes="story" Text="{Binding ActiveTool.Definition.Story, StringFormat='Not built yet: user story {0}'}" />
+        <!-- a tool not built yet -->
+        <StackPanel Classes="inline" IsVisible="{Binding IsToolIncomplete}">
+          <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding ActiveTool.Definition.Missing}"
+                     ToolTip.Tip="{Binding ActiveTool.Definition.Missing}" />
+          <TextBlock Classes="story" Text="{Binding ActiveTool.Definition.Story, StringFormat='Not built yet: user story {0}'}" />
+        </StackPanel>
       </StackPanel>
-    </WrapPanel>
+    </ScrollViewer>
   </Border>
 </UserControl>

@@ -61,6 +61,29 @@ namespace FAForever.MapEditor.App.Tests
             }
         }
 
+        [TestMethod]
+        public Task TheViewsStayInPlaceWhateverTheTool() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            double Top()
+            {
+                Dispatcher.UIThread.RunJobs();
+                return window.MapView.TranslatePoint(new Point(0, 0), window)!.Value.Y;
+            }
+            double sculpting = Top();
+
+            model.BrushMode = Project.Editing.HeightBrushMode.Flatten;
+            double flattening = Top();
+            model.SelectTool("paint.strata");
+            double painting = Top();
+            model.SelectTool("terrain.curve");
+            double notBuilt = Top();
+
+            Assert.AreEqual(sculpting, flattening, "the height to flatten to adds no row");
+            Assert.AreEqual(sculpting, painting);
+            Assert.AreEqual(sculpting, notBuilt, "what a tool not built yet will do adds no row");
+        });
+
         /// <remarks>
         /// This and the other tests of the 3D view's input also check that the mouse reaches it at
         /// all: its picture comes from the graphics card, so it claims its rectangle itself

@@ -151,7 +151,13 @@ public sealed partial class MainViewModel : ObservableObject
     public IReadOnlyList<HeightBrushMode> BrushModes { get; } = Enum.GetValues<HeightBrushMode>();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFlattening))]
     public partial HeightBrushMode BrushMode { get; set; } = HeightBrushMode.Raise;
+
+    /// <summary>
+    /// Whether the sculpt tool flattens: only then does the height to flatten to matter.
+    /// </summary>
+    public bool IsFlattening => IsSculpting && BrushMode == HeightBrushMode.Flatten;
 
     /// <summary>
     /// The radius in ogrids.
