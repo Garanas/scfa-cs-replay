@@ -1,0 +1,38 @@
+<!--
+  Fluent's controls in the editor's look: the resource keys Fluent's control themes read
+  (Avalonia.Themes.Fluent, Controls/*.xaml), pointed at the tokens of Styles/Tokens.axaml. Fluent
+  draws buttons, combo boxes, text boxes, sliders, lists, tabs, menus and tool tips with these, so
+  they match the editor's own panels. A key Fluent reads that is not here keeps Fluent's value,
+  derived from the palette in App.axaml.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- the type of every control -->
+  <StaticResource x:Key="ContentControlThemeFontFamily" ResourceKey="SansFontFamily" />
+  <StaticResource x:Key="ControlContentThemeFontSize" ResourceKey="FontSizeBody" />
+  <StaticResource x:Key="TabItemHeaderFontSize" ResourceKey="FontSizeBody" />
+  <StaticResource x:Key="ToolTipContentThemeFontSize" ResourceKey="FontSizeCaption" />
+
+  <!-- sizes -->
+  <Thickness x:Key="MenuBarItemPadding">8,4</Thickness>
+  <StaticResource x:Key="ListBoxItemPadding" ResourceKey="ListItemPadding" />
+  <x:Double x:Key="SliderHorizontalThumbWidth">14</x:Double>
+  <x:Double x:Key="SliderHorizontalThumbHeight">14</x:Double>
+  <CornerRadius x:Key="SliderThumbCornerRadius">7</CornerRadius>
+  <x:Double x:Key="SliderTrackThemeHeight">4</x:Double>
+
+  <!-- the brushes, per theme variant (Styles/FluentBrushes.axaml) -->
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Dark">
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://faf-map-editor/Styles/FluentBrushes.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Light">
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://faf-map-editor/Styles/FluentBrushes.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

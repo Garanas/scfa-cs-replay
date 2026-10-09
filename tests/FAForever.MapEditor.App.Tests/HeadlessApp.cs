@@ -14,7 +14,7 @@ namespace FAForever.MapEditor.App.Tests
     {
         public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
             .UseSkia()
-            .WithInterFont()
+            .WithEditorFonts()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 
         /// <summary>

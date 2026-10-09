@@ -6,29 +6,29 @@
              x:DataType="vm:MainViewModel">
   <Border Classes="toolbar">
     <WrapPanel Classes="row" IsEnabled="{Binding HasMap}">
-      <TextBlock Classes="heading" VerticalAlignment="Center" Text="{Binding ActiveTool.Definition.Title}" />
+      <TextBlock Classes="heading" Text="{Binding ActiveTool.Definition.Title}" />
 
       <!-- sculpting the heights (T-1) -->
       <ComboBox IsVisible="{Binding IsSculpting}" ItemsSource="{Binding BrushModes}" SelectedItem="{Binding BrushMode}" AutomationProperties.Name="Height brush mode" />
       <StackPanel Classes="inline" IsVisible="{Binding IsSculpting}">
-        <TextBlock Classes="caption" Text="{Binding BrushStrength, StringFormat='Strength: {0:0.00}'}" />
+        <TextBlock Classes="label" Text="{Binding BrushStrength, StringFormat='Strength: {0:0.00}'}" />
         <Slider Minimum="0.01" Maximum="5" Value="{Binding BrushStrength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height brush strength" />
       </StackPanel>
       <StackPanel Classes="inline" IsVisible="{Binding IsSculpting}">
-        <TextBlock Classes="caption" Text="{Binding BrushTarget, StringFormat='Flatten to: {0:0.0}'}" />
+        <TextBlock Classes="label" Text="{Binding BrushTarget, StringFormat='Flatten to: {0:0.0}'}" />
         <Slider Minimum="0" Maximum="256" Value="{Binding BrushTarget}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height to flatten to" />
       </StackPanel>
 
       <!-- painting a stratum's mask (S-1) -->
       <StackPanel Classes="inline" IsVisible="{Binding IsPaintingStrata}">
-        <TextBlock Classes="caption" Text="{Binding MaskStrength, StringFormat='Strength: {0:0.00}'}" />
+        <TextBlock Classes="label" Text="{Binding MaskStrength, StringFormat='Strength: {0:0.00}'}" />
         <Slider Minimum="0.01" Maximum="1" Value="{Binding MaskStrength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Mask brush strength" />
       </StackPanel>
       <CheckBox IsVisible="{Binding IsPaintingStrata}" Content="Erase" IsChecked="{Binding MaskErase}" AutomationProperties.Name="Erase the layer" />
 
       <!-- both brushes -->
       <StackPanel Classes="inline" IsVisible="{Binding CanPaint}">
-        <TextBlock Classes="caption" Text="{Binding BrushRadius, StringFormat='Radius: {0:0} ogrids'}" />
+        <TextBlock Classes="label" Text="{Binding BrushRadius, StringFormat='Radius: {0:0} ogrids'}" />
         <Slider Minimum="1" Maximum="128" Value="{Binding BrushRadius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
       </StackPanel>
 

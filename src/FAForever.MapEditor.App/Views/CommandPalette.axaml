@@ -17,7 +17,7 @@
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="commands:EditorCommand">
               <DockPanel>
-                <TextBlock DockPanel.Dock="Right" Classes="caption" Text="{Binding Gesture}" />
+                <TextBlock DockPanel.Dock="Right" Classes="shortcut" Text="{Binding Gesture}" />
                 <StackPanel>
                   <TextBlock Text="{Binding FullTitle}" />
                   <TextBlock Classes="story" IsVisible="{Binding IsIncomplete}" Text="{Binding Incomplete.Story, StringFormat='Not built yet: user story {0}'}" />

@@ -6,11 +6,11 @@
              x:Class="FAForever.MapEditor.App.Views.ModeRail"
              x:DataType="vm:MainViewModel">
   <Border Classes="rail">
-    <StackPanel Classes="stack">
+    <StackPanel Classes="rail">
       <ItemsControl ItemsSource="{Binding Modes}" AutomationProperties.Name="Modes">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
-            <StackPanel Classes="stack" />
+            <StackPanel Classes="rail" />
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
@@ -26,7 +26,7 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-      <Border Classes="divider" />
+      <Border Classes="raildivider" />
       <Button Classes="rail planned" Command="{Binding RunCommand}" CommandParameter="plugins.manage"
               ToolTip.Tip="Plugins: not built yet (F-15)" AutomationProperties.Name="Plugins">
         <Path Classes="icon" Data="{StaticResource Icon.Plus}" />

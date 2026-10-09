@@ -1,52 +1,104 @@
 <!--
-  The design tokens: every colour, size and distance the editor's own views use, by what it is
-  for. Views and controls refer to these keys and never to a value; a change of look is a change
-  here. Colours come in two layers: the palette (the raw colours) and the brushes named after
-  their use, which differ per theme variant. The editor runs dark; the light values keep a light
-  variant working.
+  The design tokens: every colour, font, size and distance the editor's own views use, by what it
+  is for. Views and controls refer to these keys and never to a value; a change of look is a change
+  here. Colours come in two layers: the palette (the raw colours of concept A) and the brushes
+  named after their use, which differ per theme variant. The editor runs dark; the light values
+  keep a light variant working. Styles/Fluent.axaml points Fluent's own controls at the same
+  brushes.
 -->
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- the palette -->
+  <!-- the palette: greys from dark to light -->
+  <Color x:Key="Gray950">#FF161616</Color>
   <Color x:Key="Gray900">#FF181818</Color>
   <Color x:Key="Gray850">#FF1A1A1A</Color>
   <Color x:Key="Gray800">#FF202020</Color>
-  <Color x:Key="Gray100">#FFF3F3F3</Color>
-  <Color x:Key="Gray150">#FFEBEBEB</Color>
+  <Color x:Key="Gray750">#FF242424</Color>
+  <Color x:Key="Gray700">#FF2A2A2A</Color>
+  <Color x:Key="Gray690">#FF2E2E2E</Color>
+  <Color x:Key="Gray650">#FF333333</Color>
+  <Color x:Key="Gray600">#FF3A3A3A</Color>
+  <Color x:Key="Gray550">#FF4A4A4A</Color>
+  <Color x:Key="Gray300">#FFB3B3B3</Color>
+  <Color x:Key="Gray250">#FFCCCCCC</Color>
   <Color x:Key="Gray200">#FFE0E0E0</Color>
+  <Color x:Key="Gray150">#FFEBEBEB</Color>
+  <Color x:Key="Gray100">#FFF3F3F3</Color>
+  <Color x:Key="Gray50">#FFF2F2F2</Color>
+  <!-- the palette: colours -->
+  <Color x:Key="Blue900">#FF0B3A5E</Color>
+  <Color x:Key="Blue850">#FF0E4673</Color>
+  <Color x:Key="Blue500">#FF2B8FE0</Color>
+  <Color x:Key="Blue300">#FF6CB8F6</Color>
+  <Color x:Key="Blue100">#FFCCE4F7</Color>
   <Color x:Key="Coral300">#FFFF8A7A</Color>
+  <Color x:Key="Coral200">#FFFFB4A8</Color>
+  <Color x:Key="Coral100">#FFFFD2CB</Color>
+  <Color x:Key="Maroon800">#FF5C2520</Color>
   <Color x:Key="Red700">#FFC42B1C</Color>
+  <Color x:Key="Amber500">#FFE8A23A</Color>
+  <Color x:Key="Amber300">#FFE8C27A</Color>
+  <Color x:Key="Amber100">#FFFFE2B0</Color>
+  <Color x:Key="Amber800">#FF5A4520</Color>
+  <Color x:Key="Amber900">#FF2B2414</Color>
+  <Color x:Key="Amber700">#FF9A6A10</Color>
 
   <!-- the accent of buttons, selections and sliders, the same on every computer (Fluent takes the system's otherwise) -->
   <Color x:Key="AccentColor">#FF0078D4</Color>
 
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Dark">
-      <!-- behind the map, in the views and the 3D view's sky -->
+      <!-- behind the map, in the views and the 3D view's sky; the rail of modes -->
       <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource Gray900}" />
       <!-- panels beside the map -->
       <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Gray850}" />
-      <!-- bars over and under everything: the status bar -->
+      <!-- the window under everything: the menu bar, the status bar, dialogs -->
       <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="{StaticResource Gray800}" />
-      <!-- text that explains rather than says: introductions, captions -->
-      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCFFFFFF" />
-      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#B3FFFFFF" />
+      <!-- a button that is not the point: a tool, a planned control -->
+      <SolidColorBrush x:Key="ControlBrush" Color="{StaticResource Gray750}" />
+      <SolidColorBrush x:Key="ControlStrokeBrush" Color="{StaticResource Gray650}" />
+      <!-- a button of an action, a chosen view tab; the same, under the mouse -->
+      <SolidColorBrush x:Key="ControlRaisedBrush" Color="{StaticResource Gray700}" />
+      <SolidColorBrush x:Key="ControlHoverBrush" Color="{StaticResource Gray650}" />
+      <SolidColorBrush x:Key="ControlHoverStrokeBrush" Color="{StaticResource Gray550}" />
+      <!-- where one types or chooses: text boxes, combo boxes, the palette's field -->
+      <SolidColorBrush x:Key="InputBrush" Color="{StaticResource Gray950}" />
+      <SolidColorBrush x:Key="InputStrokeBrush" Color="{StaticResource Gray600}" />
+      <!-- text: what it says, what explains it, what is there but not the point -->
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource Gray50}" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource Gray250}" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="{StaticResource Gray300}" />
       <!-- what does not count now: an undone step -->
       <SolidColorBrush x:Key="TextDisabledBrush" Color="#66FFFFFF" />
+      <SolidColorBrush x:Key="LinkBrush" Color="{StaticResource Blue300}" />
+      <!-- what went wrong, and a badge or card of an error -->
       <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource Coral300}" />
+      <SolidColorBrush x:Key="DangerTextBrush" Color="{StaticResource Coral200}" />
+      <SolidColorBrush x:Key="DangerSurfaceBrush" Color="{StaticResource Maroon800}" />
+      <SolidColorBrush x:Key="DangerOnSurfaceBrush" Color="{StaticResource Coral100}" />
+      <!-- what may be wrong: its icon, its text, and a badge or card of it -->
+      <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource Amber500}" />
+      <SolidColorBrush x:Key="WarningTextBrush" Color="{StaticResource Amber300}" />
+      <SolidColorBrush x:Key="WarningSurfaceBrush" Color="{StaticResource Amber900}" />
+      <SolidColorBrush x:Key="WarningStrokeBrush" Color="{StaticResource Amber800}" />
+      <SolidColorBrush x:Key="WarningBadgeBrush" Color="{StaticResource Amber800}" />
+      <SolidColorBrush x:Key="WarningOnSurfaceBrush" Color="{StaticResource Amber100}" />
       <!-- drawn over the map: the brush, the 3D camera, outlines and labels of markers -->
       <SolidColorBrush x:Key="OverlayBrush" Color="#FFFFFFFF" />
       <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
       <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
-      <!-- lines between parts of the window -->
-      <SolidColorBrush x:Key="DividerBrush" Color="#FF2E2E2E" />
-      <!-- the chosen mode, tool or overlay -->
-      <SolidColorBrush x:Key="SelectedBrush" Color="#FF0B3A5E" />
-      <SolidColorBrush x:Key="SelectedStrokeBrush" Color="#FF2B8FE0" />
+      <!-- lines between parts of the window, and between the groups of a panel -->
+      <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource Gray690}" />
+      <SolidColorBrush x:Key="GroupDividerBrush" Color="{StaticResource Gray700}" />
+      <!-- the chosen mode, tool, overlay or list item; the same under the mouse -->
+      <SolidColorBrush x:Key="SelectedBrush" Color="{StaticResource Blue900}" />
+      <SolidColorBrush x:Key="SelectedHoverBrush" Color="{StaticResource Blue850}" />
+      <SolidColorBrush x:Key="SelectedStrokeBrush" Color="{StaticResource Blue500}" />
+      <SolidColorBrush x:Key="OnSelectedBrush" Color="#FFFFFFFF" />
       <!-- the outline of what is not built yet -->
-      <SolidColorBrush x:Key="PlannedStrokeBrush" Color="#FF4A4A4A" />
+      <SolidColorBrush x:Key="PlannedStrokeBrush" Color="{StaticResource Gray550}" />
       <!-- behind a dialog over the window -->
       <SolidColorBrush x:Key="ScrimBrush" Color="#99000000" />
     </ResourceDictionary>
@@ -54,54 +106,102 @@
       <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource Gray200}" />
       <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Gray100}" />
       <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="{StaticResource Gray150}" />
-      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CC000000" />
-      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#99000000" />
+      <SolidColorBrush x:Key="ControlBrush" Color="#FFFAFAFA" />
+      <SolidColorBrush x:Key="ControlStrokeBrush" Color="#FFD0D0D0" />
+      <SolidColorBrush x:Key="ControlRaisedBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="ControlHoverBrush" Color="#FFF0F0F0" />
+      <SolidColorBrush x:Key="ControlHoverStrokeBrush" Color="#FFB8B8B8" />
+      <SolidColorBrush x:Key="InputBrush" Color="#FFFFFFFF" />
+      <SolidColorBrush x:Key="InputStrokeBrush" Color="#FFC4C4C4" />
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FF1A1A1A" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#FF3D3D3D" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#FF5C5C5C" />
       <SolidColorBrush x:Key="TextDisabledBrush" Color="#66000000" />
+      <SolidColorBrush x:Key="LinkBrush" Color="#FF005FB8" />
       <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource Red700}" />
+      <SolidColorBrush x:Key="DangerTextBrush" Color="{StaticResource Red700}" />
+      <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#FFFDE7E4" />
+      <SolidColorBrush x:Key="DangerOnSurfaceBrush" Color="#FF8A1F14" />
+      <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource Amber700}" />
+      <SolidColorBrush x:Key="WarningTextBrush" Color="#FF7A5208" />
+      <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#FFFFF4DD" />
+      <SolidColorBrush x:Key="WarningStrokeBrush" Color="#FFE8C27A" />
+      <SolidColorBrush x:Key="WarningBadgeBrush" Color="#FFFFE2B0" />
+      <SolidColorBrush x:Key="WarningOnSurfaceBrush" Color="#FF5A3A00" />
       <SolidColorBrush x:Key="OverlayBrush" Color="#FFFFFFFF" />
       <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
       <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
       <SolidColorBrush x:Key="DividerBrush" Color="#FFD6D6D6" />
-      <SolidColorBrush x:Key="SelectedBrush" Color="#FFCCE4F7" />
-      <SolidColorBrush x:Key="SelectedStrokeBrush" Color="#FF0078D4" />
+      <SolidColorBrush x:Key="GroupDividerBrush" Color="#FFE0E0E0" />
+      <SolidColorBrush x:Key="SelectedBrush" Color="{StaticResource Blue100}" />
+      <SolidColorBrush x:Key="SelectedHoverBrush" Color="#FFB8D8F2" />
+      <SolidColorBrush x:Key="SelectedStrokeBrush" Color="{StaticResource AccentColor}" />
+      <SolidColorBrush x:Key="OnSelectedBrush" Color="#FF0A2540" />
       <SolidColorBrush x:Key="PlannedStrokeBrush" Color="#FFB0B0B0" />
       <SolidColorBrush x:Key="ScrimBrush" Color="#66000000" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
-  <!-- type: Inter, at these sizes -->
+  <!-- type: IBM Plex Sans for the text, IBM Plex Mono for numbers, coordinates and shortcuts (Assets/Fonts, EditorFonts) -->
+  <FontFamily x:Key="SansFontFamily">fonts:Editor#IBM Plex Sans, $Default</FontFamily>
+  <FontFamily x:Key="MonoFontFamily">fonts:Editor#IBM Plex Mono, $Default</FontFamily>
+  <x:Double x:Key="FontSizeSmall">11</x:Double>
   <x:Double x:Key="FontSizeCaption">12</x:Double>
-  <x:Double x:Key="FontSizeBody">14</x:Double>
+  <x:Double x:Key="FontSizeBody">13</x:Double>
+  <x:Double x:Key="FontSizeHeading">14</x:Double>
   <x:Double x:Key="FontSizeTitle">26</x:Double>
   <!-- the numbers on spawns in the top view -->
   <x:Double x:Key="FontSizeMapLabel">11</x:Double>
+  <!-- the space between the letters of a group's label in capitals -->
+  <x:Double x:Key="OverlineLetterSpacing">0.7</x:Double>
 
-  <!-- distances, on a grid of 4 -->
+  <!-- distances, on a grid of 2 -->
+  <x:Double x:Key="SpaceTiny">2</x:Double>
   <x:Double x:Key="SpaceSmall">4</x:Double>
   <x:Double x:Key="SpaceMedium">8</x:Double>
+  <x:Double x:Key="SpaceRow">14</x:Double>
   <x:Double x:Key="SpaceLarge">16</x:Double>
   <Thickness x:Key="PagePadding">32</Thickness>
   <Thickness x:Key="PanelPadding">12</Thickness>
-  <Thickness x:Key="BarPadding">8,4</Thickness>
+  <!-- the parts of a side panel: its head, then its groups, a line apart -->
+  <Thickness x:Key="PanelHeadPadding">14,12,14,10</Thickness>
+  <Thickness x:Key="GroupPadding">14,8,14,12</Thickness>
+  <Thickness x:Key="BarPadding">12,4</Thickness>
   <!-- before a heading that starts a new part of a panel or page -->
   <Thickness x:Key="SectionGap">0,12,0,0</Thickness>
   <Thickness x:Key="InlineGap">8,0,0,0</Thickness>
   <Thickness x:Key="ListGap">0,2</Thickness>
+  <Thickness x:Key="ListItemPadding">8,6</Thickness>
+  <Thickness x:Key="MenuTitleGap">4,0,12,0</Thickness>
 
   <!-- widths and heights -->
   <x:Double x:Key="SidePanelWidth">240</x:Double>
   <x:Double x:Key="RailWidth">52</x:Double>
   <x:Double x:Key="RailButtonSize">40</x:Double>
-  <x:Double x:Key="ModePanelWidth">260</x:Double>
-  <x:Double x:Key="InspectorWidth">280</x:Double>
+  <x:Double x:Key="RailDividerWidth">28</x:Double>
+  <Thickness x:Key="RailDividerGap">0,6</Thickness>
+  <x:Double x:Key="ModePanelWidth">280</x:Double>
+  <x:Double x:Key="InspectorWidth">300</x:Double>
   <x:Double x:Key="DockHeight">190</x:Double>
+  <x:Double x:Key="MenuBarHeight">36</x:Double>
+  <x:Double x:Key="ToolbarHeight">40</x:Double>
   <x:Double x:Key="ToolButtonHeight">30</x:Double>
+  <Thickness x:Key="ToolButtonPadding">4,0</Thickness>
+  <x:Double x:Key="ActionButtonHeight">28</x:Double>
   <x:Double x:Key="ChipHeight">24</x:Double>
   <x:Double x:Key="ToolSliderWidth">140</x:Double>
-  <x:Double x:Key="TabHeight">32</x:Double>
-  <Thickness x:Key="TabPadding">10,0</Thickness>
+  <x:Double x:Key="TabHeight">30</x:Double>
+  <x:Double x:Key="SegmentHeight">28</x:Double>
+  <Thickness x:Key="TabPadding">12,0</Thickness>
+  <Thickness x:Key="TabStripPadding">8,0</Thickness>
   <x:Double x:Key="IconSize">18</x:Double>
+  <x:Double x:Key="IconSizeSmall">14</x:Double>
+  <x:Double x:Key="SearchFieldWidth">360</x:Double>
+  <x:Double x:Key="SearchFieldHeight">26</x:Double>
+  <Thickness x:Key="SearchFieldPadding">10,0</Thickness>
+  <x:Double x:Key="ToolbarDividerHeight">20</x:Double>
+  <Thickness x:Key="ToolbarDividerGap">4,0</Thickness>
   <x:Double x:Key="PaletteWidth">640</x:Double>
   <x:Double x:Key="PaletteListHeight">360</x:Double>
   <Thickness x:Key="DialogPadding">14,10</Thickness>
@@ -111,9 +211,13 @@
   <Thickness x:Key="DividerLeft">1,0,0,0</Thickness>
   <Thickness x:Key="DividerRight">0,0,1,0</Thickness>
   <Thickness x:Key="ChipPadding">10,0</Thickness>
+  <Thickness x:Key="BadgePadding">6,0</Thickness>
+  <Thickness x:Key="CardPadding">8</Thickness>
   <Thickness x:Key="RailPadding">0,8</Thickness>
   <CornerRadius x:Key="ControlRadius">4</CornerRadius>
+  <CornerRadius x:Key="RailButtonRadius">6</CornerRadius>
   <CornerRadius x:Key="ChipRadius">12</CornerRadius>
+  <CornerRadius x:Key="BadgeRadius">8</CornerRadius>
   <CornerRadius x:Key="DialogRadius">8</CornerRadius>
   <x:Double x:Key="PageWidth">720</x:Double>
   <x:Double x:Key="NarrowPageWidth">640</x:Double>

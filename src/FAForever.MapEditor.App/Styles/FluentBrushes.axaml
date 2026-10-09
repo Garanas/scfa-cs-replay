@@ -1,0 +1,86 @@
+<!--
+  The brushes of Fluent's controls, as the tokens of the theme variant they are read in: merged
+  into both variants by Styles/Fluent.axaml, so each alias finds that variant's brush.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Button -->
+  <StaticResource x:Key="ButtonBackground" ResourceKey="ControlRaisedBrush" />
+  <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="ControlHoverBrush" />
+  <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="ControlBrush" />
+  <StaticResource x:Key="ButtonBorderBrush" ResourceKey="InputStrokeBrush" />
+  <StaticResource x:Key="ButtonBorderBrushPointerOver" ResourceKey="ControlHoverStrokeBrush" />
+  <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="InputStrokeBrush" />
+  <StaticResource x:Key="ButtonForeground" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="TextPrimaryBrush" />
+
+  <!-- ComboBox -->
+  <StaticResource x:Key="ComboBoxBackground" ResourceKey="InputBrush" />
+  <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="InputBrush" />
+  <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="InputBrush" />
+  <StaticResource x:Key="ComboBoxBackgroundUnfocused" ResourceKey="InputBrush" />
+  <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="InputStrokeBrush" />
+  <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="ControlHoverStrokeBrush" />
+  <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="SelectedStrokeBrush" />
+  <StaticResource x:Key="ComboBoxForeground" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="ComboBoxDropDownGlyphForeground" ResourceKey="TextTertiaryBrush" />
+  <StaticResource x:Key="ComboBoxDropDownBackground" ResourceKey="SurfaceRaisedBrush" />
+  <StaticResource x:Key="ComboBoxDropDownBorderBrush" ResourceKey="InputStrokeBrush" />
+
+  <!-- TextBox -->
+  <StaticResource x:Key="TextControlBackground" ResourceKey="InputBrush" />
+  <StaticResource x:Key="TextControlBackgroundPointerOver" ResourceKey="InputBrush" />
+  <StaticResource x:Key="TextControlBackgroundFocused" ResourceKey="InputBrush" />
+  <StaticResource x:Key="TextControlBorderBrush" ResourceKey="InputStrokeBrush" />
+  <StaticResource x:Key="TextControlBorderBrushPointerOver" ResourceKey="ControlHoverStrokeBrush" />
+  <StaticResource x:Key="TextControlBorderBrushFocused" ResourceKey="SelectedStrokeBrush" />
+  <StaticResource x:Key="TextControlForeground" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="TextControlForegroundPointerOver" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="TextControlForegroundFocused" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="TextControlPlaceholderForeground" ResourceKey="TextTertiaryBrush" />
+
+  <!-- Slider -->
+  <StaticResource x:Key="SliderTrackFill" ResourceKey="ControlStrokeBrush" />
+  <StaticResource x:Key="SliderTrackFillPointerOver" ResourceKey="ControlHoverStrokeBrush" />
+  <StaticResource x:Key="SliderTrackFillPressed" ResourceKey="ControlHoverStrokeBrush" />
+  <StaticResource x:Key="SliderTrackValueFill" ResourceKey="SelectedStrokeBrush" />
+  <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="SelectedStrokeBrush" />
+  <StaticResource x:Key="SliderTrackValueFillPressed" ResourceKey="SelectedStrokeBrush" />
+  <StaticResource x:Key="SliderThumbBackground" ResourceKey="SelectedStrokeBrush" />
+  <StaticResource x:Key="SliderThumbBackgroundPointerOver" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="SliderThumbBackgroundPressed" ResourceKey="TextPrimaryBrush" />
+
+  <!-- ListBox and ComboBox items: the chosen one as the chosen mode or tool -->
+  <StaticResource x:Key="SystemControlHighlightListLowBrush" ResourceKey="ControlBrush" />
+  <StaticResource x:Key="SystemControlHighlightListMediumBrush" ResourceKey="ControlRaisedBrush" />
+  <StaticResource x:Key="SystemControlHighlightListAccentLowBrush" ResourceKey="SelectedBrush" />
+  <StaticResource x:Key="SystemControlHighlightListAccentMediumBrush" ResourceKey="SelectedHoverBrush" />
+  <StaticResource x:Key="SystemControlHighlightListAccentHighBrush" ResourceKey="SelectedHoverBrush" />
+
+  <!-- TabItem: a line in the stroke of the chosen under the chosen tab -->
+  <StaticResource x:Key="TabItemHeaderSelectedPipeFill" ResourceKey="SelectedStrokeBrush" />
+  <StaticResource x:Key="TabItemHeaderForegroundUnselected" ResourceKey="TextTertiaryBrush" />
+  <StaticResource x:Key="TabItemHeaderForegroundUnselectedPointerOver" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="TabItemHeaderForegroundUnselectedPressed" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="TabItemHeaderForegroundSelected" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="TabItemHeaderForegroundSelectedPointerOver" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="TabItemHeaderForegroundSelectedPressed" ResourceKey="TextPrimaryBrush" />
+
+  <!-- Menu -->
+  <StaticResource x:Key="MenuFlyoutPresenterBackground" ResourceKey="SurfaceRaisedBrush" />
+  <StaticResource x:Key="MenuFlyoutPresenterBorderBrush" ResourceKey="InputStrokeBrush" />
+  <StaticResource x:Key="MenuFlyoutItemBackgroundPointerOver" ResourceKey="ControlRaisedBrush" />
+  <StaticResource x:Key="MenuFlyoutItemBackgroundPressed" ResourceKey="ControlHoverBrush" />
+  <StaticResource x:Key="MenuFlyoutItemForeground" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="MenuFlyoutItemForegroundPointerOver" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="MenuFlyoutItemForegroundPressed" ResourceKey="TextPrimaryBrush" />
+  <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" ResourceKey="TextTertiaryBrush" />
+  <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" ResourceKey="TextSecondaryBrush" />
+  <StaticResource x:Key="MenuFlyoutSubItemChevron" ResourceKey="TextTertiaryBrush" />
+
+  <!-- ToolTip -->
+  <StaticResource x:Key="ToolTipBackground" ResourceKey="SurfaceRaisedBrush" />
+  <StaticResource x:Key="ToolTipBorderBrush" ResourceKey="InputStrokeBrush" />
+  <StaticResource x:Key="ToolTipForeground" ResourceKey="TextPrimaryBrush" />
+</ResourceDictionary>

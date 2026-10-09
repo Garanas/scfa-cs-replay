@@ -1,9 +1,24 @@
 <!--
   The style classes the views use instead of loose values: Classes="caption" and not
   FontSize="12" Opacity="0.7". Each class says what a thing is; its look comes from the tokens.
+  The looks are those of concept A (the canvas "Map editor UI concepts").
 -->
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- every control -->
+
+  <!-- a button's text in its middle: Fluent's Button leaves it at the top and centres it with uneven padding,
+       which a button of another height or padding loses -->
+  <Style Selector="Button">
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- lists lie on the panel they are in -->
+  <Style Selector="ListBox">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
 
   <!-- text -->
 
@@ -15,6 +30,12 @@
 
   <!-- the heading of a part of a panel or page -->
   <Style Selector="TextBlock.heading">
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- the name at the head of a panel: the mode, what the inspector shows -->
+  <Style Selector="TextBlock.panelname">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeHeading}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
@@ -34,6 +55,26 @@
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <!-- the name of a setting beside its control: the tool options -->
+  <Style Selector="TextBlock.label">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- numbers, coordinates and shortcuts, in the mono font -->
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+  </Style>
+
+  <!-- a shortcut beside what it runs -->
+  <Style Selector="TextBlock.shortcut">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
   <!-- what went wrong -->
@@ -59,7 +100,13 @@
   <!-- the status bar -->
   <Style Selector="Border.bar">
     <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerTop}" />
     <Setter Property="Padding" Value="{StaticResource BarPadding}" />
+  </Style>
+  <Style Selector="Border.bar TextBlock">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
   </Style>
 
   <!-- layout -->
@@ -97,10 +144,11 @@
 
   <!-- the shell (concept A) -->
 
-  <!-- a small heading of a group in a panel -->
+  <!-- the label of a group in a panel, in capitals (UpperCaseConverter) -->
   <Style Selector="TextBlock.overline">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
     <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="{StaticResource OverlineLetterSpacing}" />
     <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
   </Style>
 
@@ -121,6 +169,52 @@
     <Setter Property="StrokeJoin" Value="Round" />
     <Setter Property="Stroke" Value="{Binding $parent[ContentControl].Foreground}" />
   </Style>
+  <Style Selector="Path.icon.small">
+    <Setter Property="Width" Value="{StaticResource IconSizeSmall}" />
+    <Setter Property="Height" Value="{StaticResource IconSizeSmall}" />
+    <Setter Property="StrokeThickness" Value="1.8" />
+  </Style>
+
+  <!-- the menu bar: the map's name, the menus, the field that opens the command palette -->
+  <Style Selector="Border.menubar">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerBottom}" />
+    <Setter Property="Height" Value="{StaticResource MenuBarHeight}" />
+    <Setter Property="Padding" Value="{StaticResource BarPadding}" />
+  </Style>
+  <Style Selector="TextBlock.mapname">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="{StaticResource MenuTitleGap}" />
+  </Style>
+  <Style Selector="Border.menubar Menu">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.search">
+    <Setter Property="Width" Value="{StaticResource SearchFieldWidth}" />
+    <Setter Property="Height" Value="{StaticResource SearchFieldHeight}" />
+    <Setter Property="Padding" Value="{StaticResource SearchFieldPadding}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="{DynamicResource InputBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <Style Selector="Button.search:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource InputBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlHoverStrokeBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.search StackPanel">
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="Spacing" Value="{StaticResource SpaceMedium}" />
+  </Style>
+  <Style Selector="Button.search TextBlock">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
 
   <!-- the rail of modes -->
   <Style Selector="Border.rail">
@@ -130,46 +224,74 @@
     <Setter Property="Width" Value="{StaticResource RailWidth}" />
     <Setter Property="Padding" Value="{StaticResource RailPadding}" />
   </Style>
+  <Style Selector="StackPanel.rail">
+    <Setter Property="Spacing" Value="{StaticResource SpaceTiny}" />
+  </Style>
+  <Style Selector="Border.raildivider">
+    <Setter Property="Width" Value="{StaticResource RailDividerWidth}" />
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource ControlStrokeBrush}" />
+    <Setter Property="Margin" Value="{StaticResource RailDividerGap}" />
+  </Style>
   <Style Selector="Button.rail">
     <Setter Property="Width" Value="{StaticResource RailButtonSize}" />
     <Setter Property="Height" Value="{StaticResource RailButtonSize}" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="HorizontalAlignment" Value="Center" />
-    <Setter Property="HorizontalContentAlignment" Value="Center" />
-    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
-    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RailButtonRadius}" />
   </Style>
+  <Style Selector="Button.rail:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ControlRaisedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <!-- the chosen mode: filled -->
   <Style Selector="Button.rail.selected">
     <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource OverlayBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.rail.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectedHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
   </Style>
   <Style Selector="Button.rail.planned">
-    <Setter Property="BorderBrush" Value="{DynamicResource PlannedStrokeBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputStrokeBrush}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
 
-  <!-- the panels around the views -->
+  <!-- the panels around the views: a head, then groups a line apart -->
   <Style Selector="Border.modepanel">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
     <Setter Property="BorderThickness" Value="{StaticResource DividerRight}" />
     <Setter Property="Width" Value="{StaticResource ModePanelWidth}" />
-    <Setter Property="Padding" Value="{StaticResource PanelPadding}" />
   </Style>
   <Style Selector="Border.inspector">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
     <Setter Property="BorderThickness" Value="{StaticResource DividerLeft}" />
     <Setter Property="Width" Value="{StaticResource InspectorWidth}" />
-    <Setter Property="Padding" Value="{StaticResource PanelPadding}" />
+  </Style>
+  <Style Selector="Border.panelhead">
+    <Setter Property="Padding" Value="{StaticResource PanelHeadPadding}" />
+  </Style>
+  <Style Selector="Border.group">
+    <Setter Property="Padding" Value="{StaticResource GroupPadding}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource GroupDividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerTop}" />
   </Style>
   <Style Selector="Border.toolbar">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
     <Setter Property="BorderThickness" Value="{StaticResource DividerBottom}" />
     <Setter Property="Padding" Value="{StaticResource BarPadding}" />
+    <Setter Property="MinHeight" Value="{StaticResource ToolbarHeight}" />
+  </Style>
+  <!-- the bar of the views lies on the window, as the menu bar -->
+  <Style Selector="Border.toolbar.views">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
   </Style>
   <Style Selector="Border.dock">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -180,22 +302,46 @@
 
   <!-- a row of controls that wraps -->
   <Style Selector="WrapPanel.row">
-    <Setter Property="ItemSpacing" Value="{StaticResource SpaceLarge}" />
+    <Setter Property="ItemSpacing" Value="{StaticResource SpaceRow}" />
     <Setter Property="LineSpacing" Value="{StaticResource SpaceSmall}" />
   </Style>
+  <Style Selector="WrapPanel.row > :is(Control)">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- a short upright line between groups of a bar -->
+  <Style Selector="Border.barseparator">
+    <Setter Property="Width" Value="1" />
+    <Setter Property="Height" Value="{StaticResource ToolbarDividerHeight}" />
+    <Setter Property="Background" Value="{DynamicResource ControlStrokeBrush}" />
+    <Setter Property="Margin" Value="{StaticResource ToolbarDividerGap}" />
+  </Style>
 
+  <!-- the tools of a mode, three in a row -->
+  <Style Selector="UniformGrid.tools">
+    <Setter Property="Columns" Value="3" />
+    <Setter Property="ColumnSpacing" Value="{StaticResource SpaceSmall}" />
+    <Setter Property="RowSpacing" Value="{StaticResource SpaceSmall}" />
+  </Style>
   <!-- a tool of a mode -->
   <Style Selector="Button.tool">
     <Setter Property="Height" Value="{StaticResource ToolButtonHeight}" />
+    <Setter Property="Padding" Value="{StaticResource ToolButtonPadding}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
   </Style>
   <Style Selector="Button.tool.active">
     <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.tool.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectedHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
   </Style>
   <Style Selector="Button.tool.planned">
     <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
@@ -209,17 +355,25 @@
     <Setter Property="CornerRadius" Value="{StaticResource ChipRadius}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="{DynamicResource PlannedStrokeBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputStrokeBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <Style Selector="Button.chip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ControlRaisedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
   <Style Selector="Button.chip.on">
     <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource OverlayBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.chip.on:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectedHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
   </Style>
   <Style Selector="Button.chip.planned">
-    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
     <Setter Property="FontStyle" Value="Italic" />
   </Style>
 
@@ -228,7 +382,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource PlannedStrokeBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
-    <Setter Property="Padding" Value="{StaticResource BarPadding}" />
+    <Setter Property="Padding" Value="{StaticResource CardPadding}" />
   </Style>
 
   <!-- the command palette over the window -->
@@ -237,7 +391,7 @@
   </Style>
   <Style Selector="Border.dialog">
     <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource PlannedStrokeBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputStrokeBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{StaticResource DialogRadius}" />
     <Setter Property="Width" Value="{StaticResource PaletteWidth}" />
@@ -277,13 +431,43 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
-  <!-- tabs as small as the rest of the window: the views and the dock -->
+  <!-- the dock's tabs: a line in the accent under the chosen one, a line under the row -->
   <Style Selector="TabControl.compact">
     <Setter Property="Padding" Value="0" />
   </Style>
   <Style Selector="TabControl.compact TabItem">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
     <Setter Property="MinHeight" Value="{StaticResource TabHeight}" />
     <Setter Property="Padding" Value="{StaticResource TabPadding}" />
+  </Style>
+  <Style Selector="TabControl.compact TabItem /template/ Border#PART_SelectedPipe">
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+  <Style Selector="TabControl.compact /template/ ItemsPresenter#PART_ItemsPresenter">
+    <Setter Property="Margin" Value="{StaticResource TabStripPadding}" />
+  </Style>
+  <Style Selector="TabControl.compact /template/ ContentPresenter#PART_SelectedContentHost">
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerTop}" />
+  </Style>
+
+  <!-- the view tabs: buttons side by side, the chosen one filled -->
+  <Style Selector="TabControl.segmented">
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="TabControl.segmented /template/ ItemsPresenter#PART_ItemsPresenter">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+  <Style Selector="TabControl.segmented TabItem">
+    <Setter Property="MinHeight" Value="{StaticResource SegmentHeight}" />
+    <Setter Property="Height" Value="{StaticResource SegmentHeight}" />
+    <Setter Property="Padding" Value="{StaticResource TabPadding}" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+  </Style>
+  <Style Selector="TabControl.segmented TabItem:selected">
+    <Setter Property="Background" Value="{DynamicResource ControlRaisedBrush}" />
+  </Style>
+  <Style Selector="TabControl.segmented TabItem /template/ Border#PART_SelectedPipe">
+    <Setter Property="IsVisible" Value="False" />
   </Style>
 </Styles>

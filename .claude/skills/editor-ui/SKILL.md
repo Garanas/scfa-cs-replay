@@ -32,6 +32,10 @@ is an extension in `Avalonia.Input`; `Bitmap.Save` takes encoder options).
   | a page's `Margin="32" Spacing="16" MaxWidth=...` | `StackPanel Classes="page"` (`page wide`) |
   | `Margin="0,12,0,0"` before a part | `Classes="section"` |
 
+- Fluent's own controls (buttons, combo boxes, sliders, lists, tabs, menus) take the tokens
+  through `Styles/FluentBrushes.axaml`; a control that still looks like Fluent lacks a key there.
+- Group labels: `Classes="overline"` with the text through `controls:UpperCaseConverter`; numbers
+  and coordinates `mono`, shortcuts `shortcut`.
 - A value the tokens lack becomes a token (both theme variants), a look used twice becomes a class,
   a piece of UI used twice becomes a control (`Controls/FolderField`, `Controls/Section`).
 - Code that draws reads tokens with `TryFindResource(key, ActualThemeVariant, ...)` and reads them

@@ -109,6 +109,11 @@ public sealed partial class MainViewModel : ObservableObject
         ? "FAF map editor"
         : $"{(Map.Session.IsModified ? "* " : "")}{Map.Document.Scenario.Name} - {Map.ProjectFolder ?? "not saved as a project"} - FAF map editor";
 
+    /// <summary>
+    /// The open map's name, for the menu bar; empty without a map.
+    /// </summary>
+    public string MapName => Map?.Document.Scenario.Name ?? "";
+
     public bool HasMap => Map is not null;
 
     public bool CanStart => !IsBusy;
@@ -608,6 +613,7 @@ public sealed partial class MainViewModel : ObservableObject
             Status = status;
         }
         OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(MapName));
         OnPropertyChanged(nameof(HasMap));
         OnPropertyChanged(nameof(CanStart));
         OnPropertyChanged(nameof(CanSave));

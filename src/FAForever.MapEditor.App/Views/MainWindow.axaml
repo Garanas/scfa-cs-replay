@@ -16,19 +16,30 @@
 
   <Grid>
     <DockPanel IsVisible="{Binding IsReady}">
-      <DockPanel DockPanel.Dock="Top">
-        <Button DockPanel.Dock="Right" Classes="chip beside" Command="{Binding RunCommand}" CommandParameter="view.palette"
-                Content="Run a command  ·  Ctrl K" AutomationProperties.Name="Command palette" />
-        <Menu x:Name="MainMenu" />
-      </DockPanel>
+      <Border DockPanel.Dock="Top" Classes="menubar">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Classes="mapname" Text="{Binding MapName}" IsVisible="{Binding HasMap}" AutomationProperties.Name="Map" />
+          <Button DockPanel.Dock="Right" Classes="search" Command="{Binding RunCommand}" CommandParameter="view.palette"
+                  AutomationProperties.Name="Command palette">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Right" Classes="shortcut" Text="Ctrl K" />
+              <StackPanel>
+                <Path Classes="icon small" Data="{StaticResource Icon.Search}" />
+                <TextBlock Text="Run a command" />
+              </StackPanel>
+            </DockPanel>
+          </Button>
+          <Menu x:Name="MainMenu" />
+        </DockPanel>
+      </Border>
 
       <Border DockPanel.Dock="Bottom" Classes="bar">
         <DockPanel>
-          <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Margin="{StaticResource InlineGap}" AutomationProperties.Name="Place under the mouse" />
+          <TextBlock x:Name="CursorText" DockPanel.Dock="Left" Classes="mono" AutomationProperties.Name="Place under the mouse" />
           <TextBlock DockPanel.Dock="Right" Classes="secondary" Margin="{StaticResource InlineGap}" AutomationProperties.Name="Mode and tool">
             <Run Text="{Binding SelectedMode.Definition.Title}" /><Run Text=" · " /><Run Text="{Binding ActiveTool.Definition.Title}" />
           </TextBlock>
-          <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Status" AutomationProperties.LiveSetting="Polite" />
+          <TextBlock Text="{Binding Status}" Margin="{StaticResource InlineGap}" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Status" AutomationProperties.LiveSetting="Polite" />
         </DockPanel>
       </Border>
 
@@ -41,15 +52,17 @@
 
         <!-- which view, and what it shows over the terrain; the tabs only choose: both views stay in the tree,
              so the 3D view keeps its textures on the graphics card -->
-        <Border DockPanel.Dock="Top" Classes="toolbar">
+        <Border DockPanel.Dock="Top" Classes="toolbar views">
           <WrapPanel Classes="row">
-            <TabControl x:Name="Views" Classes="compact" SelectedIndex="{Binding ViewIndex}" AutomationProperties.Name="View">
+            <TabControl x:Name="Views" Classes="segmented" SelectedIndex="{Binding ViewIndex}" AutomationProperties.Name="View">
               <TabItem Header="Top" />
               <TabItem Header="3D" />
             </TabControl>
-            <Button Classes="chip planned" VerticalAlignment="Center" Content="Side by side" Command="{Binding RunCommand}" CommandParameter="view.sideBySide"
+            <Button Classes="chip planned" Content="Side by side" Command="{Binding RunCommand}" CommandParameter="view.sideBySide"
                     ToolTip.Tip="Not built yet: user story V-4" />
-            <ItemsControl ItemsSource="{Binding Overlays}" VerticalAlignment="Center" AutomationProperties.Name="Shown over the terrain">
+            <Border Classes="barseparator" />
+            <TextBlock Classes="caption" Text="Show" />
+            <ItemsControl ItemsSource="{Binding Overlays}" AutomationProperties.Name="Shown over the terrain">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                   <WrapPanel Classes="chips" />

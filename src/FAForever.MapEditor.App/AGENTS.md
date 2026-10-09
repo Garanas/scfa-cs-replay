@@ -74,17 +74,40 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
 
 ## UI rules: one look, kept in one place
 
-Fluent (Avalonia's theme, dark) draws the controls; the editor's own look lives in `Styles/`:
+The look is concept A's (its colours, IBM Plex, the spacing). Fluent (Avalonia's theme, dark,
+compact density) draws the standard controls; `Styles/` holds the look of everything:
 
-- `Styles/Tokens.axaml`, the design tokens: the palette, the brushes named after their use
-  (`CanvasBrush`, `SurfaceBrush`, `SurfaceRaisedBrush`, `TextSecondaryBrush`, `TextTertiaryBrush`,
-  `TextDisabledBrush`, `DangerBrush`, `Overlay*Brush`), per theme variant, and the sizes
-  (`FontSize*`, `Space*`, `*Padding`, `*Gap`, `*Width`). The accent is pinned (`AccentColor`,
-  through Fluent's palette), so the editor looks the same on every computer.
+- `Styles/Tokens.axaml`, the design tokens: the palette (concept A's greys, blues, corals and
+  ambers), the brushes named after their use (`CanvasBrush`, `SurfaceBrush`, `SurfaceRaisedBrush`,
+  `ControlBrush`, `ControlRaisedBrush`, `InputBrush`, `InputStrokeBrush`, `TextPrimaryBrush`,
+  `TextSecondaryBrush`, `TextTertiaryBrush`, `SelectedBrush`, `SelectedStrokeBrush`, `DangerBrush`,
+  `Warning*Brush`, `LinkBrush`, `Overlay*Brush`, ...), per theme variant, the fonts
+  (`SansFontFamily`, `MonoFontFamily`) and the sizes (`FontSize*`, `Space*`, `*Padding`, `*Gap`,
+  `*Width`). The accent is pinned (`AccentColor`, through Fluent's palette in `App.axaml`, with the
+  window's background and text), so the editor looks the same on every computer.
+- `Styles/Fluent.axaml` and `Styles/FluentBrushes.axaml`: the resource keys Fluent's control themes
+  read (`ButtonBackground`, `TextControlBorderBrushFocused`, `SystemControlHighlightListAccentLowBrush`,
+  `TabItemHeaderSelectedPipeFill`, ...; the names are in Avalonia's `src/Avalonia.Themes.Fluent/Controls/*.xaml`),
+  pointed at the tokens. That is what makes buttons, combo boxes, text boxes, sliders, lists,
+  tabs, menus and tool tips match the panels. The aliases are a separate file merged into both
+  theme variants: a `StaticResource` to a brush of one variant resolves only inside that variant's
+  dictionary (`ThemeTest` checks both). A control that looks like Fluent and not like concept A
+  lacks a key here.
+- Fonts: IBM Plex Sans and Mono (SIL Open Font License, `Assets/Fonts`), registered as
+  `fonts:Editor` by `EditorFonts.WithEditorFonts()` in `Program` and in the tests' `HeadlessApp`.
 - `Styles/Classes.axaml`, the classes the views say what a thing is with: text `title`,
-  `heading`, `lead`, `secondary`, `caption`, `error`, `undone`, `item`; surfaces `Border.panel`,
-  `Border.bar`; layout `StackPanel.page` (`wide`), `StackPanel.stack`, `section` (a gap before),
-  `Button.beside`.
+  `heading`, `panelname`, `lead`, `secondary`, `caption`, `label`, `mono`, `shortcut`, `error`,
+  `undone`, `item`, `overline` (a group's label in capitals: bind the text through
+  `Controls/UpperCaseConverter`, a `TextBlock` has no text transform), `story`; surfaces
+  `Border.panel`, `Border.bar`, `Border.menubar`, the panels' `Border.panelhead` and `Border.group`
+  (groups a line apart), `Border.planned`; layout `StackPanel.page` (`wide`), `StackPanel.stack`,
+  `section` (a gap before), `Button.beside`; the shell's `Button.rail` (`selected`: filled),
+  `Button.tool`, `Button.chip`, `Button.search`, `TabControl.compact` (the
+  dock) and `TabControl.segmented` (the view tabs).
+- Every `Button` centres its content (`Classes.axaml`): Fluent's leaves it at the top and relies
+  on an uneven padding, which a button with its own height or padding loses. A class that changes
+  the look of a state Fluent styles in the template (`:pointerover`, `:pressed`) sets it on
+  `/template/ ContentPresenter#PART_ContentPresenter`, as Fluent does, or Fluent's wins.
 - `Styles/Controls.axaml`, the control themes of the editor's own controls (`Section`: a
   heading with its content).
 - Reusable pieces are controls: `Controls/FolderField` (a folder to choose: heading,
@@ -99,7 +122,7 @@ Fluent (Avalonia's theme, dark) draws the controls; the editor's own look lives 
   from the map (a marker's) are made in code.
 - `StyleRulesTest` fails on a colour, font size or weight, opacity or non-zero distance written
   in a view or control, and on a fixed colour in their code. `SnapshotTest` draws the setup page,
-  the assets page and the editor with HardFFA headless (Skia, Inter, 1280 by 800) and compares
+  the assets page and the editor with HardFFA headless (Skia, IBM Plex, 1280 by 800) and compares
   them with `tests/FAForever.MapEditor.App.Tests/snapshots/*.png` (a channel may differ by 24, 0.2 %
   of the pixels may differ); a failure writes the new picture into the tests' output
   (`snapshot-results/`). Look at it, and run the tests with `UPDATE_SNAPSHOTS=1` to accept it.

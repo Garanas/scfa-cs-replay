@@ -28,7 +28,7 @@ public sealed class HeightmapView : Control
     /// What the view draws besides the terrain and the markers' own colours, from the theme's
     /// tokens (<c>Styles/Tokens.axaml</c>).
     /// </summary>
-    internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, double LabelSize);
+    internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, Typeface LabelFont, double LabelSize);
 
     private Overlay? _overlay;
 
@@ -54,13 +54,12 @@ public sealed class HeightmapView : Control
         Token<IBrush>("OverlayFillBrush"),
         new Pen(Token<IBrush>("OverlayShadowBrush"), 1),
         new Pen(Token<IBrush>("OverlayBrush"), 2),
+        new Typeface(Token<FontFamily>("SansFontFamily"), FontStyle.Normal, FontWeight.Bold),
         Token<double>("FontSizeMapLabel"));
 
     private T Token<T>(string key) => this.TryFindResource(key, ActualThemeVariant, out object? value) && value is T token
         ? token
         : throw new KeyNotFoundException($"The theme has no token {key} (Styles/Tokens.axaml)");
-    private static readonly Typeface LabelFont = new Typeface("Inter", FontStyle.Normal, FontWeight.Bold);
-
     private readonly MarkerLayer _markers = new MarkerLayer();
 
     private readonly TerrainPicture _picture = new TerrainPicture();
@@ -423,7 +422,7 @@ public sealed class HeightmapView : Control
                 Point at = At(spawn);
                 context.DrawEllipse(Fill(spawn.Color), overlay.Ring, at, 10, 10);
                 string label = spawn.Army.StartsWith("ARMY_", StringComparison.Ordinal) ? spawn.Army[5..] : spawn.Army;
-                FormattedText text = new FormattedText(label, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, LabelFont, overlay.LabelSize, overlay.Strong);
+                FormattedText text = new FormattedText(label, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, overlay.LabelFont, overlay.LabelSize, overlay.Strong);
                 context.DrawText(text, new Point(at.X - text.Width / 2, at.Y - text.Height / 2));
             }
         }

@@ -7,11 +7,13 @@
   <Border Classes="dock">
     <TabControl Classes="compact" SelectedIndex="{Binding DockIndex}" AutomationProperties.Name="Dock">
       <TabItem Header="Problems">
-        <Border Classes="planned">
-          <StackPanel Classes="stack">
-            <TextBlock Classes="caption" Text="What is wrong or doubtful: a missing texture, a spawn without mass, a new passage through a cliff, a check of a plugin; each leading to its place." />
-            <TextBlock Classes="story" Text="Not built yet: user story F-14" />
-          </StackPanel>
+        <Border Classes="panel">
+          <Border Classes="planned">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="caption" Text="What is wrong or doubtful: a missing texture, a spawn without mass, a new passage through a cliff, a check of a plugin; each leading to its place." />
+              <TextBlock Classes="story" Text="Not built yet: user story F-14" />
+            </StackPanel>
+          </Border>
         </Border>
       </TabItem>
       <TabItem Header="History">
@@ -25,11 +27,13 @@
         </ListBox>
       </TabItem>
       <TabItem Header="Assets">
-        <Border Classes="planned">
-          <StackPanel Classes="stack">
-            <TextBlock Classes="caption" Text="Which assets are loaded and where each comes from: the game, FAF, the workspace's own, the map's own files; which the map uses, which are missing." />
-            <TextBlock Classes="story" Text="Not built yet: user story F-8" />
-          </StackPanel>
+        <Border Classes="panel">
+          <Border Classes="planned">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="caption" Text="Which assets are loaded and where each comes from: the game, FAF, the workspace's own, the map's own files; which the map uses, which are missing." />
+              <TextBlock Classes="story" Text="Not built yet: user story F-8" />
+            </StackPanel>
+          </Border>
         </Border>
       </TabItem>
       <TabItem Header="Console">
