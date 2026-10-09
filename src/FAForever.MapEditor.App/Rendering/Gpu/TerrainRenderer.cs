@@ -1,4 +1,6 @@
 using FAForever.MapEditor.App.Diagnostics;
+using FAForever.MapEditor.App.Tools;
+using FAForever.MapEditor.Project.Editing;
 using System.Collections.Immutable;
 using System.Numerics;
 using FAForever.MapEditor.Project.Files;
@@ -10,7 +12,7 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 
 /// <summary>
 /// Draws a map with OpenGL: the terrain with its layers, then the albedo decals, then the normal
-/// decals. It keeps on the card what it drew last and updates only what a new version of the
+/// decals, the water, and the active tool's brush under the mouse. It keeps on the card what it drew last and updates only what a new version of the
 /// document changed: the tiles of the heightmap and masks a brush touched, the decals when the
 /// list changed. Textures come from a <see cref="GpuTextureCache"/>, one per file.
 /// </summary>
@@ -22,6 +24,9 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     // decal grids by size class: small decals need few cells, large ones many to follow the ground
     private static readonly int[] DecalGridCells = [8, 32, 96];
 
+    // the brush under the mouse follows the ground with this many cells along a side
+    private const int BrushGridCells = 64;
+
     // corner, edge u, edge v: six floats per decal
     private const int DecalStride = 6 * sizeof(float);
 
@@ -31,6 +36,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     private readonly Program _decalAlbedo;
     private readonly Program _decalNormal;
     private readonly Program _water;
+    private readonly Program _brush;
     private readonly uint _repeat;
     private readonly uint _clamp;
     private readonly uint _masks;
@@ -45,6 +51,9 @@ internal sealed unsafe class TerrainRenderer : IDisposable
 
     private readonly Mesh _grid;
     private readonly Mesh _waterQuad;
+    private readonly Mesh _brushGrid;
+    private uint _brushPicture;
+    private BrushShape? _brushPictureOf;
     private (int X, int Z) _gridCells;
     private readonly Mesh[] _decalGrids;
     private readonly uint _decalInstances;
@@ -61,6 +70,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _decalAlbedo = new Program(gl, TerrainShaders.DecalVertex(es), TerrainShaders.DecalAlbedoFragment(es));
         _decalNormal = new Program(gl, TerrainShaders.DecalVertex(es), TerrainShaders.DecalNormalFragment(es));
         _water = new Program(gl, TerrainShaders.WaterVertex(es), TerrainShaders.WaterFragment(es));
+        _brush = new Program(gl, TerrainShaders.BrushVertex(es), TerrainShaders.BrushFragment(es));
 
         _repeat = Sampler(GLEnum.Repeat);
         _clamp = Sampler(GLEnum.ClampToEdge);
@@ -74,6 +84,8 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _grid = new Mesh(gl);
         _waterQuad = new Mesh(gl);
         _waterQuad.SetGrid(1, 1);
+        _brushGrid = new Mesh(gl);
+        _brushGrid.SetGrid(BrushGridCells, BrushGridCells);
         _decalGrids = [.. DecalGridCells.Select(cells =>
         {
             Mesh mesh = new Mesh(gl);
@@ -100,7 +112,9 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// </summary>
     public int Debug { get; set; }
 
-    public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture)
+    /// <param name="brush">The active tool's brush under the mouse; null for none.</param>
+    /// <param name="brushColor">Its colour, from the theme's overlay token.</param>
+    public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, BrushPreview? brush = null, Vector3 brushColor = default)
     {
         using (Performance.Measure("3d.upload-textures"))
         {
@@ -134,6 +148,17 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         }
         _gl.Disable(EnableCap.PolygonOffsetFill);
         DrawWater(document, viewProjection);
+        if (brush is not null)
+        {
+            using (Performance.Measure("3d.draw-brush"))
+            {
+                // over the decals and the water, pulled towards the camera so the ground does not hide it
+                _gl.Enable(EnableCap.PolygonOffsetFill);
+                _gl.PolygonOffset(-2, -16);
+                DrawBrush(document, viewProjection, brush, brushColor);
+                _gl.Disable(EnableCap.PolygonOffsetFill);
+            }
+        }
         _gl.DepthMask(true);
         _gl.Disable(EnableCap.Blend);
 
@@ -203,6 +228,71 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         program.Set("uWaterColor", water.SurfaceColor.X, water.SurfaceColor.Y, water.SurfaceColor.Z);
         _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
         _waterQuad.Draw();
+    }
+
+    private void DrawBrush(MapDocument document, Matrix4x4 viewProjection, BrushPreview brush, Vector3 color)
+    {
+        if (brush.Shape is BrushShape picture)
+        {
+            // before the heights are bound: uploading binds the picture to the active unit
+            UpdateBrushPicture(picture);
+        }
+        Program program = _brush;
+        program.Use();
+        program.Set("uViewProjection", viewProjection);
+        Bind(0, _heights, 0);
+        program.Set("uHeights", 0);
+        program.Set("uHeightScale", document.Terrain.Heightmap.Scale);
+
+        // the square around the radius, turned clockwise in the top view (x east, z south)
+        (float sin, float cos) = MathF.SinCos(brush.Shape is null ? 0 : brush.Rotation * MathF.PI / 180);
+        float side = 2 * brush.Radius;
+        Vector2 edgeU = new Vector2(cos, sin) * side;
+        Vector2 edgeV = new Vector2(-sin, cos) * side;
+        Vector2 corner = new Vector2(brush.X, brush.Z) - (edgeU + edgeV) / 2;
+        program.Set("uCorner", corner.X, corner.Y);
+        program.Set("uEdgeU", edgeU.X, edgeU.Y);
+        program.Set("uEdgeV", edgeV.X, edgeV.Y);
+        program.Set("uColor", color.X, color.Y, color.Z);
+
+        if (brush.Shape is BrushShape shape)
+        {
+            Bind(14, _brushPicture, _clamp);
+            float longest = Math.Max(shape.Width, shape.Height);
+            program.Set("uShapeScale", longest / shape.Width, longest / shape.Height);
+            program.Set("uRound", 0);
+        }
+        else
+        {
+            program.Set("uRound", 1);
+        }
+        program.Set("uShape", 14);
+        _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
+        _brushGrid.Draw();
+    }
+
+    /// <summary>
+    /// The brush's picture on the card, its value in every channel; again only for another shape.
+    /// </summary>
+    private void UpdateBrushPicture(BrushShape shape)
+    {
+        if (ReferenceEquals(shape, _brushPictureOf))
+        {
+            return;
+        }
+        if (_brushPicture == 0)
+        {
+            _brushPicture = _gl.GenTexture();
+        }
+        ReadOnlySpan<float> values = shape.Values;
+        byte[] rgba = new byte[values.Length * 4];
+        for (int i = 0; i < values.Length; i++)
+        {
+            byte value = (byte)Math.Clamp(MathF.Round(values[i] * 255), 0, 255);
+            rgba[i * 4] = rgba[i * 4 + 1] = rgba[i * 4 + 2] = rgba[i * 4 + 3] = value;
+        }
+        GpuTextureCache.UploadRgba(_gl, _brushPicture, shape.Width, shape.Height, rgba, mipmaps: true);
+        _brushPictureOf = shape;
     }
 
     private void DrawDecals(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, bool normals)
@@ -475,6 +565,12 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _decalNormal.Dispose();
         _water.Dispose();
         _waterQuad.Dispose();
+        _brush.Dispose();
+        _brushGrid.Dispose();
+        if (_brushPicture != 0)
+        {
+            _gl.DeleteTexture(_brushPicture);
+        }
         _grid.Dispose();
         foreach (Mesh mesh in _decalGrids)
         {

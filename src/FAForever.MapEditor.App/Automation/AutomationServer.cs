@@ -159,7 +159,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         "state", "commands", "run {id, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?}", "perf {reset?}", "logs {problems?, count?}",
         "diagnostics {record?, send?, endpoint?, flush?, upload?}", "version-control {open?, enable?, name?, email?, lfs?, remote?}",
         "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}",
-        "show {markers?, pathNodes?, camera?}", "screenshot {path, map?, gpu?}", "close",
+        "show {markers?, pathNodes?, camera?}", "screenshot {path, map?, gpu?, brush?}", "close",
     ];
 
     /// <summary>
@@ -349,7 +349,9 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             case "screenshot":
                 result["file"] = arguments["gpu"]?.GetValue<bool>() == true
                     ? model.View == MapViewTab.ThreeD
-                        ? await window.View3D.CaptureAsync(Text(arguments, "path")).WaitAsync(TimeSpan.FromSeconds(10))
+                        ? await window.View3D.CaptureAsync(Text(arguments, "path"), arguments["brush"] is JsonArray brush
+                            ? new System.Numerics.Vector2(brush[0]!.GetValue<float>(), brush[1]!.GetValue<float>())
+                            : null).WaitAsync(TimeSpan.FromSeconds(10))
                         : throw new ArgumentException("The 3D view draws only while it shows: tab name=3d first")
                     : Screenshot(Text(arguments, "path"), arguments["map"]?.GetValue<bool>() == true);
                 break;

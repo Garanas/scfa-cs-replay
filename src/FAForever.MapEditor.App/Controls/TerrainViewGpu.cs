@@ -9,6 +9,7 @@ using Avalonia.OpenGL;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Threading;
 using FAForever.MapEditor.App.Rendering.Gpu;
+using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -68,6 +69,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private string? _watched;
     private TaskCompletionSource<string>? _capture;
     private string? _capturePath;
+    private Vector2? _captureBrushAt;
 
     private readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
     private TimeSpan _lastFrame;
@@ -76,6 +78,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private Point? _turnFrom;
     private Point _mouse;
     private bool _mouseInside;
+    private IMapTool? _pressed;
 
     private string? _loggedTextureError;
 
@@ -132,11 +135,14 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     /// Draws a frame and saves it as a PNG, for automation: the picture is on the graphics card,
     /// where a screenshot of the window does not reach.
     /// </summary>
-    public Task<string> CaptureAsync(string path)
+    /// <param name="brushAt">Where the active tool's brush shows in that frame, in ogrids, as if the
+    /// mouse pointed there; null for where the mouse is.</param>
+    public Task<string> CaptureAsync(string path, Vector2? brushAt = null)
     {
         _capture?.TrySetCanceled();
         _capture = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         _capturePath = Path.GetFullPath(path);
+        _captureBrushAt = brushAt;
         RequestNextFrameRendering();
         return _capture.Task;
     }
@@ -215,7 +221,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                 {
                     using Performance.Span lookup = Performance.Measure("3d.find-texture");
                     return FindTexture(path, document, workspace);
-                });
+                }, BrushUnderMouse(document), BrushColor());
             }
             catch (InvalidOperationException exception)
             {
@@ -276,6 +282,38 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         (float)(2 * at.X / Math.Max(1, Bounds.Width) - 1),
         (float)(1 - 2 * at.Y / Math.Max(1, Bounds.Height)));
 
+    /// <summary>
+    /// The place of the map under the mouse, in ogrids; null when the mouse is outside the view or
+    /// the map.
+    /// </summary>
+    private Vector3? PlaceUnderMouse(MapDocument document) =>
+        _mouseInside && _model?.Camera.PointAt(InView(_mouse)) is Vector3 place
+            && place.X >= 0 && place.Z >= 0 && place.X <= document.Width && place.Z <= document.Height
+            ? place
+            : null;
+
+    /// <summary>
+    /// The active tool's brush where the mouse points, as the top view shows it; null without one.
+    /// </summary>
+    private BrushPreview? BrushUnderMouse(MapDocument document)
+    {
+        using Performance.Span measure = Performance.Measure("3d.brush-place");
+        if (_model?.ActiveTool?.Tool is not { CursorRadius: > 0 } tool)
+        {
+            return null;
+        }
+        if (_capture is not null && _captureBrushAt is Vector2 at)
+        {
+            return BrushPreview.Of(tool, at.X, at.Y);
+        }
+        return PlaceUnderMouse(document) is Vector3 place ? BrushPreview.Of(tool, place.X, place.Z) : null;
+    }
+
+    private Vector3 BrushColor() =>
+        this.TryFindResource("OverlayBrush", ActualThemeVariant, out object? overlay) && overlay is Avalonia.Media.ISolidColorBrush brush
+            ? new Vector3(brush.Color.R / 255f, brush.Color.G / 255f, brush.Color.B / 255f)
+            : Vector3.One;
+
     private void ReportCursor()
     {
         using Performance.Span measure = Performance.Measure("3d.cursor");
@@ -283,8 +321,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             return;
         }
-        CursorMoved?.Invoke(_model.Camera.PointAt(InView(_mouse)) is Vector3 place
-            && place.X >= 0 && place.Z >= 0 && place.X <= document.Width && place.Z <= document.Height
+        CursorMoved?.Invoke(PlaceUnderMouse(document) is Vector3 place
             ? $"x {place.X:0}, z {place.Z:0}, height {place.Y:0.00}"
             : "");
     }
@@ -330,6 +367,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             _model.MapChanged -= OnMapChanged;
             _model.DocumentChanged -= OnDocumentChanged;
+            _model.CursorChanged -= OnDocumentChanged;
             _model.CameraMoved -= OnCameraMoved;
         }
         _model = DataContext as MainViewModel;
@@ -338,6 +376,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.MapChanged += OnMapChanged;
             _model.DocumentChanged += OnDocumentChanged;
             _model.CameraMoved += OnCameraMoved;
+            _model.CursorChanged += OnDocumentChanged;
         }
         RequestNextFrameRendering();
     }
@@ -380,16 +419,31 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         base.OnPointerExited(e);
         _mouseInside = false;
         CursorMoved?.Invoke("");
+        RequestNextFrameRendering();
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
         Focus();
-        if (e.GetCurrentPoint(this).Properties.IsMiddleButtonPressed)
+        PointerPointProperties buttons = e.GetCurrentPoint(this).Properties;
+        if (buttons.IsMiddleButtonPressed)
         {
             _panFrom = e.GetPosition(this);
             e.Pointer.Capture(this);
+            e.Handled = true;
+        }
+        else if (buttons.IsLeftButtonPressed && _model is { ShownDocument: MapDocument document, ActiveTool.Tool: IMapTool tool })
+        {
+            // the left mouse is the active tool's, on the place of the terrain it points at
+            _mouse = e.GetPosition(this);
+            _mouseInside = true;
+            if (PlaceUnderMouse(document) is Vector3 place)
+            {
+                _pressed = tool;
+                tool.Press(place.X, place.Z);
+                e.Pointer.Capture(this);
+            }
             e.Handled = true;
         }
     }
@@ -412,6 +466,15 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model?.Camera.Rotate(new Vector2((float)delta.X, (float)delta.Y));
             Moved();
         }
+        if (_pressed is IMapTool tool && _model?.ShownDocument is MapDocument document && PlaceUnderMouse(document) is Vector3 place)
+        {
+            tool.Drag(place.X, place.Z);
+        }
+        if (_model?.ActiveTool?.Tool is { CursorRadius: > 0 })
+        {
+            // the brush follows the mouse
+            RequestNextFrameRendering();
+        }
         ReportCursor();
     }
 
@@ -421,6 +484,12 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         if (_panFrom is not null)
         {
             _panFrom = null;
+            e.Pointer.Capture(null);
+        }
+        if (_pressed is IMapTool tool)
+        {
+            _pressed = null;
+            tool.Release();
             e.Pointer.Capture(null);
         }
     }

@@ -179,6 +179,75 @@ internal static class TerrainShaders
         """;
 
     /// <summary>
+    /// The active tool's brush under the mouse: a grid over the square around its radius,
+    /// turned with its picture, that follows the terrain.
+    /// </summary>
+    public static string BrushVertex(bool es) => Header(es) + Heights + """
+        layout(location = 0) in vec2 aUv;
+        uniform mat4 uViewProjection;
+        uniform vec2 uCorner;
+        uniform vec2 uEdgeU;
+        uniform vec2 uEdgeV;
+        out vec2 vUv;
+
+        void main()
+        {
+            vec2 p = uCorner + aUv.x * uEdgeU + aUv.y * uEdgeV;
+            vUv = aUv;
+            gl_Position = uViewProjection * vec4(p.x, heightAt(p), p.y, 1.0);
+        }
+        """;
+
+    /// <summary>
+    /// How strongly the brush works (the round falloff, or the picture's values) as a ramp from
+    /// near black to the overlay's colour over the terrain, so that it reads on light and dark
+    /// ground alike. Its edge is a line: the circle of the radius, or the picture's square.
+    /// </summary>
+    public static string BrushFragment(bool es) => Header(es) + """
+        in vec2 vUv;
+        out vec4 outColor;
+        uniform sampler2D uShape;
+        uniform int uRound;
+        // the square's side over the picture's width and height: a shorter side is centred
+        uniform vec2 uShapeScale;
+        uniform vec3 uColor;
+
+        void main()
+        {
+            vec2 c = vUv * 2.0 - 1.0;
+            float weight;
+            float edge;
+            bool inside;
+            if (uRound == 1)
+            {
+                float d = length(c);
+                inside = d < 1.0;
+                weight = inside ? 0.5 * (1.0 + cos(3.14159265 * d)) : 0.0;
+                edge = abs(d - 1.0) / max(fwidth(d), 1e-5);
+            }
+            else
+            {
+                vec2 uv = (vUv - 0.5) * uShapeScale + 0.5;
+                inside = all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
+                weight = inside ? texture(uShape, uv).r : 0.0;
+                vec2 e = (1.0 - abs(c)) / max(fwidth(c), vec2(1e-5));
+                edge = min(e.x, e.y);
+            }
+            float line = 1.0 - clamp(edge - 0.75, 0.0, 1.0);
+            // premultiplied: near black at no weight, the overlay's colour at full weight; the
+            // square root shows where a picture works at all, which its low values hide
+            float tint = inside ? 0.55 : 0.0;
+            vec4 color = vec4(mix(vec3(0.05), uColor, sqrt(weight)) * tint, tint);
+            color = mix(color, vec4(uColor * 0.9, 0.9), line);
+            if (color.a < 0.004)
+            {
+                discard;
+            }
+            outColor = color;
+        }
+        """;
+
+    /// <summary>
     /// A decal: a grid over its rectangle that follows the terrain. Each instance is one decal,
     /// placed by its corner (the decal's position) and its two edges.
     /// </summary>

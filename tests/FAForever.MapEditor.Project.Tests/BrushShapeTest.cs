@@ -54,6 +54,19 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void KeepsTheValuesOfAGreyPictureAndTheBrightnessOfAColouredOne()
+        {
+            string folder = ProjectFolders.New("brush-values");
+            string grey = Path.Combine(folder, "grey.png");
+            ProjectImages.WriteGray16(grey, 2, 1, [32768, 65535]);
+            string colour = Path.Combine(folder, "colour.png");
+            ProjectImages.WriteRgba(colour, 2, 1, [128, 128, 128, 255, 255, 255, 255, 255]);
+
+            Assert.AreEqual(0.5f, BrushShape.Read(grey).Values[0], 0.01f, "a value is a height: no conversion to linear light");
+            Assert.AreEqual(0.5f, BrushShape.Read(colour).Values[0], 0.01f);
+        }
+
+        [TestMethod]
         public void ReadsAPictureAsItsBrightnessReducedAndStretched()
         {
             string folder = ProjectFolders.New("brush");

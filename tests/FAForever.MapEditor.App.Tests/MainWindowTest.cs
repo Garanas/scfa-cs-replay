@@ -156,6 +156,28 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task TheLeftMouseSculptsInThe3DView() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.ThreeD);
+            Settle(model);
+            Point middle = Middle(window.View3D, window);
+            SculptTool sculpt = model.Tool<SculptTool>();
+            sculpt.Radius = 10;
+            sculpt.Strength = 2;
+            float before = model.ShownDocument!.Terrain.Heightmap.GetHeight(128, 128);
+
+            window.MouseMove(middle);
+            window.MouseDown(middle, MouseButton.Left);
+            window.MouseMove(middle + new Vector(20, 0));
+            window.MouseUp(middle + new Vector(20, 0), MouseButton.Left);
+
+            Assert.AreEqual("Raise terrain", model.Map!.Session.UndoDescription, "one step, as in the top view");
+            Assert.IsTrue(model.ShownDocument!.Terrain.Heightmap.GetHeight(128, 128) > before, "the camera looks straight down at the middle of the map");
+            window.Close();
+        });
+
+        [TestMethod]
         public Task HomeShowsTheWholeMapAgain() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();

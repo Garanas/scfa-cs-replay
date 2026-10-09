@@ -133,11 +133,19 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     or one of the workspace's brushes (the shelf's, below), the first choice of the options row;
     a brush chosen on the shelf becomes the active tool's shape. A picture fills the square
     around the radius, its top to the north, turned clockwise by `Rotation` or at random per dab
-    (`RandomRotation`); the top view draws that square, with a tick on its top edge, in place of
-    the circle. It is read once (`BrushShapes`, by file and write time; the library's
+    (`RandomRotation`). It is read once (`BrushShapes`, by file and write time; the library's
     `BrushShape`, reduced to 256 pixels), on a pool thread when chosen; a picture that cannot be
     read shows in the status line and paints nothing. With a picture, raising and lowering go up
     to 50 game units a dab (`StrengthMaximum`): a mountain at a click.
+  - **Both views show the brush** under the mouse (`Tools/BrushPreview`) and send it the left
+    mouse: the top view on the map's place, the 3D view on the place of the terrain it points at
+    (`EditorCamera.PointAt`). They draw how strongly it works as a ramp from near black to the
+    overlay's colour (the square root of the values, which shows where a picture works at all),
+    with its edge as a line: the circle of the radius, or the picture's square turned with it
+    (with a tick on its top edge in the top view). The 3D view draws it after the water, on a
+    grid that follows the ground (`TerrainShaders.BrushVertex`; the picture on texture unit 14,
+    uploaded before the heights are bound, since an upload binds to the active unit).
+    `MainViewModel.CursorChanged` (a tool's radius, shape or rotation) draws them again.
   - `brush.set {layer?, mode?, radius?, strength?, target?, erase?, shape?, rotation?,
     randomRotation?}` sets them up for automation: a layer chooses its tool (0 sculpting, 1 to 8
     the strata tool with that layer); radius, strength and the shape (`round`, a brush's key or
@@ -268,7 +276,7 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   above the horizon; F focuses on the place under the mouse (the FAF editor focuses on the
   selection; there is none yet), from about half as far; Home shows the whole map again. It
   glides to where it is sent (only while the 3D view draws), and its pivot is always the ground
-  it looks at. The left mouse button is left for editing.
+  it looks at. The left mouse button is the active tool's, as in the top view.
   - The camera belongs to the view model (`MainViewModel.Camera`, `CameraMoved`), so both views
     share it: the top view draws what it sees (its footprint on the ground, the eye and a line to
     the pivot; View menu), and control and a click there sends it to that place at once. Opening
@@ -502,9 +510,10 @@ faf-map editor close                                      # closes without askin
   git; `open` runs `file.commit` without a message, which shows the page, `enable` runs
   `file.enableVersionControl` with the choices, which go only with it), `mask {layer, x, z}`,
   `stroke {points}` (the left mouse, so the active tool, no command), `height {x, z}`, `hit {x, y}` (the control the
-  mouse reaches at a point of the window, with its parents), `screenshot {path, map?, gpu?}`
+  mouse reaches at a point of the window, with its parents), `screenshot {path, map?, gpu?, brush?}`
   (`gpu: true` reads a frame of the 3D view back from the card: a screenshot of the window does
-  not reach it), `close`. A new operation is a
+  not reach it; `brush: [x, z]` draws the active tool's brush there in that frame, as if the
+  mouse pointed at it), `close`. A new operation is a
   command of the registry, not a case here.
 - The method does not matter, and a command without arguments works as a GET
   (`curl localhost:5371/undo`); Windows refuses a POST without a body, so the CLI always sends one.

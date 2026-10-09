@@ -37,6 +37,11 @@ namespace FAForever.MapEditor.Project.Editing
         public int Height { get; }
 
         /// <summary>
+        /// The values from 0 to 1, row by row from the top: for a picture of the shape.
+        /// </summary>
+        public ReadOnlySpan<float> Values => _values;
+
+        /// <summary>
         /// Reads a picture of any depth or colour as its brightness, reduced to at most
         /// <see cref="MaxSide"/> pixels and stretched so that its brightest pixel is 1.
         /// </summary>

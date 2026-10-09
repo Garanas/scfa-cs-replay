@@ -38,10 +38,12 @@ public interface IShapedBrushTool : IMapTool
 public sealed partial class BrushShapeSettings : ObservableObject
 {
     private readonly ILogger _log;
+    private readonly SynchronizationContext? _ui;
 
     public BrushShapeSettings(MainViewModel model)
     {
         _log = model.Logger("Editor");
+        _ui = SynchronizationContext.Current;
     }
 
     /// <summary>
@@ -51,7 +53,7 @@ public sealed partial class BrushShapeSettings : ObservableObject
     public partial IReadOnlyList<BrushChoice> Choices { get; private set; } = [BrushChoice.Round];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsShaped))]
+    [NotifyPropertyChangedFor(nameof(IsShaped), nameof(Shown))]
     public partial BrushChoice Chosen { get; set; } = BrushChoice.Round;
 
     /// <summary>
@@ -115,6 +117,12 @@ public sealed partial class BrushShapeSettings : ObservableObject
     public BrushShape? Read() => Chosen.File is string file ? BrushShapes.Get(file) : null;
 
     /// <summary>
+    /// The chosen shape once it has been read, for the views to draw under the mouse; null for
+    /// round and while it is being read. It never touches the disk.
+    /// </summary>
+    public BrushShape? Shown => Chosen.File is string file ? BrushShapes.Find(file) : null;
+
+    /// <summary>
     /// The chosen shape for a stroke about to start, or false when its picture cannot be read: the
     /// status line says why, and the stroke does not start.
     /// </summary>
@@ -138,12 +146,13 @@ public sealed partial class BrushShapeSettings : ObservableObject
         {
             return;
         }
-        // read it now, so that the first dab need not wait
+        // read it now, so that the first dab need not wait; the views then draw it
         _ = Task.Run(() =>
         {
             try
             {
                 BrushShapes.Get(file);
+                UiThread.Run(_ui, () => OnPropertyChanged(nameof(Shown)));
             }
             catch (MapProjectException exception)
             {
@@ -161,6 +170,17 @@ internal static class BrushShapes
     private const int Kept = 16;
     private static readonly Lock Gate = new Lock();
     private static readonly List<(string File, DateTime Written, BrushShape Shape)> Read = [];
+
+    /// <summary>
+    /// The picture read last of a file, whatever its time; null when it has not been read.
+    /// </summary>
+    public static BrushShape? Find(string file)
+    {
+        lock (Gate)
+        {
+            return Read.FindLast(entry => entry.File == file).Shape;
+        }
+    }
 
     /// <exception cref="MapProjectException">The picture cannot be read.</exception>
     public static BrushShape Get(string file)

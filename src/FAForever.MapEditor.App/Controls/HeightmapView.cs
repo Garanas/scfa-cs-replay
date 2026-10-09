@@ -9,6 +9,7 @@ using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.App.Rendering.Gpu;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 
@@ -159,6 +160,49 @@ public sealed class HeightmapView : Control
         }
     }
 
+    private WriteableBitmap? _brushPicture;
+    private (BrushShape Shape, IBrush Color)? _brushPictureOf;
+
+    /// <summary>
+    /// A brush's picture as the 3D view draws it, a ramp from near black where it does little to
+    /// the overlay's colour where it works fully; made again only for another shape or theme.
+    /// </summary>
+    private WriteableBitmap? BrushPicture(BrushShape shape, IBrush color)
+    {
+        if (_brushPictureOf is { } made && ReferenceEquals(made.Shape, shape) && ReferenceEquals(made.Color, color))
+        {
+            return _brushPicture;
+        }
+        if (color is not ISolidColorBrush solid)
+        {
+            return null;
+        }
+        _brushPicture?.Dispose();
+        _brushPicture = new WriteableBitmap(new PixelSize(shape.Width, shape.Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
+        using (ILockedFramebuffer frame = _brushPicture.Lock())
+        {
+            ReadOnlySpan<float> values = shape.Values;
+            byte[] row = new byte[shape.Width * 4];
+            for (int y = 0; y < shape.Height; y++)
+            {
+                for (int x = 0; x < shape.Width; x++)
+                {
+                    // the square root shows where it works at all, as the 3D view does
+                    float weight = MathF.Sqrt(values[y * shape.Width + x]);
+                    const float alpha = 0.55f;
+                    const float dark = 0.05f * 255;
+                    row[x * 4] = (byte)((dark + (solid.Color.B - dark) * weight) * alpha);
+                    row[x * 4 + 1] = (byte)((dark + (solid.Color.G - dark) * weight) * alpha);
+                    row[x * 4 + 2] = (byte)((dark + (solid.Color.R - dark) * weight) * alpha);
+                    row[x * 4 + 3] = (byte)(255 * alpha);
+                }
+                System.Runtime.InteropServices.Marshal.Copy(row, 0, frame.Address + y * frame.RowBytes, row.Length);
+            }
+        }
+        _brushPictureOf = (shape, color);
+        return _brushPicture;
+    }
+
     public override void Render(DrawingContext context)
     {
         using Performance.Span measure = Performance.Measure("top.render");
@@ -189,10 +233,20 @@ public sealed class HeightmapView : Control
         if (_cursor is Point cursor && _model?.ActiveTool?.Tool is { CursorRadius: > 0 } tool)
         {
             double radius = tool.CursorRadius * _zoom;
-            if (tool is IShapedBrushTool { Shape: { IsShaped: true, RandomRotation: false } shape })
+            if (tool is IShapedBrushTool { Shape: { IsShaped: true } shape })
             {
-                // the picture's square, turned as it paints, with a tick on its top edge
+                // the picture, faded, in its square, turned as it paints, with a tick on its top edge
                 (double sin, double cos) = Math.SinCos(shape.Rotation * Math.PI / 180);
+                if (shape.Shown is BrushShape picture && BrushPicture(picture, overlay.Strong) is WriteableBitmap bitmap)
+                {
+                    double longest = Math.Max(picture.Width, picture.Height);
+                    double width = 2 * radius * picture.Width / longest;
+                    double height = 2 * radius * picture.Height / longest;
+                    using (context.PushTransform(Matrix.CreateRotation(shape.Rotation * Math.PI / 180) * Matrix.CreateTranslation(cursor.X, cursor.Y)))
+                    {
+                        context.DrawImage(bitmap, new Rect(-width / 2, -height / 2, width, height));
+                    }
+                }
                 Point Corner(double u, double v) => cursor + new Vector((u * cos - v * sin) * radius, (u * sin + v * cos) * radius);
                 StreamGeometry square = new StreamGeometry();
                 using (StreamGeometryContext figure = square.Open())
