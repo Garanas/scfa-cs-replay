@@ -64,6 +64,25 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task HelpShowsTheWorkspaceFolder()
+        {
+            Machine machine = NewMachine();
+            MainViewModel model = machine.NewEditor();
+            List<string> shown = [];
+            model.ShowFolderRequested += shown.Add;
+
+            await model.StartAsync(machine.Settings);
+            model.ShowWorkspaceFolder();
+            CollectionAssert.AreEqual(Array.Empty<string>(), shown, "no workspace yet");
+
+            model.SetupFolder = machine.WorkspaceFolder;
+            Assert.IsTrue(await model.SetUpWorkspaceAsync(), model.SetupError);
+            Assert.IsTrue(await model.Commands.RunAsync("help.workspaceFolder"));
+
+            CollectionAssert.AreEqual(new[] { model.Workspace!.Folder }, shown);
+        }
+
+        [TestMethod]
         public async Task StartsWithTheSetupFilledInFromFaf()
         {
             Machine machine = NewMachine();

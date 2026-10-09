@@ -4,11 +4,17 @@ using FAForever.MapEditor.App.ViewModels;
 namespace FAForever.MapEditor.App.Controllers;
 
 /// <summary>
-/// The Help menu: what goes well and wrong while the editor runs (user story F-17).
+/// The Help menu: where the editor keeps its files, and what goes well and wrong while it runs
+/// (user stories F-5 and F-17).
 /// </summary>
 public sealed class HelpController(MainViewModel model)
 {
-    [EditorCommand("help.diagnostics", "Diagnostics...", Menu = "Help", Story = "F-17")]
+    public bool HasWorkspace => model.Workspace is not null;
+
+    [EditorCommand("help.workspaceFolder", "Show the workspace folder", Menu = "Help", Story = "F-5", CanRun = nameof(HasWorkspace))]
+    public void WorkspaceFolder() => model.ShowWorkspaceFolder();
+
+    [EditorCommand("help.diagnostics", "Diagnostics...", Menu = "Help", Story = "F-17", SeparatorBefore = true)]
     public void Diagnostics() => model.OpenDiagnostics();
 
     [EditorCommand("help.diagnosticsFolder", "Show the diagnostics folder", Menu = "Help", Story = "F-17")]

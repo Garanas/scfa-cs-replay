@@ -148,7 +148,8 @@ reads the remembered one (`UserSettings`) and sets the window's `Stage`:
 - `Ready`: the editor. Open and Save As start in the workspace's `projects`, Import in the vault's
   `maps`, and Export writes into the vault's `maps` without asking.
 
-The menu and the editor are hidden until `Ready`. To try the start without touching your own
+Help, Show the workspace folder (`help.workspaceFolder`) opens the workspace in the system's file
+manager. The menu and the editor are hidden until `Ready`. To try the start without touching your own
 workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
 
 ## Structure

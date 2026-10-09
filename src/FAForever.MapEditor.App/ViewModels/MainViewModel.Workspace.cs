@@ -106,6 +106,17 @@ public sealed partial class MainViewModel
     public partial string ConversionText { get; private set; } = "";
 
     /// <summary>
+    /// Shows the workspace's folder (its projects, assets and settings) in the system's file manager.
+    /// </summary>
+    public void ShowWorkspaceFolder()
+    {
+        if (Workspace is Workspace workspace)
+        {
+            ShowFolderRequested?.Invoke(workspace.Folder);
+        }
+    }
+
+    /// <summary>
     /// Starts with the workspace remembered in <paramref name="settings"/>, or asks to set one up.
     /// </summary>
     /// <param name="openFolder">A project or map folder to open once the workspace is ready.</param>
