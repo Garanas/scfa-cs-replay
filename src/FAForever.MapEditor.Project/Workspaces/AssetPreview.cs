@@ -4,28 +4,35 @@ using ImageMagick;
 namespace FAForever.MapEditor.Project.Workspaces
 {
     /// <summary>
-    /// Draws the picture of a prop or unit from its converted mesh and albedo (<see cref="AssetModel"/>),
-    /// with <see cref="MeshPreview"/>: a still from above and in front, on a transparent background.
+    /// Draws the picture of a prop or unit from its converted mesh and textures (<see cref="AssetModel"/>),
+    /// with <see cref="MeshPreview"/>: a still from above and in front, on a transparent background,
+    /// shaded as the game's shader the blueprint names.
     /// </summary>
     public static class AssetPreview
     {
         /// <summary>
-        /// Draws a picture of <paramref name="size"/> by <paramref name="size"/> pixels. The albedo is
-        /// read at most twice that wide, which is as sharp as the picture can show it; without an
-        /// albedo the mesh is grey.
+        /// Draws a picture of <paramref name="size"/> by <paramref name="size"/> pixels. The textures
+        /// are read at most twice that wide, which is as sharp as the picture can show them; a
+        /// texture that is missing is left out (without an albedo the mesh is grey).
         /// </summary>
         /// <exception cref="IOException">The mesh cannot be read from disk.</exception>
         /// <exception cref="GlbFormatException">The mesh is no glTF file.</exception>
-        /// <exception cref="MagickException">The albedo is no picture.</exception>
+        /// <exception cref="MagickException">A texture is no picture.</exception>
         public static RgbaImage Render(AssetModel model, int size)
         {
             Scm mesh = GlbReader.Read(File.ReadAllBytes(model.Mesh));
-            RgbaImage? albedo = model.Albedo is string file && File.Exists(file) ? ReadAlbedo(file, Math.Max(64, 2 * size)) : null;
-            return MeshPreview.Render(mesh, albedo, new MeshPreviewOptions { Size = size, Alpha = MeshPreview.AlphaOf(model.Shader) });
+            int width = Math.Max(64, 2 * size);
+            PreviewTextures textures = new PreviewTextures(Read(model.Albedo, width), Read(model.Normals, width), Read(model.Specular, width));
+            (PreviewShader shader, float? alphaTest) = MeshPreview.ShaderOf(model.Shader);
+            return MeshPreview.Render(mesh, textures, new MeshPreviewOptions { Size = size, Shader = shader, AlphaTest = alphaTest });
         }
 
-        private static RgbaImage ReadAlbedo(string file, int maxWidth)
+        private static RgbaImage? Read(string? file, int maxWidth)
         {
+            if (file is null || !File.Exists(file))
+            {
+                return null;
+            }
             // ImageMagick gets the bytes: its own file access fails on long paths
             using MagickImage image = new MagickImage(File.ReadAllBytes(file));
             if (image.Width > maxWidth)

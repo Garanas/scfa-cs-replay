@@ -27,7 +27,7 @@ namespace FAForever.MapEditor.Project.Tests
             Write("env/evergreen/props/trees/pine06_v1_s3_prop.json", pine);
             Write("env/evergreen/props/rocks/rock01_prop.json", """
                 { "id": "/env/evergreen/props/rocks/rock01_prop.bp", "reclaimMass": 20, "lods": [
-                    { "mesh": "/env/evergreen/props/rocks/rock01_lod0.glb", "shader": "NormalMappedAlpha", "albedo": "/env/evergreen/props/rocks/rock01_albedo.png" },
+                    { "mesh": "/env/evergreen/props/rocks/rock01_lod0.glb", "shader": "NormalMappedAlpha", "albedo": "/env/evergreen/props/rocks/rock01_albedo.png", "normals": "/env/evergreen/props/rocks/rock01_normalsts.png" },
                     { "mesh": "/env/evergreen/props/rocks/rock01_lod1.glb" } ] }
                 """);
             Write("env/evergreen/props/broken_prop.json", "{ not json");
@@ -57,7 +57,12 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual("rocks", catalog.Find("env/evergreen/props/rocks/rock01_prop.bp")!.Category);
             // the most detailed mesh is drawn as its picture
             Assert.AreEqual(
-                new AssetModel(Path.Combine(assets, "env/evergreen/props/rocks/rock01_lod0.glb"), Path.Combine(assets, "env/evergreen/props/rocks/rock01_albedo.png"), "NormalMappedAlpha"),
+                new AssetModel(
+                    Path.Combine(assets, "env/evergreen/props/rocks/rock01_lod0.glb"),
+                    Path.Combine(assets, "env/evergreen/props/rocks/rock01_albedo.png"),
+                    Path.Combine(assets, "env/evergreen/props/rocks/rock01_normalsts.png"),
+                    null,
+                    "NormalMappedAlpha"),
                 catalog.Find("env/evergreen/props/rocks/rock01_prop.bp")!.Model);
             Assert.IsNull(pine.Model, "a blueprint without levels of detail");
             Assert.IsTrue(pine.Facts.Any(fact => fact.Label == "Reclaim" && fact.Value == "0 mass, 30 energy"));

@@ -33,8 +33,10 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// </summary>
     /// <param name="Mesh">The mesh (<c>.glb</c>).</param>
     /// <param name="Albedo">Its albedo texture (<c>.png</c>), if the blueprint names one the archives have.</param>
+    /// <param name="Normals">Its normal map, likewise.</param>
+    /// <param name="Specular">Its specular map (a unit's <c>_specteam</c>), likewise.</param>
     /// <param name="Shader">The game's shader it is drawn with (<c>Unit</c>, <c>NormalMappedAlpha</c>).</param>
-    public sealed record AssetModel(string Mesh, string? Albedo, string? Shader);
+    public sealed record AssetModel(string Mesh, string? Albedo, string? Normals, string? Specular, string? Shader);
 
     /// <summary>
     /// An asset of the workspace as the map maker chooses it: a prop, a unit, a decal's texture, or
@@ -441,11 +443,13 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// </summary>
         private static AssetModel? ModelOf(string assets, IReadOnlyList<MeshLodDto> lods) =>
             lods.Count == 0 ? null : new AssetModel(
-                AssetFile(assets, lods[0].Mesh),
-                lods[0].Albedo is string albedo ? AssetFile(assets, albedo) : null,
+                AssetFile(assets, lods[0].Mesh)!,
+                AssetFile(assets, lods[0].Albedo),
+                AssetFile(assets, lods[0].Normals),
+                AssetFile(assets, lods[0].Specular),
                 lods[0].Shader);
 
-        private static string AssetFile(string assets, string path) => Path.Combine(assets, path.TrimStart('/'));
+        private static string? AssetFile(string assets, string? path) => path is null ? null : Path.Combine(assets, path.TrimStart('/'));
 
         private static T? TryRead<T>(string file) where T : class
         {

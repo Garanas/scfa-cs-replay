@@ -181,13 +181,15 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   `_v1`, `_s2`: the variants share a tile) and its facts. `AssetUse.Count(document)` counts what a
   map uses by those keys, and `AssetUse.Biomes` gives the biomes of that, most used first.
 - A prop's or unit's picture is drawn from its most detailed mesh (`AssetEntry.Model`: the
-  `.glb`, the albedo and the shader of its first level of detail) by `AssetPreview.Render`, with
-  `MeshPreview` of FileFormats.Mesh: on the processor, from above and in front, one light, the
-  albedo's alpha cutting out where the shader's name ends in `Alpha` (trees, bushes), and
-  brightened when dark (the units' albedos are: the game adds specular light, reflections and
-  the team colour, which the picture leaves out; Seraphim structures come out darkest). The
-  albedo is read at most twice the picture's width. A unit of about 2000 triangles takes 20 to
-  100 ms at 112 pixels, most of it reading the albedo.
+  `.glb`, the albedo, normal and specular maps and the shader of its first level of detail) by
+  `AssetPreview.Render`, with `MeshPreview` of FileFormats.Mesh: on the processor, from above and
+  in front, shaded as the game's `effects/mesh.fx` (FAF's, in `effects.nx2`) shades it. The
+  shader's name chooses the formula (`MeshPreview.ShaderOf`: the factions' PBR shaders with their
+  team colour, normal-mapped props, vertex-normal props) and the alpha test (`AlphaRef` 0x80 for
+  the `...Alpha` shaders of trees and bushes, 0x23 for `VertexNormal`). The light is the game
+  editor's default, the environment a gradient fitted to `DefaultEnvCube.dds`, the army blue;
+  there are no shadows. The textures are read at most twice the picture's width. A unit takes
+  about 50 to 300 ms at 160 pixels, most of it reading the three textures.
 - `GameTextures.Find(path, document, workspace)` finds a texture a map names as the game does: a
   path into `/maps/<any folder>/` is one of the map's own files (`MapDocument.Files`), any other
   one of the workspace's assets. Its `Key` is the same for every spelling of the path and its

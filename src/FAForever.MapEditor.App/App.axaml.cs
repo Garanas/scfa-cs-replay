@@ -27,6 +27,7 @@ public sealed class App : Application
             ILogger log = telemetry.CreateLogger("Editor");
             WatchCrashes(telemetry, log);
             Performance.Logger = telemetry.CreateLogger("Performance");
+            Controls.AssetThumbnail.Cache.Logger = telemetry.CreateLogger("Assets");
             Performance.StartWatchdog();
             log.LogInformation("Started the editor {Version} on {System}", AssetConverter.EditorVersion, System.Runtime.InteropServices.RuntimeInformation.OSDescription);
 

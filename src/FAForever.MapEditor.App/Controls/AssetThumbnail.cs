@@ -7,6 +7,8 @@ using Avalonia.Threading;
 using FAForever.FileFormats.Mesh;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.Project.Workspaces;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FAForever.MapEditor.App.Controls;
 
@@ -156,6 +158,11 @@ public sealed class AssetThumbnail : Control
         private static readonly SemaphoreSlim Readers = new SemaphoreSlim(Math.Max(2, Environment.ProcessorCount / 2));
 
         /// <summary>
+        /// Where a mesh that cannot be drawn is reported, in the category <c>Assets</c>.
+        /// </summary>
+        public static ILogger Logger { get; set; } = NullLogger.Instance;
+
+        /// <summary>
         /// The picture, if it is read; null while it is not (or could not be).
         /// </summary>
         public static Bitmap? Get(string file, int width) => Get((file, width));
@@ -188,21 +195,21 @@ public sealed class AssetThumbnail : Control
             {
                 using FileStream stream = File.OpenRead(file);
                 return Bitmap.DecodeToWidth(stream, width, BitmapInterpolationMode.MediumQuality);
-            });
+            }, report: false);
 
         /// <summary>
         /// Draws the picture of a mesh, <paramref name="width"/> pixels square, unless it is drawn
         /// (from the mesh as it is now) or being drawn; a mesh that cannot be read is kept as none.
         /// </summary>
         public static Task LoadAsync(AssetModel model, int width) =>
-            LoadAsync((KeyOf(model), width), model.Mesh, "assets.preview", () => ToBitmap(AssetPreview.Render(model, width)));
+            LoadAsync((KeyOf(model), width), model.Mesh, "assets.preview", () => ToBitmap(AssetPreview.Render(model, width)), report: true);
 
         /// <summary>
-        /// The variants of a prop share a mesh and differ in their albedo.
+        /// The variants of a prop share a mesh and differ in their textures.
         /// </summary>
-        private static string KeyOf(AssetModel model) => model.Mesh + "|" + model.Albedo;
+        private static string KeyOf(AssetModel model) => string.Join('|', model.Mesh, model.Albedo, model.Normals, model.Specular, model.Shader);
 
-        private static Task LoadAsync((string, int) key, string file, string span, Func<Bitmap> read)
+        private static Task LoadAsync((string, int) key, string file, string span, Func<Bitmap> read, bool report)
         {
             DateTime written = File.GetLastWriteTimeUtc(file);
             lock (Gate)
@@ -229,10 +236,15 @@ public sealed class AssetThumbnail : Control
                         using Performance.Span measure = Performance.Measure(span);
                         bitmap = read();
                     }
-                    catch (Exception)
+                    catch (Exception exception)
                     {
                         // a file that is no picture or mesh (or gone) shows as none: it is the
-                        // asset's own problem, and the 3D view reports textures it cannot read
+                        // asset's own problem; the 3D view reports textures it cannot read, and
+                        // this a mesh
+                        if (report)
+                        {
+                            Logger.LogWarning(exception, "Could not draw the picture of {Mesh}", file);
+                        }
                     }
                     finally
                     {
