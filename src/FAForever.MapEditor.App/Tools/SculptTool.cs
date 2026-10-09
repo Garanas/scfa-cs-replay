@@ -5,16 +5,33 @@ using FAForever.MapEditor.Project.Editing;
 namespace FAForever.MapEditor.App.Tools;
 
 /// <summary>
-/// Raises, lowers, smooths or flattens the heights with a round brush (user story T-1).
+/// Raises, lowers, smooths or flattens the heights with a brush, round or of a picture (user
+/// story T-1).
 /// </summary>
-public sealed partial class SculptTool(MainViewModel model) : ObservableObject, IMapTool
+public sealed partial class SculptTool : ObservableObject, IShapedBrushTool
 {
+    private readonly MainViewModel _model;
     private BrushStroke? _stroke;
+
+    public SculptTool(MainViewModel model)
+    {
+        _model = model;
+        Shape = new BrushShapeSettings(model);
+        Shape.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(BrushShapeSettings.IsShaped))
+            {
+                OnPropertyChanged(nameof(StrengthMaximum));
+            }
+        };
+    }
+
+    public BrushShapeSettings Shape { get; }
 
     public IReadOnlyList<HeightBrushMode> Modes { get; } = Enum.GetValues<HeightBrushMode>();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsFlattening))]
+    [NotifyPropertyChangedFor(nameof(IsFlattening), nameof(StrengthMaximum))]
     public partial HeightBrushMode Mode { get; set; } = HeightBrushMode.Raise;
 
     /// <summary>
@@ -42,16 +59,27 @@ public sealed partial class SculptTool(MainViewModel model) : ObservableObject, 
 
     public double CursorRadius => Radius;
 
+    /// <summary>
+    /// The most the strength slider goes to: a picture raises or lowers up to 50 game units in one
+    /// dab, a mountain at a click; round, 5.
+    /// </summary>
+    public double StrengthMaximum => Shape.IsShaped && Mode is HeightBrushMode.Raise or HeightBrushMode.Lower ? 50 : 5;
+
     public void Press(float x, float z)
     {
+        if (BrushShapeSettings.TryRead(_model, Shape) is not (true, var shape))
+        {
+            return;
+        }
         HeightBrush brush = new HeightBrush
         {
             Mode = Mode,
             Radius = (float)Radius,
             Strength = (float)Strength,
             Target = (float)Target,
+            Shape = shape,
         };
-        float scale = (model.ShownDocument ?? throw new InvalidOperationException("No map is open")).Terrain.Heightmap.Scale;
+        float scale = (_model.ShownDocument ?? throw new InvalidOperationException("No map is open")).Terrain.Heightmap.Scale;
         string description = Mode switch
         {
             HeightBrushMode.Raise => "Raise terrain",
@@ -59,7 +87,7 @@ public sealed partial class SculptTool(MainViewModel model) : ObservableObject, 
             HeightBrushMode.Smooth => "Smooth terrain",
             _ => "Flatten terrain",
         };
-        _stroke = new BrushStroke(model, description, Radius, x, z, (edit, at, to) => brush.Apply(edit.Heightmap, scale, at, to));
+        _stroke = new BrushStroke(_model, description, Radius, x, z, (edit, at, to) => (brush with { Rotation = Shape.NextRotation() }).Apply(edit.Heightmap, scale, at, to));
     }
 
     public void Drag(float x, float z) => _stroke?.MoveTo(x, z);

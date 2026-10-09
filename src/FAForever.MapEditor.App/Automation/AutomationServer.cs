@@ -429,6 +429,9 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     ["radius"] = sculpt.Radius,
                     ["strength"] = sculpt.Strength,
                     ["target"] = sculpt.Target,
+                    ["shape"] = sculpt.Shape.Chosen.Key ?? "round",
+                    ["rotation"] = sculpt.Shape.Rotation,
+                    ["randomRotation"] = sculpt.Shape.RandomRotation,
                 },
                 ["strata"] = new JsonObject
                 {
@@ -436,6 +439,9 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     ["radius"] = strata.Radius,
                     ["strength"] = strata.Strength,
                     ["erase"] = strata.Erase,
+                    ["shape"] = strata.Shape.Chosen.Key ?? "round",
+                    ["rotation"] = strata.Shape.Rotation,
+                    ["randomRotation"] = strata.Shape.RandomRotation,
                 },
             },
             ["zoom"] = window.MapView.Zoom,

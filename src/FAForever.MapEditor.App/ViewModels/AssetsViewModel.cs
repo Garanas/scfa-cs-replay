@@ -249,7 +249,6 @@ public sealed partial class AssetsViewModel : ObservableObject
         AssetKind.Unit => "Placing it for an army: user story U-2",
         AssetKind.Decal => "Placing it on the terrain: user story D-1",
         AssetKind.Texture => "Using it for a stratum: user story S-2",
-        AssetKind.Brush => "Sculpting with it as a stamp: user story T-1",
         _ => "",
     };
 
@@ -260,6 +259,13 @@ public sealed partial class AssetsViewModel : ObservableObject
         : Kind == AssetKind.Brush && !Catalog.Entries.Any(entry => entry.Kind == AssetKind.Brush)
             ? "No brushes yet: put greyscale PNGs in the workspace's brushes folder (Modes, Assets, Show the brushes folder), in folders as you like."
         : Kind == AssetKind.Brush && Scope == AssetScope.InMap ? "A map holds no brushes: choose The workspace's."
+    /// <summary>
+    /// What the shown asset is for today, beside what is planned: a brush is a shape of the brush tools.
+    /// </summary>
+    public string ShownUse => Shown?.Kind == AssetKind.Brush
+        ? "Choosing it makes it the shape of the active brush tool: Sculpt in the Terrain mode, Strata in the Paint mode, whose options turn it."
+        : "";
+
         : Catalog.Entries.Count == 0 ? "The workspace has no converted assets."
         : Scope == AssetScope.InMap ? "The map uses none of these. Choose Map's biomes or Everything."
         : "Nothing matches. Search in Everything, or clear the biome and category.";
@@ -521,6 +527,10 @@ public sealed partial class AssetsViewModel : ObservableObject
     private void Rebuild()
     {
         if (_rebuilding)
+    partial void OnSelectedChanged(AssetTile? value) => OnPropertyChanged(nameof(ShownUse));
+
+    partial void OnSelectedMemberChanged(AssetEntry? value) => OnPropertyChanged(nameof(ShownUse));
+
         {
             return;
         }

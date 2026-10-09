@@ -16,10 +16,11 @@ public sealed record Stratum(int Layer, string Name)
 }
 
 /// <summary>
-/// Paints or erases the mask of a terrain layer with a round brush (user story S-1). The layer it
-/// paints is chosen in the Paint mode's panel; the top view shows its mask while the tool is active.
+/// Paints or erases the mask of a terrain layer with a brush, round or of a picture (user story
+/// S-1). The layer it paints is chosen in the Paint mode's panel; the top view shows its mask while
+/// the tool is active.
 /// </summary>
-public sealed partial class StrataTool : ObservableObject, IMapTool
+public sealed partial class StrataTool : ObservableObject, IShapedBrushTool
 {
     private readonly MainViewModel _model;
     private BrushStroke? _stroke;
@@ -27,6 +28,7 @@ public sealed partial class StrataTool : ObservableObject, IMapTool
     public StrataTool(MainViewModel model)
     {
         _model = model;
+        Shape = new BrushShapeSettings(model);
         model.MapChanged += (_, _) => ReadStrata();
     }
 
@@ -68,6 +70,8 @@ public sealed partial class StrataTool : ObservableObject, IMapTool
 
     public double CursorRadius => Radius;
 
+    public BrushShapeSettings Shape { get; }
+
     /// <summary>
     /// Paints the mask of layer <paramref name="layer"/>.
     /// </summary>
@@ -80,7 +84,8 @@ public sealed partial class StrataTool : ObservableObject, IMapTool
 
     public void Press(float x, float z)
     {
-        if (Painted is not Stratum stratum || _model.ShownDocument is not MapDocument document)
+        if (Painted is not Stratum stratum || _model.ShownDocument is not MapDocument document
+            || BrushShapeSettings.TryRead(_model, Shape) is not (true, var shape))
         {
             return;
         }
@@ -89,10 +94,11 @@ public sealed partial class StrataTool : ObservableObject, IMapTool
             Radius = (float)Radius,
             Strength = (float)Strength,
             Erase = Erase,
+            Shape = shape,
         };
         (int width, int height) = (document.Width, document.Height);
         _stroke = new BrushStroke(_model, $"{(Erase ? "Erase" : "Paint")} layer {stratum.Layer}", Radius, x, z,
-            (edit, at, to) => brush.Apply(edit.StratumMask(stratum.Layer), width, height, at, to));
+            (edit, at, to) => (brush with { Rotation = Shape.NextRotation() }).Apply(edit.StratumMask(stratum.Layer), width, height, at, to));
     }
 
     public void Drag(float x, float z) => _stroke?.MoveTo(x, z);

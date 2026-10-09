@@ -130,7 +130,8 @@ namespace FAForever.MapEditor.App.Tests
 
             shelf.Select("brushes/craters/crater01.png");
             Assert.AreEqual("Brush · Craters · shape", shelf.ShownDetail);
-            StringAssert.Contains(shelf.ShownPlanned, "T-1");
+            StringAssert.Contains(shelf.ShownUse, "Sculpt");
+            Assert.AreEqual("", shelf.ShownPlanned, "brushes are used today");
             Assert.AreEqual("In the workspace", shelf.ShownKeyLabel);
             Assert.AreEqual("", shelf.ShownUses, "a map holds no brushes");
 

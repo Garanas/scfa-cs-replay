@@ -129,9 +129,19 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     the layer it paints (chosen in the Paint panel's list, `Strata`/`Painted`), radius, strength,
     erase; the top view shows that layer's mask while it is active (`MainViewModel.ShownMask`).
     Each tool has its own radius.
-  - `brush.set {layer?, mode?, radius?, strength?, target?, erase?}` sets them up for
-    automation: a layer chooses its tool (0 sculpting, 1 to 8 the strata tool with that layer),
-    radius and strength go to the active tool's brush.
+  - **Brush shapes** (`Tools/BrushShapeSettings`, both tools' `Shape`, `IShapedBrushTool`): round,
+    or one of the workspace's brushes (the shelf's, below), the first choice of the options row;
+    a brush chosen on the shelf becomes the active tool's shape. A picture fills the square
+    around the radius, its top to the north, turned clockwise by `Rotation` or at random per dab
+    (`RandomRotation`); the top view draws that square, with a tick on its top edge, in place of
+    the circle. It is read once (`BrushShapes`, by file and write time; the library's
+    `BrushShape`, reduced to 256 pixels), on a pool thread when chosen; a picture that cannot be
+    read shows in the status line and paints nothing. With a picture, raising and lowering go up
+    to 50 game units a dab (`StrengthMaximum`): a mountain at a click.
+  - `brush.set {layer?, mode?, radius?, strength?, target?, erase?, shape?, rotation?,
+    randomRotation?}` sets them up for automation: a layer chooses its tool (0 sculpting, 1 to 8
+    the strata tool with that layer); radius, strength and the shape (`round`, a brush's key or
+    its path in the brushes folder) go to the active tool's brush.
 - Shortcuts are never a single letter (`IdsAndShortcutsAreUnique`): it would fire while typing.
 
 ## UI rules: one look, kept in one place
@@ -368,8 +378,8 @@ ready and again with Modes, Assets, Read the assets again (`assets.reload`):
 - **Brushes** are the workspace's own, not the game's: the greyscale PNGs of its `brushes` folder,
   in folders as the map maker likes (the folders are the shelf's groups; Modes, Assets, Show the
   brushes folder, `assets.brushesFolder`). The editor watches the folder and reads the brushes
-  again when a file changes; a thumbnail whose file changed is read again too. Sculpting with one
-  (stamps) is not built yet (T-1).
+  again when a file changes; a thumbnail whose file changed is read again too. Choosing one makes
+  it the shape of the active brush tool (sculpt or strata, above).
 - **Show**: what the map uses (`InMap`), the map's biomes (`Narrow`: the biomes of the props,
   decals and strata it uses, all when none; for units the civilian ones), or `Everything`. Then
   the biome (or faction) and the category: the left column holds what filters, nothing else. The
@@ -469,7 +479,7 @@ faf-map editor close                                      # closes without askin
   (`workspace.convert`, `converted`), `open {path}`, `import {path}`, `save {path?}`,
   `save-as {path}` (the path is the command's `folder`), `commit {message}` (`commit`: the hash, or
   null when nothing changed), `export {output, version?}` (`folder`), `undo`, `redo`,
-  `goto {step}` (`done`), `brush {layer?, mode?, radius?, strength?, target?, erase?}`
+  `goto {step}` (`done`), `brush {layer?, mode?, radius?, strength?, target?, erase?, shape?, rotation?, randomRotation?}`
   (`brush.set`, above), `fit`, `camera {x?, z?, distance?, yaw?, pitch?}`
   (`camera.look`: the 3D view, degrees; at once), `focus {x, z, radius?}` (`camera.focus`: with a
   radius as F, gliding while the 3D view shows; without, as control and a click in the top view),

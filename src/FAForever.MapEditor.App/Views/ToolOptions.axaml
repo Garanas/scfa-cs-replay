@@ -17,6 +17,9 @@
             <!-- sculpting the heights (T-1) -->
             <DataTemplate DataType="tools:SculptTool">
               <StackPanel Classes="toolrow">
+                <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
+                          ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
+                          AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
                 <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" AutomationProperties.Name="Height brush mode" />
                 <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
@@ -24,17 +27,21 @@
                 </StackPanel>
                 <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="{Binding Strength, StringFormat='Strength: {0:0.00}'}" />
-                  <Slider Minimum="0.01" Maximum="5" Value="{Binding Strength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height brush strength" />
+                  <Slider Minimum="0.01" Maximum="{Binding StrengthMaximum}" Value="{Binding Strength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height brush strength" />
                 </StackPanel>
                 <StackPanel Classes="inline" IsVisible="{Binding IsFlattening}">
                   <TextBlock Classes="label" Text="{Binding Target, StringFormat='Flatten to: {0:0.0}'}" />
                   <Slider Minimum="0" Maximum="256" Value="{Binding Target}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height to flatten to" />
                 </StackPanel>
+                <ContentControl Content="{Binding Shape}" />
               </StackPanel>
             </DataTemplate>
             <!-- painting a stratum's mask (S-1) -->
             <DataTemplate DataType="tools:StrataTool">
               <StackPanel Classes="toolrow">
+                <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
+                          ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
+                          AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
                 <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
                   <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
@@ -44,6 +51,19 @@
                   <Slider Minimum="0.01" Maximum="1" Value="{Binding Strength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Mask brush strength" />
                 </StackPanel>
                 <CheckBox Content="Erase" IsChecked="{Binding Erase}" AutomationProperties.Name="Erase the layer" />
+                <ContentControl Content="{Binding Shape}" />
+              </StackPanel>
+            </DataTemplate>
+            <!-- how either brush's picture is turned; the shape itself is the first choice of the row -->
+            <DataTemplate DataType="tools:BrushShapeSettings">
+              <StackPanel Classes="toolrow">
+                <StackPanel Classes="inline" IsVisible="{Binding IsShaped}">
+                  <TextBlock Classes="label" Text="{Binding Rotation, StringFormat='Turned: {0:0}°'}" />
+                  <Slider Minimum="-180" Maximum="180" Value="{Binding Rotation}" IsEnabled="{Binding !RandomRotation}" Width="{StaticResource ToolSliderWidth}"
+                          AutomationProperties.Name="Brush rotation in degrees" />
+                </StackPanel>
+                <CheckBox Content="Random" IsChecked="{Binding RandomRotation}" IsVisible="{Binding IsShaped}"
+                          AutomationProperties.Name="Turn each dab at random" />
               </StackPanel>
             </DataTemplate>
           </ContentControl.DataTemplates>

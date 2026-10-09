@@ -2,7 +2,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Tools;
+using System.ComponentModel;
 using FAForever.MapEditor.Project;
+using FAForever.MapEditor.Project.Workspaces;
 using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.ViewModels;
@@ -143,6 +145,39 @@ public sealed partial class MainViewModel
 
     partial void OnActiveToolChanged(ToolItem? value) => Redraw();
 
+    /// <summary>
+    /// Raised when a tool's settings change what the views draw around the mouse: its radius, its
+    /// brush's shape or rotation.
+    /// </summary>
+    public event EventHandler? CursorChanged;
+
+    /// <summary>
+    /// The catalogue the brush tools last read their shapes from.
+    /// </summary>
+    private AssetCatalog? _brushCatalog;
+
+    /// <summary>
+    /// The brush tools offer the workspace's brushes as shapes, and a brush chosen on the shelf
+    /// becomes the active tool's shape (user stories T-1, T-2, S-1).
+    /// </summary>
+    private void OnAssetsChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AssetsViewModel.Kinds) && Assets.Catalog != _brushCatalog)
+        {
+            _brushCatalog = Assets.Catalog;
+            foreach (IShapedBrushTool tool in _tools.Values.OfType<IShapedBrushTool>())
+            {
+                tool.Shape.Refresh(Assets.Catalog);
+            }
+        }
+        else if (e.PropertyName == nameof(AssetsViewModel.Shown)
+            && Assets.Shown is { Kind: AssetKind.Brush } brush
+            && ActiveTool?.Tool is IShapedBrushTool active)
+        {
+            active.Shape.Choose(brush.Key);
+        }
+    }
+
     public IReadOnlyList<OverlayItem> Overlays { get; private set; } = [];
 
     /// <summary>
@@ -191,6 +226,19 @@ public sealed partial class MainViewModel
             if (tool.Make is not null)
             {
                 _tools[tool.Id] = tool.Make(this);
+            }
+        }
+
+        Assets.PropertyChanged += OnAssetsChanged;
+        foreach (IMapTool tool in _tools.Values)
+        {
+            if (tool is INotifyPropertyChanged settings)
+            {
+                settings.PropertyChanged += (_, _) => CursorChanged?.Invoke(this, EventArgs.Empty);
+            }
+            if (tool is IShapedBrushTool shaped)
+            {
+                shaped.Shape.PropertyChanged += (_, _) => CursorChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 

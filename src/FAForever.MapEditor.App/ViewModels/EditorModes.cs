@@ -92,7 +92,6 @@ public static class EditorModes
         new ModeDefinition("terrain", "Terrain", "Icon.Terrain", "Height layers, sculpting, curves, terrain types, walkability", 0, "F2", "T-1",
             [
                 new ToolDefinition("terrain.sculpt", "Sculpt", "T-1") { Make = model => new SculptTool(model) },
-                new ToolDefinition("terrain.stamp", "Stamp", "T-1", "Brushes from images, with rotation"),
                 new ToolDefinition("terrain.curve", "Curve", "T-4", "Draw a curve and shape the terrain along it: ridge, valley, road, cliff edge"),
                 new ToolDefinition("terrain.types", "Terrain types", "T-6", "Paint the terrain type of each ogrid"),
                 new ToolDefinition("terrain.walkability", "Walkability", "T-7", "Mark where land units must be blocked or may pass"),

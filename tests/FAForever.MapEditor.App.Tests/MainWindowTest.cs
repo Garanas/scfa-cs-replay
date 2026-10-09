@@ -362,6 +362,24 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task ABrushOfAPictureShowsItsTurnedSquare() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            model.Assets.Use(TestAssets.Catalog());
+            Show(window, MapViewTab.Top);
+            model.ShowCamera = false;
+            model.Tool<SculptTool>().Radius = 40;
+            window.MouseMove(Middle(window.MapView, window));
+            byte[] round = Png(window.CaptureRenderedFrame());
+
+            model.Tool<SculptTool>().Shape.Choose("ridge.png");
+            model.Tool<SculptTool>().Shape.Rotation = 30;
+
+            CollectionAssert.AreNotEqual(round, Png(window.CaptureRenderedFrame()), "the square of the picture in place of the circle");
+            window.Close();
+        });
+
+        [TestMethod]
         public Task EveryControlOneCanUseHasALabelOrText() => Run(async () =>
         {
             (MainWindow window, _) = await Open();

@@ -171,6 +171,52 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task SculptsAndPaintsWithABrushOfTheWorkspace()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            await model.OpenAsync(HardFfa);
+            AssetCatalog catalog = TestAssets.Catalog();
+            // brushes of one white pixel: the whole square works fully at its centre
+            byte[] white = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGP4DwABAQEAsTj2FAAAAABJRU5ErkJggg==");
+            foreach (AssetEntry brush in catalog.Entries.Where(entry => entry.Kind == AssetKind.Brush))
+            {
+                File.WriteAllBytes(brush.File, white);
+            }
+            model.Assets.Use(catalog);
+            SculptTool sculpt = model.Tool<SculptTool>();
+            StrataTool strata = model.StrataTool;
+            CollectionAssert.AreEqual(new[] { "Round", "ridge", "craters/crater01" }, sculpt.Shape.Choices.Select(choice => choice.Path).ToArray());
+            Assert.AreEqual(5, sculpt.StrengthMaximum);
+
+            model.SelectMode("terrain");
+            model.Assets.Select("brushes/craters/crater01.png");
+            Assert.AreEqual("brushes/craters/crater01.png", sculpt.Shape.Chosen.Key, "a brush chosen on the shelf is the active tool's shape");
+            Assert.IsTrue((await model.Commands.RunAsync("brush.set", new System.Text.Json.Nodes.JsonObject { ["rotation"] = 45, ["radius"] = 10, ["strength"] = 2 }, interactive: false)).Ran);
+            Assert.AreEqual(45, sculpt.Shape.Rotation);
+            Assert.AreEqual(50, sculpt.StrengthMaximum, "a picture raises a mountain at a click");
+            float before = model.ShownDocument!.Terrain.Heightmap.GetHeight(100, 40);
+            float far = model.ShownDocument.Terrain.Heightmap.GetHeight(116, 40);
+            model.Stroke([(100, 40)]);
+            Assert.AreEqual(before + 2, model.ShownDocument!.Terrain.Heightmap.GetHeight(100, 40), 0.05f, "the picture is white at its centre");
+            Assert.AreEqual(far, model.ShownDocument.Terrain.Heightmap.GetHeight(116, 40), "nothing past the corner of its square");
+
+            model.SelectTool("paint.strata");
+            Assert.IsTrue((await model.Commands.RunAsync("brush.set", new System.Text.Json.Nodes.JsonObject { ["layer"] = 3, ["shape"] = "ridge.png" }, interactive: false)).Ran);
+            Assert.AreEqual("brushes/ridge.png", strata.Shape.Chosen.Key);
+            Assert.AreEqual("brushes/craters/crater01.png", sculpt.Shape.Chosen.Key, "each tool has its own shape");
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+                model.Commands.RunAsync("brush.set", new System.Text.Json.Nodes.JsonObject { ["shape"] = "nothing.png" }, interactive: false));
+
+            File.Delete(strata.Shape.Chosen.File!);
+            model.Stroke([(50, 50)]);
+            StringAssert.StartsWith(model.Status, "The brush ridge cannot be read");
+            Assert.AreEqual("Raise terrain", model.Map!.Session.UndoDescription, "no stroke");
+
+            model.Assets.Use(TestAssets.WithoutBrushes());
+            Assert.AreEqual(BrushChoice.Round, strata.Shape.Chosen, "a brush the workspace lost is round again");
+        }
+
+        [TestMethod]
         public async Task SavesAnImportedMapWhereThePersonSays()
         {
             Answers answers = new Answers();

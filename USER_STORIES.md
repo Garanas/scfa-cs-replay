@@ -83,12 +83,13 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## T: Terrain
 
-- [x] **T-1 Sculpt.** Raise, lower, smooth and flatten with a round brush. Missing: set height, add,
-      scale, noise, erosion; a choice of falloff; brushes from images (stamps) with rotation;
-      limits on the lowest and highest height.
+- [x] **T-1 Sculpt.** Raise, lower, smooth and flatten with a brush, round or the shape of one of
+      the workspace's brushes (T-2), turned by hand or at random per dab. Missing: set height, add,
+      scale, noise, erosion; a choice of falloff; limits on the lowest and highest height.
 - [ ] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace. Today: the
       brush shapes, greyscale PNGs of the workspace's `brushes` folder, in the asset shelf of the
-      Terrain mode, read again when they change; missing: using them (T-1), presets of settings.
+      Terrain mode, read again when they change; they are the shapes of the sculpt and strata
+      brushes (T-1, S-1). Missing: presets of settings.
 - [x] **T-3 Heightmap from other tools.** `heightmap.png` or `.r16` in the project is read again
       when World Machine or Gaea writes it. Missing: import or export with a different size.
 - [ ] **T-4 Curves.** Draw a curve (spline) and shape the terrain along it: a ridge, a valley, a
@@ -106,8 +107,9 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## S: Strata (terrain textures)
 
-- [x] **S-1 Paint strata.** Paint and erase a layer's mask with a round brush. Missing: stamps,
-      limits by slope or height, painting with symmetry.
+- [x] **S-1 Paint strata.** Paint and erase a layer's mask with a brush, round or the shape of one
+      of the workspace's brushes (T-2), turned. Missing: limits by slope or height, painting with
+      symmetry.
 - [ ] **S-2 Layers.** Choose each layer's albedo and normal texture (picker, F-9) and their scales;
       add, remove and reorder layers; the lower and upper layer.
 - [x] **S-3 Masks from other tools.** The masks are PNGs in the project, read again when they change.

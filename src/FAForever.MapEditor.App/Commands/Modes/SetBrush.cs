@@ -15,6 +15,10 @@ namespace FAForever.MapEditor.App.Commands;
 /// <param name="Strength">Of the active tool's brush.</param>
 /// <param name="Target">The height that the sculpt tool flattens towards, in game units.</param>
 /// <param name="Erase">Whether the strata tool takes the layer away.</param>
+/// <param name="Shape">Of the active tool's brush: <c>round</c>, or a brush of the workspace by its key
+/// (<c>brushes/craters/crater01.png</c>) or its path in the brushes folder (<c>craters/crater01.png</c>).</param>
+/// <param name="Rotation">Of the active tool's shape, in degrees clockwise in the top view.</param>
+/// <param name="RandomRotation">Whether the active tool turns each dab at random.</param>
 [EditorCommand("brush.set", "Set the brush", Story = "T-1")]
 public sealed record SetBrush(
     int? Layer = null,
@@ -22,7 +26,10 @@ public sealed record SetBrush(
     double? Radius = null,
     double? Strength = null,
     double? Target = null,
-    bool? Erase = null) : IRequest;
+    bool? Erase = null,
+    string? Shape = null,
+    double? Rotation = null,
+    bool? RandomRotation = null) : IRequest;
 
 public sealed class SetBrushHandler(MainViewModel model) : IRequestHandler<SetBrush>
 {
@@ -58,11 +65,20 @@ public sealed class SetBrushHandler(MainViewModel model) : IRequestHandler<SetBr
                 strata.Strength = request.Strength ?? strata.Strength;
                 break;
             default:
-                if (request.Radius is not null || request.Strength is not null)
+                if (request.Radius is not null || request.Strength is not null || request.Shape is not null || request.Rotation is not null || request.RandomRotation is not null)
                 {
                     throw new ArgumentException($"The active tool ({model.ActiveTool?.Definition.Title}) has no brush: give a layer to choose one");
                 }
                 break;
+        }
+        if (model.ActiveTool?.Tool is IShapedBrushTool shaped)
+        {
+            if (request.Shape is not null)
+            {
+                shaped.Shape.Choose(request.Shape);
+            }
+            shaped.Shape.Rotation = request.Rotation ?? shaped.Shape.Rotation;
+            shaped.Shape.RandomRotation = request.RandomRotation ?? shaped.Shape.RandomRotation;
         }
         return Task.CompletedTask;
     }

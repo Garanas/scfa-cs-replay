@@ -128,6 +128,7 @@ public sealed class HeightmapView : Control
             _model.MapChanged -= OnMapChanged;
             _model.DocumentChanged -= OnDocumentChanged;
             _model.CameraMoved -= OnCameraMoved;
+            _model.CursorChanged -= OnCameraMoved;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
@@ -135,11 +136,12 @@ public sealed class HeightmapView : Control
             _model.MapChanged += OnMapChanged;
             _model.DocumentChanged += OnDocumentChanged;
             _model.CameraMoved += OnCameraMoved;
+            _model.CursorChanged += OnCameraMoved;
         }
         OnMapChanged(this, EventArgs.Empty);
     }
 
-    // only the overlay changes: the terrain's picture stays
+    // only the overlay changes (the camera, the brush around the mouse): the terrain's picture stays
     private void OnCameraMoved(object? sender, EventArgs e)
     {
         if (IsVisible)
@@ -187,7 +189,27 @@ public sealed class HeightmapView : Control
         if (_cursor is Point cursor && _model?.ActiveTool?.Tool is { CursorRadius: > 0 } tool)
         {
             double radius = tool.CursorRadius * _zoom;
-            context.DrawEllipse(null, overlay.Brush, cursor, radius, radius);
+            if (tool is IShapedBrushTool { Shape: { IsShaped: true, RandomRotation: false } shape })
+            {
+                // the picture's square, turned as it paints, with a tick on its top edge
+                (double sin, double cos) = Math.SinCos(shape.Rotation * Math.PI / 180);
+                Point Corner(double u, double v) => cursor + new Vector((u * cos - v * sin) * radius, (u * sin + v * cos) * radius);
+                StreamGeometry square = new StreamGeometry();
+                using (StreamGeometryContext figure = square.Open())
+                {
+                    figure.BeginFigure(Corner(-1, -1), false);
+                    figure.LineTo(Corner(1, -1));
+                    figure.LineTo(Corner(1, 1));
+                    figure.LineTo(Corner(-1, 1));
+                    figure.EndFigure(true);
+                }
+                context.DrawGeometry(null, overlay.Brush, square);
+                context.DrawLine(overlay.Brush, Corner(0, -1), Corner(0, -0.8));
+            }
+            else
+            {
+                context.DrawEllipse(null, overlay.Brush, cursor, radius, radius);
+            }
         }
     }
 

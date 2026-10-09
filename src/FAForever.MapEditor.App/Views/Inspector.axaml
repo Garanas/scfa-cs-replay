@@ -69,7 +69,8 @@
           </Border>
           <Border Classes="group">
             <StackPanel Classes="stack">
-              <Border Classes="planned">
+              <TextBlock Classes="caption" Text="{Binding Assets.ShownUse}" IsVisible="{Binding Assets.ShownUse, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              <Border Classes="planned" IsVisible="{Binding Assets.ShownPlanned, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                 <StackPanel Classes="stack">
                   <TextBlock Classes="caption" Text="{Binding Assets.ShownPlanned}" />
                   <TextBlock Classes="story" Text="Not built yet" />
