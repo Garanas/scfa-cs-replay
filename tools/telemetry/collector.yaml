@@ -1,0 +1,37 @@
+# What the collector takes in and where it goes: logs to Loki, metrics to Prometheus, both over
+# their OTLP endpoints. The editor sends to the otlp receiver; the otlpjsonfile receivers read the
+# sessions' files as the editor writes them (one OTLP/JSON request a line).
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+  otlpjsonfile/logs:
+    include: ["/import/*.logs.jsonl", "/import/**/*.logs.jsonl"]
+    start_at: beginning
+  otlpjsonfile/metrics:
+    include: ["/import/*.metrics.jsonl", "/import/**/*.metrics.jsonl"]
+    start_at: beginning
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+  batch: {}
+
+exporters:
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+  otlphttp/prometheus:
+    endpoint: http://prometheus:9090/api/v1/otlp
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp, otlpjsonfile/logs]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/loki]
+    metrics:
+      receivers: [otlp, otlpjsonfile/metrics]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/prometheus]
