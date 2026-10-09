@@ -35,7 +35,7 @@ public sealed class ViewController(MainViewModel model)
     [EditorCommand("view.assets", "Assets", Menu = "View", Story = "F-8")]
     public void Assets() => model.DockIndex = 2;
 
-    [EditorCommand("view.console", "Console", Menu = "View", Story = "F-1")]
+    [EditorCommand("view.console", "Console", Menu = "View", Story = "F-17")]
     public void Console() => model.DockIndex = 3;
 
     [EditorCommand("view.overlay.markers", "Show markers", Menu = "View", Story = "R-6", SeparatorBefore = true)]

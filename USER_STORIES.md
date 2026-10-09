@@ -47,6 +47,11 @@ reads again when it changes; and nothing that generates runs by itself.
       the events; a run is one step of undo.
 - [x] **F-16 Driven by agents and tests.** Automation over HTTP for every operation, labels for
       screen readers, headless tests of the window, performance spans (see the App's guide).
+- [ ] **F-17 Diagnostics.** See what goes well and wrong, as a service's logs and metrics: the
+      Console with levels; every session's logs (warnings, errors, crashes) and measurements
+      (commands, operations and their durations, frames, stalls, memory) on disk in
+      OpenTelemetry's format, recording on or off; sent to the developers' collector only when the
+      user turns it on; a problem report that bundles them. Today: all but the report.
 
 ## M: The map
 

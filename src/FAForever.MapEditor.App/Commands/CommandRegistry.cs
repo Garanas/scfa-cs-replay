@@ -105,6 +105,7 @@ public sealed class CommandRegistry
 
     /// <summary>
     /// Runs a command: a command not built yet only reports what it is to do (<see cref="IncompleteRun"/>).
+    /// Every run is counted by its result (<see cref="Diagnostics.EditorMetrics.Commands"/>).
     /// </summary>
     /// <returns>Whether it ran: false when it cannot run now or is not built yet.</returns>
     /// <exception cref="ArgumentException">There is no such command.</exception>
@@ -113,17 +114,31 @@ public sealed class CommandRegistry
         EditorCommand command = Find(id) ?? throw new ArgumentException($"There is no command '{id}'; 'commands' lists them");
         if (command.Incomplete is not null)
         {
+            Count(command, "not_built");
             IncompleteRun?.Invoke(command);
             return false;
         }
         if (!command.CanRun())
         {
+            Count(command, "cannot_run");
             return false;
         }
-        await command.Run();
+        try
+        {
+            await command.Run();
+        }
+        catch
+        {
+            Count(command, "failed");
+            throw;
+        }
+        Count(command, "ran");
         Ran?.Invoke(command);
         return true;
     }
+
+    private static void Count(EditorCommand command, string result) => Diagnostics.EditorMetrics.Commands.Add(1,
+        Diagnostics.EditorMetrics.Tag("command", command.Id), Diagnostics.EditorMetrics.Tag("result", result));
 
     /// <summary>
     /// The commands whose title, menu or id contain every word of <paramref name="query"/>, the

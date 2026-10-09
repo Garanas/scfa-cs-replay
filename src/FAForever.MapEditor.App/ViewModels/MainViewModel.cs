@@ -1,9 +1,11 @@
+using System.Diagnostics;
 using FAForever.MapEditor.App.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
+using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
@@ -69,10 +71,13 @@ public sealed partial class MainViewModel : ObservableObject
     private (float X, float Z) _lastDab;
     private readonly HashSet<string> _pendingReload = new HashSet<string>(StringComparer.Ordinal);
 
-    public MainViewModel(IEditorDialogs dialogs)
+    /// <param name="telemetry">Where the logs and metrics go; without it the Console alone shows them.</param>
+    public MainViewModel(IEditorDialogs dialogs, Telemetry? telemetry = null)
     {
         _dialogs = dialogs;
         _ui = SynchronizationContext.Current;
+        Telemetry = telemetry ?? new Telemetry();
+        Telemetry.Logged += OnLogged;
         InitializeShell();
     }
 
@@ -256,20 +261,20 @@ public sealed partial class MainViewModel : ObservableObject
         ? LoadProjectAsync(folder)
         : ImportMapFolderAsync(folder);
 
-    public Task LoadProjectAsync(string folder) => BusyAsync($"Opening {folder}...", async () =>
+    public Task LoadProjectAsync(string folder) => BusyAsync("open", $"Opening {folder}...", async () =>
         Attach(await EditedMap.OpenProjectAsync(folder), $"Opened the project {folder}"));
 
-    public Task ImportMapFolderAsync(string folder) => BusyAsync($"Importing {folder}...", async () =>
+    public Task ImportMapFolderAsync(string folder) => BusyAsync("import", $"Importing {folder}...", async () =>
         Attach(await EditedMap.ImportMapAsync(folder), $"Imported {folder}; save it as a project to keep it"));
 
-    public Task SaveAsync() => BusyAsync("Saving...", async () =>
+    public Task SaveAsync() => BusyAsync("save", "Saving...", async () =>
     {
         EditedMap map = RequireMap();
         await map.SaveAsync();
         Refresh($"Saved {map.ProjectFolder}");
     });
 
-    public Task SaveAsAsync(string folder) => BusyAsync("Saving...", async () =>
+    public Task SaveAsAsync(string folder) => BusyAsync("save-as", "Saving...", async () =>
     {
         EditedMap map = RequireMap();
         await map.SaveAsAsync(folder);
@@ -281,7 +286,7 @@ public sealed partial class MainViewModel : ObservableObject
     public async Task<string> ExportAsync(string outputFolder, int? version = null)
     {
         string folder = "";
-        await BusyAsync("Exporting...", async () =>
+        await BusyAsync("export", "Exporting...", async () =>
         {
             folder = await RequireMap().ExportAsync(outputFolder, version);
             Status = $"Exported {folder}";
@@ -556,11 +561,13 @@ public sealed partial class MainViewModel : ObservableObject
             if (Map.Reload(files))
             {
                 Status = $"Read again what changed on disk: {string.Join(", ", files)}";
+                FilesLog.LogInformation("Read again what changed on disk: {Files}", string.Join(", ", files));
             }
         }
         catch (Exception exception) when (exception is MapProjectException or IOException or InvalidOperationException or ArgumentException)
         {
             Status = exception.Message;
+            FilesLog.LogWarning(exception, "Could not read again {Files}: {Reason}", string.Join(", ", files), exception.Message);
         }
     }
 
@@ -645,10 +652,13 @@ public sealed partial class MainViewModel : ObservableObject
     private EditedMap RequireMap() => Map ?? throw new InvalidOperationException("No map is open");
 
     /// <summary>
-    /// Runs an operation that reads or writes in the background, with the editor busy meanwhile.
+    /// Runs an operation that reads or writes in the background, with the editor busy meanwhile;
+    /// logs how long it took, or why it failed, and measures it
+    /// (<see cref="EditorMetrics.OperationDuration"/>).
     /// </summary>
+    /// <param name="name">What it is, for the metrics: <c>open</c>, <c>save</c>, ...</param>
     /// <exception cref="InvalidOperationException">Another such operation is still running.</exception>
-    private async Task BusyAsync(string status, Func<Task> operation)
+    private async Task BusyAsync(string name, string status, Func<Task> operation)
     {
         if (IsBusy)
         {
@@ -656,9 +666,22 @@ public sealed partial class MainViewModel : ObservableObject
         }
         IsBusy = true;
         Status = status;
+        long start = Stopwatch.GetTimestamp();
         try
         {
             await operation();
+            double milliseconds = Math.Round(Stopwatch.GetElapsedTime(start).TotalMilliseconds);
+            EditorMetrics.OperationDuration.Record(milliseconds, EditorMetrics.Tag("operation", name), EditorMetrics.Tag("result", "ok"));
+            FilesLog.LogInformation("{Status} ({Operation}, {Milliseconds} ms)", Status, name, milliseconds);
+        }
+        catch (Exception exception)
+        {
+            double milliseconds = Math.Round(Stopwatch.GetElapsedTime(start).TotalMilliseconds);
+            EditorMetrics.OperationDuration.Record(milliseconds, EditorMetrics.Tag("operation", name), EditorMetrics.Tag("result", "failed"));
+            Status = exception.Message;
+            FilesLog.LogError(exception, "{Operation} failed after {Milliseconds} ms: {Reason}", name, milliseconds, exception.Message);
+            exception.Data[Logged] = true;
+            throw;
         }
         finally
         {
@@ -679,6 +702,10 @@ public sealed partial class MainViewModel : ObservableObject
         catch (Exception exception) when (exception is MapProjectException or IOException or InvalidOperationException or ArgumentException)
         {
             Status = exception.Message;
+            if (!exception.Data.Contains(Logged))
+            {
+                Logger("Commands").LogWarning(exception, "{Reason}", exception.Message);
+            }
         }
     }
 }

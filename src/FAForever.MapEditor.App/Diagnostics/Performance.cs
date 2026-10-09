@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json.Nodes;
 using Avalonia.Threading;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FAForever.MapEditor.App.Diagnostics;
 
@@ -9,8 +11,9 @@ namespace FAForever.MapEditor.App.Diagnostics;
 /// Keeps track of where the editor spends its time, to find out why it lags: named spans around
 /// the work that may take long (<see cref="Measure"/>), and a watchdog that notices when the user
 /// interface's thread does not answer for a while (a stall), with the spans that ran meanwhile.
-/// Automation reads it all with <c>perf</c>; stalls of a quarter second or more also go to
-/// <see cref="LogFile"/>.
+/// Automation reads it all with <c>perf</c>. The spans and stalls are metrics too
+/// (<see cref="EditorMetrics"/>), and a stall of a quarter second or more is a warning in the log
+/// (<see cref="Logger"/>).
 /// </summary>
 public static class Performance
 {
@@ -27,10 +30,9 @@ public static class Performance
     private static Thread? _watchdog;
 
     /// <summary>
-    /// Where the long stalls are written, next to the user's settings.
+    /// Where the long stalls are logged, in the category <c>Performance</c>.
     /// </summary>
-    public static string LogFile { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FAF Map Editor", "performance.log");
+    public static ILogger Logger { get; set; } = NullLogger.Instance;
 
     /// <summary>
     /// Measures until the result is disposed: <c>using (Performance.Measure("3d.frame")) { ... }</c>.
@@ -44,6 +46,7 @@ public static class Performance
             long end = Stopwatch.GetTimestamp();
             double milliseconds = Stopwatch.GetElapsedTime(start, end).TotalMilliseconds;
             Statistics.GetOrAdd(name, _ => new Statistic()).Add(milliseconds);
+            EditorMetrics.SpanDuration.Record(milliseconds, EditorMetrics.Tag("span", name));
             if (milliseconds >= 1)
             {
                 Finished.Enqueue((end, name, milliseconds));
@@ -76,6 +79,7 @@ public static class Performance
                 long now = Stopwatch.GetTimestamp();
                 double late = Stopwatch.GetElapsedTime(asked, now).TotalMilliseconds;
                 Statistics.GetOrAdd("ui.latency", _ => new Statistic()).Add(late);
+                EditorMetrics.UiLatency.Record(late);
                 if (late >= StallMilliseconds)
                 {
                     Stall(asked, now, late);
@@ -99,21 +103,15 @@ public static class Performance
             .OrderByDescending(group => group.Total)
             .Take(8)
             .Select(group => $"{group.Name} {group.Total:0} ms ({group.Count}x)"));
+        EditorMetrics.UiStalls.Add(1);
         Stalls.Enqueue((DateTime.Now, milliseconds, spans));
         while (Stalls.Count > 100 && Stalls.TryDequeue(out _))
         {
         }
         if (milliseconds >= 250)
         {
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(LogFile)!);
-                File.AppendAllText(LogFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} stall {milliseconds:0} ms: {(spans.Length > 0 ? spans : "no measured work")}\n");
-            }
-            catch (IOException)
-            {
-                // the log is a convenience
-            }
+            Logger.LogWarning("The window did not answer for {Milliseconds} ms; meanwhile {Spans}",
+                Math.Round(milliseconds), spans.Length > 0 ? spans : "no measured work");
         }
     }
 
@@ -144,7 +142,6 @@ public static class Performance
                 ["ms"] = Math.Round(stall.Milliseconds),
                 ["during"] = stall.Spans,
             })]),
-            ["log"] = LogFile,
         };
     }
 

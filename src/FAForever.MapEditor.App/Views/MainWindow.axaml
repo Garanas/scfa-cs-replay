@@ -81,5 +81,6 @@
     <views:UpdateAssetsPage IsVisible="{Binding IsAskingToUpdate}" />
     <views:ConvertingPage IsVisible="{Binding IsConverting}" />
     <views:CommandPalette x:Name="Palette" IsVisible="{Binding IsPaletteOpen}" />
+    <views:DiagnosticsPage IsVisible="{Binding IsDiagnosticsOpen}" />
   </Grid>
 </Window>

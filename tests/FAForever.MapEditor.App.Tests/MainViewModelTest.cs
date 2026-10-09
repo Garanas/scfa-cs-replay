@@ -1,5 +1,8 @@
+using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Workspaces;
+using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.Tests
 {
@@ -177,6 +180,49 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.IsFalse(model.HasMap);
             StringAssert.Contains(model.Status, "is missing");
+            ConsoleEntry error = model.ConsoleProblems.Single();
+            Assert.AreEqual(LogLevel.Error, error.Level, "logged once, as an error of the operation");
+            Assert.AreEqual("Files", error.Category);
+            StringAssert.Contains(error.Message, "open failed after");
+        }
+
+        [TestMethod]
+        public void TheConsoleShowsWhatIsLoggedAndCanShowOnlyProblems()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            ILogger log = model.Logger("Rendering");
+
+            log.LogInformation("The 3D view runs on {Renderer}", "OpenGLES 3.0");
+            log.LogWarning("A texture could not be read: {Reason}", "no such file");
+
+            Assert.AreEqual("The 3D view runs on OpenGLES 3.0", model.Console[^2].Message);
+            Assert.AreEqual("warning", model.Console[^1].LevelText);
+            Assert.AreEqual("Console (1)", model.ConsoleHeader);
+            Assert.AreSame(model.Console, model.ShownConsole);
+
+            model.ConsoleShowsProblemsOnly = true;
+
+            Assert.AreEqual("A texture could not be read: no such file", model.ShownConsole.Single().Message);
+        }
+
+        [TestMethod]
+        public async Task RemembersTheChoicesAboutDiagnostics()
+        {
+            UserSettings settings = new UserSettings(Path.Combine(NewFolder(), "settings.json"));
+            MainViewModel model = new MainViewModel(new Answers(), new Telemetry(settings: settings.Telemetry, background: false)) { FindFaf = () => null };
+            await model.StartAsync(settings);
+
+            Assert.IsTrue(model.RecordDiagnostics);
+            Assert.IsFalse(model.SendDiagnostics);
+            StringAssert.Contains(model.DiagnosticsSummary, "Nothing is sent");
+
+            model.DiagnosticsEndpoint = " http://localhost:4318 ";
+            model.SendDiagnostics = true;
+
+            Assert.AreEqual(new TelemetrySettings(true, true, "http://localhost:4318", settings.Telemetry.InstallId), settings.Telemetry);
+            Assert.IsTrue(model.Telemetry.Settings.Send);
+            Assert.IsTrue(await model.Commands.RunAsync("help.diagnostics"));
+            Assert.IsTrue(model.IsDiagnosticsOpen);
         }
 
         [TestMethod]

@@ -1,0 +1,48 @@
+<!-- Diagnostics (F-17): what the editor records about how it runs, and whether it sends it. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.DiagnosticsPage"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="scrim">
+    <Border Classes="dialog">
+      <StackPanel>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <TextBlock Classes="heading" Text="Diagnostics" />
+            <TextBlock Classes="caption"
+                       Text="What goes well and wrong while the editor runs: what the Console shows, warnings, errors and crashes, and measurements such as how long a frame or a save takes. Your home folder is written as ~; what is on a map is not recorded." />
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <CheckBox IsChecked="{Binding RecordDiagnostics}" Content="Record on this computer" />
+            <TextBlock Classes="caption"
+                       Text="Each session writes its logs and measurements into this folder, in OpenTelemetry's format; the last 30 sessions are kept. Attach them to a report of a problem." />
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Classes="beside" Content="Show" Command="{Binding OpenDiagnosticsFolderCommand}"
+                      AutomationProperties.Name="Show the diagnostics folder" />
+              <TextBlock Classes="secondary" Text="{Binding DiagnosticsFolder}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                         AutomationProperties.Name="Diagnostics folder" />
+            </DockPanel>
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <CheckBox IsChecked="{Binding SendDiagnostics}" Content="Send to the editor's developers" />
+            <TextBlock Classes="caption"
+                       Text="Sends what is recorded from now on to this OpenTelemetry endpoint every half minute, to see what goes wrong for everyone. Off unless you turn it on." />
+            <TextBox Text="{Binding DiagnosticsEndpoint, UpdateSourceTrigger=LostFocus}" PlaceholderText="e.g. http://localhost:4318"
+                     AutomationProperties.Name="Endpoint" />
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="accent" Content="Close" Command="{Binding CloseDiagnosticsCommand}" />
+            <TextBlock Classes="caption" Text="{Binding DiagnosticsSummary}" VerticalAlignment="Center" AutomationProperties.Name="Diagnostics summary" />
+          </DockPanel>
+        </Border>
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

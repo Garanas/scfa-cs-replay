@@ -12,6 +12,7 @@ using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
+using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.Automation;
 
@@ -56,6 +57,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         _listener.Start();
         _ = Task.Run(ListenAsync);
         model.Status = $"Automation on http://localhost:{port}/";
+        model.Logger("Automation").LogInformation("Automation on http://localhost:{Port}/", port);
     }
 
     public void Dispose()
@@ -124,7 +126,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "commands", "run {id}", "mode {id}", "tool {id}", "ui {hidden?}", "perf {reset?}", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "commands", "run {id}", "mode {id}", "tool {id}", "ui {hidden?}", "perf {reset?}", "logs {problems?, count?}", "diagnostics {record?, send?, endpoint?, flush?, upload?}", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
             case "state":
                 break;
             case "commands":
@@ -161,6 +163,55 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     Performance.Reset();
                 }
                 return Performance.Snapshot();
+            case "logs":
+                // what the Console shows, newest last
+                {
+                    int count = (int)(Number(arguments, "count") ?? 50);
+                    bool problems = arguments["problems"]?.GetValue<bool>() == true;
+                    return new JsonObject
+                    {
+                        ["logs"] = new JsonArray([.. (problems ? model.ConsoleProblems : model.Console).TakeLast(count).Select(entry => (JsonNode)new JsonObject
+                        {
+                            ["time"] = entry.Time.ToString("O"),
+                            ["level"] = entry.Level.ToString(),
+                            ["category"] = entry.Category,
+                            ["message"] = entry.Message,
+                        })]),
+                    };
+                }
+            case "diagnostics":
+                // the choices about diagnostics, and the session's files
+                if (arguments["record"] is JsonNode record)
+                {
+                    model.RecordDiagnostics = record.GetValue<bool>();
+                }
+                if (arguments["send"] is JsonNode send)
+                {
+                    model.SendDiagnostics = send.GetValue<bool>();
+                }
+                if (arguments["endpoint"] is JsonNode endpoint)
+                {
+                    model.DiagnosticsEndpoint = endpoint.GetValue<string>();
+                }
+                if (arguments["flush"]?.GetValue<bool>() == true)
+                {
+                    model.Telemetry.Flush();
+                }
+                int? uploaded = arguments["upload"]?.GetValue<bool>() == true ? await model.Telemetry.UploadAsync() : null;
+                return new JsonObject
+                {
+                    ["record"] = model.RecordDiagnostics,
+                    ["send"] = model.SendDiagnostics,
+                    ["endpoint"] = model.Telemetry.Settings.Endpoint,
+                    ["folder"] = model.Telemetry.Folder,
+                    ["session"] = model.Telemetry.SessionId,
+                    ["logsFile"] = model.Telemetry.LogsFile,
+                    ["metricsFile"] = model.Telemetry.MetricsFile,
+                    ["warnings"] = model.Telemetry.Warnings,
+                    ["errors"] = model.Telemetry.Errors,
+                    ["uploaded"] = uploaded,
+                    ["uploadError"] = model.Telemetry.LastUploadError,
+                };
             case "setup":
                 // the setup page as the person fills it in: the fields not given keep what it suggests
                 model.SetupFolder = Text(arguments, "folder");

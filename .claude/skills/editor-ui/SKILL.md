@@ -58,6 +58,9 @@ is an extension in `Avalonia.Input`; `Bitmap.Save` takes encoder options).
   running editor.
 - Work per frame, per mouse move, or growing with the map: a `Performance.Measure` span; no disk
   access per frame; a hidden view does no work.
+- What can go wrong is logged: `model.Logger("Files").LogError(exception, "Saving {Folder} failed: {Reason}", ...)`,
+  a template with named values; it shows in the Console and goes to the session's files
+  (the App's guide, "Diagnostics"). Read it with `faf-map editor logs problems=true`.
 
 ## Check it
 
