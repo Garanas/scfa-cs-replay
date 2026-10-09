@@ -119,7 +119,7 @@ compact density) draws the standard controls; `Styles/` holds the look of everyt
   used twice becomes one.
 - The views are split by what they are: `MainWindow` (menu, status bar, the two map views, the
   pages by stage), `ModeRail`, `ModePanel`, `ToolOptions`, `Inspector`, `Dock`,
-  `CommandPalette`, `DiagnosticsPage`, `SetupPage`, `UpdateAssetsPage`,
+  `CommandPalette`, `DiagnosticsPage`, `VersionControlPage`, `SetupPage`, `UpdateAssetsPage`,
   `ConvertingPage`.
 - Code that draws (the overlays of the top view, the 3D view's sky) reads the tokens with
   `TryFindResource` and reads them again when the theme variant changes. Only colours that come
@@ -269,6 +269,16 @@ What it found, and the rules that came of it:
 - A hidden view does no work: the top view skips updating its picture while hidden and catches
   up when shown.
 
+## Version control: commit beside save
+
+User story F-18; the library's guide explains the repository (`ProjectRepository`). File, Commit
+(`file.commit`, Ctrl+Shift+C, for a map saved as a project) opens `VersionControlPage`: while the
+project is no repository, its setup with the choices first (the author, suggested from git's
+global settings; Git LFS, on; a repository to share through), and "Turn on version control"
+makes the repository and its first commit (`EnableVersionControlAsync`); afterwards the commit,
+with how the repository stands (branch, changed files, unsaved changes, the last commit) and a
+message (`CommitAsync`: saves first when the map has changes). What fails shows on the page.
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session
@@ -276,7 +286,7 @@ User story F-17. The editor keeps what a service keeps for Loki and Prometheus, 
 
 - **Logs**: every `ILogger` of the editor (`Microsoft.Extensions.Logging.Abstractions`; get one
   with `MainViewModel.Logger(category)`, categories `Commands`, `Files`, `Workspace`,
-  `Rendering`, `Performance`, `Automation`, `Editor`). The Console of the dock shows them, with
+  `Rendering`, `Performance`, `Automation`, `VersionControl`, `Editor`). The Console of the dock shows them, with
   their level, newest last; its tab counts the warnings and errors, and it can show only those.
   Logged now: commands run and asked for while not built; opening, importing, saving, exporting
   with their duration, or why they failed; files read again; the workspace and the conversion of
@@ -343,7 +353,9 @@ faf-map editor close                                      # closes without askin
   `tool {id}`, `ui {hidden?}`, `perf {reset?}` (above), `logs {problems?, count?}` (what the
   Console shows), `diagnostics {record?, send?, endpoint?, flush?, upload?}` (the choices, the
   session's files, and with `flush`/`upload` writes or sends at once), `setup {folder, game?, faf?, vault?}` (the setup page; fields left
-  out keep what it suggests), `update-assets`, `open {path}`, `import {path}`, `save`, `save-as {path}`,
+  out keep what it suggests), `update-assets`, `open {path}`, `import {path}`, `save`, `save-as {path}`, `version-control {open?, enable?, name?, email?, lfs?, remote?}` (how the project
+  stands in git; `enable` turns it on with the choices), `commit {message}` (the commit's hash, or null
+  when nothing changed),
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,
   `stroke {points}`, `height {x, z}`, `hit {x, y}` (the control the mouse reaches at a point of

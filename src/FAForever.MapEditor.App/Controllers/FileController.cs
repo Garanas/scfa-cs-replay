@@ -30,6 +30,11 @@ public sealed class FileController(MainViewModel model)
     [EditorCommand("file.saveAs", "Save as project...", Menu = "File", Gesture = "Ctrl+Shift+S", Story = "M-7", CanRun = nameof(CanSave))]
     public Task SaveAs() => model.SaveProjectAsCommand.ExecuteAsync(null);
 
+    public bool CanCommit => model.CanCommit;
+
+    [EditorCommand("file.commit", "Commit...", Menu = "File", Gesture = "Ctrl+Shift+C", Story = "F-18", CanRun = nameof(CanCommit))]
+    public Task Commit() => model.OpenVersionControlAsync();
+
     [EditorCommand("file.export", "Export to the vault", Menu = "File", Gesture = "Ctrl+E", Story = "M-7", CanRun = nameof(CanSave), SeparatorBefore = true)]
     public Task Export() => model.ExportMapCommand.ExecuteAsync(null);
 

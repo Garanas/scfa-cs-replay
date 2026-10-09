@@ -52,6 +52,11 @@ reads again when it changes; and nothing that generates runs by itself.
       (commands, operations and their durations, frames, stalls, memory) on disk in
       OpenTelemetry's format, recording on or off; sent to the developers' collector only when the
       user turns it on; a problem report that bundles them. Today: all but the report.
+- [x] **F-18 Version control.** One git repository per project, turned on from a page that shows
+      the choices first: the author, Git LFS for the images and the procedural sources (on), a
+      repository to share through; a `.gitignore` that leaves `procedural/temp` (what World Machine
+      and Gaea build) out and a `.gitattributes`. Then a commit beside save (File, Commit), which
+      saves first. Missing: push and pull, the history of commits, going back to one.
 
 ## M: The map
 

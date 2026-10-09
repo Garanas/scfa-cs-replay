@@ -126,7 +126,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "commands", "run {id}", "mode {id}", "tool {id}", "ui {hidden?}", "perf {reset?}", "logs {problems?, count?}", "diagnostics {record?, send?, endpoint?, flush?, upload?}", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "commands", "run {id}", "mode {id}", "tool {id}", "ui {hidden?}", "perf {reset?}", "logs {problems?, count?}", "diagnostics {record?, send?, endpoint?, flush?, upload?}", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "version-control {open?, enable?, name?, email?, lfs?, remote?}", "commit {message}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
             case "state":
                 break;
             case "commands":
@@ -234,6 +234,49 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 break;
             case "save-as":
                 await model.SaveAsAsync(Text(arguments, "path"));
+                break;
+            case "version-control":
+                // the version control of the open project; enable turns it on with the given choices
+                if (arguments["name"] is JsonNode name)
+                {
+                    model.GitAuthorName = name.GetValue<string>();
+                }
+                if (arguments["email"] is JsonNode email)
+                {
+                    model.GitAuthorEmail = email.GetValue<string>();
+                }
+                if (arguments["lfs"] is JsonNode lfs)
+                {
+                    model.GitUseLfs = lfs.GetValue<bool>();
+                }
+                if (arguments["remote"] is JsonNode remote)
+                {
+                    model.GitRemote = remote.GetValue<string>();
+                }
+                if (arguments["open"]?.GetValue<bool>() == true || model.Repository is null)
+                {
+                    await model.OpenVersionControlAsync();
+                }
+                if (arguments["enable"]?.GetValue<bool>() == true)
+                {
+                    await model.EnableVersionControlAsync();
+                }
+                result["versionControl"] = new JsonObject
+                {
+                    ["git"] = model.Repository?.GitInstalled,
+                    ["lfsInstalled"] = model.Repository?.LfsInstalled,
+                    ["repository"] = model.Repository?.IsRepository,
+                    ["usesLfs"] = model.Repository?.UsesLfs,
+                    ["changes"] = model.Repository?.Changes,
+                    ["branch"] = model.Repository?.Branch,
+                    ["lastCommit"] = model.Repository?.LastCommit,
+                    ["remote"] = model.Repository?.Remote,
+                    ["pageOpen"] = model.IsVersionControlOpen,
+                    ["error"] = model.VersionControlError,
+                };
+                break;
+            case "commit":
+                result["commit"] = await model.CommitAsync(Text(arguments, "message"));
                 break;
             case "export":
                 result["folder"] = await model.ExportAsync(Text(arguments, "output"), arguments["version"]?.GetValue<int>());

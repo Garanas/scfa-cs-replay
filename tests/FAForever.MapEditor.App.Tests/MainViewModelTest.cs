@@ -18,6 +18,11 @@ namespace FAForever.MapEditor.App.Tests
         {
             if (Directory.Exists(Root))
             {
+                // git's objects are read-only, which stops a delete on Windows
+                foreach (string file in Directory.EnumerateFiles(Root, "*", SearchOption.AllDirectories))
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                }
                 Directory.Delete(Root, recursive: true);
             }
         }
@@ -57,6 +62,43 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(1, opened);
             StringAssert.StartsWith(model.Title, "HardFFA - not saved as a project");
             Assert.IsTrue(model.SaveProjectCommand.CanExecute(null));
+        }
+
+        [TestMethod]
+        public async Task CommitsBesideSavingOnceVersionControlIsOn()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            await model.OpenAsync(HardFfa);
+            Assert.IsFalse(model.CanCommit, "an imported map is no project yet");
+            await model.OpenVersionControlAsync();
+            Assert.IsFalse(model.IsVersionControlOpen);
+
+            await model.SaveAsAsync(NewFolder());
+            Assert.IsTrue(await model.Commands.RunAsync("file.commit"));
+            Assert.IsTrue(model.IsVersionControlOpen);
+            Assert.IsTrue(model.IsNotVersioned, "the setup shows before version control is on");
+            Assert.IsTrue(model.GitUseLfs, "LFS is on unless turned off");
+            model.GitAuthorName = "Map maker";
+            model.GitAuthorEmail = "maker@example.org";
+            model.GitUseLfs = false;
+            await model.TurnOnVersionControlCommand.ExecuteAsync(null);
+            Assert.IsNull(model.VersionControlError);
+            Assert.IsTrue(model.IsVersioned);
+            Assert.IsFalse(model.IsVersionControlOpen);
+
+            model.Stroke([(100, 40), (130, 40)]);
+            await model.OpenVersionControlAsync();
+            await model.CommitChangesCommand.ExecuteAsync(null);
+            Assert.AreEqual("Say what the commit changes", model.VersionControlError);
+            model.CommitMessage = "Raise a ridge";
+            await model.CommitChangesCommand.ExecuteAsync(null);
+
+            Assert.IsNull(model.VersionControlError);
+            StringAssert.StartsWith(model.Status, "Committed ");
+            StringAssert.EndsWith(model.Repository!.LastCommit, "Raise a ridge");
+            Assert.AreEqual(0, model.Repository.Changes, "the commit saved the stroke first");
+            StringAssert.StartsWith(model.Title, "HardFFA", "saved");
+            Assert.IsNull(await model.CommitAsync("Nothing"));
         }
 
         [TestMethod]

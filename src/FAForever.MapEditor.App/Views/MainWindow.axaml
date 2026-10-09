@@ -95,5 +95,6 @@
     <views:ConvertingPage IsVisible="{Binding IsConverting}" />
     <views:CommandPalette x:Name="Palette" IsVisible="{Binding IsPaletteOpen}" />
     <views:DiagnosticsPage IsVisible="{Binding IsDiagnosticsOpen}" />
+    <views:VersionControlPage IsVisible="{Binding IsVersionControlOpen}" />
   </Grid>
 </Window>

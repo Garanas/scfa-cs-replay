@@ -630,6 +630,7 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HasMap));
         OnPropertyChanged(nameof(CanStart));
         OnPropertyChanged(nameof(CanSave));
+        OnPropertyChanged(nameof(CanCommit));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(CanRedo));
         OnPropertyChanged(nameof(UndoHeader));
