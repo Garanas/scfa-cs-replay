@@ -47,9 +47,9 @@
               <DataTemplate x:DataType="vm:ConsoleEntry">
                 <DockPanel>
                   <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="{Binding TimeText}" />
-                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Classes.error="{Binding IsError}" Margin="{StaticResource InlineGap}"
+                  <TextBlock DockPanel.Dock="Left" Classes.warning="{Binding IsWarning}" Classes.error="{Binding IsError}" Margin="{StaticResource InlineGap}"
                              Text="{Binding LevelText}" IsVisible="{Binding IsProblem}" />
-                  <TextBlock Classes.error="{Binding IsError}" Margin="{StaticResource InlineGap}" Text="{Binding Message}" TextWrapping="Wrap" />
+                  <TextBlock Classes.warning="{Binding IsWarning}" Classes.error="{Binding IsError}" Margin="{StaticResource InlineGap}" Text="{Binding Message}" TextWrapping="Wrap" />
                 </DockPanel>
               </DataTemplate>
             </ListBox.ItemTemplate>

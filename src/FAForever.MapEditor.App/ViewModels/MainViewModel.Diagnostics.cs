@@ -27,6 +27,8 @@ public sealed record ConsoleEntry(DateTimeOffset Time, LogLevel Level, string Ca
 
     public bool IsProblem => Level >= LogLevel.Warning;
 
+    public bool IsWarning => Level == LogLevel.Warning;
+
     public bool IsError => Level >= LogLevel.Error;
 
     public override string ToString() => $"{TimeText} {(LevelText.Length > 0 ? LevelText + " " : "")}{Message}";

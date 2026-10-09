@@ -83,6 +83,12 @@
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
+  <!-- what the editor worked around: a warning of the Console -->
+  <Style Selector="TextBlock.warning">
+    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
   <!-- a step of the history that is undone: it can be redone -->
   <Style Selector="TextBlock.undone">
     <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />

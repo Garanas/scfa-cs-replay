@@ -197,6 +197,7 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.AreEqual("The 3D view runs on OpenGLES 3.0", model.Console[^2].Message);
             Assert.AreEqual("warning", model.Console[^1].LevelText);
+            Assert.IsTrue(model.Console[^1].IsWarning && !model.Console[^1].IsError, "a warning has its own colour");
             Assert.AreEqual("Console (1)", model.ConsoleHeader);
             Assert.AreSame(model.Console, model.ShownConsole);
 

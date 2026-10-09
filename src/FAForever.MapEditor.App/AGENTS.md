@@ -100,7 +100,7 @@ compact density) draws the standard controls; `Styles/` holds the look of everyt
 - Fonts: IBM Plex Sans and Mono (SIL Open Font License, `Assets/Fonts`), registered as
   `fonts:Editor` by `EditorFonts.WithEditorFonts()` in `Program` and in the tests' `HeadlessApp`.
 - `Styles/Classes.axaml`, the classes the views say what a thing is with: text `title`,
-  `heading`, `panelname`, `lead`, `secondary`, `caption`, `label`, `mono`, `shortcut`, `error`,
+  `heading`, `panelname`, `lead`, `secondary`, `caption`, `label`, `mono`, `shortcut`, `error`, `warning`,
   `undone`, `item`, `overline` (a group's label in capitals: bind the text through
   `Controls/UpperCaseConverter`, a `TextBlock` has no text transform), `story`; surfaces
   `Border.panel`, `Border.bar`, `Border.menubar`, the panels' `Border.panelhead` and `Border.group`
