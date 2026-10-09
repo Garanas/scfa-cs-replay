@@ -68,16 +68,32 @@ internal static class TerrainShaders
 
         """;
 
-    public static string TerrainVertex(bool es) => Header(es) + Heights + """
-        layout(location = 0) in vec2 aGrid;
+    /// <summary>
+    /// A corner of the terrain's lattice (whole cells from its top left) as a place of the terrain:
+    /// the terrain and the brush both make their vertices with it, invariantly, so that the brush
+    /// lies exactly on the terrain.
+    /// </summary>
+    private const string Lattice = """
         uniform mat4 uViewProjection;
         uniform vec2 uMapSize;
+        uniform vec2 uCells;
+        invariant gl_Position;
+
+        vec3 latticePlace(vec2 corner)
+        {
+            vec2 p = corner / uCells * uMapSize;
+            return vec3(p.x, heightAt(p), p.y);
+        }
+
+        """;
+
+    public static string TerrainVertex(bool es) => Header(es) + Heights + Lattice + """
+        layout(location = 0) in vec2 aCorner;
         out vec3 vWorld;
 
         void main()
         {
-            vec2 p = aGrid * uMapSize;
-            vWorld = vec3(p.x, heightAt(p), p.y);
+            vWorld = latticePlace(aCorner);
             gl_Position = uViewProjection * vec4(vWorld, 1.0);
         }
         """;
@@ -179,22 +195,28 @@ internal static class TerrainShaders
         """;
 
     /// <summary>
-    /// The active tool's brush under the mouse: a grid over the square around its radius,
-    /// turned with its picture, that follows the terrain.
+    /// The active tool's brush under the mouse: the cells of the terrain's lattice under it, made
+    /// as the terrain makes them, so the two are one surface; where a point lies in the brush's
+    /// square (turned with its picture) is worked out per pixel.
     /// </summary>
-    public static string BrushVertex(bool es) => Header(es) + Heights + """
-        layout(location = 0) in vec2 aUv;
-        uniform mat4 uViewProjection;
-        uniform vec2 uCorner;
-        uniform vec2 uEdgeU;
-        uniform vec2 uEdgeV;
+    public static string BrushVertex(bool es) => Header(es) + Heights + Lattice + """
+        layout(location = 0) in vec2 aCorner;
+        // the patch's first corner in the lattice
+        uniform vec2 uOrigin;
+        // the brush's centre, radius, and the sine and cosine of its turn
+        uniform vec2 uCenter;
+        uniform float uRadius;
+        uniform vec2 uTurn;
         out vec2 vUv;
 
         void main()
         {
-            vec2 p = uCorner + aUv.x * uEdgeU + aUv.y * uEdgeV;
-            vUv = aUv;
-            gl_Position = uViewProjection * vec4(p.x, heightAt(p), p.y, 1.0);
+            vec3 world = latticePlace(uOrigin + aCorner);
+            vec2 d = world.xz - uCenter;
+            // turned back into the square, from (0, 0) at its top left to (1, 1)
+            vec2 c = vec2(d.x * uTurn.y + d.y * uTurn.x, d.y * uTurn.y - d.x * uTurn.x) / uRadius;
+            vUv = c * 0.5 + 0.5;
+            gl_Position = uViewProjection * vec4(world, 1.0);
         }
         """;
 
@@ -230,8 +252,9 @@ internal static class TerrainShaders
                 vec2 uv = (vUv - 0.5) * uShapeScale + 0.5;
                 inside = all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
                 weight = inside ? texture(uShape, uv).r : 0.0;
+                // pixels from the square's edge, on either side of it
                 vec2 e = (1.0 - abs(c)) / max(fwidth(c), vec2(1e-5));
-                edge = min(e.x, e.y);
+                edge = abs(min(e.x, e.y));
             }
             float line = 1.0 - clamp(edge - 0.75, 0.0, 1.0);
             // premultiplied: near black at no weight, the overlay's colour at full weight; the
@@ -248,24 +271,36 @@ internal static class TerrainShaders
         """;
 
     /// <summary>
-    /// A decal: a grid over its rectangle that follows the terrain. Each instance is one decal,
-    /// placed by its corner (the decal's position) and its two edges.
+    /// A decal: the cells of the terrain's lattice under its rectangle, made as the terrain makes
+    /// them, so the two are one surface whatever the distance. Each instance is one decal, placed by
+    /// its corner (the decal's position) and its two edges; its patch of the lattice has
+    /// <c>uPatchCells</c> cells a side, the corners it does not need folded onto its far edge, and a
+    /// decal wider than that takes every second (or more) corner. Where a point lies in the decal is
+    /// its place turned back by the edges; the fragment drops what lies outside.
     /// </summary>
-    public static string DecalVertex(bool es) => Header(es) + Heights + """
-        layout(location = 0) in vec2 aUv;
+    public static string DecalVertex(bool es) => Header(es) + Heights + Lattice + """
+        layout(location = 0) in vec2 aCorner;
         layout(location = 1) in vec2 iCorner;
         layout(location = 2) in vec2 iEdgeU;
         layout(location = 3) in vec2 iEdgeV;
-        uniform mat4 uViewProjection;
+        uniform float uPatchCells;
         out vec2 vUv;
         out vec3 vWorld;
         out vec2 vTangent;
 
         void main()
         {
-            vec2 p = iCorner + aUv.x * iEdgeU + aUv.y * iEdgeV;
-            vWorld = vec3(p.x, heightAt(p), p.y);
-            vUv = aUv;
+            vec2 cell = uMapSize / uCells;
+            vec2 b = iCorner + iEdgeU;
+            vec2 c = iCorner + iEdgeV;
+            vec2 d = b + iEdgeV;
+            vec2 low = min(min(iCorner, b), min(c, d));
+            vec2 high = max(max(iCorner, b), max(c, d));
+            vec2 origin = clamp(floor(low / cell), vec2(0.0), uCells);
+            vec2 need = clamp(ceil(high / cell), vec2(0.0), uCells) - origin;
+            float stride = max(1.0, ceil(max(need.x, need.y) / uPatchCells));
+            vWorld = latticePlace(origin + min(aCorner * stride, need));
+            vUv = inverse(mat2(iEdgeU, iEdgeV)) * (vWorld.xz - iCorner);
             vTangent = normalize(iEdgeU);
             gl_Position = uViewProjection * vec4(vWorld, 1.0);
         }
@@ -283,6 +318,10 @@ internal static class TerrainShaders
 
         void main()
         {
+            if (any(lessThan(vUv, vec2(0.0))) || any(greaterThan(vUv, vec2(1.0))))
+            {
+                discard;
+            }
             vec4 color = texture(uTexture, vUv);
             if (color.a < 0.003)
             {
@@ -306,6 +345,10 @@ internal static class TerrainShaders
 
         void main()
         {
+            if (any(lessThan(vUv, vec2(0.0))) || any(greaterThan(vUv, vec2(1.0))))
+            {
+                discard;
+            }
             vec4 raw = texture(uTexture, vUv);
             float opacity = raw.r;
             if (opacity < 0.004)

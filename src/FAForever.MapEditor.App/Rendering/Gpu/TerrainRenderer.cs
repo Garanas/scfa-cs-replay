@@ -21,11 +21,9 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     // the grid of the terrain has at most this many cells along a side; the heights are sampled per pixel for the light
     private const int MaxGridCells = 1024;
 
-    // decal grids by size class: small decals need few cells, large ones many to follow the ground
-    private static readonly int[] DecalGridCells = [8, 32, 96];
-
-    // the brush under the mouse follows the ground with this many cells along a side
-    private const int BrushGridCells = 64;
+    // decal patches of the terrain's lattice by size class, in cells a side: the smallest that
+    // covers a decal; one wider than the largest takes every second (or more) corner
+    private static readonly int[] DecalGridCells = [4, 16, 64, 256];
 
     // corner, edge u, edge v: six floats per decal
     private const int DecalStride = 6 * sizeof(float);
@@ -52,6 +50,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     private readonly Mesh _grid;
     private readonly Mesh _waterQuad;
     private readonly Mesh _brushGrid;
+    private (int X, int Z) _brushCells;
     private uint _brushPicture;
     private BrushShape? _brushPictureOf;
     private (int X, int Z) _gridCells;
@@ -59,6 +58,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     private readonly uint _decalInstances;
     private ImmutableArray<Decal> _decalsOf;
     private readonly List<DecalRun> _runs = [];
+    private (int Width, int Height) _mapSize;
 
     private sealed record DecalRun(bool Normals, string Texture, int SizeClass, int First, int Count);
 
@@ -85,11 +85,10 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _waterQuad = new Mesh(gl);
         _waterQuad.SetGrid(1, 1);
         _brushGrid = new Mesh(gl);
-        _brushGrid.SetGrid(BrushGridCells, BrushGridCells);
         _decalGrids = [.. DecalGridCells.Select(cells =>
         {
             Mesh mesh = new Mesh(gl);
-            mesh.SetGrid(cells, cells);
+            mesh.SetGrid(cells, cells, corners: true);
             return mesh;
         })];
         _decalInstances = gl.GenBuffer();
@@ -175,6 +174,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         program.Use();
         SetCommon(program, document, viewProjection);
         program.Set("uMapSize", document.Width, document.Height);
+        program.Set("uCells", _gridCells.X, _gridCells.Z);
         program.Set("uDebug", Debug);
 
         ImmutableArray<TerrainLayer> layers = document.Terrain.Layers;
@@ -243,16 +243,32 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         Bind(0, _heights, 0);
         program.Set("uHeights", 0);
         program.Set("uHeightScale", document.Terrain.Heightmap.Scale);
+        program.Set("uMapSize", document.Width, document.Height);
+        program.Set("uCells", _gridCells.X, _gridCells.Z);
 
-        // the square around the radius, turned clockwise in the top view (x east, z south)
+        // the cells of the terrain's lattice under the square around the radius, turned clockwise
+        // in the top view (x east, z south): its corners reach the radius times the root of two
         (float sin, float cos) = MathF.SinCos(brush.Shape is null ? 0 : brush.Rotation * MathF.PI / 180);
-        float side = 2 * brush.Radius;
-        Vector2 edgeU = new Vector2(cos, sin) * side;
-        Vector2 edgeV = new Vector2(-sin, cos) * side;
-        Vector2 corner = new Vector2(brush.X, brush.Z) - (edgeU + edgeV) / 2;
-        program.Set("uCorner", corner.X, corner.Y);
-        program.Set("uEdgeU", edgeU.X, edgeU.Y);
-        program.Set("uEdgeV", edgeV.X, edgeV.Y);
+        float reach = brush.Radius * (brush.Shape is null ? 1 : MathF.Sqrt(2));
+        float cellX = (float)document.Width / _gridCells.X;
+        float cellZ = (float)document.Height / _gridCells.Z;
+        int x0 = Math.Clamp((int)MathF.Floor((brush.X - reach) / cellX), 0, _gridCells.X);
+        int x1 = Math.Clamp((int)MathF.Ceiling((brush.X + reach) / cellX), 0, _gridCells.X);
+        int z0 = Math.Clamp((int)MathF.Floor((brush.Z - reach) / cellZ), 0, _gridCells.Z);
+        int z1 = Math.Clamp((int)MathF.Ceiling((brush.Z + reach) / cellZ), 0, _gridCells.Z);
+        if (x1 <= x0 || z1 <= z0)
+        {
+            return;
+        }
+        if (_brushCells != (x1 - x0, z1 - z0))
+        {
+            _brushCells = (x1 - x0, z1 - z0);
+            _brushGrid.SetGrid(_brushCells.X, _brushCells.Z, corners: true);
+        }
+        program.Set("uOrigin", x0, z0);
+        program.Set("uCenter", brush.X, brush.Z);
+        program.Set("uRadius", brush.Radius);
+        program.Set("uTurn", sin, cos);
         program.Set("uColor", color.X, color.Y, color.Z);
 
         if (brush.Shape is BrushShape shape)
@@ -300,6 +316,8 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         Program program = normals ? _decalNormal : _decalAlbedo;
         program.Use();
         SetCommon(program, document, viewProjection);
+        program.Set("uMapSize", document.Width, document.Height);
+        program.Set("uCells", _gridCells.X, _gridCells.Z);
         program.Set("uTexture", 1);
         if (normals)
         {
@@ -324,6 +342,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             }
             Bind(1, texture, _clamp);
             Mesh mesh = _decalGrids[run.SizeClass];
+            program.Set("uPatchCells", (float)DecalGridCells[run.SizeClass]);
             mesh.Bind();
             _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _decalInstances);
             nint offset = run.First * DecalStride;
@@ -366,13 +385,16 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     {
         UpdateHeights(document.Terrain.Heightmap.Samples);
         UpdateMasks(document.Terrain.StratumMasks.Layers);
+        _mapSize = (document.Width, document.Height);
 
         int cellsX = Math.Min(MaxGridCells, document.Width);
         int cellsZ = Math.Min(MaxGridCells, document.Height);
         if (_gridCells != (cellsX, cellsZ))
         {
-            _grid.SetGrid(cellsX, cellsZ);
+            _grid.SetGrid(cellsX, cellsZ, corners: true);
             _gridCells = (cellsX, cellsZ);
+            // the decals' patches are counted in the lattice's cells
+            _decalsOf = default;
         }
 
         if (_decalsOf != document.Decals)
@@ -524,10 +546,12 @@ internal sealed unsafe class TerrainRenderer : IDisposable
                 continue;
             }
             (float sin, float cos) = MathF.SinCos(decal.Rotation.Y);
-            float size = Math.Max(Math.Abs(decal.Scale.X), Math.Abs(decal.Scale.Z));
-            int sizeClass = size <= 24 ? 0 : size <= 128 ? 1 : 2;
+            Vector2 corner = new Vector2(decal.Position.X, decal.Position.Z);
+            Vector2 edgeU = new Vector2(decal.Scale.X * cos, decal.Scale.X * sin);
+            Vector2 edgeV = new Vector2(-decal.Scale.Z * sin, decal.Scale.Z * cos);
+            int sizeClass = SizeClassOf(corner, edgeU, edgeV);
             int index = instances.Count / 6;
-            instances.AddRange([decal.Position.X, decal.Position.Z, decal.Scale.X * cos, decal.Scale.X * sin, -decal.Scale.Z * sin, decal.Scale.Z * cos]);
+            instances.AddRange([corner.X, corner.Y, edgeU.X, edgeU.Y, edgeV.X, edgeV.Y]);
 
             string texture = decal.Textures[0];
             if (_runs.Count > 0 && _runs[^1] is DecalRun last && last.Normals == normals && last.SizeClass == sizeClass && string.Equals(last.Texture, texture, StringComparison.OrdinalIgnoreCase))
@@ -543,6 +567,26 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _decalInstances);
         float[] data = instances.Count > 0 ? [.. instances] : [0f];
         _gl.BufferData<float>(BufferTargetARB.ArrayBuffer, data, BufferUsageARB.StaticDraw);
+    }
+
+    /// <summary>
+    /// The smallest patch of the lattice that covers a decal's rectangle, as the decal shader
+    /// measures it.
+    /// </summary>
+    private int SizeClassOf(Vector2 corner, Vector2 edgeU, Vector2 edgeV)
+    {
+        Vector2 b = corner + edgeU;
+        Vector2 c = corner + edgeV;
+        Vector2 d = b + edgeV;
+        Vector2 low = Vector2.Min(Vector2.Min(corner, b), Vector2.Min(c, d));
+        Vector2 high = Vector2.Max(Vector2.Max(corner, b), Vector2.Max(c, d));
+        Vector2 cell = new Vector2((float)_mapSize.Width / _gridCells.X, (float)_mapSize.Height / _gridCells.Z);
+        Vector2 cells = new Vector2(_gridCells.X, _gridCells.Z);
+        Vector2 origin = Vector2.Clamp(new Vector2(MathF.Floor(low.X / cell.X), MathF.Floor(low.Y / cell.Y)), Vector2.Zero, cells);
+        Vector2 need = Vector2.Clamp(new Vector2(MathF.Ceiling(high.X / cell.X), MathF.Ceiling(high.Y / cell.Y)), Vector2.Zero, cells) - origin;
+        float widest = Math.Max(need.X, need.Y);
+        int sizeClass = Array.FindIndex(DecalGridCells, cellsOfClass => cellsOfClass >= widest);
+        return sizeClass < 0 ? DecalGridCells.Length - 1 : sizeClass;
     }
 
     private uint Sampler(GLEnum wrap, bool mipmaps = true)
@@ -588,7 +632,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     }
 
     /// <summary>
-    /// A square grid of cells over 0 to 1, as positions and two triangles per cell.
+    /// A grid of cells over 0 to 1 (or over whole corners), as positions and two triangles per cell.
     /// </summary>
     private sealed class Mesh(GL gl) : IDisposable
     {
@@ -598,7 +642,9 @@ internal sealed unsafe class TerrainRenderer : IDisposable
 
         public int IndexCount { get; private set; }
 
-        public void SetGrid(int cellsX, int cellsZ)
+        /// <param name="corners">The positions as whole corners (0 to the cells), the lattice the
+        /// terrain and the brush share; else from 0 to 1.</param>
+        public void SetGrid(int cellsX, int cellsZ, bool corners = false)
         {
             float[] positions = new float[(cellsX + 1) * (cellsZ + 1) * 2];
             int i = 0;
@@ -606,8 +652,8 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             {
                 for (int x = 0; x <= cellsX; x++)
                 {
-                    positions[i++] = (float)x / cellsX;
-                    positions[i++] = (float)z / cellsZ;
+                    positions[i++] = corners ? x : (float)x / cellsX;
+                    positions[i++] = corners ? z : (float)z / cellsZ;
                 }
             }
             uint[] indices = new uint[cellsX * cellsZ * 6];

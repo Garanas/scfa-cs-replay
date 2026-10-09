@@ -142,9 +142,9 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     (`EditorCamera.PointAt`). They draw how strongly it works as a ramp from near black to the
     overlay's colour (the square root of the values, which shows where a picture works at all),
     with its edge as a line: the circle of the radius, or the picture's square turned with it
-    (with a tick on its top edge in the top view). The 3D view draws it after the water, on a
-    grid that follows the ground (`TerrainShaders.BrushVertex`; the picture on texture unit 14,
-    uploaded before the heights are bound, since an upload binds to the active unit).
+    (with a tick on its top edge in the top view). The 3D view draws it after the water, on the
+    cells of the terrain's lattice under it (`TerrainShaders.BrushVertex`; the picture on texture
+    unit 14, uploaded before the heights are bound, since an upload binds to the active unit).
     `MainViewModel.CursorChanged` (a tool's radius, shape or rotation) draws them again.
   - `brush.set {layer?, mode?, radius?, strength?, target?, erase?, shape?, rotation?,
     randomRotation?}` sets them up for automation: a layer chooses its tool (0 sculpting, 1 to 8
@@ -308,6 +308,14 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
     draws). A decal's position is its corner, and it turns around that corner. Normal decals
     (DXT5nm) change the lit colour below by the ratio of the light with and without them,
     blended as `2 × source × destination`, since the view has no deferred lighting.
+  - What lies on the terrain (decals, the brush) is drawn on the terrain's own lattice: the
+    cells under it, their corners made by the same invariant code as the terrain's
+    (`TerrainShaders.Lattice`), so the two are one surface and the depth test with a small
+    polygon offset puts it on top at any distance. A grid of its own would cut under the
+    terrain between corners and fight with it, most visibly close by and looking straight
+    down. A decal's patch has 4, 16, 64 or 256 cells a side (the smallest that covers it, the
+    size class of its run); where a point lies in the decal is worked out from its place, and
+    the fragment drops what lies outside.
   - The water is a surface at its elevation, drawn after the decals, darker and more opaque
     with depth down to the abyss elevation.
   - Uniforms of samplers must not share a texture unit with another sampler type: unit 0 holds
