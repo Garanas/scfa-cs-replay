@@ -13,7 +13,7 @@ public sealed class ShowTopViewHandler(MainViewModel model) : IRequestHandler<Sh
 {
     public Task Handle(ShowTopView request, CancellationToken cancellationToken)
     {
-        model.ViewIndex = 0;
+        model.View = MapViewTab.Top;
         return Task.CompletedTask;
     }
 }
@@ -28,7 +28,7 @@ public sealed class Show3DViewHandler(MainViewModel model) : IRequestHandler<Sho
 {
     public Task Handle(Show3DView request, CancellationToken cancellationToken)
     {
-        model.ViewIndex = 1;
+        model.View = MapViewTab.ThreeD;
         return Task.CompletedTask;
     }
 }

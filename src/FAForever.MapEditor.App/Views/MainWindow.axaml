@@ -54,7 +54,8 @@
              so the 3D view keeps its textures on the graphics card -->
         <Border DockPanel.Dock="Top" Classes="toolbar views">
           <WrapPanel Classes="row">
-            <TabControl x:Name="Views" Classes="segmented" SelectedIndex="{Binding ViewIndex}" AutomationProperties.Name="View">
+            <!-- in the order of MapViewTab -->
+            <TabControl x:Name="Views" Classes="segmented" SelectedIndex="{Binding View, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="View">
               <TabItem Header="Top" />
               <TabItem Header="3D" />
             </TabControl>

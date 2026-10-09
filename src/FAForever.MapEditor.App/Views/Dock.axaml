@@ -1,11 +1,12 @@
-<!-- The dock under the views: lists that span the map. -->
+<!-- The dock under the views: lists that span the map. The tabs are in the order of DockTab. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
              x:Class="FAForever.MapEditor.App.Views.Dock"
              x:DataType="vm:MainViewModel">
   <Border Classes="dock">
-    <TabControl Classes="compact" SelectedIndex="{Binding DockIndex}" AutomationProperties.Name="Dock">
+    <TabControl Classes="compact" SelectedIndex="{Binding Dock, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="Dock">
       <TabItem Header="Problems">
         <Border Classes="panel">
           <Border Classes="planned">

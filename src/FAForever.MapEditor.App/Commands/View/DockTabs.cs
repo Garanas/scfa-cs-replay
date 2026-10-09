@@ -28,22 +28,22 @@ public sealed record ShowAssetsTab : IRequest;
 public sealed record ShowConsoleTab : IRequest;
 
 /// <summary>
-/// Chooses a tab of the dock: 0 Problems, 1 History, 2 Assets, 3 Console.
+/// Chooses a tab of the dock.
 /// </summary>
 public sealed class DockTabHandlers(MainViewModel model) :
     IRequestHandler<ShowProblemsTab>, IRequestHandler<ShowHistoryTab>, IRequestHandler<ShowAssetsTab>, IRequestHandler<ShowConsoleTab>
 {
-    public Task Handle(ShowProblemsTab request, CancellationToken cancellationToken) => Show(0);
+    public Task Handle(ShowProblemsTab request, CancellationToken cancellationToken) => Show(DockTab.Problems);
 
-    public Task Handle(ShowHistoryTab request, CancellationToken cancellationToken) => Show(1);
+    public Task Handle(ShowHistoryTab request, CancellationToken cancellationToken) => Show(DockTab.History);
 
-    public Task Handle(ShowAssetsTab request, CancellationToken cancellationToken) => Show(2);
+    public Task Handle(ShowAssetsTab request, CancellationToken cancellationToken) => Show(DockTab.Assets);
 
-    public Task Handle(ShowConsoleTab request, CancellationToken cancellationToken) => Show(3);
+    public Task Handle(ShowConsoleTab request, CancellationToken cancellationToken) => Show(DockTab.Console);
 
-    private Task Show(int tab)
+    private Task Show(DockTab tab)
     {
-        model.DockIndex = tab;
+        model.Dock = tab;
         return Task.CompletedTask;
     }
 }

@@ -62,7 +62,8 @@ Each step can be merged on its own and leaves the editor working.
    and overlays' commands are made from their data, as file 04 proposed.
 2. **Built**: tools as classes (02), each with its own settings and radius; the views send the
    left mouse to the active tool.
-3. The lists generated from one source: overlays, modes, dock tabs (04).
+3. **Built**: the lists generated from one source: overlays, modes, the tabs as enums, the
+   Markers panel's check boxes from the overlays (04).
 4. The loose parts out of `MainViewModel`: diagnostics and console, palette, workspace setup (03).
 5. Measure, then make the notifications finer where it shows (05).
 6. Lua (06), once 1 and 2 have shown which hooks built-in code needs; plugins use the same ones.

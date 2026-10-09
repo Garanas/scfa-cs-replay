@@ -116,6 +116,16 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
     }
 
     /// <summary>
+    /// The views of the map by their name in automation (<c>tab</c>, the state's <c>tab</c>), with
+    /// the command that shows each.
+    /// </summary>
+    private static readonly (string Name, MapViewTab View, string Command)[] MapViews =
+    [
+        ("top", MapViewTab.Top, "view.top"),
+        ("3d", MapViewTab.ThreeD, "view.3d"),
+    ];
+
+    /// <summary>
     /// The names automation had before its operations became commands of the registry, with the
     /// command each runs, how its arguments are named there, and where the answer goes in the reply.
     /// </summary>
@@ -198,13 +208,13 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 await RunCommandAsync($"tool.{Take(arguments, "id")}", arguments, result, null);
                 break;
             case "tab":
-                await RunCommandAsync(Take(arguments, "name").ToLowerInvariant() switch
-                {
-                    "top" => "view.top",
-                    "3d" => "view.3d",
-                    string other => throw new ArgumentException($"There is no view '{other}': top or 3d"),
-                }, arguments, result, null);
+            {
+                string name = Take(arguments, "name").ToLowerInvariant();
+                string shows = MapViews.FirstOrDefault(view => view.Name == name).Command
+                    ?? throw new ArgumentException($"There is no view '{name}': {string.Join(" or ", MapViews.Select(view => view.Name))}");
+                await RunCommandAsync(shows, arguments, result, null);
                 break;
+            }
             case "ui":
                 // the window's controls: what an agent can read and use, with their places for hit and the mouse
                 return new JsonObject { ["ui"] = UiTree.Describe(window, arguments["hidden"]?.GetValue<bool>() == true) };
@@ -338,7 +348,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 break;
             case "screenshot":
                 result["file"] = arguments["gpu"]?.GetValue<bool>() == true
-                    ? window.ShownView == "3d"
+                    ? model.View == MapViewTab.ThreeD
                         ? await window.View3D.CaptureAsync(Text(arguments, "path")).WaitAsync(TimeSpan.FromSeconds(10))
                         : throw new ArgumentException("The 3D view draws only while it shows: tab name=3d first")
                     : Screenshot(Text(arguments, "path"), arguments["map"]?.GetValue<bool>() == true);
@@ -429,7 +439,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 },
             },
             ["zoom"] = window.MapView.Zoom,
-            ["tab"] = window.ShownView,
+            ["tab"] = MapViews.First(view => view.View == model.View).Name,
             ["camera"] = new JsonObject
             {
                 ["x"] = model.Camera.Now.X,

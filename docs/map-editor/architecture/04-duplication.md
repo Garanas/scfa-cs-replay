@@ -5,7 +5,12 @@ stay equal, and nothing checks that they do.
 
 Built with file 01: the overlays' and the modes' commands are made from their data
 (`EditorOverlays`, `EditorModes`), `assets.show` is gone, and the planned commands are a line each.
-The dock's tabs are still numbers.
+
+**Built** (2026-10-09), the rest: the tabs are the enums `MapViewTab` and `DockTab`, bound through
+`EnumIndexConverter` (a test checks the order of the `TabItem`s), and the Markers panel's check
+boxes are the overlays with `Panel = "markers"`, each running its overlay's command
+(`OverlaySection`). *As built*: the dock keeps one request per tab (`view.problems`, ...), since
+each has its own user story; their one handler names the tab by the enum.
 
 ## Overlays: three ways to show the markers
 

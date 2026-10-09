@@ -34,20 +34,6 @@ public sealed partial class MainWindow : Window
     public TerrainViewGpu View3D => Terrain3D;
 
     /// <summary>
-    /// Which view shows: <c>top</c> or <c>3d</c>.
-    /// </summary>
-    public string ShownView
-    {
-        get => Views.SelectedIndex == 1 ? "3d" : "top";
-        set => Views.SelectedIndex = value.ToLowerInvariant() switch
-        {
-            "top" => 0,
-            "3d" => 1,
-            _ => throw new ArgumentException($"There is no view '{value}': top or 3d"),
-        };
-    }
-
-    /// <summary>
     /// Closes the window without asking about unsaved changes, for automation.
     /// </summary>
     public void CloseWithoutAsking()
@@ -138,7 +124,7 @@ public sealed partial class MainWindow : Window
     {
         switch (e.PropertyName)
         {
-            case nameof(MainViewModel.ViewIndex):
+            case nameof(MainViewModel.View):
                 ShowChosenView();
                 break;
             case nameof(MainViewModel.GpuDebug):
@@ -164,9 +150,9 @@ public sealed partial class MainWindow : Window
 
     private void ShowChosenView()
     {
-        int index = _model?.ViewIndex ?? 0;
-        Heightmap.IsVisible = index == 0;
-        Terrain3D.IsVisible = index == 1;
+        MapViewTab view = _model?.View ?? MapViewTab.Top;
+        Heightmap.IsVisible = view == MapViewTab.Top;
+        Terrain3D.IsVisible = view == MapViewTab.ThreeD;
     }
 
     protected override async void OnClosing(WindowClosingEventArgs e)

@@ -8,6 +8,26 @@ using Microsoft.Extensions.Logging;
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
+/// The views of the map, in the order of their tabs (<c>MainWindow.axaml</c>).
+/// </summary>
+public enum MapViewTab
+{
+    Top,
+    ThreeD,
+}
+
+/// <summary>
+/// The tabs of the dock, in their order (<c>Views/Dock.axaml</c>).
+/// </summary>
+public enum DockTab
+{
+    Problems,
+    History,
+    Assets,
+    Console,
+}
+
+/// <summary>
 /// A mode on the rail.
 /// </summary>
 public sealed partial class ModeItem(ModeDefinition definition) : ObservableObject
@@ -126,16 +146,24 @@ public sealed partial class MainViewModel
     public IReadOnlyList<OverlayItem> Overlays { get; private set; } = [];
 
     /// <summary>
-    /// Which view shows: 0 the top view, 1 the 3D view.
+    /// Which view of the map shows.
     /// </summary>
     [ObservableProperty]
-    public partial int ViewIndex { get; set; }
+    public partial MapViewTab View { get; set; }
 
     /// <summary>
-    /// Which tab of the dock shows: 0 Problems, 1 History, 2 Assets, 3 Console.
+    /// Which tab of the dock shows.
     /// </summary>
     [ObservableProperty]
-    public partial int DockIndex { get; set; } = 1;
+    public partial DockTab Dock { get; set; } = DockTab.History;
+
+    /// <summary>
+    /// The overlays the selected mode's panel lists (<see cref="OverlayDefinition.Panel"/>).
+    /// </summary>
+    public IReadOnlyList<OverlayItem> PanelOverlays =>
+        [.. Overlays.Where(overlay => overlay.Definition.Panel is string panel && panel == SelectedMode?.Definition.Id)];
+
+    partial void OnSelectedModeChanged(ModeItem? value) => OnPropertyChanged(nameof(PanelOverlays));
 
     /// <summary>
     /// Raised when the top view is to show the whole map.

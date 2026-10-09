@@ -43,9 +43,21 @@ namespace FAForever.MapEditor.App.Tests
             return (window, model);
         }
 
-        private static void Show(MainWindow window, string view)
+        private static void Show(MainWindow window, MapViewTab view)
         {
-            window.ShownView = view;
+            ((MainViewModel)window.DataContext!).View = view;
+            Dispatcher.UIThread.RunJobs();
+        }
+
+        private static TabControl Tabs(MainWindow window, string name) => window.GetVisualDescendants().OfType<TabControl>()
+            .Single(tabs => Avalonia.Automation.AutomationProperties.GetName(tabs) == name);
+
+        private static void Click(MainWindow window, Control control)
+        {
+            Point at = Middle(control, window);
+            window.MouseMove(at);
+            window.MouseDown(at, MouseButton.Left);
+            window.MouseUp(at, MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
         }
 
@@ -94,7 +106,7 @@ namespace FAForever.MapEditor.App.Tests
         public Task TheWheelZoomsTheCameraTowardsTheMouse() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
-            Show(window, "3d");
+            Show(window, MapViewTab.ThreeD);
             Point middle = Middle(window.View3D, window);
             float before = model.Camera.Now.Distance;
 
@@ -111,7 +123,7 @@ namespace FAForever.MapEditor.App.Tests
         public Task TheMiddleButtonDragsTheMap() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
-            Show(window, "3d");
+            Show(window, MapViewTab.ThreeD);
             Point middle = Middle(window.View3D, window);
 
             window.MouseMove(middle);
@@ -128,7 +140,7 @@ namespace FAForever.MapEditor.App.Tests
         public Task SpaceAndTheMouseTurnTheCamera() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
-            Show(window, "3d");
+            Show(window, MapViewTab.ThreeD);
             Point middle = Middle(window.View3D, window);
 
             window.MouseMove(middle);
@@ -147,7 +159,7 @@ namespace FAForever.MapEditor.App.Tests
         public Task HomeShowsTheWholeMapAgain() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
-            Show(window, "3d");
+            Show(window, MapViewTab.ThreeD);
             Point middle = Middle(window.View3D, window);
             model.Camera.Look(x: 10, z: 10, distance: 20, pitch: 30);
 
@@ -162,7 +174,7 @@ namespace FAForever.MapEditor.App.Tests
         public Task ControlAndAClickInTheTopViewSendTheCameraThere() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
-            Show(window, "top");
+            Show(window, MapViewTab.Top);
             Point at = Middle(window.MapView, window) + new Vector(-120, 80);
             Point place = window.MapView.ControlToMap(window.TranslatePoint(at, window.MapView)!.Value);
 
@@ -180,7 +192,7 @@ namespace FAForever.MapEditor.App.Tests
         public Task PaintingInTheTopViewIsOneStepOfUndo() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
-            Show(window, "top");
+            Show(window, MapViewTab.Top);
             Point middle = Middle(window.MapView, window);
 
             window.MouseMove(middle);
@@ -212,7 +224,7 @@ namespace FAForever.MapEditor.App.Tests
             Dispatcher.UIThread.RunJobs();
 
             Assert.IsFalse(model.IsPaletteOpen);
-            Assert.AreEqual("3d", window.ShownView);
+            Assert.AreEqual(MapViewTab.ThreeD, model.View);
             window.Close();
         });
 
@@ -239,6 +251,54 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task TheTabsAreInTheOrderOfTheirEnums() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            TabControl dock = Tabs(window, "Dock");
+            foreach (DockTab tab in Enum.GetValues<DockTab>())
+            {
+                model.Dock = tab;
+                Dispatcher.UIThread.RunJobs();
+                StringAssert.StartsWith(((TabItem)dock.SelectedItem!).Header?.ToString(), tab.ToString());
+            }
+
+            Click(window, dock.GetVisualDescendants().OfType<TabItem>().First());
+            Assert.AreEqual(DockTab.Problems, model.Dock, "a click on a tab chooses it in the view model");
+
+            TabControl views = Tabs(window, "View");
+            Click(window, views.GetVisualDescendants().OfType<TabItem>().Last());
+            Assert.AreEqual(MapViewTab.ThreeD, model.View);
+            Assert.IsTrue(window.View3D.IsVisible);
+            Assert.IsFalse(window.MapView.IsVisible);
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task TheMarkersPanelRunsTheOverlaysCommands() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            List<string> ran = [];
+            model.Commands.Ran += command => ran.Add(command.Id);
+            model.SelectMode("markers");
+            Dispatcher.UIThread.RunJobs();
+            CheckBox Box(string title) => window.GetVisualDescendants().OfType<CheckBox>().Single(box => box.Content as string == title);
+            Assert.IsTrue(Box("Markers").IsChecked);
+            Assert.IsFalse(Box("Path nodes").IsChecked);
+
+            Click(window, Box("Path nodes"));
+            Click(window, Box("Markers"));
+
+            CollectionAssert.AreEqual(new[] { "view.overlay.pathNodes", "view.overlay.markers" }, ran);
+            Assert.IsTrue(model.ShowPathNodes);
+            Assert.IsFalse(model.ShowMarkers);
+            Assert.IsFalse(Box("Markers").IsChecked, "the box shows the overlay");
+
+            model.ShowMarkers = true;
+            Assert.IsTrue(Box("Markers").IsChecked, "and follows the chip and the menu");
+            window.Close();
+        });
+
+        [TestMethod]
         public Task TheRailChoosesTheMode() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
@@ -259,7 +319,7 @@ namespace FAForever.MapEditor.App.Tests
         public Task AToolNotBuiltYetDoesNotPaint() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
-            Show(window, "top");
+            Show(window, MapViewTab.Top);
             model.SelectTool("terrain.curve");
             Point middle = Middle(window.MapView, window);
 
@@ -277,8 +337,8 @@ namespace FAForever.MapEditor.App.Tests
         {
             (MainWindow window, _) = await Open();
 
-            Show(window, "3d");
-            Show(window, "top");
+            Show(window, MapViewTab.ThreeD);
+            Show(window, MapViewTab.Top);
 
             // in the tree, so the 3D view keeps its context and textures on the graphics card
             Assert.AreSame(window, TopLevel.GetTopLevel(window.View3D));
@@ -291,7 +351,7 @@ namespace FAForever.MapEditor.App.Tests
         public Task TheTopViewShowsWhatTheCameraSees() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
-            Show(window, "top");
+            Show(window, MapViewTab.Top);
             model.ShowCamera = false;
             byte[] without = Png(window.CaptureRenderedFrame());
             model.ShowCamera = true;

@@ -158,9 +158,9 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = NewModel();
 
             Assert.IsTrue(await model.Commands.RunAsync("view.3d"));
-            Assert.AreEqual(1, model.ViewIndex);
+            Assert.AreEqual(MapViewTab.ThreeD, model.View);
             Assert.IsTrue(await model.Commands.RunAsync("view.console"));
-            Assert.AreEqual(3, model.DockIndex);
+            Assert.AreEqual(DockTab.Console, model.Dock);
             Assert.IsFalse(await model.Commands.RunAsync("file.save"), "nothing to save without a map");
             Assert.ThrowsException<ArgumentException>(() => model.Commands.RunAsync("no.such").GetAwaiter().GetResult());
         }

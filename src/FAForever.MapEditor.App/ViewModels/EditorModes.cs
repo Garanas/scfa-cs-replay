@@ -39,9 +39,10 @@ public sealed record PlannedSection(string Title, string Story, string Missing) 
 public sealed record StrataSection() : PanelSection("Strata");
 
 /// <summary>
-/// Which kinds of markers the views show (user story R-6).
+/// The overlays the mode's panel lists, to show or hide them there as with the chips above the
+/// views (<see cref="OverlayDefinition.Panel"/>).
 /// </summary>
-public sealed record MarkerVisibilitySection() : PanelSection("Shown in the views");
+public sealed record OverlaySection() : PanelSection("Shown in the views");
 
 /// <summary>
 /// A mode: one button on the rail, its tools and its panel; its parts of the inspector.
@@ -143,7 +144,7 @@ public static class EditorModes
                 new ToolDefinition("markers.chain", "Chain", "R-4", "Click markers in order to make a chain"),
             ],
             [
-                new MarkerVisibilitySection(),
+                new OverlaySection(),
                 new PlannedSection("By kind", "R-6", "The markers by kind, each kind shown or hidden"),
                 new PlannedSection("Chains", "R-4", "The chains, and their markers in order"),
             ],
@@ -193,6 +194,11 @@ public sealed record OverlayDefinition(string Id, string Title, string CommandTi
     public bool IsIncomplete => Missing is not null;
 
     /// <summary>
+    /// The mode whose panel lists it too (<see cref="OverlaySection"/>), e.g. <c>markers</c>.
+    /// </summary>
+    public string? Panel { get; init; }
+
+    /// <summary>
     /// The command that turns it on or off: <c>view.overlay.markers</c>.
     /// </summary>
     public string CommandId => $"view.overlay.{Id}";
@@ -205,8 +211,8 @@ public static class EditorOverlays
 {
     public static IReadOnlyList<OverlayDefinition> All { get; } =
     [
-        new OverlayDefinition("markers", "Markers", "Show markers", "R-6"),
-        new OverlayDefinition("pathNodes", "Path nodes", "Show path nodes", "R-6"),
+        new OverlayDefinition("markers", "Markers", "Show markers", "R-6") { Panel = "markers" },
+        new OverlayDefinition("pathNodes", "Path nodes", "Show path nodes", "R-6") { Panel = "markers" },
         new OverlayDefinition("camera", "3D camera", "Show the 3D camera", "V-1"),
         new OverlayDefinition("walkability", "Walkability", "Show walkability", "T-7", "Show where land units can and cannot go, and what changed"),
         new OverlayDefinition("mask", "Mask", "Show a mask", "K-1", "Show a mask over the terrain"),

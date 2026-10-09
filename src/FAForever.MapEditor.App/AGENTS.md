@@ -106,6 +106,13 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   `[Incomplete]` (and then none), and that the menus hold each command once.
 - **Modes and tools** are data (`EditorModes`): a mode's id, title, icon (`Styles/Icons.axaml`),
   tools, panel sections and inspector sections. A mode remembers its last tool.
+- **Overlays** are data too (`EditorOverlays`): each is a chip above the views and a command in
+  the View menu (`view.overlay.<id>`). One with `Panel` is also a check box in that mode's panel
+  (`OverlaySection`: the Markers panel's "Shown in the views"), which runs the same command.
+- **Tabs are enums**: `MapViewTab` (the top and 3D views) and `DockTab` (the dock), declared in
+  the order of their `TabItem`s and bound through `Controls/EnumIndexConverter`. A new tab is a
+  value there, its `TabItem` in that place and its command; `TheTabsAreInTheOrderOfTheirEnums`
+  checks the order.
 - **What a tool does is one class** in `Tools/`, made once per editor by its definition's `Make`,
   so its settings last while the person switches tools (`ToolItem.Tool`; `MainViewModel.Tool<T>()`
   finds one by class). It implements `IMapTool`: `Press`, `Drag` and `Release` of the left mouse,

@@ -63,12 +63,19 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
-            <DataTemplate DataType="vm:MarkerVisibilitySection">
+            <!-- the mode's overlays; a check box runs the overlay's command, as its chip does -->
+            <DataTemplate DataType="vm:OverlaySection">
               <Border Classes="group">
                 <StackPanel Classes="stack">
                   <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-                  <CheckBox Content="Markers" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ShowMarkers}" />
-                  <CheckBox Content="Path nodes" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ShowPathNodes}" />
+                  <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).PanelOverlays}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:OverlayItem">
+                        <CheckBox Content="{Binding Title}" IsChecked="{Binding IsOn, Mode=OneWay}"
+                                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding Definition.CommandId}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
                 </StackPanel>
               </Border>
             </DataTemplate>
