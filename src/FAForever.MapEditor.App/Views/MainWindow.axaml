@@ -45,33 +45,34 @@
 
     <Border DockPanel.Dock="Bottom" Padding="8,4" Background="#202020">
       <DockPanel>
-        <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Margin="16,0,0,0" />
-        <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
+        <TextBlock x:Name="CursorText" DockPanel.Dock="Right" Margin="16,0,0,0" AutomationProperties.Name="Place under the mouse" />
+        <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Status" AutomationProperties.LiveSetting="Polite" />
       </DockPanel>
     </Border>
 
     <Border DockPanel.Dock="Right" Width="240" Padding="12" Background="#1a1a1a">
       <StackPanel Spacing="8" IsEnabled="{Binding HasMap}">
         <TextBlock Text="Brush" FontWeight="SemiBold" />
-        <ComboBox ItemsSource="{Binding PaintTargets}" SelectedItem="{Binding SelectedPaintTarget}" HorizontalAlignment="Stretch" />
+        <ComboBox ItemsSource="{Binding PaintTargets}" SelectedItem="{Binding SelectedPaintTarget}" HorizontalAlignment="Stretch" AutomationProperties.Name="What the brush paints" />
         <TextBlock Text="{Binding BrushRadius, StringFormat='Radius: {0:0} ogrids'}" />
-        <Slider Minimum="1" Maximum="128" Value="{Binding BrushRadius}" />
+        <Slider Minimum="1" Maximum="128" Value="{Binding BrushRadius}" AutomationProperties.Name="Brush radius in ogrids" />
         <StackPanel Spacing="8" IsVisible="{Binding IsPaintingHeight}">
-          <ComboBox ItemsSource="{Binding BrushModes}" SelectedItem="{Binding BrushMode}" HorizontalAlignment="Stretch" />
+          <ComboBox ItemsSource="{Binding BrushModes}" SelectedItem="{Binding BrushMode}" HorizontalAlignment="Stretch" AutomationProperties.Name="Height brush mode" />
           <TextBlock Text="{Binding BrushStrength, StringFormat='Strength: {0:0.00}'}" />
-          <Slider Minimum="0.01" Maximum="5" Value="{Binding BrushStrength}" />
+          <Slider Minimum="0.01" Maximum="5" Value="{Binding BrushStrength}" AutomationProperties.Name="Height brush strength" />
           <TextBlock Text="{Binding BrushTarget, StringFormat='Flatten to: {0:0.0}'}" />
-          <Slider Minimum="0" Maximum="256" Value="{Binding BrushTarget}" />
+          <Slider Minimum="0" Maximum="256" Value="{Binding BrushTarget}" AutomationProperties.Name="Height to flatten to" />
         </StackPanel>
         <StackPanel Spacing="8" IsVisible="{Binding IsPaintingLayer}">
           <TextBlock Text="{Binding MaskStrength, StringFormat='Strength: {0:0.00}'}" />
-          <Slider Minimum="0.01" Maximum="1" Value="{Binding MaskStrength}" />
-          <CheckBox Content="Erase" IsChecked="{Binding MaskErase}" />
+          <Slider Minimum="0.01" Maximum="1" Value="{Binding MaskStrength}" AutomationProperties.Name="Mask brush strength" />
+          <CheckBox Content="Erase" IsChecked="{Binding MaskErase}" AutomationProperties.Name="Erase the layer" />
         </StackPanel>
         <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12"
                    Text="Top view: left mouse paints, right or middle moves, the wheel zooms, control and a click sends the 3D camera there. 3D view: the wheel zooms, middle moves, space and the mouse turn, F focuses, Home shows all. A stroke is one step of Undo." />
         <TextBlock Text="History" FontWeight="SemiBold" Margin="0,12,0,0" />
-        <ListBox ItemsSource="{Binding History}" SelectedIndex="{Binding HistoryIndex, Mode=TwoWay}" MaxHeight="320">
+        <ListBox ItemsSource="{Binding History}" SelectedIndex="{Binding HistoryIndex, Mode=TwoWay}" MaxHeight="320" AutomationProperties.Name="History"
+                 AutomationProperties.HelpText="Choosing a step undoes or redoes up to it">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:HistoryEntry">
               <TextBlock Text="{Binding Description}" Classes.undone="{Binding IsUndone}" />
@@ -89,13 +90,15 @@
 
     <!-- the tabs only choose: both views stay in the tree, so the 3D view keeps its textures on the graphics card -->
     <DockPanel>
-      <TabControl x:Name="Views" DockPanel.Dock="Top" Padding="0" SelectionChanged="OnViewChosen">
+      <TabControl x:Name="Views" DockPanel.Dock="Top" Padding="0" SelectionChanged="OnViewChosen" AutomationProperties.Name="View">
         <TabItem Header="Top" />
         <TabItem Header="3D" />
       </TabControl>
       <Grid>
-        <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" />
-        <controls:TerrainViewGpu x:Name="Terrain3D" IsVisible="False" />
+        <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" AutomationProperties.Name="Top view"
+                                 AutomationProperties.HelpText="Left mouse paints; right or middle moves; the wheel zooms; control and a click sends the 3D camera there" />
+        <controls:TerrainViewGpu x:Name="Terrain3D" IsVisible="False" AutomationProperties.Name="3D view"
+                                  AutomationProperties.HelpText="The wheel zooms towards the mouse; middle moves; space and the mouse turn; F focuses; Home shows the whole map" />
       </Grid>
     </DockPanel>
   </DockPanel>
@@ -110,29 +113,29 @@
       <TextBlock Text="Workspace folder" FontWeight="SemiBold" Margin="0,8,0,0" />
       <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12" Text="An empty folder, or one that holds a workspace already." />
       <DockPanel>
-        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseSetupFolderCommand}" />
-        <TextBox Text="{Binding SetupFolder}" />
+        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseSetupFolderCommand}" AutomationProperties.Name="Browse for the workspace folder" />
+        <TextBox Text="{Binding SetupFolder}" AutomationProperties.Name="Workspace folder" />
       </DockPanel>
 
       <TextBlock Text="Supreme Commander: Forged Alliance" FontWeight="SemiBold" Margin="0,8,0,0" />
       <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12" Text="The folder the game is installed in, with gamedata\env.scd and gamedata\units.scd." />
       <DockPanel>
-        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseGameFolderCommand}" />
-        <TextBox Text="{Binding SetupGameFolder}" />
+        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseGameFolderCommand}" AutomationProperties.Name="Browse for the game folder" />
+        <TextBox Text="{Binding SetupGameFolder}" AutomationProperties.Name="Game folder" />
       </DockPanel>
 
       <TextBlock Text="FAF's data" FontWeight="SemiBold" Margin="0,8,0,0" />
       <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12" Text="FAF's gamedata folder: its env.nx2 and units.nx2 replace files of the game. Empty without FAF." />
       <DockPanel>
-        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseFafDataFolderCommand}" />
-        <TextBox Text="{Binding SetupFafDataFolder}" />
+        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseFafDataFolderCommand}" AutomationProperties.Name="Browse for FAF's data folder" />
+        <TextBox Text="{Binding SetupFafDataFolder}" AutomationProperties.Name="FAF's data folder" />
       </DockPanel>
 
       <TextBlock Text="Vault" FontWeight="SemiBold" Margin="0,8,0,0" />
       <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12" Text="The folder the FAF client keeps maps and mods in. Maps are exported to its maps folder." />
       <DockPanel>
-        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseVaultFolderCommand}" />
-        <TextBox Text="{Binding SetupVaultFolder}" />
+        <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseVaultFolderCommand}" AutomationProperties.Name="Browse for the vault folder" />
+        <TextBox Text="{Binding SetupVaultFolder}" AutomationProperties.Name="Vault folder" />
       </DockPanel>
 
       <TextBlock Text="{Binding SetupError}" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}"
@@ -163,7 +166,7 @@
   <!-- Converting -->
   <StackPanel IsVisible="{Binding IsConverting}" MaxWidth="640" Margin="32" Spacing="14" VerticalAlignment="Center">
     <TextBlock Text="Converting the game's assets" FontSize="26" FontWeight="SemiBold" />
-    <ProgressBar Minimum="0" Maximum="1" Value="{Binding ConversionFraction}" Height="8" />
+    <ProgressBar Minimum="0" Maximum="1" Value="{Binding ConversionFraction}" Height="8" AutomationProperties.Name="Conversion progress" />
     <TextBlock Text="{Binding ConversionText}" Opacity="0.8" />
     <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12"
                Text="Closing the editor stops the conversion; the next start goes on where it was." />

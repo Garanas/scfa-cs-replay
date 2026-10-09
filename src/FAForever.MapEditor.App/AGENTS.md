@@ -109,6 +109,21 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
 - The window watches the project folder (`ProjectWatcher`) and reads back what other tools change;
   during a stroke the changes wait until it ends.
 
+## Tests with the real window, and labels for screen readers and agents
+
+- `tests/FAForever.MapEditor.App.Tests/MainWindowTest` runs the real `MainWindow` without a screen
+  (Avalonia.Headless with Skia): the mouse, wheel and keys as a person uses them, and frames of
+  what it shows. Test input and views there: the camera's controls, control and a click in the
+  top view, painting as one undo step, switching views. The headless platform has no graphics
+  card, so the 3D view draws nothing and its camera does not glide by itself (the tests let it
+  arrive); what it draws is checked with automation in a real editor. The tests of the 3D view's
+  input also catch a view that the mouse does not reach.
+- Give every control one can read or use a name for screen readers: `AutomationProperties.Name`
+  (and `HelpText` where the use is not obvious) in the XAML, unless its own text says it (a
+  button's content, a menu's header). `MainWindowTest.EveryControlOneCanUseHasALabelOrText`
+  fails otherwise. Avalonia hands the names to Windows UI Automation (and the other systems'
+  equivalents), and automation's `ui` returns them.
+
 ## Performance: finding out why it lags
 
 `Diagnostics/Performance` measures named spans (`using Performance.Span measure =
@@ -157,7 +172,13 @@ faf-map editor close                                      # closes without askin
   `workspace`, `setupError` and `assetReasons`; a command that opens, saves or converts answers
   when it is done. Start a test editor with `FAF_MAP_EDITOR_SETTINGS` set to a file of its own, so
   that its setup never changes the workspace the user's editor remembers.
-- Commands: `help`, `state`, `perf {reset?}` (above), `setup {folder, game?, faf?, vault?}` (the setup page; fields left
+- `ui {hidden?}` returns the window's controls as an agent needs them (`Automation/UiTree`): type,
+  name (`x:Name`), label (`AutomationProperties.Name`), help, text or value (sliders, check boxes,
+  selected tab, list item or combo box entry), whether enabled and focused, and the place in the
+  window (`[x, y, width, height]`, for `hit` and the mouse). Layout without anything to read or
+  use is left out, and a control's template is not opened up. Read it before guessing from a
+  screenshot.
+- Commands: `help`, `state`, `ui {hidden?}`, `perf {reset?}` (above), `setup {folder, game?, faf?, vault?}` (the setup page; fields left
   out keep what it suggests), `update-assets`, `open {path}`, `import {path}`, `save`, `save-as {path}`,
   `export {output, version?}`, `undo`, `redo`, `goto {step}`,
   `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0 the heights, 1 to 8 a mask), `mask {layer, x, z}`,

@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\FAForever.MapEditor.App\FAForever.MapEditor.App.csproj" />
   </ItemGroup>

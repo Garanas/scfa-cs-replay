@@ -124,9 +124,12 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         switch (command)
         {
             case "" or "help":
-                return new JsonObject { ["commands"] = new JsonArray("state", "perf {reset?}", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
+                return new JsonObject { ["commands"] = new JsonArray("state", "ui {hidden?}", "perf {reset?}", "setup {folder, game?, faf?, vault?}", "update-assets", "height?x=&z=", "mask?layer=&x=&z=", "open {path}", "import {path}", "save", "save-as {path}", "export {output, version?}", "undo", "redo", "goto {step}", "brush {layer?, mode?, radius?, strength?, target?, erase?}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "fit", "tab {name: top|3d}", "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}", "screenshot {path, map?, gpu?}", "close") };
             case "state":
                 break;
+            case "ui":
+                // the window's controls: what an agent can read and use, with their places for hit and the mouse
+                return new JsonObject { ["ui"] = UiTree.Describe(window, arguments["hidden"]?.GetValue<bool>() == true) };
             case "perf":
                 // where the time goes: per measured span, and the recent stalls of the user interface
                 if (arguments["reset"]?.GetValue<bool>() == true)
