@@ -20,7 +20,7 @@
             <TextBlock Classes="caption"
                        Text="Each session writes its logs and measurements into this folder, in OpenTelemetry's format; the last 30 sessions are kept. Attach them to a report of a problem." />
             <DockPanel>
-              <Button DockPanel.Dock="Right" Classes="beside" Content="Show" Command="{Binding OpenDiagnosticsFolderCommand}"
+              <Button DockPanel.Dock="Right" Classes="beside" Content="Show" Command="{Binding RunCommand}" CommandParameter="help.diagnosticsFolder"
                       AutomationProperties.Name="Show the diagnostics folder" />
               <TextBlock Classes="secondary" Text="{Binding DiagnosticsFolder}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                          AutomationProperties.Name="Diagnostics folder" />

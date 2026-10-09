@@ -63,6 +63,7 @@ public sealed partial class MainWindow : Window
         {
             _model.PropertyChanged -= OnModelChanged;
             _model.FitRequested -= OnFitRequested;
+            _model.TopViewRequested -= OnTopViewRequested;
             _model.ShowFolderRequested -= OnShowFolderRequested;
         }
         _model = DataContext as MainViewModel;
@@ -70,6 +71,7 @@ public sealed partial class MainWindow : Window
         {
             _model.PropertyChanged += OnModelChanged;
             _model.FitRequested += OnFitRequested;
+            _model.TopViewRequested += OnTopViewRequested;
             _model.ShowFolderRequested += OnShowFolderRequested;
             BuildMenusAndShortcuts(_model);
             ShowChosenView();
@@ -139,6 +141,9 @@ public sealed partial class MainWindow : Window
             case nameof(MainViewModel.ViewIndex):
                 ShowChosenView();
                 break;
+            case nameof(MainViewModel.GpuDebug):
+                Terrain3D.Debug = _model!.GpuDebug;
+                break;
             case nameof(MainViewModel.IsPaletteOpen) when _model?.IsPaletteOpen == true:
                 Dispatcher.UIThread.Post(Palette.FocusQuery, DispatcherPriority.Input);
                 break;
@@ -152,6 +157,8 @@ public sealed partial class MainWindow : Window
     }
 
     private void OnFitRequested(object? sender, EventArgs e) => Heightmap.Fit();
+
+    private void OnTopViewRequested(double x, double z, double? zoom) => Heightmap.Show(zoom ?? Heightmap.Zoom, x, z);
 
     private async void OnShowFolderRequested(string folder) => await Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(folder));
 

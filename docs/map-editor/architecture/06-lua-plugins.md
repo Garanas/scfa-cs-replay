@@ -36,8 +36,9 @@ design: what a built-in tool or command cannot do through those points, a plugin
   request, `RunPluginCommand(Plugin, Id, Arguments)`, marked `[UndoStep]`; its one handler calls the
   plugin's Lua function. So a run is one undo step, and a failing run leaves nothing, through the
   same behaviour as built-in commands.
-- **Removing what a plugin registered**: `Unregister`, and ids in the plugin's namespace
-  (`plugin.<name>.<id>`), so turning a plugin off takes its commands, tools and panels away.
+- **Removing what a plugin registered**: the registry has `Unregister` for commands; ids in the
+  plugin's namespace (`plugin.<name>.<id>`), and the same for its tools and panels, so turning a
+  plugin off takes all of it away.
 - **Queries for what plugins read.** A plugin reads the map (a height, a mask, the markers). These
   reads are worth making queries (requests that answer) when the first plugin needs one, so Lua and
   automation read the same way.

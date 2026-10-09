@@ -170,6 +170,26 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
         }
     }
 
+    /// <summary>
+    /// Takes a command made at run time away again, as a plugin that is turned off does with its own.
+    /// </summary>
+    /// <returns>Whether there was such a command.</returns>
+    /// <exception cref="InvalidOperationException">The command is in a menu: the menu bar would name a command that is gone.</exception>
+    public bool Unregister(string id)
+    {
+        if (Find(id) is not EditorCommand command)
+        {
+            return false;
+        }
+        if (command.Menu.Length > 0)
+        {
+            throw new InvalidOperationException($"The command {id} is in the menu {command.Menu}");
+        }
+        _byId.Remove(id);
+        _commands.Remove(command);
+        return true;
+    }
+
     public EditorCommand? Find(string id) => _byId.GetValueOrDefault(id);
 
     /// <summary>

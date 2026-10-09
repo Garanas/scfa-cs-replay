@@ -34,7 +34,7 @@ public static class Menus
         new MenuLayout("Select", ["select.all", "select.none", Separator, "select.symmetry"]),
         new MenuLayout("View",
         [
-            "view.top", "view.3d", "view.sideBySide", "view.fit", Separator,
+            "view.top", "view.3d", "view.sideBySide", "view.fit", "camera.home", Separator,
             "view.palette", Separator,
             "view.problems", "view.history", "view.assets", "view.console", Separator,
             .. EditorOverlays.All.Select(overlay => overlay.CommandId),

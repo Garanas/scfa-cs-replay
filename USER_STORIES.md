@@ -116,7 +116,7 @@ reads again when it changes; and nothing that generates runs by itself.
 ## W: Water
 
 - [ ] **W-1 Water.** On or off; surface, deep and abyss elevations; colours, sun, reflection and
-      refraction, textures; wave generators.
+      refraction, textures; wave generators. Today: on or off (`water.toggle`).
 - [ ] **W-2 Paintable water.** Paint the water's foam, flatness and depth bias.
 
 ## L: Lighting and atmosphere

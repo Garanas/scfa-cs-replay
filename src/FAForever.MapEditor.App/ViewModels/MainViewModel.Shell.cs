@@ -260,6 +260,19 @@ public sealed partial class MainViewModel
     public void RequestFit() => FitRequested?.Invoke(this, EventArgs.Empty);
 
     /// <summary>
+    /// Raised when the top view is to centre on a place of the map, in ogrids, at a zoom (null: as it is).
+    /// </summary>
+    public event Action<double, double, double?>? TopViewRequested;
+
+    public void RequestTopView(double x, double z, double? zoom) => TopViewRequested?.Invoke(x, z, zoom);
+
+    /// <summary>
+    /// What the 3D view's terrain shows: 0 the picture, 1 to 7 a part of it, to find out why it looks wrong.
+    /// </summary>
+    [ObservableProperty]
+    public partial int GpuDebug { get; set; }
+
+    /// <summary>
     /// The terrain layers whose masks the strata tool paints: all but the heights.
     /// </summary>
     public IReadOnlyList<PaintTarget> StrataTargets => [.. PaintTargets.Where(target => target.Layer > 0)];

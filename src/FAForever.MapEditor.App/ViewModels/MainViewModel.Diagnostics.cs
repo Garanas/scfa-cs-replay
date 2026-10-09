@@ -209,7 +209,4 @@ public sealed partial class MainViewModel
 
     [RelayCommand]
     private void CloseDiagnostics() => IsDiagnosticsOpen = false;
-
-    [RelayCommand]
-    private void OpenDiagnosticsFolder() => ShowDiagnosticsFolder();
 }

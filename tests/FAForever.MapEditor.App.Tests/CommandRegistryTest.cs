@@ -114,7 +114,11 @@ namespace FAForever.MapEditor.App.Tests
             CollectionAssert.AllItemsAreUnique(ids, "a command shows in one menu");
             string[] outside = [.. model.Commands.All.Where(command => !ids.Contains(command.Id)).Select(command => command.Id).Order()];
             CollectionAssert.AreEqual(
-                new[] { "brush.set", "edit.goTo", "file.enableVersionControl", "workspace.convert", "workspace.setUp" }, outside,
+                new[]
+                {
+                    "brush.set", "camera.focus", "camera.look", "diagnostics.flush", "diagnostics.set", "diagnostics.upload",
+                    "edit.goTo", "file.enableVersionControl", "view.gpuDebug", "view.zoomTo", "workspace.convert", "workspace.setUp",
+                }, outside,
                 "the commands outside the menus are for automation and plugins: their buttons are on a page or panel");
             Assert.AreEqual("Terrain", model.Commands.Find("tool.terrain.curve")!.Menu, "a tool is in its mode's menu");
         }
@@ -223,6 +227,36 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(model.Commands.CanRun(model.Commands.Find("file.commit")!), "no project");
             Assert.IsTrue(model.Commands.CanRun(model.Commands.Find("file.open")!));
             Assert.IsFalse(model.Commands.CanRun(model.Commands.Find("terrain.addLayer")!), "not built");
+        }
+
+        [TestMethod]
+        public async Task TheWaterGoesOnAndOffAsOneStepOfUndo()
+        {
+            MainViewModel model = NewModel();
+            await model.OpenAsync("assets/maps/HardFFA.v0001");
+            bool before = model.Map!.Document.Water.HasWater;
+
+            Assert.IsTrue(await model.Commands.RunAsync("water.toggle"));
+            Assert.AreEqual(!before, model.Map.Document.Water.HasWater);
+            Assert.AreEqual("Water on or off", model.Map.Session.UndoDescription);
+
+            Assert.IsTrue((await model.Commands.RunAsync("water.toggle", new JsonObject { ["on"] = before }, interactive: false)).Ran);
+            Assert.AreEqual(before, model.Map.Document.Water.HasWater);
+            Assert.IsTrue(await model.Commands.RunAsync("edit.undo"));
+            Assert.AreEqual(!before, model.Map.Document.Water.HasWater, "each run is one step");
+        }
+
+        [TestMethod]
+        public void ACommandMadeAtRunTimeCanBeTakenAway()
+        {
+            MainViewModel model = NewModel();
+            model.Commands.Register(new EditorCommand { Id = "plugin.example.hello", Title = "Hello", MakeRequest = _ => new ShowTopView() });
+
+            Assert.IsTrue(model.Commands.Unregister("plugin.example.hello"));
+
+            Assert.IsNull(model.Commands.Find("plugin.example.hello"));
+            Assert.IsFalse(model.Commands.Unregister("plugin.example.hello"), "it is gone");
+            Assert.ThrowsException<InvalidOperationException>(() => model.Commands.Unregister("file.save"), "a command of the menus stays");
         }
 
         [TestMethod]

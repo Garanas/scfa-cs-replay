@@ -73,22 +73,28 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   - `CommandServices` puts it together: the one container of the app, holding MediatR, the
     handlers of the assembly, the pipeline and what the handlers take (`MainViewModel`, the
     dialogs, `CurrentEdit`); `MainViewModel` makes it. MediatR runs without a licence key, which a
-    desktop application needs not set; it would log only that, and its logging is off.
+    desktop application needs not set; it would log only that, and its logging is off. The
+    project uses MediatR under Lucky Penny's community licence (accepted 2026-10-09); a key, when
+    there is one, goes in the environment as `MEDIATR_LICENSE_KEY`, never in the repository.
   - `Commands/Menus.cs` is the menu bar: each menu's command ids in order, separators, the modes'
     submenus (the mode, its commands, its tools). A request says what a command is, the layout
-    where it shows. A command in no menu (`brush.set`, `edit.goTo`, `workspace.setUp`,
-    `workspace.convert`, `file.enableVersionControl`) is for automation and plugins and the
-    palette leaves it out; its button is on a page or panel. The window makes the menus and the
+    where it shows. A command in no menu is for automation and plugins, and the palette leaves
+    it out: its control is on a page or panel (`workspace.setUp`, `workspace.convert`,
+    `file.enableVersionControl`, `diagnostics.set`), it is the mouse's or a view's own key in
+    the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
+    for finding faults (`view.gpuDebug`, `diagnostics.flush`, `diagnostics.upload`). The window makes the menus and the
     shortcuts from it (`MainWindow.BuildMenusAndShortcuts`); the palette searches the commands in
     menus, the ones that work first.
   - Run without a person (automation, later Lua: `RunAsync(id, arguments, interactive: false)`),
     a command asks nothing: `DialogGuard` refuses the question with what argument to give. The
     menus, shortcuts, palette and buttons run `MainViewModel.RunAsync(id)` (`RunCommand` in XAML),
-    which shows what went wrong in the status line.
+    which shows what went wrong in the status line. A command made at run time (a plugin's)
+    is taken away with `Unregister`; one in the menu bar cannot be.
   - **One undo step**: a request with `[UndoStep]` runs inside a transaction named after the
     command (`UndoStepBehavior`, the pipeline), kept when the handler returns and thrown away when
     it fails; the handler edits through `CurrentEdit.Transaction`. Transactions do not nest: such a
     command needs a map and no brush stroke going on (the registry adds `Map | NoStroke`).
+    `water.toggle {on?}` (`Commands/Water/ToggleWater.cs`) is the example.
 - **Not built yet** is visible and traceable: a command with `[Incomplete(story, missing)]`
   only says what it is to do (status bar, Console, `run` answers `ran: false`) and shows in
   italics in the menus; a tool with `Missing` shows it in the tool options and does nothing in
@@ -384,22 +390,25 @@ faf-map editor close                                      # closes without askin
   `save-as {path}` (the path is the command's `folder`), `commit {message}` (`commit`: the hash, or
   null when nothing changed), `export {output, version?}` (`folder`), `undo`, `redo`,
   `goto {step}` (`done`), `brush {layer?, mode?, radius?, strength?, target?, erase?}` (layer 0
-  the heights, 1 to 8 a mask), `fit`, `mode {id}`, `tool {id}`, `tab {name: top|3d}`,
-  `show {markers?, pathNodes?, camera?}` (each overlay's command with `on`).
+  the heights, 1 to 8 a mask), `fit`, `camera {x?, z?, distance?, yaw?, pitch?}`
+  (`camera.look`: the 3D view, degrees; at once), `focus {x, z, radius?}` (`camera.focus`: with a
+  radius as F, gliding while the 3D view shows; without, as control and a click in the top view),
+  `view {x, z, zoom?}` (`view.zoomTo`: the top view), `gpu-debug {mode}` (`view.gpuDebug`: what
+  the 3D view's terrain shows: 0 the picture, 1 the albedo, 2 the light, 3 the normals, 4 the
+  heights, 5 the lower layer, 6 the first four masks after the remap, 7 as stored), `mode {id}`,
+  `tool {id}`, `tab {name: top|3d}`, `show {markers?, pathNodes?, camera?}` (each overlay's
+  command with `on`).
 - **Automation's own**, reads and input: `state` (with `mode`, `tool`, `toolNotBuilt`, `palette`),
   `ui {hidden?}`, `perf {reset?}` (above), `logs {problems?, count?}` (what the Console shows),
-  `diagnostics {record?, send?, endpoint?, flush?, upload?}` (the choices, the session's files,
-  and with `flush`/`upload` writes or sends at once), `version-control {open?, enable?, name?,
-  email?, lfs?, remote?}` (how the project stands in git; `enable` runs
-  `file.enableVersionControl` with the choices), `mask {layer, x, z}`, `stroke {points}` (the
-  mouse, so no command), `height {x, z}`, `hit {x, y}` (the control the mouse reaches at a point
-  of the window, with its parents), `view {zoom, x, z}`, `camera {x?, z?, distance?, yaw?,
-  pitch?}` (the 3D view, degrees; at once), `focus {x, z, radius?}` (with a radius as F, gliding
-  while the 3D view shows; without, as control and a click in the top view),
-  `screenshot {path, map?, gpu?}` (`gpu: true` reads a frame of the 3D view back from the card:
-  a screenshot of the window does not reach it), `gpu-debug {mode}` (what the 3D view's terrain
-  shows: 0 the picture, 1 the albedo, 2 the light, 3 the normals, 4 the heights, 5 the lower
-  layer, 6 the first four masks after the remap, 7 as stored), `close`. A new operation is a
+  `diagnostics {record?, send?, endpoint?, flush?, upload?}` (the session's files and choices;
+  what it changes runs `diagnostics.set`, `diagnostics.flush`, `diagnostics.upload`),
+  `version-control {open?, enable?, name?, email?, lfs?, remote?}` (how the project stands in
+  git; `open` runs `file.commit` without a message, which shows the page, `enable` runs
+  `file.enableVersionControl` with the choices, which go only with it), `mask {layer, x, z}`,
+  `stroke {points}` (the mouse, so no command), `height {x, z}`, `hit {x, y}` (the control the
+  mouse reaches at a point of the window, with its parents), `screenshot {path, map?, gpu?}`
+  (`gpu: true` reads a frame of the 3D view back from the card: a screenshot of the window does
+  not reach it), `close`. A new operation is a
   command of the registry, not a case here.
 - The method does not matter, and a command without arguments works as a GET
   (`curl localhost:5371/undo`); Windows refuses a POST without a body, so the CLI always sends one.

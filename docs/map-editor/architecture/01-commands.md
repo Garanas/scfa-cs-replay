@@ -167,8 +167,8 @@ step, and that a failing command leaves nothing:
 - It commits when the handler returns. `Commit` keeps nothing when the document did not change.
 - It disposes the transaction when the handler throws: the half-made edit is gone.
 
-No command of the editor edits the map yet (the edits are brush strokes); `CommandRegistryTest`
-checks the behaviour with a command of its own. The handler edits through the transaction it is
+`water.toggle` is the first command that edits the map this way; `CommandRegistryTest` checks
+the rollback with a command of its own that fails halfway. The handler edits through the transaction it is
 given. The behaviour puts it in `CurrentEdit`, a
 small class the handler takes in its constructor; asking it for the transaction in a command
 without `[UndoStep]` throws, and the message says to add the attribute.

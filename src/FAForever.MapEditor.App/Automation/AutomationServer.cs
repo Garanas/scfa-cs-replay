@@ -24,17 +24,13 @@ namespace FAForever.MapEditor.App.Automation;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The commands: <c>GET /state</c>, <c>GET /height?x=&amp;z=</c>, <c>GET /mask?layer=&amp;x=&amp;z=</c> (0 to 255), <c>GET /help</c>, and with a JSON
-/// body <c>POST /setup {folder, game?, faf?, vault?}</c> (the setup page of the first start, which converts the
-/// game's assets before it answers), <c>/update-assets</c>, <c>/open {path}</c>, <c>/import {path}</c>, <c>/save</c>, <c>/save-as {path}</c>,
-/// <c>/export {output, version?}</c>, <c>/undo</c>, <c>/redo</c>, <c>/goto {step}</c> (a step of the history, -1 for the map as opened),
-/// <c>/brush {layer?, mode?, radius?, strength?, target?, erase?}</c> (layer 0 paints the heights, 1 to 8 a layer's mask), <c>/stroke {points: [[x, z], ...]}</c> (in
-/// ogrids), <c>/fit</c>, <c>/tab {name}</c> (<c>top</c> or <c>3d</c>), <c>/camera {x?, z?, distance?, yaw?, pitch?}</c> (the 3D view's, in ogrids and degrees), <c>/show {markers?, pathNodes?}</c> (what the view shows), <c>/view {zoom, x, z}</c> (centre the view on a place of the map),
-/// <c>/screenshot {path, map?, gpu?}</c> (the window, or with <c>map: true</c> the map alone, or with
-/// <c>gpu: true</c> a frame of the 3D view, read back from the graphics card, as PNG) and
-/// <c>/close</c>. The method does not matter: a command without a body can be a GET
-/// (<c>curl localhost:port/undo</c>), and query parameters count as arguments; Windows refuses a
-/// POST without a body.
+/// The operations are the commands of the registry: <c>run {id, ...arguments}</c>, or the
+/// command's id as the path; they run without a person, so they ask nothing. Automation adds reads
+/// of the window and the map (<c>state</c>, <c>ui</c>, <c>height</c>, ...), the mouse
+/// (<c>stroke</c>), screenshots and <c>close</c>, and keeps its earlier names as aliases of
+/// commands (<see cref="Aliases"/>). <c>GET /help</c> lists them all. The method does not matter:
+/// a command without a body can be a GET (<c>curl localhost:port/undo</c>), and query parameters
+/// count as arguments; Windows refuses a POST without a body.
 /// </para>
 /// <para>
 /// It listens on the loopback address only and is off unless the editor is started with
@@ -137,6 +133,10 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         ["goto"] = ("edit.goTo", [], "done"),
         ["brush"] = ("brush.set", [], null),
         ["fit"] = ("view.fit", [], null),
+        ["camera"] = ("camera.look", [], null),
+        ["focus"] = ("camera.focus", [], null),
+        ["view"] = ("view.zoomTo", [], null),
+        ["gpu-debug"] = ("view.gpuDebug", [], null),
     };
 
     /// <summary>
@@ -148,9 +148,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         "state", "commands", "run {id, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?}", "perf {reset?}", "logs {problems?, count?}",
         "diagnostics {record?, send?, endpoint?, flush?, upload?}", "version-control {open?, enable?, name?, email?, lfs?, remote?}",
         "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}",
-        "camera {x?, z?, distance?, yaw?, pitch?}", "focus {x, z, radius?}", "show {markers?, pathNodes?, camera?}", "view {zoom, x, z}",
-        "gpu-debug {mode: 0 picture|1 albedo|2 light|3 normals|4 heights|5 lower layer|6 masks|7 masks as stored}",
-        "screenshot {path, map?, gpu?}", "close",
+        "show {markers?, pathNodes?, camera?}", "screenshot {path, map?, gpu?}", "close",
     ];
 
     /// <summary>
@@ -233,24 +231,24 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     };
                 }
             case "diagnostics":
-                // the choices about diagnostics, and the session's files
-                if (arguments["record"] is JsonNode record)
+            {
+                // the choices about diagnostics, and the session's files; what changes runs the commands
+                bool flush = arguments["flush"]?.GetValue<bool>() == true;
+                bool upload = arguments["upload"]?.GetValue<bool>() == true;
+                arguments.Remove("flush");
+                arguments.Remove("upload");
+                if (arguments.Count > 0)
                 {
-                    model.RecordDiagnostics = record.GetValue<bool>();
+                    await RunCommandAsync("diagnostics.set", arguments, result, null);
                 }
-                if (arguments["send"] is JsonNode send)
+                if (flush)
                 {
-                    model.SendDiagnostics = send.GetValue<bool>();
+                    await RunCommandAsync("diagnostics.flush", [], result, null);
                 }
-                if (arguments["endpoint"] is JsonNode endpoint)
+                if (upload)
                 {
-                    model.DiagnosticsEndpoint = endpoint.GetValue<string>();
+                    await RunCommandAsync("diagnostics.upload", [], result, "uploaded");
                 }
-                if (arguments["flush"]?.GetValue<bool>() == true)
-                {
-                    model.Telemetry.Flush();
-                }
-                int? uploaded = arguments["upload"]?.GetValue<bool>() == true ? await model.Telemetry.UploadAsync() : null;
                 return new JsonObject
                 {
                     ["record"] = model.RecordDiagnostics,
@@ -262,34 +260,29 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     ["metricsFile"] = model.Telemetry.MetricsFile,
                     ["warnings"] = model.Telemetry.Warnings,
                     ["errors"] = model.Telemetry.Errors,
-                    ["uploaded"] = uploaded,
+                    ["uploaded"] = result["uploaded"]?.DeepClone(),
                     ["uploadError"] = model.Telemetry.LastUploadError,
                 };
+            }
             case "version-control":
-                // how the open project stands in git, and the page's choices; enable turns it on with them
-                if (arguments["name"] is JsonNode name)
+            {
+                // how the open project stands in git; open shows the page (file.commit without a
+                // message), enable turns version control on with the choices given
+                bool open = arguments["open"]?.GetValue<bool>() == true;
+                bool enable = arguments["enable"]?.GetValue<bool>() == true;
+                arguments.Remove("open");
+                arguments.Remove("enable");
+                if (arguments.Count > 0 && !enable)
                 {
-                    model.GitAuthorName = name.GetValue<string>();
+                    throw new ArgumentException("The choices (name, email, lfs, remote) go with enable: true");
                 }
-                if (arguments["email"] is JsonNode email)
+                if (open || model.Repository is null)
                 {
-                    model.GitAuthorEmail = email.GetValue<string>();
+                    await RunCommandAsync("file.commit", [], result, null);
                 }
-                if (arguments["lfs"] is JsonNode lfs)
+                if (enable)
                 {
-                    model.GitUseLfs = lfs.GetValue<bool>();
-                }
-                if (arguments["remote"] is JsonNode remote)
-                {
-                    model.GitRemote = remote.GetValue<string>();
-                }
-                if (arguments["open"]?.GetValue<bool>() == true || model.Repository is null)
-                {
-                    await model.OpenVersionControlAsync();
-                }
-                if (arguments["enable"]?.GetValue<bool>() == true)
-                {
-                    await RunCommandAsync("file.enableVersionControl", [], result, null);
+                    await RunCommandAsync("file.enableVersionControl", arguments, result, null);
                 }
                 result["versionControl"] = new JsonObject
                 {
@@ -305,6 +298,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     ["error"] = model.VersionControlError,
                 };
                 break;
+            }
             case "stroke":
                 // input: the left mouse down, dragged along the points and up again
                 model.Stroke([.. (arguments["points"] as JsonArray ?? throw new ArgumentException("points: [[x, z], ...] is missing"))
@@ -334,33 +328,12 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 // what the mouse would reach at a point of the window: the control that gets its events
                 result["hit"] = HitAt(Number(arguments, "x") ?? 0, Number(arguments, "y") ?? 0);
                 break;
-            case "gpu-debug":
-                window.View3D.Debug = (int)(Number(arguments, "mode") ?? 0);
-                break;
-            case "camera":
-                model.Camera.Look((float?)Number(arguments, "x"), (float?)Number(arguments, "z"), (float?)Number(arguments, "distance"), (float?)Number(arguments, "yaw"), (float?)Number(arguments, "pitch"));
-                model.NotifyCameraMoved();
-                break;
-            case "focus":
-                // as F in the 3D view, or control and a click in the top view without a radius; the camera glides there
-                if (Number(arguments, "radius") is double radius)
-                {
-                    model.FocusCamera((float)(Number(arguments, "x") ?? 0), (float)(Number(arguments, "z") ?? 0), (float)radius);
-                }
-                else
-                {
-                    model.MoveCameraTo((float)(Number(arguments, "x") ?? 0), (float)(Number(arguments, "z") ?? 0));
-                }
-                break;
             case "show":
                 // the overlays' commands, each with whether to show it
                 foreach ((string key, JsonNode? on) in arguments)
                 {
                     await RunCommandAsync($"view.overlay.{key}", new JsonObject { ["on"] = on?.DeepClone() }, result, null);
                 }
-                break;
-            case "view":
-                window.MapView.Show(Number(arguments, "zoom") ?? window.MapView.Zoom, Number(arguments, "x") ?? 0, Number(arguments, "z") ?? 0);
                 break;
             case "screenshot":
                 result["file"] = arguments["gpu"]?.GetValue<bool>() == true

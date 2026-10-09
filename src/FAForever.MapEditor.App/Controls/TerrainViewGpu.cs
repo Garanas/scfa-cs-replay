@@ -446,9 +446,10 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             }
             e.Handled = true;
         }
-        else if (e.Key == Key.Home && _model?.ShownDocument is MapDocument document)
+        else if (e.Key == Key.Home && _model?.ShownDocument is not null)
         {
-            _model.Camera.Reset(document.Width, document.Height);
+            // as the command camera.home
+            _model.ResetCamera();
             Moved();
             e.Handled = true;
         }

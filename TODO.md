@@ -62,9 +62,7 @@
   the tag as `client_payload.version`) with a token that may do so here; the snippet is at the top
   of the workflow file. That needs the FAF team's agreement. The workflow has not run on GitHub yet:
   trigger it by hand once (Actions → Update unit data → Run workflow) to check it.
-- [ ] **Settle the map editor's MediatR licence.** The editor's commands go through MediatR 14
-  (`src/FAForever.MapEditor.App/Commands/CommandServices.cs`). Lucky Penny Software licenses it
-  under the Reciprocal Public License 1.5, or under its licence agreement at
-  luckypennysoftware.com/license (the package's `LICENSE.md`); this repository is MIT. Decide which
-  applies and whether a key is wanted (a desktop application needs none; `MEDIATR_LICENSE_KEY`
-  or `cfg.LicenseKey` sets one). Version 12.5 is the last under Apache 2.0, should neither fit.
+- [x] ~~Settle the map editor's MediatR licence~~: the community licence of Lucky Penny Software
+  is accepted (2026-10-09) for MediatR 14 (`src/FAForever.MapEditor.App/Commands/CommandServices.cs`).
+  A key, if one is issued, goes in the environment as `MEDIATR_LICENSE_KEY`, not in the
+  repository; the editor runs without one.

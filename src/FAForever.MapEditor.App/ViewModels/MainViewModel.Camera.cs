@@ -63,7 +63,10 @@ public sealed partial class MainViewModel
         NotifyCameraMoved();
     }
 
-    private void ResetCamera()
+    /// <summary>
+    /// Puts the 3D camera over the whole map, straight down.
+    /// </summary>
+    public void ResetCamera()
     {
         if (Map?.Document is MapDocument document)
         {
