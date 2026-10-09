@@ -57,11 +57,16 @@ public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry
         : entry.Category;
 
     /// <summary>
-    /// The picture to show, or null for a glyph of its kind.
+    /// The picture to show; with <see cref="Model"/>, null for a glyph of its kind.
     /// </summary>
     public string? Image => entry.Image;
 
-    public bool HasImage => entry.Image is not null;
+    /// <summary>
+    /// The mesh to draw as its picture: a prop's or unit's.
+    /// </summary>
+    public AssetModel? Model => entry.Model;
+
+    public bool HasImage => entry.Image is not null || entry.Model is not null;
 
     /// <summary>
     /// The icon of its kind (<c>Styles/Icons.axaml</c>), shown when it has no picture.
@@ -201,7 +206,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// The variant of the selected family the inspector shows.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownPlanned), nameof(ShownKeyLabel))]
+    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownModel), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownPlanned), nameof(ShownKeyLabel))]
     public partial AssetEntry? SelectedMember { get; set; }
 
     public bool HasSelection => Selected is not null;
@@ -232,7 +237,9 @@ public sealed partial class AssetsViewModel : ObservableObject
 
     public string? ShownImage => Shown?.Image;
 
-    public bool HasShownImage => Shown?.Image is not null;
+    public AssetModel? ShownModel => Shown?.Model;
+
+    public bool HasShownImage => Shown?.Image is not null || Shown?.Model is not null;
 
     public string? ShownNormalImage => Shown?.NormalImage is string normals && normals != Shown.Image ? normals : null;
 

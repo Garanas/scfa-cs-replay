@@ -92,6 +92,22 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public void APropWithAMeshIsDrawnFromIt()
+        {
+            AssetsViewModel shelf = Shelf();
+
+            AssetTile rock = shelf.Tiles.Single(tile => tile.Title == "rock01");
+            Assert.IsNotNull(rock.Model);
+            Assert.IsTrue(rock.HasImage);
+            AssetTile oak = shelf.Tiles.Single(tile => tile.Title == "oak01");
+            Assert.IsFalse(oak.HasImage, "a blueprint without levels of detail shows its kind");
+
+            shelf.Select("/env/evergreen/props/rocks/rock01_prop.bp");
+            Assert.AreSame(rock.Model, shelf.ShownModel);
+            Assert.IsTrue(shelf.HasShownImage);
+        }
+
+        [TestMethod]
         public void SelectingAnAssetShowsItWhereverTheFiltersWere()
         {
             AssetsViewModel shelf = Shelf();

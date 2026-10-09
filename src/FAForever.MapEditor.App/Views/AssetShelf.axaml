@@ -127,7 +127,7 @@
                     <ToolTip.Tip>
                       <StackPanel Classes="stack" x:DataType="vm:AssetTile">
                         <Border Classes="thumbnail tooltippreview" IsVisible="{Binding HasImage}">
-                          <controls:AssetThumbnail Source="{Binding Image}" DecodeWidth="256" />
+                          <controls:AssetThumbnail Source="{Binding Image}" Model="{Binding Model}" DecodeWidth="256" />
                         </Border>
                         <TextBlock Classes="heading" Text="{Binding Title}" />
                         <TextBlock Classes="caption" Text="{Binding Label}" />
@@ -136,7 +136,7 @@
                     <StackPanel Spacing="{StaticResource SpaceTiny}">
                       <Border Classes="thumbnail" Height="{Binding $parent[UserControl].((vm:AssetsViewModel)DataContext).ThumbnailSize}">
                         <Panel>
-                          <controls:AssetThumbnail Source="{Binding Image}" IsVisible="{Binding HasImage}" />
+                          <controls:AssetThumbnail Source="{Binding Image}" Model="{Binding Model}" IsVisible="{Binding HasImage}" />
                           <Path Classes="icon" Data="{Binding Glyph, Converter={x:Static controls:IconConverter.Instance}}" IsVisible="{Binding !HasImage}"
                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
                           <Border Classes="badge uses" HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding IsUsed}">

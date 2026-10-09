@@ -43,7 +43,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// The version of what the conversion writes. Raise it whenever that changes, so that
         /// every workspace converts again.
         /// </summary>
-        public const int FormatVersion = 2;
+        public const int FormatVersion = 3;
 
         /// <summary>
         /// The version of the editor, without the commit it was built from, e.g. <c>1.2.0</c>.

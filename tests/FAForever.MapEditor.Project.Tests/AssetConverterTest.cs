@@ -80,6 +80,7 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsNull(pine.Lods[0].Normals, "the archives have no normals");
             Assert.AreEqual("/env/evergreen/props/pine_far.glb", pine.Lods[1].Mesh);
             Assert.IsNull(pine.Lods[1].Albedo, "a texture the archives lack is left out");
+            Assert.AreEqual("/env/evergreen/shared_normalsts.png", pine.Lods[1].Normals, "a name relative to the folder above");
             string far = workspace.FindAsset("/env/evergreen/props/pine_far.scm")!;
             Assert.AreEqual(Path.Combine(workspace.AssetsFolder, "env", "evergreen", "props", "pine_far.glb"), far);
             StringAssert.Contains(GlbJson(far), "\"game far\"", "the mesh as glTF, with its bone");

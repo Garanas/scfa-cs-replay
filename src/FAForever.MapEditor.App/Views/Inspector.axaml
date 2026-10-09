@@ -22,7 +22,7 @@
             <StackPanel Classes="stack">
               <Border Classes="thumbnail preview">
                 <Panel>
-                  <controls:AssetThumbnail Source="{Binding Assets.ShownImage}" DecodeWidth="512" IsVisible="{Binding Assets.HasShownImage}"
+                  <controls:AssetThumbnail Source="{Binding Assets.ShownImage}" Model="{Binding Assets.ShownModel}" DecodeWidth="512" IsVisible="{Binding Assets.HasShownImage}"
                                            AutomationProperties.Name="Picture of the asset" />
                   <Path Classes="icon" Data="{Binding Assets.ShownGlyph, Converter={x:Static controls:IconConverter.Instance}}" IsVisible="{Binding !Assets.HasShownImage}"
                         HorizontalAlignment="Center" VerticalAlignment="Center" />

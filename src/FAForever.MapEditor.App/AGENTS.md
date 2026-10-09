@@ -390,7 +390,9 @@ ready and again with Modes, Assets, Read the assets again (`assets.reload`):
 - **Tiles** in rows of as many as fit (`Columns`, measured by the view): the list makes only the
   rows in sight, and `Controls/AssetThumbnail` reads a picture small on a pool thread when its
   tile first shows, keeping the last 600. Decals and textures show their PNG over a checker; props
-  and units their kind's icon (their meshes are not drawn yet). A badge counts the map's uses
+  and units their mesh, drawn on the same pool threads (`AssetPreview`, the span `assets.preview`)
+  at the control's `DecodeWidth`, and their kind's icon when the blueprint names no mesh. A badge
+  counts the map's uses
   (`AssetUse`, counted again after every step), another the variants. The tool tip shows a tile
   larger.
 - **Choosing** a tile (click, the arrow keys) shows it in the inspector, in place of the mode's

@@ -422,6 +422,27 @@ namespace FAForever.MapEditor.App.Tests
             return stream.ToArray();
         }
         [TestMethod]
+        public Task ATileOfAPropDrawsItsMesh() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            model.Assets.Use(TestAssets.Catalog());
+            model.Assets.Kind = Project.Workspaces.AssetKind.Prop;
+            model.Assets.Scope = AssetScope.Everything;
+            model.Dock = DockTab.Assets;
+            Dispatcher.UIThread.RunJobs();
+
+            AssetThumbnail rock = window.GetVisualDescendants().OfType<AssetThumbnail>()
+                .Single(thumbnail => thumbnail.Model?.Mesh.EndsWith("rock01_lod0.glb", StringComparison.Ordinal) == true);
+            Assert.IsTrue(rock.IsEffectivelyVisible);
+            await AssetThumbnail.Cache.LoadAsync(rock.Model!, rock.DecodeWidth);
+
+            Bitmap? picture = AssetThumbnail.Cache.Get(rock.Model!, rock.DecodeWidth);
+            Assert.IsNotNull(picture, "the mesh is drawn");
+            Assert.AreEqual(rock.DecodeWidth, picture.PixelSize.Width);
+            window.Close();
+        });
+
+        [TestMethod]
         public Task ATileOfTheShelfShowsInTheInspector() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();

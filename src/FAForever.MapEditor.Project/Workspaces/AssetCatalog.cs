@@ -29,6 +29,14 @@ namespace FAForever.MapEditor.Project.Workspaces
     public sealed record AssetFact(string Label, string Value);
 
     /// <summary>
+    /// The mesh of a prop or unit with what it is drawn with: files of the workspace's assets.
+    /// </summary>
+    /// <param name="Mesh">The mesh (<c>.glb</c>).</param>
+    /// <param name="Albedo">Its albedo texture (<c>.png</c>), if the blueprint names one the archives have.</param>
+    /// <param name="Shader">The game's shader it is drawn with (<c>Unit</c>, <c>NormalMappedAlpha</c>).</param>
+    public sealed record AssetModel(string Mesh, string? Albedo, string? Shader);
+
+    /// <summary>
     /// An asset of the workspace as the map maker chooses it: a prop, a unit, a decal's texture, or
     /// a stratum's texture with its normal map.
     /// </summary>
@@ -88,10 +96,14 @@ namespace FAForever.MapEditor.Project.Workspaces
 
         /// <summary>
         /// The picture of it, a PNG of the workspace's assets: a decal's or texture's albedo, or
-        /// its normal map when it has no albedo. Props and units have none yet: their meshes are
-        /// not drawn.
+        /// its normal map when it has no albedo. Props and units are drawn from their <see cref="Model"/>.
         /// </summary>
         public string? Image { get; init; }
+
+        /// <summary>
+        /// A prop's or unit's most detailed mesh, which its picture is drawn from (<see cref="AssetPreview"/>).
+        /// </summary>
+        public AssetModel? Model { get; init; }
 
         /// <summary>
         /// A texture's normal map, a PNG of the workspace's assets.
@@ -191,7 +203,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             string units = Path.Combine(assetsFolder, "units");
             if (Directory.Exists(units))
             {
-                entries.AddRange(Units(units));
+                entries.AddRange(Units(assetsFolder, units));
             }
             entries.Sort((a, b) => (a.Kind, a.Group, a.Name).CompareTo((b.Kind, b.Group, b.Name)));
             return new AssetCatalog(entries);
@@ -239,6 +251,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                     Group = biome,
                     Category = string.Equals(folder, "props", StringComparison.OrdinalIgnoreCase) ? "other" : folder.ToLowerInvariant(),
                     Family = FamilyOf(name),
+                    Model = ModelOf(assets, prop.Lods),
                     File = file,
                     Facts = [.. facts],
                 };
@@ -316,7 +329,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             }
         }
 
-        private static IEnumerable<AssetEntry> Units(string units)
+        private static IEnumerable<AssetEntry> Units(string assets, string units)
         {
             foreach (string file in Directory.EnumerateFiles(units, "*_unit.json", SearchOption.AllDirectories))
             {
@@ -360,6 +373,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                     Category = layer,
                     Family = id,
                     IsCivilian = categories.Contains("CIVILIAN"),
+                    Model = ModelOf(assets, unit.Lods),
                     File = file,
                     Facts = [.. facts],
                 };
@@ -421,6 +435,17 @@ namespace FAForever.MapEditor.Project.Workspaces
                 return null;
             }
         }
+
+        /// <summary>
+        /// The first level of detail, the most detailed, with its paths in the assets folder.
+        /// </summary>
+        private static AssetModel? ModelOf(string assets, IReadOnlyList<MeshLodDto> lods) =>
+            lods.Count == 0 ? null : new AssetModel(
+                AssetFile(assets, lods[0].Mesh),
+                lods[0].Albedo is string albedo ? AssetFile(assets, albedo) : null,
+                lods[0].Shader);
+
+        private static string AssetFile(string assets, string path) => Path.Combine(assets, path.TrimStart('/'));
 
         private static T? TryRead<T>(string file) where T : class
         {

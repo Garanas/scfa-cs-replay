@@ -25,7 +25,11 @@ namespace FAForever.MapEditor.Project.Tests
             Write("env/evergreen/props/trees/pine06_prop.json", pine);
             Write("env/evergreen/props/trees/pine06_s2_prop.json", pine);
             Write("env/evergreen/props/trees/pine06_v1_s3_prop.json", pine);
-            Write("env/evergreen/props/rocks/rock01_prop.json", """{ "id": "/env/evergreen/props/rocks/rock01_prop.bp", "reclaimMass": 20 }""");
+            Write("env/evergreen/props/rocks/rock01_prop.json", """
+                { "id": "/env/evergreen/props/rocks/rock01_prop.bp", "reclaimMass": 20, "lods": [
+                    { "mesh": "/env/evergreen/props/rocks/rock01_lod0.glb", "shader": "NormalMappedAlpha", "albedo": "/env/evergreen/props/rocks/rock01_albedo.png" },
+                    { "mesh": "/env/evergreen/props/rocks/rock01_lod1.glb" } ] }
+                """);
             Write("env/evergreen/props/broken_prop.json", "{ not json");
             Write("env/evergreen/decals/e_mud001_albedo.png");
             Write("env/evergreen/decals/e_dl001_normals.png");
@@ -43,13 +47,19 @@ namespace FAForever.MapEditor.Project.Tests
         [TestMethod]
         public void ReadsEachKindWithItsGroupAndCategory()
         {
-            AssetCatalog catalog = AssetCatalog.Load(Assets());
+            string assets = Assets();
+            AssetCatalog catalog = AssetCatalog.Load(assets);
 
             AssetEntry pine = catalog.Find("/env/Evergreen/Props/Trees/Pine06_prop.bp")!;
             Assert.AreEqual(AssetKind.Prop, pine.Kind);
             Assert.AreEqual(("evergreen", "trees", "pine06"), (pine.Group, pine.Category, pine.Family));
             Assert.AreEqual("pine06", catalog.Find("env/evergreen/props/trees/pine06_v1_s3_prop.bp")!.Family);
             Assert.AreEqual("rocks", catalog.Find("env/evergreen/props/rocks/rock01_prop.bp")!.Category);
+            // the most detailed mesh is drawn as its picture
+            Assert.AreEqual(
+                new AssetModel(Path.Combine(assets, "env/evergreen/props/rocks/rock01_lod0.glb"), Path.Combine(assets, "env/evergreen/props/rocks/rock01_albedo.png"), "NormalMappedAlpha"),
+                catalog.Find("env/evergreen/props/rocks/rock01_prop.bp")!.Model);
+            Assert.IsNull(pine.Model, "a blueprint without levels of detail");
             Assert.IsTrue(pine.Facts.Any(fact => fact.Label == "Reclaim" && fact.Value == "0 mass, 30 energy"));
             Assert.AreEqual(4, catalog.Entries.Count(entry => entry.Kind == AssetKind.Prop), "the broken blueprint is left out");
 

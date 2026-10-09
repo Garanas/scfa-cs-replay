@@ -18,7 +18,7 @@ namespace FAForever.MapEditor.Project.Tests
                 Categories = { 'RECLAIMABLE', 'OBSTRUCTSBUILDING' },
                 Defense = { Health = 50, MaxHealth = 50 },
                 Display = {
-                    Mesh = { LODs = { { LODCutoff = 100, ShaderName = 'TMeshAlpha' }, { LODCutoff = 300, MeshName = 'pine_far.scm', AlbedoName = 'missing_albedo.dds' } } },
+                    Mesh = { LODs = { { LODCutoff = 100, ShaderName = 'TMeshAlpha' }, { LODCutoff = 300, MeshName = 'pine_far.scm', AlbedoName = 'missing_albedo.dds', NormalsName = './../Shared_normalsTS.dds' } } },
                     UniformScale = 0.5,
                 },
                 Economy = { ReclaimEnergyMax = 10, ReclaimMassMax = 0, ReclaimTime = 5 },
@@ -53,6 +53,7 @@ namespace FAForever.MapEditor.Project.Tests
                 ["env/Evergreen/props/Pine_lod0.scm"] = Mesh("game lod0"),
                 ["env/Evergreen/props/pine_far.scm"] = Mesh("game far"),
                 ["env/Evergreen/props/Pine_albedo.dds"] = Texture(0x10),
+                ["env/Evergreen/Shared_normalsTS.dds"] = Texture(0x50),
                 ["env/Evergreen/layers/Eg_Grass001_albedo.dds"] = Texture(0x20),
                 ["env/Evergreen/props/Broken_prop.bp"] = Encoding.UTF8.GetBytes("PropBlueprint { Description = "),
                 ["env/Evergreen/props/Broken_lod0.scm"] = Encoding.UTF8.GetBytes("not a mesh"),

@@ -163,8 +163,9 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   `UnitBlueprintDto`, read with FileFormats.Blueprints by `AssetBlueprints`), meshes as glTF
   (`.glb`, by `GlbWriter` of FileFormats.Mesh: the triangles, the skeleton as a skin, no material);
   scripts, animations and the rest are left out. The levels of detail get the names the engine
-  fills in (`<name>_lod<n>.scm`, `_albedo.dds`, `_normalsts.dds`, `_specteam.dds`), and a file the
-  archives lack is left out. It writes into `assets.new/` and replaces `assets/` when done; a stopped
+  fills in (`<name>_lod<n>.scm`, `_albedo.dds`, `_normalsts.dds`, `_specteam.dds`); a name is
+  relative to the blueprint's folder and may step out of it (the tree groups use
+  `../Brch01_s1_albedo.dds`), and a file the archives lack is left out. It writes into `assets.new/` and replaces `assets/` when done; a stopped
   conversion goes on where it was. For game version 3839: 32 s, 2.9 GB, 6256 textures, 2188 meshes,
   563 props, 606 units.
 - `AssetCheck` tells whether the assets are current: converted by this editor version (and
@@ -179,6 +180,14 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   unit's faction), its category (a prop's folder, a unit's layer, ...), its family (a prop without
   `_v1`, `_s2`: the variants share a tile) and its facts. `AssetUse.Count(document)` counts what a
   map uses by those keys, and `AssetUse.Biomes` gives the biomes of that, most used first.
+- A prop's or unit's picture is drawn from its most detailed mesh (`AssetEntry.Model`: the
+  `.glb`, the albedo and the shader of its first level of detail) by `AssetPreview.Render`, with
+  `MeshPreview` of FileFormats.Mesh: on the processor, from above and in front, one light, the
+  albedo's alpha cutting out where the shader's name ends in `Alpha` (trees, bushes), and
+  brightened when dark (the units' albedos are: the game adds specular light, reflections and
+  the team colour, which the picture leaves out; Seraphim structures come out darkest). The
+  albedo is read at most twice the picture's width. A unit of about 2000 triangles takes 20 to
+  100 ms at 112 pixels, most of it reading the albedo.
 - `GameTextures.Find(path, document, workspace)` finds a texture a map names as the game does: a
   path into `/maps/<any folder>/` is one of the map's own files (`MapDocument.Files`), any other
   one of the workspace's assets. Its `Key` is the same for every spelling of the path and its

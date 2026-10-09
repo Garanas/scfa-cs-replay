@@ -1,3 +1,5 @@
+using System.Numerics;
+using FAForever.FileFormats.Mesh;
 using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.Tests
@@ -48,7 +50,12 @@ namespace FAForever.MapEditor.App.Tests
             Write("env/evergreen/props/trees/pine06_s2_prop.json", tree);
             Write("env/evergreen/props/trees/pine06_v1_prop.json", tree);
             Write("env/evergreen/props/trees/oak01_prop.json", tree);
-            Write("env/evergreen/props/rocks/rock01_prop.json", """{ "id": "x", "reclaimMass": 20 }""");
+            Write("env/evergreen/props/rocks/rock01_prop.json", """
+                { "id": "x", "reclaimMass": 20, "lods": [
+                    { "mesh": "/env/evergreen/props/rocks/rock01_lod0.glb", "shader": "NormalMappedTerrain", "albedo": "/env/evergreen/props/rocks/rock01_albedo.png" } ] }
+                """);
+            Write("env/evergreen/props/rocks/rock01_albedo.png");
+            File.WriteAllBytes(Path.Combine(assets, "env/evergreen/props/rocks/rock01_lod0.glb"), GlbWriter.Write(Pyramid()));
             Write("env/tundra/props/rocks/tund_rock01_prop.json", """{ "id": "x", "reclaimMass": 20 }""");
             Write("env/evergreen/decals/e_mud001_albedo.png");
             Write("env/evergreen/decals/e_mud002_albedo.png");
@@ -60,6 +67,21 @@ namespace FAForever.MapEditor.App.Tests
             Write($"../{Path.GetFileName(assets)}-brushes/craters/crater01.png");
             Write($"../{Path.GetFileName(assets)}-brushes/ridge.png");
             return assets;
+        }
+
+        /// <summary>
+        /// A rock's mesh: a pyramid of four sides on a square of 2 by 2, 1 high.
+        /// </summary>
+        private static Scm Pyramid()
+        {
+            Vector3[] corners = [new(-1, 0, -1), new(1, 0, -1), new(1, 0, 1), new(-1, 0, 1), new(0, 1, 0)];
+            return new Scm
+            {
+                Bones = [],
+                Vertices = [.. corners.Select(corner => new ScmVertex(corner, Vector3.Normalize(corner + Vector3.UnitY), Vector3.UnitX, Vector3.UnitZ, new Vector2(corner.X, corner.Z), Vector2.Zero, 0))],
+                Indices = [0, 4, 1, 1, 4, 2, 2, 4, 3, 3, 4, 0],
+                Information = [],
+            };
         }
     }
 }

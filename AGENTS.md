@@ -40,7 +40,7 @@ product in the solution folders `FileFormats`, `Vault` and `MapEditor`.
 | `src/FAForever.FileFormats.Lua` | Lua values (`LuaData`), their formatter, and an evaluator for the data-only Lua that game files are written in. |
 | `src/FAForever.FileFormats.Blueprints` | Blueprint files (`.bp`), blueprint ids, unit names and factions. References Lua. |
 | `src/FAForever.FileFormats.Map` | Map files: the binary `.scmap` (versions 53, 56, 60) and the `_save.lua` / `_scenario.lua` next to it. References Lua. |
-| `src/FAForever.FileFormats.Mesh` | Meshes of units and props (`.scm`, version 5): bones, vertices, triangles; written back or as glTF (`.glb`). References nothing. |
+| `src/FAForever.FileFormats.Mesh` | Meshes of units and props (`.scm`, version 5): bones, vertices, triangles; written back or as glTF (`.glb`) and read from it; drawn into a small picture without a graphics card (`MeshPreview`). References nothing. |
 | `src/FAForever.FileFormats.Replay` | Core replay parser (the crown jewel: change with care, it is benchmarked and heavily tested). References Lua and Blueprints. |
 | `src/FAForever.Vault.Viewer` | Standalone Blazor WebAssembly app (UI). Tailwind CSS v4, no component library. |
 | `src/FAForever.MapEditor.Project` | The map editor's model of a map, its project format (JSON + PNG) and the import and export of the game's files. References Map, Blueprints and Mesh; desktop only (Magick.NET). |

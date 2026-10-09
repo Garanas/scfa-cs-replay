@@ -62,8 +62,10 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// in <c>lua/system/Blueprints.lua</c>). A level without a mesh name uses
         /// <c>&lt;name&gt;_lod&lt;n&gt;.scm</c>, and the textures default to <c>&lt;name&gt;_albedo.dds</c>,
         /// <c>_normalsts.dds</c> and <c>_specteam.dds</c> next to the blueprint, as the engine
-        /// (and the FAF map editor) fill them in. A level whose mesh is missing is left out; so is
-        /// a texture that is missing.
+        /// (and the FAF map editor) fill them in. A name without a leading slash is relative to the
+        /// blueprint's folder and may step out of it (<c>../Brch01_s1_albedo.dds</c>, as the tree
+        /// groups name the textures of their trees). A level whose mesh is missing is left out; so
+        /// is a texture that is missing.
         /// </summary>
         private static List<MeshLodDto> Lods(Blueprint blueprint, BlueprintDisplayMesh? mesh, string? meshBlueprint, Func<string, bool> exists, IReadOnlyDictionary<string, BlueprintMesh> meshes)
         {
@@ -86,9 +88,9 @@ namespace FAForever.MapEditor.Project.Workspaces
 
             string? Find(string? given, string fallback)
             {
-                string path = given is { Length: > 0 }
+                string path = Resolve(given is { Length: > 0 }
                     ? given.StartsWith('/') ? GameArchives.Normalize(given) : GameArchives.Normalize(folder + given)
-                    : folder + fallback;
+                    : folder + fallback);
                 return exists(path) ? "/" + WorkspaceLayout.AssetOf(path) : null;
             }
 
@@ -112,6 +114,33 @@ namespace FAForever.MapEditor.Project.Workspaces
                 });
             }
             return result;
+        }
+
+        /// <summary>
+        /// A path without its <c>.</c> and <c>..</c> steps; a <c>..</c> above the root is dropped.
+        /// </summary>
+        internal static string Resolve(string path)
+        {
+            if (!path.Contains("./", StringComparison.Ordinal))
+            {
+                return path;
+            }
+            List<string> parts = [];
+            foreach (string part in path.Split('/'))
+            {
+                if (part == "..")
+                {
+                    if (parts.Count > 0)
+                    {
+                        parts.RemoveAt(parts.Count - 1);
+                    }
+                }
+                else if (part is not ("." or ""))
+                {
+                    parts.Add(part);
+                }
+            }
+            return string.Join('/', parts);
         }
 
         [GeneratedRegex("^<LOC [^>]*>")]
