@@ -29,8 +29,13 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(3, pine.Members.Count);
             Assert.AreEqual("6 props in 4 families", shelf.Summary);
 
-            shelf.Families = false;
+            shelf.ToggleFamiliesCommand.Execute(null);
             Assert.AreEqual(6, shelf.Tiles.Count);
+
+            shelf.NextTileSizeCommand.Execute(null);
+            Assert.AreEqual(2, shelf.TileSize);
+            shelf.NextTileSizeCommand.Execute(null);
+            Assert.AreEqual(0, shelf.TileSize, "after large comes small");
 
             Assert.AreEqual(6, shelf.Kinds.Single(kind => kind.Value == "Prop").Count);
             Assert.AreEqual(2, shelf.Kinds.Single(kind => kind.Value == "Decal").Count);

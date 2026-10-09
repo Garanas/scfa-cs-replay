@@ -505,8 +505,13 @@
     <Setter Property="BorderBrush" Value="{DynamicResource GroupDividerBrush}" />
     <Setter Property="BorderThickness" Value="{StaticResource DividerBottom}" />
   </Style>
-  <Style Selector="TextBox.assetsearch">
-    <Setter Property="Width" Value="{StaticResource AssetSearchWidth}" />
+  <Style Selector="StackPanel.shelfoptions">
+    <Setter Property="Margin" Value="{StaticResource InlineGap}" />
+  </Style>
+  <!-- a chip with only an icon: as wide as high -->
+  <Style Selector="Button.chip.icononly">
+    <Setter Property="Width" Value="{StaticResource ChipHeight}" />
+    <Setter Property="Padding" Value="0" />
   </Style>
   <!-- a biome or faction to show alone: a line with its count -->
   <Style Selector="Button.facet">

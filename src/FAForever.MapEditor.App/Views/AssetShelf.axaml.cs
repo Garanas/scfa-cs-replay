@@ -9,8 +9,8 @@ using FAForever.MapEditor.App.ViewModels;
 namespace FAForever.MapEditor.App.Views;
 
 /// <summary>
-/// The asset shelf: it tells the view model how many tiles fit in a row, and takes the arrow keys
-/// and Escape for the tiles.
+/// The asset shelf: it tells the view model how many tiles fit in a row, and takes the arrow keys,
+/// Escape, and control with the wheel (the tile size) for the tiles.
 /// </summary>
 public sealed partial class AssetShelf : UserControl
 {
@@ -26,6 +26,7 @@ public sealed partial class AssetShelf : UserControl
         InitializeComponent();
         Grid.SizeChanged += (_, _) => MeasureColumns();
         Grid.AddHandler(KeyDownEvent, OnGridKeyDown, RoutingStrategies.Tunnel);
+        Grid.AddHandler(PointerWheelChangedEvent, OnGridWheel, RoutingStrategies.Tunnel);
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -69,6 +70,15 @@ public sealed partial class AssetShelf : UserControl
     // the tab shows first, then the field can take the keyboard
     private void OnFocusRequested(object? sender, EventArgs e) =>
         Dispatcher.UIThread.Post(() => Search.Focus(), DispatcherPriority.Background);
+
+    private void OnGridWheel(object? sender, PointerWheelEventArgs e)
+    {
+        if (_model is not null && e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Delta.Y != 0)
+        {
+            _model.TileSize = Math.Clamp(_model.TileSize + Math.Sign(e.Delta.Y), 0, 2);
+            e.Handled = true;
+        }
+    }
 
     private void OnGridKeyDown(object? sender, KeyEventArgs e)
     {

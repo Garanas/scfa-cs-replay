@@ -181,8 +181,10 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// The size of the tiles: 0 small, 1 medium, 2 large.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(TileWidth), nameof(ThumbnailSize))]
+    [NotifyPropertyChangedFor(nameof(TileWidth), nameof(ThumbnailSize), nameof(TileSizeHelp))]
     public partial int TileSize { get; set; } = 1;
+
+    public string TileSizeHelp => $"Tiles: {(TileSize switch { 0 => "small", 2 => "large", _ => "medium" })}. Click for another size, or control and the wheel over the tiles";
 
     public double TileWidth => ThumbnailSize + 16;
 
@@ -473,6 +475,15 @@ public sealed partial class AssetsViewModel : ObservableObject
 
     [RelayCommand]
     private void ClearSelection() => Select((AssetTile?)null);
+
+    [RelayCommand]
+    private void ToggleFamilies() => Families = !Families;
+
+    /// <summary>
+    /// The next size of the tiles: small, medium, large, then small again.
+    /// </summary>
+    [RelayCommand]
+    private void NextTileSize() => TileSize = (TileSize + 1) % 3;
 
     partial void OnKindChanged(AssetKind value)
     {

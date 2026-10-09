@@ -1,8 +1,8 @@
 <!--
   The asset shelf in the dock (concept C1, user stories F-8 and F-9): the kind (which follows the
-  mode) and a search above; on the left what it shows (the map's assets, its biomes, everything),
-  the biomes or factions, the categories, the families and the tile size; the tiles in rows, of
-  which the list makes only those in sight. A tile's tool tip shows it larger; the chosen
+  mode), a search, and how the tiles look (a prop's variants as one, their size) above; on the
+  left what it shows (the map's assets, its biomes, everything), the biomes or factions and the
+  categories; the tiles in rows, of which the list makes only those in sight. A tile's tool tip shows it larger; the chosen
   one shows in the inspector.
 -->
 <UserControl xmlns="https://github.com/avaloniaui"
@@ -13,8 +13,16 @@
              x:DataType="vm:AssetsViewModel">
   <DockPanel>
     <Border DockPanel.Dock="Top" Classes="shelfbar">
-      <DockPanel>
-        <ItemsControl DockPanel.Dock="Left" ItemsSource="{Binding Kinds}" AutomationProperties.Name="Kind of asset">
+      <!-- the search takes (nearly) all the room up to its width; what is left lies before the look of the tiles -->
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="1000*" MaxWidth="{StaticResource AssetSearchWidth}" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <ItemsControl Grid.Column="0" ItemsSource="{Binding Kinds}" AutomationProperties.Name="Kind of asset">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <WrapPanel Classes="chips" />
@@ -27,10 +35,19 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <Border DockPanel.Dock="Left" Classes="barseparator" />
-        <TextBox x:Name="Search" Classes="assetsearch" HorizontalAlignment="Left" Text="{Binding Query}" PlaceholderText="Search: name, biome, id"
+        <Border Grid.Column="1" Classes="barseparator" />
+        <TextBox Grid.Column="2" x:Name="Search" Text="{Binding Query}" PlaceholderText="Search: name, biome, id"
                  AutomationProperties.Name="Search the assets" />
-      </DockPanel>
+        <StackPanel Grid.Column="4" Classes="inline shelfoptions">
+          <Button Classes="chip" Classes.on="{Binding Families}" IsVisible="{Binding IsProps}" Content="Variants"
+                  Command="{Binding ToggleFamiliesCommand}"
+                  ToolTip.Tip="A prop's sizes and variants as one tile" AutomationProperties.HelpText="A prop's sizes and variants as one tile" />
+          <Button Classes="chip icononly" Command="{Binding NextTileSizeCommand}"
+                  ToolTip.Tip="{Binding TileSizeHelp}" AutomationProperties.Name="Tile size" AutomationProperties.HelpText="{Binding TileSizeHelp}">
+            <Path Classes="icon small" Data="{StaticResource Icon.Tiles}" />
+          </Button>
+        </StackPanel>
+      </Grid>
     </Border>
 
     <Border DockPanel.Dock="Left" Classes="facets">
@@ -84,11 +101,6 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <CheckBox Classes="section" IsChecked="{Binding Families}" IsVisible="{Binding IsProps}" Content="Variants as one"
-                    AutomationProperties.HelpText="A prop's sizes and variants share a tile" />
-          <TextBlock Classes="label" Text="Tile size" />
-          <Slider Minimum="0" Maximum="2" TickFrequency="1" IsSnapToTickEnabled="True"
-                  Value="{Binding TileSize}" AutomationProperties.Name="Tile size" />
         </StackPanel>
       </ScrollViewer>
     </Border>

@@ -187,7 +187,7 @@
   <!-- the dock while it shows the asset shelf: two rows of tiles and more -->
   <x:Double x:Key="DockTallHeight">290</x:Double>
   <x:Double x:Key="AssetFacetsWidth">180</x:Double>
-  <x:Double x:Key="AssetSearchWidth">180</x:Double>
+  <x:Double x:Key="AssetSearchWidth">320</x:Double>
   <x:Double x:Key="AssetPreviewHeight">200</x:Double>
   <x:Double x:Key="AssetNormalPreviewSize">72</x:Double>
   <x:Double x:Key="AssetTooltipPreviewSize">180</x:Double>

@@ -367,9 +367,11 @@ ready and again with Modes, Assets, Read the assets again (`assets.reload`):
   mode keeps it); the chips above choose it by hand, with how many each shows.
 - **Show**: what the map uses (`InMap`), the map's biomes (`Narrow`: the biomes of the props,
   decals and strata it uses, all when none; for units the civilian ones), or `Everything`. Then
-  the biome (or faction) and the category on the left, a search (each word in the name, code,
-  biome or category), a prop's sizes and variants as one tile (`Families`: `pine06` with `_s2`,
-  `_v1`; the inspector lists them) and the tile size.
+  the biome (or faction) and the category: the left column holds what filters, nothing else. The
+  search (each word in the name, code, biome or category) fills the bar above, and at its right
+  end is how the tiles look: a prop's sizes and variants as one tile (Variants, `Families`:
+  `pine06` with `_s2`, `_v1`; the inspector lists them) and the tile size (a button that steps
+  through small, medium and large; control and the wheel over the tiles).
 - **Tiles** in rows of as many as fit (`Columns`, measured by the view): the list makes only the
   rows in sight, and `Controls/AssetThumbnail` reads a picture small on a pool thread when its
   tile first shows, keeping the last 600. Decals and textures show their PNG over a checker; props
