@@ -3,11 +3,12 @@ using FAForever.MapEditor.Project.Files.InMemory;
 namespace FAForever.MapEditor.Project.Files.Serialized
 {
     /// <summary>
-    /// <c>layers/layers.json</c>: the height layers of the map (user story T-5), lowest first. A
-    /// project without the file has no layers: its heightmap is simply its heights. Each layer's
-    /// values are <c>layers/&lt;name&gt;.png</c> (16-bit grey) beside it, its coverage
-    /// <c>layers/&lt;name&gt;.coverage.png</c> (8-bit grey) when it has one; a curve's follow from
-    /// its curve and have no file.
+    /// <c>layers/layers.json</c> of projects of format 3 to 5: the height layers of the map (user
+    /// story T-5), lowest first, read and turned into the heightmap's stack
+    /// (<see cref="LayerStackDto"/>) when such a project opens; format 6 writes
+    /// <c>stacks/heightmap.json</c> instead. Each layer's values are <c>layers/&lt;name&gt;.png</c>
+    /// (16-bit grey) beside it, its coverage <c>layers/&lt;name&gt;.coverage.png</c> (8-bit grey)
+    /// when it has one; a curve's follow from its curve and have no file.
     /// </summary>
     public sealed record HeightLayersDto
     {
@@ -18,9 +19,15 @@ namespace FAForever.MapEditor.Project.Files.Serialized
     {
         public required string Name { get; init; }
 
-        public required HeightLayerKind Kind { get; init; }
+        /// <summary>
+        /// <c>Base</c>, <c>Sculpt</c>, <c>Imported</c> or <c>Curve</c>.
+        /// </summary>
+        public required string Kind { get; init; }
 
-        public required HeightCombine Combine { get; init; }
+        /// <summary>
+        /// <c>Add</c>, <c>Maximum</c>, <c>Minimum</c> or <c>Replace</c>.
+        /// </summary>
+        public required LayerCombine Combine { get; init; }
 
         /// <summary>
         /// 0 to 1; left out at 1.
@@ -54,26 +61,5 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         public string? Source { get; init; }
 
         public HeightCurveDto? Curve { get; init; }
-    }
-
-    public sealed record HeightCurveDto
-    {
-        public required CurveProfile Profile { get; init; }
-
-        public required float Width { get; init; }
-
-        public required float Falloff { get; init; }
-
-        public bool? Closed { get; init; }
-
-        /// <summary>
-        /// The symmetry whose images of the curve the layer draws too; absent for the curve alone.
-        /// </summary>
-        public SymmetryDto? Symmetry { get; init; }
-
-        /// <summary>
-        /// The points as <c>[x, z, height]</c>.
-        /// </summary>
-        public required IReadOnlyList<float[]> Points { get; init; }
     }
 }

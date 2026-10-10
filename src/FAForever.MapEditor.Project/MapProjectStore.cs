@@ -94,7 +94,7 @@ namespace FAForever.MapEditor.Project
             SaveMasks(document, folder, previous);
             SaveWalkabilityMarks(document, folder, previous);
             SaveRules(document, folder);
-            SaveHeightLayers(document, folder, previous);
+            SaveHeightStack(document, folder, previous);
 
             if (document.Script is ImmutableArray<byte> script)
             {
@@ -159,7 +159,7 @@ namespace FAForever.MapEditor.Project
             try
             {
                 MapDocument document = MapProjectMapping.ToDocument(map, props, decals, markers, armies, images, script, files);
-                return LoadHeightLayers(WithRules(WithWalkabilityMarks(document, folder), folder), folder);
+                return LoadHeightStack(WithRules(WithWalkabilityMarks(document, folder), folder), folder);
             }
             catch (ArgumentException exception)
             {
@@ -206,7 +206,7 @@ namespace FAForever.MapEditor.Project
                     {
                         TiledBuffer<ushort> samples = document.Terrain.Heightmap.Samples;
                         ushort[] heights = ReadHeightmap(folder, width, height);
-                        if (!document.HeightLayers.IsEmpty)
+                        if (!document.HeightStack.IsEmpty)
                         {
                             // with height layers the heightmap is their sum: another tool's heightmap becomes the base
                             if (!heights.AsSpan().SequenceEqual(samples.ToArray()))
@@ -281,11 +281,11 @@ namespace FAForever.MapEditor.Project
                         {
                             document = ReloadMask(document, Of(changed), Path.GetFileNameWithoutExtension(changed));
                         }
-                        else if (changed.StartsWith(MapProjectLayout.HeightLayers + "/", StringComparison.Ordinal))
+                        else if (IsHeightStackFile(folder, changed))
                         {
-                            document = ReloadHeightLayers(document, folder);
+                            document = ReloadHeightStack(document, folder);
                         }
-                        else if (ImportedLayerOf(document, folder, changed) is HeightLayer imported)
+                        else if (ImportedLayerOf(document, folder, changed) is Layer imported)
                         {
                             document = ReloadImported(document, folder, imported);
                         }

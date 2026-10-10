@@ -149,7 +149,7 @@ namespace FAForever.MapEditor.Project.Editing
             }
 
             // the heightmap stays what the height layers add up to, a brush's work in the sculpting layer
-            if (!ReferenceEquals(_followed, _document) && !_document.HeightLayers.IsEmpty)
+            if (!ReferenceEquals(_followed, _document) && !_document.HeightStack.IsEmpty)
             {
                 MapDocument followed = HeightLayers.Follow(_followed, _document, _session.SculptLayer);
                 if (!ReferenceEquals(followed.Terrain.Heightmap.Samples, _document.Terrain.Heightmap.Samples))

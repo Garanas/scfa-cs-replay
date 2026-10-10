@@ -20,97 +20,33 @@ public sealed record HeightLayersSection() : PanelSection("Height layers");
 public sealed record HeightLayerSection() : PanelSection("Layer or curve");
 
 /// <summary>
-/// A height layer as the Terrain panel lists it, the highest first.
+/// The heightmap's stack of layers (user story T-5) as the Terrain panel lists it (the first user
+/// of the stack control, <see cref="LayerStackViewModel"/>), and the chosen layer: the sculpt tool
+/// writes into it (<see cref="Project.Editing.EditSession.SculptLayer"/>), the inspector shows its
+/// settings and the curve tool edits it when it is a curve. Every change is a command
+/// (<c>terrain.addLayer</c>, <c>terrain.removeLayer</c>, <c>terrain.moveLayer</c>,
+/// <c>terrain.setLayer</c>, <c>terrain.setCurve</c>, <c>terrain.bake</c>, ...), one step of undo.
 /// </summary>
-public sealed partial class HeightLayerItem(HeightLayer layer, int index, int count, Func<string, JsonObject, Task> run) : ObservableObject
+public sealed partial class HeightLayersViewModel : LayerStackViewModel
 {
-    public HeightLayer Layer => layer;
-
-    public string Name => layer.Name;
-
-    /// <summary>
-    /// Its place in the stack: 0 is the base.
-    /// </summary>
-    public int Index => index;
-
-    public bool IsBase => layer.Kind == HeightLayerKind.Base;
-
-    public bool CanMoveUp => !IsBase && index < count - 1;
-
-    public bool CanMoveDown => !IsBase && index > 1;
-
-    /// <summary>
-    /// E.g. <c>Sculpt · add · 50 % · mask rivers</c>.
-    /// </summary>
-    public string Summary => HeightLayersViewModel.SummaryOf(layer);
-
-    /// <summary>
-    /// Whether it counts; unticking hides it (<c>terrain.setLayer</c>).
-    /// </summary>
-    public bool IsShown
-    {
-        get => layer.Visible;
-        set
-        {
-            if (value != layer.Visible)
-            {
-                _ = run("terrain.setLayer", new JsonObject { ["layer"] = layer.Name, ["visible"] = value });
-            }
-        }
-    }
-
-    /// <summary>
-    /// Whether edits of its values leave it alone; ticking locks it (<c>terrain.setLayer</c>).
-    /// </summary>
-    public bool IsLocked
-    {
-        get => layer.Locked;
-        set
-        {
-            if (value != layer.Locked)
-            {
-                _ = run("terrain.setLayer", new JsonObject { ["layer"] = layer.Name, ["locked"] = value });
-            }
-        }
-    }
-
-    public override string ToString() => layer.Name;
-}
-
-/// <summary>
-/// The height layers of the open map (user story T-5) as the Terrain panel lists them, and the
-/// chosen one: the sculpt tool writes into it (<see cref="Project.Editing.EditSession.SculptLayer"/>),
-/// the inspector shows its settings and the curve tool edits it when it is a curve. The layers
-/// themselves are the document's; every change is a command (<c>terrain.addLayer</c>,
-/// <c>terrain.removeLayer</c>, <c>terrain.moveLayer</c>, <c>terrain.setLayer</c>,
-/// <c>terrain.setCurve</c>, <c>terrain.bake</c>, ...), one step of undo.
-/// </summary>
-public sealed partial class HeightLayersViewModel : ObservableObject
-{
-    /// <summary>
-    /// What the fields show while no layer is chosen.
-    /// </summary>
-    private static readonly HeightLayer NoLayer = new HeightLayer { Name = "", Kind = HeightLayerKind.Sculpt, Values = TiledBuffer<float>.Create(1, 1) };
-
     private readonly Func<string, JsonObject, Task> _run;
-    private ImmutableArray<HeightLayer> _shown;
-    private string _maskNames = "";
-    private string _signature = "";
-    private MapDocument? _document;
-
-    public static IReadOnlyList<string> Combines { get; } = [.. Enum.GetNames<HeightCombine>()];
 
     public static IReadOnlyList<string> Profiles { get; } = [.. Enum.GetNames<CurveProfile>()];
 
     /// <summary>
-    /// What the mask choice says for none.
+    /// The commands of the heightmap's stack.
     /// </summary>
-    public const string Everywhere = "Everywhere";
+    public static LayerStackCommands HeightCommands { get; } = new LayerStackCommands("terrain.setLayer", "terrain.moveLayer", "terrain.removeLayer", "height layer");
 
-    public HeightLayersViewModel(Func<string, JsonObject, Task> run)
+    public HeightLayersViewModel(Func<string, JsonObject, Task> run) : base(run, document => document.HeightStack, HeightCommands,
+    [
+        new LayerAddChoice("Sculpt layer", "Add a sculpting layer", "A layer the sculpt tool writes into, above the chosen one", "terrain.addLayer", new JsonObject { ["kind"] = "sculpt" }),
+        new LayerAddChoice("Image...", "Add a heightmap image as a layer", "A heightmap of World Machine, Gaea or another tool, read again when it changes in the project folder",
+            "terrain.addLayer", new JsonObject { ["kind"] = "imported" }),
+        new LayerAddChoice("Curve", "Draw a curve", "Chooses the curve tool: click in a view to start a curve layer", "tool.terrain.curve"),
+    ])
     {
         _run = run;
-        Layer = MakeLayerSettings([Everywhere]);
         JsonObject Fixed() => new JsonObject { ["layer"] = Chosen };
         HeightCurve CurveOf(MapDocument d) => HeightLayers.Find(d, Chosen)?.Curve ?? new HeightCurve();
         const string set = "terrain.setCurve";
@@ -136,49 +72,23 @@ public sealed partial class HeightLayersViewModel : ObservableObject
                 Help = "The layer draws the curve's images in the other parts of the map too, by the chosen symmetry",
             },
         ]);
-    }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsEmpty), nameof(HasLayers))]
-    public partial IReadOnlyList<HeightLayerItem> Items { get; private set; } = [];
-
-    public bool IsEmpty => Items.Count == 0;
-
-    public bool HasLayers => Items.Count > 0;
-
-    /// <summary>
-    /// The chosen layer's name; null without layers.
-    /// </summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ChosenItem), nameof(ChosenLayer), nameof(CanRemove), nameof(CanMoveUp), nameof(CanMoveDown),
-        nameof(IsCurve), nameof(IsImported), nameof(ChosenTitle), nameof(ChosenFacts))]
-    public partial string? Chosen { get; set; }
-
-    public HeightLayerItem? ChosenItem
-    {
-        get => Items.FirstOrDefault(item => item.Name == Chosen);
-        set
+        PropertyChanged += (_, e) =>
         {
-            if (value is not null)
+            if (e.PropertyName == nameof(Chosen))
             {
-                Chosen = value.Name;
+                OnPropertyChanged(nameof(IsCurve));
+                OnPropertyChanged(nameof(IsImported));
+                OnPropertyChanged(nameof(ChosenTitle));
+                OnPropertyChanged(nameof(ChosenFacts));
             }
-        }
+        };
     }
 
-    public HeightLayer? ChosenLayer => ChosenItem?.Layer;
+    public bool IsCurve => ChosenLayer?.Source is CurveSource;
 
-    public bool CanRemove => ChosenItem is { IsBase: false };
+    public bool IsImported => ChosenLayer?.Source is ImageSource;
 
-    public bool CanMoveUp => ChosenItem?.CanMoveUp == true;
-
-    public bool CanMoveDown => ChosenItem?.CanMoveDown == true;
-
-    public bool IsCurve => ChosenLayer?.Kind == HeightLayerKind.Curve;
-
-    public bool IsImported => ChosenLayer?.Kind == HeightLayerKind.Imported;
-
-    public string ChosenTitle => ChosenLayer is HeightLayer layer ? $"{layer.Name} ({KindOf(layer).ToLowerInvariant()})" : "No height layer";
+    public string ChosenTitle => ChosenLayer is Layer layer ? $"{layer.Name} ({KindOf(layer).ToLowerInvariant()})" : "No height layer";
 
     /// <summary>
     /// What else the inspector says about the chosen layer: an imported layer's file, a curve's
@@ -186,19 +96,14 @@ public sealed partial class HeightLayersViewModel : ObservableObject
     /// </summary>
     public string ChosenFacts => ChosenLayer switch
     {
-        { Kind: HeightLayerKind.Base } => "The map's heights as they were when the stack began; the lowest layer.",
-        { Kind: HeightLayerKind.Imported } layer => $"Read from {layer.Source ?? "a file"}; read again when the file changes.",
-        { Kind: HeightLayerKind.Curve, Curve: HeightCurve curve } => string.Create(CultureInfo.InvariantCulture,
+        { IsBase: true } => "The map's heights as they were when the stack began; the lowest layer.",
+        { Source: ImageSource image } => $"Read from {image.Path}; read again when the file changes.",
+        { Source: CurveSource { Curve: HeightCurve curve } } => string.Create(CultureInfo.InvariantCulture,
             $"{curve.Points.Length} points. With the curve tool: click to add a point, drag a point to move it, control and a click removes it."),
-        { Kind: HeightLayerKind.Sculpt } => "The sculpt tool writes into it while it is chosen.",
+        { Source: PaintedSource } => "The sculpt tool writes into it while it is chosen.",
+        { Source: MaskRefSource reference } => $"Raises the terrain by {LayerStacks.MaskTitle(reference.Key)}.",
         _ => "",
     };
-
-    /// <summary>
-    /// The chosen layer's name, way of combining, strength, mask, visibility and lock.
-    /// </summary>
-    [ObservableProperty]
-    public partial SettingGroup Layer { get; private set; }
 
     /// <summary>
     /// The chosen curve's profile, width, falloff, height and whether it is closed.
@@ -206,151 +111,36 @@ public sealed partial class HeightLayersViewModel : ObservableObject
     public SettingGroup Curve { get; }
 
     /// <summary>
-    /// What the panel says about the stack: how many layers, which one is sculpted.
-    /// </summary>
-    [ObservableProperty]
-    public partial string Summary { get; private set; } = "";
-
-    /// <summary>
-    /// Raised when another layer is chosen.
-    /// </summary>
-    public event EventHandler? Changed;
-
-    partial void OnChosenChanged(string? value)
-    {
-        RefreshSettings();
-        Changed?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
-    /// Shows the layers of a document; the chosen one stays while the document has it, else the
-    /// highest layer that can be sculpted, else the highest.
-    /// </summary>
-    public void Refresh(MapDocument? document)
-    {
-        _document = document;
-        ImmutableArray<HeightLayer> layers = document?.HeightLayers ?? [];
-        string maskNames = document is null ? "" : string.Join("|", MaskChoices(document));
-        if (maskNames != _maskNames)
-        {
-            _maskNames = maskNames;
-            Layer = MakeLayerSettings(document is null ? [Everywhere] : MaskChoices(document));
-        }
-        // a dab of the sculpt tool changes a layer's values, not what the panel shows of it
-        string signature = string.Join("|", layers.Select(layer => layer.Name + ":" + SummaryOf(layer) + ":" + layer.Source));
-        if (document is not null && (layers == _shown || signature == _signature))
-        {
-            _shown = layers;
-            return;
-        }
-        _shown = layers;
-        _signature = signature;
-        int count = layers.Length;
-        Items = [.. layers.Select((layer, index) => new HeightLayerItem(layer, index, count, _run)).Reverse()];
-        Summary = count == 0
-            ? ""
-            : string.Create(CultureInfo.InvariantCulture, $"{count} layers; the heightmap is what they add up to, the highest last");
-        string? chosen = Chosen is string name && layers.Any(layer => layer.Name == name)
-            ? name
-            : (layers.LastOrDefault(layer => HeightLayers.SculptProblem(document!, layer.Name) is null) ?? layers.LastOrDefault())?.Name;
-        if (chosen == Chosen)
-        {
-            OnPropertyChanged(nameof(ChosenItem));
-            OnPropertyChanged(nameof(ChosenLayer));
-            OnPropertyChanged(nameof(CanRemove));
-            OnPropertyChanged(nameof(CanMoveUp));
-            OnPropertyChanged(nameof(CanMoveDown));
-            OnPropertyChanged(nameof(IsCurve));
-            OnPropertyChanged(nameof(IsImported));
-            OnPropertyChanged(nameof(ChosenTitle));
-            OnPropertyChanged(nameof(ChosenFacts));
-            RefreshSettings();
-        }
-        Chosen = chosen;
-    }
-
-    /// <summary>
-    /// Chooses a layer by name (exactly, else without regard to case).
-    /// </summary>
-    /// <exception cref="ArgumentException">The map has no such layer.</exception>
-    public void Choose(string name) =>
-        Chosen = Items.FirstOrDefault(item => item.Name == name)?.Name
-            ?? Items.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.Name
-            ?? throw new ArgumentException(Items.Count == 0
-                ? "The map has no height layers"
-                : $"The map has no height layer '{name}': {string.Join(", ", Items.Select(item => item.Name))}");
-
-    /// <summary>
     /// The mask choices of a document: everywhere, its masks for tools, the strata.
     /// </summary>
-    public static IReadOnlyList<string> MaskChoices(MapDocument document) =>
-        [Everywhere,
-            .. document.Masks.Keys.Select(name => HeightLayers.MaskTitle(HeightLayers.MaskKey(name))),
-            .. Enumerable.Range(1, document.Terrain.StratumMasks.Layers.Length).Select(layer => HeightLayers.MaskTitle(HeightLayers.StratumKey(layer)))];
+    public static IReadOnlyList<string> MaskChoices(MapDocument document) => ClipChoices(document);
 
-    /// <summary>
-    /// The mask key a choice names (a key, a title such as <c>mask rivers</c>, or a mask's name),
-    /// or null for everywhere.
-    /// </summary>
-    /// <exception cref="ArgumentException">The document has no such mask.</exception>
-    public static string? MaskKeyOf(MapDocument document, string choice)
+    public override string KindOf(Layer layer) => layer.Source is PaintedSource && !layer.IsBase ? "Sculpt" : base.KindOf(layer);
+
+    protected override string SummaryOfStack(int count) =>
+        count == 0 ? "" : string.Create(CultureInfo.InvariantCulture, $"{count} layers; the heightmap is what they add up to, the highest last");
+
+    protected override Layer? Preferred(MapDocument? document, ImmutableArray<Layer> layers) =>
+        layers.LastOrDefault(layer => document is not null && HeightLayers.SculptProblem(document, layer.Name) is null) ?? layers.LastOrDefault();
+
+    protected override string CombineHelp => "Add its heights, subtract them, keep the higher (maximum) or lower (minimum) of it and the layers below, replace them, or multiply them by its values";
+
+    protected override string NameHelp => "Letters, digits, spaces, dashes and underscores; also the name of its file in stacks/heightmap/";
+
+    protected override void OnChosenRefreshed()
     {
-        choice = choice.Trim();
-        if (choice.Length == 0 || choice.Equals(Everywhere, StringComparison.OrdinalIgnoreCase) || choice.Equals("none", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-        if (HeightLayers.MaskOf(document, choice) is not null)
-        {
-            return choice;
-        }
-        IEnumerable<string> keys = document.Masks.Keys.Select(HeightLayers.MaskKey)
-            .Concat(Enumerable.Range(1, document.Terrain.StratumMasks.Layers.Length).Select(HeightLayers.StratumKey));
-        return keys.FirstOrDefault(key => HeightLayers.MaskTitle(key).Equals(choice, StringComparison.OrdinalIgnoreCase))
-            ?? (document.Masks.ContainsKey(choice) ? HeightLayers.MaskKey(choice) : null)
-            ?? throw new ArgumentException($"The map has no mask '{choice}': {string.Join(", ", MaskChoices(document))}");
+        OnPropertyChanged(nameof(IsCurve));
+        OnPropertyChanged(nameof(IsImported));
+        OnPropertyChanged(nameof(ChosenTitle));
+        OnPropertyChanged(nameof(ChosenFacts));
     }
 
-    /// <summary>
-    /// E.g. <c>Sculpt · add · 50 % · mask rivers</c>.
-    /// </summary>
-    public static string SummaryOf(HeightLayer layer)
+    protected override void RefreshSettings()
     {
-        List<string> parts = [KindOf(layer)];
-        if (layer.Kind != HeightLayerKind.Base)
-        {
-            parts.Add(layer.Combine.ToString().ToLowerInvariant());
-        }
-        if (layer.Strength < 1)
-        {
-            parts.Add(string.Create(CultureInfo.InvariantCulture, $"{layer.Strength * 100:0} %"));
-        }
-        if (layer.Mask is string mask)
-        {
-            parts.Add(HeightLayers.MaskTitle(mask));
-        }
-        if (layer.Curve is HeightCurve curve)
-        {
-            parts.Add(string.Create(CultureInfo.InvariantCulture, $"{curve.Profile.ToString().ToLowerInvariant()}, {curve.Points.Length} points"));
-        }
-        if (!layer.Visible)
-        {
-            parts.Add("hidden");
-        }
-        if (layer.Locked)
-        {
-            parts.Add("locked");
-        }
-        return string.Join(" · ", parts);
+        base.RefreshSettings();
+        // the base's constructor refreshes before the curve's group exists
+        Curve?.Refresh(IsCurve ? Document : null);
     }
-
-    public static string KindOf(HeightLayer layer) => layer.Kind switch
-    {
-        HeightLayerKind.Base => "Base",
-        HeightLayerKind.Sculpt => "Sculpt",
-        HeightLayerKind.Imported => "Image",
-        _ => "Curve",
-    };
 
     [RelayCommand]
     private Task AddSculpt() => _run("terrain.addLayer", new JsonObject { ["kind"] = "sculpt" });
@@ -362,46 +152,8 @@ public sealed partial class HeightLayersViewModel : ObservableObject
     private Task AddCurve() => _run("tool.terrain.curve", []);
 
     [RelayCommand]
-    private Task Remove() => Chosen is string name ? _run("terrain.removeLayer", new JsonObject { ["layer"] = name }) : Task.CompletedTask;
-
-    [RelayCommand]
-    private Task MoveUp() => Chosen is string name ? _run("terrain.moveLayer", new JsonObject { ["layer"] = name, ["by"] = 1 }) : Task.CompletedTask;
-
-    [RelayCommand]
-    private Task MoveDown() => Chosen is string name ? _run("terrain.moveLayer", new JsonObject { ["layer"] = name, ["by"] = -1 }) : Task.CompletedTask;
-
-    [RelayCommand]
     private Task Reload() => Chosen is string name ? _run("terrain.reloadLayer", new JsonObject { ["layer"] = name }) : Task.CompletedTask;
 
     [RelayCommand]
     private Task Bake() => _run("terrain.bake", []);
-
-    private SettingGroup MakeLayerSettings(IReadOnlyList<string> masks)
-    {
-        JsonObject Fixed() => new JsonObject { ["layer"] = Chosen };
-        HeightLayer Of(MapDocument d) => HeightLayers.Find(d, Chosen) ?? NoLayer;
-        const string set = "terrain.setLayer";
-        return new SettingGroup("Layer",
-        [
-            new TextSetting("Name", set, "name", d => Of(d).Name, _run, Fixed) { Help = "Letters, digits, spaces, dashes and underscores; also the name of its file in layers/" },
-            new ChoiceSetting("Combine", set, "combine", Combines, d => Of(d).Combine.ToString(), _run, Fixed)
-            {
-                Help = "Add its heights, keep the higher (maximum) or lower (minimum) of it and the layers below, or replace them",
-            },
-            new NumberSetting("Strength", set, "strength", d => Of(d).Strength, _run, Fixed) { Minimum = 0, Maximum = 1, HasSlider = true, Help = "From 0 (not at all) to 1" },
-            new ChoiceSetting("Mask", set, "mask", masks, d => Of(d).Mask is string key ? HeightLayers.MaskTitle(key) : Everywhere, _run, Fixed)
-            {
-                Help = "Where it works: everywhere, a mask for tools (Paint mode) or a stratum's mask",
-            },
-            new BoolSetting("Shown", set, "visible", d => Of(d).Visible, _run, Fixed) { Help = "A hidden layer counts for nothing" },
-            new BoolSetting("Locked", set, "locked", d => Of(d).Locked, _run, Fixed) { Help = "The sculpt tool and the curve tool leave a locked layer alone" },
-        ]);
-    }
-
-    private void RefreshSettings()
-    {
-        MapDocument? document = Chosen is null ? null : _document;
-        Layer.Refresh(document);
-        Curve.Refresh(IsCurve ? document : null);
-    }
 }

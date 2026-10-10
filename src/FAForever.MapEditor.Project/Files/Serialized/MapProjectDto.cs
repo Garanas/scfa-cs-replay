@@ -12,9 +12,14 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// <c>masks/</c> for tools. 3: the playable area by name, the rule a prop was placed by,
         /// the rules of masks (<c>masks/NAME.rules.json</c>) and props (<c>prop-rules.json</c>), and the
         /// height layers (<c>layers/</c>). 4: the map's symmetry and a curve's symmetry. 5: the walkability
-        /// marked by hand (<c>walkability-marks.png</c>). An editor reads every version up to its own.
+        /// marked by hand (<c>walkability-marks.png</c>). 6: stacks of layers (<c>stacks/&lt;target&gt;.json</c>
+        /// with the layers' PNGs in <c>stacks/&lt;target&gt;/</c>, <c>LayerStackDto</c>), the heightmap's
+        /// as <c>stacks/heightmap.json</c> in place of <c>layers/</c>; the composite is still written
+        /// (<c>heightmap.png</c>). A project of format 3 to 5 opens unchanged: its <c>layers/</c> becomes
+        /// the heightmap's stack in memory, and its next save writes format 6. An editor reads every
+        /// version up to its own.
         /// </summary>
-        public const int CurrentFormatVersion = 5;
+        public const int CurrentFormatVersion = 6;
 
         /// <summary>
         /// The layout of the project; <see cref="CurrentFormatVersion"/> for projects this library writes.

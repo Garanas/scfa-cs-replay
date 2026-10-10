@@ -22,16 +22,17 @@ internal static class HeightLayersState
             ["chosen"] = model.HeightStack.Chosen,
             ["sculptLayer"] = model.Map?.Session.SculptLayer,
             ["sculptProblem"] = document is null ? null : HeightLayers.SculptProblem(document, model.HeightStack.Chosen),
-            ["layers"] = new JsonArray([.. (document?.HeightLayers ?? []).Select(layer => (JsonNode)new JsonObject
+            ["layers"] = new JsonArray([.. (document?.HeightStack.Layers ?? []).Select(layer => (JsonNode)new JsonObject
             {
                 ["name"] = layer.Name,
-                ["kind"] = layer.Kind.ToString(),
+                ["kind"] = KindOf(layer),
+                ["sourceKind"] = LayerSources.NameOf(layer.Source),
                 ["combine"] = layer.Combine.ToString(),
                 ["strength"] = layer.Strength,
-                ["mask"] = layer.Mask,
+                ["mask"] = layer.Clip,
                 ["visible"] = layer.Visible,
                 ["locked"] = layer.Locked,
-                ["source"] = layer.Source,
+                ["source"] = layer.Path,
                 ["coverage"] = layer.Coverage is not null,
                 ["curve"] = layer.Curve is HeightCurve curve ? new JsonObject
                 {
@@ -53,4 +54,16 @@ internal static class HeightLayersState
             },
         };
     }
+
+    /// <summary>
+    /// The kind of a height layer as automation has always named it: <c>Base</c>, <c>Sculpt</c>,
+    /// <c>Imported</c>, <c>Curve</c>, or <c>Mask</c> for a mask reference.
+    /// </summary>
+    private static string KindOf(Layer layer) => layer.IsBase ? "Base" : layer.Source switch
+    {
+        ImageSource => "Imported",
+        CurveSource => "Curve",
+        MaskRefSource => "Mask",
+        _ => "Sculpt",
+    };
 }

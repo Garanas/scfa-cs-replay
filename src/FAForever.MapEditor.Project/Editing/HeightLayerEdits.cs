@@ -1,12 +1,13 @@
-using System.Collections.Immutable;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.Project.Editing
 {
     /// <summary>
-    /// Changes the stack of height layers (user story T-5, <see cref="MapDocument.HeightLayers"/>):
+    /// Changes the heightmap's stack of layers (user story T-5, <see cref="MapDocument.HeightStack"/>):
     /// start it, add, remove, rename and order layers, and set how each combines, how strongly,
-    /// where (a mask), whether it shows and whether it is locked.
+    /// where (a mask), whether it shows and whether it is locked. The stack's own changes are
+    /// <see cref="LayerStackEdits"/>'s; these add the heightmap's rules and its kinds of layer
+    /// (painted for sculpting, image, curve).
     /// </summary>
     /// <remarks>
     /// These edits change the layers only; the heightmap follows in the step that keeps them
@@ -20,7 +21,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// <summary>
         /// The longest name a layer may have.
         /// </summary>
-        public const int MaxNameLength = 64;
+        public const int MaxNameLength = LayerStackEdits.MaxNameLength;
 
         /// <summary>
         /// The name the base gets when the stack begins.
@@ -28,52 +29,21 @@ namespace FAForever.MapEditor.Project.Editing
         public const string BaseName = "Base";
 
         /// <summary>
+        /// What the messages call a layer of the heightmap.
+        /// </summary>
+        private const string What = "height layer";
+
+        /// <summary>
         /// Why a name cannot be a new layer's name, or null when it can.
         /// </summary>
         /// <param name="except">A layer the name may equal (one being renamed).</param>
-        public static string? Problem(MapDocument document, string name, string? except = null)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                return "A height layer needs a name";
-            }
-            if (name.Length > MaxNameLength)
-            {
-                return $"A height layer's name has at most {MaxNameLength} characters";
-            }
-            if (name != name.Trim())
-            {
-                return "A height layer's name does not start or end with a space";
-            }
-            if (!name.All(c => char.IsAsciiLetterOrDigit(c) || c is ' ' or '-' or '_'))
-            {
-                return $"'{name}' is no name for a height layer: use letters, digits, spaces, dashes and underscores";
-            }
-            if (document.HeightLayers.FirstOrDefault(layer => layer.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && layer.Name != except) is HeightLayer taken)
-            {
-                return $"The map has a height layer '{taken.Name}' already";
-            }
-            return null;
-        }
+        public static string? Problem(MapDocument document, string name, string? except = null) =>
+            LayerStackEdits.NameProblem(document.HeightStack, name, except, What);
 
         /// <summary>
         /// A name no layer has: <paramref name="stem"/>, else with the first free number after it.
         /// </summary>
-        public static string FreeName(MapDocument document, string stem)
-        {
-            if (Problem(document, stem) is null)
-            {
-                return stem;
-            }
-            for (int number = 2; ; number++)
-            {
-                string name = $"{stem} {number}";
-                if (Problem(document, name) is null)
-                {
-                    return name;
-                }
-            }
-        }
+        public static string FreeName(MapDocument document, string stem) => LayerStackEdits.FreeName(document.HeightStack, stem);
 
         /// <summary>
         /// The document with a stack of layers: the base, holding the heightmap as it is. A document
@@ -81,19 +51,20 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         public static MapDocument Start(MapDocument document)
         {
-            if (!document.HeightLayers.IsEmpty)
+            if (!document.HeightStack.IsEmpty)
             {
                 return document;
             }
             Heightmap heightmap = document.Terrain.Heightmap;
-            HeightLayer layer = new HeightLayer
+            Layer layer = new Layer
             {
                 Name = BaseName,
-                Kind = HeightLayerKind.Base,
-                Combine = HeightCombine.Replace,
+                Source = LayerSource.Painted,
+                IsBase = true,
+                Combine = LayerCombine.Replace,
                 Values = FromSamples(heightmap.Samples, heightmap.Scale),
             };
-            return document with { HeightLayers = [layer] };
+            return document with { HeightStack = document.HeightStack with { Layers = [layer] } };
         }
 
         /// <summary>
@@ -101,32 +72,30 @@ namespace FAForever.MapEditor.Project.Editing
         /// layer <paramref name="above"/> or on top.
         /// </summary>
         /// <exception cref="ArgumentException">The name is taken or no name, or the layer is a second base.</exception>
-        public static MapDocument Add(MapDocument document, HeightLayer layer, string? above = null)
+        public static MapDocument Add(MapDocument document, Layer layer, string? above = null)
         {
             document = Start(document);
-            if (layer.Kind == HeightLayerKind.Base)
+            if (layer.IsBase)
             {
                 throw new ArgumentException("A map has one base layer", nameof(layer));
             }
-            if (Problem(document, layer.Name) is string problem)
+            if (layer.Values is TiledBuffer<float> values)
             {
-                throw new ArgumentException(problem, nameof(layer));
+                CheckSize(document, values);
             }
-            CheckSize(document, layer.Values);
-            int index = above is null ? document.HeightLayers.Length : IndexOf(document, above) + 1;
-            return document with { HeightLayers = document.HeightLayers.Insert(index, layer) };
+            return With(document, LayerStackEdits.Add(document.HeightStack, layer, above, What));
         }
 
         /// <summary>
         /// A layer for the sculpt tool: adds nothing until sculpted.
         /// </summary>
-        public static HeightLayer NewSculpt(MapDocument document, string name, HeightCombine combine = HeightCombine.Add) => new HeightLayer
+        public static Layer NewSculpt(MapDocument document, string name, LayerCombine combine = LayerCombine.Add) => new Layer
         {
             Name = name,
-            Kind = HeightLayerKind.Sculpt,
+            Source = LayerSource.Painted,
             Combine = combine,
             Values = TiledBuffer<float>.Create(document.Width + 1, document.Height + 1),
-            Coverage = combine == HeightCombine.Add ? null : TiledBuffer<byte>.Create(document.Width + 1, document.Height + 1),
+            Coverage = IsDifference(combine) ? null : TiledBuffer<byte>.Create(document.Width + 1, document.Height + 1),
         };
 
         /// <summary>
@@ -135,30 +104,28 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         /// <param name="samples">(width + 1) by (height + 1) samples of the map's height scale.</param>
         /// <param name="source">The file it is read from again.</param>
-        public static HeightLayer NewImported(MapDocument document, string name, ushort[] samples, string? source) => new HeightLayer
+        public static Layer NewImported(MapDocument document, string name, ushort[] samples, string source) => new Layer
         {
             Name = name,
-            Kind = HeightLayerKind.Imported,
-            Combine = HeightCombine.Replace,
+            Source = new ImageSource(source),
+            Combine = LayerCombine.Replace,
             Values = FromSamples(TiledBuffer<ushort>.FromArray(document.Width + 1, document.Height + 1, samples), document.Terrain.Heightmap.Scale),
-            Source = source,
         };
 
         /// <summary>
         /// A layer made from a curve (user story T-4), combining as its profile does
         /// (<see cref="HeightCurves.CombineOf"/>).
         /// </summary>
-        public static HeightLayer NewCurve(MapDocument document, string name, HeightCurve curve)
+        public static Layer NewCurve(MapDocument document, string name, HeightCurve curve)
         {
             (TiledBuffer<float> values, TiledBuffer<byte>? coverage) = HeightCurves.Rasterize(curve, document.Width, document.Height);
-            return new HeightLayer
+            return new Layer
             {
                 Name = name,
-                Kind = HeightLayerKind.Curve,
+                Source = new CurveSource(curve),
                 Combine = HeightCurves.CombineOf(curve.Profile),
                 Values = values,
                 Coverage = coverage,
-                Curve = curve,
             };
         }
 
@@ -170,8 +137,8 @@ namespace FAForever.MapEditor.Project.Editing
         public static MapDocument SetCurve(MapDocument document, string name, HeightCurve curve)
         {
             int index = IndexOf(document, name);
-            HeightLayer layer = document.HeightLayers[index];
-            if (layer.Kind != HeightLayerKind.Curve)
+            Layer layer = document.HeightStack.Layers[index];
+            if (layer.Curve is not HeightCurve before)
             {
                 throw new ArgumentException($"The height layer {layer.Name} is no curve", nameof(name));
             }
@@ -179,16 +146,16 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 throw new ArgumentException($"The height layer {layer.Name} is locked", nameof(name));
             }
-            if (Equals(layer.Curve, curve))
+            if (Equals(before, curve))
             {
                 return document;
             }
-            (TiledBuffer<float> values, TiledBuffer<byte>? coverage) = HeightCurves.Rasterize(curve, document.Width, document.Height, layer.Values, layer.Coverage, layer.Curve);
+            (TiledBuffer<float> values, TiledBuffer<byte>? coverage) = HeightCurves.Rasterize(curve, document.Width, document.Height, layer.Values, layer.Coverage, before);
             // a new profile brings its way of combining, unless the map maker chose another
-            HeightCombine combine = layer.Curve is HeightCurve before && before.Profile != curve.Profile && layer.Combine == HeightCurves.CombineOf(before.Profile)
+            LayerCombine combine = before.Profile != curve.Profile && layer.Combine == HeightCurves.CombineOf(before.Profile)
                 ? HeightCurves.CombineOf(curve.Profile)
                 : layer.Combine;
-            return With(document, index, layer with { Curve = curve, Values = values, Coverage = coverage, Combine = combine });
+            return With(document, index, layer with { Source = new CurveSource(curve), Values = values, Coverage = coverage, Combine = combine });
         }
 
         /// <summary>
@@ -197,12 +164,11 @@ namespace FAForever.MapEditor.Project.Editing
         /// <exception cref="ArgumentException">There is no such layer, or it is the base.</exception>
         public static MapDocument Remove(MapDocument document, string name)
         {
-            int index = IndexOf(document, name);
-            if (document.HeightLayers[index].Kind == HeightLayerKind.Base)
+            if (document.HeightStack.Layers[IndexOf(document, name)].IsBase)
             {
                 throw new ArgumentException("The base layer stays: bake the layers to end the stack", nameof(name));
             }
-            return document with { HeightLayers = document.HeightLayers.RemoveAt(index) };
+            return With(document, LayerStackEdits.Remove(document.HeightStack, name, What));
         }
 
         /// <summary>
@@ -211,45 +177,32 @@ namespace FAForever.MapEditor.Project.Editing
         /// <exception cref="ArgumentException">There is no such layer, it is the base, or the place is not above the base.</exception>
         public static MapDocument Move(MapDocument document, string name, int index)
         {
-            int from = IndexOf(document, name);
-            if (document.HeightLayers[from].Kind == HeightLayerKind.Base)
+            if (document.HeightStack.Layers[IndexOf(document, name)].IsBase)
             {
                 throw new ArgumentException("The base layer stays the lowest", nameof(name));
             }
-            if (index < 1 || index >= document.HeightLayers.Length)
-            {
-                throw new ArgumentException($"A layer goes to place 1 (just above the base) to {document.HeightLayers.Length - 1}, not {index}", nameof(index));
-            }
-            HeightLayer layer = document.HeightLayers[from];
-            return document with { HeightLayers = document.HeightLayers.RemoveAt(from).Insert(index, layer) };
+            return With(document, LayerStackEdits.Move(document.HeightStack, name, index, What));
         }
 
         /// <summary>
         /// The document with a layer under another name.
         /// </summary>
         /// <exception cref="ArgumentException">There is no such layer, or the new name cannot be a layer's.</exception>
-        public static MapDocument Rename(MapDocument document, string name, string newName)
-        {
-            int index = IndexOf(document, name);
-            HeightLayer layer = document.HeightLayers[index];
-            if (Problem(document, newName, except: layer.Name) is string problem)
-            {
-                throw new ArgumentException(problem, nameof(newName));
-            }
-            return With(document, index, layer with { Name = newName });
-        }
+        public static MapDocument Rename(MapDocument document, string name, string newName) =>
+            With(document, LayerStackEdits.Rename(document.HeightStack, name, newName, What));
 
         /// <summary>
         /// The document with a layer combining another way. A sculpting layer keeps its look: going
-        /// from adding to an absolute way (maximum, minimum, replace) its differences become heights
-        /// over the layers below where it changed anything, and back again.
+        /// from differences (add, subtract) to an absolute way (maximum, minimum, replace, multiply)
+        /// its differences become heights over the layers below where it changed anything, and back
+        /// again.
         /// </summary>
         /// <exception cref="ArgumentException">There is no such layer, or it is the base.</exception>
-        public static MapDocument SetCombine(MapDocument document, string name, HeightCombine combine)
+        public static MapDocument SetCombine(MapDocument document, string name, LayerCombine combine)
         {
             int index = IndexOf(document, name);
-            HeightLayer layer = document.HeightLayers[index];
-            if (layer.Kind == HeightLayerKind.Base)
+            Layer layer = document.HeightStack.Layers[index];
+            if (layer.IsBase)
             {
                 throw new ArgumentException("The base layer replaces: it is the lowest", nameof(name));
             }
@@ -257,9 +210,12 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 return document;
             }
-            bool wasAdd = layer.Combine == HeightCombine.Add;
-            bool isAdd = combine == HeightCombine.Add;
-            if (layer.Kind != HeightLayerKind.Sculpt || wasAdd == isAdd)
+            if (layer.Source is PaintedSource && IsDifference(layer.Combine) && IsDifference(combine) && layer.Values is TiledBuffer<float> differences)
+            {
+                // adding and subtracting: the differences turn round
+                return With(document, index, layer with { Combine = combine, Values = Negated(differences) });
+            }
+            if (layer.Source is not PaintedSource || IsDifference(layer.Combine) == IsDifference(combine) || combine == LayerCombine.Multiply || layer.Combine == LayerCombine.Multiply)
             {
                 return With(document, index, layer with { Combine = combine });
             }
@@ -272,62 +228,53 @@ namespace FAForever.MapEditor.Project.Editing
         /// <exception cref="ArgumentException">There is no such layer, or it is the base.</exception>
         public static MapDocument SetStrength(MapDocument document, string name, float strength)
         {
-            int index = IndexOf(document, name);
-            HeightLayer layer = document.HeightLayers[index];
-            if (layer.Kind == HeightLayerKind.Base)
+            if (document.HeightStack.Layers[IndexOf(document, name)].IsBase)
             {
                 throw new ArgumentException("The base layer works at full strength", nameof(name));
             }
-            return With(document, index, layer with { Strength = Math.Clamp(strength, 0, 1) });
+            return With(document, LayerStackEdits.SetStrength(document.HeightStack, name, strength, What));
         }
 
         /// <summary>
-        /// The document with a layer working only where a mask is (<see cref="HeightLayers.MaskKey"/>,
-        /// <see cref="HeightLayers.StratumKey"/>), or everywhere (null).
+        /// The document with a layer working only where a mask is (<see cref="LayerStacks.MaskKey"/>,
+        /// <see cref="LayerStacks.StratumKey"/>), or everywhere (null).
         /// </summary>
         /// <exception cref="ArgumentException">There is no such layer or mask, or the layer is the base.</exception>
         public static MapDocument SetMask(MapDocument document, string name, string? mask)
         {
-            int index = IndexOf(document, name);
-            HeightLayer layer = document.HeightLayers[index];
-            if (layer.Kind == HeightLayerKind.Base && mask is not null)
+            if (document.HeightStack.Layers[IndexOf(document, name)].IsBase && mask is not null)
             {
                 throw new ArgumentException("The base layer works everywhere", nameof(name));
             }
-            if (mask is not null && HeightLayers.MaskOf(document, mask) is null)
+            if (mask is not null && LayerStacks.MaskOf(document, mask) is null)
             {
-                throw new ArgumentException($"The map has no {HeightLayers.MaskTitle(mask)}", nameof(mask));
+                throw new ArgumentException($"The map has no {LayerStacks.MaskTitle(mask)}", nameof(mask));
             }
-            return With(document, index, layer with { Mask = mask });
+            return With(document, LayerStackEdits.SetClip(document.HeightStack, name, mask, What));
         }
 
-        public static MapDocument SetVisible(MapDocument document, string name, bool visible)
-        {
-            int index = IndexOf(document, name);
-            return With(document, index, document.HeightLayers[index] with { Visible = visible });
-        }
+        public static MapDocument SetVisible(MapDocument document, string name, bool visible) =>
+            With(document, LayerStackEdits.SetVisible(document.HeightStack, name, visible, What));
 
-        public static MapDocument SetLocked(MapDocument document, string name, bool locked)
-        {
-            int index = IndexOf(document, name);
-            return With(document, index, document.HeightLayers[index] with { Locked = locked });
-        }
+        public static MapDocument SetLocked(MapDocument document, string name, bool locked) =>
+            With(document, LayerStackEdits.SetLocked(document.HeightStack, name, locked, What));
 
         /// <summary>
-        /// The document with an imported layer's values read again from its file.
+        /// The document with an image layer's values read again from its file.
         /// </summary>
         /// <param name="samples">(width + 1) by (height + 1) samples of the map's height scale.</param>
-        /// <exception cref="ArgumentException">There is no such layer, or it is not imported.</exception>
+        /// <exception cref="ArgumentException">There is no such layer, or it is not read from a file.</exception>
         public static MapDocument SetImported(MapDocument document, string name, ushort[] samples, string? source = null)
         {
             int index = IndexOf(document, name);
-            HeightLayer layer = document.HeightLayers[index];
-            if (layer.Kind != HeightLayerKind.Imported)
+            Layer layer = document.HeightStack.Layers[index];
+            if (layer.Source is not ImageSource image)
             {
                 throw new ArgumentException($"The height layer {layer.Name} is not imported", nameof(name));
             }
             TiledBuffer<float> values = FromSamples(TiledBuffer<ushort>.FromArray(document.Width + 1, document.Height + 1, samples), document.Terrain.Heightmap.Scale, layer.Values);
-            return With(document, index, layer with { Values = values, Source = source ?? layer.Source });
+            LayerSource read = source is null || source == image.Path ? image : new ImageSource(source);
+            return With(document, index, layer with { Values = values, Source = read });
         }
 
         /// <summary>
@@ -338,35 +285,36 @@ namespace FAForever.MapEditor.Project.Editing
         public static MapDocument SetBase(MapDocument document, TiledBuffer<ushort> samples)
         {
             document = Start(document);
-            HeightLayer layer = document.HeightLayers[0];
+            Layer layer = document.HeightStack.Layers[0];
             return With(document, 0, layer with { Values = FromSamples(samples, document.Terrain.Heightmap.Scale, layer.Values) });
         }
 
         /// <summary>
-        /// Ends the stack: the heightmap keeps what the layers add up to, and the map has no layers.
+        /// Ends the stack: the heightmap keeps what the layers make, and the map has no layers.
         /// </summary>
         public static MapDocument Bake(MapDocument document) =>
-            document.HeightLayers.IsEmpty ? document : document with { HeightLayers = [] };
+            document.HeightStack.IsEmpty ? document : document with { HeightStack = LayerStack.Empty(LayerTarget.Heightmap) };
 
         /// <summary>
         /// The place of a layer in the stack, by name (exactly, else without regard to case).
         /// </summary>
         /// <exception cref="ArgumentException">There is no such layer.</exception>
-        public static int IndexOf(MapDocument document, string name)
-        {
-            HeightLayer layer = HeightLayers.Find(document, name)
-                ?? throw new ArgumentException(document.HeightLayers.IsEmpty
-                    ? "The map has no height layers"
-                    : $"The map has no height layer '{name}': {string.Join(", ", document.HeightLayers.Select(each => each.Name))}", nameof(name));
-            return document.HeightLayers.IndexOf(layer);
-        }
+        public static int IndexOf(MapDocument document, string name) => LayerStackEdits.IndexOf(document.HeightStack, name, What);
 
-        internal static MapDocument With(MapDocument document, int index, HeightLayer layer) =>
-            ReferenceEquals(document.HeightLayers[index], layer) ? document : document with { HeightLayers = document.HeightLayers.SetItem(index, layer) };
+        internal static MapDocument With(MapDocument document, int index, Layer layer) =>
+            With(document, document.HeightStack.With(index, layer));
+
+        internal static MapDocument With(MapDocument document, LayerStack stack) =>
+            ReferenceEquals(document.HeightStack, stack) ? document : document with { HeightStack = stack };
+
+        /// <summary>
+        /// Whether a layer combining so holds differences (0 changes nothing) rather than heights.
+        /// </summary>
+        public static bool IsDifference(LayerCombine combine) => combine is LayerCombine.Add or LayerCombine.Subtract;
 
         /// <summary>
         /// Heights in game units from samples; with <paramref name="reuse"/>, its tiles where they
-        /// hold the same values, so that only the tiles that differ are added up again.
+        /// hold the same values, so that only the tiles that differ are composited again.
         /// </summary>
         internal static TiledBuffer<float> FromSamples(TiledBuffer<ushort> samples, float scale, TiledBuffer<float>? reuse = null, float offset = 0)
         {
@@ -386,7 +334,7 @@ namespace FAForever.MapEditor.Project.Editing
                     {
                         tile[i] = offset + from[i] * scale;
                     }
-                    if (reuse is null || !HeightLayers.SameTile(samples, tileX, tileY, tile, builder.Tile(tileX, tileY)))
+                    if (reuse is null || !LayerStacks.SameTile(samples, tileX, tileY, tile, builder.Tile(tileX, tileY)))
                     {
                         builder.SetTile(tileX, tileY, tile);
                     }
@@ -396,34 +344,38 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
-        /// A sculpting layer turned from adding into an absolute way of combining, or back, with the
-        /// heights of the layers below it as they are.
+        /// A sculpting layer turned from differences (add, subtract) into an absolute way of
+        /// combining (maximum, minimum, replace), or back, with the heights of the layers below it as
+        /// they are.
         /// </summary>
-        private static HeightLayer Converted(MapDocument document, int index, HeightLayer layer, HeightCombine combine)
+        private static Layer Converted(MapDocument document, int index, Layer layer, LayerCombine combine)
         {
             const int size = TiledBuffer<float>.TileSize;
-            bool toAdd = combine == HeightCombine.Add;
-            TiledBuffer<float>.Builder values = layer.Values.ToBuilder();
+            bool toDifference = IsDifference(combine);
+            float sign = combine == LayerCombine.Subtract ? -1 : 1;
+            float wasSign = layer.Combine == LayerCombine.Subtract ? -1 : 1;
+            TiledBuffer<float> held = layer.Values!;
+            TiledBuffer<float>.Builder values = held.ToBuilder();
             TiledBuffer<byte>? oldCoverage = layer.Coverage;
-            TiledBuffer<byte>.Builder? coverage = toAdd ? null : TiledBuffer<byte>.Create(layer.Values.Width, layer.Values.Height).ToBuilder();
+            TiledBuffer<byte>.Builder? coverage = toDifference ? null : TiledBuffer<byte>.Create(held.Width, held.Height).ToBuilder();
             float[] below = new float[size * size];
             float[] tile = new float[size * size];
             float[] zeros = new float[size * size];
             byte[] covered = new byte[size * size];
-            for (int tileY = 0; tileY < layer.Values.TilesY; tileY++)
+            for (int tileY = 0; tileY < held.TilesY; tileY++)
             {
-                for (int tileX = 0; tileX < layer.Values.TilesX; tileX++)
+                for (int tileX = 0; tileX < held.TilesX; tileX++)
                 {
-                    ReadOnlySpan<float> held = layer.Values.Tile(tileX, tileY);
+                    ReadOnlySpan<float> heldTile = held.Tile(tileX, tileY);
                     ReadOnlySpan<byte> heldCoverage = oldCoverage is null ? default : oldCoverage.Tile(tileX, tileY);
                     bool any = false;
-                    for (int i = 0; i < held.Length && !any; i++)
+                    for (int i = 0; i < heldTile.Length && !any; i++)
                     {
-                        any = toAdd ? (oldCoverage is null || heldCoverage[i] > 0) : held[i] != 0;
+                        any = toDifference ? (oldCoverage is null || heldCoverage[i] > 0) : heldTile[i] != 0;
                     }
                     if (!any)
                     {
-                        if (toAdd && !held.SequenceEqual(zeros))
+                        if (toDifference && !heldTile.SequenceEqual(zeros))
                         {
                             Array.Clear(tile);
                             values.SetTile(tileX, tileY, tile);
@@ -433,22 +385,22 @@ namespace FAForever.MapEditor.Project.Editing
                     HeightLayers.Heights(document, tileX, tileY, index, below);
                     for (int i = 0; i < tile.Length; i++)
                     {
-                        if (toAdd)
+                        if (toDifference)
                         {
                             float weight = oldCoverage is null ? 1 : heldCoverage[i] / 255f;
-                            float difference = held[i] - below[i];
+                            float difference = heldTile[i] - below[i];
                             difference = layer.Combine switch
                             {
-                                HeightCombine.Maximum => Math.Max(0, difference),
-                                HeightCombine.Minimum => Math.Min(0, difference),
+                                LayerCombine.Maximum => Math.Max(0, difference),
+                                LayerCombine.Minimum => Math.Min(0, difference),
                                 _ => difference,
                             };
-                            tile[i] = weight > 0 ? difference * weight : 0;
+                            tile[i] = weight > 0 ? sign * difference * weight : 0;
                         }
                         else
                         {
-                            covered[i] = held[i] != 0 ? (byte)255 : (byte)0;
-                            tile[i] = below[i] + held[i];
+                            covered[i] = heldTile[i] != 0 ? (byte)255 : (byte)0;
+                            tile[i] = below[i] + wasSign * heldTile[i];
                         }
                     }
                     values.SetTile(tileX, tileY, tile);
@@ -459,6 +411,30 @@ namespace FAForever.MapEditor.Project.Editing
                 }
             }
             return layer with { Combine = combine, Values = values.ToBuffer(), Coverage = coverage?.ToBuffer() };
+        }
+
+        private static TiledBuffer<float> Negated(TiledBuffer<float> values)
+        {
+            const int size = TiledBuffer<float>.TileSize;
+            TiledBuffer<float>.Builder builder = values.ToBuilder();
+            float[] tile = new float[size * size];
+            for (int tileY = 0; tileY < values.TilesY; tileY++)
+            {
+                for (int tileX = 0; tileX < values.TilesX; tileX++)
+                {
+                    ReadOnlySpan<float> held = values.Tile(tileX, tileY);
+                    if (!held.ContainsAnyExcept(0f))
+                    {
+                        continue;
+                    }
+                    for (int i = 0; i < tile.Length; i++)
+                    {
+                        tile[i] = -held[i];
+                    }
+                    builder.SetTile(tileX, tileY, tile);
+                }
+            }
+            return builder.ToBuffer();
         }
 
         private static void CheckSize(MapDocument document, TiledBuffer<float> values)

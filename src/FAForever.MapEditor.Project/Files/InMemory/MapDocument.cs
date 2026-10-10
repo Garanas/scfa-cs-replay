@@ -132,13 +132,13 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             : Markers.Areas.FirstOrDefault();
 
         /// <summary>
-        /// The height layers (user story T-5), lowest first: the base, then sculpting, imported
-        /// and curve layers. Empty for a map without them, whose heightmap is simply its heights.
-        /// With layers, <see cref="Terrain"/>'s heightmap is what they add up to, kept so by
-        /// <see cref="Editing.HeightLayers.Follow"/> after every change; everything that reads the
-        /// heights (the views, walkability, the export) reads that.
+        /// The heightmap's stack of layers (user stories T-5, T-4; <see cref="LayerStack"/>), lowest
+        /// first: the base, then painted (sculpt), image and curve layers. Empty for a map without
+        /// them, whose heightmap is simply its heights. With layers, <see cref="Terrain"/>'s heightmap
+        /// is what they make, kept so by <see cref="Editing.HeightLayers.Follow"/> after every change;
+        /// everything that reads the heights (the views, walkability, the export) reads that.
         /// </summary>
-        public ImmutableArray<HeightLayer> HeightLayers { get; init; } = [];
+        public LayerStack HeightStack { get; init; } = LayerStack.Empty(LayerTarget.Heightmap);
 
         /// <summary>
         /// Where the map maker marked by hand that land units must be blocked or may pass (user story

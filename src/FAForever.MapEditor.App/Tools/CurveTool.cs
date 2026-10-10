@@ -62,8 +62,8 @@ public sealed partial class CurveTool(MainViewModel model) : ObservableObject, I
     /// <summary>
     /// The chosen curve when it can be edited: a curve layer, not locked; null otherwise.
     /// </summary>
-    public HeightLayer? Curve =>
-        model.ShownDocument is MapDocument document && HeightLayers.Find(document, model.HeightStack.Chosen) is { Kind: HeightLayerKind.Curve, Locked: false, Curve: not null } layer
+    public Layer? Curve =>
+        model.ShownDocument is MapDocument document && HeightLayers.Find(document, model.HeightStack.Chosen) is { Source: CurveSource, Locked: false } layer
             ? layer
             : null;
 
@@ -109,7 +109,7 @@ public sealed partial class CurveTool(MainViewModel model) : ObservableObject, I
         {
             return;
         }
-        HeightLayer? layer = _startNew ? null : Curve;
+        Layer? layer = _startNew ? null : Curve;
         if (layer?.Curve is not HeightCurve curve)
         {
             _startNew = false;

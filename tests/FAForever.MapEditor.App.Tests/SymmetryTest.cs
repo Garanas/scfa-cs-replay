@@ -292,16 +292,16 @@ namespace FAForever.MapEditor.App.Tests
             string name = (string)run.Result!;
             HeightCurve curve = HeightLayers.Find(model.ShownDocument!, name)!.Curve!;
             Assert.AreEqual(new SymmetrySetting(MapSymmetryKind.MirroredLeftRight, 2), curve.Symmetry, "drawn while the symmetry mirrors edits");
-            HeightLayer layer = HeightLayers.Find(model.ShownDocument!, name)!;
-            Assert.IsTrue(layer.Values[65, 100] > 1, "the ridge rises");
-            Assert.AreEqual(layer.Values[65, 100], layer.Values[256 - 65, 100], 0.05, "the image rises as much");
+            Layer layer = HeightLayers.Find(model.ShownDocument!, name)!;
+            Assert.IsTrue(layer.Values![65, 100] > 1, "the ridge rises");
+            Assert.AreEqual(layer.Values![65, 100], layer.Values![256 - 65, 100], 0.05, "the image rises as much");
             CurveTool tool = (CurveTool)model.ActiveTool!.Tool!;
             Assert.AreEqual(1, tool.Marks!.Images!.Count, "the views draw the image");
             Assert.IsTrue(tool.Marks.Images[0].All(point => point.X > 128), "on the other side");
 
             await Run(model, "terrain.setCurve", new JsonObject { ["mirrored"] = false });
             Assert.IsNull(HeightLayers.Find(model.ShownDocument!, name)!.Curve!.Symmetry);
-            Assert.AreEqual(0, HeightLayers.Find(model.ShownDocument!, name)!.Values[256 - 65, 100], "the curve alone");
+            Assert.AreEqual(0, HeightLayers.Find(model.ShownDocument!, name)!.Values![256 - 65, 100], "the curve alone");
         }
 
         [TestMethod]

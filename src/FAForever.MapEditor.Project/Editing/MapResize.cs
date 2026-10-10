@@ -182,12 +182,15 @@ namespace FAForever.MapEditor.Project.Editing
                 WalkabilityMarks = document.WalkabilityMarks is TiledBuffer<byte> marks ? Resized(marks, (byte)0) : null,
                 // the height layers (T-5) at the heightmap's corners: an absolute layer continues its
                 // edge, an adding one adds nothing where the map gains; a curve's points move along
-                HeightLayers = [.. document.HeightLayers.Select(layer => layer with
+                HeightStack = document.HeightStack with
                 {
-                    Values = Shift(layer.Values, newWidth + 1, newDepth + 1, dx, dz, layer.Combine == HeightCombine.Add ? 0f : null),
-                    Coverage = layer.Coverage is TiledBuffer<byte> coverage ? Shift(coverage, newWidth + 1, newDepth + 1, dx, dz, (byte)0) : null,
-                    Curve = layer.Curve is HeightCurve curve ? curve with { Points = [.. curve.Points.Select(point => point with { X = point.X + dx, Z = point.Z + dz })] } : null,
-                })],
+                    Layers = [.. document.HeightStack.Layers.Select(layer => layer with
+                    {
+                        Values = layer.Values is TiledBuffer<float> values ? Shift(values, newWidth + 1, newDepth + 1, dx, dz, HeightLayerEdits.IsDifference(layer.Combine) ? 0f : null) : null,
+                        Coverage = layer.Coverage is TiledBuffer<byte> coverage ? Shift(coverage, newWidth + 1, newDepth + 1, dx, dz, (byte)0) : null,
+                        Source = layer.Source is CurveSource { Curve: HeightCurve curve } ? new CurveSource(curve with { Points = [.. curve.Points.Select(point => point with { X = point.X + dx, Z = point.Z + dz })] }) : layer.Source,
+                    })],
+                },
             };
             // with layers, the heightmap is their sum again
             resized = HeightLayers.Recomposite(resized);

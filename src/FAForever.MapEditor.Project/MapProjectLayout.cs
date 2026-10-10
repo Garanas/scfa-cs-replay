@@ -20,9 +20,10 @@ namespace FAForever.MapEditor.Project
     /// masks/NAME.png               8-bit grey, the map's size or half: masks for tools (K-1), not exported
     /// masks/NAME.rules.json        the rules a mask is generated from (K-2), when it has rules
     /// prop-rules.json              the rules that place props from the layers (P-4), when the map has rules
-    /// layers/layers.json           the height layers (T-5), lowest first; absent for a map without them
-    /// layers/NAME.png              16-bit grey, (width + 1) by (height + 1): a height layer's values
-    /// layers/NAME.coverage.png     8-bit grey, the same size: how much of the layer there is, when not all
+    /// stacks/heightmap.json        the heightmap's stack of layers (T-5), lowest first; absent without layers
+    /// stacks/heightmap/NAME.png    16-bit grey, (width + 1) by (height + 1): a height layer's values
+    /// stacks/heightmap/NAME.coverage.png   8-bit grey, the same size: how much of the layer there is, when not all
+    /// stacks/TARGET.json, stacks/TARGET/   the stack of another grid (stratum-N, mask-NAME, water-foam), same shape
     /// script.lua                   the map's script, if it has one
     /// files/                       the other files of the map folder, as they are
     /// procedural/sources/          the map maker's World Machine and Gaea files (.tmd, .terrain)
@@ -63,24 +64,52 @@ namespace FAForever.MapEditor.Project
         public const string Masks = "masks";
 
         /// <summary>
-        /// The folder of the height layers (user story T-5): <see cref="HeightLayersIndex"/> and a
-        /// PNG per layer. With layers, <see cref="Heightmap"/> is what they add up to, written by
-        /// the editor; other tools write into a layer's file or an imported layer's source.
+        /// The folder of the stacks of layers (format 6, <c>LayerStackDto</c>): per target a JSON
+        /// file (<see cref="StackIndex"/>) and a folder of the layers' PNGs (<see cref="StackLayer"/>).
+        /// With a stack, the target's own file (<see cref="Heightmap"/>) is what the stack makes,
+        /// written by the editor; other tools write into a layer's file or an image layer's file.
+        /// </summary>
+        public const string Stacks = "stacks";
+
+        /// <summary>
+        /// The settings of the stack of a target, lowest first: <c>stacks/heightmap.json</c>.
+        /// </summary>
+        public static string StackIndex(string target) => $"{Stacks}/{target}.json";
+
+        /// <summary>
+        /// The values of a layer of a target's stack: <c>stacks/heightmap/Sculpt.png</c>.
+        /// </summary>
+        public static string StackLayer(string target, string name) => $"{Stacks}/{target}/{name}.png";
+
+        /// <summary>
+        /// The coverage of a layer of a stack of heights, when it has one: <c>stacks/heightmap/Road.coverage.png</c>.
+        /// </summary>
+        public static string StackLayerCoverage(string target, string name) => $"{Stacks}/{target}/{name}.coverage.png";
+
+        /// <summary>
+        /// The heightmap's stack: <c>stacks/heightmap.json</c>.
+        /// </summary>
+        public const string HeightStackIndex = "stacks/heightmap.json";
+
+        /// <summary>
+        /// The folder of the height layers of projects of format 3 to 5 (user story T-5):
+        /// <see cref="HeightLayersIndex"/> and a PNG per layer, read into the heightmap's stack when
+        /// such a project opens and removed by its first save.
         /// </summary>
         public const string HeightLayers = "layers";
 
         /// <summary>
-        /// The height layers' settings, lowest first (<c>HeightLayersDto</c>).
+        /// The height layers' settings in projects of format 3 to 5 (<c>HeightLayersDto</c>).
         /// </summary>
         public const string HeightLayersIndex = "layers/layers.json";
 
         /// <summary>
-        /// The values of the height layer named <paramref name="name"/>.
+        /// The values of a height layer in projects of format 3 to 5.
         /// </summary>
         public static string HeightLayer(string name) => $"{HeightLayers}/{name}.png";
 
         /// <summary>
-        /// The coverage of the height layer named <paramref name="name"/>, when it has one.
+        /// The coverage of a height layer in projects of format 3 to 5, when it has one.
         /// </summary>
         public static string HeightLayerCoverage(string name) => $"{HeightLayers}/{name}.coverage.png";
 

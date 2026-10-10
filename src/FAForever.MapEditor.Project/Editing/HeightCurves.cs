@@ -7,7 +7,7 @@ namespace FAForever.MapEditor.Project.Editing
     /// <summary>
     /// Curves that shape the terrain along them (user story T-4): the spline through a curve's
     /// points, and the values of its layer made from it (<see cref="Rasterize"/>). A curve is a
-    /// height layer (<see cref="HeightLayerKind.Curve"/>), so editing the curve makes its values
+    /// height layer (<see cref="CurveSource"/>), so editing the curve makes its values
     /// again and the heightmap follows.
     /// </summary>
     public static class HeightCurves
@@ -21,7 +21,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// How a new curve layer of a profile combines: a road replaces the terrain where it lies (by
         /// its coverage), the others add their rise or sink.
         /// </summary>
-        public static HeightCombine CombineOf(CurveProfile profile) => profile == CurveProfile.Road ? HeightCombine.Replace : HeightCombine.Add;
+        public static LayerCombine CombineOf(CurveProfile profile) => profile == CurveProfile.Road ? LayerCombine.Replace : LayerCombine.Add;
 
         /// <summary>
         /// The spline through the points (Catmull-Rom), as a line of places with their heights,
@@ -271,7 +271,7 @@ namespace FAForever.MapEditor.Project.Editing
                 for (int tileX = x0; tileX <= x1; tileX++)
                 {
                     ReadOnlySpan<T> tile = made.Tile(tileX, tileY);
-                    if (!made.SharesTile(previous, tileX, tileY) && !HeightLayers.SameTile(made, tileX, tileY, tile, previous.Tile(tileX, tileY)))
+                    if (!made.SharesTile(previous, tileX, tileY) && !LayerStacks.SameTile(made, tileX, tileY, tile, previous.Tile(tileX, tileY)))
                     {
                         builder.SetTile(tileX, tileY, tile);
                     }
