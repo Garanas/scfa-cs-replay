@@ -1,5 +1,6 @@
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
@@ -151,12 +152,17 @@ public static class EditorModes
                 new ToolDefinition("markers.path", "Path node", "R-3") { Make = model => new PathTool(model) },
                 new ToolDefinition("markers.ai", "AI marker", "R-1") { Make = model => new PlaceMarkerTool(model, MarkerPlacement.Ai) },
                 new ToolDefinition("markers.chain", "Chain", "R-4") { Make = model => new ChainTool(model) },
+                new ToolDefinition("markers.weatherDefinition", "Weather", "R-1") { Make = model => new PlaceMarkerTool(model, MarkerPlacement.WeatherDefinition) },
+                new ToolDefinition("markers.weatherGenerator", "Clouds", "R-1") { Make = model => new PlaceMarkerTool(model, MarkerPlacement.WeatherGenerator) },
+                new ToolDefinition("markers.preset", "Preset", "F-10") { Make = model => new MarkerPresetTool(model) },
             ],
             [
                 new OverlaySection(),
                 new MarkerKindsSection(),
+                new PathNetworkSection(),
                 new ChainsSection(),
                 new AdaptiveSection(),
+                new PresetSection(MarkerPresets.Kind, "Marker presets") { EmptyText = "None yet: select markers, such as a spawn with its deposits, and save them to place them again." },
             ],
             []),
 

@@ -240,6 +240,42 @@ snaps to (`Snap`, `MarkerSnap`), how steep the ground under a deposit is (`Steep
 kinds of markers one by one (`MarkerKinds`, `KindOf`), which `MapObjects.Nearest`, `Inside` and
 `All` take to leave hidden kinds out.
 
+**Generated path networks** (user story R-3, `Generation/PathNetworks`, `PathNetworkGenerator`, an
+`IDocumentGenerator` with walkability's inputs): per layer the AI's graph from the navigational
+mesh (land, water, amphibious; air on a grid over the playable area). The map is cut into squares of
+the spacing (`DefaultSpacing`: a sixteenth of the map, 16 to 64 ogrids); each 4-connected part of
+passable ground in a square that covers a sixteenth of it gets a node at its ogrid furthest from
+blocked ground (to a quarter of the spacing), nearest the square's centre; parts that touch across a
+square's edge are linked, with nodes along the way through them where the straight line would cross
+blocked ground (`CanWalk`: every ogrid a line passes, both beside a corner, of the start's region);
+diagonal squares link where walkable and not linked through a neighbour; last every region is made
+one network (pieces joined along `NavPaths.FindRoute`). The map's own nodes of a layer stay unless
+`Replace`: they are nodes from the start with their links, a part that holds one takes it, and two
+that reach each other get no new way, so generating again adds nothing. `Apply` names new nodes as
+the map editors do (`LandPN`, `WaterPN`, `AmphPN`, `AirPN`, going on from the highest number), puts
+them on the terrain and links both ways; replacing takes the layer's nodes out of chains too.
+`PathNetworksTest` checks on the test maps that no link crosses blocked ground and every region is
+one network.
+
+**Weather** (`Editing/WeatherStyles`, static data of `lua/weatherdefinitions.lua` and
+`lua/MarkerTemplates.lua`): the map styles, each style's cloud types (its own and the cirrus layers)
+and new definitions and generators as the game's templates make them.
+
+**Markers presets** (F-10, `Workspaces/MarkerPresets`, kind `markers`): the chosen markers as a
+`MarkerSetDto` (what `markers.json` holds, links and chains by name) around their middle, heights
+above the terrain; the army deposits wait for is left out. `Place` pastes them through
+`ObjectEdits.Paste` (free names, a spawn the next army, links among them) and makes their chains again.
+
+**Adaptive maps' optional groups** (R-5, `Editing/AdaptiveGroups`): the game has no field for
+which civilians exist by players or options. FAF's adaptive maps (the script by CookieNoob and
+KeyBlue, e.g. `adaptive_canis_river`, `dualgap_adaptive`) keep them in groups directly under an
+army's units beside `INITIAL`, named `Optional_<option>_<n>`, and the map's script creates them with
+`ScenarioUtils.CreateArmyGroup` when the lobby option `optional_<option>` (the map's `_options.lua`)
+has value n or more (or as wrecks, by option). `Find` lists them, `AddOptionalGroup` makes one in
+the civilians' army (`CivilianArmy`: `ARMY_17`, else `NEUTRAL_CIVILIAN`, else the first extra army).
+The editor writes neither the options nor the script; civilians by the number of players are not
+part of the convention.
+
 ## Images and textures
 
 - ImageMagick (Magick.NET, Q16) reads and writes the PNGs (`ProjectImages`) and compresses the

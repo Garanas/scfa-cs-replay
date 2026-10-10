@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Generation;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
@@ -28,6 +29,19 @@ public sealed partial class MainViewModel
         DocumentChanged += (_, _) => Markers.Refresh(ShownDocument);
         MapChanged += (_, _) => Markers.Refresh(ShownDocument);
         PropertyChanged += OnMarkerToolChosen;
+
+        // generated path networks (R-3), markers presets (F-10), the adaptive script's groups (R-5)
+        Generation.Register(new PathNetworkGenerator(), "markers.connectPaths");
+        Generation.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(GenerationViewModel.Rows) or nameof(GenerationViewModel.States))
+            {
+                Markers.Paths.Show(Generation.Rows.FirstOrDefault(row => row.Id == PathNetworkGenerator.GeneratorId));
+            }
+        };
+        Presets.Register(MarkerPresetTool.Kind(this));
+        DocumentChanged += (_, _) => Markers.RefreshOptionalGroups(ShownDocument);
+        MapChanged += (_, _) => Markers.RefreshOptionalGroups(ShownDocument);
     }
 
     /// <summary>

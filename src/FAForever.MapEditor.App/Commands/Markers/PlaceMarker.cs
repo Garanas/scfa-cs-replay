@@ -18,7 +18,8 @@ namespace FAForever.MapEditor.App.Commands;
 /// army (<c>ARMY_n</c>), added to the armies. Deposits go to the centre of their ogrid, where the
 /// game puts them, and say so when the ground is too steep for the storages around an extractor.
 /// </summary>
-/// <param name="Kind"><c>spawn</c>, <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c> or <c>path</c>.</param>
+/// <param name="Kind"><c>spawn</c>, <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c>, <c>path</c>, <c>weatherDefinition</c> or
+/// <c>weatherGenerator</c> (as the game's marker templates make them: Tundra weather, ten clouds 180 high).</param>
 /// <param name="X">In ogrids.</param>
 /// <param name="Type">An AI marker's type, e.g. <c>Rally Point</c> (left out: that one).</param>
 /// <param name="Layer">A path node's layer: <c>Land</c> (left out), <c>Water</c>, <c>Amphibious</c>, <c>Air</c>.</param>
@@ -53,7 +54,9 @@ public sealed class PlaceMarkerHandler(MainViewModel model, MarkersViewModel mar
             "hydrocarbon" => new ResourceMarker { Id = 0, Name = "Hydrocarbon 01", Kind = ResourceKind.Hydrocarbon, Position = position },
             "ai" => new AiMarker { Id = 0, Name = $"{type} 01", Type = type, Position = position },
             "path" => new PathNode { Id = 0, Name = $"{LayerPrefix(layer)}PN1", Layer = layer, Position = position },
-            _ => throw new ArgumentException($"There is no kind of marker '{request.Kind}' to place: spawn, mass, hydrocarbon, ai or path"),
+            "weatherdefinition" => WeatherStyles.NewDefinition("Weather Definition 01", position),
+            "weathergenerator" => WeatherStyles.NewGenerator("Weather Generator 01", position),
+            _ => throw new ArgumentException($"There is no kind of marker '{request.Kind}' to place: spawn, mass, hydrocarbon, ai, path, weatherDefinition or weatherGenerator"),
         };
 
         document = document.AddMarker(marker with { Name = NextName(document, marker.Name) }, out Marker added);

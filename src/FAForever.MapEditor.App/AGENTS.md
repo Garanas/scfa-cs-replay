@@ -84,7 +84,8 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     it out: its control is on a page or panel (`workspace.setUp`, `workspace.convert`,
     `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`, `paint.chooseMask`, `presets.apply`,
     `presets.delete`, `view.walkability`, `problems.show`, `markers.showKind`, `markers.set`,
-    `markers.setChain`, `markers.renameChain`, `markers.deleteChain`), it selects what one
+    `markers.setChain`, `markers.renameChain`, `markers.deleteChain`, `markers.setWeather`,
+    `markers.addOptionalGroup`), it selects what one
     clicks (`assets.select`) or drops what one drags (`assets.drop`), it is what a tool's click does
     (`markers.place`, `markers.link`), it is the mouse's or a view's own key in
     the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
@@ -870,7 +871,7 @@ inspector's `MarkerSelection`.
   path (shift starts a new one); a click on a node goes on from it; dragging from a node to
   another runs `markers.link {a, b, unlink?}` (control unlinks). Nodes of different layers never
   link. Choosing the tool shows the path nodes and its layer. Generating them from walkability is
-  `markers.connectPaths` (not built yet).
+  `markers.connectPaths` (below).
 - **Chains** (R-4): the panel's section lists them (`ChainsSection`); "From the selection" runs
   `markers.addChain {name?, markers?}` (the selected markers in the order they were selected,
   `Chain_1` or the next free name) and chooses it; its markers have up, down and take-out
@@ -892,9 +893,40 @@ inspector's `MarkerSelection`.
   picking takes (`MapObjects.Nearest`/`Inside`/`All`, `PickOptions`, `ObjectFrame`): the panel's
   kinds of what the overlays Markers and Path nodes show.
 - Automation: `state.markers` (the kinds shown, what can be picked, the chains with their
-  markers, the chosen chain, adaptive, the last warning, the active marker tool's settings).
-- Not built yet: weather markers, a line drawn while a link is dragged, the slope under the
-  mouse before a click, marker presets (`markers.placePreset`).
+  markers, the chosen chain, adaptive, the last warning, `paths`: the panel's layers, spacing,
+  replace, status and result; `optionalGroups`; the active marker tool's settings, the Preset
+  tool's preset).
+- **Generated path networks** (R-3, F-7; the panel's `PathNetworkSection`, `MarkersViewModel.Paths`
+  as `PathNetworkPanel`): check boxes per layer, the spacing (empty: the library's default by the
+  map's size), "Replace the layers' own nodes", Generate, and how the result stands (the generated
+  results' line of `pathNetwork`, in the warning colour when out of date). `markers.connectPaths
+  {layers?, spacing?, airSpacing?, replace?}` sets the library's `PathNetworkGenerator.Settings`
+  (what is left out is the panel's), hands it the last walkability so the mesh is not made twice,
+  and runs `MainViewModel.GenerateAsync`: one step of undo, `Generate the path networks`. Without
+  `replace` nothing of the map goes: a part of the ground that holds a node keeps it, two of the
+  map's nodes that reach each other already get no new way, so generating twice adds nothing.
+  The result is out of date when walkability's inputs change (the heightmap, terrain types, water
+  level, deposits, areas), and `generate.stale` makes it again with the same settings, replacing
+  or adding as they say. The Terrain panel's generated results list it too. About 130 ms on
+  Archsimkats Valley, all four layers with walkability.
+- **Weather** (R-1): the tools Weather and Clouds (`PlaceMarkerTool` with
+  `MarkerPlacement.WeatherDefinition`, `WeatherGenerator`) place the game's templates
+  (`markers.place kind=weatherDefinition|weatherGenerator`); the inspector's `MarkerSelection.Weather`
+  (`WeatherSelection`, two `SettingGroup`s drawn by `Controls/SettingList`) shows the first selected
+  definition's style, four cloud types and chances and drift, and a generator's forced type and
+  cloud settings; a value goes to every selected one through `markers.setWeather {mapStyle?, type?,
+  cloudType?, chance?, driftX?, driftZ?, forceType?, spawnChance?, cloudCount?, ...}`.
+- **Markers presets** (F-10, kind `markers`, the panel's Marker presets): Save keeps the selected
+  markers (the library's `MarkerPresets`); applying one chooses the Preset tool (`Tools/MarkerPresetTool`),
+  whose click runs `markers.placePreset {name?, x?, z?}`: the markers around the place, under free
+  names (a spawn is the next army), links and chains with them, selected. Not mirrored.
+- **Optional groups** (R-5, the Adaptive map section): the groups `Optional_<option>_<n>` the map's
+  armies have (`MarkersViewModel.OptionalGroups`, made again when the armies change), and the
+  option and value of a new one with "Add group with the selected units", which runs
+  `markers.addOptionalGroup {option, level?, army?, fromSelection?}` (the civilians' army when left
+  out). The library's guide says what the convention is.
+- Not built yet: a line drawn while a link is dragged, the slope under the mouse before a click,
+  the 3D view's links between path nodes.
 
 ## Props: placing, painting, reclaim
 

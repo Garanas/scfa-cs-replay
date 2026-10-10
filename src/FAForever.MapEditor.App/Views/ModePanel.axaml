@@ -526,6 +526,49 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                   <TextBlock Classes="caption" TextWrapping="Wrap" Text="Select deposits to choose the army they wait for in the inspector." />
+                  <!-- the adaptive script's groups of civilians and wrecks by lobby option (R-5) -->
+                  <TextBlock Classes="label section" Text="Groups by lobby option" />
+                  <ItemsControl ItemsSource="{Binding OptionalGroups}" AutomationProperties.Name="Optional groups of units">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:OptionalGroupItem">
+                        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Line}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <DockPanel>
+                    <TextBox DockPanel.Dock="Right" Classes="mono commit" Width="{StaticResource FactLabelWidth}" Text="{Binding OptionLevel}" AutomationProperties.Name="Option value of the new group"
+                             AutomationProperties.HelpText="The lobby option's value from which on the adaptive script creates the group, 2 or more; empty for a name without one" />
+                    <TextBox Classes="commit" Text="{Binding OptionName}" AutomationProperties.Name="Option of the new group"
+                             AutomationProperties.HelpText="E.g. Civilian_Defenses or Wreckage: the group is called Optional_ with it and the value" />
+                  </DockPanel>
+                  <Button Content="Add group with the selected units" Command="{Binding AddOptionalGroupCommand}"
+                          AutomationProperties.HelpText="Adds Optional_option_value to the civilian army, beside INITIAL, with the selected units in it" />
+                  <TextBlock Classes="caption" TextWrapping="Wrap" Text="FAF's adaptive script creates a group Optional_Option_n from value n of the lobby option optional_option on; the map's script and options file decide, the editor writes neither." />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+            <!-- path networks generated from walkability (R-3) -->
+            <DataTemplate DataType="vm:PathNetworkSection">
+              <Border Classes="group">
+                <StackPanel Classes="stack" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Markers.Paths}" x:DataType="vm:PathNetworkPanel">
+                  <TextBlock Classes="overline" Text="{Binding Source=Path networks, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <UniformGrid Columns="2">
+                    <CheckBox Content="Land" IsChecked="{Binding Land}" AutomationProperties.Name="Generate the land network" />
+                    <CheckBox Content="Water" IsChecked="{Binding Water}" AutomationProperties.Name="Generate the water network" />
+                    <CheckBox Content="Amphibious" IsChecked="{Binding Amphibious}" AutomationProperties.Name="Generate the amphibious network" />
+                    <CheckBox Content="Air" IsChecked="{Binding Air}" AutomationProperties.Name="Generate the air network" />
+                  </UniformGrid>
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Spacing" Width="{StaticResource FactLabelWidth}" />
+                    <TextBox Classes="mono commit" Text="{Binding Spacing}" AutomationProperties.Name="Spacing of the path nodes"
+                             AutomationProperties.HelpText="About how far apart the nodes lie, in ogrids; empty: a sixteenth of the map, 16 to 64; air nodes twice as far" />
+                  </DockPanel>
+                  <CheckBox Content="Replace the layers' own nodes" IsChecked="{Binding Replace}" AutomationProperties.Name="Replace the layers' path nodes"
+                            AutomationProperties.HelpText="On: the chosen layers' nodes are removed first. Off: they stay, and nodes are only added where none are" />
+                  <Button Content="Generate" Command="{Binding GenerateCommand}" AutomationProperties.Name="Generate path networks"
+                          AutomationProperties.HelpText="Nodes on the ground each layer's units can walk, linked where they walk straight to each other; one step of undo" />
+                  <TextBlock Classes="caption" Classes.warning="{Binding IsStale}" TextWrapping="Wrap" Text="{Binding Status}" AutomationProperties.Name="How the path networks stand" />
+                  <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Result}" IsVisible="{Binding Result, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" AutomationProperties.Name="What was generated" />
                 </StackPanel>
               </Border>
             </DataTemplate>

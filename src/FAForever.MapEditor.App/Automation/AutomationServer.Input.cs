@@ -388,9 +388,14 @@ public sealed partial class AutomationServer
     /// </summary>
     public static Point? Project(EditorCamera camera, Size size, Vector3 place)
     {
-        float aspect = (float)(size.Width / Math.Max(1, size.Height));
+        if (size.Width <= 0 || size.Height <= 0)
+        {
+            // a hidden view shows nothing (its projection would be infinite, which JSON cannot hold)
+            return null;
+        }
+        float aspect = (float)(size.Width / size.Height);
         Vector4 clip = Vector4.Transform(new Vector4(place, 1), camera.ViewProjection(aspect));
-        if (clip.W <= 1e-6f)
+        if (clip.W <= 1e-6f || !float.IsFinite(clip.X / clip.W) || !float.IsFinite(clip.Y / clip.W))
         {
             return null;
         }

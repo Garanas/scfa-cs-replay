@@ -14,6 +14,7 @@ using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Generation;
 using Vector3 = System.Numerics.Vector3;
 
 namespace FAForever.MapEditor.App.Tests
@@ -898,6 +899,42 @@ namespace FAForever.MapEditor.App.Tests
                 StringAssert.Contains(json, $"\"label\":\"{label}\"");
             }
             window.Close();
+        });
+
+        [TestMethod]
+        public Task AClickWithTheCloudsToolPlacesAWeatherGeneratorAndThePathNetworksButtonGenerates() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.Top);
+            model.SelectTool("markers.weatherGenerator");
+            Dispatcher.UIThread.RunJobs();
+            Point at = window.MapView.TranslatePoint(window.MapView.MapToControl(120, 60), window)!.Value;
+
+            window.MouseMove(at);
+            window.MouseDown(at, MouseButton.Left);
+            window.MouseUp(at, MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+
+            WeatherGenerator placed = model.ShownDocument!.Markers.WeatherGenerators[^1];
+            Assert.IsTrue(model.Selection.Contains(ObjectRef.Marker(placed.Id)), "a click places a weather generator and selects it");
+            TextBox height = window.GetVisualDescendants().OfType<TextBox>().Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Cloud height");
+            Assert.IsTrue(height.IsEffectivelyVisible, "the inspector shows its fields");
+            Assert.AreEqual("180", height.Text);
+
+            Button generate = window.GetVisualDescendants().OfType<Button>().Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == "Generate path networks");
+            Assert.IsTrue(generate.IsEffectivelyVisible, "the Markers panel offers the path networks");
+            int nodes = model.ShownDocument.Markers.PathNodes.Length;
+            generate.Command!.Execute(generate.CommandParameter);
+            for (int i = 0; i < 250 && model.ShownDocument!.Markers.PathNodes.Length == nodes; i++)
+            {
+                await Task.Delay(20);
+                Dispatcher.UIThread.RunJobs();
+            }
+            Assert.IsTrue(model.ShownDocument!.Markers.PathNodes.Length > nodes, "the button generates them");
+            StringAssert.Contains(json(window), "\"label\":\"How the path networks stand\"");
+            window.Close();
+
+            static string json(MainWindow window) => UiTree.Describe(window, hidden: true).ToJsonString();
         });
 
         [TestMethod]
