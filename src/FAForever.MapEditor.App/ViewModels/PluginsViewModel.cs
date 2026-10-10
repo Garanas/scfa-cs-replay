@@ -134,6 +134,10 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
 
     public Task<CommandRun> RunCommandAsync(string id, JsonObject arguments) => _model.Commands.RunAsync(id, arguments, interactive: false);
 
+    public IReadOnlyList<FAForever.FileFormats.Map.MapSymmetryTransform> Mirrors(MapDocument document) => _model.EditTransforms(document);
+
+    public MapDocument MirrorPlaced(MapDocument document, IReadOnlyList<ObjectRef> placed) => _model.MirrorPlaced(document, placed, out _);
+
     public void Show() => IsOpen = true;
 
     [RelayCommand]

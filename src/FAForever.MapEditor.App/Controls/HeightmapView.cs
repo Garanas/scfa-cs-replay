@@ -855,7 +855,13 @@ public sealed class HeightmapView : Control
                 drawn++;
             }
         }
-        context.DrawGeometry(null, overlay.DecalOutline, outlines);
+        // what sticks out past the map's edge is cut off at it
+        Point corner = MapToControl(0, 0);
+        Point opposite = MapToControl(document.Width, document.Height);
+        using (context.PushClip(new Rect(corner, opposite)))
+        {
+            context.DrawGeometry(null, overlay.DecalOutline, outlines);
+        }
         DecalOutlinesDrawn = drawn;
     }
 
@@ -863,7 +869,7 @@ public sealed class HeightmapView : Control
     /// The fewest pixels a decal's longer side takes for the top view to draw its outline in the
     /// Decals mode, where one works with them.
     /// </summary>
-    public const double MinDecalSize = 3;
+    public const double MinDecalSize = 8;
 
     /// <summary>
     /// The fewest pixels a decal's longer side takes for its outline in the other modes: on a map

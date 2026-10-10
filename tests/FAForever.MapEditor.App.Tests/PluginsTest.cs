@@ -413,6 +413,8 @@ namespace FAForever.MapEditor.App.Tests
             string folder = NewFolder();
             ExamplePlugins.Ensure(folder);
             MainViewModel model = await Open(folder, TestMaps.SlopeProject(30));
+            // the ramp is on one side only: no images in the other half (the symmetry is mirrored in PluginToolsTest)
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "off" });
             MapDocument before = model.Map!.Document;
 
             JsonObject result = (JsonObject)(await Run(model, "plugin.scatter-rocks.scatter", new JsonObject { ["minSlope"] = 25, ["count"] = 12 })).Result!;

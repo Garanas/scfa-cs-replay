@@ -65,6 +65,10 @@ public static class BrushKeys
                 sculpt.Radius = RadiusStep(sculpt.Radius, steps);
                 status = Say("Radius", sculpt.Radius, "0", " ogrids");
                 return true;
+            // a plugin's tool whose radius is one of its fields (the field's own limits hold)
+            case PluginTool plugin when plugin.HasRadiusField && !strength:
+                status = Say("Radius", plugin.SetRadius(RadiusStep(plugin.CursorRadius, steps)), "0.#", " ogrids");
+                return true;
             case GridPaintTool grid when strength:
                 grid.Strength = StrengthStep(grid.Strength, steps, 0.01, 1);
                 status = Say("Strength", grid.Strength, "0.00");

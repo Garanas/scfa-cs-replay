@@ -136,7 +136,7 @@ public sealed partial class WaveTool(MainViewModel model) : ObservableObject, IM
         {
             return;
         }
-        _edit = model.StartStroke("Place a wave generator");
+        _edit = model.StartStroke(model.EditTransforms(model.ShownDocument).Count > 1 ? "Place wave generators" : "Place a wave generator");
         _before = _edit.Document;
         _pressed = new Vector2(x, z);
         Place(WaveGeneratorEdits.DirectionOfHeading(Heading));
