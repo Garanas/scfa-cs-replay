@@ -110,6 +110,14 @@ namespace FAForever.MapEditor.Project.Editing
         public event EventHandler? StateChanged;
 
         /// <summary>
+        /// The height layer (user story T-5) that changes of the heightmap itself go into while the
+        /// map has layers: the one the sculpt tool writes into. Every step keeps the heightmap the
+        /// sum of the layers (<see cref="HeightLayers.Follow"/>); without a layer here that can be
+        /// sculpted, a change of the heightmap itself is undone by that.
+        /// </summary>
+        public string? SculptLayer { get; set; }
+
+        /// <summary>
         /// Makes one edit, which can be undone as one step.
         /// </summary>
         /// <param name="mergeKey">Merges the edit into the previous step when that was an edit
@@ -222,6 +230,7 @@ namespace FAForever.MapEditor.Project.Editing
         private bool Record(string description, MapDocument result, string? mergeKey)
         {
             MapDocument previous = Document;
+            result = HeightLayers.Follow(previous, result, SculptLayer);
             if (result.Equals(previous))
             {
                 return false;

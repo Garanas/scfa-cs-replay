@@ -128,6 +128,19 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         }
 
         /// <summary>
+        /// The values of one tile (column, row), row by row with <see cref="TileSize"/> values a row;
+        /// the part of an edge tile outside the buffer holds what it was made with.
+        /// </summary>
+        public ReadOnlySpan<T> Tile(int tileX, int tileY) => _tiles[CheckTile(tileX, tileY, TilesX, TilesY)];
+
+        /// <summary>
+        /// Whether a tile (column, row) is the same in both buffers: shared, so certainly equal.
+        /// </summary>
+        public bool SharesTile(TiledBuffer<T> other, int tileX, int tileY) =>
+            other.Width == Width && other.Height == Height
+            && ReferenceEquals(_tiles[CheckTile(tileX, tileY, TilesX, TilesY)], other._tiles[tileY * TilesX + tileX]);
+
+        /// <summary>
         /// A builder that starts from this buffer's values.
         /// </summary>
         public Builder ToBuilder() => new Builder(this);
@@ -192,6 +205,31 @@ namespace FAForever.MapEditor.Project.Files.InMemory
                 return _last;
             }
 
+            /// <summary>
+            /// The values of one tile (column, row) as they are now, as <see cref="TiledBuffer{T}.Tile"/>.
+            /// </summary>
+            public ReadOnlySpan<T> Tile(int tileX, int tileY) =>
+                _tiles[CheckTile(tileX, tileY, (Width + TileSize - 1) / TileSize, (Height + TileSize - 1) / TileSize)];
+
+            /// <summary>
+            /// Replaces the values of one tile (column, row), <see cref="TileSize"/> squared, row by row.
+            /// </summary>
+            public void SetTile(int tileX, int tileY, ReadOnlySpan<T> values)
+            {
+                int tile = CheckTile(tileX, tileY, (Width + TileSize - 1) / TileSize, (Height + TileSize - 1) / TileSize);
+                if (values.Length != TileSize * TileSize)
+                {
+                    throw new ArgumentException($"A tile holds {TileSize * TileSize} values, not {values.Length}", nameof(values));
+                }
+                if (!_owned[tile])
+                {
+                    _tiles[tile] = new T[TileSize * TileSize];
+                    _owned[tile] = true;
+                }
+                values.CopyTo(_tiles[tile]);
+                _changed = true;
+            }
+
             private int TileIndex(int x, int y) => y / TileSize * ((Width + TileSize - 1) / TileSize) + x / TileSize;
 
             private void CheckBounds(int x, int y)
@@ -213,6 +251,15 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             {
                 throw new ArgumentOutOfRangeException(null, $"({x}, {y}) lies outside {Width} by {Height}");
             }
+        }
+
+        private static int CheckTile(int tileX, int tileY, int tilesX, int tilesY)
+        {
+            if ((uint)tileX >= (uint)tilesX || (uint)tileY >= (uint)tilesY)
+            {
+                throw new ArgumentOutOfRangeException(null, $"Tile ({tileX}, {tileY}) lies outside {tilesX} by {tilesY} tiles");
+            }
+            return tileY * tilesX + tileX;
         }
 
         private static int TileCount(int width, int height) =>

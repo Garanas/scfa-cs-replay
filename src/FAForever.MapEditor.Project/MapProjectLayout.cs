@@ -18,6 +18,9 @@ namespace FAForever.MapEditor.Project
     /// water/water-map.png          colour with alpha
     /// water/foam.png, flatness.png, depth-bias.png   8-bit grey, half the map's size
     /// masks/NAME.png               8-bit grey, the map's size or half: masks for tools (K-1), not exported
+    /// layers/layers.json           the height layers (T-5), lowest first; absent for a map without them
+    /// layers/NAME.png              16-bit grey, (width + 1) by (height + 1): a height layer's values
+    /// layers/NAME.coverage.png     8-bit grey, the same size: how much of the layer there is, when not all
     /// script.lua                   the map's script, if it has one
     /// files/                       the other files of the map folder, as they are
     /// procedural/sources/          the map maker's World Machine and Gaea files (.tmd, .terrain)
@@ -56,6 +59,28 @@ namespace FAForever.MapEditor.Project
         /// after it. The editor and other tools read them; the export leaves them out.
         /// </summary>
         public const string Masks = "masks";
+
+        /// <summary>
+        /// The folder of the height layers (user story T-5): <see cref="HeightLayersIndex"/> and a
+        /// PNG per layer. With layers, <see cref="Heightmap"/> is what they add up to, written by
+        /// the editor; other tools write into a layer's file or an imported layer's source.
+        /// </summary>
+        public const string HeightLayers = "layers";
+
+        /// <summary>
+        /// The height layers' settings, lowest first (<c>HeightLayersDto</c>).
+        /// </summary>
+        public const string HeightLayersIndex = "layers/layers.json";
+
+        /// <summary>
+        /// The values of the height layer named <paramref name="name"/>.
+        /// </summary>
+        public static string HeightLayer(string name) => $"{HeightLayers}/{name}.png";
+
+        /// <summary>
+        /// The coverage of the height layer named <paramref name="name"/>, when it has one.
+        /// </summary>
+        public static string HeightLayerCoverage(string name) => $"{HeightLayers}/{name}.coverage.png";
 
         /// <summary>
         /// The folder with the other files of the map folder, copied as they are.

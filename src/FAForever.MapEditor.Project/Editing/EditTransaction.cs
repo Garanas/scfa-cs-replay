@@ -16,6 +16,7 @@ namespace FAForever.MapEditor.Project.Editing
     {
         private readonly EditSession _session;
         private MapDocument _document;
+        private MapDocument _followed;
         private TiledBuffer<ushort>.Builder? _heightmap;
         private readonly Dictionary<PaintTarget, TiledBuffer<byte>.Builder> _grids = [];
         private bool _ended;
@@ -24,6 +25,7 @@ namespace FAForever.MapEditor.Project.Editing
         {
             _session = session;
             _document = document;
+            _followed = document;
             Description = description;
         }
 
@@ -43,7 +45,10 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
-        /// The heights, to change sample by sample.
+        /// The heights, to change sample by sample. While the map has height layers (user story T-5),
+        /// what is written goes into the session's sculpting layer (<see cref="EditSession.SculptLayer"/>)
+        /// at the next read of <see cref="Document"/>, and the builder then starts again from the
+        /// heights the layers add up to.
         /// </summary>
         public TiledBuffer<ushort>.Builder Heightmap
         {
@@ -138,6 +143,18 @@ namespace FAForever.MapEditor.Project.Editing
                     _document = target.Write(_document, grid);
                 }
             }
+
+            // the heightmap stays what the height layers add up to, a brush's work in the sculpting layer
+            if (!ReferenceEquals(_followed, _document) && !_document.HeightLayers.IsEmpty)
+            {
+                MapDocument followed = HeightLayers.Follow(_followed, _document, _session.SculptLayer);
+                if (!ReferenceEquals(followed.Terrain.Heightmap.Samples, _document.Terrain.Heightmap.Samples))
+                {
+                    _heightmap = null;
+                }
+                _document = followed;
+            }
+            _followed = _document;
         }
 
         private void EnsureOpen()
