@@ -11,7 +11,7 @@ namespace FAForever.MapEditor.Project
     /// Keeps a <see cref="MapDocument"/> on disk as a project (<see cref="MapProjectLayout"/>): its
     /// records as JSON, its images as PNG, its script and other files as they are.
     /// </summary>
-    public static class MapProjectStore
+    public static partial class MapProjectStore
     {
         /// <summary>
         /// Writes the document into <paramref name="folder"/>, which must be absent, empty or a
@@ -92,6 +92,7 @@ namespace FAForever.MapEditor.Project
             }
 
             SaveMasks(document, folder, previous);
+            SaveRules(document, folder);
 
             if (document.Script is ImmutableArray<byte> script)
             {
@@ -155,7 +156,7 @@ namespace FAForever.MapEditor.Project
 
             try
             {
-                return MapProjectMapping.ToDocument(map, props, decals, markers, armies, images, script, files);
+                return WithRules(MapProjectMapping.ToDocument(map, props, decals, markers, armies, images, script, files), folder);
             }
             catch (ArgumentException exception)
             {
@@ -229,6 +230,9 @@ namespace FAForever.MapEditor.Project
                     case MapProjectLayout.WaterDepthBias:
                         document = ReloadGray8(document, Of(changed), document.Water.DepthBiasMask, width / 2, height / 2, (d, mask) => d with { Water = d.Water with { DepthBiasMask = mask } });
                         break;
+                    case MapProjectLayout.PropRules:
+                        document = ReloadPropRules(document, Of(changed));
+                        break;
                     case MapProjectLayout.Script:
                     {
                         ImmutableArray<byte>? script = File.Exists(Of(changed)) ? ImmutableCollectionsMarshal.AsImmutableArray(File.ReadAllBytes(Of(changed))) : null;
@@ -252,6 +256,10 @@ namespace FAForever.MapEditor.Project
                             {
                                 document = document with { Terrain = document.Terrain with { StratumMasks = masks with { Layers = masks.Layers.SetItem(layer - 1, mask) } } };
                             }
+                        }
+                        else if (MapProjectLayout.IsMaskRules(changed, out string? ruled))
+                        {
+                            document = ReloadMaskRules(document, Of(changed), ruled);
                         }
                         else if (changed.StartsWith(MapProjectLayout.Masks + "/", StringComparison.Ordinal)
                             && changed.EndsWith(".png", StringComparison.OrdinalIgnoreCase)

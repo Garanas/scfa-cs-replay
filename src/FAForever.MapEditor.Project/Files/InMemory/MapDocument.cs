@@ -99,6 +99,19 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             ImmutableSortedDictionary.Create<string, TiledBuffer<byte>>(StringComparer.Ordinal);
 
         /// <summary>
+        /// The rules of the masks for tools that are made from rules (user story K-2), by the mask's
+        /// name: such a mask is generated from them when asked. Kept as <c>masks/&lt;name&gt;.rules.json</c>.
+        /// </summary>
+        public ImmutableSortedDictionary<string, MaskRuleSet> MaskRules { get; init; } =
+            ImmutableSortedDictionary.Create<string, MaskRuleSet>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// The rules that place props from the layers when asked (user story P-4), in the order they
+        /// place; their props carry the rule's name (<see cref="Prop.Rule"/>). Kept as <c>prop-rules.json</c>.
+        /// </summary>
+        public ImmutableArray<PropRule> PropRules { get; init; } = [];
+
+        /// <summary>
         /// An id for a new prop: one more than the highest in use.
         /// </summary>
         /// <summary>

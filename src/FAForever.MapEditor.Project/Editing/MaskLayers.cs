@@ -80,7 +80,8 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
-        /// The document with a mask under another name.
+        /// The document with a mask under another name, its rules (user story K-2) with it and the
+        /// rules that read it reading the new name.
         /// </summary>
         /// <exception cref="ArgumentException">There is no such mask, or the new name cannot be a mask's.</exception>
         public static MapDocument Rename(MapDocument document, string name, string newName)
@@ -93,16 +94,16 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 throw new ArgumentException(problem, nameof(newName));
             }
-            return document with { Masks = document.Masks.Remove(name).Add(newName, mask) };
+            return RuleEdits.MaskRenamed(document with { Masks = document.Masks.Remove(name).Add(newName, mask) }, name, newName);
         }
 
         /// <summary>
-        /// The document without a mask.
+        /// The document without a mask and its rules.
         /// </summary>
         /// <exception cref="ArgumentException">There is no such mask.</exception>
         public static MapDocument Remove(MapDocument document, string name) =>
             document.Masks.ContainsKey(name)
-                ? document with { Masks = document.Masks.Remove(name) }
+                ? RuleEdits.MaskRemoved(document with { Masks = document.Masks.Remove(name) }, name)
                 : throw new ArgumentException($"The map has no mask '{name}'", nameof(name));
 
         /// <summary>

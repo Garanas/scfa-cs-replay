@@ -19,5 +19,10 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         public required Vector3Dto RotationZ { get; init; }
 
         public required Vector3Dto Scale { get; init; }
+
+        /// <summary>
+        /// The rule that placed it (user story P-4); absent for a prop placed by hand.
+        /// </summary>
+        public string? Rule { get; init; }
     }
 }

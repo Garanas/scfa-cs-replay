@@ -153,7 +153,7 @@ namespace FAForever.MapEditor.Project.Editing
                 switch (item)
                 {
                     case Prop prop:
-                        document = document.AddProp(prop with { Position = Move(prop.Position) });
+                        document = document.AddProp(prop with { Position = Move(prop.Position), Rule = null });
                         refs.Add(ObjectRef.Prop(document.Props[^1].Id));
                         break;
                     case Decal decal:
