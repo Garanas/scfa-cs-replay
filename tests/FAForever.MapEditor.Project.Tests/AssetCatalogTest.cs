@@ -41,6 +41,8 @@ namespace FAForever.MapEditor.Project.Tests
             Write("units/uec1101/uec1101_unit.json", """{ "id": "UEC1101", "name": "UEF Residential Building", "faction": "Uef", "techLevel": 1, "categories": ["UEF", "STRUCTURE", "CIVILIAN"] }""");
             Write("units/uel0101/uel0101_unit.json", """{ "id": "UEL0101", "name": "Snoop", "faction": "Uef", "techLevel": 1, "categories": ["UEF", "LAND", "MOBILE"] }""");
             Write("units/uel0101/uel0101_albedo.png");
+            Write("units/uel0001/uel0001_unit.json", """{ "id": "UEL0001", "name": "Armored Command Unit", "faction": "Uef", "categories": ["UEF", "LAND", "COMMAND"] }""");
+            Write("units/ues0401/ues0401_unit.json", """{ "id": "UES0401", "name": "Atlantis", "faction": "Uef", "techLevel": 4, "categories": ["UEF", "NAVAL", "EXPERIMENTAL"] }""");
             return assets;
         }
 
@@ -85,6 +87,11 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsTrue(house.IsCivilian);
             Assert.AreEqual("land", catalog.Find("uel0101")!.Category);
             Assert.IsFalse(catalog.Find("uel0101")!.IsCivilian);
+            // the tech level, for the unit picker's filters (user story U-1)
+            Assert.AreEqual(1, house.TechLevel);
+            Assert.IsNull(catalog.Find("uel0001")!.TechLevel, "a commander has no tech level");
+            Assert.AreEqual((4, "naval"), (catalog.Find("ues0401")!.TechLevel, catalog.Find("ues0401")!.Category));
+            Assert.IsNull(pine.TechLevel, "only units have one");
         }
 
         [TestMethod]
