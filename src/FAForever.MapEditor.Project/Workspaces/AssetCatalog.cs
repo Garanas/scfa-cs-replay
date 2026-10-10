@@ -165,6 +165,28 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// The energy a prop gives when it is reclaimed, from its blueprint; 0 for the other kinds.
         /// </summary>
         public double ReclaimEnergy { get; init; }
+
+        /// <summary>
+        /// The mass a unit costs to build, from its blueprint (the Aeon Asylum, <c>uab0301</c>, 5220);
+        /// null for the other kinds and for a unit whose blueprint names none.
+        /// </summary>
+        public double? MassCost { get; init; }
+
+        /// <summary>
+        /// The energy a unit costs to build, from its blueprint (<c>uab0301</c>: 47400); null for the
+        /// other kinds and for a unit whose blueprint names none.
+        /// </summary>
+        public double? EnergyCost { get; init; }
+
+        /// <summary>
+        /// The mass it stands for: a unit's cost, a prop's reclaim; 0 for the other kinds.
+        /// </summary>
+        public double Mass => Kind == AssetKind.Unit ? MassCost ?? 0 : ReclaimMass;
+
+        /// <summary>
+        /// The energy it stands for: a unit's cost, a prop's reclaim; 0 for the other kinds.
+        /// </summary>
+        public double Energy => Kind == AssetKind.Unit ? EnergyCost ?? 0 : ReclaimEnergy;
     }
 
     /// <summary>
@@ -511,6 +533,8 @@ namespace FAForever.MapEditor.Project.Workspaces
                     IconBackground = IconBackgroundOf(assets, unit.BuildIcon),
                     File = file,
                     Facts = [.. facts],
+                    MassCost = unit.MassCost,
+                    EnergyCost = unit.EnergyCost,
                 };
             }
         }

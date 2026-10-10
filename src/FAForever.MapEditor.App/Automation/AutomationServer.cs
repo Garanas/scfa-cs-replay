@@ -670,6 +670,9 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["adaptiveFiles"] = new JsonObject { ["writes"] = model.Markers.WritesAdaptiveFiles, ["text"] = model.Markers.AdaptiveFilesText },
             ["floatingWindows"] = FloatingWindowsState(),
             ["waves"] = WavesState(),
+            ["panelParts"] = model.DescribePanelParts(),
+            ["shortcuts"] = model.Shortcuts.Describe(),
+            ["workspaceSettings"] = model.WorkspaceSettings.Describe(),
         };
     }
 

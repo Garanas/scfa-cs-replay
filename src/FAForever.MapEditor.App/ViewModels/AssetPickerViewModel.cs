@@ -69,6 +69,30 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
     public partial string? Tech { get; set; }
 
     /// <summary>
+    /// How the tiles are ordered: as listed, or the most mass or energy first (units and props);
+    /// kept from one opening to the next.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SortIndex))]
+    public partial AssetSort Sort { get; set; }
+
+    /// <summary>
+    /// <see cref="Sort"/> as the picker's combo box chooses it.
+    /// </summary>
+    public int SortIndex
+    {
+        get => (int)Sort;
+        set => Sort = Enum.IsDefined((AssetSort)value) ? (AssetSort)value : AssetSort.Listed;
+    }
+
+    public IReadOnlyList<string> SortTitles => AssetSearch.SortTitles;
+
+    /// <summary>
+    /// Whether the kind has mass and energy to sort by: units and props.
+    /// </summary>
+    public bool CanSort => Kind is AssetKind.Unit or AssetKind.Prop;
+
+    /// <summary>
     /// The shelf, whose stars and recents the picker offers and notes (user story F-9); null in
     /// tests of the picker alone.
     /// </summary>
@@ -321,6 +345,8 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
 
     partial void OnTechChanged(string? value) => Rebuild();
 
+    partial void OnSortChanged(AssetSort value) => Rebuild();
+
     partial void OnColumnsChanged(int value) => MakeRows();
 
     private void Close(string? key)
@@ -383,7 +409,7 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
             .Select(tech => new AssetChoice(tech.Key, AssetSearch.TechTitle(tech.First().TechLevel), tech.Count(), tech.Key == Tech))];
 
         AssetEntry? selected = Selected?.Entry;
-        Tiles = [.. ofKind.Where(entry => InGroup(entry) && InCategory(entry) && InTech(entry))
+        Tiles = [.. AssetSearch.Sorted(ofKind.Where(entry => InGroup(entry) && InCategory(entry) && InTech(entry)), CanSort ? Sort : AssetSort.Listed)
             .Select(entry => new AssetTile(entry, [entry]) { IsStarred = favourites?.IsStarred(entry.Key) == true })];
         MakeRows();
 
@@ -391,6 +417,7 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
         OnPropertyChanged(nameof(Categories));
         OnPropertyChanged(nameof(Techs));
         OnPropertyChanged(nameof(Shows));
+        OnPropertyChanged(nameof(CanSort));
         OnPropertyChanged(nameof(Tiles));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(EmptyText));

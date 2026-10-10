@@ -213,7 +213,7 @@ namespace FAForever.MapEditor.App.Tests
 
             CollectionAssert.AreEqual(new[] { Path.GetFullPath(machine.WorkspaceFolder) }, opened);
             Assert.AreEqual(Path.Combine(Path.GetFullPath(machine.WorkspaceFolder), WorkspaceLayout.Presets), model.Presets.Library!.Folder);
-            Assert.AreEqual("brush", model.Presets.Kind);
+            Assert.AreEqual(PresetKinds.Brushes, model.Presets.Kind);
             Assert.AreEqual(0, model.Presets.Shown.Count);
 
             // another tool, or another editor, writes a preset into the workspace

@@ -25,24 +25,26 @@ public sealed record AreasSection() : PanelSection("Areas");
 public sealed record ScriptSection() : PanelSection("Script and files");
 
 /// <summary>
-/// The Water mode's panel: on or off, the elevations and colours (user story W-1), <see cref="MainViewModel.WaterSettings"/>.
+/// The Water mode's panel (user stories W-1, W-2): on or off, then the list of what there is
+/// (<see cref="WaterSettingsViewModel.Parts"/>: the settings groups, the maps, the wave generators).
 /// </summary>
 public sealed record WaterSection() : PanelSection("Water");
 
 /// <summary>
-/// The Water mode's inspector: the sun on the water, reflection, textures and wave generators (user story W-1).
+/// The Water mode's inspector: the entry chosen in the panel's list.
 /// </summary>
-public sealed record WaterDetailsSection() : PanelSection("Surface and waves");
+public sealed record WaterDetailsSection() : PanelSection("Water");
 
 /// <summary>
-/// The Lighting mode's panel: the sun, colours, bloom and fog (user story L-1), <see cref="MainViewModel.LightingSettings"/>.
+/// The Lighting mode's panel (user story L-1): the list of what there is
+/// (<see cref="LightingSettingsViewModel.Parts"/>: sun, colours, fog, bloom, sky, shadow decal).
 /// </summary>
 public sealed record LightingSection() : PanelSection("Lighting");
 
 /// <summary>
-/// The Lighting mode's inspector: the sky's cube maps and background (user story L-1), <see cref="LightingSettingsViewModel.Sky"/>.
+/// The Lighting mode's inspector: the entry chosen in the panel's list.
 /// </summary>
-public sealed record SkySection() : PanelSection("Sky");
+public sealed record LightingDetailsSection() : PanelSection("Lighting");
 
 /// <summary>
 /// The Paint mode's layers with their textures: add, remove, reorder (user story S-2), <see cref="MainViewModel.LayerTextures"/>.

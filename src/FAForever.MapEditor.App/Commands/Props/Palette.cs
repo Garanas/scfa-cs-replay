@@ -47,3 +47,21 @@ public sealed class RemoveFromPropPaletteHandler(MainViewModel model) : IRequest
     public Task<bool> Handle(RemoveFromPropPalette request, CancellationToken cancellationToken) =>
         Task.FromResult(model.Props.RemoveFromPalette(request.Key));
 }
+
+/// <summary>
+/// Empties the painting palette (user story P-2): the Props panel's Clear beside the palette, to
+/// start a new one; a palette saved as a preset brings it back.
+/// </summary>
+/// <returns>How many props it held.</returns>
+[EditorCommand("props.clearPalette", "Clear the palette", Story = "P-2")]
+public sealed record ClearPropPalette : IRequest<int>;
+
+public sealed class ClearPropPaletteHandler(MainViewModel model) : IRequestHandler<ClearPropPalette, int>
+{
+    public Task<int> Handle(ClearPropPalette request, CancellationToken cancellationToken)
+    {
+        int count = model.Props.ClearPalette();
+        model.Status = count == 0 ? "The palette is empty already" : $"Cleared the palette of {count} {(count == 1 ? "prop" : "props")}";
+        return Task.FromResult(count);
+    }
+}

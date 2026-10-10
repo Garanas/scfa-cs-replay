@@ -193,11 +193,11 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(model.ToolKey("OemCloseBrackets", ToolModifiers.None));
             Assert.IsTrue(tool.Radius > 16);
 
-            // the settings as a brush preset, the picture by its key
+            // the settings as a stamp preset, the picture by its key
             CommandRun saved = await Run(model, "terrain.saveBrush", new JsonObject { ["name"] = "Cone" });
             tool.Height = 1;
             tool.Shape.Choose(null);
-            await Run(model, "presets.apply", new JsonObject { ["kind"] = BrushPreset.Kind, ["name"] = "Cone" });
+            await Run(model, "presets.apply", new JsonObject { ["kind"] = BrushPreset.StampKind, ["name"] = "Cone" });
             Assert.AreEqual(("terrain.stamp", 30.0, "brushes/hills/cone.png"), (model.ActiveTool!.Definition.Id, tool.Height, tool.Shape.Chosen.Key));
         }
 

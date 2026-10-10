@@ -43,6 +43,8 @@
         <Border DockPanel.Dock="Left" Classes="facets">
           <ScrollViewer>
             <StackPanel Classes="stack">
+              <ComboBox ItemsSource="{Binding SortTitles}" SelectedIndex="{Binding SortIndex}" IsVisible="{Binding CanSort}" HorizontalAlignment="Stretch"
+                        AutomationProperties.Name="Sort the assets to choose from" AutomationProperties.HelpText="As listed, or the most mass or energy first: a unit's build cost, a prop's reclaim" />
               <!-- the assets starred and chosen last (F-9) -->
               <ItemsControl ItemsSource="{Binding Shows}" AutomationProperties.Name="Starred or recent">
                 <ItemsControl.ItemsPanel>
@@ -153,6 +155,7 @@
                           </Border>
                           <TextBlock Classes="tiletitle" Text="{Binding Title}" />
                           <TextBlock Classes="caption" Text="{Binding Detail}" TextWrapping="NoWrap" />
+                          <TextBlock Classes="caption tileeconomy" Text="{Binding Economy}" IsVisible="{Binding ShowsEconomy}" ToolTip.Tip="{Binding EconomyHelp}" />
                         </StackPanel>
                       </Button>
                     </DataTemplate>

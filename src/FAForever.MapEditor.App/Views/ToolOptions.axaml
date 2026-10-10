@@ -139,8 +139,8 @@
             <!-- painting the water's foam, flatness or depth bias (W-2) -->
             <DataTemplate DataType="tools:WaterPaintTool">
               <controls:ToolRow Classes="toolrow">
-                <ComboBox ItemsSource="{Binding Masks}" SelectedItem="{Binding Painted}" ToolTip.Tip="{Binding Painted.Help}"
-                          AutomationProperties.Name="Water mask to paint" AutomationProperties.HelpText="Foam, flatness or depth bias; the top view shows the chosen one" />
+                <TextBlock Classes="label" Text="{Binding Painted.Title, StringFormat='Map: {0}'}" ToolTip.Tip="{Binding Painted.Help}"
+                           AutomationProperties.Name="Water map painted" AutomationProperties.HelpText="Foam, flatness or depth bias, chosen in the Water panel; the top view shows it" />
                 <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
                           ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
                           AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />

@@ -30,9 +30,12 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
     {
         _run = run;
         const string set = "water.set";
-        Basic = new SettingGroup("Water",
+        On = new SettingGroup("Water",
         [
-            new BoolSetting("Water", set, "hasWater", d => d.Water.HasWater, run) { Help = "Whether the map has water; the elevations are kept either way" },
+            new BoolSetting("Water on", set, "hasWater", d => d.Water.HasWater, run) { Help = "Whether the map has water; the elevations are kept either way" },
+        ]);
+        Basic = new SettingGroup("Elevations and colour",
+        [
             new NumberSetting("Surface", set, "elevation", d => d.Water.Elevation, run) { Minimum = 0, Maximum = 256, HasSlider = true, Help = "The height of the water's surface, in game units" },
             new NumberSetting("Deep", set, "elevationDeep", d => d.Water.ElevationDeep, run) { Minimum = 0, Maximum = 256, HasSlider = true, Help = "Below this height the water is deep: naval units only" },
             new NumberSetting("Abyss", set, "elevationAbyss", d => d.Water.ElevationAbyss, run) { Minimum = 0, Maximum = 256, HasSlider = true, Help = "Below this height the water is at its darkest" },
@@ -40,7 +43,7 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
             new NumberSetting("Colour near", set, "colorLerpMin", d => d.Water.ColorLerp.X, run) { Help = "How much of the surface colour shows in shallow water" },
             new NumberSetting("Colour far", set, "colorLerpMax", d => d.Water.ColorLerp.Y, run) { Help = "How much of the surface colour shows in deep water" },
         ]);
-        Surface = new SettingGroup("Sun and reflection",
+        Surface = new SettingGroup("Surface and reflection",
         [
             new ColorSetting("Sun colour", set, "sunColor", d => d.Water.SunColor, run),
             new ColorSetting("Sun direction", set, "sunDirection", d => d.Water.SunDirection, run) { ShowsSwatch = false, Help = "x, y, z of the sun the water reflects" },
@@ -65,7 +68,33 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
         ]);
         WaveTextures = [.. Enumerable.Range(0, 4).Select(index => WaveTexture(index, run))];
         Generator = GeneratorFields(run, () => SelectedGenerator?.Index ?? 0);
+        Parts = new PanelParts(
+        [
+            new PanelPart(ElevationsPart, "Elevations and colour", "Settings", new SettingsPart([Basic]), "The surface, deep and abyss elevations and the water's colour"),
+            new PanelPart(SurfacePart, "Surface and reflection", "Settings", new SettingsPart([Surface]), "The sun on the water, what it reflects and refracts"),
+            new PanelPart(TexturesPart, "Textures and waves", "Settings", new SettingsPart([Textures, .. WaveTextures]), "The cube map, the ramp and the four wave textures of the surface"),
+            .. WaterMaps.All.Select(map => new PanelPart(map.PartId, map.Title, "Maps", new WaterMapPart(map), map.Help)),
+            new PanelPart(WavesPart, "Wave generators", "Wave generators", new WaveGeneratorsPart(this), "Waves rolling onto the shores: placed with the Waves tool, edited here"),
+        ]);
     }
+
+    // the ids of the Water panel's entries besides the maps' (view.inspectPart)
+    public const string ElevationsPart = "water.elevations";
+    public const string SurfacePart = "water.surface";
+    public const string TexturesPart = "water.textures";
+    public const string WavesPart = "water.waves";
+
+    /// <summary>
+    /// What the Water panel lists under its check box: the settings groups, the three maps and the
+    /// wave generators; the inspector edits the chosen one. Choosing a map makes the water brush
+    /// paint it (<c>MainViewModel.PanelParts.cs</c>).
+    /// </summary>
+    public PanelParts Parts { get; }
+
+    /// <summary>
+    /// Whether the map has water: the check box at the top of the Water panel.
+    /// </summary>
+    public SettingGroup On { get; }
 
     /// <summary>
     /// The Water panel's fields.
@@ -122,6 +151,7 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
         if (document is null)
         {
             _shown = null;
+            On.Refresh(null);
             Basic.Refresh(null);
             Surface.Refresh(null);
             Textures.Refresh(null);
@@ -131,6 +161,7 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
             }
             Generators = [];
             SelectedGenerator = null;
+            RefreshDetails(null);
             return;
         }
         if (ReferenceEquals(document.Water, _shown))
@@ -139,6 +170,7 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
         }
         ImmutableArray<WaveGenerator> before = _shown?.WaveGenerators ?? [];
         _shown = document.Water;
+        On.Refresh(document);
         Basic.Refresh(document);
         Surface.Refresh(document);
         Textures.Refresh(document);
@@ -157,6 +189,23 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
         {
             Generator.Refresh(document);
         }
+        RefreshDetails(document.Water);
+    }
+
+    /// <summary>
+    /// The lines beside the Water panel's entries: the surface's elevation, each map's size, how many
+    /// wave generators there are.
+    /// </summary>
+    private void RefreshDetails(Water? water)
+    {
+        Parts.Find(ElevationsPart)!.Detail = water is null ? "" : string.Create(CultureInfo.InvariantCulture, $"Surface {water.Elevation:0.#}");
+        foreach (WaterMap map in WaterMaps.All)
+        {
+            TiledBuffer<byte>? grid = water is null ? null : map.Of(water);
+            Parts.Find(map.PartId)!.Detail = grid is null ? "" : string.Create(CultureInfo.InvariantCulture, $"{grid.Width} × {grid.Height}");
+        }
+        Parts.Find(WavesPart)!.Detail = water is null ? "" : water.WaveGenerators.Length == 1 ? "1 generator"
+            : string.Create(CultureInfo.InvariantCulture, $"{water.WaveGenerators.Length} generators");
     }
 
     private static SettingGroup WaveTexture(int index, Func<string, JsonObject, Task> run)

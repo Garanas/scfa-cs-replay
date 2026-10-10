@@ -31,9 +31,17 @@ public sealed record ToolDefinition(string Id, string Title, string Story, strin
 public abstract record PanelSection(string Title)
 {
     /// <summary>
-    /// The tools (by id) whose inspector shows it; null for every tool of the mode.
+    /// The tools (by id) whose inspector shows it; null for every tool of the mode. A part of the
+    /// mode's panel with it shows only while one of them is active.
     /// </summary>
     public IReadOnlyList<string>? ForTools { get; init; }
+
+    /// <summary>
+    /// The entries of the mode panel's list (<see cref="PanelParts"/>, by id) while one of which is
+    /// chosen it shows; null whichever is chosen. The Lighting panel lists the sky's presets while
+    /// its sky is chosen.
+    /// </summary>
+    public IReadOnlyList<string>? ForParts { get; init; }
 }
 
 /// <summary>
@@ -87,6 +95,11 @@ public static class EditorModes
     // what the brush presets of the Terrain and Paint modes say while there are none
     private const string BrushPresetsEmpty = "None yet: save the brush's settings (shape, mode, radius, strength) to use them again.";
 
+    /// <summary>
+    /// The group of the modes at the bottom of the rail, above the Plugins entry.
+    /// </summary>
+    public const int BottomGroup = 2;
+
     public static IReadOnlyList<ModeDefinition> All { get; } =
     [
         new ModeDefinition("map", "Map", "Icon.Map", "Information, armies, areas, script", 0, "F1", "M-1",
@@ -115,7 +128,8 @@ public static class EditorModes
                 new ToolDefinition("terrain.ruler", "Ruler", "V-5") { Make = model => new RulerTool(model) },
             ],
             [
-                new PresetSection("brush", "Brush presets") { EmptyText = BrushPresetsEmpty, SaveLabel = "Save the brush's settings as a preset" },
+                new PresetSection(BrushPreset.Kind, "Brush presets") { EmptyText = BrushPresetsEmpty, SaveLabel = "Save the brush's settings as a preset", ForTools = ["terrain.sculpt", "terrain.curve", "terrain.types", "terrain.walkability", "terrain.ruler"] },
+                new PresetSection(BrushPreset.StampKind, "Stamp presets") { EmptyText = "None yet: save the stamp's picture, size, height, mode, base and edge to press it again.", SaveLabel = "Save the stamp's settings as a preset", ForTools = ["terrain.stamp"] },
                 new HeightLayersSection(),
                 new GeneratedSection(),
             ],
@@ -129,10 +143,20 @@ public static class EditorModes
             [
                 new LayerTexturesSection(),
                 new MasksSection(),
-                new PresetSection("brush", "Brush presets") { EmptyText = BrushPresetsEmpty, SaveLabel = "Save the brush's settings as a preset" },
+                new PresetSection(BrushPreset.Kind, "Brush presets") { EmptyText = BrushPresetsEmpty, SaveLabel = "Save the brush's settings as a preset" },
             ],
             // the masks tool's rules, the strata tool's stratum: each only with its tool
             [new MaskRulesSection { ForTools = ["paint.masks"] }, new LayerSection { ForTools = ["paint.strata"] }]),
+
+        // masks for tools get a mode of their own: an empty shell until their stacks of layers move in
+        new ModeDefinition("masks", "Masks", "Icon.Masks", "Where things may happen: masks for tools, props and strata", 0, "Shift+F3", "K-1",
+            [
+                new ToolDefinition("masks.paint", "Mask brush", "K-1", "Paint the chosen mask's painted layer; until it moves here, the Paint mode's Masks tool paints masks"),
+            ],
+            [
+                new PlannedSection("Masks", "K-1", "The masks with a preview each: add, rename, duplicate, delete. Each is a stack of layers from painting, an image, rules, another mask, a stratum or decal masks. Until then the Paint mode's Masks for tools holds them."),
+            ],
+            [new PlannedSection("Mask", "K-1", "The chosen mask's stack of layers: add one by its source, reorder, combine, strength, clip, on or off.")]),
 
         new ModeDefinition("water", "Water", "Icon.Water", "Levels, colours, waves, paintable water", 0, "F4", "W-1",
             [
@@ -148,9 +172,18 @@ public static class EditorModes
             ],
             [
                 new LightingSection(),
-                new PresetSection("lighting", "Lighting presets") { EmptyText = "None yet: save the sun, colours and fog to use them on another map.", SaveLabel = "Save the lighting as a preset" },
+                new PresetSection("lighting", "Lighting presets")
+                {
+                    EmptyText = "None yet: save the sun, colours and fog to use them on another map.", SaveLabel = "Save the lighting as a preset",
+                    ForParts = [LightingSettingsViewModel.SunPart, LightingSettingsViewModel.ColoursPart, LightingSettingsViewModel.FogPart, LightingSettingsViewModel.BloomPart, LightingSettingsViewModel.ShadowDecalPart],
+                },
+                new PresetSection(PresetKinds.Sky, "Sky presets")
+                {
+                    EmptyText = "None yet: save the sky's cube maps and background to use them on another map.", SaveLabel = "Save the sky as a preset",
+                    ForParts = [LightingSettingsViewModel.SkyPart],
+                },
             ],
-            [new SkySection()]),
+            [new LightingDetailsSection()]),
 
         new ModeDefinition("markers", "Markers", "Icon.Markers", "Spawns, deposits, path nodes, AI markers, chains, adaptive maps", 1, "F6", "R-1",
             [
@@ -207,6 +240,16 @@ public static class EditorModes
             [
                 new UnitGroupsSection(),
                 new PresetSection(UnitPreset.Kind, "Presets") { EmptyText = "None yet: select units, or choose a group in the tree, and save them to place them again.", SaveLabel = "Save the selected units as a preset" },
+            ],
+            []),
+
+        // what is generated from the map, at the bottom of the rail above the plugins
+        new ModeDefinition("procedural", "Procedural", "Icon.Procedural", "Generated results: walkability, normal map, preview, navigation", BottomGroup, "F10", "F-7",
+            [
+                new ToolDefinition("procedural.generate", "Generate", "F-7", "Generate the chosen result and preview it in the views"),
+            ],
+            [
+                new PlannedSection("Generated", "F-7", "Each generated result with its state (missing, out of date, current), Generate, a preview in the views and whether the export makes it: walkability, the navigation mesh, path nodes, the normal map, the map-wide decals, the preview."),
             ],
             []),
     ];

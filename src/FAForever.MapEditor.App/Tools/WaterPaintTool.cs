@@ -26,15 +26,10 @@ public sealed partial class WaterPaintTool : GridPaintTool
 
     public override string PresetName => "water";
 
-    public IReadOnlyList<WaterMaskChoice> Masks { get; } =
-    [
-        new WaterMaskChoice(WaterMask.Foam, "Foam", "Where the water foams, at shores and rocks"),
-        new WaterMaskChoice(WaterMask.Flatness, "Flatness", "Where the waves die down and the surface lies flat"),
-        new WaterMaskChoice(WaterMask.DepthBias, "Depth bias", "Where the water looks deeper or shallower than it is"),
-    ];
+    public IReadOnlyList<WaterMaskChoice> Masks { get; } = [.. WaterMaps.All.Select(map => new WaterMaskChoice(map.Mask, map.Title, map.Help))];
 
     /// <summary>
-    /// The mask it paints.
+    /// The mask it paints, chosen in the Water panel's list of maps.
     /// </summary>
     [ObservableProperty]
     public partial WaterMaskChoice Painted { get; set; }

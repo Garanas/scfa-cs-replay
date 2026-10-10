@@ -89,8 +89,9 @@ public sealed class SaveBrushPresetHandler(MainViewModel model, PresetsViewModel
 {
     public Task<JsonObject> Handle(SaveBrushPreset request, CancellationToken cancellationToken)
     {
-        Preset preset = presets.Save(BrushPreset.Kind, request.Name);
-        model.Status = $"Saved the brush preset {preset.Name}";
+        string kind = BrushPreset.KindOf(model.ActiveTool?.Tool);
+        Preset preset = presets.Save(kind, request.Name);
+        model.Status = kind == BrushPreset.StampKind ? $"Saved the stamp preset {preset.Name}" : $"Saved the brush preset {preset.Name}";
         return Task.FromResult(new JsonObject { ["kind"] = preset.Kind, ["name"] = preset.Name });
     }
 }

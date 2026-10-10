@@ -1,0 +1,95 @@
+<!-- The inspector's part of what is chosen in a mode panel's list (the Water and Lighting panels): its title and
+     what it is for, then its content by type. A new kind of part (a layer stack) adds its template here. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.PanelPartView"
+             x:DataType="vm:PanelParts">
+  <StackPanel>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="heading" Text="{Binding Chosen.Title}" AutomationProperties.Name="Inspected part" />
+        <TextBlock Classes="caption" Text="{Binding Chosen.Help}" IsVisible="{Binding Chosen.Help, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+    </Border>
+    <ContentControl Content="{Binding Chosen.Content}">
+      <ContentControl.DataTemplates>
+        <!-- fields: a group each, their titles when there are several -->
+        <DataTemplate DataType="vm:SettingsPart">
+          <StackPanel>
+            <ItemsControl ItemsSource="{Binding Groups}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:SettingGroup">
+                  <Border Classes="group">
+                    <controls:SettingList ShowsTitle="{Binding $parent[ContentControl].((vm:SettingsPart)Content).ShowsTitles}" />
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Border Classes="group" IsVisible="{Binding Caption, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <TextBlock Classes="caption" Text="{Binding Caption}" />
+            </Border>
+          </StackPanel>
+        </DataTemplate>
+        <DataTemplate DataType="vm:PlannedPart">
+          <Border Classes="group">
+            <Border Classes="planned">
+              <StackPanel Classes="stack">
+                <TextBlock Classes="caption" Text="{Binding Missing}" />
+                <TextBlock Classes="story" Text="{Binding Story, StringFormat='Not built yet: user story {0}'}" />
+              </StackPanel>
+            </Border>
+          </Border>
+        </DataTemplate>
+        <!-- a water map (W-2): the water brush that paints it -->
+        <DataTemplate DataType="vm:WaterMapPart">
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="caption" Text="The Paint water tool paints this map; the top view shows it while the tool is active. Its shape is in the tool's options." />
+              <StackPanel Classes="stack" IsVisible="{Binding HasBrush}">
+                <CheckBox Content="Erase" IsChecked="{Binding Brush.Erase}" AutomationProperties.Name="Erase the water map"
+                          AutomationProperties.HelpText="Take the map away where the brush goes, rather than add to it" />
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Radius" Width="{StaticResource FactLabelWidth}" />
+                  <TextBlock DockPanel.Dock="Right" Classes="mono" Text="{Binding Brush.Radius, StringFormat='{}{0:0}'}" Width="{StaticResource FactLabelWidth}" TextAlignment="Right" />
+                  <Slider Minimum="1" Maximum="128" Value="{Binding Brush.Radius}" AutomationProperties.Name="Water brush radius in ogrids" />
+                </DockPanel>
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Strength" Width="{StaticResource FactLabelWidth}" />
+                  <TextBlock DockPanel.Dock="Right" Classes="mono" Text="{Binding Brush.Strength, StringFormat='{}{0:0.00}'}" Width="{StaticResource FactLabelWidth}" TextAlignment="Right" />
+                  <Slider Minimum="0.01" Maximum="1" Value="{Binding Brush.Strength}" AutomationProperties.Name="Water brush strength of the map" />
+                </DockPanel>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+        <!-- the wave generators (W-1): their list, add and remove, the chosen one's fields -->
+        <DataTemplate DataType="vm:WaveGeneratorsPart">
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="caption" Text="{Binding Water.GeneratorsSummary}" />
+              <ListBox ItemsSource="{Binding Water.Generators}" SelectedItem="{Binding Water.SelectedGenerator}" MaxHeight="{StaticResource SettingListHeight}"
+                       AutomationProperties.Name="Wave generators">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WaveGeneratorItem">
+                    <TextBlock Text="{Binding Title}" />
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <StackPanel Classes="inline">
+                <Button Content="Add" Command="{Binding Water.AddGeneratorCommand}"
+                        AutomationProperties.Name="Add a wave generator" AutomationProperties.HelpText="In the middle of the map; type its place below, or place one with the Waves tool" />
+                <Button Content="Remove" Command="{Binding Water.RemoveGeneratorCommand}" IsEnabled="{Binding Water.HasSelectedGenerator}"
+                        AutomationProperties.Name="Remove the wave generator" />
+              </StackPanel>
+              <Panel IsVisible="{Binding Water.HasSelectedGenerator}">
+                <controls:SettingList DataContext="{Binding Water.Generator}" ShowsTitle="False" />
+              </Panel>
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+      </ContentControl.DataTemplates>
+    </ContentControl>
+  </StackPanel>
+</UserControl>

@@ -48,9 +48,9 @@ namespace FAForever.MapEditor.Project.Workspaces
         public const int CurrentFormatVersion = 1;
 
         /// <summary>
-        /// The kinds of preset the editor knows today; a feature may use another.
+        /// The kinds of preset the editor knows (<see cref="PresetKinds"/>); a feature may use another.
         /// </summary>
-        public static IReadOnlyList<string> KnownKinds { get; } = ["brush", "lighting", "water", "units", "markers", "props-palette", "selection"];
+        public static IReadOnlyList<string> KnownKinds => PresetKinds.All;
 
         public string Folder { get; } = Path.GetFullPath(folder);
 
@@ -62,12 +62,20 @@ namespace FAForever.MapEditor.Project.Workspaces
             : [];
 
         /// <summary>
+        /// The folder of a kind's presets, e.g. <c>presets/brushes</c>; an old kind name
+        /// (<see cref="PresetKinds.Renamed"/>) gives its new folder.
+        /// </summary>
+        /// <exception cref="ArgumentException">Not a kind.</exception>
+        public string FolderOf(string kind) => KindFolder(kind);
+
+        /// <summary>
         /// The presets of a kind by name. A file that cannot be read is left out and named in
         /// <paramref name="unreadable"/> when it is given.
         /// </summary>
         /// <exception cref="ArgumentException">Not a kind.</exception>
         public IReadOnlyList<Preset> List(string kind, ICollection<string>? unreadable = null)
         {
+            kind = PresetKinds.Of(kind);
             string kindFolder = KindFolder(kind);
             if (!Directory.Exists(kindFolder))
             {
@@ -95,7 +103,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         public Preset? Find(string kind, string name)
         {
             string file = FileOf(kind, name);
-            return File.Exists(file) ? ReadFile(file, kind) : null;
+            return File.Exists(file) ? ReadFile(file, PresetKinds.Of(kind)) : null;
         }
 
         /// <summary>
@@ -110,7 +118,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             ProjectJson.Write(file, new PresetDto
             {
                 FormatVersion = CurrentFormatVersion,
-                Kind = preset.Kind,
+                Kind = PresetKinds.Of(preset.Kind),
                 Name = preset.Name.Trim(),
                 Settings = preset.Settings,
             });
@@ -167,7 +175,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             kind.Length > 0 && kind.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-');
 
         private string KindFolder(string kind) => IsKind(kind)
-            ? Path.Combine(Folder, kind)
+            ? Path.Combine(Folder, PresetKinds.Of(kind))
             : throw new ArgumentException($"'{kind}' is no kind of preset: lower-case letters, digits and dashes", nameof(kind));
 
         private static Preset ReadFile(string file, string kind)

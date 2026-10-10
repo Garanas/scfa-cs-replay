@@ -15,7 +15,9 @@ public sealed partial class MainViewModel
     /// The page that shows over the editor, by name (the last one opened lies on top), or null.
     /// </summary>
     public string? OpenPageName =>
-        NewMapPage?.IsOpen == true ? "newMap"
+        WorkspaceSettings?.IsOpen == true ? "workspaceSettings"
+        : Shortcuts?.IsOpen == true ? "shortcuts"
+        : NewMapPage?.IsOpen == true ? "newMap"
         : Report?.IsOpen == true ? "report"
         : VersionControl?.IsOpen == true ? "versionControl"
         : Plugins?.IsOpen == true ? "plugins"
@@ -29,6 +31,12 @@ public sealed partial class MainViewModel
     {
         switch (OpenPageName)
         {
+            case "workspaceSettings":
+                WorkspaceSettings.IsOpen = false;
+                break;
+            case "shortcuts":
+                Shortcuts.IsOpen = false;
+                break;
             case "newMap":
                 NewMapPage.IsOpen = false;
                 break;

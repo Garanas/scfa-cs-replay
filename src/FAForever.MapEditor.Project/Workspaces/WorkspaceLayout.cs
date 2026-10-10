@@ -9,9 +9,10 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// projects/              the map projects (MapProjectLayout)
     /// brushes/               the map maker's brush shapes: greyscale PNGs, in folders as they like
     /// presets/               saved settings to apply again: a folder per kind, a JSON file each (PresetLibrary)
-    /// plugins/               the Lua plugins: a folder each with its plugin.lua (and plugin.json)
-    /// templates/             map templates a new map starts from: JSON files of its settings, map
+    ///   brushes/ stamps/ lighting/ water/ sky/ props/ units/ markers/ selections/   (PresetKinds)
+    ///   maps/                map templates a new map starts from: JSON files of its settings, map
     ///                        projects in folders (MapTemplates)
+    /// plugins/               the Lua plugins: a folder each with its plugin.lua (and plugin.json)
     /// assets/                converted from the game's archives; made again whenever they change
     ///   manifest.json        what they were converted from, and by which editor (AssetManifestDto)
     ///   env/..., units/...   the game's paths in lower case: textures as PNG, blueprints as JSON
@@ -27,7 +28,6 @@ namespace FAForever.MapEditor.Project.Workspaces
         public const string Projects = "projects";
         public const string Brushes = "brushes";
         public const string Presets = "presets";
-        public const string Templates = "templates";
         public const string Plugins = "plugins";
         public const string Assets = "assets";
         public const string AssetsInProgress = "assets.new";
@@ -42,7 +42,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <summary>
         /// The folders a new workspace starts with.
         /// </summary>
-        public static readonly IReadOnlyList<string> Folders = [Projects, Brushes, Presets, Templates, Plugins];
+        public static readonly IReadOnlyList<string> Folders = [Projects, Brushes, Presets, Plugins];
 
         /// <summary>
         /// Where the conversion puts the file of a game path, relative to <see cref="Assets"/>:

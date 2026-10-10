@@ -52,13 +52,27 @@ public sealed record BrushPresetSettings(
     double? Edge = null);
 
 /// <summary>
-/// Brush presets: the active brush tool's settings, saved and applied again.
+/// Brush presets: the active brush tool's settings, saved and applied again; the stamp tool's are
+/// stamp presets, a kind of their own (the Terrain panel lists them while the stamp tool is active).
 /// </summary>
 public static class BrushPreset
 {
-    public const string Kind = "brush";
+    public const string Kind = PresetKinds.Brushes;
 
-    public static PresetKind Of(MainViewModel model) => new PresetKind(Kind, "Brush presets", () => Capture(model), preset => Apply(model, preset));
+    public const string StampKind = PresetKinds.Stamps;
+
+    public static PresetKind Of(MainViewModel model) => new PresetKind(Kind, "Brush presets", () => model.ActiveTool?.Tool is StampTool
+        ? throw new InvalidOperationException("The stamp tool's settings are a stamp preset: save them as kind stamps")
+        : Capture(model), preset => Apply(model, preset));
+
+    public static PresetKind Stamps(MainViewModel model) => new PresetKind(StampKind, "Stamp presets", () => model.ActiveTool?.Tool is StampTool
+        ? Capture(model)
+        : throw new InvalidOperationException("Choose the stamp tool to save its settings as a stamp preset"), preset => Apply(model, preset));
+
+    /// <summary>
+    /// The kind of preset the active tool's settings are saved as: stamps for the stamp tool, else brushes.
+    /// </summary>
+    public static string KindOf(IMapTool? tool) => tool is StampTool ? StampKind : Kind;
 
     /// <summary>
     /// The active brush tool's settings, and a name for them such as <c>Raise 12</c>.

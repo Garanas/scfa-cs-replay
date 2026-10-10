@@ -16,10 +16,11 @@ namespace FAForever.MapEditor.App.Commands;
 /// <param name="Group">A biome (<c>evergreen</c>) or faction (<c>UEF</c>); empty for all.</param>
 /// <param name="Category">A category (<c>trees</c>, <c>structure</c>, <c>splats</c>); empty for all.</param>
 /// <param name="Families">Whether a prop's variants share a tile.</param>
+/// <param name="Sort"><c>listed</c>, <c>mass</c> or <c>energy</c> (the most first: a unit's cost, a prop's reclaim).</param>
 /// <returns>What the shelf then shows: its filters and up to 200 tiles.</returns>
 [EditorCommand("assets.browse", "Browse the assets", Gesture = "Ctrl+Shift+A", Story = "F-9")]
 public sealed record BrowseAssets(
-    string? Kind = null, string? Scope = null, string? Query = null, string? Group = null, string? Category = null, bool? Families = null, string? Source = null)
+    string? Kind = null, string? Scope = null, string? Query = null, string? Group = null, string? Category = null, bool? Families = null, string? Source = null, string? Sort = null)
     : IRequest<JsonObject>;
 
 public sealed class BrowseAssetsHandler(MainViewModel model, AssetsViewModel assets) : IRequestHandler<BrowseAssets, JsonObject>
@@ -58,6 +59,12 @@ public sealed class BrowseAssetsHandler(MainViewModel model, AssetsViewModel ass
         {
             assets.Families = families;
         }
+        if (request.Sort is string sort)
+        {
+            assets.Sort = Enum.TryParse(sort, ignoreCase: true, out AssetSort parsed)
+                ? parsed
+                : throw new ArgumentException($"There is no sort '{sort}': listed, mass or energy");
+        }
         model.Dock = DockTab.Assets;
         assets.Focus();
         return Task.FromResult(Describe(assets));
@@ -74,6 +81,7 @@ public sealed class BrowseAssetsHandler(MainViewModel model, AssetsViewModel ass
         ["group"] = assets.Group,
         ["category"] = assets.Category,
         ["families"] = assets.Families,
+        ["sort"] = assets.Sort.ToString(),
         ["summary"] = assets.Summary,
         ["kinds"] = new JsonObject([.. assets.Kinds.Select(choice => KeyValuePair.Create(choice.Value!, (JsonNode?)choice.Count))]),
         ["groups"] = new JsonObject([.. assets.Groups.Select(choice => KeyValuePair.Create(choice.Value!, (JsonNode?)choice.Count))]),
@@ -92,6 +100,9 @@ public sealed class BrowseAssetsHandler(MainViewModel model, AssetsViewModel ass
         {
             ["title"] = tile.Title,
             ["detail"] = tile.Detail,
+            ["economy"] = tile.ShowsEconomy ? tile.Economy : null,
+            ["mass"] = tile.ShowsEconomy ? tile.Entry.Mass : null,
+            ["energy"] = tile.ShowsEconomy ? tile.Entry.Energy : null,
             ["key"] = tile.Entry.Key,
             ["variants"] = tile.Members.Count,
             ["uses"] = tile.Uses,
