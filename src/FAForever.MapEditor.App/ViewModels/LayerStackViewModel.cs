@@ -363,14 +363,12 @@ public partial class LayerStackViewModel : ObservableObject
         {
             return null;
         }
-        if (LayerStacks.MaskOf(document, choice) is not null)
-        {
-            return choice;
-        }
+        // the one way to name a mask: any of its names (a key, a title, the rules' Layer 3: and Mask: forest) gives its key
         IEnumerable<string> keys = document.Masks.Keys.Select(LayerStacks.MaskKey)
             .Concat(Enumerable.Range(1, document.Terrain.StratumMasks.Layers.Length).Select(LayerStacks.StratumKey));
-        return keys.FirstOrDefault(key => LayerStacks.MaskTitle(key).Equals(choice, StringComparison.OrdinalIgnoreCase))
-            ?? (document.Masks.ContainsKey(choice) ? LayerStacks.MaskKey(choice) : null)
+        return LayerStacks.KeyOf(document, choice)
+            ?? keys.FirstOrDefault(key => LayerStacks.MaskTitle(key).Equals(choice, StringComparison.OrdinalIgnoreCase))
+            ?? LayerStacks.KeyOf(document, RuleLayers.Parse(choice))
             ?? throw new ArgumentException($"The map has no mask '{choice}': {string.Join(", ", ClipChoices(document))}");
     }
 

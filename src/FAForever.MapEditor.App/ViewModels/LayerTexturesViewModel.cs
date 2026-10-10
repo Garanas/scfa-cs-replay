@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
@@ -12,8 +13,15 @@ namespace FAForever.MapEditor.App.ViewModels;
 /// A layer of the terrain in the Paint panel's list (user story S-2).
 /// </summary>
 /// <param name="Index">0 is the lower layer, the last the upper one, the strata between.</param>
-public sealed record LayerItem(int Index, string Title, string Albedo, string Normal, bool IsUsed, bool IsStratum, bool CanMoveUp, bool CanMoveDown)
+/// <param name="Texture">Its albedo texture as a small picture (the converted PNG); null without one.</param>
+public sealed record LayerItem(int Index, string Title, string Albedo, string Normal, bool IsUsed, bool IsStratum, bool CanMoveUp, bool CanMoveDown,
+    PreviewPicture? Texture = null)
 {
+    /// <summary>
+    /// What a screen reader says of its picture.
+    /// </summary>
+    public string TextureLabel => $"Texture of {Title}";
+
     /// <summary>
     /// E.g. <c>grass000 · normal grass000_normals</c>, or that the stratum is unused.
     /// </summary>
@@ -35,9 +43,13 @@ public sealed partial class LayerTexturesViewModel : ObservableObject
     private ImmutableArray<TerrainLayer> _shown;
     private MapDocument? _document;
 
-    public LayerTexturesViewModel(Func<string, JsonObject, Task> run)
+    private readonly Func<string, string?> _textureFile;
+
+    /// <param name="textureFile">The converted PNG of a texture's game path, for the list's pictures; null for none.</param>
+    public LayerTexturesViewModel(Func<string, JsonObject, Task> run, Func<string, string?>? textureFile = null)
     {
         _run = run;
+        _textureFile = textureFile ?? (_ => null);
         const string set = "paint.setLayer";
         JsonObject Fixed() => new JsonObject { ["layer"] = SelectedIndex };
         TerrainLayer Of(MapDocument d) => SelectedIndex < d.Terrain.Layers.Length ? d.Terrain.Layers[SelectedIndex] : new TerrainLayer { AlbedoPath = "", NormalPath = "" };
@@ -188,7 +200,8 @@ public sealed partial class LayerTexturesViewModel : ObservableObject
             Path.GetFileNameWithoutExtension(layer.AlbedoPath), Path.GetFileNameWithoutExtension(layer.NormalPath),
             layer.IsUsed() || index == 0 || index == count - 1, document!.Terrain.IsStratum(index),
             document.Terrain.IsStratum(index) && document.Terrain.IsStratum(index + 1),
-            document.Terrain.IsStratum(index) && document.Terrain.IsStratum(index - 1))).Reverse()];
+            document.Terrain.IsStratum(index) && document.Terrain.IsStratum(index - 1),
+            layer.AlbedoPath.Length > 0 && _textureFile(layer.AlbedoPath) is string file ? new FilePicture(file) : null)).Reverse()];
         Summary = document is null
             ? ""
             : string.Create(CultureInfo.InvariantCulture,

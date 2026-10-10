@@ -50,10 +50,16 @@ public abstract record PanelSection(string Title)
 public sealed record PlannedSection(string Title, string Story, string Missing) : PanelSection(Title);
 
 /// <summary>
-/// The masks for tools of the map (user story K-1): add, rename, delete, choose the one to paint
-/// and show.
+/// The masks for tools of the map (user story K-1), the Masks mode's list: each with a preview;
+/// add, rename, duplicate, delete, choose the one to paint, show and edit.
 /// </summary>
-public sealed record MasksSection() : PanelSection("Masks for tools");
+public sealed record MasksSection() : PanelSection("Masks");
+
+/// <summary>
+/// The chosen mask's stack of layers (user stories K-1, K-2), the Masks mode's inspector: the
+/// stack control, what a mask layer reads and a rules layer's rules.
+/// </summary>
+public sealed record MaskStackSection() : PanelSection("Mask");
 
 /// <summary>
 /// The overlays the mode's panel lists, to show or hide them there as with the chips above the
@@ -134,28 +140,27 @@ public static class EditorModes
             ],
             [new HeightLayerSection()]),
 
-        new ModeDefinition("paint", "Paint", "Icon.Paint", "Strata and masks for tools", 0, "F3", "S-1",
+        new ModeDefinition("paint", "Paint", "Icon.Paint", "Strata: their textures and their masks as stacks of layers", 0, "F3", "S-1",
             [
                 new ToolDefinition("paint.strata", "Strata", "S-1") { Make = model => new StrataTool(model) },
-                new ToolDefinition("paint.masks", "Masks", "K-1") { Make = model => new MaskPaintTool(model) },
             ],
             [
                 new LayerTexturesSection(),
+                new PresetSection(BrushPreset.Kind, "Brush presets") { EmptyText = BrushPresetsEmpty, SaveLabel = "Save the brush's settings as a preset" },
+            ],
+            // the chosen stratum: its textures and its mask's stack
+            [new LayerSection { ForTools = ["paint.strata"] }]),
+
+        // the masks for tools (wave 9B): each a stack of layers; never exported
+        new ModeDefinition("masks", "Masks", "Icon.Masks", "Where things may happen: masks for tools, props and strata", 0, "Shift+F3", "K-1",
+            [
+                new ToolDefinition("masks.paint", "Mask brush", "K-1") { Make = model => new MaskPaintTool(model) },
+            ],
+            [
                 new MasksSection(),
                 new PresetSection(BrushPreset.Kind, "Brush presets") { EmptyText = BrushPresetsEmpty, SaveLabel = "Save the brush's settings as a preset" },
             ],
-            // the masks tool's rules, the strata tool's stratum: each only with its tool
-            [new MaskRulesSection { ForTools = ["paint.masks"] }, new LayerSection { ForTools = ["paint.strata"] }]),
-
-        // masks for tools get a mode of their own: an empty shell until their stacks of layers move in
-        new ModeDefinition("masks", "Masks", "Icon.Masks", "Where things may happen: masks for tools, props and strata", 0, "Shift+F3", "K-1",
-            [
-                new ToolDefinition("masks.paint", "Mask brush", "K-1", "Paint the chosen mask's painted layer; until it moves here, the Paint mode's Masks tool paints masks"),
-            ],
-            [
-                new PlannedSection("Masks", "K-1", "The masks with a preview each: add, rename, duplicate, delete. Each is a stack of layers from painting, an image, rules, another mask, a stratum or decal masks. Until then the Paint mode's Masks for tools holds them."),
-            ],
-            [new PlannedSection("Mask", "K-1", "The chosen mask's stack of layers: add one by its source, reorder, combine, strength, clip, on or off.")]),
+            [new MaskStackSection()]),
 
         new ModeDefinition("water", "Water", "Icon.Water", "Levels, colours, waves, paintable water", 0, "F4", "W-1",
             [

@@ -161,7 +161,7 @@ public static class BrushPreset
             {
                 "strata" => ("paint.strata", (GridPaintTool)model.Tool<StrataTool>()),
                 "water" => ("water.paint", model.Tool<WaterPaintTool>()),
-                "masks" => ("paint.masks", model.Tool<MaskPaintTool>()),
+                "masks" => ("masks.paint", model.Tool<MaskPaintTool>()),
                 "types" => ("terrain.types", model.Tool<TerrainTypeTool>()),
                 "walkability" => ("terrain.walkability", model.Tool<WalkabilityMarkTool>()),
                 _ => throw new ArgumentException($"The preset {preset.Name} is for a tool the editor has not: {settings.Tool}"),

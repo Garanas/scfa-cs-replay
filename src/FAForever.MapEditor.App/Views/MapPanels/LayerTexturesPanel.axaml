@@ -11,13 +11,18 @@
     <StackPanel Classes="stack">
       <TextBlock Classes="overline" Text="{Binding Source='Layers', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
       <ListBox ItemsSource="{Binding LayerTextures.Items}" SelectedItem="{Binding LayerTextures.Selected}" AutomationProperties.Name="Layer textures"
-               AutomationProperties.HelpText="The chosen stratum is the one the strata tool paints; the chosen layer's textures and scales are in the inspector">
+               AutomationProperties.HelpText="The chosen stratum is the one the strata tool paints; the chosen layer's textures, scales and mask layers are in the inspector">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:LayerItem">
-            <StackPanel>
-              <TextBlock Text="{Binding Title}" />
-              <TextBlock Classes="caption" Text="{Binding Textures}" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
+            <DockPanel>
+              <Border DockPanel.Dock="Left" Classes="thumbnail imagepreview">
+                <controls:ImagePreview Picture="{Binding Texture}" AutomationProperties.Name="{Binding TextureLabel}" />
+              </Border>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{Binding Title}" />
+                <TextBlock Classes="caption" Text="{Binding Textures}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </DockPanel>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>

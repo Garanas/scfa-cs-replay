@@ -78,7 +78,7 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = await Open("diagonal");
             await Run(model, "paint.addMask", new JsonObject { ["name"] = "Mirror" });
-            model.SelectTool("paint.masks");
+            model.SelectTool("masks.paint");
             MaskPaintTool tool = model.Tool<MaskPaintTool>();
             tool.Strength = 1;
             tool.Radius = 6;

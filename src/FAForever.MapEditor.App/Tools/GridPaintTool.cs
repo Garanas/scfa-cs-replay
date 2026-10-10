@@ -69,6 +69,12 @@ public abstract partial class GridPaintTool : ObservableObject, IShapedBrushTool
     public abstract PaintTarget? Target { get; }
 
     /// <summary>
+    /// The stack of layers of what it paints (a stratum's mask, a mask for tools, a water map), whose
+    /// chosen painted layer its strokes go into; null for a grid without one (the terrain's types).
+    /// </summary>
+    public virtual LayerTarget? Stack => null;
+
+    /// <summary>
     /// What the top view lays over the terrain while the tool is active; null for nothing. A tool
     /// raises <see cref="ObservableObject.PropertyChanged"/> for it when it paints something else.
     /// </summary>
@@ -108,6 +114,13 @@ public abstract partial class GridPaintTool : ObservableObject, IShapedBrushTool
         if (Target is not PaintTarget target || Model.ShownDocument is not MapDocument document
             || BrushShapeSettings.TryRead(Model, Shape) is not (true, var shape))
         {
+            return;
+        }
+        // a grid with a stack takes a stroke into its chosen painted layer: without one it cannot be painted
+        if (Stack is LayerTarget stack && Model.Map?.Session is EditSession session
+            && CoverageLayers.PaintProblem(document, stack, session.PaintLayers.GetValueOrDefault(stack.Key)) is string problem)
+        {
+            Model.Status = problem;
             return;
         }
         (int width, int height) = (document.Width, document.Height);

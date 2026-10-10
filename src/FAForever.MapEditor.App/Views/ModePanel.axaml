@@ -57,8 +57,8 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
-            <!-- the masks for tools (K-1): the list chooses the one the masks tool paints and the overlay shows;
-                 the field names a new mask or gives the chosen one a new name -->
+            <!-- the masks for tools (K-1), the Masks mode's list: each with a preview; the list chooses the one the mask brush
+                 paints, the overlay shows and the inspector edits; the field names a new mask or a new name for the chosen one -->
             <DataTemplate DataType="vm:MasksSection">
               <Border Classes="group">
                 <StackPanel Classes="stack">
@@ -66,40 +66,46 @@
                   <ListBox ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.Items}"
                            SelectedItem="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.ChosenItem}"
                            IsVisible="{Binding !$parent[UserControl].((vm:MainViewModel)DataContext).Masks.IsEmpty}"
-                           AutomationProperties.Name="Masks for tools">
+                           AutomationProperties.Name="Masks for tools"
+                           AutomationProperties.HelpText="The chosen mask is the one the mask brush paints and the inspector shows as a stack of layers">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:MaskItem">
                         <DockPanel>
-                          <Button DockPanel.Dock="Right" Classes="beside" Content="Rules..."
-                                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).MaskRules.OpenCommand}" CommandParameter="{Binding Name}"
-                                  AutomationProperties.Name="{Binding Name, StringFormat='Rules of the mask {0}'}"
-                                  AutomationProperties.HelpText="Make the mask from slope, height, distance to water, other layers and noise (K-2)" />
+                          <Border DockPanel.Dock="Left" Classes="thumbnail imagepreview">
+                            <controls:ImagePreview Picture="{Binding Preview}" AutomationProperties.Name="{Binding PreviewLabel}" />
+                          </Border>
                           <TextBlock DockPanel.Dock="Right" Classes="caption mono" Text="{Binding Size}" VerticalAlignment="Center" />
-                          <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                          <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" />
+                            <TextBlock Classes="caption" Text="{Binding Layers}" IsVisible="{Binding Layers, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                          </StackPanel>
                         </DockPanel>
                       </DataTemplate>
                     </ListBox.ItemTemplate>
                   </ListBox>
-                  <TextBlock Classes="caption" Text="None yet: a mask marks where rivers go, forests grow or what to erode, saved as a PNG for World Machine, Gaea and the rules."
+                  <TextBlock Classes="caption" Text="None yet: a mask marks where rivers go, forests grow or what to erode. It is a stack of layers (painted, images, rules, other masks, strata), saved for World Machine, Gaea and the rules, and never exported."
                              IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.IsEmpty}" />
                   <TextBox Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.NewName}" PlaceholderText="Name (optional)"
                            AutomationProperties.Name="Name of a new mask, or a new name for the chosen one"
                            AutomationProperties.HelpText="Letters, digits, spaces, dashes and underscores; left empty, a new mask gets a free name" />
                   <CheckBox Content="Half the map's size" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.Half}"
                             AutomationProperties.HelpText="A new mask of one pixel per two by two ogrids, as most stratum masks are" />
-                  <StackPanel Classes="inline">
+                  <WrapPanel Classes="chips">
                     <Button Content="Add a mask" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.addMask"
                             AutomationProperties.Name="Add a mask" />
                     <Button Content="Rename" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.renameMask"
                             IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.HasChosen}"
                             AutomationProperties.Name="Rename the chosen mask" />
+                    <Button Content="Duplicate" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.duplicateMask"
+                            IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.HasChosen}"
+                            AutomationProperties.Name="Duplicate the chosen mask" AutomationProperties.HelpText="A copy with its stack of layers, under the name in the field or a free one" />
                     <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.deleteMask"
                             IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.HasChosen}"
                             AutomationProperties.Name="Delete the chosen mask" />
-                  </StackPanel>
+                  </WrapPanel>
                   <CheckBox Content="Show it over the terrain" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ShowMask, Mode=OneWay}"
                             Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="view.overlay.mask"
-                            AutomationProperties.HelpText="The top view shows the chosen mask while no painting tool shows its own" />
+                            AutomationProperties.HelpText="The views show the chosen mask while no painting tool shows its own" />
                 </StackPanel>
               </Border>
             </DataTemplate>

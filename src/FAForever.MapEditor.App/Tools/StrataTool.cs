@@ -18,7 +18,8 @@ public sealed record Stratum(int Layer, string Name)
 /// <summary>
 /// Paints or erases the mask of a terrain layer with a brush, round or of a picture (user story
 /// S-1), where the slope and height are within limits when those are on. The layer it paints is
-/// chosen in the Paint mode's panel; the top view shows its mask while the tool is active.
+/// chosen in the Paint mode's panel, and of its mask's stack the painted layer chosen in the
+/// inspector; the top view shows its mask while the tool is active.
 /// </summary>
 public sealed partial class StrataTool : GridPaintTool
 {
@@ -66,6 +67,8 @@ public sealed partial class StrataTool : GridPaintTool
     public PaintLimitSettings Limiting { get; } = new PaintLimitSettings();
 
     public override PaintTarget? Target => Painted is Stratum stratum ? PaintTarget.Stratum(stratum.Layer) : null;
+
+    public override LayerTarget? Stack => Painted is Stratum stratum ? LayerTarget.Stratum(stratum.Layer) : null;
 
     protected override PaintLimits? Limits => Limiting.ToLimits();
 

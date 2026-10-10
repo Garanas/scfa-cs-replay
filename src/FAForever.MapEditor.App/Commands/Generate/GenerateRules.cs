@@ -6,11 +6,11 @@ using MediatR;
 namespace FAForever.MapEditor.App.Commands;
 
 /// <summary>
-/// Makes every mask for tools that has rules from them (user story K-2), on a thread of the pool,
-/// and puts them in the map: one step of undo. Only when asked (F-7): the status bar and the rule
-/// editor say when they are out of date.
+/// Makes every rules layer of the masks for tools and the strata from its rules (user story K-2),
+/// on a thread of the pool, and puts them in the map: one step of undo. Only when asked (F-7): the
+/// status bar and the rule editor say when they are out of date.
 /// </summary>
-/// <returns>How many masks were made.</returns>
+/// <returns>How many masks and strata were made.</returns>
 [EditorCommand("generate.masks", "Masks from rules", Story = "K-2", Needs = Needs.Map)]
 public sealed record GenerateMasks : IRequest<int>;
 
@@ -18,13 +18,13 @@ public sealed class GenerateMasksHandler(MainViewModel model) : IRequestHandler<
 {
     public async Task<int> Handle(GenerateMasks request, CancellationToken cancellationToken)
     {
-        if (model.Map!.Document.MaskRules.IsEmpty)
+        if (!model.Map!.Document.CoverageStacks.Values.Any(stack => stack.Layers.Any(layer => layer.Source is Project.Files.InMemory.RulesSource)))
         {
-            model.Status = "No mask has rules: open a mask's rules in the Paint panel and add some";
+            model.Status = "No mask or stratum has rules: add a rules layer to a mask's stack in the Masks mode";
             return 0;
         }
         GeneratedResult result = await model.GenerateAsync(MaskRulesGenerator.GeneratorId);
-        int count = ((System.Collections.Immutable.ImmutableSortedDictionary<string, Project.Files.InMemory.TiledBuffer<byte>>)result.Value).Count;
+        int count = ((IReadOnlyList<(string Target, string Layer, Project.Files.InMemory.TiledBuffer<byte> Grid)>)result.Value).Select(made => made.Target).Distinct().Count();
         model.Status = $"Generated {count} {(count == 1 ? "mask" : "masks")} from their rules";
         return count;
     }

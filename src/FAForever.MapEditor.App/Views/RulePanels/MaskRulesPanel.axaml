@@ -1,5 +1,6 @@
-<!-- The rules of a mask for tools (K-2), in the Paint mode's inspector: the rules in order, each with its fields and
-     buttons to move and remove it; a kind to add; how the generated masks stand, Generate, and the preview in the top view. -->
+<!-- The rules of a rules layer (K-2), under the stack of a mask (the Masks mode's inspector) or a stratum (the Paint mode's): the
+     rules in order, each with its fields and buttons to move and remove it; a kind to add; how the generated masks stand,
+     Generate, and the preview in the top view. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -10,7 +11,7 @@
     <StackPanel Classes="stack" DataContext="{Binding MaskRules}" x:DataType="vm:MaskRulesViewModel">
       <TextBlock Classes="overline" Text="{Binding Source=Mask rules, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
       <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding !IsEditing}"
-                 Text="Choose Rules... beside a mask in the panel to make it from slope, height, distance to water, other layers and noise." />
+                 Text="Choose a rules layer in the stack above to make it from slope, height, distance to water, other layers and noise." />
       <StackPanel Classes="stack" IsVisible="{Binding IsEditing}">
         <DockPanel>
           <Button DockPanel.Dock="Right" Classes="beside" Content="Close" Command="{Binding CloseCommand}" AutomationProperties.Name="Close the rules of the mask" />

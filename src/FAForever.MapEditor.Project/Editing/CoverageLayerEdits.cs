@@ -99,6 +99,24 @@ namespace FAForever.MapEditor.Project.Editing
             };
         }
 
+        /// <summary>
+        /// An image file's grey (PNG and what ImageMagick reads, or raw 16-bit samples) resampled to
+        /// a target grid's size, as an image layer holds it.
+        /// </summary>
+        /// <exception cref="MapProjectException">The file is missing or does not read.</exception>
+        public static byte[] ReadImage(MapDocument document, LayerTarget target, string path)
+        {
+            TiledBuffer<byte> grid = Grid(document, target);
+            (int width, int height, ushort[] samples) = HeightmapFiles.Read(path);
+            ushort[] resampled = width == grid.Width && height == grid.Height ? samples : HeightmapFiles.Resample(samples, width, height, grid.Width, grid.Height);
+            byte[] values = new byte[resampled.Length];
+            for (int i = 0; i < values.Length; i++)
+            {
+                values[i] = (byte)(resampled[i] >> 8);
+            }
+            return values;
+        }
+
         public static MapDocument Remove(MapDocument document, LayerTarget target, string name) =>
             CoverageLayers.WithStack(document, LayerStackEdits.Remove(Stack(document, target), name, CoverageLayers.What(target)));
 
@@ -188,12 +206,30 @@ namespace FAForever.MapEditor.Project.Editing
         /// pass, which <see cref="MaskRulesGenerator"/> does on a thread of the pool.
         /// </summary>
         /// <exception cref="ArgumentException">A rule reads a layer the map has not, or masks read each other in a circle.</exception>
-        public static IReadOnlyList<(string Target, string Layer, TiledBuffer<byte> Grid)> Generate(MapDocument document)
+        public static IReadOnlyList<(string Target, string Layer, TiledBuffer<byte> Grid)> Generate(MapDocument document) => Generate(document, null, out _);
+
+        /// <summary>
+        /// The document as generating makes it up to the stack <paramref name="key"/>: the stacks with
+        /// rules made before it are made, for a preview of its rules from what they read.
+        /// </summary>
+        /// <exception cref="ArgumentException">A rule reads a layer the map has not, or masks read each other in a circle.</exception>
+        public static MapDocument GeneratedBefore(MapDocument document, string key)
+        {
+            Generate(document, key, out MapDocument working);
+            return working;
+        }
+
+        private static IReadOnlyList<(string Target, string Layer, TiledBuffer<byte> Grid)> Generate(MapDocument document, string? until, out MapDocument result)
         {
             List<(string, string, TiledBuffer<byte>)> made = [];
             MapDocument working = document;
+            result = document;
             foreach (string key in MaskRules.Order(document))
             {
+                if (key == until)
+                {
+                    break;
+                }
                 LayerStack stack = working.CoverageStacks[key];
                 MapDocument before = working;
                 foreach (Layer layer in stack.Layers.Where(layer => layer.Source is RulesSource))
@@ -205,6 +241,7 @@ namespace FAForever.MapEditor.Project.Editing
                 }
                 working = CoverageLayers.Follow(before, working);
             }
+            result = working;
             return made;
         }
 

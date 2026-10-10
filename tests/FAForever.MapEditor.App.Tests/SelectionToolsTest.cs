@@ -80,9 +80,9 @@ namespace FAForever.MapEditor.App.Tests
         public async Task TheInspectorShowsTheActiveToolsPartsAndTheSelectionOnlyInModesOfThings()
         {
             MainViewModel model = await Open("paint.strata");
-            CollectionAssert.AreEqual(new[] { "Layer" }, model.InspectorParts.Select(part => part.Title).ToArray(), "the strata tool: its stratum, no mask rules");
-            model.SelectTool("paint.masks");
-            CollectionAssert.AreEqual(new[] { "Mask rules" }, model.InspectorParts.Select(part => part.Title).ToArray(), "the masks tool: its rules, no stratum");
+            CollectionAssert.AreEqual(new[] { "Layer" }, model.InspectorParts.Select(part => part.Title).ToArray(), "the strata tool: its stratum");
+            model.SelectTool("masks.paint");
+            CollectionAssert.AreEqual(new[] { "Mask" }, model.InspectorParts.Select(part => part.Title).ToArray(), "the mask brush: the chosen mask's stack");
 
             model.SelectTool("markers.select");
             model.SelectInside(-10, -10, 270, 270, SelectionChange.Replace);
