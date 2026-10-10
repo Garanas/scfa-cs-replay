@@ -93,14 +93,15 @@ namespace FAForever.MapEditor.App.Tests
             model.ActiveTool!.Tool!.Press(100, 100);
             await Task.Yield();
             WeatherDefinition definition = (WeatherDefinition)model.ShownDocument!.Find(model.Selection.Items.Single())!;
-            Assert.AreEqual("Tundra", definition.MapStyle);
+            string style0 = WeatherStyles.StyleOf(model.ShownDocument) ?? "Tundra";
+            Assert.AreEqual(style0, definition.MapStyle, "the style of the map's biome");
             Assert.AreEqual("Weather Definition 01", definition.Name);
 
             MarkerSelection section = (MarkerSelection)model.Selection.Inspector.Sections.Single();
             Assert.IsTrue(section.Weather.HasDefinitions);
             Assert.IsFalse(section.Weather.HasGenerators);
             ChoiceSetting style = (ChoiceSetting)section.Weather.Definition.Settings[0];
-            Assert.AreEqual("Tundra", style.Chosen);
+            Assert.AreEqual(style0, style.Chosen);
             style.Chosen = "Evergreen";
             await Task.Yield();
             await Run(model, "markers.setWeather", new JsonObject { ["type"] = 2, ["cloudType"] = "RainClouds", ["chance"] = 0.5 });

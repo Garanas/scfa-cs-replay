@@ -156,6 +156,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeHeightLayers();
         InitializeUndoSelection();
         InitializeContent();
+        InitializeInspectorParts();
         Plugins = new PluginsViewModel(this);
     }
 

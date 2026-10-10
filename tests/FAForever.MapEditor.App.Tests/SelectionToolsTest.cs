@@ -77,6 +77,24 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task TheInspectorShowsTheActiveToolsPartsAndTheSelectionOnlyInModesOfThings()
+        {
+            MainViewModel model = await Open("paint.strata");
+            CollectionAssert.AreEqual(new[] { "Layer" }, model.InspectorParts.Select(part => part.Title).ToArray(), "the strata tool: its stratum, no mask rules");
+            model.SelectTool("paint.masks");
+            CollectionAssert.AreEqual(new[] { "Mask rules" }, model.InspectorParts.Select(part => part.Title).ToArray(), "the masks tool: its rules, no stratum");
+
+            model.SelectTool("markers.select");
+            model.SelectInside(-10, -10, 270, 270, SelectionChange.Replace);
+            Assert.IsTrue(model.InspectsSelection);
+            Assert.IsFalse(model.InspectsMode);
+            model.SelectTool("terrain.sculpt");
+            Assert.IsTrue(model.Selection.HasAny, "the selection stays");
+            Assert.IsFalse(model.InspectsSelection, "but the Terrain mode's inspector shows its own parts");
+            Assert.IsTrue(model.InspectsMode);
+        }
+
+        [TestMethod]
         public async Task SimilarThingsAreSelectedByBlueprintOrFamily()
         {
             MainViewModel model = await Open("props.select");

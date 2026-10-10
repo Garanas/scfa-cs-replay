@@ -61,24 +61,39 @@ namespace FAForever.MapEditor.Project.Editing
             Styles.TryGetValue(style, out IReadOnlyList<string>? types) ? [None, .. types] : AllTypes;
 
         /// <summary>
-        /// A new weather definition as the game's marker template makes it: Tundra, with snow,
-        /// thick and patchy white clouds and none, drifting along +x.
+        /// A new weather definition as the game's marker template makes it, of a style: the first
+        /// three cloud types of the style at 0.3 each and none at 0.1, drifting along +x. The
+        /// template's own is Tundra, with snow, thick and patchy white clouds.
         /// </summary>
-        public static WeatherDefinition NewDefinition(string name, Vector3 position) => new WeatherDefinition
+        /// <param name="style">One of <see cref="StyleNames"/>; left out (or unknown), Tundra.</param>
+        public static WeatherDefinition NewDefinition(string name, Vector3 position, string? style = null)
         {
-            Id = 0,
-            Name = name,
-            Position = position,
-            MapStyle = "Tundra",
-            DriftDirection = new Vector3(1, 0, 0),
-            Types =
-            [
-                new WeatherChance { Type = "SnowClouds", Chance = 0.3 },
-                new WeatherChance { Type = "WhiteThickClouds", Chance = 0.3 },
-                new WeatherChance { Type = "WhitePatchyClouds", Chance = 0.3 },
-                new WeatherChance { Type = None, Chance = 0.1 },
-            ],
-        };
+            style = style is not null && Styles.ContainsKey(style) ? style : "Tundra";
+            IReadOnlyList<string> types = Styles[style];
+            int count = Math.Min(3, types.Count);
+            return new WeatherDefinition
+            {
+                Id = 0,
+                Name = name,
+                Position = position,
+                MapStyle = style,
+                DriftDirection = new Vector3(1, 0, 0),
+                Types =
+                [
+                    .. types.Take(count).Select(type => new WeatherChance { Type = type, Chance = Math.Round(0.9 / count, 3) }),
+                    new WeatherChance { Type = None, Chance = 0.1 },
+                ],
+            };
+        }
+
+        /// <summary>
+        /// The weather style that fits a map: the style of the biome whose props, decals and strata
+        /// it uses most (<c>env/desert/...</c> is Desert), else null.
+        /// </summary>
+        public static string? StyleOf(MapDocument document) =>
+            Workspaces.AssetUse.Biomes(Workspaces.AssetUse.Count(document))
+                .Select(biome => StyleNames.FirstOrDefault(style => style.Equals(biome, StringComparison.OrdinalIgnoreCase)))
+                .FirstOrDefault(style => style is not null);
 
         /// <summary>
         /// A new weather generator as the game's marker template makes it.

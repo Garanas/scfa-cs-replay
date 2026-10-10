@@ -50,6 +50,29 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void ATurnedStampWithAHardEdgeBlendsItsRimOverAnOgrid()
+        {
+            TiledBuffer<ushort>.Builder samples = Flat();
+            BrushShape white = new BrushShape(8, 8, [.. Enumerable.Repeat(1f, 64)]);
+
+            new HeightStamp { Shape = white, Radius = 8, Height = 10, Base = 10, Edge = 0, Rotation = 45, Mode = HeightStampMode.Set }.Apply(samples, Scale, 32, 32);
+
+            Assert.AreEqual(20, samples[32, 32] * Scale, 0.01, "set inside");
+            Assert.AreEqual(10, samples[32, 18] * Scale, 0.01, "untouched outside");
+            // along the slanted side some samples lie between: no stair step from ogrid to ogrid
+            int between = 0;
+            for (int z = 0; z < 65; z++)
+            {
+                for (int x = 0; x < 65; x++)
+                {
+                    float height = samples[x, z] * Scale;
+                    between += height > 10.5f && height < 19.5f ? 1 : 0;
+                }
+            }
+            Assert.IsTrue(between >= 8, $"blended samples along the rim: {between}");
+        }
+
+        [TestMethod]
         public void TheEdgeFadesOutTowardsTheSides()
         {
             TiledBuffer<ushort>.Builder samples = Flat();

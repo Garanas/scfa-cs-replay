@@ -96,7 +96,7 @@
           </Border>
         </StackPanel>
         <!-- what is selected on the map (F-11): the fields all kinds share, then a section per kind -->
-        <StackPanel IsVisible="{Binding Selection.HasAny}" AutomationProperties.Name="Selection">
+        <StackPanel IsVisible="{Binding InspectsSelection}" AutomationProperties.Name="Selection">
           <Border Classes="panelhead">
             <StackPanel>
               <TextBlock Classes="overline" Text="{Binding Source=Selection, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
@@ -314,20 +314,14 @@
             </ItemsControl.DataTemplates>
           </ItemsControl>
         </StackPanel>
-        <StackPanel>
-          <StackPanel.IsVisible>
-            <MultiBinding Converter="{x:Static BoolConverters.And}">
-              <Binding Path="!Assets.HasSelection" />
-              <Binding Path="!Selection.HasAny" />
-            </MultiBinding>
-          </StackPanel.IsVisible>
+        <StackPanel IsVisible="{Binding InspectsMode}">
           <Border Classes="panelhead">
             <StackPanel>
               <TextBlock Classes="overline" Text="{Binding Source=Inspector, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
               <TextBlock Classes="panelname" Text="{Binding SelectedMode.Definition.Title}" />
             </StackPanel>
           </Border>
-          <ItemsControl ItemsSource="{Binding SelectedMode.Definition.Inspector}" AutomationProperties.Name="Inspector">
+          <ItemsControl ItemsSource="{Binding InspectorParts}" AutomationProperties.Name="Inspector">
             <ItemsControl.DataTemplates>
               <!-- the map and its atmosphere (M-1, W-1, S-2): a view of their own each, on the editor's view model -->
               <DataTemplate DataType="vm:MapFactsSection">

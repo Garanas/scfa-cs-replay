@@ -58,7 +58,8 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// How much of the picture fades out towards its sides, as a part of half its side: 0 for a
-        /// hard edge, 0.5 fading from halfway.
+        /// hard edge (smoothed over one ogrid, so a turned stamp has no stair-step rim), 0.5 fading
+        /// from halfway.
         /// </summary>
         public float Edge { get; init; } = 0.15f;
 
@@ -103,11 +104,14 @@ namespace FAForever.MapEditor.Project.Editing
                         u = -u;
                     }
                     float border = Shape.Border(u, v);
-                    if (border <= 0)
+                    // how much of the sample's ogrid the picture covers: a side that runs at a slant
+                    // (a turned stamp) blends over one ogrid rather than stepping from ogrid to ogrid
+                    float coverage = Math.Clamp(border * Radius + 0.5f, 0, 1);
+                    if (coverage <= 0)
                     {
                         continue;
                     }
-                    float fade = Edge <= 0 ? 1 : Smooth(Math.Clamp(border / Edge, 0, 1));
+                    float fade = (Edge <= 0 ? 1 : Smooth(Math.Clamp(border / Edge, 0, 1))) * coverage;
                     float value = Shape.Sample(u, v, clamp: true);
                     float height = samples[sx, sz] * scale;
                     float changed = Mode switch

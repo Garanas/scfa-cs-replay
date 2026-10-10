@@ -159,6 +159,8 @@ namespace FAForever.MapEditor.App.Tests
         {
             (MainViewModel model, Workspace workspace) = await OpenInWorkspace("terrain.stamp");
             StampTool tool = model.Tool<StampTool>();
+            Assert.AreEqual(BrushChoice.NoPicture, tool.Shape.Chosen, "a stamp has no round shape: it asks for a picture");
+            CollectionAssert.DoesNotContain(tool.Shape.Choices.ToArray(), BrushChoice.Round);
             string picture = Path.Combine(workspace.BrushesFolder, "hills", "cone.png");
             Directory.CreateDirectory(Path.GetDirectoryName(picture)!);
             // a cone: white in the middle, black at the sides
