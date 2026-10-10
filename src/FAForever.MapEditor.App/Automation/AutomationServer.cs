@@ -38,7 +38,7 @@ namespace FAForever.MapEditor.App.Automation;
 /// <c>--automation port</c>.
 /// </para>
 /// </remarks>
-public sealed class AutomationServer(MainWindow window, MainViewModel model, int port) : IDisposable
+public sealed partial class AutomationServer(MainWindow window, MainViewModel model, int port) : IDisposable
 {
     private readonly HttpListener _listener = new HttpListener();
     private readonly CancellationTokenSource _stop = new CancellationTokenSource();
@@ -156,11 +156,11 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
     /// </summary>
     private static readonly string[] Own =
     [
-        "state", "commands", "run {id, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?}", "perf {reset?}", "logs {problems?, count?}",
+        "state", "commands", "run {id, interactive?, wait?, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?, under?}", "perf {reset?}", "logs {problems?, count?}",
         "diagnostics {record?, send?, endpoint?, flush?, upload?}", "version-control {open?, enable?, name?, email?, lfs?, remote?}",
         "picker {open?, query?, group?, category?, tech?, move?: [across, down], choose?, cancel?}",
         "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "pick {x, y, highlight?}",
-        "show {markers?, pathNodes?, camera?, props?, units?, areas?}", "screenshot {path, map?, gpu?, brush?}", "close",
+        "show {markers?, pathNodes?, camera?, props?, units?, areas?}", "screenshot {path, map?, gpu?, brush?, settle?}", "close",
     ];
 
     /// <summary>
@@ -174,7 +174,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             case "" or "help":
                 return new JsonObject
                 {
-                    ["automation"] = new JsonArray([.. Own.Select(line => (JsonNode)JsonValue.Create(line))]),
+                    ["automation"] = new JsonArray([.. Own.Concat(InputCommands).Select(line => (JsonNode)JsonValue.Create(line))]),
                     ["commands"] = new JsonArray([.. model.Commands.All.Where(c => !c.IsIncomplete).Select(c => (JsonNode)JsonValue.Create(c.Usage))]),
                     ["aliases"] = new JsonObject([.. Aliases.Select(alias => KeyValuePair.Create(alias.Key, (JsonNode?)JsonValue.Create(alias.Value.Runs)))]),
                 };
@@ -199,7 +199,10 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             {
                 // a command of the registry with its arguments; it asks nothing, a missing argument fails
                 string id = Take(arguments, "id");
-                await RunCommandAsync(id, arguments, result, "result");
+                if (!await StartCommandAsync(id, arguments, result))
+                {
+                    await RunCommandAsync(id, arguments, result, "result");
+                }
                 break;
             }
             case "mode":
@@ -218,7 +221,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             }
             case "ui":
                 // the window's controls: what an agent can read and use, with their places for hit and the mouse
-                return new JsonObject { ["ui"] = UiTree.Describe(window, arguments["hidden"]?.GetValue<bool>() == true) };
+                return new JsonObject { ["ui"] = DescribeUi(arguments) };
             case "perf":
                 // where the time goes: per measured span, and the recent stalls of the user interface
                 if (arguments["reset"]?.GetValue<bool>() == true)
@@ -413,6 +416,10 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 }
                 break;
             case "screenshot":
+                if (arguments["settle"]?.GetValue<bool>() == true)
+                {
+                    result["settled"] = await SettleAsync(arguments["gpu"]?.GetValue<bool>() == true);
+                }
                 result["file"] = arguments["gpu"]?.GetValue<bool>() == true
                     ? model.View == MapViewTab.ThreeD
                         ? await window.View3D.CaptureAsync(Text(arguments, "path"), arguments["brush"] is JsonArray brush
@@ -426,6 +433,10 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 Dispatcher.UIThread.Post(window.CloseWithoutAsking, DispatcherPriority.Background);
                 break;
             default:
+                if (await RunInputAsync(command, arguments, result))
+                {
+                    break;
+                }
                 if (Aliases.TryGetValue(command, out var alias))
                 {
                     foreach ((string from, string to) in alias.Renamed)
@@ -594,6 +605,9 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["decalTextures"] = window.View3D.DecalState.Textures,
                 ["objects"] = ObjectState(),
             },
+            ["pid"] = Environment.ProcessId,
+            ["views"] = ViewsState(),
+            ["loading"] = LoadingState(),
         };
     }
 
@@ -692,7 +706,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
     private static double? Number(JsonObject arguments, string name) => arguments[name] switch
     {
         null => null,
-        JsonValue value when value.TryGetValue(out double number) => number,
+        JsonValue value when value.GetValueKind() == JsonValueKind.Number => double.Parse(value.ToJsonString(), System.Globalization.CultureInfo.InvariantCulture),
         JsonValue value when value.TryGetValue(out string? text) && double.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out double parsed) => parsed,
         _ => throw new ArgumentException($"{name} is not a number"),
     };

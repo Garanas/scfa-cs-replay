@@ -128,6 +128,11 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// </summary>
     public AssetCatalog Catalog { get; private set; } = AssetCatalog.Empty;
 
+    /// <summary>
+    /// Whether the workspace's assets have been read (they may be none); automation waits for it.
+    /// </summary>
+    public bool IsLoaded { get; private set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsProps), nameof(GroupsTitle))]
     public partial AssetKind Kind { get; set; } = AssetKind.Prop;
@@ -344,6 +349,7 @@ public sealed partial class AssetsViewModel : ObservableObject
             return AssetCatalog.Load(workspace);
         });
         Catalog = catalog;
+        IsLoaded = true;
         _log.LogInformation("Read {Assets} assets of the workspace in {Milliseconds} ms", catalog.Entries.Count, Math.Round(Stopwatch.GetElapsedTime(start).TotalMilliseconds));
         Rebuild();
     }
@@ -354,6 +360,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     public void Use(AssetCatalog catalog)
     {
         Catalog = catalog;
+        IsLoaded = true;
         Rebuild();
     }
 

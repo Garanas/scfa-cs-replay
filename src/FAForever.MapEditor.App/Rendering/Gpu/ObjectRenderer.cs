@@ -96,6 +96,11 @@ internal sealed unsafe class ObjectRenderer : IDisposable
     /// </summary>
     public (int Props, int Units, int Markers, int Draws, int Meshes, int Missing, long Triangles) State { get; private set; }
 
+    /// <summary>
+    /// The models' albedos being read, not on the card yet.
+    /// </summary>
+    public int TexturesLoading => _textures.Loading;
+
     private long _triangles;
 
     /// <summary>

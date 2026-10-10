@@ -101,6 +101,11 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     public (int Textures, string? Error) TextureState => (_textures.Count, _textures.LastError);
 
     /// <summary>
+    /// The textures being read, not on the card yet.
+    /// </summary>
+    public int TexturesLoading => _textures.Loading;
+
+    /// <summary>
     /// The decals drawn, the draws they take (a run of decals with one texture is one draw) and
     /// the textures they use.
     /// </summary>

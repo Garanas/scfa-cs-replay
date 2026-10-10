@@ -163,6 +163,20 @@ public sealed class AssetThumbnail : Control
         public static ILogger Logger { get; set; } = NullLogger.Instance;
 
         /// <summary>
+        /// The pictures being read or drawn; for automation, which waits for them before a settled screenshot.
+        /// </summary>
+        public static int Pending
+        {
+            get
+            {
+                lock (Gate)
+                {
+                    return Loading.Count;
+                }
+            }
+        }
+
+        /// <summary>
         /// The picture, if it is read; null while it is not (or could not be).
         /// </summary>
         public static Bitmap? Get(string file, int width) => Get((file, width));
