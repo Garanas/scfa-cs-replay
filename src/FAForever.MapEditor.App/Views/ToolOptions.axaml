@@ -175,7 +175,7 @@
             </DataTemplate>
             <!-- selecting and moving what lies on the map (F-11) -->
             <DataTemplate DataType="tools:SelectTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <StackPanel Classes="inline" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Handles}">
                   <CheckBox Content="Handles" IsChecked="{Binding Show}" AutomationProperties.Name="Show the handles of the selection"
                             AutomationProperties.HelpText="The square moves, the arrows move along x or z, the ring turns, the squares on the box scale" />
@@ -187,7 +187,7 @@
                             AutomationProperties.HelpText="Shift snaps a move to this grid, a turn to 15 degrees, a scale to tenths" />
                 </StackPanel>
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- the Decals mode's select tool (F-11, D-1): what dragging the selection does -->
             <DataTemplate DataType="tools:DecalSelectTool">
@@ -284,10 +284,10 @@
             </DataTemplate>
             <!-- placing a markers preset (F-10) -->
             <DataTemplate DataType="tools:MarkerPresetTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <TextBlock Classes="label" Text="{Binding Title}" AutomationProperties.Name="Markers preset to place" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- putting markers in a chain (R-4) -->
             <DataTemplate DataType="tools:ChainTool">
@@ -352,22 +352,28 @@
             </DataTemplate>
             <!-- growing or cropping the map (M-3) -->
             <DataTemplate DataType="tools:MapSizeTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <Button Content="Apply" Command="{Binding ApplyCommand}" ToolTip.Tip="{Binding Summary}" AutomationProperties.HelpText="Resize the map: one step of undo" />
-                <ComboBox ItemsSource="{Binding Sizes}" SelectedItem="{Binding NewWidth}" AutomationProperties.Name="New width in ogrids"
-                          AutomationProperties.HelpText="256 is 5 km, 512 10 km, 1024 20 km, 2048 40 km, 4096 81 km" />
-                <TextBlock Classes="label" Text="by" />
-                <ComboBox ItemsSource="{Binding Sizes}" SelectedItem="{Binding NewHeight}" AutomationProperties.Name="New height in ogrids" />
+                <StackPanel Classes="inline">
+                  <ComboBox ItemsSource="{Binding Sizes}" SelectedItem="{Binding NewWidth}" AutomationProperties.Name="New width in ogrids"
+                            AutomationProperties.HelpText="256 is 5 km, 512 10 km, 1024 20 km, 2048 40 km, 4096 81 km" />
+                  <TextBlock Classes="label" Text="by" />
+                  <ComboBox ItemsSource="{Binding Sizes}" SelectedItem="{Binding NewHeight}" AutomationProperties.Name="New height in ogrids" />
+                </StackPanel>
                 <ComboBox ItemsSource="{Binding Anchors}" SelectedItem="{Binding Anchor}" AutomationProperties.Name="Where the old map lies in the new one" />
-                <TextBlock Classes="label" Text="at" />
-                <TextBox Classes="toolfield" Text="{Binding OffsetX, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Old map's left edge in the new map, in ogrids" />
-                <TextBox Classes="toolfield" Text="{Binding OffsetZ, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Old map's top edge in the new map, in ogrids" />
-                <CheckBox Content="Fill at" IsChecked="{Binding FillWithHeight}" AutomationProperties.Name="Fill what the map gains at a height"
-                          AutomationProperties.HelpText="Off, the heights at the old map's edges continue outwards" />
-                <TextBox Classes="toolfield" Text="{Binding FillHeight, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" IsEnabled="{Binding FillWithHeight}" AutomationProperties.Name="Height of the terrain the map gains" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="at" />
+                  <TextBox Classes="toolfield" Text="{Binding OffsetX, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Old map's left edge in the new map, in ogrids" />
+                  <TextBox Classes="toolfield" Text="{Binding OffsetZ, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Old map's top edge in the new map, in ogrids" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <CheckBox Content="Fill at" IsChecked="{Binding FillWithHeight}" AutomationProperties.Name="Fill what the map gains at a height"
+                            AutomationProperties.HelpText="Off, the heights at the old map's edges continue outwards" />
+                  <TextBox Classes="toolfield" Text="{Binding FillHeight, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" IsEnabled="{Binding FillWithHeight}" AutomationProperties.Name="Height of the terrain the map gains" />
+                </StackPanel>
                 <CheckBox Content="Fit the playable area" IsChecked="{Binding FitPlayableArea}" AutomationProperties.Name="Make the playable area the whole new map" />
                 <TextBlock Classes="caption mono" TextWrapping="NoWrap" Text="{Binding Summary}" AutomationProperties.Name="New map size" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- measuring distances and heights (V-5) -->
             <DataTemplate DataType="tools:RulerTool">
@@ -383,7 +389,7 @@
             </DataTemplate>
             <!-- drawing curves that shape the terrain (T-4): what a new curve gets; the chosen curve's own are in the inspector -->
             <DataTemplate DataType="tools:CurveTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <ComboBox ItemsSource="{x:Static tools:CurveTool.Profiles}" SelectedItem="{Binding Profile}" AutomationProperties.Name="Profile of a new curve"
                           AutomationProperties.HelpText="Ridge raises, valley lowers, road flattens to the terrain under its points, cliff raises the left side" />
                 <StackPanel Classes="inline">
@@ -400,7 +406,7 @@
                           AutomationProperties.HelpText="How much it rises or sinks in game units; a road's points lie on the terrain" />
                 </StackPanel>
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- how a brush's picture is turned; the shape itself is the first choice of the row -->
             <DataTemplate DataType="tools:BrushShapeSettings">

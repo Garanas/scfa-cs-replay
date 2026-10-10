@@ -68,6 +68,11 @@ public sealed partial class MainViewModel
     {
         Masks.Choose(name);
         SelectMode("paint");
+        if (ActiveTool?.Tool is FAForever.MapEditor.App.Tools.StrataTool)
+        {
+            // the strata tool shows the layer it paints; the masks tool lets the preview show
+            SelectTool("paint.masks");
+        }
         Selection.Clear();
         MaskRules.Editing = Masks.Chosen;
         ShowMask = true;
