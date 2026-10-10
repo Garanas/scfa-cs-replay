@@ -172,6 +172,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeInspectorParts();
         InitializeProcedural();
         InitializeWideDecals();
+        InitializeProceduralParts();
         InitializePanelParts();
         InitializeCoverageStacks();
         InitializeHelp();

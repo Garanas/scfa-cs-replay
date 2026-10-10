@@ -52,9 +52,9 @@ namespace FAForever.MapEditor.App.Tests
             ModeDefinition procedural = EditorModes.All.Single(mode => mode.Id == "procedural");
 
             Assert.AreSame(EditorModes.All[^1], procedural, "at the bottom of the rail");
-            CollectionAssert.AreEqual(new[] { "Generated results", "Map-wide decals", "Walkability", "Navigation mesh", "Path networks", "Export" }, procedural.Sections.Select(section => section.Title).ToArray());
+            CollectionAssert.AreEqual(new[] { "Generated results" }, procedural.Sections.Select(section => section.Title).ToArray());
             Assert.IsFalse(EditorModes.All.Single(mode => mode.Id == "terrain").Sections.Any(section => section.Title == "Generated from the layers"), "moved out of the Terrain panel");
-            Assert.IsFalse(EditorModes.All.Single(mode => mode.Id == "markers").Sections.OfType<PathNetworkSection>().Any(), "moved out of the Markers panel");
+            Assert.IsFalse(EditorModes.All.Single(mode => mode.Id == "markers").Sections.Any(section => section.Title == "Path networks"), "moved out of the Markers panel");
         }
 
         [TestMethod]

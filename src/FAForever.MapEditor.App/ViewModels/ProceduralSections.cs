@@ -3,25 +3,16 @@ using FAForever.MapEditor.App.Tools;
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
-/// The Procedural mode's list of what is generated from the map: per result how it stands, Generate,
-/// its preview in the views, whether it regenerates on its own, and what the export does with it.
+/// The Procedural mode's list (the panel lists, the inspector edits): an entry per generated result
+/// with how it stands, a picture and Generate, under headings, and the export's steps last
+/// (<see cref="ProceduralListViewModel"/>).
 /// </summary>
-public sealed record GeneratedResultsSection() : PanelSection("Generated results");
+public sealed record ProceduralListSection() : PanelSection("Generated results");
 
 /// <summary>
-/// Walkability's choices: the layer of units, what changed since the time before.
+/// The Procedural inspector's part of the chosen entry: its settings and details (<see cref="ProceduralPart"/>).
 /// </summary>
-public sealed record WalkabilitySection() : PanelSection("Walkability");
-
-/// <summary>
-/// The navigation mesh: the layer shown, the routes it measures, its regions and routes.
-/// </summary>
-public sealed record NavigationSection() : PanelSection("Navigation mesh");
-
-/// <summary>
-/// The steps of the export, as they stand in the export running or the last one.
-/// </summary>
-public sealed record ExportStepsSection() : PanelSection("Export");
+public sealed record ProceduralDetailsSection() : PanelSection("Generated result");
 
 /// <summary>
 /// The Procedural mode (at the bottom of the rail): what is generated from the map, gathered in one
@@ -43,21 +34,12 @@ public static class ProceduralMode
     ];
 
     /// <summary>
-    /// The mode's inspector: the chosen map-wide decal's settings.
+    /// The mode's inspector: the chosen entry's settings and details.
     /// </summary>
-    public static IReadOnlyList<PanelSection> Inspector { get; } = [new MapWideProceduralDetailsSection()];
+    public static IReadOnlyList<PanelSection> Inspector { get; } = [new ProceduralDetailsSection()];
 
     /// <summary>
-    /// The mode's panel: the generated results, the map-wide decals, walkability's choices, the
-    /// navigation mesh, the path networks and the export's steps.
+    /// The mode's panel: the list of generated results, the export last.
     /// </summary>
-    public static IReadOnlyList<PanelSection> Sections { get; } =
-    [
-        new GeneratedResultsSection(),
-        new MapWideDecalsProceduralSection(),
-        new WalkabilitySection(),
-        new NavigationSection(),
-        new PathNetworkSection(),
-        new ExportStepsSection(),
-    ];
+    public static IReadOnlyList<PanelSection> Sections { get; } = [new ProceduralListSection()];
 }

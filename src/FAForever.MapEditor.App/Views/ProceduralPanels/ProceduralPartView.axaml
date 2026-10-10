@@ -1,0 +1,65 @@
+<!-- The inspector's part of a generated result chosen in the Procedural panel: its picture, how it stands and Generate,
+     its preview in the views, regenerating on its own, what the export does with it, what it is made from and when it was
+     made, then its own details (walkability's and the navigation mesh's choices, the path networks, a map-wide decal's settings). -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:procedural="using:FAForever.MapEditor.App.Views.ProceduralPanels"
+             x:Class="FAForever.MapEditor.App.Views.ProceduralPanels.ProceduralPartView"
+             x:DataType="vm:ProceduralPart">
+  <StackPanel>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <Border Classes="thumbnail proceduralpicture" IsVisible="{Binding HasPicture}">
+          <controls:ImagePreview Picture="{Binding Picture}" AutomationProperties.Name="{Binding PictureLabel}" />
+        </Border>
+        <TextBlock Classes="caption" Classes.warning="{Binding IsStale}" TextWrapping="Wrap" Text="{Binding StatusText}" IsVisible="{Binding ShowsGenerate}"
+                   AutomationProperties.Name="{Binding StatusLabel}" />
+        <Button Content="{Binding GenerateText}" Command="{Binding GenerateCommand}" IsVisible="{Binding ShowsGenerate}" IsEnabled="{Binding CanGenerate}"
+                AutomationProperties.Name="{Binding InspectorGenerateLabel}" AutomationProperties.HelpText="Generates it from the map as it is now; editing goes on meanwhile" />
+        <CheckBox Content="Preview in the views" IsVisible="{Binding HasOverlay}" IsChecked="{Binding PreviewOn, Mode=OneWay}"
+                  Command="{Binding TogglePreviewCommand}" AutomationProperties.Name="{Binding PreviewLabel}" />
+        <CheckBox Content="Regenerate on its own" IsVisible="{Binding CanAuto}" IsChecked="{Binding AutoOn, Mode=OneWay}"
+                  Command="{Binding ToggleAutoCommand}" AutomationProperties.Name="{Binding AutoLabel}"
+                  AutomationProperties.HelpText="A second after the last change to what it is made from, it is generated in the background; a newer change starts again" />
+        <CheckBox Content="{Binding OnExportText}" IsVisible="{Binding ShowsExportToggle}" IsChecked="{Binding OnExport, Mode=OneWay}"
+                  Command="{Binding ToggleOnExportCommand}" AutomationProperties.Name="{Binding OnExportLabel}"
+                  AutomationProperties.HelpText="Off: the export keeps it as it is, such as a normal map made in another tool" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding HasExportText}" Text="{Binding ExportText}" />
+      </StackPanel>
+    </Border>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding ReadsText}" AutomationProperties.Name="{Binding WhatItReadsLabel}" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding MadeText}" AutomationProperties.Name="{Binding WhenMadeLabel}" />
+        <ItemsControl ItemsSource="{Binding Facts}" IsVisible="{Binding HasFacts}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+    <ContentControl Content="{Binding Details}" IsVisible="{Binding HasDetails}">
+      <ContentControl.DataTemplates>
+        <DataTemplate DataType="vm:ProceduralWalkabilityDetails">
+          <procedural:WalkabilityPanel DataContext="{Binding Model}" />
+        </DataTemplate>
+        <DataTemplate DataType="vm:ProceduralNavigationDetails">
+          <procedural:NavigationPanel DataContext="{Binding Model}" />
+        </DataTemplate>
+        <DataTemplate DataType="vm:PathNodesViewModel">
+          <procedural:PathNodesPanel />
+        </DataTemplate>
+        <!-- a map-wide decal (D-1): its source, file and settings; its picture and Generate are above -->
+        <DataTemplate DataType="vm:MapWideSlotViewModel">
+          <Border Classes="group">
+            <controls:SettingList DataContext="{Binding Settings}" ShowsTitle="False" />
+          </Border>
+        </DataTemplate>
+      </ContentControl.DataTemplates>
+    </ContentControl>
+  </StackPanel>
+</UserControl>

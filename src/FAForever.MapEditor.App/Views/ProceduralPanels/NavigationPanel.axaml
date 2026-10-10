@@ -1,4 +1,4 @@
-<!-- The navigation mesh in the Procedural mode (T-8): the layer shown, which starts it routes between,
+<!-- The navigation mesh in the Procedural inspector (T-8): the layer shown, which starts it routes between,
      its regions (the largest first, with their starts and deposits; a click chooses one) and the routes. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -8,7 +8,7 @@
              x:DataType="vm:MainViewModel">
   <Border Classes="group" IsVisible="{Binding HasMap}">
     <StackPanel Classes="stack">
-      <TextBlock Classes="overline" Text="{Binding Source=Navigation mesh, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <TextBlock Classes="overline" Text="{Binding Source=Regions and routes, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
       <DockPanel>
         <TextBlock DockPanel.Dock="Left" Classes="label" Text="Units" VerticalAlignment="Center" />
         <ComboBox Margin="{StaticResource InlineGap}" HorizontalAlignment="Stretch" ItemsSource="{Binding Navigation.Layers}" SelectedItem="{Binding Navigation.Layer}"

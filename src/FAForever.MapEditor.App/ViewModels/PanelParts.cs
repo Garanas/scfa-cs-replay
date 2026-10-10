@@ -66,18 +66,40 @@ public sealed partial class PanelParts : ObservableObject
         {
             throw new ArgumentException("A list of parts holds at least one", nameof(parts));
         }
-        Items = parts;
-        Groups = [.. parts.GroupBy(part => part.Group).Select(group => new PanelPartGroup(group.Key, [.. group]))];
+        _items = [.. parts];
+        Groups = GroupsOf(_items);
         Chosen = parts[0];
         parts[0].IsChosen = true;
     }
 
-    public IReadOnlyList<PanelPart> Items { get; }
+    private readonly List<PanelPart> _items;
+
+    public IReadOnlyList<PanelPart> Items => _items;
 
     /// <summary>
     /// The entries by heading, in the order of their first entry.
     /// </summary>
-    public IReadOnlyList<PanelPartGroup> Groups { get; }
+    public IReadOnlyList<PanelPartGroup> Groups { get; private set; }
+
+    private static IReadOnlyList<PanelPartGroup> GroupsOf(IEnumerable<PanelPart> parts) =>
+        [.. parts.GroupBy(part => part.Group).Select(group => new PanelPartGroup(group.Key, [.. group]))];
+
+    /// <summary>
+    /// Adds an entry at a place of the list (at its end when <paramref name="index"/> is out of it), e.g.
+    /// a generator registered after the list was made; the panel shows it at once.
+    /// </summary>
+    /// <exception cref="ArgumentException">The list has an entry of that id.</exception>
+    public void Insert(int index, PanelPart part)
+    {
+        if (Find(part.Id) is not null)
+        {
+            throw new ArgumentException($"The list has a part '{part.Id}' already");
+        }
+        _items.Insert(index < 0 || index > _items.Count ? _items.Count : index, part);
+        Groups = GroupsOf(_items);
+        OnPropertyChanged(nameof(Items));
+        OnPropertyChanged(nameof(Groups));
+    }
 
     /// <summary>
     /// The entry the inspector shows.
@@ -99,6 +121,27 @@ public sealed partial class PanelParts : ObservableObject
             item.IsChosen = item == part;
         }
         Chosen = part;
+    }
+
+    /// <summary>
+    /// Takes an entry out of the list; when it was chosen, the first entry is chosen.
+    /// </summary>
+    /// <exception cref="ArgumentException">There is no such entry, or it is the only one.</exception>
+    public void Remove(string id)
+    {
+        PanelPart part = Find(id) ?? throw new ArgumentException($"There is no part '{id}' here");
+        if (_items.Count == 1)
+        {
+            throw new ArgumentException("A list of parts holds at least one");
+        }
+        _items.Remove(part);
+        Groups = GroupsOf(_items);
+        OnPropertyChanged(nameof(Items));
+        OnPropertyChanged(nameof(Groups));
+        if (part == Chosen)
+        {
+            Choose(_items[0].Id);
+        }
     }
 
     /// <summary>

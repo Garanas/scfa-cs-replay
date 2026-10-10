@@ -74,6 +74,8 @@ namespace FAForever.MapEditor.App.Tests
             Click(window, Named<Button>(window, "Generate the navigation mesh"));
             await Until(() => model.Navigation.Mesh is not null && !model.Generation.IsRunning("navigationMesh"));
             Dispatcher.UIThread.RunJobs();
+            // its entry shows it in the inspector, with its regions
+            Click(window, Named<Button>(window, "Navigation mesh"));
 
             Assert.IsTrue(model.ShowNavigation);
             Assert.IsTrue(Named<CheckBox>(window, "Preview the navigation mesh in the views").IsChecked);
