@@ -192,6 +192,42 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task AMapIsSavedAsATemplateAndTheNewMapPageStartsFromIt()
+        {
+            (MainViewModel model, Workspace workspace) = await OpenInWorkspace();
+            CommandRun saved = await Run(model, "file.saveAsTemplate", new JsonObject { ["name"] = "Eight" });
+            Assert.AreEqual("Settings", ((JsonObject)saved.Result!)["kind"]!.GetValue<string>());
+            Assert.IsTrue(File.Exists(Path.Combine(workspace.TemplatesFolder, "Eight.json")));
+            await Run(model, "file.saveAsTemplate", new JsonObject { ["name"] = "Whole", ["whole"] = true });
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "file.saveAsTemplate", new JsonObject { ["name"] = "sandbox" }));
+
+            NewMapPageViewModel page = model.NewMapPage;
+            page.Open(workspace.TemplatesFolder);
+            CollectionAssert.AreEqual(new[] { "None: from the fields below", "Eight", "Whole", "Sandbox" }, page.Templates.Select(t => t.Title).ToArray());
+            page.Players = "3";
+            page.Template = page.Templates.Single(t => t.Title == "Eight");
+            Assert.AreEqual("8", page.Players, "the template's settings fill the fields");
+            Assert.IsTrue(page.UsesFields && page.StrataFromTemplate);
+            Assert.IsNull(page.Arguments()!["biome"], "the template's own strata, not a biome");
+            page.Name = "From eight";
+            await page.CreateCommand.ExecuteAsync(null);
+            Assert.AreEqual("From eight", model.ShownDocument!.Scenario.Name);
+            Assert.AreEqual(8, model.ShownDocument.Scenario.PlayableArmies.Length);
+
+            page.Open(workspace.TemplatesFolder);
+            Assert.AreEqual("Eight", page.Template.Title, "the template chosen last");
+            page.Template = page.Templates.Single(t => t.Title == "Whole");
+            Assert.IsFalse(page.UsesFields, "a whole map takes only the name");
+            CommandRun copied = await Run(model, "file.new", new JsonObject { ["template"] = "Whole", ["name"] = "Copy of Hard" });
+            Assert.IsTrue(copied.Ran);
+            Assert.AreEqual(("Copy of Hard", 1), (model.ShownDocument!.Scenario.Name, model.ShownDocument.Version));
+            Assert.IsTrue(model.Map!.ProjectFolder is null, "no project until it is saved");
+            await Run(model, "file.new", new JsonObject { ["template"] = "sandbox", ["name"] = "Try" });
+            Assert.AreEqual(256, model.ShownDocument!.Width);
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "file.new", new JsonObject { ["template"] = "Nothing" }));
+        }
+
+        [TestMethod]
         public async Task SavingNeedsASelection()
         {
             MainViewModel model = await Open();

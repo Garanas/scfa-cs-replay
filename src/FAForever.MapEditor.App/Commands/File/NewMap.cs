@@ -1,5 +1,6 @@
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project;
+using FAForever.MapEditor.Project.Workspaces;
 using MediatR;
 
 namespace FAForever.MapEditor.App.Commands;
@@ -16,6 +17,9 @@ namespace FAForever.MapEditor.App.Commands;
 /// <param name="WaterElevation">The water's surface; deep and abyss follow 5 and 15 below unless given.</param>
 /// <param name="Biome"><c>evergreen</c>, <c>desert</c>, <c>tundra</c>, <c>lava</c>, <c>tropical</c> or <c>red-barrens</c>.</param>
 /// <param name="Players">The spawns, 1 to 16.</param>
+/// <param name="Template">A map template of the workspace's <c>templates</c> folder, or <c>Sandbox</c>
+/// (user story M-2): a template of settings gives what the other arguments leave out; a template of
+/// a whole map is copied under the name, the other arguments unused.</param>
 [EditorCommand("file.new", "New map...", Gesture = "Ctrl+N", Story = "M-2", Needs = Needs.Idle | Needs.NoStroke)]
 public sealed record NewMapRequest(
     string? Name = null,
@@ -26,7 +30,8 @@ public sealed record NewMapRequest(
     float? DeepElevation = null,
     float? AbyssElevation = null,
     string? Biome = null,
-    int? Players = null) : IRequest
+    int? Players = null,
+    string? Template = null) : IRequest
 {
     public bool IsEmpty => this == new NewMapRequest();
 }
@@ -37,10 +42,22 @@ public sealed class NewMapHandler(MainViewModel model, IEditorDialogs dialogs) :
     {
         if (request.IsEmpty && dialogs is not DialogGuard { Quiet: true })
         {
-            model.NewMapPage.Open();
+            model.NewMapPage.Open(model.Setup.Workspace?.TemplatesFolder);
             return Task.CompletedTask;
         }
         NewMapSettings defaults = new NewMapSettings();
+        if (request.Template is string name)
+        {
+            MapTemplate template = MapTemplates.Find(model.Setup.Workspace?.TemplatesFolder ?? "", name)
+                ?? throw new ArgumentException($"There is no map template '{name}': {string.Join(", ", MapTemplates.List(model.Setup.Workspace?.TemplatesFolder ?? "").Select(t => t.Name))}");
+            if (template.Kind != MapTemplateKind.Settings)
+            {
+                model.OpenNewMap(MapTemplates.Copy(template, request.Name ?? defaults.Name, model.VersionControl.AuthorName, model.Assets.Catalog));
+                model.Status = $"A new map from the template {template.Name}; it is no project until you save it";
+                return Task.CompletedTask;
+            }
+            defaults = MapTemplates.Apply(MapTemplates.ReadSettings(template.Path!), defaults);
+        }
         NewMapSettings settings = new NewMapSettings
         {
             Name = request.Name ?? defaults.Name,
@@ -53,6 +70,9 @@ public sealed class NewMapHandler(MainViewModel model, IEditorDialogs dialogs) :
             Biome = request.Biome ?? defaults.Biome,
             Players = request.Players ?? defaults.Players,
             Author = model.VersionControl.AuthorName,
+            Layers = request.Biome is null ? defaults.Layers : null,
+            ExtraArmies = defaults.ExtraArmies,
+            Lighting = defaults.Lighting,
         };
         model.OpenNewMap(NewMap.Create(settings));
         return Task.CompletedTask;

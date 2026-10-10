@@ -26,7 +26,7 @@ public static class Menus
         new MenuLayout("File",
         [
             "file.new", "file.open", "file.import", Separator,
-            "file.save", "file.saveAs", "file.commit", "file.push", "file.pull", "file.history", Separator,
+            "file.save", "file.saveAs", "file.saveAsTemplate", "file.commit", "file.push", "file.pull", "file.history", Separator,
             "file.export", "file.renderPreview", "file.upload", Separator,
             "file.openScript",
         ]),

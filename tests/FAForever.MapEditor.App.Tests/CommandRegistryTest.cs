@@ -158,12 +158,12 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = NewModel();
 
-            bool ran = await model.Commands.RunAsync("terrain.saveBrush");
+            bool ran = await model.Commands.RunAsync("paint.shader");
 
             Assert.IsFalse(ran);
-            StringAssert.Contains(model.Status, "Not built yet: Terrain: Save the brush as a preset");
-            StringAssert.Contains(model.Status, "user story T-2");
-            StringAssert.Contains(model.Diagnostics.Console.Last().Message, "terrain.saveBrush: not built yet, user story T-2");
+            StringAssert.Contains(model.Status, "Not built yet: Paint: Terrain shader");
+            StringAssert.Contains(model.Status, "user story S-4");
+            StringAssert.Contains(model.Diagnostics.Console.Last().Message, "paint.shader: not built yet, user story S-4");
         }
 
         [TestMethod]

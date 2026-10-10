@@ -37,6 +37,11 @@ namespace FAForever.MapEditor.Project.Workspaces
         public string BrushesFolder => Path.Combine(Folder, WorkspaceLayout.Brushes);
 
         /// <summary>
+        /// The map templates a new map starts from (<see cref="MapTemplates"/>, user story M-2).
+        /// </summary>
+        public string TemplatesFolder => Path.Combine(Folder, WorkspaceLayout.Templates);
+
+        /// <summary>
         /// The saved settings to apply again (user story F-10), a folder per kind.
         /// </summary>
         public string PresetsFolder => Path.Combine(Folder, WorkspaceLayout.Presets);

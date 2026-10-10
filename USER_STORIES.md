@@ -149,9 +149,13 @@ reads again when it changes; and nothing that generates runs by itself.
       preview image, no-rush radius, adaptive map, reclaim: the Map panel's fields
       (`map.information`), one step of undo per field; the inspector shows the size, armies and
       the `.scmap`'s preview.
-- [ ] **M-2 New map.** Size, starting height, water, biome or template; from scratch. Today:
+- [x] **M-2 New map.** Size, starting height, water, biome or template; from scratch. Today:
       File, New map (`file.new`): one of the game's sizes, the height, water and its elevation,
-      the strata of one of six biomes, spawns and the playable area. Missing: templates.
+      the strata of one of six biomes, spawns and the playable area; templates in the workspace's
+      `templates` folder, offered first on the page: a small JSON of settings (size, height, water,
+      strata, players, extra armies, lighting) fills the fields, a map project in a folder is copied
+      under the new name, the sandbox is the editor's own; File, Save as a template
+      (`file.saveAsTemplate {name?, whole?}`) makes either from the open map.
 - [x] **M-3 Size and playable area.** Grow or crop the map; set the playable area. The Map mode's
       Map size tool (`map.resize`): another of the game's sizes per side, an anchor or an offset,
       the edges' heights or a height for what the map gains, every grid and thing along, what lies
