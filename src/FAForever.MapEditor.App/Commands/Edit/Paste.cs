@@ -9,7 +9,8 @@ namespace FAForever.MapEditor.App.Commands;
 /// <summary>
 /// Pastes what was copied (user story F-11), one step of undo, and selects the copies: centred on
 /// a place, else where the mouse is on the map, else where the originals were; then moved by an
-/// offset.
+/// offset. While the symmetry mirrors edits, the copies get their images in the other parts of the
+/// map, as placed things do, and those are selected too.
 /// </summary>
 /// <param name="X">Where the middle of the copies goes, in ogrids.</param>
 /// <param name="Dx">How far to move them after that, in ogrids.</param>
@@ -33,7 +34,8 @@ public sealed class PasteHandler(MainViewModel model, SelectionViewModel selecti
             _ => (request.X ?? centre.X, request.Z ?? centre.Y),
         };
         ImmutableArray<ObjectRef> added = [];
-        edit.Transaction.Apply(document => document.Paste(clipboard, x - centre.X + (request.Dx ?? 0), z - centre.Y + (request.Dz ?? 0), out added));
+        // with the symmetry, the copies get their images in the other parts, as placed things do (F-12)
+        edit.Transaction.Apply(document => model.MirrorPlaced(document.Paste(clipboard, x - centre.X + (request.Dx ?? 0), z - centre.Y + (request.Dz ?? 0), out ImmutableArray<ObjectRef> copies), copies, out added));
         selection.Set(added);
         return Task.FromResult(added.Select(thing => thing.ToString()).ToArray());
     }

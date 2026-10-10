@@ -384,11 +384,11 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
                 float step = model.SelectionTurnsInQuarters ? MathF.PI / 2
                     : input.Modifiers.HasFlag(ToolModifiers.Shift) ? HandleSettings.SnapDegrees * MathF.PI / 180 : 0;
                 float angle = HandleMaths.TurnAngle(frame.Middle, _pressPlane, place, step);
-                Apply(before => pivot is Vector2 p ? before.RotateObjectsAbout(_moving, angle, p) : before.RotateObjects(_moving, _partners, angle));
+                Apply(before => pivot is Vector2 p ? before.RotateObjectsAbout(_moving, _partners, angle, p) : before.RotateObjects(_moving, _partners, angle));
                 break;
             case HandleKind.Scale:
                 Vector2 factors = HandleMaths.ScaleFactors(frame, _part, _pressPlane, place, input.Modifiers.HasFlag(ToolModifiers.Shift) ? HandleSettings.ScaleSnap : 0);
-                Apply(before => before.ScaleObjects(_moving, factors.X, factors.Y, frame.Heading, pivot));
+                Apply(before => before.ScaleObjects(_moving, _partners, factors.X, factors.Y, frame.Heading, pivot));
                 break;
             default:
                 HandleAxis axis = _part.Kind switch

@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Files.InMemory;
 using MediatR;
 
 namespace FAForever.MapEditor.App.Commands;
@@ -8,7 +9,8 @@ namespace FAForever.MapEditor.App.Commands;
 /// <summary>
 /// Scales each selected decal about its own centre (user story D-1), one step of undo: both
 /// sides by <c>factor</c>, or the width by <c>x</c> and the length by <c>z</c>. What plus and minus
-/// do with the Decals mode's select tool.
+/// do with the Decals mode's select tool. While the symmetry mirrors edits, the decals' mirror
+/// partners scale alike.
 /// </summary>
 /// <param name="Factor">Both sides; 1.1 makes them a tenth larger.</param>
 /// <param name="X">The width alone (along each decal's own x axis), times <c>factor</c> when both are given.</param>
@@ -17,7 +19,7 @@ namespace FAForever.MapEditor.App.Commands;
 [EditorCommand("decals.scale", "Scale the decals", Story = "D-1", Needs = Needs.Selection)]
 public sealed record ScaleDecals(float? Factor = null, float? X = null, float? Z = null) : IRequest;
 
-public sealed class ScaleDecalsHandler(SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<ScaleDecals>
+public sealed class ScaleDecalsHandler(MainViewModel model, SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<ScaleDecals>
 {
     public Task Handle(ScaleDecals request, CancellationToken cancellationToken)
     {
@@ -29,20 +31,21 @@ public sealed class ScaleDecalsHandler(SelectionViewModel selection, CurrentEdit
             throw new ArgumentException("A decal is scaled by a number larger than 0");
         }
         ImmutableArray<ObjectRef> decals = SelectedDecals.Of(selection);
-        edit.Transaction.Apply(document => document.ScaleDecals(decals, x, z));
+        edit.Transaction.Apply(document => document.ScaleDecals(SelectedDecals.WithPartners(model, document, decals), x, z));
         return Task.CompletedTask;
     }
 }
 
 /// <summary>
 /// Gives each selected decal a width or a length in ogrids (user story D-1), about its own centre,
-/// one step of undo: what the inspector's fields do. What is left out stays.
+/// one step of undo: what the inspector's fields do. What is left out stays. While the symmetry
+/// mirrors edits, the decals' mirror partners get the same width and length.
 /// </summary>
 [UndoStep]
 [EditorCommand("decals.size", "Size the decals", Story = "D-1", Needs = Needs.Selection)]
 public sealed record SizeDecals(float? Width = null, float? Length = null) : IRequest;
 
-public sealed class SizeDecalsHandler(SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<SizeDecals>
+public sealed class SizeDecalsHandler(MainViewModel model, SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<SizeDecals>
 {
     public Task Handle(SizeDecals request, CancellationToken cancellationToken)
     {
@@ -51,7 +54,7 @@ public sealed class SizeDecalsHandler(SelectionViewModel selection, CurrentEdit 
             throw new ArgumentException("A decal's width and length are larger than 0");
         }
         ImmutableArray<ObjectRef> decals = SelectedDecals.Of(selection);
-        edit.Transaction.Apply(document => document.SizeDecals(decals, request.Width, request.Length));
+        edit.Transaction.Apply(document => document.SizeDecals(SelectedDecals.WithPartners(model, document, decals), request.Width, request.Length));
         return Task.CompletedTask;
     }
 }
@@ -90,4 +93,11 @@ internal static class SelectedDecals
         ImmutableArray<ObjectRef> decals = [.. selection.Items.Where(thing => thing.Kind == ObjectKind.Decal)];
         return decals.IsEmpty ? throw new InvalidOperationException("No decal is selected: select decals first") : decals;
     }
+
+    /// <summary>
+    /// The decals and, while the symmetry mirrors edits, their mirror partners (user story F-12):
+    /// what scales about its own centre takes its partners along.
+    /// </summary>
+    public static ImmutableArray<ObjectRef> WithPartners(MainViewModel model, MapDocument document, ImmutableArray<ObjectRef> decals) =>
+        [.. decals, .. model.PartnersOf(document, decals).Select(partner => partner.Partner)];
 }

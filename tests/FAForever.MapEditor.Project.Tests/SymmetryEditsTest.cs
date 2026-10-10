@@ -174,6 +174,48 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void PartnersTurnAboutTheImageOfThePivot()
+        {
+            MapDocument document = Blank().AddProps([Rock(100, 60), Rock(110, 60), Rock(60, 100), Rock(60, 110)], out ImmutableArray<int> ids);
+            ObjectRef[] things = [ObjectRef.Prop(ids[0]), ObjectRef.Prop(ids[1])];
+            ImmutableArray<SymmetryPartner> partners = document.Partners(things, Diagonal);
+            Assert.AreEqual(2, partners.Length);
+            CollectionAssert.AreEqual(things, document.WithoutPartners([things[0], ObjectRef.Prop(ids[2]), things[1], ObjectRef.Prop(ids[3])], Diagonal).ToArray(), "the images of things kept before them leave");
+
+            MapDocument turned = document.RotateObjectsAbout(things, partners, MathF.PI / 2, new Vector2(105, 60));
+            Assert.AreEqual(new Vector2(105, 55), Flat(turned.PlaceOf(things[0])!.Value));
+            Assert.AreEqual(new Vector2(55, 105), Flat(turned.PlaceOf(ObjectRef.Prop(ids[2]))!.Value), "the image of the thing's new place");
+            Assert.AreEqual(new Vector2(65, 105), Flat(turned.PlaceOf(ObjectRef.Prop(ids[3]))!.Value));
+            Assert.AreEqual(-MathF.PI / 2, turned.HeadingOf(ObjectRef.Prop(ids[2]))!.Value, 1e-4f, "the other way in a mirrored part");
+        }
+
+        [TestMethod]
+        public void PartnersScaleAlongTheImagesOfTheAxes()
+        {
+            MapDocument document = Blank().AddProps([Rock(100, 60), Rock(110, 60), Rock(60, 100), Rock(60, 110)], out ImmutableArray<int> ids);
+            ObjectRef[] things = [ObjectRef.Prop(ids[0]), ObjectRef.Prop(ids[1])];
+            ImmutableArray<SymmetryPartner> partners = document.Partners(things, Diagonal);
+
+            MapDocument scaled = document.ScaleObjects(things, partners, 2, 1, 0, new Vector2(105, 60));
+            Assert.AreEqual(new Vector2(95, 60), Flat(scaled.PlaceOf(things[0])!.Value));
+            Assert.AreEqual(new Vector2(60, 95), Flat(scaled.PlaceOf(ObjectRef.Prop(ids[2]))!.Value), "spread along the image of x");
+            Assert.AreEqual(new Vector2(60, 115), Flat(scaled.PlaceOf(ObjectRef.Prop(ids[3]))!.Value));
+            Assert.AreEqual(2, scaled.Props.Single(prop => prop.Id == ids[2]).Scale.X, 1e-4f);
+
+            // a decal's partner gets the same width, about its own centre
+            Heightmap heights = document.Terrain.Heightmap;
+            document = document.PlaceDecal(DecalEdits.NewDecal(heights, "/env/decals/crater01_albedo.dds", 100, 60, 10, 4, 0), out ObjectRef decal)
+                .PlaceDecal(DecalEdits.NewDecal(heights, "/env/decals/crater01_albedo.dds", 60, 100, 10, 4, MathF.PI / 2), out ObjectRef image);
+            partners = document.Partners([decal], Diagonal);
+            Assert.AreEqual(image, partners.Single().Partner);
+            scaled = document.ScaleObjects([decal], partners, 2, 1);
+            Decal resized = scaled.Decals.Single(d => ObjectRef.Decal(d.Id) == image);
+            Assert.AreEqual(20, resized.Scale.X, 1e-3f);
+            Assert.AreEqual(4, resized.Scale.Z, 1e-3f);
+            Assert.AreEqual(new Vector2(60, 100), Flat(scaled.PlaceOf(image)!.Value));
+        }
+
+        [TestMethod]
         public void MirroredMarkersAreNewSpawnsDepositsAndLinkedPathNodes()
         {
             MapDocument document = Blank();
