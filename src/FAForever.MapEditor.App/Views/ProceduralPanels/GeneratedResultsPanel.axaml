@@ -36,7 +36,7 @@
                         Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ToggleAutoGenerateCommand}" CommandParameter="{Binding Id}"
                         AutomationProperties.Name="{Binding AutoLabel}"
                         AutomationProperties.HelpText="A second after the last change to what it is made from, it is generated in the background; a newer change starts again" />
-              <CheckBox Content="Generate on export when out of date" IsVisible="{Binding HasExportToggle}" IsChecked="{Binding OnExport, Mode=OneWay}"
+              <CheckBox Content="{Binding OnExportText}" IsVisible="{Binding HasExportToggle}" IsChecked="{Binding OnExport, Mode=OneWay}"
                         Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ToggleOnExportCommand}" CommandParameter="{Binding Id}"
                         AutomationProperties.Name="{Binding OnExportLabel}"
                         AutomationProperties.HelpText="Off: the export keeps it as it is, such as a normal map made in another tool" />

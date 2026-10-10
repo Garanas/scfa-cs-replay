@@ -47,6 +47,11 @@ public sealed record ProceduralRow(GeneratedRow Row, string? Overlay, bool Previ
 
     public bool HasExportToggle => Export is ExportUse.WhenOutOfDate or ExportUse.Written;
 
+    /// <summary>
+    /// The export check box's text.
+    /// </summary>
+    public string OnExportText => Export == ExportUse.Written ? "Write into the map on export" : "Generate on export when out of date";
+
     public string OnExportLabel => Export == ExportUse.Written
         ? $"Write the {Title.ToLowerInvariant()} into the map on export"
         : $"Generate the {Title.ToLowerInvariant()} on export when out of date";

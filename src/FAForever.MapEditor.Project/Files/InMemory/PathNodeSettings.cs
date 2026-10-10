@@ -120,7 +120,7 @@ namespace FAForever.MapEditor.Project.Files.InMemory
 
         public static PathNodeRef Generated(float x, float z) => new PathNodeRef(x, z);
 
-        public override string ToString() => IsAdded ? $"added node {Added}" : $"node at ({X:0.#}, {Z:0.#})";
+        public override string ToString() => IsAdded ? $"added node {Added} at ({X:0.#}, {Z:0.#})" : $"node at ({X:0.#}, {Z:0.#})";
     }
 
     /// <summary>

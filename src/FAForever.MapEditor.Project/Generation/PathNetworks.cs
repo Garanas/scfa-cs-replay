@@ -458,6 +458,11 @@ namespace FAForever.MapEditor.Project.Generation
                 LinkNeighbours();
                 Smooth(smoothing);
                 Merge();
+                if (fill)
+                {
+                    // smoothing and merging may open gaps
+                    Fill();
+                }
                 LinkNeighbours();
                 JoinRegions();
             }
