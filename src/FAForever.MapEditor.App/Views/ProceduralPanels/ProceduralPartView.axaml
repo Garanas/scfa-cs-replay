@@ -59,6 +59,10 @@
             <controls:SettingList DataContext="{Binding Settings}" ShowsTitle="False" />
           </Border>
         </DataTemplate>
+        <!-- the sky cube map (L-1): its sky, what uses it, Use, its settings; its picture and Generate are above -->
+        <DataTemplate DataType="vm:SkyCubeViewModel">
+          <procedural:SkyCubeView />
+        </DataTemplate>
       </ContentControl.DataTemplates>
     </ContentControl>
   </StackPanel>

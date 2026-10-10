@@ -61,7 +61,7 @@ public static class Menus
             Mode("paint", "paint.chooseTexture", "paint.addStratum", "paint.shader"),
             Mode("masks", "paint.addMask", "paint.renameMask", "paint.duplicateMask", "paint.deleteMask", "layers.add", "paint.maskRules"),
             Mode("water", "water.toggle", "water.addWaveGenerator", "water.placeWaveGenerator"),
-            Mode("lighting", "lighting.preset", "lighting.chooseCubemap"),
+            Mode("lighting", "lighting.preset", "lighting.chooseCubemap", "lighting.importSkybox"),
             Mode("markers", "markers.connectPaths", "markers.addChain", "markers.adaptive", "markers.placePreset"),
             Mode("props", "props.choose", "props.addToPalette", "props.clearPalette", "props.followTerrain", Separator, "props.alignToTerrain", "props.upright", "props.dropToGround", "props.randomize", "props.replace", "props.randomVariant", Separator, "props.reclaim", "props.addRule", "props.keepFromRules"),
             Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack"),
@@ -72,7 +72,7 @@ public static class Menus
         new MenuLayout("Generate",
         [
             "generate.walkability", "generate.navigation", "generate.props", "generate.masks", Separator,
-            "generate.normalMap", "decals.generateNormal", "decals.generateShadow", Separator,
+            "generate.normalMap", "decals.generateNormal", "decals.generateShadow", "generate.skyCube", Separator,
             "generate.stale",
         ]),
         new MenuLayout(PluginsMenu, ["plugins.manage", "plugins.reload", Separator, "plugins.check"]),

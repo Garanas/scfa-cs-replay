@@ -294,6 +294,8 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     {
         _timer?.Dispose();
         _timer = null;
+        _skyCubeReady = false;
+        ReleaseSkyCube();
         _renderer?.Dispose();
         _renderer = null;
         _objects?.Dispose();
@@ -310,6 +312,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         // view again asks for one (OnPropertyChanged)
         if (!IsVisible)
         {
+            _skyCubeReady = false;
             return;
         }
         using Performance.Span measure = Performance.Measure("3d.frame");
@@ -394,6 +397,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                 capture.TrySetException(exception);
             }
         }
+        RenderSkyCube(fb, width, height);
     }
 
     private unsafe string Save(int width, int height, string path)
@@ -566,6 +570,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.CursorChanged += OnDocumentChanged;
             _model.Selection.Changed += OnSelectionChanged;
             _model.OverlaysChanged += OnDocumentChanged;
+            AttachSkyCube();
         }
         RequestNextFrameRendering();
     }

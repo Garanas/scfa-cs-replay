@@ -43,7 +43,12 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// </summary>
         public PathNodeSettings PathNodes { get; init; } = PathNodeSettings.Default;
 
-        public bool IsDefault => AutoGenerate.IsEmpty && NotOnExport.IsEmpty && Navigation == NavigationSettings.Default && DraftMasks.IsEmpty && !WriteDraftOnChange && PathNodes.IsDefault;
+        /// <summary>
+        /// How the sky cube map is generated from the map.
+        /// </summary>
+        public SkyCubeSettings SkyCube { get; init; } = SkyCubeSettings.Default;
+
+        public bool IsDefault => AutoGenerate.IsEmpty && NotOnExport.IsEmpty && Navigation == NavigationSettings.Default && DraftMasks.IsEmpty && !WriteDraftOnChange && PathNodes.IsDefault && SkyCube.IsDefault;
 
         public bool RegeneratesOnItsOwn(string id) => AutoGenerate.Contains(id);
 
@@ -57,7 +62,7 @@ namespace FAForever.MapEditor.Project.Files.InMemory
 
         public bool Equals(ProceduralSettings? other) =>
             other is not null && AutoGenerate.SetEquals(other.AutoGenerate) && NotOnExport.SetEquals(other.NotOnExport) && Navigation == other.Navigation
-            && DraftMasks.SetEquals(other.DraftMasks) && WriteDraftOnChange == other.WriteDraftOnChange && PathNodes == other.PathNodes;
+            && DraftMasks.SetEquals(other.DraftMasks) && WriteDraftOnChange == other.WriteDraftOnChange && PathNodes == other.PathNodes && SkyCube == other.SkyCube;
 
         public override int GetHashCode() => HashCode.Combine(AutoGenerate.Count, NotOnExport.Count, Navigation, PathNodes);
     }

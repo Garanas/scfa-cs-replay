@@ -70,7 +70,7 @@ namespace FAForever.MapEditor.App.Tests
             {
                 "procedural.walkability", "procedural.navigationMesh", "procedural.pathNetwork",
                 "procedural.normalMap", "procedural.normalDecal", "procedural.shadowDecal",
-                "procedural.masksFromRules", "procedural.propsFromRules", "procedural.preview", "procedural.export",
+                "procedural.masksFromRules", "procedural.propsFromRules", "procedural.preview", "procedural.skyCube", "procedural.export",
             }, model.ProceduralList.Parts.Items.Select(part => part.Id).ToArray());
             CollectionAssert.AreEqual(new[] { "Movement", "Terrain surface", "From rules", "Pictures", "Export" },
                 model.ProceduralList.Groups.Select(group => group.Title).ToArray());
@@ -144,8 +144,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("Made from heightmap and lighting", model.ProceduralList.PartOf("lateTest")!.ReadsText);
 
             model.ProceduralList.Describe(new ProceduralEntry("lateTest", "Pictures") { Facts = _ => ["A fact"] });
-            CollectionAssert.AreEqual(new[] { "procedural.preview", "procedural.lateTest", "procedural.export" },
-                model.ProceduralList.Parts.Items.TakeLast(3).Select(part => part.Id).ToArray(), "under its heading");
+            CollectionAssert.AreEqual(new[] { "procedural.preview", "procedural.skyCube", "procedural.lateTest", "procedural.export" },
+                model.ProceduralList.Parts.Items.TakeLast(4).Select(part => part.Id).ToArray(), "under its heading");
             CollectionAssert.AreEqual(new[] { "A fact" }, model.ProceduralList.PartOf("lateTest")!.Facts.ToArray());
             Assert.IsFalse(model.ProceduralList.Groups.Any(group => group.Title == ProceduralListViewModel.OtherGroup));
 

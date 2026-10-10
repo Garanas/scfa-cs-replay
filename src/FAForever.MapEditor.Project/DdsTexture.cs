@@ -142,6 +142,57 @@ namespace FAForever.MapEditor.Project
             return dds;
         }
 
+        /// <summary>
+        /// A DDS cube map of a strip of six square faces (<see cref="Workspaces.CubeMaps"/>: +x, -x, +y,
+        /// -y, +z, -z side by side), each face compressed with its full chain of mipmaps, one face after
+        /// the other: the header of <see cref="WriteMipmapped"/> with the cube map's caps
+        /// (DDSCAPS2_CUBEMAP and its six faces, 0xfe00, as the game's own cube maps have).
+        /// </summary>
+        public static byte[] WriteCube(Workspaces.DecodedTexture strip, DdsCompression compression)
+        {
+            int size = strip.Height;
+            if (size <= 0 || strip.Width != 6 * size || strip.Rgba.Length != checked(strip.Width * size * 4))
+            {
+                throw new ArgumentException($"A cube map is a strip of six square faces, not {strip.Width} by {strip.Height}", nameof(strip));
+            }
+            int levels = DxtEncoder.LevelsOf(size, size);
+            List<byte[]> blocks = new List<byte[]>(6 * levels);
+            for (int face = 0; face < 6; face++)
+            {
+                (int w, int h, byte[] pixels) = (size, size, Workspaces.CubeMaps.Face(strip, face));
+                for (int level = 0; level < levels; level++)
+                {
+                    blocks.Add(DxtEncoder.Compress(w, h, pixels, compression));
+                    if (level + 1 < levels)
+                    {
+                        (w, h, pixels) = DxtEncoder.Halve(w, h, pixels);
+                    }
+                }
+            }
+
+            byte[] dds = new byte[HeaderSize + blocks.Sum(level => level.Length)];
+            Span<byte> header = dds.AsSpan(0, HeaderSize);
+            BinaryPrimitives.WriteUInt32LittleEndian(header, 0x20534444); // "DDS "
+            BinaryPrimitives.WriteInt32LittleEndian(header[4..], 124);
+            BinaryPrimitives.WriteInt32LittleEndian(header[8..], 0xa1007); // caps, height, width, pixel format, mipmap count, linear size
+            BinaryPrimitives.WriteInt32LittleEndian(header[12..], size);
+            BinaryPrimitives.WriteInt32LittleEndian(header[16..], size);
+            BinaryPrimitives.WriteInt32LittleEndian(header[20..], blocks[0].Length);
+            BinaryPrimitives.WriteInt32LittleEndian(header[28..], levels);
+            BinaryPrimitives.WriteInt32LittleEndian(header[76..], 32);
+            BinaryPrimitives.WriteInt32LittleEndian(header[80..], 0x4);
+            BinaryPrimitives.WriteUInt32LittleEndian(header[84..], compression == DdsCompression.Dxt1 ? 0x31545844u : 0x35545844u); // "DXT1", "DXT5"
+            BinaryPrimitives.WriteInt32LittleEndian(header[108..], 0x401008); // complex, texture, mipmaps
+            BinaryPrimitives.WriteInt32LittleEndian(header[112..], 0xfe00); // a cube map with all six faces
+            int at = HeaderSize;
+            foreach (byte[] level in blocks)
+            {
+                level.CopyTo(dds, at);
+                at += level.Length;
+            }
+            return dds;
+        }
+
         private static byte[] ToBgra(byte[] rgba)
         {
             byte[] bgra = new byte[rgba.Length];

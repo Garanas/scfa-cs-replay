@@ -22,6 +22,9 @@ public enum ExportUse
     /// <summary>Written into the files the export writes when the map says so (the path networks);
     /// the project never holds it.</summary>
     Written,
+
+    /// <summary>Kept among the map's own files, which the export copies (the sky cube map).</summary>
+    Copied,
 }
 
 /// <summary>
@@ -64,10 +67,11 @@ public sealed record ProceduralRow(GeneratedRow Row, string? Overlay, bool Previ
         ExportUse.Always => "On export: always made",
         ExportUse.WhenOutOfDate => OnExport ? "On export: made again when out of date" : "On export: kept as it is",
         ExportUse.Written => OnExport ? "On export: written into the markers" : "On export: not written",
+        ExportUse.Copied => "On export: copied with the map's files",
         _ => "",
     };
 
-    public bool HasExportText => Export == ExportUse.Always;
+    public bool HasExportText => Export is ExportUse.Always or ExportUse.Copied;
 }
 
 /// <summary>

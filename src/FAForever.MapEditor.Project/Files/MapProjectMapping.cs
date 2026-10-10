@@ -72,6 +72,13 @@ namespace FAForever.MapEditor.Project.Files
                 DraftMasks = settings.DraftMasks.IsEmpty ? null : [.. settings.DraftMasks],
                 WriteDraft = settings.WriteDraftOnChange ? true : null,
                 PathNodes = ToDto(settings.PathNodes),
+                SkyCube = settings.SkyCube.IsDefault ? null : new SkyCubeDto
+                {
+                    Resolution = settings.SkyCube.Resolution,
+                    EyeHeight = settings.SkyCube.EyeHeight,
+                    IncludeTerrain = settings.SkyCube.IncludeTerrain,
+                    SunDisc = settings.SkyCube.SunDisc,
+                },
             };
 
         /// <summary>
@@ -90,6 +97,15 @@ namespace FAForever.MapEditor.Project.Files
                 DraftMasks = ImmutableSortedSet.CreateRange(StringComparer.Ordinal, settings.DraftMasks ?? []),
                 WriteDraftOnChange = settings.WriteDraft == true,
                 PathNodes = ToModel(settings.PathNodes),
+                SkyCube = settings.SkyCube is SkyCubeDto sky
+                    ? new SkyCubeSettings
+                    {
+                        Resolution = SkyCubeSettings.ValidResolution(sky.Resolution ?? SkyCubeSettings.Default.Resolution),
+                        EyeHeight = sky.EyeHeight ?? SkyCubeSettings.Default.EyeHeight,
+                        IncludeTerrain = sky.IncludeTerrain ?? SkyCubeSettings.Default.IncludeTerrain,
+                        SunDisc = sky.SunDisc ?? SkyCubeSettings.Default.SunDisc,
+                    }
+                    : SkyCubeSettings.Default,
             };
 
         /// <summary>
