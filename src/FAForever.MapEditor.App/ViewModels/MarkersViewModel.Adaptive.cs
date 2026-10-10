@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
@@ -12,7 +13,9 @@ namespace FAForever.MapEditor.App.ViewModels;
 /// </summary>
 public sealed record OptionalGroupItem(OptionalGroup Group)
 {
-    public string Line => Group.Level is int level
+    public string Line => Group.Option == AdaptiveScript.PlayersOption && Group.Level is int players
+        ? $"{Group.Group} ({Group.Army}): {Group.Units} units, when {players} or more players are in the game"
+        : Group.Level is int level
         ? $"{Group.Group} ({Group.Army}): {Group.Units} units, from value {level} of optional_{Group.Option.ToLowerInvariant()}"
         : $"{Group.Group} ({Group.Army}): {Group.Units} units";
 }
@@ -62,11 +65,43 @@ public sealed partial class MarkersViewModel
     /// </summary>
     internal void RefreshOptionalGroups(MapDocument? document)
     {
+        RefreshAdaptiveFiles(document);
         if (document is not null && _armies is { } armies && armies == document.Armies)
         {
             return;
         }
         _armies = document?.Armies;
         OptionalGroups = document is null ? [] : [.. AdaptiveGroups.Find(document).Select(group => new OptionalGroupItem(group))];
+    }
+
+    private (object? Script, object? Armies, object? Resources, object? Scenario) _adaptiveOf;
+
+    /// <summary>
+    /// What the export writes of the adaptive map (user story R-5, <see cref="AdaptiveScript"/>): the
+    /// lobby options, tables and script, or nothing because the map's own script decides.
+    /// </summary>
+    [ObservableProperty]
+    public partial string AdaptiveFilesText { get; private set; } = "";
+
+    /// <summary>
+    /// Whether the export writes the adaptive map's options, tables and script.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool WritesAdaptiveFiles { get; private set; }
+
+    private void RefreshAdaptiveFiles(MapDocument? document)
+    {
+        (object?, object?, object?, object?) of = (document?.Script, document?.Armies, document?.Markers.Resources, document?.Scenario);
+        if (of.Equals(_adaptiveOf))
+        {
+            return;
+        }
+        _adaptiveOf = of;
+        WritesAdaptiveFiles = document is not null && AdaptiveScript.Writes(document);
+        AdaptiveFilesText = document is null || !AdaptiveScript.Adapts(document)
+            ? "A map that adapts gets the lobby options, tables and script of FAF's adaptive maps on export: groups Optional_Option_n by option, Optional_Players_n by the number of players."
+            : WritesAdaptiveFiles
+                ? "The export writes the map's _options.lua (an option per group's option and dynamic_spawn), _tables.lua (the deposits per army) and the script that creates the groups and leaves out the deposits of armies no one plays."
+                : "The map's own script decides what adapts: the export keeps it and writes no options or tables.";
     }
 }

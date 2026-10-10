@@ -293,12 +293,15 @@ reads again when it changes; and nothing that generates runs by itself.
       panel's Path networks (`markers.connectPaths`: spacing, replace or add where none are), out
       of date when walkability's inputs change (F-7).
 - [x] **R-4 Chains.** Create a chain and put markers in order.
-- [ ] **R-5 Adaptive maps.** Which markers (deposits, civilians) exist for which number of players
+- [x] **R-5 Adaptive maps.** Which markers (deposits, civilians) exist for which number of players
       and options. Today: whether the map adapts, the army each deposit waits for, and the groups of
       civilians and wrecks FAF's adaptive script creates by lobby option (`Optional_<option>_<n>`,
-      `markers.addOptionalGroup`). Missing: civilians by the number of players (the adaptive
-      convention has none: its script decides by option), and writing the map's `_options.lua`
-      and script.
+      `markers.addOptionalGroup`); the export writes the convention's `_options.lua` (an option per
+      group's option, and `dynamic_spawn`), `_tables.lua` (the deposits per army) and a script that
+      creates the groups by option and leaves out the deposits of armies no one plays, for a map
+      whose script is none, the new map's or the editor's own (a map maker's own script is kept);
+      civilians by the number of players: groups `Optional_Players_<n>`, created by that script
+      when n or more players are in the game.
 - [x] **R-6 Show markers.** Markers and path nodes on or off in the top view and in 3D, per kind.
 
 ## P: Props

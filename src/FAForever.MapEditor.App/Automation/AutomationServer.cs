@@ -678,6 +678,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["stamp"] = model.Tool<StampTool>().Describe(),
             ["favourites"] = model.Assets.DescribeFavourites(),
             ["walkabilityMarks"] = model.Tool<WalkabilityMarkTool>().Describe(),
+            ["adaptiveFiles"] = new JsonObject { ["writes"] = model.Markers.WritesAdaptiveFiles, ["text"] = model.Markers.AdaptiveFilesText },
         };
     }
 

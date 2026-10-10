@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.FileFormats.Map;
@@ -359,6 +360,29 @@ namespace FAForever.MapEditor.App.Tests
             await Run(model, "presets.apply", new JsonObject { ["kind"] = BrushPreset.Kind, ["name"] = "Mark" });
             Assert.AreEqual("terrain.walkability", model.ActiveTool!.Definition.Id);
             Assert.IsTrue(model.Undo());
+        }
+
+        [TestMethod]
+        public async Task AnAdaptiveMapIsExportedWithItsOptionsTablesAndScript()
+        {
+            MainViewModel model = await Open("markers.select");
+            await Run(model, "file.new", new JsonObject { ["name"] = "Adapting", ["size"] = 256, ["players"] = 2 });
+            Assert.IsFalse(model.Markers.WritesAdaptiveFiles);
+            StringAssert.StartsWith(model.Markers.AdaptiveFilesText, "A map that adapts");
+
+            await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1101", ["x"] = 100, ["z"] = 100, ["army"] = "ARMY_17" });
+            model.Selection.Set([ObjectRef.Unit("UNIT_1")]);
+            await Run(model, "markers.addOptionalGroup", new JsonObject { ["option"] = "Players", ["level"] = 2, ["fromSelection"] = true });
+            Assert.IsTrue(model.Markers.WritesAdaptiveFiles, "a new map's script is the editor's to write");
+            StringAssert.Contains(model.Markers.OptionalGroups.Single().Line, "when 2 or more players are in the game");
+
+            string output = Path.Combine(AppContext.BaseDirectory, "exports", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(output);
+            await Run(model, "file.export", new JsonObject { ["folder"] = output });
+            string folder = Directory.GetDirectories(output).Single();
+            Assert.IsTrue(File.Exists(Path.Combine(folder, "adapting_options.lua")));
+            Assert.IsTrue(File.Exists(Path.Combine(folder, "adapting_tables.lua")));
+            StringAssert.StartsWith(File.ReadAllText(Path.Combine(folder, "adapting_script.lua")), AdaptiveScript.Header);
         }
 
         [TestMethod]

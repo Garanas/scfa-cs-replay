@@ -543,7 +543,7 @@
                   </DockPanel>
                   <Button Content="Add group with the selected units" Command="{Binding AddOptionalGroupCommand}"
                           AutomationProperties.HelpText="Adds Optional_option_value to the civilian army, beside INITIAL, with the selected units in it" />
-                  <TextBlock Classes="caption" TextWrapping="Wrap" Text="FAF's adaptive script creates a group Optional_Option_n from value n of the lobby option optional_option on; the map's script and options file decide, the editor writes neither." />
+                  <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding AdaptiveFilesText}" AutomationProperties.Name="What the export writes of the adaptive map" />
                 </StackPanel>
               </Border>
             </DataTemplate>
