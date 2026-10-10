@@ -138,10 +138,14 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **M-6 Script.** Open the map's script in the user's editor; see the files of the map folder.
 - [x] **M-7 Import and export.** Import a map folder of the game or the vault; export into the
       vault's `maps` folder.
-- [ ] **M-8 Versions and upload.** Raise the version on export; render the preview; upload to the
+- [x] **M-8 Versions and upload.** Raise the version on export; render the preview; upload to the
       FAF vault, refusing a map that is not publishable (`MapDocument.IsPublishable`: the sandbox).
-      Today: File, Render the preview (S-4); `file.export {raise}` raises the version (folder and
-      `map_version`) and renders a preview out of date first. Missing: the upload.
+      File, Render the preview (S-4); `file.export {raise}` raises the version (folder and
+      `map_version`) and renders a preview out of date first; File, Upload to the vault
+      (`file.upload`): the map's errors and the vault's own rules checked first, the next version
+      exported and zipped, the person's yes to name, version and size, a sign-in in the browser
+      (kept in memory only), the upload with progress, then the map is that version. Without a
+      person only to a test server, with `confirm`.
 
 ## T: Terrain
 
@@ -308,7 +312,10 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **U-4 Unit presets.** A civilian base, a defence line: a group saved as a preset and placed
       again, for any army (F-10). The Units mode's Presets: the selected units or the chosen group,
       placed with the Place tool at the mouse as a new group, turned in quarter turns.
-- [ ] **U-5 Wrecks.** Place units as wrecks.
+- [x] **U-5 Wrecks.** Place units as wrecks: the place tool's As wrecks and `units.asWrecks` on the
+      selection (the inspector's Wrecks check box) put them into their army's `WRECKAGE` group, which
+      the game turns into wrecks when it starts, as the vault's maps keep them; grey and dark in 3D, a
+      cross in the top view; a warning for wrecks of a playable army.
 
 ## V: Views
 

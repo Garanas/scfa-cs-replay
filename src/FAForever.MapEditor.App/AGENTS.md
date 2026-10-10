@@ -920,8 +920,17 @@ change, span `model.armies`), the place tool and the commands.
 - The panel's and inspector's commands are in no menu (`units.add`, `units.renameGroup`,
   `units.removeGroup`, `units.moveGroup`, `units.moveToArmy`, `units.moveToGroup`,
   `map.renameArmy`, `map.setArmy`, `map.setAlliance`, `map.removeArmy`).
-- Automation: `state.units` (`place`: unit, preset, army, group, heading, structure, footprint;
-  `tree`: the chosen group and the first 200 groups with their units) and `state.armies` (name,
+- **Wrecks** (U-5; the library's `UnitWrecks`, its guide says why a group): the place tool's
+  As wrecks (`AsWrecks`, the check box after Choose...) places into the army's `WRECKAGE` group in
+  place of the chosen group (`units.add {wreck?}`; left out, the tool's); `units.asWrecks {wreck?}`
+  (Units menu, `[UndoStep]`) makes the selected units wrecks or, with `wreck: false`, units again in
+  their army's `INITIAL`, and says when an army is playable; the inspector's unit section has a
+  Wrecks check box (a dash when some are) that runs it. The 3D view draws a wreck grey and dark (the
+  instance's second row's fourth value, `ObjectShaders.ModelFragment`), the top view an ashen cross
+  (`MapWreckBrush`) where a unit is a square; `get` answers `wreck`. Not built yet: placing a units
+  preset as wrecks (a preset places into a new group of its name).
+- Automation: `state.units` (`place`: unit, preset, army, group, heading, structure, footprint,
+  asWrecks; `tree`: the chosen group and the first 200 groups with their units) and `state.armies` (name,
   playable, team, factions, spawn, units, alliances, chosen).
 - Not built yet: dragging units or groups in the tree, team colours in the views.
 
@@ -1237,7 +1246,46 @@ library's (`MapResize`, `MapScript`; its guide).
   map as opened (a result kept on `MapOpened`), so the status bar tells when it is out of date.
 - Automation: `state.mapSize` (size, playable area and whether it is named, version, next version,
   folder, the tool's settings and summary).
-- Not built yet: the upload to the vault (M-8, wave 3), the rectangle and handles in the 3D view.
+- Not built yet: the rectangle and handles in the 3D view.
+
+## Uploading to the vault
+
+User story M-8; the protocol and the vault's rules are the library's (`Vault/`, its guide, "The
+vault: rules, zip, upload and sign-in"). `MainViewModel.Upload` (`VaultUploadViewModel`) holds the
+upload and the sign-in.
+
+- **`file.upload {server?, confirm?, token?, ranked?}`** (File, Upload to the vault...): refuses a map
+  that is not publishable (the sandbox), runs the checks and stops on errors (showing the Problems
+  tab), checks the vault's own rules (`VaultRules.Check`: the name, a description, the version, the
+  folder and files named after the name), exports the next version (`NextVersion`) into a
+  temporary folder (the map keeps its version meanwhile; a stale preview is rendered first, as for
+  an export), checks the files the vault wants, zips it (`VaultArchive`, the folder in lower case),
+  asks the person (`IEditorDialogs.ConfirmAsync`: name, version, file, size, and where to), signs
+  in when needed, uploads with the progress in the status line (`BusyAsync("upload")`), and then
+  makes the map that version (a step of undo, `Raise the version to n (uploaded to the vault)`).
+  The vault's errors (JSON:API, with their codes) show in the status line and the log; a 401
+  forgets the sign-in. The temporary folder is removed afterwards.
+- **Never by accident**: without a person the command refuses FAForever's API (any host under
+  `faforever.com`) whatever it is given, and needs `server` (a test server) and `confirm: true`;
+  `token` (a bearer token) is taken only for a test server. A person uploads to FAForever's API
+  unless `server` says otherwise. Nothing was uploaded to the real vault while building this: the
+  tests and checks use `FakeVaultServer` (an `HttpListener` on the loopback address, in the
+  library's tests and linked into these) or a small fake in Python.
+- **Signing in** (`FafSignIn`): the system's browser (`IEditorDialogs.OpenInBrowserAsync`) opens
+  Hydra's page, which sends it back to `http://127.0.0.1:<free port>/` with the code; PKCE S256, the
+  development client (`FafOAuthSettings.Faf`, the official FAF client's id, which has `upload_map`
+  and takes loopback redirects on any port), five minutes to answer. The tokens stay in memory, per
+  API, until the editor closes; the refresh token renews an expired access token. Nothing secret is
+  written to disk (a decision: one sign-in per session costs a person little, a token on disk is a
+  key to their account). `OAuth` can point at a test server.
+- Automation: `state.upload` (stage `Idle`/`Checking`/`Exporting`/`Confirming`/`SigningIn`/
+  `Uploading`/`Uploaded`/`Cancelled`/`Failed`, progress, the last result and errors with codes,
+  whether signed in, publishable, the next version). `run id=file.upload interactive=true wait=false`
+  opens the confirmation dialog in a running editor (a window of its own, outside `screenshot`).
+- Tests: `VaultUploadTest` (the multipart request, refusals: sandbox, errors, rules, a missing file,
+  no confirmation, the real vault; the person's no; a sign-in once for two uploads; the vault's error).
+- Not built yet: choosing a licence (`licenseId`, the vault's default), a page with the vault's
+  versions of the map, cancelling an upload under way.
 
 ## Height layers and curves
 
@@ -1277,7 +1325,7 @@ User story F-17. The editor keeps what a service keeps for Loki and Prometheus, 
 
 - **Logs**: every `ILogger` of the editor (`Microsoft.Extensions.Logging.Abstractions`; get one
   with `MainViewModel.Logger(category)`, categories `Commands`, `Files`, `Workspace`,
-  `Rendering`, `Performance`, `Automation`, `VersionControl`, `Assets`, `Editor`). The Console of the dock shows them, with
+  `Rendering`, `Performance`, `Automation`, `VersionControl`, `Assets`, `Editor`, `Vault`). The Console of the dock shows them, with
   their level, newest last; its tab counts the warnings and errors, and it can show only those.
   Logged now: commands run and asked for while not built; opening, importing, saving, exporting
   with their duration, or why they failed; files read again; the workspace and the conversion of

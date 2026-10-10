@@ -305,6 +305,65 @@ the civilians' army (`CivilianArmy`: `ARMY_17`, else `NEUTRAL_CIVILIAN`, else th
 The editor writes neither the options nor the script; civilians by the number of players are not
 part of the convention.
 
+**Wrecks** (U-5, `Editing/UnitWrecks`): the game has no field for a wreck. A map's `_save.lua`
+holds wrecks as ordinary units (the same five fields) in a group named exactly `WRECKAGE` of an
+army, and `ScenarioUtils.InitializeArmies` (`lua/sim/ScenarioUtilities.lua` in
+[FAForever/fa](https://github.com/FAForever/fa/blob/develop/lua/sim/ScenarioUtilities.lua)) finds
+it (`FindUnitGroup`: by name, case-sensitive, at any depth, the first it meets), creates its units
+and turns each into its wreck (`CreateWreckageUnit`, `unit:CreateWreckageProp(0)`), even with the
+civilians turned off; no script line is needed. 34 maps of the vault keep wrecks so, nearly all in
+an extra army (`ARMY_9`, `NEUTRAL_CIVILIAN`, `ARMY_17`) with the default script (`abhor.v0004`,
+`sweepwing_sanctum.v0003`, `setons_clutch_-_faf_version.v0004`, the test map Theta Passage). An army's
+groups exist only when the army is in the game, so wrecks of a playable army show only when a player
+takes the slot (the check `wrecks-in-playable-army`, a warning). The FAF map editor reads a wreck
+from the group's name the same way and writes nothing more. So the document needs no field: a unit
+is a wreck when it lies in a `WRECKAGE` group (`IsWreck`, `Wrecks`), `SetWrecks` moves units into
+their army's `WRECKAGE` (the one the game finds, `WreckagePath`, else a new one under the root) or
+back into `INITIAL`, and import and export carry the group as any other (`UnitWrecksTest`: the same
+game content after import and export of vault maps with wrecks). Groups that adaptive maps' scripts
+create as wrecks by option (`Optional_Wreckage_<n>`, `CreateArmyGroup(army, group, true)`) are
+ordinary groups to the editor: only the script decides.
+
+## The vault: rules, zip, upload and sign-in
+
+User story M-8 (`Vault/`). How FAForever takes a map, from the source of the
+[FAF client](https://github.com/FAForever/downlords-faf-client) (`MapUploadTask`,
+`FafApiAccessor.uploadMap`) and the [API](https://github.com/FAForever/faf-java-api)
+(`map/MapsController.java`, `map/MapService.java`, `error/ErrorCode.java`; read 2026-10):
+
+- **`POST https://api.faforever.com/maps/upload`**, `multipart/form-data`, a bearer token of a person
+  signed in with the scope `upload_map` (`@PreAuthorize("hasScope('upload_map')")`). Parts: `file`,
+  the zip (its file name must end in `.zip`), and `metadata`, JSON `{"isRanked": false}` with an
+  optional `licenseId` (the vault's default licence without one; a licence less permissive than the
+  map's current one is refused). The answer is 200 with no body; a refusal is 422 with
+  `{"errors": [{"status", "title", "detail", "code": "107", "meta": {"args": [...]}}]}` (the code is
+  `ErrorCode`'s number as text), 401 without a valid token, 403 for a vault ban. At most 350 MB
+  (`spring.servlet.multipart.max-file-size`); zip bombs are refused.
+- **The zip** (`VaultArchive`): exactly one folder at the root, holding files ending in
+  `_scenario.lua`, `.scmap`, `_save.lua` and `_script.lua` (an adaptive map also `_options.lua` and
+  `_tables.lua`). The FAF client zips the map folder itself; the editor names the folder in lower
+  case. The API renames the folder to the display name in lower case with spaces as underscores and
+  the version (`theta_passage.v0004`), rewrites `/maps/<old folder>` in every `.lua` file, renders
+  the previews itself and zips it again.
+- **The scenario** must have `name`, `description`, `type`, `size`, `map_version` 1 to 9999, a
+  no-rush radius and a first team `FFA`; `map`, `save` and `script` must be
+  `/maps/<folder name>(.vNNNN)?/<folder name><ending>` (case ignored), the folder name made of the
+  display name as above. The name: letters a to z, digits, spaces and minus signs, 4 to 50
+  characters, at most 3 minus signs, starting with a letter. The version must not exist yet (107);
+  a name another author has is refused (106). `VaultRules.Check` checks what the map can tell
+  before an upload (`VaultRules.FolderName`); ownership and versions only the server knows.
+- **`MapUploadClient.UploadAsync`** sends it with progress and throws `VaultUploadException` with the
+  parsed errors; `IsRealVault` tells FAForever's own hosts, which the editor refuses without a person.
+- **Signing in** (`FafSignIn`, RFC 8252): Hydra's page in the system's browser, a redirect to a
+  listener on `http://127.0.0.1:<free port>/`, the code exchanged with the PKCE verifier (S256) at
+  `https://hydra.faforever.com/oauth2/token` (no CORS needed outside a browser). The client is the
+  official FAF client's (`2e8808cf-...`, the repository's development client): in
+  [gitops-stack](https://github.com/FAForever/gitops-stack/blob/main/apps/ory-hydra/values.yaml) it has
+  `upload_map`, `redirectUri: http://127.0.0.1` (any port) and no secret. The Viewer's production
+  client lacks `upload_map` (TODO.md). The FAF client itself now signs in with the device flow.
+- Tests (`VaultUploadTest`, `FakeVaultServer`): the zip, the rules, the multipart request's parts
+  and headers, the errors read back, and a sign-in against a fake token endpoint. Never the real vault.
+
 ## Images and textures
 
 - ImageMagick (Magick.NET, Q16) reads and writes the PNGs (`ProjectImages`) and compresses the
@@ -395,8 +454,8 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   assets (the hidden `.sandbox` holds a hash of the project's files); a saved one is kept.
 - **Publishable**: `ScenarioInfo.Publishable` (in `map.json`'s scenario as `publishable: false`,
   left out while true, so older projects read as publishable) and `MapDocument.IsPublishable`. The
-  sandbox is not; the upload to the vault (M-8, not built) is to refuse such a map, while the
-  export to the game's maps folder works for every map. The game's files do not carry it.
+  sandbox is not; the upload to the vault (M-8) refuses such a map, while the export to the
+  game's maps folder works for every map. The game's files do not carry it.
 - **Presets** (user story F-10): `presets/<kind>/<name>.json` (`Workspace.Presets`, a
   `PresetLibrary`), a folder per kind (lower-case letters, digits and dashes: `brush`, `lighting`,
   `water`, `units`, `markers`, `props-palette`) and a file per preset (`PresetDto`: format version,
