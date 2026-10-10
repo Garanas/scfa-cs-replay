@@ -39,6 +39,8 @@
           <TextBlock DockPanel.Dock="Right" Classes="warning" Margin="{StaticResource InlineGap}" Text="{Binding Generation.Summary}"
                      IsVisible="{Binding Generation.HasStale}" AutomationProperties.Name="Generated results out of date"
                      ToolTip.Tip="Generate, Everything out of date makes them again" />
+          <TextBlock DockPanel.Dock="Right" Classes="secondary mono" Margin="{StaticResource InlineGap}" Text="{Binding SelectionStatus}"
+                     IsVisible="{Binding Selection.HasAny}" AutomationProperties.Name="Selection and its size" />
           <TextBlock DockPanel.Dock="Right" Classes="secondary" Margin="{StaticResource InlineGap}" AutomationProperties.Name="Mode and tool">
             <Run Text="{Binding SelectedMode.Definition.Title}" /><Run Text=" · " /><Run Text="{Binding ActiveTool.Definition.Title}" />
           </TextBlock>

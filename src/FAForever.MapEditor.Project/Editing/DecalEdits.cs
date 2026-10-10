@@ -297,7 +297,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// A decal with another width and length, about its centre, as high above the terrain at its
         /// new corner as it was at the old one.
         /// </summary>
-        private static Decal Resized(Heightmap heights, Decal decal, float width, float length)
+        internal static Decal Resized(Heightmap heights, Decal decal, float width, float length)
         {
             width = MathF.Max(width, SmallestSide);
             length = MathF.Max(length, SmallestSide);

@@ -73,6 +73,100 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// Turns the things about the up axis through one place, from +x towards +z (clockwise in
+        /// the top view): each turns about its own centre as <see cref="RotateObjects"/> does, and
+        /// its centre goes round the place. Areas do not turn; their centres go round.
+        /// </summary>
+        public static MapDocument RotateObjectsAbout(this MapDocument document, IEnumerable<ObjectRef> things, float radians, Vector2 pivot)
+        {
+            Heightmap heights = document.Terrain.Heightmap;
+            (float sin, float cos) = MathF.SinCos(radians);
+            Vector2 Orbit(Vector2 place)
+            {
+                Vector2 d = place - pivot;
+                return pivot + new Vector2(d.X * cos - d.Y * sin, d.X * sin + d.Y * cos);
+            }
+            Vector3 Around(Vector3 position)
+            {
+                Vector2 to = Orbit(new Vector2(position.X, position.Z));
+                return Ground(heights, position, to.X, to.Y);
+            }
+            return document.Change(things,
+                prop => TurnProp(prop, radians) with { Position = Around(prop.Position) },
+                decal =>
+                {
+                    // turned about its centre, which then goes round
+                    Decal turned = TurnDecal(heights, decal, Wrap(decal.Rotation.Y + radians));
+                    Vector3 centre = MapObjects.DecalCentre(turned);
+                    Vector2 to = Orbit(new Vector2(centre.X, centre.Z));
+                    return turned with { Position = Ground(heights, turned.Position, turned.Position.X + to.X - centre.X, turned.Position.Z + to.Y - centre.Z) };
+                },
+                marker => marker with { Position = Around(marker.Position), Orientation = marker.Orientation with { Y = Wrap(marker.Orientation.Y + radians) } },
+                unit => unit with { Position = Around(unit.Position), Orientation = unit.Orientation with { Y = Wrap(unit.Orientation.Y + radians) } },
+                area =>
+                {
+                    Vector2 centre = new Vector2((float)(area.X0 + area.X1) / 2, (float)(area.Z0 + area.Z1) / 2);
+                    Vector2 d = Orbit(centre) - centre;
+                    return area with { X0 = area.X0 + d.X, X1 = area.X1 + d.X, Z0 = area.Z0 + d.Y, Z1 = area.Z1 + d.Y };
+                });
+        }
+
+        /// <summary>
+        /// Scales the things along two axes turned by <paramref name="heading"/> (radians, from +x
+        /// towards +z): a decal's width by <paramref name="x"/> and length by <paramref name="z"/>
+        /// (in its own axes), a prop alike along every axis by the factor that changes most, an area
+        /// along the map's axes. With a <paramref name="pivot"/> the centres spread from (or gather
+        /// to) it too, markers and units included; without, each thing scales about its own centre
+        /// and markers and units stay as they are.
+        /// </summary>
+        public static MapDocument ScaleObjects(this MapDocument document, IEnumerable<ObjectRef> things, float x, float z, float heading = 0, Vector2? pivot = null)
+        {
+            Heightmap heights = document.Terrain.Heightmap;
+            (float sin, float cos) = MathF.SinCos(heading);
+            float uniform = MathF.Abs(x - 1) >= MathF.Abs(z - 1) ? x : z;
+            // a place relative to the pivot, scaled in the turned axes
+            Vector2 Spread(Vector2 place)
+            {
+                if (pivot is not Vector2 p)
+                {
+                    return place;
+                }
+                Vector2 d = place - p;
+                Vector2 local = new Vector2(d.X * cos + d.Y * sin, -d.X * sin + d.Y * cos) * new Vector2(x, z);
+                return p + new Vector2(local.X * cos - local.Y * sin, local.X * sin + local.Y * cos);
+            }
+            Vector3 Moved(Vector3 position)
+            {
+                Vector2 to = Spread(new Vector2(position.X, position.Z));
+                return Ground(heights, position, to.X, to.Y);
+            }
+            return document.Change(things,
+                prop =>
+                {
+                    Vector3 scale = prop.Scale == Vector3.Zero ? Vector3.One : prop.Scale;
+                    return prop with { Scale = scale * uniform, Position = Moved(prop.Position) };
+                },
+                decal =>
+                {
+                    Decal resized = DecalEdits.Resized(heights, decal, decal.Scale.X * x, decal.Scale.Z * z);
+                    Vector3 centre = MapObjects.DecalCentre(resized);
+                    Vector2 to = Spread(new Vector2(centre.X, centre.Z));
+                    return resized with { Position = Ground(heights, resized.Position, resized.Position.X + to.X - centre.X, resized.Position.Z + to.Y - centre.Z) };
+                },
+                marker => pivot is null ? marker : marker with { Position = Moved(marker.Position) },
+                unit => pivot is null ? unit : unit with { Position = Moved(unit.Position) },
+                area =>
+                {
+                    double cx = (area.X0 + area.X1) / 2;
+                    double cz = (area.Z0 + area.Z1) / 2;
+                    Vector2 to = Spread(new Vector2((float)cx, (float)cz));
+                    double hx = Math.Abs(area.X1 - area.X0) / 2 * x;
+                    double hz = Math.Abs(area.Z1 - area.Z0) / 2 * z;
+                    return area with { X0 = to.X - hx, X1 = to.X + hx, Z0 = to.Y - hz, Z1 = to.Y + hz };
+                });
+        }
+
+        /// <summary>
         /// Turns each thing about the up axis through its own centre until it faces one way.
         /// </summary>
         public static MapDocument SetHeading(this MapDocument document, IEnumerable<ObjectRef> things, float radians)

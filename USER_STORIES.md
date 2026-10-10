@@ -64,8 +64,10 @@ reads again when it changes; and nothing that generates runs by itself.
       turn, the arrows nudge, Escape clears; in 3D a click selects what the ray meets, and the
       selection is highlighted); copy, paste (at the mouse), duplicate, delete, turn, select all and
       none as commands; the inspector edits the position and heading of one or many, and each
-      kind's own fields; decals and props scale. Missing: handles in the views, moving along one
-      axis, turning about the selection's centre.
+      kind's own fields; decals and props scale; handles in both views (move, along x or z, turn
+      about the selection's centre or each thing's own, scale; shift snaps, X or Z holds an axis),
+      F focuses the 3D camera on the selection, the status bar shows its count and size, the thing
+      under the mouse in 3D lights up. Missing: a box in the 3D view.
 - [ ] **F-12 Symmetry.** Mirror every edit: horizontally, vertically, diagonally, or around the
       middle for 2 to 8 players; shown as guides in the views. Today: the symmetry is chosen (off,
       rotational for 2 to 8, four mirrors; on and off takes the map's own) and the top view shows
@@ -206,8 +208,8 @@ reads again when it changes; and nothing that generates runs by itself.
 
 - [ ] **L-1 Lighting.** The sun's direction (with a handle in the 3D view), colours, ambience,
       shadow fill, multiplier, specular, bloom, fog, sky and cube maps, seen at once in 3D. Today:
-      the Lighting panel (`lighting.set`) and the sun tool, which turns the sun from either view.
-      Missing: a handle drawn in the 3D view; the sky and cube maps.
+      the Lighting panel (`lighting.set`) and the sun tool, which turns the sun from either view,
+      with an arrow in the 3D view whose head is dragged across the sky. Missing: the sky and cube maps.
 - [x] **L-2 Lighting presets.** The lighting of a biome as a preset (F-10): the Lighting panel's
       presets, `lighting.preset`.
 
@@ -301,7 +303,9 @@ reads again when it changes; and nothing that generates runs by itself.
 - [ ] **V-3 Overlays.** Choose what the views show over the terrain: a mask, walkability, grid,
       symmetry guides, areas, markers by kind, props, decals, units. Today: markers, path nodes and
       the 3D camera; props and units on or off in 3D; the chosen mask for tools (K-1) and, while
-      their tools are active, a layer's or the water's mask and the terrain types in the top view.
+      their tools are active, a layer's or the water's mask and the terrain types in the top view;
+      in 3D on the terrain too: the areas (the playable one marked), walkability, the mask or grid
+      being painted, the symmetry's guides, and the handles of the area and sun tools.
 - [ ] **V-4 Layouts.** Top and 3D side by side; panels that can be moved, closed and opened again.
 - [x] **V-5 Ruler.** Measure distances and heights: the ruler tool (Terrain mode), the distance in
       ogrids and km, the rise and slope, drawn in the top view and in the status line.

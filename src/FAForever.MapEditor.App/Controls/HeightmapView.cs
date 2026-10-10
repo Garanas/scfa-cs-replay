@@ -65,6 +65,7 @@ public sealed class HeightmapView : Control
     private void OnThemeChanged(object? sender, EventArgs e)
     {
         _overlay = null;
+        _inks = null;
         InvalidateVisual();
     }
 
@@ -165,6 +166,7 @@ public sealed class HeightmapView : Control
             _model.CursorChanged -= OnOverlayChanged;
             _model.SelectionChanged -= OnOverlayChanged;
             _model.Walkability.Changed -= OnOverlayChanged;
+            _model.Handles.Changed -= OnOverlayChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
@@ -177,6 +179,7 @@ public sealed class HeightmapView : Control
             _model.CursorChanged += OnOverlayChanged;
             _model.SelectionChanged += OnOverlayChanged;
             _model.Walkability.Changed += OnOverlayChanged;
+            _model.Handles.Changed += OnOverlayChanged;
         }
         OnMapChanged(this, EventArgs.Empty);
     }
@@ -293,6 +296,11 @@ public sealed class HeightmapView : Control
         if (_model?.ActiveTool?.Tool is { Marks: ToolMarks marks })
         {
             DrawMarks(context, overlay, marks);
+        }
+
+        if (_model is { HasMap: true, ActiveTool.Tool: IMapTool shaped })
+        {
+            DrawShapes(context, shaped.Shapes(ToolViewOf(_cursor)));
         }
 
         if (_model is { ShowSymmetry: true, Symmetry.IsOn: true, ShownDocument: MapDocument mirrored })
@@ -431,6 +439,7 @@ public sealed class HeightmapView : Control
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+        _axes |= AxisOf(e.Key);
         // the keys the view does not use itself are the active tool's (the select tool's Q, E, arrows, Escape)
         if (!e.Handled && _model?.HasMap == true && _model.ActiveTool?.Tool is IMapTool tool && tool.Key(e.Key.ToString(), ModifiersOf(e.KeyModifiers)))
         {
@@ -438,7 +447,99 @@ public sealed class HeightmapView : Control
         }
     }
 
-    private ToolInput InputOf(KeyModifiers modifiers) => new ToolInput(ModifiersOf(modifiers), (float)(1 / _zoom));
+    private ToolInput InputOf(KeyModifiers modifiers) => new ToolInput(ModifiersOf(modifiers) | _axes, (float)(1 / _zoom), View: ToolViewOf(_cursor));
+
+    // X and Z held: moves go along one axis
+    private ToolModifiers _axes;
+
+    protected override void OnKeyUp(KeyEventArgs e)
+    {
+        base.OnKeyUp(e);
+        _axes &= ~AxisOf(e.Key);
+    }
+
+    protected override void OnLostFocus(FocusChangedEventArgs e)
+    {
+        base.OnLostFocus(e);
+        _axes = ToolModifiers.None;
+    }
+
+    /// <summary>
+    /// The axis a key holds a move to: X or Z, else none.
+    /// </summary>
+    internal static ToolModifiers AxisOf(Key key) => key switch
+    {
+        Key.X => ToolModifiers.AxisX,
+        Key.Z => ToolModifiers.AxisZ,
+        _ => ToolModifiers.None,
+    };
+
+    /// <summary>
+    /// The view as a tool sees it: straight down, a place shows where <see cref="MapToControl"/> puts it.
+    /// </summary>
+    public ToolView ToolViewOf(Point? mouse)
+    {
+        double zoom = _zoom;
+        Vector offset = _offset;
+        return new ToolView(true, mouse is Point at ? new System.Numerics.Vector2((float)at.X, (float)at.Y) : null,
+            place => new System.Numerics.Vector2((float)(place.X * zoom + offset.X), (float)(place.Z * zoom + offset.Y)),
+            _ => (float)(1 / zoom));
+    }
+
+    private Dictionary<ToolInk, IBrush>? _inks;
+
+    private IBrush InkOf(ToolInk ink) => (_inks ??= new Dictionary<ToolInk, IBrush>
+    {
+        [ToolInk.Selection] = Token<IBrush>("MapSelectionBrush"),
+        [ToolInk.Fill] = Token<IBrush>("CanvasBrush"),
+        [ToolInk.Hover] = Token<IBrush>("OverlayBrush"),
+        [ToolInk.AxisX] = Token<IBrush>("MapHandleAxisXBrush"),
+        [ToolInk.AxisZ] = Token<IBrush>("MapHandleAxisZBrush"),
+        [ToolInk.Shadow] = Token<IBrush>("OverlayShadowBrush"),
+        [ToolInk.Sun] = Token<IBrush>("WarningBrush"),
+    })[ink];
+
+    /// <summary>
+    /// What the active tool draws at its size on screen (<see cref="IMapTool.Shapes"/>): the handles of the selection.
+    /// </summary>
+    private void DrawShapes(DrawingContext context, IReadOnlyList<ToolShape> shapes)
+    {
+        static Point P(System.Numerics.Vector2 v) => new Point(v.X, v.Y);
+        foreach (ToolShape shape in shapes)
+        {
+            switch (shape)
+            {
+                case ToolLine { Points.Length: >= 2 } line:
+                    StreamGeometry path = new StreamGeometry();
+                    using (StreamGeometryContext figure = path.Open())
+                    {
+                        figure.BeginFigure(P(line.Points[0]), false);
+                        for (int i = 1; i < line.Points.Length; i++)
+                        {
+                            figure.LineTo(P(line.Points[i]));
+                        }
+                        figure.EndFigure(line.Closed);
+                    }
+                    context.DrawGeometry(null, new Pen(InkOf(line.Ink), line.Width), path);
+                    break;
+                case ToolSquare square:
+                    context.DrawRectangle(InkOf(square.Fill), new Pen(InkOf(square.Stroke), 1.5),
+                        new Rect(square.Centre.X - square.Half, square.Centre.Y - square.Half, 2 * square.Half, 2 * square.Half));
+                    break;
+                case ToolTriangle triangle:
+                    StreamGeometry head = new StreamGeometry();
+                    using (StreamGeometryContext figure = head.Open())
+                    {
+                        figure.BeginFigure(P(triangle.A), true);
+                        figure.LineTo(P(triangle.B));
+                        figure.LineTo(P(triangle.C));
+                        figure.EndFigure(true);
+                    }
+                    context.DrawGeometry(InkOf(triangle.Ink), null, head);
+                    break;
+            }
+        }
+    }
 
     internal static ToolModifiers ModifiersOf(KeyModifiers modifiers) =>
         (modifiers.HasFlag(KeyModifiers.Shift) ? ToolModifiers.Shift : ToolModifiers.None)

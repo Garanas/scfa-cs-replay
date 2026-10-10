@@ -11,6 +11,43 @@ using Silk.NET.OpenGL;
 namespace FAForever.MapEditor.App.Rendering.Gpu;
 
 /// <summary>
+/// What the 3D view lays over the terrain in a frame (user story V-3); colours with their opacity.
+/// </summary>
+/// <param name="Walkability">Where units of the shown layer cannot go and what changed, one
+/// premultiplied colour (<c>0xAARRGGBB</c>) an ogrid, made again only when the result changes;
+/// null for none. <paramref name="WalkabilityOf"/> names it.</param>
+/// <param name="Grid">The grid being painted or the mask for tools; null for none.</param>
+/// <param name="GridPalette">A colour per code for a grid of codes (the terrain types); null for a
+/// mask, shown in <paramref name="MaskColor"/> as strong as it is full.</param>
+/// <param name="Areas">The areas, the first the playable area; null when the overlay is off.</param>
+/// <param name="AreaStates">Per area: 0, 1 selected, 2 under the mouse.</param>
+/// <param name="Guides">The symmetry's guides; empty for none.</param>
+/// <param name="Eye">Where the camera is, and <paramref name="PixelScale"/> the ogrids a pixel
+/// covers an ogrid from it: the lines keep their width on screen.</param>
+internal sealed record TerrainOverlays(
+    object? WalkabilityOf,
+    Func<uint[]>? Walkability,
+    int WalkabilityWidth,
+    int WalkabilityHeight,
+    TiledBuffer<byte>? Grid,
+    IReadOnlyList<uint>? GridPalette,
+    Vector4 MaskColor,
+    IReadOnlyList<Area>? Areas,
+    IReadOnlyList<float> AreaStates,
+    IReadOnlyList<(Vector2 From, Vector2 To)> Guides,
+    Vector4 AreaColor,
+    Vector4 SelectionColor,
+    Vector4 HoverColor,
+    Vector4 OutsideColor,
+    Vector4 GuideColor,
+    Vector4 ShadowColor,
+    Vector3 Eye,
+    float PixelScale)
+{
+    public bool IsEmpty => Walkability is null && Grid is null && (Areas is null || Areas.Count == 0) && Guides.Count == 0;
+}
+
+/// <summary>
 /// Draws a map with OpenGL: the terrain with its layers, the props and units
 /// (<see cref="ObjectRenderer"/>), then the albedo decals, then the normal decals, the water, the
 /// markers, and the active tool's brush under the mouse. It keeps on the card what it drew last and updates only what a new version of the
@@ -37,6 +74,13 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     private readonly Program _decalHighlight;
     private readonly Program _water;
     private readonly Program _brush;
+    private readonly Program _overlay;
+    private uint _walkTexture;
+    private object? _walkOf;
+    private uint _gridTexture;
+    private TiledBuffer<byte>? _gridOf;
+    private IReadOnlyList<uint>? _gridPaletteOf;
+    private Vector4 _gridColorOf;
     private readonly uint _repeat;
     private readonly uint _clamp;
     private readonly uint _masks;
@@ -81,6 +125,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _decalHighlight = new Program(gl, TerrainShaders.DecalVertex(es), TerrainShaders.DecalHighlightFragment(es));
         _water = new Program(gl, TerrainShaders.WaterVertex(es), TerrainShaders.WaterFragment(es));
         _brush = new Program(gl, TerrainShaders.BrushVertex(es), TerrainShaders.BrushFragment(es));
+        _overlay = new Program(gl, TerrainShaders.OverlayVertex(es), TerrainShaders.OverlayFragment(es));
 
         _repeat = Sampler(GLEnum.Repeat);
         _clamp = Sampler(GLEnum.ClampToEdge);
@@ -134,7 +179,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// <param name="decals">The ids of the decals not drawn (those of hidden groups) and of those
     /// drawn highlighted (the selection), with the highlight's colour; null for none.</param>
     public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, BrushPreview? brush = null, Vector3 brushColor = default, (ObjectRenderer Renderer, ObjectFrame Frame)? objects = null,
-        (IReadOnlySet<int>? Hidden, IReadOnlySet<int>? Highlighted, Vector3 Color)? decals = null)
+        (IReadOnlySet<int>? Hidden, IReadOnlySet<int>? Highlighted, Vector3 Color)? decals = null, TerrainOverlays? overlays = null)
     {
         _hidden = decals?.Hidden;
         _highlighted = decals?.Highlighted;
@@ -180,6 +225,16 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             shown.Renderer.DrawMarkers(document, viewProjection, shown.Frame);
             _gl.DepthMask(false);
             _gl.Enable(EnableCap.Blend);
+        }
+        if (overlays is { IsEmpty: false })
+        {
+            using (Performance.Measure("3d.draw-overlays"))
+            {
+                // on the terrain's own lattice, made invariantly as the terrain's: the same depth, which
+                // the depth test (less or equal) passes without an offset, so what stands on the terrain
+                // (trees far away included) stays in front; over the decals and the water
+                DrawOverlays(document, viewProjection, overlays);
+            }
         }
         if (brush is not null)
         {
@@ -262,6 +317,157 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         program.Set("uWaterColor", water.SurfaceColor.X, water.SurfaceColor.Y, water.SurfaceColor.Z);
         _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
         _waterQuad.Draw();
+    }
+
+    private void DrawOverlays(MapDocument document, Matrix4x4 viewProjection, TerrainOverlays overlays)
+    {
+        // uploads bind to the active unit: the overlays' own
+        _gl.ActiveTexture(TextureUnit.Texture15);
+        UpdateWalkability(overlays);
+        UpdateGrid(overlays);
+        Program program = _overlay;
+        program.Use();
+        program.Set("uViewProjection", viewProjection);
+        Bind(0, _heights, 0);
+        program.Set("uHeights", 0);
+        program.Set("uHeightScale", document.Terrain.Heightmap.Scale);
+        program.Set("uMapSize", document.Width, document.Height);
+        program.Set("uCells", _gridCells.X, _gridCells.Z);
+
+        // unit 13 (a mask's for the terrain, bound again every frame) holds walkability, 15 the grid
+        program.Set("uWalk", overlays.Walkability is not null && _walkTexture != 0 ? 1 : 0);
+        Bind(13, _walkTexture, _masks);
+        program.Set("uWalkTexture", 13);
+        program.Set("uGrid", overlays.Grid is not null && _gridTexture != 0 ? 1 : 0);
+        Bind(15, _gridTexture, _masks);
+        program.Set("uGridTexture", 15);
+
+        IReadOnlyList<Area> areas = overlays.Areas ?? [];
+        int count = Math.Min(areas.Count, 32);
+        program.Set("uAreaCount", count);
+        for (int i = 0; i < count; i++)
+        {
+            program.Set($"uAreas[{i}]", (float)areas[i].X0, (float)areas[i].Z0, (float)areas[i].X1, (float)areas[i].Z1);
+            program.Set($"uAreaStates[{i}]", i < overlays.AreaStates.Count ? overlays.AreaStates[i] : 0);
+        }
+        program.Set("uShade", count > 0 ? 1 : 0);
+        Set(program, "uAreaColor", overlays.AreaColor);
+        Set(program, "uSelectionColor", overlays.SelectionColor);
+        Set(program, "uHoverColor", overlays.HoverColor);
+        Set(program, "uOutside", overlays.OutsideColor);
+        Set(program, "uGuideColor", overlays.GuideColor);
+        Set(program, "uShadowColor", overlays.ShadowColor);
+        int guides = Math.Min(overlays.Guides.Count, 8);
+        program.Set("uEye", overlays.Eye.X, overlays.Eye.Y, overlays.Eye.Z);
+        program.Set("uPixelScale", overlays.PixelScale);
+        program.Set("uGuideCount", guides);
+        for (int i = 0; i < guides; i++)
+        {
+            (Vector2 from, Vector2 to) = overlays.Guides[i];
+            program.Set($"uGuides[{i}]", from.X, from.Y, to.X, to.Y);
+        }
+        _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
+        _grid.Draw();
+    }
+
+    private static void Set(Program program, string name, Vector4 color) => program.Set(name, color.X, color.Y, color.Z, color.W);
+
+    /// <summary>
+    /// Walkability's colours on the card, again only for another result, layer or theme.
+    /// </summary>
+    private void UpdateWalkability(TerrainOverlays overlays)
+    {
+        if (overlays.Walkability is null || Equals(overlays.WalkabilityOf, _walkOf))
+        {
+            return;
+        }
+        using Performance.Span measure = Performance.Measure("3d.update-walkability");
+        uint[] pixels = overlays.Walkability();
+        byte[] rgba = new byte[pixels.Length * 4];
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            uint argb = pixels[i];
+            rgba[i * 4] = (byte)(argb >> 16);
+            rgba[i * 4 + 1] = (byte)(argb >> 8);
+            rgba[i * 4 + 2] = (byte)argb;
+            rgba[i * 4 + 3] = (byte)(argb >> 24);
+        }
+        if (_walkTexture == 0)
+        {
+            _walkTexture = _gl.GenTexture();
+        }
+        GpuTextureCache.UploadRgba(_gl, _walkTexture, overlays.WalkabilityWidth, overlays.WalkabilityHeight, rgba, mipmaps: false);
+        _walkOf = overlays.WalkabilityOf;
+    }
+
+    /// <summary>
+    /// The grid's colours on the card, premultiplied: all of them for another grid or palette, else
+    /// the tiles a stroke changed.
+    /// </summary>
+    private void UpdateGrid(TerrainOverlays overlays)
+    {
+        if (overlays.Grid is not TiledBuffer<byte> grid || (ReferenceEquals(grid, _gridOf) && ReferenceEquals(overlays.GridPalette, _gridPaletteOf) && overlays.MaskColor == _gridColorOf))
+        {
+            return;
+        }
+        using Performance.Span measure = Performance.Measure("3d.update-grid");
+        bool whole = _gridTexture == 0 || _gridOf is null || _gridOf.Width != grid.Width || _gridOf.Height != grid.Height
+            || !ReferenceEquals(overlays.GridPalette, _gridPaletteOf) || overlays.MaskColor != _gridColorOf;
+        if (whole)
+        {
+            if (_gridTexture == 0)
+            {
+                _gridTexture = _gl.GenTexture();
+            }
+            GpuTextureCache.UploadRgba(_gl, _gridTexture, grid.Width, grid.Height, GridColours(grid, overlays, 0, 0, grid.Width, grid.Height), mipmaps: false);
+        }
+        else
+        {
+            _gl.BindTexture(TextureTarget.Texture2D, _gridTexture);
+            _gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
+            foreach ((int tileX, int tileY) in grid.ChangedTiles(_gridOf!))
+            {
+                (int x, int y, int w, int h) = TileBounds(grid.Width, grid.Height, tileX, tileY);
+                _gl.TexSubImage2D<byte>(TextureTarget.Texture2D, 0, x, y, (uint)w, (uint)h, PixelFormat.Rgba, PixelType.UnsignedByte, GridColours(grid, overlays, x, y, w, h));
+            }
+        }
+        _gridOf = grid;
+        _gridPaletteOf = overlays.GridPalette;
+        _gridColorOf = overlays.MaskColor;
+    }
+
+    private static byte[] GridColours(TiledBuffer<byte> grid, TerrainOverlays overlays, int x, int y, int width, int height)
+    {
+        byte[] rgba = new byte[width * height * 4];
+        IReadOnlyList<uint>? palette = overlays.GridPalette;
+        Vector4 mask = overlays.MaskColor;
+        for (int row = 0; row < height; row++)
+        {
+            for (int column = 0; column < width; column++)
+            {
+                byte value = grid[x + column, y + row];
+                int i = (row * width + column) * 4;
+                float r, g, b, a;
+                if (palette is not null)
+                {
+                    uint argb = palette[value];
+                    a = (argb >> 24) / 255f * 0.6f;
+                    r = ((argb >> 16) & 0xff) / 255f;
+                    g = ((argb >> 8) & 0xff) / 255f;
+                    b = (argb & 0xff) / 255f;
+                }
+                else
+                {
+                    a = value / 255f * 0.7f * mask.W;
+                    (r, g, b) = (mask.X, mask.Y, mask.Z);
+                }
+                rgba[i] = (byte)(r * a * 255);
+                rgba[i + 1] = (byte)(g * a * 255);
+                rgba[i + 2] = (byte)(b * a * 255);
+                rgba[i + 3] = (byte)(a * 255);
+            }
+        }
+        return rgba;
     }
 
     private void DrawBrush(MapDocument document, Matrix4x4 viewProjection, BrushPreview brush, Vector3 color)
@@ -747,6 +953,15 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _gl.DeleteTexture(_heights);
         _gl.DeleteTexture(_mask0);
         _gl.DeleteTexture(_mask1);
+        _overlay.Dispose();
+        if (_walkTexture != 0)
+        {
+            _gl.DeleteTexture(_walkTexture);
+        }
+        if (_gridTexture != 0)
+        {
+            _gl.DeleteTexture(_gridTexture);
+        }
     }
 
     /// <summary>

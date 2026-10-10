@@ -647,7 +647,67 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["pid"] = Environment.ProcessId,
             ["views"] = ViewsState(),
             ["loading"] = LoadingState(),
+            ["handles"] = DescribeHandles(),
+            ["hover"] = model.Selection.Hovered?.ToString(),
         };
+    }
+
+    /// <summary>
+    /// Where the handles show in a view's pixels, to aim the mouse at: the move square, the arrows'
+    /// tips, the ring at +x and the scale squares by their side.
+    /// </summary>
+    private static JsonObject HandlePoints(FAForever.MapEditor.Project.Editing.SelectionFrame frame, ToolView view)
+    {
+        FAForever.MapEditor.Project.Editing.HandleLayout layout = FAForever.MapEditor.Project.Editing.HandleLayout.Of(frame, view.OgridsPerPixelAt(frame.Centre));
+        JsonNode? At(System.Numerics.Vector3 place) => view.ToScreen(place) is System.Numerics.Vector2 p ? new JsonArray(Math.Round(p.X, 1), Math.Round(p.Y, 1)) : null;
+        JsonObject points = new JsonObject
+        {
+            ["move"] = At(layout.Centre),
+            ["moveX"] = At(System.Numerics.Vector3.Lerp(layout.ArrowX.From, layout.ArrowX.To, 0.6f)),
+            ["moveZ"] = At(System.Numerics.Vector3.Lerp(layout.ArrowZ.From, layout.ArrowZ.To, 0.6f)),
+            ["turn"] = frame.Turns ? At(layout.Centre + new System.Numerics.Vector3(layout.RingRadius, 0, 0)) : null,
+        };
+        foreach ((FAForever.MapEditor.Project.Editing.HandlePart part, System.Numerics.Vector3 place) in layout.Scales)
+        {
+            points[part.ToString()] = At(place);
+        }
+        return points;
+    }
+
+    /// <summary>
+    /// The handles of the selection (user story F-11): the settings, the box they sit on, the handle
+    /// under the mouse and the one dragged, and the sun's head in 3D.
+    /// </summary>
+    private JsonObject DescribeHandles()
+    {
+        JsonObject state = SetHandlesHandler.Describe(model.Handles);
+        SelectTool? select = model.ActiveTool?.Tool switch
+        {
+            SelectTool tool => tool,
+            DecalSelectTool decals => decals.Select,
+            _ => null,
+        };
+        if (select?.Frame is FAForever.MapEditor.Project.Editing.SelectionFrame frame)
+        {
+            state["centre"] = new JsonArray(Math.Round(frame.Centre.X, 2), Math.Round(frame.Centre.Y, 2), Math.Round(frame.Centre.Z, 2));
+            state["heading"] = Math.Round(frame.Heading * 180 / Math.PI, 2);
+            state["size"] = new JsonArray(Math.Round(2 * frame.HalfSize.X, 2), Math.Round(2 * frame.HalfSize.Y, 2));
+            state["turns"] = frame.Turns;
+            state["scales"] = frame.ScalesSides ? "sides" : frame.Scales ? "corners" : "none";
+            state["hovered"] = select.Hovered.ToString();
+            state["dragged"] = select.Dragged.ToString();
+            state["points"] = new JsonObject
+            {
+                ["top"] = window.MapView.IsEffectivelyVisible ? HandlePoints(frame, window.MapView.ToolViewOf(null)) : null,
+                ["3d"] = window.View3D.IsEffectivelyVisible ? HandlePoints(frame, window.View3D.ToolViewOf()) : null,
+            };
+        }
+        state["status"] = model.SelectionStatus;
+        if (model.ActiveTool?.Tool is SunTool sun)
+        {
+            state["sunHead"] = sun.HeadHovered;
+        }
+        return state;
     }
 
     /// <summary>

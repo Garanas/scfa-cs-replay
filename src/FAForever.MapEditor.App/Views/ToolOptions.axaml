@@ -176,7 +176,19 @@
             </DataTemplate>
             <!-- selecting and moving what lies on the map (F-11) -->
             <DataTemplate DataType="tools:SelectTool">
-              <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              <StackPanel Classes="toolrow">
+                <StackPanel Classes="inline" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Handles}">
+                  <CheckBox Content="Handles" IsChecked="{Binding Show}" AutomationProperties.Name="Show the handles of the selection"
+                            AutomationProperties.HelpText="The square moves, the arrows move along x or z, the ring turns, the squares on the box scale" />
+                  <TextBlock Classes="label" Text="About" />
+                  <ComboBox ItemsSource="{Binding Pivots}" SelectedItem="{Binding Pivot}" AutomationProperties.Name="What turns and scales go about"
+                            AutomationProperties.HelpText="Selection: about the selection's centre, the things go round it; Each: each thing about its own centre" />
+                  <TextBlock Classes="label" Text="Shift snaps to" />
+                  <ComboBox ItemsSource="{Binding Snaps}" SelectedItem="{Binding Snap}" AutomationProperties.Name="Grid a move snaps to with shift"
+                            AutomationProperties.HelpText="Shift snaps a move to this grid, a turn to 15 degrees, a scale to tenths" />
+                </StackPanel>
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </StackPanel>
             </DataTemplate>
             <!-- the Decals mode's select tool (F-11, D-1): what dragging the selection does -->
             <DataTemplate DataType="tools:DecalSelectTool">
@@ -185,6 +197,16 @@
                   <TextBlock Classes="label" Text="Drag" />
                   <ComboBox ItemsSource="{Binding DragModes}" SelectedItem="{Binding DragMode}" AutomationProperties.Name="What dragging the selection does"
                             AutomationProperties.HelpText="Move, Scale both sides, or scale the Width or Length only; S chooses the next" />
+                </StackPanel>
+                <StackPanel Classes="inline" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Handles}">
+                  <CheckBox Content="Handles" IsChecked="{Binding Show}" AutomationProperties.Name="Show the handles of the selection"
+                            AutomationProperties.HelpText="The square moves, the arrows move along x or z, the ring turns, the squares on the box scale" />
+                  <TextBlock Classes="label" Text="About" />
+                  <ComboBox ItemsSource="{Binding Pivots}" SelectedItem="{Binding Pivot}" AutomationProperties.Name="What turns and scales go about"
+                            AutomationProperties.HelpText="Selection: about the selection's centre, the things go round it; Each: each thing about its own centre" />
+                  <TextBlock Classes="label" Text="Shift snaps to" />
+                  <ComboBox ItemsSource="{Binding Snaps}" SelectedItem="{Binding Snap}" AutomationProperties.Name="Grid a move snaps to with shift"
+                            AutomationProperties.HelpText="Shift snaps a move to this grid, a turn to 15 degrees, a scale to tenths" />
                 </StackPanel>
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </StackPanel>
