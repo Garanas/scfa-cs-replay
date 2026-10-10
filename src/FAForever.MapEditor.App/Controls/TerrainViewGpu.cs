@@ -86,6 +86,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private IMapTool? _pressed;
 
     private string? _loggedTextureError;
+    private string? _loggedModelError;
 
     public TerrainViewGpu()
     {
@@ -294,6 +295,11 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             {
                 _loggedTextureError = textureError;
                 Log.LogWarning("A texture could not be read: {Reason}", textureError);
+            }
+            if (_models.LastError is string modelError && modelError != _loggedModelError)
+            {
+                _loggedModelError = modelError;
+                Log.LogWarning("A model could not be read; it shows as a box: {Reason}", modelError);
             }
             WatchAssets(workspace);
         }
