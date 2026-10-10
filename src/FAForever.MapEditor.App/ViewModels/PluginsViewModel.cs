@@ -157,20 +157,26 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
     /// Loads the plugins of a workspace that became ready, after writing the examples into it the
     /// first time, and watches their folder.
     /// </summary>
-    public void Open(Workspace workspace)
+    public void Open(Workspace workspace) => Open(workspace.PluginsFolder);
+
+    /// <summary>
+    /// Loads the plugins of a folder, after writing the examples into it the first time, and
+    /// watches it.
+    /// </summary>
+    public void Open(string folder)
     {
         ReadSettings();
         try
         {
-            ExamplePlugins.Ensure(workspace.PluginsFolder);
+            ExamplePlugins.Ensure(folder);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            Log.LogWarning(exception, "Could not write the example plugins into {Folder}: {Reason}", workspace.PluginsFolder, exception.Message);
+            Log.LogWarning(exception, "Could not write the example plugins into {Folder}: {Reason}", folder, exception.Message);
         }
-        Folder = workspace.PluginsFolder;
+        Folder = Path.GetFullPath(folder);
         ReloadAll();
-        Watch(workspace.PluginsFolder);
+        Watch(Folder);
     }
 
     /// <summary>
@@ -338,7 +344,11 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
         _watcher.Changed += files => UiThread.Run(_ui, () => OnFilesChanged(files));
     }
 
-    internal void OnFilesChanged(IReadOnlyCollection<string> files)
+    /// <summary>
+    /// Reads the plugins of changed files again (paths relative to the plugins folder): what the
+    /// folder's watcher reports, and tests.
+    /// </summary>
+    public void OnFilesChanged(IReadOnlyCollection<string> files)
     {
         if (Folder is not string folder)
         {

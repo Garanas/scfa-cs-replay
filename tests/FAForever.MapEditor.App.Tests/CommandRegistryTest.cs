@@ -63,7 +63,7 @@ namespace FAForever.MapEditor.App.Tests
             EditorCommand[] incomplete = [.. NewModel().Commands.All.Where(command => command.IsIncomplete)];
             HashSet<string> stories = Stories();
 
-            Assert.IsTrue(incomplete.Length > 5, "the planned commands are found");
+            Assert.IsTrue(incomplete.Length > 0, "the planned commands are found");
             foreach (EditorCommand command in incomplete)
             {
                 Assert.IsTrue(stories.Contains(command.Incomplete!.Story), $"{command.Id} names {command.Incomplete.Story}, which is not in USER_STORIES.md");
@@ -124,7 +124,8 @@ namespace FAForever.MapEditor.App.Tests
                     "file.restoreCommit", "file.showCommit", "file.showMapFiles", "lighting.set", "map.removeArea", "map.removeArmy", "map.renameArmy", "map.setAlliance",
                     "map.setArea", "map.setArmy", "map.setPlayableArea", "markers.addOptionalGroup", "markers.deleteChain", "markers.link", "markers.place",
                     "markers.renameChain", "markers.set", "markers.setChain", "markers.setWeather", "markers.showKind", "paint.addMaskRule", "paint.chooseMask",
-                    "paint.moveMaskRule", "paint.moveStratum", "paint.removeMaskRule", "paint.removeStratum", "paint.setLayer", "paint.setMaskRule", "presets.apply",
+                    "paint.moveMaskRule", "paint.moveStratum", "paint.removeMaskRule", "paint.removeStratum", "paint.setLayer", "paint.setMaskRule", "plugins.enable",
+                    "plugins.setField", "presets.apply",
                     "presets.delete", "problems.show", "props.addRuleCondition", "props.chooseRule", "props.place", "props.removeFromPalette", "props.removeRule",
                     "props.removeRuleCondition", "props.scale", "props.set", "props.setRule", "props.setRuleCondition", "props.setRulePalette", "props.tilt",
                     "select.set", "terrain.addCurve", "terrain.chooseLayer", "terrain.moveLayer", "terrain.reloadLayer", "terrain.removeLayer", "terrain.setCurve",

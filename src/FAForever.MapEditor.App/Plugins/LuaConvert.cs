@@ -52,7 +52,7 @@ public static class LuaConvert
                     JsonValueKind.String => value.GetValue<string>(),
                     JsonValueKind.True => true,
                     JsonValueKind.False => false,
-                    JsonValueKind.Number => value.GetValue<double>(),
+                    JsonValueKind.Number => double.Parse(value.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture),
                     _ => LuaValue.Nil,
                 };
             default:
@@ -77,8 +77,11 @@ public static class LuaConvert
     /// A Lua value as JSON, for a command's arguments: a table whose keys are 1 to n is an array,
     /// any other table an object (its keys as text); functions and the like are refused.
     /// </summary>
+    /// <remarks>The nodes are read from text, as automation's are, so a number reads as any number type.</remarks>
     /// <exception cref="ArgumentException">The value cannot be JSON.</exception>
-    public static JsonNode? ToJson(LuaValue value, int depth = 0)
+    public static JsonNode? ToJson(LuaValue value) => Build(value, 0) is JsonNode node ? JsonNode.Parse(node.ToJsonString()) : null;
+
+    private static JsonNode? Build(LuaValue value, int depth)
     {
         if (depth > MaxDepth)
         {
@@ -105,7 +108,7 @@ public static class LuaConvert
                     JsonArray array = [];
                     for (int i = 1; i <= table.ArrayLength; i++)
                     {
-                        array.Add(ToJson(table[i], depth + 1));
+                        array.Add(Build(table[i], depth + 1));
                     }
                     return array;
                 }
@@ -115,7 +118,7 @@ public static class LuaConvert
                     string key = pair.Key.Type == LuaValueType.Number
                         ? pair.Key.Read<double>().ToString(CultureInfo.InvariantCulture)
                         : pair.Key.ToString();
-                    obj[key] = ToJson(pair.Value, depth + 1);
+                    obj[key] = Build(pair.Value, depth + 1);
                 }
                 return obj;
             }
