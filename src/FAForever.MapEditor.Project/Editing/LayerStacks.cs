@@ -405,6 +405,24 @@ namespace FAForever.MapEditor.Project.Editing
                 }
 
                 Weights(resolved, grid, tileX, tileY, columns, rows, weights);
+                if (heights && reference is null)
+                {
+                    // the common case, kept free of the others' branches: a stroke composites it for every dab
+                    LayerCombine combine = layer.Combine;
+                    for (int row = 0; row < rows; row++)
+                    {
+                        int start = row * Size;
+                        for (int i = start; i < start + columns; i++)
+                        {
+                            float w = weights[i];
+                            if (w > 0)
+                            {
+                                values[i] = Combine(combine, values[i], heightValues[i], w);
+                            }
+                        }
+                    }
+                    continue;
+                }
                 for (int row = 0; row < rows; row++)
                 {
                     for (int column = 0; column < columns; column++)
@@ -438,6 +456,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// <summary>
         /// One layer's work at a place: h what the layers below made, v its value, w its weight.
         /// </summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         internal static float Combine(LayerCombine combine, float h, float v, float w) => combine switch
         {
             LayerCombine.Add => h + w * v,

@@ -268,7 +268,14 @@ namespace FAForever.MapEditor.Project
             }
             if (target.IsHeights)
             {
-                ushort[] samples = ProjectImages.ReadGray16(Path.Combine(folder, valuesFile), grid.Width, grid.Height);
+                // an image layer is read from its file when it is there (another tool may have changed it
+                // while the editor was closed); the layer's own PNG holds what it read last
+                string? image = layer.Path is string path ? Path.GetFullPath(Path.Combine(folder, path)) : null;
+                bool fromImage = image is not null && File.Exists(image);
+                ushort[] samples = fromImage
+                    ? HeightmapFiles.ReadResampled(document, image!, out _)
+                    : ProjectImages.ReadGray16(Path.Combine(folder, valuesFile), grid.Width, grid.Height);
+                offset = fromImage ? 0 : offset;
                 TiledBuffer<float> values = HeightLayerEdits.FromSamples(TiledBuffer<ushort>.FromArray(grid.Width, grid.Height, samples), scale, held?.Values, offset);
                 TiledBuffer<byte>? coverage = null;
                 string file = Path.Combine(folder, coverageFile);

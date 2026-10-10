@@ -325,5 +325,26 @@ namespace FAForever.MapEditor.Project.Tests
             MapDocument reloaded = HeightLayers.Follow(document, MapProjectStore.Reload(document, project, [MapProjectLayout.StackLayer("heightmap", "Sculpt")]), null);
             Assert.AreEqual(40, reloaded.Terrain.Heightmap.GetHeight(10, 10), 1e-2);
         }
+
+        [TestMethod]
+        public void AnImageLayerIsReadFromItsFileWhenTheProjectOpens()
+        {
+            MapDocument document = HeightLayerEdits.Start(Flat(35));
+            string project = ProjectFolders.New("image-open");
+            MapProjectStore.Save(document, project);
+            string source = Path.Combine(project, MapProjectLayout.ProceduralTemp, "gaea.png");
+            ProjectImages.WriteGray16(source, 129, 129, Enumerable.Repeat((ushort)(50 * 128), 129 * 129).ToArray());
+            ushort[] samples = HeightmapFiles.ReadResampled(document, source, out _);
+            document = HeightLayers.Recomposite(HeightLayerEdits.Add(document, HeightLayerEdits.NewImported(document, "gaea", samples, "procedural/temp/gaea.png")));
+            MapProjectStore.Save(document, project);
+
+            // another tool changes the file while the editor is closed
+            ProjectImages.WriteGray16(source, 129, 129, Enumerable.Repeat((ushort)(42 * 128), 129 * 129).ToArray());
+            Assert.AreEqual(42, MapProjectStore.Load(project).Terrain.Heightmap.GetHeight(10, 10), 1e-2, "the file, not the layer's last reading");
+
+            // without the file the layer's own PNG holds what it read last
+            File.Delete(source);
+            Assert.AreEqual(50, MapProjectStore.Load(project).Terrain.Heightmap.GetHeight(10, 10), 1e-2);
+        }
     }
 }

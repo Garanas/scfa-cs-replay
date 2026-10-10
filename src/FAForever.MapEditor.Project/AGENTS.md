@@ -632,24 +632,88 @@ User stories M-3 and M-8.
 - **Versions**: `MapDocument.NextVersion` (one more, or 1); the folder name and `map_version` follow
   `Version` (`MapFolderName`).
 
+## Layer stacks
+
+The one model of layers (wave 8; `Files/InMemory/LayerStack.cs`, `Editing/LayerStacks`,
+`LayerStackEdits`). The heightmap's stack is the first; wave 9 gives the stratum masks, the masks
+for tools and the water's masks theirs in the same shape (the plan "Map Editor Rework").
+
+- **`LayerStack`**: a `LayerTarget` (`Heightmap`, `Stratum(n)`, `Mask(name)`, `Water(mask)`; its
+  `Key` names the files, `heightmap`, `stratum-2`, `mask-highlands`, `water-foam`; `IsHeights`) and
+  `Layers`, lowest first. Empty: the target is simply its own grid. A layer's `Name` is its identity
+  (unique in its stack without case, a file name): edits, the editor's choice and the project name
+  it, so there is no separate id.
+- **`Layer`**: `Source`, `Combine` (`Add`, `Subtract`, `Maximum`, `Minimum`, `Replace`, `Multiply`;
+  the names are written in JSON), `Strength` 0 to 1, `Clip` (a mask key, `LayerStacks.MaskKey`
+  `mask:<name>` or `StratumKey` `stratum:<n>`; a missing mask counts as none, a renamed mask for
+  tools is followed by `FollowRenamedMasks`), `Visible`, `Locked`, `IsBase` (the lowest, full,
+  unclipped, replacing; the heightmap's stack always has one), and its grids: in a stack of heights
+  `Values` (game units at the heightmap's corners, so its tiles are the heightmap's) and an optional
+  `Coverage` (0 to 255, how much of the layer there is: a road's soft edge, the sculpted part of a
+  replacing layer); in a stack of coverage `Coverage` is the layer's values at the target's size and
+  `Values` is null. A coverage layer has no alpha of its own: its way of combining works wherever
+  its grid is, so a painted `Minimum`, `Replace` or `Multiply` layer works everywhere unless clipped
+  (wave 9 may add an alpha when strata need one).
+- **Sources** (`LayerSource` records): `PaintedSource` (`LayerSource.Painted`: a brush writes its
+  grid), `ImageSource(Path)` (a file, relative to the project when inside it, read again when it
+  changes and when the project opens; the layer's PNG keeps the last reading for when the file is
+  gone), `MaskRefSource(Key, Threshold, Invert, Height)` (another mask read while compositing; in a
+  stack of heights its value is the mask times `Height` game units), `RulesSource(MaskRuleSet)` (the
+  grid holds the rules' last result; coverage only), `CurveSource(HeightCurve)` (heights only).
+  `LayerSources` names them (`painted`, `image`, `mask`, `rules`, `curve`), says which fit which
+  stack (`Fits`) and which a brush paints (`CanPaint`). **Every source but a mask reference keeps
+  its values in the layer's grids**, made again by the edit that changes the source (reusing the
+  tiles that come out the same, as `HeightCurves.Rasterize` does), so the compositor reads grids
+  only. A new kind (wave 9C's decal masks) is a record here, a name in `LayerSources`, its fields in
+  `LayerDto` and its read in `MapProjectStore.Stacks`, its rasterizing in its own edit, and a
+  follow step like `FollowRenamedMasks` when the things it reads change (decals moved).
+- **The compositor** (`LayerStacks`): per place the value starts at 0 and each visible layer works
+  on it with its weight w (strength × clip × in heights its coverage) and value v: add h + w·v,
+  subtract h − w·v, maximum and minimum w of the way to v when higher or lower, replace w of the way
+  to v, multiply h·(1 + w(v − 1)). Coverage runs 0 to 1 and is kept within it after every layer.
+  `GridOf` gives a stack's `StackGrid` (corners for heights, pixel centres for coverage; clips and
+  mask references of any size are sampled between their pixels, `SampleAt`). `CompositeHeights`
+  and `CompositeCoverage` make the target's grid again over the tiles marked dirty (all when null),
+  keeping tiles that come out the same and the grid itself when nothing changed; `Composite` gives
+  floats (previews, the draft of 9A); `TileOf` one tile below a layer. `ChangedTiles(previous,
+  before, next, after)` marks the tiles a change touched (a layer's grid tiles, the tiles reading a
+  changed part of a mask), all of them when the layers, their order or settings changed.
+  `TakeChanges` puts a brush's change of the target itself into the chosen painted layer
+  (`PaintProblem` says why a layer cannot be painted), so the composite is what the brush made: a
+  weaker or clipped layer gets more, under a replacing layer it does not show. A stroke on an 81 km
+  map costs what it cost before the stacks (`tool.stroke` about 10 ms a dab in a debug build).
+- **Edits** (`LayerStackEdits`, stack in, stack out; messages name a layer as `what` says, `height
+  layer`): `NameProblem`, `FreeName`, `IndexOf`, `Add` (above a layer or on top; the source must fit,
+  a base only at the bottom), `Remove`, `Move` (above the base), `Rename`, `SetCombine`,
+  `SetStrength`, `SetClip`, `SetVisible`, `SetLocked`. A target's own edits put the stack in its
+  place and add the target's rules (`HeightLayerEdits` for the heightmap).
+- **Two stacks of one target** (9A's draft and final heightmaps): each a `LayerStack` of its own; a
+  shared layer is the same name in both with the same source and grids (the same objects), at a
+  place of its own in each and with its own `Visible`. 9A adds the draft beside
+  `MapDocument.HeightStack` (which stays the final, the one exported) and an edit that changes a
+  shared layer's content in both; `stacks/heightmap.json` can then list the draft's order beside
+  the layers. The conversion of older projects then puts every layer in both.
+- **Following after every step** (for wave 9's targets): the heightmap's `HeightLayers.Follow` is
+  the pattern: `FollowRenamedMasks`, `ChangedTiles`, `TakeChanges` when the target grid itself
+  changed (a brush through `EditTransaction`), `CompositeHeights`/`CompositeCoverage` over the dirty
+  tiles, and a composite that came out as it was is the previous grid (no step). A stratum's or
+  mask's stack follows the same way from `EditSession.Record` and `EditTransaction`'s read.
+
 ## Height layers and curves
 
-User stories T-5 and T-4 (`Files/InMemory/HeightLayer.cs`, `Editing/HeightLayers`, `HeightLayerEdits`,
-`HeightCurves`).
+User stories T-5 and T-4 (`MapDocument.HeightStack`, `Editing/HeightLayers`, `HeightLayerEdits`,
+`HeightCurves`): the heightmap's layer stack (above).
 
-- `MapDocument.HeightLayers`, lowest first, empty for a map without them (its heightmap is simply
-  its heights). With layers, `Terrain.Heightmap` is what they add up to, so everything that reads
-  the heights (views, walkability, normal map, export) is unchanged. The base (`Kind.Base`, the
+- `MapDocument.HeightStack`, lowest first, empty for a map without layers (its heightmap is simply
+  its heights). With layers, `Terrain.Heightmap` is what they make, so everything that reads the
+  heights (views, walkability, normal map, export) is unchanged. The base (`IsBase`, painted, the
   heights as they were when the stack began) is always the lowest layer, one per map, at full
   strength, unmasked, replacing; it cannot be moved or removed. `HeightLayerEdits.Bake` ends the
   stack: the heightmap keeps the sum.
-- A layer: name (a file name, unique without case), kind (`Base`, `Sculpt`, `Imported`, `Curve`),
-  `Combine` (`Add` differences; `Maximum`, `Minimum`, `Replace` absolute heights), `Strength` 0 to
-  1, `Mask` (`mask:<name>` for a mask for tools, `stratum:<n>`; a missing mask counts as none, a
-  renamed mask for tools is followed), `Visible`, `Locked`, `Values` in game units at the
-  heightmap's corners (its tiles are the heightmap's tiles) and an optional `Coverage` (0 to 255:
-  a road's soft edge, the part of a replacing sculpt layer that was sculpted). Per corner the
-  weight is strength × mask (bilinear between the mask's pixels, any size) × coverage.
+- Its layers: painted (the sculpt tool's, shown as `Sculpt`), image (`Imported` in automation),
+  curve, mask reference. `HeightLayerEdits.SetMask` sets the clip after checking the map has the
+  mask. Per corner the weight is strength × clip (bilinear between the mask's pixels, any size) ×
+  coverage.
 - **The heightmap follows** (`HeightLayers.Follow(previous, next, sculptLayer)`): run by
   `EditSession` on every step and by `EditTransaction` on every read of its document. It adds up
   again only the tiles whose layer values, coverage or masks changed (all of them when a layer's
@@ -660,8 +724,9 @@ User stories T-5 and T-4 (`Files/InMemory/HeightLayer.cs`, `Editing/HeightLayers
   what the brush made (a weaker or masked layer gets more; under a replacing layer it does not
   show), or, without a layer that can be sculpted (`SculptProblem`: locked, hidden, a curve, an
   import), is undone. Smooth, flatten and erode work on the sum.
-- `SetCombine` of a sculpt layer between adding and an absolute way converts its values over the
-  layers below, so it keeps its look. `HeightmapFiles.Import` and a `heightmap.png` another tool
+- `SetCombine` of a sculpt layer between differences (add, subtract) and an absolute way (maximum,
+  minimum, replace) converts its values over the layers below, and between add and subtract turns
+  them round, so it keeps its look; to or from multiply the values stay. `HeightmapFiles.Import` and a `heightmap.png` another tool
   saves go into the base of a map with layers.
 - **Curves** (`HeightCurve`: points with a height, `Profile` ridge, valley, road, cliff; width,
   falloff, closed, and an optional `Symmetry`: the layer then shapes the curve's images too,
@@ -673,13 +738,21 @@ User stories T-5 and T-4 (`Files/InMemory/HeightLayer.cs`, `Editing/HeightLayers
   the width (a cliff: a drop of an ogrid at the curve, full over the width on the high side) and
   a smooth fade over the falloff. `SetCurve` rasterizes again, reusing the tiles that come out the
   same, within the tiles the old and new curve reach; a new profile brings its way of combining.
-- **On disk**: `layers/layers.json` (`HeightLayersDto`; absent without layers) and per layer except
-  curves `layers/<name>.png` (16-bit, sample 0 at `offset`: -32768 steps for adding layers, 0
-  otherwise) and `layers/<name>.coverage.png`. Load adds the layers up again (the saved
-  `heightmap.png` is their sum, written by the editor). A save writes only the layers whose values
-  changed. Reload reads `layers/` again, an imported layer's `Source` (relative to the project when
-  inside it) when that file changes, and a changed `heightmap.png` into the base. Old projects have
-  no layers.
+- **On disk** (format 6, `MapProjectStore.Stacks.cs`): `stacks/heightmap.json` (`LayerStackDto`:
+  the target, the layers with name, `source`, combine, strength, clip, hidden, locked, base, and
+  their source's fields: `offset`, `path`, `mask`/`threshold`/`invert`/`height`, `rules`, `curve`;
+  absent without layers) and per layer except curves and mask references
+  `stacks/heightmap/<name>.png` (16-bit, sample 0 at `offset`: -32768 steps for layers of
+  differences, 0 otherwise) and `stacks/heightmap/<name>.coverage.png`; a coverage stack's layers
+  are 8-bit PNGs of the target's size. `SaveStack`/`ReadStack` work for any target. Load composites
+  the layers again (the saved `heightmap.png` is their composite, written by the editor). A save
+  writes only the layers whose grids changed. Reload reads the stack again when a file of it
+  changes, an image layer's file when that changes, and a changed `heightmap.png` into the base.
+  **Older projects** (format 3 to 5) keep the layers as `layers/layers.json` (`HeightLayersDto`, kinds
+  `Base`, `Sculpt`, `Imported`, `Curve`) and `layers/<name>.png`: they open unchanged (read into the
+  stack in memory), and their first save writes `stacks/` and removes `layers/`. An image layer added
+  since the last save is not read again when its file changes until the map is saved
+  (`EditedMap.Reload` compares with the saved version); saving first works.
 
 ## Generated results
 

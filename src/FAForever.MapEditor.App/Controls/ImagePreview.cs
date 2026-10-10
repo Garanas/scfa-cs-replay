@@ -38,6 +38,12 @@ public sealed class ImagePreview : Control
         AffectsRender<ImagePreview>(PictureProperty);
     }
 
+    public ImagePreview()
+    {
+        // beside the panel, over the views: under the pointer the large picture would hide the list
+        ToolTip.SetPlacement(this, PlacementMode.Right);
+    }
+
     public PreviewPicture? Picture
     {
         get => GetValue(PictureProperty);
@@ -60,7 +66,8 @@ public sealed class ImagePreview : Control
     }
 
     /// <summary>
-    /// The tool tip holds a large preview of the same picture, made only when it first shows.
+    /// The tool tip holds a large preview of the same picture, drawn only when it first shows; the
+    /// large one has no tool tip of its own (its <see cref="LargeSize"/> is set first).
     /// </summary>
     private void UpdateTip()
     {
@@ -76,8 +83,7 @@ public sealed class ImagePreview : Control
     private static (int Width, int Height) Fit(int width, int height, int size)
     {
         int longer = Math.Max(1, Math.Max(width, height));
-        int scaled = Math.Min(size, Math.Max(longer, 64));
-        return (Math.Max(1, width * scaled / longer), Math.Max(1, height * scaled / longer));
+        return (Math.Max(1, width * size / longer), Math.Max(1, height * size / longer));
     }
 
     public override void Render(DrawingContext context)

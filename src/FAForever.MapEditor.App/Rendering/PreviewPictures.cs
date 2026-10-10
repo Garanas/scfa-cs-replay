@@ -52,13 +52,13 @@ public abstract record PreviewPicture
     }
 
     /// <summary>
-    /// The size of a picture of a grid of that size, at most <paramref name="size"/> on the longer side.
+    /// The size of a picture of a grid of that size, <paramref name="size"/> on the longer side (a
+    /// small grid's pixels are repeated, so its large preview is as large as any other's).
     /// </summary>
     protected static (int Width, int Height) Fit(int width, int height, int size)
     {
         int longer = Math.Max(1, Math.Max(width, height));
-        int scaled = Math.Min(size, longer);
-        return (Math.Max(1, (int)Math.Round((double)width * scaled / longer)), Math.Max(1, (int)Math.Round((double)height * scaled / longer)));
+        return (Math.Max(1, (int)Math.Round((double)width * size / longer)), Math.Max(1, (int)Math.Round((double)height * size / longer)));
     }
 }
 
