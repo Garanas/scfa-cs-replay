@@ -32,6 +32,32 @@ namespace FAForever.MapEditor.App.Tests
         }, CancellationToken.None);
 
         /// <summary>
+        /// One control's picture as drawn now, as a PNG (not the whole window's): its own size at
+        /// 96 dots per inch. Lay the window out first (<c>Dispatcher.UIThread.RunJobs()</c>).
+        /// </summary>
+        public static byte[] Capture(Avalonia.Controls.Control control)
+        {
+            Avalonia.Size size = control.Bounds.Size;
+            using Avalonia.Media.Imaging.RenderTargetBitmap bitmap = new Avalonia.Media.Imaging.RenderTargetBitmap(
+                new Avalonia.PixelSize(Math.Max(1, (int)size.Width), Math.Max(1, (int)size.Height)));
+            bitmap.Render(control);
+            using MemoryStream png = new MemoryStream();
+            bitmap.Save(png);
+            return png.ToArray();
+        }
+
+        /// <summary>
+        /// Saves a picture into the tests' output (<c>captures/</c>) to look at, and returns its path.
+        /// </summary>
+        public static string SaveCapture(byte[] png, string name)
+        {
+            string file = Path.Combine(AppContext.BaseDirectory, "captures", name + ".png");
+            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            File.WriteAllBytes(file, png);
+            return file;
+        }
+
+        /// <summary>
         /// The repository's folder, for the files the tests read and write in the source tree:
         /// from where this file was compiled, so it holds wherever the build output goes.
         /// </summary>

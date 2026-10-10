@@ -25,6 +25,7 @@ namespace FAForever.MapEditor.Project.Files
                 ? null
                 : source.ArmyFactions.ToDictionary(entry => entry.Key, entry => (IReadOnlyList<string>)[.. entry.Value]),
             Teams = source.Teams.IsEmpty ? null : [.. source.Teams.Select(team => new TeamDto { Name = team.Name, Armies = [.. team.Armies] })],
+            Publishable = source.Publishable ? null : false,
         };
 
         public static ScenarioInfo ToModel(ScenarioInfoDto source) => new ScenarioInfo
@@ -41,6 +42,7 @@ namespace FAForever.MapEditor.Project.Files
             ExtraArmies = [.. source.ExtraArmies],
             ArmyFactions = (source.ArmyFactions ?? []).ToImmutableSortedDictionary(entry => entry.Key, entry => entry.Value.ToImmutableArray(), StringComparer.Ordinal),
             Teams = [.. (source.Teams ?? []).Select(team => new Team { Name = team.Name, Armies = [.. team.Armies] })],
+            Publishable = source.Publishable ?? true,
         };
 
         public static ArmyDto ToDto(Army source) => new ArmyDto

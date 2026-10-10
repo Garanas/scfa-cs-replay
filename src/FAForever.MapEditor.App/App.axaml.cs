@@ -37,6 +37,8 @@ public sealed class App : Application
             desktop.MainWindow = window;
 
             StartOptions options = Program.Options;
+            // without a folder, the workspace's sandbox: a map to try things on
+            model.OpenSandboxWhenReady = true;
             _ = model.StartAsync(settings, options.Folder);
             if (options.AutomationPort is int port)
             {

@@ -79,14 +79,38 @@ dotnet test tests/FAForever.MapEditor.App.Tests --artifacts-path <scratch>/artif
 # a changed look: look at snapshot-results/*.png in the test output, then accept it
 UPDATE_SNAPSHOTS=1 dotnet test tests/FAForever.MapEditor.App.Tests --artifacts-path <scratch>/artifacts
 
-# a test editor of your own: port 5372, its own settings (never the user's on 5371)
-FAF_MAP_EDITOR_SETTINGS=<scratch>/settings.json faf-map-editor <map folder> --automation 5372 &
+# a test editor of your own: its own port and a scratch workspace (never the user's editor on 5371,
+# never the user's workspace: the editor writes the sandbox into it when started without a map)
+faf-map workspace scratch <scratch>/ws --from "<real workspace>" --settings <scratch>/settings.json
+faf-map editor start --port 5372 --settings <scratch>/settings.json   # waits until ready; opens the sandbox
+faf-map editor start --port 5372 --settings <scratch>/settings.json --map <map folder>
 faf-map editor ui --port 5372                         # the controls, labels, values and places
-faf-map editor state --port 5372
-faf-map editor screenshot path=<scratch>/shot.png --port 5372   # then look at it
-faf-map editor tab name=3d --port 5372 && faf-map editor screenshot path=<scratch>/3d.png gpu=true --port 5372
-faf-map editor perf --port 5372                       # where the time goes
-faf-map editor close --port 5372                      # only an editor you started
+faf-map editor ui under=MainMenu --port 5372          # one part of the window
+faf-map editor state --port 5372                      # views (bounds, pixels, scaling), loading, selection
+faf-map editor screenshot path=<scratch>/shot.png settle=true --port 5372   # then look at it
+faf-map editor tab name=3d --port 5372 && faf-map editor screenshot path=<scratch>/3d.png gpu=true settle=true --port 5372
+faf-map editor perf gpu=true --port 5372              # where the time goes, with the card's (3d.gpu-frame)
+faf-map editor stop --port 5372                       # only an editor you started; waits until it exited
 ```
+
+Drive the window as a person does (its own input, never the real mouse):
+
+```sh
+faf-map editor objects kind=units count=3 --port 5372          # refs and places to aim at
+faf-map editor get ref=unit:UNIT_1 --port 5372                 # place, heading, blueprint, army
+faf-map editor view-point ref=unit:UNIT_1 --port 5372          # its pixel in the top and 3D views
+faf-map editor tool id=units.select --port 5372
+faf-map editor mouse view=3d x=335 y=260 --port 5372           # click there (action=move|down|up|drag|wheel)
+faf-map editor mouse view=top x=100 y=80 action=drag to=[160,80] modifiers=Shift --port 5372
+faf-map editor key key=E --port 5372                           # the view has the keyboard after the click
+faf-map editor key key=Ctrl+K --port 5372 && faf-map editor type text=undo --port 5372
+faf-map editor run id=units.pick interactive=true wait=false --port 5372   # opens the picker, answers at once
+faf-map editor key key=Down --port 5372 && faf-map editor key key=Enter --port 5372
+faf-map editor drag view=3d from=[10,10] to=[300,200] data=<asset key> --port 5372   # a shelf tile dropped
+```
+
+Headless: `new AutomationServer(window, model, 0).HandleAsync("mouse", ...)` runs the same commands
+(`AutomationTest`); `HeadlessApp.Capture(control)` draws one control; `TestAssets.Catalog(unitModel: true)`
+and `TestAssets.SandboxProject()` give assets with models and a map with one of every kind of thing.
 
 Read `ui` before guessing from a screenshot; look at a screenshot before saying a look is right.

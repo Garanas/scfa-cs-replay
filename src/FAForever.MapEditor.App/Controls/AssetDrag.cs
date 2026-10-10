@@ -22,10 +22,15 @@ public static class AssetDrag
     /// <summary>
     /// What a drag of the asset carries.
     /// </summary>
-    public static IDataTransfer Of(AssetEntry entry)
+    public static IDataTransfer Of(AssetEntry entry) => Of(entry.Key);
+
+    /// <summary>
+    /// What a drag of the asset with this key carries (automation's <c>drag {data}</c>).
+    /// </summary>
+    public static IDataTransfer Of(string key)
     {
         DataTransfer transfer = new DataTransfer();
-        transfer.Add(DataTransferItem.Create(Format, entry.Key));
+        transfer.Add(DataTransferItem.Create(Format, key));
         return transfer;
     }
 

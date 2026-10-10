@@ -23,6 +23,22 @@ public static class UiTree
     /// <param name="hidden">Whether to describe hidden controls too.</param>
     public static JsonArray Describe(Visual root, bool hidden = false) => [.. Nodes(root, root, hidden)];
 
+    /// <summary>
+    /// Describes <paramref name="visual"/> and what lies in it, places relative to <paramref name="root"/>
+    /// (the window): one part of the window, as automation's <c>ui {under}</c> gives it.
+    /// </summary>
+    public static JsonArray Describe(Visual visual, Visual root, bool hidden) => [.. Nodes(visual, root, hidden)];
+
+    /// <summary>
+    /// The first control (in the order of the tree) whose <c>x:Name</c>, label or text is
+    /// <paramref name="text"/>, ignoring case; hidden controls only when <paramref name="hidden"/>.
+    /// </summary>
+    public static Control? Find(Visual root, string text, bool hidden = false) => root.GetVisualDescendants().OfType<Control>()
+        .Where(control => hidden || control.IsEffectivelyVisible)
+        .FirstOrDefault(control => string.Equals(control.Name, text, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(AutomationProperties.GetName(control), text, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(TextOf(control), text, StringComparison.OrdinalIgnoreCase));
+
     private static IEnumerable<JsonNode> Nodes(Visual visual, Visual root, bool hidden)
     {
         if (visual is Control { IsVisible: false } && !hidden)

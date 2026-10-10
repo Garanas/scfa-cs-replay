@@ -164,6 +164,31 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task StartingWithoutAFolderOpensTheSandboxWhichExportsWithAWarning()
+        {
+            Machine machine = NewMachine();
+            await SetUp(machine);
+            MainViewModel model = machine.NewEditor();
+            model.OpenSandboxWhenReady = true;
+
+            await model.StartAsync(machine.Settings);
+            for (int i = 0; i < 100 && !model.HasMap; i++)
+            {
+                await Task.Delay(50);
+            }
+
+            Assert.IsTrue(model.HasMap, model.Status);
+            Assert.AreEqual(SandboxMap.FolderOf(model.Setup.Workspace!), model.Map!.ProjectFolder);
+            Assert.IsFalse(model.Map.Document.IsPublishable);
+            StringAssert.Contains(model.Title, "sandbox");
+            StringAssert.Contains(model.Status, "sandbox");
+
+            await model.RunAsync("file.export");
+            Assert.IsTrue(Directory.EnumerateDirectories(Path.Combine(machine.Vault, "maps")).Any(), model.Status);
+            StringAssert.Contains(model.Status, "cannot be uploaded");
+        }
+
+        [TestMethod]
         public async Task ExportsIntoTheVault()
         {
             Machine machine = NewMachine();

@@ -137,6 +137,15 @@ namespace FAForever.MapEditor.Project.Workspaces
                 Directory.Delete(workspace.AssetsFolder, recursive: true);
             }
             Directory.Move(staging, workspace.AssetsFolder);
+            try
+            {
+                // the sandbox made of these assets, if it is missing or still the plain one
+                SandboxMap.Ensure(workspace);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or MapProjectException)
+            {
+                // the assets are converted; the editor writes the sandbox again when it starts, and says why it cannot
+            }
             return new AssetConversion(manifest, skippedList);
         }
 

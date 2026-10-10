@@ -55,5 +55,11 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// The teams the map maker puts playable armies in; absent for none.
         /// </summary>
         public IReadOnlyList<TeamDto>? Teams { get; init; }
+
+        /// <summary>
+        /// False for a map that may not go to the vault (the workspace's sandbox); left out (true)
+        /// for every other map.
+        /// </summary>
+        public bool? Publishable { get; init; }
     }
 }

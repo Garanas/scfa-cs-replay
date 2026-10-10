@@ -29,6 +29,11 @@ internal sealed class GpuTextureCache(GL gl, Action loaded) : IDisposable
     public int Count => _entries.Count(e => e.Value.Id != 0);
 
     /// <summary>
+    /// The textures being read on the pool, not on the card yet; for automation's settling.
+    /// </summary>
+    public int Loading => _entries.Count(e => e.Value.Loading is not null);
+
+    /// <summary>
     /// The last texture that could not be read, with why.
     /// </summary>
     public string? LastError { get; private set; }

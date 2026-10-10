@@ -67,5 +67,12 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// export writes first (<see cref="Team"/>).
         /// </summary>
         public ImmutableArray<Team> Teams { get; init; } = [];
+
+        /// <summary>
+        /// Whether the map may go to the vault: false for the workspace's sandbox
+        /// (<see cref="Workspaces.SandboxMap"/>), which is for trying the editor out. It stays in the
+        /// project only; the game's files do not carry it.
+        /// </summary>
+        public bool Publishable { get; init; } = true;
     }
 }
