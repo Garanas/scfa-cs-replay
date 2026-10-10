@@ -27,7 +27,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ProceduralEntryRow">
                   <DockPanel>
-                    <Button DockPanel.Dock="Right" Content="{Binding Result.GenerateText, FallbackValue=Generate}" IsVisible="{Binding IsResult}"
+                    <Button DockPanel.Dock="Right" Content="Generate" IsVisible="{Binding IsResult}"
                             Command="{Binding Result.GenerateCommand, FallbackValue={x:Null}}" IsEnabled="{Binding Result.CanGenerate, FallbackValue=False}"
                             AutomationProperties.Name="{Binding Result.GenerateLabel, FallbackValue=''}"
                             AutomationProperties.HelpText="{Binding Result.StatusText, FallbackValue=''}" />

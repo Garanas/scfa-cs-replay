@@ -409,6 +409,7 @@ public sealed partial class ProceduralListViewModel : ObservableObject
     /// </summary>
     public void Refresh()
     {
+        using Diagnostics.Performance.Span measure = Diagnostics.Performance.Measure("model.procedural-list");
         foreach (ProceduralPart result in Results)
         {
             Refresh(result);
@@ -422,7 +423,7 @@ public sealed partial class ProceduralListViewModel : ObservableObject
         result.Picture = result.Entry.Picture?.Invoke(document, document is null ? null : _generation.Results.ResultOf(result.GeneratorId));
         result.Facts = result.Entry.Facts?.Invoke(document) ?? [];
         result.MadeText = _generation.TimingOf(result.GeneratorId)?.Text
-            ?? (result.Row?.Row.State == GeneratedStatus.Missing || result.Row is null ? "Not made in this session" : "Made in this session");
+            ?? (result.Row?.Row.State == GeneratedStatus.Missing || result.Row is null ? "Not made in this session" : "Taken from the map as it was opened");
         if (Parts.Find(result.PartId) is PanelPart part)
         {
             part.Detail = result.Entry.Detail?.Invoke() ?? result.StateText;

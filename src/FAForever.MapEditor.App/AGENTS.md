@@ -910,9 +910,9 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   run of the same generator while one runs is refused. `generate.stale` puts what it makes into
   the map the same way (`MainViewModel.GenerateStale`).
 - **The list of generated results** is the Procedural mode's (section "The Procedural mode"
-  below): a line per registered generator (`GenerationViewModel.Rows`, shown through
-  `ProceduralViewModel.Rows`), and walkability's choices (the layer of units, what changed) in its
-  own section there.
+  below): an entry per registered generator (`GenerationViewModel.Rows`, through
+  `ProceduralViewModel.Rows` and `ProceduralListViewModel`), walkability's choices (the layer of
+  units, what changed) in its entry's inspector.
 - **Walkability** (`generate.walkability`, `ViewModels/WalkabilityViewModel`, `model.Walkability`):
   the library's `Walkability.Generate`, the game's navigational mesh made from the document.
   The part notices when the registry keeps another result (by any command) and compares it with
@@ -954,11 +954,39 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
 User stories F-7, T-7, T-8 and M-9 (wave 8C). The mode at the bottom of the rail (`procedural`,
 F11; its definition is the last of `EditorModes.All`, its tools and sections are
 `ViewModels/ProceduralSections.cs`'s `ProceduralMode`, so the rail's entry and the contents change
-apart). Its panel: Generated results, Walkability, Navigation mesh, Path networks (moved from the
-Markers panel) and Export, each a view of its own in `Views/ProceduralPanels/`. The core's side is
-`ViewModels/MainViewModel.Procedural.cs` (`InitializeProcedural`, after every other part).
+apart). The core's side is `ViewModels/MainViewModel.Procedural.cs` (`InitializeProcedural`, after
+every other part).
 
-- **Generated results** (`model.Procedural`, `ProceduralViewModel`): a line per generator with a
+- **The panel lists, the inspector edits** (wave 10D; `ViewModels/ProceduralParts.cs`,
+  `MainViewModel.ProceduralParts.cs`, `model.ProceduralList`, the views
+  `Views/ProceduralPanels/ProceduralList` and `ProceduralPartView`): the panel's one section
+  (`ProceduralListSection`) lists an entry per registered generator under a heading (Movement:
+  walkability, navigation mesh, path networks; Terrain surface: normal map, normal decal, shadow
+  decal; From rules: masks, props; Pictures: preview), each with a picture where one exists
+  (`ImagePreview`: walkability and the regions as `NavGridPicture`, the normal map and preview as
+  `ColourGridPicture`, the decals their slot's), its title, how it stands (`Missing`, `Out of date`,
+  `Current`, `Generating`; a decal taken from a file or none says its source) and Generate (its
+  command, the ids kept); Export last (`procedural.export`). The entries are a `PanelParts`
+  (`PanelPartLists["procedural"]`, ids `procedural.<generator id>`), so `view.inspectPart` and
+  `state.panelParts` know them; one is always chosen, walkability first. The inspector
+  (`ProceduralDetailsSection`, through `PanelPartView`'s templates for `ProceduralPart` and
+  `ProceduralExportPart`) shows the chosen one: its picture larger, how it stands with Generate
+  ("from the inspector" in its label), Preview in the views, Regenerate on its own, the export's
+  check box or what the export does, what it is made from (`IGenerator.Inputs` and the results it
+  `Reads`), when it was made in this session and how long it took (`GenerationViewModel.TimingOf`,
+  noted by `GenerateAsync`, `AutoGeneration` and `GenerateStale`), facts (the normal map's size,
+  the rules' counts), then its details: walkability's choices (`WalkabilityPanel`), the navigation
+  mesh's layer, routes and regions (`NavigationPanel`), the path networks' part (`PathNodesPanel`,
+  which keeps its own Generate and export check box), a map-wide decal's settings, the export's
+  steps (`ExportStepsPanel`). An entry with a tool picks it (navigation mesh: Regions, path networks:
+  Path nodes), and picking a tool in the mode shows its entry; coming into the mode with its first
+  tool keeps the chosen entry. A generator registered later, also after the list was made (the sky
+  cube map), is listed by itself before the export under Other; `ProceduralList.Describe(new
+  ProceduralEntry(id, group) { Details, Picture, Facts, Detail, CanGenerate, Tool, OwnGenerate, Help })`
+  gives it a heading, details (a template in `ProceduralPartView`) and a picture. `state.procedural.list`:
+  the chosen entry and each entry's state, detail, picture, tool and when it was made.
+
+- **Generated results** (`model.Procedural`, `ProceduralViewModel`): a row per generator with a
   command (`GenerationViewModel.Rows`, the commands keep their ids: `generate.walkability`,
   `markers.connectPaths`, ...), with "Preview in the views" when an overlay shows its result
   (`ProceduralViewModel.PreviewWith(generator, overlay)`: walkability, `navigation`, `pathNodes`;
@@ -1202,9 +1230,8 @@ User stories D-1 and D-2, the Decals mode (F8); the edits are the library's `Dec
   Generate now). The Decals panel lists them above the groups (`MapWideDecalsSection`,
   `Views/DecalPanels/MapWideDecalsList`) and the inspector shows the chosen one while nothing is
   selected (`MapWideDecalDetailsSection`, through `PanelPartView`'s template `MapWideSlotView`); the
-  Lighting panel's Shadow decal entry is the shadow slot; the Procedural mode lists the normal and
-  shadow (`MapWideDecalsProceduralSection`, its inspector `MapWideProceduralDetailsSection`), so the
-  wave 10 move of the Procedural mode to panel lists takes them as they are. `view.inspectPart` knows
+  Lighting panel's Shadow decal entry is the shadow slot; the Procedural mode's list has the normal
+  and shadow decals as entries with the slot's settings as their details. `view.inspectPart` knows
   `decals.wideAlbedo|wideNormal|wideShadow` and `procedural.normalDecal|shadowDecal`.
   Commands: `decals.setWide {kind, source?, file?, specular?}`, `decals.chooseWideFile {kind,
   target?: file|specular, path?}`, `decals.setShadow {radius?, strength?, darkest?, sunShadows?}`,
@@ -2010,8 +2037,9 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   fields in the inspector. A new part follows it: an entry of a list in the panel, its editing in
   the inspector. Checked against it (October 2026): Terrain (height layers listed, the chosen one
   in the inspector), Paint (strata listed, the chosen stratum in the inspector), Decals and Units
-  (groups listed, the selection in the inspector), Water and Lighting (below) follow it; the Map
-  panel's Information fields, the Props panel's Placing and the Markers panel's path networks are
+  (groups listed, the selection in the inspector), Water and Lighting (below) and Procedural (the
+  generated results listed, section "The Procedural mode") follow it; the Map
+  panel's Information fields and the Props panel's Placing are
   still edited in the panel, for a later wave to move.
 - **Lists of parts** (`PanelParts`, `PanelPart`): a mode panel's list of entries under headings,
   one always chosen (the first until another is); `Controls/PanelPartList` draws it in the panel
@@ -2020,7 +2048,8 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   (`SettingsPart`: groups of settings, their titles when there are several; `PlannedPart`: not
   built yet with its story; `WaterMapPart`; `WaveGeneratorsPart`). A new kind of content adds its
   template to `PanelPartView`; `PanelParts.Replace(id, content)` gives an entry another (a water
-  map's layer stack). `view.inspectPart {part}` (in no menu) chooses an entry and its mode;
+  map's layer stack), `Insert(index, part)` and `Remove(id)` change the list after it was made (the
+  Procedural mode's, as generators register). `view.inspectPart {part}` (in no menu) chooses an entry and its mode;
   `state.panelParts` has each list's chosen entry, its content's type and every entry's detail.
 - **Water** (`WaterSettings.Parts`): Water on (a check box above the list), Settings (Elevations
   and colour, its detail the surface's elevation; Surface and reflection; Textures and waves, the

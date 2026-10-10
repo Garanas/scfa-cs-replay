@@ -43,7 +43,9 @@ reads again when it changes; and nothing that generates runs by itself.
       them again in the order one feeds the next (masks from rules before the props that read
       them, walkability before path networks), so one run leaves nothing out of date; walkability,
       the normal map and the preview are generated this way (T-7, S-4), and so are masks and props
-      from rules (K-2, P-4).
+      from rules (K-2, P-4). The Procedural mode lists every generated result as an entry with how
+      it stands (missing, out of date, current), a picture and Generate; choosing one shows its
+      settings, what it is made from and when it was made in the inspector.
 - [x] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
       missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map

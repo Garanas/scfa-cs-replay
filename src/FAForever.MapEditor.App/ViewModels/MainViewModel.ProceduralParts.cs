@@ -64,7 +64,7 @@ public sealed partial class MainViewModel
         {
             Facts = document => document is null ? [] :
             [
-                $"{Count(document.PropRules.Length, "prop rule")}; the rules placed {Count(document.CountRuleProps(), "prop")}",
+                document.PropRules.IsEmpty ? "The map has no prop rules" : $"{Count(document.PropRules.Length, "prop rule")}; they placed {Count(document.CountRuleProps(), "prop")}",
                 "Generating places the props of every rule again; the props placed by hand stay. The rules are edited in the Props mode",
             ],
             Help = "The props the prop rules place",
