@@ -133,6 +133,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializePainting();
         InitializeMapPanels();
         InitializeLayout();
+        InitializeAssetDiscovery();
     }
 
     /// <summary>

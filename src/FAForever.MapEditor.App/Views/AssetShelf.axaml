@@ -9,6 +9,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:ws="using:FAForever.MapEditor.Project.Workspaces"
              x:Class="FAForever.MapEditor.App.Views.AssetShelf"
              x:DataType="vm:AssetsViewModel">
   <DockPanel>
@@ -71,7 +72,32 @@
                     AutomationProperties.Name="Everything">
               <TextBlock Text="Everything" />
             </Button>
+            <!-- what the map uses and the workspace lacks (F-8) -->
+            <Button Classes="facet" Classes.on="{Binding IsMissingScope}" Command="{Binding ChooseScopeCommand}" CommandParameter="{x:Static vm:AssetScope.Missing}"
+                    AutomationProperties.Name="Missing" AutomationProperties.HelpText="What the map uses that the workspace and the map's own files lack">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Classes="shortcut" Text="{Binding MissingCount}" />
+                <TextBlock Text="Missing" />
+              </DockPanel>
+            </Button>
           </StackPanel>
+          <!-- where the assets come from (F-8): the game, FAF, the workspace's own -->
+          <TextBlock Classes="overline section" Text="{Binding Source=Source, Converter={x:Static controls:UpperCaseConverter.Instance}}"
+                     IsVisible="{Binding !IsMissingScope}" />
+          <ItemsControl ItemsSource="{Binding Sources}" AutomationProperties.Name="Source" IsVisible="{Binding !IsMissingScope}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Classes="chips" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AssetChoice">
+                <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Text}"
+                        Command="{Binding $parent[UserControl].((vm:AssetsViewModel)DataContext).ChooseSourceCommand}" CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding Title, StringFormat='From {0}'}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
           <TextBlock Classes="overline section" Text="{Binding GroupsTitle, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
           <ItemsControl ItemsSource="{Binding Groups}" AutomationProperties.Name="{Binding GroupsTitle}">
             <ItemsControl.ItemTemplate>
@@ -108,7 +134,29 @@
     <Panel>
       <TextBlock Classes="caption" Text="{Binding EmptyText}" IsVisible="{Binding IsEmpty}" Margin="{StaticResource ShelfPadding}"
                  AutomationProperties.Name="No assets" />
-      <ListBox x:Name="Grid" Classes="shelf" ItemsSource="{Binding Rows}" AutomationProperties.Name="Assets"
+      <!-- the Missing scope: the paths the map uses and the workspace lacks, each leading to its problem -->
+      <DockPanel IsVisible="{Binding IsMissingScope}">
+        <StackPanel DockPanel.Dock="Top" Classes="inline shelfmissing">
+          <TextBlock Classes="caption" VerticalAlignment="Center"
+                     Text="Convert the assets again, add the files to the workspace or the map's folder, or replace them on the map; then read the assets again." />
+          <Button Classes="chip" Content="Read the assets again" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="assets.reload" />
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Missing}" AutomationProperties.Name="Missing assets" IsVisible="{Binding !IsEmpty}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="ws:MissingAsset">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="chip" Content="Problem"
+                        Command="{Binding $parent[UserControl].((vm:AssetsViewModel)DataContext).ShowMissingProblemCommand}" CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding Path, StringFormat='Show the problem of {0}'}" />
+                <TextBlock DockPanel.Dock="Right" Classes="secondary" VerticalAlignment="Center" Margin="{StaticResource InlineGap}"
+                           Text="{Binding Uses, StringFormat='{}{0} on the map'}" />
+                <TextBlock Classes="mono" VerticalAlignment="Center" Text="{Binding Path}" TextTrimming="CharacterEllipsis" />
+              </DockPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+      <ListBox x:Name="Grid" Classes="shelf" ItemsSource="{Binding Rows}" AutomationProperties.Name="Assets" IsVisible="{Binding !IsMissingScope}"
                AutomationProperties.HelpText="Arrow keys move through the assets; Escape clears the choice">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:AssetRow">

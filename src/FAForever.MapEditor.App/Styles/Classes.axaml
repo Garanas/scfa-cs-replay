@@ -738,4 +738,8 @@
   <Style Selector="TextBox.reportdescription">
     <Setter Property="Height" Value="{StaticResource SettingTextHeight}" />
   </Style>
+  <!-- the shelf's Missing scope (F-8): what to do, above the list -->
+  <Style Selector="StackPanel.shelfmissing">
+    <Setter Property="Margin" Value="{StaticResource ShelfPadding}" />
+  </Style>
 </Styles>

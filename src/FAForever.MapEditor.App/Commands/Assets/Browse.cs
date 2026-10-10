@@ -10,7 +10,8 @@ namespace FAForever.MapEditor.App.Commands;
 /// arguments set its filters.
 /// </summary>
 /// <param name="Kind"><c>prop</c>, <c>unit</c>, <c>decal</c> or <c>texture</c>.</param>
-/// <param name="Scope"><c>inMap</c>, <c>narrow</c> (the map's biomes, civilian units) or <c>everything</c>.</param>
+/// <param name="Scope"><c>inMap</c>, <c>narrow</c> (the map's biomes, civilian units), <c>everything</c> or <c>missing</c> (what the map uses and the workspace lacks).</param>
+/// <param name="Source">Only the assets of one origin: <c>Game</c>, <c>FAF</c>, <c>Workspace</c>, <c>Unknown</c>; empty for all.</param>
 /// <param name="Query">Words each shown asset has in its name, code, biome or category.</param>
 /// <param name="Group">A biome (<c>evergreen</c>) or faction (<c>UEF</c>); empty for all.</param>
 /// <param name="Category">A category (<c>trees</c>, <c>structure</c>, <c>splats</c>); empty for all.</param>
@@ -18,7 +19,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// <returns>What the shelf then shows: its filters and up to 200 tiles.</returns>
 [EditorCommand("assets.browse", "Browse the assets", Gesture = "Ctrl+Shift+A", Story = "F-9")]
 public sealed record BrowseAssets(
-    string? Kind = null, string? Scope = null, string? Query = null, string? Group = null, string? Category = null, bool? Families = null)
+    string? Kind = null, string? Scope = null, string? Query = null, string? Group = null, string? Category = null, bool? Families = null, string? Source = null)
     : IRequest<JsonObject>;
 
 public sealed class BrowseAssetsHandler(MainViewModel model, AssetsViewModel assets) : IRequestHandler<BrowseAssets, JsonObject>
@@ -35,7 +36,7 @@ public sealed class BrowseAssetsHandler(MainViewModel model, AssetsViewModel ass
         {
             assets.Scope = Enum.TryParse(scope, ignoreCase: true, out AssetScope parsed)
                 ? parsed
-                : throw new ArgumentException($"There is no scope '{scope}': inMap, narrow or everything");
+                : throw new ArgumentException($"There is no scope '{scope}': inMap, narrow, everything or missing");
         }
         if (request.Query is not null)
         {
@@ -48,6 +49,10 @@ public sealed class BrowseAssetsHandler(MainViewModel model, AssetsViewModel ass
         if (request.Category is not null)
         {
             assets.Category = request.Category.Length == 0 ? null : request.Category;
+        }
+        if (request.Source is not null)
+        {
+            assets.Source = request.Source.Length == 0 ? null : request.Source;
         }
         if (request.Families is bool families)
         {
@@ -73,6 +78,16 @@ public sealed class BrowseAssetsHandler(MainViewModel model, AssetsViewModel ass
         ["kinds"] = new JsonObject([.. assets.Kinds.Select(choice => KeyValuePair.Create(choice.Value!, (JsonNode?)choice.Count))]),
         ["groups"] = new JsonObject([.. assets.Groups.Select(choice => KeyValuePair.Create(choice.Value!, (JsonNode?)choice.Count))]),
         ["categories"] = new JsonObject([.. assets.Categories.Select(choice => KeyValuePair.Create(choice.Value!, (JsonNode?)choice.Count))]),
+        ["source"] = assets.Source,
+        ["sources"] = new JsonObject([.. assets.Sources.Select(choice => KeyValuePair.Create(choice.Value!, (JsonNode?)choice.Count))]),
+        ["missingCount"] = assets.MissingCount,
+        ["missing"] = new JsonArray([.. assets.Missing.Take(200).Select(missing => (JsonNode)new JsonObject
+        {
+            ["path"] = missing.Path,
+            ["kind"] = missing.Kind.ToString(),
+            ["uses"] = missing.Uses,
+            ["check"] = missing.Check,
+        })]),
         ["tiles"] = new JsonArray([.. assets.Tiles.Take(200).Select(tile => (JsonNode)new JsonObject
         {
             ["title"] = tile.Title,
@@ -80,8 +95,10 @@ public sealed class BrowseAssetsHandler(MainViewModel model, AssetsViewModel ass
             ["key"] = tile.Entry.Key,
             ["variants"] = tile.Members.Count,
             ["uses"] = tile.Uses,
+            ["source"] = assets.Origins.Of(tile.Entry).Short,
         })]),
         ["selected"] = assets.Shown?.Key,
+        ["selectedSource"] = assets.ShownSource,
     };
 }
 
