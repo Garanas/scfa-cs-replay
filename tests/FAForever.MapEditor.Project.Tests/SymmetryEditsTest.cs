@@ -147,7 +147,9 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsNull(document.PartnerOf(a, Four[1]));
 
             ImmutableArray<SymmetryPartner> partners = document.Partners([a, ObjectRef.Prop(ids[1])], Diagonal);
-            Assert.AreEqual(0, partners.Length, "a partner that is selected moves as itself");
+            Assert.AreEqual(new SymmetryPartner(a, ObjectRef.Prop(ids[1]), Diagonal[1]), partners.Single(), "a selected partner follows the thing selected before it");
+            partners = document.Partners([ObjectRef.Prop(ids[1]), a], Diagonal);
+            Assert.AreEqual(a, partners.Single().Partner, "the one selected first leads");
             partners = document.Partners([a], Diagonal);
             Assert.AreEqual(new SymmetryPartner(a, ObjectRef.Prop(ids[1]), Diagonal[1]), partners.Single());
         }
@@ -171,6 +173,71 @@ namespace FAForever.MapEditor.Project.Tests
             MapDocument placed = document.PlaceObjects([a], partners, 120, null, 0.25f);
             Assert.AreEqual(new Vector2(60, 120), Flat(placed.PlaceOf(b)!.Value));
             Assert.AreEqual(-0.25f, placed.HeadingOf(b)!.Value, 1e-4f);
+        }
+
+        [TestMethod]
+        [DataRow(MapSymmetryKind.Rotational, 2)]
+        [DataRow(MapSymmetryKind.Rotational, 4)]
+        [DataRow(MapSymmetryKind.MirroredLeftRight, 2)]
+        [DataRow(MapSymmetryKind.MirroredDiagonal, 2)]
+        public void ThingsSelectedWithTheirPartnersStayEachOthersImages(MapSymmetryKind kind, int count)
+        {
+            IReadOnlyList<MapSymmetryTransform> transforms = MapSymmetry.Transforms(kind, count, 256, 256);
+            Heightmap heights = Blank().Terrain.Heightmap;
+            // a rock, a mass deposit and their images, all selected
+            Prop rock = Rock(100, 60, 0.3f);
+            MapDocument document = Blank().AddProps([.. transforms.Select(t => SymmetryEdits.ImageOf(rock, t, heights))], out ImmutableArray<int> ids);
+            List<ObjectRef> things = [.. ids.Select(ObjectRef.Prop)];
+            foreach (MapSymmetryTransform transform in transforms)
+            {
+                Vector3 place = transform.Apply(new Vector3(90.5f, 30, 70.5f));
+                document = document.AddMarker(new ResourceMarker { Id = 0, Name = $"Mass {things.Count}", Kind = ResourceKind.Mass, Position = place }, out Marker mass);
+                things.Add(ObjectRef.Marker(mass.Id));
+            }
+
+            void AssertImages(MapDocument edited, string what)
+            {
+                for (int i = 1; i < transforms.Count; i++)
+                {
+                    Vector3 expected = transforms[i].Apply(edited.PlaceOf(things[0])!.Value);
+                    Vector3 actual = edited.PlaceOf(things[i])!.Value;
+                    Assert.AreEqual(expected.X, actual.X, 1e-2f, $"{what}: the rock's image {i}");
+                    Assert.AreEqual(expected.Z, actual.Z, 1e-2f, $"{what}: the rock's image {i}");
+                    float heading = transforms[i].ApplyYaw(edited.HeadingOf(things[0])!.Value);
+                    Assert.AreEqual(0, MathF.Sin(heading - edited.HeadingOf(things[i])!.Value), 1e-3f, $"{what}: the rock's image {i} faces the image of its facing");
+                    Vector3 mass = transforms[i].Apply(edited.PlaceOf(things[transforms.Count])!.Value);
+                    Vector3 massImage = edited.PlaceOf(things[transforms.Count + i])!.Value;
+                    Assert.AreEqual(mass.X, massImage.X, 1e-2f, $"{what}: the deposit's image {i}");
+                    Assert.AreEqual(mass.Z, massImage.Z, 1e-2f, $"{what}: the deposit's image {i}");
+                }
+                foreach (ObjectRef deposit in things.Skip(transforms.Count))
+                {
+                    Vector3 place = edited.PlaceOf(deposit)!.Value;
+                    Assert.AreEqual(0.5f, place.X - MathF.Floor(place.X), 1e-4f, $"{what}: a deposit on an ogrid's centre");
+                    Assert.AreEqual(0.5f, place.Z - MathF.Floor(place.Z), 1e-4f, $"{what}: a deposit on an ogrid's centre");
+                }
+            }
+
+            ImmutableArray<SymmetryPartner> partners = document.Partners(things, transforms);
+            Assert.AreEqual(2 * (transforms.Count - 1), partners.Length, "every image follows its original");
+            AssertImages(document.MoveObjects(things, partners, 3.3f, -1.5f), "moved");
+            AssertImages(document.MoveObjects(things, partners, 0.5f, 0.5f), "moved by half an ogrid");
+            AssertImages(document.RotateObjects(things, partners, 0.4f), "turned each");
+            AssertImages(document.RotateObjectsAbout(things, partners, 0.4f, new Vector2(95, 65)), "turned about a place");
+            AssertImages(document.ScaleObjects(things, partners, 1.5f, 1.5f, 0, new Vector2(95, 65)), "scaled about a place");
+            AssertImages(document.PlaceObjects(things, partners, 40, 30, 1), "placed");
+        }
+
+        [TestMethod]
+        public void ADepositMovedLandsOnAnOgridCentre()
+        {
+            MapDocument document = Blank().AddMarker(new ResourceMarker { Id = 0, Name = "Hydrocarbon 01", Kind = ResourceKind.Hydrocarbon, Position = new Vector3(100.5f, 30, 60.5f) }, out Marker hydro)
+                .AddMarker(new PathNode { Id = 0, Name = "LandPN1", Layer = PathLayer.Land, Position = new Vector3(100.5f, 30, 60.5f) }, out Marker blank);
+            ObjectRef[] things = [ObjectRef.Marker(hydro.Id), ObjectRef.Marker(blank.Id)];
+            MapDocument moved = document.MoveObjects(things, 0.7f, -0.2f);
+            Assert.AreEqual(new Vector2(101.5f, 60.5f), Flat(moved.PlaceOf(things[0])!.Value), "the nearest centre");
+            Assert.AreEqual(new Vector2(101.2f, 60.3f), Flat(moved.PlaceOf(things[1])!.Value), "another marker goes where it is moved");
+            Assert.AreEqual(new Vector2(40.5f, 60.5f), Flat(document.PlaceObjects(things, 40.2f, null).PlaceOf(things[0])!.Value));
         }
 
         [TestMethod]

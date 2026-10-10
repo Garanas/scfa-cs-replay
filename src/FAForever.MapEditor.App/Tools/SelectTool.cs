@@ -447,6 +447,11 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
                 return false;
             }
             _moving = model.Selection.Items;
+            if (_gesture == Gesture.Move && _clickUnder is ObjectRef grabbed && _moving.Contains(grabbed))
+            {
+                // the thing under the mouse leads: with the symmetry its selected partners follow it mirrored
+                _moving = [grabbed, .. _moving.Where(thing => thing != grabbed)];
+            }
             _frame ??= Frame;
             _move = model.StartStroke(description);
             _before = _move.Document;

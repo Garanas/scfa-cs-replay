@@ -64,13 +64,15 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// The mirror partners of the things under every transform but the identity, each partner once:
-        /// the first thing that finds it keeps it, and a partner that is one of the things is left out
-        /// (it moves as itself).
+        /// the first thing that finds it keeps it. Of things that hold a thing and its images, the
+        /// thing selected first leads (<see cref="WithoutPartners"/>) and the others are its partners,
+        /// so an edit of all of them keeps them each other's images: each part moves by its own image
+        /// of the offset, not all alike.
         /// </summary>
         /// <param name="transforms">The parts of the map (<see cref="MapSymmetry.Transforms"/>); the identity is skipped.</param>
         public static ImmutableArray<SymmetryPartner> Partners(this MapDocument document, IEnumerable<ObjectRef> things, IReadOnlyList<MapSymmetryTransform> transforms, float tolerance = DefaultTolerance)
         {
-            ObjectRef[] list = [.. things];
+            ObjectRef[] list = [.. document.WithoutPartners(things, transforms, tolerance)];
             HashSet<ObjectRef> taken = [.. list];
             ImmutableArray<SymmetryPartner>.Builder partners = ImmutableArray.CreateBuilder<SymmetryPartner>();
             foreach (ObjectRef thing in list)
@@ -324,7 +326,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         public static MapDocument MoveObjects(this MapDocument document, IReadOnlyCollection<ObjectRef> things, IReadOnlyList<SymmetryPartner> partners, float dx, float dz)
         {
-            document = document.MoveObjects(things, dx, dz);
+            document = document.MoveObjects(Leading(things, partners), dx, dz);
             foreach (IGrouping<MapSymmetryTransform, SymmetryPartner> group in partners.GroupBy(partner => partner.Transform))
             {
                 Vector2 offset = group.Key.ApplyDirection(new Vector2(dx, dz));
@@ -339,7 +341,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         public static MapDocument RotateObjects(this MapDocument document, IReadOnlyCollection<ObjectRef> things, IReadOnlyList<SymmetryPartner> partners, float radians)
         {
-            document = document.RotateObjects(things, radians);
+            document = document.RotateObjects(Leading(things, partners), radians);
             document = document.RotateObjects(partners.Where(partner => !partner.Transform.IsMirror).Select(partner => partner.Partner), radians);
             return document.RotateObjects(partners.Where(partner => partner.Transform.IsMirror).Select(partner => partner.Partner), -radians);
         }
@@ -351,7 +353,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         public static MapDocument RotateObjectsAbout(this MapDocument document, IReadOnlyCollection<ObjectRef> things, IReadOnlyList<SymmetryPartner> partners, float radians, Vector2 pivot)
         {
-            document = document.RotateObjectsAbout(things, radians, pivot);
+            document = document.RotateObjectsAbout(Leading(things, partners), radians, pivot);
             foreach (IGrouping<MapSymmetryTransform, SymmetryPartner> group in partners.GroupBy(partner => partner.Transform))
             {
                 document = document.RotateObjectsAbout(group.Select(partner => partner.Partner), group.Key.IsMirror ? -radians : radians, group.Key.Apply(pivot));
@@ -367,7 +369,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         public static MapDocument ScaleObjects(this MapDocument document, IReadOnlyCollection<ObjectRef> things, IReadOnlyList<SymmetryPartner> partners, float x, float z, float heading = 0, Vector2? pivot = null)
         {
-            document = document.ScaleObjects(things, x, z, heading, pivot);
+            document = document.ScaleObjects(Leading(things, partners), x, z, heading, pivot);
             (float sin, float cos) = MathF.SinCos(heading);
             foreach (IGrouping<MapSymmetryTransform, SymmetryPartner> group in partners.GroupBy(partner => partner.Transform))
             {
@@ -387,13 +389,14 @@ namespace FAForever.MapEditor.Project.Editing
         public static MapDocument PlaceObjects(this MapDocument document, IReadOnlyCollection<ObjectRef> things, IReadOnlyList<SymmetryPartner> partners, float? x, float? z, float? heading)
         {
             MapDocument before = document;
+            ObjectRef[] leading = Leading(things, partners);
             if (x is not null || z is not null)
             {
-                document = document.PlaceObjects(things, x, z);
+                document = document.PlaceObjects(leading, x, z);
             }
             if (heading is float radians)
             {
-                document = document.SetHeading(things, radians);
+                document = document.SetHeading(leading, radians);
             }
             foreach (SymmetryPartner partner in partners)
             {
@@ -412,6 +415,20 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         #endregion
+
+        /// <summary>
+        /// The things that lead an edit with partners: those that are not a partner themselves (a
+        /// selected partner moves as the image of its thing).
+        /// </summary>
+        private static ObjectRef[] Leading(IReadOnlyCollection<ObjectRef> things, IReadOnlyList<SymmetryPartner> partners)
+        {
+            if (partners.Count == 0)
+            {
+                return [.. things];
+            }
+            HashSet<ObjectRef> images = [.. partners.Select(partner => partner.Partner)];
+            return [.. things.Where(thing => !images.Contains(thing))];
+        }
 
         /// <summary>
         /// A place moved by a transform, as high above the terrain as it was.

@@ -239,6 +239,52 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        [DataRow("rotational", 2)]
+        [DataRow("rotational", 4)]
+        [DataRow("leftRight", 2)]
+        [DataRow("diagonal", 2)]
+        public async Task ASelectionHoldingThingsAndTheirPartnersStaysSymmetric(string kind, int count)
+        {
+            MainViewModel model = await Open(kind, count, tool: "markers.select");
+            await Run(model, "markers.place", new JsonObject { ["kind"] = "mass", ["x"] = 90, ["z"] = 70 });
+            ObjectRef[] all = [.. model.Selection.Items];
+            Assert.AreEqual(count, all.Length, "placed with its images, all selected");
+            IReadOnlyList<MapSymmetryTransform> transforms = model.Symmetry.Transforms(model.ShownDocument!);
+
+            void AssertSymmetric(string what)
+            {
+                MapDocument document = model.ShownDocument!;
+                Vector3 first = document.PlaceOf(all[0])!.Value;
+                foreach (MapSymmetryTransform transform in transforms.Skip(1))
+                {
+                    Vector3 image = transform.Apply(first);
+                    Assert.IsTrue(all.Skip(1).Any(thing => Vector2.Distance(Flat(document.PlaceOf(thing)!.Value), new Vector2(image.X, image.Z)) < 0.01f),
+                        $"{what}: a deposit at the image ({image.X}, {image.Z}) of ({first.X}, {first.Z})");
+                }
+                Assert.IsFalse(SymmetryChecks.NotSymmetric(document, transforms).Any(problem => problem.Thing is ObjectRef thing && all.Contains(thing)), $"{what}: no deposit without a partner");
+            }
+
+            await Run(model, "edit.nudge", new JsonObject { ["dx"] = 3, ["dz"] = 1 });
+            AssertSymmetric("nudged");
+            await Run(model, "edit.rotate", new JsonObject { ["degrees"] = 90, ["about"] = "each" });
+            AssertSymmetric("turned each");
+            await Run(model, "edit.rotate", new JsonObject { ["degrees"] = 180, ["about"] = "selection" });
+            AssertSymmetric("turned about the centre");
+            await Run(model, "edit.scale", new JsonObject { ["factor"] = 1.2f, ["about"] = "selection" });
+            AssertSymmetric("scaled");
+
+            // dragging one of the images: it follows the mouse, the others its images
+            SelectTool tool = (SelectTool)model.ActiveTool!.Tool!;
+            Vector3 grabbed = model.ShownDocument!.PlaceOf(all[^1])!.Value;
+            Drag(tool, grabbed, new Vector2(grabbed.X + 6, grabbed.Z + 4));
+            Assert.AreEqual(new Vector2(MathF.Round(grabbed.X + 6 - 0.5f) + 0.5f, MathF.Round(grabbed.Z + 4 - 0.5f) + 0.5f), Flat(model.ShownDocument!.PlaceOf(all[^1])!.Value), "the grabbed deposit goes with the mouse, onto an ogrid's centre");
+            AssertSymmetric("dragged");
+
+            await Run(model, "edit.delete");
+            Assert.IsFalse(all.Any(model.ShownDocument!.Exists), "deleted, all of them");
+        }
+
+        [TestMethod]
         public async Task TheHandlesTurnAndScaleThePartnersToo()
         {
             MainViewModel model = await Open("leftRight", tool: "props.select");
