@@ -61,6 +61,21 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
   the tiles to redraw. An edit that changes nothing (`Equals`) is not kept.
 - Edits name what they change, never a position in a list: props by `Prop.Id` (in memory only; a
   project numbers them on load), markers and armies by name. Shared edits live in `DocumentEdits`.
+  - `DocumentEdits`: add, update and remove props, decals (removing one takes it out of its
+    groups), units (`AddUnit(army, group path, unit)`, found by name with `FindUnit` and
+    `AllUnits` as `PlacedUnit`: army, group path, unit), markers of every kind by id
+    (`AddMarker` gives a new id and a free name, `FreeName`: `Mass 08` becomes `Mass 12`;
+    `RemoveMarker` drops every path node link and chain entry to it; `UpdateMarker` may not change
+    a marker's kind or id) and areas by name.
+  - `ObjectRef` names one thing of any kind (`marker:12`, `prop:5`, `decal:3`, `unit:UNIT_5`,
+    `area:AREA_1`), for the editor's selection (user story F-11). `MapObjects` gives a thing's
+    place (its centre: a decal's position is a corner), heading (about the up axis, from +x towards
+    +z, clockwise in the top view; a prop's from its matrix, whose rows are `RotationX/Y/Z`), the
+    outline of a decal or area, and finds what a click picks (`Nearest`, with the size of a pixel)
+    or a box holds (`Inside`). `ObjectEdits` moves, places, turns (each about its own centre; a
+    prop's whole matrix turns, so a tilt stays), removes, copies and pastes many things at once
+    (`ObjectClipboard`; copied path nodes keep their links among each other). Things keep to the
+    terrain: they stay as high above it as they were (`Heightmap.HeightAt`, between the corners).
 - Lua plugins (Lua-CSharp, later) get a facade over the session, never the document: reads give
   values, writes happen inside a transaction, so each plugin run is one undo step and a failing
   plugin changes nothing.

@@ -26,7 +26,7 @@ public sealed class LookCameraHandler(MainViewModel model) : IRequestHandler<Loo
 /// <summary>
 /// Sends the 3D view's camera to a place of the map (user story V-1). With a radius it shows that
 /// much around the place and glides there while the 3D view shows, as F does; without, it moves
-/// there at once keeping its distance and angles, as control and a click in the top view do.
+/// there at once keeping its distance and angles, as alt and a click in the top view do.
 /// </summary>
 /// <param name="Radius">How much around the place to show, in ogrids.</param>
 [EditorCommand("camera.focus", "Send the 3D camera to a place", Story = "V-1")]
