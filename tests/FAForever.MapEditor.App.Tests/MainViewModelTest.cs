@@ -37,7 +37,7 @@ namespace FAForever.MapEditor.App.Tests
         /// <summary>
         /// Answers the editor's questions as a test says.
         /// </summary>
-        private sealed class Answers : IEditorDialogs
+        internal sealed class Answers : IEditorDialogs
         {
             public Queue<string?> Folders { get; } = new Queue<string?>();
 
@@ -175,6 +175,24 @@ namespace FAForever.MapEditor.App.Tests
             sculpt.Release();
             Assert.IsTrue(asked >= 2, "the stroke ended");
             Assert.IsTrue(model.Commands.CanRun(undo));
+        }
+
+        [TestMethod]
+        public async Task PropsAndUnitsShowUntilTheirOverlaysAreTurnedOff()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            await model.OpenAsync(HardFfa);
+            int overlays = 0;
+            model.OverlaysChanged += (_, _) => overlays++;
+            Assert.IsTrue(model.ShowProps && model.ShowUnits, "both show at first");
+
+            Assert.IsTrue(await model.Commands.RunAsync("view.overlay.props"));
+            Assert.IsFalse(model.ShowProps);
+            Assert.IsTrue(await model.Commands.RunAsync("view.overlay.units"));
+            Assert.IsFalse(model.ShowUnits);
+            Assert.AreEqual(2, overlays);
+            Assert.IsFalse(model.Overlays.Single(overlay => overlay.Id == "props").IsOn);
+            Assert.IsFalse(model.Overlays.Single(overlay => overlay.Id == "units").IsIncomplete);
         }
 
         [TestMethod]

@@ -220,7 +220,7 @@ public static class EditorOverlays
         new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12"),
         new OverlayDefinition("grid", "Grid", "Show the grid", "V-3", "Show a grid over the terrain"),
         new OverlayDefinition("areas", "Areas", "Show areas", "M-5", "Show the areas"),
-        new OverlayDefinition("props", "Props", "Show props", "P-1", "Show the props in the top view"),
-        new OverlayDefinition("units", "Units", "Show units", "U-2", "Show the units"),
+        new OverlayDefinition("props", "Props", "Show props", "V-2"),
+        new OverlayDefinition("units", "Units", "Show units", "V-2"),
     ];
 }

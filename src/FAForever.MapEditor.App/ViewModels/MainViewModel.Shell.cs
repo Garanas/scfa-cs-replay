@@ -276,6 +276,8 @@ public sealed partial class MainViewModel
             "pathNodes" => new OverlayItem(overlay, () => ShowPathNodes, value => ShowPathNodes = value),
             "camera" => new OverlayItem(overlay, () => ShowCamera, value => ShowCamera = value),
             "symmetry" => new OverlayItem(overlay, () => ShowSymmetry, value => ShowSymmetry = value),
+            "props" => new OverlayItem(overlay, () => ShowProps, value => ShowProps = value),
+            "units" => new OverlayItem(overlay, () => ShowUnits, value => ShowUnits = value),
             _ => new OverlayItem(overlay, () => false, null),
         })];
         foreach (OverlayDefinition overlay in EditorOverlays.All)

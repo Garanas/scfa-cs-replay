@@ -159,8 +159,8 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         "state", "commands", "run {id, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?}", "perf {reset?}", "logs {problems?, count?}",
         "diagnostics {record?, send?, endpoint?, flush?, upload?}", "version-control {open?, enable?, name?, email?, lfs?, remote?}",
         "picker {open?, query?, group?, category?, tech?, move?: [across, down], choose?, cancel?}",
-        "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}",
-        "show {markers?, pathNodes?, camera?}", "screenshot {path, map?, gpu?, brush?}", "close",
+        "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "pick {x, y, highlight?}",
+        "show {markers?, pathNodes?, camera?, props?, units?}", "screenshot {path, map?, gpu?, brush?}", "close",
     ];
 
     /// <summary>
@@ -393,6 +393,22 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 // what the mouse would reach at a point of the window: the control that gets its events
                 result["hit"] = HitAt(Number(arguments, "x") ?? 0, Number(arguments, "y") ?? 0);
                 break;
+            case "pick":
+            {
+                // the object under a point of the 3D view (its pixels, as the mouse's); highlight: draw it highlighted
+                Rendering.PickedObject? picked = window.View3D.PickAt(new Point(Number(arguments, "x") ?? 0, Number(arguments, "y") ?? 0));
+                result["picked"] = picked is null ? null : new JsonObject
+                {
+                    ["kind"] = picked.Kind.ToString(),
+                    ["id"] = picked.Id,
+                    ["name"] = picked.Name,
+                };
+                if (arguments["highlight"]?.GetValue<bool>() == true)
+                {
+                    window.View3D.Highlighted = picked is null ? null : new HashSet<Rendering.PickedObject> { picked };
+                }
+                break;
+            }
             case "show":
                 // the overlays' commands, each with whether to show it
                 foreach ((string key, JsonNode? on) in arguments)
@@ -534,7 +550,11 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["yaw"] = model.Camera.Now.Yaw,
                 ["pitch"] = model.Camera.Now.Pitch,
             },
-            ["show"] = new JsonObject { ["markers"] = model.ShowMarkers, ["pathNodes"] = model.ShowPathNodes, ["camera"] = model.ShowCamera },
+            ["show"] = new JsonObject
+            {
+                ["markers"] = model.ShowMarkers, ["pathNodes"] = model.ShowPathNodes, ["camera"] = model.ShowCamera,
+                ["props"] = model.ShowProps, ["units"] = model.ShowUnits,
+            },
             ["dock"] = model.Dock.ToString(),
             ["assets"] = new JsonObject
             {
@@ -569,7 +589,29 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["decals"] = window.View3D.DecalState.Decals,
                 ["decalDraws"] = window.View3D.DecalState.Draws,
                 ["decalTextures"] = window.View3D.DecalState.Textures,
+                ["objects"] = ObjectState(),
             },
+        };
+    }
+
+    /// <summary>
+    /// The props, units and markers the 3D view drew in its last frame, with their draws, the
+    /// models on the card, read and being read, and the blueprints drawn as a box for want of a model.
+    /// </summary>
+    private JsonObject ObjectState()
+    {
+        var state = window.View3D.ObjectState;
+        return new JsonObject
+        {
+            ["props"] = state.Props,
+            ["units"] = state.Units,
+            ["markers"] = state.Markers,
+            ["draws"] = state.Draws,
+            ["meshes"] = state.Meshes,
+            ["modelsRead"] = state.ModelsRead,
+            ["modelsLoading"] = state.ModelsLoading,
+            ["missingMeshes"] = state.Missing,
+            ["triangles"] = state.Triangles,
         };
     }
 

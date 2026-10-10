@@ -53,7 +53,7 @@ internal static class TerrainShaders
     /// <c>CalculateXPLighting</c> without the specular part: the sun on the side that faces it,
     /// the ambience everywhere, and the shadow fill colour where little light falls.
     /// </summary>
-    private const string Lighting = """
+    internal const string Lighting = """
         uniform vec3 uSunDirection;
         uniform vec3 uSunColor;
         uniform vec3 uSunAmbience;

@@ -161,8 +161,8 @@ reads again when it changes; and nothing that generates runs by itself.
 - [ ] **R-4 Chains.** Create a chain and put markers in order.
 - [ ] **R-5 Adaptive maps.** Which markers (deposits, civilians) exist for which number of players
       and options.
-- [x] **R-6 Show markers.** Markers and path nodes on or off in the top view. Missing: per kind,
-      and in 3D.
+- [x] **R-6 Show markers.** Markers and path nodes on or off in the top view and in 3D. Missing:
+      per kind.
 
 ## P: Props
 
@@ -199,8 +199,11 @@ reads again when it changes; and nothing that generates runs by itself.
 ## V: Views
 
 - [x] **V-1 Top view.** The terrain from above with the brush, markers and the 3D camera.
-- [x] **V-2 3D view.** On the graphics card, with strata, decals and water; the FAF editor's camera.
+- [x] **V-2 3D view.** On the graphics card, with strata, decals and water; the FAF editor's camera;
+      the props and units with their models, the markers as symbols, the object under the mouse
+      found by picking and drawn highlighted.
 - [ ] **V-3 Overlays.** Choose what the views show over the terrain: a mask, walkability, grid,
-      symmetry guides, areas, markers by kind, props, decals, units.
+      symmetry guides, areas, markers by kind, props, decals, units. Today: markers, path nodes and
+      the 3D camera; props and units on or off in 3D.
 - [ ] **V-4 Layouts.** Top and 3D side by side; panels that can be moved, closed and opened again.
 - [ ] **V-5 Ruler.** Measure distances and heights.

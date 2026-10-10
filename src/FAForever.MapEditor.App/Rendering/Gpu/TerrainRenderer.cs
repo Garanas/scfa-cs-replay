@@ -11,8 +11,9 @@ using Silk.NET.OpenGL;
 namespace FAForever.MapEditor.App.Rendering.Gpu;
 
 /// <summary>
-/// Draws a map with OpenGL: the terrain with its layers, then the albedo decals, then the normal
-/// decals, the water, and the active tool's brush under the mouse. It keeps on the card what it drew last and updates only what a new version of the
+/// Draws a map with OpenGL: the terrain with its layers, the props and units
+/// (<see cref="ObjectRenderer"/>), then the albedo decals, then the normal decals, the water, the
+/// markers, and the active tool's brush under the mouse. It keeps on the card what it drew last and updates only what a new version of the
 /// document changed: the tiles of the heightmap and masks a brush touched, the decals when the
 /// list changed. Textures come from a <see cref="GpuTextureCache"/>, one per file.
 /// </summary>
@@ -113,7 +114,9 @@ internal sealed unsafe class TerrainRenderer : IDisposable
 
     /// <param name="brush">The active tool's brush under the mouse; null for none.</param>
     /// <param name="brushColor">Its colour, from the theme's overlay token.</param>
-    public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, BrushPreview? brush = null, Vector3 brushColor = default)
+    /// <param name="objects">The props, units and markers, and what of them shows: the models after
+    /// the terrain (decals do not cover them), the markers after the water; null for none.</param>
+    public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, BrushPreview? brush = null, Vector3 brushColor = default, (ObjectRenderer Renderer, ObjectFrame Frame)? objects = null)
     {
         using (Performance.Measure("3d.upload-textures"))
         {
@@ -134,6 +137,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         {
             DrawTerrain(document, viewProjection, findTexture);
         }
+        objects?.Renderer.DrawModels(document, viewProjection, objects.Value.Frame);
 
         // decals lie on the terrain: no depth writes, and pulled towards the camera so the ground does not hide them
         _gl.DepthMask(false);
@@ -147,6 +151,15 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         }
         _gl.Disable(EnableCap.PolygonOffsetFill);
         DrawWater(document, viewProjection);
+        if (objects is { } shown)
+        {
+            // the symbols are solid: they hide what is behind them, the brush included
+            _gl.DepthMask(true);
+            _gl.Disable(EnableCap.Blend);
+            shown.Renderer.DrawMarkers(document, viewProjection, shown.Frame);
+            _gl.DepthMask(false);
+            _gl.Enable(EnableCap.Blend);
+        }
         if (brush is not null)
         {
             using (Performance.Measure("3d.draw-brush"))
@@ -704,7 +717,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// <summary>
     /// A linked pair of shaders and its uniforms by name.
     /// </summary>
-    private sealed class Program : IDisposable
+    internal sealed class Program : IDisposable
     {
         private readonly GL _gl;
         private readonly uint _id;

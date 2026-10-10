@@ -332,8 +332,48 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
     the fragment drops what lies outside.
   - The water is a surface at its elevation, drawn after the decals, darker and more opaque
     with depth down to the abyss elevation.
+  - **Props, units and markers** (`Rendering/Gpu/ObjectRenderer`, `ObjectShaders`), after the
+    terrain (so decals do not cover them) and, the markers, after the water. A model is read on a
+    pool thread the first time its blueprint shows (`Rendering/ObjectModels`, span
+    `3d.read-model`): every level of detail of the converted blueprint's JSON (`<name>_lod0.glb`,
+    `_lod1.glb`, ...) with its cutoff, albedo and shader, scaled by its `uniformScale`; it goes on
+    the card with the next frame. Asking for a model never touches the disk, and the models are
+    read again when the catalog is (`assets.reload`). Props and units are instanced: their
+    placements are made again only when the objects or the highlighted set change; per frame
+    (only when the camera moved) the ones inside the view are sorted into runs of blueprint and
+    level by their distance to the eye, one draw a run (`3d.arrange-objects`). The game hides a
+    prop beyond its last cutoff; the editor keeps drawing its last level. Archsimkats Valley
+    (8304 props, 98 units): 5.2 million triangles at the first level, 65 000 to 160 000 with the
+    levels, about 1 ms a frame for the objects.
+  - Placement and shading: a prop's model is turned by its three axes (`RotationX/Y/Z` as the rows
+    of its rotation, so it can lean) and scaled by `Scale` (zero counts as 1); a unit's by its
+    `Orientation` (yaw, pitch, roll in radians). Both are lit by the map's sun as the terrain is,
+    from both sides; the albedo's alpha is cut out at the shader's reference (`MeshPreview.ShaderOf`:
+    0x80 for the `...Alpha` shaders); UEF, Aeon and Cybran units are brightened (the game lights
+    their metal with its environment), Seraphim units take their silver from the albedo's blue.
+    There is no team colour, normal map or specular yet. A blueprint the workspace has no model
+    of (or whose model cannot be read, logged once) is a box of one ogrid in the theme's
+    `WarningBrush`.
+  - Markers are upright diamonds in their kind's colour (`Marker.Color`) standing on the terrain
+    at their place: spawns 5 ogrids high, path nodes 1.2, the rest 2; from `ObjectPlacement.MarkerNear`
+    (80 ogrids) on they grow with the distance so they keep their size on screen. They are drawn
+    in front of the water, so the markers under it show. The overlays `markers`, `pathNodes`,
+    `props` and `units` turn them on and off.
+  - **Picking** (`Rendering/ObjectPicking`, without OpenGL, tested in `ObjectPickingTest`):
+    `TerrainViewGpu.PickAt(point)` makes the ray through the point (`EditorCamera.RayAt`) and
+    returns the nearest `PickedObject` (`Rendering/PickedObject`: kind Marker, Prop, Decal or Unit,
+    with the id or, for a unit, its name) whose bounds it meets in front of the terrain: a
+    model's box (the read model's, `ObjectBounds.Box` until then) turned and placed as drawn
+    (`ObjectPlacement`, shared with the renderer), a marker's symbol as a sphere. When no object
+    is hit, the decal under the point on top (the last in the map's order). Only the kinds that
+    show are picked.
+  - **Highlight**: `TerrainViewGpu.Highlighted` is a set of `PickedObject`s drawn mixed with the
+    theme's `SelectedStrokeBrush` (props, units, markers). Whoever keeps the selection sets it;
+    automation's `pick {x, y, highlight: true}` sets it to what it found, to check it.
   - Uniforms of samplers must not share a texture unit with another sampler type: unit 0 holds
-    the heights (`usampler2D`), 1 a decal's texture, 2 to 11 the layers, 12 and 13 the masks.
+    the heights (`usampler2D`), 1 a decal's texture or a model's albedo (the objects set it
+    active before their textures upload, since an upload binds to the active unit), 2 to 11 the
+    layers, 12 and 13 the masks, 14 the brush's picture.
     A sampler with a mipmapped filter on a texture without mipmaps reads as black: the masks have
     their own sampler.
   - Avalonia's hit testing only finds what a control draws itself, and this one draws nothing
@@ -560,8 +600,10 @@ faf-map editor close                                      # closes without askin
 ```
 
 - The state's `gpu` says which OpenGL the 3D view runs on, its error if it could not start, the
-  textures on the card, the last texture that could not be read, and the decals with their draws
-  and textures.
+  textures on the card, the last texture that could not be read, the decals with their draws
+  and textures, and `objects`: the props, units and markers drawn in the last frame, their draws,
+  the models on the card (`meshes`, one per level), read and being read, the blueprints drawn as
+  a box (`missingMeshes`) and the triangles of the models.
 - The state includes `busy` and `stage` (`SetUp`, `UpdateAssets`, `Converting`, `Ready`), with
   `workspace`, `setupError` and `assetReasons`; a command that opens, saves or converts answers
   when it is done. Start a test editor with `FAF_MAP_EDITOR_SETTINGS` set to a file of its own, so
@@ -589,7 +631,7 @@ faf-map editor close                                      # closes without askin
   `view {x, z, zoom?}` (`view.zoomTo`: the top view), `gpu-debug {mode}` (`view.gpuDebug`: what
   the 3D view's terrain shows: 0 the picture, 1 the albedo, 2 the light, 3 the normals, 4 the
   heights, 5 the lower layer, 6 the first four masks after the remap, 7 as stored), `mode {id}`,
-  `tool {id}`, `tab {name: top|3d}`, `show {markers?, pathNodes?, camera?}` (each overlay's
+  `tool {id}`, `tab {name: top|3d}`, `show {markers?, pathNodes?, camera?, props?, units?}` (each overlay's
   command with `on`).
 - `state` has `symmetry` (kind, count, title), `presets` (folder, the panel's kind, the names it
   lists) and `generated` (per generator its status, `Missing`, `Stale` or `Current`, and the
@@ -612,7 +654,9 @@ faf-map editor close                                      # closes without askin
   git; `open` runs `file.commit` without a message, which shows the page, `enable` runs
   `file.enableVersionControl` with the choices, which go only with it), `mask {layer, x, z}`,
   `stroke {points}` (the left mouse, so the active tool, no command), `height {x, z}`, `hit {x, y}` (the control the
-  mouse reaches at a point of the window, with its parents), `screenshot {path, map?, gpu?, brush?}`
+  mouse reaches at a point of the window, with its parents), `pick {x, y, highlight?}` (the
+  object under a point of the 3D view, in its pixels: `picked` with kind, id and name, or null;
+  `highlight` draws it highlighted), `screenshot {path, map?, gpu?, brush?}`
   (`gpu: true` reads a frame of the 3D view back from the card: a screenshot of the window does
   not reach it; `brush: [x, z]` draws the active tool's brush there in that frame, as if the
   mouse pointed at it), `close`. A new operation is a
