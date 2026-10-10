@@ -246,6 +246,43 @@ namespace FAForever.MapEditor.App.Tests
             window.Close();
         });
 
+        [TestMethod]
+        public Task ThePickersKeysWorkAfterAFilterOrStarIsClicked() => Run(async () =>
+        {
+            (MainViewModel model, _) = await ContentTest.OpenInWorkspace("props.place");
+            MainWindow window = new MainWindow { DataContext = model, Width = 1280, Height = 800 };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            AssetPickerViewModel picker = model.Picker;
+            Task<string?> picking = picker.PickAsync(FAForever.MapEditor.Project.Workspaces.AssetKind.Prop);
+            Dispatcher.UIThread.RunJobs();
+            Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            int starred = picker.Shows[0].Count;
+            Button facet = window.GetVisualDescendants().OfType<Button>().First(button => button.IsEffectivelyVisible && button.Classes.Contains("facet"));
+            Click(window, facet);
+            Assert.IsTrue(window.GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "Search").IsFocused, "after a filter the search has the keyboard");
+
+            Click(window, ButtonLabelled(window, "Star the asset to choose"));
+            Assert.AreEqual(starred + 1, picker.Shows[0].Count, "the Starred chip counts the star at once");
+            Assert.IsTrue(window.GetVisualDescendants().OfType<TextBox>().Single(box => box.Name == "Search").IsFocused, "the search has the keyboard again");
+            Press(window, Key.Enter, physical: PhysicalKey.Enter);
+            Assert.IsTrue(picking.IsCompleted, "Enter chooses rather than pressing Star again");
+            Assert.AreEqual(picker.Selected?.Entry.Key ?? await picking, await picking);
+            window.Close();
+        });
+
+        private static Button ButtonLabelled(Visual root, string label) => root.GetVisualDescendants().OfType<Button>()
+            .First(button => button.IsEffectivelyVisible && Avalonia.Automation.AutomationProperties.GetName(button) == label);
+
+        private static void Click(MainWindow window, Control control)
+        {
+            Point at = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
+            window.MouseMove(at);
+            window.MouseDown(at, MouseButton.Left);
+            window.MouseUp(at, MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+        }
+
         private static void Modify(MainViewModel model) =>
             model.EditMap("A change", document => document with { Scenario = document.Scenario with { Description = "changed" } });
     }
