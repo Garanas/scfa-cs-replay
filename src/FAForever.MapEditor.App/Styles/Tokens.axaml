@@ -337,4 +337,6 @@
   <x:Double x:Key="PluginsListHeight">480</x:Double>
   <!-- the keys' column of the keyboard shortcuts page -->
   <x:Double x:Key="ShortcutKeysWidth">170</x:Double>
+  <!-- the workspace settings page's folders and assets, without scrolling at 1280 by 800 -->
+  <x:Double x:Key="WorkspaceSettingsListHeight">560</x:Double>
 </ResourceDictionary>

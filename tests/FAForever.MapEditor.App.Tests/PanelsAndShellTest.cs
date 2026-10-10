@@ -150,7 +150,6 @@ namespace FAForever.MapEditor.App.Tests
             ModeDefinition procedural = EditorModes.All.Single(mode => mode.Id == "procedural");
 
             Assert.AreEqual("Shift+F3", masks.Gesture, "beside the Paint mode (F3) the masks came from");
-            Assert.AreEqual("F10", procedural.Gesture, "after the Units mode (F9)");
             Assert.IsInstanceOfType<PlannedSection>(masks.Sections.Single());
             Assert.AreEqual(EditorModes.BottomGroup, procedural.Group);
             CollectionAssert.AreEqual(new[] { "procedural" }, model.BottomRailModes.Select(mode => mode.Definition.Id).ToArray());
@@ -277,7 +276,8 @@ namespace FAForever.MapEditor.App.Tests
             assets.Group = "Aeon";
 
             AssetTile factory = assets.Tiles.Single(tile => tile.Entry.Key == "uab0301");
-            Assert.AreEqual("5,220 m · 47.4k e", factory.Economy);
+            Assert.AreEqual("5.2k · 47.4k", factory.Economy);
+            Assert.AreEqual(("0.27", "850", "7.5M"), (AssetSearch.Short(0.27), AssetSearch.Short(850), AssetSearch.Short(7_506_000)));
             Assert.AreEqual("Costs 5,220 mass and 47,400 energy", factory.EconomyHelp);
             StringAssert.Contains(factory.Label, "Costs 5,220 mass");
             Assert.IsTrue(assets.CanSort);

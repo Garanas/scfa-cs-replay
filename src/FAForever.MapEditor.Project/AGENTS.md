@@ -453,7 +453,9 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   has its kind, the keys a map names it by (`AssetCatalog.KeyOf`: the game path as
   `GameArchives.Normalize` writes it, `.dds`; a unit's id), its group (the biome of `env/`, or a
   unit's faction), its category (a prop's folder, a unit's layer, ...), its family (a prop without
-  `_v1`, `_s2`: the variants share a tile) and its facts. `AssetUse.Count(document)` counts what a
+  `_v1`, `_s2`: the variants share a tile) and its facts; a prop its reclaim (`ReclaimMass`,
+  `ReclaimEnergy`), a unit its build cost (`MassCost`, `EnergyCost`, from the converted blueprint:
+  `uab0301` 5220 and 47400), and both as `Mass` and `Energy`. `AssetUse.Count(document)` counts what a
   map uses by those keys, and `AssetUse.Biomes` gives the biomes of that, most used first.
 - **Where an asset comes from** (F-8, `AssetOrigins`): `Read(workspace)` reads the lists of files
   (never their content) of the archives the manifest names, laid over each other as the converter
@@ -510,14 +512,22 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   sandbox is not; the upload to the vault (M-8) refuses such a map, while the export to the
   game's maps folder works for every map. The game's files do not carry it.
 - **Presets** (user story F-10): `presets/<kind>/<name>.json` (`Workspace.Presets`, a
-  `PresetLibrary`), a folder per kind (lower-case letters, digits and dashes: `brush`, `lighting`,
-  `water`, `units`, `markers`, `props-palette`, `selection`) and a file per preset (`PresetDto`: format version,
+  `PresetLibrary`), a folder per kind named in the plural (`PresetKinds`: `brushes`, `stamps`,
+  `lighting`, `water`, `sky`, `props`, `units`, `markers`, `selections`, and `maps`, the map templates
+  of `MapTemplates`, which are no preset files; a kind is lower-case letters, digits and dashes) and
+  a file per preset (`PresetDto`: format version,
   kind, name, settings). The settings are a JSON object whose shape the feature of the kind owns:
   `Preset.Of(kind, name, record)` writes a record of its own as the editor writes JSON, and
   `preset.Read<T>()` reads it back. The file name is the name with the characters a file name
   cannot hold made dashes; the name itself is in the file. The library keeps nothing in memory:
   every call reads the folder, so presets other tools or editors write show at once; `List` leaves
-  out a file it cannot read and names it.
+  out a file it cannot read and names it. An old kind name (`brush`, `props-palette`, `selection`,
+  `templates`: `PresetKinds.Renamed`) names its new folder (`PresetKinds.Of`, `FolderOf`), and
+  `PresetFolders.Move(workspace)` moves the old folders' files into the new ones (a name taken gets
+  a number), brush presets whose tool is the stamp into `stamps`, and `templates/` into
+  `presets/maps`, deleting what it emptied; the editor runs it when a workspace opens, so it happens
+  once. A stamp's picture (`brushes/stamps/*.png`) is a brush, never moved. `AtmospherePresets.OfSky`
+  and `ReadSky` keep the sky (`SkyDto`).
 
 ## New maps, heightmaps, strata and areas
 
@@ -546,7 +556,7 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
 
 User stories F-10, T-2, M-2, F-9, T-7 and R-5.
 
-- **Selection presets** (F-10, `Workspaces/SelectionPresets`, kind `selection`): `Capture(document,
+- **Selection presets** (F-10, `Workspaces/SelectionPresets`, kind `selections`): `Capture(document,
   things, name)` keeps props, decals, markers (`MarkerPresets.Capture` around the same middle) and units
   (`CaptureUnits` around it) as a project writes them (`SelectionPresetSettings`: `PropDto`s, `DecalDto`s,
   a `MarkerSetDto`, a `UnitGroupDto`), around their middle rounded to a whole ogrid, each height above
@@ -563,7 +573,7 @@ User stories F-10, T-2, M-2, F-9, T-7 and R-5.
   lowest (0) to its highest (65535) sample, `Save` writes it as a 16-bit grey PNG: pressed with mode Set,
   base the lowest, height the difference and a radius of half its side, it puts the part back sample
   for sample (`HeightStampTest`).
-- **Map templates** (M-2, `Workspaces/MapTemplates`, the workspace's `templates/`,
+- **Map templates** (M-2, `Workspaces/MapTemplates`, the workspace's `presets/maps/`,
   `Workspace.TemplatesFolder`): a JSON file of a new map's settings (`MapTemplateDto`: size, height,
   water and its elevations, biome or its own strata, players, extra armies, lighting; each optional),
   a map project in a folder, and the sandbox (`MapTemplateKind.Sandbox`, built from the catalogue).

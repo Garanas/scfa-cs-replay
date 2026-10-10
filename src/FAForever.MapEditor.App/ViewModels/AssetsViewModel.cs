@@ -107,11 +107,12 @@ public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry
     public bool ShowsEconomy => entry.Kind is AssetKind.Unit or AssetKind.Prop;
 
     /// <summary>
-    /// Its mass and energy in a short line, <c>5,220 m · 47.4k e</c>; empty for the other kinds.
+    /// Its mass and energy in a short line, mass first: <c>5.2k · 47.4k</c> (in full in
+    /// <see cref="EconomyHelp"/>); empty for the other kinds.
     /// </summary>
     public string Economy => !ShowsEconomy ? ""
         : entry.Mass == 0 && entry.Energy == 0 ? (entry.Kind == AssetKind.Unit ? "No cost" : "No reclaim")
-        : $"{AssetSearch.Short(entry.Mass)} m · {AssetSearch.Short(entry.Energy)} e";
+        : $"{AssetSearch.Short(entry.Mass)} · {AssetSearch.Short(entry.Energy)}";
 
     /// <summary>
     /// Its mass and energy in full: what its tile's tool tip and a screen reader say.
@@ -284,8 +285,24 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// How the tiles are ordered: as listed, or the most mass or energy first (units and props).
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SortIndex))]
+    [NotifyPropertyChangedFor(nameof(SortIndex), nameof(IsSorted), nameof(SortHelp))]
     public partial AssetSort Sort { get; set; }
+
+    /// <summary>
+    /// Whether the tiles are in another order than listed (the sort button is on).
+    /// </summary>
+    public bool IsSorted => Sort != AssetSort.Listed;
+
+    /// <summary>
+    /// What the sort button says: the order now, and what a click does.
+    /// </summary>
+    public string SortHelp => $"Order: {AssetSearch.SortTitles[(int)Sort].ToLowerInvariant()}. Click for the next: as listed, the most mass first, the most energy first (a unit's build cost, a prop's reclaim)";
+
+    /// <summary>
+    /// The shelf's sort button: the next order.
+    /// </summary>
+    [RelayCommand]
+    private void NextSort() => Sort = (AssetSort)(((int)Sort + 1) % AssetSearch.SortTitles.Count);
 
     /// <summary>
     /// <see cref="Sort"/> as the shelf's combo box chooses it (<see cref="AssetSearch.SortTitles"/>).

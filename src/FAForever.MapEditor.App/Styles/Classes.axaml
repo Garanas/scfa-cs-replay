@@ -851,8 +851,11 @@
   <Style Selector="Border.dialog.shortcuts, Border.dialog.workspacesettings">
     <Setter Property="Width" Value="{StaticResource PluginsDialogWidth}" />
   </Style>
-  <Style Selector="ScrollViewer.shortcutslist, ScrollViewer.workspacesettingslist">
+  <Style Selector="ScrollViewer.shortcutslist">
     <Setter Property="MaxHeight" Value="{StaticResource PluginsListHeight}" />
+  </Style>
+  <Style Selector="ScrollViewer.workspacesettingslist">
+    <Setter Property="MaxHeight" Value="{StaticResource WorkspaceSettingsListHeight}" />
   </Style>
   <Style Selector="TextBlock.shortcutkeys">
     <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />

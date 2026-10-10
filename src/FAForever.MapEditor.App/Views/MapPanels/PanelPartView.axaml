@@ -51,13 +51,13 @@
                 <CheckBox Content="Erase" IsChecked="{Binding Brush.Erase}" AutomationProperties.Name="Erase the water map"
                           AutomationProperties.HelpText="Take the map away where the brush goes, rather than add to it" />
                 <DockPanel>
-                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Radius" Width="{StaticResource FactLabelWidth}" />
-                  <TextBlock DockPanel.Dock="Right" Classes="mono" Text="{Binding Brush.Radius, StringFormat='{}{0:0}'}" Width="{StaticResource FactLabelWidth}" TextAlignment="Right" />
+                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Radius" Width="{StaticResource FactLabelWidth}" VerticalAlignment="Center" />
+                  <TextBlock DockPanel.Dock="Right" Classes="mono" Text="{Binding Brush.Radius, StringFormat='{}{0:0}'}" Width="{StaticResource FactLabelWidth}" TextAlignment="Right" VerticalAlignment="Center" />
                   <Slider Minimum="1" Maximum="128" Value="{Binding Brush.Radius}" AutomationProperties.Name="Water brush radius in ogrids" />
                 </DockPanel>
                 <DockPanel>
-                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Strength" Width="{StaticResource FactLabelWidth}" />
-                  <TextBlock DockPanel.Dock="Right" Classes="mono" Text="{Binding Brush.Strength, StringFormat='{}{0:0.00}'}" Width="{StaticResource FactLabelWidth}" TextAlignment="Right" />
+                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Strength" Width="{StaticResource FactLabelWidth}" VerticalAlignment="Center" />
+                  <TextBlock DockPanel.Dock="Right" Classes="mono" Text="{Binding Brush.Strength, StringFormat='{}{0:0.00}'}" Width="{StaticResource FactLabelWidth}" TextAlignment="Right" VerticalAlignment="Center" />
                   <Slider Minimum="0.01" Maximum="1" Value="{Binding Brush.Strength}" AutomationProperties.Name="Water brush strength of the map" />
                 </DockPanel>
               </StackPanel>

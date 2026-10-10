@@ -87,7 +87,8 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     `presets.delete`, `view.walkability`, `problems.show`, `markers.showKind`, `markers.set`,
     `markers.setChain`, `markers.renameChain`, `markers.deleteChain`, `markers.setWeather`,
     `markers.addOptionalGroup`, `file.showCommit`, `file.restoreCommit`, `view.togglePanel`,
-    `view.resizePanel`, `view.movePanel`, `view.returnPanel`, `view.setToolbar`, `view.addToToolbar`, `view.removeFromToolbar`), it selects what one
+    `view.resizePanel`, `view.movePanel`, `view.returnPanel`, `view.setToolbar`, `view.addToToolbar`, `view.removeFromToolbar`,
+    `view.inspectPart`, `presets.showFolder`), it selects what one
     clicks (`assets.select`) or drops what one drags (`assets.drop`), it is what a tool's click does
     (`markers.place`, `markers.link`), it is the mouse's or a view's own key in
     the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
@@ -200,7 +201,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   keys (`MainWindow.IsTextKey`: every key without control or alt but the function keys, and with
   control A, C, X, V, Z, Y, the arrows, Home, End, Back, Delete), and none while a question, the
   palette or the picker shows. **Pages** (diagnostics, plugins, version control, report a problem,
-  new map: `MainViewModel.OpenPageName`, `ClosePage`) take the keyboard when they open, give it
+  new map, keyboard shortcuts, workspace settings: `MainViewModel.OpenPageName`, `ClosePage`) take the keyboard when they open, give it
   back to the views when they close, take no shortcut and no tool key, and Escape closes them
   (after a combo box's list). Enter in a one-line text field gives its text to its binding as losing
   the keyboard does (`OnEnterInField`: the options row's numbers); Enter in New map's fields presses
@@ -365,8 +366,9 @@ always have a map. A map that is not publishable says so in the title ("sandbox,
 vault") and the status line when it opens; exporting it works, with a warning in the status line
 and the log.
 
-Help, Show the workspace folder (`help.workspaceFolder`) opens the workspace in the system's file
-manager. The menu and the editor are hidden until `Ready`. To try the start without touching your own
+Help, Folders opens the workspace and its other folders in the system's file manager (section
+"Panels list, the inspector edits", below), and File, Workspace settings edits where the game,
+FAF's data and the vault are. The menu and the editor are hidden until `Ready`. To try the start without touching your own
 workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
 
 ## Structure
@@ -749,7 +751,7 @@ User stories S-4, L-1 and V-3. What the views draw follows the map's settings as
   ImageMagick mixes the faces with their smaller levels when the pixel format has no alpha
   (`skycube_desert01`). A workspace converted before keeps the broken strip until its assets are
   converted again (`faf-map workspace convert`).
-- **The sky** (L-1): the Lighting mode's inspector (`SkySection`, `LightingSettings.Sky`): the
+- **The sky** (L-1): the Lighting panel's Sky and cube maps, edited in the inspector (`LightingSettings.Sky`): the
   sky's cube map, the one units reflect (the map's `<default>` environment cube map, added when
   it has none), the background; `lighting.setSky {cubemap?, environmentCubemap?, background?}`
   and `lighting.chooseCubemap {target: sky|environment|water, key?}`, which opens the picker of
@@ -796,18 +798,22 @@ Four small parts that later features build on:
   the same part (section "Lua plugins").
 - **Presets** (user stories F-10, T-2, `model.Presets`, `ViewModels/PresetsViewModel`; selection presets
   and stamps in the section "Content to use again"): the
-  workspace's `presets/<kind>/*.json` (the library's `PresetLibrary`), read again when a file there
-  changes (`ProjectWatcher`; opening writes nothing, so a workspace without the folder is watched
+  workspace's `presets/<kind>/*.json`, the kinds plural folders (the library's `PresetLibrary` and
+  `PresetKinds`; moved there once when a workspace opens, below), read again when a file there
+  changes (`ProjectWatcher`; opening writes nothing but that move, so a workspace without the folder is watched
   once the first preset makes it). A feature registers what it can save and apply as a
-  `PresetKind` (kind, capture, apply); today `brush` (`Tools/BrushPreset`: the active brush tool,
+  `PresetKind` (kind, capture, apply); `brushes` (`Tools/BrushPreset`: the active brush tool,
   radius, strength, mode or erase, target, shape, rotation; not the strata tool's layer, which is
   the map's). A mode whose sections hold a `PresetSection(kind, title)` lists the presets of that
   kind (Terrain and Paint: brush presets), each a button that applies it and a cross that deletes
   it, with a name field and Save. `edit.saveAsPreset {kind?, name?}` saves (the panel's kind; a
   name made from the settings, such as `Raise 12`, when left out), `presets.apply {kind, name}` and
   `presets.delete {kind, name}` are the panel's buttons. A preset whose brush the workspace lost
-  applies with a round brush and says so. Wave 1 registers lighting, water, units, markers and
-  palettes of props the same way.
+  applies with a round brush and says so. Stamps, lighting, sky, water, units, markers, selections
+  and palettes of props register the same way. A preset section shows only while the mode's panel
+  shows it (`MainViewModel.PanelSections`: `ForTools`, `ForParts`), and the panel lists the kind of
+  the first one shown: the Terrain panel's stamp presets with the stamp tool, its brush presets
+  with the others.
 - **Symmetry** (user story F-12, `model.Symmetry`, `ViewModels/SymmetryViewModel`): off unless
   chosen; rotational for 2 to 8 players or one of the four mirrors, chosen in the combo box after
   the overlay chips or with `select.symmetry {kind?, count?}` (Ctrl+Shift+Y; `off`, `rotational`,
@@ -1263,8 +1269,8 @@ follow the terrain, and the reclaim. The maths is the library's (`PropOrientatio
   `props.followTerrain {on?}`, `props.reclaim` and, for automation, `props.set {alignment?,
   randomTurn?, randomTilt?, scaleMin?, scaleMax?, sink?, radius?, density?, spacing?, onlyOn?,
   notOn?, threshold?, eraseRadius?, onlyPalette?}`. The ones on the selection act on its props.
-- **Panel**: Placing, Palette (thumbnail, weight, cross), Palettes (presets of kind
-  `props-palette`: the props with weights, the paint brush, the Placing settings), Rules (P-4,
+- **Panel**: Placing, Palette (thumbnail, weight, cross; Add a prop and Clear, `props.clearPalette`), Palettes (presets of kind
+  `props`: the props with weights, the paint brush, the Placing settings), Rules (P-4,
   planned), Reclaim (map and per area, counted again only when the props, areas or catalogue
   change; span `model.props-reclaim`). The inspector's `PropSelection` adds pitch, roll, scale,
   the selection's reclaim and the buttons of the commands above.
@@ -1429,13 +1435,16 @@ mode panel's and inspector's templates only name it).
   either view (in 3D its arrow's head is dragged across the sky). A tool shows handles and a line
   with a label through `IMapTool.Marks` (`ToolMarks`), which both views draw (the 3D view without
   the label).
-- **Presets**: the kinds `lighting` (all of it) and `water` (its look; the elevations, wave
+- **Presets**: the kinds `lighting` (all of it), `sky` (its cube maps, background and dome; listed while the
+  Lighting panel's sky is chosen) and `water` (its look; the elevations, wave
   generators and masks stay the map's), the library's `AtmospherePresets`; the Lighting and Water
   panels list them.
 - The top view labels the playable area (the one the scenario names, else the first, M-3). `state.mapPanels` has the information,
   areas, script and files, water, lighting angles, layers, the ruler's measurement and whether
   the page of a new map is open.
-- The sky's cube maps are in the Lighting mode's inspector (section "The map's look").
+- The Water and Lighting panels list what there is and the inspector edits the chosen entry
+  (section "Panels list, the inspector edits"); the sky's cube maps are the Lighting panel's Sky
+  and cube maps (section "The map's look").
 - **Templates for a new map** (M-2): section "Content to use again" below.
 - **Wave generators with the mouse** (W-1, `Tools/WaveTool`, the Water mode's Waves tool, the
   library's `WaveGeneratorEdits`): a click on the water places one at the water's elevation, its
@@ -1647,7 +1656,7 @@ things named by reference as in automation: `prop:5`, `marker:3`, `unit:UNIT_1`,
 | `editor.log(...)`, `editor.warn(...)`, `editor.error(...)`, `print(...)`, `editor.status(text)` | The Console (category `Plugins`), the status line. |
 | `editor.run(id, args?)` | Runs any command of the registry without a person and answers its result as a table (commands only); an error when it does not run. |
 | `editor.selection()`, `editor.select(refs)` | The selected references; selecting (commands only). |
-| `editor.assets{ kind?, search?, limit? }` | The workspace's assets: `{ key, path, name, kind, category, reclaimMass, reclaimEnergy }`. |
+| `editor.assets{ kind?, search?, limit? }` | The workspace's assets: `{ key, path, name, kind, category, reclaimMass, reclaimEnergy }`, and a unit's `massCost` and `energyCost`. |
 | `map.name()`, `map.size()`, `map.height(x, z)`, `map.slope(x, z)`, `map.water()` | Name; width and height; the height between samples; the slope in degrees; the water's elevation or nil. |
 | `map.markers(kind?)`, `map.props()`, `map.units()`, `map.decals()`, `map.areas()`, `map.armies()`, `map.get(ref)` | Plain tables: `ref`, `x`, `y`, `z`, `heading` and what the thing is (a marker's `kind`: spawn, mass, hydrocarbon, path, ai, weather). |
 | `map.masks()`, `map.mask(name, x, z)`, `map.reclaim(blueprint)`, `map.revision(part?)` | The masks' names; a mask's value 0 to 1; a prop's mass and energy; a number that stays while a part (`map`, `props`, `markers`, `units`, `decals`, `heights`, `masks`) is the same. |
@@ -1664,7 +1673,7 @@ Anything else the editor does is a command: `editor.run("markers.place", { kind 
 User stories F-10, T-2, M-2, U-3, F-9, T-7 and R-5. The core's side is `ViewModels/MainViewModel.Content.cs`
 (one `InitializeContent` line in the constructor); the library does the work (its guide, "Content to use again").
 
-- **Selection presets** (F-10, kind `selection`, `Tools/SelectionPresetTool`): `edit.saveSelectionPreset
+- **Selection presets** (F-10, kind `selections`, `Tools/SelectionPresetTool`): `edit.saveSelectionPreset
   {name?}` (Edit menu; also the Map panel's Selection presets, `edit.saveAsPreset kind=selection`) saves the
   selected things of every kind but areas around their middle (a whole ogrid), named after the first
   unit's group (else `Selection (n)`); applying one chooses the Map mode's Preset tool (`map.preset`),
@@ -1699,7 +1708,7 @@ User stories F-10, T-2, M-2, U-3, F-9, T-7 and R-5. The core's side is `ViewMode
   settings (its own strata until another biome is chosen: `StrataFromTemplate`, the page then sends
   no biome) or, for a whole map, leaves only the name. `file.new {template?}` takes it; `file.saveAsTemplate
   {name?, whole?}` (File menu) saves the open map's settings, or with `whole` the map, into the
-  workspace's `templates`. `WorkspaceSetupViewModel.Use(workspace)` works in a workspace without
+  workspace's `presets/maps`. `WorkspaceSetupViewModel.Use(workspace)` works in a workspace without
   checking its assets (tests of what keeps files in the workspace).
 - **Dragging in the units tree** (U-3): the tree shows each group's units after its groups
   (`GroupNode.Items`, `UnitNode`; a unit never opens), its choice is `ArmiesViewModel.ChosenNode` (a
@@ -1729,6 +1738,82 @@ User stories F-10, T-2, M-2, U-3, F-9, T-7 and R-5. The core's side is `ViewMode
 - Tests: `ContentTest` (the operations), `ContentWindowTest` (dragging in the tree with the mouse),
   `MainWindowTest.TheWalkabilityToolMarksWhereTheMouseDragsAsOneStep`, `AdaptiveScriptRunTest` (the
   exported script run in Lua with the game's functions stood in for).
+
+## Panels list, the inspector edits; the rail, help, settings and presets
+
+Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2). The parts are
+`ViewModels/PanelParts.cs`, `MainViewModel.PanelParts.cs`, `MainViewModel.Help.cs`,
+`ShortcutsViewModel`, `WorkspaceSettingsViewModel`, the library's `PresetKinds` and `PresetFolders`.
+
+- **The rule for every mode: the panel says what there is, the inspector edits what you chose.**
+  A setting lives in one place: the panel lists the things of the mode (layers, masks, groups,
+  settings groups, maps, generators, presets) with a short detail each, and choosing one shows its
+  fields in the inspector. A new part follows it: an entry of a list in the panel, its editing in
+  the inspector. Checked against it (October 2026): Terrain (height layers listed, the chosen one
+  in the inspector), Paint (strata listed, the chosen stratum in the inspector), Decals and Units
+  (groups listed, the selection in the inspector), Water and Lighting (below) follow it; the Map
+  panel's Information fields, the Props panel's Placing and the Markers panel's path networks are
+  still edited in the panel, for a later wave to move.
+- **Lists of parts** (`PanelParts`, `PanelPart`): a mode panel's list of entries under headings,
+  one always chosen (the first until another is); `Controls/PanelPartList` draws it in the panel
+  (`Button.partentry`, filled while chosen, the detail at the right), `Views/MapPanels/PanelPartView`
+  the chosen entry in the inspector: its title and help, then its `Content` by type
+  (`SettingsPart`: groups of settings, their titles when there are several; `PlannedPart`: not
+  built yet with its story; `WaterMapPart`; `WaveGeneratorsPart`). A new kind of content adds its
+  template to `PanelPartView`; `PanelParts.Replace(id, content)` gives an entry another (a water
+  map's layer stack). `view.inspectPart {part}` (in no menu) chooses an entry and its mode;
+  `state.panelParts` has each list's chosen entry, its content's type and every entry's detail.
+- **Water** (`WaterSettings.Parts`): Water on (a check box above the list), Settings (Elevations
+  and colour, its detail the surface's elevation; Surface and reflection; Textures and waves, the
+  four wave textures with them), Maps (Foam, Flatness, Depth bias, their size as detail) and Wave
+  generators (how many). A map chosen makes the Paint water tool paint it and chooses that tool;
+  the inspector shows the brush's erase, radius and strength (its shape stays in the options row,
+  which says `Map: Foam`). The Waves entry chooses the Waves tool; and back, choosing a tool or a
+  map for the brush (`brush.set waterMask`, a preset) shows its entry. Presets below.
+- **Lighting** (`LightingSettings.Parts`): Sun (azimuth, elevation, colour, multiplier; the Sun
+  tool's line), Colours and ambience, Fog, Bloom, Sky and cube maps (the sky's cube maps and
+  background), and Shadow decal under Map-wide decals (planned: the map-wide decals fill it).
+  Presets below: lighting presets, and sky presets while the sky is chosen (`ForParts`).
+- **The rail** (`Views/ModeRail`): the modes of groups 0 and 1 at the top (`RailModes`), the bottom
+  group (`EditorModes.BottomGroup`, `BottomRailModes`) at the bottom above a divider and the Plugins
+  entry (`plugins.manage`). Masks (Shift+F3, after Paint, which it takes the masks from; an empty
+  shell with a planned section and a planned brush) and Procedural (F11, group `BottomGroup`; its
+  sections are the generated results). F1 to F9 stay as they were. A mode's tool tip names its shortcut.
+- **Keyboard shortcuts** (`help.shortcuts {query?}`, Shift+F1, Help menu; `Views/ShortcutsPage`): every
+  command with a gesture from the registry (so a plugin's shows) by menu, the keys the tools take
+  (`ShortcutsViewModel.ToolKeys`) and the mouse in each view (`Mouse`), each line its keys (`[` and
+  `]` as themselves, `D1` as `1`: `KeysOf`), what and where; the search keeps the lines holding
+  every word. A new tool key or mouse gesture gets a line in those lists. `state.shortcuts`.
+- **Folders** (Help, Folders): the workspace (`help.workspaceFolder`), projects
+  (`help.projectsFolder`), the open project (`help.projectFolder`, needs a project), presets
+  (`help.presetsFolder`), brushes (`assets.brushesFolder`), plugins (`plugins.showFolder`), converted
+  assets (`help.assetsFolder`), the game's (`help.gameFolder`), FAF's data (`help.fafDataFolder`), the
+  export folder (`help.exportFolder`: the vault's `maps`) and the logs (`help.diagnosticsFolder`).
+  Each answers its path; a workspace folder is made when missing, the others refuse when absent.
+- **Workspace settings** (`file.workspaceSettings {gameFolder?, fafDataFolder?, vaultFolder?}`, File
+  menu; `Views/WorkspaceSettingsPage`): without arguments the page (the three folders with Browse,
+  Save and Revert; the converted assets' format, editor, date, counts and whether they are current,
+  checked on a pool thread; Convert again, `workspace.convert`; links to the plugins and diagnostics
+  pages); with folders it writes them into `workspace.json` (`WorkspaceSetupViewModel.ChangeFolders`,
+  checked as the setup checks them) and keeps the assets: other archives make them out of date, and
+  the page says so. `state.workspaceSettings`. Never press Convert again in a scratch workspace whose
+  `assets` is a link to another's.
+- **Presets in one folder**: `presets/` with plural kinds (`brushes`, `stamps`, `lighting`, `water`,
+  `sky`, `props`, `units`, `markers`, `selections`, `maps`: the map templates). `PresetsViewModel.Open`
+  moves a workspace's old folders once (`PresetFolders.Move`: `brush`, `props-palette`, `selection`,
+  `templates/`, brush presets of the stamp tool to `stamps`; `Moved`, logged); an old kind name in a
+  command still names its folder (`PresetKinds.Of`). A stamp's picture (`brushes/stamps/*.png`) is a
+  brush, not a preset: the shelf and the stamp tool's pictures list it; its settings saved
+  (`terrain.saveBrush` with the stamp tool) are a stamp preset. Each preset section has Show the
+  folder (`presets.showFolder {kind?}`).
+- **Mass and energy** (F-8): a unit's and a prop's tile has a line of mass and energy
+  (`AssetTile.Economy`, `5.2k · 47.4k`, mass first; `EconomyHelp` in full as its tool tip and in its
+  label; a unit's build cost, a prop's reclaim), in the shelf and the picker; the inspector's facts
+  have them in full. The shelf's sort button (`Icon.Sort`, beside the search, on while sorted) and
+  the picker's combo box order the tiles as listed, the most mass first or the most energy first
+  (`AssetSort`, `AssetSearch.Sorted`); `assets.browse {sort}`, whose tiles carry `economy`, `mass`
+  and `energy`. Lua's `editor.assets` gives `massCost` and `energyCost`.
+- Tests: `PanelsAndShellTest` (the operations), `PanelsAndShellWindowTest` (the mouse and keys).
 
 ## Small rules of editing, looks and speed
 

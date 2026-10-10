@@ -41,8 +41,10 @@
         <TextBox Grid.Column="2" x:Name="Search" Text="{Binding Query}" PlaceholderText="Search: name, biome, id"
                  AutomationProperties.Name="Search the assets" />
         <StackPanel Grid.Column="4" Classes="inline shelfoptions">
-          <ComboBox ItemsSource="{Binding SortTitles}" SelectedIndex="{Binding SortIndex}" IsVisible="{Binding CanSort}"
-                    AutomationProperties.Name="Sort the assets" AutomationProperties.HelpText="As listed, or the most mass or energy first: a unit's build cost, a prop's reclaim" />
+          <Button Classes="chip icononly" Classes.on="{Binding IsSorted}" Command="{Binding NextSortCommand}" IsVisible="{Binding CanSort}"
+                  ToolTip.Tip="{Binding SortHelp}" AutomationProperties.Name="Sort the assets" AutomationProperties.HelpText="{Binding SortHelp}">
+            <Path Classes="icon small" Data="{StaticResource Icon.Sort}" />
+          </Button>
           <Button Classes="chip" Classes.on="{Binding Families}" IsVisible="{Binding IsProps}" Content="Variants"
                   Command="{Binding ToggleFamiliesCommand}"
                   ToolTip.Tip="A prop's sizes and variants as one tile" AutomationProperties.HelpText="A prop's sizes and variants as one tile" />

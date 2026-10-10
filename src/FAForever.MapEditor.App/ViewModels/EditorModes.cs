@@ -244,7 +244,7 @@ public static class EditorModes
             []),
 
         // what is generated from the map, at the bottom of the rail above the plugins
-        new ModeDefinition("procedural", "Procedural", "Icon.Procedural", "Generated results: walkability, normal map, preview, navigation", BottomGroup, "F10", "F-7",
+        new ModeDefinition("procedural", "Procedural", "Icon.Procedural", "Generated results: walkability, normal map, preview, navigation", BottomGroup, "F11", "F-7",
             [
                 new ToolDefinition("procedural.generate", "Generate", "F-7", "Generate the chosen result and preview it in the views"),
             ],

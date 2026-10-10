@@ -159,7 +159,13 @@ faf-map editor window width=1280 height=800 --port 5372   # the window's size; c
 faf-map editor dialog text="My template" button="Save the settings" --port 5372   # a question with a text field
 faf-map editor ui under=Sky type=Button --port 5372       # under takes a section's heading too
 faf-map editor run id=file.open folder=<project> discard=true --port 5372   # without discard it refuses while the map has unsaved changes
+faf-map editor run id=view.inspectPart part=water.foam --port 5372   # an entry of the Water or Lighting panel's list in the inspector (state.panelParts)
+faf-map editor run id=help.shortcuts query=undo --port 5372          # the keyboard shortcuts page (state.shortcuts); help.presetsFolder ... answer their paths
+faf-map editor run id=file.workspaceSettings --port 5372             # the workspace settings page (state.workspaceSettings); never Convert again in a scratch workspace
 ```
+
+A new part of a mode follows "the panel says what there is, the inspector edits what you chose":
+an entry of the panel's list (`PanelParts`), its fields in the inspector (`PanelPartView`).
 
 `faf-map editor start` detaches the editor (its output in `editor-<port>.log` beside the settings
 file, or `--log`), so the call returns with its JSON even inside a pipe. It runs a copy of the build

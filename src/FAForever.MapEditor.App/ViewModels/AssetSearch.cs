@@ -65,11 +65,15 @@ public static class AssetSearch
     public static IReadOnlyList<string> SortTitles { get; } = ["As listed", "Most mass first", "Most energy first"];
 
     /// <summary>
-    /// Mass or energy in a few characters for a tile: <c>850</c>, <c>5,220</c>, <c>47.4k</c>.
+    /// Mass or energy in a few characters for a tile: <c>0.27</c>, <c>850</c>, <c>5.2k</c>, <c>7.5M</c>.
     /// </summary>
-    public static string Short(double value) => value >= 10000
-        ? (value / 1000).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "k"
-        : value.ToString("#,0", System.Globalization.CultureInfo.InvariantCulture);
+    public static string Short(double value) => value switch
+    {
+        >= 1_000_000 => (value / 1_000_000).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "M",
+        >= 1000 => (value / 1000).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "k",
+        < 10 => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture),
+        _ => value.ToString("0", System.Globalization.CultureInfo.InvariantCulture),
+    };
 
     public static string TechTitle(int? level) => level switch
     {
