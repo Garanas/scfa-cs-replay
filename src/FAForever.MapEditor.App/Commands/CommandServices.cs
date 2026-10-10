@@ -42,6 +42,7 @@ public static class CommandServices
         services.AddSingleton(_ => model.Layout);
         services.AddSingleton(_ => model.Report);
         services.AddSingleton(_ => model.Upload);
+        services.AddSingleton(_ => model.Plugins);
         services.AddSingleton<IEditorDialogs>(dialogs);
         services.AddSingleton<CurrentEdit>();
         // MediatR logs only that it runs without a licence key, which a desktop application needs

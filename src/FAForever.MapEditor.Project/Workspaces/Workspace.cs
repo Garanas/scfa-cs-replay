@@ -42,6 +42,11 @@ namespace FAForever.MapEditor.Project.Workspaces
         public string PresetsFolder => Path.Combine(Folder, WorkspaceLayout.Presets);
 
         /// <summary>
+        /// The Lua plugins (user story F-15), a folder each with its <c>plugin.lua</c>.
+        /// </summary>
+        public string PluginsFolder => Path.Combine(Folder, WorkspaceLayout.Plugins);
+
+        /// <summary>
         /// The presets of <see cref="PresetsFolder"/>.
         /// </summary>
         public PresetLibrary Presets => new PresetLibrary(PresetsFolder);

@@ -304,4 +304,7 @@
   <x:Double x:Key="VersionHistoryHeight">180</x:Double>
   <x:Double x:Key="VersionFilesHeight">110</x:Double>
   <x:Double x:Key="VersionDialogWidth">760</x:Double>
+  <!-- the Plugins page (F-15): its width and the most its list of plugins takes before it scrolls -->
+  <x:Double x:Key="PluginsDialogWidth">760</x:Double>
+  <x:Double x:Key="PluginsListHeight">480</x:Double>
 </ResourceDictionary>

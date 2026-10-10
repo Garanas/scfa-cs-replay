@@ -755,6 +755,13 @@
   <Style Selector="ListBox.versionfiles">
     <Setter Property="MaxHeight" Value="{StaticResource VersionFilesHeight}" />
   </Style>
+  <!-- the Plugins page (F-15): a wider page, its list of plugins scrolls -->
+  <Style Selector="Border.dialog.plugins">
+    <Setter Property="Width" Value="{StaticResource PluginsDialogWidth}" />
+  </Style>
+  <Style Selector="ScrollViewer.pluginslist">
+    <Setter Property="MaxHeight" Value="{StaticResource PluginsListHeight}" />
+  </Style>
   <!-- the description of a problem report (F-17): a few lines high -->
   <Style Selector="TextBox.reportdescription">
     <Setter Property="Height" Value="{StaticResource SettingTextHeight}" />

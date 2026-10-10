@@ -136,9 +136,12 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     `PropScatter` paints a palette by weight with a density and spacing (`PropGrid` finds the
     props near a place) where `IPlacementCondition`s allow (`MaskCondition`), and
     `Workspaces/PropReclaim` adds up the blueprints' reclaim (`AssetEntry.ReclaimMass`, `ReclaimEnergy`).
-- Lua plugins (Lua-CSharp, later) get a facade over the session, never the document: reads give
-  values, writes happen inside a transaction, so each plugin run is one undo step and a failing
-  plugin changes nothing.
+- Lua plugins (user story F-15, the App's guide "Lua plugins") get a facade over the session, never
+  the document: reads give values, writes happen inside a transaction, so each plugin run is one
+  undo step and a failing plugin changes nothing. A run that also runs commands (each its own
+  step) holds a group (`EditSession.BeginGroup`, `EditGroup`): the steps made while it is open
+  become one step when it is committed, and are undone and forgotten when it is disposed; undo
+  waits until it ends, and the history keeps all of the group's steps whatever its limit.
 
 ## Brushes
 

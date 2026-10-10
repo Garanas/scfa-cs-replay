@@ -21,6 +21,28 @@ namespace FAForever.MapEditor.Project.Workspaces.Serialized
         /// the user changes it.
         /// </summary>
         public LayoutSettingsDto? Layout { get; init; }
+
+        /// <summary>
+        /// The Lua plugins turned off and the values of their panels' fields (user story F-15);
+        /// absent until the user changes one.
+        /// </summary>
+        public PluginSettingsDto? Plugins { get; init; }
+    }
+
+    /// <summary>
+    /// The user's choices about the workspace's plugins: a plugin is on unless named here.
+    /// </summary>
+    public sealed record PluginSettingsDto
+    {
+        /// <summary>
+        /// The folders (in the workspace's <c>plugins</c>) of the plugins turned off.
+        /// </summary>
+        public List<string>? Off { get; init; }
+
+        /// <summary>
+        /// Per plugin folder, the values of its panel's fields by key, as text.
+        /// </summary>
+        public Dictionary<string, Dictionary<string, string>>? Values { get; init; }
     }
 
     /// <summary>

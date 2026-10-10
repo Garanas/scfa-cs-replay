@@ -250,5 +250,84 @@ namespace FAForever.MapEditor.Project.Tests
             StringAssert.Contains(exception.Message, "prop 99999");
             Assert.AreSame(original, session.Document);
         }
+
+        [TestMethod]
+        public void MakesTheStepsOfAGroupOneStep()
+        {
+            EditSession session = new EditSession(original);
+            session.Edit("Before", MoveProp(2, Vector3.UnitX));
+
+            using (EditGroup group = session.BeginGroup("Plugin: scatter"))
+            {
+                session.Edit("First", MoveProp(1, Vector3.One));
+                Assert.AreEqual(Vector3.One, session.Document.Props[0].Position, "a step reads what the steps before it made");
+                Assert.IsFalse(session.CanUndo, "undo waits until the group ends");
+                Assert.IsFalse(session.Undo());
+                using (EditTransaction transaction = session.Begin("Second"))
+                {
+                    transaction.Heightmap[0, 0] = 7;
+                    transaction.Commit();
+                }
+                Assert.IsTrue(group.Commit());
+            }
+
+            Assert.AreEqual("Plugin: scatter", session.UndoDescription);
+            CollectionAssert.AreEqual(new[] { "Before", "Plugin: scatter" }, session.History.Select(step => step.Description).ToArray());
+            Assert.AreEqual(7, session.Document.Terrain.Heightmap.Samples[0, 0]);
+            Assert.IsTrue(session.Undo());
+            Assert.AreEqual(Vector3.UnitX, session.Document.Props[1].Position);
+            Assert.AreEqual(original.Props[0].Position, session.Document.Props[0].Position, "both steps are undone at once");
+        }
+
+        [TestMethod]
+        public void UndoesAndForgetsAGroupThrownAway()
+        {
+            EditSession session = new EditSession(original);
+            List<DocumentChange> changes = [];
+            session.Changed += (_, change) => changes.Add(change);
+
+            using (EditGroup group = session.BeginGroup("Plugin: failing"))
+            {
+                session.Edit("First", MoveProp(1, Vector3.One));
+                session.Begin("Left open");
+            }
+
+            Assert.AreSame(original, session.Document);
+            Assert.IsFalse(session.CanUndo);
+            Assert.IsFalse(session.InTransaction, "a transaction left open in the group is thrown away");
+            Assert.IsFalse(session.InGroup);
+            Assert.AreEqual(ChangeReason.Undo, changes[^1].Reason);
+            Assert.AreSame(original, changes[^1].Current);
+        }
+
+        [TestMethod]
+        public void AGroupKeepsEveryStepWhateverTheLimitAndNothingWhenItChangedNothing()
+        {
+            EditSession session = new EditSession(original, historyLimit: 2);
+
+            using (EditGroup group = session.BeginGroup("Many"))
+            {
+                for (int i = 1; i <= 5; i++)
+                {
+                    session.Edit($"Step {i}", MoveProp(1, new Vector3(i, 0, 0)));
+                }
+                group.Commit();
+            }
+            Assert.IsTrue(session.Undo());
+            Assert.AreSame(original, session.Document, "the group's start was not forgotten");
+
+            session.Redo();
+            using (EditGroup group = session.BeginGroup("Nothing"))
+            {
+                session.Edit("Same", document => document);
+                Assert.IsFalse(group.Commit(), "a group that changed nothing is no step");
+            }
+            Assert.AreEqual("Many", session.UndoDescription);
+            Assert.ThrowsException<InvalidOperationException>(() =>
+            {
+                using EditGroup first = session.BeginGroup("One");
+                session.BeginGroup("Two");
+            });
+        }
     }
 }

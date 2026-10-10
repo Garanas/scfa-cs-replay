@@ -13,7 +13,7 @@ namespace FAForever.MapEditor.Project.Workspaces
 
     /// <summary>
     /// What the editor remembers for the user, outside the workspace: where the workspace is, the
-    /// choices about diagnostics, and the window's layout.
+    /// choices about diagnostics, the window's layout and the plugins turned off.
     /// </summary>
     /// <param name="File">The settings file; <see cref="DefaultFile"/> for the user.</param>
     public sealed record UserSettings(string File)
@@ -68,6 +68,18 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// </summary>
         /// <exception cref="IOException">The file cannot be written.</exception>
         public void SetLayout(LayoutSettingsDto layout) => Update(settings => settings with { Layout = layout });
+
+        /// <summary>
+        /// The plugins turned off and their fields' values (user story F-15): every plugin on until
+        /// the user turns one off.
+        /// </summary>
+        public PluginSettingsDto Plugins => Read().Plugins ?? new PluginSettingsDto();
+
+        /// <summary>
+        /// Remembers the plugins turned off and their fields' values.
+        /// </summary>
+        /// <exception cref="IOException">The file cannot be written.</exception>
+        public void SetPlugins(PluginSettingsDto plugins) => Update(settings => settings with { Plugins = plugins });
 
         /// <summary>
         /// Remembers <paramref name="folder"/> as the workspace.

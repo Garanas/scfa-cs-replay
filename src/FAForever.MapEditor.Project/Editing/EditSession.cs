@@ -51,6 +51,7 @@ namespace FAForever.MapEditor.Project.Editing
         private readonly List<Version> _versions;
         private int _current;
         private EditTransaction? _open;
+        private EditGroup? _group;
         private string? _mergeKey;
         private MapDocument _saved;
 
@@ -67,9 +68,17 @@ namespace FAForever.MapEditor.Project.Editing
 
         public int HistoryLimit { get; }
 
-        public bool CanUndo => _current > 0;
+        /// <summary>
+        /// Whether a step can be undone: there is one, and no group is open (<see cref="BeginGroup"/>).
+        /// </summary>
+        public bool CanUndo => _current > 0 && _group is null;
 
-        public bool CanRedo => _current < _versions.Count - 1;
+        public bool CanRedo => _current < _versions.Count - 1 && _group is null;
+
+        /// <summary>
+        /// Whether a group is open (<see cref="BeginGroup"/>): its steps become one when it ends.
+        /// </summary>
+        public bool InGroup => _group is not null;
 
         /// <summary>
         /// The edit that <see cref="Undo"/> would undo, e.g. for a menu item <c>Undo Raise terrain</c>.
@@ -140,6 +149,25 @@ namespace FAForever.MapEditor.Project.Editing
             return _open;
         }
 
+        /// <summary>
+        /// Starts a group: the steps made until it ends (edits, transactions, in any number) become
+        /// one step when it is committed, and are all undone when it is thrown away, as a plugin
+        /// run that runs other commands. Undo and redo wait until it ends; the history keeps every
+        /// step of the group meanwhile, whatever <see cref="HistoryLimit"/>.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">A transaction or another group is open.</exception>
+        public EditGroup BeginGroup(string description)
+        {
+            EnsureNoTransaction();
+            if (_group is not null)
+            {
+                throw new InvalidOperationException($"The group '{_group.Description}' is still open");
+            }
+            _group = new EditGroup(this, description, _current);
+            _mergeKey = null;
+            return _group;
+        }
+
         public bool Undo()
         {
             EnsureNoTransaction();
@@ -178,6 +206,10 @@ namespace FAForever.MapEditor.Project.Editing
         public bool GoTo(int step)
         {
             EnsureNoTransaction();
+            if (_group is not null)
+            {
+                return false;
+            }
             ArgumentOutOfRangeException.ThrowIfLessThan(step, -1);
             ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(step, _versions.Count - 1);
             int target = step + 1;
@@ -227,6 +259,47 @@ namespace FAForever.MapEditor.Project.Editing
             return result is not null && Record(transaction.Description, result, mergeKey: null);
         }
 
+        /// <summary>
+        /// Ends the open group: its steps become one (<paramref name="keep"/>), or are undone and
+        /// forgotten. A transaction still open in it is thrown away first.
+        /// </summary>
+        /// <returns>Whether the group's steps changed the document and were kept.</returns>
+        internal bool EndGroup(EditGroup group, bool keep)
+        {
+            if (!ReferenceEquals(_group, group))
+            {
+                throw new InvalidOperationException("The group is not the open one");
+            }
+            _open?.Dispose();
+            _group = null;
+            _mergeKey = null;
+            int start = Math.Min(group.Start, _current);
+            if (_current == start)
+            {
+                return false;
+            }
+
+            MapDocument last = Document;
+            MapDocument first = _versions[start].Document;
+            _versions.RemoveRange(start + 1, _versions.Count - start - 1);
+            _current = start;
+            if (!keep || last.Equals(first))
+            {
+                // thrown away, or the steps came to nothing: the document as the group found it
+                Raise(new DocumentChange(last, first, group.Description, keep ? ChangeReason.Edit : ChangeReason.Undo));
+                return false;
+            }
+            _versions.Add(new Version(last, group.Description));
+            if (_versions.Count > HistoryLimit + 1)
+            {
+                _versions.RemoveRange(0, _versions.Count - HistoryLimit - 1);
+            }
+            _current = _versions.Count - 1;
+            // the document is the one the last step made: only the history changed
+            StateChanged?.Invoke(this, EventArgs.Empty);
+            return true;
+        }
+
         private bool Record(string description, MapDocument result, string? mergeKey)
         {
             MapDocument previous = Document;
@@ -245,7 +318,7 @@ namespace FAForever.MapEditor.Project.Editing
             else
             {
                 _versions.Add(new Version(result, description));
-                if (_versions.Count > HistoryLimit + 1)
+                if (_versions.Count > HistoryLimit + 1 && _group is null)
                 {
                     _versions.RemoveRange(0, _versions.Count - HistoryLimit - 1);
                 }

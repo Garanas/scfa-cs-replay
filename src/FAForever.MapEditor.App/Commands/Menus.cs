@@ -16,6 +16,11 @@ public static class Menus
 {
     public const string Separator = "-";
 
+    /// <summary>
+    /// The menu of the plugins' commands (user story F-15), after the editor's own.
+    /// </summary>
+    public const string PluginsMenu = "Plugins";
+
     public static IReadOnlyList<MenuLayout> Bar { get; } =
     [
         new MenuLayout("File",
@@ -66,7 +71,7 @@ public static class Menus
             "generate.normalMap", Separator,
             "generate.stale",
         ]),
-        new MenuLayout("Plugins", ["plugins.manage", "plugins.check"]),
+        new MenuLayout(PluginsMenu, ["plugins.manage", "plugins.reload", "plugins.showFolder", Separator, "plugins.check"]),
         new MenuLayout("Help",
         [
             "help.workspaceFolder", Separator,
@@ -74,6 +79,21 @@ public static class Menus
             "help.reportProblem",
         ]),
     ];
+
+    /// <summary>
+    /// The menu bar with the commands the plugins registered (<see cref="EditorCommand.Owner"/>) at
+    /// the end of the Plugins menu, by title.
+    /// </summary>
+    public static IReadOnlyList<MenuLayout> WithPlugins(IEnumerable<EditorCommand> commands)
+    {
+        string[] plugins = [.. commands
+            .Where(command => command.Owner is not null && command.Menu == PluginsMenu)
+            .OrderBy(command => command.Title, StringComparer.CurrentCultureIgnoreCase)
+            .Select(command => command.Id)];
+        return plugins.Length == 0
+            ? Bar
+            : [.. Bar.Select(menu => menu.Title == PluginsMenu ? menu with { Items = [.. menu.Items, Separator, .. plugins] } : menu)];
+    }
 
     /// <summary>
     /// A mode's submenu: the command that chooses it, its own commands, then its tools.

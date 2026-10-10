@@ -1,0 +1,5 @@
+{
+  "name": "Scatter rocks",
+  "version": "1.0",
+  "description": "Scatters rocks where the terrain is steep, as one step of undo."
+}
