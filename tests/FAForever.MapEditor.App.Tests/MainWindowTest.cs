@@ -394,7 +394,7 @@ namespace FAForever.MapEditor.App.Tests
             CollectionAssert.AreEqual(new[] { "_File", "_Edit", "_Select", "_View", "_Map", "_Modes", "_Generate", "_Plugins", "_Help" },
                 bar.Select(item => (string?)item.Header).ToArray());
             MenuItem terrain = Item(bar[5], "Terrain");
-            Assert.IsTrue(Item(terrain, "Add a height layer...").Classes.Contains("planned"), "a command not built yet shows as planned");
+            Assert.IsTrue(Item(terrain, "Save the brush as a preset...").Classes.Contains("planned"), "a command not built yet shows as planned");
             Assert.IsNotNull(Item(terrain, "Curve"), "the tools of the mode follow");
             Assert.AreEqual(KeyGesture.Parse("F2"), Item(terrain, "Terrain mode").InputGesture);
             Assert.IsInstanceOfType<Separator>(bar[0].Items[3], "the separators of the layout");
@@ -475,7 +475,7 @@ namespace FAForever.MapEditor.App.Tests
         {
             (MainWindow window, MainViewModel model) = await Open();
             Show(window, MapViewTab.Top);
-            model.SelectTool("terrain.curve");
+            model.SelectTool("terrain.walkability");
             Point middle = Middle(window.MapView, window);
 
             window.MouseMove(middle);

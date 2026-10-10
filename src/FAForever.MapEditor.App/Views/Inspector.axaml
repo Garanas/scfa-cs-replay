@@ -316,6 +316,10 @@
               <DataTemplate DataType="vm:LayerSection">
                 <panels:LayerPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
               </DataTemplate>
+              <!-- the chosen height layer or curve (T-5, T-4) -->
+              <DataTemplate DataType="vm:HeightLayerSection">
+                <panels:HeightLayerPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
               <DataTemplate DataType="vm:PlannedSection">
                 <Border Classes="group">
                   <StackPanel Classes="stack">

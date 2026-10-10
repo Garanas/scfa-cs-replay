@@ -424,6 +424,10 @@
               </Border>
             </DataTemplate>
             <!-- the mode's overlays; a check box runs the overlay's command, as its chip does -->
+            <!-- the height layers (T-5): a view of its own -->
+            <DataTemplate DataType="vm:HeightLayersSection">
+              <panels:HeightLayersPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+            </DataTemplate>
             <DataTemplate DataType="vm:OverlaySection">
               <Border Classes="group">
                 <StackPanel Classes="stack">

@@ -286,6 +286,21 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void EditingACurveTileByTileGivesWhatAddingUpEverythingGives()
+        {
+            EditSession session = new EditSession(MapImporter.ImportFolder(ProjectFolders.HardFfa));
+            HeightCurve curve = new HeightCurve { Profile = CurveProfile.Ridge, Points = [new CurvePoint(40, 100, 15)] };
+            session.Edit("Curve", d => HeightLayerEdits.Add(d, HeightLayerEdits.NewCurve(d, "ridge", curve)));
+            foreach (CurvePoint point in new[] { new CurvePoint(80, 100, 15), new CurvePoint(120, 110, 15), new CurvePoint(140, 150, 15) })
+            {
+                curve = curve with { Points = curve.Points.Add(point) };
+                session.Edit("Point", d => HeightLayerEdits.SetCurve(d, "ridge", curve));
+                CollectionAssert.AreEqual(HeightLayers.Recomposite(session.Document with { HeightLayers = [.. session.Document.HeightLayers] }).Terrain.Heightmap.Samples.ToArray(),
+                    session.Document.Terrain.Heightmap.Samples.ToArray(), $"after {curve.Points.Length} points");
+            }
+        }
+
+        [TestMethod]
         public void CurvesShapeTheTerrainAlongThem()
         {
             EditSession session = new EditSession(Flat(35));

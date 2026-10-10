@@ -332,6 +332,27 @@
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </StackPanel>
             </DataTemplate>
+            <!-- drawing curves that shape the terrain (T-4): what a new curve gets; the chosen curve's own are in the inspector -->
+            <DataTemplate DataType="tools:CurveTool">
+              <StackPanel Classes="toolrow">
+                <ComboBox ItemsSource="{x:Static tools:CurveTool.Profiles}" SelectedItem="{Binding Profile}" AutomationProperties.Name="Profile of a new curve"
+                          AutomationProperties.HelpText="Ridge raises, valley lowers, road flattens to the terrain under its points, cliff raises the left side" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding CurveWidth, StringFormat='Width: {0:0} ogrids'}" />
+                  <Slider Minimum="0" Maximum="64" Value="{Binding CurveWidth}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Width of a new curve in ogrids" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Falloff, StringFormat='Falloff: {0:0} ogrids'}" />
+                  <Slider Minimum="0" Maximum="64" Value="{Binding Falloff}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Falloff of a new curve in ogrids" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Height, StringFormat='Height: {0:0.0}'}" />
+                  <Slider Minimum="0" Maximum="100" Value="{Binding Height}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height of a new ridge, valley or cliff"
+                          AutomationProperties.HelpText="How much it rises or sinks in game units; a road's points lie on the terrain" />
+                </StackPanel>
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </StackPanel>
+            </DataTemplate>
             <!-- how a brush's picture is turned; the shape itself is the first choice of the row -->
             <DataTemplate DataType="tools:BrushShapeSettings">
               <StackPanel Classes="toolrow">
