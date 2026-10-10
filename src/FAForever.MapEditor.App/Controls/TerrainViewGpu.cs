@@ -731,8 +731,21 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         Size size = Bounds.Size;
         float height = (float)Math.Max(1, size.Height);
         Vector2? mouse = _mouseInside ? new Vector2((float)_mouse.X, (float)_mouse.Y) : null;
-        return new ToolView(false, mouse,
-            place => Automation.AutomationServer.Project(camera, size, place) is Point at ? new Vector2((float)at.X, (float)at.Y) : null,
+        // the camera's matrix once for this view (a box selection places thousands of things with it)
+        float width = (float)size.Width;
+        Matrix4x4 viewProjection = camera.ViewProjection(width / height);
+        Vector2? ToScreen(Vector3 place)
+        {
+            if (size.Width <= 0 || size.Height <= 0)
+            {
+                return null;
+            }
+            Vector4 clip = Vector4.Transform(new Vector4(place, 1), viewProjection);
+            return clip.W <= 1e-6f || !float.IsFinite(clip.X / clip.W) || !float.IsFinite(clip.Y / clip.W)
+                ? null
+                : new Vector2((clip.X / clip.W + 1) / 2 * width, (1 - clip.Y / clip.W) / 2 * (float)size.Height);
+        }
+        return new ToolView(false, mouse, ToScreen,
             place => 2 * Vector3.Distance(camera.Eye, place) * MathF.Tan(EditorCamera.FieldOfView / 2) / height,
             camera.RayAt(InView(_mouse)), camera.Eye);
     }
@@ -855,10 +868,25 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                 }
             }
         }
+        // placed with the camera's matrix made once for the frame (thousands of links on a large map)
         MarkerKinds shown = _model!.ShownMarkerKinds;
+        float width = (float)Bounds.Width;
+        float height = (float)Bounds.Height;
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+        Matrix4x4 viewProjection = _model.Camera.ViewProjection(width / height);
+        Vector2? OnScreen(Vector3 place)
+        {
+            Vector4 clip = Vector4.Transform(new Vector4(place, 1), viewProjection);
+            return clip.W <= 1e-6f ? null : new Vector2((clip.X / clip.W + 1) / 2 * width, (1 - clip.Y / clip.W) / 2 * height);
+        }
+        bool Outside(Vector2 a, Vector2 b) =>
+            (a.X < 0 && b.X < 0) || (a.Y < 0 && b.Y < 0) || (a.X > width && b.X > width) || (a.Y > height && b.Y > height);
         foreach ((PathLayer layer, Vector3 from, Vector3 to, Vector4 color) in _links)
         {
-            if ((shown & MarkerEdits.KindOf(layer)) != 0 && view.ToScreen(from) is Vector2 a && view.ToScreen(to) is Vector2 b)
+            if ((shown & MarkerEdits.KindOf(layer)) != 0 && OnScreen(from) is Vector2 a && OnScreen(to) is Vector2 b && !Outside(a, b))
             {
                 shapes.Add(new ToolMapLine(a, b, 2, color));
             }

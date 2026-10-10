@@ -99,7 +99,7 @@ internal sealed unsafe class ShapeRenderer : IDisposable
         _program.Set("uViewSize", size.X, size.Y);
         _gl.BindVertexArray(_vao);
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _buffer);
-        float[] data = [.. _vertices];
+        ReadOnlySpan<float> data = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_vertices);
         _gl.BufferData<float>(BufferTargetARB.ArrayBuffer, data, BufferUsageARB.StreamDraw);
         _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint)(data.Length / 6));
         _gl.BindVertexArray(0);
@@ -131,7 +131,15 @@ internal sealed unsafe class ShapeRenderer : IDisposable
         Add(d, color);
     }
 
-    private void Add(Vector2 p, Vector4 color) => _vertices.AddRange([p.X, p.Y, color.X * color.W, color.Y * color.W, color.Z * color.W, color.W]);
+    private void Add(Vector2 p, Vector4 color)
+    {
+        _vertices.Add(p.X);
+        _vertices.Add(p.Y);
+        _vertices.Add(color.X * color.W);
+        _vertices.Add(color.Y * color.W);
+        _vertices.Add(color.Z * color.W);
+        _vertices.Add(color.W);
+    }
 
     private static string Vertex(bool es) => TerrainShaders.Header(es) + """
         layout(location = 0) in vec2 aPixel;

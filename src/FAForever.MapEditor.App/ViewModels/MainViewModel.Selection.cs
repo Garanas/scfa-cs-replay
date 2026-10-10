@@ -168,16 +168,18 @@ public sealed partial class MainViewModel
         {
             return;
         }
-        using Performance.Span measure = Performance.Measure("model.select-on-screen");
         System.Numerics.Vector2 min = System.Numerics.Vector2.Min(from, to);
         System.Numerics.Vector2 max = System.Numerics.Vector2.Max(from, to);
         List<ObjectRef> inside = [];
-        foreach (ObjectRef thing in document.All(kinds ?? SelectableKinds, ShownMarkerKinds).Where(Decals.IsShown))
+        using (Performance.Measure("model.select-on-screen"))
         {
-            if (document.PlaceOf(thing) is System.Numerics.Vector3 place && toScreen(place) is System.Numerics.Vector2 at
-                && at.X >= min.X && at.Y >= min.Y && at.X <= max.X && at.Y <= max.Y)
+            foreach (ObjectRef thing in document.All(kinds ?? SelectableKinds, ShownMarkerKinds).Where(Decals.IsShown))
             {
-                inside.Add(thing);
+                if (document.PlaceOf(thing) is System.Numerics.Vector3 place && toScreen(place) is System.Numerics.Vector2 at
+                    && at.X >= min.X && at.Y >= min.Y && at.X <= max.X && at.Y <= max.Y)
+                {
+                    inside.Add(thing);
+                }
             }
         }
         Selection.Apply(inside, change);

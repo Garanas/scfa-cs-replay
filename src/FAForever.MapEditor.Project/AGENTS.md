@@ -169,7 +169,10 @@ the map's ogrids whatever the grid's size (`GridDab`: each pixel counts at its c
   path layer; within `DefaultTolerance`, an ogrid), through an index per document version;
   `ImageOf` for props (rotation by `MapSymmetryTransform.Apply(Matrix4x4)`), decals, units and
   markers, keeping the height above the terrain; `MirrorObjects` adds images where no partner is;
-  `MoveObjects`, `RotateObjects`, `PlaceObjects` with partners. `Checks/SymmetryChecks` is the
+  `MoveObjects`, `RotateObjects`, `RotateObjectsAbout` (a partner about the image of the pivot),
+  `ScaleObjects` (along the images of the axes, about the image of the pivot) and `PlaceObjects`
+  with partners; `WithoutPartners` leaves out the partners of things kept before them (what a
+  duplicate copies before mirroring the copies). `Checks/SymmetryChecks` is the
   `not-symmetric` check, given the transforms by the caller.
 - **Masks for tools** (K-1): `MapDocument.Masks`, named grids of the map's size or half, edited
   with `MaskLayers` (`Add`, `Rename`, `Remove`, `Problem` for a name: letters, digits, spaces,
@@ -522,6 +525,15 @@ generators that need it. A generator whose result is a part of the map (`IDocume
 also puts it in its place (`Apply`); the editor makes that a step of undo. Inputs read only what
 a generator needs (`WaterLevel`, `DepositsAndAreas`, `MapType`), so a change of the water's colour
 or a path node leaves walkability current.
+
+Generators feed each other: `Outputs` names the parts of the document a generator's result
+changes when put in place (as other generators' inputs name them: masks from rules change
+`RuleInputs.PropRuleMasks`, props from rules `Props`, path networks `Markers`), and `Reads` the
+generators whose last result it reads (path networks read walkability; `GeneratedResults.Generate`
+hands it over through `Read` first, `HandResults` for a caller that generates elsewhere).
+`GeneratedResults.Feeds(a, b)` and `InOrder()` give the order (a cycle keeps the order of
+registration), and `Stale` lists in that order, so generating what is out of date one after the
+other from the document each leaves (the editor's `generate.stale`) leaves nothing out of date.
 
 - **Walkability** (user story T-7, `Generation/Walkability`, `WalkabilityGenerator`): the game's
   navigational mesh, `NavGenerator` of FileFormats.Map (which stays browser-safe), made from the

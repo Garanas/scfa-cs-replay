@@ -141,7 +141,9 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     when the tool changes. A tool's template is a `controls:ToolRow Classes="toolrow"` whose
     children are its settings, most used first: what does not fit (the last ones) goes behind a
     More toggle at the row's end, which lays them out in rows of the same height over the top of
-    the views (on a `Border.tooloverflow`); another tool, a second click or Escape hides them. They
+    the views (on a `Border.tooloverflow`); another tool, a second click, a click anywhere outside
+    the row and what it shows (a combo box's list dropped from it counts as inside) or Escape
+    (wherever the keyboard is; the key goes no further) hides them. They
     stay in the tree with their bindings, clipped away while hidden; `ui` marks them `overflow:
     hidden|shown`, and automation's `set` opens More before setting one. The `ToolOptions` and its
     `ContentControl` do not clip (`ClipToBounds="False"`: Fluent's templated controls clip by
@@ -263,6 +265,14 @@ compact density) draws the standard controls; `Styles/` holds the look of everyt
   pages by stage), `ModeRail`, `ModePanel`, `ToolOptions`, `Inspector`, `Dock`, `AssetShelf`,
   `CommandPalette`, `AssetPicker`, `DiagnosticsPage`, `VersionControlPage`, `ReportProblemPage`, `SetupPage`,
   `UpdateAssetsPage`, `ConvertingPage`.
+- **Numbers** show and are read alike on every computer (`ViewModels/EditorCulture`): the editor's
+  threads run in the invariant culture (`EditorCulture.Use()` in `Program.Main`, and in the tests'
+  `[AssemblyInitialize]`), so bindings and labels (`StringFormat='{0:0.00}'`) write a point; a
+  number typed is read with a point, or a single comma when it has no point ("12.5" and "12,5"),
+  never grouped. A view model parses a field's text with `EditorCulture.TryParse` (`Setting.TryParse`
+  does) and shows it with `EditorCulture.Format`; a `TextBox` bound straight to a number
+  (`double`, `float`, `int`) takes `Converter={x:Static controls:NumberTextConverter.Instance}`.
+  `EditorCultureTest` checks a Dutch computer.
 - Code that draws (the overlays of the top view, the 3D view's sky) reads the tokens with
   `TryFindResource` and reads them again when the theme variant changes. Only colours that come
   from the map (a marker's) are made in code.
@@ -693,11 +703,23 @@ Four small parts that later features build on:
     step, and select them all. Spawns become the next armies, a path node links to the images (or
     partners) of the node it goes on from, a structure snaps to the build grid, a unit's image goes
     into its army and group; areas are never mirrored.
-  - **Moving with partners**: `edit.nudge`, `edit.rotate`, `edit.place`, `edit.delete` and dragging
-    with a select tool take each selected thing's mirror partners (`PartnersOf`: the same kind and
-    blueprint within an ogrid of the image, found once at the press): moved by the image of the
-    offset, turned the other way in a mirrored part, deleted with it. A partner that is selected
-    itself moves as itself. Span `model.symmetry-partners` (13 ms for Archsimkats Valley's 8304 props).
+  - **Moving with partners**: `edit.nudge`, `edit.rotate`, `edit.scale`, `edit.place`, `edit.delete`,
+    dragging with a select tool and its handles (move, turn, scale), `decals.scale`, `decals.size`
+    and the Decals tool's scaling drag take each selected thing's mirror partners (`PartnersOf`: the
+    same kind and blueprint within an ogrid of the image, found once at the press): moved by the
+    image of the offset, turned the other way in a mirrored part (about the image of the
+    selection's centre with the pivot `Selection`: the library's `RotateObjectsAbout` with
+    partners), scaled by the same factors along the images of the axes about the image of the
+    centre (`ScaleObjects` with partners; a decal's partner gets the same width and length),
+    deleted with it. A partner that is selected itself moves as itself. Span
+    `model.symmetry-partners` (13 ms for Archsimkats Valley's 8304 props).
+  - **Copies**: `edit.paste` and `edit.duplicate` give the copies their images (`MirrorPlaced`) and
+    select them all; `edit.duplicate` copies the selection without the partners of things selected
+    before them (the library's `WithoutPartners`), so a partner's copy is the image of its thing's.
+  - **The brush under the mouse** shows every image where a stroke paints (`BrushPreview.Images`,
+    the library's `SymmetricDabs`): the top view draws each outline (a shaped brush's picture
+    turned, and flipped in a mirrored part; span `top.brush`), the 3D view's brush pass draws one
+    brush per image (`TerrainRenderer.Render` takes the list; the shader's `uFlip` flips the picture).
   - **Commands**: `select.symmetryPartners` (Select menu) adds the partners to the selection;
     `edit.mirror` (Edit menu, `[UndoStep]`) copies the selection into every other part where it
     has no partner (span `model.mirror-objects`). Both work with the guides only too.
@@ -706,15 +728,20 @@ Four small parts that later features build on:
     warning per blueprint for units and AI markers; a note per blueprint, texture or layer for props,
     decals and path nodes. About 30 ms of `model.problems` on Archsimkats Valley.
   - `state.symmetry` has `mirrorsEdits` and `mirroring`.
-  - Not built yet: the brush's images drawn under the mouse, guides in 3D, decal scaling with the
-    partners; a decal's image is turned, not mirrored (the game draws no mirrored decal).
+  - A decal's image is turned, not mirrored (the game draws no mirrored decal).
 - **Generated results** (user story F-7, `model.Generation`, `ViewModels/GenerationViewModel`):
   the library's `GeneratedResults`, where a feature registers its `IGenerator` (its inputs: parts
   of the document). Nothing generates by itself: after every step (not every dab) the part
   compares each last result with the document (`model.generated`); the status bar names those
   out of date in the warning colour. `generate.stale {list?}` generates them again (or only
   lists them), with the inputs that changed; a result never generated is its own command's
-  (`generate.walkability`, ...). Another map forgets the results. A feature registers its
+  (`generate.walkability`, ...). It generates one result at a time, each from the document as the
+  ones before left it, in the order one feeds the next (`GeneratedResults.InOrder`: a generator's
+  `Outputs`, the parts of the document its result changes, among another's `Inputs`, or a
+  generator another `Reads`, whose last result is handed to it): masks from rules before props from
+  rules, walkability before path networks; a result made out of date by one put in place before it
+  is generated too, each generator once, so one run leaves nothing out of date. A new generator
+  that writes the document names its `Outputs`. Another map forgets the results. A feature registers its
   generator with the command that generates it (`Generation.Register(generator, commandId)`), and
   the panel lists it (`Rows`); walkability, the normal map and the preview do (next section).
 
@@ -825,7 +852,12 @@ that moves stays selected. Another map clears it. The core's side is
   keys held and two pixels an ogrid.
 - **Handles**: the selection has handles in both views, to move (along one axis), turn and scale
   it; section "Handles, hover and the 3D view's overlays".
-- Not built yet: a box in the 3D view.
+- **A box in the 3D view**: dragging on empty ground with a select tool draws a rectangle on
+  screen (`SelectTool.ScreenBox`, drawn through `Shapes` in the 3D view only, never in the top
+  view) and selects what shows inside it: each thing of the kinds that can be picked whose place
+  (at its own height) projects into the rectangle (`MainViewModel.SelectOnScreen`, span
+  `model.select-on-screen`), with shift and control as a click. The view comes with the input
+  (`ToolInput.View`, not top-down, with its mouse).
 
 ## Decals: placing, scaling, order and groups
 
@@ -1004,8 +1036,11 @@ inspector's `MarkerSelection`.
   option and value of a new one with "Add group with the selected units", which runs
   `markers.addOptionalGroup {option, level?, army?, fromSelection?}` (the civilians' army when left
   out). The library's guide says what the convention is.
-- Not built yet: a line drawn while a link is dragged, the slope under the mouse before a click,
-  the 3D view's links between path nodes.
+- **Links in 3D**: while path nodes show, the 3D view draws the links of the layers that show, a
+  line in the layer's colour between points half an ogrid above the nodes, over everything at a
+  fixed width (`TerrainViewGpu.PathLinks`: the pairs made once per version of the markers, placed
+  on screen each frame as `ToolMapLine`s through the `ShapeRenderer`; span `3d.path-links`).
+- Not built yet: a line drawn while a link is dragged, the slope under the mouse before a click.
 
 ## Props: placing, painting, reclaim
 
@@ -1109,7 +1144,8 @@ User stories F-11, L-1 and V-3. The maths of the handles is the library's (`Sele
   are `ToolModifiers.AxisX` and `AxisZ` (the views keep them from key down to key up).
 - **What a tool draws at its size on screen**: `IMapTool.Shapes(view)`, lines, squares and
   triangles in the view's pixels in an ink by use (`ToolInk`: selection, fill, hover, the axes'
-  `MapHandleAxisXBrush` and `MapHandleAxisZBrush`, shadow, sun). The top view draws them with
+  `MapHandleAxisXBrush` and `MapHandleAxisZBrush`, shadow, sun), or a `ToolMapLine` in a colour of
+  the map's own (the 3D view's links between path nodes). The top view draws them with
   Avalonia (`HeightmapView.DrawShapes`), the 3D view over everything without the depth test
   (`Rendering/Gpu/ShapeRenderer`, triangles made every frame, span `3d.draw-shapes`), with the
   tool's `Marks` at the terrain's height.
@@ -1261,14 +1297,16 @@ User stories T-5 and T-4; the library does the work (its guide, "Height layers a
   curve, a click adds a point at its end (shift: into the nearest part), dragging a point moves it
   (one step), control and a click removes one, Delete or Backspace the last; otherwise the first
   click makes a curve layer with the tool's profile, width, falloff and height (a road's points lie
-  on the terrain). Escape: the next click starts another curve. The top view draws the spline and
-  the points (`ToolMarks.Path`, `Handles`); the 3D view does not yet.
+  on the terrain). Escape: the next click starts another curve. Both views draw the spline and
+  the points (`ToolMarks.Path`, `Handles`); the 3D view on the terrain, each part cut into pieces
+  of at most two ogrids so the line follows the ground (`TerrainViewGpu.TerrainLine`), and the
+  tool works there as in the top view (on the ground under the mouse).
 - Automation: `state.heightLayers` (chosen, the session's sculpt layer, the sculpt problem, the
   layers with their settings and curves, the curve tool's settings).
 - On an 81 km map: adding the first layer 0.2 s, a stroke's move about 30 ms, a curve edit 0.3 to
   0.7 s with the views' own reaction to the new heights (debug build).
-- Not built yet: the curve in 3D, a height per point by hand in the views, exporting a layer for
-  World Machine or Gaea, merging layers.
+- Not built yet: a height per point by hand in the views, exporting a layer for World Machine or
+  Gaea, merging layers.
 
 ## Diagnostics: what goes well and wrong
 
@@ -1424,8 +1462,8 @@ faf-map editor close                                      # closes without askin
   (`true`/`false`); a combo box or list chooses the item whose text is the value (else a number as
   the index); a tree chooses a shown item by its text; a list or tree item named itself is clicked.
   A setting behind the options row's More is shown first (`revealed`). The answer's `set` reads
-  the control back. Numbers in text fields are read in the system's culture (as a person types
-  them): give whole numbers, or the culture's decimal separator.
+  the control back. Numbers in text fields are read with a point or a comma whatever the
+  computer's language (`EditorCulture`): `value=12.5`.
   `faf-map editor set label="Height brush strength" value=0.3 --port 5372`
   `faf-map editor set label="Height brush mode" value=Flatten --port 5372`
   `faf-map editor set label="Keep the heights within limits" value=true --port 5372`
@@ -1461,10 +1499,13 @@ last frame drawn.
 - `mouse {view?, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, to?: [x, y], steps?, notches?, modifiers?}`:
   `click` is the default; `drag` presses at `x, y` and lets go at `to` after `steps` moves; `wheel`
   turns `notches` (positive zooms in). The answer's `mouse` has where it is and what it hit.
-- `key {key, modifiers?, repeat?}`: a name (`E`, `Delete`, `Escape`, `Enter`, `F5`, `Up`, `5`) or a
-  gesture (`Ctrl+K`, `Ctrl+Shift+Z`); modifiers as a list or `Shift+Control`. Down, the text a
-  printable key types, up, to the focused control (a view has the keyboard after a click in it).
-  The answer's `focused` names the control with the keyboard.
+- `key {key, action?, modifiers?, repeat?}`: a name (`E`, `Delete`, `Escape`, `Enter`, `F5`, `Up`, `5`,
+  `Shift`, `Ctrl`, `Alt`) or a gesture (`Ctrl+K`, `Ctrl+Shift+Z`); modifiers as a list or
+  `Shift+Control`. Down, the text a printable key types, up, to the focused control (a view has the
+  keyboard after a click in it). `action: down` holds the key until `action: up`: a modifier held
+  goes with every mouse event and key meanwhile (shift held across clicks adds to the selection; X
+  held while dragging keeps the axis). The answer's `focused` names the control with the keyboard,
+  `held` the keys held down (also `state.views.keysHeld`).
 - `type {text}`: text into the focused control (a search field), as an input method hands it.
 - `drag {view?, from, to?, data?, button?, steps?, modifiers?}`: with `data` (an asset's key) a drag
   from outside dropped at `to`, as a tile from the shelf (`dropped`: what the target did); without,
@@ -1476,8 +1517,17 @@ last frame drawn.
   view's and the 3D view's pixels (`point.top`, `point.3d`, each with `inside`; null in 3D behind the
   camera), for `mouse` and `pick`. `get {ref}` describes one thing (`prop:5`, `unit:UNIT_1`,
   `marker:12`, `decal:3`, `area:AREA_1`): place, heading in degrees, blueprint, scale, rotation,
-  army and group, a path node's links. `objects {kind?, near?: [x, z], count?}` lists a few with
-  their places, nearest first when `near` is given, and the total.
+  army and group, a path node's links; `get {name}` finds a marker, unit or area by its name
+  (ignoring case). `objects {kind?, name?, near?: [x, z], count?}` lists a few with their places,
+  nearest first when `near` is given, and the total; `name` keeps those whose name, blueprint or
+  texture contains it (ignoring case).
+- `wait {path, value, timeout?}` (`Automation/AutomationServer.Waiting.cs`) reads the state every
+  tenth of a second until the value at a path (keys joined by dots, a number for a list's item:
+  `selection.count`, `stage`, `history.0`) matches `value` (numbers by value, the rest by their
+  text), or `timeout` seconds (10, at most 120) passed; the answer's `wait` has `matched`, the value
+  last read, the milliseconds and the reads. `state.build` says which build runs: `version` and
+  `built` (the time of the App's assembly file), to tell an editor started before a build from one
+  after. `EditorDriver` has `KeyDown`, `KeyUp` and `Wait`.
 - `state` has `pid`, `views` (the render scaling, the window's size, per view whether it shows, its
   bounds in the window and its size in pixels, the automation mouse) and `loading` (`assetsLoaded`,
   the catalogue's count per kind, `thumbnailsPending`, `modelsLoading`, `texturesLoading`).

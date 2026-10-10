@@ -57,7 +57,7 @@ public sealed class ToolRow : Panel
         _more.Content = "More";
         _more.IsVisible = false;
         AutomationProperties.SetName(_more, "More options of the tool");
-        AutomationProperties.SetHelpText(_more, "Shows the settings that do not fit in the row, over the views; a second click hides them");
+        AutomationProperties.SetHelpText(_more, "Shows the settings that do not fit in the row, over the views; a second click, a click elsewhere or Escape hides them");
         _more.IsCheckedChanged += (_, _) => IsExpanded = _more.IsChecked == true;
         _box.Classes.Add("tooloverflow");
         Children.Add(_box);
