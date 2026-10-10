@@ -1,3 +1,5 @@
+using FAForever.MapEditor.Project.Editing;
+
 namespace FAForever.MapEditor.App.Tools;
 
 /// <summary>
@@ -59,7 +61,11 @@ public enum ToolModifiers
 /// </summary>
 /// <param name="OgridsPerPixel">How large a pixel of the view is on the map at the mouse, so that
 /// a tool can reach "a few pixels" whatever the zoom.</param>
-public readonly record struct ToolInput(ToolModifiers Modifiers, float OgridsPerPixel)
+/// <param name="Picks">Whether the view picked the thing under the mouse itself (the 3D view, along
+/// its ray through models and markers); the top view leaves it to the tool, which takes the nearest
+/// thing on the ground.</param>
+/// <param name="Picked">What the view picked, or null for nothing, when it <paramref name="Picks"/>.</param>
+public readonly record struct ToolInput(ToolModifiers Modifiers, float OgridsPerPixel, bool Picks = false, ObjectRef? Picked = null)
 {
     /// <summary>
     /// No keys held, at a zoom of two pixels an ogrid: for input without a view (automation's

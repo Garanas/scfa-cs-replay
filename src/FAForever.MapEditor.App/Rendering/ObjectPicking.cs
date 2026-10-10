@@ -1,5 +1,6 @@
 using System.Numerics;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Editing;
 
 namespace FAForever.MapEditor.App.Rendering;
 
@@ -144,13 +145,13 @@ public static class ObjectPicking
     /// <param name="terrain">How far along the ray it meets the terrain, in units of
     /// <paramref name="direction"/>; null when it misses the map. What lies behind the terrain is
     /// hidden.</param>
-    public static PickedObject? Pick(MapDocument document, Vector3 origin, Vector3 direction, PickOptions shown, Func<string, ObjectBounds> boundsOf, float? terrain)
+    public static ObjectRef? Pick(MapDocument document, Vector3 origin, Vector3 direction, PickOptions shown, Func<string, ObjectBounds> boundsOf, float? terrain)
     {
         float limit = terrain is float t ? t + Math.Max(1, t * 0.01f) : float.PositiveInfinity;
         float nearest = limit;
-        PickedObject? found = null;
+        ObjectRef? found = null;
 
-        void Consider(float? hit, PickedObject what)
+        void Consider(float? hit, ObjectRef what)
         {
             if (hit is float at && at >= 0 && at < nearest)
             {
@@ -163,14 +164,14 @@ public static class ObjectPicking
         {
             foreach (Prop prop in document.Props)
             {
-                Consider(HitBox(ObjectPlacement.Prop(prop), boundsOf(prop.Blueprint), origin, direction), PickedObject.Prop(prop.Id));
+                Consider(HitBox(ObjectPlacement.Prop(prop), boundsOf(prop.Blueprint), origin, direction), ObjectRef.Prop(prop.Id));
             }
         }
         if (shown.Units)
         {
             foreach ((Unit unit, _) in ObjectPlacement.Units(document))
             {
-                Consider(HitBox(ObjectPlacement.Unit(unit), boundsOf(unit.Blueprint), origin, direction), PickedObject.Unit(unit.Name));
+                Consider(HitBox(ObjectPlacement.Unit(unit), boundsOf(unit.Blueprint), origin, direction), ObjectRef.Unit(unit.Name));
             }
         }
         if (shown.Markers || shown.PathNodes)
@@ -180,7 +181,7 @@ public static class ObjectPicking
             {
                 Vector3 place = ObjectPlacement.MarkerPlace(marker, heights);
                 float height = ObjectPlacement.MarkerHeight(marker, place, origin);
-                Consider(HitSphere(place + new Vector3(0, height / 2, 0), height / 2, origin, direction), PickedObject.Marker(marker.Id));
+                Consider(HitSphere(place + new Vector3(0, height / 2, 0), height / 2, origin, direction), ObjectRef.Marker(marker.Id));
             }
         }
 
@@ -191,7 +192,7 @@ public static class ObjectPicking
             {
                 if (Covers(document.Decals[i], new Vector2(point.X, point.Z)))
                 {
-                    return PickedObject.Decal(document.Decals[i].Id);
+                    return ObjectRef.Decal(document.Decals[i].Id);
                 }
             }
         }

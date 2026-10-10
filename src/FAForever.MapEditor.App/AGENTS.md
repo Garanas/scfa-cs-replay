@@ -361,15 +361,18 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
     `props` and `units` turn them on and off.
   - **Picking** (`Rendering/ObjectPicking`, without OpenGL, tested in `ObjectPickingTest`):
     `TerrainViewGpu.PickAt(point)` makes the ray through the point (`EditorCamera.RayAt`) and
-    returns the nearest `PickedObject` (`Rendering/PickedObject`: kind Marker, Prop, Decal or Unit,
-    with the id or, for a unit, its name) whose bounds it meets in front of the terrain: a
+    returns the nearest thing (an `ObjectRef`, the selection's own reference) whose bounds it
+    meets in front of the terrain: a
     model's box (the read model's, `ObjectBounds.Box` until then) turned and placed as drawn
     (`ObjectPlacement`, shared with the renderer), a marker's symbol as a sphere. When no object
     is hit, the decal under the point on top (the last in the map's order). Only the kinds that
-    show are picked.
-  - **Highlight**: `TerrainViewGpu.Highlighted` is a set of `PickedObject`s drawn mixed with the
-    theme's `SelectedStrokeBrush` (props, units, markers). Whoever keeps the selection sets it;
-    automation's `pick {x, y, highlight: true}` sets it to what it found, to check it.
+    show are picked. A press of the left mouse gives the active tool both the place on the ground
+    and what the ray met (`ToolInput.Picks`, `Picked`): the select tool selects that, so a click
+    on a tree in 3D selects the tree, not whatever lies nearest the ground behind it. The keys the
+    view does not use itself go to the active tool, as in the top view.
+  - **Highlight**: `TerrainViewGpu.Highlighted` is a set of `ObjectRef`s drawn mixed with the
+    theme's `SelectedStrokeBrush` (props, units, markers): the selection, which the view follows.
+    Automation's `pick {x, y, highlight: true}` selects what it found, as a click would.
   - Uniforms of samplers must not share a texture unit with another sampler type: unit 0 holds
     the heights (`usampler2D`), 1 a decal's texture or a model's albedo (the objects set it
     active before their textures upload, since an upload binds to the active unit), 2 to 11 the

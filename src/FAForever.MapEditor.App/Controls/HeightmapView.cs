@@ -422,7 +422,7 @@ public sealed class HeightmapView : Control
 
     private ToolInput InputOf(KeyModifiers modifiers) => new ToolInput(ModifiersOf(modifiers), (float)(1 / _zoom));
 
-    private static ToolModifiers ModifiersOf(KeyModifiers modifiers) =>
+    internal static ToolModifiers ModifiersOf(KeyModifiers modifiers) =>
         (modifiers.HasFlag(KeyModifiers.Shift) ? ToolModifiers.Shift : ToolModifiers.None)
         | (modifiers.HasFlag(KeyModifiers.Control) ? ToolModifiers.Control : ToolModifiers.None)
         | (modifiers.HasFlag(KeyModifiers.Alt) ? ToolModifiers.Alt : ToolModifiers.None);

@@ -396,16 +396,12 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             case "pick":
             {
                 // the object under a point of the 3D view (its pixels, as the mouse's); highlight: draw it highlighted
-                Rendering.PickedObject? picked = window.View3D.PickAt(new Point(Number(arguments, "x") ?? 0, Number(arguments, "y") ?? 0));
-                result["picked"] = picked is null ? null : new JsonObject
-                {
-                    ["kind"] = picked.Kind.ToString(),
-                    ["id"] = picked.Id,
-                    ["name"] = picked.Name,
-                };
+                ObjectRef? picked = window.View3D.PickAt(new Point(Number(arguments, "x") ?? 0, Number(arguments, "y") ?? 0));
+                result["picked"] = picked?.ToString();
                 if (arguments["highlight"]?.GetValue<bool>() == true)
                 {
-                    window.View3D.Highlighted = picked is null ? null : new HashSet<Rendering.PickedObject> { picked };
+                    // as a click with the select tool would: the selection, which the 3D view highlights
+                    model.Selection.Set(picked is ObjectRef thing ? [thing] : []);
                 }
                 break;
             }

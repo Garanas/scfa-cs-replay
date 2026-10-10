@@ -19,6 +19,7 @@ using ImageMagick;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Silk.NET.OpenGL;
+using FAForever.MapEditor.Project.Editing;
 
 namespace FAForever.MapEditor.App.Controls;
 
@@ -48,7 +49,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private TerrainRenderer? _renderer;
     private ObjectRenderer? _objects;
     private readonly ObjectModels _models;
-    private IReadOnlySet<PickedObject>? _highlighted;
+    private IReadOnlySet<ObjectRef>? _highlighted;
     private MainViewModel? _model;
     private ProjectWatcher? _assetWatcher;
 
@@ -105,7 +106,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     /// The objects drawn highlighted (props, units and markers): the selection, set by whoever
     /// keeps it; null or empty for none.
     /// </summary>
-    public IReadOnlySet<PickedObject>? Highlighted
+    public IReadOnlySet<ObjectRef>? Highlighted
     {
         get => _highlighted;
         set
@@ -134,7 +135,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     /// kinds it shows, or null: the nearest prop, unit or marker the ray from the camera meets in
     /// front of the terrain, else the decal on top there (<see cref="ObjectPicking"/>).
     /// </summary>
-    public PickedObject? PickAt(Point at)
+    public ObjectRef? PickAt(Point at)
     {
         using Performance.Span measure = Performance.Measure("3d.pick");
         if (_model?.ShownDocument is not MapDocument document)
@@ -457,6 +458,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.MapChanged -= OnMapChanged;
             _model.DocumentChanged -= OnDocumentChanged;
             _model.CursorChanged -= OnDocumentChanged;
+            _model.Selection.Changed -= OnSelectionChanged;
             _model.CameraMoved -= OnCameraMoved;
             _model.OverlaysChanged -= OnDocumentChanged;
         }
@@ -467,6 +469,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.DocumentChanged += OnDocumentChanged;
             _model.CameraMoved += OnCameraMoved;
             _model.CursorChanged += OnDocumentChanged;
+            _model.Selection.Changed += OnSelectionChanged;
             _model.OverlaysChanged += OnDocumentChanged;
         }
         RequestNextFrameRendering();
@@ -532,7 +535,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             if (PlaceUnderMouse(document) is Vector3 place)
             {
                 _pressed = tool;
-                tool.Press(place.X, place.Z);
+                // the thing under the mouse is the one the ray meets, not the nearest on the ground
+                tool.Press(place.X, place.Z, InputAt(place, e.KeyModifiers) with { Picks = true, Picked = PickAt(_mouse) });
                 e.Pointer.Capture(this);
             }
             e.Handled = true;
@@ -559,7 +563,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         }
         if (_pressed is IMapTool tool && _model?.ShownDocument is MapDocument document && PlaceUnderMouse(document) is Vector3 place)
         {
-            tool.Drag(place.X, place.Z);
+            tool.Drag(place.X, place.Z, InputAt(place, e.KeyModifiers));
         }
         if (_model?.ActiveTool?.Tool is { CursorRadius: > 0 })
         {
@@ -619,7 +623,29 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.FocusCamera(place.X, place.Z, _model.Camera.Now.Distance * 0.26f);
             e.Handled = true;
         }
+        // the keys the view does not use itself are the active tool's (the select tool's Q, E, arrows, Escape)
+        else if (_model?.HasMap == true && _model.ActiveTool?.Tool is IMapTool tool && tool.Key(e.Key.ToString(), HeightmapView.ModifiersOf(e.KeyModifiers)))
+        {
+            e.Handled = true;
+        }
     }
+
+    /// <summary>
+    /// What a tool needs to know with a place: the keys held, and how large a pixel of the view is
+    /// on the ground there.
+    /// </summary>
+    private ToolInput InputAt(Vector3 place, KeyModifiers modifiers)
+    {
+        float distance = _model is null ? 1 : Vector3.Distance(_model.Camera.Eye, place);
+        float ogridsPerPixel = 2 * distance * MathF.Tan(EditorCamera.FieldOfView / 2) / (float)Math.Max(1, Bounds.Height);
+        return new ToolInput(HeightmapView.ModifiersOf(modifiers), ogridsPerPixel);
+    }
+
+    /// <summary>
+    /// The selection drawn highlighted.
+    /// </summary>
+    private void OnSelectionChanged(object? sender, EventArgs e) =>
+        Highlighted = _model is { Selection.IsEmpty: false } ? _model.Selection.Items.ToHashSet() : null;
 
     protected override void OnKeyUp(KeyEventArgs e)
     {

@@ -39,6 +39,28 @@ namespace FAForever.MapEditor.App.Tests
             model.Commands.RunAsync(id, arguments ?? [], interactive: false);
 
         [TestMethod]
+        public async Task WhatThe3DViewPicksIsSelectedWhereverTheGroundIs()
+        {
+            MainViewModel model = await Open();
+            Spawn far = model.ShownDocument!.Markers.Spawns[^1];
+            ObjectRef thing = ObjectRef.Marker(far.Id);
+            IMapTool tool = ActiveTool(model);
+
+            // the ray met the spawn; the ground behind it is elsewhere
+            tool.Press(1, 1, new ToolInput(ToolModifiers.None, 0.5f, Picks: true, Picked: thing));
+            tool.Release();
+            CollectionAssert.AreEqual(new[] { thing }, model.Selection.Items.ToArray());
+
+            tool.Press(far.Position.X, far.Position.Z, new ToolInput(ToolModifiers.None, 0.5f, Picks: true, Picked: null));
+            tool.Release();
+            Assert.IsTrue(model.Selection.IsEmpty, "the ray met nothing: the nearest on the ground does not count");
+
+            tool.Press(1, 1, new ToolInput(ToolModifiers.None, 0.5f, Picks: true, Picked: ObjectRef.Prop(model.ShownDocument.Props[0].Id)));
+            tool.Release();
+            Assert.IsTrue(model.Selection.IsEmpty, "the Markers mode selects no props");
+        }
+
+        [TestMethod]
         public async Task AClickSelectsAndADragMovesTheSelectionAsOneStepOfUndo()
         {
             MainViewModel model = await Open();

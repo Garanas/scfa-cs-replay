@@ -75,7 +75,10 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             return;
         }
         SelectionChange change = ChangeOf(input.Modifiers);
-        if (model.PickAt(x, z, input.OgridsPerPixel, model.SelectableKinds) is ObjectRef picked)
+        ObjectRef? under = input.Picks
+            ? input.Picked is ObjectRef found && found.IsIn(model.SelectableKinds, found.Kind == ObjectKind.Marker && model.ShownDocument!.Markers.PathNodes.Any(node => node.Id == found.Id)) ? found : null
+            : model.PickAt(x, z, input.OgridsPerPixel, model.SelectableKinds);
+        if (under is ObjectRef picked)
         {
             if (change == SelectionChange.Toggle)
             {

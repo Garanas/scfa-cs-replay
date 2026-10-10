@@ -5,6 +5,7 @@ using FAForever.MapEditor.App.Rendering.Gpu;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Editing;
 
 namespace FAForever.MapEditor.App.Tests
 {
@@ -34,8 +35,8 @@ namespace FAForever.MapEditor.App.Tests
             MapDocument document = (await HardFfaAsync()) with { Props = [PropAt(1, 100, 100), PropAt(2, 110, 100)] };
             PickOptions props = new PickOptions(Units: false, Markers: false, Decals: false);
 
-            Assert.AreEqual(PickedObject.Prop(1), ObjectPicking.Pick(document, new Vector3(100.5f, 200, 100), Down, props, Tall, terrain: 200));
-            Assert.AreEqual(PickedObject.Prop(2), ObjectPicking.Pick(document, new Vector3(109.5f, 200, 100.5f), Down, props, Tall, terrain: 200));
+            Assert.AreEqual(ObjectRef.Prop(1), ObjectPicking.Pick(document, new Vector3(100.5f, 200, 100), Down, props, Tall, terrain: 200));
+            Assert.AreEqual(ObjectRef.Prop(2), ObjectPicking.Pick(document, new Vector3(109.5f, 200, 100.5f), Down, props, Tall, terrain: 200));
             Assert.IsNull(ObjectPicking.Pick(document, new Vector3(105, 200, 100), Down, props, Tall, terrain: 200), "between them");
             Assert.IsNull(ObjectPicking.Pick(document, new Vector3(100, 200, 100), Down, props with { Props = false }, Tall, terrain: 200), "props hidden");
         }
@@ -48,8 +49,8 @@ namespace FAForever.MapEditor.App.Tests
             Vector3 east = Vector3.UnitX;
             PickOptions props = new PickOptions(Units: false, Markers: false, Decals: false);
 
-            Assert.AreEqual(PickedObject.Prop(1), ObjectPicking.Pick(document, eye, east, props, Tall, terrain: null));
-            Assert.AreEqual(PickedObject.Prop(2), ObjectPicking.Pick(document, new Vector3(130, 2, 100), -east, props, Tall, terrain: null));
+            Assert.AreEqual(ObjectRef.Prop(1), ObjectPicking.Pick(document, eye, east, props, Tall, terrain: null));
+            Assert.AreEqual(ObjectRef.Prop(2), ObjectPicking.Pick(document, new Vector3(130, 2, 100), -east, props, Tall, terrain: null));
             Assert.IsNull(ObjectPicking.Pick(document, eye, east, props, Tall, terrain: 5), "the terrain hides what lies behind it");
         }
 
@@ -74,14 +75,14 @@ namespace FAForever.MapEditor.App.Tests
             Army first = document.Armies[0];
             document = document with { Armies = document.Armies.SetItem(0, first with { Units = first.Units with { Units = first.Units.Units.Add(unit) } }) };
             PickOptions units = new PickOptions(Props: false, Markers: false, Decals: false);
-            Assert.AreEqual(PickedObject.Unit("UNIT_7"), ObjectPicking.Pick(document, new Vector3(50, 300, 60), Down, units, Tall, terrain: null));
+            Assert.AreEqual(ObjectRef.Unit("UNIT_7"), ObjectPicking.Pick(document, new Vector3(50, 300, 60), Down, units, Tall, terrain: null));
 
             Spawn spawn = document.Markers.Spawns[0];
             document = document with { Markers = new MarkerSet { Spawns = [spawn] } };
             Vector3 place = ObjectPlacement.MarkerPlace(spawn, document.Terrain.Heightmap);
             Vector3 eye = place + new Vector3(0, 100, 0);
             PickOptions markers = new PickOptions(Props: false, Units: false, Decals: false);
-            Assert.AreEqual(PickedObject.Marker(spawn.Id), ObjectPicking.Pick(document, eye, Down, markers, Tall, terrain: null));
+            Assert.AreEqual(ObjectRef.Marker(spawn.Id), ObjectPicking.Pick(document, eye, Down, markers, Tall, terrain: null));
             float height = ObjectPlacement.MarkerHeight(spawn, place, eye);
             Assert.IsTrue(height > ObjectPlacement.MarkerBase(spawn), "from afar a marker grows to keep its size on screen");
             Assert.IsNull(ObjectPicking.Pick(document, eye + new Vector3(height, 0, 0), Down, markers, Tall, terrain: null), "beside it");
@@ -96,9 +97,9 @@ namespace FAForever.MapEditor.App.Tests
             document = document with { Decals = [under, top], Props = [PropAt(1, 25, 25)] };
             PickOptions decals = new PickOptions(Props: false, Units: false, Markers: false);
 
-            Assert.AreEqual(PickedObject.Decal(41), ObjectPicking.Pick(document, new Vector3(15, 100, 15), Down, decals, Tall, terrain: 100));
-            Assert.AreEqual(PickedObject.Decal(42), ObjectPicking.Pick(document, new Vector3(25, 100, 25), Down, decals, Tall, terrain: 100), "the last lies on top");
-            Assert.AreEqual(PickedObject.Prop(1), ObjectPicking.Pick(document, new Vector3(25, 100, 25), Down, new PickOptions(), Tall, terrain: 100), "an object first");
+            Assert.AreEqual(ObjectRef.Decal(41), ObjectPicking.Pick(document, new Vector3(15, 100, 15), Down, decals, Tall, terrain: 100));
+            Assert.AreEqual(ObjectRef.Decal(42), ObjectPicking.Pick(document, new Vector3(25, 100, 25), Down, decals, Tall, terrain: 100), "the last lies on top");
+            Assert.AreEqual(ObjectRef.Prop(1), ObjectPicking.Pick(document, new Vector3(25, 100, 25), Down, new PickOptions(), Tall, terrain: 100), "an object first");
             Assert.IsNull(ObjectPicking.Pick(document, new Vector3(5, 100, 5), Down, decals, Tall, terrain: 100));
         }
 

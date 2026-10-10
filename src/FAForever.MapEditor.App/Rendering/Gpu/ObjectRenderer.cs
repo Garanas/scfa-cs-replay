@@ -5,6 +5,7 @@ using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
 using Silk.NET.OpenGL;
+using FAForever.MapEditor.Project.Editing;
 
 namespace FAForever.MapEditor.App.Rendering.Gpu;
 
@@ -27,7 +28,7 @@ internal sealed record ObjectFrame(
     bool Units,
     bool Markers,
     bool PathNodes,
-    IReadOnlySet<PickedObject>? Highlighted,
+    IReadOnlySet<ObjectRef>? Highlighted,
     Vector3 Eye,
     Vector3 HighlightColor,
     Vector3 MissingColor);
@@ -122,7 +123,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         {
             using Performance.Span measure = Performance.Measure("3d.draw-props");
             _props.Update((document.Props, frame.Highlighted), () => document.Props.Select(prop =>
-                (prop.Blueprint, ObjectPlacement.Prop(prop), frame.Highlighted?.Contains(PickedObject.Prop(prop.Id)) == true)));
+                (prop.Blueprint, ObjectPlacement.Prop(prop), frame.Highlighted?.Contains(ObjectRef.Prop(prop.Id)) == true)));
             _props.Arrange(blueprint => _models.Get(blueprint, frame.Catalog, out _), viewProjection, frame.Eye, _models.Loaded);
             (int drawn, int runs, int boxes) = DrawRuns(_props, frame);
             props = drawn;
@@ -133,7 +134,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         {
             using Performance.Span measure = Performance.Measure("3d.draw-units");
             _units.Update((document.Armies, frame.Highlighted), () => ObjectPlacement.Units(document).Select(placed =>
-                (placed.Unit.Blueprint, ObjectPlacement.Unit(placed.Unit), frame.Highlighted?.Contains(PickedObject.Unit(placed.Unit.Name)) == true)));
+                (placed.Unit.Blueprint, ObjectPlacement.Unit(placed.Unit), frame.Highlighted?.Contains(ObjectRef.Unit(placed.Unit.Name)) == true)));
             _units.Arrange(blueprint => _models.Get(blueprint, frame.Catalog, out _), viewProjection, frame.Eye, _models.Loaded);
             (int drawn, int runs, int boxes) = DrawRuns(_units, frame);
             units = drawn;
@@ -272,7 +273,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         {
             Vector3 place = ObjectPlacement.MarkerPlace(marker, document.Terrain.Heightmap);
             Color32 color = marker.Color;
-            bool highlighted = frame.Highlighted?.Contains(PickedObject.Marker(marker.Id)) == true;
+            bool highlighted = frame.Highlighted?.Contains(ObjectRef.Marker(marker.Id)) == true;
             data.AddRange([place.X, place.Y, place.Z, ObjectPlacement.MarkerBase(marker),
                 color.Red / 255f, color.Green / 255f, color.Blue / 255f, highlighted ? 1 : 0]);
         }
