@@ -724,4 +724,14 @@
     <Setter Property="Background" Value="{DynamicResource ControlRaisedBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
+  <!-- version control (F-18): a wider page, the history of commits and the files of the chosen one -->
+  <Style Selector="Border.dialog.versioncontrol">
+    <Setter Property="Width" Value="{StaticResource VersionDialogWidth}" />
+  </Style>
+  <Style Selector="ListBox.versionhistory">
+    <Setter Property="Height" Value="{StaticResource VersionHistoryHeight}" />
+  </Style>
+  <Style Selector="ListBox.versionfiles">
+    <Setter Property="MaxHeight" Value="{StaticResource VersionFilesHeight}" />
+  </Style>
 </Styles>

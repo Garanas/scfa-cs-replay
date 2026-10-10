@@ -318,6 +318,11 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                     ["branch"] = model.VersionControl.Repository?.Branch,
                     ["lastCommit"] = model.VersionControl.Repository?.LastCommit,
                     ["remote"] = model.VersionControl.Repository?.Remote,
+                    ["ahead"] = model.VersionControl.Repository?.Ahead,
+                    ["behind"] = model.VersionControl.Repository?.Behind,
+                    ["history"] = new JsonArray([.. model.VersionControl.History.Take(20).Select(commit => (JsonNode)JsonValue.Create($"{commit.ShortHash} {commit.Date:yyyy-MM-dd HH:mm} {commit.Author}: {commit.Subject}"))]),
+                    ["chosen"] = model.VersionControl.ChosenCommit?.ShortHash,
+                    ["files"] = new JsonArray([.. model.VersionControl.ChosenFiles.Take(50).Select(file => (JsonNode)JsonValue.Create($"{file.Change} {file.Path}"))]),
                     ["pageOpen"] = model.VersionControl.IsOpen,
                     ["error"] = model.VersionControl.Error,
                 };
