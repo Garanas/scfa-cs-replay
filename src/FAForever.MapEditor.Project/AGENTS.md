@@ -104,7 +104,9 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
   itself: a result comes into the map when the map maker brings it in (T-3, later T-5).
 - `ProjectWatcher` reports the changed files of a folder once it has been quiet for a moment
   (tools save in bursts), on a pool thread. `faf-map pack --watch` opens the project once and
-  reloads only what changed before each export.
+  reloads only what changed before each export. Tests wait for a report with `NextChangeAsync`
+  and skip the quiet time with `Flush` (once `HasPending`: the file system's event comes on its
+  own thread), instead of polling.
 
 ## Version control
 
@@ -209,7 +211,13 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   path into `/maps/<any folder>/` is one of the map's own files (`MapDocument.Files`), any other
   one of the workspace's assets. Its `Key` is the same for every spelling of the path and its
   `Version` changes with the file, so a view can keep one copy per texture and reload it.
-- `faf-map workspace init|convert|status` does the same without the editor.
+- `faf-map workspace init|convert|status` does the same without the editor. `faf-map workspace scratch
+  <folder> --from <workspace> [--settings <file>]` makes a scratch workspace for test editors
+  (`ScratchWorkspace`: its own projects, presets, copied brushes and a vault inside it, the other
+  workspace's assets through a directory junction on Windows, a symbolic link elsewhere, a copy
+  when neither works); `remove-scratch` deletes it, the junction first, since .NET does not delete
+  a junction inside a recursive delete. Converting assets in a scratch workspace would replace the
+  linked ones.
 - **The sandbox** (`Workspaces/SandboxMap`, user story F-5): `projects/Sandbox`, a map of 256
   ogrids with two armies and one of every kind of thing (spawns, mass, hydrocarbon, three land path
   nodes with links, an AI marker, an area, a chain, a decal in a decal group, props, civilian units

@@ -406,6 +406,12 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   card, so the 3D view draws nothing and its camera does not glide by itself (the tests let it
   arrive); what it draws is checked with automation in a real editor. The tests of the 3D view's
   input also catch a view that the mouse does not reach.
+- Helpers for these tests: `HeadlessApp.Capture(control)` draws one control into a PNG (not the
+  whole window; `SaveCapture` writes it into the output's `captures/` to look at), `TestAssets`
+  writes converted assets with models made in the tests (a rock with a pyramid mesh; with
+  `unitModel: true` a civilian unit `uec1901` with a box mesh: no file of the game), and
+  `TestAssets.SandboxProject()` writes the sandbox of those assets (one of every kind of thing on a
+  map) as a project to open. `AutomationTest` drives the window through automation.
 - Give every control one can read or use a name for screen readers: `AutomationProperties.Name`
   (and `HelpText` where the use is not obvious) in the XAML, unless its own text says it (a
   button's content, a menu's header). `MainWindowTest.EveryControlOneCanUseHasALabelOrText`
@@ -734,3 +740,71 @@ faf-map editor close                                      # closes without askin
   `close` does not ask about unsaved changes.
 - Query parameters read as JSON where they can (`?step=3`, `?on=true`), as the CLI sends them.
 - An MCP server for agents would be a thin layer over these same commands.
+
+### Input as a person gives it, and aiming it
+
+`Automation/AutomationServer.Input.cs` and `Automation/WindowInput.cs`. The input goes into the
+window's own input (`PlatformImpl.Input`, raw mouse, key, text and drag events), the path the
+operating system's input takes and the one Avalonia.Headless uses: hit testing, pointer capture,
+focus, the window's key bindings and drag and drop all apply. The real mouse and keyboard are never
+touched; the user's cursor stays where it is. The raw events are not in Avalonia's reference
+assemblies, so `WindowInput.Raw` makes them by reflection and says what is missing if an update
+changes them. Places are in device-independent pixels of a view (`view: top|3d`) or of the window
+(the default); a hidden view is refused (`tab` first). The mouse finds what lies under it in the
+last frame drawn.
+
+- `mouse {view?, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, to?: [x, y], steps?, notches?, modifiers?}`:
+  `click` is the default; `drag` presses at `x, y` and lets go at `to` after `steps` moves; `wheel`
+  turns `notches` (positive zooms in). The answer's `mouse` has where it is and what it hit.
+- `key {key, modifiers?, repeat?}`: a name (`E`, `Delete`, `Escape`, `Enter`, `F5`, `Up`, `5`) or a
+  gesture (`Ctrl+K`, `Ctrl+Shift+Z`); modifiers as a list or `Shift+Control`. Down, the text a
+  printable key types, up, to the focused control (a view has the keyboard after a click in it).
+  The answer's `focused` names the control with the keyboard.
+- `type {text}`: text into the focused control (a search field), as an input method hands it.
+- `drag {view?, from, to?, data?, button?, steps?, modifiers?}`: with `data` (an asset's key) a drag
+  from outside dropped at `to`, as a tile from the shelf (`dropped`: what the target did); without,
+  the mouse dragged with a button held.
+- `run {id, interactive: true, wait: false}` starts a command as the menu does and answers at once
+  (`started`, `finished`), so a picker or question it opens can be driven with `key` and `type`;
+  `interactive: true` alone waits for it.
+- `view-point {x, z, y?}` or `{ref}`: where a place (or a thing, at its own height) shows, in the top
+  view's and the 3D view's pixels (`point.top`, `point.3d`, each with `inside`; null in 3D behind the
+  camera), for `mouse` and `pick`. `get {ref}` describes one thing (`prop:5`, `unit:UNIT_1`,
+  `marker:12`, `decal:3`, `area:AREA_1`): place, heading in degrees, blueprint, scale, rotation,
+  army and group, a path node's links. `objects {kind?, near?: [x, z], count?}` lists a few with
+  their places, nearest first when `near` is given, and the total.
+- `state` has `pid`, `views` (the render scaling, the window's size, per view whether it shows, its
+  bounds in the window and its size in pixels, the automation mouse) and `loading` (`assetsLoaded`,
+  the catalogue's count per kind, `thumbnailsPending`, `modelsLoading`, `texturesLoading`).
+- `screenshot {settle: true, ...}` first waits (at most 15 s) until nothing is busy, the assets are
+  read, no thumbnail is drawn and, for the 3D view, no model or texture is read, each checked after
+  a frame (`settled` says how long and what it still waited for). `ui {under}` describes only the
+  control of that name, label or text and what lies in it.
+- `perf {gpu: true}` times the 3D view's frames on the card (`Rendering/Gpu/GpuTimer`): timer
+  queries where the card offers them (ANGLE's `EXT_disjoint_timer_query`, OpenGL 3.3), recorded as
+  the span `3d.gpu-frame`; else `glFinish` around the frame (`3d.gpu-frame-finish`, which stalls).
+  `gpuTiming` says whether it is on and how it measures. Off by default.
+- Headless, `AutomationServer.HandleAsync(command, arguments)` runs the same commands without HTTP
+  (`AutomationTest`); force a frame first (`AvaloniaHeadlessPlatform.ForceRenderTimerTick()`), since
+  the mouse hits what the last frame drew.
+
+### A test editor of one's own
+
+```sh
+faf-map workspace scratch D:/scratch/ws --from "<the real workspace>" --settings D:/scratch/settings.json
+faf-map editor start --port 5398 --settings D:/scratch/settings.json [--map <folder>]   # waits until ready
+faf-map editor objects kind=props count=5 --port 5398
+faf-map editor stop --port 5398                                                          # waits until it exited
+faf-map workspace remove-scratch D:/scratch/ws                                           # the assets stay
+```
+
+- `faf-map editor start` runs the editor built beside the CLI (or `--exe`, `FAF_MAP_EDITOR_EXE`) with
+  `FAF_MAP_EDITOR_SETTINGS` set to `--settings`, refuses a port that answers already, and waits (up
+  to `--timeout`, 120 s) until the stage is `Ready`, nothing is busy, a map is open and the assets are
+  read; it prints the process, map and workspace. Without `--map` the editor opens the workspace's
+  sandbox, which writes it into that workspace when it is missing: use a scratch workspace, never
+  the user's. `stop` sends `close` and waits until the process has exited (`--force` ends it after
+  `--timeout`), so the build output is free again.
+- A scratch workspace (`ScratchWorkspace`, the library's) has its own projects, presets, brushes
+  (copied) and vault (`vault/maps`, where exports go), and the real workspace's assets through a
+  directory junction (no administrator needed): a test editor may save, export and write presets.
