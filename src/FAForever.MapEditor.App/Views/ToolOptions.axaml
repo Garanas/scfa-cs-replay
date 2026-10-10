@@ -54,6 +54,10 @@
                 <ContentControl Content="{Binding Shape}" />
               </StackPanel>
             </DataTemplate>
+            <!-- selecting and moving what lies on the map (F-11) -->
+            <DataTemplate DataType="tools:SelectTool">
+              <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+            </DataTemplate>
             <!-- how either brush's picture is turned; the shape itself is the first choice of the row -->
             <DataTemplate DataType="tools:BrushShapeSettings">
               <StackPanel Classes="toolrow">

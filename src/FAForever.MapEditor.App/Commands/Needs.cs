@@ -43,4 +43,9 @@ public enum Needs
     /// No brush stroke is going on: a stroke holds the map's transaction while the mouse is down.
     /// </summary>
     NoStroke = 64,
+
+    /// <summary>
+    /// Something is selected on the map (<see cref="ViewModels.MainViewModel.Selection"/>).
+    /// </summary>
+    Selection = 128,
 }

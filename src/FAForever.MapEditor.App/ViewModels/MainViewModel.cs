@@ -90,9 +90,11 @@ public sealed partial class MainViewModel : ObservableObject
         Setup.WorkspaceReady += OnWorkspaceReady;
         VersionControl = new VersionControlViewModel(this);
         Assets = new AssetsViewModel(Logger("Assets"));
+        Selection = new SelectionViewModel(RunWithAsync);
         Commands = CommandServices.Create(this, _dialogs, typeof(MainViewModel).Assembly);
         Palette = new PaletteViewModel(Commands, RunAsync);
         InitializeShell();
+        InitializeSelection();
     }
 
     /// <summary>
@@ -269,7 +271,8 @@ public sealed partial class MainViewModel : ObservableObject
         && (!needs.HasFlag(Needs.Redo) || CanRedo)
         && (!needs.HasFlag(Needs.Workspace) || Setup.Workspace is not null)
         && (!needs.HasFlag(Needs.Project) || Map?.ProjectFolder is not null)
-        && (!needs.HasFlag(Needs.NoStroke) || _stroke is null);
+        && (!needs.HasFlag(Needs.NoStroke) || _stroke is null)
+        && (!needs.HasFlag(Needs.Selection) || Selection.HasAny);
 
     /// <summary>
     /// The history panel: the map as it was opened, then every step, the undone ones last.

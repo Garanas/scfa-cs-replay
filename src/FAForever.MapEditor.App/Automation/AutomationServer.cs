@@ -159,7 +159,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         "state", "commands", "run {id, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?}", "perf {reset?}", "logs {problems?, count?}",
         "diagnostics {record?, send?, endpoint?, flush?, upload?}", "version-control {open?, enable?, name?, email?, lfs?, remote?}",
         "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}",
-        "show {markers?, pathNodes?, camera?}", "screenshot {path, map?, gpu?, brush?}", "close",
+        "show {markers?, pathNodes?, camera?, props?, units?, areas?}", "screenshot {path, map?, gpu?, brush?}", "close",
     ];
 
     /// <summary>
@@ -456,7 +456,18 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["yaw"] = model.Camera.Now.Yaw,
                 ["pitch"] = model.Camera.Now.Pitch,
             },
-            ["show"] = new JsonObject { ["markers"] = model.ShowMarkers, ["pathNodes"] = model.ShowPathNodes, ["camera"] = model.ShowCamera },
+            ["show"] = new JsonObject { ["markers"] = model.ShowMarkers, ["pathNodes"] = model.ShowPathNodes, ["camera"] = model.ShowCamera, ["props"] = model.ShowProps, ["units"] = model.ShowUnits, ["areas"] = model.ShowAreas },
+            ["selection"] = new JsonObject
+            {
+                ["count"] = model.Selection.Count,
+                ["kinds"] = model.Selection.Summary,
+                ["items"] = new JsonArray([.. model.Selection.Items.Take(200).Select(thing => (JsonNode)JsonValue.Create(thing.ToString()))]),
+                ["selectable"] = model.SelectableKinds.ToString(),
+                ["copied"] = model.Selection.Clipboard?.Items.Length ?? 0,
+                ["x"] = model.Selection.Inspector.X,
+                ["z"] = model.Selection.Inspector.Z,
+                ["heading"] = model.Selection.Inspector.Heading,
+            },
             ["dock"] = model.Dock.ToString(),
             ["assets"] = new JsonObject
             {

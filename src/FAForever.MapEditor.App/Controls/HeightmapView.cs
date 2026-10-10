@@ -18,8 +18,10 @@ namespace FAForever.MapEditor.App.Controls;
 
 /// <summary>
 /// The terrain seen from above (<see cref="TerrainPicture"/>), with the mask of the layer being
-/// painted laid over it. The left mouse button paints with the brush, the right or middle one
-/// moves the map, the wheel zooms.
+/// painted laid over it, and what lies on the map over that: markers, areas, props and units, and
+/// the outlines of what is selected. The left mouse button is the active tool's, alt and a click
+/// send the 3D camera there, the right or middle button moves the map, the wheel zooms. While it has
+/// the keyboard (after a click), the keys it does not use go to the active tool.
 /// </summary>
 /// <remarks>
 /// The picture has one pixel per sample of the heightmap. After a change only what the picture
@@ -31,7 +33,14 @@ public sealed class HeightmapView : Control
     /// What the view draws besides the terrain and the markers' own colours, from the theme's
     /// tokens (<c>Styles/Tokens.axaml</c>).
     /// </summary>
-    internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, Typeface LabelFont, double LabelSize);
+    internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, Typeface LabelFont, double LabelSize,
+        IBrush Prop, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box);
+
+    public HeightmapView()
+    {
+        // a click gives it the keyboard, for the active tool's keys
+        Focusable = true;
+    }
 
     private Overlay? _overlay;
 
@@ -58,7 +67,14 @@ public sealed class HeightmapView : Control
         new Pen(Token<IBrush>("OverlayShadowBrush"), 1),
         new Pen(Token<IBrush>("OverlayBrush"), 2),
         new Typeface(Token<FontFamily>("SansFontFamily"), FontStyle.Normal, FontWeight.Bold),
-        Token<double>("FontSizeMapLabel"));
+        Token<double>("FontSizeMapLabel"),
+        Token<IBrush>("MapPropBrush"),
+        Token<IBrush>("MapUnitBrush"),
+        new Pen(Token<IBrush>("MapAreaBrush"), 1.5, new DashStyle([4, 3], 0)),
+        Token<IBrush>("MapAreaBrush"),
+        new Pen(Token<IBrush>("MapSelectionBrush"), 2),
+        Token<IBrush>("MapSelectionFillBrush"),
+        new Pen(Token<IBrush>("MapSelectionBrush"), 1, new DashStyle([4, 3], 0)));
 
     private T Token<T>(string key) => this.TryFindResource(key, ActualThemeVariant, out object? value) && value is T token
         ? token
@@ -133,6 +149,7 @@ public sealed class HeightmapView : Control
             _model.OverlaysChanged -= OnOverlayChanged;
             _model.CameraMoved -= OnOverlayChanged;
             _model.CursorChanged -= OnOverlayChanged;
+            _model.SelectionChanged -= OnOverlayChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
@@ -143,6 +160,7 @@ public sealed class HeightmapView : Control
             _model.OverlaysChanged += OnOverlayChanged;
             _model.CameraMoved += OnOverlayChanged;
             _model.CursorChanged += OnOverlayChanged;
+            _model.SelectionChanged += OnOverlayChanged;
         }
         OnMapChanged(this, EventArgs.Empty);
     }
@@ -237,7 +255,18 @@ public sealed class HeightmapView : Control
 
         if (_model?.ShownDocument is MapDocument document)
         {
-            _markers.Render(context, overlay, document.Markers, _model.ShowMarkers, _model.ShowPathNodes, _zoom, _offset);
+            using (context.PushClip(new Rect(Bounds.Size)))
+            {
+                DrawThings(context, overlay, document, _model);
+                _markers.Render(context, overlay, document.Markers, _model.ShowMarkers, _model.ShowPathNodes, _zoom, _offset);
+                DrawSelection(context, overlay, document, _model.Selection.Items);
+            }
+        }
+
+        if (_model?.ActiveTool?.Tool is { Box: (float x0, float z0, float x1, float z1) })
+        {
+            Rect box = new Rect(MapToControl(x0, z0), MapToControl(x1, z1)).Normalize();
+            context.DrawRectangle(overlay.SelectionFill, overlay.Box, box);
         }
 
         if (_model is { ShowCamera: true, HasMap: true })
@@ -298,9 +327,10 @@ public sealed class HeightmapView : Control
         base.OnPointerPressed(e);
         PointerPointProperties buttons = e.GetCurrentPoint(this).Properties;
         Point at = e.GetPosition(this);
-        if (buttons.IsLeftButtonPressed && _model?.HasMap == true && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        Focus();
+        if (buttons.IsLeftButtonPressed && _model?.HasMap == true && e.KeyModifiers.HasFlag(KeyModifiers.Alt))
         {
-            // control and a click: the 3D view looks here
+            // alt and a click: the 3D view looks here
             Point place = ControlToMap(at);
             _model.MoveCameraTo((float)place.X, (float)place.Y);
         }
@@ -309,7 +339,7 @@ public sealed class HeightmapView : Control
             // the left mouse is the active tool's
             Point map = ControlToMap(at);
             _pressed = tool;
-            tool.Press((float)map.X, (float)map.Y);
+            tool.Press((float)map.X, (float)map.Y, InputOf(e.KeyModifiers));
             e.Pointer.Capture(this);
         }
         else if (buttons.IsRightButtonPressed || buttons.IsMiddleButtonPressed)
@@ -333,7 +363,12 @@ public sealed class HeightmapView : Control
         else if (_pressed is IMapTool tool)
         {
             Point map = ControlToMap(at);
-            tool.Drag((float)map.X, (float)map.Y);
+            tool.Drag((float)map.X, (float)map.Y, InputOf(e.KeyModifiers));
+        }
+        if (_model is not null)
+        {
+            Point place = ControlToMap(at);
+            _model.Pointer = ((float)place.X, (float)place.Y);
         }
         ReportCursor(at);
         InvalidateVisual();
@@ -355,7 +390,110 @@ public sealed class HeightmapView : Control
     {
         base.OnPointerExited(e);
         _cursor = null;
+        if (_model is not null)
+        {
+            _model.Pointer = null;
+        }
         InvalidateVisual();
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        // the keys the view does not use itself are the active tool's (the select tool's Q, E, arrows, Escape)
+        if (!e.Handled && _model?.HasMap == true && _model.ActiveTool?.Tool is IMapTool tool && tool.Key(e.Key.ToString(), ModifiersOf(e.KeyModifiers)))
+        {
+            e.Handled = true;
+        }
+    }
+
+    private ToolInput InputOf(KeyModifiers modifiers) => new ToolInput(ModifiersOf(modifiers), (float)(1 / _zoom));
+
+    private static ToolModifiers ModifiersOf(KeyModifiers modifiers) =>
+        (modifiers.HasFlag(KeyModifiers.Shift) ? ToolModifiers.Shift : ToolModifiers.None)
+        | (modifiers.HasFlag(KeyModifiers.Control) ? ToolModifiers.Control : ToolModifiers.None)
+        | (modifiers.HasFlag(KeyModifiers.Alt) ? ToolModifiers.Alt : ToolModifiers.None);
+
+    /// <summary>
+    /// The areas as dashed rectangles with their names, the props as dots and the units as squares,
+    /// each when its overlay is on; only what lies in the view.
+    /// </summary>
+    private void DrawThings(DrawingContext context, Overlay overlay, MapDocument document, MainViewModel model)
+    {
+        using Performance.Span measure = Performance.Measure("top.things");
+        Rect shown = new Rect(Bounds.Size).Inflate(8);
+        if (model.ShowAreas)
+        {
+            foreach (Area area in document.Markers.Areas)
+            {
+                Rect rect = new Rect(MapToControl(area.X0, area.Z0), MapToControl(area.X1, area.Z1)).Normalize();
+                context.DrawRectangle(null, overlay.Area, rect);
+                FormattedText name = new FormattedText(area.Name, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, overlay.LabelFont, overlay.LabelSize, overlay.AreaLabel);
+                context.DrawText(name, rect.TopLeft + new Vector(4, 2));
+            }
+        }
+        if (model.ShowProps)
+        {
+            foreach (Prop prop in document.Props)
+            {
+                Point at = MapToControl(prop.Position.X, prop.Position.Z);
+                if (shown.Contains(at))
+                {
+                    context.FillRectangle(overlay.Prop, new Rect(at.X - 1.5, at.Y - 1.5, 3, 3));
+                }
+            }
+        }
+        if (model.ShowUnits)
+        {
+            foreach (PlacedUnit unit in document.AllUnits())
+            {
+                Point at = MapToControl(unit.Unit.Position.X, unit.Unit.Position.Z);
+                if (shown.Contains(at))
+                {
+                    context.DrawRectangle(overlay.Unit, overlay.Shadow, new Rect(at.X - 3.5, at.Y - 3.5, 7, 7));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// An outline around each selected thing: its rectangle for a decal or an area, a ring for the others.
+    /// </summary>
+    private void DrawSelection(DrawingContext context, Overlay overlay, MapDocument document, IReadOnlyList<ObjectRef> selected)
+    {
+        if (selected.Count == 0)
+        {
+            return;
+        }
+        using Performance.Span measure = Performance.Measure("top.selection");
+        Rect shown = new Rect(Bounds.Size).Inflate(16);
+        foreach (ObjectRef thing in selected)
+        {
+            System.Numerics.Vector2[] outline = document.OutlineOf(thing);
+            if (outline.Length > 0)
+            {
+                StreamGeometry shape = new StreamGeometry();
+                using (StreamGeometryContext figure = shape.Open())
+                {
+                    figure.BeginFigure(MapToControl(outline[0].X, outline[0].Y), true);
+                    for (int i = 1; i < outline.Length; i++)
+                    {
+                        figure.LineTo(MapToControl(outline[i].X, outline[i].Y));
+                    }
+                    figure.EndFigure(true);
+                }
+                context.DrawGeometry(overlay.SelectionFill, overlay.Selection, shape);
+            }
+            else if (document.PlaceOf(thing) is System.Numerics.Vector3 place)
+            {
+                Point at = MapToControl(place.X, place.Z);
+                if (shown.Contains(at))
+                {
+                    double radius = document.Find(thing) is Spawn ? 13 : 8;
+                    context.DrawEllipse(null, overlay.Selection, at, radius, radius);
+                }
+            }
+        }
     }
 
     private void OnMapChanged(object? sender, EventArgs e)

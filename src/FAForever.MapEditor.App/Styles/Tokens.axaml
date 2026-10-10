@@ -89,6 +89,12 @@
       <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
       <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
+      <!-- things on the map in the top view: props as dots, units as squares, areas as dashed rectangles; what is selected, and the box being drawn -->
+      <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
+      <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
+      <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
+      <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
+      <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />
       <!-- lines between parts of the window, and between the groups of a panel -->
       <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource Gray690}" />
       <SolidColorBrush x:Key="GroupDividerBrush" Color="{StaticResource Gray700}" />
@@ -132,6 +138,11 @@
       <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
       <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
+      <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
+      <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
+      <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
+      <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
+      <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />
       <SolidColorBrush x:Key="DividerBrush" Color="#FFD6D6D6" />
       <SolidColorBrush x:Key="GroupDividerBrush" Color="#FFE0E0E0" />
       <SolidColorBrush x:Key="SelectedBrush" Color="{StaticResource Blue100}" />

@@ -28,7 +28,7 @@ public static class Menus
         new MenuLayout("Edit",
         [
             "edit.undo", "edit.redo", Separator,
-            "edit.copy", "edit.paste", "edit.duplicate", "edit.delete", Separator,
+            "edit.copy", "edit.paste", "edit.duplicate", "edit.delete", "edit.rotate", Separator,
             "edit.saveAsPreset",
         ]),
         new MenuLayout("Select", ["select.all", "select.none", Separator, "select.symmetry"]),
