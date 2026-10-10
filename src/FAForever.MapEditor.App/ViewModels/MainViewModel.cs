@@ -49,6 +49,19 @@ public interface IEditorDialogs
     /// </summary>
     /// <param name="suggestedName">The name the dialog starts with, e.g. <c>heightmap.png</c>.</param>
     Task<string?> PickSaveFileAsync(string title, string suggestedName, IReadOnlyList<string> extensions, string? startIn = null) => Task.FromResult<string?>(null);
+
+    /// <summary>
+    /// Whether the person agrees to what <paramref name="message"/> says will happen (user story
+    /// M-8: an upload to the vault). Without a dialog of its own (a test's answers), the answer is no.
+    /// </summary>
+    /// <param name="action">The button that agrees, e.g. <c>Upload</c>.</param>
+    Task<bool> ConfirmAsync(string title, string message, string action) => Task.FromResult(false);
+
+    /// <summary>
+    /// Opens a page in the system's browser (user story M-8: signing in to FAForever). Without a
+    /// browser of its own (a test's answers), it opens nothing.
+    /// </summary>
+    Task OpenInBrowserAsync(Uri page) => Task.CompletedTask;
 }
 
 /// <summary>
@@ -111,6 +124,7 @@ public sealed partial class MainViewModel : ObservableObject
         Setup.WorkspaceReady += OnWorkspaceReady;
         VersionControl = new VersionControlViewModel(this);
         Report = new ReportProblemViewModel(this, _dialogs);
+        Upload = new VaultUploadViewModel(this);
         Assets = new AssetsViewModel(Logger("Assets"));
         Picker = new AssetPickerViewModel(() => Assets.Catalog);
         Events = new EditorEvents(Logger("Editor"));
@@ -165,6 +179,11 @@ public sealed partial class MainViewModel : ObservableObject
     /// The page that bundles a problem report (user story F-17).
     /// </summary>
     public ReportProblemViewModel Report { get; }
+
+    /// <summary>
+    /// The upload of the open map to FAForever's vault, and its sign-in (user story M-8).
+    /// </summary>
+    public VaultUploadViewModel Upload { get; }
 
     /// <summary>
     /// The command palette (user story F-2).
