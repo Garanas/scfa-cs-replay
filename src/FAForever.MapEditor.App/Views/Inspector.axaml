@@ -7,6 +7,7 @@
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              xmlns:workspaces="using:FAForever.MapEditor.Project.Workspaces"
              xmlns:panels="using:FAForever.MapEditor.App.Views.MapPanels"
+             xmlns:rules="using:FAForever.MapEditor.App.Views.RulePanels"
              x:Class="FAForever.MapEditor.App.Views.Inspector"
              x:DataType="vm:MainViewModel">
   <Border Classes="inspector">
@@ -312,6 +313,13 @@
               </DataTemplate>
               <DataTemplate DataType="vm:WaterDetailsSection">
                 <panels:WaterDetailsPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
+              <!-- the rules of masks (K-2) and props (P-4): a view of their own each -->
+              <DataTemplate DataType="vm:MaskRulesSection">
+                <rules:MaskRulesPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
+              <DataTemplate DataType="vm:PropRuleSection">
+                <rules:PropRulePanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
               </DataTemplate>
               <DataTemplate DataType="vm:LayerSection">
                 <panels:LayerPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />

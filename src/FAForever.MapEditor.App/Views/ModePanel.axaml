@@ -5,6 +5,7 @@
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              xmlns:ws="using:FAForever.MapEditor.Project.Workspaces"
              xmlns:panels="using:FAForever.MapEditor.App.Views.MapPanels"
+             xmlns:rules="using:FAForever.MapEditor.App.Views.RulePanels"
              x:Class="FAForever.MapEditor.App.Views.ModePanel"
              x:DataType="vm:MainViewModel">
   <Border Classes="modepanel">
@@ -78,8 +79,12 @@
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:MaskItem">
                         <DockPanel>
-                          <TextBlock DockPanel.Dock="Right" Classes="caption mono" Text="{Binding Size}" />
-                          <TextBlock Text="{Binding Name}" />
+                          <Button DockPanel.Dock="Right" Classes="beside" Content="Rules..."
+                                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).MaskRules.OpenCommand}" CommandParameter="{Binding Name}"
+                                  AutomationProperties.Name="{Binding Name, StringFormat='Rules of the mask {0}'}"
+                                  AutomationProperties.HelpText="Make the mask from slope, height, distance to water, other layers and noise (K-2)" />
+                          <TextBlock DockPanel.Dock="Right" Classes="caption mono" Text="{Binding Size}" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
                         </DockPanel>
                       </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -422,6 +427,10 @@
                   </ItemsControl>
                 </StackPanel>
               </Border>
+            </DataTemplate>
+            <!-- the rules that place props (P-4): a view of its own -->
+            <DataTemplate DataType="vm:PropRulesSection">
+              <rules:PropRulesPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
             </DataTemplate>
             <!-- the mode's overlays; a check box runs the overlay's command, as its chip does -->
             <DataTemplate DataType="vm:OverlaySection">

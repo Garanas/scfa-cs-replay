@@ -1,0 +1,39 @@
+<!-- The Props panel's rules (P-4): the map's rules in the order they place, choosing one edits it in the inspector;
+     Add, Delete, and Generate with how the props from rules stand. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.RulePanels.PropRulesPanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack" DataContext="{Binding PropRules}" x:DataType="vm:PropRulesViewModel">
+      <TextBlock Classes="overline" Text="{Binding Source=Rules, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding ChosenItem}" IsVisible="{Binding !IsEmpty}" AutomationProperties.Name="Prop rules">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:PropRuleItem">
+            <StackPanel>
+              <TextBlock Text="{Binding Name}" />
+              <TextBlock Classes="caption" Text="{Binding Summary}" />
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding IsEmpty}"
+                 Text="None yet: a rule places the palette's props where strata or masks allow, with a density, spacing and clustering, generated when asked; props placed by hand stay." />
+      <TextBox Text="{Binding NewName}" PlaceholderText="Name (optional)" AutomationProperties.Name="Name of a new rule"
+               AutomationProperties.HelpText="Left empty, the new rule gets a free name" />
+      <StackPanel Classes="inline">
+        <Button Content="Add" Command="{Binding AddCommand}" AutomationProperties.Name="Add a rule with the palette"
+                AutomationProperties.HelpText="A new rule places the props of the palette above, anywhere until it gets layers" />
+        <Button Content="Delete" Command="{Binding DeleteCommand}" IsEnabled="{Binding HasChosen}" AutomationProperties.Name="Delete the chosen rule and its props" />
+      </StackPanel>
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Classes="beside" Content="Generate" Command="{Binding GenerateCommand}"
+                AutomationProperties.Name="Generate the props from the rules"
+                AutomationProperties.HelpText="Places the props of every rule again in place of the ones they placed before: one step of undo" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Status}" VerticalAlignment="Center" AutomationProperties.Name="How the props from rules stand" />
+      </DockPanel>
+    </StackPanel>
+  </Border>
+</UserControl>
