@@ -125,7 +125,7 @@ public sealed partial class StampTool : ObservableObject, IShapedBrushTool
         {
             return;
         }
-        if (HeightLayers.SculptProblem(document, _model.HeightStack.Chosen) is string problem)
+        if (HeightLayers.SculptProblem(document, _model.HeightStack.Chosen, _model.ShownHeights) is string problem)
         {
             _model.Status = problem;
             return;

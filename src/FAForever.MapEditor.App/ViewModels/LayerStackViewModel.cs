@@ -204,7 +204,7 @@ public partial class LayerStackViewModel : ObservableObject
         }
     }
 
-    public Layer? ChosenLayer => ChosenItem?.Layer;
+    public Layer? ChosenLayer => ChosenItem?.Layer ?? (Chosen is null ? null : _shown?.Find(Chosen));
 
     public bool CanRemove => ChosenItem is { IsBase: false };
 
@@ -257,8 +257,8 @@ public partial class LayerStackViewModel : ObservableObject
             Layer = MakeLayerSettings(document is null ? [Everywhere] : ClipChoices(document));
         }
         // a dab of a brush changes a layer's values, not what the list shows of it: only the previews follow
-        string signature = string.Join("|", layers.Select(layer => layer.Name + ":" + SummaryOf(layer) + ":" + layer.Path));
-        if (document is not null && stack is not null && (ReferenceEquals(stack, _shown) || signature == _signature))
+        string signature = FilterKey + "#" + string.Join("|", layers.Select(layer => layer.Name + ":" + SummaryOf(layer) + ":" + layer.Path));
+        if (document is not null && stack is not null && signature == _signature)
         {
             if (!ReferenceEquals(stack, _shown))
             {
@@ -270,8 +270,10 @@ public partial class LayerStackViewModel : ObservableObject
         _shown = stack;
         _signature = signature;
         int count = layers.Length;
-        Items = [.. layers.Select((layer, index) => new StackLayerItem(layer, index, count, document is null || stack is null ? null : PreviewPicture.OfLayer(document, stack, layer),
-            SummaryOf(layer), this)).Reverse()];
+        Items = [.. layers.Select((layer, index) => (Layer: layer, Index: index))
+            .Where(entry => document is null || Shows(document, entry.Layer))
+            .Select(entry => new StackLayerItem(entry.Layer, entry.Index, count, document is null || stack is null ? null : PreviewPicture.OfLayer(document, stack, entry.Layer),
+                SummaryOf(entry.Layer), this)).Reverse()];
         Summary = SummaryOfStack(count);
         string? chosen = Chosen is string name && layers.Any(layer => layer.Name == name)
             ? name
@@ -305,6 +307,16 @@ public partial class LayerStackViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Whether the list shows a layer of the stack (a subclass's filters); every layer by default.
+    /// </summary>
+    protected virtual bool Shows(MapDocument document, Layer layer) => true;
+
+    /// <summary>
+    /// What the filters choose, so the list is made again when they change.
+    /// </summary>
+    protected virtual string FilterKey => "";
+
+    /// <summary>
     /// The layer chosen when the chosen one is gone: the highest that can be painted, else the highest.
     /// </summary>
     protected virtual Layer? Preferred(MapDocument? document, ImmutableArray<Layer> layers) =>
@@ -330,6 +342,7 @@ public partial class LayerStackViewModel : ObservableObject
     public void Choose(string name) =>
         Chosen = Items.FirstOrDefault(item => item.Name == name)?.Name
             ?? Items.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.Name
+            ?? _shown?.Find(name)?.Name
             ?? throw new ArgumentException(Items.Count == 0
                 ? $"The map has no {Commands.Word}s"
                 : $"The map has no {Commands.Word} '{name}': {string.Join(", ", Items.Select(item => item.Name))}");

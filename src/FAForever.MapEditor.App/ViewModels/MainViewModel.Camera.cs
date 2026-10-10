@@ -17,7 +17,7 @@ public sealed partial class MainViewModel
 
     private EditorCamera NewCamera()
     {
-        CameraGround ground = new CameraGround(() => ShownDocument?.Terrain.Heightmap);
+        CameraGround ground = new CameraGround(() => ShownHeightmap);
         return new EditorCamera(ground.Smooth, ground.Exact);
     }
 

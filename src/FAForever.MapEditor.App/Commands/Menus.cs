@@ -57,7 +57,7 @@ public static class Menus
         ]),
         new MenuLayout("Modes",
         [
-            Mode("terrain", "terrain.addLayer", "terrain.bake", "terrain.importHeightmap", "terrain.exportHeightmap", "terrain.saveBrush"),
+            Mode("terrain", "terrain.addLayer", "terrain.bake", "terrain.importHeightmap", "terrain.exportHeightmap", "terrain.saveBrush", Separator, "terrain.switchHeights", "terrain.writeDraft", "terrain.useAsFinalBase"),
             Mode("paint", "paint.chooseTexture", "paint.addStratum", "paint.addMask", "paint.renameMask", "paint.deleteMask", "paint.maskRules", "paint.shader"),
             Mode("masks"),
             Mode("water", "water.toggle", "water.addWaveGenerator", "water.placeWaveGenerator"),
