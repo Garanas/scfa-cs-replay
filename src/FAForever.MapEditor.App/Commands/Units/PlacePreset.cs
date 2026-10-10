@@ -14,15 +14,19 @@ namespace FAForever.MapEditor.App.Commands;
 /// group of an army, one step of undo: its middle at a place (on a whole ogrid, so structures stay
 /// on the build grid), turned in quarter turns, each unit as high above the terrain as it was.
 /// What is left out is the place tool's: its army, group (the new group goes in it) and heading;
-/// the place, the mouse's (else the middle of the map). Selects the units placed, with their images.
+/// the place, the mouse's (else the middle of the map). A preset with an army role (the examples:
+/// civilian, enemy, player) goes to the army of that role on this map (<see cref="UnitPresets.ArmyFor"/>)
+/// unless the army is given; one of wrecks into the army's <c>WRECKAGE</c> group. Selects the units
+/// placed, with their images (a player's preset's images go to the partner spawns' armies).
 /// </summary>
 /// <param name="Name">The preset's name (Units mode, Presets); left out, the one the place tool places.</param>
 /// <param name="X">In ogrids.</param>
 /// <param name="Heading">In degrees, clockwise in the top view; rounded to quarter turns.</param>
+/// <param name="Wreck">Whether to place them as wrecks; left out, as the preset says or the tool's As wrecks.</param>
 /// <returns>The army, the new group's path and the units' names.</returns>
 [UndoStep]
 [EditorCommand("units.placePreset", "Place a preset", Story = "U-4")]
-public sealed record PlaceUnitPreset(string? Name = null, float? X = null, float? Z = null, string? Army = null, string? Group = null, float? Heading = null) : IRequest<JsonObject>;
+public sealed record PlaceUnitPreset(string? Name = null, float? X = null, float? Z = null, string? Army = null, string? Group = null, float? Heading = null, bool? Wreck = null) : IRequest<JsonObject>;
 
 public sealed class PlaceUnitPresetHandler(MainViewModel model, PresetsViewModel presets, SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<PlaceUnitPreset, JsonObject>
 {
@@ -32,34 +36,23 @@ public sealed class PlaceUnitPresetHandler(MainViewModel model, PresetsViewModel
         UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
         string name = request.Name ?? tool.Preset ?? throw new ArgumentException("Choose a preset in the Units mode's panel, or give its name as the argument name");
         Preset preset = library.Find(UnitPreset.Kind, name) ?? throw new ArgumentException($"There is no units preset '{name}'");
-        // the new group is named after the preset, not after the group its units were saved from
-        UnitGroup template = UnitPreset.Template(preset) with { Name = preset.Name.Replace('/', '-') };
+        UnitPresetSettings settings = UnitPreset.Settings(preset);
         MapDocument document = edit.Transaction.Document;
-        string army = request.Army ?? tool.Army ?? throw new ArgumentException("The map has no army to place units for: add one in the Map mode");
-        UnitCommands.RequireArmy(document, army);
         ImmutableArray<string> parent = UnitGroupEdits.ParsePath(request.Group ?? tool.Group);
         (float x, float z) = (request.X, request.Z) is (float px, float pz) ? (px, pz) : model.Pointer ?? (document.Width / 2f, document.Height / 2f);
         x = MathF.Round(x);
         z = MathF.Round(z);
         float radians = BuildGrid.SnapHeading((float)((request.Heading ?? tool.Heading) * Math.PI / 180));
+        bool? wreck = request.Wreck ?? (tool.AsWrecks ? true : null);
 
         ImmutableArray<string> names = [];
         ImmutableArray<string> group = [];
         ImmutableArray<ObjectRef> placed = [];
+        string army = "";
         UnitCommands.Apply(edit, d =>
         {
-            // the group to place into is made when missing, as placing a unit makes it
-            if (d.FindGroup(army, parent) is null)
-            {
-                for (int depth = 1; depth <= parent.Length; depth++)
-                {
-                    if (d.FindGroup(army, parent[..depth]) is null)
-                    {
-                        d = d.AddGroup(army, parent[..(depth - 1)], parent[depth - 1], out _);
-                    }
-                }
-            }
-            d = d.PlaceUnits(template, army, parent, x, z, radians, out names, out group);
+            // the new group is named after the preset, not after the group its units were saved from
+            d = UnitPresets.Place(d, settings, preset.Name, request.Army, tool.Army, parent, wreck, x, z, radians, out names, out group, out army);
             // with the symmetry, the preset's units in every part of the map, in the same group (F-12)
             return model.MirrorPlaced(d, [.. names.Select(ObjectRef.Unit)], out placed);
         });

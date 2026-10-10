@@ -1,0 +1,142 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Player start, Cybran economy",
+  "settings": {
+    "group": {
+      "name": "Player start, Cybran economy",
+      "units": [
+        {
+          "blueprint": "urb1101",
+          "x": 6.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1101",
+          "x": -1.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1106",
+          "x": -7.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1101",
+          "x": -7.5,
+          "y": 0,
+          "z": -13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1101",
+          "x": -21.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1101",
+          "x": -13.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1202",
+          "x": -19.5,
+          "y": 0,
+          "z": 7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1202",
+          "x": -7.5,
+          "y": 0,
+          "z": -15.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1106",
+          "x": -17.5,
+          "y": 0,
+          "z": 7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1106",
+          "x": 6.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1102",
+          "x": 21.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1201",
+          "x": -7.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1101",
+          "x": -11.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1101",
+          "x": 4.5,
+          "y": 0,
+          "z": 7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1105",
+          "x": -3.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1105",
+          "x": -7.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1202",
+          "x": 4.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urb1105",
+          "x": -11.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 18,
+    "role": "player",
+    "source": "SCCA_R04, army Player, group Initial_Economy"
+  }
+}

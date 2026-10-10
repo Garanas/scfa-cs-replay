@@ -1,0 +1,43 @@
+[
+  { "name": "UEF base, small", "map": "FAF_Coop_Theban_Colony", "army": "UEF", "path": "M2/M2_Fire_Base_South_D3/M2_Fire_Base_South_D2/M2_Fire_Base_South_D1", "role": "enemy", "leave": ["Engineers"] },
+  { "name": "UEF base, medium", "map": "X1CA_006", "army": "Fletcher", "path": "M2/Main_Base/M2_Fletcher_Base_D3/M2_Fletcher_Base_D2/M2_Fletcher_Base_D1", "role": "enemy", "leave": ["Engineers"] },
+  { "name": "UEF base, large", "map": "SCCA_A05", "army": "UEF", "path": "West_Base_D3", "role": "enemy", "leave": ["Engineers"] },
+  { "name": "Aeon base, small", "map": "X1CA_001", "army": "Order", "path": "M2/M2_Bases/M2_Town_Attack_Base", "role": "enemy", "leave": ["Engineers"] },
+  { "name": "Aeon base, medium", "map": "X1CA_002", "army": "Order", "path": "M1/M1_Order_MainBase_D3/M1_Order_MainBase_D2/M1_Order_MainBase_D1", "role": "enemy", "leave": ["Engineers"], "radius": 50 },
+  { "name": "Aeon base, large", "map": "FAF_Coop_Operation_Tight_Spot", "army": "Loyalist", "path": "M3/M3_Loyalist_Base_D1", "role": "enemy", "leave": ["Engineers"] },
+  { "name": "Cybran base, small", "map": "X1CA_005", "army": "QAI", "path": "M3_QAI_Main_Base_D3", "role": "enemy", "leave": ["Engineers"] },
+  { "name": "Cybran base, medium", "map": "SCCA_E04", "army": "Cybran", "path": "M1_Expansion_Base", "role": "enemy", "leave": ["Engineers"] },
+  { "name": "Cybran base, large", "map": "FAF_Coop_Theban_Colony", "army": "Player1", "path": "M1_Player_Base", "role": "enemy", "leave": ["Engineers"] },
+  { "name": "Seraphim base, small", "map": "X1CA_006", "army": "Seraphim", "path": "M1/Main_Base/M1_Seraph_Base_D3/M1_Seraph_Base_D2/M1_Seraph_Base_D1", "role": "enemy", "leave": ["Engineers"], "radius": 45 },
+  { "name": "Seraphim base, medium", "map": "X1CA_006", "army": "Seraphim", "path": "M2/M2_Seraph_Base_D3/M2_Seraph_Base_D2/M2_Seraph_Base_D1", "role": "enemy", "leave": ["Engineers"], "radius": 55 },
+  { "name": "Seraphim base, large", "map": "X1CA_004", "army": "Seraphim", "path": "M1/M1_Seraph_West_D3/M1_Seraph_West_D2/M1_Seraph_West_D1", "role": "enemy", "leave": ["Engineers"] },
+
+  { "name": "Aeon bridge defences, walled", "map": "X1CA_001", "army": "Order", "path": "M1/M1_Bases/M1_Order_Bridge_Defense", "role": "enemy" },
+  { "name": "Cybran defence point, walled", "map": "FAF_Coop_Fort_Clarke_Assault", "army": "Cybran", "path": "M3/Main_Base/M3_East_Defenses_D1", "role": "enemy" },
+  { "name": "Cybran defence camp", "map": "X1CA_005", "army": "QAI", "path": "M3_Initial_Units/M3_QAI_Eastern_Defense_Camp_D3", "role": "enemy" },
+  { "name": "UEF outpost, walled", "map": "rainmakers_survival.v0065", "army": "Objective", "path": "Outposts/Outpost3", "role": "enemy" },
+  { "name": "UEF turret camp", "map": "SCCA_Coop_R01", "army": "UEF", "path": "M2UEF/M2_UEFDefenseCamps/M2_UEFCamp_1/M2_UEFCamp_1_Turrets_Strong", "role": "enemy" },
+  { "name": "Seraphim defence point", "map": "adaptive_salt_and_pepper.v0003", "army": "ARMY_17", "path": "Optional_Civilian_Defenses_3", "role": "enemy" },
+
+  { "name": "UEF wall ring", "map": "FAF_Coop_Operation_Rescue", "army": "UEF", "path": "Tech/Walls", "role": "enemy" },
+  { "name": "UEF wall corners", "map": "FAF_Coop_Operation_Trident", "army": "UEF", "path": "M1/M1_Walls", "role": "enemy" },
+  { "name": "UEF wall line", "map": "FAF_Coop_Prothyon_16", "army": "UEFAlly", "path": "M5/M5_UEFAlly_Walls_3", "role": "enemy" },
+  { "name": "Aeon wall ring", "map": "FAF_Coop_Operation_Yath_Aez", "army": "Aeon", "path": "Part3/P3AWalls", "role": "enemy" },
+  { "name": "Cybran wall ring", "map": "FAF_Coop_Operation_Uhthe_Thuum_QAI", "army": "Nodes", "path": "Mainframe_Walls", "role": "enemy" },
+  { "name": "Civilian wall ring", "map": "FAF_Coop_Havens_Invasion", "army": "Civilian", "path": "M1/M1_Walls", "role": "civilian" },
+
+  { "name": "UEF civilian town", "map": "X1CA_001", "army": "Civilians", "path": "M2/M2_Civilian_South_City", "role": "civilian" },
+  { "name": "UEF civilian town, walled", "map": "Supreme Commander Forged Alliance/maps/SCMP_022", "army": "NEUTRAL_CIVILIAN", "path": "INITIAL", "role": "civilian" },
+  { "name": "Aeon civilian town, walled", "map": "Supreme Commander Forged Alliance/maps/SCMP_018", "army": "NEUTRAL_CIVILIAN", "path": "INITIAL", "role": "civilian" },
+  { "name": "Cybran civilian town", "map": "SCCA_A02", "army": "NeutralCybran", "path": "M2_City", "role": "civilian" },
+  { "name": "Seraphim civilian outpost", "map": "adaptive_salt_and_pepper.v0003", "army": "ARMY_17", "path": "Optional_Civilian_Defenses_2", "role": "civilian" },
+
+  { "name": "Wreck field, UEF tanks and gunships", "map": "SCCA_R01", "army": "Wreckage_Holding", "path": "Part1_UEF_Wreckage", "role": "civilian", "wrecks": true },
+  { "name": "Wreck field, mixed", "map": "Supreme Commander Forged Alliance/maps/SCMP_018", "army": "NEUTRAL_CIVILIAN", "path": "WRECKAGE", "role": "civilian", "wrecks": true },
+  { "name": "Wreck field, Aeon", "map": "SCCA_A03", "army": "Eris", "path": "WRECKAGE", "role": "civilian", "wrecks": true, "radius": 50 },
+  { "name": "Wreck field, Cybran, small", "map": "SCCA_E01", "army": "Cybran", "path": "WRECKAGE", "role": "civilian", "wrecks": true },
+  { "name": "Wrecked Cybran town", "map": "Supreme Commander Forged Alliance/maps/SCMP_012", "army": "NEUTRAL_CIVILIAN", "path": "WRECKAGE", "role": "civilian", "wrecks": true },
+
+  { "name": "Player start, UEF outpost", "map": "FAF_Coop_Prothyon_16", "army": "Player1", "path": "Starting Base", "role": "player" },
+  { "name": "Player start, Cybran economy", "map": "SCCA_R04", "army": "Player", "path": "Initial_Economy", "role": "player" }
+]

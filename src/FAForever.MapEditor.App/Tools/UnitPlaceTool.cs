@@ -79,11 +79,19 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
     private IReadOnlyList<PreviewOutline> _outlines = [];
 
     /// <summary>
+    /// The army role of the preset it places (<see cref="UnitPresetSettings.Role"/>), which picks the
+    /// army its units go to in place of <see cref="Army"/>; null for a preset without one.
+    /// </summary>
+    public string? PresetRole { get; private set; }
+
+    /// <summary>
     /// Makes a units preset what a click places, with its units' footprints under the mouse.
     /// </summary>
-    public void UsePreset(string name, UnitGroup units)
+    /// <param name="role">Its army role, if any.</param>
+    public void UsePreset(string name, UnitGroup units, string? role = null)
     {
         _outlines = PresetPreview.OfUnits(units, model.Assets.Catalog);
+        PresetRole = role;
         Preset = name;
     }
 
@@ -123,6 +131,7 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
     {
         ["unit"] = Unit?.Key,
         ["preset"] = Preset,
+        ["presetRole"] = Preset is null ? null : PresetRole,
         ["army"] = Army,
         ["group"] = Group,
         ["heading"] = Heading,

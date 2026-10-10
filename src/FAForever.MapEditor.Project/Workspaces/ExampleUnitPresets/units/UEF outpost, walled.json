@@ -1,0 +1,226 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "UEF outpost, walled",
+  "settings": {
+    "group": {
+      "name": "UEF outpost, walled",
+      "units": [
+        {
+          "blueprint": "ueb5101",
+          "x": 1.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 5.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -8.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -7.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb1101",
+          "x": 1.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 1.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 4.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 6.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb3201",
+          "x": 3.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb2104",
+          "x": -7.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 8.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 5.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 8.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 3.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb1101",
+          "x": 3.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 1.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -7.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 2.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 5.5,
+          "y": 0,
+          "z": 0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 0.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -6.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -6.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 5.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 8.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -8.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 0.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb2301",
+          "x": 6.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 7.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 2.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 8.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 30,
+    "role": "enemy",
+    "source": "rainmakers_survival.v0065, army Objective, group Outposts/Outpost3"
+  }
+}

@@ -1,0 +1,712 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Seraphim base, large",
+  "settings": {
+    "group": {
+      "name": "Seraphim base, large",
+      "units": [
+        {
+          "blueprint": "xsl0208",
+          "x": 16.5,
+          "y": 0,
+          "z": -18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "xsl0208",
+          "x": 23.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        }
+      ],
+      "groups": [
+        {
+          "name": "Factories",
+          "units": [
+            {
+              "blueprint": "xsb0201",
+              "x": 3.5,
+              "y": 0,
+              "z": -22.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0101",
+              "x": 13.5,
+              "y": 0,
+              "z": -26.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0202",
+              "x": -22.5,
+              "y": 0,
+              "z": 8.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0201",
+              "x": 12.5,
+              "y": 0,
+              "z": -6.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0202",
+              "x": -4.5,
+              "y": 0,
+              "z": 20.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0102",
+              "x": -12.5,
+              "y": 0,
+              "z": 12.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0201",
+              "x": 20.5,
+              "y": 0,
+              "z": -11.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0201",
+              "x": -6.5,
+              "y": 0,
+              "z": -24.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Energy",
+          "units": [
+            {
+              "blueprint": "xsb1105",
+              "x": -0.5,
+              "y": 0,
+              "z": -6.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": -27.5,
+              "y": 0,
+              "z": 9.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": -1.5,
+              "y": 0,
+              "z": 25.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": 23.5,
+              "y": 0,
+              "z": -16.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1105",
+              "x": 28.5,
+              "y": 0,
+              "z": 3.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": -1.5,
+              "y": 0,
+              "z": -25.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": 17.5,
+              "y": 0,
+              "z": -6.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": -1.5,
+              "y": 0,
+              "z": -21.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": 25.5,
+              "y": 0,
+              "z": -12.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1105",
+              "x": 20.5,
+              "y": 0,
+              "z": 7.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": 8.5,
+              "y": 0,
+              "z": -23.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1105",
+              "x": 7.5,
+              "y": 0,
+              "z": -5.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": 16.5,
+              "y": 0,
+              "z": -31.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1201",
+              "x": 24.5,
+              "y": 0,
+              "z": 5.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1105",
+              "x": -11.5,
+              "y": 0,
+              "z": -26.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": 15.5,
+              "y": 0,
+              "z": -11.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1201",
+              "x": 30.5,
+              "y": 0,
+              "z": -0.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1201",
+              "x": 3.5,
+              "y": 0,
+              "z": -5.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1105",
+              "x": 26.5,
+              "y": 0,
+              "z": 1.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": -17.5,
+              "y": 0,
+              "z": 11.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": -33.5,
+              "y": 0,
+              "z": 3.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": -7.5,
+              "y": 0,
+              "z": 15.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1105",
+              "x": -19.5,
+              "y": 0,
+              "z": -28.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1201",
+              "x": -15.5,
+              "y": 0,
+              "z": -26.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": -9.5,
+              "y": 0,
+              "z": 17.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Mass",
+          "units": [
+            {
+              "blueprint": "xsb1202",
+              "x": 0.5,
+              "y": 0,
+              "z": 25.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": -21.5,
+              "y": 0,
+              "z": -28.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1106",
+              "x": 0.5,
+              "y": 0,
+              "z": 23.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1202",
+              "x": 18.5,
+              "y": 0,
+              "z": -29.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": -21.5,
+              "y": 0,
+              "z": -26.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1106",
+              "x": -27.5,
+              "y": 0,
+              "z": -12.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": -35.5,
+              "y": 0,
+              "z": 3.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": -11.5,
+              "y": 0,
+              "z": -28.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1106",
+              "x": -38.5,
+              "y": 0,
+              "z": -34.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": -1.5,
+              "y": 0,
+              "z": -23.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1106",
+              "x": 18.5,
+              "y": 0,
+              "z": -27.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1202",
+              "x": -27.5,
+              "y": 0,
+              "z": -10.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": -11.5,
+              "y": 0,
+              "z": -24.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": -17.5,
+              "y": 0,
+              "z": 9.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": -9.5,
+              "y": 0,
+              "z": 19.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": -2.5,
+              "y": 0,
+              "z": -6.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1106",
+              "x": 0.5,
+              "y": 0,
+              "z": 27.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": 7.5,
+              "y": 0,
+              "z": -3.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": -7.5,
+              "y": 0,
+              "z": 13.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1106",
+              "x": -27.5,
+              "y": 0,
+              "z": -8.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1106",
+              "x": -36.5,
+              "y": 0,
+              "z": -32.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1202",
+              "x": -36.5,
+              "y": 0,
+              "z": -34.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1106",
+              "x": -29.5,
+              "y": 0,
+              "z": -10.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1106",
+              "x": -36.5,
+              "y": 0,
+              "z": -36.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1104",
+              "x": -23.5,
+              "y": 0,
+              "z": -28.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1106",
+              "x": 2.5,
+              "y": 0,
+              "z": 25.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Defense",
+          "units": [
+            {
+              "blueprint": "xsb2301",
+              "x": 31.5,
+              "y": 0,
+              "z": -24.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2204",
+              "x": -19.5,
+              "y": 0,
+              "z": -26.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2301",
+              "x": 36.5,
+              "y": 0,
+              "z": -6.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2104",
+              "x": 7.5,
+              "y": 0,
+              "z": -7.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2301",
+              "x": 23.5,
+              "y": 0,
+              "z": -34.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2101",
+              "x": 34.5,
+              "y": 0,
+              "z": -26.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2101",
+              "x": 25.5,
+              "y": 0,
+              "z": -37.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2101",
+              "x": 35.5,
+              "y": 0,
+              "z": -28.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2101",
+              "x": 8.5,
+              "y": 0,
+              "z": 29.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2301",
+              "x": 33.5,
+              "y": 0,
+              "z": -24.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2101",
+              "x": -25.5,
+              "y": 0,
+              "z": -28.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2101",
+              "x": -38.5,
+              "y": 0,
+              "z": 3.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2101",
+              "x": 26.5,
+              "y": 0,
+              "z": -35.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5202",
+              "x": -29.5,
+              "y": 0,
+              "z": 5.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2204",
+              "x": -0.5,
+              "y": 0,
+              "z": -4.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2204",
+              "x": -33.5,
+              "y": 0,
+              "z": 5.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2101",
+              "x": 38.5,
+              "y": 0,
+              "z": -7.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2104",
+              "x": 4.5,
+              "y": 0,
+              "z": 33.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2301",
+              "x": 5.5,
+              "y": 0,
+              "z": 30.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2101",
+              "x": -5.5,
+              "y": 0,
+              "z": -6.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Misc",
+          "units": [
+            {
+              "blueprint": "xsb5101",
+              "x": 2.5,
+              "y": 0,
+              "z": 36.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5101",
+              "x": 6.5,
+              "y": 0,
+              "z": 35.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5101",
+              "x": 11.5,
+              "y": 0,
+              "z": 29.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5101",
+              "x": 5.5,
+              "y": 0,
+              "z": 35.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5101",
+              "x": 3.5,
+              "y": 0,
+              "z": 36.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5101",
+              "x": 10.5,
+              "y": 0,
+              "z": 30.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0304",
+              "x": 29.5,
+              "y": 0,
+              "z": -18.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5101",
+              "x": 10.5,
+              "y": 0,
+              "z": 31.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb3101",
+              "x": 18.5,
+              "y": 0,
+              "z": -31.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5101",
+              "x": 9.5,
+              "y": 0,
+              "z": 32.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5101",
+              "x": 4.5,
+              "y": 0,
+              "z": 36.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5101",
+              "x": 7.5,
+              "y": 0,
+              "z": 34.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5101",
+              "x": 11.5,
+              "y": 0,
+              "z": 27.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb5101",
+              "x": 11.5,
+              "y": 0,
+              "z": 28.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        }
+      ]
+    },
+    "count": 95,
+    "role": "enemy",
+    "source": "X1CA_004, army Seraphim, group M1/M1_Seraph_West_D3/M1_Seraph_West_D2/M1_Seraph_West_D1"
+  }
+}

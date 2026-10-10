@@ -115,13 +115,14 @@ public sealed partial class PresetsViewModel : ObservableObject
 
     /// <summary>
     /// Uses the workspace's presets, and reads them again when a file changes there. Opening writes
-    /// nothing: a workspace without a presets folder is watched once the first preset makes it.
+    /// only the example unit presets the workspace never had (<see cref="ExampleUnitPresets"/>).
     /// </summary>
     public void Open(Workspace workspace)
     {
         _watcher?.Dispose();
         _watcher = null;
         MoveOldFolders(workspace);
+        WriteExamples(workspace);
         Use(workspace.Presets);
         Watch();
     }
@@ -154,6 +155,25 @@ public sealed partial class PresetsViewModel : ObservableObject
         if (Moved.Count > 0)
         {
             _log.LogInformation("Moved {Count} presets and templates into {Folder}", Moved.Count, workspace.PresetsFolder);
+        }
+    }
+
+    /// <summary>
+    /// Writes the example unit presets the workspace never had (<see cref="ExampleUnitPresets"/>).
+    /// </summary>
+    private void WriteExamples(Workspace workspace)
+    {
+        try
+        {
+            IReadOnlyList<string> written = ExampleUnitPresets.Ensure(workspace);
+            if (written.Count > 0)
+            {
+                _log.LogInformation("Wrote {Count} example unit presets into {Folder}", written.Count, workspace.PresetsFolder);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _log.LogError(exception, "Writing the example unit presets into {Folder} failed: {Reason}", workspace.PresetsFolder, exception.Message);
         }
     }
 

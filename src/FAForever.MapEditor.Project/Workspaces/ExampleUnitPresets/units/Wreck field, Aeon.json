@@ -1,0 +1,731 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Wreck field, Aeon",
+  "settings": {
+    "group": {
+      "name": "Wreck field, Aeon",
+      "units": [
+        {
+          "blueprint": "ual0106",
+          "x": 7.5,
+          "y": 0,
+          "z": -27.5,
+          "heading": -2.251
+        },
+        {
+          "blueprint": "ual0106",
+          "x": 6.5,
+          "y": 0,
+          "z": -25.5,
+          "heading": -2.251
+        },
+        {
+          "blueprint": "uab1106",
+          "x": -26.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -7.061798,
+          "y": 0,
+          "z": -31.135895,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "ual0106",
+          "x": -23.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": -2.766
+        },
+        {
+          "blueprint": "ual0106",
+          "x": 14.838348,
+          "y": 0,
+          "z": -1.2588959,
+          "heading": -2.609
+        },
+        {
+          "blueprint": "uab1101",
+          "x": 1.5,
+          "y": 0,
+          "z": 31.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uaa0103",
+          "x": -7.2575073,
+          "y": 0,
+          "z": 19.324188,
+          "heading": -0.585
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 16.796967,
+          "y": 0,
+          "z": -29.392212,
+          "heading": 0.576
+        },
+        {
+          "blueprint": "ual0106",
+          "x": -12.166626,
+          "y": 0,
+          "z": 12.2981415,
+          "heading": -2.601
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": -25.959259,
+          "y": 0,
+          "z": -12.293213,
+          "heading": -0.419
+        },
+        {
+          "blueprint": "uab1101",
+          "x": 25.5,
+          "y": 0,
+          "z": 7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab2104",
+          "x": 20.5,
+          "y": 0,
+          "z": -36.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1105",
+          "x": 29.5,
+          "y": 0,
+          "z": 23.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": -7.127014,
+          "y": 0,
+          "z": 27.784729,
+          "heading": -2.81
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 9.051117,
+          "y": 0,
+          "z": -1.8283691,
+          "heading": 0.436
+        },
+        {
+          "blueprint": "ual0106",
+          "x": -8.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": -1.806
+        },
+        {
+          "blueprint": "uab0102",
+          "x": -3.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": -11.486511,
+          "y": 0,
+          "z": -12.157257,
+          "heading": -2.749
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -13.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "ual0106",
+          "x": -19.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": -2.766
+        },
+        {
+          "blueprint": "uaa0103",
+          "x": -14.555664,
+          "y": 0,
+          "z": -3.5171967,
+          "heading": 0.995
+        },
+        {
+          "blueprint": "ual0208",
+          "x": 31.70282,
+          "y": 0,
+          "z": -11.400269,
+          "heading": 1.065
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": -20.526398,
+          "y": 0,
+          "z": -26.960632,
+          "heading": -0.463
+        },
+        {
+          "blueprint": "ual0208",
+          "x": 6.302948,
+          "y": 0,
+          "z": 14.107742,
+          "heading": -1.152
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": -20.46698,
+          "y": 0,
+          "z": -2.0532227,
+          "heading": 1.649
+        },
+        {
+          "blueprint": "ual0106",
+          "x": 14.684937,
+          "y": 0,
+          "z": -3.4896698,
+          "heading": -2.609
+        },
+        {
+          "blueprint": "uab1101",
+          "x": 0.5,
+          "y": 0,
+          "z": 34.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -5.1946106,
+          "y": 0,
+          "z": -31.852509,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -11.5,
+          "y": 0,
+          "z": -25.5,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -15.5,
+          "y": 0,
+          "z": -23.5,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "uea0103",
+          "x": -12,
+          "y": 0,
+          "z": -26,
+          "heading": -0.716
+        },
+        {
+          "blueprint": "ual0106",
+          "x": -12.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": 2.993
+        },
+        {
+          "blueprint": "uaa0103",
+          "x": -11.941742,
+          "y": 0,
+          "z": -14.9149475,
+          "heading": -0.803
+        },
+        {
+          "blueprint": "ual0208",
+          "x": -20.5,
+          "y": 0,
+          "z": -18.5,
+          "heading": -1.047
+        },
+        {
+          "blueprint": "uab3101",
+          "x": -23.5,
+          "y": 0,
+          "z": 24.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1106",
+          "x": 14.5,
+          "y": 0,
+          "z": 12.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -11.5,
+          "y": 0,
+          "z": -27.5,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "uaa0103",
+          "x": 24.956177,
+          "y": 0,
+          "z": -24.562378,
+          "heading": 2.382
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": -8.234772,
+          "y": 0,
+          "z": 12.477051,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0106",
+          "x": 7.5,
+          "y": 0,
+          "z": -25.5,
+          "heading": -2.251
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 41.141235,
+          "y": 0,
+          "z": 3.428711,
+          "heading": 0
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 7.8652344,
+          "y": 0,
+          "z": 26.188889,
+          "heading": -1.222
+        },
+        {
+          "blueprint": "uab2104",
+          "x": -41.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1202",
+          "x": 16.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -1.4602966,
+          "y": 0,
+          "z": -33.28607,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 11.5,
+          "y": 0,
+          "z": -29.5,
+          "heading": -2.068
+        },
+        {
+          "blueprint": "ual0208",
+          "x": -8.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 1.292
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": -31.790955,
+          "y": 0,
+          "z": 13.788239,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1201",
+          "x": 30.5,
+          "y": 0,
+          "z": 13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1106",
+          "x": 0.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1101",
+          "x": 28.5,
+          "y": 0,
+          "z": 18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1105",
+          "x": 34.5,
+          "y": 0,
+          "z": 18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab2104",
+          "x": -22.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -13.5,
+          "y": 0,
+          "z": -24.5,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "ual0106",
+          "x": -21.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": -2.766
+        },
+        {
+          "blueprint": "ual0106",
+          "x": 13.976746,
+          "y": 0,
+          "z": -0.75138855,
+          "heading": -2.609
+        },
+        {
+          "blueprint": "uaa0103",
+          "x": 1,
+          "y": 0,
+          "z": -7,
+          "heading": -1.23
+        },
+        {
+          "blueprint": "uab1101",
+          "x": -2.5,
+          "y": 0,
+          "z": 36.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1105",
+          "x": 30.5,
+          "y": 0,
+          "z": 26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -9.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 20.861237,
+          "y": 0,
+          "z": 30.85608,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1101",
+          "x": 21.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0106",
+          "x": -2.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": -2.827
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 26.129486,
+          "y": 0,
+          "z": -31.169983,
+          "heading": -0.384
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -4.044159,
+          "y": 0,
+          "z": -34.436554,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "uea0103",
+          "x": -7.4325256,
+          "y": 0,
+          "z": -33.937836,
+          "heading": 1.963
+        },
+        {
+          "blueprint": "uab0202",
+          "x": 4.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": -10.408539,
+          "y": 0,
+          "z": -32.493866,
+          "heading": -1.449
+        },
+        {
+          "blueprint": "uab1101",
+          "x": 22.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0106",
+          "x": -25.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": -2.766
+        },
+        {
+          "blueprint": "ual0208",
+          "x": 10.895172,
+          "y": 0,
+          "z": 3.949463,
+          "heading": -0.873
+        },
+        {
+          "blueprint": "uaa0103",
+          "x": -5.850464,
+          "y": 0,
+          "z": -24.32788,
+          "heading": 2.932
+        },
+        {
+          "blueprint": "ual0106",
+          "x": -26.5,
+          "y": 0,
+          "z": -4.5,
+          "heading": -2.766
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": -2.0194397,
+          "y": 0,
+          "z": -14.454361,
+          "heading": -2.243
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 15.5,
+          "y": 0,
+          "z": -23.5,
+          "heading": -1.422
+        },
+        {
+          "blueprint": "uab1101",
+          "x": 19.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0106",
+          "x": 8.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": -2.251
+        },
+        {
+          "blueprint": "uab0102",
+          "x": 0.5,
+          "y": 0,
+          "z": 13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0106",
+          "x": -15.595306,
+          "y": 0,
+          "z": 14.358353,
+          "heading": -2.601
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 38.61606,
+          "y": 0,
+          "z": -19.426605,
+          "heading": -1.073
+        },
+        {
+          "blueprint": "ual0104",
+          "x": 19.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": -0.995
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 13.5,
+          "y": 0,
+          "z": -34.5,
+          "heading": -1.03
+        },
+        {
+          "blueprint": "uab1101",
+          "x": 25.5,
+          "y": 0,
+          "z": 19.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -5.911438,
+          "y": 0,
+          "z": -33.719666,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "uab1101",
+          "x": 0.5,
+          "y": 0,
+          "z": 28.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1105",
+          "x": 31.5,
+          "y": 0,
+          "z": 29.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1202",
+          "x": -28.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1105",
+          "x": 31.5,
+          "y": 0,
+          "z": 20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0106",
+          "x": 15.626312,
+          "y": 0,
+          "z": -16.041534,
+          "heading": -1.091
+        },
+        {
+          "blueprint": "uab1202",
+          "x": 35.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 18.290833,
+          "y": 0,
+          "z": 9.404861,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1101",
+          "x": 28.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0208",
+          "x": -8.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": 1.292
+        },
+        {
+          "blueprint": "uab1202",
+          "x": -15.5,
+          "y": 0,
+          "z": 24.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uea0103",
+          "x": -6.3140564,
+          "y": 0,
+          "z": -9.059555,
+          "heading": 0.969
+        },
+        {
+          "blueprint": "uab1101",
+          "x": 22.5,
+          "y": 0,
+          "z": 18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -3.3276062,
+          "y": 0,
+          "z": -32.569275,
+          "heading": -2.775
+        },
+        {
+          "blueprint": "ual0106",
+          "x": 17.89859,
+          "y": 0,
+          "z": -13.842224,
+          "heading": -1.091
+        },
+        {
+          "blueprint": "uab1202",
+          "x": -1.5,
+          "y": 0,
+          "z": -19.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ual0106",
+          "x": 16.975067,
+          "y": 0,
+          "z": -15.616241,
+          "heading": -1.091
+        },
+        {
+          "blueprint": "uea0103",
+          "x": 3.1584473,
+          "y": 0,
+          "z": -29.07257,
+          "heading": -0.419
+        }
+      ],
+      "groups": []
+    },
+    "count": 102,
+    "role": "civilian",
+    "wrecks": true,
+    "source": "SCCA_A03, army Eris, group WRECKAGE"
+  }
+}

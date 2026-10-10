@@ -1147,6 +1147,28 @@ map's things.
 - `steep-deposit` (warning): a mass or hydrocarbon deposit whose ground rises more than
   `MarkerEdits.MaxGroundVariation` over the square it needs (`MarkerEdits.Steepness`).
 
+## Unit templates from real maps
+
+User story U-6. `Workspaces/UnitGroupScan` reads the `_save.lua` (and `_scenario.lua`) of every
+map folder under some folders and classifies each group with units (`UnitGroupCategory`: a base
+by its role groups `Defense`, `Factories`, `Energy`, `Mass`, `Misc`, `Engineers`, ... or by a
+cluster of structures with a factory, a base role, defence, walls, wreckage, civilian, start,
+scripting, other), the difficulty level of a campaign base (`_D1` inside `_D2` inside `_D3`), the
+army's role (`ArmyRoles`: player, civilian, enemy), the faction, size and blueprints, and sums
+the patterns of the names with numbers stripped; one-line Lua functions in a save's orders are
+blanked first. `faf-map dev scan-units <folders...> --out scan.json` runs it.
+`Workspaces/UnitTemplates` makes units presets from picks (`UnitTemplatePick`: map, army, group
+path, role, wrecks, groups to leave out, a rectangle, blueprints, a radius about the median):
+the subtree's units around their middle (a whole ogrid, so structures stay on the build grid),
+in the base's role groups (`CanonicalRole`, `RoleOrder`), each on the terrain (y 0).
+`faf-map dev unit-templates docs/map-editor/unit-template-picks.json <folders...> --out
+src/FAForever.MapEditor.Project/Workspaces/ExampleUnitPresets` writes the shipped examples, which
+`ExampleUnitPresets.Ensure` writes into a workspace's `presets/units` once (`.examples` names those
+written; a copy equal to an earlier version, listed in `Earlier`, is updated; a changed one stays).
+`Workspaces/UnitPresets` holds the preset records (`UnitPresetSettings` with the optional `Role`,
+`Wrecks`, `Source`), `ArmyFor(document, role, x, z)` and `Place`. The game's folders, the coop maps
+and the vault are only read.
+
 ## Tests
 
 `tests/FAForever.MapEditor.Project.Tests` uses the three maps of the map library's tests (linked,

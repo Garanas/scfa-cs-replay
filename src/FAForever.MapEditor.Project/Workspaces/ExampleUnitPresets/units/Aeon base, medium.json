@@ -1,0 +1,564 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Aeon base, medium",
+  "settings": {
+    "group": {
+      "name": "Aeon base, medium",
+      "units": [],
+      "groups": [
+        {
+          "name": "Factories",
+          "units": [
+            {
+              "blueprint": "uab0201",
+              "x": 19.5,
+              "y": 0,
+              "z": -7.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab0202",
+              "x": 3.5,
+              "y": 0,
+              "z": 18.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab0201",
+              "x": 9.5,
+              "y": 0,
+              "z": -9.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab0101",
+              "x": 29.5,
+              "y": 0,
+              "z": -1.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab0201",
+              "x": -0.5,
+              "y": 0,
+              "z": -7.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab0202",
+              "x": 17.5,
+              "y": 0,
+              "z": 18.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab0101",
+              "x": -10.5,
+              "y": 0,
+              "z": -1.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Energy",
+          "units": [
+            {
+              "blueprint": "uab1101",
+              "x": 16.5,
+              "y": 0,
+              "z": -2.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": 22.5,
+              "y": 0,
+              "z": 15.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": 24.5,
+              "y": 0,
+              "z": -8.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": 34.5,
+              "y": 0,
+              "z": 3.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": 0.5,
+              "y": 0,
+              "z": -0.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": -5.5,
+              "y": 0,
+              "z": -8.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1105",
+              "x": 17.5,
+              "y": 0,
+              "z": 23.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": 18.5,
+              "y": 0,
+              "z": -0.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": 2.5,
+              "y": 0,
+              "z": -2.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": -15.5,
+              "y": 0,
+              "z": 3.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1105",
+              "x": 6.5,
+              "y": 0,
+              "z": 45.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": -5.5,
+              "y": 0,
+              "z": -4.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": 14.5,
+              "y": 0,
+              "z": -8.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": 29.5,
+              "y": 0,
+              "z": -15.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": 4.5,
+              "y": 0,
+              "z": -8.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": -1.5,
+              "y": 0,
+              "z": 15.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1105",
+              "x": 3.5,
+              "y": 0,
+              "z": 23.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1101",
+              "x": 18.5,
+              "y": 0,
+              "z": -2.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1201",
+              "x": 7.5,
+              "y": 0,
+              "z": 25.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Mass",
+          "units": [
+            {
+              "blueprint": "uab1104",
+              "x": 6.5,
+              "y": 0,
+              "z": 1.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1104",
+              "x": -13.5,
+              "y": 0,
+              "z": 3.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1104",
+              "x": 12.5,
+              "y": 0,
+              "z": 1.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1104",
+              "x": -1.5,
+              "y": 0,
+              "z": 17.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1104",
+              "x": 32.5,
+              "y": 0,
+              "z": 3.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1104",
+              "x": 4.5,
+              "y": 0,
+              "z": 44.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1104",
+              "x": 16.5,
+              "y": 0,
+              "z": 44.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab1104",
+              "x": 22.5,
+              "y": 0,
+              "z": 17.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Defense",
+          "units": [
+            {
+              "blueprint": "uab2104",
+              "x": -27.5,
+              "y": 0,
+              "z": -5.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2101",
+              "x": 4.5,
+              "y": 0,
+              "z": -10.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2104",
+              "x": 13.5,
+              "y": 0,
+              "z": -40.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2204",
+              "x": 34.5,
+              "y": 0,
+              "z": 1.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2104",
+              "x": -31.5,
+              "y": 0,
+              "z": -1.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2101",
+              "x": -28.5,
+              "y": 0,
+              "z": -2.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2104",
+              "x": 35.5,
+              "y": 0,
+              "z": 5.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2204",
+              "x": 14.5,
+              "y": 0,
+              "z": -43.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2204",
+              "x": -15.5,
+              "y": 0,
+              "z": 1.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2101",
+              "x": 16.5,
+              "y": 0,
+              "z": -41.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2104",
+              "x": 17.5,
+              "y": 0,
+              "z": -44.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2204",
+              "x": -30.5,
+              "y": 0,
+              "z": -4.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2101",
+              "x": 14.5,
+              "y": 0,
+              "z": -10.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2104",
+              "x": 16.5,
+              "y": 0,
+              "z": 46.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2104",
+              "x": -16.5,
+              "y": 0,
+              "z": 5.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab2104",
+              "x": 4.5,
+              "y": 0,
+              "z": 46.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Misc",
+          "units": [
+            {
+              "blueprint": "uab5101",
+              "x": -32.5,
+              "y": 0,
+              "z": -4.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab3201",
+              "x": 24.5,
+              "y": 0,
+              "z": -6.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": -33.5,
+              "y": 0,
+              "z": -3.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab4202",
+              "x": 9.5,
+              "y": 0,
+              "z": -2.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab4202",
+              "x": 10.5,
+              "y": 0,
+              "z": 19.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": 14.5,
+              "y": 0,
+              "z": -45.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": 12.5,
+              "y": 0,
+              "z": -43.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5202",
+              "x": 13.5,
+              "y": 0,
+              "z": 25.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": 10.5,
+              "y": 0,
+              "z": -40.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": -29.5,
+              "y": 0,
+              "z": -7.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": 11.5,
+              "y": 0,
+              "z": -42.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": 15.5,
+              "y": 0,
+              "z": -46.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab4202",
+              "x": 10.5,
+              "y": 0,
+              "z": 47.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": -27.5,
+              "y": 0,
+              "z": -8.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab4202",
+              "x": -3.5,
+              "y": 0,
+              "z": -0.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": -33.5,
+              "y": 0,
+              "z": -2.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": -28.5,
+              "y": 0,
+              "z": -7.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab3201",
+              "x": -5.5,
+              "y": 0,
+              "z": -6.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": -34.5,
+              "y": 0,
+              "z": -1.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": 17.5,
+              "y": 0,
+              "z": -47.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab4202",
+              "x": 22.5,
+              "y": 0,
+              "z": -0.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": 16.5,
+              "y": 0,
+              "z": -46.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": -30.5,
+              "y": 0,
+              "z": -6.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "uab5101",
+              "x": 11.5,
+              "y": 0,
+              "z": -41.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        }
+      ]
+    },
+    "count": 74,
+    "role": "enemy",
+    "source": "X1CA_002, army Order, group M1/M1_Order_MainBase_D3/M1_Order_MainBase_D2/M1_Order_MainBase_D1"
+  }
+}

@@ -30,7 +30,7 @@ namespace FAForever.MapEditor.Project.Tests
 
             Assert.AreEqual(Path.Combine(workspace.PresetsFolder, "brushes", "Big crater.json"), file);
             StringAssert.Contains(File.ReadAllText(file), "\"mode\": \"Flatten\"", "the editor's JSON: camel case, enums as text");
-            CollectionAssert.AreEqual(new[] { "brushes", "lighting" }, presets.Kinds().ToArray());
+            CollectionAssert.AreEqual(new[] { "brushes", "lighting", "units" }, presets.Kinds().ToArray(), "units: the example unit presets of a new workspace");
             CollectionAssert.AreEqual(new[] { "a small hill", "Big crater" }, presets.List("brushes").Select(preset => preset.Name).ToArray());
             Assert.AreEqual(new BrushSettings(Mode.Flatten, 40, "craters/crater01.png"), presets.Find("brushes", "Big crater")!.Read<BrushSettings>());
             Assert.IsNull(presets.Find("brushes", "nothing"));

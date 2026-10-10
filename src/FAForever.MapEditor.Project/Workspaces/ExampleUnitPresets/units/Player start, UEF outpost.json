@@ -1,0 +1,51 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Player start, UEF outpost",
+  "settings": {
+    "group": {
+      "name": "Player start, UEF outpost",
+      "units": [
+        {
+          "blueprint": "ueb0101",
+          "x": 1.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb1101",
+          "x": -3.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb1101",
+          "x": 4.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb1202",
+          "x": -3.5,
+          "y": 0,
+          "z": -3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb1101",
+          "x": -1.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 5,
+    "role": "player",
+    "source": "FAF_Coop_Prothyon_16, army Player1, group Starting Base"
+  }
+}

@@ -5,6 +5,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- the example unit presets every workspace starts with (ExampleUnitPresets), made by faf-map dev unit-templates -->
+    <EmbeddedResource Include="Workspaces\ExampleUnitPresets\units\*.json" LogicalName="ExampleUnitPresets/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="FAForever.MapEditor.Project.Tests" />
   </ItemGroup>
 

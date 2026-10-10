@@ -1,0 +1,51 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "UEF turret camp",
+  "settings": {
+    "group": {
+      "name": "UEF turret camp",
+      "units": [
+        {
+          "blueprint": "ueb2101",
+          "x": 0.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": -1.571
+        },
+        {
+          "blueprint": "ueb2104",
+          "x": 0.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": -1.571
+        },
+        {
+          "blueprint": "ueb2104",
+          "x": 2.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": -1.571
+        },
+        {
+          "blueprint": "ueb2104",
+          "x": 0.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": -1.571
+        },
+        {
+          "blueprint": "ueb2101",
+          "x": -1.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": -1.571
+        }
+      ],
+      "groups": []
+    },
+    "count": 5,
+    "role": "enemy",
+    "source": "SCCA_Coop_R01, army UEF, group M2UEF/M2_UEFDefenseCamps/M2_UEFCamp_1/M2_UEFCamp_1_Turrets_Strong"
+  }
+}

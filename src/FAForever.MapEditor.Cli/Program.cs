@@ -98,14 +98,20 @@ namespace FAForever.MapEditor.Cli
         public string? ConvertInto { get; set; }
     }
 
-    [Verb("dev", HelpText = "Tools for working on the editor's source, e.g. 'dev replace <file> --old-file a.txt --new-file b.txt': replaces text keeping the file's line endings and UTF-8.")]
+    [Verb("dev", HelpText = "Tools for working on the editor's source, e.g. 'dev replace <file> --old-file a.txt --new-file b.txt': replaces text keeping the file's line endings and UTF-8; 'dev scan-units <folders...> --out scan.json': the unit groups of the maps in folders; 'dev unit-templates <picks.json> <folders...> --out <presets>': units presets from groups of those maps.")]
     public sealed class DevOptions
     {
-        [Value(0, MetaName = "action", Required = true, HelpText = "replace.")]
+        [Value(0, MetaName = "action", Required = true, HelpText = "replace, scan-units or unit-templates.")]
         public string Action { get; set; } = "";
 
-        [Value(1, MetaName = "file", Required = true, HelpText = "The file to change.")]
+        [Value(1, MetaName = "file", Required = true, HelpText = "replace: the file to change; scan-units: a folder of maps (or one map); unit-templates: the JSON file of picks.")]
         public string File { get; set; } = "";
+
+        [Value(2, MetaName = "folders", HelpText = "scan-units: more folders of maps; unit-templates: the folders of maps the picks name.")]
+        public IEnumerable<string> Folders { get; set; } = [];
+
+        [Option("out", HelpText = "scan-units: the JSON file to write the scan to; unit-templates: the presets folder to write into (the presets go into its units folder).")]
+        public string? Out { get; set; }
 
         [Option("old", HelpText = "replace: the text to replace, on one line (--old-file for several lines).")]
         public string? Old { get; set; }
@@ -148,10 +154,17 @@ namespace FAForever.MapEditor.Cli
         /// </summary>
         private static int Dev(DevOptions o)
         {
-            if (o.Action != "replace")
+            switch (o.Action)
             {
-                Console.Error.WriteLine($"There is no dev action '{o.Action}': replace");
-                return 2;
+                case "scan-units":
+                    return UnitScanCommand.Scan([o.File, .. o.Folders], o.Out);
+                case "unit-templates":
+                    return UnitScanCommand.Templates(o.File, [.. o.Folders], o.Out);
+                case "replace":
+                    break;
+                default:
+                    Console.Error.WriteLine($"There is no dev action '{o.Action}': replace, scan-units or unit-templates");
+                    return 2;
             }
             try
             {
