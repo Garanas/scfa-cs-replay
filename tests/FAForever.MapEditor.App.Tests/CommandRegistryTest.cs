@@ -158,12 +158,12 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = NewModel();
 
-            bool ran = await model.Commands.RunAsync("paint.shader");
+            bool ran = await model.Commands.RunAsync("water.placeWaveGenerator");
 
             Assert.IsFalse(ran);
-            StringAssert.Contains(model.Status, "Not built yet: Paint: Terrain shader");
-            StringAssert.Contains(model.Status, "user story S-4");
-            StringAssert.Contains(model.Diagnostics.Console.Last().Message, "paint.shader: not built yet, user story S-4");
+            StringAssert.Contains(model.Status, "Not built yet: Water: Place a wave generator");
+            StringAssert.Contains(model.Status, "user story W-1");
+            StringAssert.Contains(model.Diagnostics.Console.Last().Message, "water.placeWaveGenerator: not built yet, user story W-1");
         }
 
         [TestMethod]

@@ -58,7 +58,7 @@ public static class Menus
         [
             Mode("terrain", "terrain.addLayer", "terrain.bake", "terrain.importHeightmap", "terrain.exportHeightmap", "terrain.saveBrush"),
             Mode("paint", "paint.chooseTexture", "paint.addStratum", "paint.addMask", "paint.renameMask", "paint.deleteMask", "paint.maskRules", "paint.shader"),
-            Mode("water", "water.toggle", "water.addWaveGenerator"),
+            Mode("water", "water.toggle", "water.addWaveGenerator", "water.placeWaveGenerator"),
             Mode("lighting", "lighting.preset", "lighting.chooseCubemap"),
             Mode("markers", "markers.connectPaths", "markers.addChain", "markers.adaptive", "markers.placePreset"),
             Mode("props", "props.choose", "props.addToPalette", "props.followTerrain", Separator, "props.alignToTerrain", "props.upright", "props.dropToGround", "props.randomize", "props.replace", "props.randomVariant", Separator, "props.reclaim", "props.addRule", "props.keepFromRules"),
