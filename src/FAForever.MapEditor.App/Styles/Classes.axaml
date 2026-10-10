@@ -734,4 +734,8 @@
   <Style Selector="ListBox.versionfiles">
     <Setter Property="MaxHeight" Value="{StaticResource VersionFilesHeight}" />
   </Style>
+  <!-- the description of a problem report (F-17): a few lines high -->
+  <Style Selector="TextBox.reportdescription">
+    <Setter Property="Height" Value="{StaticResource SettingTextHeight}" />
+  </Style>
 </Styles>

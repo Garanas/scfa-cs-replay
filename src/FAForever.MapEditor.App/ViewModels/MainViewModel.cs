@@ -110,6 +110,7 @@ public sealed partial class MainViewModel : ObservableObject
         Setup = new WorkspaceSetupViewModel(_dialogs, Logger("Workspace"), text => Status = text);
         Setup.WorkspaceReady += OnWorkspaceReady;
         VersionControl = new VersionControlViewModel(this);
+        Report = new ReportProblemViewModel(this, _dialogs);
         Assets = new AssetsViewModel(Logger("Assets"));
         Picker = new AssetPickerViewModel(() => Assets.Catalog);
         Events = new EditorEvents(Logger("Editor"));
@@ -153,6 +154,11 @@ public sealed partial class MainViewModel : ObservableObject
     /// The version control page of the open project (user story F-18).
     /// </summary>
     public VersionControlViewModel VersionControl { get; }
+
+    /// <summary>
+    /// The page that bundles a problem report (user story F-17).
+    /// </summary>
+    public ReportProblemViewModel Report { get; }
 
     /// <summary>
     /// The command palette (user story F-2).

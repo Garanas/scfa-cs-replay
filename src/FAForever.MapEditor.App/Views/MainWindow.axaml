@@ -151,6 +151,7 @@
     </Panel>
     <views:DiagnosticsPage IsVisible="{Binding Diagnostics.IsOpen}" />
     <views:VersionControlPage IsVisible="{Binding VersionControl.IsOpen}" />
+    <views:ReportProblemPage IsVisible="{Binding Report.IsOpen}" />
     <views:NewMapPage IsVisible="{Binding NewMapPage.IsOpen}" />
   </Grid>
 </Window>
