@@ -102,6 +102,25 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// A new decal set centred on a place (<see cref="DecalSets"/>): one decal of its albedo with
+        /// its specular in the second slot (or of its normals when it has no albedo), carrying the
+        /// set's normals and masks (<see cref="Decal.Set"/>), so it is placed, moved and turned as one.
+        /// </summary>
+        /// <exception cref="ArgumentException">The set has neither an albedo nor normals.</exception>
+        public static Decal NewDecalSet(Heightmap heights, DecalSetAssets set, float x, float z, float width, float length, float heading,
+            float cutOffLod = DefaultCutOffLod, float nearCutOffLod = 0)
+        {
+            string first = set.Albedo ?? set.Normals ?? throw new ArgumentException($"The decal set {set.Name} has neither an albedo nor normals to draw");
+            Decal decal = NewDecal(heights, first, x, z, width, length, heading, cutOffLod, nearCutOffLod);
+            return decal with
+            {
+                Type = set.Albedo is null ? DecalType.Normals : DecalType.Albedo,
+                Textures = [TexturePath(first), set.Albedo is not null && set.Specular is string specular ? TexturePath(specular) : ""],
+                Set = DecalSets.ToDecalSet(set),
+            };
+        }
+
+        /// <summary>
         /// Adds a decal on top of the others (<see cref="DocumentEdits.AddDecal"/>).
         /// </summary>
         /// <param name="added">The new decal, with its id.</param>

@@ -253,6 +253,12 @@ namespace FAForever.MapEditor.Project.Files
             CutOffLod = source.CutOffLod,
             NearCutOffLod = source.NearCutOffLod,
             OwnerArmy = source.OwnerArmy,
+            Set = source.Set is DecalSet set ? new DecalSetDto
+            {
+                Name = set.Name,
+                Normals = set.Normals,
+                Masks = set.Masks.IsEmpty ? null : set.Masks.ToDictionary(StringComparer.Ordinal),
+            } : null,
         };
 
         public static Decal ToModel(DecalDto source) => new Decal
@@ -266,6 +272,12 @@ namespace FAForever.MapEditor.Project.Files
             CutOffLod = source.CutOffLod,
             NearCutOffLod = source.NearCutOffLod,
             OwnerArmy = source.OwnerArmy,
+            Set = source.Set is DecalSetDto set ? new DecalSet
+            {
+                Name = set.Name,
+                Normals = string.IsNullOrEmpty(set.Normals) ? null : set.Normals,
+                Masks = ImmutableSortedDictionary.CreateRange(StringComparer.Ordinal, set.Masks ?? []),
+            } : null,
         };
 
         public static DecalGroupDto ToDto(DecalGroup source) => new DecalGroupDto

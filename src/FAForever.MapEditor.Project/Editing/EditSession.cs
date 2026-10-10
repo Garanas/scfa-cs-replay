@@ -127,6 +127,13 @@ namespace FAForever.MapEditor.Project.Editing
         public string? SculptLayer { get; set; }
 
         /// <summary>
+        /// Where the decal sets' mask pictures are read from, for the decal-masks layers that follow
+        /// the decals after every step (<see cref="DecalMaskLayers.Follow(MapDocument, MapDocument, IDecalMaskPictures?)"/>);
+        /// null leaves those layers as they are.
+        /// </summary>
+        public IDecalMaskPictures? DecalPictures { get; set; }
+
+        /// <summary>
         /// Makes one edit, which can be undone as one step.
         /// </summary>
         /// <param name="mergeKey">Merges the edit into the previous step when that was an edit
@@ -303,6 +310,7 @@ namespace FAForever.MapEditor.Project.Editing
         private bool Record(string description, MapDocument result, string? mergeKey)
         {
             MapDocument previous = Document;
+            result = DecalMaskLayers.Follow(previous, result, DecalPictures);
             result = HeightLayers.Follow(previous, result, SculptLayer);
             if (result.Equals(previous))
             {

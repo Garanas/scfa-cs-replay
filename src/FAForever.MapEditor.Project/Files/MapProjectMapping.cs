@@ -105,7 +105,68 @@ namespace FAForever.MapEditor.Project.Files
         {
             Decals = [.. document.Decals.Select(decal => ToDto(decal))],
             Groups = [.. document.DecalGroups.Select(group => ToDto(group))],
+            MapWide = ToDto(document.WideDecals),
         };
+
+        /// <summary>
+        /// The map-wide decals as <c>decals.json</c> keeps them; null for none.
+        /// </summary>
+        internal static MapWideDecalsDto? ToDto(MapWideDecals wide)
+        {
+            if (wide.IsNone)
+            {
+                return null;
+            }
+            static MapWideSlotDto? Slot(MapWideSlot slot) => slot.Source == MapWideSource.None ? null : new MapWideSlotDto { Source = slot.Source.ToString(), File = slot.File };
+            ShadowDecalSettings shadow = wide.ShadowSettings;
+            ShadowDecalSettings defaults = ShadowDecalSettings.Default;
+            return new MapWideDecalsDto
+            {
+                Albedo = Slot(wide.Albedo),
+                Specular = wide.Specular,
+                Normal = Slot(wide.Normal),
+                Shadow = Slot(wide.Shadow),
+                ShadowSettings = shadow == defaults ? null : new ShadowDecalSettingsDto
+                {
+                    Radius = shadow.Radius == defaults.Radius ? null : shadow.Radius,
+                    Strength = shadow.Strength == defaults.Strength ? null : shadow.Strength,
+                    Darkest = shadow.Darkest == defaults.Darkest ? null : shadow.Darkest,
+                    SunShadows = shadow.SunShadows ? true : null,
+                },
+            };
+        }
+
+        /// <summary>
+        /// The map-wide decals of <c>decals.json</c>; a slot of a source this editor does not know,
+        /// or a file slot without its file, is none.
+        /// </summary>
+        internal static MapWideDecals ToModel(MapWideDecalsDto? wide)
+        {
+            if (wide is null)
+            {
+                return MapWideDecals.None;
+            }
+            static MapWideSlot Slot(MapWideSlotDto? slot, bool generates) =>
+                slot is null || !Enum.TryParse(slot.Source, ignoreCase: true, out MapWideSource source) || !Enum.IsDefined(source) ? MapWideSlot.None
+                : source == MapWideSource.File ? (string.IsNullOrWhiteSpace(slot.File) ? MapWideSlot.None : MapWideSlot.Of(slot.File))
+                : source == MapWideSource.Generated && !generates ? MapWideSlot.None
+                : new MapWideSlot(source);
+            ShadowDecalSettings defaults = ShadowDecalSettings.Default;
+            return new MapWideDecals
+            {
+                Albedo = Slot(wide.Albedo, generates: false),
+                Specular = string.IsNullOrWhiteSpace(wide.Specular) ? null : wide.Specular,
+                Normal = Slot(wide.Normal, generates: true),
+                Shadow = Slot(wide.Shadow, generates: true),
+                ShadowSettings = wide.ShadowSettings is ShadowDecalSettingsDto shadow ? new ShadowDecalSettings
+                {
+                    Radius = shadow.Radius is float radius && radius > 0 ? radius : defaults.Radius,
+                    Strength = shadow.Strength ?? defaults.Strength,
+                    Darkest = shadow.Darkest is float darkest ? Math.Clamp(darkest, 0, 1) : defaults.Darkest,
+                    SunShadows = shadow.SunShadows ?? false,
+                } : defaults,
+            };
+        }
 
         public static MapDocument ToDocument(
             MapProjectDto map,
@@ -137,6 +198,7 @@ namespace FAForever.MapEditor.Project.Files
                 Procedural = ToModel(map.Procedural),
                 Decals = [.. decals.Decals.Select(decal => ToModel(decal))],
                 DecalGroups = [.. decals.Groups.Select(group => ToModel(group))],
+                WideDecals = ToModel(decals.MapWide),
                 Props = [.. props.Select((prop, index) => ToModel(prop, index + 1))],
                 Markers = ToModel(markers),
                 Armies = [.. armies.Select(army => ToModel(army))],
@@ -201,6 +263,7 @@ namespace FAForever.MapEditor.Project.Files
         {
             Decals = [.. decals.Decals.Select(decal => ToModel(decal))],
             DecalGroups = [.. decals.Groups.Select(group => ToModel(group))],
+            WideDecals = ToModel(decals.MapWide),
         };
 
         private static TerrainDto ToDto(Terrain source) => new TerrainDto

@@ -148,6 +148,12 @@ namespace FAForever.MapEditor.Project.Editing
                 }
             }
 
+            // decal-masks layers follow decals moved during the transaction (a drag)
+            if (!ReferenceEquals(_followed, _document))
+            {
+                _document = DecalMaskLayers.Follow(_followed, _document, _session.DecalPictures);
+            }
+
             // the heightmap stays what the height layers add up to, a brush's work in the sculpting layer
             if (!ReferenceEquals(_followed, _document) && !_document.HeightStack.IsEmpty)
             {
