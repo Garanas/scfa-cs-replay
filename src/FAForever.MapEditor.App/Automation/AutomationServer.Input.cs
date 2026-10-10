@@ -36,12 +36,12 @@ public sealed partial class AutomationServer
     private static readonly string[] InputCommands =
     [
         "mouse {view?: top|3d|window, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, to?: [x, y], steps?, notches?, modifiers?}",
-        "key {key: E|Delete|Escape|Ctrl+K..., modifiers?, repeat?}",
+        "key {key: E|Delete|Escape|Ctrl+K|Shift..., action?: press|down|up, modifiers?, repeat?}",
         "type {text}",
         "drag {view?, from: [x, y], to?: [x, y], data?: asset key, button?, steps?, modifiers?}",
         "view-point {x, z, y?} or {ref}",
-        "get {ref}",
-        "objects {kind?: markers|pathNodes|props|units|decals|areas|all, near?: [x, z], count?}",
+        "get {ref} or {name}",
+        "objects {kind?: markers|pathNodes|props|units|decals|areas|all, name?, near?: [x, z], count?}",
     ];
 
     /// <summary>
@@ -109,13 +109,28 @@ public sealed partial class AutomationServer
             {
                 (Key key, RawInputModifiers modifiers) = WindowInput.ParseKey(Text(arguments, "key"));
                 modifiers |= ModifiersOf(arguments);
-                int repeat = Math.Max(1, (int)(Number(arguments, "repeat") ?? 1));
-                for (int i = 0; i < repeat; i++)
+                switch (arguments["action"]?.GetValue<string>()?.ToLowerInvariant() ?? "press")
                 {
-                    Input.Key(key, modifiers);
+                    case "down":
+                        // held until up: across mouse actions (shift, X or Z held while dragging)
+                        Input.KeyDown(key, modifiers);
+                        break;
+                    case "up":
+                        Input.KeyUp(key, modifiers);
+                        break;
+                    case "press":
+                        int repeat = Math.Max(1, (int)(Number(arguments, "repeat") ?? 1));
+                        for (int i = 0; i < repeat; i++)
+                        {
+                            Input.Key(key, modifiers);
+                        }
+                        break;
+                    default:
+                        throw new ArgumentException("The action of a key is press (the default), down or up");
                 }
                 await LetInputSettleAsync();
                 result["focused"] = Focused();
+                result["held"] = new JsonArray([.. Input.Held.Select(held => (JsonNode)JsonValue.Create(held.ToString()))]);
                 return true;
             }
             case "type":
@@ -149,7 +164,9 @@ public sealed partial class AutomationServer
             case "get":
             {
                 MapDocument document = model.ShownDocument ?? throw new InvalidOperationException("No map is open");
-                ObjectRef thing = ObjectRef.Parse(Text(arguments, "ref"));
+                ObjectRef thing = arguments["name"]?.GetValue<string>() is string name && arguments["ref"] is null
+                    ? Named(document, name)
+                    : ObjectRef.Parse(Text(arguments, "ref"));
                 result["object"] = Describe(document, thing) ?? throw new ArgumentException($"The map has no {thing}");
                 return true;
             }
@@ -320,6 +337,7 @@ public sealed partial class AutomationServer
             ["top"] = View(window.MapView),
             ["3d"] = View(window.View3D),
             ["mouse"] = _input is null ? null : new JsonArray(Math.Round(_input.Position.X, 1), Math.Round(_input.Position.Y, 1)),
+            ["keysHeld"] = new JsonArray([.. (_input?.Held ?? []).Select(held => (JsonNode)JsonValue.Create(held.ToString()))]),
         };
     }
 
@@ -482,6 +500,11 @@ public sealed partial class AutomationServer
         };
         int count = Math.Clamp((int)(Number(arguments, "count") ?? 20), 1, 1000);
         List<ObjectRef> all = [.. document.All(kinds)];
+        if (arguments["name"]?.GetValue<string>() is { Length: > 0 } name)
+        {
+            // by part of the name, blueprint or texture, ignoring case
+            all = [.. all.Where(thing => WhatOf(document, thing)?.Contains(name, StringComparison.OrdinalIgnoreCase) == true)];
+        }
         IEnumerable<ObjectRef> chosen = all;
         if (arguments["near"] is JsonArray)
         {
@@ -499,15 +522,7 @@ public sealed partial class AutomationServer
                 {
                     ["ref"] = thing.ToString(),
                     ["place"] = new JsonArray(Round(place.X), Round(place.Y), Round(place.Z)),
-                    ["what"] = document.Find(thing) switch
-                    {
-                        Prop prop => prop.Blueprint,
-                        PlacedUnit unit => unit.Unit.Blueprint,
-                        Marker marker => marker.Name,
-                        Decal decal => decal.Textures.FirstOrDefault(texture => texture.Length > 0),
-                        Area area => area.Name,
-                        _ => null,
-                    },
+                    ["what"] = WhatOf(document, thing),
                 };
             })]),
         };

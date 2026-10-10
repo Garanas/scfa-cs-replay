@@ -32,9 +32,9 @@ public sealed class NudgeHandler(MainViewModel model, SelectionViewModel selecti
 /// a view with the select tool (15 degrees, 90 with shift). About the selection's centre the things
 /// go round it and each turns too; about each centre they turn where they are (the handles'
 /// pivot, <see cref="HandleSettings.Pivot"/>, unless given). A prop's whole rotation turns, so a
-/// tilted rock stays tilted; areas do not turn. While the symmetry mirrors edits,
-/// each thing turned about its own centre takes its mirror partners along (the other way in a
-/// mirrored part).
+/// tilted rock stays tilted; areas do not turn. While the symmetry mirrors edits, each thing's
+/// mirror partners turn along (the other way in a mirrored part), about the image of the
+/// selection's centre or each about its own.
 /// </summary>
 /// <param name="Degrees">Clockwise in the top view; negative turns the other way. Left out, 15.</param>
 /// <param name="About"><c>selection</c> or <c>each</c>; left out, the handles' pivot.</param>
@@ -50,7 +50,7 @@ public sealed class RotateHandler(MainViewModel model, SelectionViewModel select
         float radians = request.Degrees * MathF.PI / 180;
         HandlePivot pivot = request.About is string about ? SetHandlesHandler.ParsePivot(about) : model.Handles.Pivot;
         edit.Transaction.Apply(document => pivot == HandlePivot.Selection && things.Length > 1 && SelectionFrame.Of(document, things) is SelectionFrame frame
-            ? document.RotateObjectsAbout(things, radians, frame.Middle)
+            ? document.RotateObjectsAbout(things, model.PartnersOf(document, things), radians, frame.Middle)
             : document.RotateObjects(things, model.PartnersOf(document, things), radians));
         return Task.CompletedTask;
     }
@@ -60,7 +60,8 @@ public sealed class RotateHandler(MainViewModel model, SelectionViewModel select
 /// Scales the selection (user story F-11), one step of undo: what the scale handles do. Props
 /// scale alike along every axis, decals by their width and length, areas by their sides; about
 /// the selection's centre the things spread from it (markers and units too), about each centre
-/// they scale where they are.
+/// they scale where they are. While the symmetry mirrors edits, each thing's mirror partners scale
+/// alike, along the images of the axes and about the image of the centre.
 /// </summary>
 /// <param name="Factor">Both sides alike; left out, 1.</param>
 /// <param name="X">The width (along the selection's box) on top of the factor.</param>
@@ -84,7 +85,7 @@ public sealed class ScaleSelectionHandler(MainViewModel model, SelectionViewMode
         ImmutableArray<ObjectRef> things = selection.Items;
         HandlePivot pivot = request.About is string about ? SetHandlesHandler.ParsePivot(about) : model.Handles.Pivot;
         edit.Transaction.Apply(document => SelectionFrame.Of(document, things) is SelectionFrame frame
-            ? document.ScaleObjects(things, x, z, frame.Heading, pivot == HandlePivot.Selection ? frame.Middle : null)
+            ? document.ScaleObjects(things, model.PartnersOf(document, things), x, z, frame.Heading, pivot == HandlePivot.Selection ? frame.Middle : null)
             : document);
         return Task.CompletedTask;
     }

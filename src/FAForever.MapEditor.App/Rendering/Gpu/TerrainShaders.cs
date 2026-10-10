@@ -207,6 +207,8 @@ internal static class TerrainShaders
         uniform vec2 uCenter;
         uniform float uRadius;
         uniform vec2 uTurn;
+        // -1 flips the picture left to right before it is turned (an image in a mirrored part)
+        uniform float uFlip;
         out vec2 vUv;
 
         void main()
@@ -215,6 +217,7 @@ internal static class TerrainShaders
             vec2 d = world.xz - uCenter;
             // turned back into the square, from (0, 0) at its top left to (1, 1)
             vec2 c = vec2(d.x * uTurn.y + d.y * uTurn.x, d.y * uTurn.y - d.x * uTurn.x) / uRadius;
+            c.x *= uFlip;
             vUv = c * 0.5 + 0.5;
             gl_Position = uViewProjection * vec4(world, 1.0);
         }

@@ -77,6 +77,28 @@ namespace FAForever.MapEditor.Project.Generation
         IReadOnlyList<GeneratedInput> Inputs { get; }
 
         /// <summary>
+        /// The parts of the document putting its result in place changes, as inputs of other
+        /// generators read them (masks from rules change the masks the prop rules read): a generator
+        /// that reads one is generated after it (<see cref="GeneratedResults.InOrder"/>).
+        /// </summary>
+        IReadOnlyList<GeneratedInput> Outputs => [];
+
+        /// <summary>
+        /// The ids of generators whose results it reads besides the document (path networks read
+        /// walkability): those are generated before it, and their last result is handed to it
+        /// (<see cref="Read"/>) before it generates.
+        /// </summary>
+        IReadOnlyList<string> Reads => [];
+
+        /// <summary>
+        /// The last result of a generator it <see cref="Reads"/>, handed to it before it generates;
+        /// it uses the result only while the result is current for the version it generates from.
+        /// </summary>
+        void Read(GeneratedResult result)
+        {
+        }
+
+        /// <summary>
         /// Makes the result from a version of the document. It reads only <see cref="Inputs"/> and may
         /// run on a thread of the pool: the document never changes.
         /// </summary>
@@ -179,9 +201,51 @@ namespace FAForever.MapEditor.Project.Generation
         public GeneratedResult Generate(string id, MapDocument document)
         {
             IGenerator generator = Find(id) ?? throw new ArgumentException($"There is no generator '{id}'", nameof(id));
+            HandResults(generator);
             GeneratedResult result = GeneratedResult.Of(generator, document, generator.Generate(document));
             Keep(result);
             return result;
+        }
+
+        /// <summary>
+        /// Hands a generator the last results of the generators it <see cref="IGenerator.Reads"/>.
+        /// </summary>
+        public void HandResults(IGenerator generator)
+        {
+            foreach (string read in generator.Reads)
+            {
+                if (ResultOf(read) is GeneratedResult result)
+                {
+                    generator.Read(result);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Whether what <paramref name="first"/> makes is read by <paramref name="then"/>: one of its
+        /// outputs is one of the other's inputs (by name), or the other reads its result.
+        /// </summary>
+        public static bool Feeds(IGenerator first, IGenerator then) =>
+            then.Reads.Contains(first.Id, StringComparer.Ordinal)
+            || first.Outputs.Any(output => then.Inputs.Any(input => input.Name == output.Name));
+
+        /// <summary>
+        /// The generators in an order in which each comes after those that feed it
+        /// (<see cref="Feeds"/>), else in the order they were registered; generators that feed each
+        /// other (a cycle) keep the order they were registered in.
+        /// </summary>
+        public IReadOnlyList<IGenerator> InOrder()
+        {
+            List<IGenerator> ordered = [];
+            List<IGenerator> waiting = [.. _generators];
+            while (waiting.Count > 0)
+            {
+                // the first registered that nothing still waiting feeds; in a cycle, the first registered
+                IGenerator next = waiting.FirstOrDefault(generator => !waiting.Any(other => other != generator && Feeds(other, generator))) ?? waiting[0];
+                ordered.Add(next);
+                waiting.Remove(next);
+            }
+            return ordered;
         }
 
         /// <summary>
@@ -209,8 +273,15 @@ namespace FAForever.MapEditor.Project.Generation
         })];
 
         /// <summary>
-        /// The results whose inputs changed since they were generated.
+        /// The results whose inputs changed since they were generated, in the order to generate them
+        /// again (<see cref="InOrder"/>).
         /// </summary>
-        public IReadOnlyList<GeneratedState> Stale(MapDocument document) => [.. States(document).Where(state => state.Status == GeneratedStatus.Stale)];
+        public IReadOnlyList<GeneratedState> Stale(MapDocument document)
+        {
+            IReadOnlyList<GeneratedState> states = States(document);
+            return [.. InOrder()
+                .Select(generator => states.First(state => state.Generator == generator))
+                .Where(state => state.Status == GeneratedStatus.Stale)];
+        }
     }
 }

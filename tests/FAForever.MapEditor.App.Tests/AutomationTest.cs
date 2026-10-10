@@ -321,5 +321,71 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(1, model.Selection.Count, "a click still picks a prop, whatever dot shows");
             window.Close();
         });
+
+        [TestMethod]
+        public Task AKeyHeldDownGoesWithTheMouseUntilItIsLetGo() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            model.View = MapViewTab.Top;
+            model.SelectTool("markers.select");
+            Dispatcher.UIThread.RunJobs();
+            async Task ClickOn(ObjectRef thing)
+            {
+                JsonObject top = (JsonObject)(await Send(automation, "view-point", new JsonObject { ["ref"] = thing.ToString() }))["point"]!["top"]!;
+                await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = top["x"]!.DeepClone(), ["y"] = top["y"]!.DeepClone() });
+            }
+            ObjectRef first = ObjectRef.Marker(model.ShownDocument!.Markers.Spawns[0].Id);
+            ObjectRef second = ObjectRef.Marker(model.ShownDocument!.Markers.Spawns[1].Id);
+            ObjectRef third = ObjectRef.Marker(model.ShownDocument!.Markers.Spawns[2].Id);
+
+            await ClickOn(first);
+            JsonObject down = await Send(automation, "key", new JsonObject { ["key"] = "Shift", ["action"] = "down" });
+            CollectionAssert.AreEqual(new[] { "LeftShift" }, ((JsonArray)down["held"]!).Select(key => key!.GetValue<string>()).ToArray());
+            Assert.AreEqual("LeftShift", down["views"]!["keysHeld"]![0]!.GetValue<string>(), "the state says what is held");
+            await ClickOn(second);
+            CollectionAssert.AreEquivalent(new[] { first, second }, model.Selection.Items.ToArray(), "shift held: the click adds");
+
+            JsonObject up = await Send(automation, "key", new JsonObject { ["key"] = "Shift", ["action"] = "up" });
+            Assert.AreEqual(0, ((JsonArray)up["held"]!).Count);
+            await ClickOn(third);
+            CollectionAssert.AreEqual(new[] { third }, model.Selection.Items.ToArray(), "let go: the click replaces");
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task ThingsAreFoundByNameAndWaitPollsTheState() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            Spawn spawn = model.ShownDocument!.Markers.Spawns[0];
+
+            JsonObject got = (JsonObject)(await Send(automation, "get", new JsonObject { ["name"] = spawn.Name.ToLowerInvariant() }))["object"]!;
+            Assert.AreEqual(ObjectRef.Marker(spawn.Id).ToString(), got["ref"]!.GetValue<string>(), "by its name, ignoring case");
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => automation.HandleAsync("get", new JsonObject { ["name"] = "nothing by this name" }));
+
+            JsonArray masses = (JsonArray)(await Send(automation, "objects", new JsonObject { ["kind"] = "markers", ["name"] = "mass", ["count"] = 1000 }))["objects"]!["items"]!;
+            Assert.AreEqual(model.ShownDocument.Markers.Resources.Count(resource => resource.Name.Contains("Mass", StringComparison.OrdinalIgnoreCase)), masses.Count);
+            Assert.IsTrue(masses.All(item => item!["what"]!.GetValue<string>().Contains("Mass", StringComparison.OrdinalIgnoreCase)));
+
+            JsonObject state = await Send(automation, "state");
+            Assert.IsFalse(string.IsNullOrEmpty(state["build"]!["version"]?.GetValue<string>()), "the build's version");
+            Assert.IsTrue(DateTime.TryParse(state["build"]!["built"]!.GetValue<string>(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out _), "and when it was built");
+
+            model.Selection.Set([ObjectRef.Marker(spawn.Id)]);
+            JsonObject matched = (JsonObject)(await Send(automation, "wait", new JsonObject { ["path"] = "selection.count", ["value"] = 1 }))["wait"]!;
+            Assert.IsTrue(matched["matched"]!.GetValue<bool>());
+            Assert.AreEqual(1, matched["reads"]!.GetValue<int>(), "already so: one read");
+            JsonObject stage = (JsonObject)(await Send(automation, "wait", new JsonObject { ["path"] = "stage", ["value"] = model.Setup.Stage.ToString() }))["wait"]!;
+            Assert.IsTrue(stage["matched"]!.GetValue<bool>(), "a text");
+
+            Task<JsonNode> waiting = automation.HandleAsync("wait", new JsonObject { ["path"] = "selection.count", ["value"] = 2, ["timeout"] = 5 });
+            model.Selection.Apply([ObjectRef.Marker(model.ShownDocument.Markers.Spawns[1].Id)], SelectionChange.Add);
+            JsonObject later = (JsonObject)(await waiting)["wait"]!;
+            Assert.IsTrue(later["matched"]!.GetValue<bool>(), "it polls until the value matches");
+
+            JsonObject never = (JsonObject)(await Send(automation, "wait", new JsonObject { ["path"] = "selection.count", ["value"] = 99, ["timeout"] = 0.3 }))["wait"]!;
+            Assert.IsFalse(never["matched"]!.GetValue<bool>(), "the time ran out");
+            Assert.AreEqual(2, never["value"]!.GetValue<int>(), "with the value last read");
+            window.Close();
+        });
     }
 }

@@ -13,7 +13,8 @@ namespace FAForever.MapEditor.App.Tools;
 /// Selects things on the map and moves them (user story F-11). A click selects the nearest thing
 /// within a few pixels, shift adds it and control takes it out or adds it; a click on nothing
 /// selects nothing. Dragging on empty ground draws a box that selects what lies in it (with shift
-/// and control as a click). Dragging a selected thing moves the whole selection, one step of undo,
+/// and control as a click): on the map in the top view, on screen in the 3D view, where what shows
+/// inside the rectangle is selected. Dragging a selected thing moves the whole selection, one step of undo,
 /// keeping each thing on the terrain. Its keys in a view: Escape selects nothing, Q and E turn the
 /// selection by 15 degrees (with shift, or when only structures are selected, 90), the arrows move
 /// it an ogrid (with shift 8).
@@ -58,6 +59,8 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
     private ToolView? _view;
     private ObjectRef? _clickUnder;
     private (MapDocument Document, ImmutableArray<ObjectRef> Items, SelectionFrame? Frame)? _frameOf;
+    private Vector2? _screenFrom;
+    private ToolView? _screenView;
 
     /// <summary>
     /// The kinds it picks, of those the views show: the Markers mode's tool markers and areas, the
@@ -67,10 +70,16 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
     public partial ObjectKinds Kinds { get; set; } = kinds;
 
     /// <summary>
-    /// The box being drawn, while it is.
+    /// The box being drawn in the top view, while it is.
     /// </summary>
     [ObservableProperty]
     public partial (float X0, float Z0, float X1, float Z1)? Box { get; private set; }
+
+    /// <summary>
+    /// The box being drawn in the 3D view, while it is: a rectangle of the view's pixels (corners in
+    /// any order), which selects what shows inside it.
+    /// </summary>
+    public (Vector2 From, Vector2 To)? ScreenBox { get; private set; }
 
     public double CursorRadius => 0;
 
@@ -132,6 +141,12 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
     /// </summary>
     public IReadOnlyList<ToolShape> Shapes(ToolView view)
     {
+        if (ScreenBox is (Vector2 boxFrom, Vector2 boxTo) && !view.IsTopDown)
+        {
+            // the box of the 3D view, on screen
+            Vector2[] corners = [boxFrom, new Vector2(boxTo.X, boxFrom.Y), boxTo, new Vector2(boxFrom.X, boxTo.Y)];
+            return [new ToolLine(corners, true, 3, ToolInk.Shadow), new ToolLine(corners, true, 1, ToolInk.Selection)];
+        }
         if (!model.Handles.Show || Frame is not SelectionFrame frame)
         {
             Hovered = default;
@@ -244,6 +259,8 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
         else
         {
             _gesture = Gesture.Box;
+            // in 3D the box is a rectangle on screen
+            _screenFrom = input.View is { IsTopDown: false, Mouse: Vector2 mouse } ? mouse : null;
         }
     }
 
@@ -266,6 +283,13 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             case Gesture.Handle:
                 DragHandle(x, z, input);
                 break;
+            case Gesture.Box when _screenFrom is Vector2 from:
+                if (input.View is { Mouse: Vector2 mouse } view)
+                {
+                    ScreenBox = (from, mouse);
+                    _screenView = view;
+                }
+                break;
             case Gesture.Box:
                 Box = (_from.X, _from.Z, x, z);
                 break;
@@ -286,6 +310,9 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             case Gesture.Box when Box is (float x0, float z0, float x1, float z1):
                 model.SelectInside(x0, z0, x1, z1, ChangeOf(_input.Modifiers));
                 break;
+            case Gesture.Box when ScreenBox is (Vector2 from, Vector2 to) && _screenView is ToolView view:
+                model.SelectOnScreen(from, to, view.ToScreen, ChangeOf(_input.Modifiers));
+                break;
             case Gesture.Box when ChangeOf(_input.Modifiers) == SelectionChange.Replace:
                 // a click on nothing
                 model.Selection.Clear();
@@ -300,6 +327,9 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
         _view = null;
         _part = default;
         Box = null;
+        ScreenBox = null;
+        _screenFrom = null;
+        _screenView = null;
     }
 
     public bool Key(string key, ToolModifiers modifiers)
@@ -384,11 +414,11 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
                 float step = model.SelectionTurnsInQuarters ? MathF.PI / 2
                     : input.Modifiers.HasFlag(ToolModifiers.Shift) ? HandleSettings.SnapDegrees * MathF.PI / 180 : 0;
                 float angle = HandleMaths.TurnAngle(frame.Middle, _pressPlane, place, step);
-                Apply(before => pivot is Vector2 p ? before.RotateObjectsAbout(_moving, angle, p) : before.RotateObjects(_moving, _partners, angle));
+                Apply(before => pivot is Vector2 p ? before.RotateObjectsAbout(_moving, _partners, angle, p) : before.RotateObjects(_moving, _partners, angle));
                 break;
             case HandleKind.Scale:
                 Vector2 factors = HandleMaths.ScaleFactors(frame, _part, _pressPlane, place, input.Modifiers.HasFlag(ToolModifiers.Shift) ? HandleSettings.ScaleSnap : 0);
-                Apply(before => before.ScaleObjects(_moving, factors.X, factors.Y, frame.Heading, pivot));
+                Apply(before => before.ScaleObjects(_moving, _partners, factors.X, factors.Y, frame.Heading, pivot));
                 break;
             default:
                 HandleAxis axis = _part.Kind switch

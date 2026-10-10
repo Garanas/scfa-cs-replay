@@ -16,6 +16,8 @@ is an extension in `Avalonia.Input`; `Bitmap.Save` takes encoder options).
 
 ## Look: tokens and classes, never values
 
+- Numbers in fields: a point or a comma typed, a point shown (`EditorCulture`); a `TextBox` bound
+  straight to a number takes `Converter={x:Static controls:NumberTextConverter.Instance}`.
 - Colours, font sizes, weights, opacities and distances come from `Styles/Tokens.axaml` (by use:
   `CanvasBrush`, `SurfaceBrush`, `TextTertiaryBrush`, `DangerBrush`, `SpaceMedium`, `PagePadding`, ...)
   through the classes of `Styles/Classes.axaml`:
@@ -101,12 +103,14 @@ Drive the window as a person does (its own input, never the real mouse):
 
 ```sh
 faf-map editor objects kind=units count=3 --port 5372          # refs and places to aim at
-faf-map editor get ref=unit:UNIT_1 --port 5372                 # place, heading, blueprint, army
+faf-map editor get ref=unit:UNIT_1 --port 5372                 # place, heading, blueprint, army (or name=ARMY_1)
+faf-map editor objects kind=markers name=mass --port 5372      # by part of the name, blueprint or texture
 faf-map editor view-point ref=unit:UNIT_1 --port 5372          # its pixel in the top and 3D views
 faf-map editor tool id=units.select --port 5372
 faf-map editor mouse view=3d x=335 y=260 --port 5372           # click there (action=move|down|up|drag|wheel)
 faf-map editor mouse view=top x=100 y=80 action=drag to=[160,80] modifiers=Shift --port 5372
 faf-map editor key key=E --port 5372                           # the view has the keyboard after the click
+faf-map editor key key=Shift action=down --port 5372           # held across mouse actions until action=up
 faf-map editor key key=Ctrl+K --port 5372 && faf-map editor type text=undo --port 5372
 faf-map editor run id=units.pick interactive=true wait=false --port 5372   # opens the picker, answers at once
 faf-map editor key key=Down --port 5372 && faf-map editor key key=Enter --port 5372
@@ -123,6 +127,7 @@ faf-map editor focus ref=unit:UNIT_1 --port 5372                         # frame
 faf-map editor grid target=stratum:1 x=100 z=60 --port 5372             # heightmap, types, stratum:N, water:foam, mask:<name>; or x0 z0 x1 z1 step
 faf-map editor screenshot part=options path=<scratch>/o.png --port 5372 # options, inspector, panel, dock, rail, top, 3d
 faf-map editor undo --port 5372                                         # ran: false comes with why ("nothing to undo")
+faf-map editor wait path=selection.count value=4 timeout=5 --port 5372  # polls the state until it matches; state.build: version, built
 faf-map editor view zoom=4 --port 5372                                  # the top view zooms about its middle
 faf-map editor run id=plugin.scatter-rocks.scatter count=10 --port 5372  # a Lua plugin's command (state.plugins: errors, commands)
 ```

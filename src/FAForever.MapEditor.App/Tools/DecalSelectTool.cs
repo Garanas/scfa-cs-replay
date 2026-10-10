@@ -220,9 +220,11 @@ public sealed partial class DecalSelectTool : ObservableObject, IMapTool
                 _scaling = false;
                 return;
             }
-            _scaled = [.. _model.Selection.Items.Where(thing => thing.Kind == ObjectKind.Decal)];
             _scale = _model.StartStroke("Scale the decals");
             _before = _scale.Document;
+            // with the symmetry, the mirror partners as they were at the press scale along (F-12)
+            ImmutableArray<ObjectRef> decals = [.. _model.Selection.Items.Where(thing => thing.Kind == ObjectKind.Decal)];
+            _scaled = [.. decals, .. _model.PartnersOf(_before, decals).Select(partner => partner.Partner)];
         }
         if (_model.StrokeInProgress != _scale)
         {

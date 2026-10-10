@@ -341,39 +341,57 @@ public sealed class HeightmapView : Control
 
         if (_cursor is Point cursor && _model?.ActiveTool?.Tool is { CursorRadius: > 0 } tool)
         {
+            using Performance.Span brush = Performance.Measure("top.brush");
             double radius = tool.CursorRadius * _zoom;
-            if (tool is IShapedBrushTool { Shape: { IsShaped: true } shape })
+            BrushShapeSettings? brushShape = tool is IShapedBrushTool { Shape: { IsShaped: true } shape } ? shape : null;
+            float rotation = (float)(brushShape?.Rotation ?? 0);
+            // with the symmetry, every image of the brush where a stroke paints (F-12)
+            Point map = ControlToMap(cursor);
+            IReadOnlyList<SymmetricDab> images = _model.ShownDocument is MapDocument shown
+                ? SymmetricDabs.Of(_model.EditTransforms(shown), (float)map.X, (float)map.Y, rotation, brushShape is null)
+                : [new SymmetricDab((float)map.X, (float)map.Y, rotation, false, MapSymmetryTransform.Identity)];
+            foreach (SymmetricDab image in images)
             {
-                // the picture, faded, in its square, turned as it paints, with a tick on its top edge
-                (double sin, double cos) = Math.SinCos(shape.Rotation * Math.PI / 180);
-                if (shape.Shown is BrushShape picture && BrushPicture(picture, overlay.Strong) is WriteableBitmap bitmap)
-                {
-                    double longest = Math.Max(picture.Width, picture.Height);
-                    double width = 2 * radius * picture.Width / longest;
-                    double height = 2 * radius * picture.Height / longest;
-                    using (context.PushTransform(Matrix.CreateRotation(shape.Rotation * Math.PI / 180) * Matrix.CreateTranslation(cursor.X, cursor.Y)))
-                    {
-                        context.DrawImage(bitmap, new Rect(-width / 2, -height / 2, width, height));
-                    }
-                }
-                Point Corner(double u, double v) => cursor + new Vector((u * cos - v * sin) * radius, (u * sin + v * cos) * radius);
-                StreamGeometry square = new StreamGeometry();
-                using (StreamGeometryContext figure = square.Open())
-                {
-                    figure.BeginFigure(Corner(-1, -1), false);
-                    figure.LineTo(Corner(1, -1));
-                    figure.LineTo(Corner(1, 1));
-                    figure.LineTo(Corner(-1, 1));
-                    figure.EndFigure(true);
-                }
-                context.DrawGeometry(null, overlay.Brush, square);
-                context.DrawLine(overlay.Brush, Corner(0, -1), Corner(0, -0.8));
-            }
-            else
-            {
-                context.DrawEllipse(null, overlay.Brush, cursor, radius, radius);
+                DrawBrush(context, overlay, MapToControl(image.X, image.Z), radius, brushShape?.Shown, brushShape is not null, image.Rotation, image.Mirrored);
             }
         }
+    }
+
+    /// <summary>
+    /// A brush's outline around a point of the view: a circle, or the picture, faded, in its square,
+    /// turned as it paints (flipped first when mirrored), with a tick on its top edge.
+    /// </summary>
+    private void DrawBrush(DrawingContext context, Overlay overlay, Point at, double radius, BrushShape? picture, bool shaped, float rotation, bool mirrored)
+    {
+        if (!shaped)
+        {
+            context.DrawEllipse(null, overlay.Brush, at, radius, radius);
+            return;
+        }
+        (double sin, double cos) = Math.SinCos(rotation * Math.PI / 180);
+        if (picture is not null && BrushPicture(picture, overlay.Strong) is WriteableBitmap bitmap)
+        {
+            double longest = Math.Max(picture.Width, picture.Height);
+            double width = 2 * radius * picture.Width / longest;
+            double height = 2 * radius * picture.Height / longest;
+            Matrix flip = mirrored ? Matrix.CreateScale(-1, 1) : Matrix.Identity;
+            using (context.PushTransform(flip * Matrix.CreateRotation(rotation * Math.PI / 180) * Matrix.CreateTranslation(at.X, at.Y)))
+            {
+                context.DrawImage(bitmap, new Rect(-width / 2, -height / 2, width, height));
+            }
+        }
+        Point Corner(double u, double v) => at + new Vector((u * cos - v * sin) * radius, (u * sin + v * cos) * radius);
+        StreamGeometry square = new StreamGeometry();
+        using (StreamGeometryContext figure = square.Open())
+        {
+            figure.BeginFigure(Corner(-1, -1), false);
+            figure.LineTo(Corner(1, -1));
+            figure.LineTo(Corner(1, 1));
+            figure.LineTo(Corner(-1, 1));
+            figure.EndFigure(true);
+        }
+        context.DrawGeometry(null, overlay.Brush, square);
+        context.DrawLine(overlay.Brush, Corner(0, -1), Corner(0, -0.8));
     }
 
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)

@@ -172,13 +172,14 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// </summary>
     public int Debug { get; set; }
 
-    /// <param name="brush">The active tool's brush under the mouse; null for none.</param>
+    /// <param name="brushes">The active tool's brush under the mouse and its images in the other
+    /// parts of a symmetric map; null or empty for none.</param>
     /// <param name="brushColor">Its colour, from the theme's overlay token.</param>
     /// <param name="objects">The props, units and markers, and what of them shows: the models after
     /// the terrain (decals do not cover them), the markers after the water; null for none.</param>
     /// <param name="decals">The ids of the decals not drawn (those of hidden groups) and of those
     /// drawn highlighted (the selection), with the highlight's colour; null for none.</param>
-    public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, BrushPreview? brush = null, Vector3 brushColor = default, (ObjectRenderer Renderer, ObjectFrame Frame)? objects = null,
+    public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, IReadOnlyList<BrushPreview>? brushes = null, Vector3 brushColor = default, (ObjectRenderer Renderer, ObjectFrame Frame)? objects = null,
         (IReadOnlySet<int>? Hidden, IReadOnlySet<int>? Highlighted, Vector3 Color)? decals = null, TerrainOverlays? overlays = null)
     {
         _hidden = decals?.Hidden;
@@ -236,14 +237,17 @@ internal sealed unsafe class TerrainRenderer : IDisposable
                 DrawOverlays(document, viewProjection, overlays);
             }
         }
-        if (brush is not null)
+        if (brushes is { Count: > 0 })
         {
             using (Performance.Measure("3d.draw-brush"))
             {
                 // over the decals and the water, pulled towards the camera so the ground does not hide it
                 _gl.Enable(EnableCap.PolygonOffsetFill);
                 _gl.PolygonOffset(-2, -16);
-                DrawBrush(document, viewProjection, brush, brushColor);
+                foreach (BrushPreview brush in brushes)
+                {
+                    DrawBrush(document, viewProjection, brush, brushColor);
+                }
                 _gl.Disable(EnableCap.PolygonOffsetFill);
             }
         }
@@ -509,6 +513,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         program.Set("uCenter", brush.X, brush.Z);
         program.Set("uRadius", brush.Radius);
         program.Set("uTurn", sin, cos);
+        program.Set("uFlip", brush.Mirrored && brush.Shape is not null ? -1f : 1f);
         program.Set("uColor", color.X, color.Y, color.Z);
 
         if (brush.Shape is BrushShape shape)

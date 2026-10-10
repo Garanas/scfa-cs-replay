@@ -78,10 +78,12 @@ public abstract partial class Setting : ObservableObject
     /// <summary>
     /// A number as a field shows it: up to four decimals, a point as the separator.
     /// </summary>
-    public static string Format(double value) => value.ToString("0.####", CultureInfo.InvariantCulture);
+    public static string Format(double value) => EditorCulture.Format(value);
 
-    public static bool TryParse(string text, out double value) =>
-        double.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
+    /// <summary>
+    /// A number typed into a field (<see cref="EditorCulture.TryParse(string?, out double)"/>): "12.5" or "12,5".
+    /// </summary>
+    public static bool TryParse(string text, out double value) => EditorCulture.TryParse(text, out value);
 }
 
 /// <summary>

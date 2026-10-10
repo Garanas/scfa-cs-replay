@@ -90,6 +90,19 @@ namespace FAForever.MapEditor.App.Tests
         public Task<JsonObject> Key(string key) => Send("key", new JsonObject { ["key"] = key });
 
         /// <summary>
+        /// Holds a key down (<c>Shift</c>, <c>X</c>) across the mouse actions that follow, until <see cref="KeyUp"/>.
+        /// </summary>
+        public Task<JsonObject> KeyDown(string key) => Send("key", new JsonObject { ["key"] = key, ["action"] = "down" });
+
+        public Task<JsonObject> KeyUp(string key) => Send("key", new JsonObject { ["key"] = key, ["action"] = "up" });
+
+        /// <summary>
+        /// Waits until the state's value at a path (<c>selection.count</c>) matches; whether it did in time.
+        /// </summary>
+        public async Task<bool> Wait(string path, JsonNode value, double timeout = 10) =>
+            (await Send("wait", new JsonObject { ["path"] = path, ["value"] = value, ["timeout"] = timeout }))["wait"]!["matched"]!.GetValue<bool>();
+
+        /// <summary>
         /// Where a thing (<c>prop:5</c>) shows in a view, in its pixels: null when it lies outside.
         /// </summary>
         public async Task<(double X, double Y)?> PointOf(string thing, string view = "top")

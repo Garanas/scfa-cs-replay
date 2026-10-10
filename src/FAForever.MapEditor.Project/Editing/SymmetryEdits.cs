@@ -91,6 +91,33 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// The things without those that are the mirror partner of a thing kept before them: of a
+        /// selection that holds things and their images, the things alone, so that a copy mirrored
+        /// again (<see cref="MirrorObjects"/>) is made once per part.
+        /// </summary>
+        public static ImmutableArray<ObjectRef> WithoutPartners(this MapDocument document, IEnumerable<ObjectRef> things, IReadOnlyList<MapSymmetryTransform> transforms, float tolerance = DefaultTolerance)
+        {
+            ImmutableArray<ObjectRef>.Builder kept = ImmutableArray.CreateBuilder<ObjectRef>();
+            HashSet<ObjectRef> images = [];
+            foreach (ObjectRef thing in things)
+            {
+                if (images.Contains(thing))
+                {
+                    continue;
+                }
+                kept.Add(thing);
+                foreach (MapSymmetryTransform transform in transforms)
+                {
+                    if (transform != MapSymmetryTransform.Identity && document.PartnerOf(thing, transform, tolerance) is ObjectRef partner)
+                    {
+                        images.Add(partner);
+                    }
+                }
+            }
+            return kept.ToImmutable();
+        }
+
+        /// <summary>
         /// What makes two things counterparts besides their place: the kind and the blueprint, texture,
         /// resource, type or layer; null for what has no partner (areas, weather).
         /// </summary>
@@ -315,6 +342,40 @@ namespace FAForever.MapEditor.Project.Editing
             document = document.RotateObjects(things, radians);
             document = document.RotateObjects(partners.Where(partner => !partner.Transform.IsMirror).Select(partner => partner.Partner), radians);
             return document.RotateObjects(partners.Where(partner => partner.Transform.IsMirror).Select(partner => partner.Partner), -radians);
+        }
+
+        /// <summary>
+        /// Turns the things about one place, as <see cref="ObjectEdits.RotateObjectsAbout"/> does, and
+        /// each partner about the image of that place in its part: the other way in a mirrored part,
+        /// so that the partners stay the images of their things.
+        /// </summary>
+        public static MapDocument RotateObjectsAbout(this MapDocument document, IReadOnlyCollection<ObjectRef> things, IReadOnlyList<SymmetryPartner> partners, float radians, Vector2 pivot)
+        {
+            document = document.RotateObjectsAbout(things, radians, pivot);
+            foreach (IGrouping<MapSymmetryTransform, SymmetryPartner> group in partners.GroupBy(partner => partner.Transform))
+            {
+                document = document.RotateObjectsAbout(group.Select(partner => partner.Partner), group.Key.IsMirror ? -radians : radians, group.Key.Apply(pivot));
+            }
+            return document;
+        }
+
+        /// <summary>
+        /// Scales the things as <see cref="ObjectEdits.ScaleObjects"/> does, and each partner by the
+        /// same factors along the images of the axes, about the image of the pivot (or each about its
+        /// own centre without one): a decal's partner, whose width runs along the image of its width,
+        /// gets the same width and length.
+        /// </summary>
+        public static MapDocument ScaleObjects(this MapDocument document, IReadOnlyCollection<ObjectRef> things, IReadOnlyList<SymmetryPartner> partners, float x, float z, float heading = 0, Vector2? pivot = null)
+        {
+            document = document.ScaleObjects(things, x, z, heading, pivot);
+            (float sin, float cos) = MathF.SinCos(heading);
+            foreach (IGrouping<MapSymmetryTransform, SymmetryPartner> group in partners.GroupBy(partner => partner.Transform))
+            {
+                Vector2 axis = group.Key.ApplyDirection(new Vector2(cos, sin));
+                Vector2? image = pivot is Vector2 p ? group.Key.Apply(p) : null;
+                document = document.ScaleObjects(group.Select(partner => partner.Partner), x, z, MathF.Atan2(axis.Y, axis.X), image);
+            }
+            return document;
         }
 
         /// <summary>

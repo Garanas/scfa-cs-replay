@@ -96,6 +96,45 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task MoreClosesOnAClickElsewhereAndOnEscape() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            AutomationServer automation = new AutomationServer(window, model, 0);
+            model.SelectTool("terrain.sculpt");
+            Frame();
+            ToolRow row = RowOf(window)!;
+            Point Middle(Control control) => control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
+            async Task Click(Point at)
+            {
+                Frame();
+                await automation.HandleAsync("mouse", new JsonObject { ["x"] = at.X, ["y"] = at.Y });
+                Frame();
+            }
+            Slider strength = row.GetVisualDescendants().OfType<Slider>()
+                .Single(slider => Avalonia.Automation.AutomationProperties.GetName(slider) == "Height brush strength");
+
+            await Click(Middle(row.MoreButton));
+            Assert.IsTrue(row.IsExpanded);
+            await Click(Middle(strength));
+            Assert.IsTrue(row.IsExpanded, "a click on what it shows keeps it open");
+            await Click(Middle(window.FindControl<Control>("InspectorView")!));
+            Assert.IsFalse(row.IsExpanded, "a click elsewhere closes it");
+
+            await Click(Middle(row.MoreButton));
+            Assert.IsTrue(row.IsExpanded);
+            await Click(Middle(row.MoreButton));
+            Assert.IsFalse(row.IsExpanded, "a second click on More closes it");
+
+            await Click(Middle(row.MoreButton));
+            model.Selection.Set([Project.Editing.ObjectRef.Marker(model.ShownDocument!.Markers.Spawns[0].Id)]);
+            await automation.HandleAsync("key", new JsonObject { ["key"] = "Escape" });
+            Frame();
+            Assert.IsFalse(row.IsExpanded, "Escape closes it");
+            Assert.IsFalse(model.Selection.IsEmpty, "and goes no further");
+            window.Close();
+        });
+
+        [TestMethod]
         public Task AWideWindowShowsEverythingInTheRow() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open(width: 2400);

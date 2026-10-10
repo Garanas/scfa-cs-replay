@@ -28,6 +28,9 @@ public sealed class WindowInput
     private readonly TopLevel _top;
     private IInputDevice? _mouse;
     private RawInputModifiers _buttons;
+    // the modifier keys held down, and every key held
+    private RawInputModifiers _keys;
+    private readonly HashSet<Key> _held = [];
 
     public WindowInput(TopLevel top)
     {
@@ -45,10 +48,15 @@ public sealed class WindowInput
     /// </summary>
     public Point Position { get; private set; }
 
+    /// <summary>
+    /// The keys held down (<see cref="KeyDown"/>) and not yet let go.
+    /// </summary>
+    public IReadOnlyCollection<Key> Held => _held;
+
     public void Move(Point at, RawInputModifiers modifiers = RawInputModifiers.None)
     {
         Position = at;
-        Send(Raw.Pointer(Mouse, Timestamp, Root, RawPointerEventType.Move, at, modifiers | _buttons));
+        Send(Raw.Pointer(Mouse, Timestamp, Root, RawPointerEventType.Move, at, modifiers | _buttons | _keys));
     }
 
     public void Down(Point at, MouseButton button = MouseButton.Left, RawInputModifiers modifiers = RawInputModifiers.None)
@@ -62,7 +70,7 @@ public sealed class WindowInput
             _ => throw new ArgumentException($"The mouse has no button {button} here: left, right or middle"),
         };
         _buttons |= held;
-        Send(Raw.Pointer(Mouse, Timestamp, Root, type, at, modifiers | _buttons));
+        Send(Raw.Pointer(Mouse, Timestamp, Root, type, at, modifiers | _buttons | _keys));
     }
 
     public void Up(Point at, MouseButton button = MouseButton.Left, RawInputModifiers modifiers = RawInputModifiers.None)
@@ -76,7 +84,7 @@ public sealed class WindowInput
             _ => throw new ArgumentException($"The mouse has no button {button} here: left, right or middle"),
         };
         _buttons &= ~held;
-        Send(Raw.Pointer(Mouse, Timestamp, Root, type, at, modifiers | _buttons));
+        Send(Raw.Pointer(Mouse, Timestamp, Root, type, at, modifiers | _buttons | _keys));
     }
 
     /// <summary>
@@ -85,7 +93,7 @@ public sealed class WindowInput
     public void Wheel(Point at, double notches, RawInputModifiers modifiers = RawInputModifiers.None)
     {
         Position = at;
-        Send(Raw.Wheel(Mouse, Timestamp, Root, at, new Vector(0, notches), modifiers | _buttons));
+        Send(Raw.Wheel(Mouse, Timestamp, Root, at, new Vector(0, notches), modifiers | _buttons | _keys));
     }
 
     /// <summary>
@@ -110,6 +118,20 @@ public sealed class WindowInput
     /// </summary>
     public void Key(Key key, RawInputModifiers modifiers = RawInputModifiers.None)
     {
+        KeyDown(key, modifiers);
+        KeyUp(key, modifiers);
+    }
+
+    /// <summary>
+    /// Presses a key and holds it (with the text a printable key types) until <see cref="KeyUp"/>:
+    /// a modifier key held goes with every mouse event and key meanwhile, as shift held while
+    /// dragging does.
+    /// </summary>
+    public void KeyDown(Key key, RawInputModifiers modifiers = RawInputModifiers.None)
+    {
+        _held.Add(key);
+        _keys |= ModifierOf(key);
+        modifiers |= _keys;
         PhysicalKey physical = PhysicalOf(key);
         string? symbol = SymbolOf(key, modifiers);
         Send(Raw.Key(Raw.Keyboard, Timestamp, Root, RawKeyEventType.KeyDown, key, modifiers, physical, symbol));
@@ -117,8 +139,30 @@ public sealed class WindowInput
         {
             Send(Raw.Text(Raw.Keyboard, Timestamp, Root, symbol));
         }
-        Send(Raw.Key(Raw.Keyboard, Timestamp, Root, RawKeyEventType.KeyUp, key, modifiers, physical, symbol));
     }
+
+    /// <summary>
+    /// Lets go of a key (held or not).
+    /// </summary>
+    public void KeyUp(Key key, RawInputModifiers modifiers = RawInputModifiers.None)
+    {
+        modifiers |= _keys;
+        _held.Remove(key);
+        _keys = _held.Aggregate(RawInputModifiers.None, (all, held) => all | ModifierOf(held));
+        Send(Raw.Key(Raw.Keyboard, Timestamp, Root, RawKeyEventType.KeyUp, key, modifiers & ~ModifierOf(key), PhysicalOf(key), SymbolOf(key, modifiers)));
+    }
+
+    /// <summary>
+    /// The modifier a key is (shift, control, alt, the Windows key); none for other keys.
+    /// </summary>
+    private static RawInputModifiers ModifierOf(Key key) => key switch
+    {
+        Avalonia.Input.Key.LeftShift or Avalonia.Input.Key.RightShift => RawInputModifiers.Shift,
+        Avalonia.Input.Key.LeftCtrl or Avalonia.Input.Key.RightCtrl => RawInputModifiers.Control,
+        Avalonia.Input.Key.LeftAlt or Avalonia.Input.Key.RightAlt => RawInputModifiers.Alt,
+        Avalonia.Input.Key.LWin or Avalonia.Input.Key.RWin => RawInputModifiers.Meta,
+        _ => RawInputModifiers.None,
+    };
 
     /// <summary>
     /// Types text into the focused control, as an input method hands it over (no key presses).
@@ -171,6 +215,9 @@ public sealed class WindowInput
             "arrowright" => "Right",
             "pgup" => "PageUp",
             "pgdn" => "PageDown",
+            "shift" => "LeftShift",
+            "ctrl" or "control" => "LeftCtrl",
+            "alt" => "LeftAlt",
             _ => null,
         };
         if (alias is not null)

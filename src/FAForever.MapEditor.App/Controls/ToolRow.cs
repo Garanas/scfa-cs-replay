@@ -11,8 +11,8 @@ namespace FAForever.MapEditor.App.Controls;
 /// The active tool's options in one row of a fixed height, whatever the tool and the window's
 /// width, so the views below never move: what does not fit goes behind a "More" button at the
 /// row's end, which shows it in rows of the same height laid over the top of the views (and hides
-/// it again with a second click or another tool). The settings keep their order: those at the end
-/// are the first to go.
+/// it again with a second click, a click anywhere outside the row and what it shows, Escape, or
+/// another tool). The settings keep their order: those at the end are the first to go.
 /// </summary>
 /// <remarks>
 /// The overflowing settings stay where they are in the tree (their bindings do not change), laid
@@ -43,6 +43,7 @@ public sealed class ToolRow : Panel
         HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
     };
     private readonly HashSet<Control> _overflow = [];
+    private TopLevel? _window;
 
     static ToolRow()
     {
@@ -56,7 +57,7 @@ public sealed class ToolRow : Panel
         _more.Content = "More";
         _more.IsVisible = false;
         AutomationProperties.SetName(_more, "More options of the tool");
-        AutomationProperties.SetHelpText(_more, "Shows the settings that do not fit in the row, over the views; a second click hides them");
+        AutomationProperties.SetHelpText(_more, "Shows the settings that do not fit in the row, over the views; a second click, a click elsewhere or Escape hides them");
         _more.IsCheckedChanged += (_, _) => IsExpanded = _more.IsChecked == true;
         _box.Classes.Add("tooloverflow");
         Children.Add(_box);
@@ -223,9 +224,49 @@ public sealed class ToolRow : Panel
         _box.IsVisible = IsExpanded;
     }
 
-    protected override void OnKeyDown(KeyEventArgs e)
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        base.OnKeyDown(e);
+        base.OnAttachedToVisualTree(e);
+        _window = TopLevel.GetTopLevel(this);
+        // the window's presses and keys before anything else sees them: a click elsewhere or Escape closes
+        _window?.AddHandler(PointerPressedEvent, OnWindowPressed, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
+        _window?.AddHandler(KeyDownEvent, OnWindowKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        _window?.RemoveHandler(PointerPressedEvent, OnWindowPressed);
+        _window?.RemoveHandler(KeyDownEvent, OnWindowKeyDown);
+        _window = null;
+    }
+
+    /// <summary>
+    /// A press anywhere in the window while the settings that do not fit show: outside the row and
+    /// them (and outside a list a combo box of theirs dropped down) it closes them, and the press
+    /// goes on to what it reached.
+    /// </summary>
+    private void OnWindowPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!IsExpanded || e.Source is not Visual source)
+        {
+            return;
+        }
+        if (source == this || this.IsVisualAncestorOf(source)
+            || source.FindAncestorOfType<OverlayLayer>(includeSelf: true) is not null
+            || source.FindAncestorOfType<PopupRoot>(includeSelf: true) is not null)
+        {
+            return;
+        }
+        IsExpanded = false;
+    }
+
+    /// <summary>
+    /// Escape while the settings that do not fit show closes them, wherever the keyboard is; the
+    /// key goes no further (a view's Escape would also clear the selection).
+    /// </summary>
+    private void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    {
         if (e.Key == Key.Escape && IsExpanded)
         {
             IsExpanded = false;

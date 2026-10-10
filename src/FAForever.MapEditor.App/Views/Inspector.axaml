@@ -355,7 +355,7 @@
           <Border Classes="group">
             <StackPanel Classes="stack">
               <TextBlock Classes="heading" Text="Selection" />
-              <TextBlock Classes="caption" TextWrapping="Wrap" Text="Nothing is selected. Choose a mode's Select tool and click a thing in either view, or drag a box around several in the top view; shift adds, control toggles. The handles then move, turn and scale the selection." />
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="Nothing is selected. Choose a mode's Select tool and click a thing in either view, or drag a box around several in either view; shift adds, control toggles. The handles then move, turn and scale the selection." />
             </StackPanel>
           </Border>
         </StackPanel>

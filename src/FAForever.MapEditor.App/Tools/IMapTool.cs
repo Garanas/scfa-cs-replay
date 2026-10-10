@@ -220,6 +220,12 @@ public sealed record ToolLine(Vector2[] Points, bool Closed, float Width, ToolIn
 public sealed record ToolSquare(Vector2 Centre, float Half, ToolInk Fill, ToolInk Stroke) : ToolShape;
 
 /// <summary>
+/// A line in a colour of the map's own rather than an ink of the theme, such as the links between
+/// path nodes in their layer's colour; red, green, blue and opacity from 0 to 1.
+/// </summary>
+public sealed record ToolMapLine(Vector2 From, Vector2 To, float Width, Vector4 Color) : ToolShape;
+
+/// <summary>
 /// A filled triangle, such as an arrow's head.
 /// </summary>
 public sealed record ToolTriangle(Vector2 A, Vector2 B, Vector2 C, ToolInk Ink) : ToolShape;

@@ -233,7 +233,7 @@ public sealed partial class SelectionInspector : ObservableObject
         {
             return;
         }
-        if (_selection.IsEmpty || !double.TryParse(value.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double number) || !double.IsFinite(number))
+        if (_selection.IsEmpty || !EditorCulture.TryParse(value, out double number))
         {
             // the binding wrote the text: show the field's own value again
             string shown = field;
@@ -429,7 +429,7 @@ public sealed partial class PropSelection : SelectionSection
         {
             return;
         }
-        if (Owner is null || !double.TryParse(value.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double number) || !double.IsFinite(number))
+        if (Owner is null || !EditorCulture.TryParse(value, out double number))
         {
             string shown = field;
             field = value;
@@ -535,7 +535,7 @@ public sealed class DecalSelection : SelectionSection
         {
             return;
         }
-        if (Run is null || !double.TryParse(value.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double number) || !double.IsFinite(number))
+        if (Run is null || !EditorCulture.TryParse(value, out double number))
         {
             string shown = field;
             field = value;

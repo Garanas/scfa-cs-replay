@@ -34,8 +34,10 @@ reads again when it changes; and nothing that generates runs by itself.
       from rules, a baked heightmap) shows that its inputs changed and offers to generate again; it
       never runs by itself. Today: the generators' registry with the inputs each result was made
       from; the status bar names the results out of date, and Generate, Everything out of date makes
-      them again; walkability, the normal map and the preview are generated this way (T-7, S-4),
-      and so are masks and props from rules (K-2, P-4).
+      them again in the order one feeds the next (masks from rules before the props that read
+      them, walkability before path networks), so one run leaves nothing out of date; walkability,
+      the normal map and the preview are generated this way (T-7, S-4), and so are masks and props
+      from rules (K-2, P-4).
 - [ ] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
       missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map
@@ -73,16 +75,19 @@ reads again when it changes; and nothing that generates runs by itself.
       kind's own fields; decals and props scale; handles in both views (move, along x or z, turn
       about the selection's centre or each thing's own, scale; shift snaps, X or Z holds an axis),
       F focuses the 3D camera on the selection, the status bar shows its count and size, the thing
-      under the mouse in 3D lights up. Missing: a box in the 3D view.
+      under the mouse in 3D lights up; a box in the 3D view is a rectangle on screen that selects
+      what shows inside it.
 - [ ] **F-12 Symmetry.** Mirror every edit: horizontally, vertically, diagonally, or around the
       middle for 2 to 8 players; shown as guides in the views. Today: the symmetry is chosen (off,
       rotational for 2 to 8, four mirrors; on and off takes the map's own) and the top view shows
       its guides; the maths mirrors points, yaws and rotations. Every brush stroke paints in every
       part (shapes turned and flipped, props painted as mirrored props); placing markers, props,
       decals and units places their images; moving, turning and deleting take the mirror partners
-      along; "Mirror edits" off keeps the guides only; Select the mirror partners, Mirror the
-      selection, and the check "not symmetric". Missing: guides and the brush's images in the 3D
-      view, decal scaling with partners.
+      along, and so do scaling (the handles, Scale the selection), turning about the selection's
+      centre and the decals' sizes; pasted and duplicated things get their images; the brush under
+      the mouse shows every image in both views; the guides show in 3D; "Mirror edits" off keeps
+      the guides only; Select the mirror partners, Mirror the selection, and the check "not
+      symmetric".
 - [x] **F-13 Events.** C# and Lua react to what happens (workspace opened, map opened or saved,
       document changed) and may check things before a save or export. Today: C# handlers of
       workspace opened, map opened, saved or exported, document changed, and checks that stop a
@@ -176,8 +181,9 @@ reads again when it changes; and nothing that generates runs by itself.
       road, a cliff edge, with a profile, width and falloff; edit the curve afterwards and the
       terrain follows (it stays a layer, see T-5). Today: the curve tool draws a Catmull-Rom curve
       layer point by point in the top view, moves, inserts and removes points; the inspector sets
-      its profile, width, falloff, height and whether it is closed. Missing: a height per point by
-      hand in the views, the curve's handles in the 3D view.
+      its profile, width, falloff, height and whether it is closed; the 3D view draws the curve and
+      its points on the terrain, where the tool works as in the top view. Missing: a height per
+      point by hand in the views.
 - [x] **T-5 Heightmap layers.** A stack of layers that add up to the heightmap: the base, sculpting,
       curves, imported results of World Machine or Gaea; per layer a way of combining (add, maximum,
       minimum, replace), strength, a mask, visible or hidden, locked. Shape the general form in the

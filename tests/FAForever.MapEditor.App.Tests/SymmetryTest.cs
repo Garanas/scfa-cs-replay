@@ -199,6 +199,128 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task PartnersTurnAndScaleAboutTheSelectionAndCopiesAreMirrored()
+        {
+            MainViewModel model = await Open("leftRight");
+            await Run(model, "props.place", new JsonObject { ["key"] = Rock, ["x"] = 80, ["z"] = 30, ["heading"] = 0 });
+            ObjectRef[] first = [.. model.Selection.Items];
+            await Run(model, "props.place", new JsonObject { ["key"] = Rock, ["x"] = 90, ["z"] = 30, ["heading"] = 0 });
+            ObjectRef[] second = [.. model.Selection.Items];
+            model.Selection.Set([first[0], second[0]]);
+
+            await Run(model, "edit.rotate", new JsonObject { ["degrees"] = 90, ["about"] = "selection" });
+            Assert.AreEqual(new Vector2(85, 25), Flat(model.ShownDocument!.PlaceOf(first[0])!.Value));
+            Assert.AreEqual(new Vector2(171, 25), Flat(model.ShownDocument!.PlaceOf(first[1])!.Value), "about the image of the centre");
+            Assert.AreEqual(new Vector2(171, 35), Flat(model.ShownDocument!.PlaceOf(second[1])!.Value));
+
+            await Run(model, "edit.scale", new JsonObject { ["factor"] = 2, ["about"] = "selection" });
+            Assert.AreEqual(new Vector2(171, 20), Flat(model.ShownDocument!.PlaceOf(first[1])!.Value), "spread from the image of the centre");
+            Assert.AreEqual(2, ((Prop)model.ShownDocument!.Find(first[1])!).Scale.X, 1e-3f);
+
+            await Run(model, "edit.scale", new JsonObject { ["factor"] = 0.5f, ["about"] = "each" });
+            Assert.AreEqual(new Vector2(171, 20), Flat(model.ShownDocument!.PlaceOf(first[1])!.Value), "each about its own centre");
+            Assert.AreEqual(1, ((Prop)model.ShownDocument!.Find(first[1])!).Scale.X, 1e-3f);
+
+            // copies: pasted and duplicated, with their images
+            model.Selection.Set([first[0]]);
+            await Run(model, "edit.copy");
+            await Run(model, "edit.paste", new JsonObject { ["x"] = 60, ["z"] = 100 });
+            Assert.AreEqual(2, model.Selection.Count, "the copy and its image");
+            Assert.IsTrue(model.Selection.Items.Any(thing => Flat(model.ShownDocument!.PlaceOf(thing)!.Value) == new Vector2(196, 100)));
+
+            model.Selection.Set([second[0], second[1]]);
+            int props = model.ShownDocument!.Props.Length;
+            await Run(model, "edit.duplicate", new JsonObject { ["dx"] = 2, ["dz"] = 2 });
+            Assert.AreEqual(props + 2, model.ShownDocument!.Props.Length, "the thing's copy and its image, not a copy of the partner as well");
+            Vector2 copy = Flat(model.ShownDocument!.PlaceOf(model.Selection.Items[0])!.Value);
+            Vector2 image = Flat(model.ShownDocument!.PlaceOf(model.Selection.Items[1])!.Value);
+            Assert.AreEqual(256 - copy.X, image.X, 1e-3f);
+            Assert.AreEqual(copy.Y, image.Y, 1e-3f);
+        }
+
+        [TestMethod]
+        public async Task TheHandlesTurnAndScaleThePartnersToo()
+        {
+            MainViewModel model = await Open("leftRight", tool: "props.select");
+            await Run(model, "props.place", new JsonObject { ["key"] = Rock, ["x"] = 80, ["z"] = 30, ["heading"] = 0 });
+            ObjectRef[] first = [.. model.Selection.Items];
+            await Run(model, "props.place", new JsonObject { ["key"] = Rock, ["x"] = 90, ["z"] = 30, ["heading"] = 0 });
+            ObjectRef[] second = [.. model.Selection.Items];
+            await Run(model, "select.handles", new JsonObject { ["pivot"] = "selection" });
+            model.SelectTool("props.select");
+            model.Selection.Set([first[0], second[0]]);
+            SelectTool tool = (SelectTool)model.ActiveTool!.Tool!;
+            HandleLayout layout = HandleLayout.Of(tool.Frame!, ToolInput.Default.OgridsPerPixel);
+            Vector2 middle = tool.Frame!.Middle;
+            (_, Vector3 corner) = layout.Scales[2];
+
+            Drag(tool, corner, middle + (new Vector2(corner.X, corner.Z) - middle) * 2);
+
+            Vector3 a = model.ShownDocument!.PlaceOf(first[0])!.Value;
+            Vector3 partner = model.ShownDocument!.PlaceOf(first[1])!.Value;
+            Assert.AreEqual(256 - a.X, partner.X, 1e-2f, "the partner stays the image");
+            Assert.AreEqual(a.Z, partner.Z, 1e-2f);
+            Assert.AreEqual(((Prop)model.ShownDocument!.Find(first[0])!).Scale.X, ((Prop)model.ShownDocument!.Find(first[1])!).Scale.X, 1e-4f);
+
+            layout = HandleLayout.Of(tool.Frame!, ToolInput.Default.OgridsPerPixel);
+            Vector3 ring = layout.Centre + new Vector3(layout.RingRadius, 0, 0);
+            Assert.AreEqual(new HandlePart(HandleKind.Turn), tool.HandleAt(ring.X, ring.Z, ToolInput.Default));
+            Drag(tool, ring, tool.Frame!.Middle + new Vector2(0, layout.RingRadius));
+            Assert.AreEqual("Turn the selection", model.Map!.Session.UndoDescription);
+            a = model.ShownDocument!.PlaceOf(first[0])!.Value;
+            partner = model.ShownDocument!.PlaceOf(first[1])!.Value;
+            Assert.AreEqual(256 - a.X, partner.X, 1e-2f, "turned about the image of the centre");
+            Assert.AreEqual(a.Z, partner.Z, 1e-2f);
+        }
+
+        private static void Drag(IMapTool tool, Vector3 from, Vector2 to)
+        {
+            tool.Press(from.X, from.Z, ToolInput.Default);
+            Vector2 start = new Vector2(from.X, from.Z);
+            for (int i = 1; i <= 4; i++)
+            {
+                Vector2 at = Vector2.Lerp(start, to, i / 4f);
+                tool.Drag(at.X, at.Y, ToolInput.Default);
+            }
+            tool.Release();
+        }
+
+        [TestMethod]
+        public async Task TheBrushUnderTheMouseShowsEveryImage()
+        {
+            MainViewModel model = await Open(tool: "terrain.sculpt");
+            BrushPreview brush = BrushPreview.Of(model.ActiveTool!.Tool, 60, 40)!;
+            IReadOnlyList<BrushPreview> images = brush.Images(model.EditTransforms(model.ShownDocument!));
+            Assert.AreEqual(4, images.Count);
+            Assert.AreEqual(brush, images[0], "the brush itself first");
+            Assert.AreEqual(Quarter(60, 40), new Vector2(images[1].X, images[1].Z));
+
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "leftRight" });
+            images = brush.Images(model.EditTransforms(model.ShownDocument!));
+            Assert.IsTrue(images[1].Mirrored, "flipped in the mirrored part");
+            Assert.AreEqual(196, images[1].X, 1e-3f);
+
+            await Run(model, "select.mirrorEdits", new JsonObject { ["on"] = false });
+            Assert.AreEqual(1, brush.Images(model.EditTransforms(model.ShownDocument!)).Count, "guides only: the brush alone");
+        }
+
+        [TestMethod]
+        public async Task DecalPartnersScaleAndTakeTheirSize()
+        {
+            MainViewModel model = await Open("leftRight");
+            await Run(model, "decals.place", new JsonObject { ["key"] = "env/common/decals/mud.dds", ["x"] = 60, ["z"] = 40, ["width"] = 10, ["heading"] = 30 });
+            ObjectRef[] pair = [.. model.Selection.Items];
+            model.Selection.Set([pair[0]]);
+
+            await Run(model, "decals.scale", new JsonObject { ["x"] = 2 });
+            Assert.AreEqual(20, ((Decal)model.ShownDocument!.Find(pair[1])!).Scale.X, 1e-3f);
+            await Run(model, "decals.size", new JsonObject { ["length"] = 7 });
+            Assert.AreEqual(7, ((Decal)model.ShownDocument!.Find(pair[1])!).Scale.Z, 1e-3f);
+            Vector3 centre = MapObjects.DecalCentre((Decal)model.ShownDocument!.Find(pair[1])!);
+            Assert.AreEqual(196, centre.X, 1e-2f, "about its own centre");
+        }
+
+        [TestMethod]
         public async Task TheSelectionIsMirroredOnceAndTheCheckFindsWhatLacksAPartner()
         {
             MainViewModel model = await Open("topBottom");

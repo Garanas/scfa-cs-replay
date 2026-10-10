@@ -524,6 +524,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
         return new JsonObject
         {
             ["title"] = model.Title,
+            ["build"] = BuildState(),
             ["stage"] = model.Setup.Stage.ToString(),
             ["mode"] = model.SelectedMode?.Definition.Id,
             ["tool"] = model.ActiveTool?.Definition.Id,
