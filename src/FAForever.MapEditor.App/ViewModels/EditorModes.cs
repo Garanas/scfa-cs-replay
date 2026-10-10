@@ -98,6 +98,7 @@ public static class EditorModes
                 new ToolDefinition("terrain.ruler", "Ruler", "V-5", "Measure distances and heights"),
             ],
             [
+                new PresetSection("brush", "Brush presets"),
                 new PlannedSection("Height layers", "T-5", "Layers that add up to the heightmap: base, sculpting, curves, results of World Machine or Gaea"),
                 new PlannedSection("Generated from the layers", "T-7", "Walkability, with what changed since it was generated last"),
             ],
@@ -110,6 +111,7 @@ public static class EditorModes
             ],
             [
                 new StrataSection(),
+                new PresetSection("brush", "Brush presets"),
                 new PlannedSection("Layer textures", "S-2", "Each layer's albedo and normal texture and their scales; add, remove, reorder"),
                 new PlannedSection("Masks for tools", "K-1", "Named masks for one's own purposes, saved as PNG"),
             ],
@@ -215,7 +217,7 @@ public static class EditorOverlays
         new OverlayDefinition("camera", "3D camera", "Show the 3D camera", "V-1"),
         new OverlayDefinition("walkability", "Walkability", "Show walkability", "T-7", "Show where land units can and cannot go, and what changed"),
         new OverlayDefinition("mask", "Mask", "Show a mask", "K-1", "Show a mask over the terrain"),
-        new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12", "Show the symmetry's guides"),
+        new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12"),
         new OverlayDefinition("grid", "Grid", "Show the grid", "V-3", "Show a grid over the terrain"),
         new OverlayDefinition("areas", "Areas", "Show areas", "M-5", "Show the areas"),
         new OverlayDefinition("props", "Props", "Show props", "P-1", "Show the props in the top view"),

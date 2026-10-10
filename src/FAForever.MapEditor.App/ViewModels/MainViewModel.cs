@@ -90,8 +90,12 @@ public sealed partial class MainViewModel : ObservableObject
         Setup.WorkspaceReady += OnWorkspaceReady;
         VersionControl = new VersionControlViewModel(this);
         Assets = new AssetsViewModel(Logger("Assets"));
+        Events = new EditorEvents(Logger("Editor"));
+        Symmetry = new SymmetryViewModel();
+        Generation = new GenerationViewModel();
         Commands = CommandServices.Create(this, _dialogs, typeof(MainViewModel).Assembly);
         Palette = new PaletteViewModel(Commands, RunAsync);
+        Presets = new PresetsViewModel(Logger("Assets"), _ui, (id, arguments) => TryAsync(() => Commands.RunAsync(id, arguments, interactive: true)));
         InitializeShell();
     }
 
@@ -126,6 +130,26 @@ public sealed partial class MainViewModel : ObservableObject
     public AssetsViewModel Assets { get; }
 
     /// <summary>
+    /// What happens in the editor, for C# and later Lua plugins to react to (user story F-13).
+    /// </summary>
+    public EditorEvents Events { get; }
+
+    /// <summary>
+    /// The workspace's presets, and those the mode's panel lists (user story F-10).
+    /// </summary>
+    public PresetsViewModel Presets { get; }
+
+    /// <summary>
+    /// The symmetry edits are mirrored by, and whose guides the top view draws (user story F-12).
+    /// </summary>
+    public SymmetryViewModel Symmetry { get; }
+
+    /// <summary>
+    /// What is generated when asked, and which results are out of date (user story F-7).
+    /// </summary>
+    public GenerationViewModel Generation { get; }
+
+    /// <summary>
     /// A logger of the editor, by what it is about: <c>Commands</c>, <c>Files</c>, <c>Workspace</c>,
     /// <c>Rendering</c>, <c>Performance</c>, <c>Automation</c>, <c>VersionControl</c>, <c>Assets</c>, <c>Editor</c>.
     /// </summary>
@@ -154,8 +178,10 @@ public sealed partial class MainViewModel : ObservableObject
     private void OnWorkspaceReady(Workspace workspace)
     {
         WatchBrushes(workspace);
+        Presets.Open(workspace);
         _ = LoadAssetsAsync(workspace);
         Refresh(null);
+        Events.OnWorkspaceOpened(workspace);
         if (_openWhenReady is string folder)
         {
             _openWhenReady = null;
@@ -319,30 +345,46 @@ public sealed partial class MainViewModel : ObservableObject
     public Task ImportMapFolderAsync(string folder) => BusyAsync("import", $"Importing {folder}...", async () =>
         Attach(await EditedMap.ImportMapAsync(folder), $"Imported {folder}; save it as a project to keep it"));
 
-    public Task SaveAsync() => BusyAsync("save", "Saving...", async () =>
+    /// <exception cref="OperationVetoedException">A handler of <see cref="EditorEvents.BeforeSave"/> stopped it.</exception>
+    public async Task SaveAsync()
     {
         EditedMap map = RequireMap();
-        await map.SaveAsync();
-        Refresh($"Saved {map.ProjectFolder}");
-    });
+        Events.CheckSave(map, map.ProjectFolder);
+        await BusyAsync("save", "Saving...", async () =>
+        {
+            await map.SaveAsync();
+            Refresh($"Saved {map.ProjectFolder}");
+        });
+        Events.OnMapSaved(map);
+    }
 
-    public Task SaveAsAsync(string folder) => BusyAsync("save-as", "Saving...", async () =>
+    /// <exception cref="OperationVetoedException">A handler of <see cref="EditorEvents.BeforeSave"/> stopped it.</exception>
+    public async Task SaveAsAsync(string folder)
     {
         EditedMap map = RequireMap();
-        await map.SaveAsAsync(folder);
-        Watch(map.ProjectFolder!);
-        Refresh($"Saved as {map.ProjectFolder}");
-    });
+        Events.CheckSave(map, folder);
+        await BusyAsync("save-as", "Saving...", async () =>
+        {
+            await map.SaveAsAsync(folder);
+            Watch(map.ProjectFolder!);
+            Refresh($"Saved as {map.ProjectFolder}");
+        });
+        Events.OnMapSaved(map);
+    }
 
     /// <returns>The map folder that was written.</returns>
+    /// <exception cref="OperationVetoedException">A handler of <see cref="EditorEvents.BeforeExport"/> stopped it.</exception>
     public async Task<string> ExportAsync(string outputFolder, int? version = null)
     {
+        EditedMap map = RequireMap();
+        Events.CheckExport(map, outputFolder);
         string folder = "";
         await BusyAsync("export", "Exporting...", async () =>
         {
-            folder = await RequireMap().ExportAsync(outputFolder, version);
+            folder = await map.ExportAsync(outputFolder, version);
             Status = $"Exported {folder}";
         });
+        Events.OnMapExported(map, folder);
         return folder;
     }
 
@@ -478,9 +520,12 @@ public sealed partial class MainViewModel : ObservableObject
         if (Map is not null)
         {
             Map.Session.StateChanged -= OnSessionChanged;
+            Map.Session.Changed -= OnDocumentChange;
         }
         Map = map;
         map.Session.StateChanged += OnSessionChanged;
+        map.Session.Changed += OnDocumentChange;
+        Generation.Forget();
         _pendingReload.Clear();
         if (map.ProjectFolder is string folder)
         {
@@ -494,6 +539,7 @@ public sealed partial class MainViewModel : ObservableObject
         ResetCamera();
         MapChanged?.Invoke(this, EventArgs.Empty);
         Refresh(status);
+        Events.OnMapOpened(map);
     }
 
     /// <summary>
@@ -540,6 +586,8 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     private void OnSessionChanged(object? sender, EventArgs e) => Refresh(null);
+
+    private void OnDocumentChange(object? sender, DocumentChange change) => Events.OnDocumentChanged(change);
 
     partial void OnIsBusyChanged(bool value) => Refresh(null);
 
@@ -592,6 +640,7 @@ public sealed partial class MainViewModel : ObservableObject
         RefreshOverlays();
         ShowHistory();
         Assets.UseMap(Map?.Document);
+        Generation.Refresh(Map?.Document);
         Commands.NotifyCanRunChanged();
         DocumentChanged?.Invoke(this, EventArgs.Empty);
     }

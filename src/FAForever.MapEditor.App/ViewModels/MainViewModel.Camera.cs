@@ -35,6 +35,14 @@ public sealed partial class MainViewModel
     partial void OnShowCameraChanged(bool value) => RefreshOverlays();
 
     /// <summary>
+    /// Whether the top view draws the guides of the symmetry, while one is chosen (user story F-12).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ShowSymmetry { get; set; } = true;
+
+    partial void OnShowSymmetryChanged(bool value) => RefreshOverlays();
+
+    /// <summary>
     /// Says that the camera moved; the 3D view calls it while the camera glides, and every
     /// operation that sends it somewhere.
     /// </summary>

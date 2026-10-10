@@ -17,7 +17,3 @@ public sealed record Duplicate : IRequest;
 [Incomplete("F-11", "Delete the selection")]
 [EditorCommand("edit.delete", "Delete", Story = "F-11")]
 public sealed record Delete : IRequest;
-
-[Incomplete("F-10", "Save the selection as a preset in the workspace")]
-[EditorCommand("edit.saveAsPreset", "Save the selection as a preset...", Story = "F-10")]
-public sealed record SaveAsPreset : IRequest;

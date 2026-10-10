@@ -468,6 +468,19 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["summary"] = model.Assets.Summary,
                 ["selected"] = model.Assets.Shown?.Key,
             },
+            ["symmetry"] = ChooseSymmetryHandler.Describe(model.Symmetry),
+            ["presets"] = new JsonObject
+            {
+                ["folder"] = model.Presets.Library?.Folder,
+                ["kind"] = model.Presets.Kind,
+                ["shown"] = new JsonArray([.. model.Presets.Shown.Select(preset => (JsonNode)JsonValue.Create(preset.Name))]),
+            },
+            ["generated"] = new JsonArray([.. model.Generation.States.Select(state => (JsonNode)new JsonObject
+            {
+                ["id"] = state.Generator.Id,
+                ["status"] = state.Status.ToString(),
+                ["changed"] = new JsonArray([.. state.ChangedInputs.Select(input => (JsonNode)JsonValue.Create(input))]),
+            })]),
             ["gpu"] = new JsonObject
             {
                 ["renderer"] = window.View3D.Renderer,

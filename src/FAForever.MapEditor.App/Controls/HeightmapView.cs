@@ -240,6 +240,11 @@ public sealed class HeightmapView : Control
             _markers.Render(context, overlay, document.Markers, _model.ShowMarkers, _model.ShowPathNodes, _zoom, _offset);
         }
 
+        if (_model is { ShowSymmetry: true, Symmetry.IsOn: true, ShownDocument: MapDocument mirrored })
+        {
+            DrawSymmetry(context, overlay, _model.Symmetry.Guides(mirrored));
+        }
+
         if (_model is { ShowCamera: true, HasMap: true })
         {
             DrawCamera(context, overlay, _model.Camera);
@@ -617,6 +622,26 @@ public sealed class HeightmapView : Control
             Point at = MapToControl(eye.X, eye.Z);
             context.DrawLine(overlay.Stroke, at, MapToControl(x, z));
             context.DrawEllipse(overlay.Strong, overlay.Stroke, at, 4, 4);
+        }
+    }
+
+    /// <summary>
+    /// The lines between the parts of the symmetry (user story F-12), dashed, over a darker line
+    /// so that they show on light and dark terrain.
+    /// </summary>
+    private void DrawSymmetry(DrawingContext context, Overlay overlay, IReadOnlyList<(System.Numerics.Vector2 From, System.Numerics.Vector2 To)> guides)
+    {
+        Pen shadow = new Pen(overlay.Shadow.Brush, overlay.Stroke.Thickness * 2);
+        Pen line = new Pen(overlay.Stroke.Brush, overlay.Stroke.Thickness, DashStyle.Dash);
+        using (context.PushClip(new Rect(Bounds.Size)))
+        {
+            foreach ((System.Numerics.Vector2 from, System.Numerics.Vector2 to) in guides)
+            {
+                Point start = MapToControl(from.X, from.Y);
+                Point end = MapToControl(to.X, to.Y);
+                context.DrawLine(shadow, start, end);
+                context.DrawLine(line, start, end);
+            }
         }
     }
 

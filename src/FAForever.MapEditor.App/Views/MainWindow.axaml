@@ -36,6 +36,9 @@
       <Border DockPanel.Dock="Bottom" Classes="bar">
         <DockPanel>
           <TextBlock x:Name="CursorText" DockPanel.Dock="Left" Classes="mono" AutomationProperties.Name="Place under the mouse" />
+          <TextBlock DockPanel.Dock="Right" Classes="warning" Margin="{StaticResource InlineGap}" Text="{Binding Generation.Summary}"
+                     IsVisible="{Binding Generation.HasStale}" AutomationProperties.Name="Generated results out of date"
+                     ToolTip.Tip="Generate, Everything out of date makes them again" />
           <TextBlock DockPanel.Dock="Right" Classes="secondary" Margin="{StaticResource InlineGap}" AutomationProperties.Name="Mode and tool">
             <Run Text="{Binding SelectedMode.Definition.Title}" /><Run Text=" · " /><Run Text="{Binding ActiveTool.Definition.Title}" />
           </TextBlock>
@@ -77,6 +80,11 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <Border Classes="barseparator" />
+            <TextBlock Classes="caption" Text="Symmetry" />
+            <ComboBox ItemsSource="{Binding Symmetry.Choices}" SelectedItem="{Binding Symmetry.Chosen}"
+                      AutomationProperties.Name="Symmetry"
+                      AutomationProperties.HelpText="The symmetry edits are mirrored by; the top view shows its guides" />
           </WrapPanel>
         </Border>
 

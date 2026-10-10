@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:ws="using:FAForever.MapEditor.Project.Workspaces"
              x:Class="FAForever.MapEditor.App.Views.ModePanel"
              x:DataType="vm:MainViewModel">
   <Border Classes="modepanel">
@@ -60,6 +61,39 @@
                   <ListBox ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StrataTool.Strata}"
                            SelectedItem="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StrataTool.Painted}"
                            AutomationProperties.Name="Strata" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+            <!-- the workspace's presets of the panel's kind: a button applies one, the cross deletes it; Save keeps the settings as they are -->
+            <DataTemplate DataType="vm:PresetSection">
+              <Border Classes="group">
+                <StackPanel Classes="stack">
+                  <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.Shown}" AutomationProperties.Name="{Binding Title}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="ws:Preset">
+                        <DockPanel>
+                          <Button DockPanel.Dock="Right" Classes="beside" Content="×"
+                                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.DeleteShownCommand}" CommandParameter="{Binding}"
+                                  AutomationProperties.Name="{Binding Name, StringFormat='Delete the preset {0}'}" />
+                          <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="{Binding Name}"
+                                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.ApplyShownCommand}" CommandParameter="{Binding}"
+                                  AutomationProperties.Name="{Binding Name, StringFormat='Apply the preset {0}'}" />
+                        </DockPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Classes="caption" Text="None yet: save the tool's settings to use them again."
+                             IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.IsEmpty}" />
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Classes="beside" Content="Save"
+                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.SaveNewCommand}"
+                            IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.HasLibrary}"
+                            AutomationProperties.Name="Save the settings as a preset" />
+                    <TextBox Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.NewName}" PlaceholderText="Name (optional)"
+                             AutomationProperties.Name="Name of the new preset"
+                             AutomationProperties.HelpText="Left empty, the preset is named after its settings" />
+                  </DockPanel>
                 </StackPanel>
               </Border>
             </DataTemplate>

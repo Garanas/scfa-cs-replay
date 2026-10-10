@@ -1,8 +1,11 @@
+using FAForever.FileFormats.Map;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Generation;
 using FAForever.MapEditor.Project.Workspaces;
 using Microsoft.Extensions.Logging;
 
@@ -412,6 +415,202 @@ namespace FAForever.MapEditor.App.Tests
 
             await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
                 model.Commands.RunAsync("assets.browse", new System.Text.Json.Nodes.JsonObject { ["kind"] = "tree" }, interactive: false));
+        }
+
+        [TestMethod]
+        public async Task TheEventsTellWhatHappensAndAChecksMayStopASaveOrExport()
+        {
+            Answers answers = new Answers();
+            MainViewModel model = new MainViewModel(answers);
+            List<string> heard = [];
+            model.Events.MapOpened += map => heard.Add($"opened {map.Document.Scenario.Name}");
+            model.Events.DocumentChanged += change => heard.Add($"{change.Reason} {change.Description}");
+            model.Events.MapSaved += map => heard.Add("saved");
+            model.Events.MapExported += (map, folder) => heard.Add($"exported {Path.GetFileName(folder)}");
+
+            await model.OpenAsync(HardFfa);
+            model.Stroke([(100, 40), (130, 40)]);
+            model.Undo();
+            model.Redo();
+            CollectionAssert.AreEqual(new[] { "opened HardFFA", "Edit Raise terrain", "Undo Raise terrain", "Redo Raise terrain" }, heard);
+
+            EventHandler<VetoableEventArgs> noSpawnCheck = (_, check) => check.Veto("ARMY_9 has no spawn");
+            model.Events.BeforeSave += noSpawnCheck;
+            string folder = NewFolder();
+            OperationVetoedException vetoed = await Assert.ThrowsExceptionAsync<OperationVetoedException>(() => model.SaveAsAsync(folder));
+            CollectionAssert.AreEqual(new[] { "ARMY_9 has no spawn" }, vetoed.Reasons.ToArray());
+            Assert.IsFalse(Directory.Exists(folder), "nothing is written");
+            Assert.IsFalse(model.IsBusy);
+            answers.Folders.Enqueue(folder);
+            await model.RunAsync("file.saveAs");
+            StringAssert.Contains(model.Status, "Saving was stopped: ARMY_9 has no spawn", "a command shows why in the status line");
+
+            model.Events.BeforeSave -= noSpawnCheck;
+            model.Events.MapSaved += _ => throw new InvalidOperationException("a broken plugin");
+            await model.SaveAsAsync(folder);
+            Assert.AreEqual("saved", heard[^1], "a handler that fails stops neither the save nor the others");
+            Assert.IsTrue(model.Diagnostics.Console.Any(entry => entry.Message.Contains("a broken plugin", StringComparison.Ordinal)));
+
+            model.Events.BeforeExport += (_, check) =>
+            {
+                Assert.AreEqual(Path.Combine(folder, "out"), check.Folder);
+                check.Veto("the map has no mass");
+            };
+            await Assert.ThrowsExceptionAsync<OperationVetoedException>(() => model.ExportAsync(Path.Combine(folder, "out")));
+            Assert.IsFalse(Directory.Exists(Path.Combine(folder, "out")));
+        }
+
+        [TestMethod]
+        public async Task SavesTheBrushAsAPresetAndAppliesItAgain()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            await model.OpenAsync(HardFfa);
+            Assert.ThrowsException<InvalidOperationException>(() => model.Presets.Save(null, null), "presets need a workspace");
+            PresetLibrary library = new PresetLibrary(NewFolder());
+            model.Presets.Use(library);
+            SculptTool sculpt = model.Tool<SculptTool>();
+            StrataTool strata = model.StrataTool;
+
+            model.SelectTool("terrain.sculpt");
+            Assert.AreEqual("brush", model.Presets.Kind, "the Terrain panel lists the brush presets");
+            sculpt.Mode = HeightBrushMode.Flatten;
+            sculpt.Radius = 30;
+            sculpt.Strength = 0.8;
+            sculpt.Target = 15;
+            sculpt.Shape.RandomRotation = true;
+            CommandRun saved = await model.Commands.RunAsync("edit.saveAsPreset", [], interactive: false);
+            Assert.AreEqual("Flatten 30", ((System.Text.Json.Nodes.JsonObject)saved.Result!)["name"]!.GetValue<string>(), "named after its settings");
+            CollectionAssert.AreEqual(new[] { "Flatten 30" }, model.Presets.Shown.Select(preset => preset.Name).ToArray());
+
+            model.SelectTool("paint.strata");
+            strata.Erase = true;
+            strata.Radius = 20;
+            await model.Commands.RunAsync("edit.saveAsPreset", new System.Text.Json.Nodes.JsonObject { ["name"] = "Wide eraser" }, interactive: false);
+
+            sculpt.Mode = HeightBrushMode.Raise;
+            sculpt.Radius = 5;
+            sculpt.Shape.RandomRotation = false;
+            Assert.IsTrue((await model.Commands.RunAsync("presets.apply", new System.Text.Json.Nodes.JsonObject { ["kind"] = "brush", ["name"] = "Flatten 30" }, interactive: false)).Ran);
+            Assert.AreEqual("terrain.sculpt", model.ActiveTool!.Definition.Id, "it chooses its tool");
+            Assert.AreEqual(HeightBrushMode.Flatten, sculpt.Mode);
+            Assert.AreEqual(30, sculpt.Radius);
+            Assert.AreEqual(0.8, sculpt.Strength);
+            Assert.AreEqual(15, sculpt.Target);
+            Assert.IsTrue(sculpt.Shape.RandomRotation);
+
+            strata.Erase = false;
+            await model.Commands.RunAsync("presets.apply", new System.Text.Json.Nodes.JsonObject { ["kind"] = "brush", ["name"] = "Wide eraser" }, interactive: false);
+            Assert.AreEqual("paint.strata", model.ActiveTool!.Definition.Id);
+            Assert.IsTrue(strata.Erase);
+            Assert.AreEqual(20, strata.Radius);
+
+            library.Save(Preset.Of("brush", "Lost crater", new BrushPresetSettings("sculpt", 9, 1, "brushes/gone.png", 0, false)));
+            await model.Commands.RunAsync("presets.apply", new System.Text.Json.Nodes.JsonObject { ["kind"] = "brush", ["name"] = "Lost crater" }, interactive: false);
+            Assert.AreEqual(9, sculpt.Radius);
+            Assert.AreEqual(BrushChoice.Round, sculpt.Shape.Chosen);
+            StringAssert.Contains(model.Status, "has a brush the workspace has not");
+
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => model.Commands.RunAsync("presets.apply", new System.Text.Json.Nodes.JsonObject { ["kind"] = "lighting", ["name"] = "Dusk" }, interactive: false));
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => model.Commands.RunAsync("presets.apply", new System.Text.Json.Nodes.JsonObject { ["kind"] = "brush", ["name"] = "Nothing" }, interactive: false));
+            model.SelectMode("lighting");
+            Assert.IsNull(model.Presets.Kind);
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => model.Commands.RunAsync("edit.saveAsPreset", [], interactive: false), "the Lighting panel lists no presets yet");
+
+            model.SelectMode("paint");
+            await model.Commands.RunAsync("presets.delete", new System.Text.Json.Nodes.JsonObject { ["kind"] = "brush", ["name"] = "Wide eraser" }, interactive: false);
+            CollectionAssert.AreEqual(new[] { "Flatten 30", "Lost crater" }, model.Presets.Shown.Select(preset => preset.Name).ToArray());
+        }
+
+        [TestMethod]
+        public async Task TheSymmetryIsChosenAndItsGuidesShow()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            await model.OpenAsync(HardFfa);
+            int redraws = 0;
+            model.OverlaysChanged += (_, _) => redraws++;
+            OverlayItem guides = model.Overlays.Single(overlay => overlay.Id == "symmetry");
+            Assert.IsFalse(guides.IsIncomplete);
+            Assert.IsFalse(model.Symmetry.IsOn, "off unless chosen");
+            Assert.AreEqual(0, model.Symmetry.Guides(model.Map!.Document).Count);
+
+            await model.Commands.RunAsync("select.symmetry", [], interactive: false);
+            Assert.IsTrue(model.Symmetry.IsOn);
+            Assert.AreEqual(SymmetryViewModel.Detect(model.Map.Document) ?? MapSymmetryKind.Rotational, model.Symmetry.Chosen.Kind, "the map's own symmetry");
+            Assert.IsTrue(redraws > 0, "the views draw the guides");
+
+            CommandRun four = await model.Commands.RunAsync("select.symmetry", new System.Text.Json.Nodes.JsonObject { ["kind"] = "rotational", ["count"] = 4 }, interactive: false);
+            Assert.AreEqual(4, ((System.Text.Json.Nodes.JsonObject)four.Result!)["count"]!.GetValue<int>());
+            Assert.AreEqual(4, model.Symmetry.Guides(model.Map.Document).Count);
+            Assert.AreEqual(4, model.Symmetry.Transforms(model.Map.Document).Count);
+
+            await model.Commands.RunAsync("select.symmetry", new System.Text.Json.Nodes.JsonObject { ["kind"] = "leftRight" }, interactive: false);
+            Assert.AreEqual(MapSymmetryKind.MirroredLeftRight, model.Symmetry.Chosen.Kind);
+            await model.Commands.RunAsync("select.symmetry", [], interactive: false);
+            Assert.IsFalse(model.Symmetry.IsOn);
+            Assert.AreEqual("Symmetry off", model.Status);
+            await model.Commands.RunAsync("select.symmetry", [], interactive: false);
+            Assert.AreEqual(MapSymmetryKind.MirroredLeftRight, model.Symmetry.Chosen.Kind, "on again: the one used last");
+
+            await Assert.ThrowsExceptionAsync<ArgumentOutOfRangeException>(() => model.Commands.RunAsync("select.symmetry", new System.Text.Json.Nodes.JsonObject { ["kind"] = "rotational", ["count"] = 9 }, interactive: false));
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => model.Commands.RunAsync("select.symmetry", new System.Text.Json.Nodes.JsonObject { ["kind"] = "spiral" }, interactive: false));
+            await model.Commands.RunAsync("view.overlay.symmetry", [], interactive: false);
+            Assert.IsFalse(model.ShowSymmetry, "the guides hide; the symmetry stays");
+            Assert.IsTrue(model.Symmetry.IsOn);
+        }
+
+        /// <summary>
+        /// Counts the samples of the heightmap above the water, as walkability will read them.
+        /// </summary>
+        private sealed class HighGround : IGenerator
+        {
+            public int Runs { get; private set; }
+
+            public string Id => "high-ground";
+
+            public string Title => "High ground";
+
+            public string Story => "F-7";
+
+            public IReadOnlyList<GeneratedInput> Inputs { get; } = [GeneratedInput.Heightmap, GeneratedInput.Water];
+
+            public object Generate(MapDocument document)
+            {
+                Runs++;
+                return document.Terrain.Heightmap.GetHeight(128, 40) > document.Water.Elevation;
+            }
+        }
+
+        [TestMethod]
+        public async Task GeneratesAgainOnlyWhatIsOutOfDateAndOnlyWhenAsked()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            HighGround generator = new HighGround();
+            model.Generation.Results.Register(generator);
+            await model.OpenAsync(HardFfa);
+            Assert.AreEqual(GeneratedStatus.Missing, model.Generation.States.Single().Status);
+            CommandRun nothing = await model.Commands.RunAsync("generate.stale", [], interactive: false);
+            Assert.AreEqual(0, ((System.Text.Json.Nodes.JsonArray)nothing.Result!).Count, "a result never generated is its own command's");
+            Assert.AreEqual("Nothing is out of date", model.Status);
+
+            model.Generation.Results.Generate("high-ground", model.Map!.Document);
+            model.Stroke([(100, 40), (130, 40)]);
+            Assert.AreEqual(1, generator.Runs, "a stroke generates nothing");
+            Assert.IsTrue(model.Generation.HasStale);
+            Assert.AreEqual("Out of date: High ground", model.Generation.Summary);
+
+            CommandRun listed = await model.Commands.RunAsync("generate.stale", new System.Text.Json.Nodes.JsonObject { ["list"] = true }, interactive: false);
+            System.Text.Json.Nodes.JsonObject stale = (System.Text.Json.Nodes.JsonObject)((System.Text.Json.Nodes.JsonArray)listed.Result!).Single()!;
+            Assert.AreEqual("high-ground", stale["id"]!.GetValue<string>());
+            Assert.AreEqual("heightmap", stale["changed"]![0]!.GetValue<string>());
+            Assert.AreEqual(1, generator.Runs, "listing generates nothing");
+
+            await model.Commands.RunAsync("generate.stale", [], interactive: false);
+            Assert.AreEqual(2, generator.Runs);
+            Assert.IsFalse(model.Generation.HasStale);
+            Assert.AreEqual("Generated again: High ground (heightmap changed)", model.Status);
+
+            await model.OpenAsync(HardFfa);
+            Assert.AreEqual(GeneratedStatus.Missing, model.Generation.States.Single().Status, "another map forgets the results");
         }
     }
 }
