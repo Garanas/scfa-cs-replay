@@ -180,8 +180,25 @@ namespace FAForever.MapEditor.Cli
 
         private static void Pack(PackOptions o)
         {
-            string folder = EditedMap.OpenProject(o.ProjectFolder).Export(o.OutputFolder, o.Version, wideDecals: true);
+            string folder = EditedMap.OpenProject(o.ProjectFolder).Export(o.OutputFolder, o.Version, wideDecals: true, ddsTextures: true, converted: ReportConverted);
             Console.WriteLine($"{DateTime.Now:HH:mm:ss} Packed {folder}");
+        }
+
+        /// <summary>
+        /// Says which of the map's own textures a pack converted to DDS.
+        /// </summary>
+        private static void ReportConverted(IReadOnlyList<ConvertedTexture> converted)
+        {
+            if (converted.Count == 0)
+            {
+                return;
+            }
+            int cached = converted.Count(texture => texture.Cached);
+            Console.WriteLine($"Converted {converted.Count} texture{(converted.Count == 1 ? "" : "s")} to DDS{(cached > 0 ? $" ({cached} as before)" : "")}:");
+            foreach (ConvertedTexture texture in converted)
+            {
+                Console.WriteLine($"  {texture.Source} -> {texture.Target} ({texture.Format})");
+            }
         }
 
         private static int Run(Action action)
@@ -220,7 +237,7 @@ namespace FAForever.MapEditor.Cli
                         {
                             return;
                         }
-                        string folder = map.Export(o.OutputFolder, o.Version, wideDecals: true);
+                        string folder = map.Export(o.OutputFolder, o.Version, wideDecals: true, ddsTextures: true, converted: ReportConverted);
                         Console.WriteLine($"{DateTime.Now:HH:mm:ss} Packed {folder}");
                     }
                     catch (Exception exception) when (exception is MapProjectException or IOException)

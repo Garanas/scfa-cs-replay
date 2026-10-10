@@ -254,9 +254,9 @@ namespace FAForever.MapEditor.App.Tests
 
             string folder = await model.ExportAsync(Path.Combine(Root, Guid.NewGuid().ToString("N")));
 
-            CollectionAssert.AreEqual(new[] { "normalMap", "preview", "wideDecals", "pathNodes", "walkabilityMarks", "write" }, model.Export.Lines.Select(line => line.Id).ToArray());
-            CollectionAssert.AreEqual(new[] { ExportStepStatus.Skipped, ExportStepStatus.Done, ExportStepStatus.Skipped, ExportStepStatus.Skipped, ExportStepStatus.Skipped, ExportStepStatus.Done }, model.Export.Lines.Select(line => line.Status).ToArray());
-            Assert.AreEqual("Exporting, step 2 of 6: Render the preview", progress[0]);
+            CollectionAssert.AreEqual(new[] { "normalMap", "preview", "wideDecals", "pathNodes", "walkabilityMarks", "ddsTextures", "write" }, model.Export.Lines.Select(line => line.Id).ToArray());
+            CollectionAssert.AreEqual(new[] { ExportStepStatus.Skipped, ExportStepStatus.Done, ExportStepStatus.Skipped, ExportStepStatus.Skipped, ExportStepStatus.Skipped, ExportStepStatus.Skipped, ExportStepStatus.Done }, model.Export.Lines.Select(line => line.Status).ToArray());
+            Assert.AreEqual("Exporting, step 2 of 7: Render the preview", progress[0]);
             Assert.AreEqual(GeneratedStatus.Current, model.Generation.States.Single(state => state.Generator.Id == "preview").Status, "rendered although never generated");
             StringAssert.StartsWith(File.ReadAllText(Path.Combine(folder, "HardFFA_scenario.lua")), "-- Made with the FAF Map Editor ");
 
@@ -294,7 +294,7 @@ namespace FAForever.MapEditor.App.Tests
 
             string folder = await model.ExportAsync(Path.Combine(Root, Guid.NewGuid().ToString("N")));
 
-            CollectionAssert.AreEqual(new[] { "normalMap", "preview", "wideDecals", "pathNodes", "test.marker", "walkabilityMarks", "write" }, model.Export.Lines.Select(line => line.Id).ToArray());
+            CollectionAssert.AreEqual(new[] { "normalMap", "preview", "wideDecals", "pathNodes", "test.marker", "walkabilityMarks", "ddsTextures", "write" }, model.Export.Lines.Select(line => line.Id).ToArray());
             Assert.AreEqual("Done: one marker", model.Export.Lines.Single(line => line.Id == "test.marker").StatusText);
             Assert.AreEqual("Done: 1 ogrid blocked, 0 ogrids open", model.Export.Lines.Single(line => line.Id == "walkabilityMarks").StatusText);
             StringAssert.Contains(File.ReadAllText(Path.Combine(folder, "HardFFA_save.lua")), "Exported only");
