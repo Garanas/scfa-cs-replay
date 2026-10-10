@@ -52,6 +52,16 @@ namespace FAForever.MapEditor.Project.Generation
         public static GeneratedInput Decals { get; } = new GeneratedInput("decals", document => document.Decals);
 
         /// <summary>
+        /// The start positions (the spawns), without the other markers.
+        /// </summary>
+        public static GeneratedInput Spawns { get; } = new GeneratedInput("spawns", document => document.Markers.Spawns);
+
+        /// <summary>
+        /// The navigation mesh's settings (<see cref="ProceduralSettings.Navigation"/>).
+        /// </summary>
+        public static GeneratedInput NavigationSettings { get; } = new GeneratedInput("navigation settings", document => document.Procedural.Navigation);
+
+        /// <summary>
         /// Whether two versions of the part are the same.
         /// </summary>
         public static bool Same(object? before, object? now) => Equals(before, now);
@@ -108,6 +118,18 @@ namespace FAForever.MapEditor.Project.Generation
         /// run on a thread of the pool: the document never changes.
         /// </summary>
         object Generate(MapDocument document);
+
+        /// <summary>
+        /// <see cref="Generate(MapDocument)"/> that a newer run can stop (a result regenerating on its
+        /// own after a change, <see cref="ProceduralSettings.AutoGenerate"/>); a generator that can stop
+        /// between its steps overrides it, the others run to the end.
+        /// </summary>
+        /// <exception cref="OperationCanceledException"><paramref name="cancel"/> was cancelled.</exception>
+        object Generate(MapDocument document, CancellationToken cancel)
+        {
+            cancel.ThrowIfCancellationRequested();
+            return Generate(document);
+        }
     }
 
     /// <summary>

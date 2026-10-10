@@ -75,6 +75,12 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// </summary>
         public SymmetrySetting? Symmetry { get; init; }
 
+        /// <summary>
+        /// How the generated results are made (the Procedural mode): which regenerate on their own,
+        /// which the export makes, the navigation mesh's settings. Kept with the project.
+        /// </summary>
+        public ProceduralSettings Procedural { get; init; } = ProceduralSettings.Default;
+
         public ImmutableArray<Decal> Decals { get; init; } = [];
 
         public ImmutableArray<DecalGroup> DecalGroups { get; init; } = [];

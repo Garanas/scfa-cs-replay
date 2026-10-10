@@ -21,6 +21,8 @@ namespace FAForever.MapEditor.Project.Generation
             [GeneratedInput.Heightmap, GeneratedInput.TerrainTypes, GeneratedInput.WaterLevel, GeneratedInput.DepositsAndAreas, GeneratedInput.MapType, GeneratedInput.WalkabilityMarks];
 
         public object Generate(MapDocument document) => Walkability.Generate(document);
+
+        public object Generate(MapDocument document, CancellationToken cancel) => Walkability.Generate(document, cancel);
     }
 
     /// <summary>

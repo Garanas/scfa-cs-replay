@@ -20,13 +20,16 @@ namespace FAForever.MapEditor.Project.Generation
         /// Generates the mesh of a version of the document: per layer (land, naval, hover,
         /// amphibious) the label of every ogrid, positive where units of that layer can path.
         /// </summary>
-        public static MapNavigation Generate(MapDocument document) => NavGenerator.Generate(
+        /// <param name="cancel">Stops it between its steps.</param>
+        /// <exception cref="OperationCanceledException"><paramref name="cancel"/> was cancelled.</exception>
+        public static MapNavigation Generate(MapDocument document, CancellationToken cancel = default) => NavGenerator.Generate(
             HeightmapOf(document.Terrain.Heightmap),
             WaterLevel(document),
             Editing.WalkabilityMarks.TerrainTypes(document),
             ResourceMarkers(document.Markers),
             PlayableArea(document),
-            Editing.WalkabilityMarks.ForcedOpen(document));
+            Editing.WalkabilityMarks.ForcedOpen(document),
+            cancel);
 
         /// <summary>
         /// The heightmap as the game's file holds it.
