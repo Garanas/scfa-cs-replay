@@ -12,6 +12,7 @@ using FAForever.MapEditor.App.Controls;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
@@ -514,6 +515,31 @@ namespace FAForever.MapEditor.App.Tests
             byte[] with = Png(window.CaptureRenderedFrame());
 
             CollectionAssert.AreNotEqual(without, with, "the camera's footprint is drawn over the map");
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task TheTopViewColoursALargeMapOnThePoolAndThenShowsIt() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.Top);
+            model.ShowCamera = false;
+            byte[] small = Png(window.CaptureRenderedFrame());
+
+            model.OpenNewMap(NewMap.Create(new NewMapSettings { Name = "Wide", Size = 1024, Height = 40, Water = false }));
+            Assert.IsTrue(window.MapView.IsColouring, "a map of 20 km is coloured on a thread of the pool, the window goes on");
+            for (int i = 0; i < 200 && window.MapView.IsColouring; i++)
+            {
+                await Task.Delay(20);
+                Dispatcher.UIThread.RunJobs();
+            }
+            Assert.IsFalse(window.MapView.IsColouring);
+            CollectionAssert.AreNotEqual(small, Png(window.CaptureRenderedFrame()), "then it shows");
+
+            // a stroke afterwards colours only its tiles, at once
+            model.SelectTool("terrain.sculpt");
+            model.Stroke([(500, 500), (520, 500)]);
+            Assert.IsFalse(window.MapView.IsColouring);
             window.Close();
         });
 

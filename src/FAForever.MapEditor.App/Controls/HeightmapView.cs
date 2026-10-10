@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.App.Rendering.Gpu;
 using FAForever.MapEditor.App.Tools;
@@ -15,6 +16,7 @@ using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
 using FAForever.FileFormats.Map;
+using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.Controls;
 
@@ -885,7 +887,72 @@ public sealed class HeightmapView : Control
             return;
         }
 
-        IReadOnlyList<SampleRect> changed = _picture.Update(document, _model!.ShownGrid);
+        if (_colouring)
+        {
+            // the whole picture is being coloured on the pool: this version follows when it is done
+            _colourAgain = true;
+            return;
+        }
+        GridOverlay? grid = _model!.ShownGrid;
+        if ((long)document.Terrain.Heightmap.Samples.Width * document.Terrain.Heightmap.Samples.Height >= ColourOnPool
+            && _picture.ColoursAll(document, grid))
+        {
+            ColourOnThePool(document, grid);
+            return;
+        }
+        Show(_picture.Update(document, grid));
+    }
+
+    /// <summary>
+    /// From this many samples on (a map of 20 km and more) a picture coloured anew is coloured on a
+    /// thread of the pool: an 81 km map's takes a few hundred milliseconds.
+    /// </summary>
+    private const long ColourOnPool = 1025L * 1025;
+
+    private bool _colouring;
+    private bool _colourAgain;
+
+    /// <summary>
+    /// Whether the whole picture is being coloured on a thread of the pool (a large map opened):
+    /// automation's settled screenshot waits for it.
+    /// </summary>
+    public bool IsColouring => _colouring;
+
+    /// <summary>
+    /// Colours the whole picture on a thread of the pool, shows it, then the version of the map
+    /// shown by then (a change made meanwhile only colours its tiles).
+    /// </summary>
+    private void ColourOnThePool(MapDocument document, GridOverlay? grid)
+    {
+        _colouring = true;
+        _ = Task.Run(() =>
+        {
+            using Performance.Span measure = Performance.Measure("top.colour-all");
+            return _picture.Update(document, grid);
+        }).ContinueWith(task => Dispatcher.UIThread.Post(() =>
+        {
+            _colouring = false;
+            if (task.IsCompletedSuccessfully)
+            {
+                Show(task.Result);
+            }
+            else if (task.Exception is not null)
+            {
+                _model?.Logger("Views").LogError(task.Exception, "Colouring the top view's picture failed: {Reason}", task.Exception.Message);
+            }
+            if (_colourAgain || !ReferenceEquals(_model?.ShownDocument, document))
+            {
+                _colourAgain = false;
+                OnDocumentChanged(this, EventArgs.Empty);
+            }
+        }), TaskScheduler.Default);
+    }
+
+    /// <summary>
+    /// Puts the rectangles of the picture that were coloured into the bitmap and draws again.
+    /// </summary>
+    private void Show(IReadOnlyList<SampleRect> changed)
+    {
         if (_bitmap is null || _bitmap.PixelSize.Width != _picture.Width || _bitmap.PixelSize.Height != _picture.Height)
         {
             _bitmap?.Dispose();

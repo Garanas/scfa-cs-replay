@@ -24,15 +24,116 @@ public sealed class SmoothGround
     /// </summary>
     public static SmoothGround Flat(float height) => FromHeights(1, 1, [height]);
 
+    /// <summary>
+    /// From the heights of a map, one per ogrid corner.
+    /// </summary>
     public static SmoothGround From(Heightmap heightmap)
     {
-        ushort[] samples = heightmap.Samples.ToArray();
-        float[] heights = new float[samples.Length];
-        for (int i = 0; i < samples.Length; i++)
+        // the first level straight from the samples, its rows spread over the processors
+        int w = CellsOf(heightmap.Samples.Width, FirstCell);
+        int h = CellsOf(heightmap.Samples.Height, FirstCell);
+        float[] level = new float[w * h];
+        Parallel.For(0, h, y =>
         {
-            heights[i] = samples[i] * heightmap.Scale;
+            for (int x = 0; x < w; x++)
+            {
+                level[y * w + x] = AverageOf(heightmap, x, y);
+            }
+        });
+        return FromFirstLevel(w, h, level);
+    }
+
+    /// <summary>
+    /// Follows the heights from <paramref name="before"/> (what it was made from) to
+    /// <paramref name="after"/>: only the squares over the tiles that changed are averaged again,
+    /// and the larger squares holding them, so a brush's dab on an 81 km map costs a fraction of a
+    /// millisecond. Another size or scale, or most of the map changed, makes it anew.
+    /// </summary>
+    /// <returns>The ground of <paramref name="after"/>: this one, changed, or a new one.</returns>
+    public SmoothGround Update(Heightmap before, Heightmap after)
+    {
+        TiledBuffer<ushort> samples = after.Samples;
+        if (MustRemake(before, after) || _levels.Count == 0 || _levels[0].Width != CellsOf(samples.Width, FirstCell))
+        {
+            return From(after);
         }
-        return FromHeights(heightmap.Width, heightmap.Height, heights);
+        List<(int X, int Y)> tiles = [.. samples.ChangedTiles(before.Samples)];
+        if (tiles.Count * 2 > samples.TilesX * samples.TilesY)
+        {
+            return From(after);
+        }
+        const int cellsPerTile = TiledBuffer<ushort>.TileSize / FirstCell;
+        foreach ((int tileX, int tileY) in tiles)
+        {
+            // the squares of the first level over the tile, then each larger square that holds them
+            int x0 = tileX * cellsPerTile, y0 = tileY * cellsPerTile, x1 = x0 + cellsPerTile, y1 = y0 + cellsPerTile;
+            for (int level = 0; level < _levels.Count; level++)
+            {
+                (int width, int height, float[] heights) = _levels[level];
+                x1 = Math.Min(x1, width);
+                y1 = Math.Min(y1, height);
+                for (int y = y0; y < y1; y++)
+                {
+                    for (int x = x0; x < x1; x++)
+                    {
+                        heights[y * width + x] = level == 0 ? AverageOf(after, x, y) : AverageOf(_levels[level - 1], x, y);
+                    }
+                }
+                x0 /= 2;
+                y0 /= 2;
+                x1 = (x1 + 1) / 2;
+                y1 = (y1 + 1) / 2;
+            }
+        }
+        return this;
+    }
+
+    /// <summary>
+    /// Whether the ground of <paramref name="before"/> cannot follow to <paramref name="after"/>
+    /// and is made anew: another size or scale of heights.
+    /// </summary>
+    public static bool MustRemake(Heightmap before, Heightmap after) =>
+        before.Samples.Width != after.Samples.Width || before.Samples.Height != after.Samples.Height || before.Scale != after.Scale;
+
+    private static int CellsOf(int size, int factor) => Math.Max(1, (size + factor - 1) / factor);
+
+    /// <summary>
+    /// The average height of the samples in a square of the first level.
+    /// </summary>
+    private static float AverageOf(Heightmap heightmap, int cellX, int cellY)
+    {
+        TiledBuffer<ushort> samples = heightmap.Samples;
+        int xEnd = Math.Min((cellX + 1) * FirstCell, samples.Width);
+        int yEnd = Math.Min((cellY + 1) * FirstCell, samples.Height);
+        float sum = 0;
+        int count = 0;
+        for (int y = cellY * FirstCell; y < yEnd; y++)
+        {
+            for (int x = cellX * FirstCell; x < xEnd; x++)
+            {
+                sum += samples[x, y] * heightmap.Scale;
+                count++;
+            }
+        }
+        return sum / count;
+    }
+
+    /// <summary>
+    /// The average of the (up to) four squares of the level below that a square holds.
+    /// </summary>
+    private static float AverageOf((int Width, int Height, float[] Heights) below, int cellX, int cellY)
+    {
+        float sum = 0;
+        int count = 0;
+        for (int y = cellY * 2; y < Math.Min(cellY * 2 + 2, below.Height); y++)
+        {
+            for (int x = cellX * 2; x < Math.Min(cellX * 2 + 2, below.Width); x++)
+            {
+                sum += below.Heights[y * below.Width + x];
+                count++;
+            }
+        }
+        return sum / count;
     }
 
     /// <summary>
@@ -40,8 +141,13 @@ public sealed class SmoothGround
     /// </summary>
     public static SmoothGround FromHeights(int width, int height, float[] heights)
     {
-        SmoothGround ground = new SmoothGround();
         (int w, int h, float[] level) = Average(width, height, heights, FirstCell);
+        return FromFirstLevel(w, h, level);
+    }
+
+    private static SmoothGround FromFirstLevel(int w, int h, float[] level)
+    {
+        SmoothGround ground = new SmoothGround();
         ground._levels.Add((w, h, level));
         while (w > 1 || h > 1)
         {

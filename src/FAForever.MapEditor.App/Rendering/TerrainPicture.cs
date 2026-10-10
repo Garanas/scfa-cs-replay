@@ -61,13 +61,7 @@ public sealed class TerrainPicture
         TiledBuffer<byte>? mask = overlay?.Select(document);
         string? key = mask is null ? null : overlay!.Key;
 
-        bool all = _samples is null
-            || samples.Width != Width
-            || samples.Height != Height
-            || heightmap.Scale != _scale
-            || water != _water
-            || key != _overlay
-            || (mask is not null && (_mask is null || mask.Width != _mask.Width || mask.Height != _mask.Height));
+        bool all = ColoursAll(document, overlay);
 
         List<SampleRect> changed = [];
         if (all)
@@ -121,6 +115,25 @@ public sealed class TerrainPicture
         _samples = samples;
         _mask = mask;
         return changed;
+    }
+
+    /// <summary>
+    /// Whether <see cref="Update"/> of this document colours the whole picture again: its size,
+    /// the height's scale, the water or the way it is coloured changed.
+    /// </summary>
+    public bool ColoursAll(MapDocument document, GridOverlay? overlay)
+    {
+        TiledBuffer<ushort> samples = document.Terrain.Heightmap.Samples;
+        float water = document.Water.HasWater ? document.Water.Elevation : float.NegativeInfinity;
+        TiledBuffer<byte>? mask = overlay?.Select(document);
+        string? key = mask is null ? null : overlay!.Key;
+        return _samples is null
+            || samples.Width != Width
+            || samples.Height != Height
+            || document.Terrain.Heightmap.Scale != _scale
+            || water != _water
+            || key != _overlay
+            || (mask is not null && (_mask is null || mask.Width != _mask.Width || mask.Height != _mask.Height));
     }
 
     private SampleRect Clip(SampleRect rect) => new SampleRect(
