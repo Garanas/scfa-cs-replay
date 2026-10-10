@@ -131,6 +131,12 @@ namespace FAForever.MapEditor.Project
         public const string WalkabilityMarks = "walkability-marks.png";
 
         /// <summary>
+        /// Which results kept outside the map (walkability) were current when the project was saved
+        /// (<see cref="Generation.KeptResults"/>), generated again when it opens. Absent without any.
+        /// </summary>
+        public const string KeptResults = ".generated.json";
+
+        /// <summary>
         /// What the file of a mask's rules ends with, after the mask's name.
         /// </summary>
         public const string MaskRulesSuffix = ".rules.json";
