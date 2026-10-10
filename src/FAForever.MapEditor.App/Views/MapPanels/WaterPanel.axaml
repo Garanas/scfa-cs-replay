@@ -1,0 +1,15 @@
+<!-- The Water panel (W-1): on or off, the elevations and colours; the rest is in the inspector. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.WaterPanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <TextBlock Classes="overline" Text="{Binding Source=Water, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <controls:SettingList DataContext="{Binding WaterSettings.Basic}" ShowsTitle="False" />
+      <TextBlock Classes="caption" Text="The sun on the water, reflection, textures and wave generators are in the inspector." />
+    </StackPanel>
+  </Border>
+</UserControl>

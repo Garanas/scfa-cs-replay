@@ -66,4 +66,35 @@ public sealed class WindowDialogs(Window window) : IEditorDialogs
         window.DataContext is MainViewModel model
             ? model.Picker.PickAsync(kind, title, current)
             : Task.FromResult<string?>(null);
+
+    public async Task<string?> PickFileAsync(string title, IReadOnlyList<string> extensions, string? startIn = null)
+    {
+        IReadOnlyList<IStorageFile> files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            FileTypeFilter = [Filter(extensions)],
+            SuggestedStartLocation = await StartIn(startIn),
+        });
+        return files.Count > 0 ? files[0].TryGetLocalPath() : null;
+    }
+
+    public async Task<string?> PickSaveFileAsync(string title, string suggestedName, IReadOnlyList<string> extensions, string? startIn = null)
+    {
+        IStorageFile? file = await window.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = title,
+            SuggestedFileName = suggestedName,
+            FileTypeChoices = [.. extensions.Select(extension => Filter([extension]))],
+            SuggestedStartLocation = await StartIn(startIn),
+        });
+        return file?.TryGetLocalPath();
+    }
+
+    private static FilePickerFileType Filter(IReadOnlyList<string> extensions) =>
+        new FilePickerFileType(string.Join(", ", extensions)) { Patterns = [.. extensions.Select(extension => $"*{extension}")] };
+
+    private async Task<IStorageFolder?> StartIn(string? folder) => folder is { Length: > 0 } && Directory.Exists(folder)
+        ? await window.StorageProvider.TryGetFolderFromPathAsync(folder)
+        : null;
 }

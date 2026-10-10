@@ -58,6 +58,22 @@
             <DataTemplate DataType="tools:SelectTool">
               <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
             </DataTemplate>
+            <!-- drawing, moving and resizing areas (M-5) -->
+            <DataTemplate DataType="tools:AreaTool">
+              <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+            </DataTemplate>
+            <!-- measuring distances and heights (V-5) -->
+            <DataTemplate DataType="tools:RulerTool">
+              <TextBlock Classes="mono" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Text}" ToolTip.Tip="{Binding Text}"
+                         AutomationProperties.Name="Measurement" />
+            </DataTemplate>
+            <!-- turning the sun (L-1) -->
+            <DataTemplate DataType="tools:SunTool">
+              <StackPanel Classes="toolrow">
+                <TextBlock Classes="mono" Text="{Binding Angles}" AutomationProperties.Name="Sun angles" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </StackPanel>
+            </DataTemplate>
             <!-- how either brush's picture is turned; the shape itself is the first choice of the row -->
             <DataTemplate DataType="tools:BrushShapeSettings">
               <StackPanel Classes="toolrow">

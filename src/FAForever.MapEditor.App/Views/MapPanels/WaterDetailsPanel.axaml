@@ -1,0 +1,48 @@
+<!-- The Water inspector (W-1): the sun on the water and its reflection, its textures, the wave textures and the wave generators. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.WaterDetailsPanel"
+             x:DataType="vm:MainViewModel">
+  <StackPanel>
+    <Border Classes="group">
+      <controls:SettingList DataContext="{Binding WaterSettings.Surface}" />
+    </Border>
+    <Border Classes="group">
+      <controls:SettingList DataContext="{Binding WaterSettings.Textures}" />
+    </Border>
+    <ItemsControl ItemsSource="{Binding WaterSettings.WaveTextures}" AutomationProperties.Name="Wave textures">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:SettingGroup">
+          <Border Classes="group">
+            <controls:SettingList />
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="heading" Text="Wave generators" />
+        <TextBlock Classes="caption" Text="{Binding WaterSettings.GeneratorsSummary}" />
+        <ListBox ItemsSource="{Binding WaterSettings.Generators}" SelectedItem="{Binding WaterSettings.SelectedGenerator}" MaxHeight="{StaticResource SettingListHeight}"
+                 AutomationProperties.Name="Wave generators">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:WaveGeneratorItem">
+              <TextBlock Text="{Binding Title}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <StackPanel Classes="inline">
+          <Button Content="Add" Command="{Binding WaterSettings.AddGeneratorCommand}" IsEnabled="{Binding HasMap}"
+                  AutomationProperties.Name="Add a wave generator" AutomationProperties.HelpText="In the middle of the map; type its place below" />
+          <Button Content="Remove" Command="{Binding WaterSettings.RemoveGeneratorCommand}" IsEnabled="{Binding WaterSettings.HasSelectedGenerator}"
+                  AutomationProperties.Name="Remove the wave generator" />
+        </StackPanel>
+        <Panel IsVisible="{Binding WaterSettings.HasSelectedGenerator}">
+          <controls:SettingList DataContext="{Binding WaterSettings.Generator}" ShowsTitle="False" />
+        </Panel>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

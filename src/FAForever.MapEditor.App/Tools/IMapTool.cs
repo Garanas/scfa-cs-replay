@@ -42,7 +42,21 @@ public interface IMapTool
     /// as a box that selects; null for none.
     /// </summary>
     (float X0, float Z0, float X1, float Z1)? Box => null;
+
+    /// <summary>
+    /// What else the views draw for the tool, in ogrids (handles to drag, a line it measures);
+    /// null for nothing.
+    /// </summary>
+    ToolMarks? Marks => null;
 }
+
+/// <summary>
+/// What a tool shows over the map besides its box (<see cref="IMapTool.Marks"/>), in ogrids.
+/// </summary>
+/// <param name="Handles">Small squares to drag, such as the corners and edges of a selected area.</param>
+/// <param name="Line">A line from its first point to its second, such as what the ruler measures.</param>
+/// <param name="Label">Text at the line's end, such as the distance.</param>
+public sealed record ToolMarks(IReadOnlyList<(float X, float Z)> Handles, (float X0, float Z0, float X1, float Z1)? Line = null, string? Label = null);
 
 /// <summary>
 /// The keys held with the mouse or a key.

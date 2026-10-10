@@ -54,6 +54,7 @@ public sealed partial class MainWindow : Window
             _model.FitRequested -= OnFitRequested;
             _model.TopViewRequested -= OnTopViewRequested;
             _model.ShowFolderRequested -= OnShowFolderRequested;
+            _model.OpenFileRequested -= OnOpenFileRequested;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
@@ -64,6 +65,7 @@ public sealed partial class MainWindow : Window
             _model.FitRequested += OnFitRequested;
             _model.TopViewRequested += OnTopViewRequested;
             _model.ShowFolderRequested += OnShowFolderRequested;
+            _model.OpenFileRequested += OnOpenFileRequested;
             BuildMenusAndShortcuts(_model);
             ShowChosenView();
         }
@@ -161,6 +163,11 @@ public sealed partial class MainWindow : Window
     private void OnTopViewRequested(double x, double z, double? zoom) => Heightmap.Show(zoom ?? Heightmap.Zoom, x, z);
 
     private async void OnShowFolderRequested(string folder) => await Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(folder));
+
+    /// <summary>
+    /// Opens a file in the system's application for it, such as the map's script (user story M-6).
+    /// </summary>
+    private async void OnOpenFileRequested(string file) => await Launcher.LaunchFileInfoAsync(new FileInfo(file));
 
     private void ShowChosenView()
     {

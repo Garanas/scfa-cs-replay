@@ -6,6 +6,7 @@
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              xmlns:workspaces="using:FAForever.MapEditor.Project.Workspaces"
+             xmlns:panels="using:FAForever.MapEditor.App.Views.MapPanels"
              x:Class="FAForever.MapEditor.App.Views.Inspector"
              x:DataType="vm:MainViewModel">
   <Border Classes="inspector">
@@ -163,6 +164,11 @@
                   <StackPanel Classes="stack">
                     <TextBlock Classes="heading" Text="{Binding Title}" />
                     <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected areas" />
+                    <!-- one area alone: its name and corners to type (M-5) -->
+                    <TextBlock Classes="caption" Text="The playable area: the first area of the map" IsVisible="{Binding IsPlayable}" />
+                    <Panel IsVisible="{Binding IsSingle}">
+                      <controls:SettingList DataContext="{Binding Fields}" ShowsTitle="False" />
+                    </Panel>
                   </StackPanel>
                 </Border>
               </DataTemplate>
@@ -184,6 +190,16 @@
           </Border>
           <ItemsControl ItemsSource="{Binding SelectedMode.Definition.Inspector}" AutomationProperties.Name="Inspector">
             <ItemsControl.DataTemplates>
+              <!-- the map and its atmosphere (M-1, W-1, S-2): a view of their own each, on the editor's view model -->
+              <DataTemplate DataType="vm:MapFactsSection">
+                <panels:MapFactsPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
+              <DataTemplate DataType="vm:WaterDetailsSection">
+                <panels:WaterDetailsPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
+              <DataTemplate DataType="vm:LayerSection">
+                <panels:LayerPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
               <DataTemplate DataType="vm:PlannedSection">
                 <Border Classes="group">
                   <StackPanel Classes="stack">

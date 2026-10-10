@@ -1,0 +1,14 @@
+<!-- The Map panel's information (M-1): what players see of the map, each field one step of undo. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.MapInformationPanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <TextBlock Classes="overline" Text="{Binding Source=Information, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <controls:SettingList DataContext="{Binding MapInformation.Settings}" ShowsTitle="False" />
+    </StackPanel>
+  </Border>
+</UserControl>

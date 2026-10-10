@@ -80,15 +80,15 @@ public static class EditorModes
     [
         new ModeDefinition("map", "Map", "Icon.Map", "Information, armies, areas, script", 0, "F1", "M-1",
             [
-                new ToolDefinition("map.areas", "Areas", "M-5", "Draw, name, move and resize areas"),
+                new ToolDefinition("map.areas", "Areas", "M-5") { Make = model => new AreaTool(model) },
             ],
             [
-                new PlannedSection("Information", "M-1", "Name, description, author, version, type, preview, no-rush radius, adaptive, reclaim"),
+                new MapInformationSection(),
                 new PlannedSection("Armies and teams", "M-4", "Add, remove and rename armies; playable or extra; factions; alliances; teams"),
-                new PlannedSection("Areas", "M-5", "The areas of the map, by name"),
-                new PlannedSection("Script and files", "M-6", "The map's script and the files of its folder"),
+                new AreasSection(),
+                new ScriptSection(),
             ],
-            [new PlannedSection("Map", "M-1", "The map's information, or the selected army or area")]),
+            [new MapFactsSection()]),
 
         new ModeDefinition("terrain", "Terrain", "Icon.Terrain", "Height layers, sculpting, curves, terrain types, walkability", 0, "F2", "T-1",
             [
@@ -96,7 +96,7 @@ public static class EditorModes
                 new ToolDefinition("terrain.curve", "Curve", "T-4", "Draw a curve and shape the terrain along it: ridge, valley, road, cliff edge"),
                 new ToolDefinition("terrain.types", "Terrain types", "T-6", "Paint the terrain type of each ogrid"),
                 new ToolDefinition("terrain.walkability", "Walkability", "T-7", "Mark where land units must be blocked or may pass"),
-                new ToolDefinition("terrain.ruler", "Ruler", "V-5", "Measure distances and heights"),
+                new ToolDefinition("terrain.ruler", "Ruler", "V-5") { Make = model => new RulerTool(model) },
             ],
             [
                 new PresetSection("brush", "Brush presets"),
@@ -113,27 +113,27 @@ public static class EditorModes
             [
                 new StrataSection(),
                 new PresetSection("brush", "Brush presets"),
-                new PlannedSection("Layer textures", "S-2", "Each layer's albedo and normal texture and their scales; add, remove, reorder"),
+                new LayerTexturesSection(),
                 new PlannedSection("Masks for tools", "K-1", "Named masks for one's own purposes, saved as PNG"),
             ],
-            [new PlannedSection("Layer", "S-2", "The selected layer's textures and scales, or the selected mask")]),
+            [new LayerSection()]),
 
         new ModeDefinition("water", "Water", "Icon.Water", "Levels, colours, waves, paintable water", 0, "F4", "W-1",
             [
                 new ToolDefinition("water.paint", "Paint water", "W-2", "Paint foam, flatness and depth bias"),
             ],
-            [new PlannedSection("Water", "W-1", "On or off; elevations; colours, sun, reflection; textures; waves")],
-            [new PlannedSection("Water", "W-1", "The water's settings")]),
+            [new WaterSection(), new PresetSection("water", "Water presets")],
+            [new WaterDetailsSection()]),
 
         new ModeDefinition("lighting", "Lighting", "Icon.Lighting", "Sun, colours, fog, sky", 0, "F5", "L-1",
             [
-                new ToolDefinition("lighting.sun", "Sun", "L-1", "Turn the sun with a handle in the 3D view"),
+                new ToolDefinition("lighting.sun", "Sun", "L-1") { Make = model => new SunTool(model) },
             ],
             [
-                new PlannedSection("Lighting", "L-1", "Sun direction, colours, ambience, shadow fill, multiplier, specular, bloom, fog, sky"),
-                new PlannedSection("Presets", "L-2", "The lighting of a biome as a preset"),
+                new LightingSection(),
+                new PresetSection("lighting", "Lighting presets"),
             ],
-            [new PlannedSection("Lighting", "L-1", "The lighting's settings")]),
+            [new PlannedSection("Sky", "L-1", "The sky dome, the background and the cube maps units reflect")]),
 
         new ModeDefinition("markers", "Markers", "Icon.Markers", "Spawns, deposits, path nodes, AI markers, chains, adaptive maps", 1, "F6", "R-1",
             [

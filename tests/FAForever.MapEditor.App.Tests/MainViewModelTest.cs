@@ -678,9 +678,9 @@ namespace FAForever.MapEditor.App.Tests
 
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => model.Commands.RunAsync("presets.apply", new System.Text.Json.Nodes.JsonObject { ["kind"] = "lighting", ["name"] = "Dusk" }, interactive: false));
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => model.Commands.RunAsync("presets.apply", new System.Text.Json.Nodes.JsonObject { ["kind"] = "brush", ["name"] = "Nothing" }, interactive: false));
-            model.SelectMode("lighting");
+            model.SelectMode("decals");
             Assert.IsNull(model.Presets.Kind);
-            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => model.Commands.RunAsync("edit.saveAsPreset", [], interactive: false), "the Lighting panel lists no presets yet");
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => model.Commands.RunAsync("edit.saveAsPreset", [], interactive: false), "the Decals panel lists no presets");
 
             model.SelectMode("paint");
             await model.Commands.RunAsync("presets.delete", new System.Text.Json.Nodes.JsonObject { ["kind"] = "brush", ["name"] = "Wide eraser" }, interactive: false);

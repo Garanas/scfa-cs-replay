@@ -636,4 +636,36 @@
     <Setter Property="Padding" Value="{StaticResource BarPadding}" />
     <Setter Property="MinHeight" Value="0" />
   </Style>
+
+  <!-- a field of the map's settings (M-1, W-1, L-1, S-2): its label at the left, a number beside its slider, a colour's swatch -->
+  <Style Selector="TextBlock.setting">
+    <Setter Property="Width" Value="{StaticResource FactLabelWidth}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="TextBox.number">
+    <Setter Property="Width" Value="{StaticResource SettingNumberWidth}" />
+    <Setter Property="Margin" Value="{StaticResource InlineGap}" />
+  </Style>
+  <Style Selector="TextBox.long">
+    <Setter Property="Height" Value="{StaticResource SettingTextHeight}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="AcceptsReturn" Value="True" />
+  </Style>
+  <Style Selector="Border.swatch">
+    <Setter Property="Width" Value="{StaticResource SwatchSize}" />
+    <Setter Property="Height" Value="{StaticResource SwatchSize}" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Margin" Value="{StaticResource SwatchGap}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- the map's preview in the Map inspector -->
+  <Style Selector="Image.mappreview">
+    <Setter Property="Width" Value="{StaticResource MapPreviewSize}" />
+    <Setter Property="Height" Value="{StaticResource MapPreviewSize}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
 </Styles>

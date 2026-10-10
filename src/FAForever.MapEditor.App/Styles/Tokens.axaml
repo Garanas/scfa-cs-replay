@@ -250,4 +250,11 @@
   <CornerRadius x:Key="DialogRadius">8</CornerRadius>
   <x:Double x:Key="PageWidth">720</x:Double>
   <x:Double x:Key="NarrowPageWidth">640</x:Double>
+  <!-- the fields of the map's settings (M-1, W-1, L-1, S-2): a number beside its slider, a colour's swatch, the map's preview -->
+  <x:Double x:Key="SettingNumberWidth">64</x:Double>
+  <x:Double x:Key="SwatchSize">18</x:Double>
+  <x:Double x:Key="MapPreviewSize">200</x:Double>
+  <x:Double x:Key="SettingTextHeight">64</x:Double>
+  <Thickness x:Key="SwatchGap">0,0,8,0</Thickness>
+  <x:Double x:Key="SettingListHeight">160</x:Double>
 </ResourceDictionary>

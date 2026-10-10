@@ -30,7 +30,19 @@ public sealed partial class StrataTool : ObservableObject, IShapedBrushTool
         _model = model;
         Shape = new BrushShapeSettings(model);
         model.MapChanged += (_, _) => ReadStrata();
+        // the layers' textures change (user story S-2): the names follow, the painted layer stays
+        model.DocumentChanged += (_, _) =>
+        {
+            if (_model.Map?.Document.Terrain.Layers is { } layers && layers != _layers)
+            {
+                int painted = Layer;
+                ReadStrata();
+                Painted = Strata.FirstOrDefault(stratum => stratum.Layer == painted) ?? Painted;
+            }
+        };
     }
+
+    private System.Collections.Immutable.ImmutableArray<TerrainLayer> _layers;
 
     /// <summary>
     /// The open map's layers that have a mask, by the name of their texture.
@@ -110,6 +122,7 @@ public sealed partial class StrataTool : ObservableObject, IShapedBrushTool
     private void ReadStrata()
     {
         Terrain? terrain = _model.Map?.Document.Terrain;
+        _layers = terrain?.Layers ?? default;
         Strata = terrain is null
             ? []
             : [.. Enumerable.Range(1, terrain.StratumMasks.Layers.Length).Select(layer => new Stratum(layer,

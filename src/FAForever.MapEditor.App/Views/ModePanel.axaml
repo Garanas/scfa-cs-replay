@@ -4,6 +4,7 @@
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              xmlns:ws="using:FAForever.MapEditor.Project.Workspaces"
+             xmlns:panels="using:FAForever.MapEditor.App.Views.MapPanels"
              x:Class="FAForever.MapEditor.App.Views.ModePanel"
              x:DataType="vm:MainViewModel">
   <Border Classes="modepanel">
@@ -112,6 +113,25 @@
                   </ItemsControl>
                 </StackPanel>
               </Border>
+            </DataTemplate>
+            <!-- the map and its atmosphere (M-1, M-5, M-6, W-1, L-1, S-2): a view of their own each, on the editor's view model -->
+            <DataTemplate DataType="vm:MapInformationSection">
+              <panels:MapInformationPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+            </DataTemplate>
+            <DataTemplate DataType="vm:AreasSection">
+              <panels:AreasPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+            </DataTemplate>
+            <DataTemplate DataType="vm:ScriptSection">
+              <panels:ScriptPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+            </DataTemplate>
+            <DataTemplate DataType="vm:WaterSection">
+              <panels:WaterPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+            </DataTemplate>
+            <DataTemplate DataType="vm:LightingSection">
+              <panels:LightingPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+            </DataTemplate>
+            <DataTemplate DataType="vm:LayerTexturesSection">
+              <panels:LayerTexturesPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
             </DataTemplate>
           </ItemsControl.DataTemplates>
         </ItemsControl>

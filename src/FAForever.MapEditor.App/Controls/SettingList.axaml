@@ -1,0 +1,70 @@
+<!-- The fields of a group of the map's settings (M-1, W-1, L-1, S-2): a template per kind of setting, each with its label
+     at the left; a number has a slider when it has a range, a colour its swatch. A field gives its value on Enter or when
+     it loses the keyboard. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Controls.SettingList"
+             x:DataType="vm:SettingGroup"
+             x:Name="Root">
+  <StackPanel Classes="stack">
+    <TextBlock Classes="heading" Text="{Binding Title}" IsVisible="{Binding #Root.ShowsTitle}" />
+    <ItemsControl ItemsSource="{Binding Settings}" AutomationProperties.Name="{Binding Title}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Classes="stack" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.DataTemplates>
+        <DataTemplate DataType="vm:NumberSetting">
+          <DockPanel ToolTip.Tip="{Binding Help}">
+            <TextBlock DockPanel.Dock="Left" Classes="setting" Text="{Binding Label}" />
+            <TextBox DockPanel.Dock="Right" Classes="mono commit number" Text="{Binding Text, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding IsEnabled}"
+                     AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" />
+            <Slider IsVisible="{Binding HasSlider}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Value="{Binding Value}" IsEnabled="{Binding IsEnabled}"
+                    AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, slider'}" />
+          </DockPanel>
+        </DataTemplate>
+        <DataTemplate DataType="vm:TextSetting">
+          <DockPanel ToolTip.Tip="{Binding Help}">
+            <TextBlock DockPanel.Dock="Left" Classes="setting" Text="{Binding Label}" VerticalAlignment="Top" />
+            <TextBox Classes.commit="{Binding !IsLong}" Classes.long="{Binding IsLong}" Text="{Binding Text, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding IsEnabled}"
+                     AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" />
+          </DockPanel>
+        </DataTemplate>
+        <DataTemplate DataType="vm:BoolSetting">
+          <CheckBox Content="{Binding Label}" IsChecked="{Binding IsOn}" IsEnabled="{Binding IsEnabled}" ToolTip.Tip="{Binding Help}"
+                    AutomationProperties.HelpText="{Binding Help}" />
+        </DataTemplate>
+        <DataTemplate DataType="vm:ChoiceSetting">
+          <DockPanel ToolTip.Tip="{Binding Help}">
+            <TextBlock DockPanel.Dock="Left" Classes="setting" Text="{Binding Label}" />
+            <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Chosen}" IsEnabled="{Binding IsEnabled}" HorizontalAlignment="Stretch"
+                      AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" />
+          </DockPanel>
+        </DataTemplate>
+        <DataTemplate DataType="vm:ColorSetting">
+          <DockPanel ToolTip.Tip="{Binding Help}">
+            <TextBlock DockPanel.Dock="Left" Classes="setting" Text="{Binding Label}" />
+            <Border DockPanel.Dock="Left" Classes="swatch" Background="{Binding Swatch, Converter={x:Static controls:SwatchConverter.Instance}}" IsVisible="{Binding ShowsSwatch}" />
+            <TextBox Classes="mono commit" Text="{Binding Text, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding IsEnabled}"
+                     AutomationProperties.Name="{Binding Label}"
+                     AutomationProperties.HelpText="Three numbers: red, green and blue from 0 to 1 and beyond, or x, y and z" />
+          </DockPanel>
+        </DataTemplate>
+        <DataTemplate DataType="vm:TextureSetting">
+          <StackPanel Classes="stack" ToolTip.Tip="{Binding Help}">
+            <TextBlock Classes="setting" Text="{Binding Label}" />
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Classes="beside" Content="Choose..." Command="{Binding ChooseCommand}" IsVisible="{Binding CanChoose}" IsEnabled="{Binding IsEnabled}"
+                      AutomationProperties.Name="{Binding Label, StringFormat='Choose the {0} in the picker'}" />
+              <TextBox Classes="mono commit" Text="{Binding Text, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding IsEnabled}"
+                       AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" />
+            </DockPanel>
+          </StackPanel>
+        </DataTemplate>
+      </ItemsControl.DataTemplates>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>
