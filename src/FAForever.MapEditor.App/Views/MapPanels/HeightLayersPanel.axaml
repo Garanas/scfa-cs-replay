@@ -15,7 +15,7 @@
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:HeightLayerItem">
             <DockPanel>
-              <CheckBox DockPanel.Dock="Left" IsChecked="{Binding IsShown}" AutomationProperties.Name="{Binding Name, StringFormat='Show the height layer {0}'}" />
+              <CheckBox DockPanel.Dock="Left" Classes="boxonly" IsChecked="{Binding IsShown}" AutomationProperties.Name="{Binding Name, StringFormat='Show the height layer {0}'}" />
               <CheckBox DockPanel.Dock="Right" Content="Lock" IsChecked="{Binding IsLocked}" AutomationProperties.Name="{Binding Name, StringFormat='Lock the height layer {0}'}" />
               <StackPanel>
                 <TextBlock Text="{Binding Name}" />

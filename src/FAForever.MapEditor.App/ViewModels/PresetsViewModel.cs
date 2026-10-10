@@ -24,7 +24,12 @@ public sealed record PresetSection(string Kind, string Title) : PanelSection(Tit
     /// <summary>
     /// What the panel says while the kind has no presets: how to make one.
     /// </summary>
-    public string EmptyText { get; init; } = "None yet: save the tool's settings to use them again.";
+    public string EmptyText { get; init; } = "None yet: save the settings to use them again.";
+
+    /// <summary>
+    /// The Save button's label for screen readers and agents: what it keeps.
+    /// </summary>
+    public string SaveLabel { get; init; } = "Save the settings as a preset";
 }
 
 /// <summary>

@@ -1669,6 +1669,56 @@ last frame drawn.
   (`AutomationTest`); force a frame first (`AvaloniaHeadlessPlatform.ForceRenderTimerTick()`), since
   the mouse hits what the last frame drew.
 
+### Questions over the window, clicks by label, keys wherever the keyboard is
+
+- **Questions are part of the window** (`ViewModels/QuestionViewModel`, `Views/QuestionDialog`): the
+  unsaved changes before a map closes (`IEditorDialogs.AskToSaveChangesAsync`: Save, Don't save,
+  Cancel; Save has the keyboard) and confirmations (`ConfirmAsync`: the action and Cancel; Cancel
+  has the keyboard) show over everything, the pages too, as the palette does. Tab goes round the
+  buttons, Enter or space presses the one with the keyboard, Escape cancels wherever the keyboard
+  is; no shortcut and no tool key runs behind it (`CommandAdapter.Execute` waits). When it is
+  answered the keyboard goes back where it was. One question shows at a time; a second waits. Only
+  the system's file and folder pickers are windows of their own (and are refused without a person).
+  A new question is `model.Question.AskAsync(title, message, buttons, cancel, focus)` behind an
+  `IEditorDialogs` method, never a `Window`.
+- Automation: `state.dialog` (`title`, `message`, `buttons`, `cancel`, null when none),
+  `dialog {button}` presses one by its text (ignoring case), `ui`, `screenshot` and `key` reach it
+  like any control. `run {id, interactive: true, wait: false}` or a shortcut (`key Ctrl+N`) starts a
+  command that asks.
+- `click {label, under?, button?, doubleClick?}`: the control named, labelled or reading the label
+  (a control one can use before a text of that name), shown first (behind More, scrolled into its
+  scroll viewer), then clicked in its centre; its answer has the type, the place, `checked` and
+  `focused`. `ui {under}` and `set` find a control the same way: `Combine` is the combo box labelled
+  so, not the text beside it. `ui` keeps underscores in texts (only menu headers lose their access
+  key's), leaves out what a person cannot see (hidden, transparent, a text without room), reads a
+  combo box's chosen item and its first 40 items by what they show (`Title`, `Name`, `Label`,
+  `Text`, else their text), describes the controls inside a list's item (a layer's check boxes) and
+  says whether an overlay's chip is on (`checked`); `set` turns a chip on or off. `state.overlays`
+  has every overlay by id with on or off, `state.paletteResults` the palette's query, chosen and
+  first 20 command ids while it is open. `mouse action=drag` that starts on a splitter (any
+  `Thumb`) moves one frame at a time, so the layout follows it.
+- **The tool's keys wherever the keyboard is**: a tool's or mode's button (`Button.tool`,
+  `Button.rail`) gives the view that shows the keyboard after it is clicked, and a key nothing took
+  while the keyboard is on a control of the editor's panels that takes no typing (a button, a check
+  box, a slider) or nowhere goes to the active tool (`MainWindow.OnKeyLeftOver`; not while a page,
+  the palette, the picker or a question shows). Both views and the window pass keys through
+  `MainViewModel.ToolKey`, which first offers them to the brushes (`Tools/BrushKeys`): `[` and `]`
+  make the active brush's radius a fifth smaller or larger (1 to 128 ogrids, at least one a step),
+  shift with them its strength by a twentieth of its range (the props brush: density); control and
+  the wheel over a view the radius, control, shift and the wheel the strength, without zooming
+  (`MainViewModel.BrushWheel`). The sculpt, strata, mask, water, terrain types, props paint and
+  erase brushes take them; the status line says the new value and the options row's sliders follow,
+  also behind More. Control with `[` and `]` stays the decals' order.
+- **Undo brings back the selection** (`MainViewModel.UndoSelection`): each version of the document
+  remembers what was selected while it was the current one (not while an edit runs: a command that
+  deletes clears the selection inside its step); undo and redo select that again, as far as the
+  things exist, and the status line says `Undone: ...` or `Redone: ...`. A command with
+  `[UndoStep]` whose handler leaves the status line as it was gets `Done: <its title>` (with what
+  is selected), so the status line never shows an earlier operation's text.
+- A mode's panel opens at its top (`ModePanel`), the Sun tool's row shows the map's sun before the
+  first drag, the ruler's label stays inside the top view, and a combo box of a setting shows a
+  value the map has that is none of its choices (added at the end of the list).
+
 ### A test editor of one's own
 
 ```sh

@@ -284,13 +284,15 @@ namespace FAForever.MapEditor.App.Tests
         public async Task AnUndoThatTakesASelectedThingAwayDropsIt()
         {
             MainViewModel model = await Open();
-            model.Selection.Set([ObjectRef.Marker(model.ShownDocument!.Markers.Spawns[0].Id)]);
+            ObjectRef spawn = ObjectRef.Marker(model.ShownDocument!.Markers.Spawns[0].Id);
+            model.Selection.Set([spawn]);
             ObjectRef copy = ObjectRef.Parse(((string[])(await Run(model, "edit.duplicate")).Result!)[0]);
             Assert.IsTrue(model.Selection.Contains(copy));
 
             model.Undo();
 
-            Assert.IsTrue(model.Selection.IsEmpty);
+            // the copy is gone; the selection is the one before the step again
+            CollectionAssert.AreEqual(new[] { spawn }, model.Selection.Items.ToArray());
         }
     }
 }

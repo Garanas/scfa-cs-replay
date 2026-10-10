@@ -153,6 +153,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeLayout();
         InitializeAssetDiscovery();
         InitializeHeightLayers();
+        InitializeUndoSelection();
         Plugins = new PluginsViewModel(this);
     }
 
@@ -190,6 +191,11 @@ public sealed partial class MainViewModel : ObservableObject
     /// The command palette (user story F-2).
     /// </summary>
     public PaletteViewModel Palette { get; }
+
+    /// <summary>
+    /// The question shown over the window (unsaved changes, confirmations); the window's dialogs ask it.
+    /// </summary>
+    public QuestionViewModel Question { get; } = new QuestionViewModel();
 
     /// <summary>
     /// The asset shelf in the dock, and the asset the inspector shows (user stories F-8, F-9).

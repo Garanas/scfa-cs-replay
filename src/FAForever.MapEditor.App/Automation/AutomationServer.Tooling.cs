@@ -83,7 +83,7 @@ public sealed partial class AutomationServer
                 arguments["gpu"] = true;
                 return false;
             default:
-                return false;
+                return await RunDialogToolingAsync(command, arguments, result);
         }
     }
 
@@ -168,6 +168,25 @@ public sealed partial class AutomationServer
                 }
                 break;
             }
+            case Button chip:
+            {
+                // an overlay's chip: clicked when it is not as wanted
+                bool wanted = value.GetValueKind() switch
+                {
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    _ => bool.Parse(value.ToString()),
+                };
+                if (chip.Classes.Contains("on") != wanted)
+                {
+                    await ClickAsync(chip);
+                }
+                if (chip.Classes.Contains("on") != wanted)
+                {
+                    throw new InvalidOperationException($"'{label}' did not turn {(wanted ? "on" : "off")} when clicked");
+                }
+                break;
+            }
             case ComboBox combo:
                 combo.SelectedIndex = IndexOf(combo.Items.Cast<object?>().ToList(), value, label);
                 await LetInputSettleAsync();
@@ -202,7 +221,8 @@ public sealed partial class AutomationServer
                 RangeBase range => Math.Round(range.Value, 3),
                 TextBox box => box.Text,
                 ToggleButton toggle => toggle.IsChecked,
-                ComboBox combo => combo.SelectedItem?.ToString(),
+                Button chip => chip.Classes.Contains("on"),
+                ComboBox combo => UiTree.DisplayText(combo.SelectedItem),
                 ListBox list => list.SelectedItem?.ToString(),
                 TreeView tree => tree.SelectedItem?.ToString(),
                 ListBoxItem item => item.IsSelected,
@@ -220,7 +240,8 @@ public sealed partial class AutomationServer
     /// </summary>
     private static Control? FindSettable(Visual root, string label)
     {
-        static bool Settable(Control control) => control is RangeBase or TextBox or ToggleButton or ComboBox or ListBox or TreeView or ListBoxItem or TreeViewItem;
+        static bool Settable(Control control) => control is RangeBase or TextBox or ToggleButton or ComboBox or ListBox or TreeView or ListBoxItem or TreeViewItem
+            || control is Button chip && chip.Classes.Contains("chip");
         List<Control> controls = [.. root.GetVisualDescendants().OfType<Control>().Where(control => control.IsEffectivelyVisible && control.IsEffectivelyEnabled)];
         bool Matches(Control control) =>
             string.Equals(control.Name, label, StringComparison.OrdinalIgnoreCase)
@@ -261,7 +282,8 @@ public sealed partial class AutomationServer
     private static int IndexOf(List<object?> items, JsonNode value, string label)
     {
         string text = value.GetValueKind() == JsonValueKind.String ? value.GetValue<string>() : value.ToJsonString();
-        int found = items.FindIndex(item => string.Equals(item?.ToString(), text, StringComparison.OrdinalIgnoreCase));
+        int found = items.FindIndex(item => string.Equals(UiTree.DisplayText(item), text, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(item?.ToString(), text, StringComparison.OrdinalIgnoreCase));
         if (found >= 0)
         {
             return found;
@@ -270,7 +292,7 @@ public sealed partial class AutomationServer
         {
             return index;
         }
-        throw new ArgumentException($"'{label}' has no item '{text}': {string.Join(", ", items.Take(30).Select(item => item?.ToString()))}");
+        throw new ArgumentException($"'{label}' has no item '{text}': {string.Join(", ", items.Take(30).Select(UiTree.DisplayText))}");
     }
 
     private static double ValueNumber(JsonNode value) => value.GetValueKind() == JsonValueKind.Number

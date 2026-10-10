@@ -4,9 +4,11 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Controls;
 using FAForever.MapEditor.App.Diagnostics;
+using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 
 namespace FAForever.MapEditor.App.Views;
@@ -21,6 +23,10 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        // the tool's keys work right after a tool or mode is chosen by its button, and while a control
+        // that takes no typing has the keyboard (user story F-11)
+        AddHandler(Button.ClickEvent, OnButtonClicked, Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo: true);
+        AddHandler(KeyDownEvent, OnKeyLeftOver, Avalonia.Interactivity.RoutingStrategies.Bubble);
         Heightmap.CursorMoved += text => CursorText.Text = text;
         Terrain3D.CursorMoved += text => CursorText.Text = text;
         // a splitter let go: the layout remembers the size it left (user story V-4)
@@ -233,6 +239,57 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// A tool's or mode's button clicked: the view that shows takes the keyboard, so the tool's
+    /// keys (Q, E, the arrows, Escape, +, S) work at once, as after a click in the view.
+    /// </summary>
+    private void OnButtonClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (e.Source is Button button && (button.Classes.Contains("tool") || button.Classes.Contains("rail")))
+        {
+            Dispatcher.UIThread.Post(FocusShownView, DispatcherPriority.Input);
+        }
+    }
+
+    /// <summary>
+    /// Gives the keyboard to the view that shows (the top view when both do).
+    /// </summary>
+    public void FocusShownView()
+    {
+        if (Heightmap.IsEffectivelyVisible)
+        {
+            Heightmap.Focus();
+        }
+        else if (Terrain3D.IsEffectivelyVisible)
+        {
+            Terrain3D.Focus();
+        }
+    }
+
+    /// <summary>
+    /// A key nothing took, while the keyboard is in the editor's panels on a control that takes no
+    /// typing (a button, a check box) or nowhere: it goes to the active tool, as in the views. Not
+    /// while a page or question shows over the editor.
+    /// </summary>
+    private void OnKeyLeftOver(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled || _model is not { HasMap: true } model
+            || model.Question.IsOpen || model.Palette.IsOpen || model.Picker.IsOpen || model.NewMapPage.IsOpen)
+        {
+            return;
+        }
+        object? focused = FocusManager?.GetFocusedElement();
+        if (focused is TextBox or ComboBox or HeightmapView or TerrainViewGpu
+            || focused is Avalonia.Visual visual && !Shell.IsVisualAncestorOf(visual))
+        {
+            return;
+        }
+        if (model.ToolKey(e.Key.ToString(), HeightmapView.ModifiersOf(e.KeyModifiers)))
+        {
+            e.Handled = true;
+        }
+    }
+
     private void OnFitRequested(object? sender, EventArgs e) => Heightmap.Fit();
 
     private void OnTopViewFrameRequested(double x0, double z0, double x1, double z1) => Heightmap.ShowArea(x0, z0, x1, z1);
@@ -311,7 +368,14 @@ public sealed partial class MainWindow : Window
 
         public bool CanExecute(object? parameter) => command.IsIncomplete || model.Commands.CanRun(command);
 
-        public void Execute(object? parameter) => _ = model.RunAsync(command.Id);
+        public void Execute(object? parameter)
+        {
+            // a shortcut while a question shows over the window waits for its answer
+            if (!model.Question.IsOpen)
+            {
+                _ = model.RunAsync(command.Id);
+            }
+        }
 
         public void Refresh() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }

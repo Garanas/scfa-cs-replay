@@ -9,7 +9,7 @@
              x:Class="FAForever.MapEditor.App.Views.ModePanel"
              x:DataType="vm:MainViewModel">
   <Border Classes="modepanel">
-    <ScrollViewer>
+    <ScrollViewer x:Name="Scroller">
       <StackPanel>
         <Border Classes="panelhead">
           <StackPanel Classes="stack">
@@ -137,7 +137,7 @@
                     <Button DockPanel.Dock="Right" Classes="beside" Content="Save"
                             Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.SaveNewCommand}"
                             IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.HasLibrary}"
-                            AutomationProperties.Name="Save the settings as a preset" />
+                            AutomationProperties.Name="{Binding SaveLabel}" />
                     <TextBox Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.NewName}" PlaceholderText="Name (optional)"
                              AutomationProperties.Name="Name of the new preset"
                              AutomationProperties.HelpText="Left empty, the preset is named after its settings" />
@@ -321,7 +321,7 @@
                       <DataTemplate x:DataType="vm:DecalGroupItem">
                         <StackPanel Classes="stack">
                           <DockPanel>
-                            <CheckBox DockPanel.Dock="Left" IsChecked="{Binding IsShown}"
+                            <CheckBox DockPanel.Dock="Left" Classes="boxonly" IsChecked="{Binding IsShown}"
                                       AutomationProperties.Name="{Binding Name, StringFormat='Show the decal group {0}'}"
                                       AutomationProperties.HelpText="Hidden decals are not drawn in the 3D view and cannot be selected; the map keeps them" />
                             <TextBlock DockPanel.Dock="Right" Classes="caption" Text="{Binding Detail}" VerticalAlignment="Center" />

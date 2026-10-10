@@ -124,6 +124,10 @@ public sealed partial class HeightLayersViewModel : ObservableObject
             new NumberSetting("Falloff", set, "falloff", d => CurveOf(d).Falloff, run, Fixed) { Minimum = 0, Maximum = 64, HasSlider = true, Help = "How far beyond the width it fades out, in ogrids" },
             new NumberSetting("Height", set, "height", d => CurveOf(d).Points.FirstOrDefault()?.Height ?? 0, run, Fixed)
             {
+                // as the other fields: a slider beside it; a height typed may go beyond its end
+                Minimum = 0,
+                Maximum = 256,
+                HasSlider = true,
                 Help = "Every point's height: how much a ridge, valley or cliff rises, or the road's height in game units",
             },
             new BoolSetting("Closed", set, "closed", d => CurveOf(d).Closed, run, Fixed) { Help = "The last point joins the first" },

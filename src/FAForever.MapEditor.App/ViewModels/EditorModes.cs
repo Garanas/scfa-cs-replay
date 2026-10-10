@@ -83,6 +83,9 @@ public sealed record ModeDefinition(
 /// </summary>
 public static class EditorModes
 {
+    // what the brush presets of the Terrain and Paint modes say while there are none
+    private const string BrushPresetsEmpty = "None yet: save the brush's settings (shape, mode, radius, strength) to use them again.";
+
     public static IReadOnlyList<ModeDefinition> All { get; } =
     [
         new ModeDefinition("map", "Map", "Icon.Map", "Information, armies, areas, script", 0, "F1", "M-1",
@@ -107,7 +110,7 @@ public static class EditorModes
                 new ToolDefinition("terrain.ruler", "Ruler", "V-5") { Make = model => new RulerTool(model) },
             ],
             [
-                new PresetSection("brush", "Brush presets"),
+                new PresetSection("brush", "Brush presets") { EmptyText = BrushPresetsEmpty, SaveLabel = "Save the brush's settings as a preset" },
                 new HeightLayersSection(),
                 new GeneratedSection(),
             ],
@@ -121,7 +124,7 @@ public static class EditorModes
             [
                 new StrataSection(),
                 new MasksSection(),
-                new PresetSection("brush", "Brush presets"),
+                new PresetSection("brush", "Brush presets") { EmptyText = BrushPresetsEmpty, SaveLabel = "Save the brush's settings as a preset" },
                 new LayerTexturesSection(),
             ],
             [new MaskRulesSection(), new LayerSection()]),
@@ -130,7 +133,7 @@ public static class EditorModes
             [
                 new ToolDefinition("water.paint", "Paint water", "W-2") { Make = model => new WaterPaintTool(model) },
             ],
-            [new WaterSection(), new PresetSection("water", "Water presets")],
+            [new WaterSection(), new PresetSection("water", "Water presets") { EmptyText = "None yet: save the water's levels, colours and waves to use them on another map.", SaveLabel = "Save the water settings as a preset" }],
             [new WaterDetailsSection()]),
 
         new ModeDefinition("lighting", "Lighting", "Icon.Lighting", "Sun, colours, fog, sky", 0, "F5", "L-1",
@@ -139,7 +142,7 @@ public static class EditorModes
             ],
             [
                 new LightingSection(),
-                new PresetSection("lighting", "Lighting presets"),
+                new PresetSection("lighting", "Lighting presets") { EmptyText = "None yet: save the sun, colours and fog to use them on another map.", SaveLabel = "Save the lighting as a preset" },
             ],
             [new PlannedSection("Sky", "L-1", "The sky dome, the background and the cube maps units reflect")]),
 
@@ -162,7 +165,7 @@ public static class EditorModes
                 new PathNetworkSection(),
                 new ChainsSection(),
                 new AdaptiveSection(),
-                new PresetSection(MarkerPresets.Kind, "Marker presets") { EmptyText = "None yet: select markers, such as a spawn with its deposits, and save them to place them again." },
+                new PresetSection(MarkerPresets.Kind, "Marker presets") { EmptyText = "None yet: select markers, such as a spawn with its deposits, and save them to place them again.", SaveLabel = "Save the selected markers as a preset" },
             ],
             []),
 
@@ -176,7 +179,7 @@ public static class EditorModes
             [
                 new PropPlacementSection(),
                 new PropPaletteSection(),
-                new PresetSection(PropsViewModel.PaletteKind, "Palettes"),
+                new PresetSection(PropsViewModel.PaletteKind, "Palettes") { EmptyText = "None yet: save the painting palette to paint with the same props again.", SaveLabel = "Save the palette as a preset" },
                 new PropRulesSection(),
                 new PropReclaimSection(),
             ],
@@ -197,7 +200,7 @@ public static class EditorModes
             ],
             [
                 new UnitGroupsSection(),
-                new PresetSection(UnitPreset.Kind, "Presets") { EmptyText = "None yet: select units, or choose a group in the tree, and save them to place them again." },
+                new PresetSection(UnitPreset.Kind, "Presets") { EmptyText = "None yet: select units, or choose a group in the tree, and save them to place them again.", SaveLabel = "Save the selected units as a preset" },
             ],
             []),
     ];

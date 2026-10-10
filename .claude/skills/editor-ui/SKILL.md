@@ -116,6 +116,10 @@ faf-map editor run id=units.pick interactive=true wait=false --port 5372   # ope
 faf-map editor key key=Down --port 5372 && faf-map editor key key=Enter --port 5372
 faf-map editor drag view=3d from=[10,10] to=[300,200] data=<asset key> --port 5372   # a shelf tile dropped
 faf-map editor state --port 5372                               # handles.points: each handle's pixel in the top and 3D views; hover: what the 3D mouse is over
+faf-map editor click label="Sculpt layer" --port 5372                  # scrolls the control into view, clicks its centre
+faf-map editor state --port 5372                               # dialog: the question over the window (unsaved changes, confirm)
+faf-map editor dialog button="Don't save" --port 5372                 # presses its button; Escape or key Tab/Enter work too
+faf-map editor key key=OemCloseBrackets --port 5372            # [ and ] the brush's radius, shift: strength; Ctrl+wheel over a view
 ```
 
 Set controls, look at things, read the map:

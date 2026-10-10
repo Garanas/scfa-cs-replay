@@ -715,7 +715,7 @@ namespace FAForever.MapEditor.App.Tests
             Button Named(string name) => window.GetVisualDescendants().OfType<Button>()
                 .Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == name);
 
-            Click(window, Named("Save the settings as a preset"));
+            Click(window, Named("Save the brush's settings as a preset"));
             Assert.AreEqual("Raise 25", model.Presets.Shown.Single().Name);
             sculpt.Radius = 3;
             Click(window, Named("Apply the preset Raise 25"));

@@ -49,6 +49,8 @@ public static class ProblemReport
     /// <exception cref="IOException">The folder cannot be written.</exception>
     public static string Write(string folder, string? telemetryFolder, ProblemReportContent content, DateTimeOffset now)
     {
+        // one kind of slash in the path the editor reports, however the folder was written
+        folder = Path.GetFullPath(folder);
         Directory.CreateDirectory(folder);
         string path = Path.Combine(folder, FileName(now));
         string[] sessions = SessionFiles(telemetryFolder, content.Sessions);

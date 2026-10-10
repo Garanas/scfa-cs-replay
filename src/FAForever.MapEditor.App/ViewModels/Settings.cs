@@ -238,8 +238,13 @@ public sealed partial class ChoiceSetting(string label, string command, string a
     Func<string, JsonObject, Task> run, Func<JsonObject>? fixedArguments = null) : Setting(label, command, argument, run, fixedArguments)
 {
     private string? _chosen;
+    private IReadOnlyList<string> _choices = choices;
 
-    public IReadOnlyList<string> Choices => choices;
+    /// <summary>
+    /// The choices, with the map's value at the end when it is none of them (a weather marker's
+    /// cloud type the editor does not know), so the field never shows empty.
+    /// </summary>
+    public IReadOnlyList<string> Choices => _choices;
 
     public string? Chosen
     {
@@ -255,7 +260,14 @@ public sealed partial class ChoiceSetting(string label, string command, string a
 
     protected override void Show(MapDocument document)
     {
-        string chosen = read(document);
+        string value = read(document);
+        string chosen = choices.FirstOrDefault(choice => string.Equals(choice, value, StringComparison.OrdinalIgnoreCase)) ?? value;
+        IReadOnlyList<string> shown = choices.Contains(chosen) || chosen.Length == 0 ? choices : [.. choices, chosen];
+        if (!shown.SequenceEqual(_choices))
+        {
+            _choices = shown;
+            OnPropertyChanged(nameof(Choices));
+        }
         if (chosen != _chosen)
         {
             _chosen = chosen;

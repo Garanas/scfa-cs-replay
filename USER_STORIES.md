@@ -21,6 +21,8 @@ reads again when it changes; and nothing that generates runs by itself.
       (F-15).
 - [x] **F-2 Command palette.** Find and run any command by typing (`Ctrl+K`), with its shortcut shown.
 - [x] **F-3 Undo and redo.** Every change is a step; a brush stroke or a plugin run is one step.
+      Undo and redo (`Ctrl+Z`; `Ctrl+Y` or `Ctrl+Shift+Z`) bring back the selection the step had
+      (undoing a delete selects what came back) and say in the status line what they undid.
 - [x] **F-4 History.** The steps in a panel; choosing one goes back or forward to it.
 - [x] **F-5 Workspace.** One folder per computer with the projects and the game's assets converted
       from `env` and `units` (`.scd` with FAF's `.nx2` over them), set up at the first start and
@@ -112,7 +114,10 @@ reads again when it changes; and nothing that generates runs by itself.
       per army, scatter rocks on steep slopes) written into every workspace. Missing: tools (the
       left mouse in the views).
 - [x] **F-16 Driven by agents and tests.** Automation over HTTP for every operation, labels for
-      screen readers, headless tests of the window, performance spans (see the App's guide).
+      screen readers, headless tests of the window, performance spans (see the App's guide). The
+      editor's questions (unsaved changes, confirmations) show in its window, so automation reads
+      and answers them (`state.dialog`, `dialog {button}`); only the system's file and folder
+      pickers are windows of their own.
 - [x] **F-17 Diagnostics.** See what goes well and wrong, as a service's logs and metrics: the
       Console with levels; every session's logs (warnings, errors, crashes) and measurements
       (commands, operations and their durations, frames, stalls, memory) on disk in
@@ -168,7 +173,8 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **T-1 Sculpt.** Raise, lower, smooth, flatten, set to a height, add noise (a new seed per
       stroke), erode (thermal) and scale around a base with a brush, round (falloff smooth, linear
       or sharp) or the shape of one of the workspace's brushes (T-2), turned by hand or at random per
-      dab; limits on the lowest and highest height it makes. Missing: hydraulic erosion.
+      dab; limits on the lowest and highest height it makes. Every brush's radius by `[` and `]`
+      or control and the wheel over a view, its strength with shift. Missing: hydraulic erosion.
 - [ ] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace. Today: the
       brush shapes, greyscale PNGs of the workspace's `brushes` folder, in the asset shelf of the
       Terrain mode, read again when they change; they are the shapes of the sculpt and strata

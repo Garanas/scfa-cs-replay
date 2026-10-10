@@ -1,0 +1,115 @@
+using System.Globalization;
+
+namespace FAForever.MapEditor.App.Tools;
+
+/// <summary>
+/// The brushes' radius and strength by keys and the wheel (user story T-1), for every tool with a
+/// brush: <c>[</c> and <c>]</c> make the radius smaller and larger by a fifth, shift with them the
+/// strength by a twentieth of its range (the props brush: its density); control and the wheel
+/// over a view the radius, control, shift and the wheel the strength. The options row's sliders
+/// show the new values, also behind More.
+/// </summary>
+public static class BrushKeys
+{
+    /// <summary>
+    /// The least and greatest radius, as the sliders of the options row.
+    /// </summary>
+    public const double MinimumRadius = 1, MaximumRadius = 128;
+
+    /// <summary>
+    /// A key of a view or the window for the active tool: <c>OemOpenBrackets</c> or
+    /// <c>OemCloseBrackets</c> without control (control with them orders the decals).
+    /// </summary>
+    /// <param name="status">What changed, for the status line; null when the key is not one of these.</param>
+    /// <returns>Whether the key changed the brush.</returns>
+    public static bool Key(IMapTool? tool, string key, ToolModifiers modifiers, out string? status)
+    {
+        status = null;
+        // by the key's value: a key's name may be its other name (Oem4 for OemOpenBrackets)
+        int steps = !Enum.TryParse(key, out Avalonia.Input.Key pressed) ? 0 : pressed switch
+        {
+            Avalonia.Input.Key.OemOpenBrackets => -1,
+            Avalonia.Input.Key.OemCloseBrackets => 1,
+            _ => 0,
+        };
+        if (steps == 0 || modifiers.HasFlag(ToolModifiers.Control) || modifiers.HasFlag(ToolModifiers.Alt))
+        {
+            return false;
+        }
+        return Step(tool, steps, strength: modifiers.HasFlag(ToolModifiers.Shift), out status);
+    }
+
+    /// <summary>
+    /// Notches of the wheel with control held over a view (shift too: the strength).
+    /// </summary>
+    public static bool Wheel(IMapTool? tool, int notches, bool strength, out string? status) => Step(tool, notches, strength, out status);
+
+    /// <summary>
+    /// Makes the radius (or strength) of the tool's brush larger or smaller by a number of steps.
+    /// </summary>
+    /// <returns>Whether the tool has such a brush.</returns>
+    public static bool Step(IMapTool? tool, int steps, bool strength, out string? status)
+    {
+        status = null;
+        if (steps == 0)
+        {
+            return false;
+        }
+        switch (tool)
+        {
+            case SculptTool sculpt when strength:
+                sculpt.Strength = StrengthStep(sculpt.Strength, steps, 0.01, sculpt.StrengthMaximum);
+                status = Say("Strength", sculpt.Strength, "0.00");
+                return true;
+            case SculptTool sculpt:
+                sculpt.Radius = RadiusStep(sculpt.Radius, steps);
+                status = Say("Radius", sculpt.Radius, "0", " ogrids");
+                return true;
+            case GridPaintTool grid when strength:
+                grid.Strength = StrengthStep(grid.Strength, steps, 0.01, 1);
+                status = Say("Strength", grid.Strength, "0.00");
+                return true;
+            case GridPaintTool grid:
+                grid.Radius = RadiusStep(grid.Radius, steps);
+                status = Say("Radius", grid.Radius, "0", " ogrids");
+                return true;
+            case PropPaintTool paint when strength:
+                paint.Density = StrengthStep(paint.Density, steps, 0.1, 50);
+                status = Say("Density", paint.Density, "0.#", " props per 100 square ogrids");
+                return true;
+            case PropPaintTool paint:
+                paint.Radius = RadiusStep(paint.Radius, steps);
+                status = Say("Radius", paint.Radius, "0", " ogrids");
+                return true;
+            case PropEraseTool erase when !strength:
+                erase.Radius = RadiusStep(erase.Radius, steps);
+                status = Say("Radius", erase.Radius, "0", " ogrids");
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// A fifth larger or smaller per step, at least one ogrid a step, within the sliders' range.
+    /// </summary>
+    public static double RadiusStep(double radius, int steps)
+    {
+        double next = radius;
+        for (int i = 0; i < Math.Abs(steps); i++)
+        {
+            double scaled = steps > 0 ? next * 1.2 : next / 1.2;
+            next = steps > 0 ? Math.Max(Math.Round(scaled), next + 1) : Math.Min(Math.Round(scaled), next - 1);
+        }
+        return Math.Clamp(next, MinimumRadius, MaximumRadius);
+    }
+
+    /// <summary>
+    /// A twentieth of the range per step, within it.
+    /// </summary>
+    public static double StrengthStep(double strength, int steps, double minimum, double maximum) =>
+        Math.Clamp(Math.Round(strength + steps * (maximum - minimum) / 20, 3), minimum, maximum);
+
+    private static string Say(string what, double value, string format, string unit = "") =>
+        $"Brush {what.ToLowerInvariant()}: {value.ToString(format, CultureInfo.InvariantCulture)}{unit}";
+}

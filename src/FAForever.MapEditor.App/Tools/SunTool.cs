@@ -16,8 +16,18 @@ namespace FAForever.MapEditor.App.Tools;
 /// from the middle of the map towards the sun, whose head can be dragged across the sky: the sun
 /// then stands where the mouse points on the sphere the head moves on.
 /// </summary>
-public sealed partial class SunTool(MainViewModel model) : ObservableObject, IMapTool
+public sealed partial class SunTool : ObservableObject, IMapTool
 {
+    private readonly MainViewModel model;
+
+    public SunTool(MainViewModel model)
+    {
+        this.model = model;
+        // the angles show the map's sun from the start, and follow an undo, a preset or a field of the panel
+        model.DocumentChanged += (_, _) => ShowAngles();
+        ShowAngles();
+    }
+
     /// <summary>
     /// The lowest the tool puts the sun, in degrees: lower, the terrain would be all shadow.
     /// </summary>
@@ -125,10 +135,23 @@ public sealed partial class SunTool(MainViewModel model) : ObservableObject, IMa
     public string Help => "Drag in a view: the sun stands where the mouse points, seen from the middle of the map; at the middle straight up, towards the edge low";
 
     /// <summary>
-    /// The sun as the tool last put it, e.g. <c>Azimuth 135°, elevation 40°</c>.
+    /// The map's sun, e.g. <c>Azimuth 135°, elevation 40°</c>; empty without a map.
     /// </summary>
     [ObservableProperty]
     public partial string Angles { get; private set; } = "";
+
+    private void ShowAngles()
+    {
+        if (model.ShownDocument is MapDocument document)
+        {
+            (double azimuth, double elevation) = SunAngles.Of(document.Lighting.SunDirection);
+            Angles = Describe(azimuth, elevation);
+        }
+        else
+        {
+            Angles = "";
+        }
+    }
 
     public ToolMarks? Marks
     {

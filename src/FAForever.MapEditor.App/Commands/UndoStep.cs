@@ -48,10 +48,16 @@ public sealed class UndoStepBehavior<TRequest, TResponse>(MainViewModel model, C
         EditSession session = model.Map?.Session ?? throw new InvalidOperationException("No map is open");
         using EditTransaction transaction = session.Begin(Title);
         edit.Transaction = transaction;
+        string status = model.Status;
         try
         {
             TResponse response = await next(cancellationToken);
             transaction.Commit();
+            if (model.Status == status)
+            {
+                // the handler said nothing: the status line tells what was done, not what was before
+                model.Status = model.Selection.HasAny ? $"Done: {Title} ({model.Selection.Summary} selected)" : $"Done: {Title}";
+            }
             return response;
         }
         finally
