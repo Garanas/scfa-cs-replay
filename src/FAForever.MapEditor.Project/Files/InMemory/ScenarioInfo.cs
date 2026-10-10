@@ -74,5 +74,12 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// project only; the game's files do not carry it.
         /// </summary>
         public bool Publishable { get; init; } = true;
+
+        /// <summary>
+        /// The name of the area that is the playable area at the start (user story M-3); null for
+        /// the first area, the convention of the map editors. The export makes the script set it
+        /// (<see cref="MapScript"/>); <see cref="MapDocument.PlayableArea"/> gives the area itself.
+        /// </summary>
+        public string? PlayableArea { get; init; }
     }
 }

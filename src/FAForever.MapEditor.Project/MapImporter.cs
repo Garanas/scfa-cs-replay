@@ -80,7 +80,7 @@ namespace FAForever.MapEditor.Project
             byte[]? script = null,
             IReadOnlyDictionary<string, byte[]>? files = null)
         {
-            return new MapDocument
+            MapDocument document = new MapDocument
             {
                 Name = name,
                 FileName = fileName,
@@ -139,6 +139,25 @@ namespace FAForever.MapEditor.Project
                     entry => ImmutableCollectionsMarshal.AsImmutableArray(entry.Value),
                     StringComparer.Ordinal),
             };
+            return WithPlayableArea(document);
+        }
+
+        /// <summary>
+        /// The playable area the script sets at the start (<see cref="MapScript.PlayableAreaOf"/>), in
+        /// the scenario when it is an area of the map other than the first: the first is the
+        /// playable area by convention, so a map whose script names the first area keeps none.
+        /// </summary>
+        private static MapDocument WithPlayableArea(MapDocument document)
+        {
+            if (document.Script is not { } script
+                || MapScript.PlayableAreaOf(LuaEncoding.GetString(ImmutableCollectionsMarshal.AsArray(script)!)) is not string name
+                || document.Markers.Areas.IsEmpty
+                || document.Markers.Areas[0].Name == name
+                || !document.Markers.Areas.Any(area => area.Name == name))
+            {
+                return document;
+            }
+            return document with { Scenario = document.Scenario with { PlayableArea = name } };
         }
 
         /// <summary>
