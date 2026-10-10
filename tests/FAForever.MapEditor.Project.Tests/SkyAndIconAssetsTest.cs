@@ -33,10 +33,12 @@ namespace FAForever.MapEditor.Project.Tests
             Png(Path.Combine(assets, "textures/environment/defaultbackground.png"), 4, 4, MagickColors.Black);
             Png(Path.Combine(assets, "textures/engine/watercubemap.png"), 24, 4, MagickColors.Navy);
             Png(Path.Combine(assets, "textures/ui/common/icons/units/uel0101_icon.png"), 4, 4, MagickColors.Green);
+            Png(Path.Combine(assets, "textures/ui/common/icons/units/land_up.png"), 4, 4, MagickColors.DarkGreen);
+            Png(Path.Combine(assets, "textures/ui/common/icons/units/sea_up.png"), 4, 4, MagickColors.DarkBlue);
             Directory.CreateDirectory(Path.Combine(assets, "units/uel0101"));
             File.WriteAllText(Path.Combine(assets, "units/uel0101/uel0101_unit.json"), """{ "id": "UEL0101", "name": "Snoop", "faction": "Uef", "techLevel": 1, "categories": ["UEF", "LAND"] }""");
             Directory.CreateDirectory(Path.Combine(assets, "units/uel0102"));
-            File.WriteAllText(Path.Combine(assets, "units/uel0102/uel0102_unit.json"), """{ "id": "UEL0102", "name": "Tank", "faction": "Uef", "categories": ["UEF", "LAND"] }""");
+            File.WriteAllText(Path.Combine(assets, "units/uel0102/uel0102_unit.json"), """{ "id": "UEL0102", "name": "Tank", "faction": "Uef", "categories": ["UEF", "LAND"], "buildIcon": "sea" }""");
             return assets;
         }
 
@@ -60,6 +62,9 @@ namespace FAForever.MapEditor.Project.Tests
 
             Assert.AreEqual(Path.Combine(assets, AssetCatalog.UnitIconFolder, "uel0101_icon.png"), catalog.Find("uel0101")!.Icon);
             Assert.IsNull(catalog.Find("uel0102")!.Icon, "a unit the game has no icon of");
+            // what the build menu draws behind the icon: the blueprint's General.Icon, else land
+            Assert.AreEqual(Path.Combine(assets, AssetCatalog.UnitIconFolder, "land_up.png"), catalog.Find("uel0101")!.IconBackground);
+            Assert.AreEqual(Path.Combine(assets, AssetCatalog.UnitIconFolder, "sea_up.png"), catalog.Find("uel0102")!.IconBackground);
         }
 
         [TestMethod]

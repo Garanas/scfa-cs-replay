@@ -39,7 +39,10 @@
               </StackPanel>
               <StackPanel Classes="inline" IsVisible="{Binding Assets.HasShownIcon}">
                 <Border Classes="thumbnail normalpreview">
-                  <controls:AssetThumbnail Source="{Binding Assets.ShownIcon}" DecodeWidth="128" AutomationProperties.Name="Icon of the unit" />
+                  <Panel>
+                    <controls:AssetThumbnail Source="{Binding Assets.ShownIconBackground}" DecodeWidth="128" Checker="False" />
+                    <controls:AssetThumbnail Source="{Binding Assets.ShownIcon}" DecodeWidth="128" Checker="False" AutomationProperties.Name="Icon of the unit" />
+                  </Panel>
                 </Border>
                 <TextBlock Classes="caption" Text="Its icon in the game" />
               </StackPanel>

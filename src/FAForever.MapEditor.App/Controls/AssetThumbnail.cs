@@ -36,9 +36,22 @@ public sealed class AssetThumbnail : Control
     public static readonly StyledProperty<AssetModel?> ModelProperty =
         AvaloniaProperty.Register<AssetThumbnail, AssetModel?>(nameof(Model));
 
+    /// <summary>
+    /// Whether a checker shows where a <see cref="Source"/> picture is transparent; off for a
+    /// unit's icon, drawn over the picture of its layer.
+    /// </summary>
+    public static readonly StyledProperty<bool> CheckerProperty =
+        AvaloniaProperty.Register<AssetThumbnail, bool>(nameof(Checker), true);
+
     static AssetThumbnail()
     {
-        AffectsRender<AssetThumbnail>(SourceProperty, ModelProperty);
+        AffectsRender<AssetThumbnail>(SourceProperty, ModelProperty, CheckerProperty);
+    }
+
+    public bool Checker
+    {
+        get => GetValue(CheckerProperty);
+        set => SetValue(CheckerProperty, value);
     }
 
     /// <summary>
@@ -120,7 +133,7 @@ public sealed class AssetThumbnail : Control
             : Model is AssetModel model ? Cache.Get(model, DecodeWidth)
             : null;
         // a checker shows what is transparent: decals are partly so; a mesh stands on the tile itself
-        if (Source is not null && this.TryFindResource("ControlBrush", ActualThemeVariant, out object? dark) && dark is IBrush darkBrush
+        if (Source is not null && Checker && this.TryFindResource("ControlBrush", ActualThemeVariant, out object? dark) && dark is IBrush darkBrush
             && this.TryFindResource("ControlRaisedBrush", ActualThemeVariant, out object? light) && light is IBrush lightBrush)
         {
             context.FillRectangle(darkBrush, bounds);

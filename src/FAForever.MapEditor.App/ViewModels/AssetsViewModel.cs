@@ -79,6 +79,11 @@ public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry
     /// </summary>
     public string? Icon => entry.Icon;
 
+    /// <summary>
+    /// The picture of the unit's layer the game draws behind its icon.
+    /// </summary>
+    public string? IconBackground => entry.IconBackground;
+
     public bool HasIcon => entry.Icon is not null;
 
     /// <summary>
@@ -131,6 +136,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     private IReadOnlyList<string> _biomes = [];
     private bool _rebuilding;
     private MapDocument? _document;
+    private string _cubemaps = "";
 
     public AssetsViewModel(ILogger log)
     {
@@ -267,7 +273,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// The variant of the selected family the inspector shows.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownModel), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownUse), nameof(ShownKeyLabel), nameof(ShownIcon), nameof(HasShownIcon))]
+    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownModel), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownUse), nameof(ShownKeyLabel), nameof(ShownIcon), nameof(HasShownIcon), nameof(ShownIconBackground))]
     public partial AssetEntry? SelectedMember { get; set; }
 
     public bool HasSelection => Selected is not null;
@@ -310,6 +316,8 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// The shown unit's icon as the game's build menu shows it (user story U-1); null for none.
     /// </summary>
     public string? ShownIcon => Shown?.Icon;
+
+    public string? ShownIconBackground => Shown?.IconBackground;
 
     public bool HasShownIcon => ShownIcon is not null;
 
@@ -502,8 +510,20 @@ public sealed partial class AssetsViewModel : ObservableObject
         IReadOnlyDictionary<string, int> uses = document is null ? new Dictionary<string, int>() : AssetUse.Count(document);
         bool sameMap = ReferenceEquals(document, _document) || (document is not null && _document is not null && document.Files == _document.Files);
         _document = document;
+        // the cube maps the map names (L-1) are no uses, but may be missing
+        string cubemaps = document is null ? "" : string.Join('|', MissingAssets.CubemapsOf(document));
+        bool cubemapsChanged = cubemaps != _cubemaps;
+        _cubemaps = cubemaps;
         if (sameMap && uses.Count == _uses.Count && uses.All(use => _uses.TryGetValue(use.Key, out int count) && count == use.Value))
         {
+            if (cubemapsChanged)
+            {
+                FindMissing();
+                if (Scope == AssetScope.Missing)
+                {
+                    Rebuild();
+                }
+            }
             return;
         }
         IReadOnlyList<string> biomes = AssetUse.Biomes(uses);

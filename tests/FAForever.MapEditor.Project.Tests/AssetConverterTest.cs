@@ -132,6 +132,7 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual("uel0001", acu.Id);
             Assert.AreEqual("Armored Command Unit", acu.Name);
             Assert.AreEqual(Faction.Uef, acu.Faction);
+            Assert.AreEqual("amph", acu.BuildIcon, "the background of its build icon");
             Assert.IsNull(acu.TechLevel);
             Assert.AreEqual(18000, acu.MassCost);
             Assert.AreEqual(0.9, acu.WreckageMass);

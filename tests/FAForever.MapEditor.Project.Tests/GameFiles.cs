@@ -34,7 +34,7 @@ namespace FAForever.MapEditor.Project.Tests
                 Display = { Mesh = { LODs = { { LODCutoff = 215, ShaderName = 'Unit' } } }, UniformScale = 0.05 },
                 Economy = { BuildCostEnergy = 5000000, BuildCostMass = 18000 },
                 Footprint = { SizeX = 1, SizeZ = 1 },
-                General = { FactionName = 'UEF' },
+                General = { FactionName = 'UEF', Icon = 'amph' },
                 StrategicIconName = 'icon_commander_generic',
                 Wreckage = { MassMult = 0.9 },
                 SizeX = 0.6, SizeY = 1.5, SizeZ = 0.6,

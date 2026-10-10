@@ -30,6 +30,12 @@ namespace FAForever.MapEditor.Project.Workspaces.Serialized
         public string? StrategicIcon { get; init; }
 
         /// <summary>
+        /// The background of its icon in the build menu (<c>General.Icon</c>): <c>land</c>,
+        /// <c>air</c>, <c>sea</c> or <c>amph</c>.
+        /// </summary>
+        public string? BuildIcon { get; init; }
+
+        /// <summary>
         /// The size of its hitbox.
         /// </summary>
         public Vector3Dto? Size { get; init; }

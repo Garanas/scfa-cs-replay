@@ -138,6 +138,13 @@ namespace FAForever.MapEditor.Project.Workspaces
         public string? Icon { get; init; }
 
         /// <summary>
+        /// What the game's build menu draws behind a unit's <see cref="Icon"/>: the picture of its
+        /// layer (<c>land_up</c>, <c>air_up</c>, <c>sea_up</c>, <c>amph_up</c>), a PNG of the
+        /// workspace's assets; null for the other kinds and when the workspace lacks it.
+        /// </summary>
+        public string? IconBackground { get; init; }
+
+        /// <summary>
         /// A texture's normal map, a PNG of the workspace's assets.
         /// </summary>
         public string? NormalImage { get; init; }
@@ -501,6 +508,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                     Footprint = unit.Footprint is { } size ? (size.SizeX, size.SizeZ) : null,
                     Model = ModelOf(assets, unit.Lods),
                     Icon = File.Exists(Path.Combine(assets, UnitIconFolder, id + "_icon.png")) ? Path.Combine(assets, UnitIconFolder, id + "_icon.png") : null,
+                    IconBackground = IconBackgroundOf(assets, unit.BuildIcon),
                     File = file,
                     Facts = [.. facts],
                 };
@@ -516,6 +524,18 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// The folder of the units' icons in the assets, as the game names them: <c>&lt;id&gt;_icon.png</c>.
         /// </summary>
         public const string UnitIconFolder = "textures/ui/common/icons/units";
+
+        /// <summary>
+        /// The picture behind a unit's icon in the game's build menu, as the game chooses it
+        /// (<c>GetBackgroundTextures</c> in <c>lua/ui/game/construction.lua</c>): its blueprint's
+        /// <c>General.Icon</c> when that is <c>land</c>, <c>air</c>, <c>sea</c> or <c>amph</c>, else land.
+        /// </summary>
+        private static string? IconBackgroundOf(string assets, string? buildIcon)
+        {
+            string layer = buildIcon is "land" or "air" or "sea" or "amph" ? buildIcon : "land";
+            string file = Path.Combine(assets, UnitIconFolder, layer + "_up.png");
+            return File.Exists(file) ? file : null;
+        }
 
         /// <summary>
         /// The cube maps of a folder: the PNGs that are strips of six faces (<see cref="CubeMaps.IsStrip"/>).

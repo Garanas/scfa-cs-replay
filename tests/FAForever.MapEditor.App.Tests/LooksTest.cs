@@ -152,6 +152,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("/textures/environment/skycube_test.dds", model.ShownDocument!.Sky.Cubemap);
             Assert.AreEqual("/textures/environment/black.dds", model.ShownDocument.Sky.Background);
             Assert.AreEqual("/textures/environment/skycube_test.dds", ((TextureSetting)model.LightingSettings.Sky.Settings[0]).Text, "the inspector shows it");
+            Assert.IsTrue(model.Assets.AllMissing.Any(missing => missing.Kind == AssetKind.Cubemap && missing.Path == "textures/environment/skycube_test.dds"),
+                "a cube map the workspace lacks is missing (F-8)");
 
             await Run(model, "lighting.chooseCubemap", new JsonObject { ["target"] = "environment", ["key"] = "textures/environment/envcube_evergreen01a.dds" });
             Sky sky = model.ShownDocument!.Sky;
