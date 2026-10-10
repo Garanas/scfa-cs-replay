@@ -25,7 +25,13 @@ namespace FAForever.MapEditor.Project.Files.InMemory
 
         public NavigationSettings Navigation { get; init; } = NavigationSettings.Default;
 
-        public bool IsDefault => AutoGenerate.IsEmpty && NotOnExport.IsEmpty && Navigation == NavigationSettings.Default;
+        /// <summary>
+        /// How the path networks are generated, whether the export writes them, and the edits by hand
+        /// on top of them.
+        /// </summary>
+        public PathNodeSettings PathNodes { get; init; } = PathNodeSettings.Default;
+
+        public bool IsDefault => AutoGenerate.IsEmpty && NotOnExport.IsEmpty && Navigation == NavigationSettings.Default && PathNodes.IsDefault;
 
         public bool RegeneratesOnItsOwn(string id) => AutoGenerate.Contains(id);
 
@@ -38,9 +44,9 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             this with { NotOnExport = on ? NotOnExport.Remove(id) : NotOnExport.Add(id) };
 
         public bool Equals(ProceduralSettings? other) =>
-            other is not null && AutoGenerate.SetEquals(other.AutoGenerate) && NotOnExport.SetEquals(other.NotOnExport) && Navigation == other.Navigation;
+            other is not null && AutoGenerate.SetEquals(other.AutoGenerate) && NotOnExport.SetEquals(other.NotOnExport) && Navigation == other.Navigation && PathNodes == other.PathNodes;
 
-        public override int GetHashCode() => HashCode.Combine(AutoGenerate.Count, NotOnExport.Count, Navigation);
+        public override int GetHashCode() => HashCode.Combine(AutoGenerate.Count, NotOnExport.Count, Navigation, PathNodes);
     }
 
     /// <summary>

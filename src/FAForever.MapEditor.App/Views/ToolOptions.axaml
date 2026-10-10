@@ -463,6 +463,13 @@
               <TextBlock TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Text}" ToolTip.Tip="{Binding Text}" VerticalAlignment="Center"
                          AutomationProperties.Name="Chosen region" />
             </DataTemplate>
+            <!-- edits by hand on top of the generated path networks (R-3) -->
+            <DataTemplate DataType="tools:PathNodeEditTool">
+              <controls:ToolRow Classes="toolrow">
+                <ComboBox ItemsSource="{Binding Layers}" SelectedItem="{Binding Layer}" AutomationProperties.Name="Layer of the generated path nodes to edit" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </controls:ToolRow>
+            </DataTemplate>
             <!-- placing and aiming wave generators (W-1) -->
             <DataTemplate DataType="tools:WaveTool">
               <controls:ToolRow Classes="toolrow">

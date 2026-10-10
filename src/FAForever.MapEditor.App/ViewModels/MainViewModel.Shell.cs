@@ -324,6 +324,7 @@ public sealed partial class MainViewModel
             "grid" => new OverlayItem(overlay, () => ShowGrid, value => ShowGrid = value, () => EditorCulture.Format(GridSpacing)),
             "decals" => new OverlayItem(overlay, () => ShowDecals, value => ShowDecals = value),
             "navigation" => new OverlayItem(overlay, () => ShowNavigation, value => ShowNavigation = value),
+            "generatedPathNodes" => new OverlayItem(overlay, () => ShowGeneratedPathNodes, value => ShowGeneratedPathNodes = value),
             _ => new OverlayItem(overlay, () => false, null),
         })];
         foreach (OverlayDefinition overlay in EditorOverlays.All)

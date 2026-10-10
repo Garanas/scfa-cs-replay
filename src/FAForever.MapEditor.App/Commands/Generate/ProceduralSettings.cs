@@ -41,10 +41,12 @@ public sealed class GenerateOnExportHandler(MainViewModel model) : IRequestHandl
 {
     public Task Handle(GenerateOnExport request, CancellationToken cancellationToken)
     {
-        bool on = request.On ?? !model.Map!.Document.Procedural.GeneratesOnExport(request.Id);
+        bool on = request.On ?? !model.Procedural.IsOnExport(model.Map!.Document.Procedural, request.Id);
         model.SetOnExport(request.Id, on);
         string title = model.Generation.Results.Find(request.Id)!.Title.ToLowerInvariant();
-        model.Status = on ? $"The export generates the {title} again when it is out of date" : $"The export keeps the {title} as it is";
+        model.Status = model.Procedural.ExportUseOf(request.Id) == ExportUse.Written
+            ? on ? $"The export writes the {title} into the map's markers" : $"The export leaves the {title} out"
+            : on ? $"The export generates the {title} again when it is out of date" : $"The export keeps the {title} as it is";
         return Task.CompletedTask;
     }
 }

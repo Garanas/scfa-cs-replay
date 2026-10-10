@@ -340,6 +340,7 @@ public sealed partial class HeightmapView : Control
                 }
                 DrawThings(context, overlay, document, _model);
                 _markers.Render(context, overlay, _model.DrawnMarkers(document), _model.ShownMarkerKinds, _zoom, _offset);
+                DrawGeneratedPathNodes(context, overlay);
                 DrawSelection(context, overlay, document, _model.Selection.Items);
             }
         }

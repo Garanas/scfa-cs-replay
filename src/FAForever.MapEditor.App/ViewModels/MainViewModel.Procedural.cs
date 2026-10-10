@@ -67,7 +67,6 @@ public sealed partial class MainViewModel
         Generation.Register(new NavigationMeshGenerator(), "generate.navigation");
         Procedural.PreviewWith(WalkabilityGenerator.GeneratorId, "walkability");
         Procedural.PreviewWith(NavigationMeshGenerator.GeneratorId, "navigation");
-        Procedural.PreviewWith(PathNetworkGenerator.GeneratorId, "pathNodes");
         Procedural.OnExport(NormalMapGenerator.GeneratorId, ExportUse.WhenOutOfDate);
         Procedural.OnExport(MapPreview.GeneratorId, ExportUse.Always);
 
@@ -96,6 +95,7 @@ public sealed partial class MainViewModel
         };
 
         RegisterExportSteps();
+        InitializePathNodes();
     }
 
     /// <summary>
@@ -151,13 +151,15 @@ public sealed partial class MainViewModel
     public void SetOnExport(string id, bool on)
     {
         IGenerator generator = Generation.Results.Find(id) ?? throw new ArgumentException($"There is no generator '{id}'");
-        if (Procedural.ExportUseOf(id) != ExportUse.WhenOutOfDate)
+        ExportUse use = Procedural.ExportUseOf(id);
+        if (use is not (ExportUse.WhenOutOfDate or ExportUse.Written))
         {
-            throw new ArgumentException($"The export {(Procedural.ExportUseOf(id) == ExportUse.Always ? "always makes" : "does not make")} the {generator.Title.ToLowerInvariant()}");
+            throw new ArgumentException($"The export {(use == ExportUse.Always ? "always makes" : "does not make")} the {generator.Title.ToLowerInvariant()}");
         }
         string title = generator.Title.ToLowerInvariant();
-        EditMap(on ? $"Generate the {title} on export" : $"Keep the {title} on export",
-            document => document with { Procedural = document.Procedural.WithOnExport(id, on) });
+        EditMap(use == ExportUse.Written ? (on ? $"Write the {title} on export" : $"Leave the {title} out of the export")
+                : on ? $"Generate the {title} on export" : $"Keep the {title} on export",
+            document => document with { Procedural = Procedural.WithOnExport(document.Procedural, id, on) });
         Procedural.Refresh();
     }
 

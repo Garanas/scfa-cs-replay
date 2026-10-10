@@ -62,6 +62,12 @@ namespace FAForever.MapEditor.Project.Generation
         public static GeneratedInput NavigationSettings { get; } = new GeneratedInput("navigation settings", document => document.Procedural.Navigation);
 
         /// <summary>
+        /// How the path networks are generated (<see cref="PathNodeSettings.Generation"/>), without the
+        /// edits by hand and the export's choices.
+        /// </summary>
+        public static GeneratedInput PathNodeSettings { get; } = new GeneratedInput("path node settings", document => document.Procedural.PathNodes.Generation);
+
+        /// <summary>
         /// Whether two versions of the part are the same.
         /// </summary>
         public static bool Same(object? before, object? now) => Equals(before, now);

@@ -11,7 +11,7 @@ using FAForever.MapEditor.Project.Workspaces;
 namespace FAForever.MapEditor.App.Tests
 {
     /// <summary>
-    /// The Markers mode's generated path networks (R-3), weather markers (R-1), markers presets
+    /// The Markers mode's weather markers (R-1), markers presets
     /// (F-10) and the adaptive script's optional groups (R-5).
     /// </summary>
     [TestClass]
@@ -38,53 +38,6 @@ namespace FAForever.MapEditor.App.Tests
             model.Commands.RunAsync(id, arguments ?? [], interactive: false);
 
         private static PathNode[] Nodes(MainViewModel model, PathLayer layer) => [.. model.ShownDocument!.Markers.PathNodes.Where(node => node.Layer == layer)];
-
-        [TestMethod]
-        public async Task GeneratesPathNetworksAsOneStepAndAgainWhenWalkabilityChanged()
-        {
-            MainViewModel model = await Open();
-            int before = model.ShownDocument!.Markers.PathNodes.Length;
-
-            CommandRun run = await Run(model, "markers.connectPaths", new JsonObject { ["layers"] = new JsonArray("Land", "Air"), ["spacing"] = 32, ["replace"] = true });
-
-            Assert.IsTrue(run.Ran);
-            JsonArray layers = ((JsonObject)run.Result!)["layers"]!.AsArray();
-            Assert.AreEqual(2, layers.Count);
-            Assert.IsTrue(Nodes(model, PathLayer.Land).Length > 10);
-            Assert.IsTrue(Nodes(model, PathLayer.Land).All(node => node.Name.StartsWith("LandPN", StringComparison.Ordinal)));
-            Assert.AreEqual(16, Nodes(model, PathLayer.Air).Length, "4 by 4 air nodes, twice the spacing apart over 256 ogrids");
-            Assert.AreEqual("Generate the path networks", model.Map!.Session.UndoDescription);
-            Assert.IsTrue(model.ShowPathNodes, "the nodes show");
-            StringAssert.StartsWith(model.Markers.Paths.Result, "Generated: land");
-            Assert.AreEqual(GeneratedStatus.Current, model.Generation.Rows.Single(row => row.Id == PathNetworkGenerator.GeneratorId).State);
-
-            // added to, the network keeps the nodes it has and adds none on top of them
-            int land = Nodes(model, PathLayer.Land).Length;
-            await Run(model, "markers.connectPaths", new JsonObject { ["layers"] = new JsonArray("Land"), ["spacing"] = 32 });
-            Assert.AreEqual(land, Nodes(model, PathLayer.Land).Length, "every part of the ground has its node already");
-
-            // out of date when walkability's inputs change; generate.stale makes it again with its settings
-            model.Map.Session.Edit("Raise the water", document => document with { Water = document.Water with { Elevation = document.Water.Elevation + 3 } });
-            model.Generation.Refresh(model.Map.Document);
-            Assert.IsTrue(model.Markers.Paths.IsStale);
-            StringAssert.Contains(model.Markers.Paths.Status, "water level");
-            await Run(model, "generate.stale");
-            Assert.IsFalse(model.Markers.Paths.IsStale);
-
-            // back to the map as opened: the generating, the water and what generate.stale made again (the
-            // networks, and the preview, which the water put out of date) are steps of undo
-            model.HistoryIndex = 0;
-            Assert.AreEqual(before, model.ShownDocument!.Markers.PathNodes.Length, "each a step of undo");
-        }
-
-        [TestMethod]
-        public async Task RefusesNoLayerAndASpacingOutOfRange()
-        {
-            MainViewModel model = await Open();
-            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "markers.connectPaths", new JsonObject { ["layers"] = new JsonArray() }));
-            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "markers.connectPaths", new JsonObject { ["spacing"] = 2 }));
-            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "markers.connectPaths", new JsonObject { ["layers"] = new JsonArray("Hover") }));
-        }
 
         [TestMethod]
         public async Task TheWeatherToolsPlaceAndTheInspectorChangesThem()

@@ -18,6 +18,10 @@ public enum ExportUse
 
     /// <summary>Made on every export (the preview).</summary>
     Always,
+
+    /// <summary>Written into the files the export writes when the map says so (the path networks);
+    /// the project never holds it.</summary>
+    Written,
 }
 
 /// <summary>
@@ -41,9 +45,11 @@ public sealed record ProceduralRow(GeneratedRow Row, string? Overlay, bool Previ
 
     public string AutoLabel => $"Regenerate the {Title.ToLowerInvariant()} on its own";
 
-    public bool HasExportToggle => Export == ExportUse.WhenOutOfDate;
+    public bool HasExportToggle => Export is ExportUse.WhenOutOfDate or ExportUse.Written;
 
-    public string OnExportLabel => $"Generate the {Title.ToLowerInvariant()} on export when out of date";
+    public string OnExportLabel => Export == ExportUse.Written
+        ? $"Write the {Title.ToLowerInvariant()} into the map on export"
+        : $"Generate the {Title.ToLowerInvariant()} on export when out of date";
 
     /// <summary>
     /// What the export does with it, in words; empty when it does nothing.
@@ -52,6 +58,7 @@ public sealed record ProceduralRow(GeneratedRow Row, string? Overlay, bool Previ
     {
         ExportUse.Always => "On export: always made",
         ExportUse.WhenOutOfDate => OnExport ? "On export: made again when out of date" : "On export: kept as it is",
+        ExportUse.Written => OnExport ? "On export: written into the markers" : "On export: not written",
         _ => "",
     };
 
@@ -70,6 +77,8 @@ public sealed partial class ProceduralViewModel : ObservableObject
     private readonly Func<string, bool> _overlayOn;
     private readonly Dictionary<string, string> _overlays = new Dictionary<string, string>(StringComparer.Ordinal);
     private readonly Dictionary<string, ExportUse> _exports = new Dictionary<string, ExportUse>(StringComparer.Ordinal);
+    private readonly Dictionary<string, (Func<ProceduralSettings, bool> IsOn, Func<ProceduralSettings, bool, ProceduralSettings> Set)> _exportSettings =
+        new Dictionary<string, (Func<ProceduralSettings, bool>, Func<ProceduralSettings, bool, ProceduralSettings>)>(StringComparer.Ordinal);
 
     /// <param name="overlayOn">Whether an overlay (by id) shows.</param>
     public ProceduralViewModel(GenerationViewModel generation, AutoGeneration auto, Func<MapDocument?> document, Func<string, bool> overlayOn)
@@ -91,6 +100,28 @@ public sealed partial class ProceduralViewModel : ObservableObject
     /// </summary>
     public void OnExport(string generatorId, ExportUse use) => _exports[generatorId] = use;
 
+    /// <summary>
+    /// Says what the export does with a generator's result, with where the map keeps whether it does
+    /// (in place of <see cref="ProceduralSettings.NotOnExport"/>).
+    /// </summary>
+    public void OnExport(string generatorId, ExportUse use, Func<ProceduralSettings, bool> isOn, Func<ProceduralSettings, bool, ProceduralSettings> set)
+    {
+        _exports[generatorId] = use;
+        _exportSettings[generatorId] = (isOn, set);
+    }
+
+    /// <summary>
+    /// Whether the export makes or writes a generator's result, as the map keeps it.
+    /// </summary>
+    public bool IsOnExport(ProceduralSettings settings, string generatorId) =>
+        _exportSettings.TryGetValue(generatorId, out var own) ? own.IsOn(settings) : settings.GeneratesOnExport(generatorId);
+
+    /// <summary>
+    /// The settings with the export making or writing a generator's result on or off.
+    /// </summary>
+    public ProceduralSettings WithOnExport(ProceduralSettings settings, string generatorId, bool on) =>
+        _exportSettings.TryGetValue(generatorId, out var own) ? own.Set(settings, on) : settings.WithOnExport(generatorId, on);
+
     public ExportUse ExportUseOf(string generatorId) => _exports.GetValueOrDefault(generatorId);
 
     public IReadOnlyList<ProceduralRow> Rows { get; private set; } = [];
@@ -108,7 +139,7 @@ public sealed partial class ProceduralViewModel : ObservableObject
             _auto.Allowed.Contains(row.Id),
             settings.RegeneratesOnItsOwn(row.Id),
             _exports.GetValueOrDefault(row.Id),
-            settings.GeneratesOnExport(row.Id)))];
+            IsOnExport(settings, row.Id)))];
         OnPropertyChanged(nameof(Rows));
     }
 

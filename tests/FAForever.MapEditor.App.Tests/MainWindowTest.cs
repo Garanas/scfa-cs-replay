@@ -991,12 +991,13 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(generate.IsEffectivelyVisible, "the Procedural panel offers the path networks");
             int nodes = model.ShownDocument.Markers.PathNodes.Length;
             generate.Command!.Execute(generate.CommandParameter);
-            for (int i = 0; i < 250 && model.ShownDocument!.Markers.PathNodes.Length == nodes; i++)
+            for (int i = 0; i < 250 && model.PathNodes.Preview is null; i++)
             {
                 await Task.Delay(20);
                 Dispatcher.UIThread.RunJobs();
             }
-            Assert.IsTrue(model.ShownDocument!.Markers.PathNodes.Length > nodes, "the button generates them");
+            Assert.IsTrue(model.PathNodes.Preview!.Network.Nodes > 0, "the button generates them");
+            Assert.AreEqual(nodes, model.ShownDocument!.Markers.PathNodes.Length, "as a preview, never into the markers");
             StringAssert.Contains(json(window), "\"label\":\"How the path networks stand\"");
             window.Close();
 
