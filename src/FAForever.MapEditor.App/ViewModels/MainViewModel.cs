@@ -109,6 +109,7 @@ public sealed partial class MainViewModel : ObservableObject
         Presets = new PresetsViewModel(Logger("Assets"), _ui, (id, arguments) => TryAsync(() => Commands.RunAsync(id, arguments, interactive: true)));
         InitializeShell();
         InitializeSelection();
+        InitializeGeneration();
     }
 
     /// <summary>
@@ -457,6 +458,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
         Commands.NotifyCanRunChanged();
         ReloadPending();
+        RunAfterStroke();
     }
 
     /// <summary>
@@ -545,6 +547,7 @@ public sealed partial class MainViewModel : ObservableObject
         map.Session.StateChanged += OnSessionChanged;
         map.Session.Changed += OnDocumentChange;
         Generation.Forget();
+        _afterStroke.Clear();
         _pendingReload.Clear();
         if (map.ProjectFolder is string folder)
         {

@@ -8,15 +8,26 @@
              x:DataType="vm:MainViewModel">
   <Border Classes="dock" Classes.tall="{Binding IsDockTall}">
     <TabControl Classes="compact" SelectedIndex="{Binding Dock, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="Dock">
-      <TabItem Header="Problems">
-        <Border Classes="panel">
-          <Border Classes="planned">
-            <StackPanel Classes="stack">
-              <TextBlock Classes="caption" Text="What is wrong or doubtful: a missing texture, a spawn without mass, a new passage through a cliff, a check of a plugin; each leading to its place." />
-              <TextBlock Classes="story" Text="Not built yet: user story F-14" />
-            </StackPanel>
-          </Border>
-        </Border>
+      <!-- what the checks find, worst first; a double click or Enter goes to a problem's place -->
+      <TabItem Header="{Binding Problems.Header}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Classes="inline">
+            <TextBlock Classes="secondary" Text="{Binding Problems.Summary}" />
+            <Button Classes="chip" Content="Check again" Command="{Binding RunCommand}" CommandParameter="plugins.check" />
+          </StackPanel>
+          <ListBox x:Name="ProblemList" ItemsSource="{Binding Problems.Items}" AutomationProperties.Name="Problems"
+                   AutomationProperties.HelpText="Double-click a problem or press Enter to go to its place"
+                   DoubleTapped="OnProblemDoubleTapped" KeyDown="OnProblemKeyDown">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ProblemItem">
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Classes.warning="{Binding IsWarning}" Classes.error="{Binding IsError}" Text="{Binding SeverityText}" />
+                  <TextBlock Margin="{StaticResource InlineGap}" Text="{Binding Message}" TextWrapping="Wrap" />
+                </DockPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
       </TabItem>
       <TabItem Header="History">
         <ListBox ItemsSource="{Binding History}" SelectedIndex="{Binding HistoryIndex, Mode=TwoWay}" AutomationProperties.Name="History"

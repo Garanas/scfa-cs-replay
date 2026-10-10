@@ -33,6 +33,8 @@ public static class CommandServices
         services.AddSingleton(_ => model.Presets);
         services.AddSingleton(_ => model.Symmetry);
         services.AddSingleton(_ => model.Generation);
+        services.AddSingleton(_ => model.Walkability);
+        services.AddSingleton(_ => model.Problems);
         services.AddSingleton(_ => model.Selection);
         services.AddSingleton<IEditorDialogs>(dialogs);
         services.AddSingleton<CurrentEdit>();

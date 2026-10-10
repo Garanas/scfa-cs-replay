@@ -95,6 +95,10 @@
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
       <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />
+      <!-- walkability over the map (T-7): where units cannot go, and what changed since the time before -->
+      <SolidColorBrush x:Key="MapBlockedBrush" Color="#70C0392B" />
+      <SolidColorBrush x:Key="MapNewlyBlockedBrush" Color="#F0FF5A36" />
+      <SolidColorBrush x:Key="MapOpenedBrush" Color="#F03FE0C8" />
       <!-- lines between parts of the window, and between the groups of a panel -->
       <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource Gray690}" />
       <SolidColorBrush x:Key="GroupDividerBrush" Color="{StaticResource Gray700}" />
@@ -143,6 +147,9 @@
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
       <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />
+      <SolidColorBrush x:Key="MapBlockedBrush" Color="#70C0392B" />
+      <SolidColorBrush x:Key="MapNewlyBlockedBrush" Color="#F0FF5A36" />
+      <SolidColorBrush x:Key="MapOpenedBrush" Color="#F03FE0C8" />
       <SolidColorBrush x:Key="DividerBrush" Color="#FFD6D6D6" />
       <SolidColorBrush x:Key="GroupDividerBrush" Color="#FFE0E0E0" />
       <SolidColorBrush x:Key="SelectedBrush" Color="{StaticResource Blue100}" />

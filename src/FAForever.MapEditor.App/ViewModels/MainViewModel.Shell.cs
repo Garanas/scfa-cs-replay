@@ -275,6 +275,7 @@ public sealed partial class MainViewModel
             "markers" => new OverlayItem(overlay, () => ShowMarkers, value => ShowMarkers = value),
             "pathNodes" => new OverlayItem(overlay, () => ShowPathNodes, value => ShowPathNodes = value),
             "camera" => new OverlayItem(overlay, () => ShowCamera, value => ShowCamera = value),
+            "walkability" => new OverlayItem(overlay, () => ShowWalkability, value => ShowWalkability = value),
             "symmetry" => new OverlayItem(overlay, () => ShowSymmetry, value => ShowSymmetry = value),
             "props" => new OverlayItem(overlay, () => ShowProps, value => ShowProps = value),
             "units" => new OverlayItem(overlay, () => ShowUnits, value => ShowUnits = value),

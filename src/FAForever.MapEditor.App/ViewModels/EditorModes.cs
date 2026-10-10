@@ -101,7 +101,7 @@ public static class EditorModes
             [
                 new PresetSection("brush", "Brush presets"),
                 new PlannedSection("Height layers", "T-5", "Layers that add up to the heightmap: base, sculpting, curves, results of World Machine or Gaea"),
-                new PlannedSection("Generated from the layers", "T-7", "Walkability, with what changed since it was generated last"),
+                new GeneratedSection(),
             ],
             [new PlannedSection("Layer or curve", "T-5", "The selected height layer or curve: how it combines, strength, mask, points")]),
 
@@ -216,7 +216,7 @@ public static class EditorOverlays
         new OverlayDefinition("markers", "Markers", "Show markers", "R-6") { Panel = "markers" },
         new OverlayDefinition("pathNodes", "Path nodes", "Show path nodes", "R-6") { Panel = "markers" },
         new OverlayDefinition("camera", "3D camera", "Show the 3D camera", "V-1"),
-        new OverlayDefinition("walkability", "Walkability", "Show walkability", "T-7", "Show where land units can and cannot go, and what changed"),
+        new OverlayDefinition("walkability", "Walkability", "Show walkability", "T-7"),
         new OverlayDefinition("mask", "Mask", "Show a mask", "K-1", "Show a mask over the terrain"),
         new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12"),
         new OverlayDefinition("grid", "Grid", "Show the grid", "V-3", "Show a grid over the terrain"),

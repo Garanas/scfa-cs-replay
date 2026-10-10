@@ -753,7 +753,7 @@ namespace FAForever.MapEditor.App.Tests
             HighGround generator = new HighGround();
             model.Generation.Results.Register(generator);
             await model.OpenAsync(HardFfa);
-            Assert.AreEqual(GeneratedStatus.Missing, model.Generation.States.Single().Status);
+            Assert.AreEqual(GeneratedStatus.Missing, model.Generation.States.Single(state => state.Generator.Id == "high-ground").Status);
             CommandRun nothing = await model.Commands.RunAsync("generate.stale", [], interactive: false);
             Assert.AreEqual(0, ((System.Text.Json.Nodes.JsonArray)nothing.Result!).Count, "a result never generated is its own command's");
             Assert.AreEqual("Nothing is out of date", model.Status);
@@ -776,7 +776,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("Generated again: High ground (heightmap changed)", model.Status);
 
             await model.OpenAsync(HardFfa);
-            Assert.AreEqual(GeneratedStatus.Missing, model.Generation.States.Single().Status, "another map forgets the results");
+            Assert.AreEqual(GeneratedStatus.Missing, model.Generation.States.Single(state => state.Generator.Id == "high-ground").Status, "another map forgets the results");
         }
     }
 }

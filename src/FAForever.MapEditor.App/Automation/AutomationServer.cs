@@ -583,6 +583,8 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["status"] = state.Status.ToString(),
                 ["changed"] = new JsonArray([.. state.ChangedInputs.Select(input => (JsonNode)JsonValue.Create(input))]),
             })]),
+            ["walkability"] = GenerateWalkabilityHandler.Describe(model.Walkability),
+            ["problems"] = CheckMapHandler.Describe(model.Problems),
             ["gpu"] = new JsonObject
             {
                 ["renderer"] = window.View3D.Renderer,
