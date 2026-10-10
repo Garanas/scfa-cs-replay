@@ -245,6 +245,7 @@ namespace FAForever.MapEditor.Project.Files
             RotationY = Dto(source.RotationY),
             RotationZ = Dto(source.RotationZ),
             Scale = Dto(source.Scale),
+            Rule = source.Rule,
         };
 
         /// <summary>
@@ -259,6 +260,7 @@ namespace FAForever.MapEditor.Project.Files
             RotationY = Model(source.RotationY),
             RotationZ = Model(source.RotationZ),
             Scale = Model(source.Scale),
+            Rule = source.Rule,
         };
 
         private static Vector2Dto Dto(Vector2 v) => new Vector2Dto { X = v.X, Y = v.Y };

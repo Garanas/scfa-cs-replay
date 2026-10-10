@@ -632,6 +632,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["walkability"] = GenerateWalkabilityHandler.Describe(model.Walkability),
             ["problems"] = CheckMapHandler.Describe(model.Problems),
             ["props"] = model.Props.Describe(),
+            ["rules"] = new JsonObject { ["masks"] = model.MaskRules.Describe(model.ShownDocument), ["props"] = model.PropRules.Describe() },
             ["gpu"] = new JsonObject
             {
                 ["renderer"] = window.View3D.Renderer,

@@ -25,12 +25,14 @@ public sealed partial class MainViewModel
     public partial bool ShowMask { get; set; }
 
     /// <summary>
-    /// What the top view lays over the terrain: the grid the active painting tool paints (a
+    /// What the top view lays over the terrain: the preview of the mask rules being edited (K-2),
+    /// else the grid the active painting tool paints (a
     /// layer's or the water's mask, a mask for tools, the terrain's types), else the chosen mask
     /// for tools while the overlay <c>mask</c> is on, else nothing.
     /// </summary>
     public GridOverlay? ShownGrid =>
-        (ActiveTool?.Tool as GridPaintTool)?.Shown
+        MaskRules?.PreviewOverlay
+        ?? (ActiveTool?.Tool as GridPaintTool)?.Shown
         ?? (ShowMask && Masks.Chosen is string name ? GridOverlay.Mask(PaintTarget.Mask(name)) : null);
 
     partial void OnShowMaskChanged(bool value)

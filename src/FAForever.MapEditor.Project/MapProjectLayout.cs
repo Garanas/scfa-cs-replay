@@ -18,6 +18,8 @@ namespace FAForever.MapEditor.Project
     /// water/water-map.png          colour with alpha
     /// water/foam.png, flatness.png, depth-bias.png   8-bit grey, half the map's size
     /// masks/NAME.png               8-bit grey, the map's size or half: masks for tools (K-1), not exported
+    /// masks/NAME.rules.json        the rules a mask is generated from (K-2), when it has rules
+    /// prop-rules.json              the rules that place props from the layers (P-4), when the map has rules
     /// script.lua                   the map's script, if it has one
     /// files/                       the other files of the map folder, as they are
     /// procedural/sources/          the map maker's World Machine and Gaea files (.tmd, .terrain)
@@ -91,5 +93,36 @@ namespace FAForever.MapEditor.Project
         /// The file of the mask for tools named <paramref name="name"/>.
         /// </summary>
         public static string Mask(string name) => $"{Masks}/{name}.png";
+
+        /// <summary>
+        /// The rules that place props from the layers (user story P-4); absent while the map has none.
+        /// </summary>
+        public const string PropRules = "prop-rules.json";
+
+        /// <summary>
+        /// What the file of a mask's rules ends with, after the mask's name.
+        /// </summary>
+        public const string MaskRulesSuffix = ".rules.json";
+
+        /// <summary>
+        /// The file of the rules the mask for tools named <paramref name="name"/> is generated from (user story K-2).
+        /// </summary>
+        public static string MaskRules(string name) => $"{Masks}/{name}{MaskRulesSuffix}";
+
+        /// <summary>
+        /// Whether a file of the project (with <c>/</c> between folders) holds a mask's rules, and whose.
+        /// </summary>
+        public static bool IsMaskRules(string file, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? name)
+        {
+            name = null;
+            if (!file.StartsWith(Masks + "/", StringComparison.Ordinal)
+                || !file.EndsWith(MaskRulesSuffix, StringComparison.OrdinalIgnoreCase)
+                || file.IndexOf('/', Masks.Length + 1) >= 0)
+            {
+                return false;
+            }
+            name = file[(Masks.Length + 1)..^MaskRulesSuffix.Length];
+            return name.Length > 0;
+        }
     }
 }

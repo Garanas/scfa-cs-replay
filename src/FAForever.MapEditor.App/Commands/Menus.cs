@@ -50,11 +50,11 @@ public static class Menus
         new MenuLayout("Modes",
         [
             Mode("terrain", "terrain.addLayer", "terrain.bake", "terrain.importHeightmap", "terrain.exportHeightmap", "terrain.saveBrush"),
-            Mode("paint", "paint.chooseTexture", "paint.addStratum", "paint.addMask", "paint.renameMask", "paint.deleteMask", "paint.shader"),
+            Mode("paint", "paint.chooseTexture", "paint.addStratum", "paint.addMask", "paint.renameMask", "paint.deleteMask", "paint.maskRules", "paint.shader"),
             Mode("water", "water.toggle", "water.addWaveGenerator"),
             Mode("lighting", "lighting.preset"),
             Mode("markers", "markers.connectPaths", "markers.addChain", "markers.adaptive", "markers.placePreset"),
-            Mode("props", "props.choose", "props.addToPalette", "props.followTerrain", Separator, "props.alignToTerrain", "props.upright", "props.dropToGround", "props.randomize", "props.replace", "props.randomVariant", Separator, "props.reclaim", "props.addRule"),
+            Mode("props", "props.choose", "props.addToPalette", "props.followTerrain", Separator, "props.alignToTerrain", "props.upright", "props.dropToGround", "props.randomize", "props.replace", "props.randomVariant", Separator, "props.reclaim", "props.addRule", "props.keepFromRules"),
             Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack"),
             Mode("units", "units.pick", "units.addGroup", "units.selectGroup", "units.placePreset", "units.asWrecks"),
             new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.reload", Separator, "assets.brushesFolder"]),

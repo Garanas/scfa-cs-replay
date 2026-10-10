@@ -1,0 +1,174 @@
+using System.Text.Json.Nodes;
+using FAForever.MapEditor.App.Commands;
+using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Generation;
+
+namespace FAForever.MapEditor.App.Tests
+{
+    /// <summary>
+    /// Masks and props from rules in the editor (user stories K-2, P-4, F-7): the commands, the rule
+    /// editors' fields, generating when asked as one step of undo, and what is out of date.
+    /// </summary>
+    [TestClass]
+    public class RulesTest
+    {
+        private const string HardFfa = "assets/maps/HardFFA.v0001";
+        private const string Pine = "/env/evergreen/props/trees/pine06_prop.bp";
+
+        private static async Task<MainViewModel> Open()
+        {
+            MainViewModel model = new MainViewModel(new MainViewModelTest.Answers());
+            await model.OpenAsync(HardFfa);
+            return model;
+        }
+
+        private static async Task<CommandRun> Run(MainViewModel model, string id, JsonObject? arguments = null)
+        {
+            CommandRun run = await model.Commands.RunAsync(id, arguments ?? [], interactive: false);
+            Assert.IsTrue(run.Ran, $"{id}: {model.Status}");
+            return run;
+        }
+
+        private static GeneratedState StateOf(MainViewModel model, string id) => model.Generation.States.Single(state => state.Generator.Id == id);
+
+        [TestMethod]
+        public async Task EditsTheRulesOfAMaskAndGeneratesItWhenAsked()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "paint.addMask", new JsonObject { ["name"] = "flat" });
+            await Run(model, "paint.maskRules", new JsonObject { ["name"] = "flat" });
+            Assert.AreEqual("flat", model.MaskRules.Editing);
+            Assert.AreEqual("paint", model.SelectedMode!.Definition.Id);
+            Assert.IsTrue(model.ShowMask, "the mask shows over the terrain");
+
+            await Run(model, "paint.addMaskRule", new JsonObject { ["kind"] = "Slope", ["max"] = 8 });
+            await Run(model, "paint.addMaskRule", new JsonObject { ["kind"] = "distance to water", ["min"] = 2, ["max"] = 10000, ["combine"] = "Multiply" });
+            Assert.AreEqual(2, model.MaskRules.Rules.Count);
+            CollectionAssert.AreEqual(new[] { "From", "To", "Soft edge", "Inverted" }, model.MaskRules.Rules[0].Settings.Settings.Select(setting => setting.Label).ToArray(),
+                "the first rule is the start: no way to combine");
+            Assert.AreEqual("Combine", model.MaskRules.Rules[1].Settings.Settings[0].Label);
+
+            // a field of the editor runs paint.setMaskRule
+            NumberSetting to = (NumberSetting)model.MaskRules.Rules[0].Settings.Settings[1];
+            Assert.AreEqual("8", to.Text);
+            to.Text = "12";
+            await Task.Yield();
+            Assert.AreEqual(12, model.Map!.Document.MaskRules["flat"].Rules[0].Max);
+
+            Assert.AreEqual(GeneratedStatus.Missing, StateOf(model, MaskRulesGenerator.GeneratorId).Status, "nothing generates by itself");
+            Assert.IsTrue(model.Map.Document.Masks["flat"].ToArray().All(value => value == 0));
+            int steps = model.History.Count;
+
+            CommandRun generated = await Run(model, "generate.masks");
+            Assert.AreEqual(1, generated.Result);
+            Assert.AreEqual(steps + 1, model.History.Count, "one step of undo");
+            byte[] mask = model.Map.Document.Masks["flat"].ToArray();
+            Assert.IsTrue(mask.Any(value => value == 255) && mask.Any(value => value == 0), "flat ground away from the water, not the hills");
+            Assert.AreEqual(GeneratedStatus.Current, StateOf(model, MaskRulesGenerator.GeneratorId).Status);
+            StringAssert.Contains(model.MaskRules.Status, "up to date");
+
+            await Run(model, "paint.setMaskRule", new JsonObject { ["index"] = 1, ["invert"] = true });
+            Assert.AreEqual(GeneratedStatus.Stale, StateOf(model, MaskRulesGenerator.GeneratorId).Status, "a rule changed");
+            StringAssert.Contains(model.Generation.Summary, "Masks from rules");
+
+            await Run(model, "paint.moveMaskRule", new JsonObject { ["index"] = 1, ["to"] = 0 });
+            Assert.AreEqual(MaskRuleKind.WaterDistance, model.MaskRules.Rules[0].Kind);
+            await Run(model, "paint.removeMaskRule", new JsonObject { ["index"] = 0 });
+            await Run(model, "paint.removeMaskRule", new JsonObject { ["index"] = 0 });
+            Assert.IsFalse(model.Map.Document.MaskRules.ContainsKey("flat"), "without rules the mask is painted by hand");
+            Assert.IsFalse(model.MaskRules.HasRules);
+
+            model.Undo();
+            model.Undo();
+            Assert.AreEqual(2, model.MaskRules.Rules.Count, "undo brings the rules back, and the editor shows them");
+        }
+
+        [TestMethod]
+        public async Task ThePreviewShowsWhatTheRulesMakeInTheTopView()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "paint.addMask", new JsonObject { ["name"] = "high" });
+            await Run(model, "paint.addMaskRule", new JsonObject { ["mask"] = "high", ["kind"] = "Height", ["min"] = 0, ["max"] = 1000 });
+            Assert.AreEqual("high", model.MaskRules.Editing, "adding a rule opens the mask's rules");
+            for (int i = 0; i < 200 && model.MaskRules.PreviewOverlay is null; i++)
+            {
+                await Task.Delay(20);
+            }
+            Assert.IsNotNull(model.MaskRules.PreviewOverlay, "made on a thread of the pool");
+            Assert.AreSame(model.MaskRules.PreviewOverlay, model.ShownGrid, "the top view shows the preview");
+            TiledBuffer<byte> preview = model.ShownGrid!.Select(model.Map!.Document)!;
+            Assert.IsTrue(preview.ToArray().Any(value => value == 255), "what the rules make, before it is generated");
+            Assert.IsTrue(model.Map.Document.Masks["high"].ToArray().All(value => value == 0), "the mask itself is not generated");
+
+            model.MaskRules.ShowPreview = false;
+            Assert.AreNotSame(preview, model.ShownGrid?.Select(model.Map.Document), "without the preview, the mask");
+            model.MaskRules.Editing = null;
+        }
+
+        [TestMethod]
+        public async Task AddsEditsAndGeneratesPropRulesKeepingThePropsPlacedByHand()
+        {
+            MainViewModel model = await Open();
+            int byHand = model.Map!.Document.Props.Length;
+            Prop first = model.Map.Document.Props[0];
+
+            CommandRun added = await Run(model, "props.addRule", new JsonObject { ["name"] = "Forest", ["density"] = 1 });
+            Assert.AreEqual("Forest", added.Result);
+            Assert.AreEqual("Forest", model.PropRules.Chosen);
+            Assert.AreEqual("props", model.SelectedMode!.Definition.Id);
+            await Run(model, "props.setRulePalette", new JsonObject { ["props"] = new JsonArray(Pine) });
+            await Run(model, "props.addRuleCondition", new JsonObject { ["layer"] = "Layer 1", ["threshold"] = 0.2 });
+            Assert.AreEqual(1, model.PropRules.Conditions.Count);
+            Assert.AreEqual("stratum:1", model.Map.Document.PropRules[0].Conditions[0].Layer);
+            Assert.IsTrue(model.PropRules.Groups.SelectMany(group => group.Settings).Any(setting => setting.Label == "Density"));
+            StringAssert.Contains(model.PropRules.PaletteText, "pine06");
+
+            CommandRun generated = await Run(model, "generate.props");
+            int count = (int)generated.Result!;
+            Assert.IsTrue(count > 100, $"{count} props");
+            Assert.AreEqual(byHand + count, model.Map.Document.Props.Length);
+            Assert.AreEqual(byHand, model.Map.Document.Props.Count(prop => prop.Rule is null));
+            Assert.AreEqual(first, model.Map.Document.Props[0], "a prop placed by hand stays as it was");
+            StringAssert.Contains(model.PropRules.Items[0].Summary, $"{count.ToString("#,0", System.Globalization.CultureInfo.InvariantCulture)} props");
+
+            await Run(model, "props.setRule", new JsonObject { ["density"] = 0.5, ["clustering"] = "Clusters" });
+            Assert.AreEqual(GeneratedStatus.Stale, StateOf(model, PropRulesGenerator.GeneratorId).Status);
+            CommandRun again = await Run(model, "generate.props");
+            Assert.IsTrue((int)again.Result! < count);
+            Assert.AreEqual(byHand + (int)again.Result!, model.Map.Document.Props.Length, "the rule's props replaced, the others kept");
+
+            await Run(model, "props.setRule", new JsonObject { ["name"] = "Pines" });
+            Assert.AreEqual("Pines", model.PropRules.Chosen, "the chosen rule follows its name");
+            Assert.AreEqual((int)again.Result!, model.Map.Document.CountRuleProps("Pines"));
+
+            Prop generatedProp = model.Map.Document.Props.First(prop => prop.Rule is not null);
+            model.Selection.Set([ObjectRef.Prop(generatedProp.Id)]);
+            await Run(model, "props.keepFromRules");
+            Assert.IsNull(model.Map.Document.Props.Single(prop => prop.Id == generatedProp.Id).Rule, "kept: generating again leaves it");
+
+            await Run(model, "props.removeRule");
+            Assert.AreEqual(byHand + 1, model.Map.Document.Props.Length, "its props went with it, the kept one stays");
+            Assert.IsNull(model.PropRules.Chosen);
+            model.Undo();
+            Assert.AreEqual("Pines", model.PropRules.Chosen);
+        }
+
+        [TestMethod]
+        public async Task RefusesWhatCannotBe()
+        {
+            MainViewModel model = await Open();
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => model.Commands.RunAsync("paint.addMaskRule", new JsonObject { ["kind"] = "Slope" }, interactive: false),
+                "no mask to add a rule to");
+            await Run(model, "paint.addMask", new JsonObject { ["name"] = "m" });
+            ArgumentException badKind = await Assert.ThrowsExceptionAsync<ArgumentException>(() => model.Commands.RunAsync("paint.addMaskRule", new JsonObject { ["kind"] = "Wiggle" }, interactive: false));
+            StringAssert.Contains(badKind.Message, "Slope");
+            await Run(model, "props.addRule", new JsonObject { ["name"] = "A" });
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => model.Commands.RunAsync("props.addRule", new JsonObject { ["name"] = "a" }, interactive: false),
+                "names differ by more than case");
+            CommandRun generated = await Run(model, "generate.props");
+            Assert.AreEqual(0, generated.Result, "a rule without props places none");
+        }
+    }
+}

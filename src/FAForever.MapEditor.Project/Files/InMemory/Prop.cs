@@ -26,5 +26,12 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public Vector3 RotationZ { get; init; }
 
         public Vector3 Scale { get; init; }
+
+        /// <summary>
+        /// The name of the rule that placed it (user story P-4), null for a prop placed by hand:
+        /// generating the rules again replaces their props and keeps the others. The game's files
+        /// do not carry it.
+        /// </summary>
+        public string? Rule { get; init; }
     }
 }

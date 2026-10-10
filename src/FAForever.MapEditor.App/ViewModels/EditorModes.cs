@@ -123,7 +123,7 @@ public static class EditorModes
                 new PresetSection("brush", "Brush presets"),
                 new LayerTexturesSection(),
             ],
-            [new LayerSection()]),
+            [new MaskRulesSection(), new LayerSection()]),
 
         new ModeDefinition("water", "Water", "Icon.Water", "Levels, colours, waves, paintable water", 0, "F4", "W-1",
             [
@@ -171,10 +171,10 @@ public static class EditorModes
                 new PropPlacementSection(),
                 new PropPaletteSection(),
                 new PresetSection(PropsViewModel.PaletteKind, "Palettes"),
-                new PlannedSection("Rules", "P-4", "Props from layers: where they may grow and where not; generated when asked"),
+                new PropRulesSection(),
                 new PropReclaimSection(),
             ],
-            [new PlannedSection("Props", "P-1", "The selected props, palette or rule")]),
+            [new PropRuleSection()]),
 
         new ModeDefinition("decals", "Decals", "Icon.Decals", "Place decals, groups", 1, "F8", "D-1",
             [

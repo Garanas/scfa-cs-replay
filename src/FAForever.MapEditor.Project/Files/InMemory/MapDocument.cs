@@ -105,6 +105,19 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             ImmutableSortedDictionary.Create<string, TiledBuffer<byte>>(StringComparer.Ordinal);
 
         /// <summary>
+        /// The rules of the masks for tools that are made from rules (user story K-2), by the mask's
+        /// name: such a mask is generated from them when asked. Kept as <c>masks/&lt;name&gt;.rules.json</c>.
+        /// </summary>
+        public ImmutableSortedDictionary<string, MaskRuleSet> MaskRules { get; init; } =
+            ImmutableSortedDictionary.Create<string, MaskRuleSet>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// The rules that place props from the layers when asked (user story P-4), in the order they
+        /// place; their props carry the rule's name (<see cref="Prop.Rule"/>). Kept as <c>prop-rules.json</c>.
+        /// </summary>
+        public ImmutableArray<PropRule> PropRules { get; init; } = [];
+
+        /// <summary>
         /// The playable area at the start (user story M-3): the area <see cref="ScenarioInfo.PlayableArea"/>
         /// names, else the first area (the map editors' convention: their script makes <c>AREA_1</c>
         /// playable); null for a map without areas, which is playable as a whole.

@@ -939,6 +939,53 @@ follow the terrain, and the reclaim. The maths is the library's (`PropOrientatio
   reclaim with areas).
 - Not built yet: handles, the K-1 masks as layers.
 
+## Masks and props from rules
+
+User stories K-2 and P-4, generated only when asked (F-7). The rules and their generators are the
+library's (`MaskRules`, `PropRules`, `RuleEdits`; its guide, "Rules"); the core's side is
+`ViewModels/MainViewModel.Rules.cs`, which registers `MaskRulesGenerator` (`generate.masks`) and
+`PropRulesGenerator` (`generate.props`) with `Generation`, so they show in the status bar, the
+Terrain panel's generated list and `generate.stale`.
+
+- **Mask rules** (`model.MaskRules`, `MaskRulesViewModel`; the Paint mode's inspector section
+  `MaskRulesSection`, drawn by `Views/RulePanels/MaskRulesPanel`): Rules... beside each mask of the
+  Paint panel runs `paint.maskRules {name?}`, which chooses the mask, turns the mask overlay on and
+  shows its rules. Each rule is a card with its fields, a `SettingGroup` that runs
+  `paint.setMaskRule {index, mask?, kind?, combine?, invert?, min?, max?, soft?, source?, scale?,
+  seed?, radius?}` (merged per field as the map panels' fields are), up, down and a cross
+  (`paint.moveMaskRule {index, to}`, `paint.removeMaskRule {index}`); a kind and Add
+  (`paint.addMaskRule {kind, ...}`); Generate. The cards are made again only when the kinds, the
+  mask or the layers to choose from change. A layer is chosen as the paint tool names it
+  (`Layer 3: SandLight`, `Mask: forest`; `RuleLayers` turns it into `stratum:3` or `forest`).
+- **The preview**: while a mask's rules are open, `MaskRulesViewModel` makes what they make on a
+  thread of the pool (span `model.mask-rules-preview`; the masks with rules it reads first) when
+  the rules or the mask change, and `MainViewModel.ShownGrid` shows it before any tool's grid
+  (`PreviewOverlay`, a key per version so the top view colours it again). Generating writes it
+  into the mask; the check box "Preview in the top view" turns it off.
+- **Prop rules** (`model.PropRules`, `PropRulesViewModel`): the Props panel's `PropRulesSection`
+  (`Views/RulePanels/PropRulesPanel`: the rules with their props and counts, a name field, Add,
+  Delete, Generate and how they stand) and the inspector's `PropRuleSection`
+  (`Views/RulePanels/PropRulePanel`: the palette, "Take the panel's palette", the layer conditions
+  with a cross each and Add, and three groups of fields). Commands: `props.addRule {name?, layer?,
+  density?, spacing?}` (the panel's palette and Placing), `props.chooseRule {rule}`,
+  `props.setRule {rule?, name?, density?, spacing?, fade?, clustering?, clusterSize?,
+  clusterCover?, minSlope?, maxSlope?, aboveWater?, seed?, alignment?, randomTurn?, randomTilt?,
+  scaleMin?, scaleMax?, sink?}`, `props.setRulePalette {rule?, props?}`,
+  `props.addRuleCondition {rule?, layer?, threshold?, forbid?}`, `props.setRuleCondition {index,
+  rule?, layer?, threshold?, forbid?, kind?}`, `props.removeRuleCondition {index}`,
+  `props.removeRule {rule?, keepProps?}` (its props go too, unless kept) and, in the Props menu,
+  `props.keepFromRules` (the selected props of rules become hand-placed). Pasted and duplicated
+  props are hand-placed.
+- Generating runs on a thread of the pool through `MainViewModel.GenerateAsync` and is one step of
+  undo (`Generate the masks from rules`, `Generate the props from rules`); 7 500 trees on Seton's
+  Clutch (20 km) take about 35 ms.
+- Automation: `state.rules` (`masks`: the mask being edited, its rules with their fields, whether a
+  preview shows, how they stand, the masks with rules; `props`: the chosen rule, the rules with
+  their summaries, its palette and number of layers, how they stand).
+- Not built yet: `generate.stale` makes every result from the version it started with, so props
+  generated in the same run as the masks they read are out of date again at once (generate the
+  masks, then the props); the rule editor shows no preview of the props.
+
 ## The map and its atmosphere: panels of settings
 
 User stories M-1, M-2, M-5, M-6, W-1, L-1, L-2, S-2, T-3, V-5. The parts are
