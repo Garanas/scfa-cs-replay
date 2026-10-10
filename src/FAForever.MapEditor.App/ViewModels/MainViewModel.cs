@@ -166,6 +166,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeLayout();
         InitializeAssetDiscovery();
         InitializeHeightLayers();
+        InitializeDraftAndFinal();
         InitializeUndoSelection();
         InitializeContent();
         InitializeInspectorParts();

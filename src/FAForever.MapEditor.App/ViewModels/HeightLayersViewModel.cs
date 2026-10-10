@@ -38,7 +38,26 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
     /// </summary>
     public static LayerStackCommands HeightCommands { get; } = new LayerStackCommands("terrain.setLayer", "terrain.moveLayer", "terrain.removeLayer", "height layer");
 
-    public HeightLayersViewModel(Func<string, JsonObject, Task> run) : base(run, document => document.HeightStack, HeightCommands,
+    /// <summary>
+    /// The filters by use: every layer of the shown heightmap, the shared ones, those only in the
+    /// draft or only in the final.
+    /// </summary>
+    public static IReadOnlyList<string> UseFilters { get; } = ["all", "shared", "draft", "final"];
+
+    /// <summary>
+    /// The filters by source: every layer, sculpting (painted), image, curve, mask.
+    /// </summary>
+    public static IReadOnlyList<string> SourceFilters { get; } = ["all", "sculpt", "image", "curve", "mask"];
+
+    /// <summary>
+    /// The "Used in" choices of the inspector.
+    /// </summary>
+    public static IReadOnlyList<string> Uses { get; } = ["Draft and final", "Draft only", "Final only"];
+
+    private readonly Func<HeightStackKind> _shownHeights;
+
+    /// <param name="shown">Which heightmap the list shows (the editor's switch); the final when left out.</param>
+    public HeightLayersViewModel(Func<string, JsonObject, Task> run, Func<HeightStackKind>? shown = null) : base(run, document => HeightStacks.Of(document, shown?.Invoke() ?? HeightStackKind.Final), HeightCommands,
     [
         new LayerAddChoice("Sculpt layer", "Add a sculpting layer", "A layer the sculpt tool writes into, above the chosen one", "terrain.addLayer", new JsonObject { ["kind"] = "sculpt" }),
         new LayerAddChoice("Image...", "Add a heightmap image as a layer", "A heightmap of World Machine, Gaea or another tool, read again when it changes in the project folder",
@@ -47,7 +66,20 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
     ])
     {
         _run = run;
+        _shownHeights = shown ?? (() => HeightStackKind.Final);
+        UseChips = [.. UseFilters.Select(value => new LayerFilterChip(char.ToUpperInvariant(value[0]) + value[1..], $"Show the height layers used in {value}", value,
+            new AsyncRelayCommand(() => run("terrain.filterLayers", new JsonObject { ["use"] = value }))))];
+        SourceChips = [.. SourceFilters.Select(value => new LayerFilterChip(char.ToUpperInvariant(value[0]) + value[1..], $"Show the height layers whose source is {value}", value,
+            new AsyncRelayCommand(() => run("terrain.filterLayers", new JsonObject { ["source"] = value }))))];
+        UpdateChips();
         JsonObject Fixed() => new JsonObject { ["layer"] = Chosen };
+        Use = new SettingGroup("Use",
+        [
+            new ChoiceSetting("Used in", "terrain.setLayer", "use", Uses, d => UseTitle(HeightStacks.UseOf(d, Chosen ?? "") ?? LayerUse.Shared), run, Fixed)
+            {
+                Help = "Which heightmaps the layer shapes: both (it keeps a place and an on/off of its own in each), the draft only or the final only",
+            },
+        ]);
         HeightCurve CurveOf(MapDocument d) => HeightLayers.Find(d, Chosen)?.Curve ?? new HeightCurve();
         const string set = "terrain.setCurve";
         Curve = new SettingGroup("Curve",
@@ -84,6 +116,126 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
         };
     }
 
+    /// <summary>
+    /// The chosen layer's use (draft and final, draft only, final only).
+    /// </summary>
+    public SettingGroup Use { get; }
+
+    /// <summary>
+    /// The chips that filter the list by use, one of them on.
+    /// </summary>
+    public IReadOnlyList<LayerFilterChip> UseChips { get; }
+
+    /// <summary>
+    /// The chips that filter the list by source, one of them on.
+    /// </summary>
+    public IReadOnlyList<LayerFilterChip> SourceChips { get; }
+
+    /// <summary>
+    /// The filter by use: <c>all</c>, <c>shared</c>, <c>draft</c> or <c>final</c>.
+    /// </summary>
+    public string UseFilter { get; private set; } = "all";
+
+    /// <summary>
+    /// The filter by source: <c>all</c>, <c>sculpt</c>, <c>image</c>, <c>curve</c> or <c>mask</c>.
+    /// </summary>
+    public string SourceFilter { get; private set; } = "all";
+
+    /// <summary>
+    /// The heightmap the list shows.
+    /// </summary>
+    public HeightStackKind ShownHeights => _shownHeights();
+
+    /// <summary>
+    /// Filters the list by use and by source (each left as it is when null).
+    /// </summary>
+    /// <exception cref="ArgumentException">A filter the list does not have.</exception>
+    public void SetFilter(string? use, string? source)
+    {
+        string? u = use?.Trim().ToLowerInvariant();
+        string? s = source?.Trim().ToLowerInvariant();
+        if (u is not null && !UseFilters.Contains(u))
+        {
+            throw new ArgumentException($"The height layers filter by use: {string.Join(", ", UseFilters)}, not '{use}'");
+        }
+        if (s is not null && !SourceFilters.Contains(s))
+        {
+            throw new ArgumentException($"The height layers filter by source: {string.Join(", ", SourceFilters)}, not '{source}'");
+        }
+        UseFilter = u ?? UseFilter;
+        SourceFilter = s ?? SourceFilter;
+        UpdateChips();
+        OnPropertyChanged(nameof(UseFilter));
+        OnPropertyChanged(nameof(SourceFilter));
+        Refresh(Document);
+    }
+
+    private void UpdateChips()
+    {
+        foreach (LayerFilterChip chip in UseChips)
+        {
+            chip.IsOn = chip.Value == UseFilter;
+        }
+        foreach (LayerFilterChip chip in SourceChips)
+        {
+            chip.IsOn = chip.Value == SourceFilter;
+        }
+    }
+
+    /// <summary>
+    /// The "Used in" title of a use.
+    /// </summary>
+    public static string UseTitle(LayerUse use) => use switch
+    {
+        LayerUse.Draft => Uses[1],
+        LayerUse.Final => Uses[2],
+        _ => Uses[0],
+    };
+
+    /// <summary>
+    /// A use from its title or name: <c>Draft and final</c>, <c>shared</c>, <c>both</c>, <c>draft</c>, <c>Draft only</c>, <c>final</c>, ...
+    /// </summary>
+    /// <exception cref="ArgumentException">No use.</exception>
+    public static LayerUse ParseUse(string text)
+    {
+        string t = text.Trim().ToLowerInvariant();
+        return t switch
+        {
+            "shared" or "both" or "draft and final" => LayerUse.Shared,
+            "draft" or "draft only" => LayerUse.Draft,
+            "final" or "final only" => LayerUse.Final,
+            _ => throw new ArgumentException($"A height layer is used in the draft and final (shared), the draft or the final, not '{text}'"),
+        };
+    }
+
+    protected override string FilterKey => UseFilter + "/" + SourceFilter + "/" + ShownHeights;
+
+    protected override bool Shows(MapDocument document, Layer layer)
+    {
+        if (UseFilter != "all")
+        {
+            LayerUse? use = HeightStacks.UseOf(document, layer.Name);
+            bool matches = UseFilter switch
+            {
+                "shared" => use == LayerUse.Shared,
+                "draft" => use == LayerUse.Draft,
+                _ => use == LayerUse.Final,
+            };
+            if (!matches)
+            {
+                return false;
+            }
+        }
+        return SourceFilter switch
+        {
+            "sculpt" => layer.Source is PaintedSource,
+            "image" => layer.Source is ImageSource,
+            "curve" => layer.Source is CurveSource,
+            "mask" => layer.Source is MaskRefSource,
+            _ => true,
+        };
+    }
+
     public bool IsCurve => ChosenLayer?.Source is CurveSource;
 
     public bool IsImported => ChosenLayer?.Source is ImageSource;
@@ -96,6 +248,7 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
     /// </summary>
     public string ChosenFacts => ChosenLayer switch
     {
+        { IsBase: true, Source: ImageSource image } => $"The final's base: read from {image.Path} again whenever the file changes (a procedural tool's output); the lowest layer.",
         { IsBase: true } => "The map's heights as they were when the stack began; the lowest layer.",
         { Source: ImageSource image } => $"Read from {image.Path}; read again when the file changes.",
         { Source: CurveSource { Curve: HeightCurve curve } } => string.Create(CultureInfo.InvariantCulture,
@@ -117,11 +270,30 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
 
     public override string KindOf(Layer layer) => layer.Source is PaintedSource && !layer.IsBase ? "Sculpt" : base.KindOf(layer);
 
+    /// <summary>
+    /// E.g. <c>Sculpt · add · shared</c>: with where it is used once the draft and the final differ.
+    /// </summary>
+    public override string SummaryOf(Layer layer)
+    {
+        string summary = base.SummaryOf(layer);
+        if (Document is not MapDocument document || HeightStacks.MakeTheSame(document.HeightStack, document.DraftStack))
+        {
+            return summary;
+        }
+        return HeightStacks.UseOf(document, layer.Name) switch
+        {
+            LayerUse.Shared => summary + " · shared",
+            LayerUse.Draft => summary + " · draft only",
+            LayerUse.Final => summary + " · final only",
+            _ => summary,
+        };
+    }
+
     protected override string SummaryOfStack(int count) =>
         count == 0 ? "" : string.Create(CultureInfo.InvariantCulture, $"{count} layers; the heightmap is what they add up to, the highest last");
 
     protected override Layer? Preferred(MapDocument? document, ImmutableArray<Layer> layers) =>
-        layers.LastOrDefault(layer => document is not null && HeightLayers.SculptProblem(document, layer.Name) is null) ?? layers.LastOrDefault();
+        layers.LastOrDefault(layer => document is not null && HeightLayers.SculptProblem(document, layer.Name, ShownHeights) is null) ?? layers.LastOrDefault();
 
     protected override string CombineHelp => "Add its heights, subtract them, keep the higher (maximum) or lower (minimum) of it and the layers below, replace them, or multiply them by its values";
 
@@ -140,6 +312,7 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
         base.RefreshSettings();
         // the base's constructor refreshes before the curve's group exists
         Curve?.Refresh(IsCurve ? Document : null);
+        Use?.Refresh(Chosen is null ? null : Document);
     }
 
     [RelayCommand]

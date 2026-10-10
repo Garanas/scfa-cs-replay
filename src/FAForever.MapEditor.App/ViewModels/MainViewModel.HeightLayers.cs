@@ -15,7 +15,7 @@ public sealed partial class MainViewModel
 
     private void InitializeHeightLayers()
     {
-        HeightStack = new HeightLayersViewModel(RunWithAsync);
+        HeightStack = new HeightLayersViewModel(RunWithAsync, () => ShownHeights);
         DocumentChanged += (_, _) => HeightStack.Refresh(ShownDocument);
         MapChanged += (_, _) =>
         {

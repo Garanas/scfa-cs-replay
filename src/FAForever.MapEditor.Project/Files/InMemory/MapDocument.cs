@@ -147,6 +147,32 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public LayerStack HeightStack { get; init; } = LayerStack.Empty(LayerTarget.Heightmap);
 
         /// <summary>
+        /// The draft heightmap's stack of layers (the rough shape blocked out, and what World Machine
+        /// or Gaea get as input): its own order of layers, many of them shared with
+        /// <see cref="HeightStack"/>, the final (<see cref="Editing.HeightStacks"/>). Empty exactly when
+        /// the final is: a map with layers always has both; an older project opens with every layer
+        /// in both, so the two make the same terrain.
+        /// </summary>
+        public LayerStack DraftStack { get; init; } = LayerStack.Empty(LayerTarget.Heightmap);
+
+        /// <summary>
+        /// The draft heightmap's samples, what <see cref="DraftStack"/> makes (kept so by
+        /// <see cref="Editing.HeightLayers.Follow"/>), at the heightmap's size and scale; null while
+        /// the draft makes the same heights as the final (both stacks hold the same layers in the
+        /// same order), which <see cref="DraftHeightmap"/> then gives.
+        /// </summary>
+        public TiledBuffer<ushort>? DraftSamples { get; init; }
+
+        /// <summary>
+        /// The draft heightmap: <see cref="DraftSamples"/> at the heightmap's scale, or the heightmap
+        /// itself while the draft makes the same heights. Never exported: the export, walkability,
+        /// the normal map and every other generator read <see cref="Terrain"/>'s heightmap, the final.
+        /// </summary>
+        public Heightmap DraftHeightmap => DraftSamples is TiledBuffer<ushort> samples && !ReferenceEquals(samples, Terrain.Heightmap.Samples)
+            ? Terrain.Heightmap with { Samples = samples }
+            : Terrain.Heightmap;
+
+        /// <summary>
         /// Where the map maker marked by hand that land units must be blocked or may pass (user story
         /// T-7), one value an ogrid (<see cref="Editing.WalkabilityMarks"/>: none, blocked, open); null
         /// for a map without marks. Walkability takes them over what it generates; the export writes

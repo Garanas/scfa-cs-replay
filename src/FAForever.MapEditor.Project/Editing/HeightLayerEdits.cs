@@ -3,18 +3,27 @@ using FAForever.MapEditor.Project.Files.InMemory;
 namespace FAForever.MapEditor.Project.Editing
 {
     /// <summary>
-    /// Changes the heightmap's stack of layers (user story T-5, <see cref="MapDocument.HeightStack"/>):
-    /// start it, add, remove, rename and order layers, and set how each combines, how strongly,
+    /// Changes the heightmap's stacks of layers (user story T-5, <see cref="MapDocument.HeightStack"/>,
+    /// the final, and <see cref="MapDocument.DraftStack"/>, the draft; <see cref="HeightStacks"/>):
+    /// start them, add, remove, rename and order layers, and set how each combines, how strongly,
     /// where (a mask), whether it shows and whether it is locked. The stack's own changes are
     /// <see cref="LayerStackEdits"/>'s; these add the heightmap's rules and its kinds of layer
     /// (painted for sculpting, image, curve).
     /// </summary>
     /// <remarks>
+    /// <para>
     /// These edits change the layers only; the heightmap follows in the step that keeps them
     /// (<see cref="EditSession"/> runs <see cref="HeightLayers.Follow"/>), or with
     /// <see cref="HeightLayers.Recomposite"/> outside a session. The base is always the lowest layer:
     /// it cannot be moved, removed, masked or weakened. A name is a file name too: letters,
-    /// digits, spaces, dashes and underscores, unique without regard to case.
+    /// digits, spaces, dashes and underscores, unique over both stacks without regard to case.
+    /// </para>
+    /// <para>
+    /// A layer is found by name in either stack. An edit of a layer's content (its source, grids,
+    /// way of combining, strength, mask, lock or name) is made in both stacks when the layer is
+    /// shared; where it shows (<see cref="SetVisible"/>) and its place (<see cref="Move"/>) are each
+    /// stack's own, the final's unless another is named.
+    /// </para>
     /// </remarks>
     public static class HeightLayerEdits
     {
@@ -38,22 +47,22 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         /// <param name="except">A layer the name may equal (one being renamed).</param>
         public static string? Problem(MapDocument document, string name, string? except = null) =>
-            LayerStackEdits.NameProblem(document.HeightStack, name, except, What);
+            HeightStacks.NameProblem(document, name, except, What);
 
         /// <summary>
         /// A name no layer has: <paramref name="stem"/>, else with the first free number after it.
         /// </summary>
-        public static string FreeName(MapDocument document, string stem) => LayerStackEdits.FreeName(document.HeightStack, stem);
+        public static string FreeName(MapDocument document, string stem) => HeightStacks.FreeName(document, stem);
 
         /// <summary>
-        /// The document with a stack of layers: the base, holding the heightmap as it is. A document
-        /// with layers already is returned as it is.
+        /// The document with stacks of layers: the base, holding the heightmap as it is, shared by the
+        /// draft and the final. A document with layers already is returned as it is.
         /// </summary>
         public static MapDocument Start(MapDocument document)
         {
             if (!document.HeightStack.IsEmpty)
             {
-                return document;
+                return HeightStacks.Normalized(document);
             }
             Heightmap heightmap = document.Terrain.Heightmap;
             Layer layer = new Layer
@@ -64,15 +73,18 @@ namespace FAForever.MapEditor.Project.Editing
                 Combine = LayerCombine.Replace,
                 Values = FromSamples(heightmap.Samples, heightmap.Scale),
             };
-            return document with { HeightStack = document.HeightStack with { Layers = [layer] } };
+            LayerStack stack = document.HeightStack with { Layers = [layer] };
+            return document with { HeightStack = stack, DraftStack = stack, DraftSamples = null };
         }
 
         /// <summary>
-        /// The document with a layer added (the stack started when the map has none), above the
-        /// layer <paramref name="above"/> or on top.
+        /// The document with a layer added (the stacks started when the map has none), above the
+        /// layer <paramref name="above"/> or on top, in the stacks <paramref name="use"/> names (left
+        /// out: <see cref="HeightStacks.DefaultUse"/> for the stack <paramref name="shown"/>). In a
+        /// stack without <paramref name="above"/> it goes on top.
         /// </summary>
         /// <exception cref="ArgumentException">The name is taken or no name, or the layer is a second base.</exception>
-        public static MapDocument Add(MapDocument document, Layer layer, string? above = null)
+        public static MapDocument Add(MapDocument document, Layer layer, string? above = null, HeightStackKind shown = HeightStackKind.Final, LayerUse? use = null)
         {
             document = Start(document);
             if (layer.IsBase)
@@ -83,7 +95,21 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 CheckSize(document, values);
             }
-            return With(document, LayerStackEdits.Add(document.HeightStack, layer, above, What));
+            if (Problem(document, layer.Name) is string problem)
+            {
+                throw new ArgumentException(problem, nameof(layer));
+            }
+            LayerUse into = use ?? HeightStacks.DefaultUse(document, shown);
+            foreach (HeightStackKind kind in new[] { HeightStackKind.Final, HeightStackKind.Draft })
+            {
+                if (HeightStacks.IsIn(into, kind))
+                {
+                    LayerStack stack = HeightStacks.Of(document, kind);
+                    string? below = above is not null && stack.Find(above) is not null ? above : null;
+                    document = HeightStacks.With(document, kind, LayerStackEdits.Add(stack, layer, below, What));
+                }
+            }
+            return document;
         }
 
         /// <summary>
@@ -136,8 +162,8 @@ namespace FAForever.MapEditor.Project.Editing
         /// <exception cref="ArgumentException">There is no such layer, it is no curve, or it is locked.</exception>
         public static MapDocument SetCurve(MapDocument document, string name, HeightCurve curve)
         {
-            int index = IndexOf(document, name);
-            Layer layer = document.HeightStack.Layers[index];
+            (HeightStackKind kind, int index) = HeightStacks.Locate(document, name);
+            Layer layer = HeightStacks.Of(document, kind).Layers[index];
             if (layer.Curve is not HeightCurve before)
             {
                 throw new ArgumentException($"The height layer {layer.Name} is no curve", nameof(name));
@@ -155,53 +181,74 @@ namespace FAForever.MapEditor.Project.Editing
             LayerCombine combine = before.Profile != curve.Profile && layer.Combine == HeightCurves.CombineOf(before.Profile)
                 ? HeightCurves.CombineOf(curve.Profile)
                 : layer.Combine;
-            return With(document, index, layer with { Source = new CurveSource(curve), Values = values, Coverage = coverage, Combine = combine });
+            return HeightStacks.WithLayer(document, kind, index, layer with { Source = new CurveSource(curve), Values = values, Coverage = coverage, Combine = combine });
         }
 
         /// <summary>
-        /// The document without a layer. The base stays: <see cref="Bake"/> ends the stack.
+        /// The document without a layer, in both stacks. A base stays: <see cref="Bake"/> ends the
+        /// stacks, <see cref="HeightStacks.ShareDraftBase"/> drops the final's own base.
         /// </summary>
-        /// <exception cref="ArgumentException">There is no such layer, or it is the base.</exception>
+        /// <exception cref="ArgumentException">There is no such layer, or it is a base.</exception>
         public static MapDocument Remove(MapDocument document, string name)
         {
-            if (document.HeightStack.Layers[IndexOf(document, name)].IsBase)
+            (HeightStackKind kind, int index) = HeightStacks.Locate(document, name);
+            Layer layer = HeightStacks.Of(document, kind).Layers[index];
+            if (layer.IsBase)
             {
                 throw new ArgumentException("The base layer stays: bake the layers to end the stack", nameof(name));
             }
-            return With(document, LayerStackEdits.Remove(document.HeightStack, name, What));
+            foreach (HeightStackKind each in new[] { HeightStackKind.Final, HeightStackKind.Draft })
+            {
+                LayerStack stack = HeightStacks.Of(document, each);
+                if (stack.Find(layer.Name) is not null)
+                {
+                    document = HeightStacks.With(document, each, LayerStackEdits.Remove(stack, layer.Name, What));
+                }
+            }
+            return document;
         }
 
         /// <summary>
-        /// The document with a layer at another place in the stack: 1 is just above the base.
+        /// The document with a layer at another place in a stack (the final unless the layer is only
+        /// in the draft, or <paramref name="kind"/> names the draft): 1 is just above the base.
         /// </summary>
         /// <exception cref="ArgumentException">There is no such layer, it is the base, or the place is not above the base.</exception>
-        public static MapDocument Move(MapDocument document, string name, int index)
+        public static MapDocument Move(MapDocument document, string name, int index, HeightStackKind kind = HeightStackKind.Final)
         {
-            if (document.HeightStack.Layers[IndexOf(document, name)].IsBase)
+            (HeightStackKind found, int from) = HeightStacks.Locate(document, name, kind);
+            if (HeightStacks.Of(document, found).Layers[from].IsBase)
             {
                 throw new ArgumentException("The base layer stays the lowest", nameof(name));
             }
-            return With(document, LayerStackEdits.Move(document.HeightStack, name, index, What));
+            return HeightStacks.Move(document, found, name, index);
         }
 
         /// <summary>
-        /// The document with a layer under another name.
+        /// The document with a layer under another name, in both stacks.
         /// </summary>
         /// <exception cref="ArgumentException">There is no such layer, or the new name cannot be a layer's.</exception>
-        public static MapDocument Rename(MapDocument document, string name, string newName) =>
-            With(document, LayerStackEdits.Rename(document.HeightStack, name, newName, What));
+        public static MapDocument Rename(MapDocument document, string name, string newName)
+        {
+            (HeightStackKind kind, int index) = HeightStacks.Locate(document, name);
+            Layer layer = HeightStacks.Of(document, kind).Layers[index];
+            if (Problem(document, newName, except: layer.Name) is string problem)
+            {
+                throw new ArgumentException(problem, nameof(newName));
+            }
+            return HeightStacks.WithLayer(document, kind, index, layer with { Name = newName });
+        }
 
         /// <summary>
-        /// The document with a layer combining another way. A sculpting layer keeps its look: going
-        /// from differences (add, subtract) to an absolute way (maximum, minimum, replace, multiply)
-        /// its differences become heights over the layers below where it changed anything, and back
-        /// again.
+        /// The document with a layer combining another way. A sculpting layer keeps its look (in the
+        /// stack <paramref name="kind"/> when it is in both): going from differences (add, subtract)
+        /// to an absolute way (maximum, minimum, replace, multiply) its differences become heights
+        /// over the layers below where it changed anything, and back again.
         /// </summary>
         /// <exception cref="ArgumentException">There is no such layer, or it is the base.</exception>
-        public static MapDocument SetCombine(MapDocument document, string name, LayerCombine combine)
+        public static MapDocument SetCombine(MapDocument document, string name, LayerCombine combine, HeightStackKind kind = HeightStackKind.Final)
         {
-            int index = IndexOf(document, name);
-            Layer layer = document.HeightStack.Layers[index];
+            (HeightStackKind found, int index) = HeightStacks.Locate(document, name, kind);
+            Layer layer = HeightStacks.Of(document, found).Layers[index];
             if (layer.IsBase)
             {
                 throw new ArgumentException("The base layer replaces: it is the lowest", nameof(name));
@@ -213,27 +260,21 @@ namespace FAForever.MapEditor.Project.Editing
             if (layer.Source is PaintedSource && IsDifference(layer.Combine) && IsDifference(combine) && layer.Values is TiledBuffer<float> differences)
             {
                 // adding and subtracting: the differences turn round
-                return With(document, index, layer with { Combine = combine, Values = Negated(differences) });
+                return HeightStacks.WithLayer(document, found, index, layer with { Combine = combine, Values = Negated(differences) });
             }
             if (layer.Source is not PaintedSource || IsDifference(layer.Combine) == IsDifference(combine) || combine == LayerCombine.Multiply || layer.Combine == LayerCombine.Multiply)
             {
-                return With(document, index, layer with { Combine = combine });
+                return HeightStacks.WithLayer(document, found, index, layer with { Combine = combine });
             }
-            return With(document, index, Converted(document, index, layer, combine));
+            return HeightStacks.WithLayer(document, found, index, Converted(document, found, index, layer, combine));
         }
 
         /// <summary>
         /// The document with a layer working more or less strongly, 0 to 1.
         /// </summary>
         /// <exception cref="ArgumentException">There is no such layer, or it is the base.</exception>
-        public static MapDocument SetStrength(MapDocument document, string name, float strength)
-        {
-            if (document.HeightStack.Layers[IndexOf(document, name)].IsBase)
-            {
-                throw new ArgumentException("The base layer works at full strength", nameof(name));
-            }
-            return With(document, LayerStackEdits.SetStrength(document.HeightStack, name, strength, What));
-        }
+        public static MapDocument SetStrength(MapDocument document, string name, float strength) =>
+            Changed(document, name, stack => LayerStackEdits.SetStrength(stack, name, strength, What));
 
         /// <summary>
         /// The document with a layer working only where a mask is (<see cref="LayerStacks.MaskKey"/>,
@@ -242,22 +283,25 @@ namespace FAForever.MapEditor.Project.Editing
         /// <exception cref="ArgumentException">There is no such layer or mask, or the layer is the base.</exception>
         public static MapDocument SetMask(MapDocument document, string name, string? mask)
         {
-            if (document.HeightStack.Layers[IndexOf(document, name)].IsBase && mask is not null)
-            {
-                throw new ArgumentException("The base layer works everywhere", nameof(name));
-            }
             if (mask is not null && LayerStacks.MaskOf(document, mask) is null)
             {
                 throw new ArgumentException($"The map has no {LayerStacks.MaskTitle(mask)}", nameof(mask));
             }
-            return With(document, LayerStackEdits.SetClip(document.HeightStack, name, mask, What));
+            return Changed(document, name, stack => LayerStackEdits.SetClip(stack, name, mask, What));
         }
 
-        public static MapDocument SetVisible(MapDocument document, string name, bool visible) =>
-            With(document, LayerStackEdits.SetVisible(document.HeightStack, name, visible, What));
+        /// <summary>
+        /// The document with a layer shown or hidden in one stack (the final unless the layer is only
+        /// in the draft, or <paramref name="kind"/> names the draft); the other keeps its own choice.
+        /// </summary>
+        public static MapDocument SetVisible(MapDocument document, string name, bool visible, HeightStackKind kind = HeightStackKind.Final)
+        {
+            (HeightStackKind found, _) = HeightStacks.Locate(document, name, kind);
+            return HeightStacks.SetVisible(document, found, name, visible);
+        }
 
         public static MapDocument SetLocked(MapDocument document, string name, bool locked) =>
-            With(document, LayerStackEdits.SetLocked(document.HeightStack, name, locked, What));
+            Changed(document, name, stack => LayerStackEdits.SetLocked(stack, name, locked, What));
 
         /// <summary>
         /// The document with an image layer's values read again from its file.
@@ -266,46 +310,57 @@ namespace FAForever.MapEditor.Project.Editing
         /// <exception cref="ArgumentException">There is no such layer, or it is not read from a file.</exception>
         public static MapDocument SetImported(MapDocument document, string name, ushort[] samples, string? source = null)
         {
-            int index = IndexOf(document, name);
-            Layer layer = document.HeightStack.Layers[index];
+            (HeightStackKind kind, int index) = HeightStacks.Locate(document, name);
+            Layer layer = HeightStacks.Of(document, kind).Layers[index];
             if (layer.Source is not ImageSource image)
             {
                 throw new ArgumentException($"The height layer {layer.Name} is not imported", nameof(name));
             }
             TiledBuffer<float> values = FromSamples(TiledBuffer<ushort>.FromArray(document.Width + 1, document.Height + 1, samples), document.Terrain.Heightmap.Scale, layer.Values);
             LayerSource read = source is null || source == image.Path ? image : new ImageSource(source);
-            return With(document, index, layer with { Values = values, Source = read });
+            return HeightStacks.WithLayer(document, kind, index, layer with { Values = values, Source = read });
         }
 
         /// <summary>
-        /// The document with the base's heights replaced, e.g. by a heightmap another tool saved
-        /// over the project's.
+        /// The document with the final's base's heights replaced, e.g. by a heightmap another tool
+        /// saved over the project's (the draft's too while it shares the base).
         /// </summary>
         /// <param name="samples">(width + 1) by (height + 1) samples.</param>
         public static MapDocument SetBase(MapDocument document, TiledBuffer<ushort> samples)
         {
             document = Start(document);
             Layer layer = document.HeightStack.Layers[0];
-            return With(document, 0, layer with { Values = FromSamples(samples, document.Terrain.Heightmap.Scale, layer.Values) });
+            return HeightStacks.WithLayer(document, HeightStackKind.Final, 0, layer with { Values = FromSamples(samples, document.Terrain.Heightmap.Scale, layer.Values) });
         }
 
         /// <summary>
-        /// Ends the stack: the heightmap keeps what the layers make, and the map has no layers.
+        /// Ends the stacks: the heightmap keeps what the final's layers make, and the map has no
+        /// layers (nor a draft of its own).
         /// </summary>
         public static MapDocument Bake(MapDocument document) =>
-            document.HeightStack.IsEmpty ? document : document with { HeightStack = LayerStack.Empty(LayerTarget.Heightmap) };
+            document.HeightStack.IsEmpty && document.DraftStack.IsEmpty
+                ? document
+                : document with { HeightStack = LayerStack.Empty(LayerTarget.Heightmap), DraftStack = LayerStack.Empty(LayerTarget.Heightmap), DraftSamples = null };
 
         /// <summary>
-        /// The place of a layer in the stack, by name (exactly, else without regard to case).
+        /// The place of a layer in the final's stack, by name (exactly, else without regard to case).
         /// </summary>
-        /// <exception cref="ArgumentException">There is no such layer.</exception>
+        /// <exception cref="ArgumentException">The final has no such layer.</exception>
         public static int IndexOf(MapDocument document, string name) => LayerStackEdits.IndexOf(document.HeightStack, name, What);
 
         internal static MapDocument With(MapDocument document, int index, Layer layer) =>
-            With(document, document.HeightStack.With(index, layer));
+            HeightStacks.WithLayer(document, HeightStackKind.Final, index, layer);
 
-        internal static MapDocument With(MapDocument document, LayerStack stack) =>
-            ReferenceEquals(document.HeightStack, stack) ? document : document with { HeightStack = stack };
+        /// <summary>
+        /// The document with a layer changed by an edit of its stack (found in the final, else the
+        /// draft), the change made in the other stack too.
+        /// </summary>
+        private static MapDocument Changed(MapDocument document, string name, Func<LayerStack, LayerStack> edit)
+        {
+            (HeightStackKind kind, int index) = HeightStacks.Locate(document, name);
+            LayerStack changed = edit(HeightStacks.Of(document, kind));
+            return HeightStacks.WithLayer(document, kind, index, changed.Layers[index]);
+        }
 
         /// <summary>
         /// Whether a layer combining so holds differences (0 changes nothing) rather than heights.
@@ -348,7 +403,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// combining (maximum, minimum, replace), or back, with the heights of the layers below it as
         /// they are.
         /// </summary>
-        private static Layer Converted(MapDocument document, int index, Layer layer, LayerCombine combine)
+        private static Layer Converted(MapDocument document, HeightStackKind kind, int index, Layer layer, LayerCombine combine)
         {
             const int size = TiledBuffer<float>.TileSize;
             bool toDifference = IsDifference(combine);
@@ -382,7 +437,7 @@ namespace FAForever.MapEditor.Project.Editing
                         }
                         continue;
                     }
-                    HeightLayers.Heights(document, tileX, tileY, index, below);
+                    HeightLayers.Heights(document, tileX, tileY, index, below, kind);
                     for (int i = 0; i < tile.Length; i++)
                     {
                         if (toDifference)

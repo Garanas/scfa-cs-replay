@@ -156,7 +156,7 @@ public sealed partial class SculptTool : ObservableObject, IShapedBrushTool
         };
         MapDocument document = _model.ShownDocument ?? throw new InvalidOperationException("No map is open");
         // with height layers (T-5) the stroke goes into the chosen one, which must take it
-        if (HeightLayers.SculptProblem(document, _model.HeightStack.Chosen) is string problem)
+        if (HeightLayers.SculptProblem(document, _model.HeightStack.Chosen, _model.ShownHeights) is string problem)
         {
             _model.Status = problem;
             return;

@@ -22,7 +22,9 @@ internal static class HeightLayerArgument
         string chosen = name ?? model.HeightStack.Chosen ?? throw new ArgumentException(document.HeightStack.IsEmpty
             ? "The map has no height layers: add one first (terrain.addLayer)"
             : "Choose a height layer, or name one with layer");
-        return document.HeightStack.Layers[HeightLayerEdits.IndexOf(document, chosen)];
+        // the shown heightmap's version of it (its own visibility), else the other's
+        (HeightStackKind kind, int index) = HeightStacks.Locate(document, chosen, model.ShownHeights);
+        return HeightStacks.Of(document, kind).Layers[index];
     }
 }
 
@@ -39,9 +41,11 @@ internal static class HeightLayerArgument
 /// <param name="Path">An imported layer's file (PNG, <c>.r16</c>, ...); left out, the editor asks.</param>
 /// <param name="Combine"><c>Add</c>, <c>Subtract</c>, <c>Maximum</c>, <c>Minimum</c>, <c>Replace</c> or <c>Multiply</c>; left out, the
 /// kind's own (sculpting adds, an image replaces).</param>
+/// <param name="Use">Which heightmaps it shapes: <c>shared</c> (both), <c>draft</c> or <c>final</c>; left
+/// out, both while the final shares the draft's base, else the one shown.</param>
 /// <returns>The new layer's name, or null when no file was chosen.</returns>
 [EditorCommand("terrain.addLayer", "Add a height layer...", Story = "T-5", Needs = Needs.Map | Needs.NoStroke)]
-public sealed record AddHeightLayer(string? Kind = null, string? Name = null, string? Path = null, string? Combine = null) : IRequest<string?>;
+public sealed record AddHeightLayer(string? Kind = null, string? Name = null, string? Path = null, string? Combine = null, string? Use = null) : IRequest<string?>;
 
 public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs dialogs) : IRequestHandler<AddHeightLayer, string?>
 {
@@ -98,8 +102,9 @@ public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs di
                 throw new ArgumentException($"A height layer is sculpt, imported or curve, not '{request.Kind}'");
         }
         string? above = model.HeightStack.Chosen is string chosenLayer && HeightLayers.Find(document, chosenLayer) is not null ? chosenLayer : null;
+        LayerUse? use = request.Use is null ? null : HeightLayersViewModel.ParseUse(request.Use);
         using Performance.Span span = Performance.Measure("model.height-layers");
-        model.EditMap($"Add the height layer {layer.Name}", d => HeightLayerEdits.Add(d, layer, above));
+        model.EditMap($"Add the height layer {layer.Name}", d => HeightLayerEdits.Add(d, layer, above, model.ShownHeights, use));
         model.HeightStack.Refresh(model.ShownDocument);
         model.HeightStack.Choose(layer.Name);
         model.Status = $"Added the height layer {layer.Name}";
@@ -152,7 +157,7 @@ public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler
         string name = request.Name?.Trim() ?? HeightLayerEdits.FreeName(document, profile.ToString());
         string? above = model.HeightStack.Chosen is string chosen && HeightLayers.Find(document, chosen) is not null ? chosen : null;
         using Performance.Span span = Performance.Measure("model.height-layers");
-        model.EditMap($"Add the curve {name}", d => HeightLayerEdits.Add(d, HeightLayerEdits.NewCurve(d, name, curve), above));
+        model.EditMap($"Add the curve {name}", d => HeightLayerEdits.Add(d, HeightLayerEdits.NewCurve(d, name, curve), above, model.ShownHeights));
         model.HeightStack.Refresh(model.ShownDocument);
         model.HeightStack.Choose(name);
         model.Status = string.Create(CultureInfo.InvariantCulture, $"Added the curve {name}: a {profile.ToString().ToLowerInvariant()} through {curve.Points.Length} point{(curve.Points.Length == 1 ? "" : "s")}{(curve.Symmetry is null ? "" : ", mirrored by the symmetry")}");
@@ -247,14 +252,15 @@ public sealed class MoveHeightLayerHandler(MainViewModel model) : IRequestHandle
     {
         Layer layer = HeightLayerArgument.Of(model, request.Layer);
         MapDocument document = model.ShownDocument!;
-        int from = document.HeightStack.Layers.IndexOf(layer);
+        // its place in the heightmap shown: a shared layer has one in each
+        (HeightStackKind kind, int from) = HeightStacks.Locate(document, layer.Name, model.ShownHeights);
         int to = request.To ?? from + (request.By ?? 1);
         if (to == from)
         {
             return Task.CompletedTask;
         }
         using Performance.Span span = Performance.Measure("model.height-layers");
-        model.EditMap(to > from ? $"Move the height layer {layer.Name} up" : $"Move the height layer {layer.Name} down", d => HeightLayerEdits.Move(d, layer.Name, to));
+        model.EditMap(to > from ? $"Move the height layer {layer.Name} up" : $"Move the height layer {layer.Name} down", d => HeightLayerEdits.Move(d, layer.Name, to, kind));
         return Task.CompletedTask;
     }
 }
@@ -270,9 +276,13 @@ public sealed class MoveHeightLayerHandler(MainViewModel model) : IRequestHandle
 /// <param name="Strength">0 to 1.</param>
 /// <param name="Mask"><c>Everywhere</c> (or empty) for none, a mask for tools by name or as
 /// <c>mask:rivers</c>, or a stratum's as <c>stratum 3</c> or <c>stratum:3</c>.</param>
+/// <param name="Visible">Whether it shows in the heightmap shown (a shared layer is on or off in
+/// each on its own).</param>
+/// <param name="Use">Which heightmaps it shapes: <c>shared</c> (both, also <c>Draft and final</c>),
+/// <c>draft</c> or <c>final</c>.</param>
 [EditorCommand("terrain.setLayer", "Change a height layer", Story = "T-5", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record SetHeightLayer(string? Layer = null, string? Name = null, string? Combine = null, float? Strength = null, string? Mask = null,
-    bool? Visible = null, bool? Locked = null) : IRequest;
+    bool? Visible = null, bool? Locked = null, string? Use = null) : IRequest;
 
 public sealed class SetHeightLayerHandler(MainViewModel model) : IRequestHandler<SetHeightLayer>
 {
@@ -287,19 +297,25 @@ public sealed class SetHeightLayerHandler(MainViewModel model) : IRequestHandler
         {
             throw new ArgumentException("A height layer's strength is 0 to 1");
         }
+        LayerUse? use = request.Use is null ? null : HeightLayersViewModel.ParseUse(request.Use);
         string fields = HeightLayerSettings.Fields(("name", name), ("combine", request.Combine), ("strength", request.Strength), ("mask", request.Mask),
-            ("visible", request.Visible), ("locked", request.Locked));
+            ("visible", request.Visible), ("locked", request.Locked), ("use", request.Use));
         if (fields.Length == 0)
         {
             return Task.CompletedTask;
         }
         string current = layer.Name;
+        HeightStackKind shown = model.ShownHeights;
         using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap($"Height layer {layer.Name}: {fields}", d =>
         {
+            if (use is LayerUse used)
+            {
+                d = HeightStacks.SetUse(d, current, used);
+            }
             if (combine is LayerCombine way && way != layer.Combine)
             {
-                d = HeightLayerEdits.SetCombine(d, current, way);
+                d = HeightLayerEdits.SetCombine(d, current, way, shown);
             }
             if (request.Strength is float strength && strength != layer.Strength)
             {
@@ -311,7 +327,7 @@ public sealed class SetHeightLayerHandler(MainViewModel model) : IRequestHandler
             }
             if (request.Visible is bool visible)
             {
-                d = HeightLayerEdits.SetVisible(d, current, visible);
+                d = HeightLayerEdits.SetVisible(d, current, visible, shown);
             }
             if (request.Locked is bool locked)
             {

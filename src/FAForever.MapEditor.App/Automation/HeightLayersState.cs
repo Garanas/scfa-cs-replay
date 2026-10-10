@@ -21,7 +21,9 @@ internal static class HeightLayersState
         {
             ["chosen"] = model.HeightStack.Chosen,
             ["sculptLayer"] = model.Map?.Session.SculptLayer,
-            ["sculptProblem"] = document is null ? null : HeightLayers.SculptProblem(document, model.HeightStack.Chosen),
+            ["sculptProblem"] = document is null ? null : HeightLayers.SculptProblem(document, model.HeightStack.Chosen, model.ShownHeights),
+            ["filter"] = new JsonObject { ["use"] = model.HeightStack.UseFilter, ["source"] = model.HeightStack.SourceFilter },
+            ["listed"] = new JsonArray([.. model.HeightStack.Items.Select(item => (JsonNode)JsonValue.Create(item.Name))]),
             ["layers"] = new JsonArray([.. (document?.HeightStack.Layers ?? []).Select(layer => (JsonNode)new JsonObject
             {
                 ["name"] = layer.Name,
@@ -31,6 +33,7 @@ internal static class HeightLayersState
                 ["strength"] = layer.Strength,
                 ["mask"] = layer.Clip,
                 ["visible"] = layer.Visible,
+                ["use"] = document is null ? null : HeightStacks.UseOf(document, layer.Name)?.ToString(),
                 ["locked"] = layer.Locked,
                 ["source"] = layer.Path,
                 ["coverage"] = layer.Coverage is not null,

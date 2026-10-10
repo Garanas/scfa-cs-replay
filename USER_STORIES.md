@@ -262,6 +262,14 @@ reads again when it changes; and nothing that generates runs by itself.
       largest regions (a click or the Regions tool chooses one), the starts that lie in no region,
       and the routes with how much longer they are than the straight line. Walkability can
       regenerate on its own a second after a change to what it is made from (T-7).
+- [x] **T-9 Draft and final heightmap.** Block out the rough shape in a draft, send it to World
+      Machine or Gaea, and build the final on their output with layers of one's own, some of them
+      shared with the draft so the procedural tool can never erode them away; the game gets the
+      final. Today: two stacks of layers (a layer is in the draft, the final or both, with its own
+      place and on/off in each), a switch (Ctrl+Shift+D) that shows either in both views while
+      brushes write it, the list filtered by use and source, previews of both, the draft and ticked
+      masks written as 16-bit PNG and RAW into `procedural/temp/` (again whenever they change, when
+      chosen), and an output chosen as the final's base, read again whenever the tool writes it.
 
 ## S: Strata (terrain textures)
 

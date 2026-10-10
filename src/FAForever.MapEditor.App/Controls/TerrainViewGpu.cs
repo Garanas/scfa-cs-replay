@@ -168,7 +168,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     public ObjectRef? PickAt(Point at, ObjectKinds? kinds = null)
     {
         using Performance.Span measure = Performance.Measure("3d.pick");
-        if (_model?.ShownDocument is not MapDocument document)
+        if (_model?.ViewDocument is not MapDocument document)
         {
             return null;
         }
@@ -331,7 +331,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         _gl.ClearDepth(1);
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-        MapDocument? document = _model?.ShownDocument;
+        MapDocument? document = _model?.ViewDocument;
         if (document is not null && _renderer is not null)
         {
             EditorCamera camera = _model!.Camera;
