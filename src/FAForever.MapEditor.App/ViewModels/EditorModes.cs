@@ -102,6 +102,7 @@ public static class EditorModes
         new ModeDefinition("terrain", "Terrain", "Icon.Terrain", "Height layers, sculpting, curves, terrain types, walkability", 0, "F2", "T-1",
             [
                 new ToolDefinition("terrain.sculpt", "Sculpt", "T-1") { Make = model => new SculptTool(model) },
+                new ToolDefinition("terrain.stamp", "Stamp", "T-2") { Make = model => new StampTool(model) },
                 new ToolDefinition("terrain.curve", "Curve", "T-4") { Make = model => new CurveTool(model) },
                 new ToolDefinition("terrain.types", "Terrain types", "T-6") { Make = model => new TerrainTypeTool(model) },
                 new ToolDefinition("terrain.walkability", "Walkability", "T-7", "Mark where land units must be blocked or may pass"),

@@ -95,11 +95,23 @@ namespace FAForever.MapEditor.Project.Editing
         /// The value at a place of the brush's square, from (-1, -1) at its top left to (1, 1) at
         /// its bottom right, between the pixels' centres; 0 outside the picture.
         /// </summary>
-        public float Sample(float u, float v)
+        public float Sample(float u, float v) => Sample(u, v, clamp: false);
+
+        /// <summary>
+        /// The value at a place of the brush's square as <see cref="Sample(float, float)"/> gives it,
+        /// or with <paramref name="clamp"/> the value of the picture's nearest pixel outside it: a
+        /// stamp keeps its edge's value to the picture's side, where a brush fades to nothing.
+        /// </summary>
+        public float Sample(float u, float v, bool clamp)
         {
             // pixels from the square's top left; a shorter side is centred in the square
             float px = (u + 1) * 0.5f * _side - (_side - Width) * 0.5f - 0.5f;
             float py = (v + 1) * 0.5f * _side - (_side - Height) * 0.5f - 0.5f;
+            if (clamp)
+            {
+                px = Math.Clamp(px, 0, Width - 1);
+                py = Math.Clamp(py, 0, Height - 1);
+            }
             int x0 = (int)MathF.Floor(px);
             int y0 = (int)MathF.Floor(py);
             float fx = px - x0;
@@ -107,6 +119,19 @@ namespace FAForever.MapEditor.Project.Editing
             float top = At(x0, y0) + (At(x0 + 1, y0) - At(x0, y0)) * fx;
             float bottom = At(x0, y0 + 1) + (At(x0 + 1, y0 + 1) - At(x0, y0 + 1)) * fx;
             return top + (bottom - top) * fy;
+        }
+
+        /// <summary>
+        /// How far a place of the brush's square (as <see cref="Sample"/> takes it) lies inside the
+        /// picture: the distance to the picture's nearest side, as a part of half the square's side;
+        /// 0 or less outside it. A stamp (<see cref="HeightStamp"/>) fades out towards the sides by it.
+        /// </summary>
+        public float Border(float u, float v)
+        {
+            float px = (u + 1) * 0.5f * _side - (_side - Width) * 0.5f;
+            float py = (v + 1) * 0.5f * _side - (_side - Height) * 0.5f;
+            float pixels = MathF.Min(MathF.Min(px, Width - px), MathF.Min(py, Height - py));
+            return pixels / (_side * 0.5f);
         }
 
         private float At(int x, int y) => x < 0 || y < 0 || x >= Width || y >= Height ? 0 : _values[y * Width + x];

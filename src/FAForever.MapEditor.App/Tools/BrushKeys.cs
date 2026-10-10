@@ -81,6 +81,14 @@ public static class BrushKeys
                 paint.Radius = RadiusStep(paint.Radius, steps);
                 status = Say("Radius", paint.Radius, "0", " ogrids");
                 return true;
+            case StampTool stamp when strength:
+                stamp.Height = Math.Clamp(Math.Round(stamp.Height + steps * Math.Max(1, stamp.Height / 10)), 0, 1024);
+                status = Say("Height", stamp.Height, "0", " game units");
+                return true;
+            case StampTool stamp:
+                stamp.Radius = RadiusStep(stamp.Radius, steps, StampTool.MaximumRadius);
+                status = Say("Radius", stamp.Radius, "0", " ogrids");
+                return true;
             case PropEraseTool erase when !strength:
                 erase.Radius = RadiusStep(erase.Radius, steps);
                 status = Say("Radius", erase.Radius, "0", " ogrids");
@@ -93,7 +101,12 @@ public static class BrushKeys
     /// <summary>
     /// A fifth larger or smaller per step, at least one ogrid a step, within the sliders' range.
     /// </summary>
-    public static double RadiusStep(double radius, int steps)
+    public static double RadiusStep(double radius, int steps) => RadiusStep(radius, steps, MaximumRadius);
+
+    /// <summary>
+    /// A radius a fifth larger or smaller per step, at least one ogrid a step, from 1 to <paramref name="maximum"/>.
+    /// </summary>
+    public static double RadiusStep(double radius, int steps, double maximum)
     {
         double next = radius;
         for (int i = 0; i < Math.Abs(steps); i++)
@@ -101,7 +114,7 @@ public static class BrushKeys
             double scaled = steps > 0 ? next * 1.2 : next / 1.2;
             next = steps > 0 ? Math.Max(Math.Round(scaled), next + 1) : Math.Min(Math.Round(scaled), next - 1);
         }
-        return Math.Clamp(next, MinimumRadius, MaximumRadius);
+        return Math.Clamp(next, MinimumRadius, maximum);
     }
 
     /// <summary>

@@ -185,11 +185,15 @@ reads again when it changes; and nothing that generates runs by itself.
       or sharp) or the shape of one of the workspace's brushes (T-2), turned by hand or at random per
       dab; limits on the lowest and highest height it makes. Every brush's radius by `[` and `]`
       or control and the wheel over a view, its strength with shift. Missing: hydraulic erosion.
-- [ ] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace. Today: the
+- [x] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace. Today: the
       brush shapes, greyscale PNGs of the workspace's `brushes` folder, in the asset shelf of the
       Terrain mode, read again when they change; they are the shapes of the sculpt and strata
       brushes (T-1, S-1); presets of the brush tools' settings (F-10) in the Terrain and Paint
-      panels. Missing: stamps.
+      panels. Stamps: the Terrain mode's Stamp tool presses a picture of the brushes folder at a
+      click (one step, with the symmetry), turned (Q and E) and sized (`[` and `]`), raising,
+      lowering or setting the heights to a base plus the picture, its edge fading; shift and a drag
+      take a part of the map as a 16-bit stamp in `brushes/stamps` (`terrain.captureStamp`), set up
+      to put it back as it was; Save the brush as a preset (`terrain.saveBrush`) keeps a stamp too.
 - [x] **T-3 Heightmap from other tools.** `heightmap.png` or `.r16` in the project is read again
       when World Machine or Gaea writes it; one of any size is imported, resampled
       (`terrain.importHeightmap`), and the heightmap exported as PNG or `.r16` (`terrain.exportHeightmap`).

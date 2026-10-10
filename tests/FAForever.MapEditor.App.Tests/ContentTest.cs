@@ -35,6 +35,30 @@ namespace FAForever.MapEditor.App.Tests
             return model;
         }
 
+        /// <summary>
+        /// HardFFA open in a workspace of its own whose assets are the test assets.
+        /// </summary>
+        internal static async Task<(MainViewModel Model, Workspace Workspace)> OpenInWorkspace(string tool = "map.select")
+        {
+            string root = Path.Combine(AppContext.BaseDirectory, "workspaces", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(root, "game"));
+            Directory.CreateDirectory(Path.Combine(root, "vault"));
+            Workspace workspace = Workspace.Create(Path.Combine(root, "workspace"), Path.Combine(root, "game"), null, Path.Combine(root, "vault"));
+            string assets = TestAssets.Folder(unitModel: true);
+            foreach (string file in Directory.EnumerateFiles(assets, "*", SearchOption.AllDirectories))
+            {
+                string to = Path.Combine(workspace.AssetsFolder, Path.GetRelativePath(assets, file));
+                Directory.CreateDirectory(Path.GetDirectoryName(to)!);
+                File.Copy(file, to);
+            }
+            MainViewModel model = new MainViewModel(new NoDialogs());
+            model.Setup.Use(workspace);
+            await model.LoadAssetsAsync(workspace);
+            await model.OpenAsync(HardFfa);
+            model.SelectTool(tool);
+            return (model, workspace);
+        }
+
         internal static Task<CommandRun> Run(MainViewModel model, string id, JsonObject? arguments = null) =>
             model.Commands.RunAsync(id, arguments ?? [], interactive: false);
 
@@ -84,6 +108,87 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.IsTrue(model.Undo());
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "edit.placePreset", new JsonObject { ["name"] = "Nothing" }));
+        }
+
+        [TestMethod]
+        public async Task AStampIsPressedAtAClickAsOneStepTurnedAndSized()
+        {
+            (MainViewModel model, Workspace workspace) = await OpenInWorkspace("terrain.stamp");
+            StampTool tool = model.Tool<StampTool>();
+            string picture = Path.Combine(workspace.BrushesFolder, "hills", "cone.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(picture)!);
+            // a cone: white in the middle, black at the sides
+            ushort[] cone = [.. Enumerable.Range(0, 32 * 32).Select(i => (ushort)(65535 * Math.Max(0, 1 - Math.Sqrt(Math.Pow(i % 32 - 15.5, 2) + Math.Pow(i / 32 - 15.5, 2)) / 16)))];
+            new HeightStampCapture(32, 32, cone, 0, 1).Save(picture);
+            await model.LoadAssetsAsync(workspace);
+
+            float before = model.ShownDocument!.Terrain.Heightmap.HeightAt(100, 100);
+            float far = model.ShownDocument.Terrain.Heightmap.HeightAt(130, 100);
+            tool.Press(100, 100);
+            Assert.IsFalse(model.CanUndo && model.Map!.Session.UndoDescription!.StartsWith("Stamp"), "no picture chosen: nothing pressed");
+            StringAssert.Contains(model.Status, "Choose the stamp's picture");
+
+            model.Assets.Select("brushes/hills/cone.png");
+            Assert.AreEqual("brushes/hills/cone.png", tool.Shape.Chosen.Key, "a brush chosen on the shelf is the stamp's picture");
+            tool.Radius = 16;
+            tool.Height = 30;
+            tool.Edge = 0;
+            int steps = model.History.Count;
+            model.Stroke([(100, 100), (110, 100), (120, 100)]);
+            Assert.AreEqual(steps + 1, model.History.Count, "one step");
+            Assert.AreEqual("Stamp: raise terrain", model.Map!.Session.UndoDescription);
+            Heightmap heights = model.ShownDocument!.Terrain.Heightmap;
+            Assert.AreEqual(before + 30, heights.HeightAt(100, 100), 1.5, "the whole height at once, at the click");
+            Assert.AreEqual(far, heights.HeightAt(130, 100), 0.01, "dragging presses nothing more");
+
+            // turned by Q and E, sized by [ and ]
+            Assert.IsTrue(model.ToolKey("E", ToolModifiers.None));
+            Assert.AreEqual(15, tool.Shape.Rotation);
+            Assert.IsTrue(model.ToolKey("OemCloseBrackets", ToolModifiers.None));
+            Assert.IsTrue(tool.Radius > 16);
+
+            // the settings as a brush preset, the picture by its key
+            CommandRun saved = await Run(model, "terrain.saveBrush", new JsonObject { ["name"] = "Cone" });
+            tool.Height = 1;
+            tool.Shape.Choose(null);
+            await Run(model, "presets.apply", new JsonObject { ["kind"] = BrushPreset.Kind, ["name"] = "Cone" });
+            Assert.AreEqual(("terrain.stamp", 30.0, "brushes/hills/cone.png"), (model.ActiveTool!.Definition.Id, tool.Height, tool.Shape.Chosen.Key));
+        }
+
+        [TestMethod]
+        public async Task APartOfTheMapIsTakenAsAStampAndPutBackElsewhere()
+        {
+            (MainViewModel model, Workspace workspace) = await OpenInWorkspace("terrain.sculpt");
+            await Run(model, "brush.set", new JsonObject { ["layer"] = 0, ["mode"] = "raise", ["strength"] = 20, ["radius"] = 8 });
+            model.Stroke([(60, 60)]);
+            Heightmap shaped = model.ShownDocument!.Terrain.Heightmap;
+
+            model.SelectTool("terrain.stamp");
+            StampTool tool = model.Tool<StampTool>();
+            ToolInput shift = new ToolInput(ToolModifiers.Shift, 0.5f);
+            ((IMapTool)tool).Press(50, 50, shift);
+            tool.Drag(70, 70);
+            Assert.AreEqual((50f, 50f, 70f, 70f), tool.Box, "shift and a drag draw the box to take");
+            tool.Release();
+            await Task.Delay(100);
+            Assert.IsNull(tool.Box);
+            string file = Path.Combine(workspace.BrushesFolder, "stamps", "HardFFA 50 50.png");
+            Assert.IsTrue(File.Exists(file), "a 16-bit picture in the brushes folder's stamps");
+            Assert.AreEqual(("brushes/stamps/hardffa 50 50.png", HeightStampMode.Set, false), (tool.Shape.Chosen.Key, tool.Mode, tool.BaseFromGround));
+            Assert.AreEqual(10.5, tool.Radius, "a pixel an ogrid");
+            await model.LoadAssetsAsync(workspace);
+            Assert.AreEqual("brushes/stamps/hardffa 50 50.png", tool.Shape.Chosen.Key, "still chosen when the brushes are read again");
+            tool.Shape.Chosen = null!;
+            Assert.AreEqual("brushes/stamps/hardffa 50 50.png", tool.Shape.Chosen.Key, "a combo box letting go of its item leaves the shape");
+
+            ((IMapTool)tool).Press(150, 150, ToolInput.Default);
+            tool.Release();
+            Heightmap after = model.ShownDocument!.Terrain.Heightmap;
+            for (int d = -8; d <= 8; d += 4)
+            {
+                Assert.AreEqual(shaped.GetHeight(60 + d, 60), after.GetHeight(150 + d, 150), 0.05, $"put back as it was at {d}");
+            }
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "terrain.captureStamp", new JsonObject { ["x0"] = 5, ["z0"] = 5, ["x1"] = 5, ["z1"] = 5 }));
         }
 
         [TestMethod]

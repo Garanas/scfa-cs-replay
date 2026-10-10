@@ -265,6 +265,12 @@ public sealed partial class WorkspaceSetupViewModel(IEditorDialogs dialogs, ILog
         }
     }
 
+    /// <summary>
+    /// Works in a workspace that is set up, without checking or converting its assets: for tests of
+    /// what keeps files in the workspace (stamps, templates, stars and recents).
+    /// </summary>
+    public void Use(Workspace workspace) => Ready(workspace, $"Workspace {workspace.Folder}");
+
     private void Ready(Workspace workspace, string text)
     {
         _pending = null;

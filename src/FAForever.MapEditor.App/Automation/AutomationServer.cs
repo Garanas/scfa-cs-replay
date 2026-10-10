@@ -675,6 +675,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["overlays"] = OverlaysState(),
             ["paletteResults"] = PaletteState(),
             ["selectionPreset"] = model.Tool<SelectionPresetTool>().Describe(),
+            ["stamp"] = model.Tool<StampTool>().Describe(),
         };
     }
 
