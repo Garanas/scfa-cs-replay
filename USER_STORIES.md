@@ -31,8 +31,8 @@ reads again when it changes; and nothing that generates runs by itself.
       from rules, a baked heightmap) shows that its inputs changed and offers to generate again; it
       never runs by itself. Today: the generators' registry with the inputs each result was made
       from; the status bar names the results out of date, and Generate, Everything out of date makes
-      them again; walkability, the normal map and the preview are generated this way (T-7, S-4).
-      Missing: props and masks from rules (P-4, K-2).
+      them again; walkability, the normal map and the preview are generated this way (T-7, S-4),
+      and so are masks and props from rules (K-2, P-4).
 - [ ] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
       missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map
@@ -175,8 +175,13 @@ reads again when it changes; and nothing that generates runs by itself.
       own rules. Today: `masks/<name>.png` in the project (the map's size or half, read again when
       another tool changes them, never exported); the Paint panel's "Masks for tools" adds, renames,
       deletes and chooses them; the Masks tool paints the chosen one; the overlay Mask shows it.
-- [ ] **K-2 Masks from rules.** Generate a mask from slope, height, distance to water or other masks,
-      when asked.
+- [x] **K-2 Masks from rules.** Generate a mask from slope, height, distance to water or other masks,
+      when asked. Today: Rules... beside a mask in the Paint panel opens its rules in the inspector:
+      slope, height and distance to water (ranges with soft edges), other masks or strata, noise,
+      combined in order (multiply, min, max, add, subtract) and changed by blur, grow, shrink,
+      threshold and invert; a preview in the top view; `generate.masks` makes them (one step of
+      undo), out of date when the terrain, water level, strata, rules or masks they read change.
+      Kept as `masks/<name>.rules.json`.
 
 ## W: Water
 
@@ -225,10 +230,14 @@ reads again when it changes; and nothing that generates runs by itself.
 - [ ] **P-3 Paint where a layer is.** Paint only where a stratum or mask covers the terrain (trees
       only on grass), and not where another one does. Today: only on and not on a stratum, with
       a threshold. Missing: the mask layers of K-1 as choices.
-- [ ] **P-4 Props from rules.** Rules that place props from layers: where a stratum or mask allows
+- [x] **P-4 Props from rules.** Rules that place props from layers: where a stratum or mask allows
       (tree groups), where others forbid, with density, clustering and spacing; generated when
       asked (F-7), into their own layer, so they are generated again after the terrain moves
-      without touching props placed by hand.
+      without touching props placed by hand. Today: the Props panel's Rules and the inspector's
+      Rule (palette, layers that allow or forbid with thresholds, density, spacing, clustering by
+      noise or copses, slope, water, how they stand); `generate.props` replaces the props the rules
+      placed (each carries its rule's name) and keeps the others; `props.keepFromRules` makes
+      generated props hand-placed. Kept as `prop-rules.json`; exported as ordinary props.
 - [x] **P-5 Reclaim.** The mass and energy of the props, for the map and per area. Today: the
       Props panel's Reclaim (the map, per area), the selected props' in the inspector, from the
       blueprints' values (`props.reclaim`).

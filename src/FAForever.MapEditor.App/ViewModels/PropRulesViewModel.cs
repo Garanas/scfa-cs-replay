@@ -237,7 +237,7 @@ public sealed partial class PropRulesViewModel : ObservableObject
         string palette = rule.Palette.IsEmpty
             ? "no props"
             : Path.GetFileNameWithoutExtension(rule.Palette[0].Blueprint).Replace("_prop", "") + (rule.Palette.Length > 1 ? $", {rule.Palette.Length - 1} more" : "");
-        return $"{palette} · {count:#,0} props";
+        return $"{palette} · {count.ToString("#,0", System.Globalization.CultureInfo.InvariantCulture)} props";
     }
 
     private IReadOnlyList<SettingGroup> GroupsOf(string name)

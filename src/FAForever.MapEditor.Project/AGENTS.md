@@ -377,6 +377,51 @@ or a path node leaves walkability current.
   blue 0. Theta Passage's own normal map differs from the generated one by less than one step per
   channel on average.
 
+## Rules: masks and props from the layers
+
+User stories K-2 and P-4; generated only when asked, as the other results (F-7).
+
+- **Mask rules** (`MapDocument.MaskRules`: a `MaskRuleSet` per mask name, `Files/InMemory/MaskRule`):
+  an ordered list of `MaskRule`s on a value from 0 to 1 per pixel of the mask (its own size, each
+  pixel at its centre). Slope (degrees, `PaintLimits.SlopeAt`), height (game units) and distance to
+  water (ogrids, the exact Euclidean distance transform from the ground under the water level; a
+  map without water is `MaskRules.Far` away everywhere) give 1 within `Min` to `Max` and fade to 0
+  over `Soft`; a layer (`Source`: a mask's name or `stratum:N`, read between pixels, full from `Min`
+  when above 0) and noise (`HeightNoise` at `Scale` ogrids, `Seed`) give their value. Each combines
+  with what the rules before made (`Combine`: multiply, min, max, add, subtract, replace; the first
+  rule is the start), after `Invert`. Blur (three box passes), grow and shrink (the largest or
+  smallest value in a square, a queue per line), threshold and invert change what the rules before
+  made. `MaskRules.GenerateAll` makes every mask with rules after the masks with rules it reads
+  (`Order`; a circle is refused); `MaskRulesGenerator` (`masksFromRules`, an `IDocumentGenerator`)
+  puts them in place. Its inputs are the heightmap, the water level, the strata, the rules and the
+  masks without rules they read (`RuleInputs`: lists of parts compared by reference), so painting
+  another mask or putting the result in place leaves it current.
+- **Prop rules** (`MapDocument.PropRules`, `Files/InMemory/PropRule`): a name, a palette, layer
+  conditions (`PropRuleCondition`: a layer covers at a threshold; every allowing one must, no
+  forbidding one may), fade (the chance is the least allowing value), density per 100 square
+  ogrids, spacing to every prop of the rules, clustering (`Noise`: patches where smooth noise is
+  high; `Clusters`: copses around one centre per cell, as many cells as the cover asks), slope
+  limits, out of the water, a seed and a `PropPlacement` (alignment by category, random turn,
+  tilt, scale, sink). `PropRules.Generate` tries density times area / 100 places per rule (at most
+  `MaxTries`), each drawn from the rule's seed, name and number (a change in one corner keeps the
+  props elsewhere), kept apart by a shared `PropGrid`; later rules fill around earlier ones. Its
+  props carry `Prop.Rule`; `PropRulesGenerator` (`propsFromRules`) replaces every prop with a rule
+  (`RuleEdits.ReplaceRuleProps`, numbered after the props that stay) and never touches props
+  placed by hand, which do not count for the rules' spacing. 20 000 props on a 20 km map take well
+  under a second (`PropRulesTest`).
+- **Edits** (`RuleEdits`): a mask's rules by place (`AddMaskRule`, `UpdateMaskRule`,
+  `RemoveMaskRule`: without its last rule a mask is painted by hand again, `MoveMaskRule`,
+  `SetMaskRules`); `MaskLayers.Rename` takes the rules along and points every rule that read the
+  mask at the new name, `Remove` drops its rules. Prop rules by name, unique without case
+  (`AddPropRule`; `UpdatePropRule`: a new name goes to its props; `RemovePropRule` with or without
+  its props; `MovePropRule`; `KeepRuleProps`). A pasted prop is hand-placed (`ObjectEdits.Paste`).
+- **On disk**: `masks/<name>.rules.json` (`MaskRulesDto`: only the parameters a rule's kind reads)
+  beside the mask's PNG, which holds the last generated result; `prop-rules.json` (`PropRuleDto`);
+  `rule` in `props.json` on the props a rule placed. All optional: a map without rules writes none
+  of them, and an older project loads. Rules without their mask's PNG make an empty mask. `Reload`
+  reads them again when another tool changes them. The export leaves the rules out and writes the
+  props of rules as any other prop.
+
 ## Checks: problems of a map
 
 User story F-14 (`Checks/`): an `IProblemCheck` (or a `ProblemCheck` made of a function) reads a

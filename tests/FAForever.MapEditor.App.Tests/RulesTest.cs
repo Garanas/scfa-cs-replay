@@ -131,7 +131,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(byHand + count, model.Map.Document.Props.Length);
             Assert.AreEqual(byHand, model.Map.Document.Props.Count(prop => prop.Rule is null));
             Assert.AreEqual(first, model.Map.Document.Props[0], "a prop placed by hand stays as it was");
-            StringAssert.Contains(model.PropRules.Items[0].Summary, $"{count:#,0} props");
+            StringAssert.Contains(model.PropRules.Items[0].Summary, $"{count.ToString("#,0", System.Globalization.CultureInfo.InvariantCulture)} props");
 
             await Run(model, "props.setRule", new JsonObject { ["density"] = 0.5, ["clustering"] = "Clusters" });
             Assert.AreEqual(GeneratedStatus.Stale, StateOf(model, PropRulesGenerator.GeneratorId).Status);

@@ -268,8 +268,8 @@ public sealed class RemovePropRuleHandler(MainViewModel model, CurrentEdit edit)
         int count = edit.Transaction.Document.CountRuleProps(edit.Transaction.Document.FindPropRule(name)?.Name);
         edit.Transaction.Apply(document => document.RemovePropRule(name, request.KeepProps));
         model.Status = request.KeepProps
-            ? $"Deleted the rule {name}; its {count:#,0} props stay as placed by hand"
-            : $"Deleted the rule {name} and its {count:#,0} props";
+            ? $"Deleted the rule {name}; its {count.ToString("#,0", System.Globalization.CultureInfo.InvariantCulture)} props stay as placed by hand"
+            : $"Deleted the rule {name} and its {count.ToString("#,0", System.Globalization.CultureInfo.InvariantCulture)} props";
         return Task.CompletedTask;
     }
 }

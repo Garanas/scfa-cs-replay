@@ -49,7 +49,7 @@ public sealed class GeneratePropsHandler(MainViewModel model) : IRequestHandler<
         }
         GeneratedResult result = await model.GenerateAsync(PropRulesGenerator.GeneratorId);
         int count = ((System.Collections.Immutable.ImmutableArray<Project.Files.InMemory.Prop>)result.Value).Length;
-        model.Status = $"The rules placed {count:#,0} props; the props placed by hand stay";
+        model.Status = $"The rules placed {count.ToString("#,0", System.Globalization.CultureInfo.InvariantCulture)} props; the props placed by hand stay";
         return count;
     }
 }
