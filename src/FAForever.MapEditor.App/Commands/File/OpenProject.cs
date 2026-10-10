@@ -7,8 +7,9 @@ namespace FAForever.MapEditor.App.Commands;
 /// Opens a project; given a map folder of the game instead, imports it.
 /// </summary>
 /// <param name="Folder">Left out, the editor asks about unsaved changes and for the folder.</param>
+/// <param name="Discard">Run without a person, whether the open map's unsaved changes may be lost; else it refuses.</param>
 [EditorCommand("file.open", "Open project...", Gesture = "Ctrl+O", Story = "M-7", Needs = Needs.Idle)]
-public sealed record OpenProject(string? Folder = null) : IRequest;
+public sealed record OpenProject(string? Folder = null, bool? Discard = null) : IRequest;
 
 public sealed class OpenProjectHandler(MainViewModel model, IEditorDialogs dialogs) : IRequestHandler<OpenProject>
 {
@@ -16,6 +17,7 @@ public sealed class OpenProjectHandler(MainViewModel model, IEditorDialogs dialo
     {
         if (request.Folder is string folder)
         {
+            UnsavedChanges.RefuseToDiscard(model, dialogs, request.Discard, "open another map");
             await model.OpenAsync(folder);
             return;
         }

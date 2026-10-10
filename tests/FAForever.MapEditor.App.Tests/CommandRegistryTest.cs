@@ -256,7 +256,7 @@ namespace FAForever.MapEditor.App.Tests
                 "an argument it needs is missing");
             Assert.ThrowsException<ArgumentException>(() => model.Commands.RunAsync("file.open", new JsonObject { ["path"] = "x" }, interactive: false).GetAwaiter().GetResult(),
                 "an argument it does not take");
-            Assert.AreEqual("file.open {folder?}", model.Commands.Find("file.open")!.Usage);
+            Assert.AreEqual("file.open {folder?, discard?}", model.Commands.Find("file.open")!.Usage);
         }
 
         [TestMethod]

@@ -221,11 +221,11 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("Eight", page.Template.Title, "the template chosen last");
             page.Template = page.Templates.Single(t => t.Title == "Whole");
             Assert.IsFalse(page.UsesFields, "a whole map takes only the name");
-            CommandRun copied = await Run(model, "file.new", new JsonObject { ["template"] = "Whole", ["name"] = "Copy of Hard" });
+            CommandRun copied = await Run(model, "file.new", new JsonObject { ["template"] = "Whole", ["name"] = "Copy of Hard", ["discard"] = true });
             Assert.IsTrue(copied.Ran);
             Assert.AreEqual(("Copy of Hard", 1), (model.ShownDocument!.Scenario.Name, model.ShownDocument.Version));
             Assert.IsTrue(model.Map!.ProjectFolder is null, "no project until it is saved");
-            await Run(model, "file.new", new JsonObject { ["template"] = "sandbox", ["name"] = "Try" });
+            await Run(model, "file.new", new JsonObject { ["template"] = "sandbox", ["name"] = "Try", ["discard"] = true });
             Assert.AreEqual(256, model.ShownDocument!.Width);
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "file.new", new JsonObject { ["template"] = "Nothing" }));
         }

@@ -1,4 +1,5 @@
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Workspaces;
 using MediatR;
@@ -20,6 +21,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// <param name="Template">A map template of the workspace's <c>templates</c> folder, or <c>Sandbox</c>
 /// (user story M-2): a template of settings gives what the other arguments leave out; a template of
 /// a whole map is copied under the name, the other arguments unused.</param>
+/// <param name="Discard">Run without a person, whether the open map's unsaved changes may be lost; else it refuses.</param>
 [EditorCommand("file.new", "New map...", Gesture = "Ctrl+N", Story = "M-2", Needs = Needs.Idle | Needs.NoStroke)]
 public sealed record NewMapRequest(
     string? Name = null,
@@ -31,9 +33,10 @@ public sealed record NewMapRequest(
     float? AbyssElevation = null,
     string? Biome = null,
     int? Players = null,
-    string? Template = null) : IRequest
+    string? Template = null,
+    bool? Discard = null) : IRequest
 {
-    public bool IsEmpty => this == new NewMapRequest();
+    public bool IsEmpty => this with { Discard = null } == new NewMapRequest();
 }
 
 public sealed class NewMapHandler(MainViewModel model, IEditorDialogs dialogs) : IRequestHandler<NewMapRequest>
@@ -52,7 +55,9 @@ public sealed class NewMapHandler(MainViewModel model, IEditorDialogs dialogs) :
                 ?? throw new ArgumentException($"There is no map template '{name}': {string.Join(", ", MapTemplates.List(model.Setup.Workspace?.TemplatesFolder ?? "").Select(t => t.Name))}");
             if (template.Kind != MapTemplateKind.Settings)
             {
-                model.OpenNewMap(MapTemplates.Copy(template, request.Name ?? defaults.Name, model.VersionControl.AuthorName, model.Assets.Catalog));
+                MapDocument copy = MapTemplates.Copy(template, request.Name ?? defaults.Name, model.VersionControl.AuthorName, model.Assets.Catalog);
+                UnsavedChanges.RefuseToDiscard(model, dialogs, request.Discard, "make a new map");
+                model.OpenNewMap(copy);
                 model.Status = $"A new map from the template {template.Name}; it is no project until you save it";
                 return Task.CompletedTask;
             }
@@ -74,7 +79,10 @@ public sealed class NewMapHandler(MainViewModel model, IEditorDialogs dialogs) :
             ExtraArmies = defaults.ExtraArmies,
             Lighting = defaults.Lighting,
         };
-        model.OpenNewMap(NewMap.Create(settings));
+        // the arguments checked first, then the changes the new map would replace
+        MapDocument document = NewMap.Create(settings);
+        UnsavedChanges.RefuseToDiscard(model, dialogs, request.Discard, "make a new map");
+        model.OpenNewMap(document);
         return Task.CompletedTask;
     }
 }
