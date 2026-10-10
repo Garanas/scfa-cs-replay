@@ -143,6 +143,28 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task BackFromSideBySideTheTopViewShowsTheWholeMapAgain() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            double whole = window.MapView.Zoom;
+
+            model.View = MapViewTab.SideBySide;
+            Dispatcher.UIThread.RunJobs();
+            Assert.IsTrue(window.MapView.Zoom < whole, "half as wide, the whole map smaller");
+            model.View = MapViewTab.Top;
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual(whole, window.MapView.Zoom, 1e-6, "the whole map as large as before");
+
+            // zoomed in by the person, a panel hidden keeps the zoom and the place in the middle
+            window.MapView.Show(4, 100, 80);
+            model.Layout.Toggle(LayoutPanel.Inspector, false);
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual(4, window.MapView.Zoom, 1e-6);
+            Assert.AreEqual(100, window.MapView.Centre.X, 0.5);
+            Assert.AreEqual(80, window.MapView.Centre.Y, 0.5);
+        });
+
+        [TestMethod]
         public Task HidingAPanelGivesTheViewsItsRoom() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();

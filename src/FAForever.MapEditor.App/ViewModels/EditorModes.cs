@@ -219,6 +219,12 @@ public sealed record OverlayDefinition(string Id, string Title, string CommandTi
     public string? Panel { get; init; }
 
     /// <summary>
+    /// The token of the colour it lays over the terrain, shown as a swatch on its chip (its legend),
+    /// e.g. <c>MapBlockedBrush</c>; null for an overlay of symbols.
+    /// </summary>
+    public string? Swatch { get; init; }
+
+    /// <summary>
     /// The command that turns it on or off: <c>view.overlay.markers</c>.
     /// </summary>
     public string CommandId => $"view.overlay.{Id}";
@@ -234,11 +240,11 @@ public static class EditorOverlays
         new OverlayDefinition("markers", "Markers", "Show markers", "R-6") { Panel = "markers" },
         new OverlayDefinition("pathNodes", "Path nodes", "Show path nodes", "R-6") { Panel = "markers" },
         new OverlayDefinition("camera", "3D camera", "Show the 3D camera", "V-1"),
-        new OverlayDefinition("walkability", "Walkability", "Show walkability", "T-7"),
-        new OverlayDefinition("mask", "Mask", "Show the chosen mask", "K-1"),
+        new OverlayDefinition("walkability", "Walkability", "Show walkability", "T-7") { Swatch = "MapBlockedBrush" },
+        new OverlayDefinition("mask", "Mask", "Show the chosen mask", "K-1") { Swatch = "MapMaskBrush" },
         new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12"),
         new OverlayDefinition("grid", "Grid", "Show the grid", "V-3", "Show a grid over the terrain"),
-        new OverlayDefinition("areas", "Areas", "Show areas", "M-5"),
+        new OverlayDefinition("areas", "Areas", "Show areas", "M-5") { Swatch = "MapOutsidePlayableBrush" },
         new OverlayDefinition("props", "Props", "Show props", "V-2"),
         new OverlayDefinition("units", "Units", "Show units", "V-2"),
     ];

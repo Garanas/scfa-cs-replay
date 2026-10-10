@@ -505,6 +505,36 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task TheViewsBarIsOneRowWhoseChipsSayWhetherTheyShow() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.Top);
+            Assert.IsTrue(window.MapView.Bounds.Height >= 450, $"at 1280 by 800 the top view is {window.MapView.Bounds.Height:0} high: the bar above it is one row");
+
+            ToolRow row = window.GetVisualDescendants().OfType<ToolRow>().Single(r => Avalonia.Automation.AutomationProperties.GetName(r) == "Shown over the terrain");
+            List<Avalonia.Controls.Primitives.ToggleButton> chips = [.. row.Children.OfType<Avalonia.Controls.Primitives.ToggleButton>().Where(chip => chip.Classes.Contains("chip"))];
+            Assert.AreEqual(model.Overlays.Count, chips.Count, "a chip per overlay");
+            Assert.IsTrue(row.OverflowCount > 0 && row.MoreButton.IsVisible, "what does not fit at 1280 lies behind More");
+
+            Avalonia.Controls.Primitives.ToggleButton markers = chips.Single(chip => Avalonia.Automation.AutomationProperties.GetName(chip) == "Show Markers");
+            Assert.IsTrue(markers.IsChecked == true);
+            Click(window, markers);
+            Assert.IsFalse(model.ShowMarkers, "a click runs the overlay's command");
+            Assert.IsFalse(markers.IsChecked == true, "and the chip says it is off");
+            model.ShowMarkers = true;
+            Dispatcher.UIThread.RunJobs();
+            Assert.IsTrue(markers.IsChecked == true, "it follows the model");
+
+            // the tints of the terrain take turns: a mask's violet or walkability's red
+            model.ShowWalkability = true;
+            model.ShowMask = true;
+            Assert.IsFalse(model.ShowWalkability);
+            model.ShowWalkability = true;
+            Assert.IsFalse(model.ShowMask);
+            window.Close();
+        });
+
+        [TestMethod]
         public Task TheTopViewShowsWhatTheCameraSees() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();

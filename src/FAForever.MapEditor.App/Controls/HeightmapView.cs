@@ -110,6 +110,8 @@ public sealed class HeightmapView : Control
     private double _zoom = 1;
     private Vector _offset;
     private bool _fitted;
+    // the view shows the whole map as Fit left it (nobody zoomed or moved it since): a new size fits it again
+    private bool _wholeMap;
     private Point? _panFrom;
     // the tool the left mouse was pressed with, until it is released
     private IMapTool? _pressed;
@@ -151,6 +153,7 @@ public sealed class HeightmapView : Control
         _zoom = Math.Min(Bounds.Width / size.Width, Bounds.Height / size.Height) * 0.95;
         _offset = new Vector((Bounds.Width - size.Width * _zoom) / 2, (Bounds.Height - size.Height * _zoom) / 2);
         _fitted = true;
+        _wholeMap = true;
         InvalidateVisual();
     }
 
@@ -162,6 +165,7 @@ public sealed class HeightmapView : Control
         _zoom = Math.Clamp(zoom, 0.05, 64);
         _offset = new Vector(Bounds.Width / 2 - x * _zoom, Bounds.Height / 2 - z * _zoom);
         _fitted = true;
+        _wholeMap = false;
         InvalidateVisual();
     }
 
@@ -230,13 +234,14 @@ public sealed class HeightmapView : Control
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
-        if (!_fitted)
+        if (!_fitted || _wholeMap)
         {
+            // laid out for the first time, or showing the whole map (side by side and back, a panel shown): the whole map again
             Fit();
         }
         else
         {
-            // a panel or splitter moved (user story V-4): the place in the middle stays in the middle
+            // a panel or splitter moved (user story V-4) after one zoomed in: the place in the middle stays in the middle
             _offset += new Vector(e.NewSize.Width - e.PreviousSize.Width, e.NewSize.Height - e.PreviousSize.Height) / 2;
             InvalidateVisual();
         }
@@ -405,6 +410,7 @@ public sealed class HeightmapView : Control
         Point map = ControlToMap(at);
         _zoom = Math.Clamp(_zoom * Math.Pow(1.2, e.Delta.Y), 0.05, 64);
         _offset = new Vector(at.X - map.X * _zoom, at.Y - map.Y * _zoom);
+        _wholeMap = false;
         InvalidateVisual();
         e.Handled = true;
     }
@@ -445,6 +451,7 @@ public sealed class HeightmapView : Control
         if (_panFrom is Point from)
         {
             _offset += at - from;
+            _wholeMap = false;
             _panFrom = at;
         }
         else if (_pressed is IMapTool tool)

@@ -89,8 +89,58 @@ public sealed partial class MainWindow : Window
             _model.Layout.PropertyChanged += OnLayoutChanged;
             _model.Layout.Changed += OnLayoutResized;
             BuildMenusAndShortcuts(_model);
+            BuildOverlayChips(_model);
             ShowChosenView();
             ApplyLayout();
+        }
+    }
+
+    /// <summary>
+    /// A chip per overlay (<see cref="MainViewModel.Overlays"/>) in the views' row after the symmetry,
+    /// in their order: a toggle that runs the overlay's command, checked while it shows, with a
+    /// swatch of the colour it lays over the terrain. What does not fit goes behind the row's More.
+    /// </summary>
+    private void BuildOverlayChips(MainViewModel model)
+    {
+        foreach (Control chip in ViewOptions.Children.Where(child => child.Classes.Contains("chip")).ToList())
+        {
+            ViewOptions.Children.Remove(chip);
+        }
+        Avalonia.Automation.AutomationProperties.SetName(ViewOptions.MoreButton, "More of what the views show");
+        foreach (OverlayItem overlay in model.Overlays)
+        {
+            Avalonia.Controls.Primitives.ToggleButton chip = new Avalonia.Controls.Primitives.ToggleButton
+            {
+                DataContext = overlay,
+                Command = model.RunCommand,
+                CommandParameter = overlay.Definition.CommandId,
+            };
+            chip.Classes.Add("chip");
+            chip.Classes.Set("planned", overlay.IsIncomplete);
+            chip.Bind(Avalonia.Controls.Primitives.ToggleButton.IsCheckedProperty, new Avalonia.Data.Binding(nameof(OverlayItem.IsOn)) { Mode = Avalonia.Data.BindingMode.OneWay });
+            Avalonia.Automation.AutomationProperties.SetName(chip, $"Show {overlay.Title}");
+            if (overlay.Definition.Missing is string missing)
+            {
+                Avalonia.Automation.AutomationProperties.SetHelpText(chip, $"Not built yet: {missing}");
+            }
+            TextBlock title = new TextBlock { Text = overlay.Title };
+            if (overlay.Definition.Swatch is string swatch)
+            {
+                Border legend = new Border();
+                legend.Classes.Add("swatch");
+                legend.Bind(Border.BackgroundProperty, legend.GetResourceObservable(swatch));
+                ToolTip.SetTip(chip, $"{overlay.Title}: shown in this colour over the terrain");
+                StackPanel content = new StackPanel();
+                content.Classes.Add("inline");
+                content.Children.Add(legend);
+                content.Children.Add(title);
+                chip.Content = content;
+            }
+            else
+            {
+                chip.Content = title;
+            }
+            ViewOptions.Children.Add(chip);
         }
     }
 

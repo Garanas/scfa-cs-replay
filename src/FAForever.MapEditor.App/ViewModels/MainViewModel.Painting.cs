@@ -44,6 +44,11 @@ public sealed partial class MainViewModel
 
     partial void OnShowMaskChanged(bool value)
     {
+        // one tint over the terrain at a time: a mask's violet or walkability's red
+        if (value)
+        {
+            ShowWalkability = false;
+        }
         RefreshOverlays();
         OnPropertyChanged(nameof(ShownGrid));
     }
