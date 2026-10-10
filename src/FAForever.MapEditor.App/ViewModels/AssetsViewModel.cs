@@ -211,7 +211,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// The variant of the selected family the inspector shows.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownModel), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownPlanned), nameof(ShownKeyLabel))]
+    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownModel), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownUse), nameof(ShownKeyLabel))]
     public partial AssetEntry? SelectedMember { get; set; }
 
     public bool HasSelection => Selected is not null;
@@ -253,20 +253,13 @@ public sealed partial class AssetsViewModel : ObservableObject
     public string ShownGlyph => IconOf(Shown?.Kind ?? Kind);
 
     /// <summary>
-    /// What the shown asset is for, not built yet: its user story.
-    /// </summary>
-    public string ShownPlanned => Shown?.Kind switch
-    {
-        AssetKind.Prop => "Placing it on the map, and adding it to a palette: user stories P-1 and P-2",
-        AssetKind.Texture => "Using it for a stratum: user story S-2",
-        _ => "",
-    };
-
-    /// <summary>
-    /// What the shown asset is for today, beside what is planned: a brush is a shape of the brush tools.
+    /// What the shown asset is for: a brush is a shape of the brush tools, a prop what the Props
+    /// mode places or paints, a texture a stratum's.
     /// </summary>
     public string ShownUse => Shown?.Kind switch
     {
+        AssetKind.Prop => "Choosing it in the Props mode makes it the prop the Place tool places, or adds it to the palette the Paint tool paints; drag it onto a view to place it there.",
+        AssetKind.Texture => "A stratum's texture: choose it for a layer in the Paint mode's layer textures, or add a stratum with it.",
         AssetKind.Brush => "Choosing it makes it the shape of the active brush tool: Sculpt in the Terrain mode, Strata in the Paint mode, whose options turn it.",
         AssetKind.Decal => "Choosing it makes it the decal the Place tool of the Decals mode places (in that mode the tool becomes active); drag it onto a view to place it there.",
         AssetKind.Unit => "Choosing it makes it what the Units mode's Place tool places: click on the map, or drag the tile onto it.",

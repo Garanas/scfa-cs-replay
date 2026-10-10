@@ -160,7 +160,11 @@ public sealed partial class MainWindow : Window
 
     private void OnFitRequested(object? sender, EventArgs e) => Heightmap.Fit();
 
-    private void OnTopViewRequested(double x, double z, double? zoom) => Heightmap.Show(zoom ?? Heightmap.Zoom, x, z);
+    private void OnTopViewRequested(double? x, double? z, double? zoom)
+    {
+        Avalonia.Point centre = Heightmap.Centre;
+        Heightmap.Show(zoom ?? Heightmap.Zoom, x ?? centre.X, z ?? centre.Y);
+    }
 
     private async void OnShowFolderRequested(string folder) => await Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(folder));
 

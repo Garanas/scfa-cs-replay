@@ -184,6 +184,7 @@ public sealed partial class AutomationServer
         {
             CommandRun run = await model.Commands.RunAsync(id, arguments, interactive: true);
             result["ran"] = run.Ran;
+            result["why"] = run.Why;
             result["result"] = run.Result is null ? null : JsonSerializer.SerializeToNode(run.Result, run.Result.GetType());
             return true;
         }
@@ -388,6 +389,11 @@ public sealed partial class AutomationServer
     /// </summary>
     public static Point? Project(EditorCamera camera, Size size, Vector3 place)
     {
+        if (size.Width <= 0 || size.Height <= 0)
+        {
+            // a view never laid out (hidden since the start) shows nothing
+            return null;
+        }
         float aspect = (float)(size.Width / Math.Max(1, size.Height));
         Vector4 clip = Vector4.Transform(new Vector4(place, 1), camera.ViewProjection(aspect));
         if (clip.W <= 1e-6f)

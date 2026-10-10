@@ -247,5 +247,45 @@ namespace FAForever.MapEditor.App.Tests
         {
             Assert.AreEqual((key, modifiers), WindowInput.ParseKey(text));
         }
+
+        [TestMethod]
+        public Task ACommandThatCannotRunSaysWhy() => Run(async () =>
+        {
+            (MainWindow window, _, AutomationServer automation) = await Open();
+
+            JsonObject answer = await Send(automation, "undo");
+
+            Assert.IsFalse(answer["ran"]!.GetValue<bool>());
+            StringAssert.Contains(answer["why"]!.GetValue<string>(), "nothing to undo");
+            JsonObject notBuilt = await Send(automation, "run", new JsonObject { ["id"] = "map.resize" });
+            StringAssert.Contains(notBuilt["why"]!.GetValue<string>(), "not built yet");
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task ZoomingTheTopViewKeepsOrMovesItsCentre() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            model.View = MapViewTab.Top;
+            Dispatcher.UIThread.RunJobs();
+
+            await Send(automation, "view", new JsonObject { ["x"] = 40, ["z"] = 60, ["zoom"] = 4 });
+            Point centre = window.MapView.Centre;
+            Assert.AreEqual(40, centre.X, 0.01);
+            Assert.AreEqual(60, centre.Y, 0.01);
+
+            await Send(automation, "view", new JsonObject { ["zoom"] = 2 });
+            Assert.AreEqual(2, window.MapView.Zoom);
+            Assert.AreEqual(40, window.MapView.Centre.X, 0.01, "the zoom alone keeps the place in the middle");
+            Assert.AreEqual(60, window.MapView.Centre.Y, 0.01);
+
+            window.Height = 700;
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual(60, window.MapView.Centre.Y, 0.01, "a smaller view stays centred on it");
+
+            JsonObject point = (JsonObject)(await Send(automation, "view-point", new JsonObject { ["x"] = 40, ["z"] = 60 }))["point"]!;
+            Assert.IsNull(point["3d"], "the 3D view never shown has no size, so no point (and the answer is valid JSON)");
+            window.Close();
+        });
     }
 }

@@ -568,7 +568,7 @@ namespace FAForever.MapEditor.App.Tests
             model.Assets.Use(TestAssets.Catalog());
 
             Assert.IsFalse(model.DropAsset("env/tundra/layers/tund_rock_albedo.dds", 40, 60));
-            StringAssert.Contains(model.Status, "S-2", "nothing takes a texture: what does");
+            StringAssert.Contains(model.Status, "layer textures", "nothing takes a texture: where a stratum takes it");
 
             List<AssetDropEventArgs> drops = [];
             model.AssetDropped += (_, drop) =>

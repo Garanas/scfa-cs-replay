@@ -173,7 +173,7 @@ public static class EditorModes
                 new PlannedSection("Rules", "P-4", "Props from layers: where they may grow and where not; generated when asked"),
                 new PropReclaimSection(),
             ],
-            [new PlannedSection("Props", "P-1", "The selected props, palette or rule")]),
+            []),
 
         new ModeDefinition("decals", "Decals", "Icon.Decals", "Place decals, groups", 1, "F8", "D-1",
             [
@@ -192,7 +192,7 @@ public static class EditorModes
                 new UnitGroupsSection(),
                 new PresetSection(UnitPreset.Kind, "Presets") { EmptyText = "None yet: select units, or choose a group in the tree, and save them to place them again." },
             ],
-            [new PlannedSection("Units", "U-3", "The selected group or units")]),
+            []),
     ];
 }
 

@@ -38,8 +38,11 @@ namespace FAForever.MapEditor.Cli
             {
                 start.Environment["FAF_MAP_EDITOR_SETTINGS"] = Path.GetFullPath(settings);
             }
-            using Process process = Process.Start(start) ?? throw new InvalidOperationException($"Could not start {exe}");
-            Console.Error.WriteLine($"Started {exe} (process {process.Id}) on port {o.Port}");
+            // detached: its output goes to the log, so a caller reading this tool's output to the end
+            // is not kept waiting by the editor holding the same pipe
+            string log = LogFile(o);
+            using Process process = DetachedProcess.Start(start, log);
+            Console.Error.WriteLine($"Started {exe} (process {process.Id}) on port {o.Port}; its output goes to {log}");
             if (o.NoWait)
             {
                 return 0;
@@ -66,6 +69,7 @@ namespace FAForever.MapEditor.Cli
                         ["projectFolder"] = state["projectFolder"]?.DeepClone(),
                         ["workspace"] = state["workspace"]?.DeepClone(),
                         ["seconds"] = Math.Round(clock.Elapsed.TotalSeconds, 1),
+                        ["log"] = log,
                     }.ToJsonString());
                     return 0;
                 }
@@ -147,6 +151,14 @@ namespace FAForever.MapEditor.Cli
             }
             return "";
         }
+
+        /// <summary>
+        /// Where a started editor's own output goes: <c>--log</c>, else <c>editor-port.log</c> beside
+        /// the settings file, else in the temporary folder.
+        /// </summary>
+        public static string LogFile(EditorOptions o) => Path.GetFullPath(o.Log ?? Path.Combine(
+            o.Settings is string settings ? Path.GetDirectoryName(Path.GetFullPath(settings))! : Path.GetTempPath(),
+            $"editor-{o.Port}.log"));
 
         /// <summary>
         /// The editor's state, or null when none answers on the port.

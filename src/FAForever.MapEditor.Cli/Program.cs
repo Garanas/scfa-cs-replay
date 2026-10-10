@@ -59,6 +59,9 @@ namespace FAForever.MapEditor.Cli
 
         [Option("force", HelpText = "stop: end the process when it does not exit in time.")]
         public bool Force { get; set; }
+
+        [Option("log", HelpText = "start: the file the editor's own output goes to; by default editor-<port>.log beside the settings file (else in the temporary folder).")]
+        public string? Log { get; set; }
     }
 
     [Verb("workspace", HelpText = "Set up the workspace, convert the game's assets into it, show whether they are current, or make a scratch workspace for tests.")]

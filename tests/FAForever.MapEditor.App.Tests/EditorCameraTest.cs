@@ -174,5 +174,23 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(tilted[1].X - tilted[0].X > tilted[2].X - tilted[3].X, "a trapezoid: wider far away, at the top");
             Assert.IsTrue(tilted[0].Y < 256 && tilted[3].Y > tilted[0].Y);
         }
+
+        [TestMethod]
+        public void LookingWithAYawTurnsWhatTheCameraShows()
+        {
+            foreach (float pitch in new[] { 90f, 40f })
+            {
+                EditorCamera camera = Flat();
+                camera.Look(pitch: pitch);
+                Matrix4x4 before = camera.ViewProjection(1.5f);
+
+                camera.Look(yaw: 90);
+
+                Assert.AreEqual(90, camera.Now.Yaw, $"at once, at pitch {pitch}");
+                Assert.AreNotEqual(before, camera.ViewProjection(1.5f), $"the frame turns at pitch {pitch}");
+                Vector4 east = Vector4.Transform(new Vector4(400, 0, 256, 1), camera.ViewProjection(1.5f));
+                Assert.IsTrue(east.Y / east.W > 0.1f || east.Y / east.W < -0.1f, "east lies above or below the middle after a quarter turn");
+            }
+        }
     }
 }

@@ -4,12 +4,12 @@ using MediatR;
 namespace FAForever.MapEditor.App.Commands;
 
 /// <summary>
-/// Centres the top view on a place of the map (user story V-1).
+/// Centres the top view on a place of the map and zooms it (user story V-1).
 /// </summary>
-/// <param name="X">In ogrids.</param>
+/// <param name="X">In ogrids; left out with <paramref name="Z"/>, the place in the middle of the view stays there.</param>
 /// <param name="Zoom">Screen pixels per ogrid; left out, the zoom stays.</param>
 [EditorCommand("view.zoomTo", "Centre the top view on a place", Story = "V-1")]
-public sealed record ZoomTopView(double X, double Z, double? Zoom = null) : IRequest;
+public sealed record ZoomTopView(double? X = null, double? Z = null, double? Zoom = null) : IRequest;
 
 public sealed class ZoomTopViewHandler(MainViewModel model) : IRequestHandler<ZoomTopView>
 {

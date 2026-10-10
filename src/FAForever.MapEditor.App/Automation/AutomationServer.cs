@@ -89,6 +89,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
     {
         int status = 200;
         JsonNode response;
+        byte[] bytes;
         try
         {
             string body = context.Request.HasEntityBody
@@ -101,14 +102,18 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             }
             string command = context.Request.Url!.AbsolutePath.Trim('/');
             response = await Dispatcher.UIThread.InvokeAsync(() => RunAsync(command, arguments));
+            // inside the try: an answer that cannot be written (a number that is not finite) is an
+            // error the client gets, never a request left without an answer
+            bytes = Encoding.UTF8.GetBytes(response.ToJsonString(Json));
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             status = 400;
+            Dispatcher.UIThread.Post(() => model.Logger("Automation").LogWarning("An automation command failed: {Reason}", exception.Message));
             response = new JsonObject { ["ok"] = false, ["error"] = exception.Message };
+            bytes = Encoding.UTF8.GetBytes(response.ToJsonString(Json));
         }
 
-        byte[] bytes = Encoding.UTF8.GetBytes(response.ToJsonString(Json));
         context.Response.StatusCode = status;
         context.Response.ContentType = "application/json; charset=utf-8";
         await context.Response.OutputStream.WriteAsync(bytes);
@@ -730,6 +735,11 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
     {
         CommandRun run = await model.Commands.RunAsync(id, arguments, interactive: false);
         result["ran"] = run.Ran;
+        if (run.Why is string why)
+        {
+            // a command that did not run says why, never silently
+            result["why"] = why;
+        }
         if (answer is not null)
         {
             result[answer] = run.Result is null ? null : JsonSerializer.SerializeToNode(run.Result, run.Result.GetType());

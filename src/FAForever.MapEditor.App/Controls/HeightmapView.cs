@@ -116,6 +116,11 @@ public sealed class HeightmapView : Control
     public double Zoom => _zoom;
 
     /// <summary>
+    /// The place of the map (in ogrids) in the middle of the view.
+    /// </summary>
+    public Point Centre => ControlToMap(new Point(Bounds.Width / 2, Bounds.Height / 2));
+
+    /// <summary>
     /// Where a point of the map (in ogrids) is on the control.
     /// </summary>
     public Point MapToControl(double x, double z) => new Point(x * _zoom + _offset.X, z * _zoom + _offset.Y);
@@ -206,6 +211,13 @@ public sealed class HeightmapView : Control
         if (!_fitted)
         {
             Fit();
+        }
+        else
+        {
+            // the place in the middle stays there: a view centred while it was hidden (no size
+            // yet) or before the dock grew is still centred on it
+            _offset += new Vector((e.NewSize.Width - e.PreviousSize.Width) / 2, (e.NewSize.Height - e.PreviousSize.Height) / 2);
+            InvalidateVisual();
         }
     }
 

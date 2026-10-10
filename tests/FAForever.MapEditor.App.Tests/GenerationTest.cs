@@ -174,15 +174,15 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(item.IsWarning);
             Assert.IsTrue(model.Problems.Warnings > 0);
             Assert.AreEqual($"Problems ({model.Problems.Warnings})", model.Problems.Header);
-            (double X, double Z, double? Zoom)? shown = null;
+            (double? X, double? Z, double? Zoom)? shown = null;
             model.TopViewRequested += (x, z, zoom) => shown = (x, z, zoom);
 
             CommandRun run = await Run(model, "problems.show", new JsonObject { ["index"] = item.Index });
 
             Assert.IsTrue((bool)run.Result!);
             CollectionAssert.AreEqual(new[] { ObjectRef.Marker(spawn.Id) }, model.Selection.Items.ToArray());
-            Assert.AreEqual(spawn.Position.X, shown!.Value.X, 1e-3);
-            Assert.AreEqual(spawn.Position.Z, shown.Value.Z, 1e-3);
+            Assert.AreEqual(spawn.Position.X, shown!.Value.X!.Value, 1e-3);
+            Assert.AreEqual(spawn.Position.Z, shown.Value.Z!.Value, 1e-3);
             Assert.AreEqual(MainViewModel.ProblemZoom, shown.Value.Zoom);
             Assert.AreEqual(item.Message, model.Status);
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "problems.show", new JsonObject { ["index"] = 99 }));
