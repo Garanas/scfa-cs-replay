@@ -195,6 +195,29 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   one of the workspace's assets. Its `Key` is the same for every spelling of the path and its
   `Version` changes with the file, so a view can keep one copy per texture and reload it.
 - `faf-map workspace init|convert|status` does the same without the editor.
+- **Presets** (user story F-10): `presets/<kind>/<name>.json` (`Workspace.Presets`, a
+  `PresetLibrary`), a folder per kind (lower-case letters, digits and dashes: `brush`, `lighting`,
+  `water`, `units`, `markers`, `props-palette`) and a file per preset (`PresetDto`: format version,
+  kind, name, settings). The settings are a JSON object whose shape the feature of the kind owns:
+  `Preset.Of(kind, name, record)` writes a record of its own as the editor writes JSON, and
+  `preset.Read<T>()` reads it back. The file name is the name with the characters a file name
+  cannot hold made dashes; the name itself is in the file. The library keeps nothing in memory:
+  every call reads the folder, so presets other tools or editors write show at once; `List` leaves
+  out a file it cannot read and names it.
+
+## Generated results
+
+Something made from the map when asked (user story F-7: walkability, the normal map and
+preview, props or masks from rules) is an `IGenerator` (`Generation/GeneratedResults`): its id,
+title, story, its inputs (`GeneratedInput`: a named part of the document, `Heightmap`, `Water`,
+`Markers`, ...) and `Generate(document)`. `GeneratedResults` keeps the generators and the last
+result of each; a `GeneratedResult` holds the parts of the version it was made from, and since
+versions share what they do not change, `ChangedInputs(document)` is a few reference comparisons
+(an undo back to that version makes it current again). `States` tells per generator `Missing`,
+`Stale` or `Current`; nothing generates by itself. A generator that runs on a pool thread makes
+its result with `GeneratedResult.Of(generator, document, value)` from the version it started
+with and hands it to `Keep`. Results live in memory only; keeping them in the project is for the
+generators that need it.
 
 ## Tests
 

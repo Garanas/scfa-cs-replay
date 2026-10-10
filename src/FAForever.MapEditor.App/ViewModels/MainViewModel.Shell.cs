@@ -230,6 +230,8 @@ public sealed partial class MainViewModel
         }
 
         Assets.PropertyChanged += OnAssetsChanged;
+        Presets.Register(BrushPreset.Of(this));
+        Symmetry.Changed += (_, _) => RefreshOverlays();
         foreach (IMapTool tool in _tools.Values)
         {
             if (tool is INotifyPropertyChanged settings)
@@ -273,6 +275,7 @@ public sealed partial class MainViewModel
             "markers" => new OverlayItem(overlay, () => ShowMarkers, value => ShowMarkers = value),
             "pathNodes" => new OverlayItem(overlay, () => ShowPathNodes, value => ShowPathNodes = value),
             "camera" => new OverlayItem(overlay, () => ShowCamera, value => ShowCamera = value),
+            "symmetry" => new OverlayItem(overlay, () => ShowSymmetry, value => ShowSymmetry = value),
             _ => new OverlayItem(overlay, () => false, null),
         })];
         foreach (OverlayDefinition overlay in EditorOverlays.All)
@@ -304,6 +307,7 @@ public sealed partial class MainViewModel
         }
         SelectedMode = mode;
         Assets.FollowMode(id);
+        Presets.FollowMode(mode.Definition);
         Tools = [.. mode.Definition.Tools.Select(tool => new ToolItem(tool, _tools.GetValueOrDefault(tool.Id)))];
         OnPropertyChanged(nameof(Tools));
         SelectTool(mode.LastTool ?? mode.Definition.Tools[0].Id);

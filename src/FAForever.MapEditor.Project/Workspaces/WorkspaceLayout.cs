@@ -8,6 +8,7 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// workspace.json         where the game, FAF's data and the vault are (WorkspaceDto)
     /// projects/              the map projects (MapProjectLayout)
     /// brushes/               the map maker's brush shapes: greyscale PNGs, in folders as they like
+    /// presets/               saved settings to apply again: a folder per kind, a JSON file each (PresetLibrary)
     /// templates/, plugins/   the user's own, for later
     /// assets/                converted from the game's archives; made again whenever they change
     ///   manifest.json        what they were converted from, and by which editor (AssetManifestDto)
@@ -22,6 +23,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         public const string Settings = "workspace.json";
         public const string Projects = "projects";
         public const string Brushes = "brushes";
+        public const string Presets = "presets";
         public const string Templates = "templates";
         public const string Plugins = "plugins";
         public const string Assets = "assets";
@@ -32,7 +34,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <summary>
         /// The folders a new workspace starts with.
         /// </summary>
-        public static readonly IReadOnlyList<string> Folders = [Projects, Brushes, Templates, Plugins];
+        public static readonly IReadOnlyList<string> Folders = [Projects, Brushes, Presets, Templates, Plugins];
 
         /// <summary>
         /// Where the conversion puts the file of a game path, relative to <see cref="Assets"/>:

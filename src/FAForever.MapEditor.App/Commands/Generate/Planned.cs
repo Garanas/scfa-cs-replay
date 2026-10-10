@@ -17,7 +17,3 @@ public sealed record GenerateMasks : IRequest;
 [Incomplete("S-4", "Generate the normal map and the preview from the terrain")]
 [EditorCommand("generate.normalMap", "Normal map and preview", Story = "S-4")]
 public sealed record GenerateNormalMap : IRequest;
-
-[Incomplete("F-7", "Generate everything whose inputs changed")]
-[EditorCommand("generate.stale", "Everything out of date", Story = "F-7")]
-public sealed record GenerateStale : IRequest;

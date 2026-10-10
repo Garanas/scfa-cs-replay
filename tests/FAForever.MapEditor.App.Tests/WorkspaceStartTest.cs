@@ -174,5 +174,30 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.IsTrue(Directory.EnumerateDirectories(Path.Combine(machine.Vault, "maps")).Any(), model.Status);
         }
+
+        [TestMethod]
+        public async Task TheWorkspaceOpensWithItsPresetsAndReadsThemAgainWhenTheyChange()
+        {
+            Machine machine = NewMachine();
+            MainViewModel model = machine.NewEditor();
+            List<string> opened = [];
+            model.Events.WorkspaceOpened += workspace => opened.Add(workspace.Folder);
+            await model.StartAsync(machine.Settings);
+            model.Setup.Folder = machine.WorkspaceFolder;
+            Assert.IsTrue(await model.Setup.SetUpAsync(), model.Setup.Error);
+
+            CollectionAssert.AreEqual(new[] { Path.GetFullPath(machine.WorkspaceFolder) }, opened);
+            Assert.AreEqual(Path.Combine(Path.GetFullPath(machine.WorkspaceFolder), WorkspaceLayout.Presets), model.Presets.Library!.Folder);
+            Assert.AreEqual("brush", model.Presets.Kind);
+            Assert.AreEqual(0, model.Presets.Shown.Count);
+
+            // another tool, or another editor, writes a preset into the workspace
+            model.Setup.Workspace!.Presets.Save(new Preset("brush", "Shared ridge", new System.Text.Json.Nodes.JsonObject { ["tool"] = "sculpt" }));
+            for (int i = 0; i < 100 && model.Presets.Shown.Count == 0; i++)
+            {
+                await Task.Delay(50);
+            }
+            Assert.AreEqual("Shared ridge", model.Presets.Shown.Single().Name);
+        }
     }
 }

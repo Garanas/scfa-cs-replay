@@ -625,5 +625,57 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(name.IsEffectivelyVisible, "the inspector shows the mode again");
             window.Close();
         });
+
+        [TestMethod]
+        public Task TheSymmetryChoiceDrawsItsGuidesInTheTopView() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.Top);
+            model.ShowCamera = false;
+            window.CaptureRenderedFrame();
+            byte[] TopView()
+            {
+                using RenderTargetBitmap picture = new RenderTargetBitmap(new PixelSize((int)window.MapView.Bounds.Width, (int)window.MapView.Bounds.Height));
+                picture.Render(window.MapView);
+                return Png(picture);
+            }
+            byte[] off = TopView();
+            ComboBox choice = window.GetVisualDescendants().OfType<ComboBox>()
+                .Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Symmetry");
+
+            choice.SelectedItem = model.Symmetry.Choices.Single(item => item.Title == "Rotational, 4 players");
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.AreEqual(4, model.Symmetry.Chosen.Count);
+            CollectionAssert.AreNotEqual(off, TopView(), "the guides are drawn over the map");
+            model.ShowSymmetry = false;
+            CollectionAssert.AreEqual(off, TopView(), "the overlay hides them");
+            await model.Commands.RunAsync("select.symmetry", [], interactive: false);
+            Assert.AreEqual(SymmetryChoice.Off, choice.SelectedItem, "the choice follows the command");
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task TheBrushPresetsOfThePanelSaveAndApply() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            model.Presets.Use(new Project.Workspaces.PresetLibrary(Path.Combine(AppContext.BaseDirectory, "presets", Guid.NewGuid().ToString("N"))));
+            model.SelectTool("terrain.sculpt");
+            SculptTool sculpt = model.Tool<SculptTool>();
+            sculpt.Radius = 25;
+            Dispatcher.UIThread.RunJobs();
+            Button Named(string name) => window.GetVisualDescendants().OfType<Button>()
+                .Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == name);
+
+            Click(window, Named("Save the settings as a preset"));
+            Assert.AreEqual("Raise 25", model.Presets.Shown.Single().Name);
+            sculpt.Radius = 3;
+            Click(window, Named("Apply the preset Raise 25"));
+
+            Assert.AreEqual(25, sculpt.Radius);
+            Click(window, Named("Delete the preset Raise 25"));
+            Assert.AreEqual(0, model.Presets.Shown.Count);
+            window.Close();
+        });
     }
 }

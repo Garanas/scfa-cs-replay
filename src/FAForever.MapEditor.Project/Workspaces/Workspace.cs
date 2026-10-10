@@ -37,6 +37,16 @@ namespace FAForever.MapEditor.Project.Workspaces
         public string BrushesFolder => Path.Combine(Folder, WorkspaceLayout.Brushes);
 
         /// <summary>
+        /// The saved settings to apply again (user story F-10), a folder per kind.
+        /// </summary>
+        public string PresetsFolder => Path.Combine(Folder, WorkspaceLayout.Presets);
+
+        /// <summary>
+        /// The presets of <see cref="PresetsFolder"/>.
+        /// </summary>
+        public PresetLibrary Presets => new PresetLibrary(PresetsFolder);
+
+        /// <summary>
         /// Where maps are exported to: the vault's <c>maps</c> folder, where the game and the FAF
         /// client find them.
         /// </summary>
