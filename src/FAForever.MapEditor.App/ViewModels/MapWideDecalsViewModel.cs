@@ -203,7 +203,7 @@ public sealed partial class MapWideDecalsViewModel : ObservableObject
     /// </summary>
     public const string PreviewPath = "editor:wide/";
 
-    // the ids of the entries (view.inspectPart)
+    // the ids of the entries (view.inspectPart); the Procedural mode's are its list's (ProceduralListViewModel)
     public const string AlbedoPart = "decals.wideAlbedo";
     public const string NormalPart = "decals.wideNormal";
     public const string ShadowPart = "decals.wideShadow";
@@ -236,13 +236,7 @@ public sealed partial class MapWideDecalsViewModel : ObservableObject
             new PanelPart(NormalPart, Normal.Title, "Map-wide decals", Normal, Normal.Help),
             new PanelPart(ShadowPart, Shadow.Title, "Map-wide decals", Shadow, Shadow.Help),
         ]);
-        ProceduralParts = new PanelParts(
-        [
-            new PanelPart(ProceduralNormalPart, Normal.Title, "Map-wide decals", Normal, Normal.Help),
-            new PanelPart(ProceduralShadowPart, Shadow.Title, "Map-wide decals", Shadow, Shadow.Help),
-        ]);
         DecalList = new MapWideList([.. Parts.Items.Select(part => new MapWideRow(part, (MapWideSlotViewModel)part.Content, Parts))], Parts);
-        ProceduralList = new MapWideList([.. ProceduralParts.Items.Select(part => new MapWideRow(part, (MapWideSlotViewModel)part.Content, ProceduralParts))], ProceduralParts);
     }
 
     public MapWideSlotViewModel Albedo { get; }
@@ -259,19 +253,9 @@ public sealed partial class MapWideDecalsViewModel : ObservableObject
     public PanelParts Parts { get; }
 
     /// <summary>
-    /// The Procedural mode's list: the generated two.
-    /// </summary>
-    public PanelParts ProceduralParts { get; }
-
-    /// <summary>
     /// The Decals panel's rows.
     /// </summary>
     public MapWideList DecalList { get; }
-
-    /// <summary>
-    /// The Procedural panel's rows.
-    /// </summary>
-    public MapWideList ProceduralList { get; }
 
     /// <summary>
     /// Raised when what the views draw of the map-wide decals changed.
@@ -299,7 +283,7 @@ public sealed partial class MapWideDecalsViewModel : ObservableObject
             slot.IsGenerating = slot.GeneratorId is string id && _generation.IsRunning(id);
             (slot.Status, slot.Preview) = StateOf(slot, document);
         }
-        foreach (PanelPart part in Parts.Items.Concat(ProceduralParts.Items))
+        foreach (PanelPart part in Parts.Items)
         {
             part.Detail = ((MapWideSlotViewModel)part.Content).Detail;
         }
@@ -487,7 +471,6 @@ public sealed partial class MapWideDecalsViewModel : ObservableObject
             },
             ["drawn"] = new System.Text.Json.Nodes.JsonArray([.. _wide.Select(decal => (System.Text.Json.Nodes.JsonNode)System.Text.Json.Nodes.JsonValue.Create($"{decal.Type}: {decal.Textures[0]}"))]),
             ["chosen"] = Parts.Chosen.Id,
-            ["chosenProcedural"] = ProceduralParts.Chosen.Id,
         };
     }
 

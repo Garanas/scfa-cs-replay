@@ -11,11 +11,6 @@ using FAForever.MapEditor.Project.Generation;
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
-/// The Procedural panel's part for path networks.
-/// </summary>
-public sealed record PathNetworkSection() : PanelSection("Path networks");
-
-/// <summary>
 /// A node of the previewed network as the views and the edit tool see it.
 /// </summary>
 /// <param name="Index">Its place in its layer's network.</param>

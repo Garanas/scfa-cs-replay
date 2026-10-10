@@ -5,6 +5,7 @@
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              xmlns:decalpanels="using:FAForever.MapEditor.App.Views.DecalPanels"
+             xmlns:procedural="using:FAForever.MapEditor.App.Views.ProceduralPanels"
              x:Class="FAForever.MapEditor.App.Views.MapPanels.PanelPartView"
              x:DataType="vm:PanelParts">
   <StackPanel>
@@ -36,6 +37,13 @@
         <!-- a map-wide decal (D-1): the Decals, Lighting and Procedural panels list it -->
         <DataTemplate DataType="vm:MapWideSlotViewModel">
           <decalpanels:MapWideSlotView />
+        </DataTemplate>
+        <!-- a generated result of the Procedural mode, and its export's steps (wave 10D) -->
+        <DataTemplate DataType="vm:ProceduralPart">
+          <procedural:ProceduralPartView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:ProceduralExportPart">
+          <procedural:ExportStepsPanel DataContext="{Binding Model}" />
         </DataTemplate>
         <DataTemplate DataType="vm:PlannedPart">
           <Border Classes="group">

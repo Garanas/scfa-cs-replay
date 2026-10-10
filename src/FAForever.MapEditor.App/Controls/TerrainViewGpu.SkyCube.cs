@@ -109,7 +109,7 @@ public sealed partial class TerrainViewGpu : ISkyCubeFaces
             _gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
             for (int side = 0; side < 6; side++)
             {
-                _gl.ClearColor(0, 0, 0, 1);
+                // the sky covers every pixel: the colour cleared is the frame's
                 _gl.ClearDepth(1);
                 _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                 _renderer.Render(drawn, FaceViewProjection(side, job.Eye, 0.5f, far), path => _model.WideDecals.TextureOf(path) ?? FindTexture(path, job.Document, workspace),

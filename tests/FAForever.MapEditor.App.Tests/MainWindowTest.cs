@@ -987,6 +987,11 @@ namespace FAForever.MapEditor.App.Tests
 
             model.SelectMode("procedural");
             Dispatcher.UIThread.RunJobs();
+            // the panel lists the path networks; choosing the entry shows them in the inspector
+            window.GetVisualDescendants().OfType<Button>().Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == "Path networks").Command!.Execute(
+                window.GetVisualDescendants().OfType<Button>().Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == "Path networks").CommandParameter);
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual("procedural.pathNodes", model.ActiveTool!.Definition.Id, "the entry picks its tool");
             Button generate = window.GetVisualDescendants().OfType<Button>().Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == "Generate path networks");
             Assert.IsTrue(generate.IsEffectivelyVisible, "the Procedural panel offers the path networks");
             int nodes = model.ShownDocument.Markers.PathNodes.Length;

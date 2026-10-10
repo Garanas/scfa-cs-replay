@@ -9,18 +9,6 @@ using FAForever.MapEditor.Project.Generation;
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
-/// The Procedural mode's panel section of the sky cube map (<c>Views/ProceduralPanels/SkyCubePanel</c>):
-/// its preview, how it stands and Generate.
-/// </summary>
-public sealed record SkyCubeProceduralSection() : PanelSection("Sky cube map");
-
-/// <summary>
-/// The Procedural inspector's part of the sky cube map (<c>Views/ProceduralPanels/SkyCubeView</c>):
-/// its settings, its sky, and Use.
-/// </summary>
-public sealed record SkyCubeDetailsSection() : PanelSection("Sky cube map");
-
-/// <summary>
 /// The sky cube map made from the map (user story L-1): six faces seen from above the map's middle,
 /// the map's sky above the horizon and the map with its water below, written into the project's
 /// <c>env/</c> (<see cref="SkyCubeMaps.FilePath"/>) and chosen with one click as the sky's, the
@@ -29,11 +17,6 @@ public sealed record SkyCubeDetailsSection() : PanelSection("Sky cube map");
 /// </summary>
 public sealed partial class SkyCubeViewModel : ObservableObject
 {
-    /// <summary>
-    /// The id of its entry (<c>view.inspectPart</c> once the Procedural mode lists its parts).
-    /// </summary>
-    public const string PartId = "procedural.skyCube";
-
     private readonly Func<string, JsonObject, Task> _run;
     private readonly GenerationViewModel _generation;
     private readonly Func<MapDocument?> _document;
@@ -64,8 +47,6 @@ public sealed partial class SkyCubeViewModel : ObservableObject
                 Help = "Draw the sun as a disc where the lighting says it is",
             },
         ]);
-        Part = new PanelPart(PartId, "Sky cube map", "Generated from the map", this, Help);
-        Parts = new PanelParts([Part]);
     }
 
     public string Help => "Six faces seen from above the map's middle: the map's sky above the horizon, the map and its water below. Use it as the sky's, the units' and the water's cube map, so reflections show this map's colours";
@@ -74,16 +55,6 @@ public sealed partial class SkyCubeViewModel : ObservableObject
     /// The resolution, eye height, terrain and sun disc.
     /// </summary>
     public SettingGroup Settings { get; }
-
-    /// <summary>
-    /// Its entry, for the Procedural mode's list.
-    /// </summary>
-    public PanelPart Part { get; }
-
-    /// <summary>
-    /// A list of its one entry, so the panel's row looks and chooses as the other entries do.
-    /// </summary>
-    public PanelParts Parts { get; }
 
     /// <summary>
     /// The generated faces, small, as a strip of six; null before it is generated in this session.
@@ -124,15 +95,9 @@ public sealed partial class SkyCubeViewModel : ObservableObject
     public partial bool IsUsed { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(GenerateText))]
     public partial bool IsGenerating { get; private set; }
 
     public bool CanUse => HasFile && !IsUsed;
-
-    public string GenerateText => IsGenerating ? "Generating..." : HasFile ? "Generate again" : "Generate";
-
-    [RelayCommand]
-    private Task GenerateNow() => _run("generate.skyCube", []);
 
     [RelayCommand]
     private Task UseEverywhere() => _run("generate.useSkyCube", []);
@@ -158,7 +123,6 @@ public sealed partial class SkyCubeViewModel : ObservableObject
         if (document is null)
         {
             (Status, SkyLine, UseLine, HasFile, IsUsed, Preview) = ("", "", "", false, false, null);
-            Part.Detail = "";
             return;
         }
         HasFile = document.Files.ContainsKey(SkyCubeMaps.FilePath);
@@ -186,7 +150,6 @@ public sealed partial class SkyCubeViewModel : ObservableObject
         UseLine = !HasFile ? "Generate it, then use it for the sky, the units and the water"
             : users.Length == 0 ? "Not used yet: Use makes it the sky's, the units' and the water's cube map"
             : $"Used by {string.Join(", ", users)}; the export copies it with the map";
-        Part.Detail = !HasFile ? "not generated" : IsUsed ? "in use" : state?.Status == GeneratedStatus.Stale ? "out of date" : "generated";
     }
 
     private static string Count(int count, string what) => count == 1 ? $"1 {what}" : $"{count} {what}s";

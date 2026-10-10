@@ -172,10 +172,12 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeInspectorParts();
         InitializeProcedural();
         InitializeWideDecals();
+        InitializeProceduralParts();
         InitializeSkyCube();
         InitializePanelParts();
         InitializeCoverageStacks();
         InitializeHelp();
+        InitializeDdsTextures();
         Plugins = new PluginsViewModel(this);
     }
 

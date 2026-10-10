@@ -54,7 +54,7 @@ namespace FAForever.MapEditor.App.Tests
 
             CollectionAssert.AreEqual(new[] { "Map-wide decals", "Decal groups" }, decals.Sections.Select(section => section.Title).ToArray());
             Assert.IsInstanceOfType<MapWideDecalDetailsSection>(decals.Inspector.Single());
-            Assert.IsInstanceOfType<MapWideProceduralDetailsSection>(EditorModes.All.Single(mode => mode.Id == "procedural").Inspector.First());
+            Assert.IsInstanceOfType<ProceduralDetailsSection>(EditorModes.All.Single(mode => mode.Id == "procedural").Inspector.Single());
         }
 
         [TestMethod]
@@ -63,7 +63,8 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = await Open();
 
             CollectionAssert.AreEqual(new[] { "Albedo", "Normal decal", "Shadow decal" }, model.WideDecals.Parts.Items.Select(part => part.Title).ToArray());
-            CollectionAssert.AreEqual(new[] { "Normal decal", "Shadow decal" }, model.WideDecals.ProceduralParts.Items.Select(part => part.Title).ToArray());
+            Assert.AreSame(model.WideDecals.Normal, model.ProceduralList.PartOf(NormalDecalGenerator.GeneratorId)!.Details);
+            Assert.AreSame(model.WideDecals.Shadow, model.ProceduralList.PartOf(ShadowDecalGenerator.GeneratorId)!.Details);
             Assert.AreSame(model.WideDecals.Shadow, model.LightingSettings.Parts.Find(LightingSettingsViewModel.ShadowDecalPart)!.Content);
             Assert.IsTrue(model.WideDecals.Slots.All(slot => slot.Slot.Source == MapWideSource.None), "an imported map has none");
             Assert.AreEqual("none", model.WideDecals.Parts.Find(MapWideDecalsViewModel.ShadowPart)!.Detail);
@@ -73,6 +74,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(MapWideDecalsViewModel.ShadowPart, model.WideDecals.Parts.Chosen.Id);
             await Run(model, "view.inspectPart", new JsonObject { ["part"] = MapWideDecalsViewModel.ProceduralShadowPart });
             Assert.AreEqual("procedural", model.SelectedMode!.Definition.Id);
+            Assert.AreEqual(MapWideDecalsViewModel.ProceduralShadowPart, model.ProceduralList.Parts.Chosen.Id);
         }
 
         [TestMethod]

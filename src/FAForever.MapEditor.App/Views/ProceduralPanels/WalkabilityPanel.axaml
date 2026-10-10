@@ -1,4 +1,4 @@
-<!-- Walkability's choices in the Procedural mode (T-7): the layer of units the views show, what changed since the time before. -->
+<!-- Walkability's choices in the Procedural inspector (T-7): the layer of units the views show, what changed since the time before. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -7,7 +7,7 @@
              x:DataType="vm:MainViewModel">
   <Border Classes="group" IsVisible="{Binding HasMap}">
     <StackPanel Classes="stack">
-      <TextBlock Classes="overline" Text="{Binding Source=Walkability, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <TextBlock Classes="overline" Text="{Binding Source=Shown in the views, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
       <DockPanel>
         <TextBlock DockPanel.Dock="Left" Classes="label" Text="Units" VerticalAlignment="Center" />
         <ComboBox Margin="{StaticResource InlineGap}" HorizontalAlignment="Stretch" ItemsSource="{Binding Walkability.Layers}" SelectedItem="{Binding Walkability.Layer}"

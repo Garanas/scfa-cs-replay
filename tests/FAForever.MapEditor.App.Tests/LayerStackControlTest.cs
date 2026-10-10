@@ -167,13 +167,40 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreNotSame(before, sculpt.Preview);
 
             // the tool tip holds the same picture larger
-            ImagePreview large = (ImagePreview)ToolTip.GetTip(basePreview)!;
+            ImagePreview large = (ImagePreview)((ToolTip)ToolTip.GetTip(basePreview)!).Content!;
             Assert.AreSame(basePreview.Picture, large.Picture);
             Assert.AreEqual(512, large.Width);
             large.Measure(new Size(512, 512));
             large.Arrange(new Rect(0, 0, 512, 512));
             HeadlessApp.SaveCapture(HeadlessApp.Capture(large), "height-layer-preview-large");
             HeadlessApp.SaveCapture(HeadlessApp.Capture(window), "height-layers-panel");
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task TheLargePreviewInItsToolTipIsSquareAndWhole() => HeadlessApp.Run(async () =>
+        {
+            MainViewModel model = new MainViewModel(new MainViewModelTest.Answers { SaveChoice = SaveChoice.Discard });
+            await model.OpenAsync(HardFfa);
+            MainWindow window = new MainWindow { DataContext = model, Width = 1280, Height = 800 };
+            window.Show();
+            model.SelectMode("terrain");
+            Dispatcher.UIThread.RunJobs();
+            ImagePreview final = window.GetVisualDescendants().OfType<ImagePreview>()
+                .Single(preview => Avalonia.Automation.AutomationProperties.GetName(preview) == "Preview of the final heightmap");
+
+            // shown as a person's mouse shows it: in the tool tip's own popup, whose theme limits its width
+            ToolTip.SetIsOpen(final, true);
+            Dispatcher.UIThread.RunJobs();
+            Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Dispatcher.UIThread.RunJobs();
+            ImagePreview large = (ImagePreview)((ToolTip)ToolTip.GetTip(final)!).Content!;
+            Assert.IsTrue(large.IsEffectivelyVisible, "the tool tip shows");
+            Assert.AreEqual(large.Bounds.Width, large.Bounds.Height, 1, $"square: {large.Bounds.Width} by {large.Bounds.Height}");
+            Assert.IsTrue(large.Bounds.Width >= 500, $"the large size, not cut by the tool tip's width: {large.Bounds.Width}");
+            Assert.IsTrue(large.GetVisualAncestors().OfType<Control>().All(parent => parent.Bounds.Width >= large.Bounds.Width - 1 || parent is Window),
+                "no parent narrower than the picture cuts it");
+            ToolTip.SetIsOpen(final, false);
             window.Close();
         });
     }

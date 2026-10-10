@@ -43,7 +43,9 @@ reads again when it changes; and nothing that generates runs by itself.
       them again in the order one feeds the next (masks from rules before the props that read
       them, walkability before path networks), so one run leaves nothing out of date; walkability,
       the normal map and the preview are generated this way (T-7, S-4), and so are masks and props
-      from rules (K-2, P-4).
+      from rules (K-2, P-4). The Procedural mode lists every generated result as an entry with how
+      it stands (missing, out of date, current), a picture and Generate; choosing one shows its
+      settings, what it is made from and when it was made in the inspector.
 - [x] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
       missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map
@@ -204,6 +206,13 @@ reads again when it changes; and nothing that generates runs by itself.
       and holds `map_editor = { name, version, commit, project_format, exported }`, which the game,
       the FAF client and the vault's upload check ignore. Missing: map-wide decals and path nodes as
       steps (wave 9).
+- [x] **M-10 Textures as DDS.** The map's own textures in other formats (PNG, JPEG, TGA, ...) are
+      exported as DDS, every reference pointed at them; the project keeps its pictures. Today: the
+      export step `ddsTextures` (after every other step) and `faf-map pack` convert the strata, decals
+      and decal sets, the water's ramp, waves and cube map, the sky's cube maps, background and sky
+      dome, the pictures a Lua file of the map names and every picture in a folder of the map; DDS
+      files and the game's textures are left as they are; a picture converted before comes from a
+      cache by its hash.
 
 ## T: Terrain
 

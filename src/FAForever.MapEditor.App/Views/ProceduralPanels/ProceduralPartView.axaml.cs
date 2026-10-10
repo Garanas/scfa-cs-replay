@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace FAForever.MapEditor.App.Views.ProceduralPanels;
 
-public sealed partial class GeneratedResultsPanel : UserControl
+public sealed partial class ProceduralPartView : UserControl
 {
-    public GeneratedResultsPanel()
+    public ProceduralPartView()
     {
         InitializeComponent();
     }

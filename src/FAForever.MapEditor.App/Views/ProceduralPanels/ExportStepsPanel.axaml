@@ -7,7 +7,7 @@
              x:DataType="vm:MainViewModel">
   <Border Classes="group">
     <StackPanel Classes="stack">
-      <TextBlock Classes="overline" Text="{Binding Source=Export, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <TextBlock Classes="overline" Text="{Binding Source=Steps, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
       <ItemsControl ItemsSource="{Binding Export.Lines}" AutomationProperties.Name="Steps of the export">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:ExportStepState">

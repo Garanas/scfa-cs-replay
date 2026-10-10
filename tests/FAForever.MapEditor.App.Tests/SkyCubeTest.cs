@@ -64,12 +64,17 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public void TheProceduralModeListsItWithItsSettingsInTheInspector()
+        public async Task TheProceduralModeListsItWithItsSettingsInTheInspector()
         {
-            ModeDefinition procedural = EditorModes.All.Single(mode => mode.Id == "procedural");
+            MainViewModel model = await Open();
 
-            Assert.IsTrue(procedural.Sections.OfType<SkyCubeProceduralSection>().Any());
-            Assert.IsTrue(procedural.Inspector.OfType<SkyCubeDetailsSection>().Any());
+            PanelPart part = model.ProceduralList.Parts.Find(ProceduralListViewModel.PartIdOf(SkyCubeGenerator.GeneratorId))!;
+            Assert.AreEqual("Sky cube map", part.Title);
+            Assert.AreEqual("Pictures", part.Group);
+            Assert.AreSame(model.SkyCube, ((ProceduralPart)part.Content).Entry.Details);
+            await Run(model, "view.inspectPart", new JsonObject { ["part"] = part.Id });
+            Assert.AreEqual("procedural", model.SelectedMode!.Definition.Id);
+            Assert.AreEqual(part.Id, model.ProceduralList.Parts.Chosen.Id);
         }
 
         [TestMethod]
@@ -92,7 +97,7 @@ namespace FAForever.MapEditor.App.Tests
             StringAssert.StartsWith(model.SkyCube.Status, "Up to date: 512 pixels a face");
             Assert.IsInstanceOfType<TexturePicture>(model.SkyCube.Preview);
             Assert.IsTrue(model.SkyCube.CanUse);
-            Assert.AreEqual("generated", model.SkyCube.Part.Detail);
+            Assert.IsTrue(model.ProceduralList.PartOf(SkyCubeGenerator.GeneratorId)!.HasPicture, "its entry shows the faces");
             JsonObject state = (JsonObject)run.Result!;
             Assert.AreEqual(512, (int)state["size"]!);
             Assert.AreEqual(SkyCubeMaps.GamePath(document), (string?)state["file"]);
@@ -122,7 +127,6 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("Use the sky cube map for the sky, the units and the water", model.Map.Session.UndoDescription);
             Assert.IsTrue(model.SkyCube.IsUsed);
             Assert.IsFalse(model.SkyCube.CanUse);
-            Assert.AreEqual("in use", model.SkyCube.Part.Detail);
             StringAssert.StartsWith(model.SkyCube.Status, "Up to date", "choosing it for the water leaves it current");
 
             // one of them only
@@ -146,7 +150,6 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(90, model.Map!.Document.Procedural.SkyCube.EyeHeight);
             Assert.AreEqual("Sky cube map: eyeHeight", model.Map.Session.UndoDescription);
             StringAssert.StartsWith(model.SkyCube.Status, "Out of date: sky cube settings changed");
-            Assert.AreEqual("out of date", model.SkyCube.Part.Detail);
             model.Undo();
             Assert.AreEqual(SkyCubeSettings.Default.EyeHeight, model.Map.Document.Procedural.SkyCube.EyeHeight, "the two steps of the same field are one");
 

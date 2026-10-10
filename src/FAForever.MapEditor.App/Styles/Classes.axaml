@@ -749,15 +749,22 @@
   <Style Selector="Button.partentry TextBlock.partdetail.widedecaldetail">
     <Setter Property="Margin" Value="0" />
   </Style>
-  <!-- the sky cube map (L-1): its entry as tall as its preview, its faces in the inspector as a strip -->
-  <Style Selector="Button.partentry.skycubeentry">
-    <Setter Property="Height" Value="{StaticResource WideDecalEntryHeight}" />
+
+  <!-- an entry of the Procedural mode's list (wave 10D): as tall as its picture; its state under its title, a warning when out of date -->
+  <Style Selector="Button.partentry.proceduralentry">
+    <Setter Property="Height" Value="{StaticResource ProceduralEntryHeight}" />
   </Style>
-  <Style Selector="Button.partentry TextBlock.partdetail.skycubedetail">
+  <Style Selector="Button.partentry TextBlock.partdetail.proceduralstate">
     <Setter Property="Margin" Value="0" />
   </Style>
-  <Style Selector="Border.skycubepreview">
-    <Setter Property="Height" Value="{StaticResource SkyCubePreviewHeight}" />
+  <Style Selector="Button.partentry:not(.selected) TextBlock.partdetail.proceduralstate.warning">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <!-- the chosen generated result's picture in the inspector -->
+  <Style Selector="Border.proceduralpicture">
+    <Setter Property="Width" Value="{StaticResource ProceduralPictureSize}" />
+    <Setter Property="Height" Value="{StaticResource ProceduralPictureSize}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
   </Style>
 
   <!-- a list of many short lines: the Console -->

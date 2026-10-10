@@ -39,6 +39,22 @@ public sealed partial class MainViewModel
             }
         };
         SkyCube.Refresh();
+
+        // its entry in the Procedural list, after the preview; the list's common part has its picture and Generate
+        ProceduralList.Describe(new ProceduralEntry(SkyCubeGenerator.GeneratorId, "Pictures")
+        {
+            Details = SkyCube,
+            Picture = (_, _) => SkyCube.Preview,
+            Facts = _ => [SkyCube.SkyLine, SkyCube.UseLine],
+            Help = SkyCube.Help,
+        });
+        SkyCube.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(SkyCubeViewModel.Preview) or nameof(SkyCubeViewModel.SkyLine) or nameof(SkyCubeViewModel.UseLine))
+            {
+                ProceduralList.Refresh();
+            }
+        };
     }
 
     /// <summary>

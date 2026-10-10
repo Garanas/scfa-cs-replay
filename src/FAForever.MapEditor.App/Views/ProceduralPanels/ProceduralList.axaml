@@ -1,0 +1,59 @@
+<!-- The Procedural mode's list (the panel lists, the inspector edits): per generated result under its heading an entry with
+     its picture, title and how it stands (missing, out of date, current), and Generate beside it; the export's steps last.
+     Choosing an entry shows its settings and details in the inspector (ProceduralPartView through PanelPartView). -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.ProceduralPanels.ProceduralList"
+             x:DataType="vm:ProceduralListViewModel">
+  <Border Classes="group">
+    <ItemsControl ItemsSource="{Binding Groups}" AutomationProperties.Name="Generated results">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Classes="stack" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:ProceduralEntryGroup">
+          <StackPanel Classes="partgroup">
+            <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+            <ItemsControl ItemsSource="{Binding Rows}" AutomationProperties.Name="{Binding Title}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Classes="partentries" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ProceduralEntryRow">
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Generate" IsVisible="{Binding IsResult}"
+                            Command="{Binding Result.GenerateCommand, FallbackValue={x:Null}}" IsEnabled="{Binding Result.CanGenerate, FallbackValue=False}"
+                            AutomationProperties.Name="{Binding Result.GenerateLabel, FallbackValue=''}"
+                            AutomationProperties.HelpText="{Binding Result.StatusText, FallbackValue=''}" />
+                    <Button Classes="partentry proceduralentry" Classes.selected="{Binding Part.IsChosen}"
+                            Command="{Binding Parts.ChooseItemCommand}" CommandParameter="{Binding Part}"
+                            ToolTip.Tip="{Binding Part.Help}"
+                            AutomationProperties.Name="{Binding Part.Title}" AutomationProperties.HelpText="{Binding Part.Label}">
+                      <DockPanel>
+                        <Border DockPanel.Dock="Left" Classes="thumbnail imagepreview" IsVisible="{Binding IsResult}">
+                          <controls:ImagePreview Picture="{Binding Result.Picture, FallbackValue={x:Null}}"
+                                                 AutomationProperties.Name="{Binding Result.PictureLabel, FallbackValue=''}" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Part.Title}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Classes="partdetail proceduralstate" Classes.warning="{Binding Result.IsStale, FallbackValue=False}"
+                                     Text="{Binding Part.Detail}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                      </DockPanel>
+                    </Button>
+                  </DockPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </Border>
+</UserControl>
