@@ -18,6 +18,7 @@ namespace FAForever.MapEditor.Project.Workspaces
     ///                        (PropBlueprintDto, UnitBlueprintDto), meshes as glTF (.glb)
     /// assets.new/            a conversion in progress, which replaces assets/ when it is done
     /// .gitignore             keeps assets/ out of git: the game's files are not ours to share
+    /// favourites.json        the assets starred and chosen last, for the shelf and the picker (AssetFavourites)
     /// </code>
     /// </remarks>
     public static class WorkspaceLayout
@@ -32,6 +33,11 @@ namespace FAForever.MapEditor.Project.Workspaces
         public const string AssetsInProgress = "assets.new";
         public const string Manifest = "manifest.json";
         public const string GitIgnore = ".gitignore";
+
+        /// <summary>
+        /// The assets starred and chosen last (<see cref="AssetFavourites"/>, user story F-9).
+        /// </summary>
+        public const string Favourites = "favourites.json";
 
         /// <summary>
         /// The folders a new workspace starts with.

@@ -63,7 +63,7 @@ public static class Menus
             Mode("props", "props.choose", "props.addToPalette", "props.followTerrain", Separator, "props.alignToTerrain", "props.upright", "props.dropToGround", "props.randomize", "props.replace", "props.randomVariant", Separator, "props.reclaim", "props.addRule", "props.keepFromRules"),
             Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack"),
             Mode("units", "units.pick", "units.addGroup", "units.selectGroup", "units.placePreset", "units.asWrecks"),
-            new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.reload", Separator, "assets.brushesFolder"]),
+            new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.star", "assets.reload", Separator, "assets.brushesFolder"]),
         ]),
         new MenuLayout("Generate",
         [

@@ -48,7 +48,7 @@ reads again when it changes; and nothing that generates runs by itself.
       the workspace's own) and the shelf filters by it; its Missing scope lists what the map uses
       that the workspace and the map's own files lack, each leading to its problem. Missing:
       reading one asset again (the whole catalogue is read).
-- [ ] **F-9 Pickers.** One way to choose an asset everywhere: a searchable picker with thumbnails
+- [x] **F-9 Pickers.** One way to choose an asset everywhere: a searchable picker with thumbnails
       and filters, for textures, decals, props and units (see UNT-1). Today: the asset shelf in the
       dock (Ctrl+Shift+A): the kind follows the mode; what the map uses, its biomes or everything;
       biome or faction, category, search; a prop's variants as one tile; pictures of decals and
@@ -57,8 +57,11 @@ reads again when it changes; and nothing that generates runs by itself.
       tech, thumbnails (props and units their mesh), the arrows, Enter and Escape; what it
       chooses shows in the inspector; a command that picks takes the key from automation.
       Dragging a tile onto the top or 3D view hands the asset and its place to the active tool,
-      which places it (P-1, U-2, D-1); the panels' texture fields open the picker (S-2). Missing:
-      stars and recents.
+      which places it (P-1, U-2, D-1); the panels' texture fields open the picker (S-2). Stars and
+      recents: an asset starred in the inspector, the picker or with `assets.star` shows a star on
+      its tile and under Starred, and the assets chosen last (a tile clicked, a picker's choice)
+      under Recent, the newest first, on the shelf and in the picker; kept per workspace in its
+      `favourites.json`.
 - [x] **F-10 Presets.** Save a set of things and place or apply it again: a civilian base (units in
       a group), a brush, a prop palette, a set of markers, a lighting and water setup. Presets are
       files in the workspace, shared like the rest of it. Today: `presets/<kind>/*.json` in the

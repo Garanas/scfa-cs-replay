@@ -269,6 +269,55 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task StarsAndRecentsShowOnTheShelfAndInThePickerAndStayWithTheWorkspace()
+        {
+            (MainViewModel model, Workspace workspace) = await OpenInWorkspace("props.place");
+            AssetsViewModel shelf = model.Assets;
+            const string rock = "env/evergreen/props/rocks/rock01_prop.bp";
+
+            CommandRun starred = await Run(model, "assets.star", new JsonObject { ["key"] = rock });
+            Assert.IsTrue(((JsonObject)starred.Result!)["starred"]!.GetValue<bool>());
+            Assert.IsTrue(File.Exists(Path.Combine(workspace.Folder, WorkspaceLayout.Favourites)), "kept in the workspace");
+            shelf.Kind = AssetKind.Prop;
+            shelf.Scope = AssetScope.Starred;
+            Assert.AreEqual(rock, shelf.Tiles.Single().Entry.Key, "the shelf's Starred shows it");
+            Assert.IsTrue(shelf.Tiles.Single().IsStarred);
+            Assert.AreEqual(1, shelf.StarredCount);
+
+            // what is chosen is the newest of the recents
+            await Run(model, "assets.pick", new JsonObject { ["key"] = "/env/evergreen/props/trees/oak01_prop.bp" });
+            shelf.Scope = AssetScope.Recent;
+            Assert.AreEqual("env/evergreen/props/trees/oak01_prop.bp", shelf.Tiles[0].Entry.Key);
+            shelf.Scope = AssetScope.Everything;
+            AssetTile pine = shelf.Tiles.First(tile => tile.Entry.Key.Contains("pine06"));
+            shelf.ChooseTileCommand.Execute(pine);
+            Assert.AreEqual(pine.Entry.Key, shelf.Favourites.Recent[0], "a tile clicked on the shelf too");
+            Assert.AreEqual("Star", shelf.ShownStarText);
+            await Run(model, "assets.star");
+            Assert.AreEqual("Starred", shelf.ShownStarText, "the inspector's star is the shown asset's");
+
+            // the picker: Starred and Recent, a star of its own, a choice noted
+            AssetPickerViewModel picker = model.Picker;
+            Task<string?> picking = picker.PickAsync(AssetKind.Prop);
+            CollectionAssert.AreEqual(new[] { "Starred 2", "Recent 2" }, picker.Shows.Select(choice => choice.Text).ToArray());
+            picker.ChooseShowCommand.Execute(picker.Shows[0]);
+            Assert.AreEqual(2, picker.Tiles.Count, "the starred props");
+            Assert.IsTrue(picker.Tiles.All(tile => tile.IsStarred));
+            picker.Select(picker.Tiles.Single(tile => tile.Entry.Key == rock));
+            picker.ToggleStar();
+            Assert.AreEqual(1, picker.Tiles.Count, "its star taken away, it leaves Starred");
+            picker.Choose(picker.Tiles[0]);
+            Assert.AreEqual(await picking, shelf.Favourites.Recent[0], "the choice is the newest of the recents");
+
+            // another editor in the same workspace sees them
+            AssetsViewModel other = new AssetsViewModel(Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+            other.OpenFavourites(workspace);
+            CollectionAssert.AreEqual(shelf.Favourites.Starred.ToArray(), other.Favourites.Starred.ToArray());
+            CollectionAssert.AreEqual(shelf.Favourites.Recent.ToArray(), other.Favourites.Recent.ToArray());
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "assets.star", new JsonObject { ["key"] = "nothing" }));
+        }
+
+        [TestMethod]
         public async Task SavingNeedsASelection()
         {
             MainViewModel model = await Open();

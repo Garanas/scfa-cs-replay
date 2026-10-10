@@ -676,6 +676,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["paletteResults"] = PaletteState(),
             ["selectionPreset"] = model.Tool<SelectionPresetTool>().Describe(),
             ["stamp"] = model.Tool<StampTool>().Describe(),
+            ["favourites"] = model.Assets.DescribeFavourites(),
         };
     }
 

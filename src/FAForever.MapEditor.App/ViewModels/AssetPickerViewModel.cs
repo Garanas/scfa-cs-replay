@@ -69,6 +69,33 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
     public partial string? Tech { get; set; }
 
     /// <summary>
+    /// The shelf, whose stars and recents the picker offers and notes (user story F-9); null in
+    /// tests of the picker alone.
+    /// </summary>
+    public AssetsViewModel? Shelf { get; set; }
+
+    /// <summary>
+    /// Whether only the starred (<c>starred</c>) or the recent (<c>recent</c>) assets show; null for all.
+    /// </summary>
+    [ObservableProperty]
+    public partial string? Show { get; set; }
+
+    /// <summary>
+    /// The choices of <see cref="Show"/>, with how many each shows.
+    /// </summary>
+    public IReadOnlyList<AssetChoice> Shows { get; private set; } = [];
+
+    /// <summary>
+    /// Whether the selected asset is starred.
+    /// </summary>
+    public bool SelectedStarred => Selected is AssetTile tile && Shelf?.Favourites.IsStarred(tile.Entry.Key) == true;
+
+    /// <summary>
+    /// What the star button says.
+    /// </summary>
+    public string StarText => SelectedStarred ? "Starred" : "Star";
+
+    /// <summary>
     /// How many tiles fit in a row, as the view measures it.
     /// </summary>
     [ObservableProperty]
@@ -78,7 +105,7 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
     /// The tile the keyboard is on, which Enter chooses; null when nothing matches.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelection), nameof(SelectionText))]
+    [NotifyPropertyChangedFor(nameof(HasSelection), nameof(SelectionText), nameof(SelectedStarred), nameof(StarText))]
     public partial AssetTile? Selected { get; private set; }
 
     public bool HasSelection => Selected is not null;
@@ -160,6 +187,7 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
         Group = null;
         Category = null;
         Tech = null;
+        Show = null;
         _rebuilding = false;
         Rebuild();
         if (current is not null && catalog().Find(current) is AssetEntry entry && Tiles.FirstOrDefault(tile => tile.Entry == entry) is AssetTile tile)
@@ -245,6 +273,39 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
     [RelayCommand]
     private void ChooseTech(AssetChoice choice) => Tech = choice.IsOn ? null : choice.Value;
 
+    [RelayCommand]
+    private void ChooseShow(AssetChoice choice) => Show = choice.IsOn ? null : choice.Value;
+
+    /// <summary>
+    /// Stars the selected asset, or takes its star away (user story F-9).
+    /// </summary>
+    [RelayCommand]
+    public void ToggleStar()
+    {
+        if (Selected is AssetTile tile && Shelf is AssetsViewModel shelf)
+        {
+            tile.IsStarred = shelf.SetStar(tile.Entry.Key, !shelf.Favourites.IsStarred(tile.Entry.Key));
+            OnPropertyChanged(nameof(SelectedStarred));
+            OnPropertyChanged(nameof(StarText));
+            if (Show == Starred)
+            {
+                Rebuild();
+            }
+        }
+    }
+
+    /// <summary>
+    /// The value of <see cref="Show"/> that shows the starred assets.
+    /// </summary>
+    public const string Starred = "starred";
+
+    /// <summary>
+    /// The value of <see cref="Show"/> that shows the assets chosen last.
+    /// </summary>
+    public const string Recent = "recent";
+
+    partial void OnShowChanged(string? value) => Rebuild();
+
     partial void OnQueryChanged(string value) => Rebuild();
 
     partial void OnGroupChanged(string? value) => Rebuild();
@@ -258,6 +319,10 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
     private void Close(string? key)
     {
         IsOpen = false;
+        if (key is not null)
+        {
+            Shelf?.NoteUsed(key);
+        }
         TaskCompletionSource<string?>? answer = _answer;
         _answer = null;
         answer?.TrySetResult(key);
@@ -275,7 +340,16 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
         }
         using Performance.Span measure = Performance.Measure("assets.pick-filter");
         string[] words = AssetSearch.Words(Query);
-        List<AssetEntry> ofKind = [.. catalog().Entries.Where(entry => entry.Kind == Kind && AssetSearch.Matches(entry, words))];
+        AssetFavourites? favourites = Shelf?.Favourites;
+        List<AssetEntry> matching = [.. catalog().Entries.Where(entry => entry.Kind == Kind && AssetSearch.Matches(entry, words))];
+        Shows = favourites is null ? [] :
+        [
+            new AssetChoice(Starred, "Starred", matching.Count(entry => favourites.IsStarred(entry.Key)), Show == Starred),
+            new AssetChoice(Recent, "Recent", matching.Count(entry => favourites.RecentIndex(entry.Key) >= 0), Show == Recent),
+        ];
+        List<AssetEntry> ofKind = favourites is null || Show is null ? matching
+            : Show == Starred ? [.. matching.Where(entry => favourites.IsStarred(entry.Key))]
+            : [.. matching.Where(entry => favourites.RecentIndex(entry.Key) >= 0).OrderBy(entry => favourites.RecentIndex(entry.Key))];
         bool InGroup(AssetEntry entry) => Group is null || entry.Group == Group;
         bool InCategory(AssetEntry entry) => Category is null || IsOfCategory(entry, Category);
         bool InTech(AssetEntry entry) => Tech is null || TechOf(entry) == Tech;
@@ -302,12 +376,14 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
             .Select(tech => new AssetChoice(tech.Key, AssetSearch.TechTitle(tech.First().TechLevel), tech.Count(), tech.Key == Tech))];
 
         AssetEntry? selected = Selected?.Entry;
-        Tiles = [.. ofKind.Where(entry => InGroup(entry) && InCategory(entry) && InTech(entry)).Select(entry => new AssetTile(entry, [entry]))];
+        Tiles = [.. ofKind.Where(entry => InGroup(entry) && InCategory(entry) && InTech(entry))
+            .Select(entry => new AssetTile(entry, [entry]) { IsStarred = favourites?.IsStarred(entry.Key) == true })];
         MakeRows();
 
         OnPropertyChanged(nameof(Groups));
         OnPropertyChanged(nameof(Categories));
         OnPropertyChanged(nameof(Techs));
+        OnPropertyChanged(nameof(Shows));
         OnPropertyChanged(nameof(Tiles));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(EmptyText));

@@ -23,4 +23,6 @@
   <StreamGeometry x:Key="Icon.Symmetry">M12 3 L12 21 M9 7 L3 17 L9 17 Z M15 7 L21 17 L15 17 Z</StreamGeometry>
   <StreamGeometry x:Key="Icon.Commit">M15 12 A3 3 0 1 1 9 12 A3 3 0 1 1 15 12 Z M3 12 L9 12 M15 12 L21 12</StreamGeometry>
   <StreamGeometry x:Key="Icon.SideBySide">M3 5 L21 5 L21 19 L3 19 Z M12 5 L12 19</StreamGeometry>
+  <!-- a starred asset (F-9) -->
+  <StreamGeometry x:Key="Icon.Star">M12 3 L14.6 9 L21 9.3 L16 13.5 L17.7 20 L12 16.4 L6.3 20 L8 13.5 L3 9.3 L9.4 9 Z</StreamGeometry>
 </ResourceDictionary>

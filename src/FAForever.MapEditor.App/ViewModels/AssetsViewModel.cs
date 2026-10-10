@@ -34,6 +34,16 @@ public enum AssetScope
     /// F-8): no tiles, a list of the paths, each leading to its problem.
     /// </summary>
     Missing,
+
+    /// <summary>
+    /// The assets the map maker starred (user story F-9), in every map of the workspace.
+    /// </summary>
+    Starred,
+
+    /// <summary>
+    /// The assets chosen last, the newest first (user story F-9).
+    /// </summary>
+    Recent,
 }
 
 /// <summary>
@@ -92,6 +102,12 @@ public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry
     public partial bool IsSelected { get; set; }
 
     /// <summary>
+    /// Whether it (one of its variants) is starred (user story F-9).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsStarred { get; set; }
+
+    /// <summary>
     /// What a screen reader says of it.
     /// </summary>
     public string Label => $"{Title}, {Detail}" + (Uses > 0 ? $", {Uses} on the map" : "");
@@ -128,6 +144,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     public AssetsViewModel(ILogger log)
     {
         _log = log;
+        Favourites.Changed += OnFavouritesChanged;
     }
 
     /// <summary>
@@ -155,7 +172,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     public string GroupsTitle => Kind switch { AssetKind.Unit => "Faction", AssetKind.Brush => "Folder", _ => "Biome" };
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsInMap), nameof(IsNarrow), nameof(IsEverything), nameof(IsMissingScope))]
+    [NotifyPropertyChangedFor(nameof(IsInMap), nameof(IsNarrow), nameof(IsEverything), nameof(IsMissingScope), nameof(IsStarredScope), nameof(IsRecentScope))]
     public partial AssetScope Scope { get; set; } = AssetScope.Narrow;
 
     public bool IsMissingScope => Scope == AssetScope.Missing;
@@ -253,14 +270,14 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// The tile chosen, shown in the inspector; null for none.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelection), nameof(IsFamilySelected), nameof(Shown), nameof(ShownUses), nameof(ShownGlyph))]
+    [NotifyPropertyChangedFor(nameof(HasSelection), nameof(IsFamilySelected), nameof(Shown), nameof(ShownUses), nameof(ShownGlyph), nameof(ShownStarred), nameof(ShownStarText))]
     public partial AssetTile? Selected { get; private set; }
 
     /// <summary>
     /// The variant of the selected family the inspector shows.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownModel), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownUse), nameof(ShownKeyLabel))]
+    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownModel), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownUse), nameof(ShownKeyLabel), nameof(ShownStarred), nameof(ShownStarText))]
     public partial AssetEntry? SelectedMember { get; set; }
 
     public bool HasSelection => Selected is not null;
@@ -325,6 +342,8 @@ public sealed partial class AssetsViewModel : ObservableObject
         : Kind == AssetKind.Brush && Scope == AssetScope.InMap ? "A map holds no brushes: choose The workspace's."
         : Catalog.Entries.Count == 0 ? "The workspace has no converted assets."
         : Scope == AssetScope.InMap ? "The map uses none of these. Choose Map's biomes or Everything."
+        : Scope == AssetScope.Starred ? "None starred yet: choose an asset and star it in the inspector, or in the picker."
+        : Scope == AssetScope.Recent ? "None chosen lately: the assets chosen on the shelf or in the picker show here, the newest first."
         : "Nothing matches. Search in Everything, or clear the biome and category.";
 
     public bool IsEmpty => EmptyText.Length > 0;
@@ -596,7 +615,11 @@ public sealed partial class AssetsViewModel : ObservableObject
     private void ShowMissingProblem(MissingAsset missing) => ShowProblemRequested?.Invoke(missing);
 
     [RelayCommand]
-    private void ChooseTile(AssetTile tile) => Select(tile);
+    private void ChooseTile(AssetTile tile)
+    {
+        Select(tile);
+        NoteUsed(tile.Entry.Key);
+    }
 
     [RelayCommand]
     private void ClearSelection() => Select((AssetTile?)null);
@@ -684,7 +707,7 @@ public sealed partial class AssetsViewModel : ObservableObject
             .GroupBy(entry => Origins.Of(entry).Short)
             .OrderByDescending(source => source.Count())
             .Select(source => new AssetChoice(source.Key, source.Key, source.Count(), source.Key == Source))];
-        IEnumerable<AssetEntry> shown = ofKind.Where(entry => (Group is null || entry.Group == Group) && (Category is null || entry.Category == Category)
+        IEnumerable<AssetEntry> shown = InFavouritesOrder(ofKind).Where(entry => (Group is null || entry.Group == Group) && (Category is null || entry.Category == Category)
             && (Source is null || Origins.Of(entry).Short == Source));
         AssetEntry? selected = Shown;
         List<AssetTile> tiles = Kind == AssetKind.Prop && Families
@@ -693,6 +716,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         foreach (AssetTile tile in tiles)
         {
             tile.Uses = UsesOf(tile.Members);
+            tile.IsStarred = IsStarred(tile);
         }
         Tiles = tiles;
         MakeRows();
@@ -709,6 +733,8 @@ public sealed partial class AssetsViewModel : ObservableObject
         OnPropertyChanged(nameof(InMapCount));
         OnPropertyChanged(nameof(NarrowTitle));
         OnPropertyChanged(nameof(NarrowHelp));
+        OnPropertyChanged(nameof(StarredCount));
+        OnPropertyChanged(nameof(RecentCount));
 
         // by its key: read again, the catalogue holds other objects for the same assets
         AssetEntry? current = selected is null ? null : Catalog.Find(selected.Key);
@@ -731,6 +757,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     {
         AssetScope.InMap => entry.Keys.Any(_uses.ContainsKey),
         AssetScope.Missing => false,
+        AssetScope.Starred or AssetScope.Recent => IsInFavourites(entry),
         AssetScope.Narrow => entry.Kind switch
         {
             AssetKind.Unit => entry.IsCivilian,

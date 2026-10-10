@@ -81,6 +81,21 @@
                 <TextBlock Text="Missing" />
               </DockPanel>
             </Button>
+            <!-- the assets starred and chosen last, in every map of the workspace (F-9) -->
+            <Button Classes="facet" Classes.on="{Binding IsStarredScope}" Command="{Binding ChooseScopeCommand}" CommandParameter="{x:Static vm:AssetScope.Starred}"
+                    AutomationProperties.Name="Starred" AutomationProperties.HelpText="The assets starred in this workspace">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Classes="shortcut" Text="{Binding StarredCount}" />
+                <TextBlock Text="Starred" />
+              </DockPanel>
+            </Button>
+            <Button Classes="facet" Classes.on="{Binding IsRecentScope}" Command="{Binding ChooseScopeCommand}" CommandParameter="{x:Static vm:AssetScope.Recent}"
+                    AutomationProperties.Name="Recent" AutomationProperties.HelpText="The assets chosen last on the shelf or in the picker, the newest first">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Classes="shortcut" Text="{Binding RecentCount}" />
+                <TextBlock Text="Recent" />
+              </DockPanel>
+            </Button>
           </StackPanel>
           <!-- where the assets come from (F-8): the game, FAF, the workspace's own -->
           <TextBlock Classes="overline section" Text="{Binding Source=Source, Converter={x:Static controls:UpperCaseConverter.Instance}}"
@@ -193,6 +208,9 @@
                           </Border>
                           <Border Classes="badge" HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding IsFamily}">
                             <TextBlock Text="{Binding Members.Count}" />
+                          </Border>
+                          <Border Classes="badge starred" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding IsStarred}">
+                            <Path Classes="icon small" Data="{StaticResource Icon.Star}" AutomationProperties.Name="Starred" />
                           </Border>
                         </Panel>
                       </Border>

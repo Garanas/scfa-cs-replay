@@ -14,6 +14,9 @@ public sealed partial class MainViewModel
     {
         SelectionPresetTool presetTool = Tool<SelectionPresetTool>();
         Presets.Register(SelectionPresetTool.Kind(this));
+        // the picker offers and notes the shelf's stars and recents, which are the workspace's (F-9)
+        Picker.Shelf = Assets;
+        Setup.WorkspaceReady += Assets.OpenFavourites;
         // a unit dragged in the Units mode's tree while selected takes the selected units along (U-3)
         Armies.SelectedUnits = () => [.. Selection.Items.Where(thing => thing.Kind == ObjectKind.Unit).Select(thing => thing.Name!)];
         DocumentChanged += (_, _) =>

@@ -76,6 +76,8 @@
             <StackPanel Classes="stack">
               <TextBlock Classes="caption" Text="{Binding Assets.ShownUse}" IsVisible="{Binding Assets.ShownUse, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
               <StackPanel Classes="inline">
+                <Button Content="{Binding Assets.ShownStarText}" Command="{Binding RunCommand}" CommandParameter="assets.star"
+                        AutomationProperties.Name="Star the asset" AutomationProperties.HelpText="Starred assets show under Starred on the shelf and in the picker, in every map of the workspace" />
                 <Button Content="Show the file" Command="{Binding RunCommand}" CommandParameter="assets.showFile" />
                 <Button Content="Clear" Command="{Binding Assets.ClearSelectionCommand}" AutomationProperties.HelpText="The inspector shows the mode again" />
               </StackPanel>
