@@ -43,8 +43,18 @@
         <Border DockPanel.Dock="Left" Classes="facets">
           <ScrollViewer>
             <StackPanel Classes="stack">
-              <ComboBox ItemsSource="{Binding SortTitles}" SelectedIndex="{Binding SortIndex}" IsVisible="{Binding CanSort}" HorizontalAlignment="Stretch"
-                        AutomationProperties.Name="Sort the assets to choose from" AutomationProperties.HelpText="As listed, or the most mass or energy first: a unit's build cost, a prop's reclaim" />
+              <ComboBox ItemsSource="{Binding SortChoices}" SelectedIndex="{Binding SortIndex}" IsVisible="{Binding CanSort}" HorizontalAlignment="Stretch"
+                        AutomationProperties.Name="Sort the assets to choose from" AutomationProperties.HelpText="As listed, or the most mass or energy first: a unit's build cost, a prop's reclaim">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:AssetSortChoice">
+                    <StackPanel Orientation="Horizontal">
+                      <Path Classes="economyicon economymass economybody" Data="{StaticResource Icon.Mass}" IsVisible="{Binding IsMass}" />
+                      <Path Classes="economyicon economyenergy economybody" Data="{StaticResource Icon.Energy}" IsVisible="{Binding IsEnergy}" />
+                      <TextBlock Text="{Binding Title}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
               <!-- the assets starred and chosen last (F-9) -->
               <ItemsControl ItemsSource="{Binding Shows}" AutomationProperties.Name="Starred or recent">
                 <ItemsControl.ItemsPanel>
@@ -155,7 +165,8 @@
                           </Border>
                           <TextBlock Classes="tiletitle" Text="{Binding Title}" />
                           <TextBlock Classes="caption" Text="{Binding Detail}" TextWrapping="NoWrap" />
-                          <TextBlock Classes="caption tileeconomy" Text="{Binding Economy}" IsVisible="{Binding ShowsEconomy}" ToolTip.Tip="{Binding EconomyHelp}" />
+                          <controls:EconomyAmount Classes="tileeconomy" Mass="{Binding Mass}" Energy="{Binding Energy}" IsShort="True" EmptyText="{Binding EconomyEmpty}"
+                                                 IsVisible="{Binding ShowsEconomy}" ToolTip.Tip="{Binding EconomyHelp}" />
                         </StackPanel>
                       </Button>
                     </DataTemplate>

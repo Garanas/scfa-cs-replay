@@ -39,6 +39,25 @@ namespace FAForever.MapEditor.App.Tests
                 "read colours from the tokens (TryFindResource); only colours that come from the map, such as a marker's, are built in code");
         }
 
+        [TestMethod]
+        public void MassAndEnergyShowWithTheirIconsInBothThemes()
+        {
+            string styles = Path.Combine(App, "Styles");
+            string icons = File.ReadAllText(Path.Combine(styles, "Icons.axaml"));
+            string tokens = File.ReadAllText(Path.Combine(styles, "Tokens.axaml"));
+            Assert.AreEqual(1, Regex.Matches(icons, "x:Key=\"Icon.Mass\"").Count, "one Icon.Mass");
+            Assert.AreEqual(1, Regex.Matches(icons, "x:Key=\"Icon.Energy\"").Count, "one Icon.Energy");
+            Assert.AreEqual(2, Regex.Matches(tokens, "x:Key=\"MassBrush\"").Count, "MassBrush in the dark and the light variant");
+            Assert.AreEqual(2, Regex.Matches(tokens, "x:Key=\"EnergyBrush\"").Count, "EnergyBrush in the dark and the light variant");
+
+            // a view shows an asset's mass and energy through Controls/EconomyAmount, never as a line of text
+            string[] found = [.. Lines("*.axaml", "Views")
+                .Where(line => line.Text.Contains("Text=\"{Binding Economy}\"", StringComparison.Ordinal) || line.Text.Contains("Text=\"{Binding ReclaimText}\"", StringComparison.Ordinal)
+                    || line.Text.Contains("Text=\"{Binding Reclaim}\"", StringComparison.Ordinal))
+                .Select(line => $"{line.File}:{line.Line}: {line.Text.Trim()}")];
+            CollectionAssert.AreEqual(Array.Empty<string>(), found, "mass and energy go after their icons (controls:EconomyAmount)");
+        }
+
         /// <summary>
         /// <c>#rrggbb</c>, <c>FontSize="12"</c>, <c>FontWeight="..."</c>, <c>Opacity="0.7"</c>, and a
         /// <c>Margin</c>, <c>Padding</c> or <c>Spacing</c> other than zero.

@@ -121,8 +121,23 @@ public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry
     /// <see cref="EconomyHelp"/>); empty for the other kinds.
     /// </summary>
     public string Economy => !ShowsEconomy ? ""
-        : entry.Mass == 0 && entry.Energy == 0 ? (entry.Kind == AssetKind.Unit ? "No cost" : "No reclaim")
+        : entry.Mass == 0 && entry.Energy == 0 ? EconomyEmpty
         : $"{AssetSearch.Short(entry.Mass)} · {AssetSearch.Short(entry.Energy)}";
+
+    /// <summary>
+    /// Its mass: a unit's build cost, a prop's reclaim (its tile shows it after the mass icon).
+    /// </summary>
+    public double Mass => entry.Mass;
+
+    /// <summary>
+    /// Its energy, likewise (after the energy icon).
+    /// </summary>
+    public double Energy => entry.Energy;
+
+    /// <summary>
+    /// What its tile says when it has neither mass nor energy: <c>No cost</c>, <c>No reclaim</c>.
+    /// </summary>
+    public string EconomyEmpty => entry.Kind == AssetKind.Unit ? "No cost" : "No reclaim";
 
     /// <summary>
     /// Its mass and energy in full: what its tile's tool tip and a screen reader say.
@@ -307,13 +322,23 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// How the tiles are ordered: as listed, or the most mass or energy first (units and props).
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SortIndex), nameof(IsSorted), nameof(SortHelp))]
+    [NotifyPropertyChangedFor(nameof(SortIndex), nameof(IsSorted), nameof(SortHelp), nameof(IsSortedByMass), nameof(IsSortedByEnergy))]
     public partial AssetSort Sort { get; set; }
 
     /// <summary>
     /// Whether the tiles are in another order than listed (the sort button is on).
     /// </summary>
     public bool IsSorted => Sort != AssetSort.Listed;
+
+    /// <summary>
+    /// Whether the most mass comes first: the sort button shows the mass icon.
+    /// </summary>
+    public bool IsSortedByMass => Sort == AssetSort.Mass;
+
+    /// <summary>
+    /// Whether the most energy comes first: the sort button shows the energy icon.
+    /// </summary>
+    public bool IsSortedByEnergy => Sort == AssetSort.Energy;
 
     /// <summary>
     /// What the sort button says: the order now, and what a click does.

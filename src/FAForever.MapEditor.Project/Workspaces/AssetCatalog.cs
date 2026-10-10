@@ -33,7 +33,15 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// <summary>
     /// A fact about an asset, shown with it: <c>Reclaim</c>, <c>40 mass, 0 energy</c>.
     /// </summary>
-    public sealed record AssetFact(string Label, string Value);
+    /// <param name="Mass">The mass of a fact of mass and energy (a unit's cost, a prop's reclaim), which the editor shows after their icons; null for the other facts.</param>
+    /// <param name="Energy">Its energy, likewise.</param>
+    public sealed record AssetFact(string Label, string Value, double? Mass = null, double? Energy = null)
+    {
+        /// <summary>
+        /// Whether it is a fact of mass and energy.
+        /// </summary>
+        public bool IsEconomy => Mass is not null && Energy is not null;
+    }
 
     /// <summary>
     /// The mesh of a prop or unit with what it is drawn with: files of the workspace's assets.
@@ -386,7 +394,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                 {
                     facts.Add(new AssetFact("Size", $"{Number(size.X)} × {Number(size.Z)} ogrids, {Number(size.Y)} high"));
                 }
-                facts.Add(new AssetFact("Reclaim", $"{Number(prop.ReclaimMass ?? 0)} mass, {Number(prop.ReclaimEnergy ?? 0)} energy"));
+                facts.Add(new AssetFact("Reclaim", $"{Number(prop.ReclaimMass ?? 0)} mass, {Number(prop.ReclaimEnergy ?? 0)} energy", prop.ReclaimMass ?? 0, prop.ReclaimEnergy ?? 0));
                 if (prop.Health is double health)
                 {
                     facts.Add(new AssetFact("Health", Number(health)));
@@ -511,7 +519,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                 }
                 if (unit.MassCost is not null || unit.EnergyCost is not null)
                 {
-                    facts.Add(new AssetFact("Cost", $"{Number(unit.MassCost ?? 0)} mass, {Number(unit.EnergyCost ?? 0)} energy"));
+                    facts.Add(new AssetFact("Cost", $"{Number(unit.MassCost ?? 0)} mass, {Number(unit.EnergyCost ?? 0)} energy", unit.MassCost ?? 0, unit.EnergyCost ?? 0));
                 }
                 if (unit.Health is double health)
                 {

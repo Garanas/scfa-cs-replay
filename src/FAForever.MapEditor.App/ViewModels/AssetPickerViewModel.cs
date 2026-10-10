@@ -87,6 +87,8 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
 
     public IReadOnlyList<string> SortTitles => AssetSearch.SortTitles;
 
+    public IReadOnlyList<AssetSortChoice> SortChoices => AssetSearch.SortChoices;
+
     /// <summary>
     /// Whether the kind has mass and energy to sort by: units and props.
     /// </summary>

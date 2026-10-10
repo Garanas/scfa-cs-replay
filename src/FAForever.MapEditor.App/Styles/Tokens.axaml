@@ -84,6 +84,9 @@
       <SolidColorBrush x:Key="WarningStrokeBrush" Color="{StaticResource Amber800}" />
       <SolidColorBrush x:Key="WarningBadgeBrush" Color="{StaticResource Amber800}" />
       <SolidColorBrush x:Key="WarningOnSurfaceBrush" Color="{StaticResource Amber100}" />
+      <!-- mass and energy (F-8): their icons before a unit's cost or a prop's reclaim, as the game colours them -->
+      <SolidColorBrush x:Key="MassBrush" Color="#FFA8D84A" />
+      <SolidColorBrush x:Key="EnergyBrush" Color="#FFF5D142" />
       <!-- drawn over the map: the brush, the 3D camera, outlines and labels of markers -->
       <SolidColorBrush x:Key="OverlayBrush" Color="#FFFFFFFF" />
       <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
@@ -168,6 +171,8 @@
       <SolidColorBrush x:Key="WarningStrokeBrush" Color="#FFE8C27A" />
       <SolidColorBrush x:Key="WarningBadgeBrush" Color="#FFFFE2B0" />
       <SolidColorBrush x:Key="WarningOnSurfaceBrush" Color="#FF5A3A00" />
+      <SolidColorBrush x:Key="MassBrush" Color="#FF5E8C10" />
+      <SolidColorBrush x:Key="EnergyBrush" Color="#FFB08600" />
       <SolidColorBrush x:Key="OverlayBrush" Color="#FFFFFFFF" />
       <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#C8FFFFFF" />
       <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
@@ -315,6 +320,11 @@
   <Thickness x:Key="TabStripPadding">8,0</Thickness>
   <x:Double x:Key="IconSize">18</x:Double>
   <x:Double x:Key="IconSizeSmall">14</x:Double>
+  <!-- mass and energy (EconomyAmount): the space after an icon, and after the mass before the energy's icon -->
+  <Thickness x:Key="EconomyIconGap">0,0,1,0</Thickness>
+  <Thickness x:Key="EconomyValueGap">0,0,4,0</Thickness>
+  <Thickness x:Key="EconomyTextGap">0,0,4,0</Thickness>
+  <Thickness x:Key="EconomySuffixGap">4,0,0,0</Thickness>
   <x:Double x:Key="SearchFieldWidth">360</x:Double>
   <x:Double x:Key="SearchFieldHeight">26</x:Double>
   <Thickness x:Key="SearchFieldPadding">10,0</Thickness>
