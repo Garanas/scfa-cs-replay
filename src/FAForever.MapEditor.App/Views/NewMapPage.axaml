@@ -1,0 +1,68 @@
+<!-- File, New map (M-2): the name, size, height, water, biome and players of a map made from scratch. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:project="using:FAForever.MapEditor.Project"
+             x:Class="FAForever.MapEditor.App.Views.NewMapPage"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="scrim">
+    <Border Classes="dialog">
+      <StackPanel>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <TextBlock Classes="heading" Text="New map" />
+            <TextBlock Classes="caption"
+                       Text="A flat map of one of the game's sizes, with water or without, the strata textures of a biome, spawns on a circle and the playable area over the whole map. It is no project until you save it." />
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Name" />
+              <TextBox Text="{Binding NewMapPage.Name}" AutomationProperties.Name="Name of the new map"
+                       AutomationProperties.HelpText="The name players see; the folder is named after it" />
+            </DockPanel>
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Size" />
+              <ComboBox ItemsSource="{Binding NewMapPage.Sizes}" SelectedItem="{Binding NewMapPage.Size}" AutomationProperties.Name="Size of the new map" />
+            </DockPanel>
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Height" />
+              <TextBox Classes="mono settingnumber" Text="{Binding NewMapPage.Height}" HorizontalAlignment="Left" AutomationProperties.Name="Height of the terrain"
+                       AutomationProperties.HelpText="In game units, 0 to 511" />
+            </DockPanel>
+            <CheckBox Content="Water" IsChecked="{Binding NewMapPage.Water}" />
+            <DockPanel IsVisible="{Binding NewMapPage.Water}">
+              <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Water surface" />
+              <TextBox Classes="mono settingnumber" Text="{Binding NewMapPage.WaterElevation}" HorizontalAlignment="Left" AutomationProperties.Name="Elevation of the water"
+                       AutomationProperties.HelpText="In game units; deep water starts 5 below it and the abyss 15 below" />
+            </DockPanel>
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Biome" />
+              <ComboBox ItemsSource="{Binding NewMapPage.Biomes}" SelectedItem="{Binding NewMapPage.Biome}" AutomationProperties.Name="Biome of the new map"
+                        AutomationProperties.HelpText="The textures of the strata">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="project:NewMapBiome">
+                    <TextBlock Text="{Binding Title}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </DockPanel>
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Players" />
+              <TextBox Classes="mono settingnumber" Text="{Binding NewMapPage.Players}" HorizontalAlignment="Left" AutomationProperties.Name="Number of players"
+                       AutomationProperties.HelpText="1 to 16: as many spawns on a circle around the middle" />
+            </DockPanel>
+            <TextBlock Classes="error" Text="{Binding NewMapPage.Error}" IsVisible="{Binding NewMapPage.Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart pickerfoot">
+          <StackPanel Classes="inline" HorizontalAlignment="Right">
+            <Button Content="Cancel" Command="{Binding NewMapPage.CancelCommand}" />
+            <Button Content="Create" Command="{Binding NewMapPage.CreateCommand}" Classes="accent" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

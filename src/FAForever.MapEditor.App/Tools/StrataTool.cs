@@ -25,7 +25,20 @@ public sealed partial class StrataTool : GridPaintTool
     public StrataTool(MainViewModel model) : base(model)
     {
         model.MapChanged += (_, _) => ReadStrata();
+        // the layers' textures change (user story S-2): the names follow, the painted layer stays
+        model.DocumentChanged += (_, _) =>
+        {
+            if (Model.Map?.Document.Terrain.Layers is { } layers && layers != _layers)
+            {
+                int painted = Layer;
+                ReadStrata();
+                Painted = Strata.FirstOrDefault(stratum => stratum.Layer == painted) ?? Painted;
+            }
+        };
     }
+
+    // the layers the names were read from
+    private System.Collections.Immutable.ImmutableArray<TerrainLayer> _layers;
 
     public override string PresetName => "strata";
 
@@ -69,6 +82,7 @@ public sealed partial class StrataTool : GridPaintTool
     private void ReadStrata()
     {
         Terrain? terrain = Model.Map?.Document.Terrain;
+        _layers = terrain?.Layers ?? default;
         Strata = terrain is null
             ? []
             : [.. Enumerable.Range(1, terrain.StratumMasks.Layers.Length).Select(layer => new Stratum(layer,

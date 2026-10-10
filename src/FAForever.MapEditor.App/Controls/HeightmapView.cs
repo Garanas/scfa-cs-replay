@@ -290,6 +290,11 @@ public sealed class HeightmapView : Control
             context.DrawRectangle(overlay.SelectionFill, overlay.Box, box);
         }
 
+        if (_model?.ActiveTool?.Tool is { Marks: ToolMarks marks })
+        {
+            DrawMarks(context, overlay, marks);
+        }
+
         if (_model is { ShowSymmetry: true, Symmetry.IsOn: true, ShownDocument: MapDocument mirrored })
         {
             DrawSymmetry(context, overlay, _model.Symmetry.Guides(mirrored));
@@ -521,11 +526,13 @@ public sealed class HeightmapView : Control
         Rect shown = new Rect(Bounds.Size).Inflate(8);
         if (model.ShowAreas)
         {
-            foreach (Area area in document.Markers.Areas)
+            for (int i = 0; i < document.Markers.Areas.Length; i++)
             {
+                Area area = document.Markers.Areas[i];
                 Rect rect = new Rect(MapToControl(area.X0, area.Z0), MapToControl(area.X1, area.Z1)).Normalize();
                 context.DrawRectangle(null, overlay.Area, rect);
-                FormattedText name = new FormattedText(area.Name, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, overlay.LabelFont, overlay.LabelSize, overlay.AreaLabel);
+                // the first area is the playable area, by convention (user story M-5)
+                FormattedText name = new FormattedText(i == 0 ? $"{area.Name} (playable area)" : area.Name, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, overlay.LabelFont, overlay.LabelSize, overlay.AreaLabel);
                 context.DrawText(name, rect.TopLeft + new Vector(4, 2));
             }
         }
@@ -550,6 +557,33 @@ public sealed class HeightmapView : Control
                     context.DrawRectangle(overlay.Unit, overlay.Shadow, new Rect(at.X - 3.5, at.Y - 3.5, 7, 7));
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// What the active tool shows (<see cref="IMapTool.Marks"/>): its line with the label at its
+    /// end, such as the ruler's measurement, and its handles, such as a selected area's corners.
+    /// </summary>
+    private void DrawMarks(DrawingContext context, Overlay overlay, ToolMarks marks)
+    {
+        if (marks.Line is (float x0, float z0, float x1, float z1))
+        {
+            Point from = MapToControl(x0, z0);
+            Point to = MapToControl(x1, z1);
+            context.DrawLine(overlay.Shadow, from + new Vector(1, 1), to + new Vector(1, 1));
+            context.DrawLine(overlay.Selection, from, to);
+            if (marks.Label is { Length: > 0 } label)
+            {
+                FormattedText text = new FormattedText(label, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, overlay.LabelFont, overlay.LabelSize, overlay.Strong);
+                Rect back = new Rect(to + new Vector(8, 4), new Size(text.Width + 6, text.Height + 2));
+                context.FillRectangle(overlay.Canvas, back);
+                context.DrawText(text, back.TopLeft + new Vector(3, 1));
+            }
+        }
+        foreach ((float x, float z) in marks.Handles)
+        {
+            Point at = MapToControl(x, z);
+            context.DrawRectangle(overlay.Canvas, overlay.Selection, new Rect(at.X - 4, at.Y - 4, 8, 8));
         }
     }
 

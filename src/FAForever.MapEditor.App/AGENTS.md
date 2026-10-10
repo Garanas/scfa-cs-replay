@@ -892,6 +892,61 @@ follow the terrain, and the reclaim. The maths is the library's (`PropOrientatio
   reclaim with areas).
 - Not built yet: symmetry for placed and painted props (wave 2), handles, the K-1 masks as layers.
 
+## The map and its atmosphere: panels of settings
+
+User stories M-1, M-2, M-5, M-6, W-1, L-1, L-2, S-2, T-3, V-5. The parts are
+`MainViewModel.MapInformation`, `AreaList`, `ScriptFiles`, `WaterSettings`, `LightingSettings`,
+`LayerTextures` and `NewMapPage` (`ViewModels/MainViewModel.MapPanels.cs`), each refreshed on
+`DocumentChanged` by comparing its part of the document by reference (span `model.map-panels`),
+so a dab of a brush costs nothing there. Their sections are records in
+`ViewModels/MapPanelSections.cs`, each drawn by a view of its own in `Views/MapPanels/` (the
+mode panel's and inspector's templates only name it).
+
+- **Settings** (`ViewModels/Settings.cs`): a field is a `Setting` (`NumberSetting` with an
+  optional slider, `TextSetting`, `BoolSetting`, `ChoiceSetting`, `ColorSetting`: three numbers
+  `0.95, 0.84, 0.76` with a swatch, or a vector without one; `TextureSetting`: a path with an
+  optional Choose button for the picker), grouped in a `SettingGroup` and drawn by
+  `Controls/SettingList` (Enter or leaving the field gives the value). A value given runs a
+  command with the setting's argument; the command edits with `MainViewModel.EditMap(description,
+  edit, mergeKey)`, whose merge key is the command and the names of its arguments, so typing in a
+  field again or dragging a slider is one step. A slider's binding is one way and only a slider
+  the person touches (focus or pointer over it) gives its value: a slider coerces its value by
+  itself when its range arrives after the value, which once rewrote every area to 1 by 1.
+- **Commands**: `map.information {name?, description?, author?, version?, type?, preview?,
+  noRushRadius?, adaptiveMap?, reclaimMass?, reclaimEnergy?}` (without arguments: the Map panel),
+  `map.addArea {name?, x0?, z0?, x1?, z1?}` (selects it and chooses the areas tool),
+  `map.setArea {name, rename?, x0?, ...}`, `map.removeArea {name}`; `file.openScript` (the
+  project's `script.lua` in the system's application for `.lua`, written with a skirmish map's
+  script when the map has none; the watcher reads back what is saved; without a person it only
+  answers the path), `file.showMapFiles`; `file.new {name?, size?, height?, water?,
+  waterElevation?, deepElevation?, abyssElevation?, biome?, players?}` (without arguments, with a
+  person: the page `Views/NewMapPage`; the map is no project until saved, `EditedMap.New`);
+  `water.set {...}`, `water.setWaveTexture {index, ...}`, `water.addWaveGenerator {x?, z?}`,
+  `water.removeWaveGenerator {index}`, `water.setWaveGenerator {index, ...}`; `lighting.set
+  {azimuth?, elevation?, sunDirection?, sunColor?, ...}` (colours and vectors as `[r, g, b]`),
+  `lighting.preset {name?}`; `paint.chooseTexture {layer?, key?, normal?}` (the picker of
+  stratum textures; an albedo brings its normal map), `paint.setLayer {layer, ...}`,
+  `paint.addStratum {key?, scale?}`, `paint.removeStratum {layer}`, `paint.moveStratum {layer,
+  to}`; `terrain.importHeightmap {path?}` and `terrain.exportHeightmap {path?}` (they ask for a
+  file through `IEditorDialogs.PickFileAsync` and `PickSaveFileAsync`).
+- **Azimuth and elevation** (`SunAngles`): the azimuth clockwise from north (up in the top view,
+  -z), the elevation above the horizon; the map keeps the vector towards the sun.
+- **Tools**: `AreaTool` (`map.areas`): drag on empty ground draws an area, a handle of a selected
+  area resizes it, its edge or inside moves it, whole ogrids, one step from press to release;
+  `RulerTool` (`terrain.ruler`): distance in ogrids and km (256 ogrids are 5 km), rise, slope,
+  until the next drag; `SunTool` (`lighting.sun`): the sun stands where the mouse points seen from
+  the middle of the map (straight up there, 5 degrees at half the map's size), one step a drag, in
+  either view. A tool shows handles and a line with a label through `IMapTool.Marks`
+  (`ToolMarks`), which the top view draws; the 3D view does not yet.
+- **Presets**: the kinds `lighting` (all of it) and `water` (its look; the elevations, wave
+  generators and masks stay the map's), the library's `AtmospherePresets`; the Lighting and Water
+  panels list them.
+- The top view labels the first area "(playable area)". `state.mapPanels` has the information,
+  areas, script and files, water, lighting angles, layers, the ruler's measurement and whether
+  the page of a new map is open.
+- Not built yet: the sky and cube maps (L-1), a sun handle and area handles drawn in 3D,
+  placing wave generators with the mouse, templates for a new map.
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session

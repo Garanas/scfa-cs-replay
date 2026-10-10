@@ -1,0 +1,35 @@
+<!-- The Paint panel's layer textures (S-2): the layers as they lie on each other, the upper first; add, remove and reorder strata. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.LayerTexturesPanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <TextBlock Classes="overline" Text="{Binding Source='Layer textures', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <ListBox ItemsSource="{Binding LayerTextures.Items}" SelectedItem="{Binding LayerTextures.Selected}" AutomationProperties.Name="Layer textures"
+               AutomationProperties.HelpText="The chosen layer's textures and scales are in the inspector">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:LayerItem">
+            <StackPanel>
+              <TextBlock Text="{Binding Title}" />
+              <TextBlock Classes="caption" Text="{Binding Textures}" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <TextBlock Classes="caption" Text="{Binding LayerTextures.Summary}" />
+      <WrapPanel Classes="chips">
+        <Button Content="Add a stratum" Command="{Binding LayerTextures.AddCommand}" IsEnabled="{Binding HasMap}"
+                AutomationProperties.HelpText="Gives the first unused stratum a texture from the picker" />
+        <Button Content="Remove" Command="{Binding LayerTextures.RemoveCommand}" IsEnabled="{Binding LayerTextures.CanRemove}"
+                AutomationProperties.Name="Remove the stratum" AutomationProperties.HelpText="With its mask; the strata above move down" />
+        <Button Content="Up" Command="{Binding LayerTextures.MoveUpCommand}" IsEnabled="{Binding LayerTextures.CanMoveUp}"
+                AutomationProperties.Name="Move the stratum up" AutomationProperties.HelpText="Over the stratum above it, with its mask" />
+        <Button Content="Down" Command="{Binding LayerTextures.MoveDownCommand}" IsEnabled="{Binding LayerTextures.CanMoveDown}"
+                AutomationProperties.Name="Move the stratum down" AutomationProperties.HelpText="Under the stratum below it, with its mask" />
+      </WrapPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

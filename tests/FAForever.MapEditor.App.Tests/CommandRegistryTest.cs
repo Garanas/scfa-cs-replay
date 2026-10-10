@@ -63,7 +63,7 @@ namespace FAForever.MapEditor.App.Tests
             EditorCommand[] incomplete = [.. NewModel().Commands.All.Where(command => command.IsIncomplete)];
             HashSet<string> stories = Stories();
 
-            Assert.IsTrue(incomplete.Length > 20);
+            Assert.IsTrue(incomplete.Length > 5, "the planned commands are found");
             foreach (EditorCommand command in incomplete)
             {
                 Assert.IsTrue(stories.Contains(command.Incomplete!.Story), $"{command.Id} names {command.Incomplete.Story}, which is not in USER_STORIES.md");
@@ -118,16 +118,15 @@ namespace FAForever.MapEditor.App.Tests
             CollectionAssert.AreEqual(
                 new[]
                 {
-                    "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look",
-                    "decals.addToGroup", "decals.deleteGroup", "decals.lod", "decals.place", "decals.removeFromGroup", "decals.renameGroup", "decals.scale", "decals.selectGroup", "decals.showGroup", "decals.size",
-                    "diagnostics.flush", "diagnostics.set", "diagnostics.upload",
-                    "edit.goTo", "edit.nudge", "edit.place", "file.enableVersionControl",
-                    "map.removeArmy", "map.renameArmy", "map.setAlliance", "map.setArmy",
+                    "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look", "decals.addToGroup", "decals.deleteGroup",
+                    "decals.lod", "decals.place", "decals.removeFromGroup", "decals.renameGroup", "decals.scale", "decals.selectGroup", "decals.showGroup", "decals.size",
+                    "diagnostics.flush", "diagnostics.set", "diagnostics.upload", "edit.goTo", "edit.nudge", "edit.place", "file.enableVersionControl",
+                    "file.showMapFiles", "lighting.set", "map.removeArea", "map.removeArmy", "map.renameArmy", "map.setAlliance", "map.setArea", "map.setArmy",
                     "markers.deleteChain", "markers.link", "markers.place", "markers.renameChain", "markers.set", "markers.setChain", "markers.showKind",
-                    "paint.chooseMask", "presets.apply", "presets.delete", "problems.show",
-                    "props.place", "props.removeFromPalette", "props.scale", "props.set", "props.tilt", "select.set",
-                    "units.add", "units.moveGroup", "units.moveToArmy", "units.moveToGroup", "units.removeGroup", "units.renameGroup",
-                    "view.gpuDebug", "view.walkability", "view.zoomTo", "workspace.convert", "workspace.setUp",
+                    "paint.chooseMask", "paint.moveStratum", "paint.removeStratum", "paint.setLayer", "presets.apply", "presets.delete", "problems.show", "props.place",
+                    "props.removeFromPalette", "props.scale", "props.set", "props.tilt", "select.set", "units.add", "units.moveGroup", "units.moveToArmy",
+                    "units.moveToGroup", "units.removeGroup", "units.renameGroup", "view.gpuDebug", "view.walkability", "view.zoomTo", "water.removeWaveGenerator",
+                    "water.set", "water.setWaveGenerator", "water.setWaveTexture", "workspace.convert", "workspace.setUp",
                 }, outside,
                 "the commands outside the menus are for automation and plugins: their buttons are on a page or panel");
             Assert.AreEqual("Terrain", model.Commands.Find("tool.terrain.curve")!.Menu, "a tool is in its mode's menu");

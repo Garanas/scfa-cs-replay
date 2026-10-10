@@ -295,7 +295,7 @@ public abstract partial class SelectionSection : ObservableObject
             ObjectKind.Prop => new PropSelection(),
             ObjectKind.Decal => new DecalSelection(),
             ObjectKind.Unit => new UnitSelection(run),
-            _ => new AreaSelection(),
+            _ => new AreaSelection(run),
         };
         section.Run = run;
         return section;
@@ -621,11 +621,58 @@ public sealed partial class UnitSelection(Func<string, JsonObject, Task> run) : 
 }
 
 /// <summary>
-/// The selected areas: their names and rectangles (user story M-5).
+/// The selected areas: their names and rectangles (user story M-5); one area alone has fields for
+/// its name and corners, which change it through <c>map.setArea</c>.
 /// </summary>
-public sealed class AreaSelection : SelectionSection
+public sealed partial class AreaSelection : SelectionSection
 {
+    private string _name = "";
+
+    public AreaSelection(Func<string, JsonObject, Task> run)
+    {
+        const string command = "map.setArea";
+        JsonObject Fixed() => new JsonObject { ["name"] = _name };
+        Area Of(MapDocument d) => d.Markers.Areas.FirstOrDefault(area => area.Name == _name) ?? new Area { Name = _name };
+        Fields = new SettingGroup("Area",
+        [
+            new TextSetting("Name", command, "rename", d => Of(d).Name, run, Fixed) { Help = "The first area is the playable area; scripts and the lobby name areas" },
+            new NumberSetting("Left", command, "x0", d => Of(d).X0, run, Fixed) { Help = "In ogrids" },
+            new NumberSetting("Top", command, "z0", d => Of(d).Z0, run, Fixed) { Help = "In ogrids" },
+            new NumberSetting("Right", command, "x1", d => Of(d).X1, run, Fixed) { Help = "In ogrids" },
+            new NumberSetting("Bottom", command, "z1", d => Of(d).Z1, run, Fixed) { Help = "In ogrids" },
+        ]);
+    }
+
     public override ObjectKind Kind => ObjectKind.Area;
+
+    /// <summary>
+    /// The fields of the one selected area.
+    /// </summary>
+    public SettingGroup Fields { get; }
+
+    /// <summary>
+    /// Whether one area is selected, whose fields show.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsSingle { get; private set; }
+
+    /// <summary>
+    /// Whether the selected area is the playable area (the first).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsPlayable { get; private set; }
+
+    public override void Refresh(MapDocument document, IReadOnlyList<ObjectRef> things)
+    {
+        base.Refresh(document, things);
+        IsSingle = things.Count == 1 && document.Find(things[0]) is Area;
+        if (IsSingle && document.Find(things[0]) is Area area)
+        {
+            _name = area.Name;
+            IsPlayable = document.Markers.Areas.Length > 0 && document.Markers.Areas[0].Name == area.Name;
+            Fields.Refresh(document);
+        }
+    }
 
     protected override IEnumerable<string> LinesOf(MapDocument document, IReadOnlyList<ObjectRef> things) =>
         things.Select(document.Find).OfType<Area>().Select(area => string.Create(CultureInfo.InvariantCulture, $"{area.Name}: {area.X0:0.#}, {area.Z0:0.#} to {area.X1:0.#}, {area.Z1:0.#}"));

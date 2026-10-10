@@ -37,6 +37,18 @@ public interface IEditorDialogs
     /// <param name="current">The key of the asset the picker starts on, such as the one a slot holds.</param>
     /// <returns>The chosen asset's key (<see cref="FAForever.MapEditor.Project.Workspaces.AssetEntry.Key"/>).</returns>
     Task<string?> PickAssetAsync(AssetKind kind, string? title = null, string? current = null) => Task.FromResult<string?>(null);
+
+    /// <summary>
+    /// A file to open that the person picks, or null when they cancel (user story T-3).
+    /// </summary>
+    /// <param name="extensions">The extensions it may have, e.g. <c>.png</c>, <c>.r16</c>.</param>
+    Task<string?> PickFileAsync(string title, IReadOnlyList<string> extensions, string? startIn = null) => Task.FromResult<string?>(null);
+
+    /// <summary>
+    /// A file to write that the person picks, or null when they cancel (user story T-3).
+    /// </summary>
+    /// <param name="suggestedName">The name the dialog starts with, e.g. <c>heightmap.png</c>.</param>
+    Task<string?> PickSaveFileAsync(string title, string suggestedName, IReadOnlyList<string> extensions, string? startIn = null) => Task.FromResult<string?>(null);
 }
 
 /// <summary>
@@ -118,6 +130,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeMarkers();
         Props = new PropsViewModel(this);
         InitializePainting();
+        InitializeMapPanels();
     }
 
     /// <summary>

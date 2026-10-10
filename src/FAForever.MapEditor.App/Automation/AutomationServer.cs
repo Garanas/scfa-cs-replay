@@ -590,6 +590,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     ["shown"] = group.IsShown,
                 })]),
             },
+            ["mapPanels"] = model.DescribeMapPanels(),
             ["presets"] = new JsonObject
             {
                 ["folder"] = model.Presets.Library?.Folder,

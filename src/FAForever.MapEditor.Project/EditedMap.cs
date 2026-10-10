@@ -48,6 +48,19 @@ namespace FAForever.MapEditor.Project
         /// <exception cref="MapProjectException">The folder holds no readable map.</exception>
         public static EditedMap ImportMap(string mapFolder) => new EditedMap(MapImporter.ImportFolder(mapFolder), null);
 
+        /// <summary>
+        /// A map made in the editor (<see cref="NewMap.Create"/>): it has no project folder until it
+        /// is saved, and counts as changed, so that closing it asks to save it.
+        /// </summary>
+        public static EditedMap New(MapDocument document)
+        {
+            EditedMap map = new EditedMap(document, null);
+            // an equal copy that is another object: the session compares by reference
+            map._savedDocument = document with { };
+            map.Session.MarkSaved(map._savedDocument);
+            return map;
+        }
+
         public static Task<EditedMap> OpenProjectAsync(string folder) => Task.Run(() => OpenProject(folder));
 
         public static Task<EditedMap> ImportMapAsync(string mapFolder) => Task.Run(() => ImportMap(mapFolder));
