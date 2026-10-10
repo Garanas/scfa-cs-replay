@@ -856,7 +856,8 @@ that moves stays selected. Another map clears it. The core's side is
   screen (`SelectTool.ScreenBox`, drawn through `Shapes` in the 3D view only, never in the top
   view) and selects what shows inside it: each thing of the kinds that can be picked whose place
   (at its own height) projects into the rectangle (`MainViewModel.SelectOnScreen`, span
-  `model.select-on-screen`), with shift and control as a click. The view comes with the input
+  `model.select-on-screen`, 6 ms for Archsimkats Valley's 8304 props), with shift and control as
+  a click. The view comes with the input
   (`ToolInput.View`, not top-down, with its mouse).
 
 ## Decals: placing, scaling, order and groups
@@ -1039,7 +1040,10 @@ inspector's `MarkerSelection`.
 - **Links in 3D**: while path nodes show, the 3D view draws the links of the layers that show, a
   line in the layer's colour between points half an ogrid above the nodes, over everything at a
   fixed width (`TerrainViewGpu.PathLinks`: the pairs made once per version of the markers, placed
-  on screen each frame as `ToolMapLine`s through the `ShapeRenderer`; span `3d.path-links`).
+  on screen each frame with the camera's matrix made once, those off screen left out, as
+  `ToolMapLine`s through the `ShapeRenderer`; span `3d.path-links`: about 2 ms a frame, and 4 ms of
+  `3d.draw-shapes`, for the 9,900 nodes of path networks generated at a spacing of 8 on Archsimkats
+  Valley).
 - Not built yet: a line drawn while a link is dragged, the slope under the mouse before a click.
 
 ## Props: placing, painting, reclaim
