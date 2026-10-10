@@ -664,8 +664,18 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
         ["chain"] = model.Markers.SelectedChain?.Name,
         ["adaptive"] = model.Markers.IsAdaptive,
         ["warning"] = model.Markers.PlacementWarning,
+        ["paths"] = new JsonObject
+        {
+            ["layers"] = new JsonArray([.. model.Markers.Paths.Layers.Select(layer => (JsonNode)JsonValue.Create(layer.ToString()))]),
+            ["spacing"] = model.Markers.Paths.SpacingValue,
+            ["replace"] = model.Markers.Paths.Replace,
+            ["status"] = model.Markers.Paths.Status,
+            ["result"] = model.Markers.Paths.Result,
+        },
+        ["optionalGroups"] = new JsonArray([.. model.Markers.OptionalGroups.Select(item => (JsonNode)JsonValue.Create(item.Line))]),
         ["tool"] = model.ActiveTool?.Tool switch
         {
+            MarkerPresetTool preset => new JsonObject { ["preset"] = preset.Preset },
             PlaceMarkerTool place => new JsonObject { ["places"] = place.KindName, ["snap"] = place.Snap.Snap.ToString(), ["aiType"] = place.IsAi ? place.AiType : null },
             PathTool path => new JsonObject { ["layer"] = path.Layer.ToString(), ["snap"] = path.Snap.Snap.ToString() },
             _ => null,

@@ -80,14 +80,14 @@ namespace FAForever.MapEditor.Project.Generation
     /// Land, water and amphibious networks come from the navigational mesh of their layer
     /// (<see cref="Walkability"/>; amphibious from the game's amphibious layer). The map is cut into
     /// squares of the spacing; in each square every part of the passable ground that hangs together
-    /// (4-connected ogrids) gets a node, at its ogrid that lies furthest from blocked ground (up to a
-    /// quarter of the spacing), nearest the square's centre. Two parts in squares side by side that
+    /// (4-connected ogrids) and covers at least a sixteenth of the square gets a node, at its ogrid
+    /// that lies furthest from blocked ground (up to a quarter of the spacing), nearest the square's
+    /// centre (a node of the map in the part takes its place; a region of small parts only gets one
+    /// in its largest). Two parts in squares side by side that
     /// touch are linked; when the straight line between their nodes would cross blocked ground (a
     /// cliff, the shore), nodes are put along the way through the two parts, so no link crosses
     /// ground the layer's units cannot walk. Squares diagonal to each other are linked where the line
-    /// between them is walkable and no node of a square beside both links them already. Parts too
-    /// small to matter (a sixteenth of a square) lose their node when it ends a path or only passes
-    /// on to two nodes that see each other. Last, every region of the mesh is checked to be one
+    /// between them is walkable and no node of a square beside both links them already. Last, every region of the mesh is checked to be one
     /// network; two pieces of one region are joined along the shortest route between them.
     /// </para>
     /// <para>
@@ -258,8 +258,8 @@ namespace FAForever.MapEditor.Project.Generation
             /// <summary>The part of ground each ogrid belongs to, -1 where blocked.</summary>
             private readonly int[] _part;
 
-            /// <summary>Per part: its label, ogrids, square, and node (index into <see cref="Nodes"/>, -1 for none).</summary>
-            private readonly List<(int Label, int Count, int Square, int Node)> _parts = [];
+            /// <summary>Per part: its label, ogrids, square, node (index into <see cref="Nodes"/>, -1 for none) and the ogrid for its node.</summary>
+            private readonly List<(int Label, int Count, int Square, int Node, int Best)> _parts = [];
 
             /// <summary>The parts of each square.</summary>
             private readonly List<int>[] _squareParts;
@@ -274,6 +274,26 @@ namespace FAForever.MapEditor.Project.Generation
             private readonly List<int> _nodePart = [];
 
             private readonly HashSet<int> _removed = [];
+
+            /// <summary>The node of each of the map's nodes, by its id.</summary>
+            private readonly Dictionary<int, int> _existingIndex = [];
+
+            /// <summary>
+            /// Whether two of the map's nodes reach each other over the map's own links: then the
+            /// network adds no way between them.
+            /// </summary>
+            private bool LinkedByTheMap(int from, int to)
+            {
+                if (Nodes[from].ExistingId is null || Nodes[to].ExistingId is null)
+                {
+                    return false;
+                }
+                _existingPieces ??= Pieces();
+                return _existingPieces[from] == _existingPieces[to];
+            }
+
+            /// <summary>The piece of the map's own network each of its nodes is in, made before anything is linked.</summary>
+            private int[]? _existingPieces;
 
             public LayerBuilder(NavGrid grid, int size, IReadOnlyList<PathNode> existing)
             {
@@ -301,7 +321,6 @@ namespace FAForever.MapEditor.Project.Generation
                 FindParts(clearance);
                 LinkSquaresBeside();
                 LinkDiagonals();
-                DropSmallParts();
                 JoinRegions();
             }
 
@@ -387,7 +406,23 @@ namespace FAForever.MapEditor.Project.Generation
             private void FindParts(ushort[] clearance)
             {
                 int[] cells = _grid.Cells;
+                // the map's nodes are nodes of the network from the start, with their links among each other
                 Dictionary<int, PathNode> existingAt = [];
+                foreach (PathNode node in _existing)
+                {
+                    _existingIndex[node.Id] = AddNode(new GeneratedPathNode(node.Position.X, node.Position.Z, node.Id), LabelAt(_grid, new Vector2(node.Position.X, node.Position.Z)), -1);
+                }
+                foreach (PathNode node in _existing)
+                {
+                    foreach (int other in node.AdjacentTo)
+                    {
+                        if (_existingIndex.TryGetValue(other, out int index))
+                        {
+                            Link(_existingIndex[node.Id], index);
+                        }
+                    }
+                }
+                _existingPieces = Pieces();
                 foreach (PathNode node in _existing)
                 {
                     int x = (int)MathF.Floor(node.Position.X);
@@ -468,13 +503,25 @@ namespace FAForever.MapEditor.Project.Generation
                                         best = cell;
                                     }
                                 }
-                                int nodeIndex = kept is not null
-                                    ? AddNode(new GeneratedPathNode(kept.Position.X, kept.Position.Z, kept.Id), label, part)
-                                    : AddNode(new GeneratedPathNode(best % _width + 0.5f, best / _width + 0.5f), label, part);
-                                _parts.Add((label, members.Count, square, nodeIndex));
+                                // a part too small to matter gets no node of its own: the network passes it by
+                                int nodeIndex = kept is not null ? _existingIndex[kept.Id]
+                                    : members.Count >= MinimumCells ? AddNode(new GeneratedPathNode(best % _width + 0.5f, best / _width + 0.5f), label, part)
+                                    : -1;
+                                _parts.Add((label, members.Count, square, nodeIndex, best));
                                 _squareParts[square].Add(part);
                             }
                         }
+                    }
+                }
+
+                // a region of small parts only gets a node in its largest
+                foreach (IGrouping<int, int> region in Enumerable.Range(0, _parts.Count).GroupBy(part => _parts[part].Label))
+                {
+                    if (region.All(part => _parts[part].Node < 0))
+                    {
+                        int largest = region.MaxBy(part => _parts[part].Count);
+                        (int label, int count, int square, _, int best) = _parts[largest];
+                        _parts[largest] = (label, count, square, AddNode(new GeneratedPathNode(best % _width + 0.5f, best / _width + 0.5f), label, largest), best);
                     }
                 }
             }
@@ -548,6 +595,14 @@ namespace FAForever.MapEditor.Project.Generation
                 {
                     int from = _parts[a].Node;
                     int to = _parts[b].Node;
+                    if (from < 0 || to < 0)
+                    {
+                        continue;
+                    }
+                    if (LinkedByTheMap(from, to))
+                    {
+                        continue;
+                    }
                     if (CanWalk(_grid, Place(from), Place(to)))
                     {
                         Link(from, to);
@@ -674,13 +729,13 @@ namespace FAForever.MapEditor.Project.Generation
                 {
                     foreach (int b in _squareParts[squareB])
                     {
-                        if (_parts[a].Label != _parts[b].Label)
+                        if (_parts[a].Label != _parts[b].Label || _parts[a].Node < 0 || _parts[b].Node < 0)
                         {
                             continue;
                         }
                         int from = _parts[a].Node;
                         int to = _parts[b].Node;
-                        if (_links[from].Contains(to) || _links[from].Overlaps(_links[to]))
+                        if (_links[from].Contains(to) || _links[from].Overlaps(_links[to]) || LinkedByTheMap(from, to))
                         {
                             continue;
                         }
@@ -688,42 +743,6 @@ namespace FAForever.MapEditor.Project.Generation
                         {
                             Link(from, to);
                         }
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Drops the nodes of parts too small to matter where that changes no way: a node that ends
-            /// a path, or one between two nodes that can walk to each other straight.
-            /// </summary>
-            private void DropSmallParts()
-            {
-                Dictionary<int, int> nodesPerLabel = [];
-                foreach (int label in _nodeLabel)
-                {
-                    nodesPerLabel[label] = nodesPerLabel.GetValueOrDefault(label) + 1;
-                }
-                for (int part = 0; part < _parts.Count; part++)
-                {
-                    (int label, int count, _, int node) = _parts[part];
-                    if (count >= MinimumCells || Nodes[node].ExistingId is not null || nodesPerLabel[label] <= 1)
-                    {
-                        continue;
-                    }
-                    int[] neighbours = [.. _links[node]];
-                    if (neighbours.Length == 1
-                        || (neighbours.Length == 2 && CanWalk(_grid, Place(neighbours[0]), Place(neighbours[1]))))
-                    {
-                        if (neighbours.Length == 2)
-                        {
-                            Link(neighbours[0], neighbours[1]);
-                        }
-                        foreach (int other in neighbours)
-                        {
-                            Unlink(node, other);
-                        }
-                        _removed.Add(node);
-                        nodesPerLabel[label]--;
                     }
                 }
             }
@@ -738,7 +757,7 @@ namespace FAForever.MapEditor.Project.Generation
                 {
                     int[] piece = Pieces();
                     bool joined = false;
-                    foreach (IGrouping<int, int> region in Enumerable.Range(0, Nodes.Count).Where(i => !_removed.Contains(i)).GroupBy(i => _nodeLabel[i]))
+                    foreach (IGrouping<int, int> region in Enumerable.Range(0, Nodes.Count).Where(i => !_removed.Contains(i)).Where(i => _nodeLabel[i] > 0).GroupBy(i => _nodeLabel[i]))
                     {
                         int[] nodes = [.. region];
                         int first = piece[nodes[0]];

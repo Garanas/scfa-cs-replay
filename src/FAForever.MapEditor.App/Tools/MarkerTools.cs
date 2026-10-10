@@ -34,6 +34,16 @@ public enum MarkerPlacement
     Mass,
     Hydrocarbon,
     Ai,
+
+    /// <summary>
+    /// The weather of the map: its style and cloud types (the game reads the first).
+    /// </summary>
+    WeatherDefinition,
+
+    /// <summary>
+    /// A place where clouds form.
+    /// </summary>
+    WeatherGenerator,
 }
 
 /// <summary>
@@ -50,14 +60,14 @@ public sealed partial class PlaceMarkerTool(MainViewModel model, MarkerPlacement
     /// The grid it places on; deposits are always on an ogrid's centre.
     /// </summary>
     [ObservableProperty]
-    public partial SnapChoice Snap { get; set; } = SnapChoice.Of(placement == MarkerPlacement.Ai ? MarkerSnap.Half : MarkerSnap.Centre);
+    public partial SnapChoice Snap { get; set; } = SnapChoice.Of(placement is MarkerPlacement.Spawn or MarkerPlacement.Mass or MarkerPlacement.Hydrocarbon ? MarkerSnap.Centre : MarkerSnap.Half);
 
     public IReadOnlyList<SnapChoice> Snaps => SnapChoice.All;
 
     /// <summary>
     /// Whether the grid is the person's choice: deposits have theirs.
     /// </summary>
-    public bool CanSnap => placement is MarkerPlacement.Spawn or MarkerPlacement.Ai;
+    public bool CanSnap => placement is not (MarkerPlacement.Mass or MarkerPlacement.Hydrocarbon);
 
     /// <summary>
     /// The type of AI marker it places.
@@ -83,6 +93,8 @@ public sealed partial class PlaceMarkerTool(MainViewModel model, MarkerPlacement
     {
         MarkerPlacement.Spawn => "Click to place a spawn: the next playable army",
         MarkerPlacement.Ai => "Click to place an AI marker of the chosen type",
+        MarkerPlacement.WeatherDefinition => "Click to place the weather of the map (the game reads the first); the inspector sets its style and clouds",
+        MarkerPlacement.WeatherGenerator => "Click to place a place where clouds form; the inspector sets how many and how high",
         _ => "Click to place a deposit on an ogrid's centre",
     };
 
@@ -94,6 +106,8 @@ public sealed partial class PlaceMarkerTool(MainViewModel model, MarkerPlacement
         MarkerPlacement.Spawn => "spawn",
         MarkerPlacement.Mass => "mass",
         MarkerPlacement.Hydrocarbon => "hydrocarbon",
+        MarkerPlacement.WeatherDefinition => "weatherDefinition",
+        MarkerPlacement.WeatherGenerator => "weatherGenerator",
         _ => "ai",
     };
 

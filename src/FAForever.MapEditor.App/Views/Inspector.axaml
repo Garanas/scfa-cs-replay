@@ -169,6 +169,13 @@
                       <TextBox Classes="mono commit" Text="{Binding NoRushZ, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="No-rush offset down"
                                AutomationProperties.HelpText="Where the no-rush circle lies from the spawn, in game units; empty for around the spawn" />
                     </DockPanel>
+                    <!-- weather definitions and generators (R-1) -->
+                    <StackPanel IsVisible="{Binding Weather.HasDefinitions}">
+                      <controls:SettingList DataContext="{Binding Weather.Definition}" />
+                    </StackPanel>
+                    <StackPanel IsVisible="{Binding Weather.HasGenerators}">
+                      <controls:SettingList DataContext="{Binding Weather.Generator}" />
+                    </StackPanel>
                   </StackPanel>
                 </Border>
               </DataTemplate>

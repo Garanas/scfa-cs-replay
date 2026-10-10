@@ -34,6 +34,16 @@ public sealed partial class MarkerSelection : SelectionSection
 
     public override ObjectKind Kind => ObjectKind.Marker;
 
+    /// <summary>
+    /// The fields of the selected weather markers.
+    /// </summary>
+    public WeatherSelection Weather { get; }
+
+    public MarkerSelection()
+    {
+        Weather = new WeatherSelection((command, arguments) => Run(command, arguments));
+    }
+
     public IReadOnlyList<string> Resources { get; } = Enum.GetNames<ResourceKind>();
 
     public IReadOnlyList<string> Layers { get; } = Enum.GetNames<PathLayer>();
@@ -150,6 +160,7 @@ public sealed partial class MarkerSelection : SelectionSection
         AiMarker[] ais = [.. markers.OfType<AiMarker>()];
         PathNode[] nodes = [.. markers.OfType<PathNode>()];
         Spawn[] spawns = [.. markers.OfType<Spawn>()];
+        Weather.Refresh(document, markers);
         _refreshing = true;
         try
         {

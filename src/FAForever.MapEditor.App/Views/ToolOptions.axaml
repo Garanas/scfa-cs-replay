@@ -259,6 +259,13 @@
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </StackPanel>
             </DataTemplate>
+            <!-- placing a markers preset (F-10) -->
+            <DataTemplate DataType="tools:MarkerPresetTool">
+              <StackPanel Classes="toolrow">
+                <TextBlock Classes="label" Text="{Binding Title}" AutomationProperties.Name="Markers preset to place" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </StackPanel>
+            </DataTemplate>
             <!-- putting markers in a chain (R-4) -->
             <DataTemplate DataType="tools:ChainTool">
               <StackPanel Classes="toolrow">

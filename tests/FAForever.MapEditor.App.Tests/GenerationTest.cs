@@ -116,7 +116,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(MapPreview.Size, after.Terrain.Preview.Height);
             Assert.IsTrue(after.Terrain.Preview.ToArray().All(pixel => pixel.Alpha == 255));
             CollectionAssert.AreEqual(new[] { "Generate the normal map", "Generate the preview" }, model.History.Skip(1).Select(entry => entry.Description).ToArray());
-            Assert.IsTrue(model.Generation.Rows.Where(row => row.Id != "walkability").All(row => row.State == GeneratedStatus.Current));
+            Assert.IsTrue(model.Generation.Rows.Where(row => row.Id is not ("walkability" or "pathNetwork")).All(row => row.State == GeneratedStatus.Current));
 
             // a change of the heightmap leaves both out of date, and generating what is out of date puts them in the map again
             BuildWall(model);

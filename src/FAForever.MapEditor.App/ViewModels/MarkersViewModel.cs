@@ -99,6 +99,7 @@ public sealed partial class MarkersViewModel : ObservableObject
     {
         _run = run;
         Kinds = [.. Choices.Select(choice => new MarkerKindItem(choice, this))];
+        Paths = new PathNetworkPanel(run);
     }
 
     /// <summary>
@@ -126,6 +127,11 @@ public sealed partial class MarkersViewModel : ObservableObject
         ?? throw new ArgumentException($"There is no kind of marker '{name}': {string.Join(", ", Choices.Select(choice => choice.Id))}");
 
     public IReadOnlyList<MarkerKindItem> Kinds { get; }
+
+    /// <summary>
+    /// The generated path networks' choices and how they stand (user story R-3).
+    /// </summary>
+    public PathNetworkPanel Paths { get; }
 
     /// <summary>
     /// The kinds the views show and picking takes, of those the overlays Markers and Path nodes show.
