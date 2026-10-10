@@ -306,6 +306,12 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
 
     protected override void OnOpenGlRender(GlInterface gl, int fb)
     {
+        // hidden (the top view's tab), a frame asked for by an edit draws nothing: showing the
+        // view again asks for one (OnPropertyChanged)
+        if (!IsVisible)
+        {
+            return;
+        }
         using Performance.Span measure = Performance.Measure("3d.frame");
         if (_gl is null)
         {

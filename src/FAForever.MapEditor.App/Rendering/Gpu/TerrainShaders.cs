@@ -255,6 +255,12 @@ internal static class TerrainShaders
         }
         """;
 
+    /// <summary>
+    /// The sky's cube map in the direction of each pixel, its upper half only, as the game shows
+    /// it: below the horizon (where the game has the map and its skirt) the horizon's colour
+    /// fading within a few degrees into a haze of the sky low above the horizon, so the lower half
+    /// of a cube map (the default's photo landscape) never wraps the map.
+    /// </summary>
     public static string SkyFragment(bool es) => Header(es) + """
         in vec2 vNdc;
         out vec4 outColor;
@@ -266,7 +272,20 @@ internal static class TerrainShaders
             vec4 near = uInverseViewProjection * vec4(vNdc, -1.0, 1.0);
             vec4 far = uInverseViewProjection * vec4(vNdc, 1.0, 1.0);
             vec3 direction = normalize(far.xyz / far.w - near.xyz / near.w);
-            outColor = vec4(texture(uSky, direction).rgb, 1.0);
+            vec3 sky;
+            if (direction.y >= 0.0)
+            {
+                sky = texture(uSky, direction).rgb;
+            }
+            else
+            {
+                // the horizon's own colour for the first few degrees, then a haze: the sky low above
+                // the horizon in that direction, blurred to its broad colour
+                vec3 horizon = normalize(vec3(direction.x, 0.01, direction.z));
+                vec3 haze = textureLod(uSky, normalize(vec3(direction.x, 0.15, direction.z)), 7.0).rgb;
+                sky = mix(textureLod(uSky, horizon, 0.0).rgb, haze, smoothstep(0.0, 0.05, -direction.y));
+            }
+            outColor = vec4(sky, 1.0);
         }
         """;
 

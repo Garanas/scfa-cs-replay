@@ -150,7 +150,8 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         if (frame.Props)
         {
             using Performance.Span measure = Performance.Measure("3d.draw-props");
-            _props.Update((document.Props, frame.Highlighted, frame.Hovered, frame.Isolated), () => document.Props.Where(prop => frame.Shows(ObjectRef.Prop(prop.Id))).Select(prop =>
+            // the thing under the mouse changes as the mouse moves: only a prop under it makes the props again
+            _props.Update((document.Props, frame.Highlighted, frame.Hovered is { Kind: ObjectKind.Prop } hoveredProp ? hoveredProp : (ObjectRef?)null, frame.Isolated), () => document.Props.Where(prop => frame.Shows(ObjectRef.Prop(prop.Id))).Select(prop =>
                 (prop.Blueprint, ObjectPlacement.Prop(prop), frame.HighlightOf(ObjectRef.Prop(prop.Id)), 0f)));
             _props.Arrange(blueprint => _models.Get(blueprint, frame.Catalog, out _), viewProjection, frame.Eye, _models.Loaded);
             (int drawn, int runs, int boxes) = DrawRuns(_props, frame);
@@ -161,7 +162,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         if (frame.Units)
         {
             using Performance.Span measure = Performance.Measure("3d.draw-units");
-            _units.Update((document.Armies, frame.Highlighted, frame.Hovered, frame.Isolated), () =>
+            _units.Update((document.Armies, frame.Highlighted, frame.Hovered is { Kind: ObjectKind.Unit } hoveredUnit ? hoveredUnit : (ObjectRef?)null, frame.Isolated), () =>
             {
                 // wrecks are drawn grey and dark (U-5)
                 ImmutableHashSet<string> wrecks = document.Wrecks();
@@ -245,7 +246,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
                 int level = Math.Min(run.Lod, model.Lods.Length - 1);
                 ObjectModels.Lod lod = model.Lods[level];
                 mesh = MeshOf(model, level);
-                texture = _textures.Get(lod.Albedo, _white);
+                texture = lod.AlphaTest is float cut ? _textures.GetCutOut(lod.Albedo, _white, cut) : _textures.Get(lod.Albedo, _white);
                 alphaTest = lod.AlphaTest ?? -1;
                 _model.Set("uColor", 1, 1, 1);
                 _model.Set("uShading", lod.Shader switch

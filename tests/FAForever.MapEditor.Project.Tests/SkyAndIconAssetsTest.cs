@@ -170,6 +170,48 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsTrue(wholeRange.Red is > 100 and < 160 && wholeRange.Blue is > 100 and < 160, $"Terrain000: {wholeRange}");
         }
 
+        [TestMethod]
+        public void AnUncompressedCubeMapWithoutAlphaKeepsItsFacesApartFromTheirSmallerLevels()
+        {
+            // as skycube_desert01.dds: 32 bits a pixel, DDPF_RGB without DDPF_ALPHAPIXELS, a chain of levels per face
+            const int size = 4;
+            const int levels = 3;
+            int chain = (16 + 4 + 1) * 4;
+            byte[] dds = new byte[128 + 6 * chain];
+            void Put(int at, uint value) => System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(dds.AsSpan(at), value);
+            "DDS "u8.CopyTo(dds);
+            Put(4, 124);
+            Put(8, 0x1 | 0x2 | 0x4 | 0x1000 | 0x20000);
+            Put(12, size);
+            Put(16, size);
+            Put(28, levels);
+            Put(76, 32);
+            Put(80, 0x40);
+            Put(88, 32);
+            Put(92, 0x00ff0000);
+            Put(96, 0x0000ff00);
+            Put(100, 0x000000ff);
+            Put(104, 0xff000000);
+            Put(112, 0x200 | 0xfc00);
+            for (int face = 0; face < 6; face++)
+            {
+                for (int i = 0; i < chain / 4; i++)
+                {
+                    // the first level of a face its own red, the smaller levels white
+                    Put(128 + face * chain + i * 4, i < size * size ? (uint)((face * 40 + 10) << 16) : 0x00ffffffu);
+                }
+            }
+
+            DecodedTexture strip = CubeMaps.Decode(dds);
+
+            Assert.AreEqual((6 * size, size), (strip.Width, strip.Height));
+            for (int face = 0; face < 6; face++)
+            {
+                byte[] pixels = CubeMaps.Face(strip, face);
+                Assert.IsTrue(Enumerable.Range(0, size * size).All(i => pixels[i * 4] == face * 40 + 10 && pixels[i * 4 + 1] == 0 && pixels[i * 4 + 3] == 255), $"face {face} whole and of its own colour");
+            }
+        }
+
         private static DecodedTexture Solid(byte red, byte green, byte blue)
         {
             byte[] rgba = new byte[8 * 8 * 4];

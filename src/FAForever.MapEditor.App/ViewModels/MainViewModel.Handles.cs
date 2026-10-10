@@ -22,8 +22,16 @@ public sealed partial class MainViewModel
     private void InitializeHandles()
     {
         Selection.Changed += (_, _) => UpdateSelectionStatus();
-        DocumentChanged += (_, _) => UpdateSelectionStatus();
+        DocumentChanged += (_, _) =>
+        {
+            if (!ThrottledDuringStroke(ref _statusAt))
+            {
+                UpdateSelectionStatus();
+            }
+        };
     }
+
+    private long _statusAt;
 
     private void UpdateSelectionStatus()
     {

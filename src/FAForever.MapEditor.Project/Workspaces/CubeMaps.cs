@@ -34,6 +34,12 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <exception cref="InvalidDataException">The cube map has not six faces.</exception>
         public static byte[] StripPng(byte[] dds)
         {
+            if (Uncompressed(dds) is DecodedTexture own)
+            {
+                using MagickImage image = new MagickImage(own.Rgba, new PixelReadSettings((uint)own.Width, (uint)own.Height, StorageType.Char, PixelMapping.RGBA));
+                image.Settings.SetDefine(MagickFormat.Png, "compression-level", "4");
+                return image.ToByteArray(MagickFormat.Png);
+            }
             using IMagickImage<ushort> strip = Strip(dds);
             strip.Depth = 8;
             strip.Settings.SetDefine(MagickFormat.Png, "compression-level", "4");
@@ -47,6 +53,10 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <exception cref="MagickException">The bytes are no image.</exception>
         public static DecodedTexture Decode(byte[] bytes)
         {
+            if (IsCubeMap(bytes) && Uncompressed(bytes) is DecodedTexture own)
+            {
+                return own;
+            }
             if (IsCubeMap(bytes))
             {
                 using IMagickImage<ushort> strip = Strip(bytes);
@@ -85,6 +95,80 @@ namespace FAForever.MapEditor.Project.Workspaces
                 Array.Copy(strip.Rgba, (y * strip.Width + face * size) * 4, rgba, y * size * 4, size * 4);
             }
             return rgba;
+        }
+
+        /// <summary>
+        /// The strip of an uncompressed cube map of 32 bits a pixel, read by its own masks: each
+        /// face's first level, its smaller levels skipped. ImageMagick lays such a file out wrong
+        /// when its pixel format has no alpha (<c>skycube_desert01.dds</c>: DDPF_RGB without
+        /// DDPF_ALPHAPIXELS), mixing the faces with their smaller levels. Null for any other kind.
+        /// </summary>
+        public static DecodedTexture? Uncompressed(ReadOnlySpan<byte> dds)
+        {
+            const uint Rgb = 0x40;
+            const uint AlphaPixels = 0x1;
+            const uint MipMapCount = 0x20000;
+            if (!IsCubeMap(dds))
+            {
+                return null;
+            }
+            uint flags = BinaryPrimitives.ReadUInt32LittleEndian(dds[8..]);
+            int height = (int)BinaryPrimitives.ReadUInt32LittleEndian(dds[12..]);
+            int width = (int)BinaryPrimitives.ReadUInt32LittleEndian(dds[16..]);
+            int levels = (flags & MipMapCount) != 0 ? Math.Max(1, (int)BinaryPrimitives.ReadUInt32LittleEndian(dds[28..])) : 1;
+            uint format = BinaryPrimitives.ReadUInt32LittleEndian(dds[80..]);
+            uint bits = BinaryPrimitives.ReadUInt32LittleEndian(dds[88..]);
+            if ((format & Rgb) == 0 || bits != 32 || width <= 0 || width != height)
+            {
+                return null;
+            }
+            uint[] masks = new uint[4];
+            for (int i = 0; i < 4; i++)
+            {
+                masks[i] = BinaryPrimitives.ReadUInt32LittleEndian(dds[(92 + 4 * i)..]);
+            }
+            if ((format & AlphaPixels) == 0)
+            {
+                masks[3] = 0;
+            }
+            long chain = 0;
+            for (int level = 0, size = width; level < levels; level++, size = Math.Max(1, size / 2))
+            {
+                chain += (long)size * size * 4;
+            }
+            if (128 + 6 * chain > dds.Length)
+            {
+                return null;
+            }
+            byte[] rgba = new byte[6 * width * height * 4];
+            for (int face = 0; face < 6; face++)
+            {
+                ReadOnlySpan<byte> pixels = dds.Slice((int)(128 + face * chain), width * height * 4);
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        uint pixel = BinaryPrimitives.ReadUInt32LittleEndian(pixels[((y * width + x) * 4)..]);
+                        int at = (y * 6 * width + face * width + x) * 4;
+                        for (int channel = 0; channel < 4; channel++)
+                        {
+                            rgba[at + channel] = masks[channel] == 0 ? (byte)255 : Channel(pixel, masks[channel]);
+                        }
+                    }
+                }
+            }
+            return new DecodedTexture(6 * width, height, rgba);
+        }
+
+        /// <summary>
+        /// A channel of a pixel by its mask, stretched to 8 bits.
+        /// </summary>
+        private static byte Channel(uint pixel, uint mask)
+        {
+            int shift = System.Numerics.BitOperations.TrailingZeroCount(mask);
+            uint value = (pixel & mask) >> shift;
+            uint top = mask >> shift;
+            return (byte)(top == 255 ? value : value * 255 / top);
         }
 
         private static IMagickImage<ushort> Strip(byte[] dds)

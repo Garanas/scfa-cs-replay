@@ -48,12 +48,20 @@ internal sealed class GpuTextureCache(GL gl, Action loaded) : IDisposable
     public uint Get(TextureSource? source, uint fallback) => Get(source, fallback, cube: false);
 
     /// <summary>
+    /// The texture of a model whose pixels below an alpha are cut out (leaves): the colour of
+    /// those pixels, which never shows, becomes the average of the others before the mipmaps are
+    /// made, so a tree seen from afar keeps its green rather than turning dark with the black of
+    /// its holes (<see cref="CutOutTextures.Fill"/>).
+    /// </summary>
+    public uint GetCutOut(TextureSource? source, uint fallback, float alphaTest) => Get(source, fallback, cube: false, cutOut: alphaTest);
+
+    /// <summary>
     /// The cube map of <paramref name="source"/> (a strip of six faces, <see cref="CubeMaps"/>), or
     /// <paramref name="fallback"/> while it loads or when there is none.
     /// </summary>
     public uint GetCube(TextureSource? source, uint fallback) => Get(source, fallback, cube: true);
 
-    private uint Get(TextureSource? source, uint fallback, bool cube)
+    private uint Get(TextureSource? source, uint fallback, bool cube, float? cutOut = null)
     {
         if (source is null)
         {
@@ -73,7 +81,8 @@ internal sealed class GpuTextureCache(GL gl, Action loaded) : IDisposable
             {
                 try
                 {
-                    _done.Enqueue((key, source.Version, source.Read(), null));
+                    DecodedTexture image = source.Read();
+                    _done.Enqueue((key, source.Version, cutOut is float cut ? CutOutTextures.Fill(image, cut) : image, null));
                 }
                 catch (Exception exception)
                 {

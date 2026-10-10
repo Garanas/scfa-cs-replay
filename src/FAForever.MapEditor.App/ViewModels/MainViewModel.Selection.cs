@@ -89,6 +89,29 @@ public sealed partial class MainViewModel
     /// </summary>
     public ObjectKinds BoxKinds => SelectableKinds == ObjectKinds.Areas && ModeKinds == ObjectKinds.Areas ? ObjectKinds.Areas : SelectableKinds & ~ObjectKinds.Areas;
 
+    /// <summary>
+    /// How long, in milliseconds, what follows the document (the inspector, the selection's size)
+    /// waits between refreshes while a stroke goes on.
+    /// </summary>
+    public const int StrokeRefreshMilliseconds = 200;
+
+    private long _inspectedAt;
+
+    /// <summary>
+    /// Whether a refresh that follows the document is left out now: a stroke goes on and the last
+    /// was less than <see cref="StrokeRefreshMilliseconds"/> ago. Else notes the time of this one.
+    /// </summary>
+    private bool ThrottledDuringStroke(ref long last)
+    {
+        long now = Environment.TickCount64;
+        if (_stroke is not null && now - last < StrokeRefreshMilliseconds)
+        {
+            return true;
+        }
+        last = now;
+        return false;
+    }
+
     private void InitializeSelection()
     {
         // selecting on the map takes the inspector from the shelf's asset, and choosing an asset gives it back
@@ -111,6 +134,12 @@ public sealed partial class MainViewModel
         };
         DocumentChanged += (_, _) =>
         {
+            // during a stroke (a drag of thousands of props) the inspector follows a few times a
+            // second rather than on every mouse move; the stroke's end shows it as it is
+            if (ThrottledDuringStroke(ref _inspectedAt))
+            {
+                return;
+            }
             Selection.Prune(ShownDocument);
             Selection.Inspector.Refresh(ShownDocument);
         };
