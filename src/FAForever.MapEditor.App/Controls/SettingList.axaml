@@ -22,7 +22,7 @@
             <TextBlock DockPanel.Dock="Left" Classes="setting" Text="{Binding Label}" />
             <TextBox DockPanel.Dock="Right" Classes="mono commit number" Text="{Binding Text, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding IsEnabled}"
                      AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" />
-            <Slider IsVisible="{Binding HasSlider}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Value="{Binding Value}" IsEnabled="{Binding IsEnabled}"
+            <Slider IsVisible="{Binding HasSlider}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Value="{Binding Value, Mode=OneWay}" IsEnabled="{Binding IsEnabled}"
                     AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, slider'}" />
           </DockPanel>
         </DataTemplate>
@@ -55,7 +55,7 @@
         </DataTemplate>
         <DataTemplate DataType="vm:TextureSetting">
           <StackPanel Classes="stack" ToolTip.Tip="{Binding Help}">
-            <TextBlock Classes="setting" Text="{Binding Label}" />
+            <TextBlock Classes="label" Text="{Binding Label}" />
             <DockPanel>
               <Button DockPanel.Dock="Right" Classes="beside" Content="Choose..." Command="{Binding ChooseCommand}" IsVisible="{Binding CanChoose}" IsEnabled="{Binding IsEnabled}"
                       AutomationProperties.Name="{Binding Label, StringFormat='Choose the {0} in the picker'}" />

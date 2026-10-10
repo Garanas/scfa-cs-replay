@@ -220,6 +220,29 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   every call reads the folder, so presets other tools or editors write show at once; `List` leaves
   out a file it cannot read and names it.
 
+## New maps, heightmaps, strata and areas
+
+- `NewMap.Create(NewMapSettings)` (user story M-2) makes a version 56 map from scratch, as the
+  FAF map editor's new map: one of the game's sizes (`NewMap.Sizes`, 256 to 4096 ogrids), flat at
+  a height, water with its deep and abyss elevations (5 and 15 below unless given), the strata
+  textures of a biome (`NewMap.Biomes`, static data: lower layer, four strata, the macro texture
+  as upper layer), spawns on a circle, `AREA_1` over the whole map, the extra armies
+  `ARMY_17` and `NEUTRAL_CIVILIAN`, the skirmish script (`NewMap.DefaultScript`), the FAF editor's
+  default lighting and water. Masks and the water's images are half the map's size, as in the
+  vault. It exports and imports again unchanged (`NewMapTest`). `EditedMap.New` opens it as a
+  map that is no project yet and counts as changed.
+- `HeightmapFiles` (T-3): reads a heightmap of any size (PNG and what ImageMagick reads, as 16-bit
+  grey; `.r16`/`.raw` as a square of little-endian samples), resamples it bilinearly to the map's
+  (width + 1) by (height + 1) samples (`Import`), and writes the map's as PNG or `.r16`.
+- `StrataEdits` (S-2): the layer count is the version's (6 or 10); `AddStratum` fills the first
+  unused stratum (empty albedo), `RemoveStratum` takes one out and moves the ones above down with
+  their masks, `MoveStratum` moves one with its mask.
+- `AreaEdits` (M-5): an area's eight handles, which one a place hits (`HandleAt`), and what
+  dragging it does (`Drag`, kept in order).
+- `AtmospherePresets` (L-2, W-1): a lighting as a preset (its `LightingDto`), and the look of the
+  water (`WaterPresetSettings`; the elevations, whether it has water, the wave generators and the
+  masks stay the map's).
+
 ## Generated results
 
 Something made from the map when asked (user story F-7: walkability, the normal map and

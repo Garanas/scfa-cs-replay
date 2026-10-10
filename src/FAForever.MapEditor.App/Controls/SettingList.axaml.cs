@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -18,6 +19,20 @@ public sealed partial class SettingList : UserControl
     {
         InitializeComponent();
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+        AddHandler(RangeBase.ValueChangedEvent, OnSliderMoved, RoutingStrategies.Bubble);
+    }
+
+    /// <summary>
+    /// A slider moved by the person (dragged, clicked, its keys) gives its value. The slider's
+    /// binding is one way: a slider also changes its value by itself, when its range arrives after
+    /// its value or the map's value lies outside the range, and that must not change the map.
+    /// </summary>
+    private void OnSliderMoved(object? sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (e.Source is Slider { DataContext: ViewModels.NumberSetting setting } slider && (slider.IsFocused || slider.IsKeyboardFocusWithin || slider.IsPointerOver))
+        {
+            setting.Value = e.NewValue;
+        }
     }
 
     /// <summary>

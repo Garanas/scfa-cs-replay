@@ -72,6 +72,7 @@ namespace FAForever.MapEditor.App.Tests
             JsonArray ui = UiTree.Describe(window, hidden: false);
             Check(ui);
             CollectionAssert.AreEqual(Array.Empty<string>(), unlabelled);
+            Assert.AreEqual(1, model.History.Count, "showing the fields changes nothing: a slider that sets its own value gives nothing");
             StringAssert.Contains(ui.ToJsonString(), $"\"label\":\"{field}\"");
             window.Close();
         });
@@ -112,6 +113,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(1, model.Map!.Document.Markers.Areas.Length, "drawn on empty ground");
             Assert.AreEqual(1, model.AreaList.Items.Count);
             Assert.AreEqual(8, model.Tool<Tools.AreaTool>().Marks!.Handles.Count, "the new area is selected, with its handles");
+            Assert.AreEqual("Add the area AREA_1", model.History[^1].Description, "showing its fields in the inspector changes nothing");
             window.Close();
         });
 

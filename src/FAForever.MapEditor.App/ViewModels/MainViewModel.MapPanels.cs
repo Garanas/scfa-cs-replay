@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -114,6 +116,51 @@ public sealed partial class MainViewModel
         }
         Attach(EditedMap.New(document), $"Made the new map {document.Scenario.Name} ({document.Width} by {document.Height} ogrids); save it as a project to keep it");
         Logger("Files").LogInformation("Made a new map {Name} of {Width} by {Height} ogrids", document.Scenario.Name, document.Width, document.Height);
+    }
+
+    /// <summary>
+    /// What the panels of the map and its atmosphere show, for automation's <c>state</c>: the
+    /// information, the areas, the script and files, the water, the lighting, the layers, the
+    /// ruler's last measurement and whether the page of a new map is open.
+    /// </summary>
+    public JsonObject DescribeMapPanels()
+    {
+        MapDocument? document = ShownDocument;
+        (double azimuth, double elevation) = document is null ? (0, 0) : SunAngles.Of(document.Lighting.SunDirection);
+        return new JsonObject
+        {
+            ["information"] = new JsonObject
+            {
+                ["name"] = document?.Scenario.Name,
+                ["author"] = document?.Scenario.Author,
+                ["version"] = document?.Version,
+                ["type"] = document is null ? null : MapInformationViewModel.TypeName(document.Scenario.Type),
+                ["size"] = MapInformation.Size,
+                ["noRushRadius"] = document?.Scenario.NoRushRadius,
+                ["adaptive"] = document?.Scenario.AdaptiveMap,
+            },
+            ["areas"] = new JsonArray([.. AreaList.Items.Select(item => (JsonNode)JsonValue.Create(item.Rectangle.Length > 0 ? $"{item.Area.Name}: {item.Rectangle}" : item.Area.Name))]),
+            ["script"] = ScriptFiles.Script,
+            ["files"] = ScriptFiles.Summary,
+            ["water"] = document is null ? null : new JsonObject
+            {
+                ["on"] = document.Water.HasWater,
+                ["elevation"] = document.Water.Elevation,
+                ["deep"] = document.Water.ElevationDeep,
+                ["abyss"] = document.Water.ElevationAbyss,
+                ["waveGenerators"] = document.Water.WaveGenerators.Length,
+            },
+            ["lighting"] = document is null ? null : new JsonObject
+            {
+                ["azimuth"] = Math.Round(azimuth, 1),
+                ["elevation"] = Math.Round(elevation, 1),
+                ["multiplier"] = document.Lighting.Multiplier,
+            },
+            ["layers"] = new JsonArray([.. LayerTextures.Items.Select(item => (JsonNode)JsonValue.Create($"{item.Index} {item.Title}: {item.Textures}"))]),
+            ["chosenLayer"] = LayerTextures.Selected?.Index,
+            ["ruler"] = Tool<RulerTool>().Measured?.ToString(),
+            ["newMapPageOpen"] = NewMapPage.IsOpen,
+        };
     }
 
     private (string Name, System.Text.Json.Nodes.JsonObject Settings) CaptureLighting()

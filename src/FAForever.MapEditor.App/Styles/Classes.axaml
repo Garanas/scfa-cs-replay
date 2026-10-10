@@ -646,6 +646,7 @@
   </Style>
   <Style Selector="TextBox.number">
     <Setter Property="Width" Value="{StaticResource SettingNumberWidth}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Margin" Value="{StaticResource InlineGap}" />
   </Style>
   <Style Selector="TextBox.long">

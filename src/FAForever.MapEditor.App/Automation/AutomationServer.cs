@@ -571,6 +571,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             },
             ["picker"] = DescribePicker(model.Picker),
             ["symmetry"] = ChooseSymmetryHandler.Describe(model.Symmetry),
+            ["mapPanels"] = model.DescribeMapPanels(),
             ["presets"] = new JsonObject
             {
                 ["folder"] = model.Presets.Library?.Folder,

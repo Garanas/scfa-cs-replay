@@ -88,15 +88,20 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## M: The map
 
-- [ ] **M-1 Map information.** Name, description, author, version, type (skirmish, campaign),
-      preview image, no-rush radius, adaptive map, reclaim. Today: kept and exported, not editable
-      in the window.
-- [ ] **M-2 New map.** Size, starting height, water, biome or template; from scratch.
+- [x] **M-1 Map information.** Name, description, author, version, type (skirmish, campaign),
+      preview image, no-rush radius, adaptive map, reclaim: the Map panel's fields
+      (`map.information`), one step of undo per field; the inspector shows the size, armies and
+      the `.scmap`'s preview.
+- [ ] **M-2 New map.** Size, starting height, water, biome or template; from scratch. Today:
+      File, New map (`file.new`): one of the game's sizes, the height, water and its elevation,
+      the strata of one of six biomes, spawns and the playable area. Missing: templates.
 - [ ] **M-3 Size and playable area.** Grow or crop the map; set the playable area.
 - [ ] **M-4 Armies.** Add, remove and rename armies; playable or extra (civilians); factions an army
       is limited to; alliances; teams for the lobby.
-- [ ] **M-5 Areas.** Draw, name, move and resize areas (rectangles) in the views.
-- [ ] **M-6 Script.** Open the map's script in the user's editor; see the files of the map folder.
+- [x] **M-5 Areas.** Draw, name, move and resize areas (rectangles) in the views: the areas tool
+      (handles in the top view), the Map panel's list, the inspector's fields; the first is the
+      playable area. Missing: handles in the 3D view.
+- [x] **M-6 Script.** Open the map's script in the user's editor; see the files of the map folder.
 - [x] **M-7 Import and export.** Import a map folder of the game or the vault; export into the
       vault's `maps` folder.
 - [ ] **M-8 Versions and upload.** Raise the version on export; render the preview; upload to the
@@ -113,7 +118,8 @@ reads again when it changes; and nothing that generates runs by itself.
       brushes (T-1, S-1); presets of the brush tools' settings (F-10) in the Terrain and Paint
       panels. Missing: stamps.
 - [x] **T-3 Heightmap from other tools.** `heightmap.png` or `.r16` in the project is read again
-      when World Machine or Gaea writes it. Missing: import or export with a different size.
+      when World Machine or Gaea writes it; one of any size is imported, resampled
+      (`terrain.importHeightmap`), and the heightmap exported as PNG or `.r16` (`terrain.exportHeightmap`).
 - [ ] **T-4 Curves.** Draw a curve (spline) and shape the terrain along it: a ridge, a valley, a
       road, a cliff edge, with a profile, width and falloff; edit the curve afterwards and the
       terrain follows (it stays a layer, see T-5).
@@ -132,8 +138,9 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **S-1 Paint strata.** Paint and erase a layer's mask with a brush, round or the shape of one
       of the workspace's brushes (T-2), turned. Missing: limits by slope or height, painting with
       symmetry.
-- [ ] **S-2 Layers.** Choose each layer's albedo and normal texture (picker, F-9) and their scales;
-      add, remove and reorder layers; the lower and upper layer.
+- [x] **S-2 Layers.** Choose each layer's albedo and normal texture (picker, F-9) and their scales;
+      add, remove and reorder layers; the lower and upper layer. The Paint panel's layer textures
+      and the inspector; the strata the version holds (4 or 8), masks moving with them.
 - [x] **S-3 Masks from other tools.** The masks are PNGs in the project, read again when they change.
 - [ ] **S-4 Shader and derived images.** The terrain shader; generate the normal map and the preview.
 
@@ -147,15 +154,19 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## W: Water
 
-- [ ] **W-1 Water.** On or off; surface, deep and abyss elevations; colours, sun, reflection and
-      refraction, textures; wave generators. Today: on or off (`water.toggle`).
+- [x] **W-1 Water.** On or off; surface, deep and abyss elevations; colours, sun, reflection and
+      refraction, textures; wave generators. The Water panel and inspector (`water.set`, the wave
+      textures and generators); water presets. Missing: placing generators with the mouse.
 - [ ] **W-2 Paintable water.** Paint the water's foam, flatness and depth bias.
 
 ## L: Lighting and atmosphere
 
 - [ ] **L-1 Lighting.** The sun's direction (with a handle in the 3D view), colours, ambience,
-      shadow fill, multiplier, specular, bloom, fog, sky and cube maps, seen at once in 3D.
-- [ ] **L-2 Lighting presets.** The lighting of a biome as a preset (F-10).
+      shadow fill, multiplier, specular, bloom, fog, sky and cube maps, seen at once in 3D. Today:
+      the Lighting panel (`lighting.set`) and the sun tool, which turns the sun from either view.
+      Missing: a handle drawn in the 3D view; the sky and cube maps.
+- [x] **L-2 Lighting presets.** The lighting of a biome as a preset (F-10): the Lighting panel's
+      presets, `lighting.preset`.
 
 ## R: Markers
 
@@ -212,4 +223,5 @@ reads again when it changes; and nothing that generates runs by itself.
       symmetry guides, areas, markers by kind, props, decals, units. Today: markers, path nodes and
       the 3D camera; props and units on or off in 3D.
 - [ ] **V-4 Layouts.** Top and 3D side by side; panels that can be moved, closed and opened again.
-- [ ] **V-5 Ruler.** Measure distances and heights.
+- [x] **V-5 Ruler.** Measure distances and heights: the ruler tool (Terrain mode), the distance in
+      ogrids and km, the rise and slope, drawn in the top view and in the status line.
