@@ -51,7 +51,8 @@
       <views:Inspector DockPanel.Dock="Right" />
 
       <DockPanel>
-        <views:ToolOptions DockPanel.Dock="Top" />
+        <!-- above the views: the options that do not fit in its row show over them -->
+        <views:ToolOptions DockPanel.Dock="Top" ZIndex="1" />
 
         <!-- which view, and what it shows over the terrain; the tabs only choose: both views stay in the tree,
              so the 3D view keeps its textures on the graphics card -->
