@@ -1004,6 +1004,12 @@ Markers panel) and Export, each a view of its own in `Views/ProceduralPanels/`. 
   (waiting, running, done or not needed with a note, failed with why; a failed step stops the
   export), `state.procedural.export`. The file the export writes names the editor (the library's
   `EditorStamp`).
+- **Textures as DDS** (M-10, wave 10E; `MainViewModel.DdsTextures.cs`): the step `ddsTextures` at
+  `TexturesOrder` 600, after every step that may add a texture, runs the library's `TextureExport`
+  on the version the export writes (performance span `model.dds-textures`), with its shared cache;
+  its note says how many were converted, how many came from the cache and the first names
+  (`2 textures converted (2 as before): moss_albedo.png, moss_normal.png`), and the log names each
+  with its format. Not needed (`every texture is DDS`) when the map's own files hold no picture.
 - **Path networks** (R-3, wave 9D; `model.PathNodes`, `ViewModels/PathNodesViewModel.cs`, the core's
   side `MainViewModel.PathNodes.cs`, the view `Views/ProceduralPanels/PathNodesPanel.axaml` on the
   part's own view model, so it moves into an inspector as it is). Generated from the navigation mesh

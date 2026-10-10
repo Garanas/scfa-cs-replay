@@ -204,6 +204,13 @@ reads again when it changes; and nothing that generates runs by itself.
       and holds `map_editor = { name, version, commit, project_format, exported }`, which the game,
       the FAF client and the vault's upload check ignore. Missing: map-wide decals and path nodes as
       steps (wave 9).
+- [x] **M-10 Textures as DDS.** The map's own textures in other formats (PNG, JPEG, TGA, ...) are
+      exported as DDS, every reference pointed at them; the project keeps its pictures. Today: the
+      export step `ddsTextures` (after every other step) and `faf-map pack` convert the strata, decals
+      and decal sets, the water's ramp, waves and cube map, the sky's cube maps, background and sky
+      dome, the pictures a Lua file of the map names and every picture in a folder of the map; DDS
+      files and the game's textures are left as they are; a picture converted before comes from a
+      cache by its hash.
 
 ## T: Terrain
 
