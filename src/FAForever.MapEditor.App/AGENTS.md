@@ -25,7 +25,8 @@ keeps that up; go through this list with every change to the window, not only at
    request without a handler, marked `[Incomplete(story, what it is to do)]`, in its menu's
    `Planned.cs`. A tool is a `ToolDefinition` of its mode (`ViewModels/EditorModes.cs`), with
    `Missing` until it works and then `Make`, its class in `Tools/` (below) and a `DataTemplate`
-   for its settings in `Views/ToolOptions.axaml`; a part of a panel not built yet a
+   for its settings in `Views/ToolOptions.axaml` (a `controls:ToolRow` of them, most used first:
+   what does not fit goes behind More); a part of a panel not built yet a
    `PlannedSection`. What the feature shows or holds is in `state` (or its own automation
    command when it is large).
 2. **Labels**: every new control one can read or use gets `AutomationProperties.Name` (and
@@ -133,6 +134,18 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   mouse (moving, zooming, alt and a click for the camera) and send the left button to the
   active tool, without knowing which tools exist. Its settings are observable properties; the
   options bar picks the tool's `DataTemplate` by class.
+  - **The options row** (`Views/ToolOptions`, `Controls/ToolRow`) is one row of a fixed height
+    (`ToolbarHeight`) for every tool and every width of the window, so the views below never move
+    when the tool changes. A tool's template is a `controls:ToolRow Classes="toolrow"` whose
+    children are its settings, most used first: what does not fit (the last ones) goes behind a
+    More toggle at the row's end, which lays them out in rows of the same height over the top of
+    the views (on a `Border.tooloverflow`); another tool, a second click or Escape hides them. They
+    stay in the tree with their bindings, clipped away while hidden; `ui` marks them `overflow:
+    hidden|shown`, and automation's `set` opens More before setting one. The `ToolOptions` and its
+    `ContentControl` do not clip (`ClipToBounds="False"`: Fluent's templated controls clip by
+    default), and the options lie above the views (`ZIndex`). At 1280 pixels the sculpt tool shows
+    its shape, mode and falloff and puts radius, strength and limits behind More
+    (`ToolOptionsTest`).
   - `BrushStroke`, which both brushes use, holds the stroke's `EditTransaction` from press to
     release (`MainViewModel.StartStroke`, `EndStroke`): one undo step, shown while it is painted,
     dabs a quarter of the radius apart. A stroke is input, not a command, so it opens its own
@@ -302,7 +315,8 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   from 4.5 to 11 000 ogrids; the middle mouse button drags the ground with the mouse; space and
   the mouse turn it around the pivot and tilt it from straight down (pitch 90) to 10 degrees
   above the horizon; F focuses on the place under the mouse (the FAF editor focuses on the
-  selection; there is none yet), from about half as far; Home shows the whole map again. It
+  selection: View, Frame the selection, `view.frame`, Ctrl+Shift+F, does that in both views), from
+  about half as far; Home shows the whole map again. It
   glides to where it is sent (only while the 3D view draws), and its pivot is always the ground
   it looks at. The left mouse button is the active tool's, as in the top view.
   - The camera belongs to the view model (`MainViewModel.Camera`, `CameraMoved`), so both views
@@ -702,15 +716,17 @@ that moves stays selected. Another map clears it. The core's side is
   `AreaSelection` in `ViewModels/SelectionInspector.cs`, each with its `DataTemplate` in
   `Views/Inspector.axaml`); a kind's own fields go into its class (refreshed by `Refresh` with
   the document, kept while its kind stays selected) and its template.
-- **The top view draws** the areas (dashed, with their names), props (dots, overlay off by
+- **The top view draws** the areas (dashed, with their names), props (dots, sparse below 2 pixels
+  an ogrid: smaller, fainter `MapPropSparseBrush` and at most one per 3 pixels square, so 8000 props
+  do not hide the terrain; picking takes every prop; overlay off by
   default) and units (squares), only what lies in the view (span `top.things`), and an outline
   per selected thing: a ring, or the rectangle of a decal or area (`top.selection`, tokens
   `MapSelectionBrush`, `MapSelectionFillBrush`). Alt and a click send the 3D camera there.
 - Automation: `state.selection` (count, kinds, the first 200 references, what can be picked, how
   many are copied, the inspector's X, Z and heading). `stroke` drives the active tool with no
   keys held and two pixels an ogrid.
-- Not built yet: picking and a box in the 3D view (its `Pick(ray)` will call `SelectAt` and the
-  like), handles, scaling, snapping, moving along one axis, turning about the selection's centre.
+- Not built yet: a box in the 3D view (a click there picks, above), handles, snapping, moving along
+  one axis, turning about the selection's centre.
 
 ## Decals: placing, scaling, order and groups
 
@@ -1044,7 +1060,8 @@ faf-map editor close                                      # closes without askin
   (`brush.set`, above), `fit`, `camera {x?, z?, distance?, yaw?, pitch?}`
   (`camera.look`: the 3D view, degrees; at once), `focus {x, z, radius?}` (`camera.focus`: with a
   radius as F, gliding while the 3D view shows; without, as alt and a click in the top view),
-  `view {x, z, zoom?}` (`view.zoomTo`: the top view), `gpu-debug {mode}` (`view.gpuDebug`: what
+  `view {x?, z?, zoom?}` (`view.zoomTo`: the top view; without a place the one in its middle
+  stays, and it stays in the middle when the view changes size), `gpu-debug {mode}` (`view.gpuDebug`: what
   the 3D view's terrain shows: 0 the picture, 1 the albedo, 2 the light, 3 the normals, 4 the
   heights, 5 the lower layer, 6 the first four masks after the remap, 7 as stored), `mode {id}`,
   `tool {id}`, `tab {name: top|3d}`, `show {markers?, pathNodes?, camera?, props?, units?, areas?}` (each overlay's
@@ -1080,11 +1097,53 @@ faf-map editor close                                      # closes without askin
   mouse pointed at it), `close`. A new operation is a
   command of the registry, not a case here.
 - The method does not matter, and a command without arguments works as a GET
-  (`curl localhost:5371/undo`); Windows refuses a POST without a body, so the CLI always sends one.
+  (`curl localhost:5371/undo`); Windows refuses a POST without a body (HTTP 411, before the
+  editor sees it), so the CLI always sends one (`curl -d ""` does too).
+- A command that does not run answers `ran: false` with `why`: what it needs that is missing
+  (`nothing to undo`, `nothing is selected`, `no map is open`) or that it is not built yet
+  (`CommandRun.Why`, `CommandRegistry.WhyNot`). An answer that cannot be written as JSON is an error
+  (status 400), never a request left hanging.
 - It listens on the loopback address only and only when asked to. Commands do not show dialogs:
   `close` does not ask about unsaved changes.
 - Query parameters read as JSON where they can (`?step=3`, `?on=true`), as the CLI sends them.
-- An MCP server for agents would be a thin layer over these same commands.
+- An MCP server for agents would be a thin layer over these same commands. The tests have a
+  typed client, `EditorDriver` (`InProcess(automation)` headless, `Http(port)` for a running
+  editor): `Set`, `Run` (throws with `why`), `Click`, `Key`, `PointOf`, `Grid`, `Focus`,
+  `Screenshot`.
+
+### Checking a change: set, focus, grid, parts
+
+`Automation/AutomationServer.Tooling.cs` (tests: `AutomationToolingTest`).
+
+- `set {label, value, under?, commit?}`: a control found by its label, name or text, set as a
+  person would and through the control, so its bindings, coercion and commands behave as for a
+  person: a slider gets the keyboard, then the value (clamped to its range); a text field gets the
+  keyboard, its text replaced by typing, Enter and then losing the keyboard to the view (`commit`:
+  `enter`, `blur` or `both`, the default); a check box or toggle button is clicked when it differs
+  (`true`/`false`); a combo box or list chooses the item whose text is the value (else a number as
+  the index); a tree chooses a shown item by its text; a list or tree item named itself is clicked.
+  A setting behind the options row's More is shown first (`revealed`). The answer's `set` reads
+  the control back. Numbers in text fields are read in the system's culture (as a person types
+  them): give whole numbers, or the culture's decimal separator.
+  `faf-map editor set label="Height brush strength" value=0.3 --port 5372`
+  `faf-map editor set label="Height brush mode" value=Flatten --port 5372`
+  `faf-map editor set label="Keep the heights within limits" value=true --port 5372`
+- `focus {ref | refs | selection: true}` runs `view.frame {refs?}`: the top view zooms to the
+  rectangle around the things (at least 24 ogrids across) and the 3D camera glides to see it;
+  without refs, the selection. `focus {x, z, radius?}` stays `camera.focus`.
+  `faf-map editor focus ref=unit:UNIT_1 --port 5372`
+- `grid {target, x, z}`: one value of any grid of the map at a place in ogrids: `heightmap`, `types`,
+  `stratum:N`, `water:foam|flatness|depthBias`, `mask:<name>` (a half-size grid is read at the cell
+  under the place); `{target, x0, z0, x1, z1, step?}` reads a rectangle (at most 64 by 64 values)
+  with `min`, `max` and `mean`.
+  `faf-map editor grid target=stratum:1 x0=0 z0=0 x1=256 z1=256 step=32 --port 5372`
+- `screenshot {path, part}`: one part of the window: `options` (with what shows under More),
+  `inspector`, `panel`, `dock`, `rail`, `top`, `window`; `3d` reads the 3D view's frame from the
+  card as `gpu: true` does.
+  `faf-map editor screenshot part=options path=<scratch>/options.png settle=true --port 5372`
+- Fixtures for such tests: `TestMaps.Slope(degrees)` (256 ogrids, flat at 40, a ramp of exactly
+  one rise per ogrid from x 96 to 160, flat above; `SlopeProject` saves it as a project) beside
+  `TestAssets`.
 
 ### Input as a person gives it, and aiming it
 
@@ -1144,7 +1203,10 @@ faf-map workspace remove-scratch D:/scratch/ws                                  
 ```
 
 - `faf-map editor start` runs the editor built beside the CLI (or `--exe`, `FAF_MAP_EDITOR_EXE`) with
-  `FAF_MAP_EDITOR_SETTINGS` set to `--settings`, refuses a port that answers already, and waits (up
+  `FAF_MAP_EDITOR_SETTINGS` set to `--settings`, detached: its output goes to a log (`--log`, by
+  default `editor-<port>.log` beside the settings file) and it inherits none of the CLI's handles,
+  so a caller reading the CLI's output (an agent's shell) gets it when the CLI exits
+  (`DetachedProcess`). It refuses a port that answers already, and waits (up
   to `--timeout`, 120 s) until the stage is `Ready`, nothing is busy, a map is open and the assets are
   read; it prints the process, map and workspace. Without `--map` the editor opens the workspace's
   sandbox, which writes it into that workspace when it is missing: use a scratch workspace, never
