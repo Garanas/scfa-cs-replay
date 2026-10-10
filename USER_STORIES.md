@@ -36,8 +36,13 @@ reads again when it changes; and nothing that generates runs by itself.
       and filters, for textures, decals, props and units (see UNT-1). Today: the asset shelf in the
       dock (Ctrl+Shift+A): the kind follows the mode; what the map uses, its biomes or everything;
       biome or faction, category, search; a prop's variants as one tile; pictures of decals and
-      textures; the chosen asset in the inspector. Missing: the picker a slot or tool opens
-      (Ctrl+P), pictures of props and units, dragging onto the map.
+      textures; the chosen asset in the inspector. The picker (Ctrl+P, Find an asset): over the
+      window, for the active mode's kind, with search, biome or faction, category and for units
+      tech, thumbnails (props and units their mesh), the arrows, Enter and Escape; what it
+      chooses shows in the inspector; a command that picks takes the key from automation.
+      Dragging a tile onto the top or 3D view hands the asset and its place to the active tool.
+      Missing: slots that open the picker (S-2 and others), placing what is dropped (P-1, U-2,
+      D-1), stars and recents.
 - [ ] **F-10 Presets.** Save a set of things and place or apply it again: a civilian base (units in
       a group), a brush, a prop palette, a set of markers, a lighting and water setup. Presets are
       files in the workspace, shared like the rest of it.
@@ -170,7 +175,10 @@ reads again when it changes; and nothing that generates runs by itself.
 ## U: Units
 
 - [ ] **U-1 Pick a unit.** A dialog: search by name or id, filter by faction, tech, kind
-      (land, air, naval, structure, civilian), with the unit's icon and size.
+      (land, air, naval, structure, civilian), with the unit's icon and size. Today: Units,
+      Choose a unit opens the picker with those filters and each unit's mesh, tech and id; the
+      inspector shows the chosen unit with its footprint. Missing: the game's unit icons (the
+      workspace does not convert them), placing the chosen unit (U-2).
 - [ ] **U-2 Place units.** Place units for an army, rotate and move them.
 - [ ] **U-3 Unit groups.** Per army a tree of groups: create, rename, nest, move units between groups.
 - [ ] **U-4 Unit presets.** A civilian base, a defence line: a group saved as a preset and placed

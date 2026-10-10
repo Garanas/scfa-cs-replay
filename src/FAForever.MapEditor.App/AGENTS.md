@@ -83,7 +83,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     where it shows. A command in no menu is for automation and plugins, and the palette leaves
     it out: its control is on a page or panel (`workspace.setUp`, `workspace.convert`,
     `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`), it selects what one
-    clicks (`assets.select`), it is the mouse's or a view's own key in
+    clicks (`assets.select`) or drops what one drags (`assets.drop`), it is the mouse's or a view's own key in
     the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
     for finding faults (`view.gpuDebug`, `diagnostics.flush`, `diagnostics.upload`). The window makes the menus and the
     shortcuts from it (`MainWindow.BuildMenusAndShortcuts`); the palette searches the commands in
@@ -204,7 +204,7 @@ compact density) draws the standard controls; `Styles/` holds the look of everyt
   used twice becomes one.
 - The views are split by what they are: `MainWindow` (menu, status bar, the two map views, the
   pages by stage), `ModeRail`, `ModePanel`, `ToolOptions`, `Inspector`, `Dock`, `AssetShelf`,
-  `CommandPalette`, `DiagnosticsPage`, `VersionControlPage`, `SetupPage`, `UpdateAssetsPage`,
+  `CommandPalette`, `AssetPicker`, `DiagnosticsPage`, `VersionControlPage`, `SetupPage`, `UpdateAssetsPage`,
   `ConvertingPage`.
 - Code that draws (the overlays of the top view, the 3D view's sky) reads the tokens with
   `TryFindResource` and reads them again when the theme variant changes. Only colours that come
@@ -251,7 +251,8 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   properties, each one user story's area, readable without opening `MainViewModel`:
   `Diagnostics` (`DiagnosticsViewModel`: the Console and the Diagnostics page), `Setup`
   (`WorkspaceSetupViewModel`: the start, the setup page, the conversion of the assets),
-  `VersionControl` (`VersionControlViewModel`: the git page) and `Palette` (`PaletteViewModel`).
+  `VersionControl` (`VersionControlViewModel`: the git page), `Palette` (`PaletteViewModel`),
+  `Assets` (`AssetsViewModel`: the shelf) and `Picker` (`AssetPickerViewModel`).
   Each is the one place its state lives: the views bind through it (`{Binding Setup.Folder}`),
   automation reads it there, and a handler that works on one part takes that part
   (`SetUpWorkspaceHandler(WorkspaceSetupViewModel setup)`; `CommandServices` holds them). A part
@@ -427,7 +428,32 @@ ready and again with Modes, Assets, Read the assets again (`assets.reload`):
   its story (placing: P-1, U-2, D-1; a stratum's texture: S-2). Ctrl+Shift+A (`assets.browse`)
   shows the shelf with the search field taken; its arguments set the filters.
 - The dock is higher (`DockTallHeight`) while the shelf shows (`IsDockTall`).
-- Not built yet: the picker for a slot (`assets.pick`, C2), dragging onto the map, stars and recents.
+- **The picker** (concept C2, `AssetPickerViewModel` as `model.Picker`, `Views/AssetPicker` over
+  the window): one asset of a kind for a slot, a tool or a command. A handler asks for it with
+  `IEditorDialogs.PickAssetAsync(kind, title?, current?)`, which answers the chosen asset's key
+  or null; `WindowDialogs` opens the picker, a test's answers say the key (the interface's default
+  cancels), and `DialogGuard` refuses it without a person, naming the argument `key`. So a command
+  that picks takes the key as its argument for automation. The picker has its own search, filters
+  and selection (the shelf's stay as they are), and opens with them cleared, on `current` when
+  given: the biome, faction or folder; the category, for units their kind (land, air, naval,
+  structure, other, and civilian, which is any of them); and for units the tech level (the
+  catalogue's `TechLevel`). Each choice counts what it would show with the other filters. A
+  prop's variants each have a tile (a slot takes one). The search has the keyboard; up and down
+  move a row from it, the four arrows in the tiles; Enter or a double click chooses, Escape or a
+  click beside it cancels. The shelf and the picker search alike (`AssetSearch`). Units show
+  their mesh: the workspace converts no unit icons.
+  - `assets.pick {kind?, key?}` (Ctrl+P, F-9) picks an asset of the active mode's kind (else the
+    shelf's) and `units.pick {key?}` (U-1) a unit; the chosen one shows in the inspector, as one
+    chosen on the shelf (a brush also becomes the active tool's shape).
+- **Dragging onto the map** (C4): a tile dragged from the shelf (6 pixels with the left button)
+  carries the asset's key (`Controls/AssetDrag`, a format that stays in the editor) onto the top
+  or 3D view, which show where it would land in the status bar's place and hand the drop to
+  `MainViewModel.DropAsset(key, x, z)` (ogrids). The active tool takes it if it is an
+  `IAssetDropTarget` that accepts the asset; else `AssetDropped` is raised, where a mode places
+  what is dropped. What nobody takes says in the status line which user story will (P-1, U-2,
+  D-1). `assets.drop {key, x, z}` does the same for automation. The views only attach
+  `AssetDrag.Attach` with how a point of the view becomes a place of the map.
+- Not built yet: stars and recents; a mark of the drop place drawn in the views.
 
 ## Diagnostics: what goes well and wrong
 
@@ -520,11 +546,17 @@ faf-map editor close                                      # closes without askin
   shows (filters, counts per kind, biome and category, the first 200 tiles with their keys);
   `run id=assets.select key=uec1101` selects one; `state` has `dock` and `assets` (kind, scope,
   query, group, category, summary, the selected key).
+- The picker: `run id=units.pick key=uec1101` chooses without it. To see and drive the picker as
+  a person does, `picker {open?, query?, group?, category?, tech?, move?: [across, down], choose?,
+  cancel?}`: `open` runs a command that picks (`assets.pick`, `units.pick`) as the menu does,
+  without waiting for the answer; the rest types, filters, moves and chooses (empty clears a
+  filter). Its answer has `pickerTiles` (the first 60); `state` has `picker` (open, kind, title,
+  filters with their counts, summary, the selected key).
 - **Automation's own**, reads and input: `state` (with `mode`, `tool`, `toolNotBuilt`, `palette`),
   `ui {hidden?}`, `perf {reset?}` (above), `logs {problems?, count?}` (what the Console shows),
   `diagnostics {record?, send?, endpoint?, flush?, upload?}` (the session's files and choices;
   what it changes runs `diagnostics.set`, `diagnostics.flush`, `diagnostics.upload`),
-  `version-control {open?, enable?, name?, email?, lfs?, remote?}` (how the project stands in
+  `picker {...}` (above), `version-control {open?, enable?, name?, email?, lfs?, remote?}` (how the project stands in
   git; `open` runs `file.commit` without a message, which shows the page, `enable` runs
   `file.enableVersionControl` with the choices, which go only with it), `mask {layer, x, z}`,
   `stroke {points}` (the left mouse, so the active tool, no command), `height {x, z}`, `hit {x, y}` (the control the

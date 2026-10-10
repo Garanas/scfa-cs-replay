@@ -423,7 +423,8 @@
   <Style Selector="Border.dialog.picker">
     <Setter Property="Width" Value="{StaticResource PickerWidth}" />
   </Style>
-  <Style Selector="Panel.pickertiles">
+  <!-- the facets and the tiles keep their height whatever the filters leave -->
+  <Style Selector="Panel.pickertiles, Border.dialog.picker Border.facets">
     <Setter Property="Height" Value="{StaticResource PickerListHeight}" />
   </Style>
   <Style Selector="Border.pickerfoot">
