@@ -654,6 +654,56 @@ that moves stays selected. Another map clears it. The core's side is
 - Not built yet: picking and a box in the 3D view (its `Pick(ray)` will call `SelectAt` and the
   like), handles, scaling, snapping, moving along one axis, turning about the selection's centre.
 
+## Decals: placing, scaling, order and groups
+
+User stories D-1 and D-2, the Decals mode (F8); the edits are the library's `DecalEdits`.
+
+- **The place tool** (`decals.place`, `Tools/DecalPlaceTool`, `model.DecalPlaceTool`) places the
+  decal it holds (`Decal`, an asset's key): chosen with Choose... in its options or
+  `decals.choose {key?}` (the picker for decals; it makes the place tool active), or on the shelf
+  and with Ctrl+P (`assets.pick`): a decal the inspector shows becomes the tool's, and in the Decals
+  mode the place tool becomes active. A click places it centred on the mouse, `Width` wide (the
+  options; its length from the shape of the texture's picture, read once from the PNG's header
+  when chosen), turned by `Heading`, with the cut-off of the options (500 at first: what maps use
+  most); dragging from the click sets its width to twice the distance and turns its width along
+  the drag. One step of undo held from press to release, as a stroke; the new decal is selected.
+  `decals.place {x, z, key?, width?, length?, heading?, cutOff?}` does the same for automation and
+  a drop. A decal tile dropped on a view is placed there: the place tool takes it
+  (`IAssetDropTarget`), and while another tool is active `AssetDropped` does
+  (`MainViewModel.Decals.cs`).
+- **The select tool** (`decals.select`, `Tools/DecalSelectTool`) wraps a `SelectTool` for decals
+  (click, box, move, Q and E, arrows, Delete) and scales: `DragMode` (the options' Drag box, or S
+  for the next) makes dragging a selected decal scale the selection about each centre, both sides
+  (`Scale`), the `Width` or the `Length` only, by how much further the mouse is from the
+  selection's middle than at the press; one step of undo. The keys `=`/`+` and `-` (`OemPlus`,
+  `OemMinus`, the keypad's) scale by a tenth (shift: a hundredth), the side the drag mode names.
+  `decals.scale {factor?, x?, z?}` is the command.
+- **The inspector's decal section** (`DecalSelection`): type, width and length (`decals.size
+  {width?, length?}`), "Shown within" and "Hidden within" (`decals.lod {cutOff?, nearCutOff?}`, the
+  cut-off and near cut-off LOD), each for one or many with a dash where they differ, and the order
+  buttons. A section runs commands through `SelectionSection.Run`, which the inspector sets.
+- **Order**: `decals.forward` (Ctrl+]), `decals.backward` (Ctrl+[), `decals.toFront` (Ctrl+Shift+]),
+  `decals.toBack` (Ctrl+Shift+[) on the selected decals, in the Decals menu: the map's list decides
+  what lies on top (the 3D view draws in its order, a click picks the last).
+- **Decal groups** (`DecalsViewModel`, `model.Decals`; the panel's `DecalGroupsSection`): the
+  document's `DecalGroups`, each a row with a check box (shown), its name (typed: renames), how many
+  decals, and Select, Add, Take out and a cross; "New group from the selection". Commands:
+  `decals.addGroup {name?}`, `decals.renameGroup {group, name}`, `decals.deleteGroup {group}` (the
+  decals stay), `decals.addToGroup {group}`, `decals.removeFromGroup {group}`, `decals.selectGroup
+  {group, add?}`, `decals.showGroup {group, on?}`; `group` is the group's id. Hidden groups are the
+  editor's, never the document's: another map shows every group again. Their decals
+  (`HiddenDecals`) are not drawn in 3D (`TerrainRenderer` leaves them out of its runs), not picked
+  in either view (`PickAt` passes `IsShown` to the library's `Nearest`; `PickOptions.HiddenDecals`),
+  not selected by a box or Select all, and drop out of the selection when hidden.
+- **3D**: the renderer rebuilds its decal runs when `document.Decals` or the hidden set changes
+  (0.7 ms for Archsimkats Valley's 3634 decals). The selected decals are drawn once more over the
+  others (`DecalHighlightFragment`): a light tint of `SelectedStrokeBrush` with an outline two pixels
+  wide, from their own instance buffer in runs by size class. The 3D view gives the active tool what
+  its ray meets among the kinds it may select (`PickAt(point, SelectableKinds)`), so a prop over a
+  decal does not stop a click of the Decals mode's tool.
+- Automation: `state.decals` (the map's count, the place tool's decal, width, heading and cut-off,
+  the select tool's drag mode, how many decals are hidden, the groups with id, name, count, shown).
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session

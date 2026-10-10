@@ -254,7 +254,6 @@ public sealed partial class AssetsViewModel : ObservableObject
     {
         AssetKind.Prop => "Placing it on the map, and adding it to a palette: user stories P-1 and P-2",
         AssetKind.Unit => "Placing it for an army: user story U-2",
-        AssetKind.Decal => "Placing it on the terrain: user story D-1",
         AssetKind.Texture => "Using it for a stratum: user story S-2",
         _ => "",
     };
@@ -262,9 +261,12 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// <summary>
     /// What the shown asset is for today, beside what is planned: a brush is a shape of the brush tools.
     /// </summary>
-    public string ShownUse => Shown?.Kind == AssetKind.Brush
-        ? "Choosing it makes it the shape of the active brush tool: Sculpt in the Terrain mode, Strata in the Paint mode, whose options turn it."
-        : "";
+    public string ShownUse => Shown?.Kind switch
+    {
+        AssetKind.Brush => "Choosing it makes it the shape of the active brush tool: Sculpt in the Terrain mode, Strata in the Paint mode, whose options turn it.",
+        AssetKind.Decal => "Choosing it makes it the decal the Place tool of the Decals mode places (in that mode the tool becomes active); drag it onto a view to place it there.",
+        _ => "",
+    };
 
     /// <summary>
     /// Why the shelf is empty, or empty when it is not.

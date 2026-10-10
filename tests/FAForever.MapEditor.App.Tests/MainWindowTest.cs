@@ -750,5 +750,66 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(SelectionInspector.Mixed, x.Text);
             window.Close();
         });
+    
+
+        [TestMethod]
+        public Task AClickWithThePlaceToolPlacesADecalAndTheDecalsModeIsLabelled() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.Top);
+            model.Assets.Use(TestAssets.Catalog());
+            model.SelectMode("decals");
+            await model.Commands.RunAsync("decals.choose", new JsonObject { ["key"] = "env/evergreen/decals/e_mud001_albedo.dds" }, interactive: false);
+            Dispatcher.UIThread.RunJobs();
+            int before = model.ShownDocument!.Decals.Length;
+            Point at = Middle(window.MapView, window);
+            Point place = window.MapView.ControlToMap(window.TranslatePoint(at, window.MapView)!.Value);
+
+            window.MouseMove(at);
+            window.MouseDown(at, MouseButton.Left);
+            window.MouseUp(at, MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.AreEqual(before + 1, model.ShownDocument!.Decals.Length, "a click places the decal");
+            ObjectRef placed = ObjectRef.Decal(model.ShownDocument.Decals[^1].Id);
+            Vector3 centre = model.ShownDocument.PlaceOf(placed)!.Value;
+            Assert.AreEqual(place.X, centre.X, 0.01, "centred on the mouse");
+            Assert.AreEqual(place.Y, centre.Z, 0.01);
+            Assert.IsTrue(model.Selection.Contains(placed), "and selected");
+            TextBox width = window.GetVisualDescendants().OfType<TextBox>().Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Width of the selected decals");
+            Assert.IsTrue(width.IsEffectivelyVisible, "the inspector shows the decal's own fields");
+            Assert.AreEqual("16", width.Text);
+
+            // the panel lists a group made of it; every control of the mode has a label
+            await model.Commands.RunAsync("decals.addGroup", new JsonObject { ["name"] = "Roads" }, interactive: false);
+            Dispatcher.UIThread.RunJobs();
+            CheckBox shown = window.GetVisualDescendants().OfType<CheckBox>().Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Show the decal group Roads");
+            Click(window, shown);
+            Assert.AreEqual(1, model.Decals.HiddenDecals.Count, "the check box hides the group");
+            List<string> unlabelled = [];
+            void Check(JsonArray nodes)
+            {
+                foreach (JsonObject node in nodes.Cast<JsonObject>())
+                {
+                    string type = node["type"]!.GetValue<string>();
+                    if (type is "Slider" or "ComboBox" or "TextBox" or "Button" or "CheckBox" && node["label"] is null && node["text"] is null)
+                    {
+                        unlabelled.Add($"{type} at {node["bounds"]!.ToJsonString()}");
+                    }
+                    if (node["children"] is JsonArray children)
+                    {
+                        Check(children);
+                    }
+                }
+            }
+            Check(UiTree.Describe(window, hidden: true));
+            CollectionAssert.AreEqual(Array.Empty<string>(), unlabelled);
+            model.SelectTool("decals.select");
+            Dispatcher.UIThread.RunJobs();
+            unlabelled.Clear();
+            Check(UiTree.Describe(window, hidden: true));
+            CollectionAssert.AreEqual(Array.Empty<string>(), unlabelled, "the select tool's options too");
+            window.Close();
+        });
     }
 }

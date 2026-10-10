@@ -167,10 +167,11 @@ public static class EditorModes
 
         new ModeDefinition("decals", "Decals", "Icon.Decals", "Place decals, groups", 1, "F8", "D-1",
             [
-                new ToolDefinition("decals.place", "Place", "D-1", "Place decals from the picker, move, rotate and scale them"),
+                new ToolDefinition("decals.select", "Select", "D-1") { Make = model => new DecalSelectTool(model) },
+                new ToolDefinition("decals.place", "Place", "D-1") { Make = model => new DecalPlaceTool(model) },
             ],
-            [new PlannedSection("Decal groups", "D-2", "Groups of decals, shown or hidden")],
-            [new PlannedSection("Decals", "D-1", "The selected decals: textures, size, distances, order")]),
+            [new DecalGroupsSection()],
+            []),
 
         new ModeDefinition("units", "Units", "Icon.Units", "Place units, groups per army, presets", 1, "F9", "U-2",
             [

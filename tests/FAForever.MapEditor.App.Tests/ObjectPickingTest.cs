@@ -101,6 +101,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(ObjectRef.Decal(42), ObjectPicking.Pick(document, new Vector3(25, 100, 25), Down, decals, Tall, terrain: 100), "the last lies on top");
             Assert.AreEqual(ObjectRef.Prop(1), ObjectPicking.Pick(document, new Vector3(25, 100, 25), Down, new PickOptions(), Tall, terrain: 100), "an object first");
             Assert.IsNull(ObjectPicking.Pick(document, new Vector3(5, 100, 5), Down, decals, Tall, terrain: 100));
+            Assert.AreEqual(ObjectRef.Decal(41), ObjectPicking.Pick(document, new Vector3(25, 100, 25), Down, decals with { HiddenDecals = new HashSet<int> { 42 } }, Tall, terrain: 100),
+                "a hidden decal (of a hidden group) is not picked: the one under it is");
         }
 
         [TestMethod]

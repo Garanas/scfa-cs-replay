@@ -76,6 +76,18 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     prop's whole matrix turns, so a tilt stays), removes, copies and pastes many things at once
     (`ObjectClipboard`; copied path nodes keep their links among each other). Things keep to the
     terrain: they stay as high above it as they were (`Heightmap.HeightAt`, between the corners).
+    `Nearest` takes what may be picked at all (`include`): the editor leaves out hidden decals.
+  - `DecalEdits` (user stories D-1, D-2): `NewDecal` centred on a place from a texture (an asset's
+    key becomes the game's path with a slash, `/env/common/decals/erosion018_normals.dds`, in the
+    first of two slots; a `_normals` texture makes a `Normals` decal, anything else `Albedo`; the
+    cut-off 500, the distance maps use most), `PlaceDecal` (on top, with its new reference),
+    `ScaleDecals` and `SizeDecals` (about each centre; `Scale.Y` follows x, as maps write it),
+    `SetDecalLods` (the cut-off and near cut-off of many at once), `OrderDecals` (`Forward` and
+    `Backward` one place, a block of selected decals moving together; `ToFront`, `ToBack`: the list's
+    order decides what lies on top, the last drawn last), and the groups: `AddDecalGroup` (a free
+    name, only decals the map has), `RenameDecalGroup`, `RemoveDecalGroup` (its decals stay),
+    `AddToDecalGroup`, `RemoveFromDecalGroup`, `DecalsOf`. Hiding a group is the editor's, never the
+    document's.
 - Lua plugins (Lua-CSharp, later) get a facade over the session, never the document: reads give
   values, writes happen inside a transaction, so each plugin run is one undo step and a failing
   plugin changes nothing.

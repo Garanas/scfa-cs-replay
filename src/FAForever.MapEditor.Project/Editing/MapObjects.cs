@@ -126,14 +126,16 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         /// <param name="ogridsPerPixel">How large a pixel of the view is on the map: the sizes on
         /// screen become distances on the map with it.</param>
-        public static ObjectRef? Nearest(this MapDocument document, float x, float z, float ogridsPerPixel, ObjectKinds kinds)
+        /// <param name="include">Whether a thing may be picked at all (the editor leaves out what it
+        /// hides, such as the decals of a hidden group); null for every thing.</param>
+        public static ObjectRef? Nearest(this MapDocument document, float x, float z, float ogridsPerPixel, ObjectKinds kinds, Func<ObjectRef, bool>? include = null)
         {
             ObjectRef? best = null;
             float bestScore = float.MaxValue;
             void Consider(ObjectRef thing, float distance, float pixels)
             {
                 float reach = pixels * ogridsPerPixel;
-                if (distance <= reach && distance / reach < bestScore)
+                if (distance <= reach && distance / reach < bestScore && (include is null || include(thing)))
                 {
                     best = thing;
                     bestScore = distance / reach;
@@ -184,7 +186,7 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 for (int i = document.Decals.Length - 1; i >= 0; i--)
                 {
-                    if (Contains(DecalCorners(document.Decals[i]), new Vector2(x, z)))
+                    if (Contains(DecalCorners(document.Decals[i]), new Vector2(x, z)) && (include is null || include(ObjectRef.Decal(document.Decals[i].Id))))
                     {
                         return ObjectRef.Decal(document.Decals[i].Id);
                     }

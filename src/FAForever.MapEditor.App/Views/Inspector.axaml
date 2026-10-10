@@ -142,11 +142,47 @@
                   </StackPanel>
                 </Border>
               </DataTemplate>
+              <!-- the decals' own fields (D-1): size, the distances they show at, their place in the order -->
               <DataTemplate DataType="vm:DecalSelection">
                 <Border Classes="group">
                   <StackPanel Classes="stack">
                     <TextBlock Classes="heading" Text="{Binding Title}" />
                     <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected decals" />
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Type" Width="{StaticResource FactLabelWidth}" />
+                      <TextBlock Classes="mono" Text="{Binding Types}" AutomationProperties.Name="Types of the selected decals" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Width" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding Width, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Width of the selected decals"
+                               AutomationProperties.HelpText="In ogrids, along each decal's own x axis; a value gives it to every selected decal, about its centre; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Length" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding Length, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Length of the selected decals"
+                               AutomationProperties.HelpText="In ogrids, along each decal's own z axis; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Shown within" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding CutOff, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Distance the selected decals show within"
+                               AutomationProperties.HelpText="The game does not draw a decal when the camera is further away than this (its cut-off LOD); maps mostly use 200 to 800; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Hidden within" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding NearCutOff, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Distance the selected decals hide within"
+                               AutomationProperties.HelpText="The game does not draw a decal when the camera is closer than this (its near cut-off LOD); usually 0; a dash when they differ" />
+                    </DockPanel>
+                    <TextBlock Classes="label" Text="Order" />
+                    <StackPanel Classes="inline">
+                      <Button Content="Front" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="decals.toFront"
+                              AutomationProperties.Name="Bring the decals to the front" ToolTip.Tip="On top of every other decal (Ctrl+Shift+])" />
+                      <Button Content="Forward" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="decals.forward"
+                              AutomationProperties.Name="Bring the decals forward" ToolTip.Tip="One place up in the map's order (Ctrl+])" />
+                      <Button Content="Back" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="decals.backward"
+                              AutomationProperties.Name="Send the decals backward" ToolTip.Tip="One place down in the map's order (Ctrl+[)" />
+                      <Button Content="Bottom" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="decals.toBack"
+                              AutomationProperties.Name="Send the decals to the back" ToolTip.Tip="Under every other decal (Ctrl+Shift+[)" />
+                    </StackPanel>
                   </StackPanel>
                 </Border>
               </DataTemplate>

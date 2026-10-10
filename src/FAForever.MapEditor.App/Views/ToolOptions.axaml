@@ -4,6 +4,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:tools="using:FAForever.MapEditor.App.Tools"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
              x:Class="FAForever.MapEditor.App.Views.ToolOptions"
              x:DataType="vm:MainViewModel">
   <Border Classes="toolbar options">
@@ -57,6 +58,45 @@
             <!-- selecting and moving what lies on the map (F-11) -->
             <DataTemplate DataType="tools:SelectTool">
               <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+            </DataTemplate>
+            <!-- the Decals mode's select tool (F-11, D-1): what dragging the selection does -->
+            <DataTemplate DataType="tools:DecalSelectTool">
+              <StackPanel Classes="toolrow">
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="Drag" />
+                  <ComboBox ItemsSource="{Binding DragModes}" SelectedItem="{Binding DragMode}" AutomationProperties.Name="What dragging the selection does"
+                            AutomationProperties.HelpText="Move, Scale both sides, or scale the Width or Length only; S chooses the next" />
+                </StackPanel>
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </StackPanel>
+            </DataTemplate>
+            <!-- placing decals (D-1): the decal, its size, turn and distance -->
+            <DataTemplate DataType="tools:DecalPlaceTool">
+              <StackPanel Classes="toolrow">
+                <StackPanel Classes="inline">
+                  <controls:AssetThumbnail Source="{Binding Image}" DecodeWidth="64" Width="{StaticResource ChipHeight}" Height="{StaticResource ChipHeight}"
+                                           IsVisible="{Binding Image, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.Name="Picture of the decal to place" />
+                  <TextBlock Classes="label" Text="{Binding Title}" ToolTip.Tip="{Binding Help}" AutomationProperties.Name="Decal to place"
+                             AutomationProperties.HelpText="{Binding Help}" />
+                  <Button Content="Choose..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="decals.choose"
+                          AutomationProperties.Name="Choose the decal to place" AutomationProperties.HelpText="Opens the picker (Ctrl+P); a decal chosen on the shelf is chosen too" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Width, StringFormat='Width: {0:0.#} ogrids'}" />
+                  <Slider Minimum="1" Maximum="256" Value="{Binding Width}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Width of a new decal in ogrids"
+                          AutomationProperties.HelpText="Its length follows the texture's shape; dragging while placing sets the width too" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Heading, StringFormat='Turned: {0:0}°'}" />
+                  <Slider Minimum="-180" Maximum="180" Value="{Binding Heading}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Turn of a new decal in degrees" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding CutOffLod, StringFormat='Shown within: {0:0}'}" />
+                  <Slider Minimum="50" Maximum="2000" SmallChange="50" LargeChange="100" IsSnapToTickEnabled="True" TickFrequency="50" Value="{Binding CutOffLod}" Width="{StaticResource ToolSliderWidth}"
+                          AutomationProperties.Name="Distance a new decal shows within"
+                          AutomationProperties.HelpText="The game does not draw the decal when the camera is further away (its cut-off LOD); maps mostly use 200 to 800" />
+                </StackPanel>
+              </StackPanel>
             </DataTemplate>
             <!-- how either brush's picture is turned; the shape itself is the first choice of the row -->
             <DataTemplate DataType="tools:BrushShapeSettings">

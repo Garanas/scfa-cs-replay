@@ -149,6 +149,7 @@ public sealed partial class SelectionInspector : ObservableObject
             if (!_sections.TryGetValue(kind, out SelectionSection? section))
             {
                 section = SelectionSection.For(kind);
+                section.Run = _run;
                 _sections[kind] = section;
             }
             section.Refresh(document, [.. things.Where(thing => thing.Kind == kind)]);
@@ -183,7 +184,10 @@ public sealed partial class SelectionInspector : ObservableObject
         return MathF.Round(degrees, 3) >= 360 ? 0 : degrees;
     }
 
-    private static string Shared(IEnumerable<float> values, string format)
+    /// <summary>
+    /// The value all of them have, as text, or <see cref="Mixed"/> when they differ; empty for none.
+    /// </summary>
+    internal static string Shared(IEnumerable<float> values, string format)
     {
         string? shown = null;
         foreach (float value in values)
@@ -245,6 +249,11 @@ public abstract partial class SelectionSection : ObservableObject
     protected const int MostLines = 8;
 
     public abstract ObjectKind Kind { get; }
+
+    /// <summary>
+    /// Runs a command with its arguments, for the section's own fields; set by the inspector.
+    /// </summary>
+    public Func<string, JsonObject, Task>? Run { get; set; }
 
     /// <summary>
     /// E.g. <c>3 props</c>.
@@ -331,14 +340,109 @@ public sealed class PropSelection : SelectionSection
 }
 
 /// <summary>
-/// The selected decals: their textures (user story D-1).
+/// The selected decals (user story D-1): their textures, and the fields of decals, for one or many
+/// at once: width and length in ogrids (<c>decals.size</c>), the distances at which the game draws
+/// them (<c>decals.lod</c>), each showing <see cref="SelectionInspector.Mixed"/> when they differ.
 /// </summary>
 public sealed class DecalSelection : SelectionSection
 {
+    private string _width = "";
+    private string _length = "";
+    private string _cutOff = "";
+    private string _nearCutOff = "";
+
     public override ObjectKind Kind => ObjectKind.Decal;
+
+    /// <summary>
+    /// Their width (along each decal's own x axis) in ogrids; typing one gives it to each.
+    /// </summary>
+    public string Width
+    {
+        get => _width;
+        set => Type(value, ref _width, nameof(Width), "decals.size", "width");
+    }
+
+    /// <summary>
+    /// Their length (along each decal's own z axis) in ogrids.
+    /// </summary>
+    public string Length
+    {
+        get => _length;
+        set => Type(value, ref _length, nameof(Length), "decals.size", "length");
+    }
+
+    /// <summary>
+    /// The distance beyond which the game does not draw them.
+    /// </summary>
+    public string CutOff
+    {
+        get => _cutOff;
+        set => Type(value, ref _cutOff, nameof(CutOff), "decals.lod", "cutOff");
+    }
+
+    /// <summary>
+    /// The distance closer than which the game does not draw them.
+    /// </summary>
+    public string NearCutOff
+    {
+        get => _nearCutOff;
+        set => Type(value, ref _nearCutOff, nameof(NearCutOff), "decals.lod", "nearCutOff");
+    }
+
+    /// <summary>
+    /// Their types, e.g. <c>albedo</c> or <c>albedo, normals</c>.
+    /// </summary>
+    public string Types { get; private set; } = "";
+
+    public override void Refresh(MapDocument document, IReadOnlyList<ObjectRef> things)
+    {
+        base.Refresh(document, things);
+        Decal[] decals = [.. things.Select(document.Find).OfType<Decal>()];
+        Show(ref _width, nameof(Width), SelectionInspector.Shared(decals.Select(decal => decal.Scale.X), "0.##"));
+        Show(ref _length, nameof(Length), SelectionInspector.Shared(decals.Select(decal => decal.Scale.Z), "0.##"));
+        Show(ref _cutOff, nameof(CutOff), SelectionInspector.Shared(decals.Select(decal => decal.CutOffLod), "0.#"));
+        Show(ref _nearCutOff, nameof(NearCutOff), SelectionInspector.Shared(decals.Select(decal => decal.NearCutOffLod), "0.#"));
+        string types = string.Join(", ", decals.Select(decal => decal.Type.ToString().ToLowerInvariant()).Distinct().Order());
+        if (types != Types)
+        {
+            Types = types;
+            OnPropertyChanged(nameof(Types));
+        }
+    }
 
     protected override IEnumerable<string> LinesOf(MapDocument document, IReadOnlyList<ObjectRef> things) =>
         Counted(things.Select(document.Find).OfType<Decal>().Select(decal => decal.Textures.IsDefaultOrEmpty ? $"decal {decal.Id}" : Path.GetFileNameWithoutExtension(decal.Textures[0])));
+
+    private void Show(ref string field, string property, string value)
+    {
+        if (field != value)
+        {
+            field = value;
+            OnPropertyChanged(property);
+        }
+    }
+
+    /// <summary>
+    /// A value typed into a field: a number goes to every selected decal through the command;
+    /// anything else changes nothing and the field shows its value again.
+    /// </summary>
+    private void Type(string value, ref string field, string property, string command, string argument)
+    {
+        if (value == field)
+        {
+            return;
+        }
+        if (Run is null || !double.TryParse(value.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double number) || !double.IsFinite(number))
+        {
+            string shown = field;
+            field = value;
+            OnPropertyChanged(property);
+            field = shown;
+            OnPropertyChanged(property);
+            return;
+        }
+        _ = Run(command, new JsonObject { [argument] = number });
+    }
 }
 
 /// <summary>
