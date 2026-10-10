@@ -87,7 +87,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     `presets.delete`, `view.walkability`, `problems.show`, `markers.showKind`, `markers.set`,
     `markers.setChain`, `markers.renameChain`, `markers.deleteChain`, `markers.setWeather`,
     `markers.addOptionalGroup`, `file.showCommit`, `file.restoreCommit`, `view.togglePanel`,
-    `view.resizePanel`, `view.setToolbar`, `view.addToToolbar`, `view.removeFromToolbar`), it selects what one
+    `view.resizePanel`, `view.movePanel`, `view.returnPanel`, `view.setToolbar`, `view.addToToolbar`, `view.removeFromToolbar`), it selects what one
     clicks (`assets.select`) or drops what one drags (`assets.drop`), it is what a tool's click does
     (`markers.place`, `markers.link`), it is the mouse's or a view's own key in
     the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
@@ -226,9 +226,38 @@ library's `LayoutSettingsDto`) and read back when the editor starts (`MainViewMo
   `view.removeFromToolbar {id}` (also a button's context menu) change it, and the settings file's
   `layout.toolbarCommands` can be edited by hand (an unknown id is left out with a warning).
 - Automation: `tab {name: side}`, `state.layout` (the panels, sizes, split, the toolbar's commands
-  with `canRun`, the settings file).
-- Not built yet: moving a panel to another side or out of the window, choosing toolbar commands
-  in the window (only the context menu's Remove).
+  with `canRun`, the settings file, `places`), `state.floatingWindows`.
+- **Moving panels** (`LayoutViewModel.Places.cs`, `Views/MainWindow.Layout.cs`): the mode panel,
+  the inspector, the dock and each of the dock's tabs (`MovablePanel`) lie `left`, `right`,
+  `bottom`, `float` (a window of its own) or, a tab, in the `dock` (`PanelPlace`); by default
+  left, right, bottom and the dock. `view.movePanel {panel, place}` moves one, `view.returnPanel
+  {panel}` puts a floating one back where it lay; each panel's context menu (a tab's header in
+  the dock has its own) moves, floats, puts back or hides it and resets the layout
+  (`MainViewModel.LayoutMenuCommand`). The shell holds three sides (`LeftSide`, `RightSide`,
+  `BottomSide`, grids) each with its splitter; `ArrangePanels` (span `window.arrange-panels`, on
+  `LayoutViewModel.PlacesChanged` and a panel shown or hidden) moves the same controls into their
+  side (one above the other left and right, side by side at the bottom, in the order of
+  `MovablePanel`), so they keep their state and bindings; an empty side collapses with its
+  splitter, whose label names what it resizes ("Resize the mode panel and the inspector"). A size
+  belongs to the side: the left's is `ModePanelWidth`, the right's `InspectorWidth`, the
+  bottom's `DockHeight` (the settings' names, after the panel that lies there by default);
+  `view.resizePanel {panel}` sizes the side the panel lies on. A tab moved out of the dock
+  (`Dock.TakeTab`, `ReturnTab`) lies in a host with its name over its content (`Border.layouttab`);
+  its header hides and the dock shows another tab; choosing it (`view.assets`) brings its window
+  to the front when it floats. A floating panel (`Views/FloatingPanelWindow`) lies in a window
+  owned by the editor's (above it, with the editor's shortcuts), whose place and size are
+  remembered as the person leaves it; closing it puts the panel back
+  (`LayoutViewModel.Return`); hidden while it floats, its window closes and opens again when it
+  is shown; closing the editor keeps it floating for the next start. Saved in the settings'
+  `layout.places` and `layout.floating` (`FloatingPanelDto`: place, size, where it goes back),
+  only what differs from the default; `view.resetLayout` puts every panel back.
+- Automation reaches a floating panel: `ui` lists each floating window as a node of type
+  `FloatingWindow` (its panel's `name`, its `place` on the screen) whose controls' places are
+  relative to that window; `click`, `set` and `ui under` find controls there too and give the
+  mouse to that window (`click` answers `window`: the panel); `screenshot part=inspector|panel|dock`
+  cuts the part from the window it lies in.
+- Not built yet: dragging a panel by its header to another side, choosing toolbar commands in the
+  window (only the context menu's Remove).
 
 ## UI rules: one look, kept in one place
 
@@ -718,8 +747,11 @@ User stories S-4, L-1 and V-3. What the views draw follows the map's settings as
   pixels. Token `MapGridLineBrush`.
 - **The decals** (V-3): the Decals chip turns `ShowDecals` over (the same switch as Select's hide
   a kind): in 3D they are drawn or not; the top view draws each as a faint outline, turned as it
-  lies, those in sight and not smaller than `HeightmapView.MinDecalSize` pixels, in one geometry
-  (span `top.decals`, about 1.5 ms for Archsimkats Valley's 3634). Token `MapDecalBrush`.
+  lies, those in sight, in one geometry clipped to the map (span `top.decals`, about 1.5 ms for
+  Archsimkats Valley's 3634). Only decals whose longer side shows at least
+  `HeightmapView.MinDecalSizeOutsideDecals` (40) pixels are outlined, in the Decals mode
+  `MinDecalSize` (8): at the whole map a decal-heavy map shows its terrain, and the outlines come as
+  one zooms in or works with decals. Token `MapDecalBrush`.
 - **Automation**: `state.looks`: the shader (name, known, strata, whole mask range), the sky (its
   cube maps, background, the water's, whether the 3D view drew the sky and the reflection), the
   grid (shown, spacing, lines the top view drew), the decals (shown, outlines the top view drew),
@@ -1325,7 +1357,7 @@ User stories F-11, L-1 and V-3. The maths of the handles is the library's (`Sele
   shows in the top and 3D views' pixels, to aim the mouse at; `sunHead` with the sun tool; the
   status bar's text) and `state.hover` (the thing under the mouse in 3D).
 - Not built yet: dashed outlines of the box, decals drawn lighter under the mouse, a label for
-  the ruler in 3D, handles for wave generators.
+  the ruler in 3D.
 
 ## The map and its atmosphere: panels of settings
 
@@ -1382,7 +1414,21 @@ mode panel's and inspector's templates only name it).
   the page of a new map is open.
 - The sky's cube maps are in the Lighting mode's inspector (section "The map's look").
 - **Templates for a new map** (M-2): section "Content to use again" below.
-- Not built yet: placing wave generators with the mouse.
+- **Wave generators with the mouse** (W-1, `Tools/WaveTool`, the Water mode's Waves tool, the
+  library's `WaveGeneratorEdits`): a click on the water places one at the water's elevation, its
+  waves rolling the tool's `Heading` (compass degrees, 0 north) at its `Speed` (ogrids a tick, 0.02);
+  dragging from the place aims them the way the mouse goes. The game keeps the direction twice:
+  the velocity's x and z, and the rotation, pi minus the direction's angle from +z (as abhor.v0004's
+  211 generators have it); `WaveGeneratorEdits.Aimed` sets both. With the symmetry mirroring edits
+  its images go into the other parts in the same step, their directions turned or mirrored. A
+  press on a generator's square (within 8 pixels) selects it in the Water inspector and a drag
+  moves it (one step; a click that moves nothing is none); Delete removes the selected one. While
+  the tool is active both views draw every generator (`IMapTool.Shapes`: a square and an arrow the
+  way its waves roll, the selected one in the hover ink; span `tool.wave-shapes`). Generators are
+  not things of the selection (they have no ids): the tool selects and moves them itself.
+  `water.placeWaveGenerator {x?, z?, heading?, speed?}` (Water menu) chooses the tool, or with a
+  place places one (and its images) at once. `state.waves`: the tool's heading, speed, the
+  selected generator and the generators' places and headings.
 
 ## Map size, playable area and versions
 
@@ -1548,10 +1594,19 @@ managed code, its calls cancellable in the middle of a loop.
   changed). Each call has `CallLimit` (2 s) and may not wait; `editor.run` reaches only commands
   that work during a stroke (those with `[UndoStep]` refuse). A call that fails or runs out of time
   throws the whole stroke away (the map shows as it was at once), says so in the status line and
-  on the page, and the rest of that stroke does nothing. Symmetry is the plugin's: the handlers get
-  the place the mouse is at. Its options row (`ToolOptions.axaml`, `tools:PluginTool`) shows the
-  plugin's fields the tool names, set as on the page; `radius` (a number, or a number field's key)
-  is the circle the views draw. `state.plugins.items[].tools` lists them. Span `plugins.tool`. The
+  on the page, and the rest of that stroke does nothing. **With the symmetry** mirroring edits the
+  handlers are called once per image of the place, the mouse's first, each with `keys.image` (1
+  for the mouse's), `keys.images`, `keys.mirrored` and `keys.turn` (degrees), so whatever they edit
+  is mirrored as a built-in brush's dabs are (a handler that keeps state per stroke keeps it per
+  `keys.image`, as the plateau example does); `plugin.tool{ symmetry = false }` gets the mouse's
+  place only, for a tool that mirrors itself. A **command**'s `map.addProp` adds the prop's images
+  too while the symmetry mirrors edits (`mirror = false` leaves them out); its other edits
+  (`setHeight`, `paintMask`, moves) are its own, and `map.images(x, z)` gives the places to repeat
+  them at. Its options row (`ToolOptions.axaml`, `tools:PluginTool`) shows the
+  plugin's fields the tool names, set as on the page, each a setting of the row of its own
+  (`Controls/ToolRowItems`), so only those that do not fit go behind More; `radius` (a number, or
+  a number field's key) is the circle the views draw, and a radius field takes the brush keys
+  (`[`, `]`, control and the wheel) within its limits. `state.plugins.items[].tools` lists them. Span `plugins.tool`. The
   example `plateau-brush` (Terrain mode) flattens what it is dragged over to the height where it
   was pressed.
 
@@ -1573,7 +1628,8 @@ things named by reference as in automation: `prop:5`, `marker:3`, `unit:UNIT_1`,
 | `map.name()`, `map.size()`, `map.height(x, z)`, `map.slope(x, z)`, `map.water()` | Name; width and height; the height between samples; the slope in degrees; the water's elevation or nil. |
 | `map.markers(kind?)`, `map.props()`, `map.units()`, `map.decals()`, `map.areas()`, `map.armies()`, `map.get(ref)` | Plain tables: `ref`, `x`, `y`, `z`, `heading` and what the thing is (a marker's `kind`: spawn, mass, hydrocarbon, path, ai, weather). |
 | `map.masks()`, `map.mask(name, x, z)`, `map.reclaim(blueprint)`, `map.revision(part?)` | The masks' names; a mask's value 0 to 1; a prop's mass and energy; a number that stays while a part (`map`, `props`, `markers`, `units`, `decals`, `heights`, `masks`) is the same. |
-| `map.addProp{ blueprint, x, z, heading?, scale? }` | Adds a prop standing on the terrain (by its kind, as the place tool does); answers its reference. Edits are for commands only. |
+| `map.addProp{ blueprint, x, z, heading?, scale?, mirror? }` | Adds a prop standing on the terrain (by its kind, as the place tool does), in a command with its images while the symmetry mirrors edits (`mirror = false`: alone); answers its reference. Edits are for commands only. |
+| `map.images(x, z)` | The place and its images in the other parts of the map while the symmetry mirrors edits (else the place alone): `{ x, z, mirrored, turn }`, the place first. |
 | `map.move(refs, dx, dz)`, `map.place(refs, x, z)`, `map.rotate(refs, degrees)`, `map.remove(refs)` | `ObjectEdits` on one reference or a list. |
 | `map.setHeight(x0, z0, x1, z1, height or function(x, z, height) return height end)` | Sets the samples of a rectangle (into the sculpting layer while the map has height layers); a function returning nil leaves a sample. |
 | `map.paintMask(name, x, z, radius, value)` | Sets a mask's pixels within a circle to a value 0 to 1; answers how many. |
@@ -1884,6 +1940,10 @@ last frame drawn.
 
 ### Questions over the window, clicks by label, keys wherever the keyboard is
 
+- **`expand {label, under?, all?, collapse?}`** (`AutomationServer.Layout.cs`) opens the tree item
+  (or tree, or expander) named, labelled or reading the label, its parents first (`all`: every item
+  in it too; `collapse`: closes), so `ui` lists what lies in it; it answers how many it changed.
+
 - **Questions are part of the window** (`ViewModels/QuestionViewModel`, `Views/QuestionDialog`): the
   unsaved changes before a map closes (`IEditorDialogs.AskToSaveChangesAsync`: Save, Don't save,
   Cancel; Save has the keyboard) and confirmations (`ConfirmAsync`: the action and Cancel; Cancel
@@ -1973,6 +2033,7 @@ last frame drawn.
 faf-map workspace scratch D:/scratch/ws --from "<the real workspace>" --settings D:/scratch/settings.json
 faf-map editor start --port 5398 --settings D:/scratch/settings.json [--map <folder>]   # waits until ready
 faf-map editor objects kind=props count=5 --port 5398
+faf-map editor restart --port 5398                                                       # stop, then start with the arguments of the last start (the newest build)
 faf-map editor stop --port 5398                                                          # waits until it exited
 faf-map workspace remove-scratch D:/scratch/ws                                           # the assets stay
 ```
@@ -1991,7 +2052,18 @@ faf-map workspace remove-scratch D:/scratch/ws                                  
   read; it prints the process, map and workspace. Without `--map` the editor opens the workspace's
   sandbox, which writes it into that workspace when it is missing: use a scratch workspace, never
   the user's. `stop` sends `close` and waits until the process has exited (`--force` ends it after
-  `--timeout`), so the build output is free again.
+  `--timeout`), so the build output is free again. `restart` stops it and starts it again with the
+  arguments its last start was given (`start-<port>.json` beside the shadow copies; an option given
+  to `restart` takes the place of the remembered one, `--map` another map), the copy brought up to
+  date first: the way to run a new build.
+- `faf-map workspace scratch <folder> --convert-into <assets folder>` gives the scratch workspace
+  assets of its own, converted from the game into that folder (made when absent, linked in;
+  nothing converted when they are current already), for a change of the assets' format that must
+  not touch the real workspace's; several scratch workspaces may share the folder.
+  `faf-map workspace init <folder> --settings <file>` remembers the workspace in that settings
+  file, never the user's.
+- In Git Bash an argument that starts with `/` is turned into a Windows path (`label=/env/...`
+  becomes `label=C:/Program Files/Git/env/...`): set `MSYS_NO_PATHCONV=1` for such a call.
 - A scratch workspace (`ScratchWorkspace`, the library's) has its own projects, presets, brushes
   (copied) and vault (`vault/maps`, where exports go), and the real workspace's assets through a
   directory junction (no administrator needed): a test editor may save, export and write presets.

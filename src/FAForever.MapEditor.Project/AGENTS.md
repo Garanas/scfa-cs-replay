@@ -487,7 +487,14 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   workspace's assets through a directory junction on Windows, a symbolic link elsewhere, a copy
   when neither works); `remove-scratch` deletes it, the junction first, since .NET does not delete
   a junction inside a recursive delete. Converting assets in a scratch workspace would replace the
-  linked ones.
+  linked ones; `--convert-into <assets folder>` links a folder of its own instead and converts into
+  it (`ScratchWorkspace.Create(folder, source, assetsInto)`), never the source's own. `init
+  --settings <file>` remembers the workspace in that file rather than the user's.
+- **The user's settings** (`UserSettings`) are read part by part (workspace, telemetry, layout,
+  plugins): a part with a value of the wrong type is left out and named in `Problem` (the editor
+  logs it and says so in the status line), the rest is read; a file that is not JSON at all reads
+  as empty and is never written over (`MapProjectException`), so a typo does not lose the user's
+  workspace.
 - **The sandbox** (`Workspaces/SandboxMap`, user story F-5): `projects/Sandbox`, a map of 256
   ogrids with two armies and one of every kind of thing (spawns, mass, hydrocarbon, three land path
   nodes with links, an AI marker, an area, a chain, a decal in a decal group, props, civilian units

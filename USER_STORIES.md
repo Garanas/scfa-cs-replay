@@ -273,7 +273,8 @@ reads again when it changes; and nothing that generates runs by itself.
 
 - [x] **W-1 Water.** On or off; surface, deep and abyss elevations; colours, sun, reflection and
       refraction, textures; wave generators. The Water panel and inspector (`water.set`, the wave
-      textures and generators); water presets. Missing: placing generators with the mouse.
+      textures and generators); water presets; the Waves tool: a click places a generator, a drag
+      aims its waves, with the symmetry, its square dragged moves it (`water.placeWaveGenerator`).
 - [x] **W-2 Paintable water.** Paint the water's foam, flatness and depth bias. Today: the Paint
       water tool, the chosen mask shown in the top view while it is active.
 
@@ -402,11 +403,12 @@ reads again when it changes; and nothing that generates runs by itself.
       path nodes, hidden behind hills; the grid's lines in both views, its chip saying its spacing
       (`view.gridSpacing`, the chip's context menu); decals on or off, the top view drawing them
       as faint outlines.
-- [ ] **V-4 Layouts.** Top and 3D side by side; panels that can be moved, closed and opened again.
+- [x] **V-4 Layouts.** Top and 3D side by side; panels that can be moved, closed and opened again.
       Today: the views side by side (sharing the camera, each with its own mouse), the mode panel,
       inspector, dock and toolbar hidden and shown, the panels and views resized with splitters,
-      all remembered in the user's settings; Reset layout; the tool's options and the views' bar
-      one row each, so at 1280 by 800 the top view keeps 464 pixels of height. Missing: moving a
-      panel to another side or out of the window.
+      the mode panel, inspector, dock and each of the dock's tabs moved left, right, to the bottom
+      or into a window of their own (a context menu on each, `view.movePanel`), all remembered in
+      the user's settings; Reset layout; the tool's options and the views' bar one row each, so at
+      1280 by 800 the top view keeps 464 pixels of height. Missing: dragging a panel by its header.
 - [x] **V-5 Ruler.** Measure distances and heights: the ruler tool (Terrain mode), the distance in
       ogrids and km, the rise and slope, drawn in the top view and in the status line.
