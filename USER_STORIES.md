@@ -109,17 +109,19 @@ reads again when it changes; and nothing that generates runs by itself.
       and blueprints or models the map and workspace lack, and passages opened or closed since
       walkability was generated last; a double click or Enter goes to a problem (selects it, the
       top view and 3D camera look at it); Lua plugins add checks of their own (F-15).
-- [ ] **F-15 Lua plugins.** Plugins with commands, tools and panels, through the controller and
+- [x] **F-15 Lua plugins.** Plugins with commands, tools and panels, through the controller and
       the events; a run is one step of undo. Today: the workspace's `plugins/` (a folder each with
       its `plugin.lua` and `plugin.json`), loaded when the workspace is ready and read again when a
       file changes; the Plugins page (Plugins, Plugins...) with each plugin on or off (remembered),
       its errors, its commands and its panel's fields; plugins register commands (the Plugins menu,
-      the palette, automation; a run is one step of undo, a failing run changes nothing), problem
-      checks, a panel of fields and handlers of events; Lua reads the map as plain tables, edits it
-      (props, moving, turning, removing, heights, masks), runs any command and logs, without files
-      or the system beyond its own folder and with a time limit per call; two examples (reclaim
-      per army, scatter rocks on steep slopes) written into every workspace. Missing: tools (the
-      left mouse in the views).
+      the palette, automation; a run is one step of undo, a failing run changes nothing), tools of
+      a mode (the left mouse in the views calls their press, drag and release with the place; a
+      stroke is one step of undo shown while the mouse is down, a failing one changes nothing; their
+      options row shows the plugin's fields), problem checks, a panel of fields and handlers of
+      events; Lua reads the map as plain tables, edits it (props, moving, turning, removing,
+      heights, masks), runs any command and logs, without files or the system beyond its own folder
+      and with a time limit per call; three examples (reclaim per army, scatter rocks on steep
+      slopes, a plateau brush) written into every workspace.
 - [x] **F-16 Driven by agents and tests.** Automation over HTTP for every operation, labels for
       screen readers, headless tests of the window, performance spans (see the App's guide). The
       editor's questions (unsaved changes, confirmations) show in its window, so automation reads

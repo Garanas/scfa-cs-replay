@@ -79,9 +79,10 @@ internal sealed class PluginClock : IDisposable
 /// </summary>
 internal sealed class PluginRun : IDisposable
 {
-    private readonly EditSession _session;
-    private readonly EditGroup _group;
+    private readonly EditSession? _session;
+    private readonly EditGroup? _group;
     private readonly string _description;
+    private readonly EditTransaction? _stroke;
     private EditTransaction? _pending;
 
     /// <exception cref="InvalidOperationException">A transaction or group is open (a stroke, another run).</exception>
@@ -93,14 +94,31 @@ internal sealed class PluginRun : IDisposable
     }
 
     /// <summary>
+    /// The run of a plugin's tool: its edits go into the stroke the mouse holds
+    /// (<see cref="ViewModels.MainViewModel.StartStroke"/>), which shows in the views while the mouse
+    /// is down and becomes one step when it is let go; the tool ends it, not the run.
+    /// </summary>
+    public PluginRun(EditTransaction stroke, string description)
+    {
+        _stroke = stroke;
+        _pending = stroke;
+        _description = description;
+    }
+
+    /// <summary>
+    /// Whether the edits go into a tool's stroke.
+    /// </summary>
+    public bool IsStroke => _stroke is not null;
+
+    /// <summary>
     /// The map with the run's edits so far.
     /// </summary>
-    public MapDocument Document => _pending?.Document ?? _session.Document;
+    public MapDocument Document => _pending?.Document ?? _session!.Document;
 
     /// <summary>
     /// The transaction the run's own edits go into, opened at the first.
     /// </summary>
-    public EditTransaction Transaction => _pending ??= _session.Begin(_description);
+    public EditTransaction Transaction => _pending ??= _session!.Begin(_description);
 
     public void Edit(Func<MapDocument, MapDocument> edit) => Transaction.Apply(edit);
 
@@ -109,6 +127,11 @@ internal sealed class PluginRun : IDisposable
     /// </summary>
     public void Flush()
     {
+        if (_stroke is not null)
+        {
+            // the stroke holds the map until the mouse is let go
+            return;
+        }
         _pending?.Commit();
         _pending = null;
     }
@@ -119,8 +142,12 @@ internal sealed class PluginRun : IDisposable
     /// <returns>Whether the map changed.</returns>
     public bool Commit()
     {
+        if (_stroke is not null)
+        {
+            throw new InvalidOperationException("A tool's stroke ends when the mouse is let go");
+        }
         Flush();
-        return _group.Commit();
+        return _group!.Commit();
     }
 
     /// <summary>
@@ -128,8 +155,12 @@ internal sealed class PluginRun : IDisposable
     /// </summary>
     public void Dispose()
     {
+        if (_stroke is not null)
+        {
+            return;
+        }
         _pending?.Dispose();
         _pending = null;
-        _group.Dispose();
+        _group!.Dispose();
     }
 }

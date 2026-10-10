@@ -18,12 +18,20 @@ public sealed partial class MainViewModel
     public const float FrameMinimumRadius = 12;
 
     /// <summary>
+    /// How much farther than just enough the camera stands when it frames things at an angle.
+    /// </summary>
+    public const float FrameMargin = 1.5f;
+
+    /// <summary>
     /// Frames things in both views (user story V-1): the top view shows the rectangle around them,
     /// the 3D camera focuses on its middle from as far as it takes to see it. Things the map does
     /// not have are left out.
     /// </summary>
+    /// <param name="pitch">Given, the 3D camera looks at them from this angle (degrees above the
+    /// horizon; 90 is straight down) at once, from far enough to see them with a margin; left out,
+    /// it glides there keeping its angles.</param>
     /// <returns>The rectangle framed (x0, z0, x1, z1), or null when none of the things exists.</returns>
-    public (float X0, float Z0, float X1, float Z1)? Frame(IEnumerable<ObjectRef> things)
+    public (float X0, float Z0, float X1, float Z1)? Frame(IEnumerable<ObjectRef> things, float? pitch = null)
     {
         MapDocument document = ShownDocument ?? throw new InvalidOperationException("No map is open");
         float x0 = float.MaxValue, z0 = float.MaxValue, x1 = float.MinValue, z1 = float.MinValue;
@@ -52,7 +60,16 @@ public sealed partial class MainViewModel
         float cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
         float radius = Math.Max(FrameMinimumRadius, MathF.Sqrt((x1 - x0) * (x1 - x0) + (z1 - z0) * (z1 - z0)) / 2);
         TopViewFrameRequested?.Invoke(cx - radius, cz - radius, cx + radius, cz + radius);
-        FocusCamera(cx, cz, radius);
+        if (pitch is float angle)
+        {
+            // oblique and at once: what a screenshot right after is to show (automation's focus)
+            Camera.Look(cx, cz, radius / MathF.Tan(Rendering.Gpu.EditorCamera.FieldOfView / 2) * FrameMargin, pitch: angle);
+            NotifyCameraMoved();
+        }
+        else
+        {
+            FocusCamera(cx, cz, radius);
+        }
         return (x0, z0, x1, z1);
     }
 }

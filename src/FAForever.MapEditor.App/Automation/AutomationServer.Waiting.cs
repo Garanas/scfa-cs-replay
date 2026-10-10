@@ -60,18 +60,44 @@ public sealed partial class AutomationServer
 
     /// <summary>
     /// The value at a path of keys joined by dots in a JSON value, a number for an item of a list;
-    /// null where the path leads nowhere.
+    /// null where the path leads nowhere. A key that holds dots itself (a span of <c>perf</c>,
+    /// <c>3d.frame</c>) is found too: the longest key that the path starts with is taken.
     /// </summary>
-    internal static JsonNode? At(JsonNode? node, string path)
+    public static JsonNode? At(JsonNode? node, string path)
     {
-        foreach (string part in path.Split('.', StringSplitOptions.RemoveEmptyEntries))
+        string[] parts = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        int at = 0;
+        while (at < parts.Length)
         {
-            node = node switch
+            switch (node)
             {
-                JsonObject obj => obj[part],
-                JsonArray list when int.TryParse(part, NumberStyles.None, CultureInfo.InvariantCulture, out int index) && index < list.Count => list[index],
-                _ => null,
-            };
+                case JsonObject obj:
+                {
+                    int taken = 0;
+                    for (int length = parts.Length - at; length >= 1; length--)
+                    {
+                        string key = string.Join('.', parts, at, length);
+                        if (obj.ContainsKey(key))
+                        {
+                            node = obj[key];
+                            taken = length;
+                            break;
+                        }
+                    }
+                    if (taken == 0)
+                    {
+                        return null;
+                    }
+                    at += taken;
+                    break;
+                }
+                case JsonArray list when int.TryParse(parts[at], NumberStyles.None, CultureInfo.InvariantCulture, out int index) && index < list.Count:
+                    node = list[index];
+                    at++;
+                    break;
+                default:
+                    return null;
+            }
             if (node is null)
             {
                 return null;

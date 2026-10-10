@@ -339,7 +339,7 @@ namespace FAForever.MapEditor.App.Tests
             JsonObject ui = (JsonObject)await automation.HandleAsync("ui", new JsonObject { ["under"] = "Show Markers" });
             Assert.IsTrue(ui["ui"]![0]!["checked"]!.GetValue<bool>());
 
-            JsonObject answer = (JsonObject)await automation.HandleAsync("set", new JsonObject { ["label"] = "Show Markers", ["value"] = false });
+            JsonObject answer = (JsonObject)await automation.HandleAsync("set", new JsonObject { ["label"] = "Show Markers", ["value"] = false, ["full"] = true });
 
             Assert.IsFalse(model.ShowMarkers);
             Assert.IsFalse(answer["overlays"]!["markers"]!.GetValue<bool>());

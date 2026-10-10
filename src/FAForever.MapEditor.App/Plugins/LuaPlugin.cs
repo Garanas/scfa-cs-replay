@@ -51,6 +51,20 @@ public sealed record PluginCommand(string Id, string Title, string? Description,
 public sealed record PluginCheck(string Id, string Title, LuaFunction Run);
 
 /// <summary>
+/// A tool a plugin registered (<c>plugin.tool{...}</c>): the left mouse in the views while it is
+/// active, in a mode's tools as <c>plugin.&lt;folder&gt;.&lt;id&gt;</c> (chosen by <c>tool.plugin.&lt;folder&gt;.&lt;id&gt;</c>).
+/// </summary>
+/// <param name="Mode">The mode whose tools it joins: <c>terrain</c>, <c>props</c>, ...</param>
+/// <param name="Radius">The circle the views draw around the mouse, in ogrids; 0 for none.</param>
+/// <param name="RadiusField">A number field of the plugin whose value is the radius, instead.</param>
+/// <param name="Fields">The keys of the plugin's fields its options row shows.</param>
+/// <param name="Press">Called with the place and the keys held when the mouse is pressed; the stroke's edits start.</param>
+/// <param name="Drag">Called at each place the mouse is dragged to.</param>
+/// <param name="Release">Called when the mouse is let go; the stroke's edits become one step of undo.</param>
+public sealed record PluginToolSpec(string Id, string Title, string Mode, string? Description, double Radius, string? RadiusField,
+    IReadOnlyList<string> Fields, LuaFunction? Press, LuaFunction? Drag, LuaFunction? Release);
+
+/// <summary>
 /// A field of a plugin's panel (<c>plugin.field{...}</c>), shown on the Plugins page; its value is
 /// the user's, remembered in the settings.
 /// </summary>
@@ -120,6 +134,10 @@ public sealed partial class LuaPlugin : ObservableObject
             {
                 parts.Add($"{Commands.Count} command{(Commands.Count == 1 ? "" : "s")}");
             }
+            if (Tools.Count > 0)
+            {
+                parts.Add($"{Tools.Count} tool{(Tools.Count == 1 ? "" : "s")}");
+            }
             if (Checks.Count > 0)
             {
                 parts.Add($"{Checks.Count} check{(Checks.Count == 1 ? "" : "s")}");
@@ -163,6 +181,16 @@ public sealed partial class LuaPlugin : ObservableObject
     public List<PluginCommand> Commands { get; } = [];
 
     public List<PluginCheck> Checks { get; } = [];
+
+    /// <summary>
+    /// The tools it registered (<c>plugin.tool{...}</c>).
+    /// </summary>
+    public List<PluginToolSpec> Tools { get; } = [];
+
+    /// <summary>
+    /// Its tools as the editor has them in the modes, while it is loaded.
+    /// </summary>
+    internal List<Tools.PluginTool> MadeTools { get; } = [];
 
     public List<PluginField> Fields { get; } = [];
 
@@ -226,6 +254,8 @@ public sealed partial class LuaPlugin : ObservableObject
     internal void Forget()
     {
         Commands.Clear();
+        Tools.Clear();
+        MadeTools.Clear();
         Checks.Clear();
         Fields.Clear();
         Handlers.Clear();

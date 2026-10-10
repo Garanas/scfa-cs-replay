@@ -48,6 +48,16 @@ public sealed partial class ModeItem(ModeDefinition definition) : ObservableObje
     /// The tool last used in this mode, chosen again when the mode is.
     /// </summary>
     public string? LastTool { get; set; }
+
+    /// <summary>
+    /// The tools plugins added to the mode (user story F-15), after its own.
+    /// </summary>
+    public List<ToolDefinition> PluginTools { get; } = [];
+
+    /// <summary>
+    /// Its own tools, then the plugins'.
+    /// </summary>
+    public IEnumerable<ToolDefinition> AllTools => definition.Tools.Concat(PluginTools);
 }
 
 /// <summary>
@@ -318,9 +328,9 @@ public sealed partial class MainViewModel
         SelectedMode = mode;
         Assets.FollowMode(id);
         Presets.FollowMode(mode.Definition);
-        Tools = [.. mode.Definition.Tools.Select(tool => new ToolItem(tool, _tools.GetValueOrDefault(tool.Id)))];
+        Tools = [.. mode.AllTools.Select(tool => new ToolItem(tool, _tools.GetValueOrDefault(tool.Id)))];
         OnPropertyChanged(nameof(Tools));
-        SelectTool(mode.LastTool ?? mode.Definition.Tools[0].Id);
+        SelectTool(mode.LastTool is string last && mode.AllTools.Any(tool => tool.Id == last) ? last : mode.Definition.Tools[0].Id);
     }
 
     /// <summary>
@@ -329,7 +339,7 @@ public sealed partial class MainViewModel
     /// <exception cref="ArgumentException">There is no such tool.</exception>
     public void SelectTool(string id)
     {
-        ModeItem mode = Modes.FirstOrDefault(m => m.Definition.Tools.Any(t => t.Id == id))
+        ModeItem mode = Modes.FirstOrDefault(m => m.AllTools.Any(t => t.Id == id))
             ?? throw new ArgumentException($"There is no tool '{id}'");
         if (SelectedMode != mode)
         {

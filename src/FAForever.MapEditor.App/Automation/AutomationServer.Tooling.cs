@@ -28,16 +28,21 @@ public sealed partial class AutomationServer
     private static readonly string[] ToolingCommands =
     [
         "set {label, value, under?, commit?: enter|blur|both}",
-        "focus {ref? | refs? | selection?: true} (else {x, z, radius?}: camera.focus)",
+        "focus {ref? | refs? | selection?: true, pitch?: degrees, 50 by default} (else {x, z, radius?}: camera.focus)",
         "grid {target: heightmap|types|stratum:N|water:foam|water:flatness|water:depthBias|mask:<name>, x, z} or {target, x0, z0, x1, z1, step?}",
-        "screenshot {path, part: window|options|inspector|panel|dock|rail|top|3d, settle?}",
+        "screenshot {path, part: window|options|inspector|panel|dock|rail|top|3d|dialog, settle?}",
         "wait {path: selection.count|stage|..., value, timeout?: seconds}",
     ];
 
     /// <summary>
     /// The parts of the window <c>screenshot {part}</c> takes.
     /// </summary>
-    private static readonly string[] Parts = ["window", "options", "inspector", "panel", "dock", "rail", "top", "3d"];
+    /// <summary>
+    /// The angle <c>focus {ref}</c> shows things from in 3D, in degrees above the horizon.
+    /// </summary>
+    private const double FocusPitch = 50;
+
+    private static readonly string[] Parts = ["window", "options", "inspector", "panel", "dock", "rail", "top", "3d", "dialog"];
 
     /// <summary>
     /// The tooling commands; false for any other.
@@ -61,6 +66,8 @@ public sealed partial class AutomationServer
                 {
                     frame["refs"] = new JsonArray(one);
                 }
+                // the 3D camera at an angle and at once, so a screenshot right after shows the things
+                frame["pitch"] = Number(arguments, "pitch") ?? FocusPitch;
                 await RunCommandAsync("view.frame", frame, result, "framed");
                 return true;
             }
@@ -299,7 +306,8 @@ public sealed partial class AutomationServer
     }
 
     private static double ValueNumber(JsonNode value) => value.GetValueKind() == JsonValueKind.Number
-        ? value.GetValue<double>()
+        // read from its text: a value made in this process (an int) does not convert to a double
+        ? double.Parse(value.ToJsonString(), System.Globalization.CultureInfo.InvariantCulture)
         : double.Parse(value.GetValue<string>(), System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>
@@ -393,6 +401,10 @@ public sealed partial class AutomationServer
         "rail" => Descendant<ModeRail>(),
         "top" => window.MapView,
         "3d" => window.View3D,
+        // the question over the window: its card, without the scrim over the rest
+        "dialog" => model.Question.IsOpen
+            ? Descendant<QuestionDialog>().GetVisualDescendants().OfType<Border>().FirstOrDefault(border => border.Name == "Dialog") ?? (Control)Descendant<QuestionDialog>()
+            : throw new InvalidOperationException("No question shows over the window"),
         _ => throw new ArgumentException($"There is no part '{part}': {string.Join(", ", Parts)}"),
     };
 

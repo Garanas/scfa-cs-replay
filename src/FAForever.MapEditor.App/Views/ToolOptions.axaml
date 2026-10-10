@@ -425,6 +425,42 @@
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </controls:ToolRow>
             </DataTemplate>
+            <!-- a Lua plugin's tool (F-15): the plugin's fields it names, as on the Plugins page -->
+            <DataTemplate DataType="tools:PluginTool">
+              <controls:ToolRow Classes="toolrow">
+                <ItemsControl ItemsSource="{Binding Settings}" AutomationProperties.Name="{Binding Title, StringFormat='{}{0}: settings'}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Classes="toolrow" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.DataTemplates>
+                    <DataTemplate DataType="vm:NumberSetting">
+                      <StackPanel Classes="inline" ToolTip.Tip="{Binding Help}">
+                        <TextBlock Classes="label" Text="{Binding Label}" />
+                        <Slider IsVisible="{Binding HasSlider}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Value="{Binding Value}" Width="{StaticResource ToolSliderWidth}"
+                                AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" />
+                        <TextBox Classes="toolfield" Text="{Binding Text, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, as a number'}" />
+                      </StackPanel>
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:BoolSetting">
+                      <CheckBox Content="{Binding Label}" IsChecked="{Binding IsOn}" ToolTip.Tip="{Binding Help}" AutomationProperties.HelpText="{Binding Help}" />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:ChoiceSetting">
+                      <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Chosen}" ToolTip.Tip="{Binding Help}"
+                                AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:TextSetting">
+                      <StackPanel Classes="inline" ToolTip.Tip="{Binding Help}">
+                        <TextBlock Classes="label" Text="{Binding Label}" />
+                        <TextBox Classes="toolfield" Text="{Binding Text, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="{Binding Label}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.DataTemplates>
+                </ItemsControl>
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Description}" ToolTip.Tip="{Binding Description}" IsVisible="{Binding HasDescription}" />
+              </controls:ToolRow>
+            </DataTemplate>
             <!-- how a brush's picture is turned; the shape itself is the first choice of the row -->
             <DataTemplate DataType="tools:BrushShapeSettings">
               <StackPanel Classes="toolrow">
