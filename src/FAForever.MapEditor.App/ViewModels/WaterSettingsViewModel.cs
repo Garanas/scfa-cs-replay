@@ -56,7 +56,11 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
         ]);
         Textures = new SettingGroup("Textures",
         [
-            new TextureSetting("Cubemap", set, "cubemap", d => d.Water.Cubemap, run) { Help = "What the water reflects, e.g. /textures/environment/skycube_evergreen01a.dds" },
+            new TextureSetting("Cubemap", set, "cubemap", d => d.Water.Cubemap, run, null,
+                () => run("lighting.chooseCubemap", new JsonObject { ["target"] = "water" }))
+            {
+                Help = "What the water reflects, e.g. /textures/environment/skycube_evergreen01a.dds; Choose opens the picker of the workspace's cube maps",
+            },
             new TextureSetting("Ramp", set, "ramp", d => d.Water.Ramp, run) { Help = "The colour of the water by depth, e.g. /textures/engine/waterramp.dds" },
         ]);
         WaveTextures = [.. Enumerable.Range(0, 4).Select(index => WaveTexture(index, run))];

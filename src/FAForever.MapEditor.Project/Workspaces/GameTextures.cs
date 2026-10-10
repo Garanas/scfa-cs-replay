@@ -29,7 +29,18 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <summary>
         /// The texture of <paramref name="gamePath"/>, or null when neither the map nor the workspace has it.
         /// </summary>
-        public static TextureSource? Find(string gamePath, MapDocument document, Workspace? workspace)
+        public static TextureSource? Find(string gamePath, MapDocument document, Workspace? workspace) =>
+            Find(gamePath, document, workspace, "", Decode);
+
+        /// <summary>
+        /// The cube map of <paramref name="gamePath"/> as a strip of its six faces
+        /// (<see cref="CubeMaps.Decode"/>), or null when neither the map nor the workspace has it.
+        /// Its <see cref="TextureSource.Key"/> differs from the one <see cref="Find"/> gives the same path.
+        /// </summary>
+        public static TextureSource? FindCube(string gamePath, MapDocument document, Workspace? workspace) =>
+            Find(gamePath, document, workspace, "cube:", CubeMaps.Decode);
+
+        private static TextureSource? Find(string gamePath, MapDocument document, Workspace? workspace, string prefix, Func<byte[], DecodedTexture> decode)
         {
             if (string.IsNullOrWhiteSpace(gamePath))
             {
@@ -46,7 +57,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                     if (string.Equals(file, inFolder, StringComparison.OrdinalIgnoreCase))
                     {
                         byte[] content = ImmutableCollectionsMarshal.AsArray(bytes)!;
-                        return new TextureSource("map:" + inFolder, bytes, () => Decode(content));
+                        return new TextureSource(prefix + "map:" + inFolder, bytes, () => decode(content));
                     }
                 }
                 return null;
@@ -54,7 +65,7 @@ namespace FAForever.MapEditor.Project.Workspaces
 
             if (workspace?.FindAsset(key) is string asset)
             {
-                return new TextureSource(key, File.GetLastWriteTimeUtc(asset), () => Decode(File.ReadAllBytes(asset)));
+                return new TextureSource(prefix + key, File.GetLastWriteTimeUtc(asset), () => decode(File.ReadAllBytes(asset)));
             }
             return null;
         }

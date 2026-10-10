@@ -28,7 +28,8 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// Converts the game's archives (<see cref="GameArchives"/>) into a workspace's assets:
     /// textures (<c>.dds</c>) to PNG with their alpha channel, prop and unit blueprints (<c>.bp</c>)
     /// to the editor's JSON (<see cref="AssetBlueprints"/>), meshes (<c>.scm</c>) to glTF
-    /// (<c>.glb</c>, <see cref="GlbWriter"/>) with their skeleton. The
+    /// (<c>.glb</c>, <see cref="GlbWriter"/>) with their skeleton. Of the <c>textures</c> archive
+    /// only the sky's, the water's and the units' icons (<see cref="GameArchives.TextureFolders"/>). The
     /// rest (scripts, animations, sounds) is not needed for making maps and left out.
     /// </summary>
     /// <remarks>
@@ -43,7 +44,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// The version of what the conversion writes. Raise it whenever that changes, so that
         /// every workspace converts again.
         /// </summary>
-        public const int FormatVersion = 3;
+        public const int FormatVersion = 4;
 
         /// <summary>
         /// The version of the editor, without the commit it was built from, e.g. <c>1.2.0</c>.
@@ -81,7 +82,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             using (GameArchives game = GameArchives.Open(paths))
             {
                 List<string> blueprints = [.. game.Files.Where(f => f.EndsWith(".bp", StringComparison.Ordinal)).Order(StringComparer.Ordinal)];
-                List<string> files = [.. game.Files.Where(f => f.EndsWith(".dds", StringComparison.Ordinal) || f.EndsWith(".scm", StringComparison.Ordinal)).Order(StringComparer.Ordinal)];
+                List<string> files = [.. game.Files.Where(f => (f.EndsWith(".dds", StringComparison.Ordinal) || f.EndsWith(".scm", StringComparison.Ordinal)) && GameArchives.IsConverted(f)).Order(StringComparer.Ordinal)];
                 int total = blueprints.Count + files.Count;
 
                 progress?.Report(new AssetProgress(0, total, "Reading the blueprints"));
@@ -202,12 +203,19 @@ namespace FAForever.MapEditor.Project.Workspaces
         }
 
         /// <summary>
-        /// A DDS texture as an 8-bit PNG; with an alpha channel when the texture has one.
+        /// A DDS texture as an 8-bit PNG; with an alpha channel when the texture has one. A cube
+        /// map (<see cref="CubeMaps.IsCubeMap"/>) becomes its six faces side by side
+        /// (<see cref="CubeMaps"/>).
         /// </summary>
         private static void WritePng(byte[] dds, string path)
         {
             MagickReadSettings settings = new MagickReadSettings { Format = MagickFormat.Dds };
             settings.SetDefine(MagickFormat.Dds, "skip-mipmaps", "true");
+            if (CubeMaps.IsCubeMap(dds))
+            {
+                File.WriteAllBytes(path, CubeMaps.StripPng(dds));
+                return;
+            }
             using MagickImage image = new MagickImage(dds, settings);
             image.Depth = 8;
             image.Settings.SetDefine(MagickFormat.Png, "compression-level", "4");

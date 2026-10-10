@@ -123,6 +123,12 @@
                               <controls:AssetThumbnail Source="{Binding Image}" Model="{Binding Model}" IsVisible="{Binding HasImage}" />
                               <Path Classes="icon" Data="{Binding Glyph, Converter={x:Static controls:IconConverter.Instance}}" IsVisible="{Binding !HasImage}"
                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                              <Border Classes="uniticon" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding HasIcon}">
+                                <Panel>
+                              <controls:AssetThumbnail Source="{Binding IconBackground}" DecodeWidth="64" Checker="False" />
+                              <controls:AssetThumbnail Source="{Binding Icon}" DecodeWidth="64" Checker="False" AutomationProperties.Name="{Binding Title, StringFormat='Icon of {0}'}" />
+                            </Panel>
+                              </Border>
                             </Panel>
                           </Border>
                           <TextBlock Classes="tiletitle" Text="{Binding Title}" />

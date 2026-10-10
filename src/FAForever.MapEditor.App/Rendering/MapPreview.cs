@@ -1,15 +1,25 @@
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.Rendering;
 
 /// <summary>
-/// The map's preview image (user stories S-4, M-8): the terrain from above as the top view draws
-/// it (<see cref="TerrainPicture"/>: shaded, coloured by height, blue under water), reduced to the
-/// 256 by 256 pixels of the game's preview and put in the map's <see cref="Terrain.Preview"/>.
+/// The map's preview image (user stories S-4, M-8), the one the map ships with in its
+/// <c>.scmap</c> (<see cref="Terrain.Preview"/>, 256 by 256 pixels): the terrain from above drawn
+/// with the strata's textures, blended as the map's terrain shader blends them and lit by its sun
+/// (<see cref="TexturedPreview"/>), the textures found as the 3D view finds them (the map's own
+/// files, else the workspace's assets). Without a workspace it is the top view's picture
+/// (<see cref="TerrainPicture"/>: shaded, coloured by height, blue under water) made smaller.
 /// </summary>
-public sealed class MapPreview : IDocumentGenerator
+/// <param name="workspace">The workspace whose assets hold the textures; null for none.</param>
+public sealed class MapPreview(Func<Workspace?>? workspace = null) : IDocumentGenerator
 {
+    /// <summary>
+    /// The map's terrain shader, which decides how the layers blend.
+    /// </summary>
+    private static readonly GeneratedInput TerrainShader = new GeneratedInput("terrain shader", document => document.Terrain.Shader);
+
     public const string GeneratorId = "preview";
 
     /// <summary>
@@ -23,10 +33,15 @@ public sealed class MapPreview : IDocumentGenerator
 
     public string Story => "S-4";
 
-    public IReadOnlyList<GeneratedInput> Inputs { get; } = [GeneratedInput.Heightmap, GeneratedInput.WaterLevel];
+    public IReadOnlyList<GeneratedInput> Inputs { get; } =
+        [GeneratedInput.Heightmap, GeneratedInput.WaterLevel, GeneratedInput.Water, GeneratedInput.StratumMasks, GeneratedInput.TerrainLayers, GeneratedInput.Lighting, TerrainShader];
 
     public object Generate(MapDocument document)
     {
+        if (workspace?.Invoke() is Workspace found)
+        {
+            return TexturedPreview.Render(document, path => GameTextures.Find(path, document, found)?.Read(), Size);
+        }
         TerrainPicture picture = new TerrainPicture();
         picture.Update(document, 0);
         return Reduce(picture.Pixels, picture.Width, picture.Height, Size, Size);

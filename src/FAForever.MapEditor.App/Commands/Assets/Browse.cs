@@ -156,19 +156,57 @@ public sealed class ShowBrushesFolderHandler(MainViewModel model, WorkspaceSetup
 }
 
 /// <summary>
-/// Reads the workspace's assets again, after a tool changed them (user story F-8).
+/// Reads the workspace's assets again, after a tool changed them (user story F-8): all of them, or
+/// one asset (its blueprint, its pictures) with the rest kept as they are.
 /// </summary>
+/// <param name="Key">The asset to read again, by any name a map uses for it (a game path, a unit's
+/// id); left out, every asset.</param>
 [EditorCommand("assets.reload", "Read the assets again", Story = "F-8", Needs = Needs.Workspace)]
-public sealed record ReloadAssets : IRequest;
+public sealed record ReloadAssets(string? Key = null) : IRequest;
 
 public sealed class ReloadAssetsHandler(MainViewModel model, WorkspaceSetupViewModel setup) : IRequestHandler<ReloadAssets>
 {
     public async Task Handle(ReloadAssets request, CancellationToken cancellationToken)
     {
+        if (setup.Workspace is not { } workspace)
+        {
+            return;
+        }
+        if (request.Key is string key)
+        {
+            ReloadOne(model, workspace, key);
+            return;
+        }
+        await model.LoadAssetsAsync(workspace);
+        model.Status = $"Read the assets again: {model.Assets.Catalog.Entries.Count} assets";
+    }
+
+    /// <summary>
+    /// Reads one asset again, and says so in the status line.
+    /// </summary>
+    public static void ReloadOne(MainViewModel model, Workspace workspace, string key)
+    {
+        AssetEntry? entry = model.Assets.ReloadOne(key, workspace.AssetsFolder);
+        model.Status = entry is null ? $"The files of {key} are gone: it left the shelf" : $"Read {entry.Name} again";
+    }
+}
+
+/// <summary>
+/// Reads the asset the inspector shows again from its files (user story F-8): after a tool
+/// changed its blueprint or its pictures, without reading the whole catalogue.
+/// </summary>
+[EditorCommand("assets.reloadShown", "Read this asset again", Story = "F-8", Needs = Needs.Workspace)]
+public sealed record ReloadShownAsset : IRequest;
+
+public sealed class ReloadShownAssetHandler(MainViewModel model, AssetsViewModel assets, WorkspaceSetupViewModel setup) : IRequestHandler<ReloadShownAsset>
+{
+    public Task Handle(ReloadShownAsset request, CancellationToken cancellationToken)
+    {
+        string key = assets.Shown?.Key ?? throw new InvalidOperationException("Select an asset first");
         if (setup.Workspace is { } workspace)
         {
-            await model.LoadAssetsAsync(workspace);
-            model.Status = $"Read the assets again: {model.Assets.Catalog.Entries.Count} assets";
+            ReloadAssetsHandler.ReloadOne(model, workspace, key);
         }
+        return Task.CompletedTask;
     }
 }

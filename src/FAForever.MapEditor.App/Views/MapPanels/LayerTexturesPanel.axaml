@@ -4,6 +4,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:editing="using:FAForever.MapEditor.Project.Editing"
              x:Class="FAForever.MapEditor.App.Views.MapPanels.LayerTexturesPanel"
              x:DataType="vm:MainViewModel">
   <Border Classes="group">
@@ -21,6 +22,26 @@
         </ListBox.ItemTemplate>
       </ListBox>
       <TextBlock Classes="caption" Text="{Binding LayerTextures.Summary}" />
+      <!-- the terrain shader that blends the layers (S-4) -->
+      <StackPanel Classes="inline">
+        <TextBlock Classes="label" Text="Shader" />
+        <ComboBox ItemsSource="{Binding LayerTextures.Shaders}" SelectedItem="{Binding LayerTextures.Shader}" IsEnabled="{Binding HasMap}"
+                  AutomationProperties.Name="Terrain shader" AutomationProperties.HelpText="How the game blends the layers; the 3D view and the generated preview blend them so too">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="editing:TerrainShaderInfo">
+              <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Summary}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </StackPanel>
+      <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding LayerTextures.ShaderSummary}" AutomationProperties.Name="What the terrain shader is" />
+      <ItemsControl ItemsSource="{Binding LayerTextures.ShaderUses}" AutomationProperties.Name="What the terrain shader reads">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="x:String">
+            <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding StringFormat='· {0}'}" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
       <WrapPanel Classes="chips">
         <Button Content="Add a stratum" Command="{Binding LayerTextures.AddCommand}" IsEnabled="{Binding HasMap}"
                 AutomationProperties.HelpText="Gives the first unused stratum a texture from the picker" />

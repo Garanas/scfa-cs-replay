@@ -51,6 +51,7 @@ public sealed class DialogGuard(IEditorDialogs dialogs) : IEditorDialogs
         AssetKind.Unit => "a unit's id, such as uec1101",
         AssetKind.Prop => "a prop's blueprint, such as env/evergreen/props/trees/pine06_prop.bp",
         AssetKind.Brush => "a brush's path, such as brushes/craters/crater01.png",
+        AssetKind.Cubemap => "a cube map's game path, such as textures/environment/skycube_evergreen01a.dds",
         _ => "a texture's game path, such as env/tundra/layers/tund_rock_albedo.dds",
     };
 }

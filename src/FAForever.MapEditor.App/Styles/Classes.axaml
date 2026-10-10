@@ -662,6 +662,14 @@
   <Style Selector="Border.badge.uses TextBlock">
     <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
   </Style>
+  <!-- a unit's icon as the game's build menu shows it, in the corner of its tile (U-1) -->
+  <Style Selector="Border.uniticon">
+    <Setter Property="Width" Value="{StaticResource UnitIconBadgeSize}" />
+    <Setter Property="Height" Value="{StaticResource UnitIconBadgeSize}" />
+    <Setter Property="Margin" Value="{StaticResource BadgeGap}" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
   <!-- the asset in the inspector, and in the tool tip of a tile -->
   <Style Selector="Border.preview">
     <Setter Property="Height" Value="{StaticResource AssetPreviewHeight}" />

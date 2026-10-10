@@ -37,6 +37,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             TechLevel = unit.TechLevel,
             Categories = [.. unit.Categories],
             StrategicIcon = unit.StrategicIconName,
+            BuildIcon = unit.General.Icon,
             Size = Size(unit),
             Footprint = unit.Footprint is { SizeX: double x, SizeZ: double z } ? new FootprintDto { SizeX = x, SizeZ = z } : null,
             UniformScale = unit.Display.UniformScale,

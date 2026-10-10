@@ -75,6 +75,18 @@ public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry
     public bool HasImage => entry.Image is not null || entry.Model is not null;
 
     /// <summary>
+    /// A unit's icon as the game's build menu shows it (user story U-1), a PNG; null for none.
+    /// </summary>
+    public string? Icon => entry.Icon;
+
+    /// <summary>
+    /// The picture of the unit's layer the game draws behind its icon.
+    /// </summary>
+    public string? IconBackground => entry.IconBackground;
+
+    public bool HasIcon => entry.Icon is not null;
+
+    /// <summary>
     /// The icon of its kind (<c>Styles/Icons.axaml</c>), shown when it has no picture.
     /// </summary>
     public string Glyph => AssetsViewModel.IconOf(entry.Kind);
@@ -124,6 +136,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     private IReadOnlyList<string> _biomes = [];
     private bool _rebuilding;
     private MapDocument? _document;
+    private string _cubemaps = "";
 
     public AssetsViewModel(ILogger log)
     {
@@ -152,7 +165,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// <summary>
     /// What the groups are: the biomes, or the units' factions.
     /// </summary>
-    public string GroupsTitle => Kind switch { AssetKind.Unit => "Faction", AssetKind.Brush => "Folder", _ => "Biome" };
+    public string GroupsTitle => Kind switch { AssetKind.Unit => "Faction", AssetKind.Brush or AssetKind.Cubemap => "Folder", _ => "Biome" };
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsInMap), nameof(IsNarrow), nameof(IsEverything), nameof(IsMissingScope))]
@@ -260,7 +273,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// The variant of the selected family the inspector shows.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownModel), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownUse), nameof(ShownKeyLabel))]
+    [NotifyPropertyChangedFor(nameof(Shown), nameof(ShownDetail), nameof(ShownUses), nameof(ShownImage), nameof(ShownModel), nameof(ShownNormalImage), nameof(HasShownImage), nameof(HasShownNormalImage), nameof(ShownGlyph), nameof(ShownUse), nameof(ShownKeyLabel), nameof(ShownIcon), nameof(HasShownIcon), nameof(ShownIconBackground))]
     public partial AssetEntry? SelectedMember { get; set; }
 
     public bool HasSelection => Selected is not null;
@@ -299,6 +312,15 @@ public sealed partial class AssetsViewModel : ObservableObject
 
     public bool HasShownNormalImage => ShownNormalImage is not null;
 
+    /// <summary>
+    /// The shown unit's icon as the game's build menu shows it (user story U-1); null for none.
+    /// </summary>
+    public string? ShownIcon => Shown?.Icon;
+
+    public string? ShownIconBackground => Shown?.IconBackground;
+
+    public bool HasShownIcon => ShownIcon is not null;
+
     public string ShownGlyph => IconOf(Shown?.Kind ?? Kind);
 
     /// <summary>
@@ -312,6 +334,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         AssetKind.Brush => "Choosing it makes it the shape of the active brush tool: Sculpt in the Terrain mode, Strata in the Paint mode, whose options turn it.",
         AssetKind.Decal => "Choosing it makes it the decal the Place tool of the Decals mode places (in that mode the tool becomes active); drag it onto a view to place it there.",
         AssetKind.Unit => "Choosing it makes it what the Units mode's Place tool places: click on the map, or drag the tile onto it.",
+        AssetKind.Cubemap => "A cube map: choose it in the Lighting mode's Sky as the sky around the map or what units reflect, or in the Water mode as what the water reflects.",
         _ => "",
     };
 
@@ -350,12 +373,13 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// </summary>
     public int InMapCount => _uses.Keys.Select(Catalog.Find).Where(entry => entry?.Kind == Kind).Distinct().Count();
 
-    public string NarrowTitle => Kind switch { AssetKind.Unit => "Civilian", AssetKind.Brush => "The workspace's", _ => "Map's biomes" };
+    public string NarrowTitle => Kind switch { AssetKind.Unit => "Civilian", AssetKind.Brush => "The workspace's", AssetKind.Cubemap => "Sky and reflections", _ => "Map's biomes" };
 
     /// <summary>
     /// Which assets <see cref="AssetScope.Narrow"/> shows, said in full.
     /// </summary>
     public string NarrowHelp => Kind == AssetKind.Unit ? "The civilian units"
+        : Kind == AssetKind.Cubemap ? "The cube maps of the sky and of what units reflect"
         : Kind == AssetKind.Brush ? "Every brush of the workspace's brushes folder"
         : _biomes.Count == 0 ? "Every biome: the map uses none yet"
         : $"The biomes the map uses: {string.Join(", ", _biomes.Select(Title))}";
@@ -439,6 +463,34 @@ public sealed partial class AssetsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Reads one asset again from its files (user story F-8), the rest of the catalogue kept: its
+    /// blueprint's facts, its pictures. The tiles and the inspector show it as it is now.
+    /// </summary>
+    /// <param name="key">Any name a map uses for it (a game path, a unit's id).</param>
+    /// <returns>The asset as it is now; null when its files are gone (it leaves the shelf).</returns>
+    /// <exception cref="ArgumentException">The workspace has no such asset.</exception>
+    public AssetEntry? ReloadOne(string key, string assetsFolder)
+    {
+        using Performance.Span measure = Performance.Measure("assets.reload-one");
+        AssetEntry old = Catalog.Find(key) ?? throw new ArgumentException($"The workspace has no asset '{key}'");
+        (AssetCatalog catalog, AssetEntry? fresh) = Catalog.Reload(key, assetsFolder);
+        foreach (string file in new[] { old.File, old.Image, old.Icon, old.NormalImage, old.Model?.Mesh, fresh?.File, fresh?.Image, fresh?.Icon, fresh?.Model?.Mesh }.OfType<string>())
+        {
+            Controls.AssetThumbnail.Cache.Forget(file);
+        }
+        bool shown = Shown is AssetEntry entry && entry.Key == old.Key;
+        Catalog = catalog;
+        FindMissing();
+        Rebuild();
+        if (shown && fresh is not null)
+        {
+            Select(fresh.Key);
+        }
+        _log.LogInformation("Read the asset {Key} again: {Result}", old.Key, fresh is null ? "its files are gone" : "updated");
+        return fresh;
+    }
+
+    /// <summary>
     /// Finds what the map uses and the workspace lacks again (span <c>assets.missing</c>).
     /// </summary>
     private void FindMissing()
@@ -458,8 +510,20 @@ public sealed partial class AssetsViewModel : ObservableObject
         IReadOnlyDictionary<string, int> uses = document is null ? new Dictionary<string, int>() : AssetUse.Count(document);
         bool sameMap = ReferenceEquals(document, _document) || (document is not null && _document is not null && document.Files == _document.Files);
         _document = document;
+        // the cube maps the map names (L-1) are no uses, but may be missing
+        string cubemaps = document is null ? "" : string.Join('|', MissingAssets.CubemapsOf(document));
+        bool cubemapsChanged = cubemaps != _cubemaps;
+        _cubemaps = cubemaps;
         if (sameMap && uses.Count == _uses.Count && uses.All(use => _uses.TryGetValue(use.Key, out int count) && count == use.Value))
         {
+            if (cubemapsChanged)
+            {
+                FindMissing();
+                if (Scope == AssetScope.Missing)
+                {
+                    Rebuild();
+                }
+            }
             return;
         }
         IReadOnlyList<string> biomes = AssetUse.Biomes(uses);
@@ -505,6 +569,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         "props" => AssetKind.Prop,
         "decals" => AssetKind.Decal,
         "units" => AssetKind.Unit,
+        "lighting" => AssetKind.Cubemap,
         _ => null,
     };
 
@@ -735,6 +800,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         {
             AssetKind.Unit => entry.IsCivilian,
             AssetKind.Brush => true,
+            AssetKind.Cubemap => entry.Category is "sky" or "reflection",
             _ => _biomes.Count == 0 || _biomes.Contains(entry.Group),
         },
         _ => true,
@@ -777,6 +843,8 @@ public sealed partial class AssetsViewModel : ObservableObject
         (AssetKind.Decal, false) => "Decals",
         (AssetKind.Brush, true) => "Brush",
         (AssetKind.Brush, false) => "Brushes",
+        (AssetKind.Cubemap, true) => "Cube map",
+        (AssetKind.Cubemap, false) => "Cube maps",
         (_, true) => "Texture",
         _ => "Textures",
     };
@@ -787,6 +855,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         AssetKind.Unit => "Icon.Units",
         AssetKind.Decal => "Icon.Decals",
         AssetKind.Brush => "Icon.Terrain",
+        AssetKind.Cubemap => "Icon.Lighting",
         _ => "Icon.Paint",
     };
 }

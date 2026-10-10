@@ -40,6 +40,11 @@ public sealed record WaterDetailsSection() : PanelSection("Surface and waves");
 public sealed record LightingSection() : PanelSection("Lighting");
 
 /// <summary>
+/// The Lighting mode's inspector: the sky's cube maps and background (user story L-1), <see cref="LightingSettingsViewModel.Sky"/>.
+/// </summary>
+public sealed record SkySection() : PanelSection("Sky");
+
+/// <summary>
 /// The Paint mode's layers with their textures: add, remove, reorder (user story S-2), <see cref="MainViewModel.LayerTextures"/>.
 /// </summary>
 public sealed record LayerTexturesSection() : PanelSection("Layer textures");

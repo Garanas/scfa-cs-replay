@@ -21,6 +21,13 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// A brush's shape: a greyscale picture of the workspace's own (<see cref="WorkspaceLayout.Brushes"/>).
         /// </summary>
         Brush,
+
+        /// <summary>
+        /// A cube map of the sky, of what units reflect or of what the water reflects
+        /// (<c>textures/environment</c>, <c>textures/engine</c>), kept as a strip of its six faces
+        /// (<see cref="CubeMaps"/>).
+        /// </summary>
+        Cubemap,
     }
 
     /// <summary>
@@ -125,6 +132,19 @@ namespace FAForever.MapEditor.Project.Workspaces
         public AssetModel? Model { get; init; }
 
         /// <summary>
+        /// A unit's icon as the game's build menu shows it (<c>textures/ui/common/icons/units/&lt;id&gt;_icon</c>),
+        /// a PNG of the workspace's assets; null for the other kinds and for a unit without one.
+        /// </summary>
+        public string? Icon { get; init; }
+
+        /// <summary>
+        /// What the game's build menu draws behind a unit's <see cref="Icon"/>: the picture of its
+        /// layer (<c>land_up</c>, <c>air_up</c>, <c>sea_up</c>, <c>amph_up</c>), a PNG of the
+        /// workspace's assets; null for the other kinds and when the workspace lacks it.
+        /// </summary>
+        public string? IconBackground { get; init; }
+
+        /// <summary>
         /// A texture's normal map, a PNG of the workspace's assets.
         /// </summary>
         public string? NormalImage { get; init; }
@@ -172,6 +192,78 @@ namespace FAForever.MapEditor.Project.Workspaces
         }
 
         public static AssetCatalog Empty { get; } = new AssetCatalog([]);
+
+        /// <summary>
+        /// The catalogue this one was made from by reading one asset again (<see cref="Reload"/>),
+        /// so that what keeps something per asset can drop only <see cref="ReloadedKeys"/>; null
+        /// for a catalogue read whole.
+        /// </summary>
+        public AssetCatalog? ReloadedFrom { get; private init; }
+
+        /// <summary>
+        /// The keys of the asset read again (its old and new <see cref="AssetEntry.Keys"/>); empty
+        /// for a catalogue read whole.
+        /// </summary>
+        public IReadOnlySet<string> ReloadedKeys { get; private init; } = new HashSet<string>();
+
+        /// <summary>
+        /// This catalogue with one asset read again from its files (user story F-8): a blueprint
+        /// another tool changed, a texture saved again. An asset whose files are gone is left out.
+        /// </summary>
+        /// <param name="key">Any of the asset's <see cref="AssetEntry.Keys"/>.</param>
+        /// <param name="assetsFolder">The workspace's <c>assets</c> folder the catalogue was read from.</param>
+        /// <returns>The new catalogue, and the asset as it is now (null when it is gone).</returns>
+        /// <exception cref="ArgumentException">The catalogue has no such asset.</exception>
+        public (AssetCatalog Catalog, AssetEntry? Entry) Reload(string key, string assetsFolder)
+        {
+            AssetEntry old = Find(key) ?? throw new ArgumentException($"The workspace has no asset '{key}'");
+            AssetEntry? fresh = ReadAgain(old, assetsFolder);
+            List<AssetEntry> entries = [.. Entries.Where(entry => !ReferenceEquals(entry, old))];
+            if (fresh is not null)
+            {
+                entries.Add(fresh);
+            }
+            entries.Sort((a, b) => (a.Kind, a.Group, a.Name).CompareTo((b.Kind, b.Group, b.Name)));
+            HashSet<string> keys = new HashSet<string>(old.Keys, StringComparer.Ordinal);
+            keys.UnionWith(fresh?.Keys ?? []);
+            return (new AssetCatalog(entries) { ReloadedFrom = this, ReloadedKeys = keys }, fresh);
+        }
+
+        /// <summary>
+        /// Reads one asset again by the reader of its kind, over the folder it lies in.
+        /// </summary>
+        private static AssetEntry? ReadAgain(AssetEntry old, string assets)
+        {
+            if (!File.Exists(old.File))
+            {
+                return null;
+            }
+            string folder = Path.GetDirectoryName(old.File)!;
+            IEnumerable<AssetEntry> read = old.Kind switch
+            {
+                AssetKind.Unit => Units(assets, folder),
+                AssetKind.Brush => Brushes(old.File[..^(old.Key.Length - WorkspaceLayout.Brushes.Length - 1)].TrimEnd('/', '\\')),
+                AssetKind.Cubemap => Cubemaps(assets, folder),
+                _ => BiomeOf(assets, old) is string biomeFolder
+                    ? old.Kind switch
+                    {
+                        AssetKind.Prop => Props(assets, biomeFolder, old.Group),
+                        AssetKind.Decal => Decals(assets, biomeFolder, old.Group),
+                        _ => Textures(assets, biomeFolder, old.Group),
+                    }
+                    : [],
+            };
+            return read.FirstOrDefault(entry => entry.Key == old.Key);
+        }
+
+        /// <summary>
+        /// The folder of the biome an asset of <c>env</c> belongs to: <c>assets/env/&lt;biome&gt;</c>.
+        /// </summary>
+        private static string? BiomeOf(string assets, AssetEntry entry)
+        {
+            string folder = Path.Combine(assets, "env", entry.Group);
+            return Directory.Exists(folder) ? folder : null;
+        }
 
         /// <summary>
         /// Every asset, by kind, then group and name.
@@ -233,6 +325,14 @@ namespace FAForever.MapEditor.Project.Workspaces
             if (Directory.Exists(units))
             {
                 entries.AddRange(Units(assetsFolder, units));
+            }
+            foreach (string folder in CubemapFolders)
+            {
+                string cubemaps = Path.Combine(assetsFolder, folder.Replace('/', Path.DirectorySeparatorChar));
+                if (Directory.Exists(cubemaps))
+                {
+                    entries.AddRange(Cubemaps(assetsFolder, cubemaps));
+                }
             }
             entries.Sort((a, b) => (a.Kind, a.Group, a.Name).CompareTo((b.Kind, b.Group, b.Name)));
             return new AssetCatalog(entries);
@@ -407,8 +507,67 @@ namespace FAForever.MapEditor.Project.Workspaces
                     TechLevel = unit.TechLevel,
                     Footprint = unit.Footprint is { } size ? (size.SizeX, size.SizeZ) : null,
                     Model = ModelOf(assets, unit.Lods),
+                    Icon = File.Exists(Path.Combine(assets, UnitIconFolder, id + "_icon.png")) ? Path.Combine(assets, UnitIconFolder, id + "_icon.png") : null,
+                    IconBackground = IconBackgroundOf(assets, unit.BuildIcon),
                     File = file,
                     Facts = [.. facts],
+                };
+            }
+        }
+
+        /// <summary>
+        /// The folders of the assets that hold cube maps.
+        /// </summary>
+        private static readonly string[] CubemapFolders = ["textures/environment", "textures/engine"];
+
+        /// <summary>
+        /// The folder of the units' icons in the assets, as the game names them: <c>&lt;id&gt;_icon.png</c>.
+        /// </summary>
+        public const string UnitIconFolder = "textures/ui/common/icons/units";
+
+        /// <summary>
+        /// The picture behind a unit's icon in the game's build menu, as the game chooses it
+        /// (<c>GetBackgroundTextures</c> in <c>lua/ui/game/construction.lua</c>): its blueprint's
+        /// <c>General.Icon</c> when that is <c>land</c>, <c>air</c>, <c>sea</c> or <c>amph</c>, else land.
+        /// </summary>
+        private static string? IconBackgroundOf(string assets, string? buildIcon)
+        {
+            string layer = buildIcon is "land" or "air" or "sea" or "amph" ? buildIcon : "land";
+            string file = Path.Combine(assets, UnitIconFolder, layer + "_up.png");
+            return File.Exists(file) ? file : null;
+        }
+
+        /// <summary>
+        /// The cube maps of a folder: the PNGs that are strips of six faces (<see cref="CubeMaps.IsStrip"/>).
+        /// </summary>
+        private static IEnumerable<AssetEntry> Cubemaps(string assets, string folder)
+        {
+            string group = Path.GetFileName(folder).ToLowerInvariant();
+            foreach (string file in Directory.EnumerateFiles(folder, "*.png"))
+            {
+                if (PngHeader(file) is not (int width, int height, _, _) || !CubeMaps.IsStrip(width, height))
+                {
+                    continue;
+                }
+                string name = Path.GetFileNameWithoutExtension(file);
+                string lower = name.ToLowerInvariant();
+                string key = KeyOf(Relative(assets, file));
+                yield return new AssetEntry
+                {
+                    Kind = AssetKind.Cubemap,
+                    Key = key,
+                    Keys = [key],
+                    Name = name,
+                    Code = name,
+                    Group = group,
+                    Category = lower.Contains("skycube", StringComparison.Ordinal) ? "sky"
+                        : lower.Contains("envcube", StringComparison.Ordinal) ? "reflection"
+                        : lower.Contains("water", StringComparison.Ordinal) ? "water"
+                        : "other",
+                    Family = name,
+                    Image = file,
+                    File = file,
+                    Facts = [new AssetFact("Faces", $"6 of {height} × {height} pixels")],
                 };
             }
         }

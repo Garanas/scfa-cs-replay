@@ -121,13 +121,27 @@ internal static class TerrainShaders
         uniform vec2 uScalesC;
         // 0 the picture, 1 the albedo alone, 2 the light alone, 3 the normal, 4 the height
         uniform int uDebug;
+        // the terrain shader's way of blending (TerrainShaderCatalog): x 1 when a mask counts over its
+        // whole range (else from its middle up), y the strata it blends (4 or 8), z 1 when stratum 8
+        // is a texture (else map-wide data), w 1 when the upper layer is a texture
+        uniform vec4 uBlend;
 
         void main()
         {
             vec2 p = vWorld.xz;
             vec2 maskUv = p / uMapSize;
-            vec4 mask0 = clamp(texture(uMask0, maskUv) * 2.0 - 1.0, 0.0, 1.0);
-            vec4 mask1 = clamp(texture(uMask1, maskUv) * 2.0 - 1.0, 0.0, 1.0);
+            vec4 mask0 = texture(uMask0, maskUv);
+            vec4 mask1 = texture(uMask1, maskUv);
+            if (uBlend.x < 0.5)
+            {
+                mask0 = clamp(mask0 * 2.0 - 1.0, 0.0, 1.0);
+                mask1 = clamp(mask1 * 2.0 - 1.0, 0.0, 1.0);
+            }
+            if (uBlend.y < 4.5)
+            {
+                mask1 = vec4(0.0);
+            }
+            mask1.w *= uBlend.z;
 
             vec4 albedo = texture(uLower, p / uScalesA.x);
             albedo = mix(albedo, texture(uStratum1, p / uScalesA.y), mask0.x);
@@ -139,7 +153,7 @@ internal static class TerrainShaders
             albedo = mix(albedo, texture(uStratum7, p / uScalesB.w), mask1.z);
             albedo = mix(albedo, texture(uStratum8, p / uScalesC.x), mask1.w);
             vec4 upper = texture(uUpper, p / uScalesC.y);
-            albedo.rgb = mix(albedo.rgb, upper.rgb, upper.a);
+            albedo.rgb = mix(albedo.rgb, upper.rgb, upper.a * uBlend.w);
 
             vec3 color = lightOf(normalAt(p)) * albedo.rgb;
             if (uDebug == 1) color = albedo.rgb;
@@ -155,8 +169,9 @@ internal static class TerrainShaders
 
     /// <summary>
     /// The water: the map's rectangle at the water's elevation, drawn after the decals (the sea
-    /// floor's decals lie under it). Its opacity and darkness grow with the depth, down to the
-    /// abyss elevation, in the water's surface colour.
+    /// floor's decals lie under it). With its ramp, as the game: the ramp's colour at the depth
+    /// (down to the abyss elevation) over the ground, then the surface colour; without one its
+    /// opacity and darkness grow with the depth, in the surface colour. It reflects its cube map.
     /// </summary>
     public static string WaterVertex(bool es) => Header(es) + """
         layout(location = 0) in vec2 aGrid;
@@ -178,6 +193,15 @@ internal static class TerrainShaders
         // elevation, abyss elevation
         uniform vec2 uWater;
         uniform vec3 uWaterColor;
+        // what the water reflects (its cube map, else the sky's), as strong as the water's sky
+        // reflection (y) and the Fresnel term say; uReflect.x 0 for none
+        uniform samplerCube uReflection;
+        uniform vec4 uReflect;
+        uniform vec3 uEye;
+        // the water ramp (its colour by depth) and whether there is one; the surface colour's near and far
+        uniform sampler2D uRamp;
+        uniform int uHasRamp;
+        uniform vec2 uColorLerp;
 
         void main()
         {
@@ -188,9 +212,61 @@ internal static class TerrainShaders
             }
             float t = clamp(depth / max(uWater.x - uWater.y, 1.0), 0.0, 1.0);
             vec3 surface = clamp(uWaterColor, 0.0, 1.0);
-            vec3 color = mix(surface * 0.55, surface * 0.12, t);
-            float alpha = clamp(0.25 + 0.75 * sqrt(t), 0.0, 0.92);
-            outColor = vec4(color * alpha, alpha);
+            // premultiplied, over the terrain
+            vec4 water;
+            if (uHasRamp == 1)
+            {
+                // as the game: the ramp's colour at the depth over the terrain by its alpha (terrain.fx),
+                // then the surface colour by the depth, clamped to its near and far (water2.fx)
+                vec4 ramp = texture(uRamp, vec2(t, 0.5));
+                float f = clamp(t, min(uColorLerp.x, uColorLerp.y), max(uColorLerp.x, uColorLerp.y));
+                water = vec4(ramp.rgb * ramp.a * (1.0 - f) + surface * f, 1.0 - (1.0 - ramp.a) * (1.0 - f));
+            }
+            else
+            {
+                float alpha = clamp(0.25 + 0.75 * sqrt(t), 0.0, 0.92);
+                water = vec4(mix(surface * 0.55, surface * 0.12, t) * alpha, alpha);
+            }
+            if (uReflect.x > 0.5)
+            {
+                vec3 view = normalize(vec3(vPlace.x, uWater.x, vPlace.y) - uEye);
+                vec3 reflected = reflect(view, vec3(0.0, 1.0, 0.0));
+                // Schlick's approximation with FAF's F0 of 0.08 (water2.fx), the surface flat
+                float fresnel = 0.08 + 0.92 * pow(1.0 - clamp(-view.y, 0.0, 1.0), 5.0);
+                float strength = clamp(fresnel * uReflect.y, 0.0, 1.0);
+                water = water * (1.0 - strength) + vec4(texture(uReflection, reflected).rgb * strength, strength);
+            }
+            outColor = water;
+        }
+        """;
+
+    /// <summary>
+    /// The sky (user story L-1): behind everything, the map's sky cube map in the direction of
+    /// each pixel, from the inverse of the camera's matrix.
+    /// </summary>
+    public static string SkyVertex(bool es) => Header(es) + """
+        layout(location = 0) in vec2 aGrid;
+        out vec2 vNdc;
+
+        void main()
+        {
+            vNdc = aGrid * 2.0 - 1.0;
+            gl_Position = vec4(vNdc, 1.0, 1.0);
+        }
+        """;
+
+    public static string SkyFragment(bool es) => Header(es) + """
+        in vec2 vNdc;
+        out vec4 outColor;
+        uniform mat4 uInverseViewProjection;
+        uniform samplerCube uSky;
+
+        void main()
+        {
+            vec4 near = uInverseViewProjection * vec4(vNdc, -1.0, 1.0);
+            vec4 far = uInverseViewProjection * vec4(vNdc, 1.0, 1.0);
+            vec3 direction = normalize(far.xyz / far.w - near.xyz / near.w);
+            outColor = vec4(texture(uSky, direction).rgb, 1.0);
         }
         """;
 
@@ -441,6 +517,9 @@ internal static class TerrainShaders
         uniform vec3 uEye;
         // ogrids a pixel at a distance of one ogrid from the eye
         uniform float uPixelScale;
+        // the grid's lines (V-3): their spacing in ogrids, 0 for none, and their colour
+        uniform float uLineSpacing;
+        uniform vec4 uLineColor;
 
         vec4 over(vec4 below, vec4 above)
         {
@@ -489,6 +568,17 @@ internal static class TerrainShaders
                     // a dark edge outside the line, so it shows on light ground
                     vec4 shown = distance < width ? vec4(line.rgb * alpha, alpha) : vec4(uShadowColor.rgb * uShadowColor.a * 0.6, uShadowColor.a * 0.6);
                     color = over(color, shown);
+                }
+            }
+            if (uLineSpacing > 0.0)
+            {
+                // a line a pixel wide every spacing ogrids, faded where they would lie closer than a few pixels
+                vec2 cell = p / uLineSpacing;
+                vec2 away = abs(cell - floor(cell + 0.5)) * uLineSpacing / pixel;
+                float fade = clamp((uLineSpacing / pixel.x - 4.0) / 8.0, 0.0, 1.0);
+                if (min(away.x, away.y) < 0.75 && fade > 0.0)
+                {
+                    color = over(color, vec4(uLineColor.rgb * uLineColor.a * fade, uLineColor.a * fade));
                 }
             }
             for (int i = 0; i < uGuideCount; i++)

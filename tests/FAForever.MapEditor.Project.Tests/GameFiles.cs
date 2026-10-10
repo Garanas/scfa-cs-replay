@@ -34,7 +34,7 @@ namespace FAForever.MapEditor.Project.Tests
                 Display = { Mesh = { LODs = { { LODCutoff = 215, ShaderName = 'Unit' } } }, UniformScale = 0.05 },
                 Economy = { BuildCostEnergy = 5000000, BuildCostMass = 18000 },
                 Footprint = { SizeX = 1, SizeZ = 1 },
-                General = { FactionName = 'UEF' },
+                General = { FactionName = 'UEF', Icon = 'amph' },
                 StrategicIconName = 'icon_commander_generic',
                 Wreckage = { MassMult = 0.9 },
                 SizeX = 0.6, SizeY = 1.5, SizeZ = 0.6,
@@ -65,6 +65,13 @@ namespace FAForever.MapEditor.Project.Tests
                 ["units/UEL0001/UEL0001_Albedo.dds"] = Texture(0x30),
                 ["units/UEL0001/UEL0001_NormalsTS.dds"] = Texture(0x40),
                 ["units/UEL0001/UEL0001_script.lua"] = Encoding.UTF8.GetBytes("-- not converted"),
+            });
+            WriteArchive(Path.Combine(GameFolder, "gamedata", "textures.scd"), new Dictionary<string, byte[]>
+            {
+                ["textures/environment/SkyCube_Test.dds"] = CubeTexture(),
+                ["textures/environment/DefaultBackground.dds"] = Texture(0x60),
+                ["textures/ui/common/icons/units/UEL0001_icon.dds"] = Texture(0x70),
+                ["textures/ui/common/game/not_converted.dds"] = Texture(0x90),
             });
             WriteFafEnv(withExtraFile: false);
             Directory.CreateDirectory(VaultFolder);
@@ -122,6 +129,24 @@ namespace FAForever.MapEditor.Project.Tests
                 rgba[i + 3] = 0x80;
             }
             return DdsTexture.Write(4, 4, TextureFormat.A8R8G8B8, rgba);
+        }
+
+        /// <summary>
+        /// A cube map of six 4 by 4 faces, uncompressed, the red of face i being 0x10 * (i + 1).
+        /// </summary>
+        public static byte[] CubeTexture()
+        {
+            List<byte> bytes = [];
+            for (int face = 0; face < 6; face++)
+            {
+                byte[] single = Texture((byte)(0x10 * (face + 1)));
+                bytes.AddRange(face == 0 ? single : single[128..]);
+            }
+            byte[] cube = [.. bytes];
+            // dwCaps: complex; dwCaps2: a cube map with all six faces
+            BitConverter.GetBytes(BitConverter.ToUInt32(cube, 108) | 0x8u).CopyTo(cube, 108);
+            BitConverter.GetBytes(0x200u | 0xFC00u).CopyTo(cube, 112);
+            return cube;
         }
 
         private static void WriteArchive(string path, Dictionary<string, byte[]> files)

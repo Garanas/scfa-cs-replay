@@ -18,6 +18,9 @@ internal sealed class GpuTextureCache(GL gl, Action loaded) : IDisposable
         public object? Version;
         public object? Loading;
         public bool Used;
+
+        // a cube map: the source is a strip of six faces (CubeMaps), uploaded as a cube
+        public bool Cube;
     }
 
     private readonly Dictionary<string, Entry> _entries = new Dictionary<string, Entry>(StringComparer.Ordinal);
@@ -42,7 +45,15 @@ internal sealed class GpuTextureCache(GL gl, Action loaded) : IDisposable
     /// The texture of <paramref name="source"/>, or <paramref name="fallback"/> while it loads or
     /// when there is none.
     /// </summary>
-    public uint Get(TextureSource? source, uint fallback)
+    public uint Get(TextureSource? source, uint fallback) => Get(source, fallback, cube: false);
+
+    /// <summary>
+    /// The cube map of <paramref name="source"/> (a strip of six faces, <see cref="CubeMaps"/>), or
+    /// <paramref name="fallback"/> while it loads or when there is none.
+    /// </summary>
+    public uint GetCube(TextureSource? source, uint fallback) => Get(source, fallback, cube: true);
+
+    private uint Get(TextureSource? source, uint fallback, bool cube)
     {
         if (source is null)
         {
@@ -50,7 +61,7 @@ internal sealed class GpuTextureCache(GL gl, Action loaded) : IDisposable
         }
         if (!_entries.TryGetValue(source.Key, out Entry? entry))
         {
-            entry = new Entry();
+            entry = new Entry { Cube = cube };
             _entries[source.Key] = entry;
         }
         entry.Used = true;
@@ -95,11 +106,23 @@ internal sealed class GpuTextureCache(GL gl, Action loaded) : IDisposable
                 LastError = done.Error;
                 continue;
             }
+            if (entry.Cube && !CubeMaps.IsStrip(done.Image.Width, done.Image.Height))
+            {
+                LastError = $"{done.Key}: not a cube map of six square faces ({done.Image.Width} by {done.Image.Height})";
+                continue;
+            }
             if (entry.Id == 0)
             {
                 entry.Id = gl.GenTexture();
             }
-            UploadRgba(gl, entry.Id, done.Image.Width, done.Image.Height, done.Image.Rgba, mipmaps: true);
+            if (entry.Cube)
+            {
+                UploadCube(gl, entry.Id, done.Image);
+            }
+            else
+            {
+                UploadRgba(gl, entry.Id, done.Image.Width, done.Image.Height, done.Image.Rgba, mipmaps: true);
+            }
         }
     }
 
@@ -131,6 +154,23 @@ internal sealed class GpuTextureCache(GL gl, Action loaded) : IDisposable
         {
             gl.GenerateMipmap(TextureTarget.Texture2D);
         }
+    }
+
+    /// <summary>
+    /// A strip of six faces as a cube map, with mipmaps: the faces in the order of OpenGL and DDS
+    /// (+x, -x, +y, -y, +z, -z), each uploaded as the DDS holds it.
+    /// </summary>
+    public static void UploadCube(GL gl, uint texture, DecodedTexture strip)
+    {
+        int size = strip.Height;
+        gl.BindTexture(TextureTarget.TextureCubeMap, texture);
+        gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
+        for (int face = 0; face < 6; face++)
+        {
+            gl.TexImage2D(TextureTarget.TextureCubeMapPositiveX + face, 0, InternalFormat.Rgba8, (uint)size, (uint)size, 0, PixelFormat.Rgba, PixelType.UnsignedByte,
+                (ReadOnlySpan<byte>)CubeMaps.Face(strip, face));
+        }
+        gl.GenerateMipmap(TextureTarget.TextureCubeMap);
     }
 
     public void Dispose()

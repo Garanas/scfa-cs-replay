@@ -40,14 +40,15 @@ reads again when it changes; and nothing that generates runs by itself.
       them, walkability before path networks), so one run leaves nothing out of date; walkability,
       the normal map and the preview are generated this way (T-7, S-4), and so are masks and props
       from rules (K-2, P-4).
-- [ ] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
+- [x] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
       missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map
       uses and how often, shows an asset's file and reads the assets again; the inspector says
       where an asset comes from (the game's .scd, FAF's .nx2 and whether it replaces the game's,
       the workspace's own) and the shelf filters by it; its Missing scope lists what the map uses
-      that the workspace and the map's own files lack, each leading to its problem. Missing:
-      reading one asset again (the whole catalogue is read).
+      that the workspace and the map's own files lack (its cube maps too), each leading to its
+      problem; the inspector's Read again (`assets.reload {key}`) reads one asset again, the rest
+      of the catalogue kept.
 - [ ] **F-9 Pickers.** One way to choose an asset everywhere: a searchable picker with thumbnails
       and filters, for textures, decals, props and units (see UNT-1). Today: the asset shelf in the
       dock (Ctrl+Shift+A): the kind follows the mode; what the map uses, its biomes or everything;
@@ -229,10 +230,12 @@ reads again when it changes; and nothing that generates runs by itself.
       layers (a stratum chosen there is the one the strata tool paints) and the inspector; the
       strata the version holds (4 or 8), masks moving with them.
 - [x] **S-3 Masks from other tools.** The masks are PNGs in the project, read again when they change.
-- [ ] **S-4 Shader and derived images.** The terrain shader; generate the normal map and the preview.
-      Today: the normal map (as the game reads it) and the 256 by 256 preview (the top view's
-      picture) generated from the terrain when asked, each one step of undo, out of date when the
-      heightmap changes. Missing: the shader; a preview with the strata's textures.
+- [x] **S-4 Shader and derived images.** The terrain shader; generate the normal map and the preview.
+      Today: the Paint panel's Shader (`paint.shader`): the game's and FAF's terrain shaders, with
+      what each reads; the 3D view and the preview blend the layers as it does. The normal map (as
+      the game reads it) and the 256 by 256 preview the `.scmap` ships with, drawn with the strata's
+      textures, lit by the sun, the water as the game colours it, generated when asked, each one
+      step of undo, out of date when what they are made of changes.
 
 ## K: Masks for tools
 
@@ -259,10 +262,13 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## L: Lighting and atmosphere
 
-- [ ] **L-1 Lighting.** The sun's direction (with a handle in the 3D view), colours, ambience,
+- [x] **L-1 Lighting.** The sun's direction (with a handle in the 3D view), colours, ambience,
       shadow fill, multiplier, specular, bloom, fog, sky and cube maps, seen at once in 3D. Today:
       the Lighting panel (`lighting.set`) and the sun tool, which turns the sun from either view,
-      with an arrow in the 3D view whose head is dragged across the sky. Missing: the sky and cube maps.
+      with an arrow in the 3D view whose head is dragged across the sky; the Lighting inspector's
+      Sky: the sky's cube map, the one units reflect and the background, cube maps chosen in the
+      picker from the workspace's (`lighting.chooseCubemap`, the water's too); the 3D view draws the
+      sky's cube map around the map and the water reflects its own.
 - [x] **L-2 Lighting presets.** The lighting of a biome as a preset (F-10): the Lighting panel's
       presets, `lighting.preset`.
 
@@ -331,11 +337,11 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## U: Units
 
-- [ ] **U-1 Pick a unit.** A dialog: search by name or id, filter by faction, tech, kind
+- [x] **U-1 Pick a unit.** A dialog: search by name or id, filter by faction, tech, kind
       (land, air, naval, structure, civilian), with the unit's icon and size. Today: Units,
-      Choose a unit opens the picker with those filters and each unit's mesh, tech and id; the
-      inspector shows the chosen unit with its footprint. Missing: the game's unit icons (the
-      workspace does not convert them).
+      Choose a unit opens the picker with those filters and each unit's mesh, tech and id, and the
+      game's icon over the picture of its layer (the workspace converts them); the inspector shows
+      the chosen unit with its footprint and icon.
 - [x] **U-2 Place units.** Place units for an army, rotate and move them. The Units mode's Place
       tool: the unit from the picker, the shelf or a dropped tile, the army and group in its
       options; structures snap to the build grid and turn in quarter turns; the selection's army in
@@ -361,7 +367,7 @@ reads again when it changes; and nothing that generates runs by itself.
       the props and units with their models (props the game shows as an effect, such as steam over
       lava, as small diamonds), the markers as symbols, the object under the mouse found by picking
       and drawn highlighted.
-- [ ] **V-3 Overlays.** Choose what the views show over the terrain: a mask, walkability, grid,
+- [x] **V-3 Overlays.** Choose what the views show over the terrain: a mask, walkability, grid,
       symmetry guides, areas, markers by kind, props, decals, units. Today: a chip per overlay in
       the views' row (what does not fit behind its More), each saying whether it shows, those that
       tint the terrain with a swatch of their colour (walkability red, a mask violet, the playable
@@ -371,7 +377,9 @@ reads again when it changes; and nothing that generates runs by itself.
       tool (the rules preview only in the Paint mode); walkability and a mask take turns; in 3D on
       the terrain too: the areas (the playable one marked), walkability, the mask or grid being
       painted, the symmetry's guides, and the handles of the area and sun tools; the links between
-      path nodes, hidden behind hills. Missing: the grid, decals on or off.
+      path nodes, hidden behind hills; the grid's lines in both views, its chip saying its spacing
+      (`view.gridSpacing`, the chip's context menu); decals on or off, the top view drawing them
+      as faint outlines.
 - [ ] **V-4 Layouts.** Top and 3D side by side; panels that can be moved, closed and opened again.
       Today: the views side by side (sharing the camera, each with its own mouse), the mode panel,
       inspector, dock and toolbar hidden and shown, the panels and views resized with splitters,

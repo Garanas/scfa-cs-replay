@@ -56,7 +56,7 @@ public sealed partial class MainViewModel
     {
         Generation.Register(new WalkabilityGenerator(), "generate.walkability");
         Generation.Register(new NormalMapGenerator(), "generate.normalMap");
-        Generation.Register(new MapPreview(), "file.renderPreview");
+        Generation.Register(new MapPreview(() => Setup.Workspace), "file.renderPreview");
         Walkability = new WalkabilityViewModel(Generation);
         Walkability.Changed += (_, _) =>
         {

@@ -129,7 +129,24 @@ public sealed partial class MainWindow : Window
             {
                 Avalonia.Automation.AutomationProperties.SetHelpText(chip, $"Not built yet: {missing}");
             }
-            TextBlock title = new TextBlock { Text = overlay.Title };
+            TextBlock title = new TextBlock();
+            // its title, and a setting of it: the grid's spacing
+            title.Bind(TextBlock.TextProperty, new Avalonia.Data.Binding(nameof(OverlayItem.Text)) { Mode = Avalonia.Data.BindingMode.OneWay });
+            if (overlay.Id == "grid")
+            {
+                // the grid's spacing: another one from the chip's context menu (view.gridSpacing)
+                chip.ContextMenu = new ContextMenu
+                {
+                    ItemsSource = MainViewModel.GridSpacings.Select(spacing => new MenuItem
+                    {
+                        Header = $"Every {spacing} {(spacing == 1 ? "ogrid" : "ogrids")}",
+                        Command = model.ChooseGridSpacingCommand,
+                        CommandParameter = spacing,
+                    }).ToList(),
+                };
+                ToolTip.SetTip(chip, "The grid's lines over the terrain; right-click for another spacing");
+                Avalonia.Automation.AutomationProperties.SetHelpText(chip, "Right-click for another spacing, or run view.gridSpacing");
+            }
             if (overlay.Definition.Swatch is string swatch)
             {
                 Border legend = new Border();

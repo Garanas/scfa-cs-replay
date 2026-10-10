@@ -13,10 +13,30 @@ namespace FAForever.MapEditor.Project.Workspaces
     public sealed class GameArchives : IDisposable
     {
         /// <summary>
-        /// The archives the editor converts: the environment (terrain textures, decals, props) and
-        /// the units.
+        /// The archives the editor converts and needs: the environment (terrain textures, decals,
+        /// props) and the units.
         /// </summary>
         public static readonly IReadOnlyList<string> Names = ["env", "units"];
+
+        /// <summary>
+        /// The archives the editor converts a part of when the game has them: of <c>textures</c>
+        /// the folders of <see cref="TextureFolders"/>.
+        /// </summary>
+        public static readonly IReadOnlyList<string> OptionalNames = ["textures"];
+
+        /// <summary>
+        /// The folders of the <c>textures</c> archive the editor converts, in the form of
+        /// <see cref="Files"/>: the cube maps and backgrounds of the sky (<c>environment</c>), the
+        /// water's textures (<c>engine</c>) and the units' icons as the game's build menu shows them.
+        /// </summary>
+        public static readonly IReadOnlyList<string> TextureFolders = ["textures/environment/", "textures/engine/", "textures/ui/common/icons/units/"];
+
+        /// <summary>
+        /// Whether the editor converts a file of the archives (<see cref="Files"/>'s form): everything
+        /// of <c>env</c> and <c>units</c>, of <c>textures</c> only the folders of <see cref="TextureFolders"/>.
+        /// </summary>
+        public static bool IsConverted(string file) =>
+            !file.StartsWith("textures/", StringComparison.Ordinal) || TextureFolders.Any(folder => file.StartsWith(folder, StringComparison.Ordinal));
 
         private readonly List<(ZipArchive Zip, object Gate)> _archives = [];
         private readonly Dictionary<string, (ZipArchiveEntry Entry, object Gate)> _files = new Dictionary<string, (ZipArchiveEntry, object)>(StringComparer.Ordinal);
@@ -33,17 +53,22 @@ namespace FAForever.MapEditor.Project.Workspaces
 
         /// <summary>
         /// The archives to read, in the order they are laid over each other: per name the game's
-        /// <c>gamedata/&lt;name&gt;.scd</c>, then FAF's <c>&lt;name&gt;.nx2</c> when there is one.
+        /// <c>gamedata/&lt;name&gt;.scd</c>, then FAF's <c>&lt;name&gt;.nx2</c> when there is one; the
+        /// optional ones (<see cref="OptionalNames"/>) when the game has them.
         /// </summary>
         /// <exception cref="MapProjectException">The game folder lacks one of its archives.</exception>
         public static IReadOnlyList<string> Find(string gameFolder, string? fafDataFolder)
         {
             List<string> archives = [];
-            foreach (string name in Names)
+            foreach (string name in Names.Concat(OptionalNames))
             {
                 string scd = Path.Combine(gameFolder, "gamedata", name + ".scd");
                 if (!File.Exists(scd))
                 {
+                    if (OptionalNames.Contains(name))
+                    {
+                        continue;
+                    }
                     throw new MapProjectException($"The game folder {gameFolder} has no gamedata/{name}.scd");
                 }
                 archives.Add(Path.GetFullPath(scd));

@@ -79,6 +79,26 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         }
         return source;
     }
+    /// <summary>
+    /// The cube map a map names (the sky's, the water's), as <see cref="FindTexture"/> finds a texture.
+    /// </summary>
+    private TextureSource? FindCube(string path, MapDocument document, Workspace? workspace)
+    {
+        using Performance.Span lookup = Performance.Measure("3d.find-texture");
+        if (!ReferenceEquals(_sourcesOf, document.Files) || workspace?.AssetsFolder != _watched)
+        {
+            _sources.Clear();
+            _sourcesOf = document.Files;
+        }
+        string key = "cube:" + path;
+        if (!_sources.TryGetValue(key, out TextureSource? source))
+        {
+            source = GameTextures.FindCube(path, document, workspace);
+            _sources[key] = source;
+        }
+        return source;
+    }
+
     private string? _watched;
     private TaskCompletionSource<string>? _capture;
     private string? _capturePath;
@@ -196,6 +216,11 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     /// The decals drawn, the draws they take and the textures they use.
     /// </summary>
     public (int Decals, int Draws, int Textures) DecalState => _renderer?.DecalState ?? (0, 0, 0);
+
+    /// <summary>
+    /// Whether the last frame drew the sky's cube map and the water's reflection (user story L-1).
+    /// </summary>
+    public (bool Sky, bool Reflection) SkyState => (_renderer?.SkyDrawn ?? false, _renderer?.ReflectionDrawn ?? false);
 
     /// <summary>
     /// What the terrain shows, to find out what is wrong with a picture: 0 the picture, 1 the
@@ -323,7 +348,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                 {
                     using Performance.Span lookup = Performance.Measure("3d.find-texture");
                     return FindTexture(path, document, workspace);
-                }, BrushUnderMouse(document), BrushColor(), Objects(camera), Decals(), Overlays(document));
+                }, BrushUnderMouse(document), BrushColor(), Objects(camera), Decals(), Overlays(document),
+                    path => FindCube(path, document, workspace), camera.Eye, _model.ShowDecals);
                 _shapes?.Draw(ToolShapes(document), new Vector2((float)Bounds.Width, (float)Bounds.Height), Ink);
             }
             catch (InvalidOperationException exception)
@@ -998,7 +1024,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         TerrainOverlays overlays = new TerrainOverlays(walkOf, walk, walkWidth, walkHeight, painted, shownGrid?.Palette, ThemeColorWithAlpha("MapMaskBrush"),
             areas, states, guides, ThemeColorWithAlpha("MapAreaBrush"), ThemeColorWithAlpha("MapSelectionBrush"), hover,
             ThemeColorWithAlpha("MapOutsidePlayableBrush"), ThemeColorWithAlpha("OverlayStrokeBrush"), ThemeColorWithAlpha("OverlayShadowBrush"),
-            model.Camera.Eye, 2 * MathF.Tan(EditorCamera.FieldOfView / 2) / (float)Math.Max(1, Bounds.Height));
+            model.Camera.Eye, 2 * MathF.Tan(EditorCamera.FieldOfView / 2) / (float)Math.Max(1, Bounds.Height),
+            model.ShowGrid ? model.GridSpacing : 0, ThemeColorWithAlpha("MapGridLineBrush"));
         return overlays.IsEmpty ? null : overlays;
     }
 

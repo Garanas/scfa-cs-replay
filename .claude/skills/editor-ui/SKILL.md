@@ -133,6 +133,7 @@ faf-map editor screenshot part=options path=<scratch>/o.png --port 5372 # option
 faf-map editor undo --port 5372                                         # ran: false comes with why ("nothing to undo")
 faf-map editor wait path=selection.count value=4 timeout=5 --port 5372  # polls the state until it matches; state.build: version, built
 faf-map editor view zoom=4 --port 5372                                  # the top view zooms about its middle
+faf-map editor state --port 5372                                        # looks: shader, sky (drawn in 3D?), grid and decal lines the top view drew, missing cube maps
 faf-map editor run id=plugin.scatter-rocks.scatter count=10 --port 5372  # a Lua plugin's command (state.plugins: errors, commands, tools)
 faf-map editor tool id=plugin.plateau-brush.plateau --port 5372          # a Lua plugin's tool: then mouse/stroke as with any tool
 ```

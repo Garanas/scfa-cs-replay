@@ -52,6 +52,38 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void ConvertsTheSkyTheWaterAndTheUnitIconsOfTheTextures()
+        {
+            (_, Workspace workspace) = Setup();
+            AssetConverter.Convert(workspace);
+
+            Assert.IsNotNull(workspace.FindAsset("/textures/ui/common/icons/units/uel0001_icon.dds"), "a unit's icon");
+            Assert.IsNotNull(workspace.FindAsset("/textures/environment/defaultbackground.dds"), "the sky's background");
+            Assert.IsNull(workspace.FindAsset("/textures/ui/common/game/not_converted.dds"), "the rest of the interface is not needed");
+
+            // a cube map: its six faces side by side, in their order
+            using MagickImage cube = new MagickImage(File.ReadAllBytes(workspace.FindAsset("/textures/environment/skycube_test.dds")!));
+            Assert.AreEqual(24u, cube.Width);
+            Assert.AreEqual(4u, cube.Height);
+            byte[] rgba = Rgba(cube);
+            for (int face = 0; face < 6; face++)
+            {
+                Assert.AreEqual(0x10 * (face + 1), rgba[face * 4 * 4], $"face {face}");
+            }
+        }
+
+        [TestMethod]
+        public void TheTexturesArchiveIsOptional()
+        {
+            (GameFiles game, Workspace workspace) = Setup();
+            File.Delete(Path.Combine(game.GameFolder, "gamedata", "textures.scd"));
+            AssetConversion conversion = AssetConverter.Convert(workspace);
+
+            Assert.IsFalse(conversion.Manifest.Archives.Any(archive => archive.Path.EndsWith("textures.scd", StringComparison.OrdinalIgnoreCase)));
+            Assert.IsNotNull(workspace.FindAsset("/env/Evergreen/layers/Eg_Grass001_albedo.dds"));
+        }
+
+        [TestMethod]
         public void FafArchivesWinFromTheGames()
         {
             (_, Workspace workspace) = Setup();
@@ -100,6 +132,7 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual("uel0001", acu.Id);
             Assert.AreEqual("Armored Command Unit", acu.Name);
             Assert.AreEqual(Faction.Uef, acu.Faction);
+            Assert.AreEqual("amph", acu.BuildIcon, "the background of its build icon");
             Assert.IsNull(acu.TechLevel);
             Assert.AreEqual(18000, acu.MassCost);
             Assert.AreEqual(0.9, acu.WreckageMass);

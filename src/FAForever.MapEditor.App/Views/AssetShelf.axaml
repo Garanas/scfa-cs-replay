@@ -194,6 +194,12 @@
                           <Border Classes="badge" HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding IsFamily}">
                             <TextBlock Text="{Binding Members.Count}" />
                           </Border>
+                          <Border Classes="uniticon" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding HasIcon}">
+                            <Panel>
+                              <controls:AssetThumbnail Source="{Binding IconBackground}" DecodeWidth="64" Checker="False" />
+                              <controls:AssetThumbnail Source="{Binding Icon}" DecodeWidth="64" Checker="False" AutomationProperties.Name="{Binding Title, StringFormat='Icon of {0}'}" />
+                            </Panel>
+                          </Border>
                         </Panel>
                       </Border>
                       <TextBlock Classes="tiletitle" Text="{Binding Title}" />

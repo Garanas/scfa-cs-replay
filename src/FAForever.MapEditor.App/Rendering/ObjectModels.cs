@@ -100,7 +100,18 @@ internal sealed class ObjectModels(Action loaded)
     {
         if (!ReferenceEquals(catalog, _catalog))
         {
-            _entries.Clear();
+            if (catalog.ReloadedFrom is not null && ReferenceEquals(catalog.ReloadedFrom, _catalog))
+            {
+                // one asset read again (F-8): only its model is read again
+                foreach (string reloaded in catalog.ReloadedKeys)
+                {
+                    _entries.TryRemove(reloaded, out _);
+                }
+            }
+            else
+            {
+                _entries.Clear();
+            }
             _catalog = catalog;
         }
         string key = AssetCatalog.KeyOf(blueprint);
