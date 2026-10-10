@@ -85,6 +85,11 @@ public sealed partial class AutomationServer
             await LetInputSettleAsync();
             return new JsonObject { ["closing"] = true };
         }
+        if ((arguments.ContainsKey("width") || arguments.ContainsKey("height")) && window.WindowState != WindowState.Normal)
+        {
+            // a maximized window keeps the screen's size: sized, it is a normal window again
+            window.WindowState = WindowState.Normal;
+        }
         if (Number(arguments, "width") is double width)
         {
             window.Width = Math.Max(window.MinWidth, width);
