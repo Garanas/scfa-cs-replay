@@ -83,7 +83,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     where it shows. A command in no menu is for automation and plugins, and the palette leaves
     it out: its control is on a page or panel (`workspace.setUp`, `workspace.convert`,
     `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`, `presets.apply`,
-    `presets.delete`), it selects what one
+    `presets.delete`, `view.walkability`, `problems.show`), it selects what one
     clicks (`assets.select`) or drops what one drags (`assets.drop`), it is the mouse's or a view's own key in
     the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
     for finding faults (`view.gpuDebug`, `diagnostics.flush`, `diagnostics.upload`). The window makes the menus and the
@@ -544,8 +544,58 @@ Four small parts that later features build on:
   compares each last result with the document (`model.generated`); the status bar names those
   out of date in the warning colour. `generate.stale {list?}` generates them again (or only
   lists them), with the inputs that changed; a result never generated is its own command's
-  (`generate.walkability`, ...). Another map forgets the results. No generator exists yet: the
-  walkability, normal map and preview of wave 1 plug in here.
+  (`generate.walkability`, ...). Another map forgets the results. A feature registers its
+  generator with the command that generates it (`Generation.Register(generator, commandId)`), and
+  the panel lists it (`Rows`); walkability, the normal map and the preview do (next section).
+
+## Walkability, the normal map and preview, and problems
+
+User stories T-7, S-4 and F-14; the core's side is `ViewModels/MainViewModel.Generation.cs`, the
+maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its guide).
+
+- **Generating one result**: `MainViewModel.GenerateAsync(id)` runs the generator on a pool thread
+  from the version of the map at that moment (span `model.generate`, logged and measured as the
+  operation `generate`), keeps the result, and puts a result that is part of the map
+  (`IDocumentGenerator`: the normal map, the preview) into it as one step of undo, named
+  `Generate the ...`; while a stroke holds its transaction that step waits until the stroke ends.
+  Editing goes on meanwhile; a result of a version edited since shows as out of date. A second
+  run of the same generator while one runs is refused. `generate.stale` puts what it makes into
+  the map the same way (`MainViewModel.GenerateStale`).
+- **The Terrain panel's "Generated from the layers"** (`GeneratedSection`, its template in
+  `Views/ModePanel.axaml`): a line per registered generator (`GenerationViewModel.Rows`: how it
+  stands, Generate or Generate again), then walkability's choices: the layer of units (land,
+  hover, amphibious, water for naval units), the overlay, whether what changed shows, and what
+  changed in words.
+- **Walkability** (`generate.walkability`, `ViewModels/WalkabilityViewModel`, `model.Walkability`):
+  the library's `Walkability.Generate`, the game's navigational mesh made from the document.
+  The part notices when the registry keeps another result (by any command) and compares it with
+  the one it replaced (`WalkabilityChanges`: per ogrid opened or blocked, the counts, new passages
+  and closed paths); another map forgets both. Generating turns the overlay `walkability` on and
+  says what changed in the status line. The top view draws it one pixel an ogrid
+  (`HeightmapView.DrawWalkability`, span `top.walkability`, made again only for another result,
+  layer or theme): where units cannot go tinted (`MapBlockedBrush`), and while the changes show
+  the ogrids blocked (`MapNewlyBlockedBrush`) and opened (`MapOpenedBrush`) since the time before.
+  `view.walkability {layer?, changes?}` chooses for automation. On a map of 81 km generating takes
+  about 3 s. Not built yet: marking by hand where it must be blocked or open (the tool
+  `terrain.walkability`, which needs a layer of its own in the project), and the overlay in 3D.
+- **The normal map and the preview** (`generate.normalMap`, `file.renderPreview`): the normal map
+  at the size of the map's own, its format kept (`TerrainImages.NormalMap`); the preview
+  (`Rendering/MapPreview`) is the top view's picture (`TerrainPicture`, without a mask) reduced
+  to 256 by 256 by averaging. Both are out of date when the heightmap changes, the preview also
+  with the water level.
+- **Problems** (`ViewModels/ProblemsViewModel`, `model.Problems`, the dock's Problems tab): the
+  library's `ProblemChecks` (`Problems.Checks`; a feature registers an `IProblemCheck` of its own),
+  run on the window's thread (span `model.problems`, about 3 ms on Archsimkats Valley's 8304
+  props) when a map opens, 300 ms after the last step of undo (`Events.DocumentChanged`, not
+  each dab), when walkability is generated, when the assets are read again, and before a save or
+  export. Problems never stop a save or export (a map maker saves work in progress): the errors are
+  logged, and the status line after it names them. The context holds the workspace's catalogue
+  (in memory) and whether the workspace has a file (`Workspace.FindAsset`, each answer kept until
+  the assets are read again), so no check touches the disk twice. A check that throws is logged
+  (`Editor`) and finds nothing. The tab's header counts the errors and warnings; a double click or
+  Enter on a line runs `problems.show {index}` (`MainViewModel.ShowProblem`): it selects the
+  problem's thing, the top view centres on its place at 4 pixels an ogrid and the 3D camera
+  focuses on it (30 ogrids around). `plugins.check` runs the checks now and shows the tab.
 
 ## Selection: picking things on the map and changing them
 
@@ -694,8 +744,10 @@ faf-map editor close                                      # closes without askin
   `tool {id}`, `tab {name: top|3d}`, `show {markers?, pathNodes?, camera?, props?, units?, areas?}` (each overlay's
   command with `on`).
 - `state` has `symmetry` (kind, count, title), `presets` (folder, the panel's kind, the names it
-  lists) and `generated` (per generator its status, `Missing`, `Stale` or `Current`, and the
-  inputs that changed).
+  lists), `generated` (per generator its status, `Missing`, `Stale` or `Current`, and the
+  inputs that changed), `walkability` (generated, the layer, passable ogrids, what changed: the
+  counts, the new passages and closed paths with their places) and `problems` (the counts per
+  severity, the summary, the first 200 with severity, check, message, thing and place).
 - The shelf: `run id=assets.browse kind=texture scope=everything query=rock` answers with what it
   shows (filters, counts per kind, biome and category, the first 200 tiles with their keys);
   `run id=assets.select key=uec1101` selects one; `state` has `dock` and `assets` (kind, scope,

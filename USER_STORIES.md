@@ -28,7 +28,8 @@ reads again when it changes; and nothing that generates runs by itself.
       from rules, a baked heightmap) shows that its inputs changed and offers to generate again; it
       never runs by itself. Today: the generators' registry with the inputs each result was made
       from; the status bar names the results out of date, and Generate, Everything out of date makes
-      them again. Missing: the generators themselves (walkability, normal map, preview, rules).
+      them again; walkability, the normal map and the preview are generated this way (T-7, S-4).
+      Missing: props and masks from rules (P-4, K-2).
 - [ ] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
       missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map
@@ -70,7 +71,12 @@ reads again when it changes; and nothing that generates runs by itself.
       workspace opened, map opened, saved or exported, document changed, and checks that stop a
       save or export with a reason. Missing: Lua.
 - [ ] **F-14 Problems.** One list of what is wrong or doubtful (a missing texture, a spawn without
-      mass, a new passage through a cliff, a check of a plugin), each leading to the place.
+      mass, a new passage through a cliff, a check of a plugin), each leading to the place. Today:
+      the Problems tab, checked a moment after each step and before a save or export (never
+      stopping it), with checks for armies without a spawn, spawns without mass nearby, textures
+      and blueprints or models the map and workspace lack, and passages opened or closed since
+      walkability was generated last; a double click or Enter goes to a problem (selects it, the
+      top view and 3D camera look at it). Missing: Lua plugins' checks (F-15).
 - [ ] **F-15 Lua plugins.** Plugins with commands, tools and panels, through the controller and
       the events; a run is one step of undo.
 - [x] **F-16 Driven by agents and tests.** Automation over HTTP for every operation, labels for
@@ -100,7 +106,7 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **M-7 Import and export.** Import a map folder of the game or the vault; export into the
       vault's `maps` folder.
 - [ ] **M-8 Versions and upload.** Raise the version on export; render the preview; upload to the
-      FAF vault.
+      FAF vault. Today: File, Render the preview (S-4). Missing: raising the version, the upload.
 
 ## T: Terrain
 
@@ -125,7 +131,11 @@ reads again when it changes; and nothing that generates runs by itself.
       and effects), from the list of types with their colours.
 - [ ] **T-7 Walkability.** A layer of where land units can and cannot go, generated from the
       heightmap layers (slope); mark where it should be blocked or open; after generating again,
-      see what changed: a new passage through a cliff, a closed path (see F-14).
+      see what changed: a new passage through a cliff, a closed path (see F-14). Today: generated
+      when asked (the game's navigational mesh, per layer: land, hover, amphibious, naval), drawn in
+      the top view with the ogrids blocked and opened since the time before, the counts in the
+      status line, new passages and closed paths as problems. Missing: marking by hand where it
+      must be blocked or open; drawing it in the 3D view.
 
 ## S: Strata (terrain textures)
 
@@ -136,6 +146,9 @@ reads again when it changes; and nothing that generates runs by itself.
       add, remove and reorder layers; the lower and upper layer.
 - [x] **S-3 Masks from other tools.** The masks are PNGs in the project, read again when they change.
 - [ ] **S-4 Shader and derived images.** The terrain shader; generate the normal map and the preview.
+      Today: the normal map (as the game reads it) and the 256 by 256 preview (the top view's
+      picture) generated from the terrain when asked, each one step of undo, out of date when the
+      heightmap changes. Missing: the shader; a preview with the strata's textures.
 
 ## K: Masks for tools
 
