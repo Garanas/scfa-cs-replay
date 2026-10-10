@@ -181,7 +181,15 @@ namespace FAForever.MapEditor.Project.Editing
         /// deepest group that holds them all. Names are kept, to be replaced when placed.
         /// </summary>
         /// <exception cref="ArgumentException">None of the names is a unit.</exception>
-        public static UnitGroup CaptureUnits(this MapDocument document, IEnumerable<string> names, string name)
+        public static UnitGroup CaptureUnits(this MapDocument document, IEnumerable<string> names, string name) => document.CaptureUnits(names, name, null);
+
+        /// <summary>
+        /// A template of units as <see cref="CaptureUnits(MapDocument, IEnumerable{string}, string)"/>
+        /// makes it, around a middle of the caller's (a selection preset's, a whole ogrid), or their
+        /// own when it is null.
+        /// </summary>
+        /// <exception cref="ArgumentException">None of the names is a unit.</exception>
+        public static UnitGroup CaptureUnits(this MapDocument document, IEnumerable<string> names, string name, Vector2? around)
         {
             PlacedUnit[] units = [.. names.Distinct(StringComparer.Ordinal).Select(document.FindUnit).OfType<PlacedUnit>()];
             if (units.Length == 0)
@@ -190,8 +198,8 @@ namespace FAForever.MapEditor.Project.Editing
             }
             Heightmap heights = document.Terrain.Heightmap;
             // the middle on a whole ogrid, so structures stay on the build grid wherever it is placed
-            float cx = MathF.Round(units.Average(u => u.Unit.Position.X));
-            float cz = MathF.Round(units.Average(u => u.Unit.Position.Z));
+            float cx = around?.X ?? MathF.Round(units.Average(u => u.Unit.Position.X));
+            float cz = around?.Y ?? MathF.Round(units.Average(u => u.Unit.Position.Z));
 
             // the deepest group that holds them all, in the army of the first
             ImmutableArray<string> common = units[0].Group;

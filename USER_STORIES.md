@@ -59,14 +59,17 @@ reads again when it changes; and nothing that generates runs by itself.
       Dragging a tile onto the top or 3D view hands the asset and its place to the active tool,
       which places it (P-1, U-2, D-1); the panels' texture fields open the picker (S-2). Missing:
       stars and recents.
-- [ ] **F-10 Presets.** Save a set of things and place or apply it again: a civilian base (units in
+- [x] **F-10 Presets.** Save a set of things and place or apply it again: a civilian base (units in
       a group), a brush, a prop palette, a set of markers, a lighting and water setup. Presets are
       files in the workspace, shared like the rest of it. Today: `presets/<kind>/*.json` in the
       workspace, read again when they change; brush presets in the Terrain and Paint panels (save,
       apply, delete); lighting and water presets (L-2, W-1); units presets of the selected units or
       a group (U-4); prop palettes (P-2); markers presets: the Markers panel's Marker presets (the
       selected markers, with their links and chains), placed with the Preset tool
-      (`markers.placePreset`). Missing: a preset of a selection of several kinds at once.
+      (`markers.placePreset`); selection presets: the selected things of several kinds at once (a
+      civilian base's units, props, decals and markers; Edit, Save the selection as a preset, or the
+      Map panel's Selection presets), placed with the Map mode's Preset tool (`edit.placePreset`),
+      turned in quarter turns, the units in a new group of an army, with the symmetry's images.
 - [x] **F-11 Selection.** Select anything that lies on the map (marker, prop, decal, unit, area) in
       the top and 3D views, one or many; an inspector shows and edits what is selected; move,
       rotate and scale with handles; copy, paste, duplicate and delete.

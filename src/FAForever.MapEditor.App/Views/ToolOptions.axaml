@@ -306,6 +306,19 @@
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </controls:ToolRow>
             </DataTemplate>
+            <!-- placing a selection preset of several kinds (F-10) -->
+            <DataTemplate DataType="tools:SelectionPresetTool">
+              <controls:ToolRow Classes="toolrow">
+                <TextBlock Classes="label" Text="{Binding Title}" ToolTip.Tip="{Binding Title}" AutomationProperties.Name="Selection preset to place" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="Units for" />
+                  <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" AutomationProperties.Name="Army of the preset's units"
+                            AutomationProperties.HelpText="The preset's units go into a new group named after it, in this army's INITIAL" />
+                </StackPanel>
+                <TextBlock Classes="label" Text="{Binding Heading, StringFormat='Turned: {0:0}°'}" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </controls:ToolRow>
+            </DataTemplate>
             <!-- putting markers in a chain (R-4) -->
             <DataTemplate DataType="tools:ChainTool">
               <controls:ToolRow Classes="toolrow">

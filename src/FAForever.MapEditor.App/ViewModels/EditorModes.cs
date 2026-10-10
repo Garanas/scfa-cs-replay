@@ -88,12 +88,14 @@ public static class EditorModes
                 new ToolDefinition("map.areas", "Areas", "M-5") { Make = model => new AreaTool(model) },
                 new ToolDefinition("map.size", "Map size", "M-3") { Make = model => new MapSizeTool(model) },
                 new ToolDefinition("map.select", "Select anything", "F-11") { Make = model => new SelectTool(model, ObjectKinds.All) },
+                new ToolDefinition("map.preset", "Preset", "F-10") { Make = model => new SelectionPresetTool(model) },
             ],
             [
                 new MapInformationSection(),
                 new ArmiesSection(),
                 new AreasSection(),
                 new ScriptSection(),
+                new PresetSection(SelectionPresets.Kind, "Selection presets") { EmptyText = "None yet: select things of any kind, such as a civilian base's units, props, decals and markers, and save them to place them again.", SaveLabel = "Save the selection as a preset" },
             ],
             [new MapFactsSection()]),
 

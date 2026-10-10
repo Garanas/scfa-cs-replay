@@ -674,6 +674,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["dialog"] = model.Question.Describe(),
             ["overlays"] = OverlaysState(),
             ["paletteResults"] = PaletteState(),
+            ["selectionPreset"] = model.Tool<SelectionPresetTool>().Describe(),
         };
     }
 
