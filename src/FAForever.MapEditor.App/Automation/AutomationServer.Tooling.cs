@@ -31,6 +31,7 @@ public sealed partial class AutomationServer
         "focus {ref? | refs? | selection?: true} (else {x, z, radius?}: camera.focus)",
         "grid {target: heightmap|types|stratum:N|water:foam|water:flatness|water:depthBias|mask:<name>, x, z} or {target, x0, z0, x1, z1, step?}",
         "screenshot {path, part: window|options|inspector|panel|dock|rail|top|3d, settle?}",
+        "wait {path: selection.count|stage|..., value, timeout?: seconds}",
     ];
 
     /// <summary>
@@ -65,6 +66,9 @@ public sealed partial class AutomationServer
             }
             case "grid":
                 result["grid"] = ReadGrid(arguments);
+                return true;
+            case "wait":
+                result["wait"] = await WaitAsync(arguments);
                 return true;
             case "screenshot" when arguments["part"]?.GetValue<string>() is string part && part != "3d":
                 if (arguments["settle"]?.GetValue<bool>() == true)
