@@ -68,13 +68,18 @@ public sealed partial class ToolItem(ToolDefinition definition, IMapTool? tool) 
 /// Something the views can show over the terrain; a chip above the views and the View menu.
 /// </summary>
 /// <param name="set">Null while the views cannot show it (<see cref="OverlayDefinition.Missing"/>).</param>
-public sealed partial class OverlayItem(OverlayDefinition definition, Func<bool> get, Action<bool>? set) : ObservableObject
+public sealed partial class OverlayItem(OverlayDefinition definition, Func<bool> get, Action<bool>? set, Func<string>? detail = null) : ObservableObject
 {
     public OverlayDefinition Definition => definition;
 
     public string Id => definition.Id;
 
     public string Title => definition.Title;
+
+    /// <summary>
+    /// What its chip says: its title, and a setting of it such as the grid's spacing (<c>Grid 16</c>).
+    /// </summary>
+    public string Text => detail is null ? definition.Title : $"{definition.Title} {detail()}";
 
     public string Story => definition.Story;
 
@@ -96,7 +101,11 @@ public sealed partial class OverlayItem(OverlayDefinition definition, Func<bool>
         }
     }
 
-    public void Refresh() => OnPropertyChanged(nameof(IsOn));
+    public void Refresh()
+    {
+        OnPropertyChanged(nameof(IsOn));
+        OnPropertyChanged(nameof(Text));
+    }
 }
 
 /// <summary>
@@ -286,6 +295,8 @@ public sealed partial class MainViewModel
             "units" => new OverlayItem(overlay, () => ShowUnits, value => ShowUnits = value),
             "areas" => new OverlayItem(overlay, () => ShowAreas, value => ShowAreas = value),
             "mask" => new OverlayItem(overlay, () => ShowMask, value => ShowMask = value),
+            "grid" => new OverlayItem(overlay, () => ShowGrid, value => ShowGrid = value, () => EditorCulture.Format(GridSpacing)),
+            "decals" => new OverlayItem(overlay, () => ShowDecals, value => ShowDecals = value),
             _ => new OverlayItem(overlay, () => false, null),
         })];
         foreach (OverlayDefinition overlay in EditorOverlays.All)

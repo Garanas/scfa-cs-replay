@@ -135,8 +135,12 @@ public sealed class AssetThumbnail : Control
         }
         if (bitmap is not null)
         {
-            // cut to fill: the middle of the picture in the control's proportions
+            // cut to fill: the middle of the picture in the control's proportions; of a cube map's strip its first face
             Size size = bitmap.Size;
+            if (CubeMaps.IsStrip(bitmap.PixelSize.Width, bitmap.PixelSize.Height))
+            {
+                size = new Size(size.Width / 6, size.Height);
+            }
             double scale = Math.Max(bounds.Width / size.Width, bounds.Height / size.Height);
             double width = bounds.Width / scale;
             double height = bounds.Height / scale;
@@ -177,6 +181,22 @@ public sealed class AssetThumbnail : Control
         }
 
         /// <summary>
+        /// Forgets the pictures of a file (a texture, or a mesh with whatever textures), so they are
+        /// read again the next time a control shows them: an asset read again (user story F-8).
+        /// </summary>
+        public static void Forget(string file)
+        {
+            lock (Gate)
+            {
+                foreach ((string, int) key in Entries.Keys.Where(key => key.Item1 == file || key.Item1.StartsWith(file + "|", StringComparison.Ordinal)).ToList())
+                {
+                    Order.Remove(Entries[key]);
+                    Entries.Remove(key);
+                }
+            }
+        }
+
+        /// <summary>
         /// The picture, if it is read; null while it is not (or could not be).
         /// </summary>
         public static Bitmap? Get(string file, int width) => Get((file, width));
@@ -208,8 +228,20 @@ public sealed class AssetThumbnail : Control
             LoadAsync((file, width), file, "assets.thumbnail", () =>
             {
                 using FileStream stream = File.OpenRead(file);
-                return Bitmap.DecodeToWidth(stream, width, BitmapInterpolationMode.MediumQuality);
+                // a cube map's strip of six faces (CubeMaps) is read six times as wide: the picture shows its first face
+                return Bitmap.DecodeToWidth(stream, IsStrip(file) ? width * 6 : width, BitmapInterpolationMode.MediumQuality);
             }, report: false);
+
+        /// <summary>
+        /// Whether a PNG is a cube map's strip of six square faces, from its header.
+        /// </summary>
+        private static bool IsStrip(string file)
+        {
+            Span<byte> header = stackalloc byte[24];
+            using FileStream stream = File.OpenRead(file);
+            return stream.Read(header) == header.Length && header[12] == 'I' && header[13] == 'H' && header[14] == 'D' && header[15] == 'R'
+                && CubeMaps.IsStrip(System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(header[16..]), System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(header[20..]));
+        }
 
         /// <summary>
         /// Draws the picture of a mesh, <paramref name="width"/> pixels square, unless it is drawn

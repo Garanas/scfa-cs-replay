@@ -24,6 +24,8 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 /// <param name="Guides">The symmetry's guides; empty for none.</param>
 /// <param name="Eye">Where the camera is, and <paramref name="PixelScale"/> the ogrids a pixel
 /// covers an ogrid from it: the lines keep their width on screen.</param>
+/// <param name="LineSpacing">The grid's lines every so many ogrids (the Grid overlay), 0 for none,
+/// in <paramref name="LineColor"/>.</param>
 internal sealed record TerrainOverlays(
     object? WalkabilityOf,
     Func<uint[]>? Walkability,
@@ -42,9 +44,11 @@ internal sealed record TerrainOverlays(
     Vector4 GuideColor,
     Vector4 ShadowColor,
     Vector3 Eye,
-    float PixelScale)
+    float PixelScale,
+    float LineSpacing = 0,
+    Vector4 LineColor = default)
 {
-    public bool IsEmpty => Walkability is null && Grid is null && (Areas is null || Areas.Count == 0) && Guides.Count == 0;
+    public bool IsEmpty => Walkability is null && Grid is null && (Areas is null || Areas.Count == 0) && Guides.Count == 0 && LineSpacing <= 0;
 }
 
 /// <summary>
@@ -73,6 +77,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     private readonly Program _decalNormal;
     private readonly Program _decalHighlight;
     private readonly Program _water;
+    private readonly Program _sky;
     private readonly Program _brush;
     private readonly Program _overlay;
     private uint _walkTexture;
@@ -84,6 +89,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     private readonly uint _repeat;
     private readonly uint _clamp;
     private readonly uint _masks;
+    private readonly uint _cubeSampler;
     private readonly uint _white;
     private readonly uint _clear;
 
@@ -124,6 +130,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _decalNormal = new Program(gl, TerrainShaders.DecalVertex(es), TerrainShaders.DecalNormalFragment(es));
         _decalHighlight = new Program(gl, TerrainShaders.DecalVertex(es), TerrainShaders.DecalHighlightFragment(es));
         _water = new Program(gl, TerrainShaders.WaterVertex(es), TerrainShaders.WaterFragment(es));
+        _sky = new Program(gl, TerrainShaders.SkyVertex(es), TerrainShaders.SkyFragment(es));
         _brush = new Program(gl, TerrainShaders.BrushVertex(es), TerrainShaders.BrushFragment(es));
         _overlay = new Program(gl, TerrainShaders.OverlayVertex(es), TerrainShaders.OverlayFragment(es));
 
@@ -131,6 +138,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _clamp = Sampler(GLEnum.ClampToEdge);
         // the masks have no mipmaps, and a mipmapped filter on a texture without them reads as black
         _masks = Sampler(GLEnum.ClampToEdge, mipmaps: false);
+        _cubeSampler = Sampler(GLEnum.ClampToEdge);
         _white = gl.GenTexture();
         GpuTextureCache.UploadRgba(gl, _white, 1, 1, [255, 255, 255, 255], mipmaps: false);
         _clear = gl.GenTexture();
@@ -168,6 +176,17 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         (_runs.Sum(run => run.Count), _runs.Count, _runs.Select(run => run.Texture.ToLowerInvariant()).Distinct().Count());
 
     /// <summary>
+    /// Whether the last frame drew the sky's cube map behind the map (user story L-1); false while
+    /// it loads or when neither the map nor the workspace has it.
+    /// </summary>
+    public bool SkyDrawn { get; private set; }
+
+    /// <summary>
+    /// Whether the last frame's water reflected a cube map (its own, else the sky's).
+    /// </summary>
+    public bool ReflectionDrawn { get; private set; }
+
+    /// <summary>
     /// What the terrain shows: 0 the picture, 1 the albedo, 2 the light, 3 the normals, 4 the heights.
     /// </summary>
     public int Debug { get; set; }
@@ -179,8 +198,13 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// the terrain (decals do not cover them), the markers after the water; null for none.</param>
     /// <param name="decals">The ids of the decals not drawn (those of hidden groups) and of those
     /// drawn highlighted (the selection), with the highlight's colour; null for none.</param>
+    /// <param name="findCube">The cube map of a game path (<see cref="GameTextures.FindCube"/>): the
+    /// sky's is drawn behind everything and the water reflects its own (user story L-1); null for none.</param>
+    /// <param name="eye">Where the camera is, for the water's reflection.</param>
+    /// <param name="showDecals">Whether the decals are drawn (the Decals overlay, user story V-3).</param>
     public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, IReadOnlyList<BrushPreview>? brushes = null, Vector3 brushColor = default, (ObjectRenderer Renderer, ObjectFrame Frame)? objects = null,
-        (IReadOnlySet<int>? Hidden, IReadOnlySet<int>? Highlighted, Vector3 Color)? decals = null, TerrainOverlays? overlays = null)
+        (IReadOnlySet<int>? Hidden, IReadOnlySet<int>? Highlighted, Vector3 Color)? decals = null, TerrainOverlays? overlays = null,
+        Func<string, TextureSource?>? findCube = null, Vector3 eye = default, bool showDecals = true)
     {
         _hidden = decals?.Hidden;
         _highlighted = decals?.Highlighted;
@@ -193,11 +217,21 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             Update(document);
         }
 
+        _gl.Disable(EnableCap.Blend);
+        _gl.Disable(EnableCap.CullFace);
+        uint skyCube = findCube is null ? 0 : _textures.GetCube(findCube(document.Sky.Cubemap), 0);
+        SkyDrawn = skyCube != 0;
+        if (skyCube != 0)
+        {
+            using (Performance.Measure("3d.draw-sky"))
+            {
+                DrawSky(viewProjection, skyCube);
+            }
+        }
+
         _gl.Enable(EnableCap.DepthTest);
         _gl.DepthFunc(DepthFunction.Lequal);
         _gl.DepthMask(true);
-        _gl.Disable(EnableCap.Blend);
-        _gl.Disable(EnableCap.CullFace);
 
         using (Performance.Measure("3d.draw-terrain"))
         {
@@ -210,14 +244,20 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _gl.Enable(EnableCap.PolygonOffsetFill);
         _gl.PolygonOffset(-1, -4);
         _gl.Enable(EnableCap.Blend);
-        using (Performance.Measure("3d.draw-decals"))
+        if (showDecals)
         {
-            DrawDecals(document, viewProjection, findTexture, normals: false);
-            DrawDecals(document, viewProjection, findTexture, normals: true);
-            DrawHighlights(document, viewProjection, decals?.Color ?? Vector3.One);
+            using (Performance.Measure("3d.draw-decals"))
+            {
+                DrawDecals(document, viewProjection, findTexture, normals: false);
+                DrawDecals(document, viewProjection, findTexture, normals: true);
+                DrawHighlights(document, viewProjection, decals?.Color ?? Vector3.One);
+            }
         }
         _gl.Disable(EnableCap.PolygonOffsetFill);
-        DrawWater(document, viewProjection);
+        // the water reflects its own cube map, else the sky's
+        uint reflection = findCube is null || !document.Water.HasWater ? 0 : _textures.GetCube(findCube(document.Water.Cubemap), skyCube);
+        ReflectionDrawn = reflection != 0;
+        DrawWater(document, viewProjection, reflection, eye);
         if (objects is { } shown)
         {
             // the symbols are solid: they hide what is behind them, the brush included
@@ -293,6 +333,9 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         program.Set("uScalesA", scales[0], scales[1], scales[2], scales[3]);
         program.Set("uScalesB", scales[4], scales[5], scales[6], scales[7]);
         program.Set("uScalesC", scales[8], scales[9]);
+        // how the map's terrain shader blends the layers (S-4)
+        TerrainShaderInfo shader = TerrainShaderCatalog.Of(document.Terrain.Shader);
+        program.Set("uBlend", shader.FullMaskRange ? 1 : 0, shader.Strata, shader.Stratum8IsData ? 0 : 1, shader.UpperIsAlbedo ? 1 : 0);
 
         Bind(12, _mask0, _masks);
         program.Set("uMask0", 12);
@@ -302,7 +345,38 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _grid.Draw();
     }
 
-    private void DrawWater(MapDocument document, Matrix4x4 viewProjection)
+    /// <summary>
+    /// The sky's cube map behind everything (user story L-1): a rectangle over the whole view at the
+    /// far plane, no depth written, each pixel the cube map in its direction.
+    /// </summary>
+    private void DrawSky(Matrix4x4 viewProjection, uint cube)
+    {
+        if (!Matrix4x4.Invert(viewProjection, out Matrix4x4 inverse))
+        {
+            return;
+        }
+        _gl.Disable(EnableCap.DepthTest);
+        _gl.DepthMask(false);
+        Program program = _sky;
+        program.Use();
+        program.Set("uInverseViewProjection", inverse);
+        BindCube(CubeUnit, cube);
+        program.Set("uSky", CubeUnit);
+        _waterQuad.Draw();
+        _gl.DepthMask(true);
+    }
+
+    // the texture unit of cube maps, which no 2D texture shares
+    private const int CubeUnit = 14;
+
+    private void BindCube(int unit, uint texture)
+    {
+        _gl.ActiveTexture(TextureUnit.Texture0 + unit);
+        _gl.BindTexture(TextureTarget.TextureCubeMap, texture);
+        _gl.BindSampler((uint)unit, _cubeSampler);
+    }
+
+    private void DrawWater(MapDocument document, Matrix4x4 viewProjection, uint reflection, Vector3 eye)
     {
         Water water = document.Water;
         if (!water.HasWater)
@@ -319,6 +393,11 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         program.Set("uElevation", water.Elevation);
         program.Set("uWater", water.Elevation, water.ElevationAbyss);
         program.Set("uWaterColor", water.SurfaceColor.X, water.SurfaceColor.Y, water.SurfaceColor.Z);
+        // the reflection (L-1), as strong as the water's sky reflection, by its Fresnel bias and power
+        BindCube(CubeUnit, reflection);
+        program.Set("uReflection", CubeUnit);
+        program.Set("uReflect", reflection != 0 ? 1 : 0, Math.Clamp(water.SkyReflection, 0, 2), Math.Clamp(water.FresnelBias, 0, 1), Math.Max(0.01f, water.FresnelPower));
+        program.Set("uEye", eye.X, eye.Y, eye.Z);
         _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
         _waterQuad.Draw();
     }
@@ -365,6 +444,8 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         program.Set("uEye", overlays.Eye.X, overlays.Eye.Y, overlays.Eye.Z);
         program.Set("uPixelScale", overlays.PixelScale);
         program.Set("uGuideCount", guides);
+        program.Set("uLineSpacing", overlays.LineSpacing);
+        Set(program, "uLineColor", overlays.LineColor);
         for (int i = 0; i < guides; i++)
         {
             (Vector2 from, Vector2 to) = overlays.Guides[i];
@@ -963,6 +1044,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _decalNormal.Dispose();
         _decalHighlight.Dispose();
         _water.Dispose();
+        _sky.Dispose();
         _waterQuad.Dispose();
         _brush.Dispose();
         _brushGrid.Dispose();
@@ -980,6 +1062,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _gl.DeleteSampler(_repeat);
         _gl.DeleteSampler(_clamp);
         _gl.DeleteSampler(_masks);
+        _gl.DeleteSampler(_cubeSampler);
         _gl.DeleteTexture(_white);
         _gl.DeleteTexture(_clear);
         _gl.DeleteTexture(_heights);

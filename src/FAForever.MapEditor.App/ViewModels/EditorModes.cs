@@ -139,7 +139,7 @@ public static class EditorModes
                 new LightingSection(),
                 new PresetSection("lighting", "Lighting presets") { EmptyText = "None yet: save the sun, colours and fog to use them on another map.", SaveLabel = "Save the lighting as a preset" },
             ],
-            [new PlannedSection("Sky", "L-1", "The sky dome, the background and the cube maps units reflect")]),
+            [new SkySection()]),
 
         new ModeDefinition("markers", "Markers", "Icon.Markers", "Spawns, deposits, path nodes, AI markers, chains, adaptive maps", 1, "F6", "R-1",
             [
@@ -241,9 +241,10 @@ public static class EditorOverlays
         new OverlayDefinition("walkability", "Walkability", "Show walkability", "T-7") { Swatch = "MapBlockedBrush" },
         new OverlayDefinition("mask", "Mask", "Show the chosen mask", "K-1") { Swatch = "MapMaskBrush" },
         new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12"),
-        new OverlayDefinition("grid", "Grid", "Show the grid", "V-3", "Show a grid over the terrain"),
+        new OverlayDefinition("grid", "Grid", "Show the grid", "V-3"),
         new OverlayDefinition("areas", "Areas", "Show areas", "M-5") { Swatch = "MapOutsidePlayableBrush" },
         new OverlayDefinition("props", "Props", "Show props", "V-2"),
         new OverlayDefinition("units", "Units", "Show units", "V-2"),
+        new OverlayDefinition("decals", "Decals", "Show decals", "V-3"),
     ];
 }

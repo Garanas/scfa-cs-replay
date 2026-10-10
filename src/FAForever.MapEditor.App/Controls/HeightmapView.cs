@@ -39,7 +39,7 @@ public sealed class HeightmapView : Control
     /// </summary>
     internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, Typeface LabelFont, double LabelSize,
         IBrush Prop, IBrush PropSparse, IBrush PropRim, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box,
-        IBrush Blocked, IBrush NewlyBlocked, IBrush Opened, IPen Wreck, IPen WreckShadow);
+        IBrush Blocked, IBrush NewlyBlocked, IBrush Opened, IPen Wreck, IPen WreckShadow, IPen GridLine, IPen DecalOutline);
 
     public HeightmapView()
     {
@@ -96,7 +96,9 @@ public sealed class HeightmapView : Control
         Token<IBrush>("MapNewlyBlockedBrush"),
         Token<IBrush>("MapOpenedBrush"),
         new Pen(Token<IBrush>("MapWreckBrush"), 2),
-        new Pen(Token<IBrush>("OverlayShadowBrush"), 4));
+        new Pen(Token<IBrush>("OverlayShadowBrush"), 4),
+        new Pen(Token<IBrush>("MapGridLineBrush"), 1),
+        new Pen(Token<IBrush>("MapDecalBrush"), 1));
 
     private T Token<T>(string key) => this.TryFindResource(key, ActualThemeVariant, out object? value) && value is T token
         ? token
@@ -317,6 +319,14 @@ public sealed class HeightmapView : Control
         {
             using (context.PushClip(new Rect(Bounds.Size)))
             {
+                if (_model.ShowDecals)
+                {
+                    DrawDecals(context, overlay, document, _model.HiddenDecalIds);
+                }
+                if (_model.ShowGrid)
+                {
+                    DrawGrid(context, overlay, document, _model.GridSpacing);
+                }
                 DrawThings(context, overlay, document, _model);
                 _markers.Render(context, overlay, _model.DrawnMarkers(document), _model.ShownMarkerKinds, _zoom, _offset);
                 DrawSelection(context, overlay, document, _model.Selection.Items);
@@ -735,6 +745,122 @@ public sealed class HeightmapView : Control
             }
         }
     }
+
+    /// <summary>
+    /// The grid's lines (user story V-3) every <paramref name="spacing"/> ogrids over the map, in
+    /// view; none while they would lie closer than a few pixels.
+    /// </summary>
+    private void DrawGrid(DrawingContext context, Overlay overlay, MapDocument document, int spacing)
+    {
+        using Performance.Span measure = Performance.Measure("top.grid");
+        GridLinesDrawn = 0;
+        if (spacing <= 0 || spacing * _zoom < MinGridLineGap)
+        {
+            return;
+        }
+        Point topLeft = ControlToMap(new Point(0, 0));
+        Point bottomRight = ControlToMap(new Point(Bounds.Width, Bounds.Height));
+        double x0 = Math.Max(0, Math.Ceiling(topLeft.X / spacing) * spacing);
+        double z0 = Math.Max(0, Math.Ceiling(topLeft.Y / spacing) * spacing);
+        double x1 = Math.Min(document.Width, bottomRight.X);
+        double z1 = Math.Min(document.Height, bottomRight.Y);
+        double top = Math.Max(0, topLeft.Y);
+        double bottom = Math.Min(document.Height, bottomRight.Y);
+        double left = Math.Max(0, topLeft.X);
+        double right = Math.Min(document.Width, bottomRight.X);
+        StreamGeometry lines = new StreamGeometry();
+        int drawn = 0;
+        using (StreamGeometryContext geometry = lines.Open())
+        {
+            for (double x = x0; x <= x1; x += spacing)
+            {
+                // on the pixel's middle, so a line a pixel wide stays sharp
+                double at = Math.Round(MapToControl(x, 0).X) + 0.5;
+                geometry.BeginFigure(new Point(at, MapToControl(0, top).Y), false);
+                geometry.LineTo(new Point(at, MapToControl(0, bottom).Y));
+                geometry.EndFigure(false);
+                drawn++;
+            }
+            for (double z = z0; z <= z1; z += spacing)
+            {
+                double at = Math.Round(MapToControl(0, z).Y) + 0.5;
+                geometry.BeginFigure(new Point(MapToControl(left, 0).X, at), false);
+                geometry.LineTo(new Point(MapToControl(right, 0).X, at));
+                geometry.EndFigure(false);
+                drawn++;
+            }
+        }
+        context.DrawGeometry(null, overlay.GridLine, lines);
+        GridLinesDrawn = drawn;
+    }
+
+    /// <summary>
+    /// The fewest pixels between the grid's lines: closer, the top view draws none.
+    /// </summary>
+    public const double MinGridLineGap = 4;
+
+    /// <summary>
+    /// How many of the grid's lines the last frame drew (for tests and automation).
+    /// </summary>
+    public int GridLinesDrawn { get; private set; }
+
+    /// <summary>
+    /// The decals (user story V-3) as faint outlines, each turned as it lies (its rectangle from its
+    /// corner along its two edges, as the 3D view draws it); only those in view and not hidden,
+    /// and none smaller than a few pixels.
+    /// </summary>
+    private void DrawDecals(DrawingContext context, Overlay overlay, MapDocument document, IReadOnlySet<int> hidden)
+    {
+        using Performance.Span measure = Performance.Measure("top.decals");
+        Rect shown = new Rect(Bounds.Size);
+        StreamGeometry outlines = new StreamGeometry();
+        int drawn = 0;
+        using (StreamGeometryContext geometry = outlines.Open())
+        {
+            foreach (Decal decal in document.Decals)
+            {
+                if (hidden.Contains(decal.Id) || Math.Max(Math.Abs(decal.Scale.X), Math.Abs(decal.Scale.Z)) * _zoom < MinDecalSize)
+                {
+                    continue;
+                }
+                (float sin, float cos) = MathF.SinCos(decal.Rotation.Y);
+                double cx = decal.Position.X;
+                double cz = decal.Position.Z;
+                double ux = decal.Scale.X * cos, uz = decal.Scale.X * sin;
+                double vx = -decal.Scale.Z * sin, vz = decal.Scale.Z * cos;
+                Point a = MapToControl(cx, cz);
+                Point b = MapToControl(cx + ux, cz + uz);
+                Point c = MapToControl(cx + ux + vx, cz + uz + vz);
+                Point d = MapToControl(cx + vx, cz + vz);
+                double minX = Math.Min(Math.Min(a.X, b.X), Math.Min(c.X, d.X));
+                double maxX = Math.Max(Math.Max(a.X, b.X), Math.Max(c.X, d.X));
+                double minY = Math.Min(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y));
+                double maxY = Math.Max(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y));
+                if (maxX < shown.Left || minX > shown.Right || maxY < shown.Top || minY > shown.Bottom)
+                {
+                    continue;
+                }
+                geometry.BeginFigure(a, false);
+                geometry.LineTo(b);
+                geometry.LineTo(c);
+                geometry.LineTo(d);
+                geometry.EndFigure(true);
+                drawn++;
+            }
+        }
+        context.DrawGeometry(null, overlay.DecalOutline, outlines);
+        DecalOutlinesDrawn = drawn;
+    }
+
+    /// <summary>
+    /// The fewest pixels a decal's longer side takes for the top view to draw its outline.
+    /// </summary>
+    public const double MinDecalSize = 3;
+
+    /// <summary>
+    /// How many decal outlines the last frame drew (for tests and automation).
+    /// </summary>
+    public int DecalOutlinesDrawn { get; private set; }
 
     /// <summary>
     /// Below this zoom (pixels an ogrid) the props are drawn sparse: smaller, at most one dot per

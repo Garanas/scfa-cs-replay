@@ -27,6 +27,7 @@ public sealed record LayerItem(int Index, string Title, string Albedo, string No
 /// inspector shows the chosen layer's albedo and normal texture, chosen in the picker or typed, and
 /// their scales. Every change is a command (<c>paint.addStratum</c>, <c>paint.removeStratum</c>,
 /// <c>paint.moveStratum</c>, <c>paint.chooseTexture</c>, <c>paint.setLayer</c>), one step of undo.
+/// The terrain shader that blends them is chosen here too (user story S-4, <c>paint.shader</c>).
 /// </summary>
 public sealed partial class LayerTexturesViewModel : ObservableObject
 {
@@ -85,6 +86,66 @@ public sealed partial class LayerTexturesViewModel : ObservableObject
     /// </summary>
     public SettingGroup Layer { get; }
 
+    private string? _shownShader;
+    private bool _showingShader;
+
+    /// <summary>
+    /// The terrain shaders to choose from (user story S-4), and the map's own when the editor does
+    /// not know it.
+    /// </summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<TerrainShaderInfo> Shaders { get; private set; } = TerrainShaderCatalog.All;
+
+    /// <summary>
+    /// The map's terrain shader; choosing another runs <c>paint.shader</c>, one step of undo.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShaderUses), nameof(ShaderSummary))]
+    public partial TerrainShaderInfo? Shader { get; set; }
+
+    /// <summary>
+    /// What the chosen shader reads, a line each.
+    /// </summary>
+    public IReadOnlyList<string> ShaderUses => Shader?.Uses ?? [];
+
+    /// <summary>
+    /// What the chosen shader is, and where the game has it.
+    /// </summary>
+    public string ShaderSummary => Shader is not { } shader ? ""
+        : TerrainShaderCatalog.Find(shader.Name) is null ? "Not a shader the editor knows (a mod's?): the views draw it as TTerrainXP"
+        : $"{char.ToUpperInvariant(shader.Summary[0])}{shader.Summary[1..]}; {(shader.IsFaf ? "FAF's game only" : "the game's own")}";
+
+    partial void OnShaderChanged(TerrainShaderInfo? value)
+    {
+        if (!_showingShader && value is not null && value.Name != _shownShader)
+        {
+            _ = _run("paint.shader", new JsonObject { ["name"] = value.Name });
+        }
+    }
+
+    private void ShowShader(MapDocument? document)
+    {
+        string? name = document?.Terrain.Shader;
+        if (name == _shownShader && document is not null)
+        {
+            return;
+        }
+        _shownShader = name;
+        _showingShader = true;
+        try
+        {
+            TerrainShaderInfo? known = TerrainShaderCatalog.Find(name);
+            Shaders = known is null && !string.IsNullOrWhiteSpace(name)
+                ? [.. TerrainShaderCatalog.All, new TerrainShaderInfo(name, "not known to the editor", 8, false, false, true, false, ["Drawn by the views as TTerrainXP"])]
+                : TerrainShaderCatalog.All;
+            Shader = name is null ? null : Shaders.FirstOrDefault(shader => string.Equals(shader.Name, name, StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            _showingShader = false;
+        }
+    }
+
     partial void OnSelectedChanged(LayerItem? value) => Layer.Refresh(value is null ? null : _document);
 
     /// <summary>
@@ -113,6 +174,7 @@ public sealed partial class LayerTexturesViewModel : ObservableObject
     public void Refresh(MapDocument? document)
     {
         _document = document;
+        ShowShader(document);
         ImmutableArray<TerrainLayer> layers = document?.Terrain.Layers ?? [];
         if (document is not null && layers == _shown)
         {

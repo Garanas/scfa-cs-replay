@@ -37,6 +37,12 @@
                 </Border>
                 <TextBlock Classes="caption" Text="Normal map" />
               </StackPanel>
+              <StackPanel Classes="inline" IsVisible="{Binding Assets.HasShownIcon}">
+                <Border Classes="thumbnail normalpreview">
+                  <controls:AssetThumbnail Source="{Binding Assets.ShownIcon}" DecodeWidth="128" AutomationProperties.Name="Icon of the unit" />
+                </Border>
+                <TextBlock Classes="caption" Text="Its icon in the game" />
+              </StackPanel>
               <TextBlock Classes="caption" Text="{Binding Assets.ShownUses}" IsVisible="{Binding Assets.ShownUses, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                          AutomationProperties.Name="Uses of the asset" />
             </StackPanel>
@@ -77,6 +83,8 @@
               <TextBlock Classes="caption" Text="{Binding Assets.ShownUse}" IsVisible="{Binding Assets.ShownUse, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
               <StackPanel Classes="inline">
                 <Button Content="Show the file" Command="{Binding RunCommand}" CommandParameter="assets.showFile" />
+                <Button Content="Read again" Command="{Binding RunCommand}" CommandParameter="assets.reloadShown" AutomationProperties.Name="Read this asset again"
+                        AutomationProperties.HelpText="Reads its blueprint and pictures from the workspace again, after a tool changed them; the other assets stay as they are" />
                 <Button Content="Clear" Command="{Binding Assets.ClearSelectionCommand}" AutomationProperties.HelpText="The inspector shows the mode again" />
               </StackPanel>
             </StackPanel>
@@ -319,6 +327,14 @@
               <!-- the map and its atmosphere (M-1, W-1, S-2): a view of their own each, on the editor's view model -->
               <DataTemplate DataType="vm:MapFactsSection">
                 <panels:MapFactsPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
+              <DataTemplate DataType="vm:SkySection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <controls:SettingList DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).LightingSettings.Sky}" />
+                    <TextBlock Classes="caption" TextWrapping="Wrap" Text="The 3D view shows the sky's cube map around the map, and the water reflects it." />
+                  </StackPanel>
+                </Border>
               </DataTemplate>
               <DataTemplate DataType="vm:WaterDetailsSection">
                 <panels:WaterDetailsPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />

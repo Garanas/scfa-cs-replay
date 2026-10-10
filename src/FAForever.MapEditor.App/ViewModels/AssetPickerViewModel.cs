@@ -92,7 +92,7 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
 
     public bool IsUnits => Kind == AssetKind.Unit;
 
-    public string GroupsTitle => Kind switch { AssetKind.Unit => "Faction", AssetKind.Brush => "Folder", _ => "Biome" };
+    public string GroupsTitle => Kind switch { AssetKind.Unit => "Faction", AssetKind.Brush or AssetKind.Cubemap => "Folder", _ => "Biome" };
 
     public string CategoriesTitle => Kind == AssetKind.Unit ? "Kind" : "Category";
 

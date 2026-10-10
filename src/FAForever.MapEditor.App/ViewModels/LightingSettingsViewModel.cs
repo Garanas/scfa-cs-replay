@@ -42,11 +42,14 @@ public static class SunAngles
 /// The lighting (user story L-1): the sun's direction as azimuth and elevation, its colour, the
 /// ambience, shadow fill, multiplier, specular, bloom and fog, each a field of the Lighting panel
 /// that changes the map through <c>lighting.set</c>, one step of undo per field. The 3D view's
-/// terrain and objects are lit by it at once; the sun tool turns the sun with the mouse.
+/// terrain and objects are lit by it at once; the sun tool turns the sun with the mouse. The sky's
+/// cube maps and background are fields of the inspector (<c>lighting.setSky</c>, chosen in the picker
+/// with <c>lighting.chooseCubemap</c>); the 3D view shows the sky's cube map around the map.
 /// </summary>
 public sealed partial class LightingSettingsViewModel : ObservableObject
 {
     private Lighting? _shown;
+    private Sky? _shownSky;
 
     public LightingSettingsViewModel(Func<string, JsonObject, Task> run)
     {
@@ -69,6 +72,21 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
             new NumberSetting("Specular strength", set, "specularAlpha", d => d.Lighting.SpecularColor.W, run) { Minimum = 0, Maximum = 1, HasSlider = true },
             new NumberSetting("Bloom", set, "bloom", d => d.Lighting.Bloom, run) { Minimum = 0, Maximum = 0.5, HasSlider = true },
         ]);
+        const string sky = "lighting.setSky";
+        Sky = new SettingGroup("Sky",
+        [
+            new TextureSetting("Sky cube map", sky, "cubemap", d => d.Sky.Cubemap, run, null,
+                () => run("lighting.chooseCubemap", new JsonObject { ["target"] = "sky" }))
+            {
+                Help = "What the 3D view shows around the map, and the water reflects there; Choose opens the picker of the workspace's cube maps",
+            },
+            new TextureSetting("Reflected by units", sky, "environmentCubemap", d => Commands.SkyFields.EnvironmentOf(d.Sky), run, null,
+                () => run("lighting.chooseCubemap", new JsonObject { ["target"] = "environment" }))
+            {
+                Help = "The cube map units and props reflect (the map's <default> environment cube map)",
+            },
+            new TextureSetting("Background", sky, "background", d => d.Sky.Background, run) { Help = "The picture far behind the sky, e.g. /textures/environment/defaultbackground.dds" },
+        ]);
         Fog = new SettingGroup("Fog",
         [
             new ColorSetting("Fog colour", set, "fogColor", d => d.Lighting.FogColor, run),
@@ -81,8 +99,18 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
 
     public SettingGroup Fog { get; }
 
+    /// <summary>
+    /// The sky's cube maps and background (user story L-1), in the Lighting mode's inspector.
+    /// </summary>
+    public SettingGroup Sky { get; }
+
     public void Refresh(MapDocument? document)
     {
+        if (document is null || !ReferenceEquals(document.Sky, _shownSky))
+        {
+            _shownSky = document?.Sky;
+            Sky.Refresh(document);
+        }
         if (document is not null && ReferenceEquals(document.Lighting, _shown))
         {
             return;
