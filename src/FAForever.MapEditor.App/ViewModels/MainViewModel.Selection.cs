@@ -179,11 +179,17 @@ public sealed partial class MainViewModel
             foreach (ObjectRef thing in document.All(kinds ?? SelectableKinds, ShownMarkerKinds).Where(Decals.IsShown))
             {
                 if (document.PlaceOf(thing) is System.Numerics.Vector3 place && toScreen(place) is System.Numerics.Vector2 at
-                    && at.X >= min.X && at.Y >= min.Y && at.X <= max.X && at.Y <= max.Y
-                    && (eye is not System.Numerics.Vector3 seenFrom || !Rendering.ObjectPlacement.IsHiddenByTerrain(document.Terrain.Heightmap, seenFrom, place)))
+                    && at.X >= min.X && at.Y >= min.Y && at.X <= max.X && at.Y <= max.Y)
                 {
                     inside.Add(thing);
                 }
+            }
+            if (eye is System.Numerics.Vector3 seenFrom)
+            {
+                // what a hill hides from the camera is left out; each line of sight on its own, in parallel
+                Heightmap heights = document.Terrain.Heightmap;
+                inside = [.. inside.AsParallel().AsOrdered()
+                    .Where(thing => !Rendering.ObjectPlacement.IsHiddenByTerrain(heights, seenFrom, document.PlaceOf(thing)!.Value))];
             }
         }
         Selection.Apply(inside, change);
