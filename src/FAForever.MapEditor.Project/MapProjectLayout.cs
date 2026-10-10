@@ -17,6 +17,7 @@ namespace FAForever.MapEditor.Project
     /// stratum-masks/stratum-N.png  8-bit grey, all the same size: how much of layer N covers the terrain
     /// water/water-map.png          colour with alpha
     /// water/foam.png, flatness.png, depth-bias.png   8-bit grey, half the map's size
+    /// masks/NAME.png               8-bit grey, the map's size or half: masks for tools (K-1), not exported
     /// script.lua                   the map's script, if it has one
     /// files/                       the other files of the map folder, as they are
     /// procedural/sources/          the map maker's World Machine and Gaea files (.tmd, .terrain)
@@ -51,6 +52,12 @@ namespace FAForever.MapEditor.Project
         public const string Script = "script.lua";
 
         /// <summary>
+        /// The folder of the masks for tools (user story K-1), one 8-bit grey PNG per mask, named
+        /// after it. The editor and other tools read them; the export leaves them out.
+        /// </summary>
+        public const string Masks = "masks";
+
+        /// <summary>
         /// The folder with the other files of the map folder, copied as they are.
         /// </summary>
         public const string Files = "files";
@@ -79,5 +86,10 @@ namespace FAForever.MapEditor.Project
         /// The mask of terrain layer <paramref name="layer"/>: 1 to 8, or 1 to 4 in version 53.
         /// </summary>
         public static string StratumMask(int layer) => $"{StratumMasks}/stratum-{layer}.png";
+
+        /// <summary>
+        /// The file of the mask for tools named <paramref name="name"/>.
+        /// </summary>
+        public static string Mask(string name) => $"{Masks}/{name}.png";
     }
 }

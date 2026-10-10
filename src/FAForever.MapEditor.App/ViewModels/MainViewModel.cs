@@ -117,6 +117,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeUnits();
         InitializeMarkers();
         Props = new PropsViewModel(this);
+        InitializePainting();
     }
 
     /// <summary>

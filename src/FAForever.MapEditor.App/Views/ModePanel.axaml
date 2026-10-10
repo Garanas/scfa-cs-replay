@@ -64,6 +64,48 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
+            <!-- the masks for tools (K-1): the list chooses the one the masks tool paints and the overlay shows;
+                 the field names a new mask or gives the chosen one a new name -->
+            <DataTemplate DataType="vm:MasksSection">
+              <Border Classes="group">
+                <StackPanel Classes="stack">
+                  <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <ListBox ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.Items}"
+                           SelectedItem="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.ChosenItem}"
+                           IsVisible="{Binding !$parent[UserControl].((vm:MainViewModel)DataContext).Masks.IsEmpty}"
+                           AutomationProperties.Name="Masks for tools">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:MaskItem">
+                        <DockPanel>
+                          <TextBlock DockPanel.Dock="Right" Classes="caption mono" Text="{Binding Size}" />
+                          <TextBlock Text="{Binding Name}" />
+                        </DockPanel>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <TextBlock Classes="caption" Text="None yet: a mask marks where rivers go, forests grow or what to erode, saved as a PNG for World Machine, Gaea and the rules."
+                             IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.IsEmpty}" />
+                  <TextBox Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.NewName}" PlaceholderText="Name (optional)"
+                           AutomationProperties.Name="Name of a new mask, or a new name for the chosen one"
+                           AutomationProperties.HelpText="Letters, digits, spaces, dashes and underscores; left empty, a new mask gets a free name" />
+                  <CheckBox Content="Half the map's size" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.Half}"
+                            AutomationProperties.HelpText="A new mask of one pixel per two by two ogrids, as most stratum masks are" />
+                  <StackPanel Classes="inline">
+                    <Button Content="Add" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.addMask"
+                            AutomationProperties.Name="Add a mask" />
+                    <Button Content="Rename" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.renameMask"
+                            IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.HasChosen}"
+                            AutomationProperties.Name="Rename the chosen mask" />
+                    <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.deleteMask"
+                            IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.HasChosen}"
+                            AutomationProperties.Name="Delete the chosen mask" />
+                  </StackPanel>
+                  <CheckBox Content="Show it over the terrain" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ShowMask, Mode=OneWay}"
+                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="view.overlay.mask"
+                            AutomationProperties.HelpText="The top view shows the chosen mask while no painting tool shows its own" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
             <!-- the workspace's presets of the panel's kind: a button applies one, the cross deletes it; Save keeps the settings as they are -->
             <DataTemplate DataType="vm:PresetSection">
               <Border Classes="group">

@@ -50,7 +50,7 @@ public static class Menus
         new MenuLayout("Modes",
         [
             Mode("terrain", "terrain.addLayer", "terrain.bake", "terrain.importHeightmap", "terrain.saveBrush"),
-            Mode("paint", "paint.chooseTexture", "paint.addStratum", "paint.addMask", "paint.shader"),
+            Mode("paint", "paint.chooseTexture", "paint.addStratum", "paint.addMask", "paint.renameMask", "paint.deleteMask", "paint.shader"),
             Mode("water", "water.toggle"),
             Mode("lighting", "lighting.preset"),
             Mode("markers", "markers.connectPaths", "markers.addChain", "markers.adaptive", "markers.placePreset"),

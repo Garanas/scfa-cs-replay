@@ -3,10 +3,11 @@ using FAForever.MapEditor.Project.Files.InMemory;
 namespace FAForever.MapEditor.Project.Editing
 {
     /// <summary>
-    /// A brush that paints a terrain layer's mask (<see cref="StratumMasks"/>): one
-    /// <see cref="Apply"/> is one dab, round or of a <see cref="Shape"/>. A mask need not have the
-    /// map's size (most are half of it); the brush works in the map's ogrids and paints the mask's
-    /// pixels under them.
+    /// A brush that paints a mask, a grid of bytes from 0 (nothing) to 255 (full): a terrain
+    /// layer's (<see cref="StratumMasks"/>), the water's, or a mask for tools
+    /// (<see cref="MapDocument.Masks"/>). One <see cref="Apply"/> is one dab, round or of a
+    /// <see cref="Shape"/>. A mask need not have the map's size (most are half of it); the brush
+    /// works in the map's ogrids and paints the mask's pixels under them.
     /// </summary>
     public sealed record MaskBrush
     {
@@ -27,10 +28,15 @@ namespace FAForever.MapEditor.Project.Editing
         public bool Erase { get; init; }
 
         /// <summary>
-        /// The brush's shape: null for round, strongest at the centre and fading to nothing at the
-        /// radius; a picture fills the square around the radius.
+        /// The brush's shape: null for round, with <see cref="Falloff"/>; a picture fills the
+        /// square around the radius.
         /// </summary>
         public BrushShape? Shape { get; init; }
+
+        /// <summary>
+        /// How a round brush fades from its centre to its radius.
+        /// </summary>
+        public BrushFalloff Falloff { get; init; } = BrushFalloff.Smooth;
 
         /// <summary>
         /// How far the shape is turned, in degrees clockwise as the top view shows the map.
@@ -38,94 +44,86 @@ namespace FAForever.MapEditor.Project.Editing
         public float Rotation { get; init; }
 
         /// <summary>
+        /// Where it may paint, by the terrain's slope and height; null paints everywhere.
+        /// </summary>
+        public PaintLimits? Limits { get; init; }
+
+        /// <summary>
         /// One dab centred on (<paramref name="x"/>, <paramref name="z"/>) in ogrids of a map of
         /// <paramref name="mapWidth"/> by <paramref name="mapHeight"/> ogrids.
         /// </summary>
-        public void Apply(TiledBuffer<byte>.Builder mask, int mapWidth, int mapHeight, float x, float z)
+        /// <param name="terrain">The heights that <see cref="Limits"/> are checked against; without
+        /// them the limits do not apply.</param>
+        public void Apply(TiledBuffer<byte>.Builder mask, int mapWidth, int mapHeight, float x, float z, Heightmap? terrain = null)
         {
             if (Radius <= 0)
             {
                 return;
             }
-
-            // pixels per ogrid; a pixel's value is the one at its centre
-            float scaleX = mask.Width / (float)mapWidth;
-            float scaleZ = mask.Height / (float)mapHeight;
-            float centreX = x * scaleX;
-            float centreZ = z * scaleZ;
-            BrushFootprint footprint = new BrushFootprint(Radius, Shape, Rotation);
-            int x0 = Math.Max(0, (int)MathF.Floor(centreX - footprint.Reach * scaleX));
-            int z0 = Math.Max(0, (int)MathF.Floor(centreZ - footprint.Reach * scaleZ));
-            int x1 = Math.Min(mask.Width - 1, (int)MathF.Ceiling(centreX + footprint.Reach * scaleX));
-            int z1 = Math.Min(mask.Height - 1, (int)MathF.Ceiling(centreZ + footprint.Reach * scaleZ));
             float target = Erase ? 0 : 255;
-
-            for (int pz = z0; pz <= z1; pz++)
-            {
-                for (int px = x0; px <= x1; px++)
+            float strength = Strength;
+            GridDab.Paint(mask.Width, mask.Height, mapWidth, mapHeight, x, z, new BrushFootprint(Radius, Shape, Rotation, Falloff), Limits, terrain,
+                (px, pz, weight) =>
                 {
-                    float dx = (px + 0.5f) / scaleX - x;
-                    float dz = (pz + 0.5f) / scaleZ - z;
-                    float weight = footprint.Weight(dx, dz);
-                    if (weight <= 0)
-                    {
-                        continue;
-                    }
                     float value = mask[px, pz];
-                    float changed = value + (target - value) * Math.Clamp(Strength * weight, 0, 1);
+                    float changed = value + (target - value) * Math.Clamp(strength * weight, 0, 1);
                     mask[px, pz] = (byte)Math.Clamp(MathF.Round(changed), 0, 255);
-                }
-            }
+                });
         }
     }
 
     /// <summary>
-    /// How strongly a brush works at a distance from its centre: a smooth bell, 1 at the centre and
-    /// 0 from the radius on.
+    /// A brush that sets a grid of codes, such as the terrain's types (user story T-6): no blending,
+    /// every pixel where the brush works at least <see cref="Threshold"/> gets <see cref="Value"/>.
+    /// The grid may have another size than the map, as with <see cref="MaskBrush"/>.
     /// </summary>
-    internal static class BrushFalloff
+    public sealed record CodeBrush
     {
-        public static float Weight(float distance, float radius) =>
-            distance >= radius ? 0 : 0.5f * (1 + MathF.Cos(MathF.PI * distance / radius));
-    }
-
-    /// <summary>
-    /// Where a dab works and how strongly: the round falloff, or a shape turned and scaled to the
-    /// radius.
-    /// </summary>
-    internal readonly struct BrushFootprint
-    {
-        private readonly float _radius;
-        private readonly BrushShape? _shape;
-        private readonly float _cos;
-        private readonly float _sin;
-
-        /// <param name="rotation">In degrees clockwise in the top view, where x runs east and z south.</param>
-        public BrushFootprint(float radius, BrushShape? shape, float rotation)
-        {
-            _radius = radius;
-            _shape = shape;
-            (_sin, _cos) = MathF.SinCos(rotation * MathF.PI / 180);
-        }
+        /// <summary>
+        /// The radius in ogrids.
+        /// </summary>
+        public float Radius { get; init; } = 8;
 
         /// <summary>
-        /// How far from the centre the dab can reach: the radius, or the corner of a shape's square.
+        /// The code it sets.
         /// </summary>
-        public float Reach => _shape is null ? _radius : _radius * MathF.Sqrt(2);
+        public byte Value { get; init; }
 
         /// <summary>
-        /// The weight at an offset from the centre, in ogrids, from 0 to 1.
+        /// The weight from which on a pixel is set, from 0 to 1: with a smooth round brush, 0.5 sets
+        /// the inner half of the radius.
         /// </summary>
-        public float Weight(float dx, float dz)
+        public float Threshold { get; init; } = 0.5f;
+
+        /// <inheritdoc cref="MaskBrush.Shape"/>
+        public BrushShape? Shape { get; init; }
+
+        /// <inheritdoc cref="MaskBrush.Falloff"/>
+        public BrushFalloff Falloff { get; init; } = BrushFalloff.Sharp;
+
+        /// <inheritdoc cref="MaskBrush.Rotation"/>
+        public float Rotation { get; init; }
+
+        /// <inheritdoc cref="MaskBrush.Limits"/>
+        public PaintLimits? Limits { get; init; }
+
+        /// <inheritdoc cref="MaskBrush.Apply"/>
+        public void Apply(TiledBuffer<byte>.Builder grid, int mapWidth, int mapHeight, float x, float z, Heightmap? terrain = null)
         {
-            if (_shape is null)
+            if (Radius <= 0)
             {
-                return BrushFalloff.Weight(MathF.Sqrt(dx * dx + dz * dz), _radius);
+                return;
             }
-            // turned back by the rotation into the shape's square
-            float u = (dx * _cos + dz * _sin) / _radius;
-            float v = (dz * _cos - dx * _sin) / _radius;
-            return _shape.Sample(u, v);
+            byte value = Value;
+            float threshold = Math.Max(Threshold, float.Epsilon);
+            GridDab.Paint(grid.Width, grid.Height, mapWidth, mapHeight, x, z, new BrushFootprint(Radius, Shape, Rotation, Falloff), Limits, terrain,
+                (px, pz, weight) =>
+                {
+                    if (weight >= threshold)
+                    {
+                        grid[px, pz] = value;
+                    }
+                });
         }
     }
 }

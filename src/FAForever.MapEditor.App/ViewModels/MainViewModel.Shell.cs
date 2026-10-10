@@ -280,6 +280,7 @@ public sealed partial class MainViewModel
             "props" => new OverlayItem(overlay, () => ShowProps, value => ShowProps = value),
             "units" => new OverlayItem(overlay, () => ShowUnits, value => ShowUnits = value),
             "areas" => new OverlayItem(overlay, () => ShowAreas, value => ShowAreas = value),
+            "mask" => new OverlayItem(overlay, () => ShowMask, value => ShowMask = value),
             _ => new OverlayItem(overlay, () => false, null),
         })];
         foreach (OverlayDefinition overlay in EditorOverlays.All)

@@ -113,9 +113,10 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## T: Terrain
 
-- [x] **T-1 Sculpt.** Raise, lower, smooth and flatten with a brush, round or the shape of one of
-      the workspace's brushes (T-2), turned by hand or at random per dab. Missing: set height, add,
-      scale, noise, erosion; a choice of falloff; limits on the lowest and highest height.
+- [x] **T-1 Sculpt.** Raise, lower, smooth, flatten, set to a height, add noise (a new seed per
+      stroke), erode (thermal) and scale around a base with a brush, round (falloff smooth, linear
+      or sharp) or the shape of one of the workspace's brushes (T-2), turned by hand or at random per
+      dab; limits on the lowest and highest height it makes. Missing: hydraulic erosion.
 - [ ] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace. Today: the
       brush shapes, greyscale PNGs of the workspace's `brushes` folder, in the asset shelf of the
       Terrain mode, read again when they change; they are the shapes of the sculpt and strata
@@ -130,8 +131,10 @@ reads again when it changes; and nothing that generates runs by itself.
       curves, imported results of World Machine or Gaea; per layer a way of combining (add, maximum,
       minimum, replace), strength, a mask, visible or hidden, locked. Shape the general form in the
       editor, bake it with the external tool, take the result back as a layer.
-- [ ] **T-6 Terrain types.** Paint the terrain type of each ogrid (what the game uses for footsteps
-      and effects), from the list of types with their colours.
+- [x] **T-6 Terrain types.** Paint the terrain type of each ogrid (what the game uses for footsteps
+      and effects), from the list of types with their colours. Today: the Terrain types tool sets
+      the chosen type where the brush works at least half; the top view shows every ogrid's type in
+      its colour while the tool is active, the tool options the legend of the types the map uses.
 - [ ] **T-7 Walkability.** A layer of where land units can and cannot go, generated from the
       heightmap layers (slope); mark where it should be blocked or open; after generating again,
       see what changed: a new passage through a cliff, a closed path (see F-14). Today: generated
@@ -143,8 +146,8 @@ reads again when it changes; and nothing that generates runs by itself.
 ## S: Strata (terrain textures)
 
 - [x] **S-1 Paint strata.** Paint and erase a layer's mask with a brush, round or the shape of one
-      of the workspace's brushes (T-2), turned. Missing: limits by slope or height, painting with
-      symmetry.
+      of the workspace's brushes (T-2), turned; only where the slope (degrees) and height are within
+      limits, each pair on or off. Missing: painting with symmetry.
 - [ ] **S-2 Layers.** Choose each layer's albedo and normal texture (picker, F-9) and their scales;
       add, remove and reorder layers; the lower and upper layer.
 - [x] **S-3 Masks from other tools.** The masks are PNGs in the project, read again when they change.
@@ -155,9 +158,11 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## K: Masks for tools
 
-- [ ] **K-1 Mask layers.** Named masks for one's own purposes (where rivers go, where forests grow,
+- [x] **K-1 Mask layers.** Named masks for one's own purposes (where rivers go, where forests grow,
       what to erode), painted like strata, saved as PNG for World Machine, Gaea and the editor's
-      own rules.
+      own rules. Today: `masks/<name>.png` in the project (the map's size or half, read again when
+      another tool changes them, never exported); the Paint panel's "Masks for tools" adds, renames,
+      deletes and chooses them; the Masks tool paints the chosen one; the overlay Mask shows it.
 - [ ] **K-2 Masks from rules.** Generate a mask from slope, height, distance to water or other masks,
       when asked.
 
@@ -165,7 +170,8 @@ reads again when it changes; and nothing that generates runs by itself.
 
 - [ ] **W-1 Water.** On or off; surface, deep and abyss elevations; colours, sun, reflection and
       refraction, textures; wave generators. Today: on or off (`water.toggle`).
-- [ ] **W-2 Paintable water.** Paint the water's foam, flatness and depth bias.
+- [x] **W-2 Paintable water.** Paint the water's foam, flatness and depth bias. Today: the Paint
+      water tool, the chosen mask shown in the top view while it is active.
 
 ## L: Lighting and atmosphere
 
@@ -251,6 +257,7 @@ reads again when it changes; and nothing that generates runs by itself.
       found by picking and drawn highlighted.
 - [ ] **V-3 Overlays.** Choose what the views show over the terrain: a mask, walkability, grid,
       symmetry guides, areas, markers by kind, props, decals, units. Today: markers, path nodes and
-      the 3D camera; props and units on or off in 3D.
+      the 3D camera; props and units on or off in 3D; the chosen mask for tools (K-1) and, while
+      their tools are active, a layer's or the water's mask and the terrain types in the top view.
 - [ ] **V-4 Layouts.** Top and 3D side by side; panels that can be moved, closed and opened again.
 - [ ] **V-5 Ruler.** Measure distances and heights.

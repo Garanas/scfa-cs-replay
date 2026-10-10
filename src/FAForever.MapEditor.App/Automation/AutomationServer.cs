@@ -536,6 +536,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                     ["randomRotation"] = strata.Shape.RandomRotation,
                 },
             },
+            ["painting"] = PaintingState.Describe(model),
             ["zoom"] = window.MapView.Zoom,
             ["tab"] = MapViews.First(view => view.View == model.View).Name,
             ["camera"] = new JsonObject

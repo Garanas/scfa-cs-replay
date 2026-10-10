@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.Rendering;
@@ -10,13 +10,13 @@ public readonly record struct SampleRect(int X0, int Y0, int X1, int Y1);
 
 /// <summary>
 /// The terrain seen from above as colours, one per sample of the heightmap (BGRA, opaque): shaded
-/// by a light from the north-west, coloured by height, blue below the water, and with the mask of
-/// one terrain layer laid over it in orange when a layer is being painted. The 2D view shows it;
-/// the 3D view colours the terrain with it.
+/// by a light from the north-west, coloured by height, blue below the water, and with a grid laid
+/// over it (<see cref="GridOverlay"/>) while one is being painted: a mask in orange, or the
+/// terrain's types in their colours. The 2D view shows it.
 /// </summary>
 /// <remarks>
 /// <see cref="Update"/> colours again only what changed since the last update: the tiles of the
-/// heightmap or the mask that are no longer shared with the version shown before.
+/// heightmap or the grid that are no longer shared with the version shown before.
 /// </remarks>
 public sealed class TerrainPicture
 {
@@ -26,7 +26,8 @@ public sealed class TerrainPicture
     private TiledBuffer<byte>? _mask;
     private float _scale;
     private float _water = float.NegativeInfinity;
-    private int _layer;
+    private string? _overlay;
+    private IReadOnlyList<uint>? _palette;
     private float _low;
     private float _high;
 
@@ -40,25 +41,32 @@ public sealed class TerrainPicture
     public uint[] Pixels { get; private set; } = [];
 
     /// <summary>
-    /// Colours what changed since the last update.
+    /// Colours what changed since the last update, with the mask of a terrain layer over it.
     /// </summary>
     /// <param name="layer">The terrain layer whose mask to lay over the terrain (1 to 8), or 0 for none.</param>
+    public IReadOnlyList<SampleRect> Update(MapDocument document, int layer) =>
+        Update(document, layer > 0 ? GridOverlay.Mask(PaintTarget.Stratum(layer)) : null);
+
+    /// <summary>
+    /// Colours what changed since the last update.
+    /// </summary>
+    /// <param name="overlay">The grid to lay over the terrain, or null for none.</param>
     /// <returns>The rectangles that were coloured again; all of the picture when its size or the
     /// way it is coloured changed.</returns>
-    public IReadOnlyList<SampleRect> Update(MapDocument document, int layer)
+    public IReadOnlyList<SampleRect> Update(MapDocument document, GridOverlay? overlay)
     {
         Heightmap heightmap = document.Terrain.Heightmap;
         TiledBuffer<ushort> samples = heightmap.Samples;
         float water = document.Water.HasWater ? document.Water.Elevation : float.NegativeInfinity;
-        ImmutableArray<TiledBuffer<byte>> masks = document.Terrain.StratumMasks.Layers;
-        TiledBuffer<byte>? mask = layer >= 1 && layer <= masks.Length ? masks[layer - 1] : null;
+        TiledBuffer<byte>? mask = overlay?.Select(document);
+        string? key = mask is null ? null : overlay!.Key;
 
         bool all = _samples is null
             || samples.Width != Width
             || samples.Height != Height
             || heightmap.Scale != _scale
             || water != _water
-            || layer != _layer
+            || key != _overlay
             || (mask is not null && (_mask is null || mask.Width != _mask.Width || mask.Height != _mask.Height));
 
         List<SampleRect> changed = [];
@@ -69,7 +77,8 @@ public sealed class TerrainPicture
             Pixels = new uint[Width * Height];
             _scale = heightmap.Scale;
             _water = water;
-            _layer = layer;
+            _overlay = key;
+            _palette = overlay?.Palette;
             ushort[] values = samples.ToArray();
             _low = values.Min() * _scale;
             _high = Math.Max(_low + 1, values.Max() * _scale);
@@ -138,8 +147,8 @@ public sealed class TerrainPicture
                 int right = Math.Min(width - 1, x + 1);
                 float slopeX = (values[here + right] - values[here + left]) * _scale / 2;
                 float slopeZ = (values[below + x] - values[above + x]) * _scale / 2;
-                float cover = mask is null ? 0 : mask[maskRow + Math.Min(maskWidth - 1, (int)((long)x * maskWidth / (width - 1)))] / 255f;
-                pixels[here + x] = Shade(values[here + x] * _scale, slopeX, slopeZ, cover);
+                int value = mask is null ? -1 : mask[maskRow + Math.Min(maskWidth - 1, (int)((long)x * maskWidth / (width - 1)))];
+                pixels[here + x] = Shade(values[here + x] * _scale, slopeX, slopeZ, value);
             }
         });
     }
@@ -160,20 +169,21 @@ public sealed class TerrainPicture
                 float east = samples[Math.Min(width - 1, x + 1), y] * _scale;
                 float north = samples[x, Math.Max(0, y - 1)] * _scale;
                 float south = samples[x, Math.Min(height - 1, y + 1)] * _scale;
-                float cover = mask is null
-                    ? 0
-                    : mask[Math.Min(mask.Width - 1, (int)((long)x * mask.Width / (width - 1))), Math.Min(mask.Height - 1, (int)((long)y * mask.Height / (height - 1)))] / 255f;
-                Pixels[y * width + x] = Shade(h, (east - west) / 2, (south - north) / 2, cover);
+                int value = mask is null
+                    ? -1
+                    : mask[Math.Min(mask.Width - 1, (int)((long)x * mask.Width / (width - 1))), Math.Min(mask.Height - 1, (int)((long)y * mask.Height / (height - 1)))];
+                Pixels[y * width + x] = Shade(h, (east - west) / 2, (south - north) / 2, value);
             }
         }
     }
 
     /// <summary>
     /// The colour of a sample: by height (green low, brown, grey high), blue under water, the
-    /// overlay where the layer covers the terrain, darker where the slope faces away from a light
+    /// overlay's colour where its grid has a value, darker where the slope faces away from a light
     /// in the north-west.
     /// </summary>
-    private uint Shade(float height, float slopeX, float slopeZ, float cover)
+    /// <param name="value">The overlay's grid there, or -1 without one.</param>
+    private uint Shade(float height, float slopeX, float slopeZ, int value)
     {
         // the normal is (-slopeX, 1, -slopeZ); the light comes from (-1, 1.4, -1)
         const float LightX = -0.5f, LightY = 0.7f, LightZ = -0.5f;
@@ -189,9 +199,14 @@ public sealed class TerrainPicture
             float depth = Math.Clamp((_water - height) / 20, 0, 1);
             (r, g, b) = Mix((r, g, b), Mix((50, 110, 160), (20, 45, 90), depth), 0.75f);
         }
-        if (cover > 0)
+        if (value > 0 && _palette is null)
         {
-            (r, g, b) = Mix((r, g, b), Overlay, cover * 0.7f);
+            (r, g, b) = Mix((r, g, b), Overlay, value / 255f * 0.7f);
+        }
+        else if (value >= 0 && _palette is not null && _palette[value] >> 24 != 0)
+        {
+            uint colour = _palette[value];
+            (r, g, b) = Mix((r, g, b), (colour >> 16 & 0xff, colour >> 8 & 0xff, colour & 0xff), 0.75f);
         }
 
         float brightness = 0.3f + 0.7f * light;

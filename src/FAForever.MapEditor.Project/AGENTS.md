@@ -125,6 +125,31 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
   values, writes happen inside a transaction, so each plugin run is one undo step and a failing
   plugin changes nothing.
 
+## Brushes
+
+A brush is a record with `Apply(builder, ...)`: one dab into a grid's `TiledBuffer.Builder`, in
+the map's ogrids whatever the grid's size (`GridDab`: each pixel counts at its centre).
+`BrushFootprint` gives the weight: round with a `BrushFalloff` (smooth bell, linear, sharp) or a
+`BrushShape` picture, turned.
+
+- `HeightBrush` (T-1): raise, lower, smooth, flatten, set height (all the way where the brush
+  works, whatever the strength), noise (`HeightNoise`, three octaves of value noise fixed by `Seed`
+  and place, so the dabs of a stroke fit), erode (one pass of thermal erosion per dab: drops
+  steeper than `Talus` slide to the lower neighbours, the earth kept) and scale (around `Target`
+  by `Factor`); `MinHeight`/`MaxHeight` keep what it writes within limits (a height beyond one
+  already is not pulled back, only kept from going further).
+- `MaskBrush` blends towards full or empty; `CodeBrush` sets a code where the weight reaches
+  `Threshold` (terrain types, T-6). Both take `PaintLimits` (slope in degrees and height, S-1),
+  checked against the heightmap handed in.
+- `PaintTarget` names a byte grid of the document (`Stratum(layer)`, `TerrainTypes`,
+  `Water(WaterMask)`, `Mask(name)`): its `Read` and `Write`; `EditTransaction.Grid(target)` gives
+  a builder per target for a stroke.
+- **Masks for tools** (K-1): `MapDocument.Masks`, named grids of the map's size or half, edited
+  with `MaskLayers` (`Add`, `Rename`, `Remove`, `Problem` for a name: letters, digits, spaces,
+  dashes, underscores, unique without case since it is a file name). The project keeps them as
+  `masks/<name>.png` (no JSON); a save writes the changed ones and removes the files of masks gone;
+  a mask of another size is refused on load and reload. The export leaves them out.
+
 ## Opening, saving and reloading
 
 - `EditedMap` is a map being edited: its session and its project folder, with the operations of

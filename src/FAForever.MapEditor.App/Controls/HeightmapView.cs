@@ -19,8 +19,8 @@ using FAForever.FileFormats.Map;
 namespace FAForever.MapEditor.App.Controls;
 
 /// <summary>
-/// The terrain seen from above (<see cref="TerrainPicture"/>), with the mask of the layer being
-/// painted laid over it, and what lies on the map over that: markers, areas, props and units, and
+/// The terrain seen from above (<see cref="TerrainPicture"/>), with the grid being painted (a mask,
+/// the terrain types) laid over it, and what lies on the map over that: markers, areas, props and units, and
 /// the outlines of what is selected. The left mouse button is the active tool's, alt and a click
 /// send the 3D camera there, the right or middle button moves the map, the wheel zooms. While it has
 /// the keyboard (after a click), the keys it does not use go to the active tool.
@@ -181,10 +181,10 @@ public sealed class HeightmapView : Control
         OnMapChanged(this, EventArgs.Empty);
     }
 
-    // another layer's mask shows: the picture changes, as when the document does
+    // another grid shows over the terrain (a layer's mask, the terrain types): the picture changes, as when the document does
     private void OnModelChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.ShownMask))
+        if (e.PropertyName == nameof(MainViewModel.ShownGrid))
         {
             OnDocumentChanged(sender, e);
         }
@@ -642,7 +642,7 @@ public sealed class HeightmapView : Control
             return;
         }
 
-        IReadOnlyList<SampleRect> changed = _picture.Update(document, _model!.ShownMask);
+        IReadOnlyList<SampleRect> changed = _picture.Update(document, _model!.ShownGrid);
         if (_bitmap is null || _bitmap.PixelSize.Width != _picture.Width || _bitmap.PixelSize.Height != _picture.Height)
         {
             _bitmap?.Dispose();

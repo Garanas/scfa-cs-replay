@@ -645,4 +645,20 @@
     <Setter Property="Padding" Value="{StaticResource BarPadding}" />
     <Setter Property="MinHeight" Value="0" />
   </Style>
+
+  <!-- a number typed in the tool options: narrow, in figures -->
+  <Style Selector="TextBox.toolfield">
+    <Setter Property="Width" Value="{StaticResource ToolFieldWidth}" />
+    <Setter Property="MinWidth" Value="{StaticResource ToolFieldWidth}" />
+    <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+  </Style>
+  <!-- a colour of the map's data, such as a terrain type's, beside its name -->
+  <Style Selector="Border.swatch">
+    <Setter Property="Width" Value="{StaticResource SwatchSize}" />
+    <Setter Property="Height" Value="{StaticResource SwatchSize}" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
 </Styles>
