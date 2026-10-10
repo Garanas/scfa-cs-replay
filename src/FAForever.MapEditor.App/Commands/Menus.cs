@@ -57,9 +57,9 @@ public static class Menus
         ]),
         new MenuLayout("Modes",
         [
-            Mode("terrain", "terrain.addLayer", "terrain.bake", "terrain.importHeightmap", "terrain.exportHeightmap", "terrain.saveBrush"),
-            Mode("paint", "paint.chooseTexture", "paint.addStratum", "paint.addMask", "paint.renameMask", "paint.deleteMask", "paint.maskRules", "paint.shader"),
-            Mode("masks"),
+            Mode("terrain", "terrain.addLayer", "terrain.bake", "terrain.importHeightmap", "terrain.exportHeightmap", "terrain.saveBrush", Separator, "terrain.switchHeights", "terrain.writeDraft", "terrain.useAsFinalBase"),
+            Mode("paint", "paint.chooseTexture", "paint.addStratum", "paint.shader"),
+            Mode("masks", "paint.addMask", "paint.renameMask", "paint.duplicateMask", "paint.deleteMask", "layers.add", "paint.maskRules"),
             Mode("water", "water.toggle", "water.addWaveGenerator", "water.placeWaveGenerator"),
             Mode("lighting", "lighting.preset", "lighting.chooseCubemap"),
             Mode("markers", "markers.connectPaths", "markers.addChain", "markers.adaptive", "markers.placePreset"),

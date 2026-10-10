@@ -95,6 +95,7 @@ namespace FAForever.MapEditor.Project
             SaveWalkabilityMarks(document, folder, previous);
             SaveRules(document, folder);
             SaveHeightStack(document, folder, previous);
+            SaveCoverageStacks(document, folder, previous);
 
             if (document.Script is ImmutableArray<byte> script)
             {
@@ -159,7 +160,7 @@ namespace FAForever.MapEditor.Project
             try
             {
                 MapDocument document = MapProjectMapping.ToDocument(map, props, decals, markers, armies, images, script, files);
-                return LoadHeightStack(WithRules(WithWalkabilityMarks(document, folder), folder), folder);
+                return LoadHeightStack(LoadCoverageStacks(WithRules(WithWalkabilityMarks(document, folder), folder), folder), folder);
             }
             catch (ArgumentException exception)
             {
@@ -280,6 +281,10 @@ namespace FAForever.MapEditor.Project
                             && changed.IndexOf('/', MapProjectLayout.Masks.Length + 1) < 0)
                         {
                             document = ReloadMask(document, Of(changed), Path.GetFileNameWithoutExtension(changed));
+                        }
+                        else if (IsCoverageStackFile(changed, out string stackKey))
+                        {
+                            document = ReloadCoverageStack(document, folder, stackKey);
                         }
                         else if (IsHeightStackFile(folder, changed))
                         {

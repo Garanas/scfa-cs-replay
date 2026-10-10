@@ -1,17 +1,39 @@
 using System.Collections.Immutable;
 using CommunityToolkit.Mvvm.ComponentModel;
+using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
-/// A mask for tools as the Paint panel lists it.
+/// A mask for tools as the Masks panel lists it: its name, size and a preview that follows its pixels.
 /// </summary>
-/// <param name="Size">Its pixels across and down, e.g. <c>256 × 256</c>.</param>
-public sealed record MaskItem(string Name, string Size)
+/// <param name="size">Its pixels across and down, e.g. <c>256 × 256</c>.</param>
+public sealed partial class MaskItem(string name, string size, PreviewPicture? preview) : ObservableObject
 {
-    public override string ToString() => Name;
+    public string Name => name;
+
+    public string Size => size;
+
+    /// <summary>
+    /// The mask as a small picture, larger while the mouse rests on it.
+    /// </summary>
+    [ObservableProperty]
+    public partial PreviewPicture? Preview { get; internal set; } = preview;
+
+    /// <summary>
+    /// What a screen reader says of its preview.
+    /// </summary>
+    public string PreviewLabel => $"Preview of the mask {name}";
+
+    /// <summary>
+    /// How many layers its stack has, e.g. <c>3 layers</c>; empty for its own painted layer only.
+    /// </summary>
+    [ObservableProperty]
+    public partial string Layers { get; internal set; } = "";
+
+    public override string ToString() => name;
 }
 
 /// <summary>
@@ -25,6 +47,7 @@ public sealed record MaskItem(string Name, string Size)
 public sealed partial class MasksViewModel : ObservableObject
 {
     private ImmutableSortedDictionary<string, TiledBuffer<byte>>? _shown;
+    private ImmutableSortedDictionary<string, LayerStack>? _shownStacks;
 
     /// <summary>
     /// The masks, by name.
@@ -82,15 +105,32 @@ public sealed partial class MasksViewModel : ObservableObject
     public void Refresh(MapDocument? document)
     {
         ImmutableSortedDictionary<string, TiledBuffer<byte>>? masks = document?.Masks;
-        if (ReferenceEquals(masks, _shown))
+        if (ReferenceEquals(masks, _shown) && ReferenceEquals(document?.CoverageStacks, _shownStacks))
         {
             return;
         }
         bool sameNames = masks is not null && _shown is not null && masks.Keys.SequenceEqual(_shown.Keys);
+        ImmutableSortedDictionary<string, TiledBuffer<byte>>? before = _shown;
         _shown = masks;
+        _shownStacks = document?.CoverageStacks;
+        string LayersOf(string name) => document?.CoverageStacks.TryGetValue(LayerTarget.Mask(name).Key, out LayerStack? stack) == true
+            ? (stack.Count == 1 ? "1 layer" : $"{stack.Count} layers")
+            : "";
+        if (sameNames && masks is not null)
+        {
+            // a stroke changes a mask's pixels: its preview follows, the list stays
+            foreach (MaskItem item in Items)
+            {
+                if (masks.TryGetValue(item.Name, out TiledBuffer<byte>? mask) && !ReferenceEquals(before?.GetValueOrDefault(item.Name), mask))
+                {
+                    item.Preview = new CoveragePicture(mask);
+                }
+                item.Layers = LayersOf(item.Name);
+            }
+        }
         if (!sameNames)
         {
-            Items = masks is null ? [] : [.. masks.Select(entry => new MaskItem(entry.Key, $"{entry.Value.Width} × {entry.Value.Height}"))];
+            Items = masks is null ? [] : [.. masks.Select(entry => new MaskItem(entry.Key, $"{entry.Value.Width} × {entry.Value.Height}", new CoveragePicture(entry.Value)) { Layers = LayersOf(entry.Key) })];
             OnPropertyChanged(nameof(IsEmpty));
             string? chosen = Chosen is string name && masks?.ContainsKey(name) == true ? name : Items.FirstOrDefault()?.Name;
             if (chosen == Chosen)

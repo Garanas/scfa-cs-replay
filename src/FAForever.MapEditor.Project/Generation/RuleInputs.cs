@@ -11,21 +11,26 @@ namespace FAForever.MapEditor.Project.Generation
     public static class RuleInputs
     {
         /// <summary>
-        /// The rules of the masks.
+        /// The rules of the rules layers of every stack of coverage (masks for tools and strata).
         /// </summary>
-        public static GeneratedInput MaskRules { get; } = new GeneratedInput("mask rules", document => document.MaskRules);
+        public static GeneratedInput MaskRules { get; } = new GeneratedInput("mask rules", document =>
+            new References([.. document.CoverageStacks.Values
+                .SelectMany(stack => stack.Layers.Where(layer => layer.Source is RulesSource).Select(layer => (object?)layer.Source))]));
 
         /// <summary>
-        /// The masks for tools the rules of masks read that are not made from rules themselves (those
-        /// follow from the other inputs).
+        /// What the rules layers read that rules do not make: the grids they read whose stacks have no
+        /// rules, and, of those that have, the other layers (rules layers follow from the other inputs).
         /// </summary>
         public static GeneratedInput MaskRuleSources { get; } = new GeneratedInput("masks the rules read", document =>
-            new References([.. document.MaskRules.Values
-                .SelectMany(rules => rules.Sources)
-                .Where(source => !document.MaskRules.ContainsKey(source))
+            new References([.. document.CoverageStacks.Values
+                .Where(stack => stack.Layers.Any(layer => layer.Source is RulesSource))
+                .SelectMany(Editing.CoverageLayers.ReadsOf)
                 .Distinct(StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal)
-                .Select(source => (object?)document.Masks.GetValueOrDefault(source))]));
+                .SelectMany(read => Editing.LayerStacks.StackKeyOf(read) is string key && document.CoverageStacks.TryGetValue(key, out LayerStack? read2)
+                    && read2.Layers.Any(layer => layer.Source is RulesSource)
+                    ? read2.Layers.Where(layer => layer.Source is not RulesSource).Select(layer => (object?)layer)
+                    : [Editing.LayerStacks.MaskOf(document, read)])]));
 
         /// <summary>
         /// The rules of props.
@@ -41,7 +46,7 @@ namespace FAForever.MapEditor.Project.Generation
                 .Where(layer => !Files.InMemory.MaskRuleSources.IsStratum(layer, out _))
                 .Distinct(StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal)
-                .Select(layer => (object?)document.Masks.GetValueOrDefault(layer))]));
+                .Select(layer => (object?)Files.InMemory.MaskRuleSources.Read(document, layer))]));
 
         /// <summary>
         /// Parts of a version of the document that are the same as another's when each is the same object.

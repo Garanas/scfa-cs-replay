@@ -218,7 +218,7 @@ public sealed partial class HeightmapView : Control
     // another grid shows over the terrain (a layer's mask, the terrain types): the picture changes, as when the document does
     private void OnModelChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.ShownGrid))
+        if (e.PropertyName == nameof(MainViewModel.ShownGrid) || e.PropertyName == nameof(MainViewModel.ShownHeights))
         {
             OnDocumentChanged(sender, e);
         }
@@ -340,6 +340,7 @@ public sealed partial class HeightmapView : Control
                 }
                 DrawThings(context, overlay, document, _model);
                 _markers.Render(context, overlay, _model.DrawnMarkers(document), _model.ShownMarkerKinds, _zoom, _offset);
+                DrawGeneratedPathNodes(context, overlay);
                 DrawSelection(context, overlay, document, _model.Selection.Items);
             }
         }
@@ -1083,7 +1084,7 @@ public sealed partial class HeightmapView : Control
         }
         _stale = false;
         using Performance.Span measure = Performance.Measure("top.document-changed");
-        MapDocument? document = _model?.ShownDocument;
+        MapDocument? document = _model?.ViewDocument;
         if (document is null)
         {
             _bitmap?.Dispose();
@@ -1146,7 +1147,7 @@ public sealed partial class HeightmapView : Control
             {
                 _model?.Logger("Views").LogError(task.Exception, "Colouring the top view's picture failed: {Reason}", task.Exception.Message);
             }
-            if (_colourAgain || !ReferenceEquals(_model?.ShownDocument, document))
+            if (_colourAgain || !ReferenceEquals(_model?.ViewDocument, document))
             {
                 _colourAgain = false;
                 OnDocumentChanged(this, EventArgs.Empty);
@@ -1403,7 +1404,7 @@ public sealed partial class HeightmapView : Control
 
     private void ReportCursor(Point at)
     {
-        MapDocument? document = _model?.ShownDocument;
+        MapDocument? document = _model?.ViewDocument;
         if (document is null)
         {
             return;

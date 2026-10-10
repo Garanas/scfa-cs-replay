@@ -218,7 +218,7 @@ public sealed partial class CurveTool(MainViewModel model) : ObservableObject, I
     private CurvePoint NewPoint(HeightCurve curve, float x, float z)
     {
         float height = curve.Profile == CurveProfile.Road
-            ? model.ShownDocument!.Terrain.Heightmap.HeightAt(x, z)
+            ? model.ShownHeightmap!.HeightAt(x, z)
             : curve.Points.LastOrDefault()?.Height ?? (float)Height;
         return new CurvePoint(x, z, height);
     }

@@ -69,6 +69,9 @@ namespace FAForever.MapEditor.Project.Files
                 AutoGenerate = settings.AutoGenerate.IsEmpty ? null : [.. settings.AutoGenerate],
                 NotOnExport = settings.NotOnExport.IsEmpty ? null : [.. settings.NotOnExport],
                 Routes = settings.Navigation.Routes == RoutePairs.Nearest ? null : settings.Navigation.Routes.ToString(),
+                DraftMasks = settings.DraftMasks.IsEmpty ? null : [.. settings.DraftMasks],
+                WriteDraft = settings.WriteDraftOnChange ? true : null,
+                PathNodes = ToDto(settings.PathNodes),
             };
 
         /// <summary>
@@ -84,7 +87,73 @@ namespace FAForever.MapEditor.Project.Files
                 {
                     Routes = Enum.TryParse(settings.Routes, ignoreCase: true, out RoutePairs routes) && Enum.IsDefined(routes) ? routes : RoutePairs.Nearest,
                 },
+                DraftMasks = ImmutableSortedSet.CreateRange(StringComparer.Ordinal, settings.DraftMasks ?? []),
+                WriteDraftOnChange = settings.WriteDraft == true,
+                PathNodes = ToModel(settings.PathNodes),
             };
+
+        /// <summary>
+        /// The path networks' settings and edits as <c>map.json</c> keeps them; null for the defaults.
+        /// </summary>
+        internal static PathNodesDto? ToDto(PathNodeSettings settings) => settings.IsDefault
+            ? null
+            : new PathNodesDto
+            {
+                Layers = settings.Layers.SequenceEqual(PathNodeSettings.Default.Layers) ? null : [.. settings.Layers.Select(layer => layer.ToString())],
+                Spacing = settings.Spacing,
+                AirSpacing = settings.AirSpacing,
+                Smoothing = settings.Smoothing == PathNodeSettings.DefaultSmoothing ? null : settings.Smoothing,
+                MinimumDistance = settings.MinimumDistance,
+                Fill = settings.Fill ? null : false,
+                Replace = settings.Replace ? true : null,
+                OnExport = settings.OnExport,
+                Edits = settings.Edits.IsEmpty ? null : [.. settings.Edits.Select(edit => new PathEditDto
+                {
+                    Kind = edit.Kind.ToString(),
+                    Layer = edit.Layer.ToString(),
+                    X = edit.Node.X,
+                    Z = edit.Node.Z,
+                    Added = edit.Node.IsAdded ? edit.Node.Added : null,
+                    OtherX = edit.Kind is PathEditKind.Link or PathEditKind.Cut ? edit.Other.X : null,
+                    OtherZ = edit.Kind is PathEditKind.Link or PathEditKind.Cut ? edit.Other.Z : null,
+                    OtherAdded = edit.Kind is PathEditKind.Link or PathEditKind.Cut && edit.Other.IsAdded ? edit.Other.Added : null,
+                    ToX = edit.Kind == PathEditKind.Move ? edit.ToX : null,
+                    ToZ = edit.Kind == PathEditKind.Move ? edit.ToZ : null,
+                })],
+            };
+
+        /// <summary>
+        /// The path networks' settings and edits of <c>map.json</c>; a layer or an edit this editor
+        /// does not know is left out.
+        /// </summary>
+        internal static PathNodeSettings ToModel(PathNodesDto? settings)
+        {
+            if (settings is null)
+            {
+                return PathNodeSettings.Default;
+            }
+            static PathLayer? LayerOf(string? name) => Enum.TryParse(name, ignoreCase: true, out PathLayer layer) && Enum.IsDefined(layer) ? layer : null;
+            return new PathNodeSettings
+            {
+                Layers = settings.Layers is null ? PathNodeSettings.Default.Layers : [.. settings.Layers.Select(LayerOf).OfType<PathLayer>().Distinct()],
+                Spacing = settings.Spacing,
+                AirSpacing = settings.AirSpacing,
+                Smoothing = Math.Clamp(settings.Smoothing ?? PathNodeSettings.DefaultSmoothing, 0, 10),
+                MinimumDistance = settings.MinimumDistance,
+                Fill = settings.Fill ?? true,
+                Replace = settings.Replace ?? false,
+                OnExport = settings.OnExport,
+                Edits = [.. (settings.Edits ?? []).Select(edit =>
+                    Enum.TryParse(edit.Kind, ignoreCase: true, out PathEditKind kind) && Enum.IsDefined(kind) && LayerOf(edit.Layer) is PathLayer layer
+                        ? new PathEdit(kind, layer, new PathNodeRef(edit.X, edit.Z, edit.Added ?? 0))
+                        {
+                            Other = new PathNodeRef(edit.OtherX ?? 0, edit.OtherZ ?? 0, edit.OtherAdded ?? 0),
+                            ToX = edit.ToX ?? 0,
+                            ToZ = edit.ToZ ?? 0,
+                        }
+                        : null).OfType<PathEdit>()],
+            };
+        }
 
         /// <summary>
         /// A symmetry as <c>map.json</c> and <c>layers.json</c> keep it; null for none.

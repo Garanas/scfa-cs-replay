@@ -1,22 +1,101 @@
-<!-- The Terrain panel's height layers (T-5): the stack control over the heightmap's stack, the highest first; the chosen
-     layer is what the sculpt tool writes into and the inspector shows. A check box shows or hides a layer, another locks it. -->
+<!-- The Terrain panel's height layers (T-5) and the draft and final heightmaps (T-9): the switch between them (both views show
+     the chosen one, brushes write it), a preview of each, the filters by use and source, the stack control over the shown
+     heightmap's stack, the highest first (the chosen layer is what the sculpt tool writes into and the inspector shows; a check
+     box shows or hides a layer in this heightmap, another locks it), and the files for World Machine and Gaea. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              x:Class="FAForever.MapEditor.App.Views.MapPanels.HeightLayersPanel"
              x:DataType="vm:MainViewModel">
-  <Border Classes="group">
-    <StackPanel Classes="stack">
-      <TextBlock Classes="overline" Text="{Binding Source='Height layers', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-      <controls:LayerStackView DataContext="{Binding HeightStack}" CanAdd="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HasMap}"
-                               ListHelp="The highest first; the chosen layer is the one the sculpt tool writes into, its settings are in the inspector"
-                               EmptyText="None yet: the heightmap is the map's heights. A layer starts a stack over them: sculpt in a layer of its own, bring in World Machine or Gaea, draw curves; bake to end it."
-                               RemoveHelp="The base stays: bake to end the stack" />
-      <WrapPanel Classes="chips" IsVisible="{Binding HeightStack.HasLayers}">
-        <Button Content="Bake" Command="{Binding HeightStack.BakeCommand}"
-                AutomationProperties.Name="Bake the layers into the heightmap" AutomationProperties.HelpText="The heightmap keeps what the layers add up to, and the map has no layers" />
-      </WrapPanel>
-    </StackPanel>
-  </Border>
+  <StackPanel Classes="stack">
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="overline" Text="{Binding Source='Heightmap', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+          <Button Grid.Column="0" Classes="chip" Classes.on="{Binding DraftFinal.ShowsDraft}" Content="Draft" Command="{Binding DraftFinal.ShowDraftCommand}"
+                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                  AutomationProperties.Name="Show the draft heightmap"
+                  AutomationProperties.HelpText="Both views show the draft and brushes write it (Ctrl+Shift+D switches); the export takes the final" />
+          <Button Grid.Column="1" Classes="chip" Classes.on="{Binding DraftFinal.ShowsFinal}" Content="Final" Command="{Binding DraftFinal.ShowFinalCommand}"
+                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                  AutomationProperties.Name="Show the final heightmap"
+                  AutomationProperties.HelpText="Both views show the final, what the game gets, and brushes write it (Ctrl+Shift+D switches)" />
+          <Border Grid.Row="1" Grid.Column="0" Classes="thumbnail imagepreview" HorizontalAlignment="Center">
+            <controls:ImagePreview Picture="{Binding DraftFinal.DraftPicture}" AutomationProperties.Name="Preview of the draft heightmap" />
+          </Border>
+          <Border Grid.Row="1" Grid.Column="1" Classes="thumbnail imagepreview" HorizontalAlignment="Center">
+            <controls:ImagePreview Picture="{Binding DraftFinal.FinalPicture}" AutomationProperties.Name="Preview of the final heightmap" />
+          </Border>
+        </Grid>
+        <TextBlock Classes="caption" Text="{Binding DraftFinal.BaseFacts}" />
+      </StackPanel>
+    </Border>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="overline" Text="{Binding Source='Height layers', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <ItemsControl ItemsSource="{Binding HeightStack.UseChips}" IsVisible="{Binding HeightStack.HasLayers}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Classes="chips" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:LayerFilterChip">
+              <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Title}" Command="{Binding Choose}" AutomationProperties.Name="{Binding Label}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ItemsControl ItemsSource="{Binding HeightStack.SourceChips}" IsVisible="{Binding HeightStack.HasLayers}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Classes="chips" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:LayerFilterChip">
+              <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Title}" Command="{Binding Choose}" AutomationProperties.Name="{Binding Label}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <controls:LayerStackView DataContext="{Binding HeightStack}" CanAdd="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HasMap}"
+                                 ListHelp="The highest first; the chosen layer is the one the sculpt tool writes into, its settings are in the inspector"
+                                 EmptyText="None yet: the heightmap is the map's heights. A layer starts a stack over them: sculpt in a layer of its own, bring in World Machine or Gaea, draw curves; bake to end it."
+                                 RemoveHelp="Removes it from the draft and the final; the base stays: bake to end the stack" />
+        <TextBlock Classes="caption" Text="{Binding DraftFinal.ElsewhereFacts}" IsVisible="{Binding DraftFinal.ElsewhereFacts, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <WrapPanel Classes="chips" IsVisible="{Binding HeightStack.HasLayers}">
+          <Button Content="Bake" Command="{Binding HeightStack.BakeCommand}"
+                  AutomationProperties.Name="Bake the layers into the heightmap" AutomationProperties.HelpText="The heightmap keeps what the final's layers add up to, and the map has no layers (nor a draft of its own)" />
+        </WrapPanel>
+      </StackPanel>
+    </Border>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="overline" Text="{Binding Source='World Machine and Gaea', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <TextBlock Classes="caption" Text="The draft and the ticked masks go into the project's procedural/temp folder; the tool writes its output beside them, which becomes the final's base." />
+        <ItemsControl ItemsSource="{Binding DraftFinal.Masks}" IsVisible="{Binding DraftFinal.HasMasks}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:DraftMaskItem">
+              <CheckBox Content="{Binding Name}" IsChecked="{Binding IsTicked}" AutomationProperties.Name="{Binding Label}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <CheckBox Content="Write again whenever it changes" IsChecked="{Binding DraftFinal.WritesOnChange, Mode=OneWay}" Command="{Binding DraftFinal.ToggleWritesOnChangeCommand}"
+                  AutomationProperties.Name="Write the draft again whenever it changes"
+                  AutomationProperties.HelpText="A second after the draft or a ticked mask changes, the files are written again, so the tool reads the current draft" />
+        <WrapPanel Classes="chips">
+          <Button Content="Write the draft" Command="{Binding DraftFinal.WriteDraftCommand}"
+                  AutomationProperties.Name="Write the draft for procedural tools"
+                  AutomationProperties.HelpText="Writes procedural/temp/draft-heightmap.png and .r16 (16-bit) and the ticked masks" />
+          <Button Content="Use as the final's base..." Command="{Binding DraftFinal.UseAsFinalBaseCommand}"
+                  AutomationProperties.Name="Use an output as the final's base"
+                  AutomationProperties.HelpText="Choose the tool's output: the final starts from it, read again whenever the tool writes it; the draft keeps its own base" />
+          <Button Content="Share the draft's base" Command="{Binding DraftFinal.ShareDraftBaseCommand}" IsVisible="{Binding DraftFinal.HasOwnBase}"
+                  AutomationProperties.Name="Share the draft's base with the final"
+                  AutomationProperties.HelpText="The final starts from the draft's base again; its own base is gone" />
+        </WrapPanel>
+        <TextBlock Classes="caption" Text="{Binding DraftFinal.WriteFacts}" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
 </UserControl>

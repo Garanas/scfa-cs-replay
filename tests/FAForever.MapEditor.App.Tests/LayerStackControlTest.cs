@@ -148,7 +148,8 @@ namespace FAForever.MapEditor.App.Tests
             await model.Commands.RunAsync("terrain.addLayer", [], interactive: false);
             Dispatcher.UIThread.RunJobs();
 
-            List<ImagePreview> previews = [.. window.GetVisualDescendants().OfType<ImagePreview>().Where(preview => preview.IsEffectivelyVisible)];
+            List<ImagePreview> previews = [.. window.GetVisualDescendants().OfType<ImagePreview>().Where(preview => preview.IsEffectivelyVisible
+                && Avalonia.Automation.AutomationProperties.GetName(preview)?.StartsWith("Preview of the height layer ", StringComparison.Ordinal) == true)];
             CollectionAssert.AreEqual(new[] { "Preview of the height layer Sculpt", "Preview of the height layer Base" },
                 previews.Select(preview => Avalonia.Automation.AutomationProperties.GetName(preview)).ToArray());
             ImagePreview basePreview = previews[1];

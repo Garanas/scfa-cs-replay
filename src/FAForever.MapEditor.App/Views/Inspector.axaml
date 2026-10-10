@@ -345,9 +345,9 @@
               <DataTemplate DataType="vm:WaterDetailsSection">
                 <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WaterSettings.Parts}" />
               </DataTemplate>
-              <!-- the rules of masks (K-2) and props (P-4): a view of their own each -->
-              <DataTemplate DataType="vm:MaskRulesSection">
-                <rules:MaskRulesPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              <!-- the chosen mask's stack with its rules (K-1, K-2), and the rules of props (P-4): a view of their own each -->
+              <DataTemplate DataType="vm:MaskStackSection">
+                <panels:MaskStackPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
               </DataTemplate>
               <DataTemplate DataType="vm:PropRuleSection">
                 <rules:PropRulePanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />

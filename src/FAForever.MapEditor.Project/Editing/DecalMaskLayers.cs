@@ -107,12 +107,17 @@ namespace FAForever.MapEditor.Project.Editing
         private const int Size = TiledBuffer<byte>.TileSize;
 
         /// <summary>
-        /// The stacks of a document with how to put a changed one back: the heightmap's; the stacks
-        /// of strata, masks and water join here as they come.
+        /// The stacks of a document with how to put a changed one back: the heightmap's and every
+        /// stack of coverage (strata, masks, water maps), whose composites <see cref="CoverageLayers.Follow"/>
+        /// then makes again where a layer's grid changed.
         /// </summary>
         private static IEnumerable<(LayerStack Stack, Func<MapDocument, LayerStack, MapDocument> Put)> StacksOf(MapDocument document)
         {
             yield return (document.HeightStack, (d, stack) => d with { HeightStack = stack });
+            foreach ((string key, LayerStack stack) in document.CoverageStacks)
+            {
+                yield return (stack, (d, changed) => d with { CoverageStacks = d.CoverageStacks.SetItem(key, changed) });
+            }
         }
 
         /// <summary>

@@ -123,10 +123,25 @@ namespace FAForever.MapEditor.Project.Files.InMemory
 
         /// <summary>
         /// The rules of the masks for tools that are made from rules (user story K-2), by the mask's
-        /// name: such a mask is generated from them when asked. Kept as <c>masks/&lt;name&gt;.rules.json</c>.
+        /// name: such a mask's rules layer is generated from them when asked.
         /// </summary>
-        public ImmutableSortedDictionary<string, MaskRuleSet> MaskRules { get; init; } =
-            ImmutableSortedDictionary.Create<string, MaskRuleSet>(StringComparer.Ordinal);
+        /// <remarks>
+        /// The rules live in the masks' stacks (<see cref="CoverageStacks"/>) as rules layers
+        /// (<see cref="RulesSource"/>): this is, per mask with one, the rules of its lowest rules layer.
+        /// </remarks>
+        public ImmutableSortedDictionary<string, MaskRuleSet> MaskRules => Editing.CoverageLayers.MaskRulesOf(this);
+
+        /// <summary>
+        /// The stacks of layers of the grids of coverage (user stories K-1, K-2, S-1, W-2; the plan
+        /// "Map Editor Rework"): stratum masks, masks for tools and the water's three maps, by their
+        /// target's key (<see cref="LayerTarget.Key"/>: <c>stratum-2</c>, <c>mask-forest</c>,
+        /// <c>water-foam</c>). A grid without a stack here is simply its own painted layer
+        /// (<see cref="Editing.CoverageLayers.StackOf"/>); with one, the grid is what the stack makes,
+        /// kept so by <see cref="Editing.CoverageLayers.Follow"/> after every change, so everything that
+        /// reads the grids (the views, the rules, the export) reads the composite.
+        /// </summary>
+        public ImmutableSortedDictionary<string, LayerStack> CoverageStacks { get; init; } =
+            ImmutableSortedDictionary.Create<string, LayerStack>(StringComparer.Ordinal);
 
         /// <summary>
         /// The rules that place props from the layers when asked (user story P-4), in the order they
@@ -151,6 +166,32 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// everything that reads the heights (the views, walkability, the export) reads that.
         /// </summary>
         public LayerStack HeightStack { get; init; } = LayerStack.Empty(LayerTarget.Heightmap);
+
+        /// <summary>
+        /// The draft heightmap's stack of layers (the rough shape blocked out, and what World Machine
+        /// or Gaea get as input): its own order of layers, many of them shared with
+        /// <see cref="HeightStack"/>, the final (<see cref="Editing.HeightStacks"/>). Empty exactly when
+        /// the final is: a map with layers always has both; an older project opens with every layer
+        /// in both, so the two make the same terrain.
+        /// </summary>
+        public LayerStack DraftStack { get; init; } = LayerStack.Empty(LayerTarget.Heightmap);
+
+        /// <summary>
+        /// The draft heightmap's samples, what <see cref="DraftStack"/> makes (kept so by
+        /// <see cref="Editing.HeightLayers.Follow"/>), at the heightmap's size and scale; null while
+        /// the draft makes the same heights as the final (both stacks hold the same layers in the
+        /// same order), which <see cref="DraftHeightmap"/> then gives.
+        /// </summary>
+        public TiledBuffer<ushort>? DraftSamples { get; init; }
+
+        /// <summary>
+        /// The draft heightmap: <see cref="DraftSamples"/> at the heightmap's scale, or the heightmap
+        /// itself while the draft makes the same heights. Never exported: the export, walkability,
+        /// the normal map and every other generator read <see cref="Terrain"/>'s heightmap, the final.
+        /// </summary>
+        public Heightmap DraftHeightmap => DraftSamples is TiledBuffer<ushort> samples && !ReferenceEquals(samples, Terrain.Heightmap.Samples)
+            ? Terrain.Heightmap with { Samples = samples }
+            : Terrain.Heightmap;
 
         /// <summary>
         /// Where the map maker marked by hand that land units must be blocked or may pass (user story

@@ -619,6 +619,8 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["mapPanels"] = model.DescribeMapPanels(),
             ["mapSize"] = model.DescribeMapSize(),
             ["heightLayers"] = HeightLayersState.Describe(model),
+            ["draftFinal"] = DraftFinalState.Describe(model),
+            ["coverageStacks"] = model.DescribeCoverageStacksState(),
             ["presets"] = new JsonObject
             {
                 ["folder"] = model.Presets.Library?.Folder,
@@ -639,6 +641,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             })]),
             ["walkability"] = GenerateWalkabilityHandler.Describe(model.Walkability),
             ["procedural"] = ProceduralState(),
+            ["pathNodes"] = model.DescribePathNodes(),
             ["problems"] = CheckMapHandler.Describe(model.Problems),
             ["props"] = model.Props.Describe(),
             ["rules"] = new JsonObject { ["masks"] = model.MaskRules.Describe(model.ShownDocument), ["props"] = model.PropRules.Describe() },
@@ -752,14 +755,6 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
         ["chain"] = model.Markers.SelectedChain?.Name,
         ["adaptive"] = model.Markers.IsAdaptive,
         ["warning"] = model.Markers.PlacementWarning,
-        ["paths"] = new JsonObject
-        {
-            ["layers"] = new JsonArray([.. model.Markers.Paths.Layers.Select(layer => (JsonNode)JsonValue.Create(layer.ToString()))]),
-            ["spacing"] = model.Markers.Paths.SpacingValue,
-            ["replace"] = model.Markers.Paths.Replace,
-            ["status"] = model.Markers.Paths.Status,
-            ["result"] = model.Markers.Paths.Result,
-        },
         ["optionalGroups"] = new JsonArray([.. model.Markers.OptionalGroups.Select(item => (JsonNode)JsonValue.Create(item.Line))]),
         ["tool"] = model.ActiveTool?.Tool switch
         {

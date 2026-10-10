@@ -262,6 +262,14 @@ reads again when it changes; and nothing that generates runs by itself.
       largest regions (a click or the Regions tool chooses one), the starts that lie in no region,
       and the routes with how much longer they are than the straight line. Walkability can
       regenerate on its own a second after a change to what it is made from (T-7).
+- [x] **T-9 Draft and final heightmap.** Block out the rough shape in a draft, send it to World
+      Machine or Gaea, and build the final on their output with layers of one's own, some of them
+      shared with the draft so the procedural tool can never erode them away; the game gets the
+      final. Today: two stacks of layers (a layer is in the draft, the final or both, with its own
+      place and on/off in each), a switch (Ctrl+Shift+D) that shows either in both views while
+      brushes write it, the list filtered by use and source, previews of both, the draft and ticked
+      masks written as 16-bit PNG and RAW into `procedural/temp/` (again whenever they change, when
+      chosen), and an output chosen as the final's base, read again whenever the tool writes it.
 
 ## S: Strata (terrain textures)
 
@@ -284,17 +292,19 @@ reads again when it changes; and nothing that generates runs by itself.
 
 - [x] **K-1 Mask layers.** Named masks for one's own purposes (where rivers go, where forests grow,
       what to erode), painted like strata, saved as PNG for World Machine, Gaea and the editor's
-      own rules. Today: `masks/<name>.png` in the project (the map's size or half, read again when
-      another tool changes them, never exported); the Paint panel's "Masks for tools" adds, renames,
-      deletes and chooses them; the Masks tool paints the chosen one; the overlay Mask shows it.
-      The Masks mode on the rail (Shift+F3) is the shell they move into, with stacks of layers.
+      own rules. Today: the Masks mode (Shift+F3) lists them with a preview each and adds, renames,
+      duplicates and deletes them; the inspector shows the chosen mask as a stack of layers
+      (painted, image, another mask, a stratum, rules; `layers.*`); the mask brush paints its chosen
+      painted layer; the overlay Mask shows it. `masks/<name>.png` is the composite (never exported),
+      `stacks/mask-<name>.json` the stack. Stratum masks (the Paint inspector) and the water's three
+      maps (the Water inspector) are stacks the same way, exported as what they make.
 - [x] **K-2 Masks from rules.** Generate a mask from slope, height, distance to water or other masks,
-      when asked. Today: Rules... beside a mask in the Paint panel opens its rules in the inspector:
+      when asked. Today: a rules layer of a mask's or stratum's stack shows its rules under the stack:
       slope, height and distance to water (ranges with soft edges), other masks or strata, noise,
       combined in order (multiply, min, max, add, subtract) and changed by blur, grow, shrink,
       threshold and invert; a preview in the top view; `generate.masks` makes them (one step of
-      undo), out of date when the terrain, water level, strata, rules or masks they read change.
-      Kept as `masks/<name>.rules.json`.
+      undo), out of date when the terrain, water level, rules or masks they read change. Kept in
+      the stack's JSON; an older project's `masks/<name>.rules.json` becomes a rules layer.
 
 ## W: Water
 
@@ -330,9 +340,13 @@ reads again when it changes; and nothing that generates runs by itself.
       (`markers.setWeather`); with symmetry (F-12) a marker's images are placed with it.
 - [x] **R-2 Marker properties.** The selected markers in the inspector.
 - [x] **R-3 Path networks.** Connect path nodes per layer (land, water, amphibious, air), by hand
-      or generated from walkability (T-7). By hand with the path tool; generated with the Markers
-      panel's Path networks (`markers.connectPaths`: spacing, replace or add where none are), out
-      of date when walkability's inputs change (F-7).
+      or generated from the navigation mesh (T-8). By hand with the Markers mode's path tool (markers
+      in the project); generated in the Procedural mode (`markers.connectPaths`: the skeleton of each
+      region, nodes at a spacing, smoothed, linked where units walk straight; air a grid of 16 by 16),
+      previewed in the views and written as markers only by the export; out of date when
+      walkability's inputs or the settings change (F-7). Edits by hand on top of the generated
+      network with the Path nodes tool (add, move, remove, link, cut; `generate.addPathNode`, ...),
+      kept with the map and applied again after every generation.
 - [x] **R-4 Chains.** Create a chain and put markers in order.
 - [x] **R-5 Adaptive maps.** Which markers (deposits, civilians) exist for which number of players
       and options. Today: whether the map adapts, the army each deposit waits for, and the groups of

@@ -33,16 +33,26 @@ namespace FAForever.MapEditor.Project
         /// </summary>
         private static void SaveHeightStack(MapDocument document, string folder, MapDocument? previous)
         {
-            SaveStack(document, document.HeightStack, folder, previous?.HeightStack, previous?.Terrain.Heightmap.Scale);
+            SaveStack(document, AllHeightLayers(document), folder, previous is null ? null : AllHeightLayers(previous), previous?.Terrain.Heightmap.Scale, draftAndFinal: document);
             RemoveLegacyHeightLayers(folder);
         }
+
+        /// <summary>
+        /// Every layer of the heightmap's two stacks once, as a stack: the final's in its order, then
+        /// those only the draft has (<see cref="HeightStacks.AllLayers"/>).
+        /// </summary>
+        private static LayerStack AllHeightLayers(MapDocument document) => document.DraftStack.IsEmpty
+            ? document.HeightStack
+            : new LayerStack { Target = LayerTarget.Heightmap, Layers = [.. HeightStacks.AllLayers(document)] };
 
         /// <summary>
         /// Writes a stack: the layers whose grids changed since the previous save, the index, and
         /// removes the files of layers gone; a stack without layers has no index and no folder.
         /// </summary>
         /// <param name="previousScale">The height scale of the previous save; a new scale writes every height layer again.</param>
-        private static void SaveStack(MapDocument document, LayerStack stack, string folder, LayerStack? previous, float? previousScale)
+        /// <param name="draftAndFinal">For the heightmap: the document whose draft and final the layers are
+        /// (which stack holds each, the draft's order).</param>
+        private static void SaveStack(MapDocument document, LayerStack stack, string folder, LayerStack? previous, float? previousScale, MapDocument? draftAndFinal = null)
         {
             string key = stack.Target.Key;
             string directory = Path.Combine(folder, MapProjectLayout.Stacks, key);
@@ -53,7 +63,7 @@ namespace FAForever.MapEditor.Project
             foreach (Layer layer in stack.Layers.Where(HasFile))
             {
                 files.Add(Path.GetFileName(MapProjectLayout.StackLayer(key, layer.Name)));
-                if (heights && layer.Coverage is not null)
+                if ((heights && layer.Coverage is not null) || (!heights && layer.Alpha is not null))
                 {
                     files.Add(Path.GetFileName(MapProjectLayout.StackLayerCoverage(key, layer.Name)));
                 }
@@ -114,23 +124,42 @@ namespace FAForever.MapEditor.Project
                         }
                     }
                 }
-                else if (layer.Coverage is TiledBuffer<byte> coverage
-                    && (before is null || before.Name != layer.Name || !ReferenceEquals(before.Coverage, coverage) || !File.Exists(values)))
+                else
                 {
-                    WriteGray8(values, coverage);
+                    if (layer.Coverage is TiledBuffer<byte> coverage
+                        && (before is null || before.Name != layer.Name || !ReferenceEquals(before.Coverage, coverage) || !File.Exists(values)))
+                    {
+                        WriteGray8(values, coverage);
+                    }
+                    // a painted layer's alpha: where it was painted
+                    string alphaFile = Path.Combine(folder, MapProjectLayout.StackLayerCoverage(key, layer.Name));
+                    if (layer.Alpha is TiledBuffer<byte> alpha
+                        && (before is null || before.Name != layer.Name || !ReferenceEquals(before.Alpha, alpha) || !File.Exists(alphaFile)))
+                    {
+                        WriteGray8(alphaFile, alpha);
+                    }
                 }
             }
-            ProjectJson.Write(index, ToDto(stack, scale));
+            ProjectJson.Write(index, ToDto(stack, scale, draftAndFinal));
         }
 
-        private static LayerStackDto ToDto(LayerStack stack, float scale) => new LayerStackDto
+        private static LayerStackDto ToDto(LayerStack stack, float scale, MapDocument? heights = null) => new LayerStackDto
         {
             Target = stack.Target.Key,
+            Draft = heights is null || heights.DraftStack.IsEmpty || HeightStacks.MakeTheSame(heights.HeightStack, heights.DraftStack)
+                ? null
+                : [.. heights.DraftStack.Layers.Select(layer => new DraftLayerDto { Name = layer.Name, Hidden = layer.Visible ? null : true })],
             Layers = [.. stack.Layers.Select(layer =>
             {
                 MaskRefSource? reference = layer.Source as MaskRefSource;
                 return new LayerDto
                 {
+                    Use = heights is null || heights.DraftStack.IsEmpty ? null : HeightStacks.UseOf(heights, layer.Name) switch
+                    {
+                        LayerUse.Draft => "draft",
+                        LayerUse.Final => "final",
+                        _ => null,
+                    },
                     Name = layer.Name,
                     Source = LayerSources.NameOf(layer.Source),
                     Combine = layer.Combine,
@@ -180,24 +209,81 @@ namespace FAForever.MapEditor.Project
         /// <exception cref="MapProjectException">A layer's file is missing or does not fit.</exception>
         private static MapDocument LoadHeightStack(MapDocument document, string folder)
         {
-            LayerStack stack = ReadHeightStack(document, folder);
-            return stack.IsEmpty ? document : HeightLayers.Recomposite(document with { HeightStack = stack });
+            (LayerStack stack, LayerStack draft) = ReadHeightStacks(document, folder);
+            return stack.IsEmpty ? document : HeightLayers.Recomposite(document with { HeightStack = stack, DraftStack = draft });
         }
 
         /// <summary>
         /// The heightmap's stack as the project's files hold it: <c>stacks/heightmap.json</c>, else
         /// the <c>layers/</c> of a project of format 5 or older, else none.
         /// </summary>
-        private static LayerStack ReadHeightStack(MapDocument document, string folder)
+        private static (LayerStack Final, LayerStack Draft) ReadHeightStacks(MapDocument document, string folder)
         {
-            LayerStack stack = File.Exists(Path.Combine(folder, MapProjectLayout.HeightStackIndex))
-                ? ReadStack(document, LayerTarget.Heightmap, folder)
-                : ReadLegacyHeightLayers(document, folder);
-            if (!stack.IsEmpty && (!stack.Layers[0].IsBase || stack.Layers.Skip(1).Any(layer => layer.IsBase)))
+            LayerStack stack;
+            LayerStack draft;
+            if (File.Exists(Path.Combine(folder, MapProjectLayout.HeightStackIndex)))
             {
-                throw new MapProjectException($"{Path.Combine(folder, MapProjectLayout.HeightStackIndex)}: the lowest height layer is the base, and there is one base");
+                ImmutableArray<Layer> all = ReadStackLayers(document, LayerTarget.Heightmap, folder, out LayerStackDto? dto);
+                (stack, draft) = SplitHeightLayers(document, all, dto!);
             }
-            return stack;
+            else
+            {
+                // an older project: every layer in both
+                stack = ReadLegacyHeightLayers(document, folder);
+                draft = stack;
+            }
+            foreach (LayerStack each in new[] { stack, draft })
+            {
+                if (!each.IsEmpty && (!each.Layers[0].IsBase || each.Layers.Skip(1).Any(layer => layer.IsBase)))
+                {
+                    throw new MapProjectException($"{Path.Combine(folder, MapProjectLayout.HeightStackIndex)}: the lowest height layer of the draft and of the final is its base, and each has one base");
+                }
+            }
+            if (stack.IsEmpty != draft.IsEmpty)
+            {
+                throw new MapProjectException($"{Path.Combine(folder, MapProjectLayout.HeightStackIndex)}: the draft and the final both have layers, or neither");
+            }
+            return (stack, draft);
+        }
+
+        /// <summary>
+        /// The final's and the draft's stacks from the layers of <c>stacks/heightmap.json</c>: the
+        /// final holds those not marked <c>draft</c> in their order, the draft those its list names
+        /// (each shown as the list says), or, without a list, the final's.
+        /// </summary>
+        private static (LayerStack Final, LayerStack Draft) SplitHeightLayers(MapDocument document, ImmutableArray<Layer> all, LayerStackDto dto)
+        {
+            Dictionary<string, string?> uses = dto.Layers.GroupBy(entry => entry.Name, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.First().Use?.ToLowerInvariant(), StringComparer.Ordinal);
+            string? UseOf(Layer layer) => uses.TryGetValue(layer.Name, out string? use) ? use : null;
+            LayerStack final = new LayerStack { Target = LayerTarget.Heightmap, Layers = [.. all.Where(layer => UseOf(layer) != "draft")] };
+            if (dto.Draft is null)
+            {
+                LayerStack sameAsFinal = all.Any(layer => UseOf(layer) == "draft")
+                    ? new LayerStack { Target = LayerTarget.Heightmap, Layers = [.. final.Layers, .. all.Where(layer => UseOf(layer) == "draft")] }
+                    : final;
+                return (final, sameAsFinal);
+            }
+            ImmutableArray<Layer>.Builder draft = ImmutableArray.CreateBuilder<Layer>();
+            foreach (DraftLayerDto entry in dto.Draft)
+            {
+                if (all.FirstOrDefault(layer => layer.Name == entry.Name) is not Layer layer || UseOf(layer) == "final" || draft.Any(each => each.Name == entry.Name))
+                {
+                    continue;
+                }
+                bool visible = entry.Hidden != true;
+                if (layer.Visible != visible)
+                {
+                    Layer shown = layer with { Visible = visible };
+                    layer = document.DraftStack.Find(layer.Name) is Layer held && held.Name == layer.Name && SameLayer(held, shown) ? held : shown;
+                }
+                draft.Add(layer);
+            }
+            // a layer of the draft its list leaves out goes on top
+            foreach (Layer layer in all.Where(layer => UseOf(layer) == "draft" && !draft.Any(each => each.Name == layer.Name)))
+            {
+                draft.Add(layer);
+            }
+            return (final, new LayerStack { Target = LayerTarget.Heightmap, Layers = draft.ToImmutable() });
         }
 
         /// <summary>
@@ -206,15 +292,24 @@ namespace FAForever.MapEditor.Project
         /// read that changes nothing gives the same layer.
         /// </summary>
         /// <exception cref="MapProjectException">A layer's file is missing or does not fit, or its source is unknown.</exception>
-        private static LayerStack ReadStack(MapDocument document, LayerTarget target, string folder)
+        private static LayerStack ReadStack(MapDocument document, LayerTarget target, string folder) =>
+            new LayerStack { Target = target, Layers = ReadStackLayers(document, target, folder, out _) };
+
+        /// <summary>
+        /// The layers of a target's stack as the project's files hold them, with the index read
+        /// (null without one).
+        /// </summary>
+        private static ImmutableArray<Layer> ReadStackLayers(MapDocument document, LayerTarget target, string folder, out LayerStackDto? read)
         {
             string index = Path.Combine(folder, MapProjectLayout.StackIndex(target.Key));
-            LayerStack held = target.IsHeights ? document.HeightStack : LayerStack.Empty(target);
+            LayerStack held = target.IsHeights ? AllHeightLayers(document) : document.CoverageStacks.GetValueOrDefault(target.Key) ?? LayerStack.Empty(target);
+            read = null;
             if (!File.Exists(index))
             {
-                return LayerStack.Empty(target);
+                return [];
             }
             LayerStackDto dto = ProjectJson.Read<LayerStackDto>(index);
+            read = dto;
             StackGrid grid = LayerStacks.GridOf(document, held);
             float scale = document.Terrain.Heightmap.Scale;
             ImmutableArray<Layer>.Builder layers = ImmutableArray.CreateBuilder<Layer>();
@@ -248,7 +343,7 @@ namespace FAForever.MapEditor.Project
                     MapProjectLayout.StackLayer(target.Key, entry.Name), MapProjectLayout.StackLayerCoverage(target.Key, entry.Name));
                 layers.Add(before is not null && SameLayer(before, layer) ? before : layer);
             }
-            return new LayerStack { Target = target, Layers = layers.ToImmutable() };
+            return layers.ToImmutable();
         }
 
         /// <summary>
@@ -289,7 +384,12 @@ namespace FAForever.MapEditor.Project
                 }
                 return layer with { Values = values, Coverage = coverage };
             }
-            return layer with { Coverage = SameOrRead(ReadGray8(Path.Combine(folder, valuesFile), grid.Width, grid.Height), held?.Coverage) };
+            string alphaFile = Path.Combine(folder, coverageFile);
+            return layer with
+            {
+                Coverage = SameOrRead(ReadGray8(Path.Combine(folder, valuesFile), grid.Width, grid.Height), held?.Coverage),
+                Alpha = File.Exists(alphaFile) ? SameOrRead(ReadGray8(alphaFile, grid.Width, grid.Height), held?.Alpha) : null,
+            };
         }
 
         private static TiledBuffer<byte> SameOrRead(TiledBuffer<byte> read, TiledBuffer<byte>? held) =>
@@ -369,9 +469,15 @@ namespace FAForever.MapEditor.Project
         }
 
         private static bool SameLayer(Layer a, Layer b) =>
-            a.Name == b.Name && a.Source.Equals(b.Source) && a.Combine == b.Combine && a.Strength == b.Strength && a.Clip == b.Clip
+            a.Name == b.Name && SameSource(a.Source, b.Source) && a.Combine == b.Combine && a.Strength == b.Strength && a.Clip == b.Clip
             && a.Visible == b.Visible && a.Locked == b.Locked && a.IsBase == b.IsBase
-            && ReferenceEquals(a.Values, b.Values) && ReferenceEquals(a.Coverage, b.Coverage);
+            && ReferenceEquals(a.Values, b.Values) && ReferenceEquals(a.Coverage, b.Coverage) && ReferenceEquals(a.Alpha, b.Alpha);
+
+        /// <summary>
+        /// Whether two sources are the same: rules by their rules, the others as records.
+        /// </summary>
+        private static bool SameSource(LayerSource a, LayerSource b) =>
+            a is RulesSource ra && b is RulesSource rb ? ra.Rules.Rules.AsSpan().SequenceEqual(rb.Rules.Rules.AsSpan()) : a.Equals(b);
 
         /// <summary>
         /// The document with the heightmap's stack read again after a file of it changed; the
@@ -379,13 +485,13 @@ namespace FAForever.MapEditor.Project
         /// </summary>
         private static MapDocument ReloadHeightStack(MapDocument document, string folder)
         {
-            LayerStack stack = ReadHeightStack(document, folder);
+            (LayerStack stack, LayerStack draft) = ReadHeightStacks(document, folder);
             if (stack.IsEmpty)
             {
                 // the index was removed: the layers end, the heightmap stays
-                return document.HeightStack.IsEmpty ? document : document with { HeightStack = LayerStack.Empty(LayerTarget.Heightmap) };
+                return document.HeightStack.IsEmpty ? document : HeightLayerEdits.Bake(document);
             }
-            return stack.Equals(document.HeightStack) ? document : document with { HeightStack = stack };
+            return stack.Equals(document.HeightStack) && draft.Equals(document.DraftStack) ? document : document with { HeightStack = stack, DraftStack = draft };
         }
 
         /// <summary>
@@ -404,9 +510,16 @@ namespace FAForever.MapEditor.Project
         private static Layer? ImportedLayerOf(MapDocument document, string folder, string changed)
         {
             string full = Path.GetFullPath(Path.Combine(folder, changed));
-            return document.HeightStack.Layers.FirstOrDefault(layer => layer.Path is string source
+            return HeightStacks.AllLayers(document).FirstOrDefault(layer => layer.Path is string source
                 && string.Equals(Path.GetFullPath(Path.Combine(folder, source)), full, StringComparison.OrdinalIgnoreCase));
         }
+
+        /// <summary>
+        /// Whether a file of the project (relative to its folder) is the file an image layer of the
+        /// heightmap is read from: another tool's, never one the editor's save writes.
+        /// </summary>
+        public static bool IsImageLayerFile(MapDocument document, string folder, string file) =>
+            ImportedLayerOf(document, folder, file.Replace('\\', '/')) is not null;
 
         /// <summary>
         /// The document with an image layer read again from its file; a file that is gone leaves the

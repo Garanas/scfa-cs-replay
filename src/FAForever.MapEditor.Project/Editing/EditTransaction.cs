@@ -18,6 +18,7 @@ namespace FAForever.MapEditor.Project.Editing
         private MapDocument _document;
         private MapDocument _followed;
         private TiledBuffer<ushort>.Builder? _heightmap;
+        private bool _heightmapIsDraft;
         private readonly Dictionary<PaintTarget, TiledBuffer<byte>.Builder> _grids = [];
         private bool _ended;
 
@@ -49,17 +50,24 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
-        /// The heights, to change sample by sample. While the map has height layers (user story T-5),
-        /// what is written goes into the session's sculpting layer (<see cref="EditSession.SculptLayer"/>)
-        /// at the next read of <see cref="Document"/>, and the builder then starts again from the
-        /// heights the layers add up to.
+        /// The heights, to change sample by sample: the final's, or the draft's while the session's
+        /// brushes write the draft (<see cref="EditSession.Heights"/>) and the map has height layers.
+        /// While the map has height layers (user story T-5), what is written goes into the session's
+        /// sculpting layer (<see cref="EditSession.SculptLayer"/>) of that stack at the next read of
+        /// <see cref="Document"/>, and the builder then starts again from the heights the layers add
+        /// up to.
         /// </summary>
         public TiledBuffer<ushort>.Builder Heightmap
         {
             get
             {
                 EnsureOpen();
-                return _heightmap ??= _document.Terrain.Heightmap.Samples.ToBuilder();
+                if (_heightmap is null)
+                {
+                    _heightmapIsDraft = _session.Heights == HeightStackKind.Draft && !_document.HeightStack.IsEmpty;
+                    _heightmap = (_heightmapIsDraft ? _document.DraftHeightmap.Samples : _document.Terrain.Heightmap.Samples).ToBuilder();
+                }
+                return _heightmap;
             }
         }
 
@@ -134,7 +142,11 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         private void Flush()
         {
-            if (_heightmap?.ToBuffer() is TiledBuffer<ushort> heights && !ReferenceEquals(heights, _document.Terrain.Heightmap.Samples))
+            if (_heightmapIsDraft && _heightmap?.ToBuffer() is TiledBuffer<ushort> draft && !ReferenceEquals(draft, _document.DraftHeightmap.Samples))
+            {
+                _document = _document with { DraftSamples = draft };
+            }
+            else if (!_heightmapIsDraft && _heightmap?.ToBuffer() is TiledBuffer<ushort> heights && !ReferenceEquals(heights, _document.Terrain.Heightmap.Samples))
             {
                 Terrain terrain = _document.Terrain;
                 _document = _document with { Terrain = terrain with { Heightmap = terrain.Heightmap with { Samples = heights } } };
@@ -154,11 +166,23 @@ namespace FAForever.MapEditor.Project.Editing
                 _document = DecalMaskLayers.Follow(_followed, _document, _session.DecalPictures);
             }
 
+            // the grids of coverage stay what their stacks make, a brush's work in the chosen painted layer
+            if (!ReferenceEquals(_followed, _document) && !_document.CoverageStacks.IsEmpty)
+            {
+                MapDocument followed = CoverageLayers.Follow(_followed, _document, _session.PaintLayerOf);
+                if (!ReferenceEquals(followed, _document))
+                {
+                    _grids.Clear();
+                }
+                _document = followed;
+            }
+
             // the heightmap stays what the height layers add up to, a brush's work in the sculpting layer
             if (!ReferenceEquals(_followed, _document) && !_document.HeightStack.IsEmpty)
             {
                 MapDocument followed = HeightLayers.Follow(_followed, _document, _session.SculptLayer);
-                if (!ReferenceEquals(followed.Terrain.Heightmap.Samples, _document.Terrain.Heightmap.Samples))
+                if (!ReferenceEquals(followed.Terrain.Heightmap.Samples, _document.Terrain.Heightmap.Samples)
+                    || !ReferenceEquals(followed.DraftHeightmap.Samples, _document.DraftHeightmap.Samples))
                 {
                     _heightmap = null;
                 }

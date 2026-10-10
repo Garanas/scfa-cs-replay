@@ -281,6 +281,38 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(there, model.ShownDocument!.Terrain.Heightmap.HeightAt(130, 100), 0.2f, "the set has no moss mask");
         }
 
+        [TestMethod]
+        public async Task AStratumOfDecalMasksFollowsTheDecal()
+        {
+            MainViewModel model = await Open();
+            using MagickImage mask = new MagickImage(MagickColors.White, 8, 8);
+            byte[] png = mask.ToByteArray(MagickFormat.Png);
+            model.EditMap("Add a decal set", document => document with
+            {
+                Files = document.Files.SetItem("env/decals/rock01_albedo.png", [.. png]).SetItem("env/decals/rock01_mask_moss.png", [.. png]),
+            });
+            CommandRun placed = await Run(model, "decals.place", new JsonObject { ["key"] = $"/maps/{model.ShownDocument!.Folder}/env/decals/rock01", ["x"] = 100, ["z"] = 100, ["width"] = 32, ["length"] = 32 });
+            ObjectRef rock = ObjectRef.Parse((string)placed.Result!);
+            float At(float x, float z)
+            {
+                MapDocument d = model.ShownDocument!;
+                return LayerStacks.SampleAt(LayerStacks.MaskOf(d, "stratum:2")!, d.Width, d.Height, x, z);
+            }
+            float before = At(160, 100);
+
+            await Run(model, "layers.add", new JsonObject { ["target"] = "stratum:2", ["source"] = "decals", ["mask"] = "moss" });
+
+            Assert.AreEqual(1, At(100, 100), 0.02f, "the stratum shows where the set's moss mask is");
+            model.Selection.Set([rock]);
+            await Run(model, "edit.nudge", new JsonObject { ["dx"] = 60, ["dz"] = 0 });
+            Assert.AreEqual(1, At(160, 100), 0.02f, "and follows the decal");
+            Assert.AreNotEqual(1, At(100, 100), 0.02f);
+            Assert.IsTrue(before < 1);
+
+            await Run(model, "layers.setDecalMasks", new JsonObject { ["target"] = "stratum:2", ["layer"] = "Decal masks", ["mask"] = "main" });
+            Assert.AreEqual(before, At(160, 100), 0.02f, "the set has no main mask");
+        }
+
         #endregion
     }
 }

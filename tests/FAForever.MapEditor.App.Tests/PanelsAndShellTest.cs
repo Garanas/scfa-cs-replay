@@ -150,7 +150,7 @@ namespace FAForever.MapEditor.App.Tests
             ModeDefinition procedural = EditorModes.All.Single(mode => mode.Id == "procedural");
 
             Assert.AreEqual("Shift+F3", masks.Gesture, "beside the Paint mode (F3) the masks came from");
-            Assert.IsInstanceOfType<PlannedSection>(masks.Sections.Single());
+            Assert.IsInstanceOfType<MasksSection>(masks.Sections[0], "the masks, filled in by wave 9B");
             Assert.AreEqual(EditorModes.BottomGroup, procedural.Group);
             CollectionAssert.AreEqual(new[] { "procedural" }, model.BottomRailModes.Select(mode => mode.Definition.Id).ToArray());
             Assert.AreEqual("paint", model.RailModes[model.RailModes.ToList().FindIndex(mode => mode.Definition.Id == "masks") - 1].Definition.Id);
@@ -158,7 +158,7 @@ namespace FAForever.MapEditor.App.Tests
             StringAssert.Contains(model.Modes.Single(mode => mode.Definition.Id == "masks").Tip, "Shift+F3");
 
             model.SelectMode("masks");
-            Assert.IsTrue(model.IsToolIncomplete, "an empty shell: its brush is still the Paint mode's");
+            Assert.AreEqual("masks.paint", model.ActiveTool!.Definition.Id, "the mask brush moved here from the Paint mode");
             model.SelectMode("procedural");
             Assert.AreEqual("procedural.regions", model.ActiveTool!.Definition.Id);
         }

@@ -51,7 +51,17 @@
         <DataTemplate DataType="vm:WaterMapPart">
           <Border Classes="group">
             <StackPanel Classes="stack">
-              <TextBlock Classes="caption" Text="The Paint water tool paints this map; the top view shows it while the tool is active. Its shape is in the tool's options." />
+              <TextBlock Classes="caption" Text="The Paint water tool paints this map's chosen painted layer; the top view shows the map while the tool is active. Its shape is in the tool's options." />
+              <!-- the map as a stack of layers (W-2): exported as what its layers make -->
+              <StackPanel Classes="stack" IsVisible="{Binding HasStack}">
+                <controls:LayerStackView DataContext="{Binding Stack}" ShowsSettings="True"
+                                         ListHelp="The highest first; the chosen painted layer is the one the water brush paints, its settings are under the list"
+                                         EmptyText="The map has no layers."
+                                         RemoveHelp="The map becomes what the other layers make" />
+                <Panel IsVisible="{Binding Stack.IsReference, FallbackValue=False}">
+                  <controls:SettingList DataContext="{Binding Stack.Reference}" />
+                </Panel>
+              </StackPanel>
               <StackPanel Classes="stack" IsVisible="{Binding HasBrush}">
                 <CheckBox Content="Erase" IsChecked="{Binding Brush.Erase}" AutomationProperties.Name="Erase the water map"
                           AutomationProperties.HelpText="Take the map away where the brush goes, rather than add to it" />

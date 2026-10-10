@@ -62,20 +62,21 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// Opens the rule editor of a mask (the Paint mode's inspector), chooses the mask and shows it
-    /// over the terrain, with the preview of its rules.
+    /// Opens the rule editor of a mask (the Masks mode's inspector, under its stack), chooses the
+    /// mask and its lowest rules layer, and shows it over the terrain with the preview of its rules.
     /// </summary>
     /// <exception cref="ArgumentException">The map has no such mask.</exception>
     public void EditMaskRules(string name)
     {
         Masks.Choose(name);
-        SelectMode("paint");
-        if (ActiveTool?.Tool is FAForever.MapEditor.App.Tools.StrataTool)
-        {
-            // the strata tool shows the layer it paints; the masks tool lets the preview show
-            SelectTool("paint.masks");
-        }
+        SelectMode("masks");
         Selection.Clear();
+        MaskStack.Refresh(ShownDocument);
+        if (ShownDocument is Project.Files.InMemory.MapDocument document
+            && Project.Editing.RuleEdits.RulesLayerOf(Project.Editing.CoverageLayers.StackOf(document, Project.Files.InMemory.LayerTarget.Mask(Masks.Chosen!))) is { } rules)
+        {
+            MaskStack.Choose(rules.Name);
+        }
         MaskRules.Editing = Masks.Chosen;
         ShowMask = true;
     }

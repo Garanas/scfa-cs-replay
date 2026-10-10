@@ -162,6 +162,7 @@ namespace FAForever.MapEditor.Project.Editing
 
             Terrain terrain = document.Terrain;
             Water water = document.Water;
+            Dictionary<string, Layer> resizedLayers = new Dictionary<string, Layer>(StringComparer.Ordinal);
             MapDocument resized = document with
             {
                 Terrain = terrain with
@@ -182,16 +183,47 @@ namespace FAForever.MapEditor.Project.Editing
                 WalkabilityMarks = document.WalkabilityMarks is TiledBuffer<byte> marks ? Resized(marks, (byte)0) : null,
                 // the height layers (T-5) at the heightmap's corners: an absolute layer continues its
                 // edge, an adding one adds nothing where the map gains; a curve's points move along
-                HeightStack = document.HeightStack with
+                HeightStack = document.HeightStack with { Layers = [.. document.HeightStack.Layers.Select(ResizedLayer)] },
+                // the draft's layers: a shared one is the same resized layer, shown as the draft shows it
+                DraftStack = document.DraftStack with
                 {
-                    Layers = [.. document.HeightStack.Layers.Select(layer => layer with
-                    {
-                        Values = layer.Values is TiledBuffer<float> values ? Shift(values, newWidth + 1, newDepth + 1, dx, dz, HeightLayerEdits.IsDifference(layer.Combine) ? 0f : null) : null,
-                        Coverage = layer.Coverage is TiledBuffer<byte> coverage ? Shift(coverage, newWidth + 1, newDepth + 1, dx, dz, (byte)0) : null,
-                        Source = layer.Source is CurveSource { Curve: HeightCurve curve } ? new CurveSource(curve with { Points = [.. curve.Points.Select(point => point with { X = point.X + dx, Z = point.Z + dz })] }) : layer.Source,
-                    })],
+                    Layers = [.. document.DraftStack.Layers.Select(layer => ResizedLayer(layer) is var shifted && shifted.Visible != layer.Visible ? shifted with { Visible = layer.Visible } : shifted)],
                 },
+                DraftSamples = null,
             };
+            // the stacks of coverage (strata, masks, water) as their grids: a mask's layers gain nothing,
+            // the others continue their edge; a painted layer's alpha gains nothing
+            resized = resized with
+            {
+                CoverageStacks = document.CoverageStacks.ToImmutableSortedDictionary(entry => entry.Key, entry => entry.Value with
+                {
+                    Layers = [.. entry.Value.Layers.Select(layer => layer with
+                    {
+                        Coverage = layer.Coverage is TiledBuffer<byte> coverage
+                            ? (entry.Key.StartsWith("mask-", StringComparison.Ordinal) ? Resized(coverage, (byte)0) : Resized(coverage))
+                            : null,
+                        Alpha = layer.Alpha is TiledBuffer<byte> alpha ? Resized(alpha, (byte)0) : null,
+                    })],
+                }, StringComparer.Ordinal),
+            };
+            resized = CoverageLayers.Recomposite(resized);
+
+            Layer ResizedLayer(Layer layer)
+            {
+                if (resizedLayers.TryGetValue(layer.Name, out Layer? done))
+                {
+                    return done;
+                }
+                Layer shiftedLayer = layer with
+                {
+                    Values = layer.Values is TiledBuffer<float> values ? Shift(values, newWidth + 1, newDepth + 1, dx, dz, HeightLayerEdits.IsDifference(layer.Combine) ? 0f : null) : null,
+                    Coverage = layer.Coverage is TiledBuffer<byte> coverage ? Shift(coverage, newWidth + 1, newDepth + 1, dx, dz, (byte)0) : null,
+                    Source = layer.Source is CurveSource { Curve: HeightCurve curve } ? new CurveSource(curve with { Points = [.. curve.Points.Select(point => point with { X = point.X + dx, Z = point.Z + dz })] }) : layer.Source,
+                };
+                resizedLayers[layer.Name] = shiftedLayer;
+                return shiftedLayer;
+            }
+
             // with layers, the heightmap is their sum again
             resized = HeightLayers.Recomposite(resized);
 

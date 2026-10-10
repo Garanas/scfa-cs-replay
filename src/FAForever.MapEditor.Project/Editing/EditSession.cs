@@ -134,6 +134,27 @@ namespace FAForever.MapEditor.Project.Editing
         public IDecalMaskPictures? DecalPictures { get; set; }
 
         /// <summary>
+        /// The heightmap brushes write (the one the editor shows): the final, or the draft. While the
+        /// map has a draft of its own, <see cref="EditTransaction.Heightmap"/> hands out the draft's
+        /// samples for the draft, and what a brush writes goes into <see cref="SculptLayer"/> of the
+        /// draft's stack.
+        /// </summary>
+        public HeightStackKind Heights { get; set; }
+
+        /// <summary>
+        /// Per stack of coverage (by target key, <c>stratum-2</c>, <c>mask-forest</c>, <c>water-foam</c>)
+        /// the painted layer that changes of its grid go into: the one the strata, mask or water brush
+        /// paints. Without one (or one that cannot be painted) the highest that can is painted
+        /// (<see cref="CoverageLayers.Follow"/>).
+        /// </summary>
+        public Dictionary<string, string> PaintLayers { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// The painted layer chosen for a stack of coverage, or null.
+        /// </summary>
+        internal string? PaintLayerOf(string key) => PaintLayers.GetValueOrDefault(key);
+
+        /// <summary>
         /// Makes one edit, which can be undone as one step.
         /// </summary>
         /// <param name="mergeKey">Merges the edit into the previous step when that was an edit
@@ -311,6 +332,8 @@ namespace FAForever.MapEditor.Project.Editing
         {
             MapDocument previous = Document;
             result = DecalMaskLayers.Follow(previous, result, DecalPictures);
+            // the grids of coverage first: height layers may be clipped by their composites
+            result = CoverageLayers.Follow(previous, result, PaintLayerOf);
             result = HeightLayers.Follow(previous, result, SculptLayer);
             if (result.Equals(previous))
             {

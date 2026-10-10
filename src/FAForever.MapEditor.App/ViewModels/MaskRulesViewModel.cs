@@ -74,7 +74,7 @@ public sealed partial class MaskRulesViewModel : ObservableObject
     private readonly ILogger _log;
     private readonly SynchronizationContext? _ui;
     private string _builtKey = "";
-    private MaskRuleSet? _previewOf;
+    private ImmutableArray<MaskRule> _previewOf;
     private TiledBuffer<byte>? _previewOfMask;
     private int _previewVersion;
     private MapDocument? _document;
@@ -112,15 +112,47 @@ public sealed partial class MaskRulesViewModel : ObservableObject
     public static IReadOnlyList<string> Combines { get; } = [.. Enum.GetNames<MaskCombine>()];
 
     /// <summary>
-    /// The mask whose rules are shown; null when none is.
+    /// The mask whose rules are shown (a stratum's as <c>stratum:N</c>); null when none is.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEditing), nameof(Heading))]
     public partial string? Editing { get; set; }
 
+    /// <summary>
+    /// The rules layer of <see cref="Editing"/>'s stack whose rules are shown; null for its lowest.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Heading))]
+    public partial string? Layer { get; private set; }
+
     public bool IsEditing => Editing is not null;
 
-    public string Heading => Editing is null ? "No mask chosen" : $"Rules of the mask {Editing}";
+    public string Heading => Editing is null ? "No mask chosen"
+        : Layer is null ? $"Rules of the mask {Editing}"
+        : MaskRuleSources.IsStratum(Editing, out int stratum) ? $"Rules of the layer {Layer} of stratum {stratum}"
+        : $"Rules of the layer {Layer} of the mask {Editing}";
+
+    /// <summary>
+    /// Shows the rules of a rules layer of a mask's or stratum's stack (the layer chosen in its
+    /// stack control).
+    /// </summary>
+    /// <param name="owner">A mask's name, or <c>stratum:N</c>.</param>
+    public void EditLayer(string owner, string layer)
+    {
+        if (Editing == owner && Layer == layer)
+        {
+            return;
+        }
+        Layer = layer;
+        if (Editing == owner)
+        {
+            OnEditingChanged(owner);
+        }
+        else
+        {
+            Editing = owner;
+        }
+    }
 
     /// <summary>
     /// The rules of the mask, a line each.
@@ -167,6 +199,10 @@ public sealed partial class MaskRulesViewModel : ObservableObject
 
     partial void OnEditingChanged(string? value)
     {
+        if (value is null)
+        {
+            Layer = null;
+        }
         _builtKey = "";
         Refresh(_document);
         UpdatePreview(force: true);
@@ -175,6 +211,10 @@ public sealed partial class MaskRulesViewModel : ObservableObject
     internal Task Run(string id, JsonObject arguments)
     {
         arguments["mask"] = Editing;
+        if (Layer is not null)
+        {
+            arguments["layer"] = Layer;
+        }
         return _run(id, arguments);
     }
 
@@ -197,14 +237,15 @@ public sealed partial class MaskRulesViewModel : ObservableObject
     public void Refresh(MapDocument? document)
     {
         _document = document;
-        if (Editing is string name && document?.Masks.ContainsKey(name) != true)
+        if (Editing is string name && (document is null || !CoverageLayers.Exists(document, RuleEdits.OwnerOf(name))
+            || (Layer is string layer && CoverageLayers.StackOf(document, RuleEdits.OwnerOf(name)).Find(layer) is null)))
         {
             Editing = null;
             return;
         }
-        ImmutableArray<MaskRule> rules = Editing is string mask && document is not null ? document.MaskRulesOf(mask) : [];
+        ImmutableArray<MaskRule> rules = Editing is string mask && document is not null ? document.MaskRulesOf(mask, Layer) : [];
         IReadOnlyList<string> layers = RuleLayers.Choices(_strata(), document, Editing);
-        string key = $"{Editing}|{string.Join(",", rules.Select(rule => rule.Kind))}|{string.Join(",", layers)}";
+        string key = $"{Editing}|{Layer}|{string.Join(",", rules.Select(rule => rule.Kind))}|{string.Join(",", layers)}";
         if (key != _builtKey)
         {
             _builtKey = key;
@@ -233,10 +274,11 @@ public sealed partial class MaskRulesViewModel : ObservableObject
     {
         const string set = "paint.setMaskRule";
         string mask = Editing!;
-        JsonObject Fixed() => new JsonObject { ["mask"] = mask, ["index"] = index };
+        string? rulesLayer = Layer;
+        JsonObject Fixed() => rulesLayer is null ? new JsonObject { ["mask"] = mask, ["index"] = index } : new JsonObject { ["mask"] = mask, ["layer"] = rulesLayer, ["index"] = index };
         MaskRule Read(MapDocument document)
         {
-            ImmutableArray<MaskRule> rules = document.MaskRulesOf(mask);
+            ImmutableArray<MaskRule> rules = document.MaskRulesOf(mask, rulesLayer);
             return index < rules.Length ? rules[index] : rule;
         }
         List<Setting> settings = [];
@@ -295,14 +337,16 @@ public sealed partial class MaskRulesViewModel : ObservableObject
     private void UpdatePreview(bool force)
     {
         MapDocument? document = _document;
-        if (!ShowPreview || Editing is not string mask || document is null || !document.MaskRules.TryGetValue(mask, out MaskRuleSet? rules)
-            || !document.Masks.TryGetValue(mask, out TiledBuffer<byte>? held))
+        LayerTarget? owner = Editing is string named ? RuleEdits.OwnerOf(named) : null;
+        ImmutableArray<MaskRule> rules = Editing is string editing && document is not null ? document.MaskRulesOf(editing, Layer) : [];
+        if (!ShowPreview || Editing is not string mask || document is null || owner is null || rules.IsEmpty || !CoverageLayers.Exists(document, owner))
         {
-            _previewOf = null;
+            _previewOf = default;
             PreviewOverlay = null;
             return;
         }
-        if (!force && ReferenceEquals(rules, _previewOf) && ReferenceEquals(held, _previewOfMask))
+        TiledBuffer<byte> held = owner.Grid!.Read(document);
+        if (!force && _previewOf == rules && ReferenceEquals(held, _previewOfMask))
         {
             return;
         }
@@ -315,16 +359,8 @@ public sealed partial class MaskRulesViewModel : ObservableObject
             {
                 using Performance.Span measure = Performance.Measure("model.mask-rules-preview");
                 // the masks with rules this one reads are made first, as generating does
-                MapDocument working = document;
-                foreach (string name in MaskRules.Order(document))
-                {
-                    if (name == mask)
-                    {
-                        break;
-                    }
-                    working = working with { Masks = working.Masks.SetItem(name, MaskRules.Generate(working, name, document.MaskRules[name])) };
-                }
-                TiledBuffer<byte> preview = MaskRules.Generate(working, mask, rules);
+                MapDocument working = CoverageLayerEdits.GeneratedBefore(document, owner.Key);
+                TiledBuffer<byte> preview = MaskRules.Generate(working, held.Width, held.Height, new MaskRuleSet { Rules = rules }, mask);
                 UiThread.Run(_ui, () =>
                 {
                     if (version == _previewVersion && Editing == mask && ShowPreview)
@@ -357,6 +393,7 @@ public sealed partial class MaskRulesViewModel : ObservableObject
     public JsonObject Describe(MapDocument? document) => new JsonObject
     {
         ["editing"] = Editing,
+        ["layer"] = Layer,
         ["status"] = Status,
         ["preview"] = PreviewOverlay is not null,
         ["rules"] = new JsonArray([.. Rules.Select(item => (JsonNode)new JsonObject

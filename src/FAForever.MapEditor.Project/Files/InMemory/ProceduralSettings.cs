@@ -25,7 +25,25 @@ namespace FAForever.MapEditor.Project.Files.InMemory
 
         public NavigationSettings Navigation { get; init; } = NavigationSettings.Default;
 
-        public bool IsDefault => AutoGenerate.IsEmpty && NotOnExport.IsEmpty && Navigation == NavigationSettings.Default;
+        /// <summary>
+        /// The masks for tools written beside the draft heightmap for World Machine or Gaea
+        /// (<see cref="FAForever.MapEditor.Project.ProceduralFiles"/>), by name.
+        /// </summary>
+        public ImmutableSortedSet<string> DraftMasks { get; init; } = ImmutableSortedSet.Create<string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Whether the draft heightmap and <see cref="DraftMasks"/> are written again whenever they
+        /// change, so the procedural tool always reads the current draft.
+        /// </summary>
+        public bool WriteDraftOnChange { get; init; }
+
+        /// <summary>
+        /// How the path networks are generated, whether the export writes them, and the edits by hand
+        /// on top of them.
+        /// </summary>
+        public PathNodeSettings PathNodes { get; init; } = PathNodeSettings.Default;
+
+        public bool IsDefault => AutoGenerate.IsEmpty && NotOnExport.IsEmpty && Navigation == NavigationSettings.Default && DraftMasks.IsEmpty && !WriteDraftOnChange && PathNodes.IsDefault;
 
         public bool RegeneratesOnItsOwn(string id) => AutoGenerate.Contains(id);
 
@@ -38,9 +56,10 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             this with { NotOnExport = on ? NotOnExport.Remove(id) : NotOnExport.Add(id) };
 
         public bool Equals(ProceduralSettings? other) =>
-            other is not null && AutoGenerate.SetEquals(other.AutoGenerate) && NotOnExport.SetEquals(other.NotOnExport) && Navigation == other.Navigation;
+            other is not null && AutoGenerate.SetEquals(other.AutoGenerate) && NotOnExport.SetEquals(other.NotOnExport) && Navigation == other.Navigation
+            && DraftMasks.SetEquals(other.DraftMasks) && WriteDraftOnChange == other.WriteDraftOnChange && PathNodes == other.PathNodes;
 
-        public override int GetHashCode() => HashCode.Combine(AutoGenerate.Count, NotOnExport.Count, Navigation);
+        public override int GetHashCode() => HashCode.Combine(AutoGenerate.Count, NotOnExport.Count, Navigation, PathNodes);
     }
 
     /// <summary>

@@ -13,71 +13,141 @@ namespace FAForever.MapEditor.Project.Editing
         #region Masks
 
         /// <summary>
-        /// The rules of a mask, empty when it has none.
+        /// The grid whose rules a name means: a mask for tools by its name (or <c>mask:name</c>), a
+        /// stratum as <c>stratum:N</c>.
         /// </summary>
-        public static ImmutableArray<MaskRule> MaskRulesOf(this MapDocument document, string mask) =>
-            document.MaskRules.TryGetValue(mask, out MaskRuleSet? rules) ? rules.Rules : [];
+        public static LayerTarget OwnerOf(string mask) =>
+            MaskRuleSources.IsStratum(mask, out int layer) ? LayerTarget.Stratum(layer)
+            : LayerTarget.Mask(mask.StartsWith(LayerStacks.MaskPrefix, StringComparison.Ordinal) ? mask[LayerStacks.MaskPrefix.Length..] : mask);
 
         /// <summary>
-        /// The document with a mask's rules; none leaves it a mask painted by hand.
+        /// The rules of a mask (or a stratum, <c>stratum:N</c>): of its rules layer <paramref name="layer"/>,
+        /// else of its lowest; empty when it has none.
         /// </summary>
-        /// <exception cref="ArgumentException">The map has no such mask.</exception>
-        public static MapDocument SetMaskRules(this MapDocument document, string mask, ImmutableArray<MaskRule> rules)
+        public static ImmutableArray<MaskRule> MaskRulesOf(this MapDocument document, string mask, string? layer = null)
         {
-            RequireMask(document, mask);
-            return document with
+            LayerTarget target = OwnerOf(mask);
+            if (!CoverageLayers.Exists(document, target))
             {
-                MaskRules = rules.IsDefaultOrEmpty
-                    ? document.MaskRules.Remove(mask)
-                    : document.MaskRules.SetItem(mask, new MaskRuleSet { Rules = rules }),
-            };
+                return [];
+            }
+            LayerStack stack = CoverageLayers.StackOf(document, target);
+            return (layer is null ? RulesLayerOf(stack) : stack.Find(layer)) is { Source: RulesSource rules } ? rules.Rules.Rules : [];
         }
 
         /// <summary>
-        /// The document with a rule added to a mask's, at the end or at <paramref name="index"/>.
+        /// The rules of a rules layer of any stack of coverage; empty for a layer that is no rules layer.
+        /// </summary>
+        public static ImmutableArray<MaskRule> LayerRulesOf(this MapDocument document, LayerTarget target, string layer) =>
+            CoverageLayers.Exists(document, target) && CoverageLayers.StackOf(document, target).Find(layer) is { Source: RulesSource rules } ? rules.Rules.Rules : [];
+
+        /// <summary>
+        /// The lowest rules layer of a stack, or null.
+        /// </summary>
+        public static Layer? RulesLayerOf(LayerStack stack) => stack.Layers.FirstOrDefault(layer => layer.Source is RulesSource);
+
+        /// <summary>
+        /// The document with a mask's rules (or a stratum's, <c>stratum:N</c>): the rules of its rules
+        /// layer <paramref name="layer"/>, else of its lowest, else of a new one (<c>Rules</c>, a mask's
+        /// only: replacing what is below, as a mask made from rules is); none turns that layer into a
+        /// painted one holding what the rules made last, so the mask is painted by hand again.
+        /// </summary>
+        /// <exception cref="ArgumentException">The map has no such mask, stratum or layer, or a stratum has no rules layer.</exception>
+        public static MapDocument SetMaskRules(this MapDocument document, string mask, ImmutableArray<MaskRule> rules, string? layer = null)
+        {
+            LayerTarget target = RequireMask(document, mask);
+            LayerStack stack = CoverageLayers.StackOf(document, target);
+            if (layer is not null)
+            {
+                return SetLayerRules(document, target, layer, rules);
+            }
+            if (RulesLayerOf(stack) is Layer held)
+            {
+                return SetLayerRules(document, target, held.Name, rules);
+            }
+            if (rules.IsDefaultOrEmpty)
+            {
+                return document;
+            }
+            if (target.Key.StartsWith("stratum-", StringComparison.Ordinal))
+            {
+                throw new ArgumentException($"{target.Grid!.Title} has no rules layer: add one to its stack first", nameof(mask));
+            }
+            Layer added = CoverageLayerEdits.NewRules(document, target, LayerStackEdits.FreeName(stack, "Rules"), new MaskRuleSet { Rules = rules }) with
+            {
+                Combine = LayerCombine.Replace,
+                // a mask made from rules shows what it held until they are generated
+                Coverage = target.Grid!.Read(document),
+            };
+            return CoverageLayerEdits.Add(document, target, added);
+        }
+
+        /// <summary>
+        /// The document with a rules layer's rules; none turns it into a painted layer holding what
+        /// the rules made last.
+        /// </summary>
+        /// <exception cref="ArgumentException">The map has no such grid or layer, or it is no rules layer.</exception>
+        public static MapDocument SetLayerRules(this MapDocument document, LayerTarget target, string layer, ImmutableArray<MaskRule> rules)
+        {
+            if (!rules.IsDefaultOrEmpty)
+            {
+                return CoverageLayerEdits.SetRules(document, target, layer, new MaskRuleSet { Rules = rules });
+            }
+            LayerStack stack = CoverageLayers.StackOf(document, target);
+            int index = LayerStackEdits.IndexOf(stack, layer, CoverageLayers.What(target));
+            Layer held = stack.Layers[index];
+            if (held.Source is not RulesSource)
+            {
+                throw new ArgumentException($"The {CoverageLayers.What(target)} {held.Name} is not made by rules", nameof(layer));
+            }
+            return CoverageLayers.WithStack(document, stack.With(index, held with { Source = LayerSource.Painted }));
+        }
+
+        /// <summary>
+        /// The document with a rule added to a mask's (or a rules layer's), at the end or at <paramref name="index"/>.
         /// </summary>
         /// <exception cref="ArgumentException">The map has no such mask, or the place is outside its list.</exception>
-        public static MapDocument AddMaskRule(this MapDocument document, string mask, MaskRule rule, int? index = null)
+        public static MapDocument AddMaskRule(this MapDocument document, string mask, MaskRule rule, int? index = null, string? layer = null)
         {
-            ImmutableArray<MaskRule> rules = MaskRulesOf(document, mask);
+            ImmutableArray<MaskRule> rules = MaskRulesOf(document, mask, layer);
             int at = index ?? rules.Length;
             if (at < 0 || at > rules.Length)
             {
                 throw new ArgumentException($"The mask '{mask}' has {rules.Length} rules: a rule goes at 0 to {rules.Length}", nameof(index));
             }
-            return SetMaskRules(document, mask, rules.Insert(at, rule));
+            return SetMaskRules(document, mask, rules.Insert(at, rule), layer);
         }
 
         /// <summary>
-        /// The document with a rule of a mask changed.
+        /// The document with a rule changed.
         /// </summary>
         /// <exception cref="ArgumentException">The map has no such mask or rule.</exception>
-        public static MapDocument UpdateMaskRule(this MapDocument document, string mask, int index, Func<MaskRule, MaskRule> change)
+        public static MapDocument UpdateMaskRule(this MapDocument document, string mask, int index, Func<MaskRule, MaskRule> change, string? layer = null)
         {
-            ImmutableArray<MaskRule> rules = MaskRulesOf(document, mask);
+            ImmutableArray<MaskRule> rules = MaskRulesOf(document, mask, layer);
             RequireRule(mask, rules, index);
             MaskRule changed = change(rules[index]);
-            return changed == rules[index] ? document : SetMaskRules(document, mask, rules.SetItem(index, changed));
+            return changed == rules[index] ? document : SetMaskRules(document, mask, rules.SetItem(index, changed), layer);
         }
 
         /// <summary>
         /// The document without a rule of a mask; without its last rule the mask stays as it is, painted by hand.
         /// </summary>
         /// <exception cref="ArgumentException">The map has no such mask or rule.</exception>
-        public static MapDocument RemoveMaskRule(this MapDocument document, string mask, int index)
+        public static MapDocument RemoveMaskRule(this MapDocument document, string mask, int index, string? layer = null)
         {
-            ImmutableArray<MaskRule> rules = MaskRulesOf(document, mask);
+            ImmutableArray<MaskRule> rules = MaskRulesOf(document, mask, layer);
             RequireRule(mask, rules, index);
-            return SetMaskRules(document, mask, rules.RemoveAt(index));
+            return SetMaskRules(document, mask, rules.RemoveAt(index), layer);
         }
 
         /// <summary>
         /// The document with a rule of a mask moved to another place in its list.
         /// </summary>
         /// <exception cref="ArgumentException">The map has no such mask or rule, or the place is outside the list.</exception>
-        public static MapDocument MoveMaskRule(this MapDocument document, string mask, int index, int to)
+        public static MapDocument MoveMaskRule(this MapDocument document, string mask, int index, int to, string? layer = null)
         {
-            ImmutableArray<MaskRule> rules = MaskRulesOf(document, mask);
+            ImmutableArray<MaskRule> rules = MaskRulesOf(document, mask, layer);
             RequireRule(mask, rules, index);
             RequireRule(mask, rules, to);
             if (index == to)
@@ -85,43 +155,71 @@ namespace FAForever.MapEditor.Project.Editing
                 return document;
             }
             MaskRule rule = rules[index];
-            return SetMaskRules(document, mask, rules.RemoveAt(index).Insert(to, rule));
+            return SetMaskRules(document, mask, rules.RemoveAt(index).Insert(to, rule), layer);
         }
 
         /// <summary>
-        /// The document after a mask was renamed: its rules under the new name, and every rule that
-        /// read it reading the new name.
+        /// The document after a mask was renamed: its stack under the new name, and every rule, clip,
+        /// mask reference and prop rule that read it reading the new name.
         /// </summary>
         public static MapDocument MaskRenamed(MapDocument document, string name, string newName)
         {
-            ImmutableSortedDictionary<string, MaskRuleSet> maskRules = document.MaskRules;
-            if (maskRules.TryGetValue(name, out MaskRuleSet? own))
+            string oldKey = LayerTarget.Mask(name).Key;
+            ImmutableSortedDictionary<string, LayerStack> stacks = document.CoverageStacks;
+            if (stacks.TryGetValue(oldKey, out LayerStack? own))
             {
-                maskRules = maskRules.Remove(name).Add(newName, own);
+                stacks = stacks.Remove(oldKey).SetItem(LayerTarget.Mask(newName).Key, own with { Target = LayerTarget.Mask(newName) });
             }
-            maskRules = maskRules.ToImmutableSortedDictionary(entry => entry.Key, entry =>
-                entry.Value.Rules.Any(rule => rule.Kind == MaskRuleKind.Layer && rule.Source == name)
-                    ? entry.Value with { Rules = [.. entry.Value.Rules.Select(rule => rule.Kind == MaskRuleKind.Layer && rule.Source == name ? rule with { Source = newName } : rule)] }
-                    : entry.Value, StringComparer.Ordinal);
-            ImmutableArray<PropRule> propRules = [.. document.PropRules.Select(rule => rule.Conditions.Any(condition => condition.Layer == name)
-                ? rule with { Conditions = [.. rule.Conditions.Select(condition => condition.Layer == name ? condition with { Layer = newName } : condition)] }
+            bool Reads(string source) => source == name || source == LayerStacks.MaskKey(name);
+            string Renamed(string source) => source == name ? newName : LayerStacks.MaskKey(newName);
+            stacks = stacks.ToImmutableSortedDictionary(entry => entry.Key, entry =>
+            {
+                LayerStack stack = entry.Value;
+                ImmutableArray<Layer> layers = [.. stack.Layers.Select(layer =>
+                {
+                    Layer changed = layer;
+                    if (changed.Clip is string clip && Reads(clip))
+                    {
+                        changed = changed with { Clip = Renamed(clip) };
+                    }
+                    if (changed.Source is MaskRefSource reference && Reads(reference.Key))
+                    {
+                        changed = changed with { Source = reference with { Key = Renamed(reference.Key) } };
+                    }
+                    if (changed.Source is RulesSource rules && rules.Rules.Rules.Any(rule => rule.Kind == MaskRuleKind.Layer && Reads(rule.Source)))
+                    {
+                        changed = changed with
+                        {
+                            Source = new RulesSource(rules.Rules with { Rules = [.. rules.Rules.Rules.Select(rule => rule.Kind == MaskRuleKind.Layer && Reads(rule.Source) ? rule with { Source = Renamed(rule.Source) } : rule)] }),
+                        };
+                    }
+                    return changed;
+                })];
+                return layers.AsSpan().SequenceEqual(stack.Layers.AsSpan()) ? stack : stack with { Layers = layers };
+            }, StringComparer.Ordinal);
+            ImmutableArray<PropRule> propRules = [.. document.PropRules.Select(rule => rule.Conditions.Any(condition => Reads(condition.Layer))
+                ? rule with { Conditions = [.. rule.Conditions.Select(condition => Reads(condition.Layer) ? condition with { Layer = Renamed(condition.Layer) } : condition)] }
                 : rule)];
-            return document with { MaskRules = maskRules, PropRules = propRules };
+            return document with { CoverageStacks = stacks, PropRules = propRules };
         }
 
         /// <summary>
-        /// The document after a mask was removed: without its rules. Rules that read it stay, and say
-        /// so when generated.
+        /// The document after a mask was removed: without its stack. Rules and layers that read it
+        /// stay, and say so when generated (a clip or mask reference of a missing mask counts as none).
         /// </summary>
         public static MapDocument MaskRemoved(MapDocument document, string name) =>
-            document.MaskRules.ContainsKey(name) ? document with { MaskRules = document.MaskRules.Remove(name) } : document;
+            document.CoverageStacks.ContainsKey(LayerTarget.Mask(name).Key)
+                ? document with { CoverageStacks = document.CoverageStacks.Remove(LayerTarget.Mask(name).Key) }
+                : document;
 
-        private static void RequireMask(MapDocument document, string mask)
+        private static LayerTarget RequireMask(MapDocument document, string mask)
         {
-            if (!document.Masks.ContainsKey(mask))
+            LayerTarget target = OwnerOf(mask);
+            if (!CoverageLayers.Exists(document, target))
             {
                 throw new ArgumentException($"The map has no mask '{mask}'", nameof(mask));
             }
+            return target;
         }
 
         private static void RequireRule(string mask, ImmutableArray<MaskRule> rules, int index)

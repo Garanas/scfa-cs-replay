@@ -26,9 +26,9 @@ public sealed partial class MainViewModel
 
     /// <summary>
     /// What the top and 3D views lay over the terrain, one grid at a time and owned by the active
-    /// mode and tool: the preview of the mask rules being edited (K-2) while the rule editor shows
-    /// in the Paint mode and the strata tool is not painting, else the grid the active painting
-    /// tool paints (a layer's or the water's mask, a mask for tools, the terrain's types), else the
+    /// mode and tool: the preview of the rules being edited (K-2) while a rules layer of the mode's
+    /// stack is chosen (the Masks and Paint modes), else the grid the active painting tool paints (a
+    /// stratum's or the water's mask, the chosen mask for tools, the terrain's types), else the
     /// chosen mask for tools while the overlay <c>mask</c> is on, else nothing.
     /// </summary>
     public GridOverlay? ShownGrid =>
@@ -37,10 +37,15 @@ public sealed partial class MainViewModel
         ?? (ShowMask && Masks.Chosen is string name ? GridOverlay.Mask(PaintTarget.Mask(name)) : null);
 
     /// <summary>
-    /// Whether the preview of the mask rules being edited may show: only in the Paint mode, whose
-    /// inspector holds the rule editor, and not while the strata tool shows the layer it paints.
+    /// Whether the preview of the rules being edited may show: while the mode's stack (the Masks
+    /// mode's mask, the Paint mode's stratum) has a rules layer chosen, whose rules the inspector shows.
     /// </summary>
-    private bool ShowsRulesPreview => SelectedMode?.Definition.Id == "paint" && ActiveTool?.Tool is not FAForever.MapEditor.App.Tools.StrataTool;
+    private bool ShowsRulesPreview => SelectedMode?.Definition.Id switch
+    {
+        "masks" => MaskStack?.IsRules == true,
+        "paint" => StratumStack?.IsRules == true,
+        _ => false,
+    };
 
     partial void OnShowMaskChanged(bool value)
     {

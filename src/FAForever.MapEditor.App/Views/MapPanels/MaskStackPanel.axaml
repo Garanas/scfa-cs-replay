@@ -1,0 +1,29 @@
+<!-- The Masks inspector (K-1, K-2): the mask chosen in the panel as a stack of layers, the highest first; the chosen layer's
+     settings under the list, what a mask layer reads, and a rules layer's rules (the rule editor) under it. The chosen painted
+     layer is what the mask brush paints. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:rules="using:FAForever.MapEditor.App.Views.RulePanels"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.MaskStackPanel"
+             x:DataType="vm:MainViewModel">
+  <StackPanel>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="heading" Text="{Binding Masks.Chosen, StringFormat='Mask {0}'}" IsVisible="{Binding Masks.HasChosen}" AutomationProperties.Name="Mask" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding !Masks.HasChosen}"
+                   Text="Add a mask in the panel: its stack of layers shows here. Masks are never exported; they feed strata, height layers, prop rules and the props brush." />
+        <StackPanel Classes="stack" IsVisible="{Binding Masks.HasChosen}">
+          <controls:LayerStackView DataContext="{Binding MaskStack}" ShowsSettings="True"
+                                   CanAdd="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HasMap}"
+                                   ListHelp="The highest first; the chosen painted layer is the one the mask brush paints, its settings are under the list"
+                                   EmptyText="The mask has no layers."
+                                   RemoveHelp="The mask becomes what the other layers make" />
+          <controls:SettingList DataContext="{Binding MaskStack.Reference}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).MaskStack.IsReference}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+    <rules:MaskRulesPanel IsVisible="{Binding MaskStack.IsRules}" />
+  </StackPanel>
+</UserControl>

@@ -547,7 +547,7 @@ the tools hold their settings and make one stroke (`BrushStroke`) a step of undo
   history's text (`Describe`). A stroke paints `EditTransaction.Grid(target)`. The tools:
   `StrataTool` (`paint.strata`, its `Limiting`: slope and height, each pair on or off),
   `WaterPaintTool` (`water.paint`: foam, flatness or depth bias, half the map's size),
-  `MaskPaintTool` (`paint.masks`: the mask chosen in the panel) and `TerrainTypeTool`
+  `MaskPaintTool` (`masks.paint`, the Masks mode's mask brush: the mask chosen in its panel) and `TerrainTypeTool`
   (`terrain.types`: the game's types, set where the brush works at least half, sharp by default).
   A new grid to paint is a `PaintTarget` in the library and a small subclass here.
 - **What the top and 3D views lay over the terrain** is `MainViewModel.ShownGrid`, one grid owned
@@ -562,7 +562,7 @@ the tools hold their settings and make one stroke (`BrushStroke`) a step of undo
   (`TerrainTypeTool.Legend`, counted only while the tool is active and no stroke runs; span
   `tool.count-types`), their swatches through `Controls/ArgbBrushConverter`.
 - **Masks for tools** (K-1, `model.Masks`, `ViewModels/MasksViewModel`): the document's masks by
-  name and the chosen one; the Paint panel's `MasksSection` lists them (with their size), names a
+  name and the chosen one; the Masks panel's `MasksSection` lists them (with their size), names a
   new one or a new name in its field, and runs `paint.addMask {name?, half?}`,
   `paint.renameMask {name?, newName?}` and `paint.deleteMask {name?}` (each `[UndoStep]`; left out,
   the field's name or the chosen mask); `paint.chooseMask {name}` chooses as the list does. Later
@@ -1004,10 +1004,46 @@ Markers panel) and Export, each a view of its own in `Views/ProceduralPanels/`. 
   (waiting, running, done or not needed with a note, failed with why; a failed step stops the
   export), `state.procedural.export`. The file the export writes names the editor (the library's
   `EditorStamp`).
+- **Path networks** (R-3, wave 9D; `model.PathNodes`, `ViewModels/PathNodesViewModel.cs`, the core's
+  side `MainViewModel.PathNodes.cs`, the view `Views/ProceduralPanels/PathNodesPanel.axaml` on the
+  part's own view model, so it moves into an inspector as it is). Generated from the navigation mesh
+  by the library's `PathNetworks` (its guide says how: skeleton, spacing, smoothing, links) and kept
+  in memory only: the views draw the result faintly (the overlay `generatedPathNodes`, chip
+  "Generated nodes"; the top view the path-node markers' look at half strength,
+  `HeightmapView.PathNetwork.cs`, span `top.generated-paths`; the 3D view faint links and small
+  crosses in the scene, `TerrainViewGpu.PathNetwork.cs`, span `3d.generated-paths`; the layers the
+  Markers panel's kinds show), never into the document. The settings are the map's
+  (`ProceduralSettings.PathNodes`): `generate.setPathNodes {layers?, spacing?, airSpacing?,
+  smoothing?, minimumDistance?, fill?, replace?, onExport?}` (0 for a default distance), each a step
+  of undo, which put the result out of date. `markers.connectPaths {layers?, spacing?, airSpacing?,
+  smoothing?, replace?}` (the row's and the panel's Generate) keeps what it is given in one step,
+  `Generate the path networks`, turns writing on export on the first time, and generates on a pool
+  thread with the current walkability or navigation mesh. It may regenerate on its own
+  (`AutoGeneration.Allow`). The row's export check box is `ExportUse.Written` (the map's
+  `PathNodes.OnExport`, through `ProceduralViewModel.OnExport(id, use, isOn, set)`).
+- **Edits by hand on top** (the owner's decision: generated nodes are the base, edits go on top):
+  the Path nodes tool (`procedural.pathNodes`, `Tools/PathNodeEditTool.cs`, its layer in the options
+  row): a click on empty ground adds a node (`generate.addPathNode {x, z, layer?}`), a click on a
+  node chooses it (a ring in both views), a drag onto empty ground moves it
+  (`generate.movePathNode {x, z, toX, toZ, layer?, within?}`), onto another node links them
+  (`generate.linkPathNodes {x, z, toX, toZ, cut?, layer?, within?}`, control cuts), control and a
+  click or Delete removes (`generate.removePathNode {x, z, layer?, within?}`); a line follows the
+  drag. Commands find the previewed node nearest the place within `within` ogrids (4). Each edit is
+  a step of undo kept in the map (`PathNodeSettings.Edits`) and applied after every generation;
+  the panel counts them and those whose node is gone (`generate.clearPathEdits {layer?, unmatched?}`
+  forgets them). How an edit finds its node again is in the library's guide.
+- **Hand-placed path nodes and the generated network**: path-node markers (placed with the Markers
+  mode's Path tool, or generated into the markers by an editor before wave 9) stay ordinary markers
+  of the project, edited only by the Markers tools; the Path nodes tool edits only the generated
+  network. At export (`ExportStep` `pathNodes` at `PathNodesOrder`, when on): the network with the
+  edits goes into the version the export writes (generated first when out of date), named on from
+  the highest `LandPN` and so on; the map's own nodes stay and each piece of them is linked to the
+  nearest generated node it sees, or with Replace they are left out of the files. The project never
+  holds a generated node.
 - Automation: `state.procedural` (rows, auto, navigation with regions and routes, `showNavigation`,
-  `routesTop`, `routes3d`, export steps).
-- Not built yet (wave 9 and 10): path nodes from the navigation mesh as an export step, the
-  normal and shadow decals, the sky cube map.
+  `routesTop`, `routes3d`, export steps); `state.pathNodes` (settings, status, the preview per layer,
+  the edits in words, `unmatched`, the chosen node).
+- Not built yet (wave 9 and 10): the normal and shadow decals, the sky cube map.
 
 ## Selection: picking things on the map and changing them
 
@@ -1229,8 +1265,8 @@ inspector's `MarkerSelection`.
   layer linked to the one selected node of that layer and selects the new one, so clicks lay a
   path (shift starts a new one); a click on a node goes on from it; dragging from a node to
   another runs `markers.link {a, b, unlink?}` (control unlinks). Nodes of different layers never
-  link. Choosing the tool shows the path nodes and its layer. Generating them from walkability is
-  `markers.connectPaths` (below).
+  link. Choosing the tool shows the path nodes and its layer. The generated networks are the
+  Procedural mode's (`markers.connectPaths`, edited with its Path nodes tool; below).
 - **Chains** (R-4): the panel's section lists them (`ChainsSection`); "From the selection" runs
   `markers.addChain {name?, markers?}` (the selected markers in the order they were selected,
   `Chain_1` or the next free name) and chooses it; its markers have up, down and take-out
@@ -1255,19 +1291,10 @@ inspector's `MarkerSelection`.
   markers, the chosen chain, adaptive, the last warning, `paths`: the panel's layers, spacing,
   replace, status and result; `optionalGroups`; the active marker tool's settings, the Preset
   tool's preset).
-- **Generated path networks** (R-3, F-7; the Procedural panel's `PathNetworkSection`, `MarkersViewModel.Paths`
-  as `PathNetworkPanel`): check boxes per layer, the spacing (empty: the library's default by the
-  map's size), "Replace the layers' own nodes", Generate, and how the result stands (the generated
-  results' line of `pathNetwork`, in the warning colour when out of date). `markers.connectPaths
-  {layers?, spacing?, airSpacing?, replace?}` sets the library's `PathNetworkGenerator.Settings`
-  (what is left out is the panel's), hands it the last walkability so the mesh is not made twice,
-  and runs `MainViewModel.GenerateAsync`: one step of undo, `Generate the path networks`. Without
-  `replace` nothing of the map goes: a part of the ground that holds a node keeps it, two of the
-  map's nodes that reach each other already get no new way, so generating twice adds nothing.
-  The result is out of date when walkability's inputs change (the heightmap, terrain types, water
-  level, deposits, areas), and `generate.stale` makes it again with the same settings, replacing
-  or adding as they say. The Procedural mode's generated results list it too. About 130 ms on
-  Archsimkats Valley, all four layers with walkability.
+- **Generated path networks** (R-3, F-7): the Procedural mode's (section "The Procedural mode",
+  Path networks): previewed, edited by hand on top, written by the export only. The Markers
+  mode's Path tool places and links path-node markers, which the export writes beside the
+  generated network (joined to it) or leaves out (Replace).
 - **Weather** (R-1): the tools Weather and Clouds (`PlaceMarkerTool` with
   `MarkerPlacement.WeatherDefinition`, `WeatherGenerator`) place the game's templates
   (`markers.place kind=weatherDefinition|weatherGenerator`); the inspector's `MarkerSelection.Weather`
@@ -1345,10 +1372,10 @@ library's (`MaskRules`, `PropRules`, `RuleEdits`; its guide, "Rules"); the core'
 `PropRulesGenerator` (`generate.props`) with `Generation`, so they show in the status bar, the
 Terrain panel's generated list and `generate.stale`.
 
-- **Mask rules** (`model.MaskRules`, `MaskRulesViewModel`; the Paint mode's inspector section
-  `MaskRulesSection`, drawn by `Views/RulePanels/MaskRulesPanel`): Rules... beside each mask of the
-  Paint panel runs `paint.maskRules {name?}`, which chooses the mask, turns the mask overlay on and
-  shows its rules. Each rule is a card with its fields, a `SettingGroup` that runs
+- **Mask rules** (`model.MaskRules`, `MaskRulesViewModel`, drawn by `Views/RulePanels/MaskRulesPanel`
+  under the stack of a mask or stratum when a rules layer is chosen; section "Stacks of coverage"):
+  `paint.maskRules {name?}` chooses the mask and its rules layer in the Masks mode, turns the mask
+  overlay on and shows its rules. Each rule is a card with its fields, a `SettingGroup` that runs
   `paint.setMaskRule {index, mask?, kind?, combine?, invert?, min?, max?, soft?, source?, scale?,
   seed?, radius?}` (merged per field as the map panels' fields are), up, down and a cross
   (`paint.moveMaskRule {index, to}`, `paint.removeMaskRule {index}`); a kind and Add
@@ -1633,6 +1660,55 @@ water stacks and the draft and final heightmaps on these two pieces.
   Base`). The tool tip is a popup: `screenshot` and `ui` do not reach it; the headless test
   `LayerStackControlTest` captures the large picture (`captures/height-layer-preview-large.png`).
 
+## Stacks of coverage: the Masks mode, stratum and water stacks
+
+Wave 9B (user stories K-1, K-2, S-1, W-2); the model is the library's (its guide, "Stacks of
+coverage"). Files: `ViewModels/CoverageStackViewModel.cs`, `MainViewModel.CoverageStacks.cs`,
+`Commands/Layers/CoverageLayers.cs`, `Views/MapPanels/MaskStackPanel`, `LayerPanel`, `PanelPartView`.
+
+- **`CoverageStackViewModel`** (a `LayerStackViewModel`): the stack of a target given by a function
+  (the chosen mask, stratum or water map), the `layers.*` commands with the target's key added, add
+  choices Painted, Image, Mask, Stratum, Rules (`AddChoicesOf`; a new source is one more choice),
+  `Reference` (what a mask layer reads: mask, threshold, inverted), `IsReference`, `IsRules`,
+  `Retarget` (another grid shown: its painted layer chosen). Its last layer cannot be removed.
+- **`MainViewModel`**: `MaskStack`, `StratumStack`, `WaterStacks` (one per map, the content of the
+  Water panel's map entries through `PanelParts.Replace` as `WaterMapPart.Stack`),
+  `ShownCoverageTarget` (the mode's grid), `CoverageStackOf`, `ShowCoverageTarget`. A stack's chosen
+  layer is the session's paint layer for its key (`EditSession.PaintLayers`), so the mask brush, the
+  strata tool and the water brush paint it; `GridPaintTool.Stack` names a tool's target, and a stroke
+  on a stack without a layer that can be painted is refused with the reason in the status line.
+- **The Masks mode** (Shift+F3): the panel's `MasksSection` lists the masks with an `ImagePreview`
+  each (following strokes) and how many layers, a name field, Add, Rename, Duplicate
+  (`paint.duplicateMask {name?, newName?}`), Delete and Show it over the terrain; the inspector's
+  `MaskStackSection` the stack control (with settings), the mask layer's `Reference` and, for a
+  rules layer, the rule editor. Its tool is the mask brush (`masks.paint`, moved from the Paint
+  mode). The overlay Mask and the brush show the chosen mask. Masks are never exported.
+- **The Paint mode**: the strata list has each texture's picture (`LayerItem.Texture`, the
+  converted PNG through the catalog; made again when the catalog loads); the inspector's
+  `LayerSection` shows the chosen stratum's textures, then "Mask layers" (the stack) and the rule
+  editor for a rules layer.
+- **The Water mode**: each map's entry shows its stack above the brush's settings.
+- **The rule editor** (`MaskRulesViewModel`) edits a rules layer: `Editing` the owner (a mask's name
+  or `stratum:N`), `Layer` the rules layer (null: the lowest). Choosing a rules layer in a stack
+  shows it (`EditLayer`); choosing another layer of that grid closes it; while it edits a grid of the
+  mode, that rules layer is chosen (`ShowEditedRulesLayer`: a rule added to a mask chooses the
+  rules layer it made). `paint.addMaskRule`, `setMaskRule`, `removeMaskRule`, `moveMaskRule` take
+  `mask` (also `stratum:N`) and `layer`. `paint.maskRules {name?}` opens a mask's rules in the Masks
+  mode. The preview shows while the mode's stack has a rules layer chosen (Masks and Paint modes).
+- Commands: `layers.add {target?, source?: painted|image|mask|stratum|rules, name?, mask?, path?}`
+  (in the Masks mode's menu), `layers.set {target?, layer?, name?, combine?, strength?, clip?,
+  visible?, locked?, reads?, threshold?, invert?}`, `layers.move {target?, layer?, to?, by?}`,
+  `layers.remove {target?, layer?}`, `layers.choose {layer, target?}` (chooses the grid in its mode
+  too). A target is a stack's key, any name of a mask or stratum (`forest`, `mask:forest`,
+  `stratum:2`, `stratum 2`, `Layer 2`) or a water map (`foam`, `flatness`, `depthBias`); left out,
+  the mode's grid. Each edit is one step of undo (span `model.coverage-layers`).
+- Automation: `state.coverageStacks` (`shown`, the `mask`, `stratum` and `water` stacks with their
+  target, chosen layer, whether kept in the document and each layer's source, combine, strength,
+  clip, what it reads and summary; `stacks`: the keys the document keeps); `state.rules.masks.layer`.
+- Speed (Archsimkats Valley, debug): a strata stroke costs about 10 ms a dab without a stack and
+  about 17 ms with a stack of three layers (a mask reference among them).
+- Tests: `CoverageStacksTest` (operations and the mouse), the library's `CoverageLayersTest`.
+
 ## Height layers and curves
 
 User stories T-5 and T-4; the library does the work (its guide, "Height layers and curves").
@@ -1665,8 +1741,46 @@ User stories T-5 and T-4; the library does the work (its guide, "Height layers a
   `Base`, `Sculpt`, `Imported`, `Curve`, and its `sourceKind`, `painted`, `image`, `curve`, `mask`).
 - On an 81 km map: adding the first layer 0.2 s, a stroke's move about 30 ms, a curve edit 0.3 to
   0.7 s with the views' own reaction to the new heights (debug build).
-- Not built yet: a height per point by hand in the views, exporting a layer for World Machine or
-  Gaea, merging layers.
+- Not built yet: a height per point by hand in the views, merging layers.
+
+## Draft and final heightmaps
+
+User story T-9 (wave 9A); the library does the work (its guide, "Draft and final heightmaps").
+
+- **The switch** (`MainViewModel.ShownHeights`, `ViewModels/MainViewModel.DraftAndFinal.cs`;
+  `terrain.switchHeights {to?: draft|final}`, Ctrl+Shift+D, in the Terrain menu; the panel's Draft and
+  Final chips): which heightmap both views show and brushes write (`EditSession.Heights`). It is the
+  view's, not a step of undo. Units, markers, props, decals and areas stay; generators and the
+  export read the final.
+- **What the views draw**: `MainViewModel.ViewDocument`, the shown document with the draft's heights
+  as the terrain's while the draft shows (the same object per version, so views compare cheaply);
+  `ShownHeightmap` for the camera's ground and the curve tool's road points. Only drawing and looking
+  use them (the top view's picture and cursor height, the 3D frame and picking); tools and edits
+  take `ShownDocument`. A new view part that draws the terrain's heights reads `ViewDocument`. The
+  switch raises `OverlaysChanged` and the property change: the top view colours the tiles that
+  differ, the 3D view uploads them (the two heightmaps share every other tile).
+- **The panel** (`Views/MapPanels/HeightLayersPanel`): "Heightmap" (the chips, `ImagePreview`s of
+  both heightmaps as `HeightmapPicture`s, what the final's base is), "Height layers" (filter chips by
+  use, `all`, `shared`, `draft`, `final`, and by source, `all`, `sculpt`, `image`, `curve`, `mask`:
+  `terrain.filterLayers {use?, source?}`; the stack control over the shown stack, rows saying
+  `shared`, `draft only` or `final only` once the stacks differ; a line naming the layers only the
+  other heightmap has), and "World Machine and Gaea" (masks to tick, Write again whenever it changes,
+  Write the draft, Use as the final's base..., Share the draft's base). `DraftFinalViewModel` holds
+  its state. The inspector adds "Used in" (`terrain.setLayer use=...`: `Draft and final`, `Draft
+  only`, `Final only`); its Shown is the shown heightmap's on/off.
+- **Commands**: `terrain.writeDraft` (Needs a project; writes `procedural/temp/draft-heightmap.png`,
+  `.r16` and the ticked masks; span `model.write-draft`), `terrain.setDraftOut {masks?, auto?}` (the
+  map's settings, a step of undo), `terrain.useAsFinalBase {path?}` (asks for the output, starting in
+  `procedural/temp/`; a step of undo; a file outside the project is read again only when the project
+  opens, a warning in the log), `terrain.shareDraftBase`; `terrain.addLayer` takes `use`. With
+  "Write again whenever it changes" on, the draft is written `DraftWriteDelay` (1 s) after the last
+  change to it or a ticked mask, not during a stroke (`WhenDraftWrittenAsync` for tests).
+- Automation: `state.draftFinal` (shown, both stacks with each layer's use and on/off, the final's
+  base, whether the draft has heights of its own, the height at the map's centre in the shown
+  heightmap, the settings, how many writes, the outputs in `procedural/temp/`); `state.heightLayers`
+  adds each layer's `use`, the filters and the listed names.
+- Tests: `DraftAndFinalTest` (the commands), `DraftAndFinalWindowTest` (the shortcut and buttons with
+  the top and 3D views' height under the mouse and the top view's picture, headless).
 
 ## Lua plugins
 
@@ -1880,8 +1994,8 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   Presets below: lighting presets, and sky presets while the sky is chosen (`ForParts`).
 - **The rail** (`Views/ModeRail`): the modes of groups 0 and 1 at the top (`RailModes`), the bottom
   group (`EditorModes.BottomGroup`, `BottomRailModes`) at the bottom above a divider and the Plugins
-  entry (`plugins.manage`). Masks (Shift+F3, after Paint, which it takes the masks from; an empty
-  shell with a planned section and a planned brush) and Procedural (F11, group `BottomGroup`; its
+  entry (`plugins.manage`). Masks (Shift+F3, after Paint, which it took the masks from; filled in by
+  wave 9B, section "Stacks of coverage") and Procedural (F11, group `BottomGroup`; its
   sections are the generated results). F1 to F9 stay as they were. A mode's tool tip names its shortcut.
 - **Keyboard shortcuts** (`help.shortcuts {query?}`, Shift+F1, Help menu; `Views/ShortcutsPage`): every
   command with a gesture from the registry (so a plugin's shows) by menu, the keys the tools take

@@ -218,9 +218,11 @@ the map's ogrids whatever the grid's size (`GridDab`: each pixel counts at its c
   document changed since (an edit during a save in the background must not be undone by it). A `map.json` that changes the map's size is refused: the grids would
   no longer fit.
 - `procedural/` holds the procedural work: `sources/` the map maker's World Machine and Gaea files
-  (versioned with the project), `temp/` what those tools build from them (heightmaps, masks; left
-  out of version control). Every save makes both folders; the editor reads nothing in them by
-  itself: a result comes into the map when the map maker brings it in (T-3, later T-5).
+  (versioned with the project), `temp/` what goes between the editor and those tools (left out of
+  version control): the draft and ticked masks the editor writes for them and the outputs they
+  write beside them (`ProceduralFiles`, section "Draft and final heightmaps"). Every save makes
+  both folders; an output comes into the map when the map maker chooses it (an image layer, or the
+  final's base), and is read again whenever the tool writes it.
 - `ProjectWatcher` reports the changed files of a folder once it has been quiet for a moment
   (tools save in bursts), on a pool thread. `faf-map pack --watch` opens the project once and
   reloads only what changed before each export. Tests wait for a report with `NextChangeAsync`
@@ -303,22 +305,52 @@ snaps to (`Snap`, `MarkerSnap`), how steep the ground under a deposit is (`Steep
 kinds of markers one by one (`MarkerKinds`, `KindOf`), which `MapObjects.Nearest`, `Inside` and
 `All` take to leave hidden kinds out.
 
-**Generated path networks** (user story R-3, `Generation/PathNetworks`, `PathNetworkGenerator`, an
-`IDocumentGenerator` with walkability's inputs): per layer the AI's graph from the navigational
-mesh (land, water, amphibious; air on a grid over the playable area). The map is cut into squares of
-the spacing (`DefaultSpacing`: a sixteenth of the map, 16 to 64 ogrids); each 4-connected part of
-passable ground in a square that covers a sixteenth of it gets a node at its ogrid furthest from
-blocked ground (to a quarter of the spacing), nearest the square's centre; parts that touch across a
-square's edge are linked, with nodes along the way through them where the straight line would cross
-blocked ground (`CanWalk`: every ogrid a line passes, both beside a corner, of the start's region);
-diagonal squares link where walkable and not linked through a neighbour; last every region is made
-one network (pieces joined along `NavPaths.FindRoute`). The map's own nodes of a layer stay unless
-`Replace`: they are nodes from the start with their links, a part that holds one takes it, and two
-that reach each other get no new way, so generating again adds nothing. `Apply` names new nodes as
-the map editors do (`LandPN`, `WaterPN`, `AmphPN`, `AirPN`, going on from the highest number), puts
-them on the terrain and links both ways; replacing takes the layer's nodes out of chains too.
-`PathNetworksTest` checks on the test maps that no link crosses blocked ground and every region is
-one network.
+**Generated path networks** (user story R-3, `Generation/PathNetworks`, `PathSkeleton`,
+`PathNetworkEdits`; `PathNetworkGenerator`, a plain `IGenerator` with walkability's inputs and
+`GeneratedInput.PathNodeSettings`): per layer the AI's graph from the navigational mesh, kept in
+memory (a preview) and written into the markers only by the export (`Apply` on the version it
+writes). The settings and the edits by hand are the map's (`ProceduralSettings.PathNodes`,
+`PathNodeSettings`; `map.json`'s optional `procedural.pathNodes`, `PathNodesDto`/`PathEditDto`).
+- **Ground layers** (`GenerateLayer`): the labels in blocks of about a twelfth of the spacing (a
+  block takes the label most of its passable ogrids have; `DefaultSpacing`: a sixteenth of the map,
+  16 to 64); each region thinned to its skeleton (`PathSkeleton.Thin`: distance-ordered homotopic
+  thinning with Yokoi's connectivity number, ends of lines kept; `Prune` drops spurs shorter than
+  half the spacing; `Trace` gives junctions, dead ends and chains); nodes at junctions and dead
+  ends and along each chain about a spacing apart, linked one to the next (a link that cannot be
+  walked straight gets a node at the chain's middle cell, and at last a route, `Route`: A* in a box
+  that grows); with `Fill` a node on a grid of the spacing wherever open ground lies further than
+  three quarters of a spacing from every node of its region; links between nodes within 1.5
+  spacings that see each other both ways (`CanWalk`) and have no node in the circle over them (a
+  Gabriel graph; the chains' links always stay); `Smoothing` rounds move every node but dead ends
+  halfway to its neighbours' middle when it stays in its region and its links stay walkable; nodes
+  closer than `MinimumDistance` (0.4 spacing) merge (dead ends, then junctions stay); links made
+  again; every region joined into one network. A region under a sixteenth of a spacing squared gets
+  no nodes; one the blocks lost gets a node near its middle. Layers run side by side. Measured: a
+  4096 map (SCMP_haz09fa, spacing 64) 0.7 s for all four layers (the mesh itself 2.3 s); Archsimkats
+  Valley 0.4 s; HardFFA 60 ms.
+- **Air** (`GenerateAir`): a grid over the playable area, 16 by 16 unless `AirSpacing`, each node
+  linked to the eight around it, as the game's maps have (256 air nodes on maps of every size).
+- **Deterministic**: the same map and settings give the same nodes (`GivesTheSameNodesForTheSameMap`).
+- **Edits by hand** (`PathNetworkEdits`, `PathEdit`: `Add`, `Move`, `Remove`, `Link`, `Cut`;
+  `PathNodeRef`): an edit names a generated node by the place it was generated at, a node added by
+  hand by its number. After every generation each remembered place is matched to the nearest
+  generated node of its layer within a third of the spacing (at least 2 ogrids), nearest pairs first,
+  each node once; the matched node then carries the remembered reference. Where the terrain did not
+  change, nodes come back exactly; where it changed a little, they move a little and are still found.
+  An edit whose node is gone: a removal does nothing, a move places a node of its own at its target,
+  a link or cut with a lost end does nothing; such edits stay (they may match again) and are listed
+  as unmatched (`ForgetUnmatched`). Order: removals, moves, added nodes (each linked to up to three
+  of the nearest nodes it sees within 1.5 spacings, at least the nearest it sees), cuts, links.
+  Making edits: `AddNode`, `MoveNode` (one move per node; an added node's own edit changes),
+  `RemoveNode` (drops the edits that refer to it), `Link` (a cut and a link of one pair cancel), `Clear`.
+- **Into the map** (`Apply(document, network, replace)`): names as the map editors do (`LandPN`,
+  `WaterPN`, `AmphPN`, `AirPN`, going on from the highest number), on the terrain, linked both ways.
+  The map's own path nodes of a layer (placed by hand; generated by an editor before wave 9, which
+  stay ordinary markers) stay, and each piece of them is linked to the nearest generated node it
+  sees; with `replace` they go, out of chains too.
+- Tests: `PathNetworksTest` (no link crosses blocked ground and every region is one network on the
+  test maps, the wall's gap, smoothing, the minimum, the air grid, `Apply`), `PathNodeEditsTest`
+  (skeletons of test grids, edits surviving regeneration after the terrain changed, the format).
 
 **Weather** (`Editing/WeatherStyles`, static data of `lua/weatherdefinitions.lua` and
 `lua/MarkerTemplates.lua`): the map styles, each style's cloud types (its own and the cirrus layers)
@@ -709,17 +741,77 @@ for tools and the water's masks theirs in the same shape (the plan "Map Editor R
   a base only at the bottom), `Remove`, `Move` (above the base), `Rename`, `SetCombine`,
   `SetStrength`, `SetClip`, `SetVisible`, `SetLocked`. A target's own edits put the stack in its
   place and add the target's rules (`HeightLayerEdits` for the heightmap).
-- **Two stacks of one target** (9A's draft and final heightmaps): each a `LayerStack` of its own; a
-  shared layer is the same name in both with the same source and grids (the same objects), at a
-  place of its own in each and with its own `Visible`. 9A adds the draft beside
-  `MapDocument.HeightStack` (which stays the final, the one exported) and an edit that changes a
-  shared layer's content in both; `stacks/heightmap.json` can then list the draft's order beside
-  the layers. The conversion of older projects then puts every layer in both.
+- **Two stacks of one target** (the draft and final heightmaps, section "Draft and final
+  heightmaps"): each a `LayerStack` of its own; a shared layer is the same name in both with the
+  same source, grids and settings, at a place of its own in each and with its own `Visible`
+  (`HeightStacks.WithLayer` makes an edit of its content in both, `HeightStacks.Sync` after every
+  step carries what a brush wrote). Another target that gets two stacks follows the same pattern.
 - **Following after every step** (for wave 9's targets): the heightmap's `HeightLayers.Follow` is
   the pattern: `FollowRenamedMasks`, `ChangedTiles`, `TakeChanges` when the target grid itself
   changed (a brush through `EditTransaction`), `CompositeHeights`/`CompositeCoverage` over the dirty
   tiles, and a composite that came out as it was is the previous grid (no step). A stratum's or
   mask's stack follows the same way from `EditSession.Record` and `EditTransaction`'s read.
+
+## Stacks of coverage: strata, masks and water maps
+
+Wave 9B (`MapDocument.CoverageStacks`, `Editing/CoverageLayers`, `CoverageLayerEdits`,
+`MapProjectStore.CoverageStacks.cs`): every stratum mask, mask for tools and water map is a stack
+of the model above, keyed by its target's key (`stratum-2`, `mask-forest`, `water-foam`;
+`LayerTarget.FromKey`).
+
+- **A grid without a stack is its own painted layer.** `CoverageLayers.StackOf` gives the stored
+  stack or `Trivial` (one painted layer `Painted`, replacing, holding the grid itself). The first
+  stack edit stores it; a stack that comes back to that shape (`IsTrivialShape`, its layer as the
+  grid holds it) leaves the dictionary again. So an older project opens with one painted layer per
+  grid holding what it held (lossless) and saves as before; the composite stays in its usual file
+  (`stratum-masks/`, `masks/`, `water-*.png`) for the export and other tools.
+- **The untouched part of a painted layer** (8A's caveat): a coverage layer gets an alpha,
+  `Layer.Alpha` (0 to 255, the target's size; null for all of it). A painted layer added to a stack
+  (`NewPainted`) starts with value and alpha 0 and combines by Replace, so it changes nothing until
+  painted; `LayerStacks.TakeChanges` raises the alpha to 255 where a brush paints, starting from
+  what the layers below make (Add and Subtract from 0, Multiply from 1), as a height layer's
+  coverage does. The weight of a coverage layer is strength × clip × alpha. Erasing in such a layer
+  paints towards 0 where it was painted (it does not give the place back to the layers below: hide
+  or remove the layer for that). The grid's own painted layer has no alpha. Saved as
+  `stacks/<key>/<layer>.coverage.png`, the name a height layer's coverage has.
+- **New layers** (`CoverageLayerEdits.New*`): painted (Replace, alpha), image (`ReadImage`: the
+  file's grey resampled to the grid, Maximum), mask reference (`NewMaskRef`: any name of a mask,
+  stored as its key; Maximum), rules (`NewRules`, empty until generated; Maximum). A stack never
+  reads its own target (refused), and keeps its last layer (`Remove` refuses).
+- **Following** (`CoverageLayers.Follow(previous, next, chosen)`): run by `EditSession.Record` and
+  `EditTransaction`'s flush before `HeightLayers.Follow` (height clips read the composites). Stacks
+  follow in `Order` (after the stacks of the masks they read; a circle is broken where it closes):
+  renamed masks followed, `ChangedTiles`, a change of the grid itself (a brush) into the chosen
+  painted layer (`EditSession.PaintLayers[key]`, else the highest that can be painted;
+  `PaintProblem` says why none can), composited over the dirty tiles. A stack whose target is gone
+  goes. `Recomposite` after opening and resizing.
+- **What takes stacks along**: `MaskLayers.Rename` (via `RuleEdits.MaskRenamed`: the stack under the
+  new key, clips, references, rules and prop conditions reading the new name), `Duplicate` (the
+  same layers), `Remove`; `StrataEdits` add/remove/move (`CoverageLayers.MoveStrata`; a stratum's
+  references elsewhere are not renumbered, as height clips are not); `MapResize` (masks' layers gain
+  nothing, the others continue their edge, alphas gain nothing).
+- **Rules are rules layers** (`RulesSource`): `MapDocument.MaskRules` is now computed (per mask, its
+  lowest rules layer's rules). `RuleEdits` take an owner (a mask's name or `stratum:N`) and an
+  optional rules layer; `SetMaskRules` on a mask without one adds `Rules` (Replace, holding the
+  mask, as a mask made from rules was); without its last rule the layer becomes painted, keeping
+  what it made. `MaskRules.Order` gives stack keys; `CoverageLayerEdits.Generate` makes every rules
+  layer of every stack (masks and strata) in that order, each from what the stacks it reads make by
+  then (`GeneratedBefore` for a preview); `MaskRulesGenerator` applies them and follows. Its inputs
+  are the rules layers' sources and what they read that rules do not make (`RuleInputs`).
+- **One way to name a mask**: the key (`mask:forest`, `stratum:3`). `LayerStacks.KeyOf` turns any
+  name (key, title `mask forest`/`stratum 3`, plain mask name) into it; `MaskOf` and
+  `MaskRuleSources.Read` read plain names and keys alike, so prop rules, the props brush, height
+  clips and mask references take any mask or stratum.
+- **On disk**: `stacks/<key>.json` (`LayerStackDto`, unchanged), layers' PNGs in `stacks/<key>/`;
+  no DTO changed. An older project's `masks/<name>.rules.json` loads as a rules layer holding the
+  mask's PNG (when the mask has no stack file); the first save removes it. Reload reads a stack again
+  when one of its files changes. Image layers of coverage are not read again when their file
+  changes (gap).
+- **A new source** (9C's decal masks): its record and name in `LayerSources`, its fields in
+  `LayerDto` and its read in `ReadStack`, a `CoverageLayerEdits.New...`, the masks or things it reads
+  in `CoverageLayers.ReadsOf` when they decide the order, and a follow step (like rules: made again
+  in the edit that changes what it reads). The window's side is one add choice and a `layers.add`
+  source (the App guide, "Stacks of coverage").
 
 ## Height layers and curves
 
@@ -772,9 +864,61 @@ User stories T-5 and T-4 (`MapDocument.HeightStack`, `Editing/HeightLayers`, `He
   changes, an image layer's file when that changes, and a changed `heightmap.png` into the base.
   **Older projects** (format 3 to 5) keep the layers as `layers/layers.json` (`HeightLayersDto`, kinds
   `Base`, `Sculpt`, `Imported`, `Curve`) and `layers/<name>.png`: they open unchanged (read into the
-  stack in memory), and their first save writes `stacks/` and removes `layers/`. An image layer added
-  since the last save is not read again when its file changes until the map is saved
-  (`EditedMap.Reload` compares with the saved version); saving first works.
+  stack in memory), and their first save writes `stacks/` and removes `layers/`. An image layer's
+  file is read again whenever it changes, also for a layer added since the last save
+  (`EditedMap.Reload` takes such a file as another tool's, `MapProjectStore.IsImageLayerFile`).
+
+## Draft and final heightmaps
+
+User story T-9 (wave 9A; `Editing/HeightStacks`, `Files/InMemory/HeightStackKind.cs`,
+`ProceduralFiles`). The draft is the rough shape blocked out and the input of World Machine or Gaea;
+the final starts from their output and is what the game gets.
+
+- **The model**: `MapDocument.HeightStack` is the final (its composite is `Terrain.Heightmap`,
+  which the export, walkability, the normal map, navigation and every generator read: the export
+  always takes the final), `MapDocument.DraftStack` the draft, `DraftSamples` the draft's
+  composite (null while both stacks hold the same layers in the same order, `MakeTheSame`: then
+  `DraftHeightmap` is the heightmap itself, so a map that never parts costs nothing), `DraftHeightmap`
+  the draft as a `Heightmap`. Both stacks are empty or both have a base; names are unique over
+  both (`HeightStacks.NameProblem`, `FreeName`). `HeightStackKind` names a stack (`Final`, `Draft`),
+  `LayerUse` a layer's membership (`Shared`, `Draft`, `Final`; `UseOf`).
+- **Shared layers**: one layer, the same source, grids and settings in both, its own place and
+  `Visible` in each. `HeightLayerEdits` finds a layer in either stack (`HeightStacks.Locate`, the
+  final first) and makes a content edit (strength, combine, mask, lock, rename, curve, image read
+  again) in both; `SetVisible` and `Move` take the stack (`kind`, the final by default); `Remove`
+  takes it out of both; `HeightStacks.SetUse` changes membership (added on top, shown; a base keeps
+  its use). `SetCombine` keeps a sculpt layer's look in the stack named.
+- **New layers** (`HeightLayerEdits.Add(..., shown, use)`): into both while the final shares the
+  draft's base (`HeightStacks.DefaultUse`: a map without a procedural step exports what was drawn),
+  else into the stack shown. `Start` begins both stacks with one shared base.
+- **The final's base** (`HeightStacks.UseAsFinalBase(document, samples, source)`): an image layer
+  marked base (`Procedural base`, `FinalBaseName`) replaces the final's lowest layer; the old base
+  stays the draft's (draft only). Read again whenever its file changes, as any image layer.
+  `ShareDraftBase` makes the final start from the draft's base again; `SharesBase`, `FinalBase`.
+- **Following** (`HeightLayers.Follow`, every step): `Normalized` (a final with layers gets a draft
+  holding every layer; none without), a brush's change of the draft's samples goes into the draft's
+  sculpting layer (`TakeChanges`), a brush's change of the heightmap into the final's, `Sync`
+  carries changed layers into the other stack (unless that stack changed them in the same step), the
+  final composites its dirty tiles, and the draft composites its own from its previous samples
+  (which share every tile the two have in common, so switching uploads only what differs).
+  `EditSession.Heights` says which heightmap brushes write; `EditTransaction.Heightmap` hands out the
+  draft's samples for the draft (while the map has layers). `HeightLayers.SculptProblem(document,
+  layer, kind)` refuses a layer the stack lacks.
+- **On disk** (format 6, optional additions): `stacks/heightmap.json` lists every layer once (the
+  final's in its order, then those only in the draft), each with `use` (`draft`, `final`; left out
+  for both), and `draft`, the draft's order with each layer's `hidden` there (`DraftLayerDto`; left
+  out while the two stacks are the same). A project without `draft` (every older one) opens with
+  every layer in both: the same terrain. Shared layers load as one object in both stacks.
+- **Files for World Machine and Gaea** (`ProceduralFiles`, all in `procedural/temp/`):
+  `draft-heightmap.png` (16-bit grey, (width + 1) by (height + 1), one step 1/128 game unit),
+  `draft-heightmap.r16` (the same samples, raw little-endian, row by row from the north-west),
+  `draft-mask-<name>.png` (a ticked mask for tools, 8-bit at its own size; an unticked one's file is
+  removed); every other image file there is an output (`Outputs`, newest first). `WriteDraft` writes
+  them; the map's settings (`ProceduralSettings.DraftMasks`, `WriteDraftOnChange`; `map.json`'s
+  `procedural.draftMasks`, `procedural.writeDraft`) say which masks and whether the editor writes them
+  again whenever they change.
+- `MapResize` keeps shared layers one object; `HeightmapFiles.Import` and a changed `heightmap.png`
+  go into the final's base (the draft's too while shared).
 
 ## Generated results
 
