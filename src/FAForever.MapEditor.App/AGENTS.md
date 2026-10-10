@@ -604,6 +604,49 @@ that moves stays selected. Another map clears it. The core's side is
 - Not built yet: picking and a box in the 3D view (its `Pick(ray)` will call `SelectAt` and the
   like), handles, scaling, snapping, moving along one axis, turning about the selection's centre.
 
+## Props: placing, painting, reclaim
+
+User stories P-1, P-2, P-3, P-5. `MainViewModel.Props` (`PropsViewModel`) holds what the Props
+mode shares between its tools: how placed props stand (the panel's Placing: `Alignment` by kind,
+upright or with the terrain; random turn, tilt and scale; a sink), the palette, whether props
+follow the terrain, and the reclaim. The maths is the library's (`PropOrientation`, `PropEdits`,
+`PropPlacement`, `PropScatter`, `PropReclaim`; its guide).
+
+- **Tools** (Props mode, F7): `props.select` (a `SelectTool` of props), `props.place`
+  (`Tools/PropPlaceTool`: a click runs `props.place`, one step, and selects the new prop, so Q, E
+  and Delete work on it; it takes a prop dropped from the shelf), `props.paint`
+  (`Tools/PropPaintTool`: a `BrushStroke` whose dabs scatter palette props, density per 100 square
+  ogrids and a least spacing to every prop, kept with a `PropGrid` made when the stroke starts;
+  the first dab fills its circle, the next ones the strip they move on) and `props.erase`
+  (`Tools/PropEraseTool`, all props or the palette's).
+- **Where it paints** (P-3): `OnlyOn` and `NotOn` are `PaintLayer`s (a name and a function from
+  the document to a mask), the map's strata today (`PaintLayer.Stratum`); the mask layers of K-1
+  are to join `Layers` the same way. A place passes a `MaskCondition` (at least the threshold).
+- **The shelf and dropping**: a prop chosen on the shelf in the Props mode becomes the place
+  tool's prop, or with the paint tool goes into the palette (another variant of the same tile
+  takes the place of the one it added). A prop dropped on a view is placed there in any mode
+  (`AssetDropped`), or by the place tool when it is active.
+- **Follow the terrain**: `MainViewModel.EndStroke` hands every kept stroke to
+  `PropsViewModel.FollowStroke` before it commits: when the heights changed, the props on the
+  changed tiles keep their height above the ground (`PropsFollowTerrain`), in the stroke's step
+  (span `tool.props-follow-terrain`, about 3 ms on Archsimkats Valley). Any height brush gets it.
+- **Commands**: `props.place {x, z, key?, heading?}`, `props.choose {key?}` (picker),
+  `props.alignToTerrain`, `props.upright`, `props.dropToGround {sink?}`, `props.tilt {pitch?,
+  roll?}` and `props.scale {scale}` (the inspector's fields), `props.randomize {turn?, scaleMin?,
+  scaleMax?}`, `props.replace {key?}` (picker), `props.randomVariant` (same biome, folder and
+  family), `props.addToPalette {key?, weight?}`, `props.removeFromPalette {key}`,
+  `props.followTerrain {on?}`, `props.reclaim` and, for automation, `props.set {alignment?,
+  randomTurn?, randomTilt?, scaleMin?, scaleMax?, sink?, radius?, density?, spacing?, onlyOn?,
+  notOn?, threshold?, eraseRadius?, onlyPalette?}`. The ones on the selection act on its props.
+- **Panel**: Placing, Palette (thumbnail, weight, cross), Palettes (presets of kind
+  `props-palette`: the props with weights, the paint brush, the Placing settings), Rules (P-4,
+  planned), Reclaim (map and per area, counted again only when the props, areas or catalogue
+  change; span `model.props-reclaim`). The inspector's `PropSelection` adds pitch, roll, scale,
+  the selection's reclaim and the buttons of the commands above.
+- Automation: `state.props` (the place tool's prop, Placing, palette, paint and erase settings,
+  reclaim with areas).
+- Not built yet: symmetry for placed and painted props (wave 2), handles, the K-1 masks as layers.
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session

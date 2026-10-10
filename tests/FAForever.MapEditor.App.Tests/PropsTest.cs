@@ -279,6 +279,10 @@ namespace FAForever.MapEditor.App.Tests
             PropPaintTool paint = model.Tool<PropPaintTool>();
             Assert.IsTrue(paint.Layers.Count > 1, "the map's strata to choose from");
             Assert.AreSame(paint.Layers[1], paint.LayerNamed(paint.Layers[1].Name));
+            JsonObject set = (JsonObject)(await Run(model, "props.set", new JsonObject { ["onlyOn"] = "Layer 1", ["threshold"] = 0.25, ["alignment"] = "terrain" })).Result!;
+            Assert.AreEqual(paint.Layers[1].Name, set["paint"]!["onlyOn"]!.GetValue<string>(), "a stratum by its number");
+            Assert.AreEqual(PropAlignment.Terrain, model.Props.Alignment);
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "props.set", new JsonObject { ["notOn"] = "Layer 99" }));
 
             // a mask of the left half of the map (a mask layer of K-1 is chosen the same way)
             int width = model.ShownDocument!.Width;

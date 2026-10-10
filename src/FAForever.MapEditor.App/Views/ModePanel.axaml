@@ -104,8 +104,8 @@
                   <TextBlock Classes="overline" Text="{Binding Source=Placing, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
                   <DockPanel>
                     <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Stand" Width="{StaticResource FactLabelWidth}" VerticalAlignment="Center" />
-                    <ComboBox ItemsSource="{Binding Alignments}" SelectedItem="{Binding Alignment}" HorizontalAlignment="Stretch" AutomationProperties.Name="How placed props stand"
-                              AutomationProperties.HelpText="ByCategory: rocks and the like tilt with the ground, trees stand upright; Upright; Terrain: every prop tilts with the ground" />
+                    <ComboBox ItemsSource="{Binding Alignments}" SelectedItem="{Binding ChosenAlignment}" HorizontalAlignment="Stretch" AutomationProperties.Name="How placed props stand"
+                              AutomationProperties.HelpText="By kind: rocks, crystals, logs and clutter tilt with the ground, trees and the rest stand upright; or all upright; or all with the terrain" />
                   </DockPanel>
                   <CheckBox Content="Turn at random" IsChecked="{Binding RandomTurn}" AutomationProperties.Name="Turn each placed prop at random" />
                   <StackPanel>

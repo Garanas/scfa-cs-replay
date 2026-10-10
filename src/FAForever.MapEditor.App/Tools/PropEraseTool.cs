@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -38,7 +39,10 @@ public sealed partial class PropEraseTool(MainViewModel model) : ObservableObjec
         HashSet<string>? palette = OnlyPalette
             ? new HashSet<string>(model.Props.Palette.Select(item => item.Key), StringComparer.Ordinal)
             : null;
-        _grid = new PropGrid(document.Props);
+        using (Performance.Measure("tool.props-erase-start"))
+        {
+            _grid = new PropGrid(document.Props);
+        }
         float radius = (float)Radius;
         _stroke = new BrushStroke(model, "Erase props", Radius, x, z, (edit, at, to) =>
         {

@@ -31,6 +31,14 @@ public sealed record PropPlacementSection() : PanelSection("Placing");
 public sealed record PropReclaimSection() : PanelSection("Reclaim");
 
 /// <summary>
+/// A way placed props stand, with what the Placing section calls it.
+/// </summary>
+public sealed record AlignmentChoice(PropAlignment Value, string Title)
+{
+    public override string ToString() => Title;
+}
+
+/// <summary>
 /// A prop of the palette, with its weight.
 /// </summary>
 public sealed partial class PaletteItem(AssetEntry? entry, string blueprint) : ObservableObject
@@ -104,7 +112,32 @@ public sealed partial class PropsViewModel : ObservableObject
 
     #region Placing
 
-    public IReadOnlyList<PropAlignment> Alignments { get; } = Enum.GetValues<PropAlignment>();
+    /// <summary>
+    /// The ways a placed prop can stand, as the Placing section offers them.
+    /// </summary>
+    public IReadOnlyList<AlignmentChoice> Alignments { get; } =
+    [
+        new AlignmentChoice(PropAlignment.ByCategory, "By kind: rocks tilt, trees stand"),
+        new AlignmentChoice(PropAlignment.Upright, "Upright"),
+        new AlignmentChoice(PropAlignment.Terrain, "With the terrain"),
+    ];
+
+    /// <summary>
+    /// <see cref="Alignment"/> as the Placing section's choice.
+    /// </summary>
+    public AlignmentChoice ChosenAlignment
+    {
+        get => Alignments.First(choice => choice.Value == Alignment);
+        set
+        {
+            if (value is not null)
+            {
+                Alignment = value.Value;
+            }
+        }
+    }
+
+    partial void OnAlignmentChanged(PropAlignment value) => OnPropertyChanged(nameof(ChosenAlignment));
 
     /// <summary>
     /// How placed props stand: by category (rocks tilt with the ground, trees stand upright),

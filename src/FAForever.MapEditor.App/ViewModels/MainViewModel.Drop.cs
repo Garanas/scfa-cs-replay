@@ -58,7 +58,7 @@ public sealed partial class MainViewModel
         {
             Status = entry.Kind switch
             {
-                AssetKind.Prop => $"Placing {entry.Name} by dropping it is not built yet: user story P-1",
+                AssetKind.Prop => $"Open a map to place {entry.Name}",
                 AssetKind.Unit => $"Placing {entry.Name} by dropping it is not built yet: user story U-2",
                 AssetKind.Decal => $"Placing {entry.Name} by dropping it is not built yet: user story D-1",
                 AssetKind.Texture => $"Dropping a texture on the map is not built yet; a stratum takes it in the Paint mode (user story S-2)",

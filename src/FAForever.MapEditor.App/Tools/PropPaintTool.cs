@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -138,6 +139,7 @@ public sealed partial class PropPaintTool : ObservableObject, IMapTool
             _model.Status = "The palette is empty: add props to it in the Props panel, or choose props on the shelf while painting";
             return;
         }
+        using Performance.Span measure = Performance.Measure("tool.props-paint-start");
         _scatter = new PropScatter(document.Props, palette, _model.Props.Placement, _model.Props.Random)
         {
             Density = (float)Density,

@@ -76,6 +76,18 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     prop's whole matrix turns, so a tilt stays), removes, copies and pastes many things at once
     (`ObjectClipboard`; copied path nodes keep their links among each other). Things keep to the
     terrain: they stay as high above it as they were (`Heightmap.HeightAt`, between the corners).
+  - Props stand by their matrix (`PropOrientation`): the rows `RotationX/Y/Z` are where the
+    model's axes point on the map, so `RotationY` is its up (checked against the tilted props of
+    the vault maps: the rows follow the terrain's normal, the columns do not). Aligning to a
+    normal, standing upright and tilting by pitch and roll keep the heading (`PropHeading`, which
+    a turn about the prop's own up changes by exactly that angle). `TiltsWithTerrain` decides by
+    the blueprint's folder: rocks, crystals, logs and clutter tilt, trees and the rest stand.
+    `PropEdits` changes many props by id in one pass (align, upright, drop with a sink, tilt,
+    scale, replace blueprints, add and remove many) and sets them back on the ground where the
+    heightmap's tiles changed (`PropsFollowTerrain`). `PropPlacement` makes a placed prop,
+    `PropScatter` paints a palette by weight with a density and spacing (`PropGrid` finds the
+    props near a place) where `IPlacementCondition`s allow (`MaskCondition`), and
+    `Workspaces/PropReclaim` adds up the blueprints' reclaim (`AssetEntry.ReclaimMass`, `ReclaimEnergy`).
 - Lua plugins (Lua-CSharp, later) get a facade over the session, never the document: reads give
   values, writes happen inside a transaction, so each plugin run is one undo step and a failing
   plugin changes nothing.
