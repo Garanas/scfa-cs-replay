@@ -543,12 +543,12 @@
               <Border Classes="group">
                 <StackPanel Classes="stack" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Markers.Paths}" x:DataType="vm:PathNetworkPanel">
                   <TextBlock Classes="overline" Text="{Binding Source=Path networks, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-                  <WrapPanel>
+                  <UniformGrid Columns="2">
                     <CheckBox Content="Land" IsChecked="{Binding Land}" AutomationProperties.Name="Generate the land network" />
                     <CheckBox Content="Water" IsChecked="{Binding Water}" AutomationProperties.Name="Generate the water network" />
                     <CheckBox Content="Amphibious" IsChecked="{Binding Amphibious}" AutomationProperties.Name="Generate the amphibious network" />
                     <CheckBox Content="Air" IsChecked="{Binding Air}" AutomationProperties.Name="Generate the air network" />
-                  </WrapPanel>
+                  </UniformGrid>
                   <DockPanel>
                     <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Spacing" Width="{StaticResource FactLabelWidth}" />
                     <TextBox Classes="mono commit" Text="{Binding Spacing}" AutomationProperties.Name="Spacing of the path nodes"

@@ -54,7 +54,8 @@ reads again when it changes; and nothing that generates runs by itself.
       files in the workspace, shared like the rest of it. Today: `presets/<kind>/*.json` in the
       workspace, read again when they change; brush presets in the Terrain and Paint panels (save,
       apply, delete). Missing: presets of lighting, water, units, markers and prop palettes, and of
-      a selection.
+      a selection. Markers presets: the Markers panel's Marker presets (the selected markers, with
+      their links and chains), placed with the Preset tool (`markers.placePreset`).
 - [ ] **F-11 Selection.** Select anything that lies on the map (marker, prop, decal, unit, area) in
       the top and 3D views, one or many; an inspector shows and edits what is selected; move,
       rotate and scale with handles; copy, paste, duplicate and delete.
@@ -198,14 +199,21 @@ reads again when it changes; and nothing that generates runs by itself.
 ## R: Markers
 
 - [x] **R-1 Place markers.** Spawns, mass and hydrocarbon deposits, AI markers, path nodes and
-      weather by kind; move and delete them; snap to the grid. Missing: weather markers, and
-      placing mirrored by the symmetry.
+      weather by kind; move and delete them; snap to the grid. Weather: the Weather and Clouds tools
+      (the game's weather definition and generator) and their fields in the inspector
+      (`markers.setWeather`). Missing: placing mirrored by the symmetry.
 - [x] **R-2 Marker properties.** The selected markers in the inspector.
-- [ ] **R-3 Path networks.** Connect path nodes per layer (land, water, amphibious, air), by hand
-      or generated from walkability (T-7). Today: by hand, with the path tool.
+- [x] **R-3 Path networks.** Connect path nodes per layer (land, water, amphibious, air), by hand
+      or generated from walkability (T-7). By hand with the path tool; generated with the Markers
+      panel's Path networks (`markers.connectPaths`: spacing, replace or add where none are), out
+      of date when walkability's inputs change (F-7).
 - [x] **R-4 Chains.** Create a chain and put markers in order.
 - [ ] **R-5 Adaptive maps.** Which markers (deposits, civilians) exist for which number of players
-      and options. Today: whether the map adapts, and the army each deposit waits for.
+      and options. Today: whether the map adapts, the army each deposit waits for, and the groups of
+      civilians and wrecks FAF's adaptive script creates by lobby option (`Optional_<option>_<n>`,
+      `markers.addOptionalGroup`). Missing: civilians by the number of players (the adaptive
+      convention has none: its script decides by option), and writing the map's `_options.lua`
+      and script.
 - [x] **R-6 Show markers.** Markers and path nodes on or off in the top view and in 3D, per kind.
 
 ## P: Props
