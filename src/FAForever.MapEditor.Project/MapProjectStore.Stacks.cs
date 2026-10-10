@@ -63,7 +63,7 @@ namespace FAForever.MapEditor.Project
             foreach (Layer layer in stack.Layers.Where(HasFile))
             {
                 files.Add(Path.GetFileName(MapProjectLayout.StackLayer(key, layer.Name)));
-                if (heights && layer.Coverage is not null)
+                if ((heights && layer.Coverage is not null) || (!heights && layer.Alpha is not null))
                 {
                     files.Add(Path.GetFileName(MapProjectLayout.StackLayerCoverage(key, layer.Name)));
                 }
@@ -124,10 +124,20 @@ namespace FAForever.MapEditor.Project
                         }
                     }
                 }
-                else if (layer.Coverage is TiledBuffer<byte> coverage
-                    && (before is null || before.Name != layer.Name || !ReferenceEquals(before.Coverage, coverage) || !File.Exists(values)))
+                else
                 {
-                    WriteGray8(values, coverage);
+                    if (layer.Coverage is TiledBuffer<byte> coverage
+                        && (before is null || before.Name != layer.Name || !ReferenceEquals(before.Coverage, coverage) || !File.Exists(values)))
+                    {
+                        WriteGray8(values, coverage);
+                    }
+                    // a painted layer's alpha: where it was painted
+                    string alphaFile = Path.Combine(folder, MapProjectLayout.StackLayerCoverage(key, layer.Name));
+                    if (layer.Alpha is TiledBuffer<byte> alpha
+                        && (before is null || before.Name != layer.Name || !ReferenceEquals(before.Alpha, alpha) || !File.Exists(alphaFile)))
+                    {
+                        WriteGray8(alphaFile, alpha);
+                    }
                 }
             }
             ProjectJson.Write(index, ToDto(stack, scale, draftAndFinal));
@@ -290,7 +300,7 @@ namespace FAForever.MapEditor.Project
         private static ImmutableArray<Layer> ReadStackLayers(MapDocument document, LayerTarget target, string folder, out LayerStackDto? read)
         {
             string index = Path.Combine(folder, MapProjectLayout.StackIndex(target.Key));
-            LayerStack held = target.IsHeights ? AllHeightLayers(document) : LayerStack.Empty(target);
+            LayerStack held = target.IsHeights ? AllHeightLayers(document) : document.CoverageStacks.GetValueOrDefault(target.Key) ?? LayerStack.Empty(target);
             read = null;
             if (!File.Exists(index))
             {
@@ -370,7 +380,12 @@ namespace FAForever.MapEditor.Project
                 }
                 return layer with { Values = values, Coverage = coverage };
             }
-            return layer with { Coverage = SameOrRead(ReadGray8(Path.Combine(folder, valuesFile), grid.Width, grid.Height), held?.Coverage) };
+            string alphaFile = Path.Combine(folder, coverageFile);
+            return layer with
+            {
+                Coverage = SameOrRead(ReadGray8(Path.Combine(folder, valuesFile), grid.Width, grid.Height), held?.Coverage),
+                Alpha = File.Exists(alphaFile) ? SameOrRead(ReadGray8(alphaFile, grid.Width, grid.Height), held?.Alpha) : null,
+            };
         }
 
         private static TiledBuffer<byte> SameOrRead(TiledBuffer<byte> read, TiledBuffer<byte>? held) =>
@@ -450,9 +465,15 @@ namespace FAForever.MapEditor.Project
         }
 
         private static bool SameLayer(Layer a, Layer b) =>
-            a.Name == b.Name && a.Source.Equals(b.Source) && a.Combine == b.Combine && a.Strength == b.Strength && a.Clip == b.Clip
+            a.Name == b.Name && SameSource(a.Source, b.Source) && a.Combine == b.Combine && a.Strength == b.Strength && a.Clip == b.Clip
             && a.Visible == b.Visible && a.Locked == b.Locked && a.IsBase == b.IsBase
-            && ReferenceEquals(a.Values, b.Values) && ReferenceEquals(a.Coverage, b.Coverage);
+            && ReferenceEquals(a.Values, b.Values) && ReferenceEquals(a.Coverage, b.Coverage) && ReferenceEquals(a.Alpha, b.Alpha);
+
+        /// <summary>
+        /// Whether two sources are the same: rules by their rules, the others as records.
+        /// </summary>
+        private static bool SameSource(LayerSource a, LayerSource b) =>
+            a is RulesSource ra && b is RulesSource rb ? ra.Rules.Rules.AsSpan().SequenceEqual(rb.Rules.Rules.AsSpan()) : a.Equals(b);
 
         /// <summary>
         /// The document with the heightmap's stack read again after a file of it changed; the

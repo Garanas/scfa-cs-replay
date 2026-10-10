@@ -1,4 +1,5 @@
 using FAForever.MapEditor.App.Tools;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.ViewModels;
@@ -40,6 +41,15 @@ public static class RuleLayers
         if (text.StartsWith(MaskPrefix, StringComparison.OrdinalIgnoreCase))
         {
             return text[MaskPrefix.Length..].Trim();
+        }
+        if (text.StartsWith(LayerStacks.MaskPrefix, StringComparison.Ordinal))
+        {
+            // a mask's key, as layers name it
+            return text[LayerStacks.MaskPrefix.Length..];
+        }
+        if (text.StartsWith("stratum ", StringComparison.OrdinalIgnoreCase) && int.TryParse(text["stratum ".Length..], out int titled))
+        {
+            return MaskRuleSources.Stratum(titled);
         }
         if (MaskRuleSources.IsStratum(text, out int stratum))
         {

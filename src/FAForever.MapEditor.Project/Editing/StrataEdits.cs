@@ -54,6 +54,9 @@ namespace FAForever.MapEditor.Project.Editing
                 throw new InvalidOperationException($"All {count} strata of a version {terrain.ScmapVersion} map are used: remove one first");
             }
             TerrainLayer layer = new TerrainLayer { AlbedoPath = albedoPath, AlbedoScale = scale, NormalPath = normalPath, NormalScale = scale };
+            int fresh = added;
+            // the stratum starts with an empty mask: a stack it had goes
+            document = CoverageLayers.MoveStrata(document, stratum => stratum == fresh ? null : stratum);
             return document with
             {
                 Terrain = terrain with
@@ -79,6 +82,8 @@ namespace FAForever.MapEditor.Project.Editing
             ImmutableArray<TiledBuffer<byte>> masks = terrain.StratumMasks.Layers;
             TiledBuffer<byte> removed = masks[layer - 1];
             masks = masks.RemoveAt(layer - 1).Insert(last - 1, Empty(removed));
+            // the stacks move down with their strata
+            document = CoverageLayers.MoveStrata(document, stratum => stratum == layer ? null : stratum > layer ? stratum - 1 : stratum);
             return document with { Terrain = terrain with { Layers = layers, StratumMasks = terrain.StratumMasks with { Layers = masks } } };
         }
 
@@ -99,6 +104,11 @@ namespace FAForever.MapEditor.Project.Editing
             TerrainLayer moved = terrain.Layers[layer];
             ImmutableArray<TiledBuffer<byte>> masks = terrain.StratumMasks.Layers;
             TiledBuffer<byte> mask = masks[layer - 1];
+            document = CoverageLayers.MoveStrata(document, stratum =>
+                stratum == layer ? to
+                : layer < to && stratum > layer && stratum <= to ? stratum - 1
+                : to < layer && stratum >= to && stratum < layer ? stratum + 1
+                : stratum);
             return document with
             {
                 Terrain = terrain with

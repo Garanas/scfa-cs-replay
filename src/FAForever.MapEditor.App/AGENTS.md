@@ -547,7 +547,7 @@ the tools hold their settings and make one stroke (`BrushStroke`) a step of undo
   history's text (`Describe`). A stroke paints `EditTransaction.Grid(target)`. The tools:
   `StrataTool` (`paint.strata`, its `Limiting`: slope and height, each pair on or off),
   `WaterPaintTool` (`water.paint`: foam, flatness or depth bias, half the map's size),
-  `MaskPaintTool` (`paint.masks`: the mask chosen in the panel) and `TerrainTypeTool`
+  `MaskPaintTool` (`masks.paint`, the Masks mode's mask brush: the mask chosen in its panel) and `TerrainTypeTool`
   (`terrain.types`: the game's types, set where the brush works at least half, sharp by default).
   A new grid to paint is a `PaintTarget` in the library and a small subclass here.
 - **What the top and 3D views lay over the terrain** is `MainViewModel.ShownGrid`, one grid owned
@@ -562,7 +562,7 @@ the tools hold their settings and make one stroke (`BrushStroke`) a step of undo
   (`TerrainTypeTool.Legend`, counted only while the tool is active and no stroke runs; span
   `tool.count-types`), their swatches through `Controls/ArgbBrushConverter`.
 - **Masks for tools** (K-1, `model.Masks`, `ViewModels/MasksViewModel`): the document's masks by
-  name and the chosen one; the Paint panel's `MasksSection` lists them (with their size), names a
+  name and the chosen one; the Masks panel's `MasksSection` lists them (with their size), names a
   new one or a new name in its field, and runs `paint.addMask {name?, half?}`,
   `paint.renameMask {name?, newName?}` and `paint.deleteMask {name?}` (each `[UndoStep]`; left out,
   the field's name or the chosen mask); `paint.chooseMask {name}` chooses as the list does. Later
@@ -1372,10 +1372,10 @@ library's (`MaskRules`, `PropRules`, `RuleEdits`; its guide, "Rules"); the core'
 `PropRulesGenerator` (`generate.props`) with `Generation`, so they show in the status bar, the
 Terrain panel's generated list and `generate.stale`.
 
-- **Mask rules** (`model.MaskRules`, `MaskRulesViewModel`; the Paint mode's inspector section
-  `MaskRulesSection`, drawn by `Views/RulePanels/MaskRulesPanel`): Rules... beside each mask of the
-  Paint panel runs `paint.maskRules {name?}`, which chooses the mask, turns the mask overlay on and
-  shows its rules. Each rule is a card with its fields, a `SettingGroup` that runs
+- **Mask rules** (`model.MaskRules`, `MaskRulesViewModel`, drawn by `Views/RulePanels/MaskRulesPanel`
+  under the stack of a mask or stratum when a rules layer is chosen; section "Stacks of coverage"):
+  `paint.maskRules {name?}` chooses the mask and its rules layer in the Masks mode, turns the mask
+  overlay on and shows its rules. Each rule is a card with its fields, a `SettingGroup` that runs
   `paint.setMaskRule {index, mask?, kind?, combine?, invert?, min?, max?, soft?, source?, scale?,
   seed?, radius?}` (merged per field as the map panels' fields are), up, down and a cross
   (`paint.moveMaskRule {index, to}`, `paint.removeMaskRule {index}`); a kind and Add
@@ -1659,6 +1659,55 @@ water stacks and the draft and final heightmaps on these two pieces.
 - Automation: `ui` lists each preview as `ImagePreview` with its label (`Preview of the height layer
   Base`). The tool tip is a popup: `screenshot` and `ui` do not reach it; the headless test
   `LayerStackControlTest` captures the large picture (`captures/height-layer-preview-large.png`).
+
+## Stacks of coverage: the Masks mode, stratum and water stacks
+
+Wave 9B (user stories K-1, K-2, S-1, W-2); the model is the library's (its guide, "Stacks of
+coverage"). Files: `ViewModels/CoverageStackViewModel.cs`, `MainViewModel.CoverageStacks.cs`,
+`Commands/Layers/CoverageLayers.cs`, `Views/MapPanels/MaskStackPanel`, `LayerPanel`, `PanelPartView`.
+
+- **`CoverageStackViewModel`** (a `LayerStackViewModel`): the stack of a target given by a function
+  (the chosen mask, stratum or water map), the `layers.*` commands with the target's key added, add
+  choices Painted, Image, Mask, Stratum, Rules (`AddChoicesOf`; a new source is one more choice),
+  `Reference` (what a mask layer reads: mask, threshold, inverted), `IsReference`, `IsRules`,
+  `Retarget` (another grid shown: its painted layer chosen). Its last layer cannot be removed.
+- **`MainViewModel`**: `MaskStack`, `StratumStack`, `WaterStacks` (one per map, the content of the
+  Water panel's map entries through `PanelParts.Replace` as `WaterMapPart.Stack`),
+  `ShownCoverageTarget` (the mode's grid), `CoverageStackOf`, `ShowCoverageTarget`. A stack's chosen
+  layer is the session's paint layer for its key (`EditSession.PaintLayers`), so the mask brush, the
+  strata tool and the water brush paint it; `GridPaintTool.Stack` names a tool's target, and a stroke
+  on a stack without a layer that can be painted is refused with the reason in the status line.
+- **The Masks mode** (Shift+F3): the panel's `MasksSection` lists the masks with an `ImagePreview`
+  each (following strokes) and how many layers, a name field, Add, Rename, Duplicate
+  (`paint.duplicateMask {name?, newName?}`), Delete and Show it over the terrain; the inspector's
+  `MaskStackSection` the stack control (with settings), the mask layer's `Reference` and, for a
+  rules layer, the rule editor. Its tool is the mask brush (`masks.paint`, moved from the Paint
+  mode). The overlay Mask and the brush show the chosen mask. Masks are never exported.
+- **The Paint mode**: the strata list has each texture's picture (`LayerItem.Texture`, the
+  converted PNG through the catalog; made again when the catalog loads); the inspector's
+  `LayerSection` shows the chosen stratum's textures, then "Mask layers" (the stack) and the rule
+  editor for a rules layer.
+- **The Water mode**: each map's entry shows its stack above the brush's settings.
+- **The rule editor** (`MaskRulesViewModel`) edits a rules layer: `Editing` the owner (a mask's name
+  or `stratum:N`), `Layer` the rules layer (null: the lowest). Choosing a rules layer in a stack
+  shows it (`EditLayer`); choosing another layer of that grid closes it; while it edits a grid of the
+  mode, that rules layer is chosen (`ShowEditedRulesLayer`: a rule added to a mask chooses the
+  rules layer it made). `paint.addMaskRule`, `setMaskRule`, `removeMaskRule`, `moveMaskRule` take
+  `mask` (also `stratum:N`) and `layer`. `paint.maskRules {name?}` opens a mask's rules in the Masks
+  mode. The preview shows while the mode's stack has a rules layer chosen (Masks and Paint modes).
+- Commands: `layers.add {target?, source?: painted|image|mask|stratum|rules, name?, mask?, path?}`
+  (in the Masks mode's menu), `layers.set {target?, layer?, name?, combine?, strength?, clip?,
+  visible?, locked?, reads?, threshold?, invert?}`, `layers.move {target?, layer?, to?, by?}`,
+  `layers.remove {target?, layer?}`, `layers.choose {layer, target?}` (chooses the grid in its mode
+  too). A target is a stack's key, any name of a mask or stratum (`forest`, `mask:forest`,
+  `stratum:2`, `stratum 2`, `Layer 2`) or a water map (`foam`, `flatness`, `depthBias`); left out,
+  the mode's grid. Each edit is one step of undo (span `model.coverage-layers`).
+- Automation: `state.coverageStacks` (`shown`, the `mask`, `stratum` and `water` stacks with their
+  target, chosen layer, whether kept in the document and each layer's source, combine, strength,
+  clip, what it reads and summary; `stacks`: the keys the document keeps); `state.rules.masks.layer`.
+- Speed (Archsimkats Valley, debug): a strata stroke costs about 10 ms a dab without a stack and
+  about 17 ms with a stack of three layers (a mask reference among them).
+- Tests: `CoverageStacksTest` (operations and the mouse), the library's `CoverageLayersTest`.
 
 ## Height layers and curves
 
@@ -1945,8 +1994,8 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   Presets below: lighting presets, and sky presets while the sky is chosen (`ForParts`).
 - **The rail** (`Views/ModeRail`): the modes of groups 0 and 1 at the top (`RailModes`), the bottom
   group (`EditorModes.BottomGroup`, `BottomRailModes`) at the bottom above a divider and the Plugins
-  entry (`plugins.manage`). Masks (Shift+F3, after Paint, which it takes the masks from; an empty
-  shell with a planned section and a planned brush) and Procedural (F11, group `BottomGroup`; its
+  entry (`plugins.manage`). Masks (Shift+F3, after Paint, which it took the masks from; filled in by
+  wave 9B, section "Stacks of coverage") and Procedural (F11, group `BottomGroup`; its
   sections are the generated results). F1 to F9 stay as they were. A mode's tool tip names its shortcut.
 - **Keyboard shortcuts** (`help.shortcuts {query?}`, Shift+F1, Help menu; `Views/ShortcutsPage`): every
   command with a gesture from the registry (so a plugin's shows) by menu, the keys the tools take

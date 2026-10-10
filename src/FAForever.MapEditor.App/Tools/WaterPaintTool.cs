@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.Tools;
 
@@ -35,6 +36,8 @@ public sealed partial class WaterPaintTool : GridPaintTool
     public partial WaterMaskChoice Painted { get; set; }
 
     public override PaintTarget? Target => Model.HasMap ? PaintTarget.Water(Painted.Mask) : null;
+
+    public override LayerTarget? Stack => LayerTarget.Water(Painted.Mask);
 
     /// <summary>
     /// Paints the mask <paramref name="name"/>: <c>foam</c>, <c>flatness</c> or <c>depthBias</c>.

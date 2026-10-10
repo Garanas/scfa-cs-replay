@@ -193,7 +193,7 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = await Open();
             MasksViewModel masks = model.Masks;
             Assert.IsTrue(masks.IsEmpty);
-            model.SelectTool("paint.masks");
+            model.SelectTool("masks.paint");
             Assert.IsNull(model.Tool<MaskPaintTool>().Target, "nothing to paint without a mask");
             model.Stroke([(50, 50)]);
             Assert.IsFalse(model.CanUndo);

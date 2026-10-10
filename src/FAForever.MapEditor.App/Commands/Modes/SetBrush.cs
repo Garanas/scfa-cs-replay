@@ -79,7 +79,7 @@ public sealed class SetBrushHandler(MainViewModel model) : IRequestHandler<SetBr
         if (request.Mask is string mask)
         {
             model.Masks.Choose(mask);
-            model.SelectTool("paint.masks");
+            model.SelectTool("masks.paint");
         }
         if (request.TerrainType is string type)
         {

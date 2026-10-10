@@ -619,6 +619,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["mapSize"] = model.DescribeMapSize(),
             ["heightLayers"] = HeightLayersState.Describe(model),
             ["draftFinal"] = DraftFinalState.Describe(model),
+            ["coverageStacks"] = model.DescribeCoverageStacksState(),
             ["presets"] = new JsonObject
             {
                 ["folder"] = model.Presets.Library?.Folder,

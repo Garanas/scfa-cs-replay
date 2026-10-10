@@ -42,9 +42,12 @@ public static class WaterMaps
 /// radius and strength; the shape is in the tool's options).
 /// </summary>
 /// <param name="Brush">The Paint water tool; null until the editor's tools are made.</param>
-public sealed record WaterMapPart(WaterMap Map, WaterPaintTool? Brush = null)
+/// <param name="Stack">The map's stack of layers (wave 9B): its painted layer is what the brush paints.</param>
+public sealed record WaterMapPart(WaterMap Map, WaterPaintTool? Brush = null, CoverageStackViewModel? Stack = null)
 {
     public bool HasBrush => Brush is not null;
+
+    public bool HasStack => Stack is not null;
 }
 
 /// <summary>

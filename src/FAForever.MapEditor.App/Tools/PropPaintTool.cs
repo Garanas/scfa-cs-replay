@@ -121,7 +121,19 @@ public sealed partial class PropPaintTool : ObservableObject, IMapTool
             ? PaintLayer.None
             : Layers.FirstOrDefault(layer => layer.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
               ?? Layers.FirstOrDefault(layer => layer.Name.StartsWith(name + ":", StringComparison.OrdinalIgnoreCase))
+              ?? Layers.FirstOrDefault(layer => layer.Name.Equals(TitleOfKey(name), StringComparison.OrdinalIgnoreCase))
+              ?? Layers.FirstOrDefault(layer => layer.Name.StartsWith(TitleOfKey(name) + ":", StringComparison.OrdinalIgnoreCase))
               ?? throw new ArgumentException($"There is no layer '{name}': {string.Join(", ", Layers.Select(layer => layer.Name))}");
+
+    /// <summary>
+    /// The list's name of a mask named the one way layers name it (<c>mask:forest</c>,
+    /// <c>stratum:3</c>, <c>stratum 3</c>): <c>Mask: forest</c>, <c>Layer 3</c>.
+    /// </summary>
+    private static string TitleOfKey(string name)
+    {
+        string parsed = RuleLayers.Parse(name);
+        return MaskRuleSources.IsStratum(parsed, out int layer) ? $"Layer {layer}" : RuleLayers.MaskPrefix + parsed;
+    }
 
     /// <summary>
     /// The conditions of where it paints, for a version of the map.

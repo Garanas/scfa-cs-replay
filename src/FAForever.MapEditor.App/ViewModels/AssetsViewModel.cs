@@ -497,6 +497,7 @@ public sealed partial class AssetsViewModel : ObservableObject
             return AssetCatalog.Load(workspace);
         });
         Catalog = catalog;
+        OnPropertyChanged(nameof(Catalog));
         IsLoaded = true;
         _log.LogInformation("Read {Assets} assets of the workspace in {Milliseconds} ms", catalog.Entries.Count, Math.Round(Stopwatch.GetElapsedTime(start).TotalMilliseconds));
         FindMissing();
@@ -536,6 +537,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     public void Use(AssetCatalog catalog)
     {
         Catalog = catalog;
+        OnPropertyChanged(nameof(Catalog));
         IsLoaded = true;
         FindMissing();
         Rebuild();
@@ -559,6 +561,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         }
         bool shown = Shown is AssetEntry entry && entry.Key == old.Key;
         Catalog = catalog;
+        OnPropertyChanged(nameof(Catalog));
         FindMissing();
         Rebuild();
         if (shown && fresh is not null)

@@ -77,16 +77,18 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public Task TheRulesButtonOfAMaskOpensItsRulesAndAddAddsOne() => HeadlessApp.Run(async () =>
+        public Task ARulesLayerOfAMaskShowsItsRulesAndAddAddsOne() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
             await model.Commands.RunAsync("paint.addMask", new JsonObject { ["name"] = "forest" }, interactive: false);
-            model.SelectMode("paint");
+            model.SelectMode("masks");
             Dispatcher.UIThread.RunJobs();
 
-            Click(window, Labelled<Button>(window, "Rules of the mask forest"));
+            // the mask's stack in the inspector: a rules layer added is chosen, and the rule editor shows its rules
+            Click(window, Labelled<Button>(window, "Add a rules mask layer"));
             await Settle();
             Assert.AreEqual("forest", model.MaskRules.Editing);
+            Assert.AreEqual("Rules", model.MaskRules.Layer);
 
             int steps = model.History.Count;
             Click(window, Labelled<Button>(window, "Add a rule of the kind chosen"));

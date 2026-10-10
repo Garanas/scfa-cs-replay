@@ -40,7 +40,7 @@ namespace FAForever.MapEditor.App.Tests
             await Run(model, "paint.addMask", new JsonObject { ["name"] = "flat" });
             await Run(model, "paint.maskRules", new JsonObject { ["name"] = "flat" });
             Assert.AreEqual("flat", model.MaskRules.Editing);
-            Assert.AreEqual("paint", model.SelectedMode!.Definition.Id);
+            Assert.AreEqual("masks", model.SelectedMode!.Definition.Id, "the rules are a layer of the mask's stack, in the Masks mode");
             Assert.IsTrue(model.ShowMask, "the mask shows over the terrain");
 
             await Run(model, "paint.addMaskRule", new JsonObject { ["kind"] = "Slope", ["max"] = 8 });
@@ -108,13 +108,14 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public async Task ThePreviewBelongsToThePaintModeAndLeavesOtherToolsTheirGrid()
+        public async Task ThePreviewBelongsToTheMasksModeAndLeavesOtherToolsTheirGrid()
         {
             MainViewModel model = await Open();
             model.SelectTool("paint.strata");
             await Run(model, "paint.addMask", new JsonObject { ["name"] = "high" });
             await Run(model, "paint.addMaskRule", new JsonObject { ["mask"] = "high", ["kind"] = "Height", ["min"] = 0, ["max"] = 1000 });
-            Assert.AreEqual("paint.masks", model.ActiveTool?.Definition.Id, "opening the rules chooses the masks tool, which lets the preview show");
+            Assert.AreEqual("masks", model.SelectedMode?.Definition.Id, "opening the rules shows the mask's stack in the Masks mode");
+            Assert.IsTrue(model.MaskStack.IsRules, "with its rules layer chosen");
             for (int i = 0; i < 200 && model.MaskRules.PreviewOverlay is null; i++)
             {
                 await Task.Delay(20);
@@ -128,8 +129,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreNotEqual(preview.Key, model.ShownGrid?.Key, "no other mode shows the preview");
             model.SelectTool("paint.strata");
             Assert.AreEqual(model.StrataTool.Shown?.Key, model.ShownGrid?.Key, "the strata tool shows the layer it paints");
-            model.SelectTool("paint.masks");
-            Assert.AreSame(preview, model.ShownGrid, "back in the Paint mode with the rules open, the preview shows again");
+            model.SelectTool("masks.paint");
+            Assert.AreSame(preview, model.ShownGrid, "back in the Masks mode with the rules layer chosen, the preview shows again");
             model.MaskRules.Editing = null;
         }
 

@@ -164,7 +164,8 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// <summary>
         /// The masks for tools the rules read (by name; strata are left out).
         /// </summary>
-        public IEnumerable<string> Sources => Rules.Where(rule => rule.Kind == MaskRuleKind.Layer && !MaskRuleSources.IsStratum(rule.Source, out _) && rule.Source.Length > 0).Select(rule => rule.Source);
+        public IEnumerable<string> Sources => Rules.Where(rule => rule.Kind == MaskRuleKind.Layer && !MaskRuleSources.IsStratum(rule.Source, out _) && rule.Source.Length > 0)
+            .Select(rule => rule.Source.StartsWith(Editing.LayerStacks.MaskPrefix, StringComparison.Ordinal) ? rule.Source[Editing.LayerStacks.MaskPrefix.Length..] : rule.Source);
     }
 
     /// <summary>
@@ -199,7 +200,8 @@ namespace FAForever.MapEditor.Project.Files.InMemory
                 ImmutableArray<TiledBuffer<byte>> layers = document.Terrain.StratumMasks.Layers;
                 return layer >= 1 && layer <= layers.Length ? layers[layer - 1] : null;
             }
-            return document.Masks.GetValueOrDefault(source);
+            // a mask by its plain name or as a key (mask:forest), the one way layers name it
+            return Editing.LayerStacks.MaskOf(document, source);
         }
     }
 }
