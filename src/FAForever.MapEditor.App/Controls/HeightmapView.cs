@@ -319,6 +319,8 @@ public sealed class HeightmapView : Control
         {
             using (context.PushClip(new Rect(Bounds.Size)))
             {
+                DecalOutlinesDrawn = 0;
+                GridLinesDrawn = 0;
                 if (_model.ShowDecals)
                 {
                     DrawDecals(context, overlay, document, _model.HiddenDecalIds);
