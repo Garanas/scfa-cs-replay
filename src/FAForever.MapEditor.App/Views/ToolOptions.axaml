@@ -58,6 +58,31 @@
             <DataTemplate DataType="tools:SelectTool">
               <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
             </DataTemplate>
+            <!-- placing markers of a kind (R-1): the grid, an AI marker's type, the last deposit's slope -->
+            <DataTemplate DataType="tools:PlaceMarkerTool">
+              <StackPanel Classes="toolrow">
+                <ComboBox ItemsSource="{Binding Snaps}" SelectedItem="{Binding Snap}" IsVisible="{Binding CanSnap}" AutomationProperties.Name="Snap markers to a grid" />
+                <ComboBox ItemsSource="{Binding AiTypes}" SelectedItem="{Binding AiType}" IsVisible="{Binding IsAi}" AutomationProperties.Name="Type of AI marker to place" />
+                <TextBlock Classes="warning" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Markers.PlacementWarning}" ToolTip.Tip="{Binding Markers.PlacementWarning}"
+                           IsVisible="{Binding !CanSnap}" AutomationProperties.Name="Slope of the last deposit" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </StackPanel>
+            </DataTemplate>
+            <!-- placing and linking path nodes by hand (R-3) -->
+            <DataTemplate DataType="tools:PathTool">
+              <StackPanel Classes="toolrow">
+                <ComboBox ItemsSource="{Binding Layers}" SelectedItem="{Binding Layer}" AutomationProperties.Name="Layer of the path nodes to place" />
+                <ComboBox ItemsSource="{Binding Snaps}" SelectedItem="{Binding Snap}" AutomationProperties.Name="Snap path nodes to a grid" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </StackPanel>
+            </DataTemplate>
+            <!-- putting markers in a chain (R-4) -->
+            <DataTemplate DataType="tools:ChainTool">
+              <StackPanel Classes="toolrow">
+                <TextBlock Classes="label" Text="{Binding Markers.SelectedChain.Summary, FallbackValue='A new chain', TargetNullValue='A new chain'}" AutomationProperties.Name="Chain the clicks add to" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </StackPanel>
+            </DataTemplate>
             <!-- how either brush's picture is turned; the shape itself is the first choice of the row -->
             <DataTemplate DataType="tools:BrushShapeSettings">
               <StackPanel Classes="toolrow">

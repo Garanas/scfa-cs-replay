@@ -22,6 +22,7 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 /// <param name="HighlightColor">The highlight's colour, from the theme.</param>
 /// <param name="MissingColor">The colour of the box that stands in for a model the workspace does
 /// not have, from the theme.</param>
+/// <param name="MarkerKinds">The kinds of markers that show, of those <paramref name="Markers"/> and <paramref name="PathNodes"/> show (user story R-6).</param>
 internal sealed record ObjectFrame(
     AssetCatalog Catalog,
     bool Props,
@@ -31,7 +32,8 @@ internal sealed record ObjectFrame(
     IReadOnlySet<ObjectRef>? Highlighted,
     Vector3 Eye,
     Vector3 HighlightColor,
-    Vector3 MissingColor);
+    Vector3 MissingColor,
+    MarkerKinds MarkerKinds = MarkerKinds.All);
 
 /// <summary>
 /// Draws the objects on the map: the props and units with their models (<see cref="ObjectModels"/>),
@@ -261,7 +263,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
 
     private void UpdateMarkers(MapDocument document, ObjectFrame frame)
     {
-        object key = (document.Markers, document.Terrain.Heightmap, frame.Markers, frame.PathNodes, frame.Highlighted);
+        object key = (document.Markers, document.Terrain.Heightmap, frame.Markers, frame.PathNodes, frame.Highlighted, frame.MarkerKinds);
         if (Equals(key, _markersOf))
         {
             return;
@@ -269,7 +271,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         _markersOf = key;
         using Performance.Span measure = Performance.Measure("3d.update-markers");
         List<float> data = [];
-        foreach (Marker marker in ObjectPlacement.Markers(document, frame.Markers, frame.PathNodes))
+        foreach (Marker marker in ObjectPlacement.Markers(document, frame.Markers, frame.PathNodes, frame.MarkerKinds))
         {
             Vector3 place = ObjectPlacement.MarkerPlace(marker, document.Terrain.Heightmap);
             Color32 color = marker.Color;

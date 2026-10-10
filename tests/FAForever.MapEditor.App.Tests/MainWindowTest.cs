@@ -750,5 +750,63 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(SelectionInspector.Mixed, x.Text);
             window.Close();
         });
+
+        [TestMethod]
+        public Task AClickWithAMarkerToolPlacesAMarkerAndTheMarkersPanelAndInspectorAreLabelled() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.Top);
+            model.SelectTool("markers.mass");
+            Dispatcher.UIThread.RunJobs();
+            int deposits = model.ShownDocument!.Markers.Resources.Length;
+            Point at = window.MapView.TranslatePoint(window.MapView.MapToControl(40.2, 70.8), window)!.Value;
+            Point place = window.MapView.ControlToMap(window.TranslatePoint(at, window.MapView)!.Value);
+
+            window.MouseMove(at);
+            window.MouseDown(at, MouseButton.Left);
+            window.MouseUp(at, MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.AreEqual(deposits + 1, model.ShownDocument!.Markers.Resources.Length, "a click places a deposit");
+            ResourceMarker placed = model.ShownDocument.Markers.Resources[^1];
+            Assert.AreEqual(MathF.Floor((float)place.X) + 0.5f, placed.Position.X, "on the centre of the ogrid under the mouse");
+            Assert.AreEqual(MathF.Floor((float)place.Y) + 0.5f, placed.Position.Z);
+            Assert.IsTrue(model.Selection.Contains(ObjectRef.Marker(placed.Id)), "and selects it");
+            ComboBox resource = window.GetVisualDescendants().OfType<ComboBox>().Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Resource of the deposits");
+            Assert.IsTrue(resource.IsEffectivelyVisible, "the inspector shows the deposit's fields");
+            Assert.AreEqual("Mass", resource.SelectedItem);
+
+            // every kind of marker selected, and a chain chosen: all the panel's and inspector's controls show
+            MarkerSet markers = model.ShownDocument.Markers;
+            await model.Commands.RunAsync("markers.addChain", new JsonObject { ["markers"] = new JsonArray(markers.Spawns[0].Id, placed.Id) }, interactive: false);
+            model.Selection.Set([ObjectRef.Marker(markers.Spawns[0].Id), ObjectRef.Marker(placed.Id), ObjectRef.Marker(markers.AiMarkers[0].Id)]);
+            model.SelectTool("markers.path");
+            Dispatcher.UIThread.RunJobs();
+            List<string> unlabelled = [];
+            void Check(JsonArray nodes)
+            {
+                foreach (JsonObject node in nodes.Cast<JsonObject>())
+                {
+                    string type = node["type"]!.GetValue<string>();
+                    if (type is "ComboBox" or "TextBox" or "ListBox" or "Button" or "CheckBox" && node["label"] is null && node["text"] is null)
+                    {
+                        unlabelled.Add($"{type} at {node["bounds"]!.ToJsonString()}");
+                    }
+                    if (node["children"] is JsonArray children)
+                    {
+                        Check(children);
+                    }
+                }
+            }
+            JsonArray ui = UiTree.Describe(window, hidden: true);
+            Check(ui);
+            CollectionAssert.AreEqual(Array.Empty<string>(), unlabelled);
+            string json = ui.ToJsonString();
+            foreach (string label in new[] { "Kinds of markers shown", "Chains", "Name of the chain", "Adaptive map", "Type of the AI markers", "No-rush offset across", "Layer of the path nodes to place" })
+            {
+                StringAssert.Contains(json, $"\"label\":\"{label}\"");
+            }
+            window.Close();
+        });
     }
 }

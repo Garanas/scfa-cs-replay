@@ -146,7 +146,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         Vector2 view = InView(at);
         (Vector3 origin, Vector3 direction) = camera.RayAt(view);
         float? terrain = camera.PointAt(view) is Vector3 ground ? Vector3.Distance(origin, ground) / direction.Length() : null;
-        PickOptions shown = new PickOptions(_model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes);
+        PickOptions shown = new PickOptions(_model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes, MarkerKinds: _model.ShownMarkerKinds);
         return ObjectPicking.Pick(document, origin, direction, shown, _models.BoundsOf, terrain);
     }
 
@@ -400,7 +400,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             return null;
         }
         ObjectFrame frame = new ObjectFrame(_model.Assets.Catalog, _model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes,
-            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"));
+            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"), _model.ShownMarkerKinds);
         return (_objects, frame);
     }
 

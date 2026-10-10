@@ -76,9 +76,10 @@ public static class ObjectPlacement
     /// <summary>
     /// The markers the 3D view shows: the spawns, deposits, AI markers and weather when
     /// <paramref name="markers"/>, the path nodes when <paramref name="pathNodes"/>.
+    /// Of those, only the kinds of <paramref name="kinds"/> (user story R-6).
     /// </summary>
-    public static IEnumerable<Marker> Markers(MapDocument document, bool markers, bool pathNodes) =>
-        document.Markers.All.Where(marker => marker is PathNode ? pathNodes : markers);
+    public static IEnumerable<Marker> Markers(MapDocument document, bool markers, bool pathNodes, MarkerKinds kinds = MarkerKinds.All) =>
+        document.Markers.All.Where(marker => (marker is PathNode ? pathNodes : markers) && (kinds & MarkerEdits.KindOf(marker)) != 0);
 
     /// <summary>
     /// How high a marker's symbol stands on the map, in ogrids: spawns two and a half times as
@@ -126,9 +127,9 @@ public static class ObjectPlacement
 }
 
 /// <summary>
-/// What picking looks at: the kinds the 3D view shows.
+/// What picking looks at: the kinds the 3D view shows, of the markers those of <see cref="MarkerKinds"/>.
 /// </summary>
-public sealed record PickOptions(bool Props = true, bool Units = true, bool Markers = true, bool PathNodes = false, bool Decals = true);
+public sealed record PickOptions(bool Props = true, bool Units = true, bool Markers = true, bool PathNodes = false, bool Decals = true, MarkerKinds MarkerKinds = MarkerKinds.All);
 
 /// <summary>
 /// Finds the object under a point of the 3D view: the ray from the camera through it against each
@@ -177,7 +178,7 @@ public static class ObjectPicking
         if (shown.Markers || shown.PathNodes)
         {
             Heightmap heights = document.Terrain.Heightmap;
-            foreach (Marker marker in ObjectPlacement.Markers(document, shown.Markers, shown.PathNodes))
+            foreach (Marker marker in ObjectPlacement.Markers(document, shown.Markers, shown.PathNodes, shown.MarkerKinds))
             {
                 Vector3 place = ObjectPlacement.MarkerPlace(marker, heights);
                 float height = ObjectPlacement.MarkerHeight(marker, place, origin);

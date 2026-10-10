@@ -27,6 +27,11 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         };
 
         /// <summary>
+        /// The types the map editors know, in alphabetical order: what a map maker chooses from.
+        /// </summary>
+        public static IReadOnlyList<string> KnownTypes { get; } = [.. Colors.Keys.Order(StringComparer.Ordinal)];
+
+        /// <summary>
         /// The type as the game names it, e.g. <c>Rally Point</c> or <c>Expansion Area</c>.
         /// </summary>
         public required string Type { get; init; }

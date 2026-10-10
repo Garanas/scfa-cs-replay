@@ -119,7 +119,9 @@ namespace FAForever.MapEditor.App.Tests
                 new[]
                 {
                     "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look", "diagnostics.flush", "diagnostics.set", "diagnostics.upload",
-                    "edit.goTo", "edit.nudge", "edit.place", "file.enableVersionControl", "presets.apply", "presets.delete", "select.set", "view.gpuDebug", "view.zoomTo", "workspace.convert", "workspace.setUp",
+                    "edit.goTo", "edit.nudge", "edit.place", "file.enableVersionControl",
+                    "markers.deleteChain", "markers.link", "markers.place", "markers.renameChain", "markers.set", "markers.setChain", "markers.showKind",
+                    "presets.apply", "presets.delete", "select.set", "view.gpuDebug", "view.zoomTo", "workspace.convert", "workspace.setUp",
                 }, outside,
                 "the commands outside the menus are for automation and plugins: their buttons are on a page or panel");
             Assert.AreEqual("Terrain", model.Commands.Find("tool.terrain.curve")!.Menu, "a tool is in its mode's menu");
