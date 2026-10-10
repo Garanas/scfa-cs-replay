@@ -19,6 +19,7 @@ namespace FAForever.MapEditor.Project.Checks
             new ProblemCheck("spawn-without-mass", "Spawns without mass nearby", SpawnsWithoutMass),
             new ProblemCheck("missing-model", "Props and units without a model", MissingModels),
             new ProblemCheck("walkability-changes", "Passages opened or closed", WalkabilityChanges),
+            new ProblemCheck("wrecks-in-playable-army", "Wrecks only a player's slot creates", WrecksInPlayableArmies),
         ];
 
         /// <summary>
@@ -46,6 +47,24 @@ namespace FAForever.MapEditor.Project.Checks
                 {
                     yield return new Problem("army-without-spawn", ProblemSeverity.Error, $"{army} is playable but has no spawn marker");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Wrecks (a <c>WRECKAGE</c> group, user story U-5) of a playable army: the game creates an
+        /// army's groups only when the army is in the game, so they show only when a player takes
+        /// that slot. Wrecks for every game belong to an extra army, such as the civilians.
+        /// </summary>
+        public static IEnumerable<Problem> WrecksInPlayableArmies(ProblemContext context)
+        {
+            MapDocument document = context.Document;
+            foreach (string army in document.PlayableArmiesWithWrecks())
+            {
+                PlacedUnit[] wrecks = [.. document.AllUnits().Where(unit => unit.Army == army && UnitWrecks.IsWreck(unit))];
+                Unit first = wrecks[0].Unit;
+                yield return new Problem("wrecks-in-playable-army", ProblemSeverity.Warning,
+                    $"{army} is playable: its {wrecks.Length} wreck{(wrecks.Length == 1 ? "" : "s")} show only when a player takes that slot; move them to an extra army such as the civilians",
+                    ObjectRef.Unit(first.Name), new Vector2(first.Position.X, first.Position.Z));
             }
         }
 

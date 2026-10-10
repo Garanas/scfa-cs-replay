@@ -13,6 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The fake vault of the library's tests (user story M-8). -->
+    <Compile Include="..\FAForever.MapEditor.Project.Tests\FakeVaultServer.cs" Link="FakeVaultServer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The maps of the map library's tests, one per .scmap version. -->
     <None Include="..\FAForever.FileFormats.Map.Tests\assets\maps\**\*" LinkBase="assets\maps" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

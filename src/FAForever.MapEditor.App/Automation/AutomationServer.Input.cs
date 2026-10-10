@@ -434,6 +434,7 @@ public sealed partial class AutomationServer
                 node["blueprint"] = unit.Unit.Blueprint;
                 node["army"] = unit.Army;
                 node["group"] = string.Join("/", unit.Group);
+                node["wreck"] = UnitWrecks.IsWreck(unit);
                 node["orientation"] = Vector(unit.Unit.Orientation);
                 break;
             case Marker marker:

@@ -9,7 +9,8 @@ internal static class ObjectShaders
     /// <summary>
     /// A model, drawn once per object: each instance is the object's placement as four rows of a
     /// matrix (a point is <c>x · row0 + y · row1 + z · row2 + row3</c>); the first row's fourth
-    /// value is how strongly it is highlighted (0 or 1), which a placement leaves 0.
+    /// value is how strongly it is highlighted (0 or 1), the second row's whether it is a wreck
+    /// (user story U-5: 1, drawn grey and dark), both of which a placement leaves 0.
     /// </summary>
     public static string ModelVertex(bool es) => TerrainShaders.Header(es) + """
         layout(location = 0) in vec3 aPosition;
@@ -23,6 +24,7 @@ internal static class ObjectShaders
         out vec3 vNormal;
         out vec2 vUv;
         out float vHighlight;
+        out float vWreck;
 
         void main()
         {
@@ -30,6 +32,7 @@ internal static class ObjectShaders
             vNormal = aNormal.x * iRow0.xyz + aNormal.y * iRow1.xyz + aNormal.z * iRow2.xyz;
             vUv = aUv;
             vHighlight = iRow0.w;
+            vWreck = iRow1.w;
             gl_Position = uViewProjection * vec4(world, 1.0);
         }
         """;
@@ -37,12 +40,13 @@ internal static class ObjectShaders
     /// <summary>
     /// A model's pixel: its albedo (cut out below the shader's alpha reference) lit as the terrain,
     /// from both sides (leaves and thin parts show their back), and mixed with the highlight's
-    /// colour when highlighted.
+    /// colour when highlighted. A wreck is grey and darker, as the game's burnt wreckage.
     /// </summary>
     public static string ModelFragment(bool es) => TerrainShaders.Header(es) + TerrainShaders.Lighting + """
         in vec3 vNormal;
         in vec2 vUv;
         in float vHighlight;
+        in float vWreck;
         out vec4 outColor;
         uniform sampler2D uAlbedo;
         // the alpha below which a pixel is cut out; below 0 for none
@@ -76,6 +80,7 @@ internal static class ObjectShaders
                 base = (albedo.bbg + vec3(0.4, 0.43, 0.47)) * 0.8;
             }
             vec3 color = lightOf(normal) * base * uColor;
+            color = mix(color, vec3(dot(color, vec3(0.3, 0.59, 0.11))) * vec3(0.5, 0.47, 0.45), vWreck);
             color = mix(color, uHighlight, vHighlight * 0.55);
             outColor = vec4(color, 1.0);
         }

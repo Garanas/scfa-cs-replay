@@ -7,6 +7,14 @@
   (`2e8808cf-...`) on `http://127.0.0.1:5080` and the token proxy stays.
 - [ ] **Verify signing in on https://vault.jipwijnia.nl with the new client** after the next
   release (Hydra already accepts the client and its redirect URI; checked 2026-10-05).
+- [ ] **Try the map editor's upload to the vault once, with a real account** (`file.upload`, user
+  story M-8): built and tested only against a fake server; the first real upload needs the owner's
+  approval and a map of their own (a version in the vault cannot be taken back). The editor signs
+  in as the official FAF client (`2e8808cf-...`, which has `upload_map` and loopback redirects on
+  any port); consider asking the FAForever team for a client of the map editor's own, like
+  [gitops-stack#333](https://github.com/FAForever/gitops-stack/pull/333). The Viewer's production
+  client (`54576b8e-...`) has only `openid,offline,public_profile`, so an upload from the web would
+  need `upload_map` added there.
 - [x] ~~Host https://vault.jipwijnia.nl~~: live since 2026-10-03, with automated deploys from
   `deploy/production`; the server is configured in
   [Garanas/jipwijnia-vps](https://github.com/Garanas/jipwijnia-vps). Signing in (and so Search)

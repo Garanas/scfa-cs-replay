@@ -143,7 +143,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         {
             using Performance.Span measure = Performance.Measure("3d.draw-props");
             _props.Update((document.Props, frame.Highlighted, frame.Hovered), () => document.Props.Select(prop =>
-                (prop.Blueprint, ObjectPlacement.Prop(prop), frame.HighlightOf(ObjectRef.Prop(prop.Id)))));
+                (prop.Blueprint, ObjectPlacement.Prop(prop), frame.HighlightOf(ObjectRef.Prop(prop.Id)), 0f)));
             _props.Arrange(blueprint => _models.Get(blueprint, frame.Catalog, out _), viewProjection, frame.Eye, _models.Loaded);
             (int drawn, int runs, int boxes) = DrawRuns(_props, frame);
             props = drawn;
@@ -153,8 +153,13 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         if (frame.Units)
         {
             using Performance.Span measure = Performance.Measure("3d.draw-units");
-            _units.Update((document.Armies, frame.Highlighted, frame.Hovered), () => ObjectPlacement.Units(document).Select(placed =>
-                (placed.Unit.Blueprint, ObjectPlacement.Unit(placed.Unit), frame.HighlightOf(ObjectRef.Unit(placed.Unit.Name)))));
+            _units.Update((document.Armies, frame.Highlighted, frame.Hovered), () =>
+            {
+                // wrecks are drawn grey and dark (U-5)
+                ImmutableHashSet<string> wrecks = document.Wrecks();
+                return ObjectPlacement.Units(document).Select(placed =>
+                    (placed.Unit.Blueprint, ObjectPlacement.Unit(placed.Unit), frame.HighlightOf(ObjectRef.Unit(placed.Unit.Name)), wrecks.Contains(placed.Unit.Name) ? 1f : 0f));
+            });
             _units.Arrange(blueprint => _models.Get(blueprint, frame.Catalog, out _), viewProjection, frame.Eye, _models.Loaded);
             (int drawn, int runs, int boxes) = DrawRuns(_units, frame);
             units = drawn;
@@ -471,7 +476,8 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         public List<Run> Runs { get; } = [];
 
         /// <param name="of">What the instances are made of; they are made again when it changes.</param>
-        public void Update(object of, Func<IEnumerable<(string Blueprint, Matrix4x4 Placement, float Highlighted)>> objects)
+        /// <param name="objects">Each object's blueprint, placement, highlight and whether it is a wreck (0 or 1).</param>
+        public void Update(object of, Func<IEnumerable<(string Blueprint, Matrix4x4 Placement, float Highlighted, float Wreck)>> objects)
         {
             if (Equals(of, _of))
             {
@@ -482,7 +488,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
             using Performance.Span measure = Performance.Measure("3d.update-objects");
             Dictionary<string, Group> byBlueprint = new Dictionary<string, Group>(StringComparer.OrdinalIgnoreCase);
             _groups.Clear();
-            foreach ((string blueprint, Matrix4x4 m, float highlighted) in objects())
+            foreach ((string blueprint, Matrix4x4 m, float highlighted, float wreck) in objects())
             {
                 if (!byBlueprint.TryGetValue(blueprint, out Group? group))
                 {
@@ -490,7 +496,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
                     byBlueprint[blueprint] = group;
                     _groups.Add(group);
                 }
-                group.Building.AddRange([m.M11, m.M12, m.M13, highlighted, m.M21, m.M22, m.M23, 0, m.M31, m.M32, m.M33, 0, m.M41, m.M42, m.M43, 1]);
+                group.Building.AddRange([m.M11, m.M12, m.M13, highlighted, m.M21, m.M22, m.M23, wreck, m.M31, m.M32, m.M33, 0, m.M41, m.M42, m.M43, 1]);
             }
             foreach (Group group in _groups)
             {

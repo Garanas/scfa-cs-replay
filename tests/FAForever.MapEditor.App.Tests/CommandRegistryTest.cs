@@ -63,7 +63,8 @@ namespace FAForever.MapEditor.App.Tests
             EditorCommand[] incomplete = [.. NewModel().Commands.All.Where(command => command.IsIncomplete)];
             HashSet<string> stories = Stories();
 
-            Assert.IsTrue(incomplete.Length > 5, "the planned commands are found");
+            int planned = typeof(MainViewModel).Assembly.GetTypes().Count(type => type.GetCustomAttribute<IncompleteAttribute>() is not null && type.GetCustomAttribute<EditorCommandAttribute>() is not null);
+            Assert.IsTrue(incomplete.Length >= planned, "the planned commands are found, and the tools not built yet");
             foreach (EditorCommand command in incomplete)
             {
                 Assert.IsTrue(stories.Contains(command.Incomplete!.Story), $"{command.Id} names {command.Incomplete.Story}, which is not in USER_STORIES.md");

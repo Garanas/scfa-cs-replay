@@ -60,6 +60,55 @@ public sealed class WindowDialogs(Window window) : IEditorDialogs
     }
 
     /// <summary>
+    /// A small dialog with the message, the action's button and Cancel, which has the keyboard first.
+    /// </summary>
+    public async Task<bool> ConfirmAsync(string title, string message, string action)
+    {
+        Window dialog = new Window
+        {
+            Title = title,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            CanResize = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+        Button Choice(string text, bool choice)
+        {
+            Button button = new Button { Content = text, MinWidth = 90, HorizontalContentAlignment = HorizontalAlignment.Center };
+            button.Click += (_, _) => dialog.Close(choice);
+            return button;
+        }
+        Button cancel = Choice("Cancel", false);
+        dialog.Content = new StackPanel
+        {
+            Margin = new Avalonia.Thickness(20),
+            Spacing = 16,
+            MaxWidth = 520,
+            Children =
+            {
+                new TextBlock { Text = message, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Spacing = 8,
+                    Children = { Choice(action, true), cancel },
+                },
+            },
+        };
+        dialog.Opened += (_, _) => cancel.Focus();
+        return await dialog.ShowDialog<bool?>(window) ?? false;
+    }
+
+    /// <summary>
+    /// The system's browser, through the shell.
+    /// </summary>
+    public Task OpenInBrowserAsync(Uri page)
+    {
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(page.ToString()) { UseShellExecute = true })?.Dispose();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Shows the picker over the window (<c>AssetPicker</c>), which the window's view model holds.
     /// </summary>
     public Task<string?> PickAssetAsync(AssetKind kind, string? title = null, string? current = null) =>

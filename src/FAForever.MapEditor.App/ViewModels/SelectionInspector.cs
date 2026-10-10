@@ -587,6 +587,30 @@ public sealed partial class UnitSelection(Func<string, JsonObject, Task> run) : 
         }
     }
 
+    private bool? _wrecks;
+
+    /// <summary>
+    /// Whether the selected units are wrecks (user story U-5: in a <c>WRECKAGE</c> group); null when
+    /// some are. Checking or clearing it runs <c>units.asWrecks</c>.
+    /// </summary>
+    public bool? Wrecks
+    {
+        get => _wrecks;
+        set
+        {
+            if (value is null || value == _wrecks)
+            {
+                return;
+            }
+            _wrecks = value;
+            OnPropertyChanged();
+            if (!_showing)
+            {
+                _ = run("units.asWrecks", new JsonObject { ["wreck"] = value });
+            }
+        }
+    }
+
     /// <summary>
     /// The group the selected units are in (<c>INITIAL/Town</c>), or <see cref="SelectionInspector.Mixed"/>.
     /// </summary>
@@ -609,6 +633,9 @@ public sealed partial class UnitSelection(Func<string, JsonObject, Task> run) : 
             OnPropertyChanged(nameof(Army));
             string[] groups = [.. units.Select(unit => UnitGroupEdits.PathText(unit.Group)).Distinct()];
             Group = groups.Length == 1 ? (groups[0].Length == 0 ? "(the root group)" : groups[0]) : SelectionInspector.Mixed;
+            int wrecks = units.Count(UnitWrecks.IsWreck);
+            _wrecks = wrecks == 0 ? false : wrecks == units.Length ? true : null;
+            OnPropertyChanged(nameof(Wrecks));
         }
         finally
         {

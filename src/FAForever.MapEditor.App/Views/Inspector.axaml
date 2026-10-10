@@ -276,6 +276,9 @@
                                 AutomationProperties.HelpText="Choosing another gives the selected units to it, in its group INITIAL" />
                     </StackPanel>
                     <TextBlock Classes="caption" Text="{Binding Group, StringFormat='Group: {0}'}" />
+                    <!-- wrecks (U-5): the army's WRECKAGE group; a dash when some are -->
+                    <CheckBox Content="Wrecks" IsChecked="{Binding Wrecks}" AutomationProperties.Name="The selected units are wrecks"
+                              AutomationProperties.HelpText="Wrecks lie in their army's WRECKAGE group, which the game turns into wrecks when it starts" />
                   </StackPanel>
                 </Border>
               </DataTemplate>

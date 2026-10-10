@@ -84,6 +84,13 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
         : "No unit chosen";
 
     /// <summary>
+    /// Whether what it places are wrecks (user story U-5): they go into the army's <c>WRECKAGE</c>
+    /// group, whose units the game turns into wrecks at the start, in place of the chosen group.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool AsWrecks { get; set; }
+
+    /// <summary>
     /// Which way what it places next faces, in degrees clockwise from +x in the top view.
     /// </summary>
     [ObservableProperty]
@@ -103,6 +110,7 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
         ["army"] = Army,
         ["group"] = Group,
         ["heading"] = Heading,
+        ["asWrecks"] = AsWrecks,
         ["structure"] = Unit?.IsStructure,
         ["footprint"] = Unit?.Footprint is (double x, double z) ? new JsonArray(x, z) : null,
     };

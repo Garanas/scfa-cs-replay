@@ -35,6 +35,14 @@ public sealed class DialogGuard(IEditorDialogs dialogs) : IEditorDialogs
         ? throw new InvalidOperationException($"The command would ask: \"{title}\". Give the file as the argument path")
         : dialogs.PickSaveFileAsync(title, suggestedName, extensions, startIn);
 
+    public Task<bool> ConfirmAsync(string title, string message, string action) => Quiet
+        ? throw new InvalidOperationException($"The command would ask: \"{title}\". Give the argument confirm: true")
+        : dialogs.ConfirmAsync(title, message, action);
+
+    public Task OpenInBrowserAsync(Uri page) => Quiet
+        ? throw new InvalidOperationException("The command would open the browser to sign in, which needs a person")
+        : dialogs.OpenInBrowserAsync(page);
+
     /// <summary>
     /// What a key of the kind looks like, for the message that asks for one.
     /// </summary>

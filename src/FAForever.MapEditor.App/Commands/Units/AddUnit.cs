@@ -24,10 +24,12 @@ namespace FAForever.MapEditor.App.Commands;
 /// <param name="Group">The group's path below the army's root group (<c>INITIAL/Town</c>, made when
 /// missing; empty for the root group); left out, the place tool's group.</param>
 /// <param name="Snap">Whether a structure snaps to the build grid and to quarter turns.</param>
+/// <param name="Wreck">Whether it is a wreck (user story U-5): it goes into the army's <c>WRECKAGE</c>
+/// group in place of the group; left out, as the place tool's As wrecks says.</param>
 /// <returns>The unit's name, blueprint, army, group, place and heading.</returns>
 [UndoStep]
 [EditorCommand("units.add", "Place a unit", Story = "U-2")]
-public sealed record AddUnit(float X, float Z, string? Blueprint = null, float? Heading = null, string? Army = null, string? Group = null, bool Snap = true) : IRequest<JsonObject>;
+public sealed record AddUnit(float X, float Z, string? Blueprint = null, float? Heading = null, string? Army = null, string? Group = null, bool Snap = true, bool? Wreck = null) : IRequest<JsonObject>;
 
 public sealed class AddUnitHandler(MainViewModel model, AssetsViewModel assets, CurrentEdit edit) : IRequestHandler<AddUnit, JsonObject>
 {
@@ -49,7 +51,8 @@ public sealed class AddUnitHandler(MainViewModel model, AssetsViewModel assets, 
         }
         string army = request.Army ?? tool.Army ?? throw new ArgumentException("The map has no army to place units for: add one in the Map mode");
         UnitCommands.RequireArmy(document, army);
-        ImmutableArray<string> group = UnitGroupEdits.ParsePath(request.Group ?? tool.Group);
+        bool wreck = request.Wreck ?? tool.AsWrecks;
+        ImmutableArray<string> group = wreck ? document.WreckagePath(army) : UnitGroupEdits.ParsePath(request.Group ?? tool.Group);
 
         float x = request.X;
         float z = request.Z;
@@ -85,13 +88,14 @@ public sealed class AddUnitHandler(MainViewModel model, AssetsViewModel assets, 
         {
             model.Selection.Set(all);
         }
-        model.Status = $"Placed {name} ({entry?.Name ?? id}) for {army}";
+        model.Status = $"Placed {name} ({entry?.Name ?? id}) for {army}{(wreck ? " as a wreck" : "")}";
         return Task.FromResult(new JsonObject
         {
             ["name"] = name,
             ["blueprint"] = id,
             ["army"] = army,
             ["group"] = UnitGroupEdits.PathText(group),
+            ["wreck"] = wreck,
             ["x"] = x,
             ["z"] = z,
             ["heading"] = Math.Round(SelectionInspector.Degrees(radians), 3),
