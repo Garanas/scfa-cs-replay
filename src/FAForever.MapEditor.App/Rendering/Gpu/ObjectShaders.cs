@@ -61,9 +61,19 @@ internal static class ObjectShaders
         void main()
         {
             vec4 albedo = texture(uAlbedo, vUv);
-            if (uAlphaTest >= 0.0 && albedo.a < uAlphaTest)
+            if (uAlphaTest >= 0.0)
             {
-                discard;
+                // the smaller mipmaps average a leaf texture's holes into alpha below the cut, which
+                // would leave a tree seen from afar as its bare trunk: the cut reads the alpha from
+                // the first or second level whatever the distance
+                vec2 texel = vUv * vec2(textureSize(uAlbedo, 0));
+                vec2 dx = dFdx(texel);
+                vec2 dy = dFdy(texel);
+                float level = 0.5 * log2(max(max(dot(dx, dx), dot(dy, dy)), 1e-8));
+                if (textureLod(uAlbedo, vUv, clamp(level, 0.0, 1.0)).a < uAlphaTest)
+                {
+                    discard;
+                }
             }
             vec3 normal = normalize(vNormal);
             if (!gl_FrontFacing)
