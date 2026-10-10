@@ -100,13 +100,13 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
     partial void OnDecalChanged(string? value)
     {
         Entry = value is null ? null : model.Assets.Catalog.Find(value);
-        Set = value is not null && Entry is null ? DecalSets.Find(model.Assets.Catalog.Entries, value) : null;
+        Set = value is not null && Entry is null ? DecalSets.Find(model.Assets.Catalog.Entries, model.ShownDocument, value) : null;
         if (Set?.First is string first)
         {
             Entry = model.Assets.Catalog.Find(first);
         }
         OnPropertyChanged(nameof(Set));
-        Aspect = Entry?.Image is string image ? AspectOf(image, model.Logger("Assets")) : 1;
+        Aspect = Entry?.Image is string image ? AspectOf(image, model.Logger("Assets")) : Set?.First is string own ? OwnAspect(own) : 1;
         OnPropertyChanged(nameof(Entry));
     }
 
@@ -203,7 +203,7 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
         float cutOff = cutOffLod ?? (float)CutOffLod;
         // a decal set's name (no texture of that key): one decal carrying all the set's textures
         DecalSetAssets? set = key == Decal ? Set
-            : model.Assets.Catalog.Find(key) is null ? DecalSets.Find(model.Assets.Catalog.Entries, key) : null;
+            : model.Assets.Catalog.Find(key) is null ? DecalSets.Find(model.Assets.Catalog.Entries, document, key) : null;
         return set is not null
             ? DecalEdits.NewDecalSet(document.Terrain.Heightmap, set, x, z, wide, length ?? wide * aspect, turn, cutOff)
             : DecalEdits.NewDecal(document.Terrain.Heightmap, key, x, z, wide, length ?? wide * aspect, turn, cutOff);
@@ -228,6 +228,28 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
         _added = added;
         _all = all;
         model.ShowStroke();
+    }
+
+    /// <summary>
+    /// The height over the width of one of the map's own textures (a decal set of the map's files); 1
+    /// when it cannot be read.
+    /// </summary>
+    private float OwnAspect(string gamePath)
+    {
+        if (model.ShownDocument is not MapDocument document || GameTextures.Find(gamePath, document, model.Setup.Workspace) is not TextureSource source)
+        {
+            return 1;
+        }
+        try
+        {
+            DecodedTexture texture = source.Read();
+            return texture.Width > 0 ? (float)texture.Height / texture.Width : 1;
+        }
+        catch (ImageMagick.MagickException exception)
+        {
+            model.Logger("Assets").LogWarning(exception, "The size of the decal's picture {File} cannot be read: {Reason}", gamePath, exception.Message);
+            return 1;
+        }
     }
 
     /// <summary>

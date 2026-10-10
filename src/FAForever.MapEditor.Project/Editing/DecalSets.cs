@@ -146,6 +146,42 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// The decal sets among the map's own files (<see cref="MapDocument.Files"/>: a map maker's
+        /// own textures and masks, which the export writes into the map's folder), with game paths
+        /// into the map's folder (<c>/maps/&lt;folder&gt;/env/decals/rock01_albedo.png</c>) as keys.
+        /// </summary>
+        public static IReadOnlyList<DecalSetAssets> OfMap(MapDocument document)
+        {
+            List<DecalSetAssets> sets = [];
+            string root = $"/maps/{document.Folder}/";
+            foreach (IGrouping<string, (string Path, DecalSetFile File)> group in document.Files.Keys
+                .Where(path => path.EndsWith(".dds", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                .Select(path => (Path: root + path, File: PartOf(root + path)))
+                .Where(item => item.File.Part != DecalSetPart.Plain)
+                .GroupBy(item => item.File.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                string? Of(DecalSetPart part) => group.FirstOrDefault(item => item.File.Part == part).Path;
+                ImmutableSortedDictionary<string, string> masks = ImmutableSortedDictionary.CreateRange(StringComparer.Ordinal,
+                    group.Where(item => item.File.Part == DecalSetPart.Mask)
+                        .GroupBy(item => item.File.MaskName!, StringComparer.Ordinal)
+                        .Select(mask => KeyValuePair.Create(mask.Key, mask.First().Path)));
+                DecalSetAssets set = new DecalSetAssets(group.Key, Of(DecalSetPart.Albedo), Of(DecalSetPart.Normals), Of(DecalSetPart.Specular), masks);
+                if ((set.Count >= 2 || masks.Count > 0) && (set.Albedo is not null || set.Normals is not null))
+                {
+                    sets.Add(set);
+                }
+            }
+            return sets;
+        }
+
+        /// <summary>
+        /// The set a name names: among a catalogue's decals, else among the map's own files.
+        /// </summary>
+        public static DecalSetAssets? Find(IEnumerable<AssetEntry> entries, MapDocument? document, string name) =>
+            Find(entries, name)
+            ?? (document is null ? null : OfMap(document).FirstOrDefault(set => string.Equals(set.Name.TrimStart('/'), name.Replace('\\', '/').TrimStart('/'), StringComparison.OrdinalIgnoreCase)));
+
+        /// <summary>
         /// The set a decal of the map belongs to as the map names it (<see cref="Decal.Set"/>), from
         /// the assets of a set: the game paths of its textures.
         /// </summary>

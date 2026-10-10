@@ -20,7 +20,7 @@ public sealed class ChooseDecalHandler(MainViewModel model, AssetsViewModel asse
     public async Task<string?> Handle(ChooseDecal request, CancellationToken cancellationToken)
     {
         // a decal set's name chooses the whole set (D-1); a texture's key, or the picker, one texture
-        string? key = request.Key is string named && assets.Catalog.Find(named) is null && DecalSets.Find(assets.Catalog.Entries, named) is DecalSetAssets set
+        string? key = request.Key is string named && assets.Catalog.Find(named) is null && DecalSets.Find(assets.Catalog.Entries, model.ShownDocument, named) is DecalSetAssets set
             ? set.Name
             : await PickAssetHandler.PickAsync(model, assets, dialogs, AssetKind.Decal, request.Key, "Choose the decal to place");
         if (key is null)
