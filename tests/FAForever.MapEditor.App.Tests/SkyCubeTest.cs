@@ -72,6 +72,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("Sky cube map", part.Title);
             Assert.AreEqual("Pictures", part.Group);
             Assert.AreSame(model.SkyCube, ((ProceduralPart)part.Content).Entry.Details);
+            Assert.AreEqual("On export: copied with the map's files", ((ProceduralPart)part.Content).ExportText);
             await Run(model, "view.inspectPart", new JsonObject { ["part"] = part.Id });
             Assert.AreEqual("procedural", model.SelectedMode!.Definition.Id);
             Assert.AreEqual(part.Id, model.ProceduralList.Parts.Chosen.Id);

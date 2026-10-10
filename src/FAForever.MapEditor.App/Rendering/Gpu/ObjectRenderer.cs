@@ -130,7 +130,8 @@ internal sealed unsafe class ObjectRenderer : IDisposable
     /// The objects that lie on the terrain and hide what is behind them: the props and units.
     /// Call after the terrain, with the depth test on and depth writes on.
     /// </summary>
-    public void DrawModels(MapDocument document, Matrix4x4 viewProjection, ObjectFrame frame)
+    /// <param name="sweep">Whether textures this draw did not use are let go (false while several views of one frame share them).</param>
+    public void DrawModels(MapDocument document, Matrix4x4 viewProjection, ObjectFrame frame, bool sweep = true)
     {
         // uploads bind to the active unit: the albedo's own
         _gl.ActiveTexture(TextureUnit.Texture1);
@@ -177,7 +178,10 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         }
         _gl.BindVertexArray(0);
         _gl.BindSampler(1, 0);
-        _textures.Sweep();
+        if (sweep)
+        {
+            _textures.Sweep();
+        }
         State = State with { Props = props, Units = units, Draws = draws, Meshes = _meshes.Count, Missing = missing, Triangles = _triangles };
     }
 

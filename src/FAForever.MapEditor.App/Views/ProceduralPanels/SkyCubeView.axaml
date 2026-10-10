@@ -1,5 +1,5 @@
-<!-- The sky cube map (L-1) below the common part of its Procedural entry (which has its picture, how it stands and
-     Generate): the sky it shows, what uses it, Use, and its settings (resolution, eye height, the terrain, the sun's disc). -->
+<!-- The sky cube map (L-1) below the common part of its Procedural entry (which has its picture, how it stands,
+     Generate, and as facts the sky it shows and what uses it): Use, and its settings (resolution, eye height, the terrain, the sun's disc). -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -9,8 +9,6 @@
   <StackPanel>
     <Border Classes="group">
       <StackPanel Classes="stack">
-        <TextBlock Classes="caption" Text="{Binding SkyLine}" AutomationProperties.Name="The sky the cube map shows" />
-        <TextBlock Classes="caption" Text="{Binding UseLine}" AutomationProperties.Name="What uses the sky cube map" />
         <Button Content="Use for sky, units and water" Command="{Binding UseEverywhereCommand}" IsEnabled="{Binding CanUse}"
                 AutomationProperties.Name="Use the sky cube map for the sky, the units and the water"
                 AutomationProperties.HelpText="Makes it the sky's cube map, the one units reflect and the one the water reflects" />

@@ -28,6 +28,7 @@ public sealed partial class MainViewModel
     {
         SkyCubeGenerator = new SkyCubeGenerator(() => Setup.Workspace) { Log = Logger("Editor") };
         Generation.Register(SkyCubeGenerator, "generate.skyCube");
+        Procedural.OnExport(SkyCubeGenerator.GeneratorId, ExportUse.Copied);
         SkyCube = new SkyCubeViewModel(RunWithAsync, Generation, () => Map?.Document);
         DocumentChanged += (_, _) => SkyCube.Refresh();
         MapChanged += (_, _) => SkyCube.Refresh();

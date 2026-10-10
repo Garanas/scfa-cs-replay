@@ -202,9 +202,11 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// sky's is drawn behind everything and the water reflects its own (user story L-1); null for none.</param>
     /// <param name="eye">Where the camera is, for the water's reflection.</param>
     /// <param name="showDecals">Whether the decals are drawn (the Decals overlay, user story V-3).</param>
+    /// <param name="sweep">Whether the textures this frame did not use are let go; false for the views of a cube map
+    /// (<c>TerrainViewGpu.SkyCube</c>), which share their textures.</param>
     public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, IReadOnlyList<BrushPreview>? brushes = null, Vector3 brushColor = default, (ObjectRenderer Renderer, ObjectFrame Frame)? objects = null,
         (IReadOnlySet<int>? Hidden, IReadOnlySet<int>? Highlighted, Vector3 Color)? decals = null, TerrainOverlays? overlays = null,
-        Func<string, TextureSource?>? findCube = null, Vector3 eye = default, bool showDecals = true)
+        Func<string, TextureSource?>? findCube = null, Vector3 eye = default, bool showDecals = true, bool sweep = true)
     {
         _hidden = decals?.Hidden;
         _highlighted = decals?.Highlighted;
@@ -237,7 +239,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         {
             DrawTerrain(document, viewProjection, findTexture);
         }
-        objects?.Renderer.DrawModels(document, viewProjection, objects.Value.Frame);
+        objects?.Renderer.DrawModels(document, viewProjection, objects.Value.Frame, sweep);
 
         // decals lie on the terrain: no depth writes, and pulled towards the camera so the ground does not hide them
         _gl.DepthMask(false);
@@ -298,7 +300,10 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         {
             _gl.BindSampler((uint)unit, 0);
         }
-        _textures.Sweep();
+        if (sweep)
+        {
+            _textures.Sweep();
+        }
     }
 
     private void DrawTerrain(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture)

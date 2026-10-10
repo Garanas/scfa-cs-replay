@@ -17,15 +17,15 @@ namespace FAForever.MapEditor.App.Controls;
 /// after a frame, six views of 90 degrees from the eye into a framebuffer of the face's size, each
 /// with the generated sky as the sky's cube map (behind everything and in the water's reflection),
 /// the terrain with its textures, the decals, props and units; read back as a strip of six faces.
-/// While textures are still loading it draws them again on the next frames (at most
-/// <see cref="SkyCubeFrames"/>), so the faces show what the 3D view shows.
+/// While textures and models are still being read it draws the faces again (for at most
+/// <see cref="SkyCubeWait"/>, holding the frame), so the faces show what the 3D view shows.
 /// </summary>
 public sealed partial class TerrainViewGpu : ISkyCubeFaces
 {
     /// <summary>
-    /// The frames the faces are drawn again while textures load.
+    /// How long the faces are drawn again while textures and models load.
     /// </summary>
-    private const int SkyCubeFrames = 240;
+    private static readonly TimeSpan SkyCubeWait = TimeSpan.FromSeconds(20);
 
     private sealed class SkyCubeJob(MapDocument document, Vector3 eye, DecodedTexture sky, CancellationToken cancel)
     {
@@ -107,37 +107,42 @@ public sealed partial class TerrainViewGpu : ISkyCubeFaces
             byte[] rgba = new byte[6 * size * size * 4];
             byte[] face = new byte[size * size * 4];
             _gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
-            for (int side = 0; side < 6; side++)
+            System.Diagnostics.Stopwatch waited = System.Diagnostics.Stopwatch.StartNew();
+            while (true)
             {
-                // the sky covers every pixel: the colour cleared is the frame's
-                _gl.ClearDepth(1);
-                _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-                _renderer.Render(drawn, FaceViewProjection(side, job.Eye, 0.5f, far), path => _model.WideDecals.TextureOf(path) ?? FindTexture(path, job.Document, workspace),
-                    objects: _objects is null ? null : (_objects, frame), findCube: _ => sky, eye: job.Eye, showDecals: true);
-                fixed (byte* data = face)
+                for (int side = 0; side < 6; side++)
                 {
-                    _gl.ReadPixels(0, 0, (uint)size, (uint)size, PixelFormat.Rgba, PixelType.UnsignedByte, data);
+                    // the sky covers every pixel: the colour cleared is the frame's
+                    _gl.ClearDepth(1);
+                    _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+                    _renderer.Render(drawn, FaceViewProjection(side, job.Eye, 0.5f, far), path => _model.WideDecals.TextureOf(path) ?? FindTexture(path, job.Document, workspace),
+                        objects: _objects is null ? null : (_objects, frame), findCube: _ => sky, eye: job.Eye, showDecals: true, sweep: false);
+                    fixed (byte* data = face)
+                    {
+                        _gl.ReadPixels(0, 0, (uint)size, (uint)size, PixelFormat.Rgba, PixelType.UnsignedByte, data);
+                    }
+                    // OpenGL's first row is the bottom one, the face's first row its top
+                    for (int row = 0; row < size; row++)
+                    {
+                        Array.Copy(face, (size - 1 - row) * size * 4, rgba, (row * 6 * size + side * size) * 4, size * 4);
+                    }
                 }
-                // OpenGL's first row is the bottom one, the face's first row its top
-                for (int row = 0; row < size; row++)
+                job.Frames++;
+                // the faces share their textures (none is let go between them); while some are still being
+                // read, draw the faces again with them, here: a frame of the view would let go of those it does not show
+                bool loading = _renderer.TexturesLoading + (_objects?.TexturesLoading ?? 0) + ObjectState.ModelsLoading > 0 || !_renderer.SkyDrawn;
+                if (!loading || waited.Elapsed > SkyCubeWait)
                 {
-                    Array.Copy(face, (size - 1 - row) * size * 4, rgba, (row * 6 * size + side * size) * 4, size * 4);
+                    break;
                 }
+                Thread.Sleep(30);
             }
             for (int i = 3; i < rgba.Length; i += 4)
             {
                 rgba[i] = 255;
             }
-            job.Frames++;
-            bool loading = _renderer.TexturesLoading + (_objects?.TexturesLoading ?? 0) > 0 || !_renderer.SkyDrawn;
-            if (loading && job.Frames < SkyCubeFrames)
-            {
-                // textures are on their way: draw the faces again with them
-                Dispatcher.UIThread.Post(RequestNextFrameRendering);
-                return;
-            }
             _skyCubeJob = null;
-            Log.LogInformation("The 3D view drew the sky cube map's faces of {Size} pixels in {Frames} frames", size, job.Frames);
+            Log.LogInformation("The 3D view drew the sky cube map's faces of {Size} pixels in {Passes} passes", size, job.Frames);
             job.Done.TrySetResult(new DecodedTexture(6 * size, size, rgba));
         }
         catch (Exception exception) when (exception is InvalidOperationException or OutOfMemoryException)
