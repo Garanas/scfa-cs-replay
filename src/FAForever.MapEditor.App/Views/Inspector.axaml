@@ -8,6 +8,7 @@
              xmlns:workspaces="using:FAForever.MapEditor.Project.Workspaces"
              xmlns:panels="using:FAForever.MapEditor.App.Views.MapPanels"
              xmlns:rules="using:FAForever.MapEditor.App.Views.RulePanels"
+             xmlns:procedural="using:FAForever.MapEditor.App.Views.ProceduralPanels"
              x:Class="FAForever.MapEditor.App.Views.Inspector"
              x:DataType="vm:MainViewModel">
   <Border Classes="inspector">
@@ -341,6 +342,10 @@
               </DataTemplate>
               <DataTemplate DataType="vm:MapWideProceduralDetailsSection">
                 <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WideDecals.ProceduralParts}" />
+              </DataTemplate>
+              <!-- the sky cube map (L-1) of the Procedural mode -->
+              <DataTemplate DataType="vm:SkyCubeDetailsSection">
+                <procedural:SkyCubeView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).SkyCube}" />
               </DataTemplate>
               <DataTemplate DataType="vm:WaterDetailsSection">
                 <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WaterSettings.Parts}" />

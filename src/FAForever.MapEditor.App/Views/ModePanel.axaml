@@ -431,6 +431,10 @@
             <DataTemplate DataType="vm:MapWideDecalsProceduralSection">
               <decalpanels:MapWideDecalsList DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WideDecals.ProceduralList}" />
             </DataTemplate>
+            <!-- the sky cube map (L-1) of the Procedural mode -->
+            <DataTemplate DataType="vm:SkyCubeProceduralSection">
+              <procedural:SkyCubePanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).SkyCube}" />
+            </DataTemplate>
             <DataTemplate DataType="vm:OverlaySection">
               <Border Classes="group">
                 <StackPanel Classes="stack">

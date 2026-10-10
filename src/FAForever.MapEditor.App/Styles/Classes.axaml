@@ -749,6 +749,16 @@
   <Style Selector="Button.partentry TextBlock.partdetail.widedecaldetail">
     <Setter Property="Margin" Value="0" />
   </Style>
+  <!-- the sky cube map (L-1): its entry as tall as its preview, its faces in the inspector as a strip -->
+  <Style Selector="Button.partentry.skycubeentry">
+    <Setter Property="Height" Value="{StaticResource WideDecalEntryHeight}" />
+  </Style>
+  <Style Selector="Button.partentry TextBlock.partdetail.skycubedetail">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+  <Style Selector="Border.skycubepreview">
+    <Setter Property="Height" Value="{StaticResource SkyCubePreviewHeight}" />
+  </Style>
 
   <!-- a list of many short lines: the Console -->
   <Style Selector="ListBox.log ListBoxItem">

@@ -54,7 +54,7 @@ namespace FAForever.MapEditor.App.Tests
 
             CollectionAssert.AreEqual(new[] { "Map-wide decals", "Decal groups" }, decals.Sections.Select(section => section.Title).ToArray());
             Assert.IsInstanceOfType<MapWideDecalDetailsSection>(decals.Inspector.Single());
-            Assert.IsInstanceOfType<MapWideProceduralDetailsSection>(EditorModes.All.Single(mode => mode.Id == "procedural").Inspector.Single());
+            Assert.IsInstanceOfType<MapWideProceduralDetailsSection>(EditorModes.All.Single(mode => mode.Id == "procedural").Inspector.First());
         }
 
         [TestMethod]

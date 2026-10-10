@@ -45,7 +45,7 @@ public static class ProceduralMode
     /// <summary>
     /// The mode's inspector: the chosen map-wide decal's settings.
     /// </summary>
-    public static IReadOnlyList<PanelSection> Inspector { get; } = [new MapWideProceduralDetailsSection()];
+    public static IReadOnlyList<PanelSection> Inspector { get; } = [new MapWideProceduralDetailsSection(), new SkyCubeDetailsSection()];
 
     /// <summary>
     /// The mode's panel: the generated results, the map-wide decals, walkability's choices, the
@@ -55,6 +55,7 @@ public static class ProceduralMode
     [
         new GeneratedResultsSection(),
         new MapWideDecalsProceduralSection(),
+        new SkyCubeProceduralSection(),
         new WalkabilitySection(),
         new NavigationSection(),
         new PathNetworkSection(),
