@@ -376,22 +376,40 @@ public sealed partial class PropsViewModel : ObservableObject
         }
         else if (e.PropertyName == nameof(AssetsViewModel.Shown)
             && _model.Assets.Shown is { Kind: AssetKind.Prop } prop
+            && _model.Assets.Selected is AssetTile tile
+            // the shelf changes the tile and its member one after the other: a member of another tile is not chosen
+            && (tile.Entry == prop || tile.Members.Contains(prop))
             && _model.SelectedMode?.Definition.Id == "props")
         {
-            Chose(prop);
+            Chose(prop, tile);
         }
     }
+
+    /// <summary>
+    /// The tile chosen last on the shelf with the paint tool, and the palette item that added.
+    /// </summary>
+    private (AssetTile? Tile, PaletteItem? Added) _lastChoice;
 
     /// <summary>
     /// A prop chosen on the shelf or in the picker while the Props mode is on: with the paint tool
     /// it goes into the palette, else it becomes the prop the place tool places.
     /// </summary>
-    public void Chose(AssetEntry prop)
+    /// <param name="tile">The shelf's tile it was chosen on: another variant of the tile chosen
+    /// just before takes the place of the one that added in the palette.</param>
+    public void Chose(AssetEntry prop, AssetTile? tile = null)
     {
         if (_model.ActiveTool?.Tool is PropPaintTool)
         {
+            if (tile is not null && _lastChoice.Tile == tile && _lastChoice.Added is PaletteItem previous && previous.Key != prop.Key)
+            {
+                Palette.Remove(previous);
+            }
             bool added = Palette.All(item => item.Key != prop.Key);
-            AddToPalette(prop, BlueprintOf(prop), null);
+            PaletteItem item = AddToPalette(prop, BlueprintOf(prop), null);
+            if (added || _lastChoice.Tile != tile)
+            {
+                _lastChoice = (tile, added ? item : null);
+            }
             _model.Status = added ? $"Added {prop.Name} to the palette" : $"{prop.Name} is in the palette";
         }
         else

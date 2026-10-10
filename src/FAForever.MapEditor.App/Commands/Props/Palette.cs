@@ -11,7 +11,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// <param name="Key">A prop's blueprint path, to add without asking.</param>
 /// <param name="Weight">How often it is painted against the others; left out, 1 for a new one.</param>
 /// <returns>The prop's key; null when the picker was cancelled.</returns>
-[EditorCommand("props.addToPalette", "Add a prop to the palette...", Story = "P-2", Needs = Needs.Workspace)]
+[EditorCommand("props.addToPalette", "Add a prop to the palette...", Story = "P-2")]
 public sealed record AddToPropPalette(string? Key = null, double? Weight = null) : IRequest<string?>;
 
 public sealed class AddToPropPaletteHandler(MainViewModel model, IEditorDialogs dialogs) : IRequestHandler<AddToPropPalette, string?>

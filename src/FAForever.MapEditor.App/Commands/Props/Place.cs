@@ -69,7 +69,7 @@ public sealed class PlacePropHandler(MainViewModel model, CurrentEdit edit) : IR
 /// </summary>
 /// <param name="Key">A prop's blueprint path, to choose without asking.</param>
 /// <returns>The chosen prop's key; null when the picker was cancelled.</returns>
-[EditorCommand("props.choose", "Choose a prop to place...", Story = "P-1", Needs = Needs.Workspace)]
+[EditorCommand("props.choose", "Choose a prop to place...", Story = "P-1")]
 public sealed record ChooseProp(string? Key = null) : IRequest<string?>;
 
 public sealed class ChoosePropHandler(MainViewModel model, AssetsViewModel assets, IEditorDialogs dialogs) : IRequestHandler<ChooseProp, string?>
