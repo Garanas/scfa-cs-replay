@@ -458,6 +458,22 @@
               <TextBlock Classes="mono" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Text}" ToolTip.Tip="{Binding Text}" VerticalAlignment="Center"
                          AutomationProperties.Name="Measurement" />
             </DataTemplate>
+            <!-- placing and aiming wave generators (W-1) -->
+            <DataTemplate DataType="tools:WaveTool">
+              <controls:ToolRow Classes="toolrow">
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Heading, StringFormat='Heading: {0:0}°'}" />
+                  <Slider Minimum="0" Maximum="359" Value="{Binding Heading}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Heading of a click's waves"
+                          AutomationProperties.HelpText="The compass heading the waves of a generator placed with a click roll: 0 north, 90 east; a drag aims them itself" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="Speed" />
+                  <TextBox Classes="toolfield" Text="{Binding Speed, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Speed of new waves"
+                           AutomationProperties.HelpText="How fast the waves of a new generator roll, in ogrids a tick (the vault's maps: 0.01 to 0.045)" />
+                </StackPanel>
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </controls:ToolRow>
+            </DataTemplate>
             <!-- turning the sun (L-1) -->
             <DataTemplate DataType="tools:SunTool">
               <controls:ToolRow Classes="toolrow">

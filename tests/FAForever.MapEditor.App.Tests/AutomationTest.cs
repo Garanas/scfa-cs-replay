@@ -251,13 +251,14 @@ namespace FAForever.MapEditor.App.Tests
         [TestMethod]
         public Task ACommandThatCannotRunSaysWhy() => Run(async () =>
         {
-            (MainWindow window, _, AutomationServer automation) = await Open();
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
 
             JsonObject answer = await Send(automation, "undo");
 
             Assert.IsFalse(answer["ran"]!.GetValue<bool>());
             StringAssert.Contains(answer["why"]!.GetValue<string>(), "nothing to undo");
-            JsonObject notBuilt = await Send(automation, "run", new JsonObject { ["id"] = "water.placeWaveGenerator" });
+            TestCommands.RegisterNotBuilt(model);
+            JsonObject notBuilt = await Send(automation, "run", new JsonObject { ["id"] = TestCommands.NotBuiltId });
             StringAssert.Contains(notBuilt["why"]!.GetValue<string>(), "not built yet");
             window.Close();
         });

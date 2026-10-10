@@ -157,13 +157,14 @@ namespace FAForever.MapEditor.App.Tests
         public async Task ACommandNotBuiltYetSaysWhatItIsToDo()
         {
             MainViewModel model = NewModel();
+            TestCommands.RegisterNotBuilt(model);
 
-            bool ran = await model.Commands.RunAsync("water.placeWaveGenerator");
+            bool ran = await model.Commands.RunAsync(TestCommands.NotBuiltId);
 
             Assert.IsFalse(ran);
-            StringAssert.Contains(model.Status, "Not built yet: Water: Place a wave generator");
-            StringAssert.Contains(model.Status, "user story W-1");
-            StringAssert.Contains(model.Diagnostics.Console.Last().Message, "water.placeWaveGenerator: not built yet, user story W-1");
+            StringAssert.Contains(model.Status, "Not built yet: Plugins: Something not built yet");
+            StringAssert.Contains(model.Status, "user story F-1");
+            StringAssert.Contains(model.Diagnostics.Console.Last().Message, $"{TestCommands.NotBuiltId}: not built yet, user story F-1");
         }
 
         [TestMethod]
