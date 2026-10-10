@@ -93,6 +93,7 @@ namespace FAForever.MapEditor.Project
 
             SaveMasks(document, folder, previous);
             SaveRules(document, folder);
+            SaveHeightLayers(document, folder, previous);
 
             if (document.Script is ImmutableArray<byte> script)
             {
@@ -156,7 +157,8 @@ namespace FAForever.MapEditor.Project
 
             try
             {
-                return WithRules(MapProjectMapping.ToDocument(map, props, decals, markers, armies, images, script, files), folder);
+                MapDocument document = MapProjectMapping.ToDocument(map, props, decals, markers, armies, images, script, files);
+                return LoadHeightLayers(WithRules(document, folder), folder);
             }
             catch (ArgumentException exception)
             {
@@ -203,7 +205,15 @@ namespace FAForever.MapEditor.Project
                     {
                         TiledBuffer<ushort> samples = document.Terrain.Heightmap.Samples;
                         ushort[] heights = ReadHeightmap(folder, width, height);
-                        if (!heights.AsSpan().SequenceEqual(samples.ToArray()))
+                        if (!document.HeightLayers.IsEmpty)
+                        {
+                            // with height layers the heightmap is their sum: another tool's heightmap becomes the base
+                            if (!heights.AsSpan().SequenceEqual(samples.ToArray()))
+                            {
+                                document = HeightLayerEdits.SetBase(document, TiledBuffer<ushort>.FromArray(width + 1, height + 1, heights));
+                            }
+                        }
+                        else if (!heights.AsSpan().SequenceEqual(samples.ToArray()))
                         {
                             document = document with { Terrain = document.Terrain with { Heightmap = document.Terrain.Heightmap with { Samples = TiledBuffer<ushort>.FromArray(width + 1, height + 1, heights) } } };
                         }
@@ -266,6 +276,14 @@ namespace FAForever.MapEditor.Project
                             && changed.IndexOf('/', MapProjectLayout.Masks.Length + 1) < 0)
                         {
                             document = ReloadMask(document, Of(changed), Path.GetFileNameWithoutExtension(changed));
+                        }
+                        else if (changed.StartsWith(MapProjectLayout.HeightLayers + "/", StringComparison.Ordinal))
+                        {
+                            document = ReloadHeightLayers(document, folder);
+                        }
+                        else if (ImportedLayerOf(document, folder, changed) is HeightLayer imported)
+                        {
+                            document = ReloadImported(document, folder, imported);
                         }
                         else if (changed.StartsWith(MapProjectLayout.Files + "/", StringComparison.Ordinal))
                         {

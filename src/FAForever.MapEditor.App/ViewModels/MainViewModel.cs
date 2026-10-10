@@ -138,6 +138,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeHandles();
         InitializeLayout();
         InitializeAssetDiscovery();
+        InitializeHeightLayers();
     }
 
     /// <summary>

@@ -157,13 +157,20 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **T-3 Heightmap from other tools.** `heightmap.png` or `.r16` in the project is read again
       when World Machine or Gaea writes it; one of any size is imported, resampled
       (`terrain.importHeightmap`), and the heightmap exported as PNG or `.r16` (`terrain.exportHeightmap`).
-- [ ] **T-4 Curves.** Draw a curve (spline) and shape the terrain along it: a ridge, a valley, a
+- [x] **T-4 Curves.** Draw a curve (spline) and shape the terrain along it: a ridge, a valley, a
       road, a cliff edge, with a profile, width and falloff; edit the curve afterwards and the
-      terrain follows (it stays a layer, see T-5).
-- [ ] **T-5 Heightmap layers.** A stack of layers that add up to the heightmap: the base, sculpting,
+      terrain follows (it stays a layer, see T-5). Today: the curve tool draws a Catmull-Rom curve
+      layer point by point in the top view, moves, inserts and removes points; the inspector sets
+      its profile, width, falloff, height and whether it is closed. Missing: a height per point by
+      hand in the views, the curve's handles in the 3D view.
+- [x] **T-5 Heightmap layers.** A stack of layers that add up to the heightmap: the base, sculpting,
       curves, imported results of World Machine or Gaea; per layer a way of combining (add, maximum,
       minimum, replace), strength, a mask, visible or hidden, locked. Shape the general form in the
-      editor, bake it with the external tool, take the result back as a layer.
+      editor, bake it with the external tool, take the result back as a layer. Today: the Terrain
+      panel's stack (the sculpt tool writes into the chosen layer, the heightmap follows tile by
+      tile), the inspector's settings, imported layers read again when their file changes, bake;
+      kept in the project's `layers/`. Missing: exporting a layer for the external tool, merging
+      two layers.
 - [x] **T-6 Terrain types.** Paint the terrain type of each ogrid (what the game uses for footsteps
       and effects), from the list of types with their colours. Today: the Terrain types tool sets
       the chosen type where the brush works at least half; the top view shows every ogrid's type in

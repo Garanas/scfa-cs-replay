@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.Tools;
 
@@ -153,7 +154,14 @@ public sealed partial class SculptTool : ObservableObject, IShapedBrushTool
             MinHeight = Limited ? (float)MinHeight : null,
             MaxHeight = Limited ? (float)MaxHeight : null,
         };
-        float scale = (_model.ShownDocument ?? throw new InvalidOperationException("No map is open")).Terrain.Heightmap.Scale;
+        MapDocument document = _model.ShownDocument ?? throw new InvalidOperationException("No map is open");
+        // with height layers (T-5) the stroke goes into the chosen one, which must take it
+        if (HeightLayers.SculptProblem(document, _model.HeightStack.Chosen) is string problem)
+        {
+            _model.Status = problem;
+            return;
+        }
+        float scale = document.Terrain.Heightmap.Scale;
         string description = Mode switch
         {
             HeightBrushMode.Raise => "Raise terrain",

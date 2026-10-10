@@ -1,3 +1,4 @@
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.Project
@@ -120,17 +121,20 @@ namespace FAForever.MapEditor.Project
 
         /// <summary>
         /// The document with the heightmap of a file in place of its own, resampled to the map's size
-        /// ((width + 1) by (height + 1) samples).
+        /// ((width + 1) by (height + 1) samples). A map with height layers (user story T-5) gets it as
+        /// its base layer, and the heightmap follows when the edit is kept.
         /// </summary>
         /// <param name="original">The size of the file before resampling, to tell the person.</param>
         /// <exception cref="MapProjectException">The file cannot be read.</exception>
         public static MapDocument Import(MapDocument document, string path, out (int Width, int Height) original)
         {
-            (int width, int height, ushort[] samples) = Read(path);
-            original = (width, height);
+            ushort[] resampled = ReadResampled(document, path, out original);
             int toWidth = document.Width + 1;
             int toHeight = document.Height + 1;
-            ushort[] resampled = Resample(samples, width, height, toWidth, toHeight);
+            if (!document.HeightLayers.IsEmpty)
+            {
+                return HeightLayerEdits.SetBase(document, TiledBuffer<ushort>.FromArray(toWidth, toHeight, resampled));
+            }
             return document with
             {
                 Terrain = document.Terrain with
@@ -138,6 +142,18 @@ namespace FAForever.MapEditor.Project
                     Heightmap = document.Terrain.Heightmap with { Samples = TiledBuffer<ushort>.FromArray(toWidth, toHeight, resampled) },
                 },
             };
+        }
+
+        /// <summary>
+        /// The heightmap of a file resampled to the map's corners ((width + 1) by (height + 1)).
+        /// </summary>
+        /// <param name="original">The size of the file before resampling.</param>
+        /// <exception cref="MapProjectException">The file cannot be read.</exception>
+        public static ushort[] ReadResampled(MapDocument document, string path, out (int Width, int Height) original)
+        {
+            (int width, int height, ushort[] samples) = Read(path);
+            original = (width, height);
+            return Resample(samples, width, height, document.Width + 1, document.Height + 1);
         }
 
         private static bool IsRaw(string path) => RawExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);

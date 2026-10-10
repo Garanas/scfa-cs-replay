@@ -101,17 +101,17 @@ public static class EditorModes
         new ModeDefinition("terrain", "Terrain", "Icon.Terrain", "Height layers, sculpting, curves, terrain types, walkability", 0, "F2", "T-1",
             [
                 new ToolDefinition("terrain.sculpt", "Sculpt", "T-1") { Make = model => new SculptTool(model) },
-                new ToolDefinition("terrain.curve", "Curve", "T-4", "Draw a curve and shape the terrain along it: ridge, valley, road, cliff edge"),
+                new ToolDefinition("terrain.curve", "Curve", "T-4") { Make = model => new CurveTool(model) },
                 new ToolDefinition("terrain.types", "Terrain types", "T-6") { Make = model => new TerrainTypeTool(model) },
                 new ToolDefinition("terrain.walkability", "Walkability", "T-7", "Mark where land units must be blocked or may pass"),
                 new ToolDefinition("terrain.ruler", "Ruler", "V-5") { Make = model => new RulerTool(model) },
             ],
             [
                 new PresetSection("brush", "Brush presets"),
-                new PlannedSection("Height layers", "T-5", "Layers that add up to the heightmap: base, sculpting, curves, results of World Machine or Gaea"),
+                new HeightLayersSection(),
                 new GeneratedSection(),
             ],
-            [new PlannedSection("Layer or curve", "T-5", "The selected height layer or curve: how it combines, strength, mask, points")]),
+            [new HeightLayerSection()]),
 
         new ModeDefinition("paint", "Paint", "Icon.Paint", "Strata and masks for tools", 0, "F3", "S-1",
             [

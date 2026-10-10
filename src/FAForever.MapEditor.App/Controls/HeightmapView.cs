@@ -674,6 +674,24 @@ public sealed class HeightmapView : Control
     /// </summary>
     private void DrawMarks(DrawingContext context, Overlay overlay, ToolMarks marks)
     {
+        if (marks.Path is { Count: >= 2 } path)
+        {
+            StreamGeometry line = new StreamGeometry();
+            using (StreamGeometryContext figure = line.Open())
+            {
+                figure.BeginFigure(MapToControl(path[0].X, path[0].Z), false);
+                for (int i = 1; i < path.Count; i++)
+                {
+                    figure.LineTo(MapToControl(path[i].X, path[i].Z));
+                }
+                figure.EndFigure(false);
+            }
+            using (context.PushTransform(Matrix.CreateTranslation(1, 1)))
+            {
+                context.DrawGeometry(null, overlay.Shadow, line);
+            }
+            context.DrawGeometry(null, overlay.Selection, line);
+        }
         if (marks.Line is (float x0, float z0, float x1, float z1))
         {
             Point from = MapToControl(x0, z0);

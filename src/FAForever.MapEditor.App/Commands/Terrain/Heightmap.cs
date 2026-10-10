@@ -12,7 +12,8 @@ namespace FAForever.MapEditor.App.Commands;
 /// Takes the heights of an image of any size into the map, resampled to the map's size (user story
 /// T-3), one step of undo: what World Machine, Gaea or another map hands over. A 16-bit grey PNG
 /// (8 bits and colour are read too) or raw 16-bit samples of a square (<c>.r16</c>, <c>.raw</c>);
-/// a sample is the height divided by the map's height scale, as in the project's heightmap.
+/// a sample is the height divided by the map's height scale, as in the project's heightmap. A map
+/// with height layers (T-5) takes it as its base layer.
 /// </summary>
 /// <param name="Path">Left out, the editor asks for the file.</param>
 [EditorCommand("terrain.importHeightmap", "Import a heightmap...", Story = "T-3", Needs = Needs.Map | Needs.NoStroke | Needs.Idle)]
@@ -38,7 +39,10 @@ public sealed class ImportHeightmapHandler(MainViewModel model, IEditorDialogs d
             return (result, size);
         }, cancellationToken);
         Heightmap heights = imported.Terrain.Heightmap;
-        model.EditMap($"Import the heightmap {System.IO.Path.GetFileName(path)}", d => d with { Terrain = d.Terrain with { Heightmap = heights } });
+        // with height layers (T-5) the file becomes the base layer, and the heightmap follows
+        model.EditMap($"Import the heightmap {System.IO.Path.GetFileName(path)}", imported.HeightLayers.IsEmpty
+            ? d => d with { Terrain = d.Terrain with { Heightmap = heights } }
+            : d => d with { HeightLayers = imported.HeightLayers });
         double milliseconds = Math.Round(Stopwatch.GetElapsedTime(start).TotalMilliseconds);
         EditorMetrics.OperationDuration.Record(milliseconds, EditorMetrics.Tag("operation", "import-heightmap"), EditorMetrics.Tag("result", "ok"));
         string resampled = original == (heights.Samples.Width, heights.Samples.Height)

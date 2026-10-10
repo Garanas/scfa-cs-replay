@@ -127,9 +127,10 @@ namespace FAForever.MapEditor.App.Tests
                     "paint.moveMaskRule", "paint.moveStratum", "paint.removeMaskRule", "paint.removeStratum", "paint.setLayer", "paint.setMaskRule", "presets.apply",
                     "presets.delete", "problems.show", "props.addRuleCondition", "props.chooseRule", "props.place", "props.removeFromPalette", "props.removeRule",
                     "props.removeRuleCondition", "props.scale", "props.set", "props.setRule", "props.setRuleCondition", "props.setRulePalette", "props.tilt",
-                    "select.set", "units.add", "units.moveGroup", "units.moveToArmy", "units.moveToGroup", "units.removeGroup", "units.renameGroup", "view.addToToolbar",
-                    "view.gpuDebug", "view.removeFromToolbar", "view.resizePanel", "view.setToolbar", "view.togglePanel", "view.walkability", "view.zoomTo",
-                    "water.removeWaveGenerator",
+                    "select.set", "terrain.addCurve", "terrain.chooseLayer", "terrain.moveLayer", "terrain.reloadLayer", "terrain.removeLayer", "terrain.setCurve",
+                    "terrain.setLayer", "units.add", "units.moveGroup", "units.moveToArmy", "units.moveToGroup", "units.removeGroup", "units.renameGroup",
+                    "view.addToToolbar", "view.gpuDebug", "view.removeFromToolbar", "view.resizePanel", "view.setToolbar", "view.togglePanel", "view.walkability",
+                    "view.zoomTo", "water.removeWaveGenerator",
                     "water.set", "water.setWaveGenerator", "water.setWaveTexture", "workspace.convert", "workspace.setUp",
                 }, outside,
                 "the commands outside the menus are for automation and plugins: their buttons are on a page or panel");
@@ -155,12 +156,12 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = NewModel();
 
-            bool ran = await model.Commands.RunAsync("terrain.addLayer");
+            bool ran = await model.Commands.RunAsync("terrain.saveBrush");
 
             Assert.IsFalse(ran);
-            StringAssert.Contains(model.Status, "Not built yet: Terrain: Add a height layer");
-            StringAssert.Contains(model.Status, "user story T-5");
-            StringAssert.Contains(model.Diagnostics.Console.Last().Message, "terrain.addLayer: not built yet, user story T-5");
+            StringAssert.Contains(model.Status, "Not built yet: Terrain: Save the brush as a preset");
+            StringAssert.Contains(model.Status, "user story T-2");
+            StringAssert.Contains(model.Diagnostics.Console.Last().Message, "terrain.saveBrush: not built yet, user story T-2");
         }
 
         [TestMethod]
@@ -186,7 +187,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(0, model.ShownMask, "sculpting shows no mask");
             model.Tool<SculptTool>().Radius = 30;
 
-            await model.Commands.RunAsync("tool.terrain.curve");
+            await model.Commands.RunAsync("tool.terrain.walkability");
 
             Assert.AreEqual("terrain", model.SelectedMode!.Definition.Id);
             Assert.IsTrue(model.IsToolIncomplete);

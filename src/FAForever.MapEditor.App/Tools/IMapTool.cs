@@ -64,7 +64,9 @@ public interface IMapTool
 /// <param name="Handles">Small squares to drag, such as the corners and edges of a selected area.</param>
 /// <param name="Line">A line from its first point to its second, such as what the ruler measures.</param>
 /// <param name="Label">Text at the line's end, such as the distance.</param>
-public sealed record ToolMarks(IReadOnlyList<(float X, float Z)> Handles, (float X0, float Z0, float X1, float Z1)? Line = null, string? Label = null);
+/// <param name="Path">A line through many places, such as a curve (user story T-4).</param>
+public sealed record ToolMarks(IReadOnlyList<(float X, float Z)> Handles, (float X0, float Z0, float X1, float Z1)? Line = null, string? Label = null,
+    IReadOnlyList<(float X, float Z)>? Path = null);
 
 /// <summary>
 /// The keys held with the mouse or a key.

@@ -1,0 +1,21 @@
+<!-- The Terrain inspector (T-5, T-4): the height layer chosen in the panel, its way of combining, strength, mask,
+     visibility and lock; an imported layer's file; a curve's profile, width, falloff and height. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.HeightLayerPanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <TextBlock Classes="heading" Text="{Binding HeightStack.ChosenTitle}" AutomationProperties.Name="Height layer" />
+      <TextBlock Classes="caption" Text="{Binding HeightStack.ChosenFacts}" IsVisible="{Binding HeightStack.HasLayers}" />
+      <TextBlock Classes="caption" IsVisible="{Binding !HeightStack.HasLayers}"
+                 Text="Add a height layer in the panel: its settings show here, and a curve's shape." />
+      <controls:SettingList DataContext="{Binding HeightStack.Layer}" ShowsTitle="False" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HeightStack.HasLayers}" />
+      <Button Content="Read the file again" Command="{Binding HeightStack.ReloadCommand}" IsVisible="{Binding HeightStack.IsImported}"
+              AutomationProperties.HelpText="Reads the imported layer's file again, as the editor does when it changes in the project folder" />
+      <controls:SettingList DataContext="{Binding HeightStack.Curve}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HeightStack.IsCurve}" />
+    </StackPanel>
+  </Border>
+</UserControl>
