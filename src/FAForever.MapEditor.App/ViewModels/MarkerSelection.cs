@@ -254,7 +254,7 @@ public sealed partial class MarkerSelection : SelectionSection
         {
             _ = Run("markers.set", new JsonObject { ["clearNoRush"] = true });
         }
-        else if (float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float number) && float.IsFinite(number))
+        else if (EditorCulture.TryParse(text, out float number))
         {
             _ = Run("markers.set", new JsonObject { [argument] = number });
         }

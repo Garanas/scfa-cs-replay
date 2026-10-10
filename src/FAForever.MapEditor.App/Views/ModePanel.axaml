@@ -393,7 +393,7 @@
                           <Button DockPanel.Dock="Right" Classes="beside" Content="×"
                                   Command="{Binding $parent[ItemsControl].((vm:PropsViewModel)DataContext).RemoveItemCommand}" CommandParameter="{Binding}"
                                   AutomationProperties.Name="{Binding Name, StringFormat='Take {0} out of the palette'}" />
-                          <TextBox DockPanel.Dock="Right" Classes="mono number" Text="{Binding Weight}"
+                          <TextBox DockPanel.Dock="Right" Classes="mono number" Text="{Binding Weight, Converter={x:Static controls:NumberTextConverter.Instance}}"
                                    AutomationProperties.Name="{Binding Name, StringFormat='Weight of {0}'}"
                                    AutomationProperties.HelpText="How often it is painted against the others; 0 never" />
                           <Border DockPanel.Dock="Left" Classes="thumbnail toolthumb">

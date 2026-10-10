@@ -48,9 +48,9 @@
                 <CheckBox Content="Limits" IsChecked="{Binding Limited}" AutomationProperties.Name="Keep the heights within limits"
                           AutomationProperties.HelpText="The brush raises no height above the highest and lowers none below the lowest" />
                 <StackPanel Classes="inline" IsVisible="{Binding Limited}">
-                  <TextBox Classes="toolfield" Text="{Binding MinHeight, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Lowest height the brush makes" />
+                  <TextBox Classes="toolfield" Text="{Binding MinHeight, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Lowest height the brush makes" />
                   <TextBlock Classes="label" Text="to" />
-                  <TextBox Classes="toolfield" Text="{Binding MaxHeight, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Highest height the brush makes" />
+                  <TextBox Classes="toolfield" Text="{Binding MaxHeight, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Highest height the brush makes" />
                 </StackPanel>
                 <ContentControl Content="{Binding Shape}" />
               </controls:ToolRow>
@@ -74,16 +74,16 @@
                 <CheckBox Content="Erase" IsChecked="{Binding Erase}" AutomationProperties.Name="Erase the layer" />
                 <CheckBox Content="Slope" IsChecked="{Binding Limiting.BySlope}" AutomationProperties.Name="Paint only within a range of slopes" />
                 <StackPanel Classes="inline" IsVisible="{Binding Limiting.BySlope}">
-                  <TextBox Classes="toolfield" Text="{Binding Limiting.MinSlope, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Gentlest slope to paint, in degrees" />
+                  <TextBox Classes="toolfield" Text="{Binding Limiting.MinSlope, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Gentlest slope to paint, in degrees" />
                   <TextBlock Classes="label" Text="to" />
-                  <TextBox Classes="toolfield" Text="{Binding Limiting.MaxSlope, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Steepest slope to paint, in degrees" />
+                  <TextBox Classes="toolfield" Text="{Binding Limiting.MaxSlope, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Steepest slope to paint, in degrees" />
                   <TextBlock Classes="label" Text="°" />
                 </StackPanel>
                 <CheckBox Content="Height" IsChecked="{Binding Limiting.ByHeight}" AutomationProperties.Name="Paint only within a range of heights" />
                 <StackPanel Classes="inline" IsVisible="{Binding Limiting.ByHeight}">
-                  <TextBox Classes="toolfield" Text="{Binding Limiting.MinHeight, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Lowest height to paint" />
+                  <TextBox Classes="toolfield" Text="{Binding Limiting.MinHeight, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Lowest height to paint" />
                   <TextBlock Classes="label" Text="to" />
-                  <TextBox Classes="toolfield" Text="{Binding Limiting.MaxHeight, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Highest height to paint" />
+                  <TextBox Classes="toolfield" Text="{Binding Limiting.MaxHeight, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Highest height to paint" />
                 </StackPanel>
                 <ContentControl Content="{Binding Shape}" />
               </controls:ToolRow>
@@ -358,11 +358,11 @@
                 <ComboBox ItemsSource="{Binding Sizes}" SelectedItem="{Binding NewHeight}" AutomationProperties.Name="New height in ogrids" />
                 <ComboBox ItemsSource="{Binding Anchors}" SelectedItem="{Binding Anchor}" AutomationProperties.Name="Where the old map lies in the new one" />
                 <TextBlock Classes="label" Text="at" />
-                <TextBox Classes="toolfield" Text="{Binding OffsetX, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Old map's left edge in the new map, in ogrids" />
-                <TextBox Classes="toolfield" Text="{Binding OffsetZ, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Old map's top edge in the new map, in ogrids" />
+                <TextBox Classes="toolfield" Text="{Binding OffsetX, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Old map's left edge in the new map, in ogrids" />
+                <TextBox Classes="toolfield" Text="{Binding OffsetZ, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" AutomationProperties.Name="Old map's top edge in the new map, in ogrids" />
                 <CheckBox Content="Fill at" IsChecked="{Binding FillWithHeight}" AutomationProperties.Name="Fill what the map gains at a height"
                           AutomationProperties.HelpText="Off, the heights at the old map's edges continue outwards" />
-                <TextBox Classes="toolfield" Text="{Binding FillHeight, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding FillWithHeight}" AutomationProperties.Name="Height of the terrain the map gains" />
+                <TextBox Classes="toolfield" Text="{Binding FillHeight, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" IsEnabled="{Binding FillWithHeight}" AutomationProperties.Name="Height of the terrain the map gains" />
                 <CheckBox Content="Fit the playable area" IsChecked="{Binding FitPlayableArea}" AutomationProperties.Name="Make the playable area the whole new map" />
                 <TextBlock Classes="caption mono" TextWrapping="NoWrap" Text="{Binding Summary}" AutomationProperties.Name="New map size" />
               </StackPanel>

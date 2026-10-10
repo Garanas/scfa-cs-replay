@@ -74,7 +74,7 @@ public sealed partial class PathNetworkPanel(Func<string, JsonObject, Task> run)
     /// <summary>
     /// The spacing typed, or null when the field is empty or holds no number.
     /// </summary>
-    public float? SpacingValue => float.TryParse(Spacing.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float value) && float.IsFinite(value) ? value : null;
+    public float? SpacingValue => EditorCulture.TryParse(Spacing, out float value) ? value : null;
 
     /// <summary>
     /// Shows how the generator's result stands (the generated results' line of it).

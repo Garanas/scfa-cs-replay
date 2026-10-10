@@ -36,6 +36,8 @@ public static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // numbers show and are read alike on every computer
+        ViewModels.EditorCulture.Use();
         Options = StartOptions.Parse(args);
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
