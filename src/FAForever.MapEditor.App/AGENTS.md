@@ -88,6 +88,10 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     for finding faults (`view.gpuDebug`, `diagnostics.flush`, `diagnostics.upload`). The window makes the menus and the
     shortcuts from it (`MainWindow.BuildMenusAndShortcuts`); the palette searches the commands in
     menus, the ones that work first.
+  - **When the menus ask again** whether their commands can run: on `CommandRegistry.CanRunChanged`
+    only (span `window.commands`). The core raises it wherever what `Needs` asks for changes:
+    `Refresh` (a map opened, busy, a step done or undone, the workspace ready), `StartStroke` and
+    `EndStroke`. A new kind of `Needs` raises it where its answer changes.
   - Run without a person (automation, later Lua: `RunAsync(id, arguments, interactive: false)`),
     a command asks nothing: `DialogGuard` refuses the question with what argument to give. The
     menus, shortcuts, palette and buttons run `MainViewModel.RunAsync(id)` (`RunCommand` in XAML),
@@ -110,6 +114,11 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
 - **Overlays** are data too (`EditorOverlays`): each is a chip above the views and a command in
   the View menu (`view.overlay.<id>`). One with `Panel` is also a check box in that mode's panel
   (`OverlaySection`: the Markers panel's "Shown in the views"), which runs the same command.
+- **What the views draw again, by event**: `DocumentChanged` when the shown document changes
+  (an edit, undo, reload, a dab, a stroke thrown away): the top view updates the tiles that
+  changed, the 3D view uploads them. `OverlaysChanged` (an overlay turned on or off),
+  `CameraMoved` and `CursorChanged`: only what lies over the terrain. `ShownMask`, a property:
+  the top view's picture with that layer's mask. `MapChanged`: everything, for another map.
 - **Tabs are enums**: `MapViewTab` (the top and 3D views) and `DockTab` (the dock), declared in
   the order of their `TabItem`s and bound through `Controls/EnumIndexConverter`. A new tab is a
   value there, its `TabItem` in that place and its command; `TheTabsAreInTheOrderOfTheirEnums`
@@ -145,7 +154,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     (with a tick on its top edge in the top view). The 3D view draws it after the water, on the
     cells of the terrain's lattice under it (`TerrainShaders.BrushVertex`; the picture on texture
     unit 14, uploaded before the heights are bound, since an upload binds to the active unit).
-    `MainViewModel.CursorChanged` (a tool's radius, shape or rotation) draws them again.
+    `MainViewModel.CursorChanged` (a tool's radius, shape or rotation, another tool) draws them again.
   - `brush.set {layer?, mode?, radius?, strength?, target?, erase?, shape?, rotation?,
     randomRotation?}` sets them up for automation: a layer chooses its tool (0 sculpting, 1 to 8
     the strata tool with that layer); radius, strength and the shape (`round`, a brush's key or

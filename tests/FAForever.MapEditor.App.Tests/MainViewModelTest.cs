@@ -129,6 +129,60 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task TheMenusAskAgainOnlyWhenWhatTheCommandsNeedChanges()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            await model.OpenAsync(HardFfa);
+            int asked = 0;
+            model.Commands.CanRunChanged += (_, _) => asked++;
+            EditorCommand undo = model.Commands.Find("edit.undo")!;
+
+            SculptTool sculpt = model.Tool<SculptTool>();
+            sculpt.Radius = 30;
+            sculpt.Strength = 1;
+            model.Status = "Something happened";
+            model.SelectTool("paint.strata");
+            model.SelectTool("terrain.sculpt");
+            model.ShowPathNodes = true;
+            Assert.AreEqual(0, asked, "settings, the status line, tools and overlays change nothing a command needs");
+
+            model.Stroke([(50, 50)]);
+            asked = 0;
+            sculpt.Press(100, 40);
+            Assert.AreEqual(1, asked, "a stroke started");
+            Assert.IsFalse(model.Commands.CanRun(undo), "no undo while a stroke goes on");
+            sculpt.Drag(130, 40);
+            Assert.AreEqual(1, asked, "a dab changes nothing a command needs");
+            sculpt.Release();
+            Assert.IsTrue(asked >= 2, "the stroke ended");
+            Assert.IsTrue(model.Commands.CanRun(undo));
+        }
+
+        [TestMethod]
+        public async Task AnOverlayOrAnotherMaskRedrawsWithoutTheDocumentChanging()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            await model.OpenAsync(HardFfa);
+            int documents = 0, overlays = 0;
+            List<string?> properties = [];
+            model.DocumentChanged += (_, _) => documents++;
+            model.OverlaysChanged += (_, _) => overlays++;
+            model.PropertyChanged += (_, e) => properties.Add(e.PropertyName);
+
+            model.ShowMarkers = false;
+            model.ShowPathNodes = true;
+            Assert.AreEqual(2, overlays);
+            model.SelectTool("paint.strata");
+            model.StrataTool.Choose(3);
+            Assert.AreEqual(3, model.ShownMask);
+            Assert.AreEqual(2, properties.Count(name => name == nameof(MainViewModel.ShownMask)), "the tool, then its layer");
+            Assert.AreEqual(0, documents);
+
+            model.Stroke([(120, 128), (136, 128)]);
+            Assert.IsTrue(documents > 0, "a stroke changes the document");
+        }
+
+        [TestMethod]
         public async Task JumpsThroughTheHistoryFromThePanel()
         {
             MainViewModel model = new MainViewModel(new Answers());

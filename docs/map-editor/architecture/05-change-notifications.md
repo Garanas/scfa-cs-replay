@@ -3,6 +3,20 @@
 Priority low, effort small. Measure first: these are what the code does, not stalls anybody has
 seen. Some of it disappears with files 01 and 02.
 
+**Built** (2026-10-10): `CommandRegistry.CanRunChanged`, `MainViewModel.OverlaysChanged`, and
+`ShownMask` as a property the top view listens to; the App's guide describes them. "Today" says
+what it replaced.
+
+*Measured*: the menus' refresh (span `window.commands`) takes 0.06 ms for all their items, so
+the change is for the reader, not for time. It runs for a stroke's start and end, an undo and a
+redo, and never while a slider moves (`MainWindowTest`, `MainViewModelTest` count it).
+
+*As built*, beyond the plan: starting and ending a stroke change what the commands need
+(`Needs.NoStroke`), so `StartStroke` and `EndStroke` raise `CanRunChanged` too. (A closed menu
+reads `CanExecute` again when it opens, so the menus would show it right without; a shortcut's
+or a plugin's button would not.) Switching tools raises `CursorChanged` (the brush around the
+mouse); the top view's picture is drawn again only when the shown mask changes with it.
+
 ## Today
 
 - **`DocumentChanged` carries nothing** and is raised for an edit, an undo, a reload, every dab

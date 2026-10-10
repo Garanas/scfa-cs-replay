@@ -220,9 +220,16 @@ public sealed partial class MainViewModel : ObservableObject
     public event EventHandler? MapChanged;
 
     /// <summary>
-    /// Raised when the shown document changes: an edit, an undo, a reload, or a dab of a stroke.
+    /// Raised when the shown document changes: an edit, an undo, a reload, a dab of a stroke, a
+    /// stroke thrown away. The views draw the terrain again where it changed.
     /// </summary>
     public event EventHandler? DocumentChanged;
+
+    /// <summary>
+    /// Raised when an overlay is turned on or off. The views draw what lies over the terrain again;
+    /// the terrain stays as it is.
+    /// </summary>
+    public event EventHandler? OverlaysChanged;
 
     [ObservableProperty]
     public partial string Status { get; set; } = "Open a project or import a map folder of the game.";
@@ -291,17 +298,9 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowPathNodes { get; set; }
 
-    partial void OnShowMarkersChanged(bool value)
-    {
-        RefreshOverlays();
-        DocumentChanged?.Invoke(this, EventArgs.Empty);
-    }
+    partial void OnShowMarkersChanged(bool value) => RefreshOverlays();
 
-    partial void OnShowPathNodesChanged(bool value)
-    {
-        RefreshOverlays();
-        DocumentChanged?.Invoke(this, EventArgs.Empty);
-    }
+    partial void OnShowPathNodesChanged(bool value) => RefreshOverlays();
 
     #endregion
 
@@ -371,6 +370,7 @@ public sealed partial class MainViewModel : ObservableObject
         EditedMap map = RequireMap();
         CancelStroke();
         _stroke = map.Session.Begin(description);
+        Commands.NotifyCanRunChanged();
         return _stroke;
     }
 
@@ -392,15 +392,16 @@ public sealed partial class MainViewModel : ObservableObject
         else
         {
             stroke.Dispose();
-            Redraw();
+            ShowStroke();
         }
+        Commands.NotifyCanRunChanged();
         ReloadPending();
     }
 
     /// <summary>
-    /// The views draw the shown document again: a stroke went on, or what a tool shows over it changed.
+    /// Says that the stroke in progress painted (<see cref="DocumentChanged"/>): the views show it.
     /// </summary>
-    public void Redraw() => DocumentChanged?.Invoke(this, EventArgs.Empty);
+    public void ShowStroke() => DocumentChanged?.Invoke(this, EventArgs.Empty);
 
     /// <summary>
     /// Input to the active tool: the left mouse down at the first place, dragged through the others
@@ -591,6 +592,7 @@ public sealed partial class MainViewModel : ObservableObject
         RefreshOverlays();
         ShowHistory();
         Assets.UseMap(Map?.Document);
+        Commands.NotifyCanRunChanged();
         DocumentChanged?.Invoke(this, EventArgs.Empty);
     }
 

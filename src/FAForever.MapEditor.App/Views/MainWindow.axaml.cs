@@ -6,6 +6,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Controls;
+using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
 
 namespace FAForever.MapEditor.App.Views;
@@ -48,6 +49,7 @@ public sealed partial class MainWindow : Window
         if (_model is not null)
         {
             _model.PropertyChanged -= OnModelChanged;
+            _model.Commands.CanRunChanged -= OnCanRunChanged;
             _model.Palette.PropertyChanged -= OnPaletteChanged;
             _model.FitRequested -= OnFitRequested;
             _model.TopViewRequested -= OnTopViewRequested;
@@ -57,6 +59,7 @@ public sealed partial class MainWindow : Window
         if (_model is not null)
         {
             _model.PropertyChanged += OnModelChanged;
+            _model.Commands.CanRunChanged += OnCanRunChanged;
             _model.Palette.PropertyChanged += OnPaletteChanged;
             _model.FitRequested += OnFitRequested;
             _model.TopViewRequested += OnTopViewRequested;
@@ -132,12 +135,16 @@ public sealed partial class MainWindow : Window
             case nameof(MainViewModel.GpuDebug):
                 Terrain3D.Debug = _model!.GpuDebug;
                 break;
-            default:
-                foreach (CommandAdapter adapter in _adapters)
-                {
-                    adapter.Refresh();
-                }
-                break;
+        }
+    }
+
+    // the menu items and shortcuts ask the registry again whether their command can run
+    private void OnCanRunChanged(object? sender, EventArgs e)
+    {
+        using Performance.Span measure = Performance.Measure("window.commands");
+        foreach (CommandAdapter adapter in _adapters)
+        {
+            adapter.Refresh();
         }
     }
 

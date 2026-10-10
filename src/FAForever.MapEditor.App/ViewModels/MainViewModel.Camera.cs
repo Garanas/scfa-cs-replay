@@ -32,11 +32,7 @@ public sealed partial class MainViewModel
     [ObservableProperty]
     public partial bool ShowCamera { get; set; } = true;
 
-    partial void OnShowCameraChanged(bool value)
-    {
-        RefreshOverlays();
-        CameraMoved?.Invoke(this, EventArgs.Empty);
-    }
+    partial void OnShowCameraChanged(bool value) => RefreshOverlays();
 
     /// <summary>
     /// Says that the camera moved; the 3D view calls it while the camera glides, and every

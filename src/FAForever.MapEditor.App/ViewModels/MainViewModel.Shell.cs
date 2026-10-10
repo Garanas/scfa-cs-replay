@@ -143,7 +143,7 @@ public sealed partial class MainViewModel
     /// </summary>
     public int ShownMask => (ActiveTool?.Tool as StrataTool)?.Layer ?? 0;
 
-    partial void OnActiveToolChanged(ToolItem? value) => Redraw();
+    partial void OnActiveToolChanged(ToolItem? value) => CursorChanged?.Invoke(this, EventArgs.Empty);
 
     /// <summary>
     /// Raised when a tool's settings change what the views draw around the mouse: its radius, its
@@ -234,7 +234,14 @@ public sealed partial class MainViewModel
         {
             if (tool is INotifyPropertyChanged settings)
             {
-                settings.PropertyChanged += (_, _) => CursorChanged?.Invoke(this, EventArgs.Empty);
+                settings.PropertyChanged += (_, e) =>
+                {
+                    if (tool is StrataTool && e.PropertyName == nameof(StrataTool.Layer))
+                    {
+                        OnPropertyChanged(nameof(ShownMask));
+                    }
+                    CursorChanged?.Invoke(this, EventArgs.Empty);
+                };
             }
             if (tool is IShapedBrushTool shaped)
             {
@@ -339,12 +346,16 @@ public sealed partial class MainViewModel
     [ObservableProperty]
     public partial int GpuDebug { get; set; }
 
+    /// <summary>
+    /// An overlay was turned on or off: its chip and check box show it, the views draw it.
+    /// </summary>
     private void RefreshOverlays()
     {
         foreach (OverlayItem overlay in Overlays)
         {
             overlay.Refresh();
         }
+        OverlaysChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

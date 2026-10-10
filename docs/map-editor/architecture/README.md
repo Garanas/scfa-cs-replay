@@ -66,7 +66,8 @@ Each step can be merged on its own and leaves the editor working.
    Markers panel's check boxes from the overlays (04).
 4. **Built**: the loose parts out of `MainViewModel`: diagnostics and console, palette, workspace
    setup, version control, the camera's ground (03).
-5. Measure, then make the notifications finer where it shows (05).
+5. **Built**: one event for what the commands need (`CanRunChanged`), the document's changes
+   apart from the overlays' and the shown mask's (05). Measured: the menus' refresh was cheap.
 6. Lua (06), once 1 and 2 have shown which hooks built-in code needs; plugins use the same ones.
 
 Do steps 1 and 2 before the next user stories: every operation and tool added before them is

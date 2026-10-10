@@ -103,6 +103,19 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
     /// </summary>
     public event Action<EditorCommand>? Ran;
 
+    /// <summary>
+    /// Raised when what the commands need may have changed (<see cref="CanRun"/>): a map was opened,
+    /// the editor became busy or idle, a step was done or undone, a stroke started or ended, the
+    /// workspace became ready. The menus and shortcuts ask again on it, and on nothing else.
+    /// </summary>
+    public event EventHandler? CanRunChanged;
+
+    /// <summary>
+    /// Says that <see cref="CanRun"/> may answer otherwise now; the editor calls it wherever what
+    /// <see cref="Needs"/> asks for changes.
+    /// </summary>
+    public void NotifyCanRunChanged() => CanRunChanged?.Invoke(this, EventArgs.Empty);
+
     public IReadOnlyList<EditorCommand> All => _commands;
 
     /// <summary>

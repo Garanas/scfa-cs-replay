@@ -34,7 +34,7 @@ public sealed class BrushStroke
         _dab = dab;
         _edit = model.StartStroke(description);
         Dab(x, z);
-        model.Redraw();
+        model.ShowStroke();
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public sealed class BrushStroke
         {
             Dab(x0 + dx * i / steps, z0 + dz * i / steps);
         }
-        _model.Redraw();
+        _model.ShowStroke();
     }
 
     /// <summary>

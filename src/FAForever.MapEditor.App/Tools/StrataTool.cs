@@ -80,8 +80,6 @@ public sealed partial class StrataTool : ObservableObject, IShapedBrushTool
         Painted = Strata.FirstOrDefault(stratum => stratum.Layer == layer)
             ?? throw new ArgumentOutOfRangeException(nameof(layer), $"The map has no layer {layer} with a mask");
 
-    partial void OnPaintedChanged(Stratum? value) => _model.Redraw();
-
     public void Press(float x, float z)
     {
         if (Painted is not Stratum stratum || _model.ShownDocument is not MapDocument document

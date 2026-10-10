@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -227,6 +228,35 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.IsTrue(model.CanUndo);
             Assert.AreEqual(2, model.History.Count, "opened, and the stroke");
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task TheMenusAskAgainWhenAStrokeStartsAndNotWhileASliderMoves() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.Top);
+            MenuItem edit = window.FindControl<Menu>("MainMenu")!.Items.OfType<MenuItem>().Single(item => (string?)item.Header == "_Edit");
+            ICommand undo = edit.Items.OfType<MenuItem>().Single(item => (string?)item.Header == "Undo").Command!;
+            int asked = 0;
+            undo.CanExecuteChanged += (_, _) => asked++;
+            model.Stroke([(50, 50)]);
+            asked = 0;
+
+            for (int radius = 10; radius <= 40; radius++)
+            {
+                model.Tool<SculptTool>().Radius = radius;
+            }
+            model.Status = "Something happened";
+            Assert.AreEqual(0, asked, "the radius and the status line change nothing a command needs");
+
+            Point middle = Middle(window.MapView, window);
+            window.MouseMove(middle);
+            window.MouseDown(middle, MouseButton.Left);
+            Assert.AreEqual(1, asked, "a stroke started");
+            Assert.IsFalse(undo.CanExecute(null), "the stroke must end first");
+            window.MouseUp(middle, MouseButton.Left);
+            Assert.IsTrue(undo.CanExecute(null));
             window.Close();
         });
 

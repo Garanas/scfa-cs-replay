@@ -1,4 +1,5 @@
 using FAForever.MapEditor.App.Diagnostics;
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -128,22 +129,36 @@ public sealed class HeightmapView : Control
         {
             _model.MapChanged -= OnMapChanged;
             _model.DocumentChanged -= OnDocumentChanged;
-            _model.CameraMoved -= OnCameraMoved;
-            _model.CursorChanged -= OnCameraMoved;
+            _model.PropertyChanged -= OnModelChanged;
+            _model.OverlaysChanged -= OnOverlayChanged;
+            _model.CameraMoved -= OnOverlayChanged;
+            _model.CursorChanged -= OnOverlayChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
         {
             _model.MapChanged += OnMapChanged;
             _model.DocumentChanged += OnDocumentChanged;
-            _model.CameraMoved += OnCameraMoved;
-            _model.CursorChanged += OnCameraMoved;
+            _model.PropertyChanged += OnModelChanged;
+            _model.OverlaysChanged += OnOverlayChanged;
+            _model.CameraMoved += OnOverlayChanged;
+            _model.CursorChanged += OnOverlayChanged;
         }
         OnMapChanged(this, EventArgs.Empty);
     }
 
-    // only the overlay changes (the camera, the brush around the mouse): the terrain's picture stays
-    private void OnCameraMoved(object? sender, EventArgs e)
+    // another layer's mask shows: the picture changes, as when the document does
+    private void OnModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.ShownMask))
+        {
+            OnDocumentChanged(sender, e);
+        }
+    }
+
+    // only the overlay changes (markers turned on or off, the camera, the brush around the mouse):
+    // the terrain's picture stays
+    private void OnOverlayChanged(object? sender, EventArgs e)
     {
         if (IsVisible)
         {
