@@ -31,6 +31,8 @@ public sealed partial class MainWindow : Window
         // the shortcuts before the focused control, except a text field's own keys and behind a page
         AddHandler(KeyDownEvent, OnShortcutKey, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnPageKeyLeftOver, Avalonia.Interactivity.RoutingStrategies.Bubble);
+        // a field that gives its value when it loses the keyboard gives it on Enter too
+        AddHandler(KeyDownEvent, OnEnterInField, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
         // a page that opens takes the keyboard; one that closes gives it back to the views
         foreach (Control page in new Control[] { DiagnosticsPageView, PluginsPageView, VersionControlPageView, ReportProblemPageView, NewMapPageView })
         {
@@ -432,6 +434,19 @@ public sealed partial class MainWindow : Window
         (modifiers & (KeyModifiers.Control | KeyModifiers.Alt | KeyModifiers.Meta)) == 0 && key is not (>= Key.F1 and <= Key.F24)
         || (modifiers & (KeyModifiers.Alt | KeyModifiers.Meta)) == 0 && key is Key.A or Key.C or Key.X or Key.V or Key.Z or Key.Y
             or Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End or Key.Back or Key.Delete or Key.Insert;
+
+    /// <summary>
+    /// Enter in a one-line text field gives its text to what it is bound to, as losing the keyboard
+    /// does (the options row's numbers, the inspector's fields bound on losing the keyboard); the
+    /// key goes on to what else Enter does there.
+    /// </summary>
+    private void OnEnterInField(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None && e.Source is TextBox { AcceptsReturn: false } field)
+        {
+            Avalonia.Data.BindingOperations.GetBindingExpressionBase(field, TextBox.TextProperty)?.UpdateSource();
+        }
+    }
 
     /// <summary>
     /// Escape that nothing on the page took (a combo box closes its list first) closes the page.

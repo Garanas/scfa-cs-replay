@@ -7,6 +7,7 @@ using Avalonia.VisualTree;
 using FAForever.MapEditor.App.Automation;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
+using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.Commands;
 
 namespace FAForever.MapEditor.App.Tests
@@ -219,6 +220,29 @@ namespace FAForever.MapEditor.App.Tests
             // without a person it asks nothing: the map's name, or the arguments
             CommandRun quiet = await model.Commands.TryRunAsync("file.saveAsTemplate", new System.Text.Json.Nodes.JsonObject { ["name"] = "Quiet" }, interactive: false);
             Assert.IsTrue(quiet.Ran);
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task ANumberFieldOfTheOptionsRowAppliesOnEnter() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, _) = await Open();
+            model.SelectTool("paint.strata");
+            Dispatcher.UIThread.RunJobs();
+            StrataTool tool = model.Tool<StrataTool>()!;
+            tool.Limiting.BySlope = true;
+            Dispatcher.UIThread.RunJobs();
+            TextBox slope = window.GetVisualDescendants().OfType<TextBox>().First(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Gentlest slope to paint, in degrees");
+            FAForever.MapEditor.App.Controls.ToolRow.Reveal(slope);
+            Dispatcher.UIThread.RunJobs();
+            slope.Focus();
+            slope.Text = "8";
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreNotEqual(8, tool.Limiting.MinSlope, 1e-6, "typing alone gives nothing yet");
+
+            Press(window, Key.Enter, physical: PhysicalKey.Enter);
+            Assert.AreEqual(8, tool.Limiting.MinSlope, 1e-6, "Enter gives the number");
+            Assert.IsTrue(slope.IsFocused, "and the field keeps the keyboard");
             window.Close();
         });
 
