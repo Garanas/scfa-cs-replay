@@ -29,7 +29,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// <param name="MaxHeight">The highest height, as <paramref name="MinHeight"/>.</param>
 /// <param name="MinSlope">The gentlest slope the strata tool paints, in degrees; turns the slope limit on.</param>
 /// <param name="MaxSlope">The steepest slope the strata tool paints, in degrees; turns the slope limit on.</param>
-/// <param name="Limits">False turns the active tool's limits off.</param>
+/// <param name="Limits">False turns the active tool's limits off (before the limits given turn theirs on), true on.</param>
 /// <param name="WaterMask">Chooses the water tool with this mask: foam, flatness or depthBias.</param>
 /// <param name="Mask">Chooses the masks tool with the mask for tools of this name.</param>
 /// <param name="TerrainType">Chooses the terrain types tool with this type, by code or name.</param>
@@ -108,7 +108,7 @@ public sealed class SetBrushHandler(MainViewModel model) : IRequestHandler<SetBr
                 sculpt.Falloff = falloff ?? sculpt.Falloff;
                 sculpt.MinHeight = request.MinHeight ?? sculpt.MinHeight;
                 sculpt.MaxHeight = request.MaxHeight ?? sculpt.MaxHeight;
-                sculpt.Limited = request.Limits ?? (request.MinHeight is not null || request.MaxHeight is not null || sculpt.Limited);
+                sculpt.Limited = (request.Limits ?? sculpt.Limited) || request.MinHeight is not null || request.MaxHeight is not null;
                 break;
             case GridPaintTool grid:
                 grid.Radius = request.Radius ?? grid.Radius;
@@ -121,8 +121,9 @@ public sealed class SetBrushHandler(MainViewModel model) : IRequestHandler<SetBr
                     limits.MaxHeight = request.MaxHeight ?? limits.MaxHeight;
                     limits.MinSlope = request.MinSlope ?? limits.MinSlope;
                     limits.MaxSlope = request.MaxSlope ?? limits.MaxSlope;
-                    limits.ByHeight = request.Limits == false ? false : limits.ByHeight || request.MinHeight is not null || request.MaxHeight is not null;
-                    limits.BySlope = request.Limits == false ? false : limits.BySlope || request.MinSlope is not null || request.MaxSlope is not null;
+                    // false turns both off first; a limit given turns its own on
+                    limits.ByHeight = (request.Limits ?? limits.ByHeight) || request.MinHeight is not null || request.MaxHeight is not null;
+                    limits.BySlope = (request.Limits ?? limits.BySlope) || request.MinSlope is not null || request.MaxSlope is not null;
                 }
                 break;
             default:
