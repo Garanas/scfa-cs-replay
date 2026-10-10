@@ -60,6 +60,12 @@ namespace FAForever.MapEditor.Cli
         [Option("force", HelpText = "stop: end the process when it does not exit in time.")]
         public bool Force { get; set; }
 
+        [Option("shadow", HelpText = "start: the folder the editor runs from, a copy of its build kept up to date (by default faf-map-editor-shadow/<port> in the temporary folder), so dotnet build works while it runs.")]
+        public string? Shadow { get; set; }
+
+        [Option("no-shadow", HelpText = "start: run the build output itself, without a copy (a build then needs the editor stopped).")]
+        public bool NoShadow { get; set; }
+
         [Option("log", HelpText = "start: the file the editor's own output goes to; by default editor-<port>.log beside the settings file (else in the temporary folder).")]
         public string? Log { get; set; }
     }

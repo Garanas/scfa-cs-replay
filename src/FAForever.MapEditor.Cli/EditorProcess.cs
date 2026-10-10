@@ -27,6 +27,23 @@ namespace FAForever.MapEditor.Cli
                 return 1;
             }
 
+            if (!o.NoShadow)
+            {
+                // run from a copy, so a build can write the output while this editor runs
+                string shadow = Path.GetFullPath(o.Shadow ?? ShadowCopy.DefaultFolder(o.Port));
+                try
+                {
+                    (string copy, int copied) = ShadowCopy.Prepare(exe, shadow);
+                    Console.Error.WriteLine($"Runs from a copy of the build in {shadow} ({copied} files copied); stop it with faf-map editor stop --port {o.Port}");
+                    exe = copy;
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    Console.Error.WriteLine($"Cannot copy the build into {shadow}: {exception.Message} (an editor still runs from it? --no-shadow runs the build itself)");
+                    return 1;
+                }
+            }
+
             ProcessStartInfo start = new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true };
             if (o.Map is string map)
             {
@@ -70,6 +87,7 @@ namespace FAForever.MapEditor.Cli
                         ["workspace"] = state["workspace"]?.DeepClone(),
                         ["seconds"] = Math.Round(clock.Elapsed.TotalSeconds, 1),
                         ["log"] = log,
+                        ["exe"] = exe,
                     }.ToJsonString());
                     return 0;
                 }

@@ -162,7 +162,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
     /// </summary>
     private static readonly string[] Own =
     [
-        "state", "commands", "run {id, interactive?, wait?, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d|side}", "ui {hidden?, under?}", "perf {reset?, gpu?}", "logs {problems?, count?}",
+        "state", "commands", "run {id, interactive?, wait?, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d|side}", "ui {hidden?, under?, type?: Button, text?: part of a name, label or text}", "perf {reset?, gpu?}", "logs {problems?, count?}",
         "diagnostics {record?, send?, endpoint?, flush?, upload?}", "version-control {open?, enable?, name?, email?, lfs?, remote?}",
         "picker {open?, query?, group?, category?, tech?, move?: [across, down], choose?, cancel?}",
         "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "pick {x, y, highlight?}",
@@ -175,12 +175,14 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
     private async Task<JsonNode> RunAsync(string command, JsonObject arguments)
     {
         JsonObject result = new JsonObject();
+        // how much of the state the answer carries (AutomationServer.Answers)
+        StateFilter filter = TakeStateFilter(command, arguments);
         switch (command)
         {
             case "" or "help":
                 return new JsonObject
                 {
-                    ["automation"] = new JsonArray([.. Own.Concat(InputCommands).Concat(ToolingCommands).Concat(DialogCommands).Select(line => (JsonNode)JsonValue.Create(line))]),
+                    ["automation"] = new JsonArray([.. Own.Concat(InputCommands).Concat(ToolingCommands).Concat(DialogCommands).Concat(AnswerCommands).Select(line => (JsonNode)JsonValue.Create(line))]),
                     ["commands"] = new JsonArray([.. model.Commands.All.Where(c => !c.IsIncomplete).Select(c => (JsonNode)JsonValue.Create(c.Usage))]),
                     ["aliases"] = new JsonObject([.. Aliases.Select(alias => KeyValuePair.Create(alias.Key, (JsonNode?)JsonValue.Create(alias.Value.Runs)))]),
                 };
@@ -230,19 +232,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 return new JsonObject { ["ui"] = DescribeUi(arguments) };
             case "perf":
                 // where the time goes: per measured span, and the recent stalls of the user interface
-                if (arguments["reset"]?.GetValue<bool>() == true)
-                {
-                    Performance.Reset();
-                }
-                if (arguments["gpu"]?.GetValue<bool>() is bool gpu)
-                {
-                    // the card's time per frame of the 3D view: 3d.gpu-frame (or 3d.gpu-frame-finish)
-                    Rendering.Gpu.GpuTimer.Enabled = gpu;
-                    window.View3D.RequestNextFrameRendering();
-                }
-                JsonObject performance = Performance.Snapshot();
-                performance["gpuTiming"] = new JsonObject { ["on"] = Rendering.Gpu.GpuTimer.Enabled, ["method"] = Rendering.Gpu.GpuTimer.Method };
-                return performance;
+                return Perf(arguments, filter);
             case "logs":
                 // what the Console shows, newest last
                 {
@@ -484,10 +474,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 break;
         }
 
-        foreach ((string key, JsonNode? value) in State())
-        {
-            result[key] = value?.DeepClone();
-        }
+        AddState(result, command, filter);
         result["ok"] = true;
         return result;
     }
@@ -825,8 +812,13 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
     /// <param name="answer">Where its answer goes in the reply; null to leave it out.</param>
     private async Task RunCommandAsync(string id, JsonObject arguments, JsonObject result, string? answer)
     {
-        CommandRun run = await model.Commands.RunAsync(id, arguments, interactive: false);
+        // a command that refuses answers ran: false with why, as one that cannot run now does
+        CommandRun run = await model.Commands.TryRunAsync(id, arguments, interactive: false);
         result["ran"] = run.Ran;
+        if (run.Error is Exception error)
+        {
+            model.Logger("Automation").LogWarning("The command {Command} refused: {Reason}", id, error.Message);
+        }
         if (run.Why is string why)
         {
             // a command that did not run says why, never silently

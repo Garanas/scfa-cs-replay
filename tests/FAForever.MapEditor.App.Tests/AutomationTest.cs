@@ -339,9 +339,9 @@ namespace FAForever.MapEditor.App.Tests
             ObjectRef third = ObjectRef.Marker(model.ShownDocument!.Markers.Spawns[2].Id);
 
             await ClickOn(first);
-            JsonObject down = await Send(automation, "key", new JsonObject { ["key"] = "Shift", ["action"] = "down" });
+            JsonObject down = await Send(automation, "key", new JsonObject { ["key"] = "Shift", ["action"] = "down", ["paths"] = new JsonArray("views.keysHeld") });
             CollectionAssert.AreEqual(new[] { "LeftShift" }, ((JsonArray)down["held"]!).Select(key => key!.GetValue<string>()).ToArray());
-            Assert.AreEqual("LeftShift", down["views"]!["keysHeld"]![0]!.GetValue<string>(), "the state says what is held");
+            Assert.AreEqual("LeftShift", down["views.keysHeld"]![0]!.GetValue<string>(), "the state says what is held");
             await ClickOn(second);
             CollectionAssert.AreEquivalent(new[] { first, second }, model.Selection.Items.ToArray(), "shift held: the click adds");
 

@@ -78,7 +78,8 @@ public sealed class EditorCommand
 /// <param name="Result">What the command answers, such as the folder an export wrote; null for most.</param>
 /// <param name="Why">Why it did not run: what it needs that is missing (<c>nothing to undo</c>), or
 /// that it is not built yet; null when it ran.</param>
-public sealed record CommandRun(bool Ran, object? Result, string? Why = null);
+/// <param name="Error">What the command threw when it refused (<see cref="CommandRegistry.TryRunAsync"/>); null otherwise.</param>
+public sealed record CommandRun(bool Ran, object? Result, string? Why = null, Exception? Error = null);
 
 /// <summary>
 /// The controller of model, view and controller (user story F-1): every command of the editor, by
@@ -276,6 +277,31 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
         Count(command, "ran");
         Ran?.Invoke(command);
         return new CommandRun(true, result is Unit ? null : result);
+    }
+
+    /// <summary>
+    /// Runs a command as <see cref="RunAsync(string, JsonObject?, bool)"/> does, but a command that
+    /// refuses (its arguments do not fit, or its handler says why it cannot: nothing to paste, no
+    /// such army, a file it cannot write) answers <c>Ran: false</c> with the reason in
+    /// <see cref="CommandRun.Why"/> and the exception in <see cref="CommandRun.Error"/>, rather than
+    /// throwing: for automation, whose <c>run</c> answers so.
+    /// </summary>
+    /// <exception cref="ArgumentException">There is no such command.</exception>
+    public async Task<CommandRun> TryRunAsync(string id, JsonObject? arguments, bool interactive)
+    {
+        if (Find(id) is null)
+        {
+            throw new ArgumentException($"There is no command '{id}'; 'commands' lists them");
+        }
+        try
+        {
+            return await RunAsync(id, arguments, interactive);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException or UnauthorizedAccessException
+            or NotSupportedException or FAForever.MapEditor.Project.MapProjectException)
+        {
+            return new CommandRun(false, null, exception.Message, exception);
+        }
     }
 
     /// <summary>

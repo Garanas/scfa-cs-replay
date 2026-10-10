@@ -204,7 +204,25 @@ public sealed partial class AutomationServer
         }
         if (wait)
         {
-            CommandRun run = await model.Commands.RunAsync(id, arguments, interactive: true);
+            // waits for the command, unless it asks a question over the window: then the answer
+            // comes at once with the question (dialog), for dialog {button} to answer
+            Task<CommandRun> waited = model.Commands.TryRunAsync(id, arguments, interactive: true);
+            Task asked = QuestionOpenedAsync(waited);
+            if (await Task.WhenAny(waited, asked) == asked && !waited.IsCompleted)
+            {
+                _ = waited.ContinueWith(task =>
+                {
+                    if (task.Exception is { } exception)
+                    {
+                        model.Logger("Automation").LogError(exception, "The command {Command} failed: {Reason}", id, exception.GetBaseException().Message);
+                    }
+                }, TaskScheduler.FromCurrentSynchronizationContext());
+                result["started"] = id;
+                result["finished"] = false;
+                result["asked"] = model.Question.Describe();
+                return true;
+            }
+            CommandRun run = await waited;
             result["ran"] = run.Ran;
             result["why"] = run.Why;
             result["result"] = run.Result is null ? null : JsonSerializer.SerializeToNode(run.Result, run.Result.GetType());
@@ -224,7 +242,29 @@ public sealed partial class AutomationServer
         result["started"] = id;
         await LetInputSettleAsync();
         result["finished"] = running.IsCompleted;
+        result["asked"] = model.Question.Describe();
         return true;
+    }
+
+    /// <summary>
+    /// Completes when a question shows over the window: at once when one shows already; it stops
+    /// listening when <paramref name="until"/> ends.
+    /// </summary>
+    private Task QuestionOpenedAsync(Task until)
+    {
+        if (model.Question.IsOpen)
+        {
+            return Task.CompletedTask;
+        }
+        TaskCompletionSource opened = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void OnOpened(object? sender, EventArgs e)
+        {
+            model.Question.Opened -= OnOpened;
+            opened.TrySetResult();
+        }
+        model.Question.Opened += OnOpened;
+        until.ContinueWith(_ => model.Question.Opened -= OnOpened, TaskScheduler.FromCurrentSynchronizationContext());
+        return opened.Task;
     }
 
     /// <summary>
@@ -234,13 +274,20 @@ public sealed partial class AutomationServer
     private JsonArray DescribeUi(JsonObject arguments)
     {
         bool hidden = arguments["hidden"]?.GetValue<bool>() == true;
+        JsonArray tree;
         if (arguments["under"]?.GetValue<string>() is not { Length: > 0 } under)
         {
-            return UiTree.Describe(window, hidden);
+            tree = UiTree.Describe(window, hidden);
         }
-        Control control = UiTree.Find(window, under, hidden)
-            ?? throw new ArgumentException($"No control is named, labelled or reads '{under}'");
-        return UiTree.Describe(control, window, hidden);
+        else
+        {
+            Control control = UiTree.Find(window, under, hidden)
+                ?? throw new ArgumentException($"No control is named, labelled or reads '{under}'");
+            tree = UiTree.Describe(control, window, hidden);
+        }
+        string? type = arguments["type"]?.GetValue<string>() is { Length: > 0 } t ? t : null;
+        string? text = arguments["text"]?.GetValue<string>() is { Length: > 0 } x ? x : null;
+        return type is null && text is null ? tree : UiTree.Filter(tree, type, text);
     }
 
     /// <summary>

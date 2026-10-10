@@ -48,6 +48,37 @@ public static class UiTree
     }
 
     /// <summary>
+    /// The controls of a described tree that are of a type (its name, ignoring case: <c>Button</c>)
+    /// and whose name, label or text holds a text (ignoring case), as a flat list in the order of
+    /// the tree, each without what lies in it: <c>ui {type, text}</c>.
+    /// </summary>
+    public static JsonArray Filter(JsonArray tree, string? type, string? text)
+    {
+        JsonArray found = [];
+        void Walk(JsonArray nodes)
+        {
+            foreach (JsonObject node in nodes.OfType<JsonObject>())
+            {
+                bool typeMatches = type is null || string.Equals(node["type"]?.GetValue<string>(), type, StringComparison.OrdinalIgnoreCase);
+                bool textMatches = text is null || ((string[])["name", "label", "text"])
+                    .Any(key => node[key]?.GetValue<string>()?.Contains(text, StringComparison.OrdinalIgnoreCase) == true);
+                if (typeMatches && textMatches)
+                {
+                    JsonObject copy = (JsonObject)node.DeepClone();
+                    copy.Remove("children");
+                    found.Add(copy);
+                }
+                if (node["children"] is JsonArray children)
+                {
+                    Walk(children);
+                }
+            }
+        }
+        Walk(tree);
+        return found;
+    }
+
+    /// <summary>
     /// What an item of a list or combo box shows: a text as it is, else its <c>Title</c>,
     /// <c>Name</c>, <c>Label</c> or <c>Text</c>, else its own text (a record's would list its fields).
     /// </summary>
