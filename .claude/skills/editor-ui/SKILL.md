@@ -107,6 +107,7 @@ faf-map editor key key=Ctrl+K --port 5372 && faf-map editor type text=undo --por
 faf-map editor run id=units.pick interactive=true wait=false --port 5372   # opens the picker, answers at once
 faf-map editor key key=Down --port 5372 && faf-map editor key key=Enter --port 5372
 faf-map editor drag view=3d from=[10,10] to=[300,200] data=<asset key> --port 5372   # a shelf tile dropped
+faf-map editor state --port 5372                               # handles.points: each handle's pixel in the top and 3D views; hover: what the 3D mouse is over
 ```
 
 Headless: `new AutomationServer(window, model, 0).HandleAsync("mouse", ...)` runs the same commands

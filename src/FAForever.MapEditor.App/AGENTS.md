@@ -301,8 +301,9 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   at, three steps of 3.3 % of 2.6 times the distance to the ground a notch (out: straight back),
   from 4.5 to 11 000 ogrids; the middle mouse button drags the ground with the mouse; space and
   the mouse turn it around the pivot and tilt it from straight down (pitch 90) to 10 degrees
-  above the horizon; F focuses on the place under the mouse (the FAF editor focuses on the
-  selection; there is none yet), from about half as far; Home shows the whole map again. It
+  above the horizon; F focuses on the selection when there is one (as the FAF editor does;
+  `camera.focusSelection`), else on the place under the mouse from about half as far; Home shows
+  the whole map again. It
   glides to where it is sent (only while the 3D view draws), and its pivot is always the ground
   it looks at. The left mouse button is the active tool's, as in the top view.
   - The camera belongs to the view model (`MainViewModel.Camera`, `CameraMoved`), so both views
@@ -390,7 +391,8 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   - Uniforms of samplers must not share a texture unit with another sampler type: unit 0 holds
     the heights (`usampler2D`), 1 a decal's texture or a model's albedo (the objects set it
     active before their textures upload, since an upload binds to the active unit), 2 to 11 the
-    layers, 12 and 13 the masks, 14 the brush's picture.
+    layers, 12 and 13 the masks, 14 the brush's picture; the overlays' pass binds walkability to
+    13 and the painted grid to 15 itself (section "Handles, hover and the 3D view's overlays").
     A sampler with a mipmapped filter on a texture without mipmaps reads as black: the masks have
     their own sampler.
   - Avalonia's hit testing only finds what a control draws itself, and this one draws nothing
@@ -439,8 +441,7 @@ the tools hold their settings and make one stroke (`BrushStroke`) a step of undo
 - Automation: `state.painting` (the sculpt tool's falloff, factor, noise size and limits, the
   strata tool's limits, the water, masks and types tools with the legend, the masks for tools, the
   chosen one, `showMask` and the key of `shownGrid`).
-- Not built yet: hydraulic erosion, painting with symmetry, limits for the water and masks tools,
-  the overlays in the 3D view.
+- Not built yet: hydraulic erosion, painting with symmetry, limits for the water and masks tools.
 
 ## Tests with the real window, and labels for screen readers and agents
 
@@ -592,7 +593,7 @@ Four small parts that later features build on:
   `leftRight`, `topBottom`, `diagonal`, `otherDiagonal`). Without arguments it turns it on or off:
   on, the one used last, else the map's own (`MapSymmetry.Find` on its spawns and deposits), else
   rotational for two. The top view draws the lines between the parts, dashed over a dark line,
-  while the overlay `symmetry` is on (`HeightmapView.DrawSymmetry`); the 3D view does not yet.
+  while the overlay `symmetry` is on (`HeightmapView.DrawSymmetry`), and so does the 3D view on the terrain.
   `Transforms(document)` gives the library's `MapSymmetryTransform`s (the maths is in
   FileFormats.Map's `MapSymmetry`): the brushes and placing tools are to mirror their edits with
   them; none does yet.
@@ -635,7 +636,7 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   the ogrids blocked (`MapNewlyBlockedBrush`) and opened (`MapOpenedBrush`) since the time before.
   `view.walkability {layer?, changes?}` chooses for automation. On a map of 81 km generating takes
   about 3 s. Not built yet: marking by hand where it must be blocked or open (the tool
-  `terrain.walkability`, which needs a layer of its own in the project), and the overlay in 3D.
+  `terrain.walkability`, which needs a layer of its own in the project).
 - **The normal map and the preview** (`generate.normalMap`, `file.renderPreview`): the normal map
   at the size of the map's own, its format kept (`TerrainImages.NormalMap`); the preview
   (`Rendering/MapPreview`) is the top view's picture (`TerrainPicture`, without a mask) reduced
@@ -709,8 +710,9 @@ that moves stays selected. Another map clears it. The core's side is
 - Automation: `state.selection` (count, kinds, the first 200 references, what can be picked, how
   many are copied, the inspector's X, Z and heading). `stroke` drives the active tool with no
   keys held and two pixels an ogrid.
-- Not built yet: picking and a box in the 3D view (its `Pick(ray)` will call `SelectAt` and the
-  like), handles, scaling, snapping, moving along one axis, turning about the selection's centre.
+- **Handles**: the selection has handles in both views, to move (along one axis), turn and scale
+  it; section "Handles, hover and the 3D view's overlays".
+- Not built yet: a box in the 3D view.
 
 ## Decals: placing, scaling, order and groups
 
@@ -903,7 +905,65 @@ follow the terrain, and the reclaim. The maths is the library's (`PropOrientatio
   the selection's reclaim and the buttons of the commands above.
 - Automation: `state.props` (the place tool's prop, Placing, palette, paint and erase settings,
   reclaim with areas).
-- Not built yet: symmetry for placed and painted props (wave 2), handles, the K-1 masks as layers.
+- Not built yet: symmetry for placed and painted props (wave 2), the K-1 masks as layers.
+
+## Handles, hover and the 3D view's overlays
+
+User stories F-11, L-1 and V-3. The maths of the handles is the library's (`SelectionHandles.cs`:
+`SelectionFrame`, `HandleLayout`, `HandleMaths`; `ObjectEdits.RotateObjectsAbout`, `ScaleObjects`).
+
+- **What the views give a tool**: `ToolInput.View`, a `ToolView`: where a place shows in the view's
+  pixels, how large a pixel is on the map at a place, the mouse, and in 3D the ray under it
+  (`PlaneAt` meets the handles' level). Without a view (automation's `stroke`, tests)
+  `ToolInput.ViewAt` stands in with one straight down at the input's zoom. X and Z held in a view
+  are `ToolModifiers.AxisX` and `AxisZ` (the views keep them from key down to key up).
+- **What a tool draws at its size on screen**: `IMapTool.Shapes(view)`, lines, squares and
+  triangles in the view's pixels in an ink by use (`ToolInk`: selection, fill, hover, the axes'
+  `MapHandleAxisXBrush` and `MapHandleAxisZBrush`, shadow, sun). The top view draws them with
+  Avalonia (`HeightmapView.DrawShapes`), the 3D view over everything without the depth test
+  (`Rendering/Gpu/ShapeRenderer`, triangles made every frame, span `3d.draw-shapes`), with the
+  tool's `Marks` at the terrain's height.
+- **The handles** (`SelectTool`, which `DecalSelectTool` wraps, so every mode's select tool has
+  them): the move square in the middle, the arrows along x and z, the ring, the scale squares on
+  the selection's box (corners for props, sides too for decals and areas); the one under the mouse
+  lights up. A press takes a handle before anything under it (a click without a drag still clicks
+  what lies there; in the Decals tool's scale modes the decal under the middle square scales).
+  Dragging the move square moves on the handles' level, an arrow along its axis, the ring turns,
+  a square scales; shift snaps a move's centre to the grid of the settings (½, 1 or 4 ogrids), a
+  turn to 15 degrees (structures always 90) and a scale to tenths; X or Z held moves along that
+  axis (also dragging a selected thing). Each drag is one step (`Move the selection`, `Turn the
+  selection`, `Scale the selection`) and calls the library's edits. The settings are
+  `MainViewModel.Handles` (`HandleSettings`: shown, the pivot `Selection` or `Each`, the snap),
+  in the select tools' options and `select.handles {show?, pivot?, snap?}` (without arguments: on
+  and off). `edit.rotate {degrees?, about?}` (Q and E) and `edit.scale {factor?, x?, z?, about?}`
+  go about the handles' pivot unless `about` says.
+- **Focus and the status bar**: `camera.focusSelection` (View menu; F in the 3D view) shows the
+  selection's box; the status bar shows how many are selected and the size of their bounds
+  (`MainViewModel.SelectionStatus`).
+- **The sun in 3D** (`SunTool.Shapes`): an arrow from the middle of the map towards the sun, a
+  quarter of the map long; its head dragged moves the sun to where the ray meets the sphere it
+  moves on (`SunTool.DirectionAt`, at least 5 degrees high).
+- **Hover**: with a select tool active the 3D view picks what lies under the mouse (at most every
+  60 ms after it moved: a pick costs milliseconds on Archsimkats Valley) into
+  `Selection.Hovered`, drawn lightly highlighted (props, units and markers: `ObjectFrame.Hovered`,
+  0.45 of the selection's highlight; areas in the selection's stroke colour). Decals under the
+  mouse are reported but not drawn.
+- **The overlays on the terrain in 3D** (`TerrainOverlays`, `TerrainShaders.OverlayVertex` and
+  `OverlayFragment`): one pass over the terrain's whole lattice, made invariantly as the terrain's,
+  so it lies exactly on it without a polygon offset (the depth test, less or equal, keeps trees in
+  front at any distance), after the water and the markers, before the brush: the shade outside the
+  playable area (`MapOutsidePlayableBrush`), walkability (one texel an ogrid, its colours made on
+  the processor once per result, `Rendering/WalkabilityPixels`), the grid being painted or the
+  mask for tools (`ShownGrid`: a mask in `MapMaskBrush`, the terrain types in their colours; the
+  tiles a stroke changed are uploaded again), the areas' outlines (the first, the playable one,
+  and the selected ones wider; the selected in the selection's colour) and the symmetry's guides
+  dashed. Each shows while its overlay is on; up to 32 areas and 8 guides.
+- Automation: `state.handles` (show, pivot, snap; for the active select tool the box's centre,
+  heading and size, which handles, the one hovered and dragged, and `points`: where each handle
+  shows in the top and 3D views' pixels, to aim the mouse at; `sunHead` with the sun tool; the
+  status bar's text) and `state.hover` (the thing under the mouse in 3D).
+- Not built yet: dashed outlines of the box, decals drawn lighter under the mouse, a label for
+  the ruler in 3D, handles for wave generators.
 
 ## The map and its atmosphere: panels of settings
 
@@ -949,16 +1009,17 @@ mode panel's and inspector's templates only name it).
   `RulerTool` (`terrain.ruler`): distance in ogrids and km (256 ogrids are 5 km), rise, slope,
   until the next drag; `SunTool` (`lighting.sun`): the sun stands where the mouse points seen from
   the middle of the map (straight up there, 5 degrees at half the map's size), one step a drag, in
-  either view. A tool shows handles and a line with a label through `IMapTool.Marks`
-  (`ToolMarks`), which the top view draws; the 3D view does not yet.
+  either view (in 3D its arrow's head is dragged across the sky). A tool shows handles and a line
+  with a label through `IMapTool.Marks` (`ToolMarks`), which both views draw (the 3D view without
+  the label).
 - **Presets**: the kinds `lighting` (all of it) and `water` (its look; the elevations, wave
   generators and masks stay the map's), the library's `AtmospherePresets`; the Lighting and Water
   panels list them.
 - The top view labels the first area "(playable area)". `state.mapPanels` has the information,
   areas, script and files, water, lighting angles, layers, the ruler's measurement and whether
   the page of a new map is open.
-- Not built yet: the sky and cube maps (L-1), a sun handle and area handles drawn in 3D,
-  placing wave generators with the mouse, templates for a new map.
+- Not built yet: the sky and cube maps (L-1), placing wave generators with the mouse, templates
+  for a new map.
 
 ## Diagnostics: what goes well and wrong
 

@@ -98,6 +98,21 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     (`ObjectClipboard`; copied path nodes keep their links among each other). Things keep to the
     terrain: they stay as high above it as they were (`Heightmap.HeightAt`, between the corners).
     `Nearest` takes what may be picked at all (`include`): the editor leaves out hidden decals.
+  - **Handles of the selection** (`SelectionHandles.cs`, user story F-11): `SelectionFrame.Of` is
+    the box they sit on (the middle of the things' bounds at their mean height; turned with decals
+    that all face one way; which handles the things have: the ring when something turns or several
+    things orbit, scale squares for props, decals and areas, sides only for decals and areas).
+    `HandleLayout.Of(frame, ogridsPerPixel)` places the handles for a view so they keep their size
+    on screen (the move square, the arrows along x and -z, the ring, the corners and sides) and
+    `HitTest` finds the one under the mouse in the view's pixels, through a function that projects
+    a place (so the top and 3D views share it). `HandleMaths`: `MoveDelta` (one axis, the centre
+    snapped to a grid), `TurnAngle` (about the centre, snapped to steps), `ScaleFactors` (a side
+    along its axis, a corner both alike, snapped to steps, never below a hundredth), `PlaneHit`
+    (a ray on the handles' level). `ObjectEdits.RotateObjectsAbout` turns things about one place
+    (each turns, its centre goes round) and `ScaleObjects` scales along turned axes, about a pivot
+    (the centres spread, markers and units too) or each about its own centre (props alike along
+    every axis by the factor that changes most, decals by width and length, areas by their sides).
+    Every handle's drag in the editor is a call of these edits, so a later hook (symmetry) can wrap them.
   - `DecalEdits` (user stories D-1, D-2): `NewDecal` centred on a place from a texture (an asset's
     key becomes the game's path with a slash, `/env/common/decals/erosion018_normals.dds`, in the
     first of two slots; a `_normals` texture makes a `Normals` decal, anything else `Albedo`; the
