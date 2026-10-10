@@ -157,7 +157,7 @@ public sealed partial class AutomationServer
                 result["objects"] = Objects(arguments);
                 return true;
             default:
-                return false;
+                return await RunToolingAsync(command, arguments, result);
         }
     }
 

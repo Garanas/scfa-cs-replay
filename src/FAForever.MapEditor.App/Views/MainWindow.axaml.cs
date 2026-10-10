@@ -53,6 +53,7 @@ public sealed partial class MainWindow : Window
             _model.Palette.PropertyChanged -= OnPaletteChanged;
             _model.FitRequested -= OnFitRequested;
             _model.TopViewRequested -= OnTopViewRequested;
+            _model.TopViewFrameRequested -= OnTopViewFrameRequested;
             _model.ShowFolderRequested -= OnShowFolderRequested;
             _model.OpenFileRequested -= OnOpenFileRequested;
         }
@@ -64,6 +65,7 @@ public sealed partial class MainWindow : Window
             _model.Palette.PropertyChanged += OnPaletteChanged;
             _model.FitRequested += OnFitRequested;
             _model.TopViewRequested += OnTopViewRequested;
+            _model.TopViewFrameRequested += OnTopViewFrameRequested;
             _model.ShowFolderRequested += OnShowFolderRequested;
             _model.OpenFileRequested += OnOpenFileRequested;
             BuildMenusAndShortcuts(_model);
@@ -159,6 +161,8 @@ public sealed partial class MainWindow : Window
     }
 
     private void OnFitRequested(object? sender, EventArgs e) => Heightmap.Fit();
+
+    private void OnTopViewFrameRequested(double x0, double z0, double x1, double z1) => Heightmap.ShowArea(x0, z0, x1, z1);
 
     private void OnTopViewRequested(double? x, double? z, double? zoom)
     {

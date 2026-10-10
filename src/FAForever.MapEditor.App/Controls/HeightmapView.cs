@@ -158,6 +158,18 @@ public sealed class HeightmapView : Control
         InvalidateVisual();
     }
 
+    /// <summary>
+    /// Centres the view on a rectangle of the map (in ogrids), as large as fits; a view not laid
+    /// out yet takes the zoom when it gets its size.
+    /// </summary>
+    public void ShowArea(double x0, double z0, double x1, double z1)
+    {
+        double fit = Bounds.Width > 0 && Bounds.Height > 0
+            ? Math.Min(Bounds.Width / Math.Max(1, x1 - x0), Bounds.Height / Math.Max(1, z1 - z0))
+            : _zoom;
+        Show(fit, (x0 + x1) / 2, (z0 + z1) / 2);
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);

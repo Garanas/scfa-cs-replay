@@ -179,7 +179,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             case "" or "help":
                 return new JsonObject
                 {
-                    ["automation"] = new JsonArray([.. Own.Concat(InputCommands).Select(line => (JsonNode)JsonValue.Create(line))]),
+                    ["automation"] = new JsonArray([.. Own.Concat(InputCommands).Concat(ToolingCommands).Select(line => (JsonNode)JsonValue.Create(line))]),
                     ["commands"] = new JsonArray([.. model.Commands.All.Where(c => !c.IsIncomplete).Select(c => (JsonNode)JsonValue.Create(c.Usage))]),
                     ["aliases"] = new JsonObject([.. Aliases.Select(alias => KeyValuePair.Create(alias.Key, (JsonNode?)JsonValue.Create(alias.Value.Runs)))]),
                 };
@@ -429,6 +429,11 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 }
                 break;
             case "screenshot":
+                if (arguments["part"] is not null && await RunToolingAsync(command, arguments, result))
+                {
+                    // one part of the window (AutomationServer.Tooling)
+                    break;
+                }
                 if (arguments["settle"]?.GetValue<bool>() == true)
                 {
                     result["settled"] = await SettleAsync(arguments["gpu"]?.GetValue<bool>() == true);
