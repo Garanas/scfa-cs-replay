@@ -571,6 +571,23 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             },
             ["picker"] = DescribePicker(model.Picker),
             ["symmetry"] = ChooseSymmetryHandler.Describe(model.Symmetry),
+            ["decals"] = new JsonObject
+            {
+                ["count"] = model.ShownDocument?.Decals.Length ?? 0,
+                ["placing"] = model.DecalPlaceTool.Decal,
+                ["width"] = model.DecalPlaceTool.Width,
+                ["heading"] = model.DecalPlaceTool.Heading,
+                ["cutOff"] = model.DecalPlaceTool.CutOffLod,
+                ["dragMode"] = model.Tool<DecalSelectTool>().DragMode.ToString(),
+                ["hidden"] = model.Decals.HiddenDecals.Count,
+                ["groups"] = new JsonArray([.. model.Decals.Groups.Select(group => (JsonNode)new JsonObject
+                {
+                    ["id"] = group.Id,
+                    ["name"] = group.Name,
+                    ["count"] = group.Count,
+                    ["shown"] = group.IsShown,
+                })]),
+            },
             ["presets"] = new JsonObject
             {
                 ["folder"] = model.Presets.Library?.Folder,

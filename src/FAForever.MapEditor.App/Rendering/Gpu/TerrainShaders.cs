@@ -332,6 +332,29 @@ internal static class TerrainShaders
         """;
 
     /// <summary>
+    /// A highlighted decal (the selection): a light tint of <c>uColor</c> over it and an outline
+    /// two pixels wide along its edges, premultiplied.
+    /// </summary>
+    public static string DecalHighlightFragment(bool es) => Header(es) + Heights + Lighting + """
+        in vec2 vUv;
+        in vec3 vWorld;
+        in vec2 vTangent;
+        out vec4 outColor;
+        uniform vec3 uColor;
+
+        void main()
+        {
+            if (any(lessThan(vUv, vec2(0.0))) || any(greaterThan(vUv, vec2(1.0))))
+            {
+                discard;
+            }
+            vec2 pixels = (min(vUv, 1.0 - vUv)) / max(fwidth(vUv), vec2(1e-6));
+            float alpha = min(pixels.x, pixels.y) < 2.0 ? 0.9 : 0.18;
+            outColor = vec4(uColor * alpha, alpha);
+        }
+        """;
+
+    /// <summary>
     /// A normal decal (DXT5nm: x in alpha, y in green, opacity in red). The view draws no
     /// deferred lighting, so the decal changes the lit colour below it by how much its normal
     /// changes the light: it outputs half that factor, blended as <c>2 × source × destination</c>.

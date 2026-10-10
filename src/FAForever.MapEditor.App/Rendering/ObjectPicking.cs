@@ -128,7 +128,9 @@ public static class ObjectPlacement
 /// <summary>
 /// What picking looks at: the kinds the 3D view shows.
 /// </summary>
-public sealed record PickOptions(bool Props = true, bool Units = true, bool Markers = true, bool PathNodes = false, bool Decals = true);
+/// <param name="HiddenDecals">The ids of the decals not drawn (those of hidden groups), which are
+/// not picked; null for none.</param>
+public sealed record PickOptions(bool Props = true, bool Units = true, bool Markers = true, bool PathNodes = false, bool Decals = true, IReadOnlySet<int>? HiddenDecals = null);
 
 /// <summary>
 /// Finds the object under a point of the 3D view: the ray from the camera through it against each
@@ -190,7 +192,7 @@ public static class ObjectPicking
             Vector3 point = origin + direction * ground;
             for (int i = document.Decals.Length - 1; i >= 0; i--)
             {
-                if (Covers(document.Decals[i], new Vector2(point.X, point.Z)))
+                if (Covers(document.Decals[i], new Vector2(point.X, point.Z)) && shown.HiddenDecals?.Contains(document.Decals[i].Id) != true)
                 {
                     return ObjectRef.Decal(document.Decals[i].Id);
                 }

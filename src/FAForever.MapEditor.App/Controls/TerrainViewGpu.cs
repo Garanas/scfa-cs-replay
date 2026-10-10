@@ -135,7 +135,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     /// kinds it shows, or null: the nearest prop, unit or marker the ray from the camera meets in
     /// front of the terrain, else the decal on top there (<see cref="ObjectPicking"/>).
     /// </summary>
-    public ObjectRef? PickAt(Point at)
+    /// <param name="kinds">The kinds it may pick, of those shown; null for all of them.</param>
+    public ObjectRef? PickAt(Point at, ObjectKinds? kinds = null)
     {
         using Performance.Span measure = Performance.Measure("3d.pick");
         if (_model?.ShownDocument is not MapDocument document)
@@ -146,7 +147,14 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         Vector2 view = InView(at);
         (Vector3 origin, Vector3 direction) = camera.RayAt(view);
         float? terrain = camera.PointAt(view) is Vector3 ground ? Vector3.Distance(origin, ground) / direction.Length() : null;
-        PickOptions shown = new PickOptions(_model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes);
+        ObjectKinds chosen = kinds ?? ObjectKinds.All;
+        PickOptions shown = new PickOptions(
+            _model.ShowProps && chosen.HasFlag(ObjectKinds.Props),
+            _model.ShowUnits && chosen.HasFlag(ObjectKinds.Units),
+            _model.ShowMarkers && chosen.HasFlag(ObjectKinds.Markers),
+            _model.ShowPathNodes && chosen.HasFlag(ObjectKinds.PathNodes),
+            chosen.HasFlag(ObjectKinds.Decals),
+            _model.Decals.HiddenDecals);
         return ObjectPicking.Pick(document, origin, direction, shown, _models.BoundsOf, terrain);
     }
 
@@ -289,7 +297,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                 {
                     using Performance.Span lookup = Performance.Measure("3d.find-texture");
                     return FindTexture(path, document, workspace);
-                }, BrushUnderMouse(document), BrushColor(), Objects(camera));
+                }, BrushUnderMouse(document), BrushColor(), Objects(camera), Decals());
             }
             catch (InvalidOperationException exception)
             {
@@ -383,6 +391,26 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     }
 
     private Vector3 BrushColor() => ThemeColor("OverlayBrush");
+
+    /// <summary>
+    /// The decals of hidden groups, not drawn, and the selected decals, drawn highlighted.
+    /// </summary>
+    private (IReadOnlySet<int>?, IReadOnlySet<int>?, Vector3)? Decals()
+    {
+        if (_model is null)
+        {
+            return null;
+        }
+        if (!ReferenceEquals(_highlighted, _highlightedDecalsOf))
+        {
+            _highlightedDecalsOf = _highlighted;
+            _highlightedDecals = _highlighted?.Where(thing => thing.Kind == ObjectKind.Decal).Select(thing => thing.Id).ToHashSet() is { Count: > 0 } ids ? ids : null;
+        }
+        return (_model.Decals.HiddenDecals, _highlightedDecals, ThemeColor("SelectedStrokeBrush"));
+    }
+
+    private IReadOnlySet<ObjectRef>? _highlightedDecalsOf;
+    private IReadOnlySet<int>? _highlightedDecals;
 
     private Vector3 ThemeColor(string key) =>
         this.TryFindResource(key, ActualThemeVariant, out object? token) && token is Avalonia.Media.ISolidColorBrush brush
@@ -536,7 +564,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             {
                 _pressed = tool;
                 // the thing under the mouse is the one the ray meets, not the nearest on the ground
-                tool.Press(place.X, place.Z, InputAt(place, e.KeyModifiers) with { Picks = true, Picked = PickAt(_mouse) });
+                tool.Press(place.X, place.Z, InputAt(place, e.KeyModifiers) with { Picks = true, Picked = PickAt(_mouse, _model.SelectableKinds) });
                 e.Pointer.Capture(this);
             }
             e.Handled = true;

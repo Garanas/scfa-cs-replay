@@ -118,11 +118,12 @@ public sealed partial class MainViewModel
 
     /// <summary>
     /// The thing a click at a place picks (<see cref="MapObjects.Nearest"/>) among the kinds given,
-    /// or by default those that can be picked now (<see cref="SelectableKinds"/>).
+    /// or by default those that can be picked now (<see cref="SelectableKinds"/>); never a decal of
+    /// a hidden group (<see cref="DecalsViewModel"/>).
     /// </summary>
     /// <param name="ogridsPerPixel">How large a pixel of the view is on the map.</param>
     public ObjectRef? PickAt(float x, float z, float ogridsPerPixel, ObjectKinds? kinds = null) =>
-        ShownDocument?.Nearest(x, z, ogridsPerPixel, kinds ?? SelectableKinds);
+        ShownDocument?.Nearest(x, z, ogridsPerPixel, kinds ?? SelectableKinds, Decals.HiddenDecals.Count > 0 ? Decals.IsShown : null);
 
     /// <summary>
     /// Selects what a click at a place picks; a click on nothing clears the selection unless it adds.
@@ -149,7 +150,7 @@ public sealed partial class MainViewModel
     {
         if (ShownDocument is MapDocument document)
         {
-            Selection.Apply(document.Inside(x0, z0, x1, z1, kinds ?? SelectableKinds), change);
+            Selection.Apply(document.Inside(x0, z0, x1, z1, kinds ?? SelectableKinds).Where(Decals.IsShown), change);
         }
     }
 
@@ -160,7 +161,7 @@ public sealed partial class MainViewModel
     {
         if (ShownDocument is MapDocument document)
         {
-            Selection.Set(document.All(kinds ?? SelectableKinds));
+            Selection.Set(document.All(kinds ?? SelectableKinds).Where(Decals.IsShown));
         }
     }
 

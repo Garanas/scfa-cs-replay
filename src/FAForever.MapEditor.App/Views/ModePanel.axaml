@@ -97,6 +97,44 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
+            <!-- the decal groups (D-2): shown or hidden in the views (the editor's, not saved), renamed, filled from the selection -->
+            <DataTemplate DataType="vm:DecalGroupsSection">
+              <Border Classes="group">
+                <StackPanel Classes="stack">
+                  <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.Groups}" AutomationProperties.Name="Decal groups">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:DecalGroupItem">
+                        <StackPanel Classes="stack">
+                          <DockPanel>
+                            <CheckBox DockPanel.Dock="Left" IsChecked="{Binding IsShown}"
+                                      AutomationProperties.Name="{Binding Name, StringFormat='Show the decal group {0}'}"
+                                      AutomationProperties.HelpText="Hidden decals are not drawn in the 3D view and cannot be selected; the map keeps them" />
+                            <TextBlock DockPanel.Dock="Right" Classes="caption" Text="{Binding Detail}" VerticalAlignment="Center" />
+                            <TextBox Classes="commit" Text="{Binding Name, UpdateSourceTrigger=LostFocus}"
+                                     AutomationProperties.Name="{Binding Detail, StringFormat='Name of the decal group of {0}'}" />
+                          </DockPanel>
+                          <StackPanel Classes="inline">
+                            <Button Content="Select" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.SelectGroupCommand}" CommandParameter="{Binding}"
+                                    AutomationProperties.Name="{Binding Name, StringFormat='Select the decals of {0}'}" />
+                            <Button Content="Add" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.AddToGroupCommand}" CommandParameter="{Binding}"
+                                    AutomationProperties.Name="{Binding Name, StringFormat='Add the selected decals to {0}'}" />
+                            <Button Content="Take out" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.RemoveFromGroupCommand}" CommandParameter="{Binding}"
+                                    AutomationProperties.Name="{Binding Name, StringFormat='Take the selected decals out of {0}'}" />
+                            <Button Classes="beside" Content="×" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.DeleteGroupCommand}" CommandParameter="{Binding}"
+                                    AutomationProperties.Name="{Binding Name, StringFormat='Delete the decal group {0}'}" ToolTip.Tip="Its decals stay on the map" />
+                          </StackPanel>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Classes="caption" TextWrapping="Wrap" Text="None yet: select decals and make a group of them, to select, show or hide them together."
+                             IsVisible="{Binding !$parent[UserControl].((vm:MainViewModel)DataContext).Decals.HasGroups}" />
+                  <Button Content="New group from the selection" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="decals.addGroup"
+                          AutomationProperties.HelpText="A group of the selected decals; rename it in its field" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
             <!-- the mode's overlays; a check box runs the overlay's command, as its chip does -->
             <DataTemplate DataType="vm:OverlaySection">
               <Border Classes="group">

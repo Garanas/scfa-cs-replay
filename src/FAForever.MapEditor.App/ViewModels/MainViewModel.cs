@@ -104,11 +104,13 @@ public sealed partial class MainViewModel : ObservableObject
         Symmetry = new SymmetryViewModel();
         Generation = new GenerationViewModel();
         Selection = new SelectionViewModel(RunWithAsync);
+        Decals = new DecalsViewModel(RunWithAsync);
         Commands = CommandServices.Create(this, _dialogs, typeof(MainViewModel).Assembly);
         Palette = new PaletteViewModel(Commands, RunAsync);
         Presets = new PresetsViewModel(Logger("Assets"), _ui, (id, arguments) => TryAsync(() => Commands.RunAsync(id, arguments, interactive: true)));
         InitializeShell();
         InitializeSelection();
+        InitializeDecals();
     }
 
     /// <summary>

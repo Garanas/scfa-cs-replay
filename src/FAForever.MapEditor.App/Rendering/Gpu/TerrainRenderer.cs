@@ -34,6 +34,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     private readonly Program _terrain;
     private readonly Program _decalAlbedo;
     private readonly Program _decalNormal;
+    private readonly Program _decalHighlight;
     private readonly Program _water;
     private readonly Program _brush;
     private readonly uint _repeat;
@@ -57,8 +58,15 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     private (int X, int Z) _gridCells;
     private readonly Mesh[] _decalGrids;
     private readonly uint _decalInstances;
+    private readonly uint _highlightInstances;
     private ImmutableArray<Decal> _decalsOf;
+    private IReadOnlySet<int>? _hiddenOf;
+    private IReadOnlySet<int>? _hidden;
     private readonly List<DecalRun> _runs = [];
+    private ImmutableArray<Decal> _highlightOf;
+    private IReadOnlySet<int>? _highlightedOf;
+    private IReadOnlySet<int>? _highlighted;
+    private readonly List<DecalRun> _highlightRuns = [];
     private (int Width, int Height) _mapSize;
 
     private sealed record DecalRun(bool Normals, string Texture, int SizeClass, int First, int Count);
@@ -70,6 +78,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _terrain = new Program(gl, TerrainShaders.TerrainVertex(es), TerrainShaders.TerrainFragment(es));
         _decalAlbedo = new Program(gl, TerrainShaders.DecalVertex(es), TerrainShaders.DecalAlbedoFragment(es));
         _decalNormal = new Program(gl, TerrainShaders.DecalVertex(es), TerrainShaders.DecalNormalFragment(es));
+        _decalHighlight = new Program(gl, TerrainShaders.DecalVertex(es), TerrainShaders.DecalHighlightFragment(es));
         _water = new Program(gl, TerrainShaders.WaterVertex(es), TerrainShaders.WaterFragment(es));
         _brush = new Program(gl, TerrainShaders.BrushVertex(es), TerrainShaders.BrushFragment(es));
 
@@ -93,6 +102,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             return mesh;
         })];
         _decalInstances = gl.GenBuffer();
+        _highlightInstances = gl.GenBuffer();
     }
 
     /// <summary>
@@ -116,8 +126,13 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// <param name="brushColor">Its colour, from the theme's overlay token.</param>
     /// <param name="objects">The props, units and markers, and what of them shows: the models after
     /// the terrain (decals do not cover them), the markers after the water; null for none.</param>
-    public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, BrushPreview? brush = null, Vector3 brushColor = default, (ObjectRenderer Renderer, ObjectFrame Frame)? objects = null)
+    /// <param name="decals">The ids of the decals not drawn (those of hidden groups) and of those
+    /// drawn highlighted (the selection), with the highlight's colour; null for none.</param>
+    public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, BrushPreview? brush = null, Vector3 brushColor = default, (ObjectRenderer Renderer, ObjectFrame Frame)? objects = null,
+        (IReadOnlySet<int>? Hidden, IReadOnlySet<int>? Highlighted, Vector3 Color)? decals = null)
     {
+        _hidden = decals?.Hidden;
+        _highlighted = decals?.Highlighted;
         using (Performance.Measure("3d.upload-textures"))
         {
             _textures.Upload();
@@ -148,6 +163,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         {
             DrawDecals(document, viewProjection, findTexture, normals: false);
             DrawDecals(document, viewProjection, findTexture, normals: true);
+            DrawHighlights(document, viewProjection, decals?.Color ?? Vector3.One);
         }
         _gl.Disable(EnableCap.PolygonOffsetFill);
         DrawWater(document, viewProjection);
@@ -410,10 +426,18 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             _decalsOf = default;
         }
 
-        if (_decalsOf != document.Decals)
+        if (_decalsOf != document.Decals || _hiddenOf != _hidden)
         {
             UpdateDecals(document.Decals);
             _decalsOf = document.Decals;
+            _hiddenOf = _hidden;
+            _highlightOf = default;
+        }
+        if (_highlightOf != document.Decals || _highlightedOf != _highlighted)
+        {
+            UpdateHighlights(document.Decals);
+            _highlightOf = document.Decals;
+            _highlightedOf = _highlighted;
         }
     }
 
@@ -554,7 +578,8 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         foreach (Decal decal in decals)
         {
             bool normals = decal.Type is DecalType.Normals or DecalType.AlphaNormals;
-            if ((decal.Type != DecalType.Albedo && !normals) || decal.Textures.IsDefaultOrEmpty || decal.Textures[0].Length == 0)
+            if ((decal.Type != DecalType.Albedo && !normals) || decal.Textures.IsDefaultOrEmpty || decal.Textures[0].Length == 0
+                || _hidden?.Contains(decal.Id) == true)
             {
                 continue;
             }
@@ -580,6 +605,79 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _decalInstances);
         float[] data = instances.Count > 0 ? [.. instances] : [0f];
         _gl.BufferData<float>(BufferTargetARB.ArrayBuffer, data, BufferUsageARB.StaticDraw);
+    }
+
+    /// <summary>
+    /// The highlighted decals that show, as instances of their own, in runs of one size class each
+    /// (their textures do not matter: the highlight is a tint with an outline).
+    /// </summary>
+    private void UpdateHighlights(ImmutableArray<Decal> decals)
+    {
+        _highlightRuns.Clear();
+        if (_highlighted is not { Count: > 0 } highlighted)
+        {
+            return;
+        }
+        using Performance.Span measure = Performance.Measure("3d.update-decal-highlights");
+        List<(int SizeClass, float[] Instance)> found = [];
+        foreach (Decal decal in decals)
+        {
+            if (!highlighted.Contains(decal.Id) || _hidden?.Contains(decal.Id) == true)
+            {
+                continue;
+            }
+            (float sin, float cos) = MathF.SinCos(decal.Rotation.Y);
+            Vector2 corner = new Vector2(decal.Position.X, decal.Position.Z);
+            Vector2 edgeU = new Vector2(decal.Scale.X * cos, decal.Scale.X * sin);
+            Vector2 edgeV = new Vector2(-decal.Scale.Z * sin, decal.Scale.Z * cos);
+            found.Add((SizeClassOf(corner, edgeU, edgeV), [corner.X, corner.Y, edgeU.X, edgeU.Y, edgeV.X, edgeV.Y]));
+        }
+        List<float> instances = [];
+        foreach (IGrouping<int, (int SizeClass, float[] Instance)> sizeClass in found.GroupBy(item => item.SizeClass))
+        {
+            int first = instances.Count / 6;
+            foreach ((int _, float[] instance) in sizeClass)
+            {
+                instances.AddRange(instance);
+            }
+            _highlightRuns.Add(new DecalRun(false, "", sizeClass.Key, first, sizeClass.Count()));
+        }
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _highlightInstances);
+        float[] data = instances.Count > 0 ? [.. instances] : [0f];
+        _gl.BufferData<float>(BufferTargetARB.ArrayBuffer, data, BufferUsageARB.StaticDraw);
+    }
+
+    /// <summary>
+    /// The highlighted decals, over the others: a light tint of the highlight's colour with an outline.
+    /// </summary>
+    private void DrawHighlights(MapDocument document, Matrix4x4 viewProjection, Vector3 color)
+    {
+        if (_highlightRuns.Count == 0)
+        {
+            return;
+        }
+        Program program = _decalHighlight;
+        program.Use();
+        SetCommon(program, document, viewProjection);
+        program.Set("uMapSize", document.Width, document.Height);
+        program.Set("uCells", _gridCells.X, _gridCells.Z);
+        program.Set("uColor", color.X, color.Y, color.Z);
+        _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
+        foreach (DecalRun run in _highlightRuns)
+        {
+            Mesh mesh = _decalGrids[run.SizeClass];
+            program.Set("uPatchCells", (float)DecalGridCells[run.SizeClass]);
+            mesh.Bind();
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _highlightInstances);
+            nint offset = run.First * DecalStride;
+            for (uint attribute = 1; attribute <= 3; attribute++)
+            {
+                _gl.EnableVertexAttribArray(attribute);
+                _gl.VertexAttribPointer(attribute, 2, VertexAttribPointerType.Float, false, DecalStride, (void*)(offset + (attribute - 1) * 2 * sizeof(float)));
+                _gl.VertexAttribDivisor(attribute, 1);
+            }
+            _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)mesh.IndexCount, DrawElementsType.UnsignedInt, null, (uint)run.Count);
+        }
     }
 
     /// <summary>
@@ -620,6 +718,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _terrain.Dispose();
         _decalAlbedo.Dispose();
         _decalNormal.Dispose();
+        _decalHighlight.Dispose();
         _water.Dispose();
         _waterQuad.Dispose();
         _brush.Dispose();
@@ -634,6 +733,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             mesh.Dispose();
         }
         _gl.DeleteBuffer(_decalInstances);
+        _gl.DeleteBuffer(_highlightInstances);
         _gl.DeleteSampler(_repeat);
         _gl.DeleteSampler(_clamp);
         _gl.DeleteSampler(_masks);

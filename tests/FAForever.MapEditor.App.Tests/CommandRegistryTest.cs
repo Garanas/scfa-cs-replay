@@ -118,7 +118,9 @@ namespace FAForever.MapEditor.App.Tests
             CollectionAssert.AreEqual(
                 new[]
                 {
-                    "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look", "diagnostics.flush", "diagnostics.set", "diagnostics.upload",
+                    "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look",
+                    "decals.addToGroup", "decals.deleteGroup", "decals.lod", "decals.place", "decals.removeFromGroup", "decals.renameGroup", "decals.scale", "decals.selectGroup", "decals.showGroup", "decals.size",
+                    "diagnostics.flush", "diagnostics.set", "diagnostics.upload",
                     "edit.goTo", "edit.nudge", "edit.place", "file.enableVersionControl", "presets.apply", "presets.delete", "select.set", "view.gpuDebug", "view.zoomTo", "workspace.convert", "workspace.setUp",
                 }, outside,
                 "the commands outside the menus are for automation and plugins: their buttons are on a page or panel");
