@@ -19,8 +19,9 @@ public sealed record SymmetryChoice(MapSymmetryKind? Kind, int Count, string Tit
 
 /// <summary>
 /// The symmetry edits are mirrored by (user story F-12): off unless chosen, rotational for 2 to 8
-/// players or a mirror. The top view draws its guides (the overlay <c>symmetry</c>); mirroring
-/// strokes and placing is for the tools that use <see cref="Transforms"/>.
+/// players or a mirror. The top view draws its guides (the overlay <c>symmetry</c>); while
+/// <see cref="MirrorsEdits"/>, brush strokes, placing, moving, turning and deleting work in every part
+/// of the map (<see cref="EditTransforms"/>).
 /// </summary>
 public sealed partial class SymmetryViewModel : ObservableObject
 {
@@ -45,10 +46,25 @@ public sealed partial class SymmetryViewModel : ObservableObject
     public IReadOnlyList<SymmetryChoice> Choices { get; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsOn))]
+    [NotifyPropertyChangedFor(nameof(IsOn), nameof(IsMirroring))]
     public partial SymmetryChoice Chosen { get; set; } = SymmetryChoice.Off;
 
     public bool IsOn => Chosen.Kind is not null;
+
+    /// <summary>
+    /// Whether edits are mirrored while a symmetry is chosen; off, the symmetry only shows its guides
+    /// (and the check of things without a partner still runs).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMirroring))]
+    public partial bool MirrorsEdits { get; set; } = true;
+
+    /// <summary>
+    /// Whether edits are mirrored now: a symmetry is chosen and <see cref="MirrorsEdits"/>.
+    /// </summary>
+    public bool IsMirroring => IsOn && MirrorsEdits;
+
+    partial void OnMirrorsEditsChanged(bool value) => Changed?.Invoke(this, EventArgs.Empty);
 
     /// <summary>
     /// The symmetry used last, which turning it on again chooses.
@@ -109,6 +125,14 @@ public sealed partial class SymmetryViewModel : ObservableObject
     public IReadOnlyList<MapSymmetryTransform> Transforms(MapDocument document) => Chosen.Kind is MapSymmetryKind kind
         ? MapSymmetry.Transforms(kind, Chosen.Count, document.Width, document.Height)
         : [];
+
+    /// <summary>
+    /// The parts edits are mirrored into, the identity first: those of <see cref="Transforms"/> while
+    /// <see cref="IsMirroring"/>, else the identity alone.
+    /// </summary>
+    public IReadOnlyList<MapSymmetryTransform> EditTransforms(MapDocument document) => IsMirroring
+        ? Transforms(document)
+        : [MapSymmetryTransform.Identity];
 
     /// <summary>
     /// The lines between the parts, for the views; empty while it is off.

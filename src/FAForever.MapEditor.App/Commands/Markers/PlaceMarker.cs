@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json.Nodes;
@@ -64,8 +65,11 @@ public sealed class PlaceMarkerHandler(MainViewModel model, MarkersViewModel mar
             }
             document = document.LinkPathNodes(added.Id, other);
         }
+        // with the symmetry, a marker in every part of the map: spawns the next armies, a path node
+        // linked to the images of the node it goes on from (F-12)
+        document = model.MirrorPlaced(document, [ObjectRef.Marker(added.Id)], out ImmutableArray<ObjectRef> placed);
         edit.Transaction.Apply(_ => document);
-        selection.Set([ObjectRef.Marker(added.Id)]);
+        selection.Set(placed);
 
         string? warning = null;
         if (added is ResourceMarker resource)
@@ -77,7 +81,7 @@ public sealed class PlaceMarkerHandler(MainViewModel model, MarkersViewModel mar
             }
             markers.PlacementWarning = warning;
         }
-        model.Status = warning ?? $"Placed {added.Name}";
+        model.Status = warning ?? (placed.Length > 1 ? $"Placed {added.Name} and {placed.Length - 1} mirrored" : $"Placed {added.Name}");
         return Task.FromResult(new JsonObject
         {
             ["ref"] = ObjectRef.Marker(added.Id).ToString(),

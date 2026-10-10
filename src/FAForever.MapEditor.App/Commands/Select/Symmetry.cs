@@ -41,5 +41,7 @@ public sealed class ChooseSymmetryHandler(MainViewModel model, SymmetryViewModel
         ["kind"] = symmetry.Chosen.Kind?.ToString(),
         ["count"] = symmetry.Chosen.Kind == MapSymmetryKind.Rotational ? symmetry.Chosen.Count : symmetry.IsOn ? 2 : 0,
         ["title"] = symmetry.Chosen.Title,
+        ["mirrorsEdits"] = symmetry.MirrorsEdits,
+        ["mirroring"] = symmetry.IsMirroring,
     };
 }

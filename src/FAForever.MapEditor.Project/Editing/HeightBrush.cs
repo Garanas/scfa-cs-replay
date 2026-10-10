@@ -1,3 +1,5 @@
+using System.Numerics;
+using FAForever.FileFormats.Map;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.Project.Editing
@@ -124,6 +126,20 @@ namespace FAForever.MapEditor.Project.Editing
         public float Rotation { get; init; }
 
         /// <summary>
+        /// Whether the shape is flipped left to right before it is turned by <see cref="Rotation"/>:
+        /// the image of a dab in a mirrored part of a symmetric map (<see cref="SymmetricDabs"/>).
+        /// </summary>
+        public bool Mirrored { get; init; }
+
+        /// <summary>
+        /// Where <see cref="HeightBrushMode.Noise"/> reads its noise for a sample: the sample's place
+        /// mapped by this transform. The identity reads it at the sample; the image of a dab in
+        /// another part of a symmetric map reads it where the sample came from, so that the parts get
+        /// the same noise.
+        /// </summary>
+        public MapSymmetryTransform NoisePlace { get; init; } = MapSymmetryTransform.Identity;
+
+        /// <summary>
         /// The lowest height the brush makes, in game units; null for no limit. A height already
         /// below it is not raised to it, only kept from going lower.
         /// </summary>
@@ -141,7 +157,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// <param name="scale">The height of one step of a sample (<see cref="Heightmap.Scale"/>).</param>
         public void Apply(TiledBuffer<ushort>.Builder samples, float scale, float x, float z)
         {
-            BrushFootprint footprint = new BrushFootprint(Radius, Shape, Rotation, Falloff);
+            BrushFootprint footprint = new BrushFootprint(Radius, Shape, Rotation, Falloff, Mirrored);
             int x0 = Math.Max(0, (int)MathF.Floor(x - footprint.Reach));
             int z0 = Math.Max(0, (int)MathF.Floor(z - footprint.Reach));
             int x1 = Math.Min(samples.Width - 1, (int)MathF.Ceiling(x + footprint.Reach));
@@ -177,13 +193,22 @@ namespace FAForever.MapEditor.Project.Editing
                         HeightBrushMode.Smooth => Lerp(height, Mean(before!, sx - x0 + 1, sz - z0 + 1) * scale, Strength * weight),
                         HeightBrushMode.Flatten => Lerp(height, Target, Strength * weight),
                         HeightBrushMode.SetHeight => Lerp(height, Target, weight),
-                        HeightBrushMode.Noise => height + Strength * weight * HeightNoise.At(sx / NoiseScale, sz / NoiseScale, Seed),
+                        HeightBrushMode.Noise => height + Strength * weight * Noise(sx, sz),
                         HeightBrushMode.Scale => Target + (height - Target) * (1 + (Factor - 1) * weight),
                         _ => height,
                     };
                     samples[sx, sz] = Write(height, changed, scale);
                 }
             }
+        }
+
+        /// <summary>
+        /// The noise for the sample at (<paramref name="sx"/>, <paramref name="sz"/>), read at <see cref="NoisePlace"/>.
+        /// </summary>
+        private float Noise(int sx, int sz)
+        {
+            Vector2 at = NoisePlace == MapSymmetryTransform.Identity ? new Vector2(sx, sz) : NoisePlace.Apply(new Vector2(sx, sz));
+            return HeightNoise.At(at.X / NoiseScale, at.Y / NoiseScale, Seed);
         }
 
         /// <summary>

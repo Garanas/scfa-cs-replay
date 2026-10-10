@@ -55,6 +55,27 @@ namespace FAForever.FileFormats.Map
         /// </summary>
         public bool IsMirror => Xx * Zz - Xz * Zx < 0;
 
+        /// <summary>
+        /// The transform that undoes this one: where a point of this part came from.
+        /// </summary>
+        public MapSymmetryTransform Inverse()
+        {
+            float determinant = Xx * Zz - Xz * Zx;
+            float xx = Zz / determinant;
+            float xz = -Xz / determinant;
+            float zx = -Zx / determinant;
+            float zz = Xx / determinant;
+            return new MapSymmetryTransform(xx, xz, zx, zz, -(xx * OffsetX + xz * OffsetZ), -(zx * OffsetX + zz * OffsetZ));
+        }
+
+        /// <summary>
+        /// The angle in radians, clockwise in the top view, of the turn this transform makes; for a
+        /// mirror, the turn that follows a flip of x (<c>x → -x</c>): the linear part of every
+        /// transform is the turn of <see cref="Rotation"/> by this angle, after that flip when it
+        /// <see cref="IsMirror"/>.
+        /// </summary>
+        public float TurnAngle => IsMirror ? MathF.Atan2(-Zx, -Xx) : MathF.Atan2(Zx, Xx);
+
         public Vector2 Apply(Vector2 point) => new Vector2(Xx * point.X + Xz * point.Y + OffsetX, Zx * point.X + Zz * point.Y + OffsetZ);
 
         /// <summary>

@@ -28,10 +28,10 @@ public static class Menus
         new MenuLayout("Edit",
         [
             "edit.undo", "edit.redo", Separator,
-            "edit.copy", "edit.paste", "edit.duplicate", "edit.delete", "edit.rotate", Separator,
+            "edit.copy", "edit.paste", "edit.duplicate", "edit.delete", "edit.rotate", "edit.mirror", Separator,
             "edit.saveAsPreset",
         ]),
-        new MenuLayout("Select", ["select.all", "select.none", Separator, "select.symmetry"]),
+        new MenuLayout("Select", ["select.all", "select.none", Separator, "select.symmetry", "select.mirrorEdits", "select.symmetryPartners"]),
         new MenuLayout("View",
         [
             "view.top", "view.3d", "view.sideBySide", "view.fit", "camera.home", Separator,

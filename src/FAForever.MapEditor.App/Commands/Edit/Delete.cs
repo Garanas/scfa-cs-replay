@@ -7,18 +7,19 @@ namespace FAForever.MapEditor.App.Commands;
 
 /// <summary>
 /// Removes the selected things from the map (user story F-11), one step of undo, with every link
-/// to a removed marker (path nodes, chains).
+/// to a removed marker (path nodes, chains). While the symmetry mirrors edits, the things' mirror
+/// partners go with them.
 /// </summary>
 [UndoStep]
 [EditorCommand("edit.delete", "Delete", Gesture = "Delete", Story = "F-11", Needs = Needs.Selection)]
 public sealed record Delete : IRequest;
 
-public sealed class DeleteHandler(SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<Delete>
+public sealed class DeleteHandler(MainViewModel model, SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<Delete>
 {
     public Task Handle(Delete request, CancellationToken cancellationToken)
     {
         ImmutableArray<ObjectRef> things = selection.Items;
-        edit.Transaction.Apply(document => document.RemoveObjects(things));
+        edit.Transaction.Apply(document => document.RemoveObjects([.. things, .. model.PartnersOf(document, things).Select(partner => partner.Partner)]));
         selection.Clear();
         return Task.CompletedTask;
     }

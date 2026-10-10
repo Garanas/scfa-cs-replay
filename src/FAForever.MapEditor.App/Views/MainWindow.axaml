@@ -85,6 +85,8 @@
             <ComboBox ItemsSource="{Binding Symmetry.Choices}" SelectedItem="{Binding Symmetry.Chosen}"
                       AutomationProperties.Name="Symmetry"
                       AutomationProperties.HelpText="The symmetry edits are mirrored by; the top view shows its guides" />
+            <CheckBox Content="Mirror edits" IsVisible="{Binding Symmetry.IsOn}" IsChecked="{Binding Symmetry.MirrorsEdits}"
+                      AutomationProperties.HelpText="On, brush strokes, placing, moving, turning and deleting work in every part of the map; off, the symmetry shows its guides only" />
           </WrapPanel>
         </Border>
 

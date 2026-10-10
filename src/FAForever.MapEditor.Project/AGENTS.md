@@ -144,6 +144,18 @@ the map's ogrids whatever the grid's size (`GridDab`: each pixel counts at its c
 - `PaintTarget` names a byte grid of the document (`Stratum(layer)`, `TerrainTypes`,
   `Water(WaterMask)`, `Mask(name)`): its `Read` and `Write`; `EditTransaction.Grid(target)` gives
   a builder per target for a stroke.
+- **Symmetry** (F-12): `SymmetricDabs.Of(transforms, x, z, rotation, round)` gives a dab's image in
+  every part: its place, its shape turned by the part's turn and, in a mirrored part, flipped
+  (`Mirrored` on every brush, `BrushFootprint`'s flip of u before the turn; the maths in its
+  remarks, `MapSymmetryTransform.TurnAngle`). Coinciding images are dropped. `HeightBrush.NoisePlace`
+  reads the noise through the inverse of the part's transform.
+- **Mirror partners and images** (`SymmetryEdits`): `PartnerOf`/`Partners` find a thing's
+  counterpart in a part (same likeness: prop or unit blueprint, decal texture, marker kind, AI type,
+  path layer; within `DefaultTolerance`, an ogrid), through an index per document version;
+  `ImageOf` for props (rotation by `MapSymmetryTransform.Apply(Matrix4x4)`), decals, units and
+  markers, keeping the height above the terrain; `MirrorObjects` adds images where no partner is;
+  `MoveObjects`, `RotateObjects`, `PlaceObjects` with partners. `Checks/SymmetryChecks` is the
+  `not-symmetric` check, given the transforms by the caller.
 - **Masks for tools** (K-1): `MapDocument.Masks`, named grids of the map's size or half, edited
   with `MaskLayers` (`Add`, `Rename`, `Remove`, `Problem` for a name: letters, digits, spaces,
   dashes, underscores, unique without case since it is a file name). The project keeps them as

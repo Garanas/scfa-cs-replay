@@ -161,13 +161,16 @@ public sealed partial class PropPaintTool : ObservableObject, IMapTool
             Density = (float)Density,
             Spacing = (float)Spacing,
             Conditions = ConditionsFor(document),
+            // the props scattered are mirrored, not the dabs: each part gets the same props (F-12)
+            Images = _model.EditTransforms(document),
         };
         _first = true;
         float radius = (float)Radius;
         // the first dab covers its circle; each next one the strip it moves on, a quarter of the radius
         float strip = 2 * radius * Math.Max(0.5f, radius / 4);
-        _stroke = new BrushStroke(_model, "Paint props", Radius, x, z, (edit, at, to) =>
+        _stroke = new BrushStroke(_model, "Paint props", Radius, x, z, (edit, dab) =>
         {
+            (float at, float to) = (dab.X, dab.Z);
             PropScatter scatter = _scatter!;
             int tries = scatter.Tries(_first ? MathF.PI * radius * radius : strip);
             _first = false;
@@ -176,7 +179,7 @@ public sealed partial class PropPaintTool : ObservableObject, IMapTool
             {
                 edit.Apply(current => current.AddProps(props, out _));
             }
-        });
+        }, mirror: false);
     }
 
     public void Drag(float x, float z) => _stroke?.MoveTo(x, z);

@@ -1,3 +1,5 @@
+using System.Numerics;
+using FAForever.FileFormats.Map;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.Project.Editing
@@ -159,6 +161,16 @@ namespace FAForever.MapEditor.Project.Editing
         public IReadOnlyList<IPlacementCondition> Conditions { get; init; } = [];
 
         /// <summary>
+        /// The parts of a symmetric map (user story F-12; the identity is skipped): each prop placed
+        /// comes with its image in every other part (<see cref="SymmetryEdits.ImageOf(Prop, MapSymmetryTransform, Heightmap)"/>),
+        /// so the props painted are as symmetric as the map. A prop goes only with all its images: one
+        /// that would lie outside the map or within the spacing of another prop leaves out the prop
+        /// and its images. An image on the prop itself (on an axis) is left out. The conditions are
+        /// checked where the prop goes, not at its images. Empty for none.
+        /// </summary>
+        public IReadOnlyList<MapSymmetryTransform> Images { get; init; } = [];
+
+        /// <summary>
         /// How many places a dab over <paramref name="area"/> square ogrids tries for the density:
         /// the whole part, and the rest of a part at random.
         /// </summary>
@@ -190,10 +202,52 @@ namespace FAForever.MapEditor.Project.Editing
                     continue;
                 }
                 Prop prop = Placement.Make(Choose(), px, pz, heights, _random);
+                if (Images.Count > 1)
+                {
+                    if (ImagesOf(prop, heights) is not List<Prop> images)
+                    {
+                        continue;
+                    }
+                    foreach (Prop image in images)
+                    {
+                        placed.Add(image);
+                        _grid.Add(image);
+                    }
+                }
                 placed.Add(prop);
                 _grid.Add(prop);
             }
             return placed;
+        }
+
+        /// <summary>
+        /// The prop's images in the other parts of the map, or null when one cannot go there.
+        /// </summary>
+        private List<Prop>? ImagesOf(Prop prop, Heightmap heights)
+        {
+            List<Prop> images = [];
+            Vector2 at = new Vector2(prop.Position.X, prop.Position.Z);
+            foreach (MapSymmetryTransform transform in Images)
+            {
+                if (transform == MapSymmetryTransform.Identity)
+                {
+                    continue;
+                }
+                Prop image = SymmetryEdits.ImageOf(prop, transform, heights);
+                Vector2 place = new Vector2(image.Position.X, image.Position.Z);
+                if (Vector2.Distance(place, at) <= SymmetricDabs.SamePlace || images.Any(other => Vector2.Distance(new Vector2(other.Position.X, other.Position.Z), place) <= SymmetricDabs.SamePlace))
+                {
+                    continue;
+                }
+                if (place.X < 0 || place.Y < 0 || place.X > heights.Width || place.Y > heights.Height
+                    || _grid.AnyWithin(place.X, place.Y, Spacing)
+                    || (Spacing > 0 && (Vector2.Distance(place, at) < Spacing || images.Any(other => Vector2.Distance(new Vector2(other.Position.X, other.Position.Z), place) < Spacing))))
+                {
+                    return null;
+                }
+                images.Add(image);
+            }
+            return images;
         }
 
         private string Choose()

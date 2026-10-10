@@ -96,6 +96,26 @@ namespace FAForever.FileFormats.Map.Tests
         }
 
         [TestMethod]
+        public void TheInverseTakesAnImageBackAndTheTurnAngleRebuildsTheTransform()
+        {
+            foreach (MapSymmetryKind kind in Enum.GetValues<MapSymmetryKind>())
+            {
+                foreach (MapSymmetryTransform transform in MapSymmetry.Transforms(kind, 3, 200, 200))
+                {
+                    Vector2 point = new Vector2(33, 71);
+                    AreClose(point, transform.Inverse().Apply(transform.Apply(point)), kind.ToString());
+                    // the linear part is the turn by the angle, after a flip of x for a mirror
+                    (float sin, float cos) = MathF.SinCos(transform.TurnAngle);
+                    float flip = transform.IsMirror ? -1 : 1;
+                    Assert.AreEqual(cos * flip, transform.Xx, 1e-5f, kind.ToString());
+                    Assert.AreEqual(-sin, transform.Xz, 1e-5f, kind.ToString());
+                    Assert.AreEqual(sin * flip, transform.Zx, 1e-5f, kind.ToString());
+                    Assert.AreEqual(cos, transform.Zz, 1e-5f, kind.ToString());
+                }
+            }
+        }
+
+        [TestMethod]
         public void MirrorsAYawAsItMirrorsWhereItFaces()
         {
             float yaw = 0.3f;
