@@ -67,6 +67,11 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         public bool? Closed { get; init; }
 
         /// <summary>
+        /// The symmetry whose images of the curve the layer draws too; absent for the curve alone.
+        /// </summary>
+        public SymmetryDto? Symmetry { get; init; }
+
+        /// <summary>
         /// The points as <c>[x, z, height]</c>.
         /// </summary>
         public required IReadOnlyList<float[]> Points { get; init; }

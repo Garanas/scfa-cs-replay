@@ -777,6 +777,15 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             Heightmap heights = document.Terrain.Heightmap;
             Vector2? At(float x, float z) => view.ToScreen(new Vector3(x, heights.HeightAt(x, z), z));
+            foreach (IReadOnlyList<(float X, float Z)> image in marks.Images ?? [])
+            {
+                // the images of a mirrored curve (F-12), thinner
+                if (image.Count >= 2 && TerrainLine(heights, view, image) is Vector2[] imageLine)
+                {
+                    shapes.Add(new ToolLine(imageLine, false, 3, ToolInk.Shadow));
+                    shapes.Add(new ToolLine(imageLine, false, 1, ToolInk.Selection));
+                }
+            }
             if (marks.Path is { Count: >= 2 } path && TerrainLine(heights, view, path) is Vector2[] line)
             {
                 // a curve on the terrain (T-4)

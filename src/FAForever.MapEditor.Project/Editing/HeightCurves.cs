@@ -1,4 +1,5 @@
 using System.Numerics;
+using FAForever.FileFormats.Map;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.Project.Editing
@@ -71,6 +72,45 @@ namespace FAForever.MapEditor.Project.Editing
             bool road = curve.Profile == CurveProfile.Road;
             TiledBuffer<float>.Builder values = TiledBuffer<float>.Create(width, height).ToBuilder();
             TiledBuffer<byte>.Builder? coverage = road ? TiledBuffer<byte>.Create(width, height).ToBuilder() : null;
+            foreach (HeightCurve part in Parts(curve, mapWidth, mapHeight))
+            {
+                Draw(part, width, height, values, coverage);
+            }
+            // the tiles that can differ lie where either curve reaches; without the previous curve, anywhere
+            (int X0, int Z0, int X1, int Z1)? tiles = previousCurve is null ? null : Union(TilesOf(curve, width, height), TilesOf(previousCurve, width, height));
+            return (Reuse(values.ToBuffer(), previousValues, tiles), coverage is null ? null : Reuse(coverage.ToBuffer(), previousCoverage, tiles));
+        }
+
+        /// <summary>
+        /// The curve and, when it is drawn by a symmetry (<see cref="HeightCurve.Symmetry"/>), its images
+        /// in the other parts of a map of that size: the curve first. An image in a mirrored part runs
+        /// the other way, so that a cliff's high side is the image of the curve's.
+        /// </summary>
+        public static IReadOnlyList<HeightCurve> Parts(HeightCurve curve, int mapWidth, int mapHeight)
+        {
+            if (curve.Symmetry is not SymmetrySetting symmetry)
+            {
+                return [curve];
+            }
+            List<HeightCurve> parts = [curve with { Symmetry = null }];
+            foreach (MapSymmetryTransform transform in MapSymmetry.Transforms(symmetry.Kind, symmetry.Count, mapWidth, mapHeight).Skip(1))
+            {
+                IEnumerable<CurvePoint> points = curve.Points.Select(point =>
+                {
+                    Vector2 image = transform.Apply(new Vector2(point.X, point.Z));
+                    return new CurvePoint(image.X, image.Y, point.Height);
+                });
+                parts.Add(curve with { Symmetry = null, Points = [.. transform.IsMirror ? points.Reverse() : points] });
+            }
+            return parts;
+        }
+
+        /// <summary>
+        /// Draws one part of a curve into the layer's values: where parts overlap, the one that
+        /// shapes the terrain most (a road: the one that covers most).
+        /// </summary>
+        private static void Draw(HeightCurve curve, int width, int height, TiledBuffer<float>.Builder values, TiledBuffer<byte>.Builder? coverage)
+        {
             IReadOnlyList<CurvePoint> line = Spline(curve);
             float half = Math.Max(0, curve.Width) / 2;
             float falloff = Math.Max(0, curve.Falloff);
@@ -121,28 +161,29 @@ namespace FAForever.MapEditor.Project.Editing
                         float h = heights[i];
                         int x = x0 + column;
                         int z = z0 + row;
-                        switch (curve.Profile)
+                        float value = curve.Profile switch
                         {
-                            case CurveProfile.Ridge:
-                                values[x, z] = h * across;
-                                break;
-                            case CurveProfile.Valley:
-                                values[x, z] = -h * across;
-                                break;
-                            case CurveProfile.Road:
-                                values[x, z] = h;
-                                coverage![x, z] = (byte)MathF.Round(across * 255);
-                                break;
-                            case CurveProfile.Cliff:
-                                values[x, z] = h * Cliff(side[i] * d, Math.Max(0, curve.Width), falloff);
-                                break;
+                            CurveProfile.Ridge => h * across,
+                            CurveProfile.Valley => -h * across,
+                            CurveProfile.Road => h,
+                            _ => h * Cliff(side[i] * d, Math.Max(0, curve.Width), falloff),
+                        };
+                        if (coverage is not null)
+                        {
+                            byte covered = (byte)MathF.Round(across * 255);
+                            if (covered >= coverage[x, z])
+                            {
+                                values[x, z] = value;
+                                coverage[x, z] = covered;
+                            }
+                        }
+                        else if (MathF.Abs(value) >= MathF.Abs(values[x, z]))
+                        {
+                            values[x, z] = value;
                         }
                     }
                 }
             }
-            // the tiles that can differ lie where either curve reaches; without the previous curve, anywhere
-            (int X0, int Z0, int X1, int Z1)? tiles = previousCurve is null ? null : Union(TilesOf(curve, width, height), TilesOf(previousCurve, width, height));
-            return (Reuse(values.ToBuffer(), previousValues, tiles), coverage is null ? null : Reuse(coverage.ToBuffer(), previousCoverage, tiles));
         }
 
         /// <summary>
@@ -245,6 +286,10 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         private static (int X0, int Z0, int X1, int Z1) TilesOf(HeightCurve curve, int width, int height)
         {
+            if (curve.Symmetry is not null)
+            {
+                return Parts(curve, width - 1, height - 1).Select(part => TilesOf(part, width, height)).Aggregate(Union);
+            }
             const int size = TiledBuffer<float>.TileSize;
             IReadOnlyList<CurvePoint> line = Spline(curve);
             float reach = (curve.Profile == CurveProfile.Cliff ? Math.Max(0, curve.Width) : Math.Max(0, curve.Width) / 2) + Math.Max(0, curve.Falloff) + 1;

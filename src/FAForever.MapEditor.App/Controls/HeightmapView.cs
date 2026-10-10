@@ -757,8 +757,12 @@ public sealed class HeightmapView : Control
     /// </summary>
     private void DrawMarks(DrawingContext context, Overlay overlay, ToolMarks marks)
     {
-        if (marks.Path is { Count: >= 2 } path)
+        StreamGeometry? Line(IReadOnlyList<(float X, float Z)> path)
         {
+            if (path.Count < 2)
+            {
+                return null;
+            }
             StreamGeometry line = new StreamGeometry();
             using (StreamGeometryContext figure = line.Open())
             {
@@ -769,11 +773,24 @@ public sealed class HeightmapView : Control
                 }
                 figure.EndFigure(false);
             }
-            using (context.PushTransform(Matrix.CreateTranslation(1, 1)))
+            return line;
+        }
+        foreach (IReadOnlyList<(float X, float Z)> image in marks.Images ?? [])
+        {
+            // the images of a mirrored curve: the guide's dashes over a shadow
+            if (Line(image) is StreamGeometry line)
             {
                 context.DrawGeometry(null, overlay.Shadow, line);
+                context.DrawGeometry(null, new Pen(overlay.Selection.Brush, overlay.Selection.Thickness, DashStyle.Dash), line);
             }
-            context.DrawGeometry(null, overlay.Selection, line);
+        }
+        if (marks.Path is { Count: >= 2 } path && Line(path) is StreamGeometry pathLine)
+        {
+            using (context.PushTransform(Matrix.CreateTranslation(1, 1)))
+            {
+                context.DrawGeometry(null, overlay.Shadow, pathLine);
+            }
+            context.DrawGeometry(null, overlay.Selection, pathLine);
         }
         if (marks.Line is (float x0, float z0, float x1, float z1))
         {

@@ -79,7 +79,11 @@ public sealed partial class CurveTool(MainViewModel model) : ObservableObject, I
                 return null;
             }
             IReadOnlyList<CurvePoint> line = HeightCurves.Spline(curve);
-            return new ToolMarks([.. curve.Points.Select(point => (point.X, point.Z))], Path: [.. line.Select(point => (point.X, point.Z))]);
+            // a curve mirrored by the symmetry shows its images too (F-12)
+            IReadOnlyList<IReadOnlyList<(float X, float Z)>>? images = curve.Symmetry is not null && model.ShownDocument is MapDocument document
+                ? [.. HeightCurves.Parts(curve, document.Width, document.Height).Skip(1).Select(part => (IReadOnlyList<(float X, float Z)>)[.. HeightCurves.Spline(part).Select(point => (point.X, point.Z))])]
+                : null;
+            return new ToolMarks([.. curve.Points.Select(point => (point.X, point.Z))], Path: [.. line.Select(point => (point.X, point.Z))], Images: images);
         }
     }
 

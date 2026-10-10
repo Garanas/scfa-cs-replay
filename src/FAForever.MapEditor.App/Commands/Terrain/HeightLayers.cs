@@ -87,7 +87,7 @@ public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs di
             case "curve":
             {
                 string name = request.Name?.Trim() ?? HeightLayerEdits.FreeName(document, "Curve");
-                layer = HeightLayerEdits.NewCurve(document, name, new HeightCurve());
+                layer = HeightLayerEdits.NewCurve(document, name, new HeightCurve { Symmetry = HeightLayerSettings.SymmetryOf(model, null) });
                 if (combine is HeightCombine chosen)
                 {
                     layer = layer with { Combine = chosen };
@@ -127,9 +127,11 @@ public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs di
 /// <param name="Points">The points in ogrids, each <c>[x, z]</c> or <c>[x, z, height]</c>.</param>
 /// <param name="Height">The height of points without one: what a ridge, valley or cliff rises or
 /// sinks; a road's points without one lie on the terrain.</param>
+/// <param name="Mirrored">Whether the layer draws the curve's images by the chosen symmetry too
+/// (F-12); left out, while the symmetry mirrors edits.</param>
 [EditorCommand("terrain.addCurve", "Add a curve", Story = "T-4", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record AddHeightCurve(float[][] Points, string? Profile = null, float? Width = null, float? Falloff = null, float? Height = null,
-    bool Closed = false, string? Name = null) : IRequest<string>;
+    bool Closed = false, string? Name = null, bool? Mirrored = null) : IRequest<string>;
 
 public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler<AddHeightCurve, string>
 {
@@ -144,6 +146,7 @@ public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler
             Width = request.Width ?? (float)tool.CurveWidth,
             Falloff = request.Falloff ?? (float)tool.Falloff,
             Closed = request.Closed,
+            Symmetry = HeightLayerSettings.SymmetryOf(model, request.Mirrored),
             Points = [.. request.Points.Select(point => HeightLayerSettings.PointOf(document, point, profile, request.Height ?? (float)tool.Height))],
         };
         string name = request.Name?.Trim() ?? HeightLayerEdits.FreeName(document, profile.ToString());
@@ -152,7 +155,7 @@ public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler
         model.EditMap($"Add the curve {name}", d => HeightLayerEdits.Add(d, HeightLayerEdits.NewCurve(d, name, curve), above));
         model.HeightStack.Refresh(model.ShownDocument);
         model.HeightStack.Choose(name);
-        model.Status = string.Create(CultureInfo.InvariantCulture, $"Added the curve {name}: a {profile.ToString().ToLowerInvariant()} through {curve.Points.Length} point{(curve.Points.Length == 1 ? "" : "s")}");
+        model.Status = string.Create(CultureInfo.InvariantCulture, $"Added the curve {name}: a {profile.ToString().ToLowerInvariant()} through {curve.Points.Length} point{(curve.Points.Length == 1 ? "" : "s")}{(curve.Symmetry is null ? "" : ", mirrored by the symmetry")}");
         return Task.FromResult(name);
     }
 }
@@ -165,9 +168,11 @@ public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler
 /// </summary>
 /// <param name="Height">Every point's height.</param>
 /// <param name="Points">All points anew, each <c>[x, z]</c> or <c>[x, z, height]</c>.</param>
+/// <param name="Mirrored">True: the layer draws the curve's images by the chosen symmetry too
+/// (F-12); false: the curve alone.</param>
 [EditorCommand("terrain.setCurve", "Change a curve", Story = "T-4", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record SetHeightCurve(string? Layer = null, string? Profile = null, float? Width = null, float? Falloff = null, float? Height = null,
-    bool? Closed = null, float[][]? Points = null) : IRequest;
+    bool? Closed = null, float[][]? Points = null, bool? Mirrored = null) : IRequest;
 
 public sealed class SetHeightCurveHandler(MainViewModel model) : IRequestHandler<SetHeightCurve>
 {
@@ -187,12 +192,13 @@ public sealed class SetHeightCurveHandler(MainViewModel model) : IRequestHandler
             Width = request.Width ?? curve.Width,
             Falloff = request.Falloff ?? curve.Falloff,
             Closed = request.Closed ?? curve.Closed,
+            Symmetry = request.Mirrored is bool mirrored ? HeightLayerSettings.SymmetryOf(model, mirrored) : curve.Symmetry,
             Points = request.Points is float[][] points
                 ? [.. points.Select(point => HeightLayerSettings.PointOf(document, point, profile, request.Height ?? curve.Points.FirstOrDefault()?.Height ?? 10))]
                 : request.Height is float height ? [.. curve.Points.Select(point => point with { Height = height })] : curve.Points,
         };
         string fields = HeightLayerSettings.Fields(("profile", request.Profile), ("width", request.Width), ("falloff", request.Falloff), ("height", request.Height),
-            ("closed", request.Closed), ("points", request.Points));
+            ("closed", request.Closed), ("points", request.Points), ("mirrored", request.Mirrored));
         // a point added, moved or removed is a step of its own; a field typed in again or a slider dragged is one
         string description = request.Points is null ? $"Curve {layer.Name}: {fields}" : $"Curve {layer.Name}: {changed.Points.Length} points";
         using Performance.Span span = Performance.Measure("model.height-layers");
@@ -397,6 +403,18 @@ internal static class HeightLayerSettings
         Enum.TryParse(text.Trim(), ignoreCase: true, out CurveProfile profile) && Enum.IsDefined(profile)
             ? profile
             : throw new ArgumentException($"A curve's profile is {string.Join(", ", Enum.GetNames<CurveProfile>())}, not '{text}'");
+
+    /// <summary>
+    /// The symmetry a curve is drawn by: the chosen one when <paramref name="mirrored"/> is true,
+    /// none when false, and while the symmetry mirrors edits when left out.
+    /// </summary>
+    /// <exception cref="ArgumentException">Mirrored asked while no symmetry is chosen.</exception>
+    public static SymmetrySetting? SymmetryOf(MainViewModel model, bool? mirrored) => mirrored switch
+    {
+        null => model.Symmetry.IsMirroring ? model.Symmetry.Setting : null,
+        true => model.Symmetry.Setting ?? throw new ArgumentException("Choose a symmetry first (select.symmetry) to mirror a curve by it"),
+        false => null,
+    };
 
     /// <summary>
     /// A point from <c>[x, z]</c> or <c>[x, z, height]</c>: without a height, a road's lies on the

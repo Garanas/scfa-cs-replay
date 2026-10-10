@@ -127,6 +127,10 @@ public sealed partial class HeightLayersViewModel : ObservableObject
                 Help = "Every point's height: how much a ridge, valley or cliff rises, or the road's height in game units",
             },
             new BoolSetting("Closed", set, "closed", d => CurveOf(d).Closed, run, Fixed) { Help = "The last point joins the first" },
+            new BoolSetting("Mirrored", set, "mirrored", d => CurveOf(d).Symmetry is not null, run, Fixed)
+            {
+                Help = "The layer draws the curve's images in the other parts of the map too, by the chosen symmetry",
+            },
         ]);
     }
 

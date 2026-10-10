@@ -55,13 +55,19 @@ namespace FAForever.MapEditor.Project.Files
             Water = ToDto(document.Water),
             Sky = ToDto(document.Sky),
             Minimap = document.Minimap is null ? null : ToDto(document.Minimap),
-            Symmetry = document.Symmetry is SymmetrySetting symmetry ? new SymmetryDto { Kind = symmetry.Kind.ToString(), Count = symmetry.Count } : null,
+            Symmetry = ToDto(document.Symmetry),
         };
+
+        /// <summary>
+        /// A symmetry as <c>map.json</c> and <c>layers.json</c> keep it; null for none.
+        /// </summary>
+        internal static SymmetryDto? ToDto(SymmetrySetting? symmetry) =>
+            symmetry is null ? null : new SymmetryDto { Kind = symmetry.Kind.ToString(), Count = symmetry.Count };
 
         /// <summary>
         /// The symmetry of <c>map.json</c>; null for none, or for a kind or count this editor does not know.
         /// </summary>
-        private static SymmetrySetting? ToModel(SymmetryDto? symmetry) =>
+        internal static SymmetrySetting? ToModel(SymmetryDto? symmetry) =>
             symmetry is not null && Enum.TryParse(symmetry.Kind, ignoreCase: true, out FileFormats.Map.MapSymmetryKind kind) && Enum.IsDefined(kind)
                 && (kind != FileFormats.Map.MapSymmetryKind.Rotational || symmetry.Count is >= 2 and <= FileFormats.Map.MapSymmetry.MaximumCount)
                 ? new SymmetrySetting(kind, kind == FileFormats.Map.MapSymmetryKind.Rotational ? symmetry.Count : 2)
