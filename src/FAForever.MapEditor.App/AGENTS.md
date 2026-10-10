@@ -82,7 +82,8 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     submenus (the mode, its commands, its tools). A request says what a command is, the layout
     where it shows. A command in no menu is for automation and plugins, and the palette leaves
     it out: its control is on a page or panel (`workspace.setUp`, `workspace.convert`,
-    `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`), it selects what one
+    `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`, `presets.apply`,
+    `presets.delete`), it selects what one
     clicks (`assets.select`), it is the mouse's or a view's own key in
     the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
     for finding faults (`view.gpuDebug`, `diagnostics.flush`, `diagnostics.upload`). The window makes the menus and the
@@ -251,7 +252,10 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   properties, each one user story's area, readable without opening `MainViewModel`:
   `Diagnostics` (`DiagnosticsViewModel`: the Console and the Diagnostics page), `Setup`
   (`WorkspaceSetupViewModel`: the start, the setup page, the conversion of the assets),
-  `VersionControl` (`VersionControlViewModel`: the git page) and `Palette` (`PaletteViewModel`).
+  `VersionControl` (`VersionControlViewModel`: the git page), `Palette` (`PaletteViewModel`),
+  `Events` (`EditorEvents`), `Presets` (`PresetsViewModel`), `Symmetry` (`SymmetryViewModel`) and
+  `Generation` (`GenerationViewModel`), the last four in the section "Events, presets, symmetry
+  and generated results" below.
   Each is the one place its state lives: the views bind through it (`{Binding Setup.Folder}`),
   automation reads it there, and a handler that works on one part takes that part
   (`SetUpWorkspaceHandler(WorkspaceSetupViewModel setup)`; `CommandServices` holds them). A part
@@ -429,6 +433,51 @@ ready and again with Modes, Assets, Read the assets again (`assets.reload`):
 - The dock is higher (`DockTallHeight`) while the shelf shows (`IsDockTall`).
 - Not built yet: the picker for a slot (`assets.pick`, C2), dragging onto the map, stars and recents.
 
+## Events, presets, symmetry and generated results
+
+Four small parts that later features build on:
+
+- **Events** (user story F-13, `model.Events`, `ViewModels/EditorEvents`): `WorkspaceOpened`,
+  `MapOpened`, `MapSaved`, `MapExported`, `DocumentChanged` (the library's `DocumentChange`: an
+  edit with its description, an undo or redo, what was read again; a stroke once, when it ends),
+  and `BeforeSave` and `BeforeExport`, whose handlers may stop it with a reason
+  (`VetoableEventArgs.Veto`): the operation then throws `OperationVetoedException` before it
+  writes anything, and a command shows the reasons in the status line. `MainViewModel` raises
+  them from its operations, on the window's thread; a handler that throws is logged (`Editor`)
+  and stops neither the operation nor the other handlers. Lua plugins (F-15) will listen through
+  the same part.
+- **Presets** (user stories F-10, T-2, `model.Presets`, `ViewModels/PresetsViewModel`): the
+  workspace's `presets/<kind>/*.json` (the library's `PresetLibrary`), read again when a file there
+  changes (`ProjectWatcher`; opening writes nothing, so a workspace without the folder is watched
+  once the first preset makes it). A feature registers what it can save and apply as a
+  `PresetKind` (kind, capture, apply); today `brush` (`Tools/BrushPreset`: the active brush tool,
+  radius, strength, mode or erase, target, shape, rotation; not the strata tool's layer, which is
+  the map's). A mode whose sections hold a `PresetSection(kind, title)` lists the presets of that
+  kind (Terrain and Paint: brush presets), each a button that applies it and a cross that deletes
+  it, with a name field and Save. `edit.saveAsPreset {kind?, name?}` saves (the panel's kind; a
+  name made from the settings, such as `Raise 12`, when left out), `presets.apply {kind, name}` and
+  `presets.delete {kind, name}` are the panel's buttons. A preset whose brush the workspace lost
+  applies with a round brush and says so. Wave 1 registers lighting, water, units, markers and
+  palettes of props the same way.
+- **Symmetry** (user story F-12, `model.Symmetry`, `ViewModels/SymmetryViewModel`): off unless
+  chosen; rotational for 2 to 8 players or one of the four mirrors, chosen in the combo box after
+  the overlay chips or with `select.symmetry {kind?, count?}` (Ctrl+Shift+Y; `off`, `rotational`,
+  `leftRight`, `topBottom`, `diagonal`, `otherDiagonal`). Without arguments it turns it on or off:
+  on, the one used last, else the map's own (`MapSymmetry.Find` on its spawns and deposits), else
+  rotational for two. The top view draws the lines between the parts, dashed over a dark line,
+  while the overlay `symmetry` is on (`HeightmapView.DrawSymmetry`); the 3D view does not yet.
+  `Transforms(document)` gives the library's `MapSymmetryTransform`s (the maths is in
+  FileFormats.Map's `MapSymmetry`): the brushes and placing tools are to mirror their edits with
+  them; none does yet.
+- **Generated results** (user story F-7, `model.Generation`, `ViewModels/GenerationViewModel`):
+  the library's `GeneratedResults`, where a feature registers its `IGenerator` (its inputs: parts
+  of the document). Nothing generates by itself: after every step (not every dab) the part
+  compares each last result with the document (`model.generated`); the status bar names those
+  out of date in the warning colour. `generate.stale {list?}` generates them again (or only
+  lists them), with the inputs that changed; a result never generated is its own command's
+  (`generate.walkability`, ...). Another map forgets the results. No generator exists yet: the
+  walkability, normal map and preview of wave 1 plug in here.
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session
@@ -516,6 +565,9 @@ faf-map editor close                                      # closes without askin
   heights, 5 the lower layer, 6 the first four masks after the remap, 7 as stored), `mode {id}`,
   `tool {id}`, `tab {name: top|3d}`, `show {markers?, pathNodes?, camera?}` (each overlay's
   command with `on`).
+- `state` has `symmetry` (kind, count, title), `presets` (folder, the panel's kind, the names it
+  lists) and `generated` (per generator its status, `Missing`, `Stale` or `Current`, and the
+  inputs that changed).
 - The shelf: `run id=assets.browse kind=texture scope=everything query=rock` answers with what it
   shows (filters, counts per kind, biome and category, the first 200 tiles with their keys);
   `run id=assets.select key=uec1101` selects one; `state` has `dock` and `assets` (kind, scope,

@@ -103,21 +103,30 @@ public sealed partial class PresetsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Uses the workspace's presets, and reads them again when a file changes there.
+    /// Uses the workspace's presets, and reads them again when a file changes there. Opening writes
+    /// nothing: a workspace without a presets folder is watched once the first preset makes it.
     /// </summary>
     public void Open(Workspace workspace)
     {
-        Use(workspace.Presets);
         _watcher?.Dispose();
         _watcher = null;
+        Use(workspace.Presets);
+        Watch();
+    }
+
+    private void Watch()
+    {
+        if (_watcher is not null || Library is not PresetLibrary library || !Directory.Exists(library.Folder))
+        {
+            return;
+        }
         try
         {
-            Directory.CreateDirectory(workspace.PresetsFolder);
-            _watcher = new ProjectWatcher(workspace.PresetsFolder);
+            _watcher = new ProjectWatcher(library.Folder);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            _log.LogWarning(exception, "Cannot watch the presets in {Folder}: {Reason}", workspace.PresetsFolder, exception.Message);
+            _log.LogWarning(exception, "Cannot watch the presets in {Folder}: {Reason}", library.Folder, exception.Message);
             return;
         }
         _watcher.Changed += files => UiThread.Run(_ui, () =>
@@ -179,6 +188,7 @@ public sealed partial class PresetsViewModel : ObservableObject
         string file = library.Save(preset);
         _log.LogInformation("Saved the preset {Name} ({Kind}) in {File}", preset.Name, preset.Kind, file);
         Refresh();
+        Watch();
         return preset;
     }
 

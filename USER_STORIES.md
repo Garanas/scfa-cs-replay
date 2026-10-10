@@ -26,7 +26,9 @@ reads again when it changes; and nothing that generates runs by itself.
       workspace's assets: a tool that saves one, the editor shows it.
 - [ ] **F-7 Generation only when asked.** A layer or result that is generated (walkability, props
       from rules, a baked heightmap) shows that its inputs changed and offers to generate again; it
-      never runs by itself.
+      never runs by itself. Today: the generators' registry with the inputs each result was made
+      from; the status bar names the results out of date, and Generate, Everything out of date makes
+      them again. Missing: the generators themselves (walkability, normal map, preview, rules).
 - [ ] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
       missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map
@@ -40,14 +42,22 @@ reads again when it changes; and nothing that generates runs by itself.
       (Ctrl+P), pictures of props and units, dragging onto the map.
 - [ ] **F-10 Presets.** Save a set of things and place or apply it again: a civilian base (units in
       a group), a brush, a prop palette, a set of markers, a lighting and water setup. Presets are
-      files in the workspace, shared like the rest of it.
+      files in the workspace, shared like the rest of it. Today: `presets/<kind>/*.json` in the
+      workspace, read again when they change; brush presets in the Terrain and Paint panels (save,
+      apply, delete). Missing: presets of lighting, water, units, markers and prop palettes, and of
+      a selection.
 - [ ] **F-11 Selection.** Select anything that lies on the map (marker, prop, decal, unit, area) in
       the top and 3D views, one or many; an inspector shows and edits what is selected; move,
       rotate and scale with handles; copy, paste, duplicate and delete.
 - [ ] **F-12 Symmetry.** Mirror every edit: horizontally, vertically, diagonally, or around the
-      middle for 2 to 8 players; shown as guides in the views.
+      middle for 2 to 8 players; shown as guides in the views. Today: the symmetry is chosen (off,
+      rotational for 2 to 8, four mirrors; on and off takes the map's own) and the top view shows
+      its guides; the maths mirrors points, yaws and rotations. Missing: mirroring strokes and
+      placing, guides in the 3D view.
 - [ ] **F-13 Events.** C# and Lua react to what happens (workspace opened, map opened or saved,
-      document changed) and may check things before a save or export.
+      document changed) and may check things before a save or export. Today: C# handlers of
+      workspace opened, map opened, saved or exported, document changed, and checks that stop a
+      save or export with a reason. Missing: Lua.
 - [ ] **F-14 Problems.** One list of what is wrong or doubtful (a missing texture, a spawn without
       mass, a new passage through a cliff, a check of a plugin), each leading to the place.
 - [ ] **F-15 Lua plugins.** Plugins with commands, tools and panels, through the controller and
@@ -89,7 +99,8 @@ reads again when it changes; and nothing that generates runs by itself.
 - [ ] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace. Today: the
       brush shapes, greyscale PNGs of the workspace's `brushes` folder, in the asset shelf of the
       Terrain mode, read again when they change; they are the shapes of the sculpt and strata
-      brushes (T-1, S-1). Missing: presets of settings.
+      brushes (T-1, S-1); presets of the brush tools' settings (F-10) in the Terrain and Paint
+      panels. Missing: stamps.
 - [x] **T-3 Heightmap from other tools.** `heightmap.png` or `.r16` in the project is read again
       when World Machine or Gaea writes it. Missing: import or export with a different size.
 - [ ] **T-4 Curves.** Draw a curve (spline) and shape the terrain along it: a ridge, a valley, a
