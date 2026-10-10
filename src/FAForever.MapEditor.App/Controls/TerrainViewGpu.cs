@@ -162,9 +162,10 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.ShowUnits && chosen.HasFlag(ObjectKinds.Units),
             _model.ShowMarkers && chosen.HasFlag(ObjectKinds.Markers),
             _model.ShowPathNodes && chosen.HasFlag(ObjectKinds.PathNodes),
-            chosen.HasFlag(ObjectKinds.Decals),
-            _model.Decals.HiddenDecals,
-            _model.ShownMarkerKinds);
+            _model.ShowDecals && chosen.HasFlag(ObjectKinds.Decals),
+            _model.HiddenDecalIds,
+            _model.ShownMarkerKinds,
+            _model.Isolated is null ? null : _model.IsPickable);
         return ObjectPicking.Pick(document, origin, direction, shown, _models.BoundsOf, terrain);
     }
 
@@ -434,7 +435,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _highlightedDecalsOf = _highlighted;
             _highlightedDecals = _highlighted?.Where(thing => thing.Kind == ObjectKind.Decal).Select(thing => thing.Id).ToHashSet() is { Count: > 0 } ids ? ids : null;
         }
-        return (_model.Decals.HiddenDecals, _highlightedDecals, ThemeColor("SelectedStrokeBrush"));
+        return (_model.HiddenDecalIds, _highlightedDecals, ThemeColor("SelectedStrokeBrush"));
     }
 
     private IReadOnlySet<ObjectRef>? _highlightedDecalsOf;
@@ -456,7 +457,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             return null;
         }
         ObjectFrame frame = new ObjectFrame(_model.Assets.Catalog, _model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes,
-            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"), _model.ShownMarkerKinds, _model.Selection.Hovered);
+            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"), _model.ShownMarkerKinds, _model.Selection.Hovered, _model.Isolated);
         return (_objects, frame);
     }
 

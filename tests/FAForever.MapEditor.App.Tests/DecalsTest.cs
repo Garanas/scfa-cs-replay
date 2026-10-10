@@ -134,10 +134,11 @@ namespace FAForever.MapEditor.App.Tests
             tool.Release();
 
             Decal placed = model.ShownDocument!.Decals[^1];
-            Assert.AreEqual(20, placed.Scale.X, 1e-3, "twice the distance to the mouse");
-            Assert.AreEqual(20, placed.Scale.Z, 1e-3, "a square picture: as long as wide");
+            Assert.AreEqual(10, placed.Scale.X, 1e-3, "from the press to the mouse");
+            Assert.AreEqual(10, placed.Scale.Z, 1e-3, "a square picture: as long as wide");
             Assert.AreEqual(MathF.PI / 2, placed.Rotation.Y, 1e-4, "its width along the drag");
-            Assert.AreEqual(60, model.ShownDocument.PlaceOf(ObjectRef.Decal(placed.Id))!.Value.X, 1e-3, "centred on the press");
+            Assert.AreEqual(60, model.ShownDocument.PlaceOf(ObjectRef.Decal(placed.Id))!.Value.X, 1e-3, "centred half way along the drag");
+            Assert.AreEqual(65, model.ShownDocument.PlaceOf(ObjectRef.Decal(placed.Id))!.Value.Z, 1e-3);
             Assert.AreEqual(2, model.History.Count, "opened, and the decal");
         }
 

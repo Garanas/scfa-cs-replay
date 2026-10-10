@@ -871,8 +871,8 @@ User stories D-1 and D-2, the Decals mode (F8); the edits are the library's `Dec
   mode the place tool becomes active. A click places it centred on the mouse, `Width` wide (the
   options; its length from the shape of the texture's picture, read once from the PNG's header
   when chosen), turned by `Heading`, with the cut-off of the options (500 at first: what maps use
-  most); dragging from the click sets its width to twice the distance and turns its width along
-  the drag. One step of undo held from press to release, as a stroke; the new decal is selected.
+  most); dragging from the click spans its width from the press to the mouse (its centre half
+  way) and turns its width along the drag. One step of undo held from press to release, as a stroke; the new decal is selected.
   `decals.place {x, z, key?, width?, length?, heading?, cutOff?}` does the same for automation and
   a drop. A decal tile dropped on a view is placed there: the place tool takes it
   (`IAssetDropTarget`), and while another tool is active `AssetDropped` does

@@ -69,6 +69,7 @@ public sealed class RandomPropVariantsHandler(MainViewModel model, SelectionView
             .ToDictionary(group => group.Key, group => group.ToArray());
         Random random = model.Props.Random;
         int unknown = 0;
+        int alone = 0;
         int changed = 0;
         edit.Transaction.Apply(document =>
         {
@@ -79,8 +80,14 @@ public sealed class RandomPropVariantsHandler(MainViewModel model, SelectionView
                     unknown++;
                     return prop.Blueprint;
                 }
-                AssetEntry[] family = families[(entry.Group, entry.Category, entry.Family)];
-                return PropsViewModel.BlueprintOf(family[random.Next(family.Length)]);
+                // another variant of its family, so that every prop with one changes
+                AssetEntry[] others = [.. families[(entry.Group, entry.Category, entry.Family)].Where(other => other.Key != entry.Key)];
+                if (others.Length == 0)
+                {
+                    alone++;
+                    return prop.Blueprint;
+                }
+                return PropsViewModel.BlueprintOf(others[random.Next(others.Length)]);
             });
             changed = ChangedProps.Between(document, after);
             return after;
@@ -89,7 +96,16 @@ public sealed class RandomPropVariantsHandler(MainViewModel model, SelectionView
         {
             model.Logger("Editor").LogWarning("{Count} props have a blueprint the workspace has not; they keep it", unknown);
         }
-        model.Status = unknown > 0 ? $"{changed} props changed; {unknown} have a blueprint the workspace has not" : $"{changed} props changed";
+        List<string> reasons = [];
+        if (alone > 0)
+        {
+            reasons.Add($"{alone} {(alone == 1 ? "is" : "are")} the only variant of {(alone == 1 ? "its" : "their")} family");
+        }
+        if (unknown > 0)
+        {
+            reasons.Add($"{unknown} {(unknown == 1 ? "has" : "have")} a blueprint the workspace has not");
+        }
+        model.Status = reasons.Count > 0 ? $"{changed} props changed; {string.Join(", ", reasons)}" : $"{changed} props changed";
         return Task.FromResult(changed);
     }
 }

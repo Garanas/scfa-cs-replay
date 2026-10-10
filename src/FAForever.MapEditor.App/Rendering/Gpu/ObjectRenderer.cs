@@ -35,8 +35,14 @@ internal sealed record ObjectFrame(
     Vector3 HighlightColor,
     Vector3 MissingColor,
     MarkerKinds MarkerKinds = MarkerKinds.All,
-    ObjectRef? Hovered = null)
+    ObjectRef? Hovered = null,
+    IReadOnlySet<ObjectRef>? Isolated = null)
 {
+    /// <summary>
+    /// Whether the thing is drawn: every thing, or only those of the isolated selection.
+    /// </summary>
+    public bool Shows(ObjectRef thing) => Isolated?.Contains(thing) != false;
+
     /// <summary>
     /// How strongly an object is highlighted: 1 selected, less under the mouse, else 0.
     /// </summary>
@@ -142,7 +148,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         if (frame.Props)
         {
             using Performance.Span measure = Performance.Measure("3d.draw-props");
-            _props.Update((document.Props, frame.Highlighted, frame.Hovered), () => document.Props.Select(prop =>
+            _props.Update((document.Props, frame.Highlighted, frame.Hovered, frame.Isolated), () => document.Props.Where(prop => frame.Shows(ObjectRef.Prop(prop.Id))).Select(prop =>
                 (prop.Blueprint, ObjectPlacement.Prop(prop), frame.HighlightOf(ObjectRef.Prop(prop.Id)), 0f)));
             _props.Arrange(blueprint => _models.Get(blueprint, frame.Catalog, out _), viewProjection, frame.Eye, _models.Loaded);
             (int drawn, int runs, int boxes) = DrawRuns(_props, frame);
@@ -153,11 +159,11 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         if (frame.Units)
         {
             using Performance.Span measure = Performance.Measure("3d.draw-units");
-            _units.Update((document.Armies, frame.Highlighted, frame.Hovered), () =>
+            _units.Update((document.Armies, frame.Highlighted, frame.Hovered, frame.Isolated), () =>
             {
                 // wrecks are drawn grey and dark (U-5)
                 ImmutableHashSet<string> wrecks = document.Wrecks();
-                return ObjectPlacement.Units(document).Select(placed =>
+                return ObjectPlacement.Units(document).Where(placed => frame.Shows(ObjectRef.Unit(placed.Unit.Name))).Select(placed =>
                     (placed.Unit.Blueprint, ObjectPlacement.Unit(placed.Unit), frame.HighlightOf(ObjectRef.Unit(placed.Unit.Name)), wrecks.Contains(placed.Unit.Name) ? 1f : 0f));
             });
             _units.Arrange(blueprint => _models.Get(blueprint, frame.Catalog, out _), viewProjection, frame.Eye, _models.Loaded);
@@ -286,7 +292,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
 
     private void UpdateMarkers(MapDocument document, ObjectFrame frame)
     {
-        object key = (document.Markers, document.Terrain.Heightmap, frame.Markers, frame.PathNodes, frame.Highlighted, frame.MarkerKinds, frame.Hovered);
+        object key = (document.Markers, document.Terrain.Heightmap, frame.Markers, frame.PathNodes, frame.Highlighted, frame.MarkerKinds, frame.Hovered, frame.Isolated);
         if (Equals(key, _markersOf))
         {
             return;
@@ -294,7 +300,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         _markersOf = key;
         using Performance.Span measure = Performance.Measure("3d.update-markers");
         List<float> data = [];
-        foreach (Marker marker in ObjectPlacement.Markers(document, frame.Markers, frame.PathNodes, frame.MarkerKinds))
+        foreach (Marker marker in ObjectPlacement.Markers(document, frame.Markers, frame.PathNodes, frame.MarkerKinds).Where(marker => frame.Shows(ObjectRef.Marker(marker.Id))))
         {
             Vector3 place = ObjectPlacement.MarkerPlace(marker, document.Terrain.Heightmap);
             Color32 color = marker.Color;

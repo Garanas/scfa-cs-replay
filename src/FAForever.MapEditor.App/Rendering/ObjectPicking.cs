@@ -131,7 +131,10 @@ public static class ObjectPlacement
 /// </summary>
 /// <param name="HiddenDecals">The ids of the decals not drawn (those of hidden groups), which are
 /// not picked; null for none.</param>
-public sealed record PickOptions(bool Props = true, bool Units = true, bool Markers = true, bool PathNodes = false, bool Decals = true, IReadOnlySet<int>? HiddenDecals = null, MarkerKinds MarkerKinds = MarkerKinds.All);
+/// <param name="Include">Whether a thing may be picked besides its kind (only the isolated
+/// selection); null for every thing.</param>
+public sealed record PickOptions(bool Props = true, bool Units = true, bool Markers = true, bool PathNodes = false, bool Decals = true, IReadOnlySet<int>? HiddenDecals = null, MarkerKinds MarkerKinds = MarkerKinds.All,
+    Func<ObjectRef, bool>? Include = null);
 
 /// <summary>
 /// Finds the object under a point of the 3D view: the ray from the camera through it against each
@@ -156,7 +159,7 @@ public static class ObjectPicking
 
         void Consider(float? hit, ObjectRef what)
         {
-            if (hit is float at && at >= 0 && at < nearest)
+            if (hit is float at && at >= 0 && at < nearest && shown.Include?.Invoke(what) != false)
             {
                 nearest = at;
                 found = what;
@@ -193,7 +196,8 @@ public static class ObjectPicking
             Vector3 point = origin + direction * ground;
             for (int i = document.Decals.Length - 1; i >= 0; i--)
             {
-                if (Covers(document.Decals[i], new Vector2(point.X, point.Z)) && shown.HiddenDecals?.Contains(document.Decals[i].Id) != true)
+                if (Covers(document.Decals[i], new Vector2(point.X, point.Z)) && shown.HiddenDecals?.Contains(document.Decals[i].Id) != true
+                    && shown.Include?.Invoke(ObjectRef.Decal(document.Decals[i].Id)) != false)
                 {
                     return ObjectRef.Decal(document.Decals[i].Id);
                 }

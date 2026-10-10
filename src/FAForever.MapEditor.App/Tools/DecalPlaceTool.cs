@@ -12,8 +12,8 @@ namespace FAForever.MapEditor.App.Tools;
 /// Places decals on the terrain (user story D-1). The decal is chosen with the picker
 /// (<c>decals.choose</c>, the options' Choose button; Ctrl+P in the Decals mode) or on the shelf. A
 /// click places it centred on the mouse, <see cref="Width"/> wide and as long as its texture's
-/// shape makes it, turned by <see cref="Heading"/>; dragging from the click sets its width (twice
-/// the distance to the mouse) and turns it so its width lies along the drag. Each decal is one step
+/// shape makes it, turned by <see cref="Heading"/>; dragging from the click spans its width from the
+/// press to the mouse (its centre half way) and turns it so its width lies along the drag. Each decal is one step
 /// of undo and becomes the selection, so the inspector shows it. A decal dropped from the shelf on
 /// a view is placed there with these settings (<see cref="IAssetDropTarget"/>).
 /// </summary>
@@ -27,6 +27,7 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
     private EditTransaction? _place;
     private MapDocument? _before;
     private (float X, float Z) _from;
+    private (float X, float Z) _dragCentre;
     private ToolInput _input = ToolInput.Default;
     private bool _dragging;
     private ObjectRef? _added;
@@ -117,6 +118,7 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
         }
         _dragWidth = (float)Width;
         _dragHeading = (float)(Heading * Math.PI / 180);
+        _dragCentre = (x, z);
         _place = model.StartStroke($"Place the decal {Path.GetFileNameWithoutExtension(key)}");
         _before = _place.Document;
         Show(key);
@@ -139,8 +141,10 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
             }
             _dragging = true;
         }
-        _dragWidth = MathF.Max(2 * distance, DecalEdits.SmallestSide);
+        // the decal spans the drag: from the press to the mouse, its centre half way
+        _dragWidth = MathF.Max(distance, DecalEdits.SmallestSide);
         _dragHeading = MathF.Atan2(dz, dx);
+        _dragCentre = (_from.X + dx / 2, _from.Z + dz / 2);
         Show(key);
     }
 
@@ -197,7 +201,7 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
             return;
         }
         MapDocument before = _before!;
-        Decal decal = Make(before, key, _from.X, _from.Z, _dragWidth, null, _dragHeading);
+        Decal decal = Make(before, key, _dragCentre.X, _dragCentre.Z, _dragWidth, null, _dragHeading);
         ObjectRef added = default;
         System.Collections.Immutable.ImmutableArray<ObjectRef> all = [];
         // with the symmetry, its images follow the size and turn of the drag (F-12)

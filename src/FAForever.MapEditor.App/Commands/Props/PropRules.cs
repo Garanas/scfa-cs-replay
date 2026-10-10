@@ -53,6 +53,8 @@ public sealed class AddPropRuleHandler(MainViewModel model, CurrentEdit edit) : 
         model.PropRules.NewName = "";
         model.PropRules.Chosen = name;
         model.SelectMode("props");
+        // the inspector shows the new rule, in place of the selection
+        model.Selection.Clear();
         model.Status = rule.Palette.IsEmpty
             ? $"Added the rule {name}: put props in the palette and take it into the rule, then generate"
             : $"Added the rule {name} with {rule.Palette.Length} props of the palette: Generate places them";

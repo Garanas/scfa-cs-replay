@@ -437,7 +437,9 @@ namespace FAForever.MapEditor.App.Tests
             model.Commands.Ran += command => ran.Add(command.Id);
             model.SelectMode("markers");
             Dispatcher.UIThread.RunJobs();
-            CheckBox Box(string title) => window.GetVisualDescendants().OfType<CheckBox>().Single(box => box.Content as string == title);
+            // the panel's boxes, not the select tool's filter (whose boxes are named "Select markers", ...)
+            CheckBox Box(string title) => window.GetVisualDescendants().OfType<CheckBox>()
+                .Single(box => box.Content as string == title && Avalonia.Automation.AutomationProperties.GetName(box)?.StartsWith("Select ", StringComparison.Ordinal) != true);
             Assert.IsTrue(Box("Markers").IsChecked);
             Assert.IsFalse(Box("Path nodes").IsChecked);
 

@@ -59,7 +59,7 @@ public sealed partial class MainViewModel
         | (ShowProps ? ObjectKinds.Props : ObjectKinds.None)
         | (ShowUnits ? ObjectKinds.Units : ObjectKinds.None)
         | (ShowAreas ? ObjectKinds.Areas : ObjectKinds.None)
-        | ObjectKinds.Decals;
+        | (ShowDecals ? ObjectKinds.Decals : ObjectKinds.None);
 
     /// <summary>
     /// The kinds the selected mode works on: the Markers mode its markers and areas, the Props mode
@@ -77,9 +77,9 @@ public sealed partial class MainViewModel
 
     /// <summary>
     /// What a click, a box or Select all may pick now: the active select tool's kinds (else the
-    /// mode's) that the views show.
+    /// mode's) that the views show and that are not locked (<see cref="LockedKinds"/>).
     /// </summary>
-    public ObjectKinds SelectableKinds => ((ActiveTool?.Tool as SelectTool)?.Kinds ?? ModeKinds) & ShownKinds;
+    public ObjectKinds SelectableKinds => ((ActiveTool?.Tool as SelectTool)?.Kinds ?? ModeKinds) & ShownKinds & ~LockedKinds;
 
     /// <summary>
     /// What a box or Select all takes: the kinds that can be picked, without areas unless areas are
@@ -131,7 +131,7 @@ public sealed partial class MainViewModel
     /// </summary>
     /// <param name="ogridsPerPixel">How large a pixel of the view is on the map.</param>
     public ObjectRef? PickAt(float x, float z, float ogridsPerPixel, ObjectKinds? kinds = null) =>
-        ShownDocument?.Nearest(x, z, ogridsPerPixel, kinds ?? SelectableKinds, Decals.HiddenDecals.Count > 0 ? Decals.IsShown : null, ShownMarkerKinds);
+        ShownDocument?.Nearest(x, z, ogridsPerPixel, kinds ?? SelectableKinds, Decals.HiddenDecals.Count > 0 || Isolated is not null ? IsPickable : null, ShownMarkerKinds);
 
     /// <summary>
     /// Selects what a click at a place picks; a click on nothing clears the selection unless it adds.
@@ -158,7 +158,7 @@ public sealed partial class MainViewModel
     {
         if (ShownDocument is MapDocument document)
         {
-            Selection.Apply(document.Inside(x0, z0, x1, z1, kinds ?? BoxKinds, ShownMarkerKinds).Where(Decals.IsShown), change);
+            Selection.Apply(document.Inside(x0, z0, x1, z1, kinds ?? BoxKinds, ShownMarkerKinds).Where(IsPickable), change);
         }
     }
 
@@ -180,7 +180,7 @@ public sealed partial class MainViewModel
         List<ObjectRef> inside = [];
         using (Performance.Measure("model.select-on-screen"))
         {
-            foreach (ObjectRef thing in document.All(kinds ?? BoxKinds, ShownMarkerKinds).Where(Decals.IsShown))
+            foreach (ObjectRef thing in document.All(kinds ?? BoxKinds, ShownMarkerKinds).Where(IsPickable))
             {
                 if (document.PlaceOf(thing) is System.Numerics.Vector3 place && toScreen(place) is System.Numerics.Vector2 at
                     && at.X >= min.X && at.Y >= min.Y && at.X <= max.X && at.Y <= max.Y)
@@ -199,7 +199,7 @@ public sealed partial class MainViewModel
     {
         if (ShownDocument is MapDocument document)
         {
-            Selection.Set(document.All(kinds ?? BoxKinds, ShownMarkerKinds).Where(Decals.IsShown));
+            Selection.Set(document.All(kinds ?? BoxKinds, ShownMarkerKinds).Where(IsPickable));
         }
     }
 

@@ -90,6 +90,11 @@ public enum ToolModifiers
     /// Z is held: a move goes along z only.
     /// </summary>
     AxisZ = 16,
+
+    /// <summary>
+    /// R is held: dragging with a select tool turns the selection.
+    /// </summary>
+    Turn = 32,
 }
 
 /// <summary>

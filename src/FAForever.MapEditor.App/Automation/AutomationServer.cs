@@ -609,6 +609,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             },
             ["picker"] = DescribePicker(model.Picker),
             ["symmetry"] = ChooseSymmetryHandler.Describe(model.Symmetry),
+            ["selectionTools"] = new JsonObject { ["locked"] = SelectionKinds.Describe(model.LockedKinds), ["isolated"] = model.Isolated?.Count, ["decalsShown"] = model.ShowDecals, ["boxKinds"] = model.BoxKinds.ToString() },
             ["decals"] = new JsonObject
             {
                 ["count"] = model.ShownDocument?.Decals.Length ?? 0,
