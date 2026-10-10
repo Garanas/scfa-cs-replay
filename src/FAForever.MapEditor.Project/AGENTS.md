@@ -344,6 +344,36 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   water (`WaterPresetSettings`; the elevations, whether it has water, the wave generators and the
   masks stay the map's).
 
+## Size, playable area and versions
+
+User stories M-3 and M-8.
+
+- **Resizing** (`Editing/MapResize`): `Resize(document, MapResizeSettings)` makes the map another of
+  the game's sizes (`NewMap.Sizes` per side; sides may differ), the old map at an anchor
+  (`MapAnchor`, top is north) or an offset (where its corner (0, 0) lands, in ogrids). Every grid
+  keeps its size relative to the map (`Grid<T>`, `Shift<T>`: a half-size mask stays half, an offset
+  between two of its pixels rounds down): the heightmap (the edges continue, or `FillHeight`),
+  terrain types, stratum masks, the water's map and masks and the normal map continue their edges;
+  masks for tools are empty where the map gains; the preview keeps its 256 pixels. A new grid of the
+  document gets its line in `Resize`. Things move by the offset and keep their height; outside the
+  new map props, decals (by their centre), units, markers (with their links and chain entries) and
+  wave generators are removed (`MapResizeRemoved` counts them); spawns move to the nearest edge, so
+  no army loses its spawn; areas are cut to the map and removed when nothing is left;
+  `FitPlayableArea` makes the playable area the whole map. A sky dome over the old centre moves to
+  the new one.
+- **The playable area** (`ScenarioInfo.PlayableArea`, a name, optional in `map.json`'s scenario as
+  `playableArea`; `MapDocument.PlayableArea` gives the area: the named one, else the first). The game
+  has none of its own: the script calls `ScenarioFramework.SetPlayableArea('AREA_1', false)`
+  (`lua/ScenarioFramework.lua`), as the map editors write it into `OnPopulate`. `MapScript` reads
+  the start's call (the first with a plain name in `OnPopulate` or `OnStart`, not behind a comment:
+  adaptive maps call it again later to grow the map) and rewrites it, or adds one after
+  `ScenarioUtils.InitializeArmies()`. The import names the area only when the script names another
+  than the first, so vault maps export unchanged; the export changes the script only for a named
+  playable area. Renaming the playable area names it (also the first by convention), removing a
+  named one falls back to the first. Walkability takes the named area whatever its size.
+- **Versions**: `MapDocument.NextVersion` (one more, or 1); the folder name and `map_version` follow
+  `Version` (`MapFolderName`).
+
 ## Generated results
 
 Something made from the map when asked (user story F-7: walkability, the normal map and

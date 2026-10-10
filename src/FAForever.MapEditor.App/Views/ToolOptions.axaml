@@ -323,6 +323,7 @@
             <!-- growing or cropping the map (M-3) -->
             <DataTemplate DataType="tools:MapSizeTool">
               <StackPanel Classes="toolrow">
+                <Button Content="Apply" Command="{Binding ApplyCommand}" ToolTip.Tip="{Binding Summary}" AutomationProperties.HelpText="Resize the map: one step of undo" />
                 <ComboBox ItemsSource="{Binding Sizes}" SelectedItem="{Binding NewWidth}" AutomationProperties.Name="New width in ogrids"
                           AutomationProperties.HelpText="256 is 5 km, 512 10 km, 1024 20 km, 2048 40 km, 4096 81 km" />
                 <TextBlock Classes="label" Text="by" />
@@ -334,8 +335,7 @@
                 <CheckBox Content="Fill at" IsChecked="{Binding FillWithHeight}" AutomationProperties.Name="Fill what the map gains at a height"
                           AutomationProperties.HelpText="Off, the heights at the old map's edges continue outwards" />
                 <TextBox Classes="toolfield" Text="{Binding FillHeight, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding FillWithHeight}" AutomationProperties.Name="Height of the terrain the map gains" />
-                <CheckBox Content="Playable area fills the map" IsChecked="{Binding FitPlayableArea}" AutomationProperties.Name="Make the playable area the whole new map" />
-                <Button Content="Apply" Command="{Binding ApplyCommand}" AutomationProperties.HelpText="Resize the map: one step of undo" />
+                <CheckBox Content="Fit the playable area" IsChecked="{Binding FitPlayableArea}" AutomationProperties.Name="Make the playable area the whole new map" />
                 <TextBlock Classes="caption mono" TextWrapping="NoWrap" Text="{Binding Summary}" AutomationProperties.Name="New map size" />
               </StackPanel>
             </DataTemplate>
