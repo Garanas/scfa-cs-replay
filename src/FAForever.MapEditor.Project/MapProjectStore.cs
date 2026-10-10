@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Files.Serialized;
@@ -90,6 +91,8 @@ namespace FAForever.MapEditor.Project
                 WriteGray8(Of(MapProjectLayout.WaterDepthBias), water.DepthBiasMask);
             }
 
+            SaveMasks(document, folder, previous);
+
             if (document.Script is ImmutableArray<byte> script)
             {
                 WriteBytes(Of(MapProjectLayout.Script), script);
@@ -142,6 +145,7 @@ namespace FAForever.MapEditor.Project
                 WaterFoamMask = ReadGray8(Of(MapProjectLayout.WaterFoam), width / 2, height / 2),
                 WaterFlatnessMask = ReadGray8(Of(MapProjectLayout.WaterFlatness), width / 2, height / 2),
                 WaterDepthBiasMask = ReadGray8(Of(MapProjectLayout.WaterDepthBias), width / 2, height / 2),
+                Masks = ReadMasks(folder, width, height),
             };
 
             string scriptPath = Of(MapProjectLayout.Script);
@@ -249,6 +253,12 @@ namespace FAForever.MapEditor.Project
                                 document = document with { Terrain = document.Terrain with { StratumMasks = masks with { Layers = masks.Layers.SetItem(layer - 1, mask) } } };
                             }
                         }
+                        else if (changed.StartsWith(MapProjectLayout.Masks + "/", StringComparison.Ordinal)
+                            && changed.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                            && changed.IndexOf('/', MapProjectLayout.Masks.Length + 1) < 0)
+                        {
+                            document = ReloadMask(document, Of(changed), Path.GetFileNameWithoutExtension(changed));
+                        }
                         else if (changed.StartsWith(MapProjectLayout.Files + "/", StringComparison.Ordinal))
                         {
                             string path = changed[(MapProjectLayout.Files.Length + 1)..];
@@ -263,6 +273,80 @@ namespace FAForever.MapEditor.Project
                 }
             }
             return document;
+        }
+
+        /// <summary>
+        /// Writes the masks for tools whose pixels changed since the previous save, and removes the
+        /// files of masks the document no longer has. The folder is made only for a first mask.
+        /// </summary>
+        private static void SaveMasks(MapDocument document, string folder, MapDocument? previous)
+        {
+            string masks = Path.Combine(folder, MapProjectLayout.Masks);
+            if (Directory.Exists(masks))
+            {
+                foreach (string file in Directory.EnumerateFiles(masks, "*.png").ToList())
+                {
+                    // gone, or renamed to another case of its name (Windows compares file names without case): written again below
+                    if (!document.Masks.ContainsKey(Path.GetFileNameWithoutExtension(file)))
+                    {
+                        File.Delete(file);
+                    }
+                }
+            }
+            foreach ((string name, TiledBuffer<byte> mask) in document.Masks)
+            {
+                string file = Path.Combine(folder, MapProjectLayout.Mask(name));
+                bool unchanged = previous is not null && previous.Masks.TryGetValue(name, out TiledBuffer<byte>? before) && ReferenceEquals(before, mask);
+                if (!unchanged || !File.Exists(file))
+                {
+                    WriteGray8(file, mask);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The masks for tools of a project: every PNG in its <see cref="MapProjectLayout.Masks"/>
+        /// folder, the map's size or half of it.
+        /// </summary>
+        /// <exception cref="MapProjectException">A mask has another size.</exception>
+        private static ImmutableSortedDictionary<string, TiledBuffer<byte>> ReadMasks(string folder, int width, int height)
+        {
+            string masks = Path.Combine(folder, MapProjectLayout.Masks);
+            if (!Directory.Exists(masks))
+            {
+                return ImmutableSortedDictionary.Create<string, TiledBuffer<byte>>(StringComparer.Ordinal);
+            }
+            return Directory.EnumerateFiles(masks, "*.png")
+                .ToImmutableSortedDictionary(file => Path.GetFileNameWithoutExtension(file), file => ReadMask(file, width, height), StringComparer.Ordinal);
+        }
+
+        private static TiledBuffer<byte> ReadMask(string file, int width, int height)
+        {
+            (int maskWidth, int maskHeight) = ProjectImages.Size(file);
+            if (!MaskLayers.Fits(width, height, maskWidth, maskHeight))
+            {
+                throw new MapProjectException($"{file} is {maskWidth} by {maskHeight} pixels: a mask is the map's size ({width} by {height}) or half of it ({Math.Max(1, width / 2)} by {Math.Max(1, height / 2)})");
+            }
+            return ReadGray8(file, maskWidth, maskHeight);
+        }
+
+        /// <summary>
+        /// The document with a mask for tools read again, added, or (its file removed) taken away.
+        /// </summary>
+        private static MapDocument ReloadMask(MapDocument document, string file, string name)
+        {
+            if (!File.Exists(file))
+            {
+                return document.Masks.ContainsKey(name) ? document with { Masks = document.Masks.Remove(name) } : document;
+            }
+            TiledBuffer<byte> read = ReadMask(file, document.Width, document.Height);
+            if (document.Masks.TryGetValue(name, out TiledBuffer<byte>? held)
+                && held.Width == read.Width && held.Height == read.Height
+                && read.ToArray().AsSpan().SequenceEqual(held.ToArray()))
+            {
+                return document;
+            }
+            return document with { Masks = document.Masks.SetItem(name, read) };
         }
 
         /// <summary>

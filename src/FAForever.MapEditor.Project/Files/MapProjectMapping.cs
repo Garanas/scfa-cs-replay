@@ -28,6 +28,12 @@ namespace FAForever.MapEditor.Project.Files
         public required TiledBuffer<byte> WaterFlatnessMask { get; init; }
 
         public required TiledBuffer<byte> WaterDepthBiasMask { get; init; }
+
+        /// <summary>
+        /// The masks for tools by name; none in a project without them.
+        /// </summary>
+        public ImmutableSortedDictionary<string, TiledBuffer<byte>> Masks { get; init; } =
+            ImmutableSortedDictionary.Create<string, TiledBuffer<byte>>(StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -90,6 +96,7 @@ namespace FAForever.MapEditor.Project.Files
                 Armies = [.. armies.Select(army => ToModel(army))],
                 Script = script,
                 Files = files,
+                Masks = images.Masks,
             };
         }
 

@@ -9,7 +9,7 @@ namespace FAForever.MapEditor.Project.Editing
     /// </summary>
     /// <remarks>
     /// Edits of records go through <see cref="Apply"/>. Brushes write the grids through builders
-    /// (<see cref="Heightmap"/>, <see cref="StratumMask"/>), which copy a tile only the first time
+    /// (<see cref="Heightmap"/>, <see cref="StratumMask"/>, <see cref="Grid"/>), which copy a tile only the first time
     /// they change it; the builders' changes are in <see cref="Document"/> from the next read of it.
     /// </remarks>
     public sealed class EditTransaction : IDisposable
@@ -17,7 +17,7 @@ namespace FAForever.MapEditor.Project.Editing
         private readonly EditSession _session;
         private MapDocument _document;
         private TiledBuffer<ushort>.Builder? _heightmap;
-        private readonly Dictionary<int, TiledBuffer<byte>.Builder> _masks = [];
+        private readonly Dictionary<PaintTarget, TiledBuffer<byte>.Builder> _grids = [];
         private bool _ended;
 
         internal EditTransaction(EditSession session, MapDocument document, string description)
@@ -65,10 +65,20 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 throw new ArgumentOutOfRangeException(nameof(layer), $"Layer {layer} has no mask; layers 1 to {_document.Terrain.StratumMasks.Layers.Length} do");
             }
-            if (!_masks.TryGetValue(layer, out TiledBuffer<byte>.Builder? builder))
+            return Grid(PaintTarget.Stratum(layer));
+        }
+
+        /// <summary>
+        /// A grid of the document (a mask, the terrain's types), to change pixel by pixel.
+        /// </summary>
+        /// <exception cref="ArgumentException">The document has no such grid.</exception>
+        public TiledBuffer<byte>.Builder Grid(PaintTarget target)
+        {
+            EnsureOpen();
+            if (!_grids.TryGetValue(target, out TiledBuffer<byte>.Builder? builder))
             {
-                builder = _document.Terrain.StratumMasks.Layers[layer - 1].ToBuilder();
-                _masks[layer] = builder;
+                builder = target.Read(_document).ToBuilder();
+                _grids[target] = builder;
             }
             return builder;
         }
@@ -83,7 +93,7 @@ namespace FAForever.MapEditor.Project.Editing
             Flush();
             _document = edit(_document);
             _heightmap = null;
-            _masks.Clear();
+            _grids.Clear();
         }
 
         /// <summary>
@@ -120,14 +130,12 @@ namespace FAForever.MapEditor.Project.Editing
                 Terrain terrain = _document.Terrain;
                 _document = _document with { Terrain = terrain with { Heightmap = terrain.Heightmap with { Samples = heights } } };
             }
-            foreach ((int layer, TiledBuffer<byte>.Builder builder) in _masks)
+            foreach ((PaintTarget target, TiledBuffer<byte>.Builder builder) in _grids)
             {
-                TiledBuffer<byte> mask = builder.ToBuffer();
-                StratumMasks masks = _document.Terrain.StratumMasks;
-                if (!ReferenceEquals(mask, masks.Layers[layer - 1]))
+                TiledBuffer<byte> grid = builder.ToBuffer();
+                if (!ReferenceEquals(grid, target.Read(_document)))
                 {
-                    masks = masks with { Layers = masks.Layers.SetItem(layer - 1, mask) };
-                    _document = _document with { Terrain = _document.Terrain with { StratumMasks = masks } };
+                    _document = target.Write(_document, grid);
                 }
             }
         }

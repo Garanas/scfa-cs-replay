@@ -90,6 +90,15 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             ImmutableSortedDictionary.Create<string, ImmutableArray<byte>>(StringComparer.Ordinal);
 
         /// <summary>
+        /// The masks for tools (user story K-1: where rivers go, where forests grow) by name, each
+        /// the map's size or half of it, from 0 (nothing) to 255 (full). They are the map maker's
+        /// own and the editor's rules', kept in the project (<c>masks/&lt;name&gt;.png</c>) and never
+        /// exported to the game. <see cref="Editing.MaskLayers"/> adds, renames and removes them.
+        /// </summary>
+        public ImmutableSortedDictionary<string, TiledBuffer<byte>> Masks { get; init; } =
+            ImmutableSortedDictionary.Create<string, TiledBuffer<byte>>(StringComparer.Ordinal);
+
+        /// <summary>
         /// An id for a new prop: one more than the highest in use.
         /// </summary>
         public int NextPropId() => Props.IsEmpty ? 1 : Props.Max(prop => prop.Id) + 1;
