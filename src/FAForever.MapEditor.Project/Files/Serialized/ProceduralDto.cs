@@ -39,5 +39,10 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// on top of them; absent for the defaults.
         /// </summary>
         public PathNodesDto? PathNodes { get; init; }
+
+        /// <summary>
+        /// How the sky cube map is generated; absent for the defaults.
+        /// </summary>
+        public SkyCubeDto? SkyCube { get; init; }
     }
 }
