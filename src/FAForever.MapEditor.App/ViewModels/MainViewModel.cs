@@ -109,6 +109,7 @@ public sealed partial class MainViewModel : ObservableObject
         Presets = new PresetsViewModel(Logger("Assets"), _ui, (id, arguments) => TryAsync(() => Commands.RunAsync(id, arguments, interactive: true)));
         InitializeShell();
         InitializeSelection();
+        InitializePainting();
     }
 
     /// <summary>

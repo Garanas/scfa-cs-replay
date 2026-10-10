@@ -40,6 +40,12 @@ public sealed record PlannedSection(string Title, string Story, string Missing) 
 public sealed record StrataSection() : PanelSection("Strata");
 
 /// <summary>
+/// The masks for tools of the map (user story K-1): add, rename, delete, choose the one to paint
+/// and show.
+/// </summary>
+public sealed record MasksSection() : PanelSection("Masks for tools");
+
+/// <summary>
 /// The overlays the mode's panel lists, to show or hide them there as with the chips above the
 /// views (<see cref="OverlayDefinition.Panel"/>).
 /// </summary>
@@ -94,7 +100,7 @@ public static class EditorModes
             [
                 new ToolDefinition("terrain.sculpt", "Sculpt", "T-1") { Make = model => new SculptTool(model) },
                 new ToolDefinition("terrain.curve", "Curve", "T-4", "Draw a curve and shape the terrain along it: ridge, valley, road, cliff edge"),
-                new ToolDefinition("terrain.types", "Terrain types", "T-6", "Paint the terrain type of each ogrid"),
+                new ToolDefinition("terrain.types", "Terrain types", "T-6") { Make = model => new TerrainTypeTool(model) },
                 new ToolDefinition("terrain.walkability", "Walkability", "T-7", "Mark where land units must be blocked or may pass"),
                 new ToolDefinition("terrain.ruler", "Ruler", "V-5", "Measure distances and heights"),
             ],
@@ -108,19 +114,19 @@ public static class EditorModes
         new ModeDefinition("paint", "Paint", "Icon.Paint", "Strata and masks for tools", 0, "F3", "S-1",
             [
                 new ToolDefinition("paint.strata", "Strata", "S-1") { Make = model => new StrataTool(model) },
-                new ToolDefinition("paint.masks", "Masks", "K-1", "Paint the masks for World Machine, Gaea and the rules"),
+                new ToolDefinition("paint.masks", "Masks", "K-1") { Make = model => new MaskPaintTool(model) },
             ],
             [
                 new StrataSection(),
                 new PresetSection("brush", "Brush presets"),
                 new PlannedSection("Layer textures", "S-2", "Each layer's albedo and normal texture and their scales; add, remove, reorder"),
-                new PlannedSection("Masks for tools", "K-1", "Named masks for one's own purposes, saved as PNG"),
+                new MasksSection(),
             ],
             [new PlannedSection("Layer", "S-2", "The selected layer's textures and scales, or the selected mask")]),
 
         new ModeDefinition("water", "Water", "Icon.Water", "Levels, colours, waves, paintable water", 0, "F4", "W-1",
             [
-                new ToolDefinition("water.paint", "Paint water", "W-2", "Paint foam, flatness and depth bias"),
+                new ToolDefinition("water.paint", "Paint water", "W-2") { Make = model => new WaterPaintTool(model) },
             ],
             [new PlannedSection("Water", "W-1", "On or off; elevations; colours, sun, reflection; textures; waves")],
             [new PlannedSection("Water", "W-1", "The water's settings")]),
@@ -217,7 +223,7 @@ public static class EditorOverlays
         new OverlayDefinition("pathNodes", "Path nodes", "Show path nodes", "R-6") { Panel = "markers" },
         new OverlayDefinition("camera", "3D camera", "Show the 3D camera", "V-1"),
         new OverlayDefinition("walkability", "Walkability", "Show walkability", "T-7", "Show where land units can and cannot go, and what changed"),
-        new OverlayDefinition("mask", "Mask", "Show a mask", "K-1", "Show a mask over the terrain"),
+        new OverlayDefinition("mask", "Mask", "Show the chosen mask", "K-1"),
         new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12"),
         new OverlayDefinition("grid", "Grid", "Show the grid", "V-3", "Show a grid over the terrain"),
         new OverlayDefinition("areas", "Areas", "Show areas", "M-5"),

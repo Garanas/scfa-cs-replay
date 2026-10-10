@@ -4,6 +4,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:tools="using:FAForever.MapEditor.App.Tools"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
              x:Class="FAForever.MapEditor.App.Views.ToolOptions"
              x:DataType="vm:MainViewModel">
   <Border Classes="toolbar options">
@@ -21,27 +22,48 @@
                           ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
                           AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
                 <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" AutomationProperties.Name="Height brush mode" />
+                <ComboBox ItemsSource="{Binding Falloffs}" SelectedItem="{Binding Falloff}" IsVisible="{Binding !Shape.IsShaped}"
+                          AutomationProperties.Name="Brush falloff" AutomationProperties.HelpText="How a round brush fades from its centre to its edge: smooth, linear, or sharp (the same everywhere)" />
                 <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
                   <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
                 </StackPanel>
-                <StackPanel Classes="inline">
+                <StackPanel Classes="inline" IsVisible="{Binding UsesStrength}">
                   <TextBlock Classes="label" Text="{Binding Strength, StringFormat='Strength: {0:0.00}'}" />
                   <Slider Minimum="0.01" Maximum="{Binding StrengthMaximum}" Value="{Binding Strength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height brush strength" />
                 </StackPanel>
-                <StackPanel Classes="inline" IsVisible="{Binding IsFlattening}">
-                  <TextBlock Classes="label" Text="{Binding Target, StringFormat='Flatten to: {0:0.0}'}" />
-                  <Slider Minimum="0" Maximum="256" Value="{Binding Target}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height to flatten to" />
+                <StackPanel Classes="inline" IsVisible="{Binding UsesTarget}">
+                  <TextBlock Classes="label" Text="{Binding TargetLabel}" />
+                  <TextBlock Classes="label mono" Text="{Binding Target, StringFormat='{}{0:0.0}'}" />
+                  <Slider Minimum="0" Maximum="256" Value="{Binding Target}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height to flatten to, set or scale around" />
+                </StackPanel>
+                <StackPanel Classes="inline" IsVisible="{Binding IsScaling}">
+                  <TextBlock Classes="label" Text="{Binding Factor, StringFormat='Factor: {0:0.00}'}" />
+                  <Slider Minimum="0.5" Maximum="2" Value="{Binding Factor}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Scale factor"
+                          AutomationProperties.HelpText="Above 1 hills grow and valleys deepen around the height; below 1 the terrain flattens towards it" />
+                </StackPanel>
+                <StackPanel Classes="inline" IsVisible="{Binding IsNoise}">
+                  <TextBlock Classes="label" Text="{Binding NoiseScale, StringFormat='Noise size: {0:0} ogrids'}" />
+                  <Slider Minimum="2" Maximum="128" Value="{Binding NoiseScale}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Size of the noise in ogrids" />
+                </StackPanel>
+                <CheckBox Content="Limits" IsChecked="{Binding Limited}" AutomationProperties.Name="Keep the heights within limits"
+                          AutomationProperties.HelpText="The brush raises no height above the highest and lowers none below the lowest" />
+                <StackPanel Classes="inline" IsVisible="{Binding Limited}">
+                  <TextBox Classes="toolfield" Text="{Binding MinHeight, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Lowest height the brush makes" />
+                  <TextBlock Classes="label" Text="to" />
+                  <TextBox Classes="toolfield" Text="{Binding MaxHeight, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Highest height the brush makes" />
                 </StackPanel>
                 <ContentControl Content="{Binding Shape}" />
               </StackPanel>
             </DataTemplate>
-            <!-- painting a stratum's mask (S-1) -->
+            <!-- painting a stratum's mask (S-1), where the slope and height allow -->
             <DataTemplate DataType="tools:StrataTool">
               <StackPanel Classes="toolrow">
                 <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
                           ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
                           AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
+                <ComboBox ItemsSource="{Binding Falloffs}" SelectedItem="{Binding Falloff}" IsVisible="{Binding !Shape.IsShaped}"
+                          AutomationProperties.Name="Brush falloff" AutomationProperties.HelpText="How a round brush fades from its centre to its edge: smooth, linear, or sharp (the same everywhere)" />
                 <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
                   <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
@@ -51,6 +73,104 @@
                   <Slider Minimum="0.01" Maximum="1" Value="{Binding Strength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Mask brush strength" />
                 </StackPanel>
                 <CheckBox Content="Erase" IsChecked="{Binding Erase}" AutomationProperties.Name="Erase the layer" />
+                <CheckBox Content="Slope" IsChecked="{Binding Limiting.BySlope}" AutomationProperties.Name="Paint only within a range of slopes" />
+                <StackPanel Classes="inline" IsVisible="{Binding Limiting.BySlope}">
+                  <TextBox Classes="toolfield" Text="{Binding Limiting.MinSlope, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Gentlest slope to paint, in degrees" />
+                  <TextBlock Classes="label" Text="to" />
+                  <TextBox Classes="toolfield" Text="{Binding Limiting.MaxSlope, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Steepest slope to paint, in degrees" />
+                  <TextBlock Classes="label" Text="°" />
+                </StackPanel>
+                <CheckBox Content="Height" IsChecked="{Binding Limiting.ByHeight}" AutomationProperties.Name="Paint only within a range of heights" />
+                <StackPanel Classes="inline" IsVisible="{Binding Limiting.ByHeight}">
+                  <TextBox Classes="toolfield" Text="{Binding Limiting.MinHeight, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Lowest height to paint" />
+                  <TextBlock Classes="label" Text="to" />
+                  <TextBox Classes="toolfield" Text="{Binding Limiting.MaxHeight, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Highest height to paint" />
+                </StackPanel>
+                <ContentControl Content="{Binding Shape}" />
+              </StackPanel>
+            </DataTemplate>
+            <!-- painting the water's foam, flatness or depth bias (W-2) -->
+            <DataTemplate DataType="tools:WaterPaintTool">
+              <StackPanel Classes="toolrow">
+                <ComboBox ItemsSource="{Binding Masks}" SelectedItem="{Binding Painted}" ToolTip.Tip="{Binding Painted.Help}"
+                          AutomationProperties.Name="Water mask to paint" AutomationProperties.HelpText="Foam, flatness or depth bias; the top view shows the chosen one" />
+                <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
+                          ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
+                          AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
+                <ComboBox ItemsSource="{Binding Falloffs}" SelectedItem="{Binding Falloff}" IsVisible="{Binding !Shape.IsShaped}"
+                          AutomationProperties.Name="Brush falloff" AutomationProperties.HelpText="How a round brush fades from its centre to its edge: smooth, linear, or sharp (the same everywhere)" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
+                  <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Strength, StringFormat='Strength: {0:0.00}'}" />
+                  <Slider Minimum="0.01" Maximum="1" Value="{Binding Strength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Mask brush strength" />
+                </StackPanel>
+                <CheckBox Content="Erase" IsChecked="{Binding Erase}" AutomationProperties.Name="Erase the water mask" />
+                <ContentControl Content="{Binding Shape}" />
+              </StackPanel>
+            </DataTemplate>
+            <!-- painting a mask for tools (K-1), chosen in the Paint panel -->
+            <DataTemplate DataType="tools:MaskPaintTool">
+              <StackPanel Classes="toolrow">
+                <TextBlock Classes="label" Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.Chosen, StringFormat='Mask: {0}', TargetNullValue='No mask: add one in the panel'}" />
+                <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
+                          ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
+                          AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
+                <ComboBox ItemsSource="{Binding Falloffs}" SelectedItem="{Binding Falloff}" IsVisible="{Binding !Shape.IsShaped}"
+                          AutomationProperties.Name="Brush falloff" AutomationProperties.HelpText="How a round brush fades from its centre to its edge: smooth, linear, or sharp (the same everywhere)" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
+                  <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Strength, StringFormat='Strength: {0:0.00}'}" />
+                  <Slider Minimum="0.01" Maximum="1" Value="{Binding Strength}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Mask brush strength" />
+                </StackPanel>
+                <CheckBox Content="Erase" IsChecked="{Binding Erase}" AutomationProperties.Name="Erase the mask" />
+                <ContentControl Content="{Binding Shape}" />
+              </StackPanel>
+            </DataTemplate>
+            <!-- painting the terrain types (T-6): the type, the brush, and the legend of the types the map uses -->
+            <DataTemplate DataType="tools:TerrainTypeTool">
+              <StackPanel Classes="toolrow">
+                <ComboBox ItemsSource="{Binding Types}" SelectedItem="{Binding Chosen}" MaxWidth="{StaticResource ToolChoiceWidth}" ToolTip.Tip="{Binding Chosen.Description}"
+                          AutomationProperties.Name="Terrain type to paint" AutomationProperties.HelpText="The game's terrain types, each in its colour in the top view">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="tools:TerrainTypeChoice">
+                      <StackPanel Classes="inline" ToolTip.Tip="{Binding Description}">
+                        <Border Classes="swatch" Background="{Binding Colour, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                        <TextBlock Text="{Binding Title}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
+                          ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
+                          AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
+                <ComboBox ItemsSource="{Binding Falloffs}" SelectedItem="{Binding Falloff}" IsVisible="{Binding !Shape.IsShaped}"
+                          AutomationProperties.Name="Brush falloff" AutomationProperties.HelpText="How a round brush fades from its centre to its edge: smooth, linear, or sharp (the same everywhere)" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
+                  <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
+                </StackPanel>
+                <TextBlock Classes="overline" Text="{Binding Source='In the map', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                <ItemsControl ItemsSource="{Binding Legend}" AutomationProperties.Name="Terrain types in the map">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Classes="toolrow" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="tools:TerrainTypeChoice">
+                      <StackPanel Classes="inline" ToolTip.Tip="{Binding Description}">
+                        <Border Classes="swatch" Background="{Binding Colour, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                        <TextBlock Classes="caption" TextWrapping="NoWrap" Text="{Binding CountText}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <ContentControl Content="{Binding Shape}" />
               </StackPanel>
             </DataTemplate>
@@ -58,7 +178,7 @@
             <DataTemplate DataType="tools:SelectTool">
               <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
             </DataTemplate>
-            <!-- how either brush's picture is turned; the shape itself is the first choice of the row -->
+            <!-- how a brush's picture is turned; the shape itself is the first choice of the row -->
             <DataTemplate DataType="tools:BrushShapeSettings">
               <StackPanel Classes="toolrow">
                 <StackPanel Classes="inline" IsVisible="{Binding IsShaped}">

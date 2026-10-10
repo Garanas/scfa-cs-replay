@@ -217,6 +217,12 @@
   <x:Double x:Key="ActionButtonHeight">28</x:Double>
   <x:Double x:Key="ChipHeight">24</x:Double>
   <x:Double x:Key="ToolSliderWidth">120</x:Double>
+  <!-- a number typed in the tool options (a height, a slope) -->
+  <x:Double x:Key="ToolFieldWidth">52</x:Double>
+  <!-- a choice of many long names in the tool options (a terrain type) -->
+  <x:Double x:Key="ToolChoiceWidth">220</x:Double>
+  <!-- a colour of the map's data (a terrain type's) in a legend or list -->
+  <x:Double x:Key="SwatchSize">12</x:Double>
   <x:Double x:Key="TabHeight">30</x:Double>
   <x:Double x:Key="SegmentHeight">28</x:Double>
   <Thickness x:Key="TabPadding">12,0</Thickness>

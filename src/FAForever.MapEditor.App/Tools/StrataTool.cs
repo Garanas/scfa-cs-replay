@@ -17,20 +17,17 @@ public sealed record Stratum(int Layer, string Name)
 
 /// <summary>
 /// Paints or erases the mask of a terrain layer with a brush, round or of a picture (user story
-/// S-1). The layer it paints is chosen in the Paint mode's panel; the top view shows its mask while
-/// the tool is active.
+/// S-1), where the slope and height are within limits when those are on. The layer it paints is
+/// chosen in the Paint mode's panel; the top view shows its mask while the tool is active.
 /// </summary>
-public sealed partial class StrataTool : ObservableObject, IShapedBrushTool
+public sealed partial class StrataTool : GridPaintTool
 {
-    private readonly MainViewModel _model;
-    private BrushStroke? _stroke;
-
-    public StrataTool(MainViewModel model)
+    public StrataTool(MainViewModel model) : base(model)
     {
-        _model = model;
-        Shape = new BrushShapeSettings(model);
         model.MapChanged += (_, _) => ReadStrata();
     }
+
+    public override string PresetName => "strata";
 
     /// <summary>
     /// The open map's layers that have a mask, by the name of their texture.
@@ -51,26 +48,13 @@ public sealed partial class StrataTool : ObservableObject, IShapedBrushTool
     public int Layer => Painted?.Layer ?? 0;
 
     /// <summary>
-    /// The radius in ogrids.
+    /// Where it paints, by slope and height.
     /// </summary>
-    [ObservableProperty]
-    public partial double Radius { get; set; } = 12;
+    public PaintLimitSettings Limiting { get; } = new PaintLimitSettings();
 
-    /// <summary>
-    /// How far a dab moves the mask at the centre, from 0 to 1.
-    /// </summary>
-    [ObservableProperty]
-    public partial double Strength { get; set; } = 0.3;
+    public override PaintTarget? Target => Painted is Stratum stratum ? PaintTarget.Stratum(stratum.Layer) : null;
 
-    /// <summary>
-    /// Whether it takes the layer away instead of painting it.
-    /// </summary>
-    [ObservableProperty]
-    public partial bool Erase { get; set; }
-
-    public double CursorRadius => Radius;
-
-    public BrushShapeSettings Shape { get; }
+    protected override PaintLimits? Limits => Limiting.ToLimits();
 
     /// <summary>
     /// Paints the mask of layer <paramref name="layer"/>.
@@ -80,36 +64,11 @@ public sealed partial class StrataTool : ObservableObject, IShapedBrushTool
         Painted = Strata.FirstOrDefault(stratum => stratum.Layer == layer)
             ?? throw new ArgumentOutOfRangeException(nameof(layer), $"The map has no layer {layer} with a mask");
 
-    public void Press(float x, float z)
-    {
-        if (Painted is not Stratum stratum || _model.ShownDocument is not MapDocument document
-            || BrushShapeSettings.TryRead(_model, Shape) is not (true, var shape))
-        {
-            return;
-        }
-        MaskBrush brush = new MaskBrush
-        {
-            Radius = (float)Radius,
-            Strength = (float)Strength,
-            Erase = Erase,
-            Shape = shape,
-        };
-        (int width, int height) = (document.Width, document.Height);
-        _stroke = new BrushStroke(_model, $"{(Erase ? "Erase" : "Paint")} layer {stratum.Layer}", Radius, x, z,
-            (edit, at, to) => (brush with { Rotation = Shape.NextRotation() }).Apply(edit.StratumMask(stratum.Layer), width, height, at, to));
-    }
-
-    public void Drag(float x, float z) => _stroke?.MoveTo(x, z);
-
-    public void Release()
-    {
-        _stroke?.End();
-        _stroke = null;
-    }
+    partial void OnPaintedChanged(Stratum? value) => OnTargetChanged();
 
     private void ReadStrata()
     {
-        Terrain? terrain = _model.Map?.Document.Terrain;
+        Terrain? terrain = Model.Map?.Document.Terrain;
         Strata = terrain is null
             ? []
             : [.. Enumerable.Range(1, terrain.StratumMasks.Layers.Length).Select(layer => new Stratum(layer,
