@@ -84,7 +84,7 @@ public static class EditorModes
             ],
             [
                 new PlannedSection("Information", "M-1", "Name, description, author, version, type, preview, no-rush radius, adaptive, reclaim"),
-                new PlannedSection("Armies and teams", "M-4", "Add, remove and rename armies; playable or extra; factions; alliances; teams"),
+                new ArmiesSection(),
                 new PlannedSection("Areas", "M-5", "The areas of the map, by name"),
                 new PlannedSection("Script and files", "M-6", "The map's script and the files of its folder"),
             ],
@@ -175,12 +175,12 @@ public static class EditorModes
 
         new ModeDefinition("units", "Units", "Icon.Units", "Place units, groups per army, presets", 1, "F9", "U-2",
             [
-                new ToolDefinition("units.place", "Place", "U-2", "Place units for an army, from the unit picker (U-1)"),
+                new ToolDefinition("units.place", "Place", "U-2") { Make = model => new UnitPlaceTool(model) },
                 new ToolDefinition("units.select", "Select", "F-11") { Make = model => new SelectTool(model, ObjectKinds.Units) },
             ],
             [
-                new PlannedSection("Armies and groups", "U-3", "Per army a tree of groups"),
-                new PlannedSection("Presets", "U-4", "Groups saved as presets, such as civilian bases"),
+                new UnitGroupsSection(),
+                new PresetSection(UnitPreset.Kind, "Presets") { EmptyText = "None yet: select units, or choose a group in the tree, and save them to place them again." },
             ],
             [new PlannedSection("Units", "U-3", "The selected group or units")]),
     ];

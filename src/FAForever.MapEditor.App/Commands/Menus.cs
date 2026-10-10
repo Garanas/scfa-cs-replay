@@ -43,6 +43,7 @@ public static class Menus
         [
             "map.mode", Separator,
             "map.information", "map.armies", "map.addArea", Separator,
+            "map.addArmy", Separator,
             "map.resize", Separator,
             .. ToolsOf("map"),
         ]),
@@ -55,7 +56,7 @@ public static class Menus
             Mode("markers", "markers.connectPaths", "markers.addChain", "markers.adaptive", "markers.placePreset"),
             Mode("props", "props.addPalette", "props.addRule", "props.reclaim"),
             Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack"),
-            Mode("units", "units.pick", "units.addGroup", "units.placePreset", "units.asWrecks"),
+            Mode("units", "units.pick", "units.addGroup", "units.selectGroup", "units.placePreset", "units.asWrecks"),
             new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.reload", Separator, "assets.brushesFolder"]),
         ]),
         new MenuLayout("Generate",

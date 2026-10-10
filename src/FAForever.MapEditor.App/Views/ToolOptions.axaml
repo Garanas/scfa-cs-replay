@@ -98,6 +98,30 @@
                 </StackPanel>
               </StackPanel>
             </DataTemplate>
+            <!-- placing units (U-2) or a units preset (U-4): what, for which army, into which group, facing where -->
+            <DataTemplate DataType="tools:UnitPlaceTool">
+              <StackPanel Classes="toolrow">
+                <StackPanel Classes="inline">
+                  <controls:AssetThumbnail Model="{Binding Unit.Model}" Width="{StaticResource ToolButtonHeight}" Height="{StaticResource ToolButtonHeight}"
+                                           IsVisible="{Binding HasUnit}" AutomationProperties.Name="Picture of the unit to place" />
+                  <TextBlock Classes="label" Text="{Binding UnitTitle}" ToolTip.Tip="{Binding UnitTitle}" />
+                  <Button Content="Choose..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.pick"
+                          AutomationProperties.Name="Choose a unit to place" AutomationProperties.HelpText="Opens the unit picker; a unit chosen on the asset shelf is placed too" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="Army" />
+                  <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" AutomationProperties.Name="Army to place units for" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="Group" />
+                  <ComboBox ItemsSource="{Binding Groups}" SelectedItem="{Binding ChosenGroup}" MaxWidth="{StaticResource ToolSliderWidth}"
+                            AutomationProperties.Name="Group to place units into"
+                            AutomationProperties.HelpText="The game creates the units of INITIAL, with its groups, when the game starts" />
+                </StackPanel>
+                <TextBlock Classes="label" Text="{Binding Heading, StringFormat='Facing: {0:0}°'}" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </StackPanel>
+            </DataTemplate>
             <!-- how either brush's picture is turned; the shape itself is the first choice of the row -->
             <DataTemplate DataType="tools:BrushShapeSettings">
               <StackPanel Classes="toolrow">

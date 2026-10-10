@@ -105,6 +105,7 @@ public sealed partial class MainViewModel : ObservableObject
         Generation = new GenerationViewModel();
         Selection = new SelectionViewModel(RunWithAsync);
         Decals = new DecalsViewModel(RunWithAsync);
+        Armies = new ArmiesViewModel(RunWithAsync);
         Commands = CommandServices.Create(this, _dialogs, typeof(MainViewModel).Assembly);
         Palette = new PaletteViewModel(Commands, RunAsync);
         Presets = new PresetsViewModel(Logger("Assets"), _ui, (id, arguments) => TryAsync(() => Commands.RunAsync(id, arguments, interactive: true)));
@@ -112,6 +113,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeSelection();
         InitializeGeneration();
         InitializeDecals();
+        InitializeUnits();
     }
 
     /// <summary>

@@ -19,7 +19,13 @@ public sealed record PresetKind(string Kind, string Title, Func<(string Name, Js
 /// <summary>
 /// The presets of a mode's panel, of one kind (<see cref="PresetsViewModel.Kind"/>).
 /// </summary>
-public sealed record PresetSection(string Kind, string Title) : PanelSection(Title);
+public sealed record PresetSection(string Kind, string Title) : PanelSection(Title)
+{
+    /// <summary>
+    /// What the panel says while the kind has no presets: how to make one.
+    /// </summary>
+    public string EmptyText { get; init; } = "None yet: save the tool's settings to use them again.";
+}
 
 /// <summary>
 /// The workspace's presets (user story F-10): saved settings of a kind (a brush, later a lighting,

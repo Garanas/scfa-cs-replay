@@ -8,7 +8,7 @@ namespace FAForever.MapEditor.Project.Files.InMemory
     /// <remarks>
     /// Every map of the vault has one configuration, <c>standard</c>, with one team, <c>FFA</c>, of
     /// the armies players take, and the other armies in <c>customprops.ExtraArmies</c>. The editor
-    /// keeps the two lists of armies; the export builds the configuration.
+    /// keeps the two lists of armies, and the teams a map maker adds; the export builds the configuration.
     /// </remarks>
     public sealed record ScenarioInfo
     {
@@ -59,5 +59,13 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// </summary>
         public ImmutableSortedDictionary<string, ImmutableArray<string>> ArmyFactions { get; init; } =
             ImmutableSortedDictionary.Create<string, ImmutableArray<string>>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// The teams the map maker puts playable armies in (user story M-4); empty for none, which
+        /// is every map of the vault. An army is in one team at most, and a playable army may be in
+        /// none. The game itself reads only the team <c>FFA</c> of every playable army, which the
+        /// export writes first (<see cref="Team"/>).
+        /// </summary>
+        public ImmutableArray<Team> Teams { get; init; } = [];
     }
 }

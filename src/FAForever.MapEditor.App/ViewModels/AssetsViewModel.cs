@@ -253,7 +253,6 @@ public sealed partial class AssetsViewModel : ObservableObject
     public string ShownPlanned => Shown?.Kind switch
     {
         AssetKind.Prop => "Placing it on the map, and adding it to a palette: user stories P-1 and P-2",
-        AssetKind.Unit => "Placing it for an army: user story U-2",
         AssetKind.Texture => "Using it for a stratum: user story S-2",
         _ => "",
     };
@@ -265,6 +264,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     {
         AssetKind.Brush => "Choosing it makes it the shape of the active brush tool: Sculpt in the Terrain mode, Strata in the Paint mode, whose options turn it.",
         AssetKind.Decal => "Choosing it makes it the decal the Place tool of the Decals mode places (in that mode the tool becomes active); drag it onto a view to place it there.",
+        AssetKind.Unit => "Choosing it makes it what the Units mode's Place tool places: click on the map, or drag the tile onto it.",
         _ => "",
     };
 

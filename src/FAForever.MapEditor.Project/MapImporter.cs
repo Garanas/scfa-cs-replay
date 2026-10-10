@@ -143,12 +143,23 @@ namespace FAForever.MapEditor.Project
 
         /// <summary>
         /// The scenario in the editor's terms: the armies of its configuration (every map of the
-        /// vault has one, <c>standard</c>, with one team) as playable and extra armies.
+        /// vault has one, <c>standard</c>, with one team) as playable and extra armies. The first
+        /// team, <c>FFA</c>, holds the playable armies, and the teams after it are the map maker's
+        /// (<see cref="Team"/>); a configuration whose first team is no <c>FFA</c> has its teams'
+        /// armies as the playable ones, and those teams as the map maker's.
         /// </summary>
         private static ScenarioInfo ToScenario(MapScenario scenario)
         {
             MapConfiguration? configuration = scenario.Configurations.FirstOrDefault(c => c.Name == "standard") ?? scenario.Configurations.FirstOrDefault();
-            ImmutableArray<string> playable = [.. configuration?.Teams.SelectMany(team => team.Armies) ?? []];
+            IReadOnlyList<MapTeam> configured = configuration?.Teams ?? [];
+            bool ffa = configured.Count > 0 && configured[0].Name == "FFA";
+            ImmutableArray<string> playable = ffa
+                ? [.. configured[0].Armies]
+                : [.. configured.SelectMany(team => team.Armies).Distinct(StringComparer.Ordinal)];
+            HashSet<string> teamed = new HashSet<string>(StringComparer.Ordinal);
+            ImmutableArray<Team> teams = [.. configured.Skip(ffa ? 1 : 0)
+                .Select(team => new Team { Name = team.Name, Armies = [.. team.Armies.Where(army => playable.Contains(army) && teamed.Add(army))] })
+                .Where(team => !team.Armies.IsEmpty)];
 
             // the factions are listed per playable army, in order
             ImmutableSortedDictionary<string, ImmutableArray<string>> factions = ImmutableSortedDictionary.Create<string, ImmutableArray<string>>(StringComparer.Ordinal);
@@ -177,6 +188,7 @@ namespace FAForever.MapEditor.Project
                 PlayableArmies = playable,
                 ExtraArmies = [.. configuration?.ExtraArmies ?? []],
                 ArmyFactions = factions,
+                Teams = teams,
             };
         }
 

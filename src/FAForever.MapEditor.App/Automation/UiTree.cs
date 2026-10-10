@@ -68,7 +68,7 @@ public static class UiTree
         string? label = AutomationProperties.GetName(control) is { Length: > 0 } l ? l : null;
         string? text = TextOf(control);
         bool usable = control is Button or MenuItem or TabItem or TextBox or Slider or ComboBox or ToggleButton or ListBox or ListBoxItem
-            or ProgressBar || control.Focusable && control is not ScrollViewer and not Window;
+            or TreeView or TreeViewItem or ProgressBar || control.Focusable && control is not ScrollViewer and not Window;
         if (name is null && label is null && text is null && !usable)
         {
             return null;

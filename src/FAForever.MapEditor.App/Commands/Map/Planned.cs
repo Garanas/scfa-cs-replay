@@ -6,10 +6,6 @@ namespace FAForever.MapEditor.App.Commands;
 [EditorCommand("map.information", "Information...", Story = "M-1")]
 public sealed record EditMapInformation : IRequest;
 
-[Incomplete("M-4", "Add, remove and rename armies; playable or extra; factions; alliances; teams")]
-[EditorCommand("map.armies", "Armies and teams...", Story = "M-4")]
-public sealed record EditArmies : IRequest;
-
 [Incomplete("M-5", "Add an area and draw it in a view")]
 [EditorCommand("map.addArea", "Add an area", Story = "M-5")]
 public sealed record AddArea : IRequest;

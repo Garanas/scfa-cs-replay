@@ -50,5 +50,10 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// The factions a playable army may play, for the armies that may not play every faction.
         /// </summary>
         public Dictionary<string, IReadOnlyList<string>>? ArmyFactions { get; init; }
+
+        /// <summary>
+        /// The teams the map maker puts playable armies in; absent for none.
+        /// </summary>
+        public IReadOnlyList<TeamDto>? Teams { get; init; }
     }
 }

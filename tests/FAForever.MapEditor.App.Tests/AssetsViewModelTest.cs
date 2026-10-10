@@ -125,7 +125,8 @@ namespace FAForever.MapEditor.App.Tests
             shelf.Select("uec1101");
             Assert.AreEqual(AssetKind.Unit, shelf.Kind);
             Assert.AreEqual("UEF Residential Building", shelf.Shown!.Name);
-            StringAssert.Contains(shelf.ShownPlanned, "U-2");
+            StringAssert.Contains(shelf.ShownUse, "Place tool", "a unit is placed today");
+            Assert.AreEqual("", shelf.ShownPlanned);
 
             Assert.ThrowsException<ArgumentException>(() => shelf.Select("/env/none/props/nothing_prop.bp"));
         }

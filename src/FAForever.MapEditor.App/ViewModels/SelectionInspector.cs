@@ -148,8 +148,7 @@ public sealed partial class SelectionInspector : ObservableObject
         {
             if (!_sections.TryGetValue(kind, out SelectionSection? section))
             {
-                section = SelectionSection.For(kind);
-                section.Run = _run;
+                section = SelectionSection.For(kind, _run);
                 _sections[kind] = section;
             }
             section.Refresh(document, [.. things.Where(thing => thing.Kind == kind)]);
@@ -267,14 +266,20 @@ public abstract partial class SelectionSection : ObservableObject
     [ObservableProperty]
     public partial IReadOnlyList<string> Lines { get; private set; } = [];
 
-    public static SelectionSection For(ObjectKind kind) => kind switch
+    /// <param name="run">Runs a command with arguments, as a field of the inspector does.</param>
+    public static SelectionSection For(ObjectKind kind, Func<string, JsonObject, Task> run)
     {
-        ObjectKind.Marker => new MarkerSelection(),
-        ObjectKind.Prop => new PropSelection(),
-        ObjectKind.Decal => new DecalSelection(),
-        ObjectKind.Unit => new UnitSelection(),
-        _ => new AreaSelection(),
-    };
+        SelectionSection section = kind switch
+        {
+            ObjectKind.Marker => new MarkerSelection(),
+            ObjectKind.Prop => new PropSelection(),
+            ObjectKind.Decal => new DecalSelection(),
+            ObjectKind.Unit => new UnitSelection(run),
+            _ => new AreaSelection(),
+        };
+        section.Run = run;
+        return section;
+    }
 
     /// <summary>
     /// Shows the selected things of this kind as they are in a version of the document.
@@ -446,11 +451,72 @@ public sealed class DecalSelection : SelectionSection
 }
 
 /// <summary>
-/// The selected units: their names, blueprints and armies (user stories U-2, U-3).
+/// The selected units: their names, blueprints and armies (user stories U-2, U-3), the army they
+/// belong to (choosing another gives them to it, <c>units.moveToArmy</c>) and their group.
 /// </summary>
-public sealed class UnitSelection : SelectionSection
+public sealed partial class UnitSelection(Func<string, JsonObject, Task> run) : SelectionSection
 {
+    private string? _army;
+    private bool _showing;
+
     public override ObjectKind Kind => ObjectKind.Unit;
+
+    /// <summary>
+    /// The map's armies, to give the units to.
+    /// </summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<string> Armies { get; private set; } = [];
+
+    /// <summary>
+    /// The army the selected units belong to; null when they belong to different ones.
+    /// Choosing one gives them all to it, into its group <c>INITIAL</c>.
+    /// </summary>
+    public string? Army
+    {
+        get => _army;
+        set
+        {
+            if (value is null || value == _army)
+            {
+                return;
+            }
+            _army = value;
+            OnPropertyChanged();
+            if (!_showing)
+            {
+                _ = run("units.moveToArmy", new JsonObject { ["army"] = value });
+            }
+        }
+    }
+
+    /// <summary>
+    /// The group the selected units are in (<c>INITIAL/Town</c>), or <see cref="SelectionInspector.Mixed"/>.
+    /// </summary>
+    [ObservableProperty]
+    public partial string Group { get; private set; } = "";
+
+    public override void Refresh(MapDocument document, IReadOnlyList<ObjectRef> things)
+    {
+        base.Refresh(document, things);
+        PlacedUnit[] units = [.. things.Select(document.Find).OfType<PlacedUnit>()];
+        _showing = true;
+        try
+        {
+            if (!Armies.SequenceEqual(document.Armies.Select(army => army.Name)))
+            {
+                Armies = [.. document.Armies.Select(army => army.Name)];
+            }
+            string[] armies = [.. units.Select(unit => unit.Army).Distinct()];
+            _army = armies.Length == 1 ? armies[0] : null;
+            OnPropertyChanged(nameof(Army));
+            string[] groups = [.. units.Select(unit => UnitGroupEdits.PathText(unit.Group)).Distinct()];
+            Group = groups.Length == 1 ? (groups[0].Length == 0 ? "(the root group)" : groups[0]) : SelectionInspector.Mixed;
+        }
+        finally
+        {
+            _showing = false;
+        }
+    }
 
     protected override IEnumerable<string> LinesOf(MapDocument document, IReadOnlyList<ObjectRef> things) =>
         things.Select(document.Find).OfType<PlacedUnit>().Select(unit => $"{unit.Unit.Name}: {unit.Unit.Blueprint}, {unit.Army}");

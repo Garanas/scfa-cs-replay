@@ -14,7 +14,8 @@ namespace FAForever.MapEditor.App.Tools;
 /// selects nothing. Dragging on empty ground draws a box that selects what lies in it (with shift
 /// and control as a click). Dragging a selected thing moves the whole selection, one step of undo,
 /// keeping each thing on the terrain. Its keys in a view: Escape selects nothing, Q and E turn the
-/// selection by 15 degrees (with shift 90), the arrows move it an ogrid (with shift 8).
+/// selection by 15 degrees (with shift, or when only structures are selected, 90), the arrows move
+/// it an ogrid (with shift 8).
 /// </summary>
 /// <param name="kinds">What it picks (<see cref="Kinds"/>).</param>
 public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) : ObservableObject, IMapTool
@@ -161,7 +162,7 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             return false;
         }
         float step = shift ? 8 : 1;
-        float turn = shift ? 90 : 15;
+        float turn = shift || model.SelectionTurnsInQuarters ? 90 : 15;
         (string Command, JsonObject Arguments)? run = key switch
         {
             "Q" => ("edit.rotate", new JsonObject { ["degrees"] = -turn }),

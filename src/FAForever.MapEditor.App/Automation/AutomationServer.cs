@@ -594,6 +594,12 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["kind"] = model.Presets.Kind,
                 ["shown"] = new JsonArray([.. model.Presets.Shown.Select(preset => (JsonNode)JsonValue.Create(preset.Name))]),
             },
+            ["units"] = new JsonObject
+            {
+                ["place"] = model.Tool<UnitPlaceTool>().Describe(),
+                ["tree"] = model.Armies.DescribeGroups(),
+            },
+            ["armies"] = model.Armies.DescribeArmies(),
             ["generated"] = new JsonArray([.. model.Generation.States.Select(state => (JsonNode)new JsonObject
             {
                 ["id"] = state.Generator.Id,
