@@ -8,6 +8,7 @@ using Avalonia.Rendering;
 using Avalonia.OpenGL;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Threading;
+using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.App.Rendering.Gpu;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
@@ -23,7 +24,8 @@ namespace FAForever.MapEditor.App.Controls;
 
 /// <summary>
 /// The map in 3D on the graphics card (OpenGL, through ANGLE on Windows): the terrain with its
-/// layers and decals, lit as in the game (<see cref="TerrainRenderer"/>). The camera works as the
+/// layers and decals, lit as in the game (<see cref="TerrainRenderer"/>), with the props, units and
+/// markers (<see cref="ObjectRenderer"/>; <see cref="PickAt"/> finds the one under a point). The camera works as the
 /// FAF map editor's (<see cref="EditorCamera"/>): the wheel zooms towards the mouse, the middle
 /// mouse button moves over the map, space and the mouse turn and tilt, F focuses on the place
 /// under the mouse, Home shows the whole map. The left mouse button is left for editing. The
@@ -44,6 +46,9 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
 
     private GL? _gl;
     private TerrainRenderer? _renderer;
+    private ObjectRenderer? _objects;
+    private readonly ObjectModels _models;
+    private IReadOnlySet<PickedObject>? _highlighted;
     private MainViewModel? _model;
     private ProjectWatcher? _assetWatcher;
 
@@ -85,6 +90,55 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     public TerrainViewGpu()
     {
         Focusable = true;
+        _models = new ObjectModels(() => Dispatcher.UIThread.Post(RequestNextFrameRendering));
+    }
+
+    /// <summary>
+    /// The objects drawn highlighted (props, units and markers): the selection, set by whoever
+    /// keeps it; null or empty for none.
+    /// </summary>
+    public IReadOnlySet<PickedObject>? Highlighted
+    {
+        get => _highlighted;
+        set
+        {
+            _highlighted = value;
+            RequestNextFrameRendering();
+        }
+    }
+
+    /// <summary>
+    /// The props, units and markers drawn in the last frame, the draws they took, the models on
+    /// the card, the models read and being read, the blueprints without a model (drawn as a box),
+    /// and the triangles of the models.
+    /// </summary>
+    public (int Props, int Units, int Markers, int Draws, int Meshes, int Missing, int ModelsRead, int ModelsLoading, long Triangles) ObjectState
+    {
+        get
+        {
+            (int props, int units, int markers, int draws, int meshes, int missing, long triangles) = _objects?.State ?? default;
+            return (props, units, markers, draws, meshes, missing, _models.Loaded, _models.Loading, triangles);
+        }
+    }
+
+    /// <summary>
+    /// The object under a point of the view (in its own coordinates, as the mouse's), among the
+    /// kinds it shows, or null: the nearest prop, unit or marker the ray from the camera meets in
+    /// front of the terrain, else the decal on top there (<see cref="ObjectPicking"/>).
+    /// </summary>
+    public PickedObject? PickAt(Point at)
+    {
+        using Performance.Span measure = Performance.Measure("3d.pick");
+        if (_model?.ShownDocument is not MapDocument document)
+        {
+            return null;
+        }
+        EditorCamera camera = _model.Camera;
+        Vector2 view = InView(at);
+        (Vector3 origin, Vector3 direction) = camera.RayAt(view);
+        float? terrain = camera.PointAt(view) is Vector3 ground ? Vector3.Distance(origin, ground) / direction.Length() : null;
+        PickOptions shown = new PickOptions(_model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes);
+        return ObjectPicking.Pick(document, origin, direction, shown, _models.BoundsOf, terrain);
     }
 
     private ILogger Log => _model?.Logger("Rendering") ?? NullLogger.Instance;
@@ -160,6 +214,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                 throw new InvalidOperationException($"The 3D view needs OpenGL ES 3.0 or OpenGL 3.3; this computer offers {Renderer}");
             }
             _renderer = new TerrainRenderer(_gl, es, () => Dispatcher.UIThread.Post(RequestNextFrameRendering));
+            _objects = new ObjectRenderer(_gl, es, _models, () => Dispatcher.UIThread.Post(RequestNextFrameRendering));
             Error = null;
             Log.LogInformation("The 3D view runs on {Renderer}", Renderer);
         }
@@ -167,6 +222,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             Error = exception.Message;
             _renderer = null;
+            _objects?.Dispose();
+            _objects = null;
             Log.LogError(exception, "The 3D view could not start on {Renderer}: {Reason}", Renderer, exception.Message);
         }
     }
@@ -175,6 +232,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     {
         _renderer?.Dispose();
         _renderer = null;
+        _objects?.Dispose();
+        _objects = null;
         _gl = null;
         base.OnOpenGlDeinit(gl);
     }
@@ -221,7 +280,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                 {
                     using Performance.Span lookup = Performance.Measure("3d.find-texture");
                     return FindTexture(path, document, workspace);
-                }, BrushUnderMouse(document), BrushColor());
+                }, BrushUnderMouse(document), BrushColor(), Objects(camera));
             }
             catch (InvalidOperationException exception)
             {
@@ -309,10 +368,27 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         return PlaceUnderMouse(document) is Vector3 place ? BrushPreview.Of(tool, place.X, place.Z) : null;
     }
 
-    private Vector3 BrushColor() =>
-        this.TryFindResource("OverlayBrush", ActualThemeVariant, out object? overlay) && overlay is Avalonia.Media.ISolidColorBrush brush
+    private Vector3 BrushColor() => ThemeColor("OverlayBrush");
+
+    private Vector3 ThemeColor(string key) =>
+        this.TryFindResource(key, ActualThemeVariant, out object? token) && token is Avalonia.Media.ISolidColorBrush brush
             ? new Vector3(brush.Color.R / 255f, brush.Color.G / 255f, brush.Color.B / 255f)
             : Vector3.One;
+
+    /// <summary>
+    /// The objects to draw with the terrain and what of them shows (the overlays); null when the
+    /// renderer could not start or the workspace's assets are not read yet.
+    /// </summary>
+    private (ObjectRenderer, ObjectFrame)? Objects(EditorCamera camera)
+    {
+        if (_objects is null || _model is null)
+        {
+            return null;
+        }
+        ObjectFrame frame = new ObjectFrame(_model.Assets.Catalog, _model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes,
+            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"));
+        return (_objects, frame);
+    }
 
     private void ReportCursor()
     {
@@ -369,6 +445,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.DocumentChanged -= OnDocumentChanged;
             _model.CursorChanged -= OnDocumentChanged;
             _model.CameraMoved -= OnCameraMoved;
+            _model.OverlaysChanged -= OnDocumentChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
@@ -377,6 +454,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.DocumentChanged += OnDocumentChanged;
             _model.CameraMoved += OnCameraMoved;
             _model.CursorChanged += OnDocumentChanged;
+            _model.OverlaysChanged += OnDocumentChanged;
         }
         RequestNextFrameRendering();
     }

@@ -121,6 +121,16 @@ public sealed class EditorCamera(Func<float, float, float, float> smoothHeight, 
     }
 
     /// <summary>
+    /// The ray from the eye through a point of the view (normalized device coordinates, -1 to 1,
+    /// y up), as the camera is now: what lies under that point is what the ray meets first.
+    /// </summary>
+    public (Vector3 Origin, Vector3 Direction) RayAt(Vector2 view)
+    {
+        Vector3 eye = EyeOf(_current);
+        return (eye, Ray(_current, eye, view, Aspect));
+    }
+
+    /// <summary>
     /// What the camera sees of the ground, as the places (x, z) under the view's corners: top
     /// left, top right, bottom right, bottom left. A corner above the horizon is cut off at four
     /// times the camera's distance.
