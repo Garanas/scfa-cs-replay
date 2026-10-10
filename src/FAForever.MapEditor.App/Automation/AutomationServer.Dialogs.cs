@@ -77,7 +77,7 @@ public sealed partial class AutomationServer
     {
         string label = Text(arguments, "label");
         Visual root = arguments["under"]?.GetValue<string>() is { Length: > 0 } under
-            ? UiTree.Find(window, under) ?? throw new ArgumentException($"No control is named, labelled or reads '{under}'")
+            ? UiTree.FindPart(window, under) ?? throw new ArgumentException($"No control or heading is named, labelled or reads '{under}'")
             : window;
         Control control = UiTree.Find(root, label) ?? throw new ArgumentException($"No control is named, labelled or reads '{label}'");
         if (ToolRow.Reveal(control))
@@ -85,10 +85,21 @@ public sealed partial class AutomationServer
             await LetInputSettleAsync();
         }
         control.BringIntoView();
-        await LetInputSettleAsync();
-        await NextFrameAsync();
-        Point centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)
-            ?? throw new InvalidOperationException($"'{label}' is not in the window");
+        // measured once it stays where it is: a scroll and the layout after it may take frames
+        Point? last = null;
+        Point centre = default;
+        for (int frame = 0; frame < 20; frame++)
+        {
+            await LetInputSettleAsync();
+            await NextFrameAsync();
+            centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)
+                ?? throw new InvalidOperationException($"'{label}' is not in the window");
+            if (last == centre)
+            {
+                break;
+            }
+            last = centre;
+        }
         if (!new Rect(window.Bounds.Size).Contains(centre))
         {
             throw new InvalidOperationException($"'{label}' lies outside the window at {centre.X:0}, {centre.Y:0}");

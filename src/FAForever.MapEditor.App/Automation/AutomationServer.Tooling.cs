@@ -90,7 +90,7 @@ public sealed partial class AutomationServer
                 arguments["gpu"] = true;
                 return false;
             default:
-                return await RunDialogToolingAsync(command, arguments, result);
+                return await RunDialogToolingAsync(command, arguments, result) || await RunShellAsync(command, arguments, result);
         }
     }
 
@@ -107,7 +107,7 @@ public sealed partial class AutomationServer
         string label = Text(arguments, "label");
         JsonNode value = arguments["value"] ?? throw new ArgumentException("value is missing");
         Visual root = arguments["under"]?.GetValue<string>() is { Length: > 0 } under
-            ? UiTree.Find(window, under) ?? throw new ArgumentException($"No control is named, labelled or reads '{under}'")
+            ? UiTree.FindPart(window, under) ?? throw new ArgumentException($"No control or heading is named, labelled or reads '{under}'")
             : window;
         Control control = FindSettable(root, label) ?? throw new ArgumentException($"No control one can set is named, labelled or reads '{label}'");
         bool revealed = ToolRow.Reveal(control);

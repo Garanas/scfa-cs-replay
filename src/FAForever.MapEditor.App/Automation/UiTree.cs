@@ -48,6 +48,29 @@ public static class UiTree
     }
 
     /// <summary>
+    /// The part of the window <c>under</c> names: a control as <see cref="Find"/> finds it, or, for a
+    /// heading (a text: <c>Presets</c>, <c>Inspector</c>, <c>Markers</c>), the part it heads: its
+    /// <c>Section</c>, else the nearest panel around it that holds a control one can use.
+    /// </summary>
+    public static Control? FindPart(Visual root, string text, bool hidden = false)
+    {
+        Control? found = Find(root, text, hidden);
+        if (found is not TextBlock heading)
+        {
+            return found;
+        }
+        for (Visual? visual = heading.GetVisualParent(); visual is Control part && visual != root; visual = visual.GetVisualParent())
+        {
+            if (part is Controls.Section || part.GetVisualDescendants().Any(control => control is Button or TextBox or ComboBox or Slider or ListBox or TreeView or ToggleButton
+                && (hidden || ((Control)control).IsEffectivelyVisible)))
+            {
+                return part;
+            }
+        }
+        return found;
+    }
+
+    /// <summary>
     /// The controls of a described tree that are of a type (its name, ignoring case: <c>Button</c>)
     /// and whose name, label or text holds a text (ignoring case), as a flat list in the order of
     /// the tree, each without what lies in it: <c>ui {type, text}</c>.
