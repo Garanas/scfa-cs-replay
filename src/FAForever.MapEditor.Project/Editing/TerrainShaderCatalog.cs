@@ -25,13 +25,7 @@ namespace FAForever.MapEditor.Project.Editing
         bool Stratum8IsData,
         bool UpperIsAlbedo,
         bool IsFaf,
-        ImmutableArray<string> Uses)
-    {
-        /// <summary>
-        /// The name and summary, as a list of choices shows it.
-        /// </summary>
-        public string Title => $"{Name}: {Summary}";
-    }
+        ImmutableArray<string> Uses);
 
     /// <summary>
     /// The terrain shaders a map can name (user story S-4), from the techniques of FAF's

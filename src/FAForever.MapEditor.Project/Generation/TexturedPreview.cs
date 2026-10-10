@@ -10,8 +10,9 @@ namespace FAForever.MapEditor.Project.Generation
     /// each pixel the layers blended by their masks as the terrain shader blends them
     /// (<see cref="TerrainShaderCatalog"/>: four or eight strata, the whole or the upper half of a
     /// mask, stratum 8 and the upper layer as textures or as data), lit by the map's sun as the 3D
-    /// view lights it (<c>CalculateXPLighting</c> without the specular part), and under the water
-    /// tinted by its surface colour down to the abyss. A texture is read once and made smaller in
+    /// view lights it (<c>CalculateXPLighting</c> without the specular part); under the water the
+    /// water ramp's colour at the depth as <c>effects/terrain.fx</c> lays it over the terrain, then
+    /// the surface colour lerped in by the depth as FAF's <c>effects/water2.fx</c> does. A texture is read once and made smaller in
     /// steps of two, and a pixel takes the step whose texels are as large as the ground it covers,
     /// so a pixel shows the colour of what it covers, not one texel of it.
     /// </summary>
@@ -48,15 +49,8 @@ namespace FAForever.MapEditor.Project.Generation
                 {
                     continue;
                 }
-                DecodedTexture? decoded = null;
-                try
-                {
-                    decoded = texture(layer.AlbedoPath);
-                }
-                catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or ImageMagick.MagickException)
-                {
-                    // drawn grey, as a texture the workspace lacks
-                }
+                // a texture that cannot be read is drawn grey, as one the workspace lacks
+                DecodedTexture? decoded = TryRead(texture, layer.AlbedoPath);
                 float scale = layer.AlbedoScale > 0 ? layer.AlbedoScale : 4;
                 // an upper layer that cannot be read covers nothing, as in the 3D view
                 layers[i] = new Layer(decoded is null ? null : Mips.Of(decoded), scale, perPixel, i == last && last > 0 ? 0 : 1);
@@ -67,6 +61,7 @@ namespace FAForever.MapEditor.Project.Generation
             Vector3 sun = lighting.SunDirection.LengthSquared() > 0 ? Vector3.Normalize(lighting.SunDirection) : Vector3.UnitY;
             Water water = document.Water;
             Vector3 surface = Vector3.Clamp(water.SurfaceColor, Vector3.Zero, Vector3.One);
+            Mips? ramp = water.HasWater && !string.IsNullOrWhiteSpace(water.Ramp) && TryRead(texture, water.Ramp) is DecodedTexture rampTexture ? Mips.Of(rampTexture) : null;
 
             Color32[] pixels = new Color32[size * size];
             Parallel.For(0, size, row =>
@@ -97,16 +92,34 @@ namespace FAForever.MapEditor.Project.Generation
 
                     if (water.HasWater && height < water.Elevation)
                     {
-                        // as the 3D view's water: darker and more opaque with depth, down to the abyss
+                        // the depth from the surface down to the abyss, 0 to 1, as the water depth the game keeps
                         float t = Math.Clamp((water.Elevation - height) / Math.Max(water.Elevation - water.ElevationAbyss, 1), 0, 1);
-                        Vector3 tint = Vector3.Lerp(surface * 0.55f, surface * 0.12f, t);
-                        float alpha = Math.Clamp(0.25f + 0.75f * MathF.Sqrt(t), 0, 0.92f);
-                        colour = tint * alpha + colour * (1 - alpha);
+                        if (ramp is not null)
+                        {
+                            // the terrain under water, as terrain.fx: the ramp's colour at the depth, by its alpha
+                            (Vector3 rampColour, float rampAlpha) = ramp.Sample(0, t, 0.5f);
+                            colour = Vector3.Lerp(colour, rampColour, rampAlpha);
+                        }
+                        // the surface, as FAF's water2.fx: its colour lerped in by the depth, clamped to the colour's near and far
+                        float factor = Math.Clamp(t, Math.Min(water.ColorLerp.X, water.ColorLerp.Y), Math.Max(water.ColorLerp.X, water.ColorLerp.Y));
+                        colour = Vector3.Lerp(colour, surface, factor);
                     }
                     pixels[row * size + column] = new Color32(255, Byte(colour.X), Byte(colour.Y), Byte(colour.Z));
                 }
             });
             return TiledBuffer<Color32>.FromArray(size, size, pixels);
+        }
+
+        private static DecodedTexture? TryRead(Func<string, DecodedTexture?> texture, string path)
+        {
+            try
+            {
+                return texture(path);
+            }
+            catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or ImageMagick.MagickException)
+            {
+                return null;
+            }
         }
 
         /// <summary>

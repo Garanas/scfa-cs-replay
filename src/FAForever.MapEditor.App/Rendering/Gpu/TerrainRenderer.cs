@@ -257,7 +257,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         // the water reflects its own cube map, else the sky's
         uint reflection = findCube is null || !document.Water.HasWater ? 0 : _textures.GetCube(findCube(document.Water.Cubemap), skyCube);
         ReflectionDrawn = reflection != 0;
-        DrawWater(document, viewProjection, reflection, eye);
+        DrawWater(document, viewProjection, reflection, eye, findTexture);
         if (objects is { } shown)
         {
             // the symbols are solid: they hide what is behind them, the brush included
@@ -376,7 +376,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _gl.BindSampler((uint)unit, _cubeSampler);
     }
 
-    private void DrawWater(MapDocument document, Matrix4x4 viewProjection, uint reflection, Vector3 eye)
+    private void DrawWater(MapDocument document, Matrix4x4 viewProjection, uint reflection, Vector3 eye, Func<string, TextureSource?> findTexture)
     {
         Water water = document.Water;
         if (!water.HasWater)
@@ -393,11 +393,18 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         program.Set("uElevation", water.Elevation);
         program.Set("uWater", water.Elevation, water.ElevationAbyss);
         program.Set("uWaterColor", water.SurfaceColor.X, water.SurfaceColor.Y, water.SurfaceColor.Z);
-        // the reflection (L-1), as strong as the water's sky reflection, by its Fresnel bias and power
+        // the reflection (L-1), as strong as the water's sky reflection; FAF's water2.fx takes its old default of 1.5 as 1
         BindCube(CubeUnit, reflection);
         program.Set("uReflection", CubeUnit);
-        program.Set("uReflect", reflection != 0 ? 1 : 0, Math.Clamp(water.SkyReflection, 0, 2), Math.Clamp(water.FresnelBias, 0, 1), Math.Max(0.01f, water.FresnelPower));
+        float skyReflection = water.SkyReflection == 1.5f ? 1 : Math.Clamp(water.SkyReflection, 0, 2);
+        program.Set("uReflect", reflection != 0 ? 1 : 0, skyReflection, 0, 0);
         program.Set("uEye", eye.X, eye.Y, eye.Z);
+        // the water's ramp: its colour by depth (unit 1, the decals' before)
+        uint ramp = water.Ramp.Length == 0 ? 0 : _textures.Get(findTexture(water.Ramp), 0);
+        Bind(1, ramp, _clamp);
+        program.Set("uRamp", 1);
+        program.Set("uHasRamp", ramp != 0 ? 1 : 0);
+        program.Set("uColorLerp", water.ColorLerp.X, water.ColorLerp.Y);
         _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
         _waterQuad.Draw();
     }

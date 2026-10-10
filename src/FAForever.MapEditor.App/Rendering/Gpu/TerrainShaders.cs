@@ -169,8 +169,9 @@ internal static class TerrainShaders
 
     /// <summary>
     /// The water: the map's rectangle at the water's elevation, drawn after the decals (the sea
-    /// floor's decals lie under it). Its opacity and darkness grow with the depth, down to the
-    /// abyss elevation, in the water's surface colour.
+    /// floor's decals lie under it). With its ramp, as the game: the ramp's colour at the depth
+    /// (down to the abyss elevation) over the ground, then the surface colour; without one its
+    /// opacity and darkness grow with the depth, in the surface colour. It reflects its cube map.
     /// </summary>
     public static string WaterVertex(bool es) => Header(es) + """
         layout(location = 0) in vec2 aGrid;
@@ -193,10 +194,14 @@ internal static class TerrainShaders
         uniform vec2 uWater;
         uniform vec3 uWaterColor;
         // what the water reflects (its cube map, else the sky's), as strong as the water's sky
-        // reflection and the Fresnel term of its bias and power say; uReflect.x 0 for none
+        // reflection (y) and the Fresnel term say; uReflect.x 0 for none
         uniform samplerCube uReflection;
         uniform vec4 uReflect;
         uniform vec3 uEye;
+        // the water ramp (its colour by depth) and whether there is one; the surface colour's near and far
+        uniform sampler2D uRamp;
+        uniform int uHasRamp;
+        uniform vec2 uColorLerp;
 
         void main()
         {
@@ -207,18 +212,31 @@ internal static class TerrainShaders
             }
             float t = clamp(depth / max(uWater.x - uWater.y, 1.0), 0.0, 1.0);
             vec3 surface = clamp(uWaterColor, 0.0, 1.0);
-            vec3 color = mix(surface * 0.55, surface * 0.12, t);
-            float alpha = clamp(0.25 + 0.75 * sqrt(t), 0.0, 0.92);
+            // premultiplied, over the terrain
+            vec4 water;
+            if (uHasRamp == 1)
+            {
+                // as the game: the ramp's colour at the depth over the terrain by its alpha (terrain.fx),
+                // then the surface colour by the depth, clamped to its near and far (water2.fx)
+                vec4 ramp = texture(uRamp, vec2(t, 0.5));
+                float f = clamp(t, min(uColorLerp.x, uColorLerp.y), max(uColorLerp.x, uColorLerp.y));
+                water = vec4(ramp.rgb * ramp.a * (1.0 - f) + surface * f, 1.0 - (1.0 - ramp.a) * (1.0 - f));
+            }
+            else
+            {
+                float alpha = clamp(0.25 + 0.75 * sqrt(t), 0.0, 0.92);
+                water = vec4(mix(surface * 0.55, surface * 0.12, t) * alpha, alpha);
+            }
             if (uReflect.x > 0.5)
             {
                 vec3 view = normalize(vec3(vPlace.x, uWater.x, vPlace.y) - uEye);
                 vec3 reflected = reflect(view, vec3(0.0, 1.0, 0.0));
-                float fresnel = clamp(uReflect.z + (1.0 - uReflect.z) * pow(1.0 - max(-view.y, 0.0), uReflect.w), 0.0, 1.0);
+                // Schlick's approximation with FAF's F0 of 0.08 (water2.fx), the surface flat
+                float fresnel = 0.08 + 0.92 * pow(1.0 - clamp(-view.y, 0.0, 1.0), 5.0);
                 float strength = clamp(fresnel * uReflect.y, 0.0, 1.0);
-                color = mix(color, texture(uReflection, reflected).rgb, strength);
-                alpha = max(alpha, strength);
+                water = water * (1.0 - strength) + vec4(texture(uReflection, reflected).rgb * strength, strength);
             }
-            outColor = vec4(color * alpha, alpha);
+            outColor = water;
         }
         """;
 
