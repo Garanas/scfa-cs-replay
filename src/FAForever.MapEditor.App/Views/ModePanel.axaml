@@ -121,7 +121,7 @@
                                     AutomationProperties.Name="{Binding Name, StringFormat='Add the selected decals to {0}'}" />
                             <Button Content="Take out" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.RemoveFromGroupCommand}" CommandParameter="{Binding}"
                                     AutomationProperties.Name="{Binding Name, StringFormat='Take the selected decals out of {0}'}" />
-                            <Button Classes="beside" Content="×" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.DeleteGroupCommand}" CommandParameter="{Binding}"
+                            <Button Classes="beside" Content="Ã—" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.DeleteGroupCommand}" CommandParameter="{Binding}"
                                     AutomationProperties.Name="{Binding Name, StringFormat='Delete the decal group {0}'}" ToolTip.Tip="Its decals stay on the map" />
                           </StackPanel>
                         </StackPanel>

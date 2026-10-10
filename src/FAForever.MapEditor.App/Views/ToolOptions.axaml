@@ -76,7 +76,8 @@
                 <StackPanel Classes="inline">
                   <controls:AssetThumbnail Source="{Binding Image}" DecodeWidth="64" Width="{StaticResource ChipHeight}" Height="{StaticResource ChipHeight}"
                                            IsVisible="{Binding Image, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.Name="Picture of the decal to place" />
-                  <TextBlock Classes="label" Text="{Binding Title}" ToolTip.Tip="{Binding Decal}" AutomationProperties.Name="Decal to place" />
+                  <TextBlock Classes="label" Text="{Binding Title}" ToolTip.Tip="{Binding Help}" AutomationProperties.Name="Decal to place"
+                             AutomationProperties.HelpText="{Binding Help}" />
                   <Button Content="Choose..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="decals.choose"
                           AutomationProperties.Name="Choose the decal to place" AutomationProperties.HelpText="Opens the picker (Ctrl+P); a decal chosen on the shelf is chosen too" />
                 </StackPanel>
@@ -86,7 +87,7 @@
                           AutomationProperties.HelpText="Its length follows the texture's shape; dragging while placing sets the width too" />
                 </StackPanel>
                 <StackPanel Classes="inline">
-                  <TextBlock Classes="label" Text="{Binding Heading, StringFormat='Turned: {0:0}°'}" />
+                  <TextBlock Classes="label" Text="{Binding Heading, StringFormat='Turned: {0:0}Â°'}" />
                   <Slider Minimum="-180" Maximum="180" Value="{Binding Heading}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Turn of a new decal in degrees" />
                 </StackPanel>
                 <StackPanel Classes="inline">
@@ -95,7 +96,6 @@
                           AutomationProperties.Name="Distance a new decal shows within"
                           AutomationProperties.HelpText="The game does not draw the decal when the camera is further away (its cut-off LOD); maps mostly use 200 to 800" />
                 </StackPanel>
-                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </StackPanel>
             </DataTemplate>
             <!-- how either brush's picture is turned; the shape itself is the first choice of the row -->

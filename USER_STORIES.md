@@ -186,8 +186,15 @@ reads again when it changes; and nothing that generates runs by itself.
 ## D: Decals
 
 - [ ] **D-1 Place decals.** Place from the picker, move, rotate and scale on the terrain; the
-      distances at which they show; their order. Today: drawn in 3D.
-- [ ] **D-2 Decal groups.** Group decals, show and hide groups.
+      distances at which they show; their order. Today: the Place tool (the decal from the picker,
+      Ctrl+P or the shelf; a click places it, a drag sizes and turns it; a tile dropped on a view);
+      the Select tool selects, moves, turns and scales them (a drag mode for both sides, the width
+      or the length; plus and minus); the inspector edits width, length and the distances of many
+      at once; bring forward, send back, to front, to back; drawn in 3D, the selection highlighted.
+      Missing: handles in the views, mirroring with symmetry.
+- [x] **D-2 Decal groups.** Group decals, show and hide groups. Today: the Decals panel's groups,
+      made from the selection, renamed, filled and emptied, selected, deleted; hidden groups are not
+      drawn in 3D or picked (an editor setting, not saved).
 
 ## U: Units
 
