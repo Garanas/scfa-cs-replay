@@ -595,6 +595,15 @@
   <Style Selector="Border.thumbnail Path.icon">
     <Setter Property="Stroke" Value="{DynamicResource TextTertiaryBrush}" />
   </Style>
+  <!-- a picture in a tool's options row: the prop the place tool places -->
+  <Style Selector="Border.toolthumb">
+    <Setter Property="Width" Value="{StaticResource ToolThumbnailSize}" />
+    <Setter Property="Height" Value="{StaticResource ToolThumbnailSize}" />
+  </Style>
+  <!-- a short number typed in a row: a palette item's weight -->
+  <Style Selector="TextBox.number">
+    <Setter Property="Width" Value="{StaticResource ToolNumberWidth}" />
+  </Style>
   <!-- a small count on a picture: the uses, the variants -->
   <Style Selector="Border.badge">
     <Setter Property="Padding" Value="{StaticResource BadgePadding}" />

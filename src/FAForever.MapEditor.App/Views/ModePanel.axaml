@@ -97,6 +97,85 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
+            <!-- how the place and paint tools stand props on the terrain (P-1, P-2) -->
+            <DataTemplate DataType="vm:PropPlacementSection">
+              <Border Classes="group">
+                <StackPanel Classes="stack" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Props}" x:DataType="vm:PropsViewModel">
+                  <TextBlock Classes="overline" Text="{Binding Source=Placing, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Stand" Width="{StaticResource FactLabelWidth}" VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding Alignments}" SelectedItem="{Binding Alignment}" HorizontalAlignment="Stretch" AutomationProperties.Name="How placed props stand"
+                              AutomationProperties.HelpText="ByCategory: rocks and the like tilt with the ground, trees stand upright; Upright; Terrain: every prop tilts with the ground" />
+                  </DockPanel>
+                  <CheckBox Content="Turn at random" IsChecked="{Binding RandomTurn}" AutomationProperties.Name="Turn each placed prop at random" />
+                  <StackPanel>
+                    <TextBlock Classes="label" Text="{Binding RandomTilt, StringFormat='Tilt at random: up to {0:0}°'}" />
+                    <Slider Minimum="0" Maximum="45" Value="{Binding RandomTilt}" AutomationProperties.Name="Most a placed prop leans at random in degrees" />
+                  </StackPanel>
+                  <StackPanel>
+                    <TextBlock Classes="label" Text="{Binding ScaleMin, StringFormat='Scale from {0:0.00}'}" />
+                    <Slider Minimum="0.1" Maximum="4" Value="{Binding ScaleMin}" AutomationProperties.Name="Smallest scale of a placed prop" />
+                    <TextBlock Classes="label" Text="{Binding ScaleMax, StringFormat='to {0:0.00}'}" />
+                    <Slider Minimum="0.1" Maximum="4" Value="{Binding ScaleMax}" AutomationProperties.Name="Largest scale of a placed prop" />
+                  </StackPanel>
+                  <StackPanel>
+                    <TextBlock Classes="label" Text="{Binding Sink, StringFormat='Sink into the ground: {0:0.00}'}" />
+                    <Slider Minimum="0" Maximum="5" Value="{Binding Sink}" AutomationProperties.Name="How far placed props sink into the terrain"
+                            AutomationProperties.HelpText="In game units; Drop to ground sinks the selected props as far" />
+                  </StackPanel>
+                  <CheckBox Content="Props follow the terrain" IsChecked="{Binding FollowTerrain, Mode=OneWay}"
+                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.followTerrain"
+                            AutomationProperties.HelpText="A height brush that raises or lowers the terrain sets the props on it back on the ground, in the same step of undo" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+            <!-- the props the paint tool paints, with their weights (P-2) -->
+            <DataTemplate DataType="vm:PropPaletteSection">
+              <Border Classes="group">
+                <StackPanel Classes="stack" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Props}" x:DataType="vm:PropsViewModel">
+                  <TextBlock Classes="overline" Text="{Binding Source=Palette, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <ItemsControl ItemsSource="{Binding Palette}" AutomationProperties.Name="Palette">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:PaletteItem">
+                        <DockPanel>
+                          <Button DockPanel.Dock="Right" Classes="beside" Content="×"
+                                  Command="{Binding $parent[ItemsControl].((vm:PropsViewModel)DataContext).RemoveItemCommand}" CommandParameter="{Binding}"
+                                  AutomationProperties.Name="{Binding Name, StringFormat='Take {0} out of the palette'}" />
+                          <TextBox DockPanel.Dock="Right" Classes="mono number" Text="{Binding Weight}"
+                                   AutomationProperties.Name="{Binding Name, StringFormat='Weight of {0}'}"
+                                   AutomationProperties.HelpText="How often it is painted against the others; 0 never" />
+                          <Border DockPanel.Dock="Left" Classes="thumbnail toolthumb">
+                            <controls:AssetThumbnail Model="{Binding Model}" DecodeWidth="64" AutomationProperties.Name="{Binding Name, StringFormat='Picture of {0}'}" />
+                          </Border>
+                          <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="{StaticResource InlineGap}" />
+                        </DockPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding IsPaletteEmpty}"
+                             Text="Empty: add props, or choose them on the shelf while the paint tool is active." />
+                  <Button Content="Add a prop..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.addToPalette"
+                          AutomationProperties.HelpText="Choose a prop for the palette in the picker" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+            <!-- the mass and energy of the props, for the map and per area (P-5) -->
+            <DataTemplate DataType="vm:PropReclaimSection">
+              <Border Classes="group">
+                <StackPanel Classes="stack" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Props}" x:DataType="vm:PropsViewModel">
+                  <TextBlock Classes="overline" Text="{Binding Source=Reclaim, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <TextBlock Classes="mono" TextWrapping="Wrap" Text="{Binding ReclaimText}" AutomationProperties.Name="Reclaim of the map" />
+                  <TextBlock Classes="caption warning" TextWrapping="Wrap" Text="{Binding ReclaimNote}" IsVisible="{Binding ReclaimNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                  <ItemsControl ItemsSource="{Binding ReclaimAreas}" AutomationProperties.Name="Reclaim per area">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
             <!-- the mode's overlays; a check box runs the overlay's command, as its chip does -->
             <DataTemplate DataType="vm:OverlaySection">
               <Border Classes="group">

@@ -139,6 +139,43 @@
                   <StackPanel Classes="stack">
                     <TextBlock Classes="heading" Text="{Binding Title}" />
                     <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected props" />
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Pitch" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding Pitch, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Pitch of the selected props"
+                               AutomationProperties.HelpText="In degrees, leaning each prop towards its own z; a value tilts every selected prop; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Roll" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding Roll, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Roll of the selected props"
+                               AutomationProperties.HelpText="In degrees, leaning each prop towards its own -x; a value tilts every selected prop; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Scale" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding Scale, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Scale of the selected props"
+                               AutomationProperties.HelpText="1 is the model's own size; a value scales every selected prop; a dash when they differ" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Reclaim" Width="{StaticResource FactLabelWidth}" />
+                      <TextBlock TextWrapping="Wrap" Text="{Binding Reclaim}" AutomationProperties.Name="Reclaim of the selected props" />
+                    </DockPanel>
+                    <StackPanel Classes="inline">
+                      <Button Content="Align to terrain" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.alignToTerrain"
+                              AutomationProperties.HelpText="Tilt each prop so that it stands along the terrain's normal, keeping its heading" />
+                      <Button Content="Upright" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.upright"
+                              AutomationProperties.HelpText="Stand each prop straight up, keeping its heading" />
+                    </StackPanel>
+                    <StackPanel Classes="inline">
+                      <Button Content="Drop to ground" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.dropToGround"
+                              AutomationProperties.HelpText="Put each prop on the terrain, sunk by the Props panel's sink" />
+                      <Button Content="Randomise" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.randomize"
+                              AutomationProperties.HelpText="Turn each prop at random and scale it between the Props panel's scales" />
+                    </StackPanel>
+                    <StackPanel Classes="inline">
+                      <Button Content="Replace..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.replace"
+                              AutomationProperties.HelpText="Give the props another blueprint, chosen in the picker" />
+                      <Button Content="Random variant" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.randomVariant"
+                              AutomationProperties.HelpText="Give each prop a variant of its family at random" />
+                    </StackPanel>
                   </StackPanel>
                 </Border>
               </DataTemplate>

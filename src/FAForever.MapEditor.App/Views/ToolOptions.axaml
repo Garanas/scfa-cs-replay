@@ -4,6 +4,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:tools="using:FAForever.MapEditor.App.Tools"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
              x:Class="FAForever.MapEditor.App.Views.ToolOptions"
              x:DataType="vm:MainViewModel">
   <Border Classes="toolbar options">
@@ -57,6 +58,56 @@
             <!-- selecting and moving what lies on the map (F-11) -->
             <DataTemplate DataType="tools:SelectTool">
               <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+            </DataTemplate>
+            <!-- placing props one by one (P-1): the prop a click places, chosen in the picker or on the shelf -->
+            <DataTemplate DataType="tools:PropPlaceTool">
+              <StackPanel Classes="toolrow">
+                <Border Classes="thumbnail toolthumb">
+                  <controls:AssetThumbnail Model="{Binding Prop.Model}" DecodeWidth="64" IsVisible="{Binding HasProp}" AutomationProperties.Name="Picture of the prop to place" />
+                </Border>
+                <TextBlock Classes="label" Text="{Binding Name}" AutomationProperties.Name="Prop to place" />
+                <Button Content="Choose..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.choose"
+                        AutomationProperties.HelpText="Choose the prop to place in the picker; a prop chosen on the shelf in the Props mode is chosen as well" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </StackPanel>
+            </DataTemplate>
+            <!-- painting props of the palette (P-2), only where a layer covers (P-3) -->
+            <DataTemplate DataType="tools:PropPaintTool">
+              <StackPanel Classes="toolrow">
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0}'}" />
+                  <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Paint brush radius in ogrids" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Density, StringFormat='Density: {0:0.#}'}" />
+                  <Slider Minimum="0.1" Maximum="50" Value="{Binding Density}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Props per 100 square ogrids"
+                          AutomationProperties.HelpText="How many props a stroke paints on a square of 10 by 10 ogrids, up to the spacing" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Spacing, StringFormat='Spacing: {0:0.#}'}" />
+                  <Slider Minimum="0" Maximum="32" Value="{Binding Spacing}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Least distance between props in ogrids" />
+                </StackPanel>
+                <TextBlock Classes="label" Text="Only on" />
+                <ComboBox ItemsSource="{Binding Layers}" SelectedItem="{Binding OnlyOn}" MaxWidth="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Paint only where this layer covers"
+                          AutomationProperties.HelpText="A stratum whose mask must cover the place at least the threshold" />
+                <TextBlock Classes="label" Text="Not on" />
+                <ComboBox ItemsSource="{Binding Layers}" SelectedItem="{Binding NotOn}" MaxWidth="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Paint nowhere this layer covers"
+                          AutomationProperties.HelpText="A stratum whose mask must not cover the place as much as the threshold" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Threshold, StringFormat='Covered: {0:P0}'}" />
+                  <Slider Minimum="0" Maximum="1" Value="{Binding Threshold}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="How much a layer covers to count" />
+                </StackPanel>
+              </StackPanel>
+            </DataTemplate>
+            <!-- taking props away with a brush (P-2) -->
+            <DataTemplate DataType="tools:PropEraseTool">
+              <StackPanel Classes="toolrow">
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
+                  <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Eraser radius in ogrids" />
+                </StackPanel>
+                <CheckBox Content="Only the palette's props" IsChecked="{Binding OnlyPalette}" AutomationProperties.Name="Erase only the props of the palette" />
+              </StackPanel>
             </DataTemplate>
             <!-- how either brush's picture is turned; the shape itself is the first choice of the row -->
             <DataTemplate DataType="tools:BrushShapeSettings">

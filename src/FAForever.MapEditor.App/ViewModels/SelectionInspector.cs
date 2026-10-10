@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
@@ -34,6 +35,17 @@ public sealed partial class SelectionInspector : ObservableObject
         _selection = selection;
         _run = run;
     }
+
+    /// <summary>
+    /// The workspace's assets, for what a section shows of the selected things' blueprints (a
+    /// prop's reclaim); empty until it is given.
+    /// </summary>
+    public Func<AssetCatalog> Catalog { get; set; } = () => AssetCatalog.Empty;
+
+    /// <summary>
+    /// Runs a command with arguments, as a section's field does when a value is typed.
+    /// </summary>
+    public Task Run(string id, JsonObject arguments) => _run(id, arguments);
 
     /// <summary>
     /// The selected thing's name, or how many are selected.
@@ -149,6 +161,7 @@ public sealed partial class SelectionInspector : ObservableObject
             if (!_sections.TryGetValue(kind, out SelectionSection? section))
             {
                 section = SelectionSection.For(kind);
+                section.Owner = this;
                 _sections[kind] = section;
             }
             section.Refresh(document, [.. things.Where(thing => thing.Kind == kind)]);
@@ -247,6 +260,11 @@ public abstract partial class SelectionSection : ObservableObject
     public abstract ObjectKind Kind { get; }
 
     /// <summary>
+    /// The inspector the section is part of: its catalogue and commands.
+    /// </summary>
+    public SelectionInspector? Owner { get; set; }
+
+    /// <summary>
     /// E.g. <c>3 props</c>.
     /// </summary>
     [ObservableProperty]
@@ -320,14 +338,117 @@ public sealed class MarkerSelection : SelectionSection
 }
 
 /// <summary>
-/// The selected props: their blueprints (user story P-1).
+/// The selected props: their blueprints, their tilt (pitch and roll) and scale, editable for one or
+/// many at once, and what they give when reclaimed (user stories P-1, P-5).
 /// </summary>
-public sealed class PropSelection : SelectionSection
+public sealed partial class PropSelection : SelectionSection
 {
+    private string _pitch = "";
+    private string _roll = "";
+    private string _scale = "";
+
     public override ObjectKind Kind => ObjectKind.Prop;
+
+    /// <summary>
+    /// How far the selected props lean towards their own z, in degrees; typing one tilts each.
+    /// </summary>
+    public string Pitch
+    {
+        get => _pitch;
+        set => Type(value, ref _pitch, nameof(Pitch), "props.tilt", "pitch");
+    }
+
+    /// <summary>
+    /// How far the selected props lean towards their own -x, in degrees; typing one tilts each.
+    /// </summary>
+    public string Roll
+    {
+        get => _roll;
+        set => Type(value, ref _roll, nameof(Roll), "props.tilt", "roll");
+    }
+
+    /// <summary>
+    /// The selected props' scale (1 is the model's own size); typing one scales each.
+    /// </summary>
+    public string Scale
+    {
+        get => _scale;
+        set => Type(value, ref _scale, nameof(Scale), "props.scale", "scale");
+    }
+
+    /// <summary>
+    /// What the selected props give when reclaimed (user story P-5).
+    /// </summary>
+    [ObservableProperty]
+    public partial string Reclaim { get; private set; } = "";
+
+    public override void Refresh(MapDocument document, IReadOnlyList<ObjectRef> things)
+    {
+        base.Refresh(document, things);
+        Prop[] props = [.. things.Select(document.Find).OfType<Prop>()];
+        List<float> pitches = [];
+        List<float> rolls = [];
+        foreach (Prop prop in props)
+        {
+            (float pitch, float roll) = PropOrientation.Tilt(prop);
+            pitches.Add(MathF.Round(pitch * 180 / MathF.PI, 1));
+            rolls.Add(MathF.Round(roll * 180 / MathF.PI, 1));
+        }
+        Show(ref _pitch, nameof(Pitch), Shared(pitches, "0.#"));
+        Show(ref _roll, nameof(Roll), Shared(rolls, "0.#"));
+        Show(ref _scale, nameof(Scale), Shared(props.Select(PropOrientation.UniformScale), "0.###"));
+        Reclaim = props.Length == 0 ? "" : PropsViewModel.Describe(PropReclaim.Of(props, Owner?.Catalog() ?? AssetCatalog.Empty));
+    }
 
     protected override IEnumerable<string> LinesOf(MapDocument document, IReadOnlyList<ObjectRef> things) =>
         Counted(things.Select(document.Find).OfType<Prop>().Select(prop => Path.GetFileNameWithoutExtension(prop.Blueprint)));
+
+    private static string Shared(IEnumerable<float> values, string format)
+    {
+        string? shown = null;
+        foreach (float value in values)
+        {
+            // -0 and 0 are the same lean
+            string text = (value == 0 ? 0 : value).ToString(format, CultureInfo.InvariantCulture);
+            if (shown is not null && shown != text)
+            {
+                return SelectionInspector.Mixed;
+            }
+            shown = text;
+        }
+        return shown ?? "";
+    }
+
+    private void Show(ref string field, string property, string value)
+    {
+        if (field != value)
+        {
+            field = value;
+            OnPropertyChanged(property);
+        }
+    }
+
+    /// <summary>
+    /// A value typed into a field: a number goes to every selected prop through the command;
+    /// anything else changes nothing and the field shows its value again.
+    /// </summary>
+    private void Type(string value, ref string field, string property, string command, string argument)
+    {
+        if (value == field)
+        {
+            return;
+        }
+        if (Owner is null || !double.TryParse(value.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double number) || !double.IsFinite(number))
+        {
+            string shown = field;
+            field = value;
+            OnPropertyChanged(property);
+            field = shown;
+            OnPropertyChanged(property);
+            return;
+        }
+        _ = Owner.Run(command, new JsonObject { [argument] = number });
+    }
 }
 
 /// <summary>
