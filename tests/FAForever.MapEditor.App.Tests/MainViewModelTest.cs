@@ -567,8 +567,8 @@ namespace FAForever.MapEditor.App.Tests
             await model.OpenAsync(HardFfa);
             model.Assets.Use(TestAssets.Catalog());
 
-            Assert.IsFalse(model.DropAsset("env/evergreen/props/rocks/rock01_prop.bp", 40, 60));
-            StringAssert.Contains(model.Status, "P-1", "nothing takes it yet: what will");
+            Assert.IsFalse(model.DropAsset("env/tundra/layers/tund_rock_albedo.dds", 40, 60));
+            StringAssert.Contains(model.Status, "S-2", "nothing takes a texture: what does");
 
             List<AssetDropEventArgs> drops = [];
             model.AssetDropped += (_, drop) =>

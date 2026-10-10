@@ -899,5 +899,72 @@ namespace FAForever.MapEditor.App.Tests
             }
             window.Close();
         });
+
+        [TestMethod]
+        public Task ThePropsModePlacesWithAClickAndShowsThePropInTheInspector() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            model.Assets.Use(TestAssets.Catalog());
+            Show(window, MapViewTab.Top);
+            await model.Commands.RunAsync("props.choose", new JsonObject { ["key"] = "env/evergreen/props/rocks/rock01_prop.bp" }, interactive: false);
+            Dispatcher.UIThread.RunJobs();
+            T Named<T>(string name) where T : Control => window.GetVisualDescendants().OfType<T>()
+                .Single(control => Avalonia.Automation.AutomationProperties.GetName(control) == name);
+            Assert.AreEqual("rock01", Named<TextBlock>("Prop to place").Text, "the tool's options show the prop to place");
+
+            int before = model.ShownDocument!.Props.Length;
+            Click(window, window.MapView);
+            Assert.AreEqual(before + 1, model.ShownDocument!.Props.Length, "a click places it");
+            Assert.AreEqual("Place a prop", model.Map!.Session.UndoDescription);
+            TextBox pitch = Named<TextBox>("Pitch of the selected props");
+            Assert.IsTrue(pitch.IsEffectivelyVisible, "the inspector shows the new prop's tilt");
+
+            Click(window, window.GetVisualDescendants().OfType<Button>().Single(button => button.Content as string == "Upright"));
+            Assert.AreEqual("Stand the props upright", model.Map.Session.UndoDescription);
+            Assert.AreEqual("0", pitch.Text);
+
+            // the panel's palette: an item with its weight and its cross
+            model.SelectTool("props.paint");
+            await model.Commands.RunAsync("props.addToPalette", new JsonObject { ["key"] = "env/evergreen/props/trees/pine06_prop.bp" }, interactive: false);
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual("1", Named<TextBox>("Weight of pine06").Text);
+            Assert.IsTrue(Named<ComboBox>("Paint only where this layer covers").IsEffectivelyVisible);
+            Click(window, Named<Button>("Take pine06 out of the palette"));
+            Assert.AreEqual(0, model.Props.Palette.Count);
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task EveryControlOfThePropsModeHasALabelOrText() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            model.Assets.Use(TestAssets.Catalog());
+            await model.Commands.RunAsync("props.addToPalette", new JsonObject { ["key"] = "env/evergreen/props/trees/pine06_prop.bp" }, interactive: false);
+            await model.Commands.RunAsync("props.place", new JsonObject { ["key"] = "env/evergreen/props/trees/pine06_prop.bp", ["x"] = 40, ["z"] = 40 }, interactive: false);
+            List<string> unlabelled = [];
+            void Check(JsonArray nodes)
+            {
+                foreach (JsonObject node in nodes.Cast<JsonObject>())
+                {
+                    string type = node["type"]!.GetValue<string>();
+                    if (type is "Slider" or "ComboBox" or "TextBox" or "ListBox" or "Button" or "CheckBox" && node["label"] is null && node["text"] is null)
+                    {
+                        unlabelled.Add($"{type} at {node["bounds"]!.ToJsonString()}");
+                    }
+                    if (node["children"] is JsonArray children)
+                    {
+                        Check(children);
+                    }
+                }
+            }
+            foreach (string tool in new[] { "props.select", "props.place", "props.paint", "props.erase" })
+            {
+                model.SelectTool(tool);
+                Dispatcher.UIThread.RunJobs();
+                Check(UiTree.Describe(window, hidden: true));
+            }
+            CollectionAssert.AreEqual(Array.Empty<string>(), unlabelled, "a screen reader and an agent need a name for each");
+            window.Close();
+        });
     }
 }

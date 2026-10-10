@@ -54,7 +54,7 @@ public static class Menus
             Mode("water", "water.toggle"),
             Mode("lighting", "lighting.preset"),
             Mode("markers", "markers.connectPaths", "markers.addChain", "markers.adaptive", "markers.placePreset"),
-            Mode("props", "props.addPalette", "props.addRule", "props.reclaim"),
+            Mode("props", "props.choose", "props.addToPalette", "props.followTerrain", Separator, "props.alignToTerrain", "props.upright", "props.dropToGround", "props.randomize", "props.replace", "props.randomVariant", Separator, "props.reclaim", "props.addRule"),
             Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack"),
             Mode("units", "units.pick", "units.addGroup", "units.selectGroup", "units.placePreset", "units.asWrecks"),
             new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.reload", Separator, "assets.brushesFolder"]),

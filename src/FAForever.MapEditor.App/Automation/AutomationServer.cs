@@ -609,6 +609,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             })]),
             ["walkability"] = GenerateWalkabilityHandler.Describe(model.Walkability),
             ["problems"] = CheckMapHandler.Describe(model.Problems),
+            ["props"] = model.Props.Describe(),
             ["gpu"] = new JsonObject
             {
                 ["renderer"] = window.View3D.Renderer,

@@ -116,6 +116,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeDecals();
         InitializeUnits();
         InitializeMarkers();
+        Props = new PropsViewModel(this);
     }
 
     /// <summary>
@@ -173,6 +174,12 @@ public sealed partial class MainViewModel : ObservableObject
     /// What is generated when asked, and which results are out of date (user story F-7).
     /// </summary>
     public GenerationViewModel Generation { get; }
+
+    /// <summary>
+    /// The Props mode: how props are placed, the palette, following the terrain, the reclaim
+    /// (user stories P-1, P-2, P-3, P-5).
+    /// </summary>
+    public PropsViewModel Props { get; }
 
     /// <summary>
     /// A logger of the editor, by what it is about: <c>Commands</c>, <c>Files</c>, <c>Workspace</c>,
@@ -455,6 +462,8 @@ public sealed partial class MainViewModel : ObservableObject
         _stroke = null;
         if (keep)
         {
+            // the props on terrain a height brush moved go with it, in the same step (P-1)
+            Props.FollowStroke(stroke, Map!.Session.Document);
             stroke.Commit();
         }
         else

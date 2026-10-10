@@ -188,16 +188,28 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## P: Props
 
-- [ ] **P-1 Place props.** Place, select, move, rotate, scale and delete props (from the picker).
-- [ ] **P-2 Paint props.** A palette of props with weights; density, random scale and rotation;
-      an eraser.
+- [x] **P-1 Place props.** Place, select, move, rotate, scale and delete props (from the picker).
+      Today: the Props mode's Select and Place tools (a click places the prop chosen with
+      Choose..., Ctrl+P or on the shelf; a prop dropped from the shelf is placed where it lands);
+      how placed props stand (by kind: rocks tilt with the ground, trees stand upright; upright;
+      with the terrain), random turn, tilt and scale, a sink; on the selection: align to the
+      terrain, upright, drop to the ground, pitch, roll and scale in the inspector, turn and scale
+      at random, replace the blueprint, a random variant of each family; props follow the terrain
+      a height brush moves, in the same step. Missing: handles in the views.
+- [x] **P-2 Paint props.** A palette of props with weights; density, random scale and rotation;
+      an eraser. Today: the paint tool (radius, density, spacing; the Placing settings), the
+      palette in the Props panel (from the picker, or the shelf while painting) saved as presets
+      (Palettes), the eraser (all props, or only the palette's).
 - [ ] **P-3 Paint where a layer is.** Paint only where a stratum or mask covers the terrain (trees
-      only on grass), and not where another one does.
+      only on grass), and not where another one does. Today: only on and not on a stratum, with
+      a threshold. Missing: the mask layers of K-1 as choices.
 - [ ] **P-4 Props from rules.** Rules that place props from layers: where a stratum or mask allows
       (tree groups), where others forbid, with density, clustering and spacing; generated when
       asked (F-7), into their own layer, so they are generated again after the terrain moves
       without touching props placed by hand.
-- [ ] **P-5 Reclaim.** The mass and energy of the props, for the map and per area.
+- [x] **P-5 Reclaim.** The mass and energy of the props, for the map and per area. Today: the
+      Props panel's Reclaim (the map, per area), the selected props' in the inspector, from the
+      blueprints' values (`props.reclaim`).
 
 ## D: Decals
 

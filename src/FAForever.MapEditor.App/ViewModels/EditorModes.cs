@@ -155,14 +155,17 @@ public static class EditorModes
 
         new ModeDefinition("props", "Props", "Icon.Props", "Place and paint props, props from rules, reclaim", 1, "F7", "P-1",
             [
-                new ToolDefinition("props.place", "Place", "P-1", "Place, move, rotate, scale and delete props"),
-                new ToolDefinition("props.paint", "Paint", "P-2", "Paint a palette of props, only where chosen layers are (P-3)"),
-                new ToolDefinition("props.erase", "Erase", "P-2", "Take props away with a brush"),
+                new ToolDefinition("props.select", "Select", "F-11") { Make = model => new SelectTool(model, ObjectKinds.Props) },
+                new ToolDefinition("props.place", "Place", "P-1") { Make = model => new PropPlaceTool(model) },
+                new ToolDefinition("props.paint", "Paint", "P-2") { Make = model => new PropPaintTool(model) },
+                new ToolDefinition("props.erase", "Erase", "P-2") { Make = model => new PropEraseTool(model) },
             ],
             [
-                new PlannedSection("Palettes", "P-2", "Props with weights, density, random scale and rotation"),
+                new PropPlacementSection(),
+                new PropPaletteSection(),
+                new PresetSection(PropsViewModel.PaletteKind, "Palettes"),
                 new PlannedSection("Rules", "P-4", "Props from layers: where they may grow and where not; generated when asked"),
-                new PlannedSection("Reclaim", "P-5", "The mass and energy of the props"),
+                new PropReclaimSection(),
             ],
             [new PlannedSection("Props", "P-1", "The selected props, palette or rule")]),
 
