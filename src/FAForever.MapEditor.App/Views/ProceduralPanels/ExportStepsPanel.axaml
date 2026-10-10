@@ -1,0 +1,27 @@
+<!-- The export's steps (the Procedural mode): what an export does, in order, and how each stands while it runs and after. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.ProceduralPanels.ExportStepsPanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <TextBlock Classes="overline" Text="{Binding Source=Export, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <ItemsControl ItemsSource="{Binding Export.Lines}" AutomationProperties.Name="Steps of the export">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ExportStepState">
+            <StackPanel>
+              <TextBlock Text="{Binding Title}" Classes.secondary="{Binding !IsRunning}" />
+              <TextBlock Classes="caption" Classes.error="{Binding IsFailed}" TextWrapping="Wrap" Text="{Binding StatusText}"
+                         AutomationProperties.Name="{Binding Title, StringFormat='How the step {0} stands'}" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <Button Content="Export" Command="{Binding RunCommand}" CommandParameter="file.export"
+              AutomationProperties.Name="Export to the vault"
+              AutomationProperties.HelpText="Runs these steps and writes the map folder into the workspace's vault" />
+    </StackPanel>
+  </Border>
+</UserControl>

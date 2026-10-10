@@ -169,6 +169,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeUndoSelection();
         InitializeContent();
         InitializeInspectorParts();
+        InitializeProcedural();
         Plugins = new PluginsViewModel(this);
     }
 
@@ -531,36 +532,6 @@ public sealed partial class MainViewModel : ObservableObject
             Refresh($"Saved as {map.ProjectFolder}");
         });
         Events.OnMapSaved(map);
-    }
-
-    /// <returns>The map folder that was written.</returns>
-    /// <exception cref="OperationVetoedException">A handler of <see cref="EditorEvents.BeforeExport"/> stopped it.</exception>
-    public async Task<string> ExportAsync(string outputFolder, int? version = null, bool raise = false)
-    {
-        EditedMap map = RequireMap();
-        Events.CheckExport(map, outputFolder);
-        if (raise)
-        {
-            // the map keeps its new version: the next export and the project go on from it (M-8)
-            int next = map.Document.NextVersion;
-            EditMap($"Raise the version to {next}", document => document with { Version = next });
-        }
-        await RenderPreviewWhenStaleAsync();
-        string folder = "";
-        int? exported = version ?? map.Document.Version;
-        await BusyAsync("export", "Exporting...", async () =>
-        {
-            folder = await map.ExportAsync(outputFolder, version);
-            Status = $"Exported {folder} (version {exported?.ToString() ?? "none"}); exporting with raise makes version {(exported ?? 0) + 1}";
-        });
-        if (!map.Document.IsPublishable)
-        {
-            // to play it, which is fine; it may never go to the vault
-            Logger("Files").LogWarning("Exported {Map}, which is the sandbox: it is for trying the editor and is not to be uploaded", map.Document.Scenario.Name);
-            Status = $"Exported {folder}. This is the sandbox: play it, but it cannot be uploaded to the vault";
-        }
-        Events.OnMapExported(map, folder);
-        return folder;
     }
 
     public bool Undo() => _stroke is null && Map?.Session.Undo() == true;

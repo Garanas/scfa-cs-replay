@@ -109,7 +109,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(metadata.RootElement.GetProperty("isRanked").GetBoolean());
 
             Assert.AreEqual(2, model.Map!.Document.Version, "the map goes on from the uploaded version");
-            Assert.AreEqual(steps + 1, model.History.Count);
+            // the raised version, and the preview the export renders (HardFFA's own differs from the editor's)
+            Assert.AreEqual(steps + 2, model.History.Count);
             Assert.AreEqual("Uploaded", model.Upload.Stage);
             StringAssert.StartsWith(model.Status, "Uploaded HardFFA version 2");
         }

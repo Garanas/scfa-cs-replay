@@ -307,6 +307,7 @@ public sealed partial class MainViewModel
             "mask" => new OverlayItem(overlay, () => ShowMask, value => ShowMask = value),
             "grid" => new OverlayItem(overlay, () => ShowGrid, value => ShowGrid = value, () => EditorCulture.Format(GridSpacing)),
             "decals" => new OverlayItem(overlay, () => ShowDecals, value => ShowDecals = value),
+            "navigation" => new OverlayItem(overlay, () => ShowNavigation, value => ShowNavigation = value),
             _ => new OverlayItem(overlay, () => false, null),
         })];
         foreach (OverlayDefinition overlay in EditorOverlays.All)

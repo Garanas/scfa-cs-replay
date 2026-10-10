@@ -58,10 +58,10 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public Task TheTerrainPanelGeneratesWalkabilityAndShowsHowItStands() => HeadlessApp.Run(async () =>
+        public Task TheProceduralPanelGeneratesWalkabilityAndShowsHowItStands() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
-            model.SelectMode("terrain");
+            model.SelectMode("procedural");
             Dispatcher.UIThread.RunJobs();
             Button generate = window.GetVisualDescendants().OfType<Button>()
                 .Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == "Generate the walkability");
@@ -75,7 +75,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("Generate again", again.Content);
             TextBlock status = window.GetVisualDescendants().OfType<TextBlock>().First(text => text.Text == "Up to date");
             Assert.IsTrue(status.IsVisible);
-            Assert.IsTrue(window.GetVisualDescendants().OfType<CheckBox>().Single(box => box.Content as string == "Show walkability").IsChecked);
+            Assert.IsTrue(window.GetVisualDescendants().OfType<CheckBox>().Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Preview the walkability in the views").IsChecked);
             window.Close();
         });
 

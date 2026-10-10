@@ -823,4 +823,16 @@
     <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
   </Style>
+
+  <!-- a region of the navigation mesh in the Procedural mode's list (T-8): flat, filled while chosen -->
+  <Style Selector="Button.regionrow">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.regionrow.chosen">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+  </Style>
+  <Style Selector="Button.regionrow.chosen:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectedHoverBrush}" />
+  </Style>
 </Styles>

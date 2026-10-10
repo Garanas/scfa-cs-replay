@@ -152,10 +152,14 @@ public sealed partial class MainViewModel
     /// </summary>
     /// <exception cref="ArgumentException">There is no such generator.</exception>
     /// <exception cref="InvalidOperationException">No map is open, or it is being generated already.</exception>
-    public async Task<GeneratedResult> GenerateAsync(string id)
+    /// <param name="changesMap">Whether putting a result that is part of the map in place changes the
+    /// map as it is (the export's preview, the same as before, makes no step of undo); null: always.</param>
+    public async Task<GeneratedResult> GenerateAsync(string id, Func<MapDocument, object, bool>? changesMap = null)
     {
         EditedMap map = RequireMap();
         IGenerator generator = Generation.Results.Find(id) ?? throw new ArgumentException($"There is no generator '{id}'");
+        // a person's Generate takes over from a run regenerating on its own
+        AutoGeneration?.Stop(id);
         if (!Generation.SetRunning(id, true))
         {
             throw new InvalidOperationException($"The {generator.Title.ToLowerInvariant()} is being generated already");
@@ -185,7 +189,7 @@ public sealed partial class MainViewModel
             {
                 WhenNoStroke(() =>
                 {
-                    if (Map == map)
+                    if (Map == map && (changesMap?.Invoke(map.Document, value) ?? true))
                     {
                         map.Session.Edit($"Generate the {generator.Title.ToLowerInvariant()}", now => part.Apply(now, value));
                     }

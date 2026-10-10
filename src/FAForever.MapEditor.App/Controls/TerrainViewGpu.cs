@@ -38,7 +38,7 @@ namespace FAForever.MapEditor.App.Controls;
 /// whenever a texture of the workspace's assets changes on disk: a texture a tool saves shows a
 /// moment later. Each texture file is on the card once, however many decals use it.
 /// </remarks>
-public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
+public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
 {
     /// <summary>
     /// The whole view takes the mouse. Avalonia hits only what a control draws itself, and the
@@ -821,6 +821,10 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             PathLinks(document, view, shapes);
         }
+        if (_model.ShowNavigation)
+        {
+            Routes(document, view, shapes);
+        }
         if (_model.ActiveTool?.Tool is not IMapTool tool)
         {
             return shapes;
@@ -1023,6 +1027,13 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             walk = () => WalkabilityPixels.Of(grid, changes, blocked, newly, opened);
             walkWidth = grid.Width;
             walkHeight = grid.Height;
+        }
+        else if (model.ShowNavigation && model.Navigation.Grid is FAForever.FileFormats.Map.NavGrid regions)
+        {
+            // the navigation mesh's regions in the same place, one tint at a time (T-8)
+            (walkOf, walk) = RegionOverlay(model.Navigation, regions);
+            walkWidth = regions.Width;
+            walkHeight = regions.Height;
         }
         Rendering.GridOverlay? shownGrid = model.ShownGrid;
         TiledBuffer<byte>? painted = shownGrid?.Select(document);

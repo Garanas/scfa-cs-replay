@@ -985,8 +985,10 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(height.IsEffectivelyVisible, "the inspector shows its fields");
             Assert.AreEqual("180", height.Text);
 
+            model.SelectMode("procedural");
+            Dispatcher.UIThread.RunJobs();
             Button generate = window.GetVisualDescendants().OfType<Button>().Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == "Generate path networks");
-            Assert.IsTrue(generate.IsEffectivelyVisible, "the Markers panel offers the path networks");
+            Assert.IsTrue(generate.IsEffectivelyVisible, "the Procedural panel offers the path networks");
             int nodes = model.ShownDocument.Markers.PathNodes.Length;
             generate.Command!.Execute(generate.CommandParameter);
             for (int i = 0; i < 250 && model.ShownDocument!.Markers.PathNodes.Length == nodes; i++)

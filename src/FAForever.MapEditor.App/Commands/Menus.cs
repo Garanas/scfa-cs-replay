@@ -64,11 +64,12 @@ public static class Menus
             Mode("props", "props.choose", "props.addToPalette", "props.followTerrain", Separator, "props.alignToTerrain", "props.upright", "props.dropToGround", "props.randomize", "props.replace", "props.randomVariant", Separator, "props.reclaim", "props.addRule", "props.keepFromRules"),
             Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack"),
             Mode("units", "units.pick", "units.addGroup", "units.selectGroup", "units.placePreset", "units.asWrecks"),
+            Mode("procedural"),
             new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.star", "assets.reload", "assets.reloadShown", Separator, "assets.brushesFolder"]),
         ]),
         new MenuLayout("Generate",
         [
-            "generate.walkability", "generate.props", "generate.masks", Separator,
+            "generate.walkability", "generate.navigation", "generate.props", "generate.masks", Separator,
             "generate.normalMap", Separator,
             "generate.stale",
         ]),

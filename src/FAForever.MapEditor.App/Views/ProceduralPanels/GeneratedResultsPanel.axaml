@@ -1,0 +1,50 @@
+<!-- The Procedural mode's generated results: per result how it stands and Generate, its preview in the views,
+     whether it regenerates on its own, and what the export does with it. Every control runs a command. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.ProceduralPanels.GeneratedResultsPanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <TextBlock Classes="overline" Text="{Binding Source=Generated results, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <TextBlock Classes="caption" Text="Open a map to generate from it." IsVisible="{Binding !HasMap}" />
+      <ItemsControl ItemsSource="{Binding Procedural.Rows}" AutomationProperties.Name="Generated results">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Classes="stack" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ProceduralRow">
+            <StackPanel>
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="beside" Content="{Binding Row.ButtonText}" IsEnabled="{Binding !Row.IsRunning}"
+                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding Row.CommandId}"
+                        AutomationProperties.Name="{Binding Row.ButtonLabel}" />
+                <StackPanel>
+                  <TextBlock Text="{Binding Title}" />
+                  <TextBlock Classes="caption" Classes.warning="{Binding Row.IsStale}" TextWrapping="Wrap" Text="{Binding Row.Status}"
+                             AutomationProperties.Name="{Binding Title, StringFormat='How the {0} stands'}" />
+                </StackPanel>
+              </DockPanel>
+              <CheckBox Content="Preview in the views" IsVisible="{Binding HasOverlay}" IsChecked="{Binding PreviewOn, Mode=OneWay}"
+                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding OverlayCommand}"
+                        AutomationProperties.Name="{Binding PreviewLabel}" />
+              <CheckBox Content="Regenerate on its own" IsVisible="{Binding CanAuto}" IsChecked="{Binding AutoOn, Mode=OneWay}"
+                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ToggleAutoGenerateCommand}" CommandParameter="{Binding Id}"
+                        AutomationProperties.Name="{Binding AutoLabel}"
+                        AutomationProperties.HelpText="A second after the last change to what it is made from, it is generated in the background; a newer change starts again" />
+              <CheckBox Content="Generate on export when out of date" IsVisible="{Binding HasExportToggle}" IsChecked="{Binding OnExport, Mode=OneWay}"
+                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ToggleOnExportCommand}" CommandParameter="{Binding Id}"
+                        AutomationProperties.Name="{Binding OnExportLabel}"
+                        AutomationProperties.HelpText="Off: the export keeps it as it is, such as a normal map made in another tool" />
+              <TextBlock Classes="caption" IsVisible="{Binding HasExportText}" Text="{Binding ExportText}" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </Border>
+</UserControl>

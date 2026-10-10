@@ -1,0 +1,53 @@
+<!-- The navigation mesh in the Procedural mode (T-8): the layer shown, which starts it routes between,
+     its regions (the largest first, with their starts and deposits; a click chooses one) and the routes. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.ProceduralPanels.NavigationPanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group" IsVisible="{Binding HasMap}">
+    <StackPanel Classes="stack">
+      <TextBlock Classes="overline" Text="{Binding Source=Navigation mesh, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left" Classes="label" Text="Units" VerticalAlignment="Center" />
+        <ComboBox Margin="{StaticResource InlineGap}" HorizontalAlignment="Stretch" ItemsSource="{Binding Navigation.Layers}" SelectedItem="{Binding Navigation.Layer}"
+                  AutomationProperties.Name="Regions of the units of a layer"
+                  AutomationProperties.HelpText="Land, hover, amphibious or naval (water) units: the views colour the regions they can move in" />
+      </DockPanel>
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left" Classes="label" Text="Routes" VerticalAlignment="Center" />
+        <ComboBox Margin="{StaticResource InlineGap}" HorizontalAlignment="Stretch" ItemsSource="{Binding Navigation.RouteChoices}" SelectedItem="{Binding NavigationRoutes}"
+                  AutomationProperties.Name="Routes between starts"
+                  AutomationProperties.HelpText="Nearest: each start to the start nearest to it; All: every pair; None: no routes. Kept with the map" />
+      </DockPanel>
+      <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Navigation.Summary}" AutomationProperties.Name="The navigation mesh in short" />
+      <ItemsControl ItemsSource="{Binding Navigation.Regions}" AutomationProperties.Name="Regions of the navigation mesh">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:NavRegionRow">
+            <Button Classes="regionrow" Classes.chosen="{Binding IsChosen}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                    Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ChooseRegionCommand}" CommandParameter="{Binding Region.Id}"
+                    AutomationProperties.Name="{Binding Label}">
+              <DockPanel>
+                <Border DockPanel.Dock="Left" Classes="swatch" Background="{Binding Swatch, Converter={x:Static controls:RegionBrushConverter.Instance}}" />
+                <StackPanel>
+                  <TextBlock Text="{Binding Name}" />
+                  <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Starts}" />
+                  <TextBlock Classes="caption mono" Text="{Binding Size}" />
+                  <TextBlock Classes="caption" Text="{Binding Deposits}" />
+                </StackPanel>
+              </DockPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <ItemsControl ItemsSource="{Binding Navigation.Routes}" AutomationProperties.Name="Routes between starts">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:NavRouteRow">
+            <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Text}" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </Border>
+</UserControl>

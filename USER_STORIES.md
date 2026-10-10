@@ -187,6 +187,15 @@ reads again when it changes; and nothing that generates runs by itself.
       exported and zipped, the person's yes to name, version and size, a sign-in in the browser
       (kept in memory only), the upload with progress, then the map is that version. Without a
       person only to a test server, with `confirm`.
+- [x] **M-9 Export as steps, and the editor named.** The export is a list of steps shown while it
+      runs: generate what is out of date and needed, render the preview, then write the map folder;
+      the editor that made the map is named in `_scenario.lua`. Today: the Procedural mode's Export
+      section and the status line show each step (the normal map when out of date unless the map
+      keeps its own, the preview always, the walkability marks into the terrain types, the writing);
+      `_scenario.lua` starts with `-- Made with the FAF Map Editor <version> (<commit>) on <date>`
+      and holds `map_editor = { name, version, commit, project_format, exported }`, which the game,
+      the FAF client and the vault's upload check ignore. Missing: map-wide decals and path nodes as
+      steps (wave 9).
 
 ## T: Terrain
 
@@ -236,6 +245,14 @@ reads again when it changes; and nothing that generates runs by itself.
       red and open green in the views), which walkability then takes over what it generates; kept
       as `walkability-marks.png`; the export writes blocked ogrids as a blocking terrain type, so
       the game agrees, and a check warns of ground marked open that the game still blocks.
+- [x] **T-8 Navigation mesh.** See where each kind of unit can move: the regions of the game's
+      navigational mesh per layer (land, hover, amphibious, naval), how large each is, which starts
+      and deposits lie in it, and the routes between starts. Today: the Procedural mode's
+      Navigation mesh (Generate, the layer, the routes between the nearest starts or every pair,
+      kept with the map), the regions coloured in both views with the routes as lines, a list of the
+      largest regions (a click or the Regions tool chooses one), the starts that lie in no region,
+      and the routes with how much longer they are than the straight line. Walkability can
+      regenerate on its own a second after a change to what it is made from (T-7).
 
 ## S: Strata (terrain textures)
 

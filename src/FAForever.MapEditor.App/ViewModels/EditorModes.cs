@@ -117,7 +117,6 @@ public static class EditorModes
             [
                 new PresetSection("brush", "Brush presets") { EmptyText = BrushPresetsEmpty, SaveLabel = "Save the brush's settings as a preset" },
                 new HeightLayersSection(),
-                new GeneratedSection(),
             ],
             [new HeightLayerSection()]),
 
@@ -168,7 +167,6 @@ public static class EditorModes
             [
                 new OverlaySection(),
                 new MarkerKindsSection(),
-                new PathNetworkSection(),
                 new ChainsSection(),
                 new AdaptiveSection(),
                 new PresetSection(MarkerPresets.Kind, "Marker presets") { EmptyText = "None yet: select markers, such as a spawn with its deposits, and save them to place them again.", SaveLabel = "Save the selected markers as a preset" },
@@ -208,6 +206,12 @@ public static class EditorModes
                 new UnitGroupsSection(),
                 new PresetSection(UnitPreset.Kind, "Presets") { EmptyText = "None yet: select units, or choose a group in the tree, and save them to place them again.", SaveLabel = "Save the selected units as a preset" },
             ],
+            []),
+
+        // the Procedural mode (wave 8C): its tools and sections are ProceduralMode's
+        new ModeDefinition(ProceduralMode.Id, "Procedural", "Icon.Procedural", "Generated results, navigation mesh, export steps", 2, "F11", "F-7",
+            ProceduralMode.Tools,
+            ProceduralMode.Sections,
             []),
     ];
 }
@@ -257,5 +261,6 @@ public static class EditorOverlays
         new OverlayDefinition("props", "Props", "Show props", "V-2"),
         new OverlayDefinition("units", "Units", "Show units", "V-2"),
         new OverlayDefinition("decals", "Decals", "Show decals", "V-3"),
+        new OverlayDefinition("navigation", "Regions", "Show the navigation mesh's regions", "T-8") { Swatch = "MapRegion1Brush" },
     ];
 }

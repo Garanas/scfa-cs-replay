@@ -458,6 +458,11 @@
               <TextBlock Classes="mono" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Text}" ToolTip.Tip="{Binding Text}" VerticalAlignment="Center"
                          AutomationProperties.Name="Measurement" />
             </DataTemplate>
+            <!-- choosing a region of the navigation mesh (T-8) -->
+            <DataTemplate DataType="tools:RegionTool">
+              <TextBlock TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Text}" ToolTip.Tip="{Binding Text}" VerticalAlignment="Center"
+                         AutomationProperties.Name="Chosen region" />
+            </DataTemplate>
             <!-- placing and aiming wave generators (W-1) -->
             <DataTemplate DataType="tools:WaveTool">
               <controls:ToolRow Classes="toolrow">
