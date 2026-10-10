@@ -251,10 +251,10 @@ namespace FAForever.MapEditor.App.Tests
 
             inspector.X = "100";
             await Task.Yield();
-            Assert.AreEqual("100", inspector.X);
+            Assert.AreEqual("100.5", inspector.X, "a deposit on the centre of the ogrid");
             foreach (ResourceMarker mass in masses)
             {
-                Assert.AreEqual(100, model.ShownDocument!.PlaceOf(ObjectRef.Marker(mass.Id))!.Value.X, 1e-3);
+                Assert.AreEqual(100.5, model.ShownDocument!.PlaceOf(ObjectRef.Marker(mass.Id))!.Value.X, 1e-3);
             }
             inspector.Heading = "90";
             await Task.Yield();

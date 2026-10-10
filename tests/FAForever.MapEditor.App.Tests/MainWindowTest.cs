@@ -1055,7 +1055,7 @@ namespace FAForever.MapEditor.App.Tests
             Dispatcher.UIThread.RunJobs();
 
             Vector3 moved = model.ShownDocument!.PlaceOf(a)!.Value;
-            Assert.AreEqual(turned.X + 40 / window.MapView.Zoom, moved.X, 0.05, "the mouse's way along x");
+            Assert.AreEqual(turned.X + 40 / window.MapView.Zoom, moved.X, 0.501, "the mouse's way along x (a deposit to the nearest ogrid centre)");
             Assert.AreEqual(turned.Z, moved.Z, 1e-3, "x held: z stays");
             Assert.AreEqual(3, model.History.Count);
             window.Close();

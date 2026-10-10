@@ -62,7 +62,7 @@ namespace FAForever.MapEditor.App.Tests
                 float before = opened.Terrain.Heightmap.HeightAt(place.X, place.Y);
                 Assert.IsTrue(Height(model, place.X, place.Y) > before + 2, $"raised at {place}");
             }
-            Assert.AreEqual(2, model.History.Count, "opened, and one stroke");
+            Assert.AreEqual(3, model.History.Count, "opened, the symmetry chosen, and one stroke");
 
             // guides only: the stroke paints where it is
             model.Undo();
@@ -282,6 +282,45 @@ namespace FAForever.MapEditor.App.Tests
 
             await Run(model, "edit.delete");
             Assert.IsFalse(all.Any(model.ShownDocument!.Exists), "deleted, all of them");
+        }
+
+        [TestMethod]
+        public async Task EachMapKeepsItsOwnSymmetry()
+        {
+            MainViewModel model = await Open("diagonal");
+            Assert.AreEqual(new SymmetrySetting(MapSymmetryKind.MirroredDiagonal, 2), model.Map!.Document.Symmetry, "the map keeps the choice");
+            Assert.AreEqual("Choose the symmetry mirrored on the diagonal", model.Map.Session.UndoDescription);
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "rotational", ["count"] = 3 });
+            Assert.AreEqual(1, model.Map.Session.History.Count(step => step.Description.Contains("symmetry")), "choices that follow each other are one step");
+            await Run(model, "edit.undo");
+            Assert.IsFalse(model.Symmetry.IsOn, "undone: the map had none");
+            await Run(model, "edit.redo");
+            Assert.AreEqual(3, model.Symmetry.Chosen.Count);
+
+            string folder = Path.Combine(Path.GetTempPath(), "faf-symmetry-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                model.Map.SaveAs(folder);
+                await model.OpenAsync(HardFfa);
+                Assert.IsFalse(model.Symmetry.IsOn, "another map: its own symmetry, none");
+                await Run(model, "select.symmetry");
+                Assert.AreEqual(SymmetryViewModel.Detect(model.Map.Document) ?? MapSymmetryKind.Rotational, model.Symmetry.Chosen.Kind, "turned on: the map's own, not the last map's");
+
+                await model.OpenAsync(folder);
+                Assert.AreEqual(new SymmetryChoice(MapSymmetryKind.Rotational, 3, "Rotational, 3 players"), model.Symmetry.Chosen, "opened with the symmetry it was saved with");
+                Assert.IsFalse(model.Map.Session.IsModified);
+
+                await Run(model, "file.new", new JsonObject { ["name"] = "Fresh", ["size"] = 256, ["players"] = 2 });
+                Assert.AreEqual(new SymmetryChoice(MapSymmetryKind.Rotational, 2, "Rotational, 2 players"), model.Symmetry.Chosen, "a new map: the symmetry of its spawns");
+                Assert.IsFalse(model.Problems.Run().Any(problem => problem.Check == SymmetryChecks.Id), "a new map is exactly symmetric");
+            }
+            finally
+            {
+                if (Directory.Exists(folder))
+                {
+                    Directory.Delete(folder, recursive: true);
+                }
+            }
         }
 
         [TestMethod]

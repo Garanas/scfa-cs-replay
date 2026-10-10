@@ -190,7 +190,7 @@ namespace FAForever.MapEditor.App.Tests
             model.Undo();
             model.Undo();
             await Run(model, "edit.scale", new JsonObject { ["factor"] = 2 });
-            Assert.AreEqual(frame.Middle.X + 2 * d.X, Flat(a, model.ShownDocument!).X, 1e-2, "markers spread from the centre");
+            Assert.AreEqual(frame.Middle.X + 2 * d.X, Flat(a, model.ShownDocument!).X, 0.501, "markers spread from the centre (a deposit to the nearest ogrid centre)");
             Assert.AreEqual("Scale the selection", model.Map!.Session.UndoDescription);
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "edit.scale", new JsonObject { ["factor"] = 0 }), "a scale is above 0");
 

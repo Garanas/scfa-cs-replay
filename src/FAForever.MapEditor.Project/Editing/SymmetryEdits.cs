@@ -206,7 +206,9 @@ namespace FAForever.MapEditor.Project.Editing
         /// Markers are named as new ones are: a spawn is the next playable army (<c>ARMY_n</c>, its army
         /// added), a deposit the next free name; a deposit waiting for an army waits for the army of that
         /// army's spawn's partner. A path node's image links to the images of its neighbours, or to their
-        /// partners where those were not mirrored. A unit's image goes into the unit's army and group.
+        /// partners where those were not mirrored. A unit's image goes into the army whose spawn is the
+        /// partner of its army's spawn (the unit's own army without one, such as the civilians), into a
+        /// group of the same name.
         /// </remarks>
         /// <param name="adjustUnit">Changes a unit's image before it is added (the editor snaps a
         /// structure to the build grid); null to add it as it is.</param>
@@ -264,7 +266,7 @@ namespace FAForever.MapEditor.Project.Editing
                                 float above = unit.Unit.Position.Y - heights.HeightAt(unit.Unit.Position.X, unit.Unit.Position.Z);
                                 unitImage = unitImage with { Position = unitImage.Position with { Y = heights.HeightAt(unitImage.Position.X, unitImage.Position.Z) + above } };
                             }
-                            document = document.AddUnit(unit.Army, unit.Group, unitImage);
+                            document = document.AddUnit(PartnerArmy(before, unit.Army, transform, tolerance), unit.Group, unitImage);
                             images.Add(ObjectRef.Unit(unitImage.Name));
                             break;
                         case Marker marker:

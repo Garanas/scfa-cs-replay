@@ -53,7 +53,7 @@ namespace FAForever.MapEditor.App.Tests
             window.MouseUp(At(window, 64, 40), MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
 
-            Assert.AreEqual(2, model.History.Count, "opened, and one stroke");
+            Assert.AreEqual(3, model.History.Count, "opened, the symmetry chosen, and one stroke");
             // a quarter turn takes (62, 40) to (216, 62)
             float before = opened.Terrain.Heightmap.HeightAt(216, 62);
             Assert.IsTrue(model.ShownDocument!.Terrain.Heightmap.HeightAt(216, 62) > before + 2, "raised in the next part");

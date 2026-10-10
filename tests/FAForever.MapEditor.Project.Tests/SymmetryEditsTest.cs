@@ -307,6 +307,25 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void AUnitsImageGoesToTheArmyOfThePartnerSpawn()
+        {
+            MapDocument document = Blank();
+            IReadOnlyList<MapSymmetryTransform> half = MapSymmetry.Transforms(MapSymmetryKind.Rotational, 2, 256, 256);
+            Spawn first = document.Markers.Spawns.Single(spawn => spawn.Name == "ARMY_1");
+            document = document.AddUnit("ARMY_1", ["INITIAL", "BASE"], new Unit { Name = "", Blueprint = "uec1101", Position = first.Position + new Vector3(4, 0, 4) })
+                .AddUnit("NEUTRAL_CIVILIAN", ["INITIAL"], new Unit { Name = "", Blueprint = "uec1201", Position = new Vector3(60, 30, 60) });
+            ObjectRef[] units = [.. document.AllUnits().Select(unit => ObjectRef.Unit(unit.Unit.Name))];
+
+            document = document.MirrorObjects(units, half, out ImmutableArray<ObjectRef> added);
+
+            Assert.AreEqual(2, added.Length);
+            PlacedUnit image = (PlacedUnit)document.Find(added.Single(thing => ((PlacedUnit)document.Find(thing)!).Unit.Blueprint == "uec1101"))!;
+            Assert.AreEqual("ARMY_2", image.Army, "the army whose spawn is the image of the army's spawn");
+            CollectionAssert.AreEqual(new[] { "INITIAL", "BASE" }, image.Group.ToArray(), "in a group of the same name");
+            Assert.AreEqual("NEUTRAL_CIVILIAN", ((PlacedUnit)document.Find(added.Single(thing => ((PlacedUnit)document.Find(thing)!).Unit.Blueprint == "uec1201"))!).Army, "an army without a spawn keeps its images");
+        }
+
+        [TestMethod]
         public void TheCheckNamesDepositsWithoutAPartner()
         {
             MapDocument document = Blank().AddMarker(new ResourceMarker { Id = 0, Name = "Mass 01", Kind = ResourceKind.Mass, Position = new Vector3(100.5f, 30, 60.5f) }, out Marker mass);

@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Text;
+using FAForever.FileFormats.Map;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 
@@ -208,13 +209,14 @@ namespace FAForever.MapEditor.Project
 
             string[] players = [.. Enumerable.Range(1, settings.Players).Select(i => $"ARMY_{i}")];
             string[] extra = ["ARMY_17", "NEUTRAL_CIVILIAN"];
+            // the first spawn above the middle on an ogrid's centre, the others its images under the
+            // rotational symmetry of as many players, so that a new map is exactly symmetric
             float radius = size * 0.3f;
+            Vector3 first = new Vector3(MathF.Floor(size / 2f) + 0.5f, settings.Height, MathF.Round(size / 2f - radius) + 0.5f);
             ImmutableArray<Spawn> spawns = [.. players.Select((army, i) =>
             {
-                double angle = 2 * Math.PI * i / players.Length;
-                float x = MathF.Round(size / 2f + radius * (float)Math.Sin(angle)) + 0.5f;
-                float z = MathF.Round(size / 2f - radius * (float)Math.Cos(angle)) + 0.5f;
-                return new Spawn { Id = i + 1, Name = army, Position = new Vector3(x, settings.Height, z) };
+                Vector3 place = MapSymmetryTransform.Rotation(2 * Math.PI * i / players.Length, size / 2f, size / 2f).Apply(first);
+                return new Spawn { Id = i + 1, Name = army, Position = place with { Y = settings.Height } };
             })];
 
             return new MapDocument
@@ -285,6 +287,7 @@ namespace FAForever.MapEditor.Project
                     Cubemap = "/textures/environment/defaultskycube.dds",
                     EnvironmentCubemaps = [new Cubemap { Name = "<default>", Texture = "/textures/environment/defaultenvcube.dds" }],
                 },
+                Symmetry = settings.Players is >= 2 and <= MapSymmetry.MaximumCount ? new SymmetrySetting(MapSymmetryKind.Rotational, settings.Players) : null,
                 Minimap = new Minimap
                 {
                     ContourInterval = 24,

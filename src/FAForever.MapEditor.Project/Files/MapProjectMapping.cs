@@ -55,7 +55,17 @@ namespace FAForever.MapEditor.Project.Files
             Water = ToDto(document.Water),
             Sky = ToDto(document.Sky),
             Minimap = document.Minimap is null ? null : ToDto(document.Minimap),
+            Symmetry = document.Symmetry is SymmetrySetting symmetry ? new SymmetryDto { Kind = symmetry.Kind.ToString(), Count = symmetry.Count } : null,
         };
+
+        /// <summary>
+        /// The symmetry of <c>map.json</c>; null for none, or for a kind or count this editor does not know.
+        /// </summary>
+        private static SymmetrySetting? ToModel(SymmetryDto? symmetry) =>
+            symmetry is not null && Enum.TryParse(symmetry.Kind, ignoreCase: true, out FileFormats.Map.MapSymmetryKind kind) && Enum.IsDefined(kind)
+                && (kind != FileFormats.Map.MapSymmetryKind.Rotational || symmetry.Count is >= 2 and <= FileFormats.Map.MapSymmetry.MaximumCount)
+                ? new SymmetrySetting(kind, kind == FileFormats.Map.MapSymmetryKind.Rotational ? symmetry.Count : 2)
+                : null;
 
         public static DecalsDto ToDecalsDto(MapDocument document) => new DecalsDto
         {
@@ -89,6 +99,7 @@ namespace FAForever.MapEditor.Project.Files
                 Water = ToModel(map.Water, images),
                 Sky = ToModel(map.Sky),
                 Minimap = map.Minimap is null ? null : ToModel(map.Minimap),
+                Symmetry = ToModel(map.Symmetry),
                 Decals = [.. decals.Decals.Select(decal => ToModel(decal))],
                 DecalGroups = [.. decals.Groups.Select(group => ToModel(group))],
                 Props = [.. props.Select((prop, index) => ToModel(prop, index + 1))],
@@ -137,6 +148,7 @@ namespace FAForever.MapEditor.Project.Files
                 Water = ToModel(map.Water, images),
                 Sky = ToModel(map.Sky),
                 Minimap = map.Minimap is null ? null : ToModel(map.Minimap),
+                Symmetry = ToModel(map.Symmetry),
             };
         }
 

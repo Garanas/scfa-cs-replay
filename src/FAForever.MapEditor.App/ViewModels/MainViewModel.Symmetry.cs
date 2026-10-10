@@ -24,9 +24,71 @@ public sealed partial class MainViewModel
         {
             if (Map is not null)
             {
+                KeepSymmetryInMap();
                 Problems.Schedule();
             }
         };
+        // each map has its own symmetry, saved with it (F-12): another map never takes the last one's
+        MapChanged += (_, _) =>
+        {
+            Symmetry.Forget();
+            FollowMapSymmetry();
+        };
+        DocumentChanged += (_, _) => FollowMapSymmetry();
+    }
+
+    private bool _followingMapSymmetry;
+
+    /// <summary>
+    /// Chooses the symmetry the map keeps (<see cref="MapDocument.Symmetry"/>): when it opens, and
+    /// after an undo or redo of a choice.
+    /// </summary>
+    private void FollowMapSymmetry()
+    {
+        if (ShownDocument is not MapDocument document || _followingMapSymmetry)
+        {
+            return;
+        }
+        SymmetryChoice choice = Symmetry.ChoiceOf(document.Symmetry);
+        if (choice != Symmetry.Chosen)
+        {
+            _followingMapSymmetry = true;
+            try
+            {
+                Symmetry.Chosen = choice;
+            }
+            finally
+            {
+                _followingMapSymmetry = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Keeps the symmetry chosen in the map, one step of undo (choices that follow each other are
+    /// one), so that it is saved with the project.
+    /// </summary>
+    private void KeepSymmetryInMap()
+    {
+        if (_followingMapSymmetry || Map is not Project.EditedMap map || Equals(map.Document.Symmetry, Symmetry.Setting))
+        {
+            return;
+        }
+        if (_stroke is not null)
+        {
+            Logger("Editor").LogWarning("The symmetry {Symmetry} was chosen during a stroke; the map keeps it with its next choice", Symmetry.Chosen.Title);
+            return;
+        }
+        SymmetrySetting? setting = Symmetry.Setting;
+        _followingMapSymmetry = true;
+        try
+        {
+            map.Session.Edit(setting is null ? "Turn the symmetry off" : $"Choose the symmetry {Symmetry.Chosen.Title.ToLowerInvariant()}", document => document with { Symmetry = setting }, "symmetry");
+        }
+        finally
+        {
+            _followingMapSymmetry = false;
+        }
     }
 
     /// <summary>

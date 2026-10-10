@@ -62,6 +62,46 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        [DataRow(2, 256)]
+        [DataRow(3, 512)]
+        [DataRow(4, 256)]
+        [DataRow(5, 1024)]
+        [DataRow(8, 512)]
+        public void SpawnsAreExactlySymmetricForTheirPlayers(int players, int size)
+        {
+            MapDocument document = NewMap.Create(new NewMapSettings { Players = players, Size = size });
+            IReadOnlyList<MapSymmetryTransform> transforms = MapSymmetry.Transforms(MapSymmetryKind.Rotational, players, size, size);
+            Assert.AreEqual(players, document.Markers.Spawns.Length);
+            Assert.IsFalse(Checks.SymmetryChecks.NotSymmetric(document, transforms).Any(), "no spawn without its partner");
+            Spawn first = document.Markers.Spawns[0];
+            Assert.AreEqual(0.5f, first.Position.X - MathF.Floor(first.Position.X), 1e-4f, "on an ogrid's centre");
+            if (players is 2 or 4)
+            {
+                Assert.IsTrue(document.Markers.Spawns.All(spawn => spawn.Position.X - MathF.Floor(spawn.Position.X) is > 0.499f and < 0.501f), "a half or quarter turn keeps them on centres");
+            }
+        }
+
+        [TestMethod]
+        public void TheSymmetryIsKeptWithTheProject()
+        {
+            MapDocument document = NewMap.Create(new NewMapSettings { Players = 4 });
+            Assert.AreEqual(new SymmetrySetting(MapSymmetryKind.Rotational, 4), document.Symmetry, "a new map is made by the symmetry of its spawns");
+            EditedMap map = EditedMap.New(document);
+            map.SaveAs(ProjectFolders.New("symmetry"));
+            Assert.AreEqual(document.Symmetry, EditedMap.OpenProject(map.ProjectFolder!).Document.Symmetry);
+
+            map.Session.Edit("mirror", d => d with { Symmetry = new SymmetrySetting(MapSymmetryKind.MirroredDiagonal, 2) });
+            map.Save();
+            Assert.AreEqual(new SymmetrySetting(MapSymmetryKind.MirroredDiagonal, 2), EditedMap.OpenProject(map.ProjectFolder!).Document.Symmetry);
+            Assert.IsTrue(File.ReadAllText(Path.Combine(map.ProjectFolder!, "map.json")).Contains("MirroredDiagonal"));
+
+            map.Session.Edit("off", d => d with { Symmetry = null });
+            map.Save();
+            Assert.IsNull(EditedMap.OpenProject(map.ProjectFolder!).Document.Symmetry, "none chosen, none kept");
+            Assert.IsNull(NewMap.Create(new NewMapSettings { Players = 1 }).Symmetry);
+        }
+
+        [TestMethod]
         public void NamesTheFolderAfterTheMap()
         {
             Assert.AreEqual("theta_passage", NewMap.FolderNameOf("  Theta   Passage "));
