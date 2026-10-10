@@ -15,7 +15,9 @@ reads again when it changes; and nothing that generates runs by itself.
       shortcuts, the command palette, automation, the CLI and Lua plugins all run the same commands.
       Today: every command is a request with its arguments and a handler, sent through MediatR
       by the registry; the menus, shortcuts and palette come from it, and automation and the CLI
-      run it (`faf-map editor run id=...`); missing: toolbars and Lua.
+      run it (`faf-map editor run id=...`); a toolbar in the menu bar is made from the registry
+      too (undo, redo, save, the palette, symmetry by default; its commands kept in the user's
+      settings, `view.setToolbar`). Missing: Lua.
 - [x] **F-2 Command palette.** Find and run any command by typing (`Ctrl+K`), with its shortcut shown.
 - [x] **F-3 Undo and redo.** Every change is a step; a brush stroke or a plugin run is one step.
 - [x] **F-4 History.** The steps in a panel; choosing one goes back or forward to it.
@@ -36,8 +38,11 @@ reads again when it changes; and nothing that generates runs by itself.
 - [ ] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
       missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map
-      uses and how often, shows an asset's file and reads the assets again; missing: where each
-      comes from, the missing ones.
+      uses and how often, shows an asset's file and reads the assets again; the inspector says
+      where an asset comes from (the game's .scd, FAF's .nx2 and whether it replaces the game's,
+      the workspace's own) and the shelf filters by it; its Missing scope lists what the map uses
+      that the workspace and the map's own files lack, each leading to its problem. Missing:
+      reading one asset again (the whole catalogue is read).
 - [ ] **F-9 Pickers.** One way to choose an asset everywhere: a searchable picker with thumbnails
       and filters, for textures, decals, props and units (see UNT-1). Today: the asset shelf in the
       dock (Ctrl+Shift+A): the kind follows the mode; what the map uses, its biomes or everything;
@@ -85,16 +90,20 @@ reads again when it changes; and nothing that generates runs by itself.
       the events; a run is one step of undo.
 - [x] **F-16 Driven by agents and tests.** Automation over HTTP for every operation, labels for
       screen readers, headless tests of the window, performance spans (see the App's guide).
-- [ ] **F-17 Diagnostics.** See what goes well and wrong, as a service's logs and metrics: the
+- [x] **F-17 Diagnostics.** See what goes well and wrong, as a service's logs and metrics: the
       Console with levels; every session's logs (warnings, errors, crashes) and measurements
       (commands, operations and their durations, frames, stalls, memory) on disk in
       OpenTelemetry's format, recording on or off; sent to the developers' collector only when the
-      user turns it on; a problem report that bundles them. Today: all but the report.
+      user turns it on; a problem report that bundles them (Help, Report a problem: the recent
+      sessions, the editor and system, and the map's project when chosen, in a zip to attach;
+      nothing is sent).
 - [x] **F-18 Version control.** One git repository per project, turned on from a page that shows
       the choices first: the author, Git LFS for the images and the procedural sources (on), a
       repository to share through; a `.gitignore` that leaves `procedural/temp` (what World Machine
       and Gaea build) out and a `.gitattributes`. Then a commit beside save (File, Commit), which
-      saves first. Missing: push and pull, the history of commits, going back to one.
+      saves first. Push and pull through the shared repository (only a fast-forward, never over
+      uncommitted work; git's credential helper signs in), the history of commits with each one's
+      files, and going back to a commit as one step of undo (the files and history stay).
 
 ## M: The map
 
@@ -276,5 +285,9 @@ reads again when it changes; and nothing that generates runs by itself.
       the 3D camera; props and units on or off in 3D; the chosen mask for tools (K-1) and, while
       their tools are active, a layer's or the water's mask and the terrain types in the top view.
 - [ ] **V-4 Layouts.** Top and 3D side by side; panels that can be moved, closed and opened again.
+      Today: the views side by side (sharing the camera, each with its own mouse), the mode panel,
+      inspector, dock and toolbar hidden and shown, the panels and views resized with splitters,
+      all remembered in the user's settings; Reset layout. Missing: moving a panel to another side
+      or out of the window.
 - [x] **V-5 Ruler.** Measure distances and heights: the ruler tool (Terrain mode), the distance in
       ogrids and km, the rise and slope, drawn in the top view and in the status line.

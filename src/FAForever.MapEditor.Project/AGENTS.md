@@ -191,6 +191,20 @@ the first commit of everything on disk. `Commit` adds everything and commits, or
 nothing changed. Git runs without a terminal prompt or an editor; what it says when it fails is the
 exception's message. Hidden folders (`.git`) are no files of the project: `ProjectWatcher` skips them.
 
+- **Sharing**: `Push` sends the branch to `origin` (`--set-upstream`), `Pull` takes `origin`'s
+  branch only as a fast-forward and only when nothing is uncommitted, and answers the files that
+  changed (the editor reads them again). Neither ever merges or overwrites work: a refusal says
+  why. Signing in is the computer's git credential helper's (Git Credential Manager on Windows):
+  the editor never sees or keeps a password; network operations stop after `NetworkTimeout`.
+  `Status` counts the commits `Ahead` and `Behind` the branch followed, as git knew it last.
+- **History**: `History(folder, count)` (`CommitInfo`: hash, short hash, author, date, subject,
+  newest first), `FilesOf(folder, commit)` (`CommitFile`: added, changed, deleted, renamed) and
+  `Resolve` (any name git knows to a full hash; a name that starts with `-` is refused).
+- **Going back**: `ReadAt(folder, commit)` reads the project as a commit holds it from a worktree
+  of its own in the temporary folder (so Git LFS's files are real files), and removes it again;
+  the project's own files and index are never touched. The editor makes that document one step
+  of undo, so nothing is lost.
+
 ## What the export derives
 
 - The paths of the map's files in the scenario (`/maps/<folder>/<file>.scmap`, `_save.lua`,
@@ -276,6 +290,15 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   unit's faction), its category (a prop's folder, a unit's layer, ...), its family (a prop without
   `_v1`, `_s2`: the variants share a tile) and its facts. `AssetUse.Count(document)` counts what a
   map uses by those keys, and `AssetUse.Biomes` gives the biomes of that, most used first.
+- **Where an asset comes from** (F-8, `AssetOrigins`): `Read(workspace)` reads the lists of files
+  (never their content) of the archives the manifest names, laid over each other as the converter
+  did, and `Of(entry)` answers an `AssetSource`: the game's (`env.scd`), FAF's (`env.nx2`, with
+  `ReplacesGame` when the game has the file too), the workspace's own (brushes) or the map's own
+  (`/maps/...`); `Unknown` when the archives moved. FAF's `.nx2` hold every blueprint, so every
+  prop and unit is FAF's by its blueprint; textures and decals are mostly the game's.
+- **Missing assets** (F-8, `MissingAssets.Find(document, catalog)`): what a map uses that neither
+  the catalogue nor the map's own files have, with how often and the check that finds it too
+  (`missing-texture`, `missing-model`), most used first.
 - A prop's or unit's picture is drawn from its most detailed mesh (`AssetEntry.Model`: the
   `.glb`, the albedo, normal and specular maps and the shader of its first level of detail) by
   `AssetPreview.Render`, with `MeshPreview` of FileFormats.Mesh: on the processor, from above and
