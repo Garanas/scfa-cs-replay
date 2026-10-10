@@ -39,7 +39,8 @@ internal static class ObjectShaders
 
     /// <summary>
     /// A model's pixel: its albedo (cut out below the shader's alpha reference) lit as the terrain,
-    /// from both sides (leaves and thin parts show their back), and mixed with the highlight's
+    /// from both sides (leaves and thin parts show their back; cut-out foliage with its normals
+    /// leaning up, as a crown takes the light), and mixed with the highlight's
     /// colour when highlighted. A wreck is grey and darker, as the game's burnt wreckage.
     /// </summary>
     public static string ModelFragment(bool es) => TerrainShaders.Header(es) + TerrainShaders.Lighting + """
@@ -79,6 +80,13 @@ internal static class ObjectShaders
             if (!gl_FrontFacing)
             {
                 normal = -normal;
+            }
+            if (uAlphaTest >= 0.0)
+            {
+                // foliage: cards of leaves stand at every angle, and lit by their own normals most face
+                // away from a high sun and show black; a crown takes the light as a whole, so its
+                // normals lean half way up
+                normal = normalize(normal + vec3(0.0, 1.0, 0.0));
             }
             vec3 base = albedo.rgb;
             if (uShading == 1)

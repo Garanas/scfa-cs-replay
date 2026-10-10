@@ -669,7 +669,7 @@ namespace FAForever.MapEditor.Project.Workspaces
 
     /// <summary>
     /// How often a map uses each asset, by the asset's key (<see cref="AssetCatalog.KeyOf"/>): its
-    /// props, decals, strata and the units of its armies.
+    /// props, decals, strata, the units of its armies and the cube maps it names.
     /// </summary>
     public static class AssetUse
     {
@@ -703,6 +703,11 @@ namespace FAForever.MapEditor.Project.Workspaces
             foreach (Army army in document.Armies)
             {
                 AddUnits(army.Units);
+            }
+            // the cube maps it names: the sky's, those units reflect and the water's (user story L-1)
+            foreach (string cubemap in MissingAssets.CubemapsOf(document))
+            {
+                Add(cubemap);
             }
             void AddUnits(UnitGroup group)
             {

@@ -114,10 +114,53 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task APresetWithASpawnMovesTheNearestSpawnAndItsUnitsAreThatArmys()
+        {
+            MainViewModel model = await Open();
+            MapDocument document = model.ShownDocument!;
+            int armies = document.Armies.Length;
+            Spawn first = document.Markers.Spawns.Single(spawn => spawn.Name == "ARMY_1");
+            (float sx, float sz) = (MathF.Floor(first.Position.X) + 0.5f, MathF.Floor(first.Position.Z) + 0.5f);
+            await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1201", ["x"] = sx + 6, ["z"] = sz, ["army"] = "ARMY_1", ["group"] = "INITIAL/Base" });
+            await Run(model, "markers.place", new JsonObject { ["kind"] = "mass", ["x"] = sx - 5, ["z"] = sz });
+            ObjectRef mass = model.Selection.Items.Single();
+            model.Selection.Set([ObjectRef.Marker(first.Id), mass, ObjectRef.Unit("UNIT_1")]);
+            await Run(model, "edit.saveSelectionPreset", new JsonObject { ["name"] = "Start" });
+            await Run(model, "presets.apply", new JsonObject { ["kind"] = SelectionPresets.Kind, ["name"] = "Start" });
+            SelectionPresetTool tool = model.Tool<SelectionPresetTool>();
+            Assert.IsTrue(tool.HoldsSpawn);
+            Assert.AreEqual("NEUTRAL_CIVILIAN", tool.Army, "the tool's army stays as it was; the spawn's army takes the units");
+
+            // the preview: an outline per thing under the mouse (and none without the mouse)
+            model.Pointer = null;
+            Assert.AreEqual(0, tool.Shapes(ToolView.Flat(0.5f)).Count);
+            model.Pointer = (100, 100);
+            Assert.AreEqual(3 * 2, tool.Shapes(ToolView.Flat(0.5f)).Count, "three outlines, each with its shadow");
+
+            // placed far away (HardFFA's spawns lie together in its middle): the nearest spawn moves there, no army is added
+            CommandRun placed = await Run(model, "edit.placePreset", new JsonObject { ["x"] = 40, ["z"] = 40 });
+            MapDocument after = model.ShownDocument!;
+            Spawn[] movedSpawns = [.. after.Markers.Spawns.Where(spawn => document.Markers.Spawns.Single(o => o.Id == spawn.Id).Position != spawn.Position)];
+            Assert.AreEqual(1, movedSpawns.Length, "one spawn moved");
+            Spawn near = document.Markers.Spawns.Single(spawn => spawn.Id == movedSpawns[0].Id);
+            Assert.AreEqual(40, movedSpawns[0].Position.X, 2, "into the base");
+            Assert.AreEqual(armies, after.Armies.Length, "the map keeps its armies");
+            Assert.AreEqual(document.Markers.Spawns.Length, after.Markers.Spawns.Length);
+            Spawn moved = after.Markers.Spawns.Single(spawn => spawn.Name == near.Name);
+            Assert.AreNotEqual(near.Position, moved.Position, "the nearest spawn moved into the base");
+            PlacedUnit unit = after.AllUnits().Single(u => u.Unit.Blueprint == "uec1201" && u.Unit.Name != "UNIT_1");
+            Assert.AreEqual(near.Name, unit.Army, "the base's units are the moved spawn's army's");
+            CollectionAssert.Contains(model.Selection.Items.ToArray(), ObjectRef.Marker(moved.Id), "the moved spawn is selected with what was placed");
+            Assert.AreEqual(3, ((JsonArray)placed.Result!).Count, "the mass and the unit placed, and the spawn moved");
+        }
+
+        [TestMethod]
         public async Task AStampIsPressedAtAClickAsOneStepTurnedAndSized()
         {
             (MainViewModel model, Workspace workspace) = await OpenInWorkspace("terrain.stamp");
             StampTool tool = model.Tool<StampTool>();
+            Assert.AreEqual(BrushChoice.NoPicture, tool.Shape.Chosen, "a stamp has no round shape: it asks for a picture");
+            CollectionAssert.DoesNotContain(tool.Shape.Choices.ToArray(), BrushChoice.Round);
             string picture = Path.Combine(workspace.BrushesFolder, "hills", "cone.png");
             Directory.CreateDirectory(Path.GetDirectoryName(picture)!);
             // a cone: white in the middle, black at the sides

@@ -133,6 +133,7 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsTrue(uses[albedo] >= 1);
             Assert.AreEqual(document.Props.Length, uses.Where(use => use.Key.EndsWith("_prop.bp", StringComparison.Ordinal)).Sum(use => use.Value));
             Assert.IsTrue(AssetUse.Biomes(uses).Count > 0);
+            Assert.IsTrue(uses.ContainsKey(AssetCatalog.KeyOf(document.Sky.Cubemap)), "the sky's cube map is a use");
         }
     }
 }

@@ -24,7 +24,7 @@ public sealed record GroupChoice(string Path, string Title)
 /// build grid; a mobile unit turns freely. The unit comes from the unit picker (Choose...), a tile
 /// chosen on the shelf, or a tile dropped on a view, which places it where it is dropped. Q and E
 /// turn what is placed next: a structure or a preset a quarter turn, a mobile unit 15 degrees
-/// (with shift a quarter turn).
+/// (with shift a quarter turn). A preset's units show under the mouse before the click.
 /// </summary>
 public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObject, IMapTool, IAssetDropTarget
 {
@@ -76,6 +76,22 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
 
     public bool HasPreset => Preset is not null;
 
+    private IReadOnlyList<PreviewOutline> _outlines = [];
+
+    /// <summary>
+    /// Makes a units preset what a click places, with its units' footprints under the mouse.
+    /// </summary>
+    public void UsePreset(string name, UnitGroup units)
+    {
+        _outlines = PresetPreview.OfUnits(units, model.Assets.Catalog);
+        Preset = name;
+    }
+
+    /// <summary>
+    /// A preset's units under the mouse, where a click puts them (turned in quarter turns, as placing does).
+    /// </summary>
+    public IReadOnlyList<ToolShape> Shapes(ToolView view) => Preset is null ? [] : PresetPreview.Shapes(model, view, _outlines, BuildGrid.SnapHeading((float)(Heading * Math.PI / 180)));
+
     /// <summary>
     /// What a click places, as the options bar says it.
     /// </summary>
@@ -111,6 +127,7 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
         ["group"] = Group,
         ["heading"] = Heading,
         ["asWrecks"] = AsWrecks,
+        ["previewOutlines"] = Preset is null ? 0 : _outlines.Count,
         ["structure"] = Unit?.IsStructure,
         ["footprint"] = Unit?.Footprint is (double x, double z) ? new JsonArray(x, z) : null,
     };

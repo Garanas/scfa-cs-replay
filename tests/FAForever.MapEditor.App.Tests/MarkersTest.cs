@@ -74,6 +74,37 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task AClickOnADepositSelectsAndDragsItRatherThanStackingAnother()
+        {
+            MainViewModel model = await Open("markers.hydrocarbon");
+            IMapTool tool = ActiveTool(model);
+            await Click(tool, 80, 80);
+            ResourceMarker first = (ResourceMarker)Selected(model);
+            int markers = model.ShownDocument!.Markers.All.Count();
+            int steps = model.History.Count;
+
+            model.Selection.Clear();
+            await Click(tool, 80.5f, 80.5f);
+            Assert.AreEqual(markers, model.ShownDocument!.Markers.All.Count(), "no deposit stacked on the one there");
+            Assert.AreEqual(first.Id, Selected(model).Id, "the one there is selected");
+            Assert.AreEqual(steps, model.History.Count);
+
+            // a drag from it moves it, one step
+            tool.Press(80.5f, 80.5f, ToolInput.Default);
+            tool.Drag(90.5f, 80.5f, ToolInput.Default);
+            tool.Release();
+            Assert.AreEqual(markers, model.ShownDocument!.Markers.All.Count());
+            Assert.AreEqual(90.5f, model.ShownDocument.FindMarker(first.Id)!.Position.X, 1e-3, "moved along, on an ogrid's centre");
+            Assert.AreEqual(steps + 1, model.History.Count);
+
+            // placing one on its ogrid by command refuses and selects the one there
+            model.Selection.Clear();
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => Run(model, "markers.place", new JsonObject { ["kind"] = "mass", ["x"] = 90.2f, ["z"] = 80.7f }));
+            Assert.AreEqual(first.Id, Selected(model).Id);
+            Assert.AreEqual(markers, model.ShownDocument!.Markers.All.Count());
+        }
+
+        [TestMethod]
         public async Task ADepositOnSteepGroundWarns()
         {
             MainViewModel model = await Open("markers.mass");

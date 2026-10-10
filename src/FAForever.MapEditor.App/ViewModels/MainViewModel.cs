@@ -156,6 +156,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeHeightLayers();
         InitializeUndoSelection();
         InitializeContent();
+        InitializeInspectorParts();
         Plugins = new PluginsViewModel(this);
     }
 
@@ -346,7 +347,15 @@ public sealed partial class MainViewModel : ObservableObject
         }
         _brushWatcher.Changed += files => UiThread.Run(_ui, () =>
         {
-            Logger("Assets").LogInformation("The brushes changed on disk: {Files}", string.Join(", ", files));
+            // a folder of brushes reports a change when the workspace's assets are read at the start
+            // (its time of access): only a brush file (a picture) changing reads them again
+            string[] pictures = [.. files.Where(Path.HasExtension)];
+            if (pictures.Length == 0)
+            {
+                Logger("Assets").LogDebug("Folders of the brushes changed on disk, no brush: {Folders}", string.Join(", ", files));
+                return;
+            }
+            Logger("Assets").LogInformation("The brushes changed on disk: {Files}", string.Join(", ", pictures));
             _ = LoadAssetsAsync(workspace);
         });
     }

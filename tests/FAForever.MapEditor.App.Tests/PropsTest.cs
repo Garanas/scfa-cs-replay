@@ -70,6 +70,15 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(model.Tools.All(tool => tool.Tool is not null), "every tool is built");
             Assert.AreEqual(ObjectKinds.Props, model.SelectableKinds);
             Assert.AreEqual(PropsViewModel.PaletteKind, model.Presets.Kind, "the panel lists the palettes");
+
+            // a prop chosen on the shelf with the Select tool: the status line says what it is for
+            AssetEntry rock = model.Assets.Catalog.Find("/" + Rock) ?? model.Assets.Catalog.Find(Rock)!;
+            model.Props.Chose(rock);
+            Assert.AreEqual("props.select", model.ActiveTool!.Definition.Id, "the Select tool stays");
+            StringAssert.Contains(model.Status, "is the prop the Place tool places");
+            model.SelectTool("props.place");
+            model.Props.Chose(rock);
+            StringAssert.StartsWith(model.Status, "Placing ");
         }
 
         [TestMethod]

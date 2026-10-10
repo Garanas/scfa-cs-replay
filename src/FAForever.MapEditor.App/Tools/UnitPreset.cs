@@ -77,7 +77,7 @@ public static class UnitPreset
         UnitPresetSettings settings = preset.Read<UnitPresetSettings>();
         UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
         model.SelectTool("units.place");
-        tool.Preset = preset.Name;
+        tool.UsePreset(preset.Name, ToTemplate(settings.Group));
         model.Status = $"Click to place the preset {preset.Name} ({settings.Count} units) for {tool.Army}; Q and E turn it";
     }
 

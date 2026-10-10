@@ -65,9 +65,33 @@ namespace FAForever.MapEditor.App.Tests
             await Run(model, "select.all");
             Assert.IsFalse(model.Selection.Items.Any(thing => thing.Kind == ObjectKind.Area), "nor does Select all");
 
+            // with the markers and path nodes locked, the box takes nothing rather than the area
+            model.LockedKinds = ObjectKinds.Markers | ObjectKinds.PathNodes;
+            model.SelectInside(-10, -10, 270, 270, SelectionChange.Replace);
+            Assert.IsFalse(model.Selection.HasAny, "areas are the Map mode's: a box in the Markers mode leaves them alone");
+            model.LockedKinds = ObjectKinds.None;
+
             model.SelectTool("map.areas");
             model.SelectInside(-10, -10, 270, 270, SelectionChange.Replace);
             CollectionAssert.AreEqual(new[] { ObjectRef.Area("AREA_1") }, model.Selection.Items.ToArray(), "the Map mode's tools pick areas alone: a box takes them");
+        }
+
+        [TestMethod]
+        public async Task TheInspectorShowsTheActiveToolsPartsAndTheSelectionOnlyInModesOfThings()
+        {
+            MainViewModel model = await Open("paint.strata");
+            CollectionAssert.AreEqual(new[] { "Layer" }, model.InspectorParts.Select(part => part.Title).ToArray(), "the strata tool: its stratum, no mask rules");
+            model.SelectTool("paint.masks");
+            CollectionAssert.AreEqual(new[] { "Mask rules" }, model.InspectorParts.Select(part => part.Title).ToArray(), "the masks tool: its rules, no stratum");
+
+            model.SelectTool("markers.select");
+            model.SelectInside(-10, -10, 270, 270, SelectionChange.Replace);
+            Assert.IsTrue(model.InspectsSelection);
+            Assert.IsFalse(model.InspectsMode);
+            model.SelectTool("terrain.sculpt");
+            Assert.IsTrue(model.Selection.HasAny, "the selection stays");
+            Assert.IsFalse(model.InspectsSelection, "but the Terrain mode's inspector shows its own parts");
+            Assert.IsTrue(model.InspectsMode);
         }
 
         [TestMethod]

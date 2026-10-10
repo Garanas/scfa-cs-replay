@@ -215,6 +215,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("units.place", model.ActiveTool!.Definition.Id, "applying chooses the place tool");
             Assert.AreEqual("Village", tool.Preset);
             tool.PlaceInto("ARMY_3", "INITIAL");
+            model.Selection.Set([ObjectRef.Unit("UNIT_1")]);
             tool.Press(100.4f, 120.2f);
 
             PlacedUnit[] placed = [.. model.ShownDocument!.AllUnits().Where(unit => unit.Army == "ARMY_3")];
@@ -224,6 +225,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual((94.5f, 120f), (farm.Unit.Position.X, farm.Unit.Position.Z), "its middle on a whole ogrid: the farm stays on the grid");
             CollectionAssert.AreEqual(new[] { "INITIAL", "Village", "Houses" }, placed.Single(unit => unit.Unit.Blueprint == "uec1101").Group.ToArray());
             Assert.AreEqual("Place a preset", model.Map!.Session.UndoDescription);
+            CollectionAssert.AreEquivalent(placed.Select(unit => ObjectRef.Unit(unit.Unit.Name)).ToArray(), model.Selection.Items.ToArray(), "what was placed is selected, not the unit selected before");
 
             CommandRun again = await Run(model, "units.placePreset", new JsonObject { ["name"] = "Village", ["x"] = 30, ["z"] = 30, ["army"] = "ARMY_4", ["heading"] = 90 });
             Assert.AreEqual("INITIAL/Village", ((JsonObject)again.Result!)["group"]!.GetValue<string>());

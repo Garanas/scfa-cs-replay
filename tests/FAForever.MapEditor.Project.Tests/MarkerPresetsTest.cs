@@ -108,6 +108,11 @@ namespace FAForever.MapEditor.Project.Tests
             CollectionAssert.DoesNotContain(WeatherStyles.TypesOf("Desert").ToArray(), "RainClouds");
             Assert.AreEqual(WeatherStyles.AllTypes, WeatherStyles.TypesOf("Martian"));
             Assert.AreEqual(4, WeatherStyles.NewDefinition("Weather Definition 01", Vector3.Zero).Types.Length);
+            Assert.AreEqual("Tundra", WeatherStyles.NewDefinition("Weather Definition 01", Vector3.Zero).MapStyle, "the game's template");
+            WeatherDefinition desert = WeatherStyles.NewDefinition("Weather Definition 01", Vector3.Zero, "Desert");
+            Assert.AreEqual("Desert", desert.MapStyle);
+            Assert.IsTrue(desert.Types.All(type => WeatherStyles.TypesOf("Desert").Contains(type.Type)), "desert clouds only");
+            Assert.AreEqual(1, desert.Types.Sum(type => type.Chance), 0.01);
             Assert.AreEqual(180, WeatherStyles.NewGenerator("Weather Generator 01", Vector3.Zero).CloudHeight);
         }
     }

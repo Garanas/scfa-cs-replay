@@ -19,6 +19,11 @@ public sealed record BrushChoice(string? Key, string Title, string Path, string?
 {
     public static BrushChoice Round { get; } = new BrushChoice(null, "Round", "Round", null);
 
+    /// <summary>
+    /// No picture yet, for a tool that needs one (the stamp): it has no round shape.
+    /// </summary>
+    public static BrushChoice NoPicture { get; } = new BrushChoice(null, "Choose a picture", "No picture chosen: a brush of the workspace, or shift and a drag", null);
+
     public override string ToString() => Title;
 }
 
@@ -40,21 +45,32 @@ public sealed partial class BrushShapeSettings : ObservableObject
     private readonly ILogger _log;
     private readonly SynchronizationContext? _ui;
 
-    public BrushShapeSettings(MainViewModel model)
+    /// <summary>
+    /// The choice without a picture: <see cref="BrushChoice.Round"/>, or for a tool that needs a
+    /// picture <see cref="BrushChoice.NoPicture"/>.
+    /// </summary>
+    private readonly BrushChoice _plain;
+
+    /// <param name="pictureOnly">The tool needs a picture (the stamp): its choices have no round
+    /// shape, and the first says to choose a picture.</param>
+    public BrushShapeSettings(MainViewModel model, bool pictureOnly = false)
     {
         _log = model.Logger("Editor");
         _ui = SynchronizationContext.Current;
+        _plain = pictureOnly ? BrushChoice.NoPicture : BrushChoice.Round;
+        Choices = [_plain];
+        Chosen = _plain;
     }
 
     /// <summary>
-    /// Round and the workspace's brushes, by folder and name.
+    /// Round (or for a tool that needs a picture, none yet) and the workspace's brushes, by folder and name.
     /// </summary>
     [ObservableProperty]
-    public partial IReadOnlyList<BrushChoice> Choices { get; private set; } = [BrushChoice.Round];
+    public partial IReadOnlyList<BrushChoice> Choices { get; private set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsShaped), nameof(Shown))]
-    public partial BrushChoice Chosen { get; set; } = BrushChoice.Round;
+    public partial BrushChoice Chosen { get; set; }
 
     /// <summary>
     /// How far the shape is turned, in degrees clockwise in the top view, from -180 to 180.
@@ -80,14 +96,14 @@ public sealed partial class BrushShapeSettings : ObservableObject
     public void Refresh(AssetCatalog catalog)
     {
         BrushChoice wanted = Chosen;
-        Choices = [BrushChoice.Round, .. catalog.Entries
+        Choices = [_plain, .. catalog.Entries
             .Where(entry => entry.Kind == AssetKind.Brush)
             .OrderBy(entry => entry.Group, StringComparer.OrdinalIgnoreCase)
             .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
             .Select(entry => new BrushChoice(entry.Key, entry.Name, entry.Group == WorkspaceLayout.Brushes ? entry.Name : $"{entry.Group}/{entry.Name}", entry.File))];
         // a picture chosen by its file before the catalogue listed it stays chosen
         Chosen = Choices.FirstOrDefault(choice => choice.Key == wanted.Key)
-            ?? (wanted.File is string file && File.Exists(file) ? AddChoice(wanted) : BrushChoice.Round);
+            ?? (wanted.File is string file && File.Exists(file) ? AddChoice(wanted) : _plain);
     }
 
     private BrushChoice AddChoice(BrushChoice choice)
@@ -105,7 +121,7 @@ public sealed partial class BrushShapeSettings : ObservableObject
     {
         if (key is null || key.Equals("round", StringComparison.OrdinalIgnoreCase))
         {
-            Chosen = BrushChoice.Round;
+            Chosen = _plain;
             return;
         }
         string wanted = key.ToLowerInvariant();
@@ -168,7 +184,7 @@ public sealed partial class BrushShapeSettings : ObservableObject
         // a combo box whose list is replaced lets go of its item: the brush keeps its shape
         if (newValue is null)
         {
-            Chosen = oldValue ?? BrushChoice.Round;
+            Chosen = oldValue ?? _plain;
         }
     }
 

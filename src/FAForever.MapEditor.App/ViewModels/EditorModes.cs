@@ -28,7 +28,13 @@ public sealed record ToolDefinition(string Id, string Title, string Story, strin
 /// <summary>
 /// A part of a mode's panel or of the inspector.
 /// </summary>
-public abstract record PanelSection(string Title);
+public abstract record PanelSection(string Title)
+{
+    /// <summary>
+    /// The tools (by id) whose inspector shows it; null for every tool of the mode.
+    /// </summary>
+    public IReadOnlyList<string>? ForTools { get; init; }
+}
 
 /// <summary>
 /// A part that is not built yet: what it will hold, and its user story.
@@ -125,7 +131,8 @@ public static class EditorModes
                 new MasksSection(),
                 new PresetSection("brush", "Brush presets") { EmptyText = BrushPresetsEmpty, SaveLabel = "Save the brush's settings as a preset" },
             ],
-            [new MaskRulesSection(), new LayerSection()]),
+            // the masks tool's rules, the strata tool's stratum: each only with its tool
+            [new MaskRulesSection { ForTools = ["paint.masks"] }, new LayerSection { ForTools = ["paint.strata"] }]),
 
         new ModeDefinition("water", "Water", "Icon.Water", "Levels, colours, waves, paintable water", 0, "F4", "W-1",
             [

@@ -93,14 +93,15 @@ namespace FAForever.MapEditor.App.Tests
             model.ActiveTool!.Tool!.Press(100, 100);
             await Task.Yield();
             WeatherDefinition definition = (WeatherDefinition)model.ShownDocument!.Find(model.Selection.Items.Single())!;
-            Assert.AreEqual("Tundra", definition.MapStyle);
+            string style0 = WeatherStyles.StyleOf(model.ShownDocument) ?? "Tundra";
+            Assert.AreEqual(style0, definition.MapStyle, "the style of the map's biome");
             Assert.AreEqual("Weather Definition 01", definition.Name);
 
             MarkerSelection section = (MarkerSelection)model.Selection.Inspector.Sections.Single();
             Assert.IsTrue(section.Weather.HasDefinitions);
             Assert.IsFalse(section.Weather.HasGenerators);
             ChoiceSetting style = (ChoiceSetting)section.Weather.Definition.Settings[0];
-            Assert.AreEqual("Tundra", style.Chosen);
+            Assert.AreEqual(style0, style.Chosen);
             style.Chosen = "Evergreen";
             await Task.Yield();
             await Run(model, "markers.setWeather", new JsonObject { ["type"] = 2, ["cloudType"] = "RainClouds", ["chance"] = 0.5 });
@@ -162,6 +163,22 @@ namespace FAForever.MapEditor.App.Tests
             PlacedUnit placed = model.ShownDocument!.FindUnit(unit)!;
             CollectionAssert.AreEqual(new[] { "Optional_Civilian_Defenses_3" }, placed.Group.ToArray());
             Assert.AreEqual("Optional_Civilian_Defenses_3 (ARMY_17): 1 units, from value 3 of optional_civilian_defenses", model.Markers.OptionalGroups.Single().Line);
+
+            // civilians of NEUTRAL_CIVILIAN keep their army: the script creates a group of any army
+            await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1101", ["x"] = 70, ["z"] = 50, ["army"] = "NEUTRAL_CIVILIAN" });
+            string house = model.ShownDocument!.AllUnits().Single(u => u.Army == "NEUTRAL_CIVILIAN" && u.Unit.Position.X == 70).Unit.Name;
+            model.Selection.Set([ObjectRef.Unit(house)]);
+            await Run(model, "markers.addOptionalGroup", new JsonObject { ["option"] = "Players", ["level"] = 3, ["fromSelection"] = true });
+            PlacedUnit kept = model.ShownDocument!.FindUnit(house)!;
+            Assert.AreEqual("NEUTRAL_CIVILIAN", kept.Army);
+            CollectionAssert.AreEqual(new[] { "Optional_Players_3" }, kept.Group.ToArray());
+            Assert.AreEqual("Added Optional_Players_3 to NEUTRAL_CIVILIAN with 1 units", model.Status);
+
+            // units of a playable army go to the civilians, and the status line says so
+            await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1101", ["x"] = 90, ["z"] = 50, ["army"] = "ARMY_1" });
+            model.Selection.Set([ObjectRef.Unit(model.ShownDocument!.AllUnits().Single(u => u.Army == "ARMY_1" && u.Unit.Position.X == 90).Unit.Name)]);
+            await Run(model, "markers.addOptionalGroup", new JsonObject { ["option"] = "Players", ["level"] = 4, ["fromSelection"] = true });
+            Assert.AreEqual("Added Optional_Players_4 to ARMY_17 with 1 units, moved from ARMY_1 into ARMY_17", model.Status);
         }
     }
 }

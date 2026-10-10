@@ -28,7 +28,8 @@ public sealed partial class StampTool : ObservableObject, IShapedBrushTool
     public StampTool(MainViewModel model)
     {
         _model = model;
-        Shape = new BrushShapeSettings(model);
+        // a stamp is a picture: it has no round shape
+        Shape = new BrushShapeSettings(model, pictureOnly: true);
     }
 
     public BrushShapeSettings Shape { get; }

@@ -194,9 +194,28 @@ public static class ObjectPicking
 
         if (shown.Props)
         {
+            // thousands of props: each blueprint's bounds asked for once, and a prop whose bounding
+            // sphere the ray passes by is left out before its box is tested
+            Dictionary<string, (ObjectBounds Bounds, float Radius)> blueprints = new Dictionary<string, (ObjectBounds, float)>(StringComparer.Ordinal);
+            Vector3 along = Vector3.Normalize(direction);
             foreach (Prop prop in document.Props)
             {
-                Consider(HitBox(ObjectPlacement.Prop(prop), boundsOf(prop.Blueprint), origin, direction), ObjectRef.Prop(prop.Id));
+                if (!blueprints.TryGetValue(prop.Blueprint, out (ObjectBounds Bounds, float Radius) model))
+                {
+                    ObjectBounds bounds = boundsOf(prop.Blueprint);
+                    model = (bounds, MathF.Max(bounds.Min.Length(), bounds.Max.Length()));
+                    blueprints[prop.Blueprint] = model;
+                }
+                // a scale of 0 counts as 1, as the placement takes it
+                float scale = MathF.Max(MathF.Max(prop.Scale.X == 0 ? 1 : MathF.Abs(prop.Scale.X), prop.Scale.Y == 0 ? 1 : MathF.Abs(prop.Scale.Y)), prop.Scale.Z == 0 ? 1 : MathF.Abs(prop.Scale.Z));
+                float reach = model.Radius * scale;
+                Vector3 to = prop.Position - origin;
+                float ahead = Vector3.Dot(to, along);
+                if (ahead < -reach || (to - along * ahead).LengthSquared() > reach * reach)
+                {
+                    continue;
+                }
+                Consider(HitBox(ObjectPlacement.Prop(prop), model.Bounds, origin, direction), ObjectRef.Prop(prop.Id));
             }
         }
         if (shown.Units)

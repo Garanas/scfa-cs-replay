@@ -529,7 +529,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         IReadOnlyDictionary<string, int> uses = document is null ? new Dictionary<string, int>() : AssetUse.Count(document);
         bool sameMap = ReferenceEquals(document, _document) || (document is not null && _document is not null && document.Files == _document.Files);
         _document = document;
-        // the cube maps the map names (L-1) are no uses, but may be missing
+        // the cube maps the map names (L-1) count as uses; whether they are missing is checked when they change
         string cubemaps = document is null ? "" : string.Join('|', MissingAssets.CubemapsOf(document));
         bool cubemapsChanged = cubemaps != _cubemaps;
         _cubemaps = cubemaps;

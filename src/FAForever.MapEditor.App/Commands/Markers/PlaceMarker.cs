@@ -16,10 +16,12 @@ namespace FAForever.MapEditor.App.Commands;
 /// it: what a click with a placing tool of the Markers mode does. Its name is the next free one of
 /// its kind (<c>Mass 12</c>, <c>Rally Point 03</c>, <c>LandPN7</c>); a spawn is the next playable
 /// army (<c>ARMY_n</c>), added to the armies. Deposits go to the centre of their ogrid, where the
-/// game puts them, and say so when the ground is too steep for the storages around an extractor.
+/// game puts them, and say so when the ground is too steep for the storages around an extractor;
+/// a deposit on an ogrid that holds one already is refused, and the one there selected.
 /// </summary>
 /// <param name="Kind"><c>spawn</c>, <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c>, <c>path</c>, <c>weatherDefinition</c> or
-/// <c>weatherGenerator</c> (as the game's marker templates make them: Tundra weather, ten clouds 180 high).</param>
+/// <c>weatherGenerator</c> (as the game's marker templates make them: weather of the style of the map's
+/// biome, else Tundra; ten clouds 180 high).</param>
 /// <param name="X">In ogrids.</param>
 /// <param name="Type">An AI marker's type, e.g. <c>Rally Point</c> (left out: that one).</param>
 /// <param name="Layer">A path node's layer: <c>Land</c> (left out), <c>Water</c>, <c>Amphibious</c>, <c>Air</c>.</param>
@@ -42,6 +44,12 @@ public sealed class PlaceMarkerHandler(MainViewModel model, MarkersViewModel mar
         bool deposit = kind is "mass" or "hydrocarbon";
         float x = deposit ? MarkerEdits.Snap(request.X, MarkerSnap.Centre) : request.X;
         float z = deposit ? MarkerEdits.Snap(request.Z, MarkerSnap.Centre) : request.Z;
+        if (deposit && document.Markers.Resources.FirstOrDefault(other => MathF.Abs(other.Position.X - x) < 1 && MathF.Abs(other.Position.Z - z) < 1) is ResourceMarker taken)
+        {
+            // two extractors cannot stand on one ogrid: the one there is chosen instead
+            selection.Set([ObjectRef.Marker(taken.Id)]);
+            throw new InvalidOperationException($"{taken.Name} lies on that ogrid already: it is selected, drag it to move it");
+        }
         Vector3 position = new Vector3(x, document.Terrain.Heightmap.HeightAt(x, z), z);
         PathLayer layer = request.Layer is null ? PathLayer.Land
             : Enum.TryParse(request.Layer, ignoreCase: true, out PathLayer parsed) && Enum.IsDefined(parsed) ? parsed
@@ -54,7 +62,8 @@ public sealed class PlaceMarkerHandler(MainViewModel model, MarkersViewModel mar
             "hydrocarbon" => new ResourceMarker { Id = 0, Name = "Hydrocarbon 01", Kind = ResourceKind.Hydrocarbon, Position = position },
             "ai" => new AiMarker { Id = 0, Name = $"{type} 01", Type = type, Position = position },
             "path" => new PathNode { Id = 0, Name = $"{LayerPrefix(layer)}PN1", Layer = layer, Position = position },
-            "weatherdefinition" => WeatherStyles.NewDefinition("Weather Definition 01", position),
+            // the style of the map's biome: a desert map gets desert weather
+            "weatherdefinition" => WeatherStyles.NewDefinition("Weather Definition 01", position, WeatherStyles.StyleOf(document)),
             "weathergenerator" => WeatherStyles.NewGenerator("Weather Generator 01", position),
             _ => throw new ArgumentException($"There is no kind of marker '{request.Kind}' to place: spawn, mass, hydrocarbon, ai, path, weatherDefinition or weatherGenerator"),
         };

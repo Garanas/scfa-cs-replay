@@ -14,7 +14,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// group of an army, one step of undo: its middle at a place (on a whole ogrid, so structures stay
 /// on the build grid), turned in quarter turns, each unit as high above the terrain as it was.
 /// What is left out is the place tool's: its army, group (the new group goes in it) and heading;
-/// the place, the mouse's (else the middle of the map).
+/// the place, the mouse's (else the middle of the map). Selects the units placed, with their images.
 /// </summary>
 /// <param name="Name">The preset's name (Units mode, Presets); left out, the one the place tool places.</param>
 /// <param name="X">In ogrids.</param>
@@ -24,7 +24,7 @@ namespace FAForever.MapEditor.App.Commands;
 [EditorCommand("units.placePreset", "Place a preset", Story = "U-4")]
 public sealed record PlaceUnitPreset(string? Name = null, float? X = null, float? Z = null, string? Army = null, string? Group = null, float? Heading = null) : IRequest<JsonObject>;
 
-public sealed class PlaceUnitPresetHandler(MainViewModel model, PresetsViewModel presets, CurrentEdit edit) : IRequestHandler<PlaceUnitPreset, JsonObject>
+public sealed class PlaceUnitPresetHandler(MainViewModel model, PresetsViewModel presets, SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<PlaceUnitPreset, JsonObject>
 {
     public Task<JsonObject> Handle(PlaceUnitPreset request, CancellationToken cancellationToken)
     {
@@ -45,6 +45,7 @@ public sealed class PlaceUnitPresetHandler(MainViewModel model, PresetsViewModel
 
         ImmutableArray<string> names = [];
         ImmutableArray<string> group = [];
+        ImmutableArray<ObjectRef> placed = [];
         UnitCommands.Apply(edit, d =>
         {
             // the group to place into is made when missing, as placing a unit makes it
@@ -60,8 +61,10 @@ public sealed class PlaceUnitPresetHandler(MainViewModel model, PresetsViewModel
             }
             d = d.PlaceUnits(template, army, parent, x, z, radians, out names, out group);
             // with the symmetry, the preset's units in every part of the map, in the same group (F-12)
-            return model.MirrorPlaced(d, [.. names.Select(ObjectRef.Unit)], out _);
+            return model.MirrorPlaced(d, [.. names.Select(ObjectRef.Unit)], out placed);
         });
+        // what was placed is selected, as placing a unit selects it
+        selection.Set(placed);
         model.Status = $"Placed the preset {preset.Name}: {names.Length} units in {UnitGroupEdits.PathText(group)} of {army}";
         return Task.FromResult(new JsonObject
         {

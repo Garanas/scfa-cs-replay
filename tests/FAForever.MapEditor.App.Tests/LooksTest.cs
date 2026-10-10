@@ -298,5 +298,17 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(0, window.MapView.GridLinesDrawn);
             window.Close();
         });
+
+        [TestMethod]
+        public void TheHolesOfALeafTextureTakeTheLeavesColourSoTheMipmapsStayGreen()
+        {
+            // two leaf pixels and two holes, the holes black as a texture of the game has them
+            DecodedTexture leaves = new DecodedTexture(2, 2, [40, 160, 30, 255, 60, 180, 50, 255, 0, 0, 0, 0, 0, 0, 0, 10]);
+
+            DecodedTexture filled = FAForever.MapEditor.App.Rendering.Gpu.CutOutTextures.Fill(leaves, 0.5f);
+
+            CollectionAssert.AreEqual(new byte[] { 40, 160, 30, 255, 60, 180, 50, 255, 50, 170, 40, 0, 50, 170, 40, 10 }, filled.Rgba, "holes in the leaves' average colour, every alpha kept");
+            Assert.AreEqual(0, leaves.Rgba[8], "the picture read stays as it was");
+        }
     }
 }
