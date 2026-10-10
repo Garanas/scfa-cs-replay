@@ -139,6 +139,9 @@ faf-map editor view zoom=4 --port 5372                                  # the to
 faf-map editor state --port 5372                                        # looks: shader, sky (drawn in 3D?), grid and decal lines the top view drew, missing cube maps
 faf-map editor run id=plugin.scatter-rocks.scatter count=10 --port 5372  # a Lua plugin's command (state.plugins: errors, commands, tools)
 faf-map editor tool id=plugin.plateau-brush.plateau --port 5372          # a Lua plugin's tool: then mouse/stroke as with any tool
+faf-map editor run id=generate.navigation --port 5372                    # the Procedural mode: regions, starts, routes (state.procedural)
+faf-map editor run id=generate.auto on=true --port 5372                  # walkability regenerates 1 s after a change; wait path=procedural.auto.kept
+faf-map editor run id=file.export --port 5372 && faf-map editor state path=procedural.export --port 5372   # the export's steps
 ```
 
 Keep answers small, compare, and see what a command opened:

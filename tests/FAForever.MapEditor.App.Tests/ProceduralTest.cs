@@ -265,6 +265,11 @@ namespace FAForever.MapEditor.App.Tests
             await model.ExportAsync(Path.Combine(Root, Guid.NewGuid().ToString("N")));
             Assert.AreEqual(ExportStepStatus.Done, model.Export.Lines[1].Status);
             Assert.AreEqual(steps, model.History.Count);
+
+            // another map forgets the last export
+            await model.OpenAsync(HardFfa);
+            Assert.IsTrue(model.Export.Lines.All(line => line.Status == ExportStepStatus.Waiting));
+            Assert.IsNull(model.Export.LastFolder);
         }
 
         [TestMethod]

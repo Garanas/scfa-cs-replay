@@ -182,7 +182,7 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **M-8 Versions and upload.** Raise the version on export; render the preview; upload to the
       FAF vault, refusing a map that is not publishable (`MapDocument.IsPublishable`: the sandbox).
       File, Render the preview (S-4); `file.export {raise}` raises the version (folder and
-      `map_version`) and renders a preview out of date first; File, Upload to the vault
+      `map_version`) and renders the preview first (M-9); File, Upload to the vault
       (`file.upload`): the map's errors and the vault's own rules checked first, the next version
       exported and zipped, the person's yes to name, version and size, a sign-in in the browser
       (kept in memory only), the upload with progress, then the map is that version. Without a

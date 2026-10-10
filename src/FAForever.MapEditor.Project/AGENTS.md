@@ -268,6 +268,18 @@ exception's message. Hidden folders (`.git`) are no files of the project: `Proje
   use). Path nodes get their `graph` from their layer. A node without links gets
   `adjacentTo = ''`, as most maps write it.
 - The save's editor counters (`next_unit_id`, ...) from the names in use (`MapSaveWriter`).
+- **The editor named** (`EditorStamp`, user story M-9): with a stamp (`MapExporter.ToBytes`/`WriteFolder`
+  take one; `EditedMap.Export` and `ExportAsync` always pass `EditorStamp.Now()`), `_scenario.lua` starts
+  with `-- Made with the FAF Map Editor <version> (<commit>) on <date>` and `ScenarioInfo` holds
+  `map_editor = { name, version, commit, project_format, exported }`. Without one the bytes are the same
+  every time (the tests' comparisons). The version and commit come from the build (`EditorBuild`: the
+  informational version, `1.0.0+<sha>`, which the SDK makes from git; a build without `.git` knows no
+  commit and writes `commit unknown`). Checked 2026-10-10: the game (`lua/ui/maputil.lua`,
+  `LoadScenarioInfoFile` runs the file and reads named keys; nothing walks ScenarioInfo's keys; the lobby
+  sends the file's path, not the table), the FAF client (`MapService.readMap`, luaj, named keys) and the
+  vault's upload check (faf-java-api `MapService.validateScenarioLua`, luaj, named keys; `updateLuaFiles`
+  rewrites only lines holding `/maps/<folder>`, so keep that path out of the stamp) all ignore the extra
+  key and the comment. The importer leaves `map_editor` out.
 - Not kept at all: the platoons, orders and platoon builders of co-op saves, and the `orders` and
   `platoon` of unit groups and units (empty in every vault map but six groups of one co-op mission);
   the export writes them empty, as the map editors do.
@@ -736,6 +748,24 @@ other from the document each leaves (the editor's `generate.stale`) leaves nothi
   FAF map editor writes it and the game reads it: x in alpha and z in green as 0.5 + n / 2, red and
   blue 0. Theta Passage's own normal map differs from the generated one by less than one step per
   channel on average.
+
+- **Cancelling**: `IGenerator.Generate(document, CancellationToken)` (by default: refuses to start when
+  cancelled, then runs to the end) lets the editor stop a run regenerating on its own; walkability
+  passes the token into `NavGenerator.Generate`, which checks it between its steps.
+- **The navigation mesh** (user story T-8, `Generation/NavigationMesh.cs`, `NavigationMeshGenerator`,
+  id `navigationMesh`): walkability's `MapNavigation` (its current result when there is one, `Reads`
+  walkability) with, per layer, the regions largest first (`NavRegion`: cells, area, the starts in it,
+  mass and hydrocarbon counts as the game assigns them) and the routes between starts
+  (`NavStartRoute`: straight distance, `NavRoute` or null, `Detour`) that `NavigationSettings.Routes`
+  asks for (`Nearest`: each start with the one nearest in a straight line; `All`; `None`). A start on
+  ground no unit of the layer can leave belongs to the region within `StartReach` (8) ogrids, else to
+  none (`StrandedOf`; HardFFA's eight starts crowd steep ground). Routes are searched on the grid
+  coarsened to the game's compression threshold (`NavGrid.Coarsen`): on a 4096 map the regions and
+  routes take well under a second after walkability (`NavigationMeshTest.IsQuickEnoughOnTheLargestMaps`).
+  Its inputs add `Spawns` and `NavigationSettings` to walkability's.
+- **The Procedural mode's settings** (`Files/InMemory/ProceduralSettings.cs`, `MapDocument.Procedural`,
+  `map.json`'s optional `procedural`, `ProceduralDto`; absent for the defaults): `AutoGenerate` (ids that
+  regenerate on their own), `NotOnExport` (ids the export leaves as they are), `Navigation.Routes`.
 
 ## Rules: masks and props from the layers
 

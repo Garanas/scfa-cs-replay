@@ -41,7 +41,7 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-      <ItemsControl ItemsSource="{Binding Navigation.Routes}" AutomationProperties.Name="Routes between starts">
+      <ItemsControl ItemsSource="{Binding Navigation.Routes}" AutomationProperties.Name="The routes measured between starts">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:NavRouteRow">
             <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Text}" />

@@ -12,7 +12,7 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:ExportStepState">
             <StackPanel>
-              <TextBlock Text="{Binding Title}" Classes.secondary="{Binding !IsRunning}" />
+              <TextBlock Text="{Binding Title}" TextWrapping="Wrap" Classes.secondary="{Binding !IsRunning}" />
               <TextBlock Classes="caption" Classes.error="{Binding IsFailed}" TextWrapping="Wrap" Text="{Binding StatusText}"
                          AutomationProperties.Name="{Binding Title, StringFormat='How the step {0} stands'}" />
             </StackPanel>

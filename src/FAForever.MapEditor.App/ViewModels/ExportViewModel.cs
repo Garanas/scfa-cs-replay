@@ -154,6 +154,18 @@ public sealed partial class ExportViewModel : ObservableObject
     public partial string? LastFolder { get; private set; }
 
     /// <summary>
+    /// Forgets the last export: another map is open.
+    /// </summary>
+    public void Reset()
+    {
+        if (!IsRunning)
+        {
+            Lines = Planned();
+            LastFolder = null;
+        }
+    }
+
+    /// <summary>
     /// The lines of an export that has not run.
     /// </summary>
     public IReadOnlyList<ExportStepState> Planned() =>

@@ -89,7 +89,11 @@ public sealed partial class MainViewModel
             Procedural.Refresh();
             OnPropertyChanged(nameof(NavigationRoutes));
         };
-        MapChanged += (_, _) => AutoGeneration.StopAll();
+        MapChanged += (_, _) =>
+        {
+            AutoGeneration.StopAll();
+            Export.Reset();
+        };
 
         RegisterExportSteps();
     }
