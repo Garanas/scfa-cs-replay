@@ -7,7 +7,11 @@ namespace FAForever.MapEditor.Project.Files.Serialized
     /// </summary>
     public sealed record MapProjectDto
     {
-        public const int CurrentFormatVersion = 1;
+        /// <summary>
+        /// 2: the scenario's teams and whether the map may go to the vault, and the project's
+        /// <c>masks/</c> for tools. An editor reads every version up to its own.
+        /// </summary>
+        public const int CurrentFormatVersion = 2;
 
         /// <summary>
         /// The layout of the project; <see cref="CurrentFormatVersion"/> for projects this library writes.

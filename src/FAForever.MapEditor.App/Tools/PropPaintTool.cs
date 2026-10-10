@@ -29,6 +29,11 @@ public sealed record PaintLayer(string Name, Func<MapDocument, TiledBuffer<byte>
     public static PaintLayer Stratum(Stratum stratum) => new PaintLayer(stratum.Name, document =>
         stratum.Layer >= 1 && stratum.Layer <= document.Terrain.StratumMasks.Layers.Length ? document.Terrain.StratumMasks.Layers[stratum.Layer - 1] : null);
 
+    /// <summary>
+    /// A mask for tools of the map (user story K-1), by its name.
+    /// </summary>
+    public static PaintLayer OfMask(string name) => new PaintLayer($"Mask: {name}", document => document.Masks.GetValueOrDefault(name));
+
     public override string ToString() => Name;
 }
 
@@ -36,8 +41,8 @@ public sealed record PaintLayer(string Name, Func<MapDocument, TiledBuffer<byte>
 /// Paints props of the palette with a round brush (user stories P-2, P-3): each dab puts props of
 /// the palette, chosen by weight, at places at random in its circle, as many as the density asks,
 /// none closer to another prop than the spacing, standing on the terrain as the Props panel's
-/// Placing says. It may paint only where a stratum covers and not where another does. A stroke
-/// is one step of undo.
+/// Placing says. It may paint only where a stratum or a mask for tools covers and not where
+/// another does. A stroke is one step of undo.
 /// </summary>
 public sealed partial class PropPaintTool : ObservableObject, IMapTool
 {
@@ -50,7 +55,18 @@ public sealed partial class PropPaintTool : ObservableObject, IMapTool
     {
         _model = model;
         model.MapChanged += (_, _) => ReadLayers();
+        // a mask added, renamed or removed (user story K-1) is a layer to paint on, or no longer
+        model.DocumentChanged += (_, _) =>
+        {
+            if (!ReferenceEquals(_model.ShownDocument?.Masks, _masks))
+            {
+                ReadLayers();
+            }
+        };
     }
+
+    // the masks for tools the layers were read from
+    private object? _masks;
 
     /// <summary>
     /// The radius in ogrids.
@@ -173,12 +189,15 @@ public sealed partial class PropPaintTool : ObservableObject, IMapTool
     }
 
     /// <summary>
-    /// The open map's strata as choices; a chosen one the map has not becomes anywhere.
+    /// The open map's strata and masks for tools as choices; a chosen one the map has not becomes
+    /// anywhere.
     /// </summary>
     private void ReadLayers()
     {
         IReadOnlyList<Stratum> strata = _model.StrataTool.Strata;
-        Layers = [PaintLayer.None, .. strata.Select(PaintLayer.Stratum)];
+        MapDocument? document = _model.ShownDocument;
+        _masks = document?.Masks;
+        Layers = [PaintLayer.None, .. strata.Select(PaintLayer.Stratum), .. (document?.Masks.Keys ?? []).Select(PaintLayer.OfMask)];
         OnlyOn = Layers.FirstOrDefault(layer => layer.Name == OnlyOn.Name) ?? PaintLayer.None;
         NotOn = Layers.FirstOrDefault(layer => layer.Name == NotOn.Name) ?? PaintLayer.None;
         _model.Logger("Editor").LogDebug("The paint tool offers {Count} layers to paint on", Layers.Count - 1);

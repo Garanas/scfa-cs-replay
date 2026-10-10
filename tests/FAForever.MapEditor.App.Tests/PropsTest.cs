@@ -48,6 +48,21 @@ namespace FAForever.MapEditor.App.Tests
         private static int[] SelectedIds(MainViewModel model) => [.. model.Selection.Items.Select(thing => thing.Id)];
 
         [TestMethod]
+        public async Task TheMasksForToolsAreLayersToPaintOn()
+        {
+            MainViewModel model = await Open("props.paint");
+            PropPaintTool paint = model.Tool<PropPaintTool>();
+            Assert.IsFalse(paint.Layers.Any(layer => layer.Name.StartsWith("Mask:", StringComparison.Ordinal)));
+
+            await model.Commands.RunAsync("paint.addMask", new System.Text.Json.Nodes.JsonObject { ["name"] = "forest" }, interactive: false);
+
+            PaintLayer forest = paint.LayerNamed("Mask: forest");
+            Assert.IsNotNull(forest.Mask(model.ShownDocument!), "a mask added to the map is offered at once (K-1, P-3)");
+            model.Undo();
+            Assert.IsFalse(paint.Layers.Contains(forest), "and taken away with it");
+        }
+
+        [TestMethod]
         public async Task TheModeHasItsToolsAndSections()
         {
             MainViewModel model = await Open("props.select");
