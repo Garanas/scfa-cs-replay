@@ -497,7 +497,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private void ReportCursor()
     {
         using Performance.Span measure = Performance.Measure("3d.cursor");
-        if (_model?.ShownDocument is not MapDocument document || !_mouseInside)
+        if (_model?.ShownDocument is not MapDocument document || !_mouseInside || !IsVisible)
         {
             return;
         }
@@ -582,6 +582,11 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         if (change.Property == IsVisibleProperty && IsVisible)
         {
             RequestNextFrameRendering();
+        }
+        else if (change.Property == IsVisibleProperty)
+        {
+            // hidden, the mouse is no longer over it: the place under the mouse is the other view's
+            _mouseInside = false;
         }
     }
 

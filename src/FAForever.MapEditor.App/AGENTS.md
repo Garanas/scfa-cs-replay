@@ -697,6 +697,13 @@ User stories S-4, L-1 and V-3. What the views draw follows the map's settings as
   terrain shader blends as it says (`uBlend`): four or eight strata, a mask whole or from its
   middle up (`saturate(mask * 2 - 1)`), stratum 8 and the upper layer as textures or left out as
   map-wide data. The generated preview blends alike.
+- **The sky's lower half**: the game shows a cube map's upper half (below the horizon lie the map
+  and its skirt), so `SkyFragment` draws below the horizon the horizon's colour fading within a few
+  degrees into a haze of the sky low above it; the default cube map's photo landscape never wraps
+  the map. Uncompressed DDS cube maps are decoded by their own masks (`CubeMaps.Uncompressed`):
+  ImageMagick mixes the faces with their smaller levels when the pixel format has no alpha
+  (`skycube_desert01`). A workspace converted before keeps the broken strip until its assets are
+  converted again (`faf-map workspace convert`).
 - **The sky** (L-1): the Lighting mode's inspector (`SkySection`, `LightingSettings.Sky`): the
   sky's cube map, the one units reflect (the map's `<default>` environment cube map, added when
   it has none), the background; `lighting.setSky {cubemap?, environmentCubemap?, background?}`
@@ -1593,14 +1600,21 @@ User stories F-10, T-2, M-2, U-3, F-9, T-7 and R-5. The core's side is `ViewMode
   library's `SelectionPresets.Place` (props and decals as high above the terrain as saved, markers with
   their links and chains, units as a new group named after the preset in the tool's army's `INITIAL`),
   turned about the place (Q and E a quarter turn, shift 15 degrees), then `MirrorPlaced`, and selects
-  it all. The tool's options: the preset with what it holds, the army of its units (the civilians
-  unless chosen), the turn. `state.selectionPreset`.
+  it all. A spawn of the preset moves the map's spawn nearest to where it goes (its mirror partners to
+  the images) rather than adding an army, and the preset's units are then that spawn's army's (the
+  army combo is disabled, `HoldsSpawn`); a map without spawns gets a new army. Before the click the
+  preset shows under the mouse as outlines, its images too (`Tools/PresetPreview`, span
+  `tool.preset-preview`; the units presets of the Units mode's place tool alike, which select what
+  they place). The tool's options: the preset with what it holds, the army of its units (the
+  civilians unless chosen), the turn. `state.selectionPreset` (`holdsSpawn`, `previewOutlines`).
 - **Stamps** (T-2, `Tools/StampTool`, `terrain.stamp`, an `IShapedBrushTool`, so the shelf's brushes
   are its pictures and both views draw it under the mouse): a click is one `BrushStroke` of one dab
   (one step, every image with the symmetry, props follow the terrain, into the sculpting layer): the
   library's `HeightStamp` with the tool's mode (raise, lower, set), radius (half the side, to 512;
   `[` and `]`, shift with them the height), height, base (the ground under the click, or typed) and
-  edge; Q and E turn it 15 degrees (shift 90). Shift and a drag draw a box (`Box`) that becomes
+  edge (a hard edge still blends over one ogrid, so a turned stamp has no stair-step rim); Q and E
+  turn it 15 degrees (shift 90). Its picture combo has no Round (`BrushShapeSettings(pictureOnly)`,
+  `BrushChoice.NoPicture` until one is chosen). Shift and a drag draw a box (`Box`) that becomes
   `terrain.captureStamp {x0, z0, x1, z1, name?}` (in no menu): a 16-bit PNG in the workspace's
   `brushes/stamps` (`HeightStampCapture`), chosen at once (`BrushShapeSettings.ChooseFile`, kept when
   the catalogue reads it) with mode Set, a pixel an ogrid, its height and lowest ground, so a click
@@ -1643,6 +1657,28 @@ User stories F-10, T-2, M-2, U-3, F-9, T-7 and R-5. The core's side is `ViewMode
 - Tests: `ContentTest` (the operations), `ContentWindowTest` (dragging in the tree with the mouse),
   `MainWindowTest.TheWalkabilityToolMarksWhereTheMouseDragsAsOneStep`, `AdaptiveScriptRunTest` (the
   exported script run in Lua with the game's functions stood in for).
+
+## Small rules of editing, looks and speed
+
+- **Placing on a marker**: a placing tool of the Markers mode pressed on a marker of its kind (any
+  deposit for a deposit's tool) selects it and drags it with an inner `SelectTool`; `markers.place`
+  refuses a deposit on an ogrid holding one and selects that one.
+- **A box takes areas only in the Map mode** (`BoxKinds`), also with the markers locked.
+- **Optional groups** (`markers.addOptionalGroup`) go to the selected units' own army when they are
+  all of one extra army (the script creates a group of any army); units of another army change army
+  and the status line says so.
+- **New weather** takes the style of the map's biome (`WeatherStyles.StyleOf`), else Tundra.
+- **The inspector** shows the active tool's parts (`PanelSection.ForTools`: the Paint mode's strata
+  tool its stratum, the masks tool its rules, `MainViewModel.InspectorParts`) and the selection only
+  in the modes of things (`InspectsSelection`).
+- **Example plugins**: an untouched copy of an earlier version (its SHA-256 in `ExamplePlugins.Earlier`)
+  is brought up to date; a file changed for a release adds its old hash there.
+- **Speed** (Archsimkats Valley): the inspector and the selection's size follow a stroke at most
+  every `StrokeRefreshMilliseconds` (200), and fully when it ends; the 3D view draws nothing while
+  hidden; the props and units are made again for the hover only when a thing of their kind is under
+  the mouse; 3D picking passes props whose bounding sphere the ray misses; the brushes' watcher
+  ignores folders (the start read the assets twice). Leaf textures (`CutOutTextures`) give their
+  holes the leaves' colour before the mipmaps, and cut-out foliage is lit with its normals leaning up.
 
 ## Diagnostics: what goes well and wrong
 
