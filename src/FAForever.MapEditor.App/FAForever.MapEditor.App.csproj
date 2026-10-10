@@ -12,6 +12,7 @@
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="LuaCSharp" />
     <PackageReference Include="MediatR" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
