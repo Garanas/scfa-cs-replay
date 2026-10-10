@@ -96,13 +96,18 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// Renames an army everywhere it is named: the army, the scenario's lists, its factions, its
-        /// team, the other armies' alliances and its spawn marker.
+        /// team, the other armies' alliances, its spawn marker and the deposits of an adaptive map
+        /// that wait for it. Renumbering the spawns (<see cref="MarkerEdits.RenumberSpawns"/>)
+        /// renames armies this way too.
         /// </summary>
-        /// <exception cref="KeyNotFoundException">The map has no army of that name.</exception>
+        /// <exception cref="KeyNotFoundException">The map has neither an army nor a spawn of that name.</exception>
         /// <exception cref="ArgumentException">The new name is taken (by an army or another marker) or cannot be an army's.</exception>
         public static MapDocument RenameArmy(this MapDocument document, string name, string newName)
         {
-            RequireArmy(document, name);
+            if (document.FindArmy(name) is null && !document.Markers.Spawns.Any(spawn => spawn.Name == name))
+            {
+                throw new KeyNotFoundException($"The map has no army {name}");
+            }
             newName = newName.Trim();
             if (newName == name)
             {
@@ -128,6 +133,13 @@ namespace FAForever.MapEditor.Project.Editing
                         ? s.ArmyFactions.Remove(name).SetItem(newName, factions)
                         : s.ArmyFactions,
                     Teams = [.. s.Teams.Select(team => team.Armies.Contains(name) ? team with { Armies = [.. team.Armies.Select(Renamed)] } : team)],
+                },
+            };
+            document = document with
+            {
+                Markers = document.Markers with
+                {
+                    Resources = [.. document.Markers.Resources.Select(resource => resource.SpawnWithArmy == name ? resource with { SpawnWithArmy = newName } : resource)],
                 },
             };
             return document.Markers.Spawns.FirstOrDefault(spawn => spawn.Name == name) is Spawn marker

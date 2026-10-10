@@ -79,14 +79,15 @@ namespace FAForever.MapEditor.Project.Tests
 
             MapDocument removed = document.RemoveArmy("ARMY_3");
 
-            Assert.IsNull(removed.FindArmy("ARMY_3"));
-            Assert.IsFalse(removed.AllUnits().Any(unit => unit.Army == "ARMY_3"), "its units go with it");
-            Assert.IsFalse(removed.Scenario.PlayableArmies.Contains("ARMY_3"));
-            Assert.IsFalse(removed.Scenario.ArmyFactions.ContainsKey("ARMY_3"));
-            CollectionAssert.AreEqual(new[] { "ARMY_4" }, removed.Scenario.Teams.Single().Armies.ToArray());
-            Assert.IsFalse(removed.FindArmy("ARMY_1")!.Alliances.ContainsKey("ARMY_3"));
-            Assert.IsFalse(removed.Markers.Spawns.Any(s => s.Name == "ARMY_3"), "its spawn too");
-            Assert.AreEqual(original.Markers.Spawns.Length - 1, removed.Markers.Spawns.Length);
+            // its spawn goes with it, and the spawns after it are numbered down, as deleting the spawn does
+            Assert.AreEqual(document.Armies.Length - 1, removed.Armies.Length);
+            Assert.AreEqual(original.Markers.Spawns.Length - 1, removed.Markers.Spawns.Length, "its spawn too");
+            Assert.AreEqual(document.AllUnits().Count() - 1, removed.AllUnits().Count(), "its units go with it");
+            Assert.IsNull(removed.FindArmy("ARMY_8"), "ARMY_4 to ARMY_8 are now ARMY_3 to ARMY_7");
+            Assert.AreEqual(document.Scenario.PlayableArmies.Length - 1, removed.Scenario.PlayableArmies.Length);
+            Assert.IsFalse(removed.Scenario.ArmyFactions.ContainsKey("ARMY_3"), "the factions went with ARMY_3; ARMY_4 had none");
+            CollectionAssert.AreEqual(new[] { "ARMY_3" }, removed.Scenario.Teams.Single().Armies.ToArray(), "ARMY_4, renamed, stays in the team");
+            Assert.IsTrue(removed.Markers.Spawns.Any(s => s.Name == "ARMY_3"), "the next spawn took the number");
         }
 
         [TestMethod]

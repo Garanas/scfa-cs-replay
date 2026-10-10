@@ -247,12 +247,14 @@ public abstract partial class SelectionSection : ObservableObject
     /// </summary>
     protected const int MostLines = 8;
 
+    /// <summary>
+    /// Runs a command with arguments, as the window does (what fails shows in the status line): a
+    /// section's fields change the selected things through commands, one step of undo each.
+    /// </summary>
+    public Func<string, JsonObject, Task> Run { get; internal set; } = (_, _) => Task.CompletedTask;
+
     public abstract ObjectKind Kind { get; }
 
-    /// <summary>
-    /// Runs a command with its arguments, for the section's own fields; set by the inspector.
-    /// </summary>
-    public Func<string, JsonObject, Task>? Run { get; set; }
 
     /// <summary>
     /// E.g. <c>3 props</c>.
@@ -306,31 +308,6 @@ public abstract partial class SelectionSection : ObservableObject
     protected static IEnumerable<string> Counted(IEnumerable<string> lines) => lines
         .GroupBy(line => line, StringComparer.Ordinal)
         .Select(group => group.Count() == 1 ? group.Key : $"{group.Key} ×{group.Count()}");
-}
-
-/// <summary>
-/// The selected markers: their names and kinds (user stories R-1, R-2).
-/// </summary>
-public sealed class MarkerSelection : SelectionSection
-{
-    public override ObjectKind Kind => ObjectKind.Marker;
-
-    protected override IEnumerable<string> LinesOf(MapDocument document, IReadOnlyList<ObjectRef> things) =>
-        things.Select(document.Find).OfType<Marker>().Select(marker => $"{marker.Name} ({KindOf(marker)})");
-
-    /// <summary>
-    /// What a marker is, in a word or two: <c>spawn</c>, <c>mass</c>, <c>Rally Point</c>, <c>land path node</c>.
-    /// </summary>
-    public static string KindOf(Marker marker) => marker switch
-    {
-        Spawn => "spawn",
-        ResourceMarker resource => resource.Kind.ToString().ToLowerInvariant(),
-        PathNode node => $"{node.Layer.ToString().ToLowerInvariant()} path node",
-        AiMarker ai => ai.Type,
-        WeatherDefinition => "weather",
-        WeatherGenerator => "weather generator",
-        _ => "marker",
-    };
 }
 
 /// <summary>

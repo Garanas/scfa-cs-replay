@@ -123,6 +123,7 @@ namespace FAForever.MapEditor.App.Tests
                     "diagnostics.flush", "diagnostics.set", "diagnostics.upload",
                     "edit.goTo", "edit.nudge", "edit.place", "file.enableVersionControl",
                     "map.removeArmy", "map.renameArmy", "map.setAlliance", "map.setArmy",
+                    "markers.deleteChain", "markers.link", "markers.place", "markers.renameChain", "markers.set", "markers.setChain", "markers.showKind",
                     "presets.apply", "presets.delete", "problems.show", "select.set",
                     "units.add", "units.moveGroup", "units.moveToArmy", "units.moveToGroup", "units.removeGroup", "units.renameGroup",
                     "view.gpuDebug", "view.walkability", "view.zoomTo", "workspace.convert", "workspace.setUp",

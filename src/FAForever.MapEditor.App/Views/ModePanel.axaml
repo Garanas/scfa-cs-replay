@@ -317,6 +317,87 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
+            <!-- the Markers mode (R-4 to R-6): the kinds shown, the chains, the adaptive map; their controls run the markers.* commands -->
+            <DataTemplate DataType="vm:MarkerKindsSection">
+              <Border Classes="group">
+                <StackPanel Classes="stack" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Markers}" x:DataType="vm:MarkersViewModel">
+                  <TextBlock Classes="overline" Text="{Binding Source=By kind, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <ItemsControl ItemsSource="{Binding Kinds}" AutomationProperties.Name="Kinds of markers shown">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:MarkerKindItem">
+                        <CheckBox Content="{Binding Label}" IsChecked="{Binding IsOn, Mode=OneWay}"
+                                  Command="{Binding $parent[ItemsControl].((vm:MarkersViewModel)DataContext).ToggleKindCommand}" CommandParameter="{Binding}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+            <DataTemplate DataType="vm:ChainsSection">
+              <Border Classes="group">
+                <StackPanel Classes="stack" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Markers}" x:DataType="vm:MarkersViewModel">
+                  <TextBlock Classes="overline" Text="{Binding Source=Chains, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <ListBox ItemsSource="{Binding Chains}" SelectedItem="{Binding SelectedChain}" AutomationProperties.Name="Chains"
+                           IsVisible="{Binding !!Chains.Count}">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ChainItem">
+                        <TextBlock Text="{Binding Summary}" />
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding !Chains.Count}"
+                             Text="None yet: select markers in order and make a chain of them, or click them with the chain tool." />
+                  <StackPanel Classes="inline">
+                    <Button Content="From the selection" Command="{Binding AddChainCommand}"
+                            AutomationProperties.HelpText="Makes a chain of the selected markers, in the order they were selected" />
+                    <Button Content="Select" Command="{Binding SelectChainMarkersCommand}" AutomationProperties.Name="Select the chain's markers" />
+                    <Button Content="Delete" Command="{Binding DeleteChainCommand}" AutomationProperties.Name="Delete the chain" />
+                  </StackPanel>
+                  <StackPanel Classes="stack" IsVisible="{Binding HasChain}">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Name" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="commit" Text="{Binding ChainName, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Name of the chain" />
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding SelectedChain.Entries}" AutomationProperties.Name="Markers of the chain">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ChainEntry">
+                          <DockPanel>
+                            <Button DockPanel.Dock="Right" Classes="beside" Content="×"
+                                    Command="{Binding $parent[ItemsControl].((vm:MarkersViewModel)DataContext).RemoveEntryCommand}" CommandParameter="{Binding}"
+                                    AutomationProperties.Name="{Binding Name, StringFormat='Take {0} out of the chain'}" />
+                            <Button DockPanel.Dock="Right" Classes="beside" Content="↓"
+                                    Command="{Binding $parent[ItemsControl].((vm:MarkersViewModel)DataContext).MoveDownCommand}" CommandParameter="{Binding}"
+                                    AutomationProperties.Name="{Binding Name, StringFormat='Move {0} down'}" />
+                            <Button DockPanel.Dock="Right" Classes="beside" Content="↑"
+                                    Command="{Binding $parent[ItemsControl].((vm:MarkersViewModel)DataContext).MoveUpCommand}" CommandParameter="{Binding}"
+                                    AutomationProperties.Name="{Binding Name, StringFormat='Move {0} up'}" />
+                            <TextBlock Text="{Binding Line}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                          </DockPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+            <DataTemplate DataType="vm:AdaptiveSection">
+              <Border Classes="group">
+                <StackPanel Classes="stack" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Markers}" x:DataType="vm:MarkersViewModel">
+                  <TextBlock Classes="overline" Text="{Binding Source=Adaptive map, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <CheckBox Content="Leave out the deposits of armies no one plays" IsChecked="{Binding IsAdaptive, Mode=OneWay}" Command="{Binding ToggleAdaptiveCommand}"
+                            AutomationProperties.Name="Adaptive map" />
+                  <TextBlock Classes="caption" Text="{Binding AlwaysThere}" />
+                  <ItemsControl ItemsSource="{Binding AdaptiveArmies}" AutomationProperties.Name="Deposits per army">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:AdaptiveArmy">
+                        <TextBlock Classes="caption" Text="{Binding Line}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Classes="caption" TextWrapping="Wrap" Text="Select deposits to choose the army they wait for in the inspector." />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
           </ItemsControl.DataTemplates>
         </ItemsControl>
       </StackPanel>

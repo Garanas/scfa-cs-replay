@@ -195,7 +195,7 @@ namespace FAForever.MapEditor.App.Tests
         public async Task CheckingTheMapListsWhatItFound()
         {
             MainViewModel model = await Open();
-            model.Map!.Session.Edit("Take a spawn away", document => document.RemoveMarker(document.Markers.Spawns[0].Id));
+            model.Map!.Session.Edit("Take a spawn away", document => document with { Markers = document.Markers with { Spawns = document.Markers.Spawns.RemoveAt(0) } });
 
             JsonObject found = (JsonObject)(await Run(model, "plugins.check")).Result!;
 
@@ -211,7 +211,7 @@ namespace FAForever.MapEditor.App.Tests
         public async Task SavesAMapWithProblemsAndSaysSo()
         {
             MainViewModel model = await Open();
-            model.Map!.Session.Edit("Take a spawn away", document => document.RemoveMarker(document.Markers.Spawns[0].Id));
+            model.Map!.Session.Edit("Take a spawn away", document => document with { Markers = document.Markers with { Spawns = document.Markers.Spawns.RemoveAt(0) } });
             string folder = Path.Combine(AppContext.BaseDirectory, "projects", Guid.NewGuid().ToString("N"));
 
             await model.SaveAsAsync(folder);

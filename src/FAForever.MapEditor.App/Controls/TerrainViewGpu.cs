@@ -154,7 +154,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.ShowMarkers && chosen.HasFlag(ObjectKinds.Markers),
             _model.ShowPathNodes && chosen.HasFlag(ObjectKinds.PathNodes),
             chosen.HasFlag(ObjectKinds.Decals),
-            _model.Decals.HiddenDecals);
+            _model.Decals.HiddenDecals,
+            _model.ShownMarkerKinds);
         return ObjectPicking.Pick(document, origin, direction, shown, _models.BoundsOf, terrain);
     }
 
@@ -428,7 +429,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             return null;
         }
         ObjectFrame frame = new ObjectFrame(_model.Assets.Catalog, _model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes,
-            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"));
+            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"), _model.ShownMarkerKinds);
         return (_objects, frame);
     }
 

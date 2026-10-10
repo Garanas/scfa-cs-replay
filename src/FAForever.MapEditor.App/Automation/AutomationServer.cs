@@ -558,6 +558,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["z"] = model.Selection.Inspector.Z,
                 ["heading"] = model.Selection.Inspector.Heading,
             },
+            ["markers"] = DescribeMarkers(),
             ["dock"] = model.Dock.ToString(),
             ["assets"] = new JsonObject
             {
@@ -621,6 +622,30 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
             },
         };
     }
+
+    /// <summary>
+    /// The Markers mode (user stories R-1 to R-6): the kinds shown, the chains and the one chosen,
+    /// the adaptive map, the last deposit's warning, and the settings of the active marker tool.
+    /// </summary>
+    private JsonObject DescribeMarkers() => new JsonObject
+    {
+        ["shownKinds"] = new JsonArray([.. MarkersViewModel.Choices.Where(choice => model.Markers.Shows(choice.Kind)).Select(choice => (JsonNode)JsonValue.Create(choice.Id))]),
+        ["pickable"] = model.ShownMarkerKinds.ToString(),
+        ["chains"] = new JsonArray([.. model.Markers.Chains.Select(chain => (JsonNode)new JsonObject
+        {
+            ["name"] = chain.Name,
+            ["markers"] = new JsonArray([.. chain.Entries.Select(entry => (JsonNode)JsonValue.Create(entry.Name))]),
+        })]),
+        ["chain"] = model.Markers.SelectedChain?.Name,
+        ["adaptive"] = model.Markers.IsAdaptive,
+        ["warning"] = model.Markers.PlacementWarning,
+        ["tool"] = model.ActiveTool?.Tool switch
+        {
+            PlaceMarkerTool place => new JsonObject { ["places"] = place.KindName, ["snap"] = place.Snap.Snap.ToString(), ["aiType"] = place.IsAi ? place.AiType : null },
+            PathTool path => new JsonObject { ["layer"] = path.Layer.ToString(), ["snap"] = path.Snap.Snap.ToString() },
+            _ => null,
+        },
+    };
 
     /// <summary>
     /// The props, units and markers the 3D view drew in its last frame, with their draws, the

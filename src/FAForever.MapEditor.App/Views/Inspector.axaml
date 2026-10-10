@@ -131,6 +131,43 @@
                   <StackPanel Classes="stack">
                     <TextBlock Classes="heading" Text="{Binding Title}" />
                     <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected markers" />
+                    <DockPanel IsVisible="{Binding CanRename}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Name" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="commit" Text="{Binding Name, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Name of the marker"
+                               AutomationProperties.HelpText="The name scripts know it by; another marker's name is refused" />
+                    </DockPanel>
+                    <DockPanel IsVisible="{Binding HasResources}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Resource" Width="{StaticResource FactLabelWidth}" />
+                      <ComboBox ItemsSource="{Binding Resources}" SelectedItem="{Binding Resource}" HorizontalAlignment="Stretch" AutomationProperties.Name="Resource of the deposits" />
+                    </DockPanel>
+                    <DockPanel IsVisible="{Binding HasResources}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Spawns with" Width="{StaticResource FactLabelWidth}" />
+                      <Button DockPanel.Dock="Right" Classes="beside" Content="Nearest" Command="{Binding WaitForNearestArmyCommand}"
+                              AutomationProperties.Name="Wait for the nearest army"
+                              AutomationProperties.HelpText="Each selected deposit waits for the army of the spawn nearest to it" />
+                      <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding SpawnWithArmy}" HorizontalAlignment="Stretch" AutomationProperties.Name="Army the deposits wait for"
+                                AutomationProperties.HelpText="On an adaptive map, a deposit is left out unless a player takes its army; Always keeps it whoever plays" />
+                    </DockPanel>
+                    <TextBlock Classes="warning" TextWrapping="Wrap" Text="{Binding Warning}" IsVisible="{Binding HasWarning}" AutomationProperties.Name="Slope of the deposits" />
+                    <DockPanel IsVisible="{Binding HasAiMarkers}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Type" Width="{StaticResource FactLabelWidth}" />
+                      <ComboBox ItemsSource="{Binding AiTypes}" SelectedItem="{Binding AiType}" HorizontalAlignment="Stretch" AutomationProperties.Name="Type of the AI markers" />
+                    </DockPanel>
+                    <DockPanel IsVisible="{Binding HasPathNodes}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Layer" Width="{StaticResource FactLabelWidth}" />
+                      <ComboBox ItemsSource="{Binding Layers}" SelectedItem="{Binding Layer}" HorizontalAlignment="Stretch" AutomationProperties.Name="Layer of the path nodes"
+                                AutomationProperties.HelpText="A node put on another layer loses its links" />
+                    </DockPanel>
+                    <DockPanel IsVisible="{Binding HasSpawns}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="No rush X" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding NoRushX, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="No-rush offset across"
+                               AutomationProperties.HelpText="Where the no-rush circle lies from the spawn, in game units; empty for around the spawn" />
+                    </DockPanel>
+                    <DockPanel IsVisible="{Binding HasSpawns}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="No rush Z" Width="{StaticResource FactLabelWidth}" />
+                      <TextBox Classes="mono commit" Text="{Binding NoRushZ, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="No-rush offset down"
+                               AutomationProperties.HelpText="Where the no-rush circle lies from the spawn, in game units; empty for around the spawn" />
+                    </DockPanel>
                   </StackPanel>
                 </Border>
               </DataTemplate>

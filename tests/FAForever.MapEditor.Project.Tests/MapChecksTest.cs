@@ -33,7 +33,8 @@ namespace FAForever.MapEditor.Project.Tests
         public void FindsAPlayableArmyWithoutASpawn()
         {
             Spawn first = hardFfa.Markers.Spawns[0];
-            MapDocument document = hardFfa.RemoveMarker(first.Id);
+            // the spawn's marker alone: deleting it in the editor takes its army along
+            MapDocument document = hardFfa with { Markers = hardFfa.Markers with { Spawns = hardFfa.Markers.Spawns.RemoveAt(0) } };
 
             Problem problem = Run(new ProblemContext(document), "army-without-spawn").Single();
 

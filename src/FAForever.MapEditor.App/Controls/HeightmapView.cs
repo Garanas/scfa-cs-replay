@@ -279,7 +279,7 @@ public sealed class HeightmapView : Control
             using (context.PushClip(new Rect(Bounds.Size)))
             {
                 DrawThings(context, overlay, document, _model);
-                _markers.Render(context, overlay, document.Markers, _model.ShowMarkers, _model.ShowPathNodes, _zoom, _offset);
+                _markers.Render(context, overlay, document.Markers, _model.ShownMarkerKinds, _zoom, _offset);
                 DrawSelection(context, overlay, document, _model.Selection.Items);
             }
         }
@@ -686,13 +686,15 @@ public sealed class HeightmapView : Control
         private readonly Dictionary<uint, IBrush> _brushes = [];
         private readonly Dictionary<uint, IPen> _linkPens = [];
         private MarkerSet? _linked;
-        private List<(Color32 Color, StreamGeometry Lines)> _links = [];
+        private List<(PathLayer Layer, Color32 Color, StreamGeometry Lines)> _links = [];
 
-        public void Render(DrawingContext context, Overlay overlay, MarkerSet markers, bool showMarkers, bool showPathNodes, double zoom, Vector offset)
+        public void Render(DrawingContext context, Overlay overlay, MarkerSet markers, MarkerKinds shown, double zoom, Vector offset)
         {
             Point At(Marker marker) => new Point(marker.Position.X * zoom + offset.X, marker.Position.Z * zoom + offset.Y);
 
-            if (showPathNodes)
+            bool Shows(Marker marker) => (shown & MarkerEdits.KindOf(marker)) != 0;
+
+            if ((shown & MarkerKinds.PathNodes) != 0)
             {
                 // the links in map units, drawn scaled: built once per version of the markers
                 if (!ReferenceEquals(markers, _linked))
@@ -702,31 +704,34 @@ public sealed class HeightmapView : Control
                 }
                 using (context.PushTransform(Matrix.CreateScale(zoom, zoom) * Matrix.CreateTranslation(offset.X, offset.Y)))
                 {
-                    foreach ((Color32 color, StreamGeometry lines) in _links)
+                    foreach ((PathLayer layer, Color32 color, StreamGeometry lines) in _links)
                     {
-                        context.DrawGeometry(null, LinkPen(color, 1 / zoom), lines);
+                        if ((shown & MarkerEdits.KindOf(layer)) != 0)
+                        {
+                            context.DrawGeometry(null, LinkPen(color, 1 / zoom), lines);
+                        }
                     }
                 }
-                foreach (PathNode node in markers.PathNodes)
+                foreach (PathNode node in markers.PathNodes.Where(Shows))
                 {
                     context.DrawEllipse(Fill(node.Color), overlay.Shadow, At(node), 2.5, 2.5);
                 }
             }
 
-            if (!showMarkers)
+            if ((shown & ~MarkerKinds.PathNodes) == 0)
             {
                 return;
             }
 
-            foreach (WeatherGenerator weather in markers.WeatherGenerators)
+            foreach (WeatherGenerator weather in markers.WeatherGenerators.Where(Shows))
             {
                 Triangle(context, overlay, Fill(weather.Color), At(weather), 6);
             }
-            foreach (WeatherDefinition weather in markers.WeatherDefinitions)
+            foreach (WeatherDefinition weather in markers.WeatherDefinitions.Where(Shows))
             {
                 Triangle(context, overlay, Fill(weather.Color), At(weather), 8);
             }
-            foreach (AiMarker marker in markers.AiMarkers)
+            foreach (AiMarker marker in markers.AiMarkers.Where(Shows))
             {
                 Point at = At(marker);
                 StreamGeometry diamond = new StreamGeometry();
@@ -740,13 +745,13 @@ public sealed class HeightmapView : Control
                 }
                 context.DrawGeometry(Fill(marker.Color), overlay.Shadow, diamond);
             }
-            foreach (ResourceMarker resource in markers.Resources)
+            foreach (ResourceMarker resource in markers.Resources.Where(Shows))
             {
                 double half = resource.Kind == ResourceKind.Mass ? 4 : 6;
                 Point at = At(resource);
                 context.DrawRectangle(Fill(resource.Color), overlay.Shadow, new Rect(at.X - half, at.Y - half, half * 2, half * 2));
             }
-            foreach (Spawn spawn in markers.Spawns)
+            foreach (Spawn spawn in markers.Spawns.Where(Shows))
             {
                 Point at = At(spawn);
                 context.DrawEllipse(Fill(spawn.Color), overlay.Ring, at, 10, 10);
@@ -770,14 +775,14 @@ public sealed class HeightmapView : Control
         }
 
         /// <summary>
-        /// The links between path nodes as lines in map units, one geometry per colour (layer);
+        /// The links between path nodes as lines in map units, one geometry per layer, with its colour;
         /// a link both ways is drawn once.
         /// </summary>
-        private static List<(Color32, StreamGeometry)> Links(MarkerSet markers)
+        private static List<(PathLayer, Color32, StreamGeometry)> Links(MarkerSet markers)
         {
             Dictionary<int, PathNode> nodes = markers.PathNodes.ToDictionary(node => node.Id);
-            List<(Color32, StreamGeometry)> links = [];
-            foreach (IGrouping<Color32, PathNode> layer in markers.PathNodes.GroupBy(node => node.Color))
+            List<(PathLayer, Color32, StreamGeometry)> links = [];
+            foreach (IGrouping<PathLayer, PathNode> layer in markers.PathNodes.GroupBy(node => node.Layer))
             {
                 StreamGeometry lines = new StreamGeometry();
                 using (StreamGeometryContext g = lines.Open())
@@ -798,7 +803,7 @@ public sealed class HeightmapView : Control
                         }
                     }
                 }
-                links.Add((layer.Key, lines));
+                links.Add((layer.Key, layer.First().Color, lines));
             }
             return links;
         }
