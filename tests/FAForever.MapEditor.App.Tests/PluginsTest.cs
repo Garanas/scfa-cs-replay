@@ -132,6 +132,28 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task ARevisionStaysWhileItsPartIsTheSame()
+        {
+            string folder = Folder("revisions", """
+                plugin.command{ id = "read", title = "Read", run = function()
+                  return { props = map.revision("props"), markers = map.revision("markers"), map = map.revision() }
+                end }
+                """);
+            MainViewModel model = await Open(folder);
+
+            JsonObject first = (JsonObject)(await Run(model, "plugin.revisions.read")).Result!;
+            await Run(model, "water.toggle");
+            JsonObject second = (JsonObject)(await Run(model, "plugin.revisions.read")).Result!;
+            model.Map!.Session.Edit("Move a prop", document => document.UpdateProp(document.Props[0].Id, prop => prop with { Position = Vector3.One }));
+            JsonObject third = (JsonObject)(await Run(model, "plugin.revisions.read")).Result!;
+
+            Assert.AreEqual(first["props"]!.GetValue<int>(), second["props"]!.GetValue<int>(), "the water changed, the props did not");
+            Assert.AreEqual(first["markers"]!.GetValue<int>(), third["markers"]!.GetValue<int>());
+            Assert.AreNotEqual(first["map"]!.GetValue<int>(), second["map"]!.GetValue<int>());
+            Assert.AreNotEqual(second["props"]!.GetValue<int>(), third["props"]!.GetValue<int>());
+        }
+
+        [TestMethod]
         public async Task ARunsEditsAndTheCommandsItRunsAreOneStepOfUndo()
         {
             string folder = Folder("edit", """

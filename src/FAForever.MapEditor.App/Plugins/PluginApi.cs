@@ -337,7 +337,17 @@ internal static class PluginApi
                 .Where(marker => kind is null || MarkerKind(marker) == kind)
                 .Select(marker => (LuaValue)Describe(document, ObjectRef.Marker(marker.Id), marker)));
         }, plugin);
-        table["props"] = Function("map.props", (context, ctx) => All(ctx.RequireDocument(), document => document.Props.Select(prop => ObjectRef.Prop(prop.Id))), plugin);
+        table["props"] = Function("map.props", (context, ctx) =>
+        {
+            // made straight from the props, the most numerous things (8304 on Archsimkats Valley)
+            System.Collections.Immutable.ImmutableArray<Prop> props = ctx.RequireDocument().Props;
+            LuaTable list = new LuaTable(props.Length, 0);
+            for (int i = 0; i < props.Length; i++)
+            {
+                list[i + 1] = PropTable(props[i]);
+            }
+            return list;
+        }, plugin);
         table["units"] = Function("map.units", (context, ctx) => All(ctx.RequireDocument(), document => document.AllUnits().Select(unit => ObjectRef.Unit(unit.Unit.Name))), plugin);
         table["decals"] = Function("map.decals", (context, ctx) => All(ctx.RequireDocument(), document => document.Decals.Select(decal => ObjectRef.Decal(decal.Id))), plugin);
         table["areas"] = Function("map.areas", (context, ctx) => All(ctx.RequireDocument(), document => document.Markers.Areas.Select(area => ObjectRef.Area(area.Name))), plugin);
@@ -357,6 +367,22 @@ internal static class PluginApi
             MapDocument document = ctx.RequireDocument();
             ObjectRef thing = ObjectRef.Parse(context.GetArgument<string>(0));
             return document.Find(thing) is object found ? Describe(document, thing, found) : LuaValue.Nil;
+        }, plugin);
+        table["revision"] = Function("map.revision", (context, ctx) =>
+        {
+            MapDocument document = ctx.RequireDocument();
+            string part = context.HasArgument(0) ? context.GetArgument<string>(0) : "map";
+            return RevisionOf(part switch
+            {
+                "map" => document,
+                "props" => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(document.Props) ?? (object)document,
+                "markers" => document.Markers,
+                "units" => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(document.Armies) ?? (object)document,
+                "decals" => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(document.Decals) ?? (object)document,
+                "heights" => document.Terrain.Heightmap.Samples,
+                "masks" => document.Masks,
+                _ => throw new ArgumentException($"There is no part '{part}': map, props, markers, units, decals, heights or masks"),
+            });
         }, plugin);
         table["masks"] = Function("map.masks", (context, ctx) => LuaConvert.List(ctx.RequireDocument().Masks.Keys.Select(name => (LuaValue)name)), plugin);
         table["mask"] = Function("map.mask", (context, ctx) =>
@@ -493,6 +519,17 @@ internal static class PluginApi
         return table;
     }
 
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, System.Runtime.CompilerServices.StrongBox<int>> Revisions = [];
+    private static int _revisions;
+
+    /// <summary>
+    /// A number for a part of the document, the same while the part is the same object: versions
+    /// share what they do not change, so a check can skip its work when the parts it reads are as
+    /// they were (<c>map.revision("props")</c>).
+    /// </summary>
+    private static int RevisionOf(object part) =>
+        Revisions.GetValue(part, _ => new System.Runtime.CompilerServices.StrongBox<int>(Interlocked.Increment(ref _revisions))).Value!;
+
     private static LuaValue All(MapDocument document, Func<MapDocument, IEnumerable<ObjectRef>> things) =>
         LuaConvert.List(things(document).Select(thing => document.Find(thing) is object found ? (LuaValue)Describe(document, thing, found) : LuaValue.Nil));
 
@@ -511,10 +548,31 @@ internal static class PluginApi
     };
 
     /// <summary>
+    /// A prop as a plain table, as <see cref="Describe"/> makes it.
+    /// </summary>
+    private static LuaTable PropTable(Prop prop)
+    {
+        LuaTable item = new LuaTable(0, 8);
+        item["ref"] = "prop:" + prop.Id.ToString(CultureInfo.InvariantCulture);
+        item["id"] = prop.Id;
+        item["blueprint"] = prop.Blueprint;
+        item["x"] = prop.Position.X;
+        item["y"] = prop.Position.Y;
+        item["z"] = prop.Position.Z;
+        item["heading"] = Math.Round(MapObjects.PropHeading(prop) * 180 / Math.PI, 3);
+        item["scale"] = prop.Scale.X == 0 ? 1 : prop.Scale.X;
+        return item;
+    }
+
+    /// <summary>
     /// A thing as a plain table: its reference, place and heading in degrees, and what it is.
     /// </summary>
     private static LuaTable Describe(MapDocument document, ObjectRef thing, object found)
     {
+        if (found is Prop prop)
+        {
+            return PropTable(prop);
+        }
         LuaTable item = new LuaTable();
         item["ref"] = thing.ToString();
         Vector3 place = document.PlaceOf(thing) ?? default;
@@ -527,11 +585,6 @@ internal static class PluginApi
         }
         switch (found)
         {
-            case Prop prop:
-                item["id"] = prop.Id;
-                item["blueprint"] = prop.Blueprint;
-                item["scale"] = prop.Scale.X == 0 ? 1 : prop.Scale.X;
-                break;
             case PlacedUnit unit:
                 item["name"] = unit.Unit.Name;
                 item["blueprint"] = unit.Unit.Blueprint;

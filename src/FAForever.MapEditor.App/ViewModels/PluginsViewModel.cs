@@ -588,6 +588,7 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
         {
             return [];
         }
+        using Performance.Span measure = Performance.Measure("plugins.check");
         using PluginClock clock = new PluginClock(CallLimit);
         if (!CallNow(plugin, new PluginContext($"The check {check.Title}", () => context.Document, clock), $"the check {check.Title}",
             () => plugin.State.CallAsync(check.Run, [], clock.Token), out LuaValue[] results))
@@ -643,6 +644,7 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
             }
             foreach (LuaFunction handler in handlers.ToList())
             {
+                using Performance.Span measure = Performance.Measure("plugins.event");
                 using PluginClock clock = new PluginClock(CallLimit);
                 if (CallNow(plugin, new PluginContext($"The handler of {name}", () => _model.Map?.Document, clock), $"the handler of {name}",
                     () => plugin.State.CallAsync(handler, arguments, clock.Token), out LuaValue[] results)

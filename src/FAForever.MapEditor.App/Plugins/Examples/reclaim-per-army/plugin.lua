@@ -63,10 +63,19 @@ plugin.command{
   end,
 }
 
+-- The check runs after every step of undo: it counts again only when the props, the markers or
+-- the tolerance changed, and else finds what it found the last time.
+local checked, found = nil, {}
+
 plugin.check{
   id = "uneven",
   title = "Uneven reclaim between armies",
   run = function()
+    local key = map.revision("props") .. "/" .. map.revision("markers") .. "/" .. plugin.value("tolerance")
+    if key == checked then
+      return found
+    end
+    checked, found = key, {}
     local totals = perArmy()
     if #totals < 2 then
       return {}
@@ -80,7 +89,7 @@ plugin.check{
       return {}
     end
     local tolerance = plugin.value("tolerance") / 100
-    local problems = {}
+    local problems = found
     for _, total in ipairs(totals) do
       local off = (total.mass - average) / average
       if math.abs(off) > tolerance then
