@@ -76,7 +76,10 @@ reads again when it changes; and nothing that generates runs by itself.
       about the selection's centre or each thing's own, scale; shift snaps, X or Z holds an axis),
       F focuses the 3D camera on the selection, the status bar shows its count and size, the thing
       under the mouse in 3D lights up; a box in the 3D view is a rectangle on screen that selects
-      what shows inside it.
+      what shows inside it. Select similar (blueprint or family), invert, select inside an area,
+      the selection filter in the select tools' options (lock a kind), hide a kind (decals too),
+      isolate the selection, R and a drag to turn, a Select anything tool in the Map mode; a box
+      and Select all leave areas alone outside the Map mode.
 - [ ] **F-12 Symmetry.** Mirror every edit: horizontally, vertically, diagonally, or around the
       middle for 2 to 8 players; shown as guides in the views. Today: the symmetry is chosen (off,
       rotational for 2 to 8, four mirrors; on and off takes the map's own) and the top view shows
@@ -87,7 +90,10 @@ reads again when it changes; and nothing that generates runs by itself.
       centre and the decals' sizes; pasted and duplicated things get their images; the brush under
       the mouse shows every image in both views; the guides show in 3D; "Mirror edits" off keeps
       the guides only; Select the mirror partners, Mirror the selection, and the check "not
-      symmetric".
+      symmetric". A selection holding things and their partners stays symmetric when moved,
+      turned, scaled or deleted; mirrored units go to the partner spawn's army; curves drawn with
+      the symmetry shape their images; each map keeps its symmetry in its project, and a new map
+      comes exactly symmetric with rotational for its players.
 - [x] **F-13 Events.** C# and Lua react to what happens (workspace opened, map opened or saved,
       document changed) and may check things before a save or export. Today: C# handlers of
       workspace opened, map opened, saved or exported, document changed, and checks that stop a
@@ -303,7 +309,7 @@ reads again when it changes; and nothing that generates runs by itself.
 
 - [ ] **D-1 Place decals.** Place from the picker, move, rotate and scale on the terrain; the
       distances at which they show; their order. Today: the Place tool (the decal from the picker,
-      Ctrl+P or the shelf; a click places it, a drag sizes and turns it; a tile dropped on a view);
+      Ctrl+P or the shelf; a click places it, a drag spans it from the press to the mouse and turns it; a tile dropped on a view);
       the Select tool selects, moves, turns and scales them (a drag mode for both sides, the width
       or the length; plus and minus); the inspector edits width, length and the distances of many
       at once; bring forward, send back, to front, to back; drawn in 3D, the selection highlighted.

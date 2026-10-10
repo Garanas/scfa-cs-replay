@@ -74,8 +74,9 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     (`AddMarker` gives a new id and a free name, `FreeName`: `Mass 08` becomes `Mass 12`;
     `RemoveMarker` drops every path node link and chain entry to it; `UpdateMarker` may not change
     a marker's kind or id) and areas by name.
-  - `ArmyEdits` (M-4): add an army (a free `ARMY_n`; playable ones get a spawn, at a place or the
-    middle), remove one (with its units, its spawn, and every mention), rename one (the scenario's
+  - `ArmyEdits` (M-4): add an army (a playable one the next player's `ARMY_n` after the spawns,
+    whatever extra armies such as `ARMY_17` exist, with a spawn at a place or the middle; an extra
+    one the next free name after `ARMY_17`), remove one (with its units, its spawn, and every mention), rename one (the scenario's
     lists, factions, team, the others' alliances and its spawn marker; a name a marker has is
     refused), make it playable or extra (extra leaves its team and factions), its factions (none or
     all four: no limit), alliances (both ways unless told) and team. Army names are Lua names
@@ -175,8 +176,23 @@ the map's ogrids whatever the grid's size (`GridDab`: each pixel counts at its c
   `MoveObjects`, `RotateObjects`, `RotateObjectsAbout` (a partner about the image of the pivot),
   `ScaleObjects` (along the images of the axes, about the image of the pivot) and `PlaceObjects`
   with partners; `WithoutPartners` leaves out the partners of things kept before them (what a
-  duplicate copies before mirroring the copies). `Checks/SymmetryChecks` is the
-  `not-symmetric` check, given the transforms by the caller.
+  duplicate copies before mirroring the copies). `Partners` of things that hold a thing and its
+  images (a mirrored placement selects them all) lets the one first in the list lead and makes
+  the others its partners, and the edits with partners move only the leading things themselves:
+  each part moves by its own image of the offset, so the selection stays symmetric (the editor's
+  select tool puts the thing under the mouse first). A unit's image goes to the army whose spawn
+  is the partner of its army's spawn (`PartnerArmy`; the civilians keep theirs), into a group of
+  the same name. `Checks/SymmetryChecks` is the `not-symmetric` check, given the transforms by
+  the caller.
+- **The map's symmetry** (`MapDocument.Symmetry`, a `SymmetrySetting` of kind and count, null for
+  none): the symmetry the editor mirrors edits by, kept in `map.json` (`symmetry`, an optional
+  `SymmetryDto`: the kind's name and the count; an unknown kind reads as none) and never exported.
+  `NewMap` sets rotational for its players (2 to 8) and puts the spawns exactly on its images: the
+  first above the middle on an ogrid's centre, the others turned about the middle.
+- **Deposits stay on ogrid centres**: `ObjectEdits` moves, places, turns about a place and scales
+  about a place a mass or hydrocarbon marker onto the nearest ogrid centre (halfway it goes to the
+  one nearer the map's middle, so a deposit and its partner moved by images of one offset stay
+  images), as placing one does.
 - **Masks for tools** (K-1): `MapDocument.Masks`, named grids of the map's size or half, edited
   with `MaskLayers` (`Add`, `Rename`, `Remove`, `Problem` for a name: letters, digits, spaces,
   dashes, underscores, unique without case since it is a file name). The project keeps them as
@@ -557,7 +573,10 @@ User stories T-5 and T-4 (`Files/InMemory/HeightLayer.cs`, `Editing/HeightLayers
   layers below, so it keeps its look. `HeightmapFiles.Import` and a `heightmap.png` another tool
   saves go into the base of a map with layers.
 - **Curves** (`HeightCurve`: points with a height, `Profile` ridge, valley, road, cliff; width,
-  falloff, closed): a Catmull-Rom spline about an ogrid between samples (`HeightCurves.Spline`);
+  falloff, closed, and an optional `Symmetry`: the layer then shapes the curve's images too,
+  `HeightCurves.Parts`, an image in a mirrored part running the other way so a cliff's high side
+  is mirrored; where parts overlap the one that shapes most wins, a road's by coverage; kept as
+  the curve's `symmetry` in `layers.json`): a Catmull-Rom spline about an ogrid between samples (`HeightCurves.Spline`);
   `Rasterize` makes the layer's values (ridge `+h`, valley `-h`, cliff `+h` on the left of the
   direction of travel in the top view, all `Add`; a road `h` with coverage, `Replace`), full over
   the width (a cliff: a drop of an ogrid at the curve, full over the width on the high side) and
@@ -677,6 +696,8 @@ map's things.
   workspace lacks, or has without a converted model (drawn as a box). Needs the catalogue.
 - `walkability-changes` (warning): new passages and closed paths of the land since walkability was
   generated the time before.
+- `steep-deposit` (warning): a mass or hydrocarbon deposit whose ground rises more than
+  `MarkerEdits.MaxGroundVariation` over the square it needs (`MarkerEdits.Steepness`).
 
 ## Tests
 

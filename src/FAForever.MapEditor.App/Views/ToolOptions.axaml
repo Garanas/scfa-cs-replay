@@ -178,7 +178,7 @@
               <controls:ToolRow Classes="toolrow">
                 <!-- the selection filter (F-11): the kinds it picks; an unchecked kind is locked -->
                 <StackPanel Classes="inline" IsVisible="{Binding HasFilters}">
-                  <TextBlock Classes="label" Text="Selects" />
+                  <TextBlock Classes="label" Text="Picks" />
                   <ItemsControl ItemsSource="{Binding Filters}" AutomationProperties.Name="Kinds the select tool picks">
                     <ItemsControl.ItemsPanel>
                       <ItemsPanelTemplate>
