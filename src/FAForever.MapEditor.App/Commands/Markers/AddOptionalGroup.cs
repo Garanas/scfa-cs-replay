@@ -42,7 +42,7 @@ public sealed class AddOptionalGroupHandler(MainViewModel model, SelectionViewMo
             document = document.MoveUnits(units, army, ImmutableArray.Create(name), out moved);
         }
         edit.Transaction.Apply(_ => document);
-        model.Status = moved > 0 ? $"Added {name} to {army} with {moved} units" : $"Added {name} to {army}";
+        model.Status = moved > 0 ? $"Added {name} to {army} with {MainViewModel.Units(moved)}" : $"Added {name} to {army}";
         return Task.FromResult(new JsonObject { ["army"] = army, ["group"] = name, ["moved"] = moved });
     }
 }

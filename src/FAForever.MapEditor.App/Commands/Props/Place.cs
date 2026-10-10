@@ -60,7 +60,7 @@ public sealed class PlacePropHandler(MainViewModel model, CurrentEdit edit) : IR
         });
         ObjectRef placed = ObjectRef.Prop(id);
         model.Selection.Set(all);
-        model.Status = $"Placed {Path.GetFileNameWithoutExtension(blueprint)} at {request.X:0.#}, {request.Z:0.#}";
+        model.Status = $"Placed {Path.GetFileNameWithoutExtension(blueprint)} at {request.X:0.#}, {request.Z:0.#}{MainViewModel.Mirrored(all.Length)}";
         return Task.FromResult(placed.ToString());
     }
 }

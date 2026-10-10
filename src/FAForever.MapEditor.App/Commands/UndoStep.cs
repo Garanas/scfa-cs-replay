@@ -49,6 +49,8 @@ public sealed class UndoStepBehavior<TRequest, TResponse>(MainViewModel model, C
         using EditTransaction transaction = session.Begin(Title);
         edit.Transaction = transaction;
         string status = model.Status;
+        bool outer = !model.InCommandStep;
+        model.InCommandStep = true;
         try
         {
             TResponse response = await next(cancellationToken);
@@ -63,6 +65,10 @@ public sealed class UndoStepBehavior<TRequest, TResponse>(MainViewModel model, C
         finally
         {
             edit.Clear();
+            if (outer)
+            {
+                model.InCommandStep = false;
+            }
         }
     }
 }

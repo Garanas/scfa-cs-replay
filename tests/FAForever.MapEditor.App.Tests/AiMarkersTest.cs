@@ -161,7 +161,7 @@ namespace FAForever.MapEditor.App.Tests
 
             PlacedUnit placed = model.ShownDocument!.FindUnit(unit)!;
             CollectionAssert.AreEqual(new[] { "Optional_Civilian_Defenses_3" }, placed.Group.ToArray());
-            Assert.AreEqual("Optional_Civilian_Defenses_3 (ARMY_17): 1 units, from value 3 of optional_civilian_defenses", model.Markers.OptionalGroups.Single().Line);
+            Assert.AreEqual("Optional_Civilian_Defenses_3 (ARMY_17): 1 unit, from value 3 of optional_civilian_defenses", model.Markers.OptionalGroups.Single().Line);
         }
     }
 }

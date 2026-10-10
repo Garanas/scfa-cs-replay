@@ -87,7 +87,7 @@ public static class EditorModes
             [
                 new ToolDefinition("map.areas", "Areas", "M-5") { Make = model => new AreaTool(model) },
                 new ToolDefinition("map.size", "Map size", "M-3") { Make = model => new MapSizeTool(model) },
-                new ToolDefinition("map.select", "Select anything", "F-11") { Make = model => new SelectTool(model, ObjectKinds.All) },
+                new ToolDefinition("map.select", "Select", "F-11") { Make = model => new SelectTool(model, ObjectKinds.All) },
                 new ToolDefinition("map.preset", "Preset", "F-10") { Make = model => new SelectionPresetTool(model) },
             ],
             [
@@ -245,7 +245,7 @@ public static class EditorOverlays
         new OverlayDefinition("mask", "Mask", "Show the chosen mask", "K-1") { Swatch = "MapMaskBrush" },
         new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12"),
         new OverlayDefinition("grid", "Grid", "Show the grid", "V-3"),
-        new OverlayDefinition("areas", "Areas", "Show areas", "M-5") { Swatch = "MapOutsidePlayableBrush" },
+        new OverlayDefinition("areas", "Areas", "Show areas", "M-5") { Swatch = "MapAreaBrush" },
         new OverlayDefinition("props", "Props", "Show props", "V-2"),
         new OverlayDefinition("units", "Units", "Show units", "V-2"),
         new OverlayDefinition("decals", "Decals", "Show decals", "V-3"),

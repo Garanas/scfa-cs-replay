@@ -14,10 +14,10 @@ namespace FAForever.MapEditor.App.ViewModels;
 public sealed record OptionalGroupItem(OptionalGroup Group)
 {
     public string Line => Group.Option == AdaptiveScript.PlayersOption && Group.Level is int players
-        ? $"{Group.Group} ({Group.Army}): {Group.Units} units, when {players} or more players are in the game"
+        ? $"{Group.Group} ({Group.Army}): {MainViewModel.Units(Group.Units)}, when {players} or more players are in the game"
         : Group.Level is int level
-        ? $"{Group.Group} ({Group.Army}): {Group.Units} units, from value {level} of optional_{Group.Option.ToLowerInvariant()}"
-        : $"{Group.Group} ({Group.Army}): {Group.Units} units";
+        ? $"{Group.Group} ({Group.Army}): {MainViewModel.Units(Group.Units)}, from value {level} of optional_{Group.Option.ToLowerInvariant()}"
+        : $"{Group.Group} ({Group.Army}): {MainViewModel.Units(Group.Units)}";
 }
 
 /// <summary>

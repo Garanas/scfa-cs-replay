@@ -124,7 +124,7 @@ public sealed class SelectUnitGroupHandler(MainViewModel model, ArmiesViewModel 
         }
         ObjectRef[] units = [.. document.UnitsIn(army, path).Select(unit => ObjectRef.Unit(unit.Unit.Name))];
         selection.Set(units);
-        model.Status = $"Selected the {units.Length} units of {(path.IsEmpty ? army : $"{UnitGroupEdits.PathText(path)} of {army}")}";
+        model.Status = $"Selected the {MainViewModel.Units(units.Length)} of {(path.IsEmpty ? army : $"{UnitGroupEdits.PathText(path)} of {army}")}";
         return Task.FromResult(units.Length);
     }
 }

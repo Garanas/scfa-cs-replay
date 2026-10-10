@@ -51,6 +51,16 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
     private Lighting? _shown;
     private Sky? _shownSky;
 
+    /// <summary>
+    /// The backgrounds the game has in <c>/textures/environment</c>, as the maps name them.
+    /// </summary>
+    public static IReadOnlyList<string> Backgrounds { get; } =
+    [
+        "/textures/environment/defaultbackground.dds",
+        "/textures/environment/blackbackground.dds",
+        "/textures/environment/seraphim iibackground3.dds",
+    ];
+
     public LightingSettingsViewModel(Func<string, JsonObject, Task> run)
     {
         const string set = "lighting.set";
@@ -85,7 +95,7 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
             {
                 Help = "The cube map units and props reflect (the map's <default> environment cube map)",
             },
-            new TextureSetting("Background", sky, "background", d => d.Sky.Background, run) { Help = "The picture far behind the sky, e.g. /textures/environment/defaultbackground.dds" },
+            new ChoiceSetting("Background", sky, "background", Backgrounds, d => d.Sky.Background, run) { Help = "The picture far behind the sky: one of the game's (a map's own stays a choice)" },
         ]);
         Fog = new SettingGroup("Fog",
         [

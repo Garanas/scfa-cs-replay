@@ -796,7 +796,11 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void OnSessionChanged(object? sender, EventArgs e) => Refresh(null);
 
-    private void OnDocumentChange(object? sender, DocumentChange change) => Events.OnDocumentChanged(change);
+    private void OnDocumentChange(object? sender, DocumentChange change)
+    {
+        SayDone(change);
+        Events.OnDocumentChanged(change);
+    }
 
     partial void OnIsBusyChanged(bool value) => Refresh(null);
 

@@ -102,14 +102,22 @@
               </TabControl>
               <Border DockPanel.Dock="Left" Classes="barseparator" />
               <controls:ToolRow x:Name="ViewOptions" Classes="toolrow" AutomationProperties.Name="Shown over the terrain">
-                <StackPanel Classes="inline">
-                  <TextBlock Classes="caption" Text="Symmetry" />
-                  <ComboBox ItemsSource="{Binding Symmetry.Choices}" SelectedItem="{Binding Symmetry.Chosen}"
-                            AutomationProperties.Name="Symmetry"
-                            AutomationProperties.HelpText="The symmetry edits are mirrored by; the views show its guides" />
-                </StackPanel>
-                <CheckBox Content="Mirror edits" IsVisible="{Binding Symmetry.IsOn}" IsChecked="{Binding Symmetry.MirrorsEdits}"
-                          AutomationProperties.HelpText="On, brush strokes, placing, moving, turning and deleting work in every part of the map; off, the symmetry shows its guides only" />
+                <!-- short, so that the overlays' chips keep room beside it at 1280 pixels: the list names each symmetry in full -->
+                <ComboBox ItemsSource="{Binding Symmetry.Choices}" SelectedItem="{Binding Symmetry.Chosen}"
+                          AutomationProperties.Name="Symmetry" ToolTip.Tip="{Binding Symmetry.Chosen.Title, StringFormat='Symmetry: {0}'}"
+                          AutomationProperties.HelpText="The symmetry edits are mirrored by; the views show its guides">
+                  <ComboBox.SelectionBoxItemTemplate>
+                    <DataTemplate x:DataType="vm:SymmetryChoice">
+                      <StackPanel Classes="inline">
+                        <Path Classes="icon small" Data="{StaticResource Icon.Symmetry}" />
+                        <TextBlock Text="{Binding Short}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ComboBox.SelectionBoxItemTemplate>
+                </ComboBox>
+                <ToggleButton Classes="chip" Content="Mirror" IsVisible="{Binding Symmetry.IsOn}" IsChecked="{Binding Symmetry.MirrorsEdits}"
+                              AutomationProperties.Name="Mirror edits" ToolTip.Tip="Mirror edits by the symmetry"
+                              AutomationProperties.HelpText="On, brush strokes, placing, moving, turning and deleting work in every part of the map; off, the symmetry shows its guides only" />
               </controls:ToolRow>
             </DockPanel>
           </Border>

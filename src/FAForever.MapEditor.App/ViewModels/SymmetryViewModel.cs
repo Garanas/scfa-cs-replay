@@ -14,6 +14,19 @@ public sealed record SymmetryChoice(MapSymmetryKind? Kind, int Count, string Tit
 {
     public static SymmetryChoice Off { get; } = new SymmetryChoice(null, 1, "Off");
 
+    /// <summary>
+    /// What the views' bar shows of it, where room is short: <c>4-way</c>, <c>Left-right</c>.
+    /// </summary>
+    public string Short => Kind switch
+    {
+        null => "Off",
+        MapSymmetryKind.Rotational => $"{Count}-way",
+        MapSymmetryKind.MirroredLeftRight => "Left-right",
+        MapSymmetryKind.MirroredTopBottom => "Top-bottom",
+        MapSymmetryKind.MirroredDiagonal => "Diagonal",
+        _ => "Other diagonal",
+    };
+
     public override string ToString() => Title;
 }
 

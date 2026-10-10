@@ -125,7 +125,7 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void BuildOverlayChips(MainViewModel model)
     {
-        foreach (Control chip in ViewOptions.Children.Where(child => child.Classes.Contains("chip")).ToList())
+        foreach (Control chip in ViewOptions.Children.Where(child => child.Classes.Contains("chip") && child.DataContext is OverlayItem).ToList())
         {
             ViewOptions.Children.Remove(chip);
         }

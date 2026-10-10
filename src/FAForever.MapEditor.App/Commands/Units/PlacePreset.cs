@@ -62,7 +62,7 @@ public sealed class PlaceUnitPresetHandler(MainViewModel model, PresetsViewModel
             // with the symmetry, the preset's units in every part of the map, in the same group (F-12)
             return model.MirrorPlaced(d, [.. names.Select(ObjectRef.Unit)], out _);
         });
-        model.Status = $"Placed the preset {preset.Name}: {names.Length} units in {UnitGroupEdits.PathText(group)} of {army}";
+        model.Status = $"Placed the preset {preset.Name}: {MainViewModel.Units(names.Length)} in {UnitGroupEdits.PathText(group)} of {army}";
         return Task.FromResult(new JsonObject
         {
             ["army"] = army,
