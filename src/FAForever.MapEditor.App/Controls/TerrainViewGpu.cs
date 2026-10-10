@@ -495,7 +495,10 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             return;
         }
-        CursorMoved?.Invoke(PlaceUnderMouse(document) is Vector3 place
+        Vector3? under = PlaceUnderMouse(document);
+        // the place under the mouse, as the top view keeps it: paste and the presets' previews use it
+        _model.Pointer = under is Vector3 at ? (at.X, at.Z) : null;
+        CursorMoved?.Invoke(under is Vector3 place
             ? $"x {place.X:0}, z {place.Z:0}, height {place.Y:0.00}"
             : "");
     }
@@ -597,6 +600,10 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         base.OnPointerExited(e);
         _mouseInside = false;
         _hoverStale = true;
+        if (_model is not null)
+        {
+            _model.Pointer = null;
+        }
         CursorMoved?.Invoke("");
         RequestNextFrameRendering();
     }
@@ -650,9 +657,9 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             tool.Drag(place.X, place.Z, InputAt(place, e.KeyModifiers));
         }
-        if (_model?.ActiveTool?.Tool is { CursorRadius: > 0 } or SelectTool or DecalSelectTool or AreaTool or SunTool)
+        if (_model?.ActiveTool?.Tool is { CursorRadius: > 0 } or SelectTool or DecalSelectTool or AreaTool or SunTool or SelectionPresetTool or UnitPlaceTool { HasPreset: true })
         {
-            // the brush follows the mouse; the handle and the thing under it light up
+            // the brush and a preset's preview follow the mouse; the handle and the thing under it light up
             _hoverStale = true;
             RequestNextFrameRendering();
         }

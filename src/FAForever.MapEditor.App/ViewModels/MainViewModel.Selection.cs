@@ -82,11 +82,12 @@ public sealed partial class MainViewModel
     public ObjectKinds SelectableKinds => ((ActiveTool?.Tool as SelectTool)?.Kinds ?? ModeKinds) & ShownKinds & ~LockedKinds;
 
     /// <summary>
-    /// What a box or Select all takes: the kinds that can be picked, without areas unless areas are
-    /// all that can be (the Map mode), so that a box over markers never takes the playable area
-    /// along (a click still picks an area by its edge).
+    /// What a box or Select all takes: the kinds that can be picked, without areas unless the mode
+    /// works on areas alone (the Map mode) and they are all that can be picked, so that a box over
+    /// markers never takes the playable area along, also with the markers locked (a click still
+    /// picks an area by its edge).
     /// </summary>
-    public ObjectKinds BoxKinds => SelectableKinds == ObjectKinds.Areas ? ObjectKinds.Areas : SelectableKinds & ~ObjectKinds.Areas;
+    public ObjectKinds BoxKinds => SelectableKinds == ObjectKinds.Areas && ModeKinds == ObjectKinds.Areas ? ObjectKinds.Areas : SelectableKinds & ~ObjectKinds.Areas;
 
     private void InitializeSelection()
     {

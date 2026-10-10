@@ -65,6 +65,12 @@ namespace FAForever.MapEditor.App.Tests
             await Run(model, "select.all");
             Assert.IsFalse(model.Selection.Items.Any(thing => thing.Kind == ObjectKind.Area), "nor does Select all");
 
+            // with the markers and path nodes locked, the box takes nothing rather than the area
+            model.LockedKinds = ObjectKinds.Markers | ObjectKinds.PathNodes;
+            model.SelectInside(-10, -10, 270, 270, SelectionChange.Replace);
+            Assert.IsFalse(model.Selection.HasAny, "areas are the Map mode's: a box in the Markers mode leaves them alone");
+            model.LockedKinds = ObjectKinds.None;
+
             model.SelectTool("map.areas");
             model.SelectInside(-10, -10, 270, 270, SelectionChange.Replace);
             CollectionAssert.AreEqual(new[] { ObjectRef.Area("AREA_1") }, model.Selection.Items.ToArray(), "the Map mode's tools pick areas alone: a box takes them");

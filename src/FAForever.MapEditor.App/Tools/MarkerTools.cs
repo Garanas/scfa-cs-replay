@@ -50,10 +50,15 @@ public enum MarkerPlacement
 /// Places markers of one kind where one clicks (user story R-1), each one step of undo through
 /// <c>markers.place</c>, which selects it so the inspector shows it: spawns (the next army,
 /// <c>ARMY_n</c>), mass and hydrocarbon deposits (always on an ogrid's centre, where the game puts
-/// them, with a warning on steep ground), AI markers of the chosen type. Escape selects nothing.
+/// them, with a warning on steep ground), AI markers of the chosen type. A press on a marker of the
+/// kind it places (any deposit for a deposit) selects it and a drag moves it (with its mirror partners), as the Select tool does, so a click on a
+/// deposit never stacks another on it. Escape selects nothing.
 /// </summary>
 public sealed partial class PlaceMarkerTool(MainViewModel model, MarkerPlacement placement) : ObservableObject, IMapTool
 {
+    private SelectTool? _select;
+    private bool _selecting;
+
     public MarkerPlacement Placement => placement;
 
     /// <summary>
@@ -111,10 +116,20 @@ public sealed partial class PlaceMarkerTool(MainViewModel model, MarkerPlacement
         _ => "ai",
     };
 
-    public void Press(float x, float z)
+    public void Press(float x, float z) => Press(x, z, ToolInput.Default);
+
+    public void Press(float x, float z, ToolInput input)
     {
         if (model.ShownDocument is null)
         {
+            return;
+        }
+        if (MarkerUnder(model.ShownDocument, x, z, input) is not null)
+        {
+            // a marker under the mouse is chosen and dragged, as the Select tool does, rather than another stacked on it
+            _select ??= new SelectTool(model, ObjectKinds.Markers | ObjectKinds.PathNodes);
+            _selecting = true;
+            _select.Press(x, z, input);
             return;
         }
         JsonObject arguments = new JsonObject
@@ -130,15 +145,66 @@ public sealed partial class PlaceMarkerTool(MainViewModel model, MarkerPlacement
         _ = model.RunWithAsync("markers.place", arguments);
     }
 
-    public void Drag(float x, float z)
+    public void Drag(float x, float z) => Drag(x, z, ToolInput.Default);
+
+    public void Drag(float x, float z, ToolInput input)
     {
+        if (_selecting)
+        {
+            _select!.Drag(x, z, input);
+        }
     }
 
     public void Release()
     {
+        if (_selecting)
+        {
+            _selecting = false;
+            _select!.Release();
+        }
     }
 
     public bool Key(string key, ToolModifiers modifiers) => MarkerToolKeys.Escape(model, key);
+
+    /// <summary>
+    /// The marker of the kind it places under the mouse: the one the 3D view picked, else the
+    /// nearest within a few pixels (and at least within its own ogrid); null for none.
+    /// </summary>
+    private ObjectRef? MarkerUnder(MapDocument document, float x, float z, ToolInput input)
+    {
+        if (input.Picks)
+        {
+            return input.Picked is ObjectRef picked && document.Find(picked) is Marker marker && IsPlaced(marker) ? picked : null;
+        }
+        float reach = MathF.Max(0.75f, 4 * input.OgridsPerPixel);
+        Marker? nearest = null;
+        float best = reach * reach;
+        foreach (Marker candidate in document.Markers.All)
+        {
+            float dx = candidate.Position.X - x;
+            float dz = candidate.Position.Z - z;
+            float distance = dx * dx + dz * dz;
+            if (distance <= best && IsPlaced(candidate) && model.IsPickable(ObjectRef.Marker(candidate.Id)))
+            {
+                best = distance;
+                nearest = candidate;
+            }
+        }
+        return nearest is null ? null : ObjectRef.Marker(nearest.Id);
+    }
+
+    /// <summary>
+    /// Whether a marker is of the kind it places (any deposit for a deposit's tool).
+    /// </summary>
+    private bool IsPlaced(Marker marker) => placement switch
+    {
+        MarkerPlacement.Spawn => marker is Spawn,
+        MarkerPlacement.Mass or MarkerPlacement.Hydrocarbon => marker is ResourceMarker,
+        MarkerPlacement.Ai => marker is AiMarker,
+        MarkerPlacement.WeatherDefinition => marker is WeatherDefinition,
+        MarkerPlacement.WeatherGenerator => marker is WeatherGenerator,
+        _ => false,
+    };
 }
 
 /// <summary>

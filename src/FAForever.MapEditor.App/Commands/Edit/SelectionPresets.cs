@@ -34,10 +34,12 @@ public sealed class SaveSelectionPresetHandler(MainViewModel model, PresetsViewM
 /// <summary>
 /// Places a selection preset of the workspace (user story F-10), one step of undo: its things
 /// around a place as they lay around their middle, turned about it, each as high above the terrain
-/// as when saved; markers under free names with their links and chains (a spawn becomes the next
-/// army), units as a new group named after the preset in an army's <c>INITIAL</c>. With the
-/// symmetry, their images in every part of the map (units of a playable army to the partner
-/// spawn's army). Selects everything it placed.
+/// as when saved; markers under free names with their links and chains, units as a new group named
+/// after the preset in an army's <c>INITIAL</c>. A spawn of the preset moves the map's spawn nearest
+/// to it there (its partners to the images), so the map keeps its armies, and the preset's units
+/// are then that army's (a map without spawns gets a new army). With the symmetry, their images in
+/// every part of the map (units of a playable army to the partner spawn's army). Selects
+/// everything it placed and the spawns it moved.
 /// </summary>
 /// <param name="Name">The preset's name (Map panel, Selection presets); left out, the Preset tool's.</param>
 /// <param name="X">In ogrids; left out, the mouse's place, else the middle of the map.</param>
@@ -67,12 +69,16 @@ public sealed class PlaceSelectionPresetHandler(MainViewModel model, PresetsView
         float radians = (float)((request.Heading ?? tool.Heading) * Math.PI / 180);
         string? army = request.Army ?? tool.Army;
         ImmutableArray<ObjectRef> all = [];
+        ImmutableArray<ObjectRef> moved = [];
+        // a spawn of the preset moves one of the map's spawns (and its partners): the map keeps its armies
+        IReadOnlyList<FAForever.FileFormats.Map.MapSymmetryTransform> parts = model.EditTransforms(document);
         edit.Transaction.Apply(d =>
         {
-            d = SelectionPresets.Place(d, settings, preset.Name, army, [UnitGroupEdits.InitialGroup], x, z, radians, out ImmutableArray<ObjectRef> added);
+            d = SelectionPresets.Place(d, settings, preset.Name, army, [UnitGroupEdits.InitialGroup], x, z, radians, parts, out ImmutableArray<ObjectRef> added, out moved);
             // with the symmetry, the preset's things in every part of the map (F-12)
             return model.MirrorPlaced(d, added, out all);
         });
+        all = [.. all, .. moved];
         selection.Set(all);
         model.Status = $"Placed the preset {preset.Name}: {settings.Summary()}" + (all.Length > settings.Count ? $", {all.Length} things with the symmetry's images" : "");
         return Task.FromResult(new JsonArray([.. all.Select(thing => (JsonNode)JsonValue.Create(thing.ToString()))]));

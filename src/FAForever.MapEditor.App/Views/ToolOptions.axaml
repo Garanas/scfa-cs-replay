@@ -361,7 +361,7 @@
                 <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="Units for" />
                   <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" AutomationProperties.Name="Army of the preset's units"
-                            AutomationProperties.HelpText="The preset's units go into a new group named after it, in this army's INITIAL" />
+                            IsEnabled="{Binding !HoldsSpawn}" ToolTip.Tip="{Binding ArmyHelp}" AutomationProperties.HelpText="{Binding ArmyHelp}" />
                 </StackPanel>
                 <TextBlock Classes="label" Text="{Binding Heading, StringFormat='Turned: {0:0}°'}" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />

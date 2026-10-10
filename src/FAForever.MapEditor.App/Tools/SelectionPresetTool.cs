@@ -13,8 +13,9 @@ namespace FAForever.MapEditor.App.Tools;
 /// several kinds at once, such as a civilian base with its units, props, decals and markers. Each
 /// click is one step of undo through <c>edit.placePreset</c>, which mirrors what it placed with the
 /// symmetry and selects it all. The preset comes from the Map panel's Selection presets (applying
-/// one chooses this tool). Q and E turn what is placed next by a quarter turn (structures stay on
-/// the build grid), with shift by 15 degrees; Escape selects nothing.
+/// one chooses this tool). Before the click, the preset's things show under the mouse as outlines
+/// (<see cref="PresetPreview"/>). Q and E turn what is placed next by a quarter turn (structures
+/// stay on the build grid), with shift by 15 degrees; Escape selects nothing.
 /// </summary>
 public sealed partial class SelectionPresetTool(MainViewModel model) : ObservableObject, IMapTool
 {
@@ -36,6 +37,39 @@ public sealed partial class SelectionPresetTool(MainViewModel model) : Observabl
     /// What a click places, as the options bar says it.
     /// </summary>
     public string Title => Preset is string name ? $"Preset {name} ({Summary})" : "No preset chosen";
+
+    /// <summary>
+    /// Whether the preset holds a spawn: it then moves one of the map's spawns, and its units are
+    /// that spawn's army's rather than <see cref="Army"/>.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ArmyHelp))]
+    public partial bool HoldsSpawn { get; private set; }
+
+    /// <summary>
+    /// What the army's combo box says about where the units go.
+    /// </summary>
+    public string ArmyHelp => HoldsSpawn
+        ? "The preset holds a spawn: its units go to the army of the map's spawn it moves"
+        : "The preset's units go into a new group named after it, in this army's INITIAL";
+
+    private IReadOnlyList<PreviewOutline> _outlines = [];
+
+    /// <summary>
+    /// Makes a preset the one a click places, with its preview under the mouse.
+    /// </summary>
+    public void Use(string name, SelectionPresetSettings settings)
+    {
+        Summary = settings.Summary();
+        HoldsSpawn = settings.Markers?.Spawns.Count > 0;
+        _outlines = PresetPreview.OfSelection(settings, model.Assets.Catalog);
+        Preset = name;
+    }
+
+    /// <summary>
+    /// The preset's things under the mouse, where a click puts them.
+    /// </summary>
+    public IReadOnlyList<ToolShape> Shapes(ToolView view) => PresetPreview.Shapes(model, view, _outlines, (float)(Heading * Math.PI / 180));
 
     /// <summary>
     /// The armies of the map, for the combo box.
@@ -69,6 +103,8 @@ public sealed partial class SelectionPresetTool(MainViewModel model) : Observabl
         ["summary"] = Summary,
         ["army"] = Army,
         ["heading"] = Heading,
+        ["holdsSpawn"] = HoldsSpawn,
+        ["previewOutlines"] = _outlines.Count,
     };
 
     public void Press(float x, float z)
@@ -148,8 +184,7 @@ public sealed partial class SelectionPresetTool(MainViewModel model) : Observabl
         SelectionPresetSettings settings = preset.Read<SelectionPresetSettings>();
         model.SelectTool("map.preset");
         SelectionPresetTool tool = model.Tool<SelectionPresetTool>();
-        tool.Summary = settings.Summary();
-        tool.Preset = preset.Name;
+        tool.Use(preset.Name, settings);
         model.Status = $"Click to place the preset {preset.Name} ({tool.Summary}); Q and E turn it";
     });
 
