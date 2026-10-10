@@ -160,6 +160,12 @@ namespace FAForever.MapEditor.Project.Editing
                 }
             }
 
+            // decal-masks layers follow decals moved during the transaction (a drag)
+            if (!ReferenceEquals(_followed, _document))
+            {
+                _document = DecalMaskLayers.Follow(_followed, _document, _session.DecalPictures);
+            }
+
             // the grids of coverage stay what their stacks make, a brush's work in the chosen painted layer
             if (!ReferenceEquals(_followed, _document) && !_document.CoverageStacks.IsEmpty)
             {

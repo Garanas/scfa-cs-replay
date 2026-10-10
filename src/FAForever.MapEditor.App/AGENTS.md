@@ -1043,7 +1043,10 @@ Markers panel) and Export, each a view of its own in `Views/ProceduralPanels/`. 
 - Automation: `state.procedural` (rows, auto, navigation with regions and routes, `showNavigation`,
   `routesTop`, `routes3d`, export steps); `state.pathNodes` (settings, status, the preview per layer,
   the edits in words, `unmatched`, the chosen node).
-- Not built yet (wave 9 and 10): the normal and shadow decals, the sky cube map.
+- **The map-wide normal and shadow decals** (9C) are generators too (`normalDecal`, `shadowDecal`,
+  previews of at most 2048 pixels; may regenerate on their own) and have the panel section Map-wide
+  decals with the inspector part of the chosen one (section "Decals: map-wide decals").
+- Not built yet (wave 10): the sky cube map.
 
 ## Selection: picking things on the map and changing them
 
@@ -1181,6 +1184,44 @@ User stories D-1 and D-2, the Decals mode (F8); the edits are the library's `Dec
   decal does not stop a click of the Decals mode's tool.
 - Automation: `state.decals` (the map's count, the place tool's decal, width, heading and cut-off,
   the select tool's drag mode, how many decals are hidden, the groups with id, name, count, shown).
+
+### Decal sets, map-wide decals, decal masks (wave 9C)
+
+- **Decal sets** (the library's `DecalSets`): with Variants on, the shelf groups a decal's textures
+  by name and suffix into one tile (`AssetTile.Set`, `set of 3`, the albedo's picture). Choosing the
+  tile chooses the whole set (`AssetsViewModel.WholeSet`, `ShownSet`): the place tool's `Decal` is
+  the set's name (`env/rocky/decals/rock01`) and it places one decal carrying the set
+  (`DecalEdits.NewDecalSet`); choosing one of its textures in the inspector places that one alone,
+  "Choose the whole set" goes back. `decals.choose` and `decals.place` take a set's name; a set of the
+  map's own files (`/maps/<folder>/env/decals/rock01`, `DecalSets.OfMap`) works the same (Git Bash:
+  `MSYS_NO_PATHCONV=1`). The 3D view draws a set's normals with its albedo (`TerrainRenderer.AddToRun`);
+  the inspector names it `rock01 (decal set)` and its type `set of albedo + normals + mask main`.
+- **Map-wide decals** (`MapWideDecalsViewModel` as `model.WideDecals`, `MainViewModel.WideDecals.cs`):
+  three slots (`MapWideSlotViewModel`: source, file, the albedo's specular, the shadow's radius,
+  strength, darkest and sun's shadows as `Setting`s; a preview `TexturePicture`; how it stands;
+  Generate now). The Decals panel lists them above the groups (`MapWideDecalsSection`,
+  `Views/DecalPanels/MapWideDecalsList`) and the inspector shows the chosen one while nothing is
+  selected (`MapWideDecalDetailsSection`, through `PanelPartView`'s template `MapWideSlotView`); the
+  Lighting panel's Shadow decal entry is the shadow slot; the Procedural mode lists the normal and
+  shadow (`MapWideDecalsProceduralSection`, its inspector `MapWideProceduralDetailsSection`), so the
+  wave 10 move of the Procedural mode to panel lists takes them as they are. `view.inspectPart` knows
+  `decals.wideAlbedo|wideNormal|wideShadow` and `procedural.normalDecal|shadowDecal`.
+  Commands: `decals.setWide {kind, source?, file?, specular?}`, `decals.chooseWideFile {kind,
+  target?: file|specular, path?}`, `decals.setShadow {radius?, strength?, darkest?, sunShadows?}`,
+  `decals.generateNormal`, `decals.generateShadow` (Generate menu). Files are read small on the pool
+  for the preview. The 3D view draws the slots' previews under the map's decals
+  (`WideDecals.Shown(document)`, decals with ids below 0, textures `editor:wide/<kind>` from
+  `TextureOf`); the top view does not outline them. The export step `wideDecals` at
+  `ExportStep.DecalsOrder` runs the library's `MapWideDecalsExport` (an 8192 normals decal and its
+  mipmaps take about 3 s). `state.wideDecals`.
+- **Normal decals in 3D** follow the game: the decal's normal is its own (up in its frame, turned by
+  the decal's heading), replacing the terrain's by red (`TerrainShaders.DecalNormalFragment`).
+- **Decal-masks layers**: the add choice `LayerStackViewModel.DecalMasksChoice` in the heightmap's
+  stack (`terrain.addLayer kind=decals {mask?, height?}`, then `terrain.setDecalMasks {layer?, mask?,
+  sets?, height?}`, the inspector's Decal masks fields) and in every stack of coverage (`layers.add
+  source=decals {target, mask?}`, `layers.setDecalMasks {target?, layer?, mask?, sets?}`; no inspector
+  fields yet). The session reads the masks through `model.DecalPictures` (`GameMaskPictures`).
+- Tests: `WideDecalsAndSetsTest`, `WideDecalsWindowTest`.
 
 ## Units and armies
 
@@ -1990,7 +2031,8 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   map for the brush (`brush.set waterMask`, a preset) shows its entry. Presets below.
 - **Lighting** (`LightingSettings.Parts`): Sun (azimuth, elevation, colour, multiplier; the Sun
   tool's line), Colours and ambience, Fog, Bloom, Sky and cube maps (the sky's cube maps and
-  background), and Shadow decal under Map-wide decals (planned: the map-wide decals fill it).
+  background), and Shadow decal under Map-wide decals (the map-wide shadow decal's slot itself,
+  `MapWideSlotViewModel`, its detail the slot's source).
   Presets below: lighting presets, and sky presets while the sky is chosen (`ForParts`).
 - **The rail** (`Views/ModeRail`): the modes of groups 0 and 1 at the top (`RailModes`), the bottom
   group (`EditorModes.BottomGroup`, `BottomRailModes`) at the bottom above a divider and the Plugins

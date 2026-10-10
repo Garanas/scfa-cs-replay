@@ -173,9 +173,11 @@ namespace FAForever.MapEditor.Project
                     Mask = reference?.Key,
                     Threshold = reference is { Threshold: not 0 } ? reference.Threshold : null,
                     Invert = reference is { Invert: true } ? true : null,
-                    Height = reference is { Height: not 0 } ? reference.Height : null,
+                    Height = reference is { Height: not 0 } ? reference.Height : layer.Source is DecalMasksSource { Height: not 0 } decalHeight ? decalHeight.Height : null,
                     Rules = layer.Source is RulesSource rules ? MapProjectMapping.ToDto(rules.Rules) : null,
                     Curve = layer.Curve is HeightCurve curve ? ToDto(curve) : null,
+                    DecalMask = (layer.Source as DecalMasksSource)?.Mask,
+                    DecalSets = layer.Source is DecalMasksSource { Sets.IsEmpty: false } decals ? [.. decals.Sets] : null,
                 };
             })],
         };
@@ -322,6 +324,8 @@ namespace FAForever.MapEditor.Project
                         entry.Threshold ?? 0, entry.Invert == true, entry.Height ?? 0),
                     LayerSources.RulesName => new RulesSource(entry.Rules is MaskRulesDto rules ? MapProjectMapping.ToModel(rules) : new MaskRuleSet()),
                     LayerSources.CurveName => new CurveSource(entry.Curve is HeightCurveDto curve ? ToModel(curve) : new HeightCurve()),
+                    LayerSources.DecalMasksName => new DecalMasksSource(string.IsNullOrWhiteSpace(entry.DecalMask) ? DecalSets.MainMask : entry.DecalMask,
+                        [.. entry.DecalSets ?? []], entry.Height ?? 0),
                     _ => throw new MapProjectException($"{index}: the layer {entry.Name} has a source '{entry.Source}' this editor does not know"),
                 };
                 Layer layer = new Layer

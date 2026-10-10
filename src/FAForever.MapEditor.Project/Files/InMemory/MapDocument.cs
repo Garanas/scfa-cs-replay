@@ -86,6 +86,12 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public ImmutableArray<DecalGroup> DecalGroups { get; init; } = [];
 
         /// <summary>
+        /// The decals over the whole map (albedo, normals, shadow): settings of the map apart from
+        /// <see cref="Decals"/>, turned into decals by the export. Kept in <c>decals.json</c> (<c>mapWide</c>).
+        /// </summary>
+        public MapWideDecals WideDecals { get; init; } = MapWideDecals.None;
+
+        /// <summary>
         /// The props, each with an <see cref="Prop.Id"/> no other prop of the document has.
         /// </summary>
         public ImmutableArray<Prop> Props { get; init; } = [];

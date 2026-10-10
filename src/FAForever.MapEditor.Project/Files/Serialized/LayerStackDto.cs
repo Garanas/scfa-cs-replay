@@ -57,7 +57,7 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         public required string Name { get; init; }
 
         /// <summary>
-        /// The kind of source: <c>painted</c>, <c>image</c>, <c>mask</c>, <c>rules</c>, <c>curve</c>
+        /// The kind of source: <c>painted</c>, <c>image</c>, <c>mask</c>, <c>rules</c>, <c>curve</c>, <c>decals</c>
         /// (<see cref="LayerSources"/>).
         /// </summary>
         public required string Source { get; init; }
@@ -129,6 +129,17 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// A curve layer's curve.
         /// </summary>
         public HeightCurveDto? Curve { get; init; }
+
+        /// <summary>
+        /// A decal-masks layer's mask name (<c>main</c> for the plain <c>_mask</c>). Its height in a
+        /// stack of heights is <see cref="Height"/>; its grid's file holds what it drew last.
+        /// </summary>
+        public string? DecalMask { get; init; }
+
+        /// <summary>
+        /// The decal sets a decal-masks layer draws, by name; left out for every set.
+        /// </summary>
+        public IReadOnlyList<string>? DecalSets { get; init; }
 
         /// <summary>
         /// For a layer of the heightmap, which of its stacks hold it: <c>draft</c> (only the draft,

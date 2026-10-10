@@ -132,6 +132,7 @@ public sealed partial class CoverageStackViewModel : LayerStackViewModel
         new LayerAddChoice("Mask", $"Add a {word} that reads a mask", "Another mask for tools, read as it changes; choose which in its settings", "layers.add", new JsonObject { ["source"] = "mask" }),
         new LayerAddChoice("Stratum", $"Add a {word} that reads a stratum", "A stratum's mask, read as it changes; choose which in its settings", "layers.add", new JsonObject { ["source"] = "stratum" }),
         new LayerAddChoice("Rules", $"Add a rules {word}", "Slope, height, distance to water, other masks and noise; generated when asked", "layers.add", new JsonObject { ["source"] = "rules" }),
+        DecalMasksChoice("layers.add", new JsonObject { ["source"] = "decals" }),
     ];
 
     /// <summary>

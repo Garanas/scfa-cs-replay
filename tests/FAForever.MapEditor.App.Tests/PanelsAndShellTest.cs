@@ -81,7 +81,7 @@ namespace FAForever.MapEditor.App.Tests
 
             model.LightingSettings.Parts.Choose("lighting.fog");
             Assert.AreEqual(AtmospherePresets.LightingKind, model.Presets.Kind);
-            Assert.IsInstanceOfType<PlannedPart>(model.LightingSettings.Parts.Find("lighting.shadowDecal")!.Content, "the shadow decal is to come");
+            Assert.AreSame(model.WideDecals.Shadow, model.LightingSettings.Parts.Find("lighting.shadowDecal")!.Content, "the map-wide shadow decal's slot");
             StringAssert.Contains(model.LightingSettings.Parts.Find("lighting.sun")!.Detail, "° up");
             CollectionAssert.AreEqual(new[] { "Settings", "Sky", "Map-wide decals" }, model.LightingSettings.Parts.Groups.Select(group => group.Title).ToArray());
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "view.inspectPart", new JsonObject { ["part"] = "nothing" }));

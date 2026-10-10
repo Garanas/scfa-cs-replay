@@ -36,8 +36,9 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
     private float _dragHeading;
 
     /// <summary>
-    /// The key of the decal it places (an asset of the workspace, <c>env/common/decals/erosion018_normals.dds</c>);
-    /// null before one is chosen.
+    /// The key of the decal it places (an asset of the workspace, <c>env/common/decals/erosion018_normals.dds</c>),
+    /// or the name of a decal set (<c>env/rocky/decals/rock01</c>, placed as one decal with all its
+    /// textures); null before one is chosen.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Title), nameof(Image), nameof(HasDecal))]
@@ -48,12 +49,18 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
     /// </summary>
     public AssetEntry? Entry { get; private set; }
 
+    /// <summary>
+    /// The decal set it places when <see cref="Decal"/> names one; null for a single texture.
+    /// </summary>
+    public DecalSetAssets? Set { get; private set; }
+
     public bool HasDecal => Decal is not null;
 
     /// <summary>
     /// What the options bar calls the chosen decal.
     /// </summary>
-    public string Title => Entry?.Name ?? (Decal is string key ? Path.GetFileNameWithoutExtension(key) : "No decal chosen");
+    public string Title => Set is DecalSetAssets set ? $"{Path.GetFileName(set.Name)} (set)"
+        : Entry?.Name ?? (Decal is string key ? Path.GetFileNameWithoutExtension(key) : "No decal chosen");
 
     /// <summary>
     /// The chosen decal's picture, for the options' thumbnail.
@@ -93,7 +100,13 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
     partial void OnDecalChanged(string? value)
     {
         Entry = value is null ? null : model.Assets.Catalog.Find(value);
-        Aspect = Entry?.Image is string image ? AspectOf(image, model.Logger("Assets")) : 1;
+        Set = value is not null && Entry is null ? DecalSets.Find(model.Assets.Catalog.Entries, model.ShownDocument, value) : null;
+        if (Set?.First is string first)
+        {
+            Entry = model.Assets.Catalog.Find(first);
+        }
+        OnPropertyChanged(nameof(Set));
+        Aspect = Entry?.Image is string image ? AspectOf(image, model.Logger("Assets")) : Set?.First is string own ? OwnAspect(own) : 1;
         OnPropertyChanged(nameof(Entry));
     }
 
@@ -186,8 +199,14 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
     {
         float wide = width ?? (float)Width;
         float aspect = key == Decal ? Aspect : 1;
-        return DecalEdits.NewDecal(document.Terrain.Heightmap, key, x, z, wide, length ?? wide * aspect,
-            heading ?? (float)(Heading * Math.PI / 180), cutOffLod ?? (float)CutOffLod);
+        float turn = heading ?? (float)(Heading * Math.PI / 180);
+        float cutOff = cutOffLod ?? (float)CutOffLod;
+        // a decal set's name (no texture of that key): one decal carrying all the set's textures
+        DecalSetAssets? set = key == Decal ? Set
+            : model.Assets.Catalog.Find(key) is null ? DecalSets.Find(model.Assets.Catalog.Entries, document, key) : null;
+        return set is not null
+            ? DecalEdits.NewDecalSet(document.Terrain.Heightmap, set, x, z, wide, length ?? wide * aspect, turn, cutOff)
+            : DecalEdits.NewDecal(document.Terrain.Heightmap, key, x, z, wide, length ?? wide * aspect, turn, cutOff);
     }
 
     /// <summary>
@@ -209,6 +228,28 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
         _added = added;
         _all = all;
         model.ShowStroke();
+    }
+
+    /// <summary>
+    /// The height over the width of one of the map's own textures (a decal set of the map's files); 1
+    /// when it cannot be read.
+    /// </summary>
+    private float OwnAspect(string gamePath)
+    {
+        if (model.ShownDocument is not MapDocument document || GameTextures.Find(gamePath, document, model.Setup.Workspace) is not TextureSource source)
+        {
+            return 1;
+        }
+        try
+        {
+            DecodedTexture texture = source.Read();
+            return texture.Width > 0 ? (float)texture.Height / texture.Width : 1;
+        }
+        catch (ImageMagick.MagickException exception)
+        {
+            model.Logger("Assets").LogWarning(exception, "The size of the decal's picture {File} cannot be read: {Reason}", gamePath, exception.Message);
+            return 1;
+        }
     }
 
     /// <summary>

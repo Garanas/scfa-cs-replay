@@ -316,6 +316,30 @@ namespace FAForever.MapEditor.Project.Files.InMemory
     public sealed record CurveSource(HeightCurve Curve) : LayerSource;
 
     /// <summary>
+    /// The masks of the map's decal sets (<see cref="DecalSet.Masks"/>): the greyscale mask of a
+    /// name of every placed set, or of the sets named, drawn at each decal's place, turn and size
+    /// (where decals overlap, the higher value). The layer's grid holds what they made when a decal
+    /// last moved (<see cref="Editing.DecalMaskLayers"/>). In a stack of heights its value is the
+    /// mask times <see cref="Height"/> game units.
+    /// </summary>
+    /// <param name="Mask">The mask's name: <c>main</c> for the plain <c>_mask</c>, else the name after <c>_mask_</c>.</param>
+    /// <param name="Sets">The sets whose masks it draws, by name (<see cref="DecalSet.Name"/>); empty for every set.</param>
+    public sealed record DecalMasksSource(string Mask, ImmutableArray<string> Sets, float Height = 0) : LayerSource
+    {
+        /// <summary>
+        /// The main mask of every set.
+        /// </summary>
+        public static DecalMasksSource Every { get; } = new DecalMasksSource(Editing.DecalSets.MainMask, []);
+
+        public ImmutableArray<string> Sets { get; init; } = Sets.IsDefault ? [] : Sets;
+
+        public bool Equals(DecalMasksSource? other) =>
+            other is not null && Mask == other.Mask && Height == other.Height && Sets.AsSpan().SequenceEqual(other.Sets.AsSpan());
+
+        public override int GetHashCode() => HashCode.Combine(Mask, Height, Sets.Length);
+    }
+
+    /// <summary>
     /// The names of the kinds of source, as the project writes them and the editor shows them.
     /// </summary>
     public static class LayerSources
@@ -330,8 +354,10 @@ namespace FAForever.MapEditor.Project.Files.InMemory
 
         public const string CurveName = "curve";
 
+        public const string DecalMasksName = "decals";
+
         /// <summary>
-        /// The name of a source's kind: <c>painted</c>, <c>image</c>, <c>mask</c>, <c>rules</c>, <c>curve</c>.
+        /// The name of a source's kind: <c>painted</c>, <c>image</c>, <c>mask</c>, <c>rules</c>, <c>curve</c>, <c>decals</c>.
         /// </summary>
         public static string NameOf(LayerSource source) => source switch
         {
@@ -340,6 +366,7 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             MaskRefSource => MaskName,
             RulesSource => RulesName,
             CurveSource => CurveName,
+            DecalMasksSource => DecalMasksName,
             _ => source.GetType().Name,
         };
 

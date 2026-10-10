@@ -127,6 +127,13 @@ namespace FAForever.MapEditor.Project.Editing
         public string? SculptLayer { get; set; }
 
         /// <summary>
+        /// Where the decal sets' mask pictures are read from, for the decal-masks layers that follow
+        /// the decals after every step (<see cref="DecalMaskLayers.Follow(MapDocument, MapDocument, IDecalMaskPictures?)"/>);
+        /// null leaves those layers as they are.
+        /// </summary>
+        public IDecalMaskPictures? DecalPictures { get; set; }
+
+        /// <summary>
         /// The heightmap brushes write (the one the editor shows): the final, or the draft. While the
         /// map has a draft of its own, <see cref="EditTransaction.Heightmap"/> hands out the draft's
         /// samples for the draft, and what a brush writes goes into <see cref="SculptLayer"/> of the
@@ -324,6 +331,7 @@ namespace FAForever.MapEditor.Project.Editing
         private bool Record(string description, MapDocument result, string? mergeKey)
         {
             MapDocument previous = Document;
+            result = DecalMaskLayers.Follow(previous, result, DecalPictures);
             // the grids of coverage first: height layers may be clipped by their composites
             result = CoverageLayers.Follow(previous, result, PaintLayerOf);
             result = HeightLayers.Follow(previous, result, SculptLayer);

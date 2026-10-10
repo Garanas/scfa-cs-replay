@@ -97,6 +97,51 @@ namespace FAForever.MapEditor.Project
             return dds;
         }
 
+        /// <summary>
+        /// A DDS file of a picture compressed as DXT1 or DXT5 with its full chain of mipmaps, as the
+        /// map-wide decals of Kaali are written (flags 0xa1007, caps 0x401008; <see cref="DxtEncoder"/>).
+        /// </summary>
+        /// <param name="rgba">Red, green, blue and alpha bytes per pixel, the first row first.</param>
+        public static byte[] WriteMipmapped(int width, int height, DdsCompression compression, byte[] rgba)
+        {
+            if (rgba.Length != checked(width * height * 4))
+            {
+                throw new ArgumentException($"A picture of {width} by {height} has {width * height * 4} bytes, not {rgba.Length}", nameof(rgba));
+            }
+            int levels = DxtEncoder.LevelsOf(width, height);
+            List<byte[]> blocks = new List<byte[]>(levels);
+            (int w, int h, byte[] pixels) = (width, height, rgba);
+            for (int level = 0; level < levels; level++)
+            {
+                blocks.Add(DxtEncoder.Compress(w, h, pixels, compression));
+                if (level + 1 < levels)
+                {
+                    (w, h, pixels) = DxtEncoder.Halve(w, h, pixels);
+                }
+            }
+
+            byte[] dds = new byte[HeaderSize + blocks.Sum(level => level.Length)];
+            Span<byte> header = dds.AsSpan(0, HeaderSize);
+            BinaryPrimitives.WriteUInt32LittleEndian(header, 0x20534444); // "DDS "
+            BinaryPrimitives.WriteInt32LittleEndian(header[4..], 124);
+            BinaryPrimitives.WriteInt32LittleEndian(header[8..], 0xa1007); // caps, height, width, pixel format, mipmap count, linear size
+            BinaryPrimitives.WriteInt32LittleEndian(header[12..], height);
+            BinaryPrimitives.WriteInt32LittleEndian(header[16..], width);
+            BinaryPrimitives.WriteInt32LittleEndian(header[20..], blocks[0].Length);
+            BinaryPrimitives.WriteInt32LittleEndian(header[28..], levels);
+            BinaryPrimitives.WriteInt32LittleEndian(header[76..], 32);
+            BinaryPrimitives.WriteInt32LittleEndian(header[80..], 0x4);
+            BinaryPrimitives.WriteUInt32LittleEndian(header[84..], compression == DdsCompression.Dxt1 ? 0x31545844u : 0x35545844u); // "DXT1", "DXT5"
+            BinaryPrimitives.WriteInt32LittleEndian(header[108..], 0x401008); // complex, texture, mipmaps
+            int at = HeaderSize;
+            foreach (byte[] level in blocks)
+            {
+                level.CopyTo(dds, at);
+                at += level.Length;
+            }
+            return dds;
+        }
+
         private static byte[] ToBgra(byte[] rgba)
         {
             byte[] bgra = new byte[rgba.Length];

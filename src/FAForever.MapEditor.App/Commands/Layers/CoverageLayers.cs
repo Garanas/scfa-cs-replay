@@ -79,9 +79,10 @@ internal static class CoverageLayerArguments
 /// </summary>
 /// <param name="Target">The grid; left out, the one the mode shows (see <c>layers.set</c>).</param>
 /// <param name="Source"><c>painted</c> (left out), <c>image</c>, <c>mask</c> (a mask for tools),
-/// <c>stratum</c> (a stratum's mask) or <c>rules</c>.</param>
+/// <c>stratum</c> (a stratum's mask), <c>rules</c> or <c>decals</c> (the masks of the placed decal sets).</param>
 /// <param name="Mask">What a mask or stratum layer reads (any name of a mask: <c>forest</c>,
-/// <c>stratum:3</c>); left out, the first other mask, or the first other stratum.</param>
+/// <c>stratum:3</c>); left out, the first other mask, or the first other stratum. For a decals layer the
+/// name of the sets' mask it draws (<c>moss</c> of <c>rock01_mask_moss</c>; <c>main</c> when left out).</param>
 /// <param name="Path">An image layer's file; left out, the editor asks.</param>
 /// <returns>The new layer's name, or null when no file was chosen.</returns>
 [EditorCommand("layers.add", "Add a layer to a mask, stratum or water map...", Story = "K-1", Needs = Needs.Map | Needs.NoStroke)]
@@ -128,8 +129,12 @@ public sealed class AddCoverageLayerHandler(MainViewModel model, IEditorDialogs 
             case "rules":
                 layer = CoverageLayerEdits.NewRules(document, target, Named("Rules"));
                 break;
+            case "decals":
+                // the masks of the placed decal sets (D-1): a mask's name of the sets, main when left out
+                layer = DecalMaskLayers.New(document, stack, Named("Decal masks"), new DecalMasksSource(request.Mask?.Trim().ToLowerInvariant() ?? DecalSets.MainMask, []), model.DecalPictures);
+                break;
             default:
-                throw new ArgumentException($"A layer of {CoverageLayerArguments.Title(target)} is painted, image, mask, stratum or rules, not '{request.Source}'");
+                throw new ArgumentException($"A layer of {CoverageLayerArguments.Title(target)} is painted, image, mask, stratum, rules or decals, not '{request.Source}'");
         }
         CoverageStackViewModel? view = model.CoverageStackOf(target);
         string? above = view?.Chosen is string chosen && stack.Find(chosen) is not null ? chosen : null;

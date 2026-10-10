@@ -8,5 +8,10 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         public required IReadOnlyList<DecalDto> Decals { get; init; }
 
         public required IReadOnlyList<DecalGroupDto> Groups { get; init; }
+
+        /// <summary>
+        /// The decals over the whole map; absent for none.
+        /// </summary>
+        public MapWideDecalsDto? MapWide { get; init; }
     }
 }

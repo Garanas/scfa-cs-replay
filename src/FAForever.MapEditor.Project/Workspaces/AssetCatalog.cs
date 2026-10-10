@@ -434,8 +434,10 @@ namespace FAForever.MapEditor.Project.Workspaces
                         Name = name,
                         Code = stem,
                         Group = biome,
-                        Category = kind == "splats" ? "splats" : normals ? "normals" : "albedo",
-                        Family = name,
+                        Category = kind == "splats" ? "splats" : normals ? "normals"
+                            : Editing.DecalSets.PartOf(stem).Part == Editing.DecalSetPart.Mask ? "masks" : "albedo",
+                        // a decal set's textures share a family: rock01 of rock01_albedo, _normals, _spec, _mask
+                        Family = Editing.DecalSets.PartOf(stem).Name,
                         Image = file,
                         File = file,
                     };

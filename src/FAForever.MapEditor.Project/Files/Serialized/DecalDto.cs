@@ -34,5 +34,10 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// The army that owns the decal, -1 for none.
         /// </summary>
         public required int OwnerArmy { get; init; }
+
+        /// <summary>
+        /// For a decal set, its normals and masks; absent for a decal of one texture.
+        /// </summary>
+        public DecalSetDto? Set { get; init; }
     }
 }

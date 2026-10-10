@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using FAForever.MapEditor.App.Tools;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.ViewModels;
@@ -20,10 +21,24 @@ public sealed partial class MainViewModel
     /// </summary>
     public DecalPlaceTool DecalPlaceTool => Tool<DecalPlaceTool>();
 
+    /// <summary>
+    /// Where the decal sets' masks are read from (the map's own files, else the workspace's assets),
+    /// for the decal-masks layers that follow the decals.
+    /// </summary>
+    public IDecalMaskPictures DecalPictures { get; private set; } = null!;
+
     private void InitializeDecals()
     {
+        DecalPictures = new GameMaskPictures(() => Setup.Workspace);
         DocumentChanged += (_, _) => Decals.Refresh(ShownDocument);
-        MapChanged += (_, _) => Decals.Clear();
+        MapChanged += (_, _) =>
+        {
+            Decals.Clear();
+            if (Map is not null)
+            {
+                Map.Session.DecalPictures = DecalPictures;
+            }
+        };
         Decals.HiddenChanged += (_, _) =>
         {
             // what is hidden cannot stay selected
@@ -51,11 +66,12 @@ public sealed partial class MainViewModel
     /// </summary>
     private void OnDecalChosen(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(AssetsViewModel.Shown) || Assets.Shown is not { Kind: AssetKind.Decal } decal)
+        if (e.PropertyName is not (nameof(AssetsViewModel.Shown) or nameof(AssetsViewModel.ShownSet)) || Assets.Shown is not { Kind: AssetKind.Decal } decal)
         {
             return;
         }
-        DecalPlaceTool.Decal = decal.Key;
+        // a decal set's tile places the whole set (D-1), one of its textures that texture alone
+        DecalPlaceTool.Decal = Assets.ShownSet?.Name ?? decal.Key;
         if (SelectedMode?.Definition.Id == "decals" && ActiveTool?.Definition.Id != "decals.place")
         {
             SelectTool("decals.place");

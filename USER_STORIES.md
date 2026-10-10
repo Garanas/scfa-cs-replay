@@ -397,7 +397,15 @@ reads again when it changes; and nothing that generates runs by itself.
       or the length; plus and minus); the inspector edits width, length and the distances of many
       at once; bring forward, send back, to front, to back; drawn in 3D, the selection highlighted;
       the selection's handles in both views (F-11); with symmetry, mirrored when placed, moved,
-      turned and scaled (F-12).
+      turned and scaled (F-12). Decal sets (textures named alike with `_albedo`, `_normals`,
+      `_spec`, `_mask`, `_mask_<name>`): one tile on the shelf (Variants), placed, selected, moved
+      and undone as one decal, written as one decal per texture (`decals.place key=<set name>`);
+      the map's own files make sets too. Map-wide decals: the Decals panel's Albedo, Normal decal
+      and Shadow decal (none, generated from the final heightmap, or a file; Generate now previews
+      them in the views), also in the Lighting panel and the Procedural mode, written at export as
+      Kaali's (`decals.setWide`, `decals.setShadow`, `decals.chooseWideFile`, `decals.generateNormal`,
+      `decals.generateShadow`). Decal-masks layers draw the sets' masks into height, stratum, mask
+      and water stacks and follow the decals (`terrain.addLayer kind=decals`, `layers.add source=decals`).
 - [x] **D-2 Decal groups.** Group decals, show and hide groups. Today: the Decals panel's groups,
       made from the selection, renamed, filled and emptied, selected, deleted; hidden groups are not
       drawn in 3D or picked (an editor setting, not saved).

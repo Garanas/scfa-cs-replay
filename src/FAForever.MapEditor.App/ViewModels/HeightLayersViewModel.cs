@@ -63,6 +63,7 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
         new LayerAddChoice("Image...", "Add a heightmap image as a layer", "A heightmap of World Machine, Gaea or another tool, read again when it changes in the project folder",
             "terrain.addLayer", new JsonObject { ["kind"] = "imported" }),
         new LayerAddChoice("Curve", "Draw a curve", "Chooses the curve tool: click in a view to start a curve layer", "tool.terrain.curve"),
+        DecalMasksChoice("terrain.addLayer", new JsonObject { ["kind"] = "decals" }),
     ])
     {
         _run = run;
@@ -104,10 +105,31 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
                 Help = "The layer draws the curve's images in the other parts of the map too, by the chosen symmetry",
             },
         ]);
+        DecalMasksSource DecalsOf(MapDocument d) => HeightLayers.Find(d, Chosen)?.Source as DecalMasksSource ?? DecalMasksSource.Every;
+        const string decals = "terrain.setDecalMasks";
+        DecalMasks = new SettingGroup("Decal masks",
+        [
+            new TextSetting("Mask", decals, "mask", d => DecalsOf(d).Mask, run, Fixed)
+            {
+                Help = "Which mask of each set: main for the plain _mask, else the name after _mask_ (moss of rock01_mask_moss)",
+            },
+            new TextSetting("Decal sets", decals, "sets", d => string.Join(", ", DecalsOf(d).Sets), run, Fixed)
+            {
+                Help = "The sets whose masks it draws, by name (/env/rocky/decals/rock01), separated by commas; empty for every set",
+            },
+            new NumberSetting("Height", decals, "height", d => DecalsOf(d).Height, run, Fixed)
+            {
+                Minimum = 0,
+                Maximum = 64,
+                HasSlider = true,
+                Help = "How much a full mask raises the terrain, in game units",
+            },
+        ]);
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(Chosen))
             {
+                OnPropertyChanged(nameof(IsDecalMasks));
                 OnPropertyChanged(nameof(IsCurve));
                 OnPropertyChanged(nameof(IsImported));
                 OnPropertyChanged(nameof(ChosenTitle));
@@ -238,6 +260,16 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
 
     public bool IsCurve => ChosenLayer?.Source is CurveSource;
 
+    /// <summary>
+    /// Whether the chosen layer draws the decal sets' masks.
+    /// </summary>
+    public bool IsDecalMasks => ChosenLayer?.Source is DecalMasksSource;
+
+    /// <summary>
+    /// The chosen decal-masks layer's mask name, sets and height.
+    /// </summary>
+    public SettingGroup DecalMasks { get; }
+
     public bool IsImported => ChosenLayer?.Source is ImageSource;
 
     public string ChosenTitle => ChosenLayer is Layer layer ? $"{layer.Name} ({KindOf(layer).ToLowerInvariant()})" : "No height layer";
@@ -255,6 +287,7 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
             $"{curve.Points.Length} points. With the curve tool: click to add a point, drag a point to move it, control and a click removes it."),
         { Source: PaintedSource } => "The sculpt tool writes into it while it is chosen.",
         { Source: MaskRefSource reference } => $"Raises the terrain by {LayerStacks.MaskTitle(reference.Key)}.",
+        { Source: DecalMasksSource decals } => $"Draws the {DecalMasksSummary(decals)} at each decal's place, turn and size, and follows the decals when they move.",
         _ => "",
     };
 
@@ -303,6 +336,7 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
     {
         OnPropertyChanged(nameof(IsCurve));
         OnPropertyChanged(nameof(IsImported));
+        OnPropertyChanged(nameof(IsDecalMasks));
         OnPropertyChanged(nameof(ChosenTitle));
         OnPropertyChanged(nameof(ChosenFacts));
     }
@@ -312,6 +346,7 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
         base.RefreshSettings();
         // the base's constructor refreshes before the curve's group exists
         Curve?.Refresh(IsCurve ? Document : null);
+        DecalMasks?.Refresh(IsDecalMasks ? Document : null);
         Use?.Refresh(Chosen is null ? null : Document);
     }
 

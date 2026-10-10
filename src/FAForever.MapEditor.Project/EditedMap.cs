@@ -122,9 +122,22 @@ namespace FAForever.MapEditor.Project
         /// game's <c>maps</c> folder.
         /// </summary>
         /// <param name="version">The version to give the map, instead of its own.</param>
+        /// <param name="wideDecals">Whether the map-wide decals are written too (<see cref="MapWideDecalsExport"/>:
+        /// generated from the heightmap, files read relative to the project), as the editor's export does.</param>
         /// <returns>The map folder, e.g. <c>maps/theta_passage.v0005</c>.</returns>
-        public string Export(string outputFolder, int? version = null) =>
-            MapExporter.WriteFolder(version is null ? Document : Document with { Version = version }, outputFolder, EditorStamp.Now());
+        public string Export(string outputFolder, int? version = null, bool wideDecals = false)
+        {
+            MapDocument document = version is null ? Document : Document with { Version = version };
+            if (wideDecals)
+            {
+                document = MapWideDecalsExport.Apply(document, file =>
+                {
+                    string path = Path.IsPathRooted(file) || ProjectFolder is null ? file : Path.Combine(ProjectFolder, file);
+                    return File.Exists(path) ? File.ReadAllBytes(path) : null;
+                }, out _);
+            }
+            return MapExporter.WriteFolder(document, outputFolder, EditorStamp.Now());
+        }
 
         /// <summary>
         /// Reads the files another tool changed in the project folder again, as one edit that can

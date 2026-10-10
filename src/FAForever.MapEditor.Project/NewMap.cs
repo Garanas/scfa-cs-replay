@@ -250,6 +250,8 @@ namespace FAForever.MapEditor.Project
                 Name = folder,
                 FileName = folder,
                 Version = 1,
+                // the normal and shadow decals over the whole map, generated at export (as Kaali's)
+                WideDecals = MapWideDecals.NewMap,
                 Scenario = new ScenarioInfo
                 {
                     Name = settings.Name.Trim().Length == 0 ? "New map" : settings.Name.Trim(),

@@ -4,6 +4,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             xmlns:decalpanels="using:FAForever.MapEditor.App.Views.DecalPanels"
              x:Class="FAForever.MapEditor.App.Views.MapPanels.PanelPartView"
              x:DataType="vm:PanelParts">
   <StackPanel>
@@ -31,6 +32,10 @@
               <TextBlock Classes="caption" Text="{Binding Caption}" />
             </Border>
           </StackPanel>
+        </DataTemplate>
+        <!-- a map-wide decal (D-1): the Decals, Lighting and Procedural panels list it -->
+        <DataTemplate DataType="vm:MapWideSlotViewModel">
+          <decalpanels:MapWideSlotView />
         </DataTemplate>
         <DataTemplate DataType="vm:PlannedPart">
           <Border Classes="group">

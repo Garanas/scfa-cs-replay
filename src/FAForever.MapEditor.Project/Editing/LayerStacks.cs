@@ -367,6 +367,7 @@ namespace FAForever.MapEditor.Project.Editing
                 ImageSource image => $"The {what} {layer.Name} is read from {image.Path}: {verb} into a layer above it",
                 MaskRefSource reference => $"The {what} {layer.Name} reads {MaskTitle(reference.Key)}: {verb} into another layer",
                 RulesSource => $"The {what} {layer.Name} is made by its rules: {verb} into another layer",
+                DecalMasksSource => $"The {what} {layer.Name} follows the decals' masks: move the decals, or {verb} into another layer",
                 _ => $"The {what} {layer.Name} cannot be {verb}ed",
             };
         }

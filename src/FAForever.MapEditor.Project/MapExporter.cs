@@ -203,6 +203,8 @@ namespace FAForever.MapEditor.Project
 
         private static Scmap ToScmap(MapDocument d)
         {
+            // a decal set is one decal per texture in the game (its albedo, then its normals)
+            d = Editing.DecalSets.Expand(d);
             Terrain terrain = d.Terrain;
             Water water = d.Water;
             Lighting l = d.Lighting;

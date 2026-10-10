@@ -437,7 +437,8 @@ User story M-8 (`Vault/`). How FAForever takes a map, from the source of the
   DXT5 textures; it reads what map makers' tools save (8 or 16 bits, grey or colour). It is native
   code, so this library is desktop only: never reference it from the Viewer.
 - `DdsTexture` reads and writes the DDS files of the `.scmap`: uncompressed A8R8G8B8 or DXT5, no
-  mipmaps (every texture in 100 vault maps), with the FAF map editor's header. Uncompressed
+  mipmaps (every texture in 100 vault maps), with the FAF map editor's header; `WriteMipmapped`
+  writes the map-wide decals' DXT5 and DXT1 with their mipmaps (below, "Decals over the whole map"). Uncompressed
   textures survive unpacking and packing pixel for pixel; DXT5 is decoded once on import and
   compressed again on export (a mean error of about 0.02 per channel).
 - ImageMagick never opens or writes a file itself: its file access fails on paths longer than
@@ -807,11 +808,67 @@ of the model above, keyed by its target's key (`stratum-2`, `mask-forest`, `wate
   mask's PNG (when the mask has no stack file); the first save removes it. Reload reads a stack again
   when one of its files changes. Image layers of coverage are not read again when their file
   changes (gap).
-- **A new source** (9C's decal masks): its record and name in `LayerSources`, its fields in
-  `LayerDto` and its read in `ReadStack`, a `CoverageLayerEdits.New...`, the masks or things it reads
-  in `CoverageLayers.ReadsOf` when they decide the order, and a follow step (like rules: made again
-  in the edit that changes what it reads). The window's side is one add choice and a `layers.add`
-  source (the App guide, "Stacks of coverage").
+- **A new source**: its record and name in `LayerSources`, its fields in `LayerDto` and its read in
+  `ReadStack`, a `CoverageLayerEdits.New...`, the masks or things it reads in `CoverageLayers.ReadsOf`
+  when they decide the order, and a follow step (like rules: made again in the edit that changes what
+  it reads). The window's side is one add choice and a `layers.add` source (the App guide, "Stacks of
+  coverage"). The decal masks (below) are one: they read no mask, so `ReadsOf` leaves them out.
+
+## Decals over the whole map, decal sets and decal masks
+
+Wave 9C, user story D-1.
+
+- **Decal sets** (`Editing/DecalSets`): textures named alike with a suffix each, `_albedo`,
+  `_normals` (`_normal`), `_spec`, `_mask` (named `main`) and `_mask_<name>` (`PartOf`). `Of(entries)`
+  finds them among the catalogue's decals (two parts or a mask), `OfMap(document)` among the map's
+  own files, `Find` by name. A placed set is one `Decal` whose `Set` (`DecalSet`: name, normals,
+  masks by name) carries the textures beyond its own (its albedo with the specular in slot 2, or its
+  normals when it has no albedo): one selection, one inspector, one undo step, moved by every edit
+  of decals. The export writes it as one decal per texture (`DecalSets.Expand` in `MapExporter`:
+  the normals decal right after, the next free id, the same groups); masks are never exported.
+  The catalogue gives a set's textures the set's name as `Family` and masks the category `masks`.
+  `decals.json` keeps `set` on such a decal (`DecalSetDto`, optional).
+- **Map-wide decals** (`MapDocument.WideDecals`, `MapWideDecals`; `decals.json`'s optional
+  `mapWide`, `MapWideDecalsDto`, absent for none): albedo (a file, with an optional specular),
+  normals and shadow (generated, a file, or none) and the shadow's settings. Imported maps and older
+  projects have none; a new map has the normals and shadow generated. A file is relative to the
+  project, absolute, or a path into the map's own folder (named by the decal as it is).
+  `MapWideDecalsExport.Apply(document, readFile)` (the editor's export step, `faf-map pack`,
+  `EditedMap.Export(wideDecals: true)`) puts them under every decal as Kaali (kaali.v0004) has them:
+  at (0, height at the corner, 0), scale (width, width, height), no turn, cut-off 10000; albedo
+  (specular in slot 2), shadow (an albedo decal), normals; textures in `env/decals/` (`map_albedo`,
+  `map_specular`, `map_lighting`, `map_normals`, a free name beside the map's own), a DDS file copied,
+  anything else converted (at most 8192).
+- **What the game reads** (`effects/terrain.fx`, `DecalsNormalsPS`, the same in the game's
+  `effects.scd` and FAF's `effects.nx2`): a normals decal's x in alpha and z in green, turned by the
+  decal's heading only, and red the weight with which it replaces the terrain's normal ("our blend
+  mask is stored in the r channel"). Kaali's red grows with the slope as the square root of its sine
+  (0.1 flat, 0.5 at 17 degrees, 0.9 at 55), so `MapWideDecalImages.Normals` writes that: 16 pixels an
+  ogrid, the corners' normals blended. Its shadow decal is black with alpha 0 to 0.45, growing with
+  the slope like ambient occlusion: `MapWideDecalImages.Shadow` writes the mean over eight
+  directions of the horizon's sine within a radius (16 ogrids, steps growing), times a strength, at
+  most the darkest (0.45), and optionally the sun's shadow (`Lighting.SunDirection`), 4 pixels an
+  ogrid, from the corners' darkness blended. Generated and exported files are byte for byte Kaali's
+  sizes (89 478 640 and 5 592 560 bytes for a map of 512).
+- **DDS with mipmaps** (`DdsTexture.WriteMipmapped`, `DxtEncoder`): DXT5 and DXT1 written by our own
+  encoder (colours along their principal axis, always four-colour; alpha's eight steps), each level
+  the mean of two by two, down to one by one; header flags 0xa1007, caps 0x401008 as Kaali's.
+  ImageMagick reads them back (it reads the first level only).
+- **Generators** (`Generation/MapWideDecalGenerators`): `NormalDecalGenerator` and
+  `ShadowDecalGenerator` make previews (at most 2048 on a side) as `DecodedTexture`; inputs the
+  heightmap, and for the shadow its settings and (with sun shadows) the sun.
+- **Decal-masks layers** (`DecalMasksSource(Mask, Sets, Height)`, `LayerSources.DecalMasksName`
+  `decals`; `LayerDto`'s `decalMask`, `decalSets`, `height`): fit heights (the mask times `Height`)
+  and coverage. `DecalMaskLayers.Draw` rasterizes the masks of the decals of the chosen sets (all
+  when none) at each decal's place, turn and size (the mask's first row along the decal's z from its
+  corner; the higher where decals overlap) over dirty tiles, reusing tiles that come out the same;
+  `New`, `SetSource`, `MaskNamesOf`. `Follow(previous, next, pictures)` runs first in
+  `EditSession.Record` and `EditTransaction`'s flush (before `CoverageLayers.Follow` and
+  `HeightLayers.Follow`, which composite what changed): the decals of either version the other lacks
+  (by reference: ids need not be unique) mark the tiles to draw again, in the heightmap's stack and
+  every stack of coverage. The pictures come from `EditSession.DecalPictures`
+  (`IDecalMaskPictures`; `GameMaskPictures`: the map's own files, else the workspace's assets, read
+  once per version); without them the layers keep their grids, which the project saves.
 
 ## Height layers and curves
 
