@@ -1,0 +1,285 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Seraphim base, small",
+  "settings": {
+    "group": {
+      "name": "Seraphim base, small",
+      "units": [
+        {
+          "blueprint": "xsb5202",
+          "x": -36.5,
+          "y": 0,
+          "z": 18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "xsb5202",
+          "x": -7.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": 0
+        }
+      ],
+      "groups": [
+        {
+          "name": "Factories",
+          "units": [
+            {
+              "blueprint": "xsb0202",
+              "x": 2.5,
+              "y": 0,
+              "z": -20.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0302",
+              "x": 8.5,
+              "y": 0,
+              "z": -12.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0301",
+              "x": 29.5,
+              "y": 0,
+              "z": 6.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0302",
+              "x": 21.5,
+              "y": 0,
+              "z": 0.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb0301",
+              "x": 15.5,
+              "y": 0,
+              "z": 18.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Energy",
+          "units": [
+            {
+              "blueprint": "xsb1301",
+              "x": -16.5,
+              "y": 0,
+              "z": 17.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1105",
+              "x": -13.5,
+              "y": 0,
+              "z": 28.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": 7.5,
+              "y": 0,
+              "z": -17.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1105",
+              "x": -19.5,
+              "y": 0,
+              "z": 12.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1301",
+              "x": -8.5,
+              "y": 0,
+              "z": 25.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1101",
+              "x": 26.5,
+              "y": 0,
+              "z": 1.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Mass",
+          "units": [
+            {
+              "blueprint": "xsb1302",
+              "x": -19.5,
+              "y": 0,
+              "z": 22.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1106",
+              "x": -32.5,
+              "y": 0,
+              "z": 28.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1303",
+              "x": -15.5,
+              "y": 0,
+              "z": 24.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb1302",
+              "x": 18.5,
+              "y": 0,
+              "z": 5.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Defense",
+          "units": [
+            {
+              "blueprint": "xsb4201",
+              "x": -19.5,
+              "y": 0,
+              "z": 11,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2301",
+              "x": 34.5,
+              "y": 0,
+              "z": 9.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2204",
+              "x": -11.5,
+              "y": 0,
+              "z": 18.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2204",
+              "x": -9.5,
+              "y": 0,
+              "z": 20.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb4201",
+              "x": -5.5,
+              "y": 0,
+              "z": 20.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2301",
+              "x": 36.5,
+              "y": 0,
+              "z": 9.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2303",
+              "x": 2.5,
+              "y": 0,
+              "z": 22.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2301",
+              "x": -0.5,
+              "y": 0,
+              "z": -25.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2303",
+              "x": 18.5,
+              "y": 0,
+              "z": -4.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2301",
+              "x": -11.5,
+              "y": 0,
+              "z": 16.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2301",
+              "x": -7.5,
+              "y": 0,
+              "z": 20.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb2301",
+              "x": -0.5,
+              "y": 0,
+              "z": -27.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Misc",
+          "units": [
+            {
+              "blueprint": "xsb3104",
+              "x": -11.5,
+              "y": 0,
+              "z": 20.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb4301",
+              "x": 22.5,
+              "y": 0,
+              "z": 7.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb4301",
+              "x": -1.5,
+              "y": 0,
+              "z": 24.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb4301",
+              "x": -15.5,
+              "y": 0,
+              "z": 10.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "xsb4301",
+              "x": 1.5,
+              "y": 0,
+              "z": -13.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        }
+      ]
+    },
+    "count": 34,
+    "role": "enemy",
+    "source": "X1CA_006, army Seraphim, group M1/Main_Base/M1_Seraph_Base_D3/M1_Seraph_Base_D2/M1_Seraph_Base_D1"
+  }
+}

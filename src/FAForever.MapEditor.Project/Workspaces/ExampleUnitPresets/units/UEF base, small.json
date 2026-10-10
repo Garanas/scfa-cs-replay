@@ -1,0 +1,228 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "UEF base, small",
+  "settings": {
+    "group": {
+      "name": "UEF base, small",
+      "units": [],
+      "groups": [
+        {
+          "name": "Factories",
+          "units": [
+            {
+              "blueprint": "zeb9501",
+              "x": -8.5,
+              "y": 0,
+              "z": -11.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "zeb9501",
+              "x": -8.5,
+              "y": 0,
+              "z": 10.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Energy",
+          "units": [
+            {
+              "blueprint": "ueb1201",
+              "x": -17.5,
+              "y": 0,
+              "z": 5.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb1201",
+              "x": -17.5,
+              "y": 0,
+              "z": -6.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Mass",
+          "units": [
+            {
+              "blueprint": "ueb1106",
+              "x": -11.5,
+              "y": 0,
+              "z": 15.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb1106",
+              "x": -11.5,
+              "y": 0,
+              "z": -16.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb1106",
+              "x": -7.5,
+              "y": 0,
+              "z": 15.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb1106",
+              "x": -9.5,
+              "y": 0,
+              "z": 17.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb1106",
+              "x": -7.5,
+              "y": 0,
+              "z": -16.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb1106",
+              "x": -9.5,
+              "y": 0,
+              "z": -18.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb1202",
+              "x": -9.5,
+              "y": 0,
+              "z": -16.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb1202",
+              "x": -9.5,
+              "y": 0,
+              "z": 15.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Defense",
+          "units": [
+            {
+              "blueprint": "ueb4201",
+              "x": 12.5,
+              "y": 0,
+              "z": -2.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb2301",
+              "x": 5.5,
+              "y": 0,
+              "z": -14.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb2204",
+              "x": 2.5,
+              "y": 0,
+              "z": -8.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb4201",
+              "x": 12.5,
+              "y": 0,
+              "z": 1.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb2204",
+              "x": 2.5,
+              "y": 0,
+              "z": 7.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb2301",
+              "x": 18.5,
+              "y": 0,
+              "z": -14.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb2301",
+              "x": 18.5,
+              "y": 0,
+              "z": 13.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb2301",
+              "x": 5.5,
+              "y": 0,
+              "z": 13.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        },
+        {
+          "name": "Misc",
+          "units": [
+            {
+              "blueprint": "ueb5202",
+              "x": -17.5,
+              "y": 0,
+              "z": 11.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb4202",
+              "x": 10.5,
+              "y": 0,
+              "z": -6.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb4202",
+              "x": 10.5,
+              "y": 0,
+              "z": 5.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb5202",
+              "x": -17.5,
+              "y": 0,
+              "z": -12.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb5202",
+              "x": -17.5,
+              "y": 0,
+              "z": -0.5,
+              "heading": 0
+            },
+            {
+              "blueprint": "ueb3201",
+              "x": -13.5,
+              "y": 0,
+              "z": -0.5,
+              "heading": 0
+            }
+          ],
+          "groups": []
+        }
+      ]
+    },
+    "count": 26,
+    "role": "enemy",
+    "source": "FAF_Coop_Theban_Colony, army UEF, group M2/M2_Fire_Base_South_D3/M2_Fire_Base_South_D2/M2_Fire_Base_South_D1"
+  }
+}

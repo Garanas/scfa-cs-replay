@@ -1,0 +1,345 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Civilian wall ring",
+  "settings": {
+    "group": {
+      "name": "Civilian wall ring",
+      "units": [
+        {
+          "blueprint": "ueb5101",
+          "x": -5.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 7.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 8.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -8.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 3.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 9.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -2.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -8.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -8.5,
+          "y": 0,
+          "z": -3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 9.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 2.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 6.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -2.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -7.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 4.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -0.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -5.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -8.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 9.5,
+          "y": 0,
+          "z": 0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 6.5,
+          "y": 0,
+          "z": -4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -4.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -8.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 0.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 1.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -8.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -3.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 0.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 5.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -5.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 7.5,
+          "y": 0,
+          "z": -3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -5.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 4.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -3.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -4.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -8.5,
+          "y": 0,
+          "z": 0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -6.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 3.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -6.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 1.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -1.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 0.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 2.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 8.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": 5.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -8.5,
+          "y": 0,
+          "z": -4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -7.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "ueb5101",
+          "x": -8.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 47,
+    "role": "civilian",
+    "source": "FAF_Coop_Havens_Invasion, army Civilian, group M1/M1_Walls"
+  }
+}

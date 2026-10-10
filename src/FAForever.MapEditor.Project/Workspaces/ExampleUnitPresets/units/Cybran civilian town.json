@@ -1,0 +1,128 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Cybran civilian town",
+  "settings": {
+    "group": {
+      "name": "Cybran civilian town",
+      "units": [
+        {
+          "blueprint": "urc1201",
+          "x": -28.5,
+          "y": 0,
+          "z": -28.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1201",
+          "x": -10.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1201",
+          "x": 19.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 28.5,
+          "y": 0,
+          "z": 12.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1301",
+          "x": -6.5,
+          "y": 0,
+          "z": -18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1501",
+          "x": -0.5,
+          "y": 0,
+          "z": -15.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1301",
+          "x": 18.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "urc1501",
+          "x": 28.5,
+          "y": 0,
+          "z": 22.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1201",
+          "x": -16.5,
+          "y": 0,
+          "z": -23.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "urc1201",
+          "x": -16.5,
+          "y": 0,
+          "z": -29.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "urc1301",
+          "x": 25.5,
+          "y": 0,
+          "z": 28.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1401",
+          "x": 8.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1501",
+          "x": 10.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": -3.142
+        },
+        {
+          "blueprint": "urc1501",
+          "x": 21.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 22.5,
+          "y": 0,
+          "z": 22.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -0.5,
+          "y": 0,
+          "z": -21.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 16,
+    "role": "civilian",
+    "source": "SCCA_A02, army NeutralCybran, group M2_City"
+  }
+}

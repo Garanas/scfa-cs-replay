@@ -1,0 +1,184 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Aeon bridge defences, walled",
+  "settings": {
+    "group": {
+      "name": "Aeon bridge defences, walled",
+      "units": [
+        {
+          "blueprint": "uab5101",
+          "x": -10.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 9.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 13.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab2101",
+          "x": 11.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab2301",
+          "x": 13.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -16.5,
+          "y": 0,
+          "z": -13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab2101",
+          "x": -14.5,
+          "y": 0,
+          "z": -15.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab2104",
+          "x": 15.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -11.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -16.5,
+          "y": 0,
+          "z": -14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -12.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -15.5,
+          "y": 0,
+          "z": -16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab2301",
+          "x": -12.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab2104",
+          "x": -10.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 16.5,
+          "y": 0,
+          "z": 15.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab2204",
+          "x": -14.5,
+          "y": 0,
+          "z": -13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab2204",
+          "x": 11.5,
+          "y": 0,
+          "z": 12.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -16.5,
+          "y": 0,
+          "z": -15.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 14.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 9.5,
+          "y": 0,
+          "z": 12.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 15.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -9.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 10.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 9.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 24,
+    "role": "enemy",
+    "source": "X1CA_001, army Order, group M1/M1_Bases/M1_Order_Bridge_Defense"
+  }
+}

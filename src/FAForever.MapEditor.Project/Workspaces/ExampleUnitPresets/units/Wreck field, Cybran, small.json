@@ -1,0 +1,108 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Wreck field, Cybran, small",
+  "settings": {
+    "group": {
+      "name": "Wreck field, Cybran, small",
+      "units": [
+        {
+          "blueprint": "url0107",
+          "x": 3.5,
+          "y": 0,
+          "z": 13.5,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0106",
+          "x": 4.3033752,
+          "y": 0,
+          "z": -1.9131775,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0107",
+          "x": 2.5,
+          "y": 0,
+          "z": -12.5,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0104",
+          "x": -1.9352112,
+          "y": 0,
+          "z": 8.305115,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0107",
+          "x": -7.811157,
+          "y": 0,
+          "z": 0.050323486,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0104",
+          "x": -3.4264832,
+          "y": 0,
+          "z": 0.56207275,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0103",
+          "x": -4.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0106",
+          "x": -0.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0106",
+          "x": -6.5,
+          "y": 0,
+          "z": 12.5,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0107",
+          "x": 7.6618958,
+          "y": 0,
+          "z": -2.3935242,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0106",
+          "x": 1.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0103",
+          "x": 2.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 1.457
+        },
+        {
+          "blueprint": "url0106",
+          "x": 5.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": 1.457
+        }
+      ],
+      "groups": []
+    },
+    "count": 13,
+    "role": "civilian",
+    "wrecks": true,
+    "source": "SCCA_E01, army Cybran, group WRECKAGE"
+  }
+}

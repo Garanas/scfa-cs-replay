@@ -1,0 +1,604 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Aeon wall ring",
+  "settings": {
+    "group": {
+      "name": "Aeon wall ring",
+      "units": [
+        {
+          "blueprint": "uab5101",
+          "x": 8.5,
+          "y": 0,
+          "z": -25.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -18.5,
+          "y": 0,
+          "z": 25.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 14.5,
+          "y": 0,
+          "z": -25.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -14.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 24.5,
+          "y": 0,
+          "z": -21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -24.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 18.5,
+          "y": 0,
+          "z": 18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 2.5,
+          "y": 0,
+          "z": 20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 24.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 23.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -0.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 6.5,
+          "y": 0,
+          "z": -24.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 4.5,
+          "y": 0,
+          "z": 21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -23.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 20.5,
+          "y": 0,
+          "z": 19.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 10.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 16.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 20.5,
+          "y": 0,
+          "z": -24.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 7.5,
+          "y": 0,
+          "z": -25.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -11.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -24.5,
+          "y": 0,
+          "z": 12.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 21.5,
+          "y": 0,
+          "z": 18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -12.5,
+          "y": 0,
+          "z": 26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 19.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 12.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 17.5,
+          "y": 0,
+          "z": -25.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -18.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -7.5,
+          "y": 0,
+          "z": 25.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -17.5,
+          "y": 0,
+          "z": 26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 16.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -13.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 16.5,
+          "y": 0,
+          "z": -24.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 19.5,
+          "y": 0,
+          "z": -24.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 22.5,
+          "y": 0,
+          "z": 18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -15.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -10.5,
+          "y": 0,
+          "z": 27.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 15.5,
+          "y": 0,
+          "z": -25.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 5.5,
+          "y": 0,
+          "z": -24.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -17.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 0.5,
+          "y": 0,
+          "z": -21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -9.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 1.5,
+          "y": 0,
+          "z": 20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 8.5,
+          "y": 0,
+          "z": 19.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 9.5,
+          "y": 0,
+          "z": 18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 23.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 0.5,
+          "y": 0,
+          "z": 19.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -16.5,
+          "y": 0,
+          "z": 26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 22.5,
+          "y": 0,
+          "z": -23.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 13.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -7.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 20.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 9.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -14.5,
+          "y": 0,
+          "z": 27.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 11.5,
+          "y": 0,
+          "z": -27.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 1.5,
+          "y": 0,
+          "z": -23.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 6.5,
+          "y": 0,
+          "z": 20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -8.5,
+          "y": 0,
+          "z": 26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 21.5,
+          "y": 0,
+          "z": -23.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -8.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 22.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 21.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -25.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -23.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 23.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -13.5,
+          "y": 0,
+          "z": 27.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 19.5,
+          "y": 0,
+          "z": 19.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 7.5,
+          "y": 0,
+          "z": 19.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -24.5,
+          "y": 0,
+          "z": 13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -16.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -11.5,
+          "y": 0,
+          "z": 26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 18.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 17.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -15.5,
+          "y": 0,
+          "z": 27.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 3.5,
+          "y": 0,
+          "z": 21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -12.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -24.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 18.5,
+          "y": 0,
+          "z": -25.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 5.5,
+          "y": 0,
+          "z": 20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 17.5,
+          "y": 0,
+          "z": 18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -9.5,
+          "y": 0,
+          "z": 27.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 23.5,
+          "y": 0,
+          "z": -19.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 0.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -10.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -25.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 84,
+    "role": "enemy",
+    "source": "FAF_Coop_Operation_Yath_Aez, army Aeon, group Part3/P3AWalls"
+  }
+}

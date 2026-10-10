@@ -1,0 +1,877 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Aeon civilian town, walled",
+  "settings": {
+    "group": {
+      "name": "Aeon civilian town, walled",
+      "units": [
+        {
+          "blueprint": "uab1101",
+          "x": -0.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab1101",
+          "x": -0.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab3101",
+          "x": -0.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 20.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 16.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": -4.5,
+          "y": 0,
+          "z": -3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -18.5,
+          "y": 0,
+          "z": 19.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 28.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 7.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -13.5,
+          "y": 0,
+          "z": 22.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -8.5,
+          "y": 0,
+          "z": -21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 13.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 24.5,
+          "y": 0,
+          "z": 12.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 26.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -22.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 6.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -8.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -8.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -28.5,
+          "y": 0,
+          "z": 7.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 13.5,
+          "y": 0,
+          "z": -18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -12.5,
+          "y": 0,
+          "z": -18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 16.5,
+          "y": 0,
+          "z": 21.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -1.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -6.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -10.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 12.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 27.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 7.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 20.5,
+          "y": 0,
+          "z": 18.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 6.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -10.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 2.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -14.5,
+          "y": 0,
+          "z": 22.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 0.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uac1201",
+          "x": -16.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 18.5,
+          "y": 0,
+          "z": 20.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -6.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 10.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 5.5,
+          "y": 0,
+          "z": -16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": -5.5,
+          "y": 0,
+          "z": -12.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -7.5,
+          "y": 0,
+          "z": -16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -0.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -5.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 9.5,
+          "y": 0,
+          "z": -16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 3.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 8.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 5.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -3.5,
+          "y": 0,
+          "z": -16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -11.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -0.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -28.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 0.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 12.5,
+          "y": 0,
+          "z": -19.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 7.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -25.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 13.5,
+          "y": 0,
+          "z": 22.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 6.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -19.5,
+          "y": 0,
+          "z": 15.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 9.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -11.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -4.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -11.5,
+          "y": 0,
+          "z": 22.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 0.5,
+          "y": 0,
+          "z": -4.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 0.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 8.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 12.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uac1301",
+          "x": 8.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -20.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -4.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 4.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -17.5,
+          "y": 0,
+          "z": 20.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -3.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -1.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 9.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 3.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -1.5,
+          "y": 0,
+          "z": -21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -2.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -5.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -10.5,
+          "y": 0,
+          "z": 7.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 26.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -4.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 5.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -15.5,
+          "y": 0,
+          "z": 21.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 8.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 13.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -7.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -6.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 8.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 12.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 12.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 23.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 22.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 1.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -5.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -11.5,
+          "y": 0,
+          "z": -19.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 15.5,
+          "y": 0,
+          "z": 22.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 1.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uac1201",
+          "x": -16.5,
+          "y": 0,
+          "z": 0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 27.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -28.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -27.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 12.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -24.5,
+          "y": 0,
+          "z": 12.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 3.5,
+          "y": 0,
+          "z": -21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 27.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -28.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uac1301",
+          "x": 7.5,
+          "y": 0,
+          "z": -12.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -12.5,
+          "y": 0,
+          "z": 22.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -10.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 3.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -9.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 19.5,
+          "y": 0,
+          "z": 15.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -7.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -13.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 14.5,
+          "y": 0,
+          "z": 22.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 7.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 10.5,
+          "y": 0,
+          "z": -21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -10.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 18.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -3.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": -3.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 19.5,
+          "y": 0,
+          "z": 19.5,
+          "heading": -0.044
+        },
+        {
+          "blueprint": "uab5101",
+          "x": 3.5,
+          "y": 0,
+          "z": -22.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 123,
+    "role": "civilian",
+    "source": "Supreme Commander Forged Alliance/maps/SCMP_018, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}
