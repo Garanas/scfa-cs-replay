@@ -124,6 +124,16 @@ namespace FAForever.MapEditor.Project.Workspaces
         public required string File { get; init; }
 
         public ImmutableArray<AssetFact> Facts { get; init; } = [];
+
+        /// <summary>
+        /// The mass a prop gives when it is reclaimed, from its blueprint; 0 for the other kinds.
+        /// </summary>
+        public double ReclaimMass { get; init; }
+
+        /// <summary>
+        /// The energy a prop gives when it is reclaimed, from its blueprint; 0 for the other kinds.
+        /// </summary>
+        public double ReclaimEnergy { get; init; }
     }
 
     /// <summary>
@@ -262,6 +272,8 @@ namespace FAForever.MapEditor.Project.Workspaces
                     Model = ModelOf(assets, prop.Lods),
                     File = file,
                     Facts = [.. facts],
+                    ReclaimMass = prop.ReclaimMass ?? 0,
+                    ReclaimEnergy = prop.ReclaimEnergy ?? 0,
                 };
             }
         }
