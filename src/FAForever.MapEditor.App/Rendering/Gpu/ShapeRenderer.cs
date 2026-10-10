@@ -76,6 +76,9 @@ internal sealed unsafe class ShapeRenderer : IDisposable
                         Segment(corners[i], corners[(i + 1) % 4], 1.5f, stroke);
                     }
                     break;
+                case ToolMapLine mapLine:
+                    Segment(mapLine.From, mapLine.To, mapLine.Width, mapLine.Color);
+                    break;
                 case ToolTriangle triangle:
                     Vector4 fill = ink(triangle.Ink);
                     Add(triangle.A, fill);

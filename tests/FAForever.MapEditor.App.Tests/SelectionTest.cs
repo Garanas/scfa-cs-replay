@@ -61,6 +61,36 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task ABoxInThe3DViewSelectsWhatShowsInsideTheRectangleOnScreen()
+        {
+            MainViewModel model = await Open();
+            SelectTool tool = (SelectTool)ActiveTool(model);
+            // a view that is not straight down: a place shows at (x * 3 + z, z * 2), so its box on the
+            // ground would be wrong
+            ToolView ViewWith(Vector2 mouse) => new ToolView(false, mouse, place => new Vector2(place.X * 3 + place.Z, place.Z * 2), _ => 0.5f);
+            Vector2 Screen(Vector3 place) => new Vector2(place.X * 3 + place.Z, place.Z * 2);
+            Spawn spawn = model.ShownDocument!.Markers.Spawns[0];
+            Vector2 at = Screen(spawn.Position);
+            Vector2 from = at - new Vector2(4, 4);
+            Vector2 to = at + new Vector2(4, 4);
+
+            tool.Press(0, 0, new ToolInput(ToolModifiers.None, 0.5f, Picks: true, Picked: null, View: ViewWith(from)));
+            tool.Drag(5, 5, new ToolInput(ToolModifiers.None, 0.5f, View: ViewWith(to)));
+            Assert.AreEqual((from, to), tool.ScreenBox);
+            Assert.IsNull(tool.Box, "no box on the ground");
+            IReadOnlyList<ToolShape> shapes = tool.Shapes(ViewWith(to));
+            Assert.IsTrue(shapes.OfType<ToolLine>().Any(line => line.Closed && line.Points.Contains(from) && line.Points.Contains(to)), "the rectangle on screen");
+            Assert.IsFalse(tool.Shapes(ToolView.Flat(0.5f)).OfType<ToolLine>().Any(line => line.Points.Contains(from)), "the top view draws no 3D box");
+            tool.Release();
+
+            ObjectRef[] expected = [.. model.ShownDocument.All(model.SelectableKinds, model.ShownMarkerKinds)
+                .Where(thing => model.ShownDocument.PlaceOf(thing) is Vector3 place && Vector2.Clamp(Screen(place), from, to) == Screen(place))];
+            CollectionAssert.Contains(expected, ObjectRef.Marker(spawn.Id));
+            CollectionAssert.AreEquivalent(expected, model.Selection.Items.ToArray());
+            Assert.IsNull(tool.ScreenBox, "gone after the release");
+        }
+
+        [TestMethod]
         public async Task AClickSelectsAndADragMovesTheSelectionAsOneStepOfUndo()
         {
             MainViewModel model = await Open();

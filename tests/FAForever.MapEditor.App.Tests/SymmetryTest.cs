@@ -286,6 +286,25 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task TheBrushUnderTheMouseShowsEveryImage()
+        {
+            MainViewModel model = await Open(tool: "terrain.sculpt");
+            BrushPreview brush = BrushPreview.Of(model.ActiveTool!.Tool, 60, 40)!;
+            IReadOnlyList<BrushPreview> images = brush.Images(model.EditTransforms(model.ShownDocument!));
+            Assert.AreEqual(4, images.Count);
+            Assert.AreEqual(brush, images[0], "the brush itself first");
+            Assert.AreEqual(Quarter(60, 40), new Vector2(images[1].X, images[1].Z));
+
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "leftRight" });
+            images = brush.Images(model.EditTransforms(model.ShownDocument!));
+            Assert.IsTrue(images[1].Mirrored, "flipped in the mirrored part");
+            Assert.AreEqual(196, images[1].X, 1e-3f);
+
+            await Run(model, "select.mirrorEdits", new JsonObject { ["on"] = false });
+            Assert.AreEqual(1, brush.Images(model.EditTransforms(model.ShownDocument!)).Count, "guides only: the brush alone");
+        }
+
+        [TestMethod]
         public async Task DecalPartnersScaleAndTakeTheirSize()
         {
             MainViewModel model = await Open("leftRight");

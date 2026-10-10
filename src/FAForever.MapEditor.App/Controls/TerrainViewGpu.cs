@@ -13,6 +13,7 @@ using FAForever.MapEditor.App.Rendering.Gpu;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project;
+using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
 using ImageMagick;
@@ -400,9 +401,10 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             : null;
 
     /// <summary>
-    /// The active tool's brush where the mouse points, as the top view shows it; null without one.
+    /// The active tool's brush where the mouse points, as the top view shows it, with its images in
+    /// the other parts while the symmetry mirrors edits (F-12); null without one.
     /// </summary>
-    private BrushPreview? BrushUnderMouse(MapDocument document)
+    private IReadOnlyList<BrushPreview>? BrushUnderMouse(MapDocument document)
     {
         using Performance.Span measure = Performance.Measure("3d.brush-place");
         if (_model?.ActiveTool?.Tool is not { CursorRadius: > 0 } tool)
@@ -411,9 +413,9 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         }
         if (_capture is not null && _captureBrushAt is Vector2 at)
         {
-            return BrushPreview.Of(tool, at.X, at.Y);
+            return BrushPreview.Of(tool, at.X, at.Y)?.Images(_model!.EditTransforms(document));
         }
-        return PlaceUnderMouse(document) is Vector3 place ? BrushPreview.Of(tool, place.X, place.Z) : null;
+        return PlaceUnderMouse(document) is Vector3 place ? BrushPreview.Of(tool, place.X, place.Z)?.Images(_model!.EditTransforms(document)) : null;
     }
 
     private Vector3 BrushColor() => ThemeColor("OverlayBrush");
@@ -736,23 +738,38 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     }
 
     /// <summary>
-    /// What the active tool draws at its size on screen: its shapes (the handles of the selection,
-    /// the sun's arrow), and its marks (the area tool's handles, the ruler's line) at the terrain's
+    /// What the 3D view draws at its size on screen: the links between path nodes while they show,
+    /// and what the active tool draws: its shapes (the handles of the selection, the sun's arrow,
+    /// the box), and its marks (the area tool's handles, the ruler's line, a curve) at the terrain's
     /// height.
     /// </summary>
     private IReadOnlyList<ToolShape> ToolShapes(MapDocument document)
     {
-        if (_model?.ActiveTool?.Tool is not IMapTool tool)
+        if (_model is null)
         {
             return [];
         }
         using Performance.Span measure = Performance.Measure("3d.tool-shapes");
         ToolView view = ToolViewOf();
         List<ToolShape> shapes = [];
+        if ((_model.ShownMarkerKinds & MarkerKinds.PathNodes) != 0)
+        {
+            PathLinks(document, view, shapes);
+        }
+        if (_model.ActiveTool?.Tool is not IMapTool tool)
+        {
+            return shapes;
+        }
         if (tool.Marks is ToolMarks marks && tool is not SunTool)
         {
             Heightmap heights = document.Terrain.Heightmap;
             Vector2? At(float x, float z) => view.ToScreen(new Vector3(x, heights.HeightAt(x, z), z));
+            if (marks.Path is { Count: >= 2 } path && TerrainLine(heights, view, path) is Vector2[] line)
+            {
+                // a curve on the terrain (T-4)
+                shapes.Add(new ToolLine(line, false, 4, ToolInk.Shadow));
+                shapes.Add(new ToolLine(line, false, 2, ToolInk.Selection));
+            }
             if (marks.Line is (float x0, float z0, float x1, float z1) && At(x0, z0) is Vector2 from && At(x1, z1) is Vector2 to)
             {
                 shapes.Add(new ToolLine([from, to], false, 4, ToolInk.Shadow));
@@ -768,6 +785,84 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         }
         shapes.AddRange(tool.Shapes(view));
         return shapes;
+    }
+
+    /// <summary>
+    /// A line through places of the map on the terrain, in the view's pixels: each part cut into
+    /// pieces of at most two ogrids, so that it follows the ground; null when a piece lies behind
+    /// the camera.
+    /// </summary>
+    private static Vector2[]? TerrainLine(Heightmap heights, ToolView view, IReadOnlyList<(float X, float Z)> path)
+    {
+        List<Vector2> points = [];
+        for (int i = 0; i < path.Count; i++)
+        {
+            (float x1, float z1) = path[i];
+            int pieces = 1;
+            if (i > 0)
+            {
+                (float x0, float z0) = path[i - 1];
+                pieces = Math.Clamp((int)MathF.Ceiling(MathF.Sqrt((x1 - x0) * (x1 - x0) + (z1 - z0) * (z1 - z0)) / 2), 1, 64);
+                for (int piece = 1; piece < pieces; piece++)
+                {
+                    float t = (float)piece / pieces;
+                    float x = x0 + (x1 - x0) * t;
+                    float z = z0 + (z1 - z0) * t;
+                    if (view.ToScreen(new Vector3(x, heights.HeightAt(x, z), z)) is not Vector2 between)
+                    {
+                        return null;
+                    }
+                    points.Add(between);
+                }
+            }
+            if (view.ToScreen(new Vector3(x1, heights.HeightAt(x1, z1), z1)) is not Vector2 at)
+            {
+                return null;
+            }
+            points.Add(at);
+        }
+        return [.. points];
+    }
+
+    private MarkerSet? _linked;
+    private List<(PathLayer Layer, Vector3 From, Vector3 To, Vector4 Color)> _links = [];
+
+    /// <summary>
+    /// The links between path nodes of the layers that show, each a line in its layer's colour from
+    /// a little above one node to a little above the other (as the top view draws them); the pairs
+    /// are made once per version of the markers, placed on screen every frame.
+    /// </summary>
+    private void PathLinks(MapDocument document, ToolView view, List<ToolShape> shapes)
+    {
+        using Performance.Span measure = Performance.Measure("3d.path-links");
+        MarkerSet markers = document.Markers;
+        if (!ReferenceEquals(markers, _linked))
+        {
+            _linked = markers;
+            _links = [];
+            Dictionary<int, PathNode> nodes = markers.PathNodes.ToDictionary(node => node.Id);
+            Vector3 lift = new Vector3(0, 0.5f, 0);
+            foreach (PathNode node in markers.PathNodes)
+            {
+                foreach (int id in node.AdjacentTo)
+                {
+                    // a link both ways once
+                    if (nodes.TryGetValue(id, out PathNode? other) && (id > node.Id || !other.AdjacentTo.Contains(node.Id)))
+                    {
+                        Vector4 color = new Vector4(node.Color.Red / 255f, node.Color.Green / 255f, node.Color.Blue / 255f, 0.85f);
+                        _links.Add((node.Layer, node.Position + lift, other.Position + lift, color));
+                    }
+                }
+            }
+        }
+        MarkerKinds shown = _model!.ShownMarkerKinds;
+        foreach ((PathLayer layer, Vector3 from, Vector3 to, Vector4 color) in _links)
+        {
+            if ((shown & MarkerEdits.KindOf(layer)) != 0 && view.ToScreen(from) is Vector2 a && view.ToScreen(to) is Vector2 b)
+            {
+                shapes.Add(new ToolMapLine(a, b, 2, color));
+            }
+        }
     }
 
     private Vector4 Ink(ToolInk ink)

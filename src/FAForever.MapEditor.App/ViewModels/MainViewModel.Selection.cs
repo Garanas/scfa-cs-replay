@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using FAForever.MapEditor.App.Diagnostics;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FAForever.MapEditor.App.Tools;
@@ -152,6 +153,34 @@ public sealed partial class MainViewModel
         {
             Selection.Apply(document.Inside(x0, z0, x1, z1, kinds ?? SelectableKinds, ShownMarkerKinds).Where(Decals.IsShown), change);
         }
+    }
+
+    /// <summary>
+    /// Selects what shows inside a rectangle of a view's pixels: each thing of the kinds that can be
+    /// picked whose place (at its own height) <paramref name="toScreen"/> puts inside it. The 3D
+    /// view's box.
+    /// </summary>
+    /// <param name="from">A corner, in the view's pixels; <paramref name="to"/> the other, in any order.</param>
+    /// <param name="toScreen">Where a place shows in the view; null behind the camera.</param>
+    public void SelectOnScreen(System.Numerics.Vector2 from, System.Numerics.Vector2 to, Func<System.Numerics.Vector3, System.Numerics.Vector2?> toScreen, SelectionChange change, ObjectKinds? kinds = null)
+    {
+        if (ShownDocument is not MapDocument document)
+        {
+            return;
+        }
+        using Performance.Span measure = Performance.Measure("model.select-on-screen");
+        System.Numerics.Vector2 min = System.Numerics.Vector2.Min(from, to);
+        System.Numerics.Vector2 max = System.Numerics.Vector2.Max(from, to);
+        List<ObjectRef> inside = [];
+        foreach (ObjectRef thing in document.All(kinds ?? SelectableKinds, ShownMarkerKinds).Where(Decals.IsShown))
+        {
+            if (document.PlaceOf(thing) is System.Numerics.Vector3 place && toScreen(place) is System.Numerics.Vector2 at
+                && at.X >= min.X && at.Y >= min.Y && at.X <= max.X && at.Y <= max.Y)
+            {
+                inside.Add(thing);
+            }
+        }
+        Selection.Apply(inside, change);
     }
 
     /// <summary>
