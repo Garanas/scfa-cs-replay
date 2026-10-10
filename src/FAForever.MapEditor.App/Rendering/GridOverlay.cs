@@ -46,7 +46,8 @@ public sealed record GridOverlay(string Key, Func<MapDocument, TiledBuffer<byte>
 public static class TerrainTypeColours
 {
     /// <summary>
-    /// The colour of every code, <c>0xAARRGGBB</c>; a code the game does not know is magenta.
+    /// The colour of every code, <c>0xAARRGGBB</c>; code 0, no type (the game takes it as Default),
+    /// a dark shade of Default's colour; a code the game does not know is magenta.
     /// </summary>
     public static IReadOnlyList<uint> Palette { get; } = MakePalette();
 
@@ -59,6 +60,8 @@ public static class TerrainTypeColours
     {
         uint[] palette = new uint[256];
         Array.Fill(palette, Argb(255, 0, 255));
+        (int dr, int dg, int db) = Base("Default");
+        palette[0] = Argb(Scale(dr, 0.55f), Scale(dg, 0.55f), Scale(db, 0.55f));
         foreach (IGrouping<string, TerrainType> kind in TerrainTypes.All.GroupBy(Kind))
         {
             TerrainType[] types = [.. kind];
