@@ -16,13 +16,13 @@ namespace FAForever.MapEditor.App.Commands;
 internal static class HeightLayerArgument
 {
     /// <exception cref="ArgumentException">The map has no such layer, or none is chosen.</exception>
-    public static HeightLayer Of(MainViewModel model, string? name)
+    public static Layer Of(MainViewModel model, string? name)
     {
         MapDocument document = model.ShownDocument ?? throw new InvalidOperationException("No map is open");
-        string chosen = name ?? model.HeightStack.Chosen ?? throw new ArgumentException(document.HeightLayers.IsEmpty
+        string chosen = name ?? model.HeightStack.Chosen ?? throw new ArgumentException(document.HeightStack.IsEmpty
             ? "The map has no height layers: add one first (terrain.addLayer)"
             : "Choose a height layer, or name one with layer");
-        return document.HeightLayers[HeightLayerEdits.IndexOf(document, chosen)];
+        return document.HeightStack.Layers[HeightLayerEdits.IndexOf(document, chosen)];
     }
 }
 
@@ -37,7 +37,7 @@ internal static class HeightLayerArgument
 /// <param name="Kind"><c>sculpt</c> (left out), <c>imported</c> or <c>curve</c>.</param>
 /// <param name="Name">Left out, a free one (<c>Sculpt 2</c>, the file's name, <c>Curve</c>).</param>
 /// <param name="Path">An imported layer's file (PNG, <c>.r16</c>, ...); left out, the editor asks.</param>
-/// <param name="Combine"><c>Add</c>, <c>Maximum</c>, <c>Minimum</c> or <c>Replace</c>; left out, the
+/// <param name="Combine"><c>Add</c>, <c>Subtract</c>, <c>Maximum</c>, <c>Minimum</c>, <c>Replace</c> or <c>Multiply</c>; left out, the
 /// kind's own (sculpting adds, an image replaces).</param>
 /// <returns>The new layer's name, or null when no file was chosen.</returns>
 [EditorCommand("terrain.addLayer", "Add a height layer...", Story = "T-5", Needs = Needs.Map | Needs.NoStroke)]
@@ -49,14 +49,14 @@ public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs di
     {
         MapDocument document = model.ShownDocument ?? throw new InvalidOperationException("No map is open");
         string kind = (request.Kind ?? "sculpt").Trim().ToLowerInvariant();
-        HeightCombine? combine = request.Combine is null ? null : HeightLayerSettings.ParseCombine(request.Combine);
-        HeightLayer layer;
+        LayerCombine? combine = request.Combine is null ? null : HeightLayerSettings.ParseCombine(request.Combine);
+        Layer layer;
         switch (kind)
         {
             case "sculpt":
             {
                 string name = request.Name?.Trim() ?? HeightLayerEdits.FreeName(document, "Sculpt");
-                layer = HeightLayerEdits.NewSculpt(document, name, combine ?? HeightCombine.Add);
+                layer = HeightLayerEdits.NewSculpt(document, name, combine ?? LayerCombine.Add);
                 break;
             }
             case "imported" or "image":
@@ -77,7 +77,7 @@ public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs di
                 string stem = new string([.. System.IO.Path.GetFileNameWithoutExtension(path).Select(c => char.IsAsciiLetterOrDigit(c) || c is ' ' or '-' or '_' ? c : '-')]).Trim();
                 string name = request.Name?.Trim() ?? HeightLayerEdits.FreeName(document, stem.Length == 0 ? "Image" : stem);
                 layer = HeightLayerEdits.NewImported(document, name, samples, SourceOf(model.Map?.ProjectFolder, path));
-                if (combine is HeightCombine chosen)
+                if (combine is LayerCombine chosen)
                 {
                     layer = layer with { Combine = chosen };
                 }
@@ -88,7 +88,7 @@ public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs di
             {
                 string name = request.Name?.Trim() ?? HeightLayerEdits.FreeName(document, "Curve");
                 layer = HeightLayerEdits.NewCurve(document, name, new HeightCurve { Symmetry = HeightLayerSettings.SymmetryOf(model, null) });
-                if (combine is HeightCombine chosen)
+                if (combine is LayerCombine chosen)
                 {
                     layer = layer with { Combine = chosen };
                 }
@@ -178,7 +178,7 @@ public sealed class SetHeightCurveHandler(MainViewModel model) : IRequestHandler
 {
     public Task Handle(SetHeightCurve request, CancellationToken cancellationToken)
     {
-        HeightLayer layer = HeightLayerArgument.Of(model, request.Layer);
+        Layer layer = HeightLayerArgument.Of(model, request.Layer);
         HeightCurve curve = layer.Curve ?? throw new ArgumentException($"The height layer {layer.Name} is no curve");
         if (request.Width is < 0 || request.Falloff is < 0)
         {
@@ -224,7 +224,7 @@ public sealed class RemoveHeightLayerHandler(MainViewModel model) : IRequestHand
 {
     public Task Handle(RemoveHeightLayer request, CancellationToken cancellationToken)
     {
-        HeightLayer layer = HeightLayerArgument.Of(model, request.Layer);
+        Layer layer = HeightLayerArgument.Of(model, request.Layer);
         using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap($"Remove the height layer {layer.Name}", d => HeightLayerEdits.Remove(d, layer.Name));
         model.Status = $"Removed the height layer {layer.Name}";
@@ -245,9 +245,9 @@ public sealed class MoveHeightLayerHandler(MainViewModel model) : IRequestHandle
 {
     public Task Handle(MoveHeightLayer request, CancellationToken cancellationToken)
     {
-        HeightLayer layer = HeightLayerArgument.Of(model, request.Layer);
+        Layer layer = HeightLayerArgument.Of(model, request.Layer);
         MapDocument document = model.ShownDocument!;
-        int from = document.HeightLayers.IndexOf(layer);
+        int from = document.HeightStack.Layers.IndexOf(layer);
         int to = request.To ?? from + (request.By ?? 1);
         if (to == from)
         {
@@ -266,7 +266,7 @@ public sealed class MoveHeightLayerHandler(MainViewModel model) : IRequestHandle
 /// </summary>
 /// <param name="Layer">Left out, the chosen one.</param>
 /// <param name="Name">A new name.</param>
-/// <param name="Combine"><c>Add</c>, <c>Maximum</c>, <c>Minimum</c> or <c>Replace</c>.</param>
+/// <param name="Combine"><c>Add</c>, <c>Subtract</c>, <c>Maximum</c>, <c>Minimum</c>, <c>Replace</c> or <c>Multiply</c>.</param>
 /// <param name="Strength">0 to 1.</param>
 /// <param name="Mask"><c>Everywhere</c> (or empty) for none, a mask for tools by name or as
 /// <c>mask:rivers</c>, or a stratum's as <c>stratum 3</c> or <c>stratum:3</c>.</param>
@@ -278,9 +278,9 @@ public sealed class SetHeightLayerHandler(MainViewModel model) : IRequestHandler
 {
     public Task Handle(SetHeightLayer request, CancellationToken cancellationToken)
     {
-        HeightLayer layer = HeightLayerArgument.Of(model, request.Layer);
+        Layer layer = HeightLayerArgument.Of(model, request.Layer);
         MapDocument document = model.ShownDocument!;
-        HeightCombine? combine = request.Combine is null ? null : HeightLayerSettings.ParseCombine(request.Combine);
+        LayerCombine? combine = request.Combine is null ? null : HeightLayerSettings.ParseCombine(request.Combine);
         string? mask = request.Mask is null ? null : HeightLayersViewModel.MaskKeyOf(document, request.Mask);
         string? name = request.Name?.Trim() is { Length: > 0 } given && given != layer.Name ? given : null;
         if (request.Strength is < 0 or > 1)
@@ -297,7 +297,7 @@ public sealed class SetHeightLayerHandler(MainViewModel model) : IRequestHandler
         using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap($"Height layer {layer.Name}: {fields}", d =>
         {
-            if (combine is HeightCombine way && way != layer.Combine)
+            if (combine is LayerCombine way && way != layer.Combine)
             {
                 d = HeightLayerEdits.SetCombine(d, current, way);
             }
@@ -305,7 +305,7 @@ public sealed class SetHeightLayerHandler(MainViewModel model) : IRequestHandler
             {
                 d = HeightLayerEdits.SetStrength(d, current, strength);
             }
-            if (request.Mask is not null && mask != layer.Mask)
+            if (request.Mask is not null && mask != layer.Clip)
             {
                 d = HeightLayerEdits.SetMask(d, current, mask);
             }
@@ -355,8 +355,8 @@ public sealed class ReloadHeightLayerHandler(MainViewModel model) : IRequestHand
 {
     public async Task Handle(ReloadHeightLayer request, CancellationToken cancellationToken)
     {
-        HeightLayer layer = HeightLayerArgument.Of(model, request.Layer);
-        if (layer.Kind != HeightLayerKind.Imported || layer.Source is not string source)
+        Layer layer = HeightLayerArgument.Of(model, request.Layer);
+        if (layer.Path is not string source)
         {
             throw new ArgumentException($"The height layer {layer.Name} is not read from a file");
         }
@@ -381,12 +381,12 @@ public sealed class BakeHeightLayersHandler(MainViewModel model) : IRequestHandl
     public Task Handle(BakeHeightLayers request, CancellationToken cancellationToken)
     {
         MapDocument document = model.ShownDocument ?? throw new InvalidOperationException("No map is open");
-        if (document.HeightLayers.IsEmpty)
+        if (document.HeightStack.IsEmpty)
         {
             model.Status = "The map has no height layers to bake";
             return Task.CompletedTask;
         }
-        int count = document.HeightLayers.Length;
+        int count = document.HeightStack.Count;
         using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap("Bake the height layers", HeightLayerEdits.Bake);
         model.Status = string.Create(CultureInfo.InvariantCulture, $"Baked {count} height layers into the heightmap");
@@ -399,10 +399,10 @@ public sealed class BakeHeightLayersHandler(MainViewModel model) : IRequestHandl
 /// </summary>
 internal static class HeightLayerSettings
 {
-    public static HeightCombine ParseCombine(string text) =>
-        Enum.TryParse(text.Trim(), ignoreCase: true, out HeightCombine combine) && Enum.IsDefined(combine)
+    public static LayerCombine ParseCombine(string text) =>
+        Enum.TryParse(text.Trim(), ignoreCase: true, out LayerCombine combine) && Enum.IsDefined(combine)
             ? combine
-            : throw new ArgumentException($"A height layer combines by {string.Join(", ", Enum.GetNames<HeightCombine>())}, not '{text}'");
+            : throw new ArgumentException($"A height layer combines by {string.Join(", ", Enum.GetNames<LayerCombine>())}, not '{text}'");
 
     public static CurveProfile ParseProfile(string text) =>
         Enum.TryParse(text.Trim(), ignoreCase: true, out CurveProfile profile) && Enum.IsDefined(profile)

@@ -24,7 +24,7 @@ namespace FAForever.MapEditor.Project.Tests
         /// <summary>
         /// A layer that holds <paramref name="value"/> in a square around (x, z), 0 elsewhere.
         /// </summary>
-        private static HeightLayer Square(MapDocument document, string name, HeightCombine combine, float value, int x, int z, int half, bool covered = false)
+        private static Layer Square(MapDocument document, string name, LayerCombine combine, float value, int x, int z, int half, bool covered = false)
         {
             TiledBuffer<float>.Builder values = TiledBuffer<float>.Create(document.Width + 1, document.Height + 1).ToBuilder();
             TiledBuffer<byte>.Builder coverage = TiledBuffer<byte>.Create(document.Width + 1, document.Height + 1).ToBuilder();
@@ -36,10 +36,10 @@ namespace FAForever.MapEditor.Project.Tests
                     coverage[i, j] = 255;
                 }
             }
-            return new HeightLayer
+            return new Layer
             {
                 Name = name,
-                Kind = HeightLayerKind.Sculpt,
+                Source = LayerSource.Painted,
                 Combine = combine,
                 Values = values.ToBuffer(),
                 Coverage = covered ? coverage.ToBuffer() : null,
@@ -52,8 +52,8 @@ namespace FAForever.MapEditor.Project.Tests
             MapDocument document = MapImporter.ImportFolder(ProjectFolders.HardFfa);
             MapDocument started = HeightLayers.Recomposite(HeightLayerEdits.Start(document));
 
-            Assert.AreEqual(1, started.HeightLayers.Length);
-            Assert.AreEqual(HeightLayerKind.Base, started.HeightLayers[0].Kind);
+            Assert.AreEqual(1, started.HeightStack.Count);
+            Assert.IsTrue(started.HeightStack.Layers[0].IsBase);
             Assert.AreSame(document.Terrain.Heightmap.Samples, started.Terrain.Heightmap.Samples, "the sum is the heightmap: no tile changes");
             Assert.AreSame(document, HeightLayerEdits.Bake(document), "a map without layers stays as it is");
         }
@@ -62,10 +62,10 @@ namespace FAForever.MapEditor.Project.Tests
         public void LayersCombineByTheirWayStrengthAndMask()
         {
             MapDocument document = HeightLayerEdits.Start(Flat(35));
-            document = HeightLayerEdits.Add(document, Square(document, "add", HeightCombine.Add, 10, 40, 40, 2));
-            document = HeightLayerEdits.Add(document, Square(document, "max", HeightCombine.Maximum, 50, 80, 80, 2, covered: true));
-            document = HeightLayerEdits.Add(document, Square(document, "min", HeightCombine.Minimum, 20, 120, 120, 2, covered: true));
-            document = HeightLayerEdits.Add(document, Square(document, "replace", HeightCombine.Replace, 5, 160, 160, 2, covered: true));
+            document = HeightLayerEdits.Add(document, Square(document, "add", LayerCombine.Add, 10, 40, 40, 2));
+            document = HeightLayerEdits.Add(document, Square(document, "max", LayerCombine.Maximum, 50, 80, 80, 2, covered: true));
+            document = HeightLayerEdits.Add(document, Square(document, "min", LayerCombine.Minimum, 20, 120, 120, 2, covered: true));
+            document = HeightLayerEdits.Add(document, Square(document, "replace", LayerCombine.Replace, 5, 160, 160, 2, covered: true));
             document = HeightLayers.Recomposite(document);
 
             Assert.AreEqual(45, HeightAt(document, 40, 40), 1e-3, "add");
@@ -90,9 +90,9 @@ namespace FAForever.MapEditor.Project.Tests
                 }
             }
             document = document with { Masks = document.Masks.SetItem("half", mask.ToBuffer()) };
-            document = HeightLayers.Recomposite(HeightLayerEdits.SetMask(document, "max", HeightLayers.MaskKey("half")));
+            document = HeightLayers.Recomposite(HeightLayerEdits.SetMask(document, "max", LayerStacks.MaskKey("half")));
             Assert.AreEqual(38, HeightAt(document, 80, 80), 1e-2, "a fifth of the way from 35 to 50");
-            Assert.ThrowsException<ArgumentException>(() => HeightLayerEdits.SetMask(document, "max", HeightLayers.MaskKey("none")));
+            Assert.ThrowsException<ArgumentException>(() => HeightLayerEdits.SetMask(document, "max", LayerStacks.MaskKey("none")));
             Assert.ThrowsException<ArgumentException>(() => HeightLayerEdits.SetStrength(document, "Base", 0.5f));
             Assert.ThrowsException<ArgumentException>(() => HeightLayerEdits.Remove(document, "Base"));
         }
@@ -101,11 +101,11 @@ namespace FAForever.MapEditor.Project.Tests
         public void TheSessionKeepsTheHeightmapTheSumTileByTile()
         {
             EditSession session = new EditSession(Flat(35));
-            session.Edit("Add a layer", d => HeightLayerEdits.Add(d, Square(d, "hill", HeightCombine.Add, 10, 40, 40, 2)));
+            session.Edit("Add a layer", d => HeightLayerEdits.Add(d, Square(d, "hill", LayerCombine.Add, 10, 40, 40, 2)));
             MapDocument added = session.Document;
             Assert.AreEqual(45, HeightAt(added, 40, 40), 1e-3, "the heightmap follows the step that adds the layer");
 
-            session.Edit("Raise the hill", d => HeightLayerEdits.With(d, 1, Square(d, "hill", HeightCombine.Add, 20, 40, 40, 2)));
+            session.Edit("Raise the hill", d => HeightLayerEdits.With(d, 1, Square(d, "hill", LayerCombine.Add, 20, 40, 40, 2)));
             MapDocument raised = session.Document;
             Assert.AreEqual(55, HeightAt(raised, 40, 40), 1e-3);
             Assert.AreEqual(1, raised.Terrain.Heightmap.Samples.ChangedTiles(added.Terrain.Heightmap.Samples).Count(), "only the tile the change touched");
@@ -114,7 +114,7 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(45, HeightAt(session.Document, 40, 40), 1e-3, "undo brings the sum back with the layer");
 
             session.Edit("Bake", HeightLayerEdits.Bake);
-            Assert.IsTrue(session.Document.HeightLayers.IsEmpty);
+            Assert.IsTrue(session.Document.HeightStack.IsEmpty);
             Assert.AreEqual(45, HeightAt(session.Document, 40, 40), 1e-3, "baking keeps the sum");
         }
 
@@ -146,8 +146,8 @@ namespace FAForever.MapEditor.Project.Tests
                 Assert.IsTrue(stroke.Commit());
             }
             MapDocument sculpted = session.Document;
-            Assert.AreSame(before.HeightLayers[0], sculpted.HeightLayers[0], "the base is untouched");
-            Assert.AreEqual(4, sculpted.HeightLayers[1].Values[100, 100], 0.05, "the layer holds the difference");
+            Assert.AreSame(before.HeightStack.Layers[0], sculpted.HeightStack.Layers[0], "the base is untouched");
+            Assert.AreEqual(4, sculpted.HeightStack.Layers[1].Values![100, 100], 0.05, "the layer holds the difference");
 
             session.Edit("Hide", d => HeightLayerEdits.SetVisible(d, "Sculpt", false));
             Assert.AreEqual(35, HeightAt(session.Document, 100, 100), 1e-3, "hiding the layer takes its work away");
@@ -172,17 +172,17 @@ namespace FAForever.MapEditor.Project.Tests
         public void TurningASculptLayerToReplaceKeepsItsLook()
         {
             EditSession session = new EditSession(Flat(35));
-            session.Edit("Add", d => HeightLayerEdits.Add(d, Square(d, "hill", HeightCombine.Add, 10, 40, 40, 2)));
-            session.Edit("Replace", d => HeightLayerEdits.SetCombine(d, "hill", HeightCombine.Replace));
-            HeightLayer layer = session.Document.HeightLayers[1];
-            Assert.AreEqual(HeightCombine.Replace, layer.Combine);
+            session.Edit("Add", d => HeightLayerEdits.Add(d, Square(d, "hill", LayerCombine.Add, 10, 40, 40, 2)));
+            session.Edit("Replace", d => HeightLayerEdits.SetCombine(d, "hill", LayerCombine.Replace));
+            Layer layer = session.Document.HeightStack.Layers[1];
+            Assert.AreEqual(LayerCombine.Replace, layer.Combine);
             Assert.IsNotNull(layer.Coverage);
             Assert.AreEqual(45, HeightAt(session.Document, 40, 40), 1e-3, "the hill stays");
             Assert.AreEqual(35, HeightAt(session.Document, 10, 10), 1e-3, "the rest does not become 0");
 
-            session.Edit("Add again", d => HeightLayerEdits.SetCombine(d, "hill", HeightCombine.Add));
+            session.Edit("Add again", d => HeightLayerEdits.SetCombine(d, "hill", LayerCombine.Add));
             Assert.AreEqual(45, HeightAt(session.Document, 40, 40), 1e-3);
-            Assert.AreEqual(0, session.Document.HeightLayers[1].Values[10, 10], 1e-3);
+            Assert.AreEqual(0, session.Document.HeightStack.Layers[1].Values![10, 10], 1e-3);
         }
 
         [TestMethod]
@@ -190,8 +190,8 @@ namespace FAForever.MapEditor.Project.Tests
         {
             EditSession session = new EditSession(Flat(35));
             session.Edit("Mask", d => MaskLayers.Add(d, "rivers"));
-            session.Edit("Add", d => HeightLayerEdits.Add(d, Square(d, "lift", HeightCombine.Add, 10, 128, 128, 100)));
-            session.Edit("Masked", d => HeightLayerEdits.SetMask(d, "lift", HeightLayers.MaskKey("rivers")));
+            session.Edit("Add", d => HeightLayerEdits.Add(d, Square(d, "lift", LayerCombine.Add, 10, 128, 128, 100)));
+            session.Edit("Masked", d => HeightLayerEdits.SetMask(d, "lift", LayerStacks.MaskKey("rivers")));
             MapDocument masked = session.Document;
             Assert.AreEqual(35, HeightAt(masked, 128, 128), 1e-3, "an empty mask: nothing");
 
@@ -205,15 +205,15 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsTrue(session.Document.Terrain.Heightmap.Samples.ChangedTiles(masked.Terrain.Heightmap.Samples).Count() <= 4, "only around the dab");
 
             session.Edit("Rename", d => MaskLayers.Rename(d, "rivers", "water"));
-            Assert.AreEqual(HeightLayers.MaskKey("water"), session.Document.HeightLayers[1].Mask, "a renamed mask stays the layer's");
+            Assert.AreEqual(LayerStacks.MaskKey("water"), session.Document.HeightStack.Layers[1].Clip, "a renamed mask stays the layer's");
         }
 
         [TestMethod]
         public void TheProjectKeepsTheLayersAndTheExportTakesTheirSum()
         {
             MapDocument document = HeightLayerEdits.Start(Flat(35));
-            document = HeightLayerEdits.Add(document, Square(document, "hill", HeightCombine.Add, 12.5f, 40, 40, 3));
-            document = HeightLayerEdits.Add(document, Square(document, "plateau", HeightCombine.Replace, 60, 90, 90, 5, covered: true));
+            document = HeightLayerEdits.Add(document, Square(document, "hill", LayerCombine.Add, 12.5f, 40, 40, 3));
+            document = HeightLayerEdits.Add(document, Square(document, "plateau", LayerCombine.Replace, 60, 90, 90, 5, covered: true));
             document = HeightLayerEdits.SetStrength(document, "plateau", 0.75f);
             document = HeightLayerEdits.SetLocked(document, "hill", true);
             HeightCurve curve = new HeightCurve { Profile = CurveProfile.Ridge, Width = 4, Falloff = 6, Points = [new CurvePoint(150, 50, 8), new CurvePoint(200, 80, 8), new CurvePoint(220, 140, 4)] };
@@ -222,21 +222,21 @@ namespace FAForever.MapEditor.Project.Tests
 
             string project = ProjectFolders.New("layers");
             MapProjectStore.Save(document, project);
-            Assert.IsTrue(File.Exists(Path.Combine(project, MapProjectLayout.HeightLayersIndex)));
-            Assert.IsTrue(File.Exists(Path.Combine(project, MapProjectLayout.HeightLayer("hill"))));
-            Assert.IsTrue(File.Exists(Path.Combine(project, MapProjectLayout.HeightLayerCoverage("plateau"))));
-            Assert.IsFalse(File.Exists(Path.Combine(project, MapProjectLayout.HeightLayer("ridge"))), "a curve's values follow from its curve");
+            Assert.IsTrue(File.Exists(Path.Combine(project, MapProjectLayout.HeightStackIndex)));
+            Assert.IsTrue(File.Exists(Path.Combine(project, MapProjectLayout.StackLayer("heightmap", "hill"))));
+            Assert.IsTrue(File.Exists(Path.Combine(project, MapProjectLayout.StackLayerCoverage("heightmap", "plateau"))));
+            Assert.IsFalse(File.Exists(Path.Combine(project, MapProjectLayout.StackLayer("heightmap", "ridge"))), "a curve's values follow from its curve");
 
             MapDocument loaded = MapProjectStore.Load(project);
-            CollectionAssert.AreEqual(document.HeightLayers.Select(layer => layer.Name).ToArray(), loaded.HeightLayers.Select(layer => layer.Name).ToArray());
-            Assert.AreEqual(0.75f, loaded.HeightLayers[2].Strength);
-            Assert.IsTrue(loaded.HeightLayers[1].Locked);
-            Assert.AreEqual(curve, loaded.HeightLayers[3].Curve);
+            CollectionAssert.AreEqual(document.HeightStack.Layers.Select(layer => layer.Name).ToArray(), loaded.HeightStack.Layers.Select(layer => layer.Name).ToArray());
+            Assert.AreEqual(0.75f, loaded.HeightStack.Layers[2].Strength);
+            Assert.IsTrue(loaded.HeightStack.Layers[1].Locked);
+            Assert.AreEqual(curve, loaded.HeightStack.Layers[3].Curve);
             CollectionAssert.AreEqual(document.Terrain.Heightmap.Samples.ToArray(), loaded.Terrain.Heightmap.Samples.ToArray(), "the same sum");
-            CollectionAssert.AreEqual(document.HeightLayers[1].Values.ToArray(), loaded.HeightLayers[1].Values.ToArray(), "differences survive the PNG");
+            CollectionAssert.AreEqual(document.HeightStack.Layers[1].Values!.ToArray(), loaded.HeightStack.Layers[1].Values!.ToArray(), "differences survive the PNG");
 
             // a save after a change writes only that layer
-            string hill = Path.Combine(project, MapProjectLayout.HeightLayer("hill"));
+            string hill = Path.Combine(project, MapProjectLayout.StackLayer("heightmap", "hill"));
             File.SetLastWriteTimeUtc(hill, new DateTime(2000, 1, 1));
             MapDocument changed = HeightLayers.Recomposite(HeightLayerEdits.SetStrength(loaded, "plateau", 0.5f));
             MapProjectStore.Save(changed, project, loaded);
@@ -250,7 +250,7 @@ namespace FAForever.MapEditor.Project.Tests
 
             // without layers the project has no index
             MapProjectStore.Save(HeightLayerEdits.Bake(changed), project, changed);
-            Assert.IsFalse(File.Exists(Path.Combine(project, MapProjectLayout.HeightLayersIndex)));
+            Assert.IsFalse(File.Exists(Path.Combine(project, MapProjectLayout.HeightStackIndex)));
             Assert.IsFalse(File.Exists(hill));
         }
 
@@ -268,7 +268,7 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(50, HeightAt(document, 10, 10), 1e-3, "an imported layer replaces");
             MapProjectStore.Save(document, project);
 
-            foreach (string file in new[] { MapProjectLayout.HeightLayersIndex, MapProjectLayout.HeightLayer("gaea"), "procedural/temp/gaea.png" })
+            foreach (string file in new[] { MapProjectLayout.HeightStackIndex, MapProjectLayout.StackLayer("heightmap", "gaea"), "procedural/temp/gaea.png" })
             {
                 Assert.AreSame(document, MapProjectStore.Reload(document, project, [file]), $"the editor's own files change nothing: {file}");
             }
@@ -282,7 +282,7 @@ namespace FAForever.MapEditor.Project.Tests
             ProjectImages.WriteGray16(Path.Combine(project, MapProjectLayout.Heightmap), 257, 257, Enumerable.Repeat((ushort)(20 * 128), 257 * 257).ToArray());
             MapDocument based = HeightLayers.Follow(hidden, MapProjectStore.Reload(hidden, project, [MapProjectLayout.Heightmap]), null);
             Assert.AreEqual(20, HeightAt(based, 10, 10), 1e-3);
-            Assert.AreEqual(20, based.HeightLayers[0].Values[10, 10], 1e-3);
+            Assert.AreEqual(20, based.HeightStack.Layers[0].Values![10, 10], 1e-3);
         }
 
         [TestMethod]
@@ -295,7 +295,7 @@ namespace FAForever.MapEditor.Project.Tests
             {
                 curve = curve with { Points = curve.Points.Add(point) };
                 session.Edit("Point", d => HeightLayerEdits.SetCurve(d, "ridge", curve));
-                CollectionAssert.AreEqual(HeightLayers.Recomposite(session.Document with { HeightLayers = [.. session.Document.HeightLayers] }).Terrain.Heightmap.Samples.ToArray(),
+                CollectionAssert.AreEqual(HeightLayers.Recomposite(session.Document with { HeightStack = session.Document.HeightStack with { Layers = [.. session.Document.HeightStack.Layers] } }).Terrain.Heightmap.Samples.ToArray(),
                     session.Document.Terrain.Heightmap.Samples.ToArray(), $"after {curve.Points.Length} points");
             }
         }
@@ -317,14 +317,14 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsTrue(session.Document.Terrain.Heightmap.Samples.ChangedTiles(before.Terrain.Heightmap.Samples).Count() < 16, "only near the curve");
 
             session.Edit("Road", d => HeightLayerEdits.SetCurve(d, "ridge", new HeightCurve { Profile = CurveProfile.Road, Width = 6, Falloff = 4, Points = [new CurvePoint(20, 20, 30), new CurvePoint(20, 120, 40)] }));
-            HeightLayer road = session.Document.HeightLayers[1];
-            Assert.AreEqual(HeightCombine.Replace, road.Combine, "a road replaces");
+            Layer road = session.Document.HeightStack.Layers[1];
+            Assert.AreEqual(LayerCombine.Replace, road.Combine, "a road replaces");
             Assert.AreEqual(30, HeightAt(session.Document, 20, 20), 1e-2);
             Assert.AreEqual(35, HeightAt(session.Document, 20, 70), 0.1, "half way between the points' heights");
             Assert.AreEqual(35, HeightAt(session.Document, 60, 70), 1e-3);
 
             session.Edit("Cliff", d => HeightLayerEdits.SetCurve(d, "ridge", new HeightCurve { Profile = CurveProfile.Cliff, Width = 8, Falloff = 10, Points = [new CurvePoint(100, 50, 20), new CurvePoint(100, 200, 20)] }));
-            session.Edit("Add", d => HeightLayerEdits.SetCombine(d, "ridge", HeightCombine.Add));
+            session.Edit("Add", d => HeightLayerEdits.SetCombine(d, "ridge", LayerCombine.Add));
             // walking down the map (z grows), the left in the top view is +x
             Assert.AreEqual(55, HeightAt(session.Document, 104, 120), 0.1, "high on the left");
             Assert.AreEqual(35, HeightAt(session.Document, 96, 120), 0.1, "low on the right");
@@ -365,7 +365,7 @@ namespace FAForever.MapEditor.Project.Tests
 
             EditedMap map = EditedMap.New(session.Document);
             map.SaveAs(ProjectFolders.New("mirrored-curve"));
-            HeightCurve kept = EditedMap.OpenProject(map.ProjectFolder!).Document.HeightLayers[1].Curve!;
+            HeightCurve kept = EditedMap.OpenProject(map.ProjectFolder!).Document.HeightStack.Layers[1].Curve!;
             Assert.AreEqual(cliff.Symmetry, kept.Symmetry, "the project keeps the curve's symmetry");
             Assert.AreEqual(55, HeightAt(EditedMap.OpenProject(map.ProjectFolder!).Document, 192, 120), 0.1);
         }

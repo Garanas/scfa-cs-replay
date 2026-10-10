@@ -1,5 +1,5 @@
-<!-- The Terrain panel's height layers (T-5): the stack, the highest first; the chosen one is what the sculpt tool writes into
-     and the inspector shows. A check box shows or hides a layer, another locks it. -->
+<!-- The Terrain panel's height layers (T-5): the stack control over the heightmap's stack, the highest first; the chosen
+     layer is what the sculpt tool writes into and the inspector shows. A check box shows or hides a layer, another locks it. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -9,40 +9,11 @@
   <Border Classes="group">
     <StackPanel Classes="stack">
       <TextBlock Classes="overline" Text="{Binding Source='Height layers', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-      <ListBox ItemsSource="{Binding HeightStack.Items}" SelectedItem="{Binding HeightStack.ChosenItem}" IsVisible="{Binding HeightStack.HasLayers}"
-               AutomationProperties.Name="Height layers"
-               AutomationProperties.HelpText="The highest first; the chosen layer is the one the sculpt tool writes into, its settings are in the inspector">
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:HeightLayerItem">
-            <DockPanel>
-              <CheckBox DockPanel.Dock="Left" Classes="boxonly" IsChecked="{Binding IsShown}" AutomationProperties.Name="{Binding Name, StringFormat='Show the height layer {0}'}" />
-              <CheckBox DockPanel.Dock="Right" Content="Lock" IsChecked="{Binding IsLocked}" AutomationProperties.Name="{Binding Name, StringFormat='Lock the height layer {0}'}" />
-              <StackPanel>
-                <TextBlock Text="{Binding Name}" />
-                <TextBlock Classes="caption" Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
-              </StackPanel>
-            </DockPanel>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-      <TextBlock Classes="caption" IsVisible="{Binding HeightStack.IsEmpty}"
-                 Text="None yet: the heightmap is the map's heights. A layer starts a stack over them: sculpt in a layer of its own, bring in World Machine or Gaea, draw curves; bake to end it." />
-      <TextBlock Classes="caption" Text="{Binding HeightStack.Summary}" IsVisible="{Binding HeightStack.HasLayers}" />
-      <WrapPanel Classes="chips">
-        <Button Content="Sculpt layer" Command="{Binding HeightStack.AddSculptCommand}" IsEnabled="{Binding HasMap}"
-                AutomationProperties.Name="Add a sculpting layer" AutomationProperties.HelpText="A layer the sculpt tool writes into, above the chosen one" />
-        <Button Content="Image..." Command="{Binding HeightStack.AddImageCommand}" IsEnabled="{Binding HasMap}"
-                AutomationProperties.Name="Add a heightmap image as a layer" AutomationProperties.HelpText="A heightmap of World Machine, Gaea or another tool, read again when it changes in the project folder" />
-        <Button Content="Curve" Command="{Binding HeightStack.AddCurveCommand}" IsEnabled="{Binding HasMap}"
-                AutomationProperties.Name="Draw a curve" AutomationProperties.HelpText="Chooses the curve tool: click in a view to start a curve layer" />
-      </WrapPanel>
+      <controls:LayerStackView DataContext="{Binding HeightStack}" CanAdd="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HasMap}"
+                               ListHelp="The highest first; the chosen layer is the one the sculpt tool writes into, its settings are in the inspector"
+                               EmptyText="None yet: the heightmap is the map's heights. A layer starts a stack over them: sculpt in a layer of its own, bring in World Machine or Gaea, draw curves; bake to end it."
+                               RemoveHelp="The base stays: bake to end the stack" />
       <WrapPanel Classes="chips" IsVisible="{Binding HeightStack.HasLayers}">
-        <Button Content="Up" Command="{Binding HeightStack.MoveUpCommand}" IsEnabled="{Binding HeightStack.CanMoveUp}"
-                AutomationProperties.Name="Move the height layer up" />
-        <Button Content="Down" Command="{Binding HeightStack.MoveDownCommand}" IsEnabled="{Binding HeightStack.CanMoveDown}"
-                AutomationProperties.Name="Move the height layer down" />
-        <Button Content="Remove" Command="{Binding HeightStack.RemoveCommand}" IsEnabled="{Binding HeightStack.CanRemove}"
-                AutomationProperties.Name="Remove the height layer" AutomationProperties.HelpText="The base stays: bake to end the stack" />
         <Button Content="Bake" Command="{Binding HeightStack.BakeCommand}"
                 AutomationProperties.Name="Bake the layers into the heightmap" AutomationProperties.HelpText="The heightmap keeps what the layers add up to, and the map has no layers" />
       </WrapPanel>

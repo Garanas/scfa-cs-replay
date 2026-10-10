@@ -1590,18 +1590,62 @@ upload and the sign-in.
 - Not built yet: choosing a licence (`licenseId`, the vault's default), a page with the vault's
   versions of the map, cancelling an upload under way.
 
+## Layer stacks: the stack control and previews
+
+Wave 8; the model is the library's (its guide, "Layer stacks"). Wave 9 builds the stratum, mask and
+water stacks and the draft and final heightmaps on these two pieces.
+
+- **The stack control** (`Controls/LayerStackView`, over a `ViewModels/LayerStackViewModel`): the
+  layers, the highest first, each a row with a show box, a preview, the name, a summary
+  (`Sculpt · add · 50 % · mask rivers`) and a lock box; buttons to add a layer by source
+  (`AddChoices`, each a `LayerAddChoice`: text, label, help, command and arguments), Up, Down and
+  Remove for the chosen layer; with `ShowsSettings` the chosen layer's `Layer` settings (name,
+  combine, strength, clip, shown, locked) under the list, for a stack in an inspector. Its labels
+  follow `LayerStackCommands.Word` (`Show the height layer Sculpt`, `Move the mask layer up`; the
+  list is named `Height layers`). `EmptyText`, `ListHelp`, `RemoveHelp` and `CanAdd` are the
+  view's.
+- **A stack of a new target** is a `LayerStackViewModel` made with the editor's `RunWithAsync`, a
+  function reading the stack from a document, its commands (`LayerStackCommands`: set, move,
+  remove; the layer's argument and the clip's argument and label) and its add choices; `Refresh`
+  it on `DocumentChanged` and `MapChanged`. Subclass it for what only that target has, as
+  `HeightLayersViewModel` does (curves, facts, bake, reading a file again; `Preferred`, `KindOf`,
+  `SummaryOfStack`, `RefreshSettings`). The commands are the target's own, one per operation
+  (`terrain.setLayer` and friends for the heightmap), each one step of undo with the layer named.
+- **The list follows a stroke cheaply**: it is made again only when the layers' names, settings or
+  files change; when only a layer's grids changed (a dab), each `StackLayerItem` stays and its
+  `Preview` follows (`FollowPreviews`), so the list keeps its selection and scroll.
+- **`ImagePreview`** (`Controls/ImagePreview`, in a `Border.thumbnail.imagepreview` of
+  `ImagePreviewSize`): a small picture of a `Rendering/PreviewPicture`, the whole picture in its
+  proportions, and the same picture `LargeSize` (512) pixels on its longer side in its tool tip
+  (placed right of it, over the views; its `LargeSize` of 0 means no tool tip). Pictures:
+  `CoveragePicture` (a byte grid in grey), `HeightPicture` (heights with the top view's ramp and
+  light from the north-west; `Differences` grey at 0, lighter up, darker down; a coverage shows a
+  dark checker where there is none of the layer), `HeightmapPicture` (the heightmap's samples, for
+  9A's draft and final), `FilePicture` (an image file read at the size asked, for stratum textures,
+  cube maps and map-wide decals), and `PreviewPicture.OfLayer(document, stack, layer)` for a layer
+  of any stack (a mask reference shows its mask). `ImagePreview.Cache` keeps one bitmap per grid
+  (weakly: a grid no version holds takes its pictures along), way of drawing and size step (32, 64,
+  128, 256, 512), so a preview is drawn once per version of its grid (span `preview.render`, about
+  0.1 ms at 32 pixels); files by path, size and the time they were written. Wave 9 uses it for the
+  masks list, every stack's layers (through the stack control), the draft and final heightmaps
+  (`HeightmapPicture`), stratum textures and water maps, map-wide decals and cube maps.
+- Automation: `ui` lists each preview as `ImagePreview` with its label (`Preview of the height layer
+  Base`). The tool tip is a popup: `screenshot` and `ui` do not reach it; the headless test
+  `LayerStackControlTest` captures the large picture (`captures/height-layer-preview-large.png`).
+
 ## Height layers and curves
 
 User stories T-5 and T-4; the library does the work (its guide, "Height layers and curves").
 
-- `MainViewModel.HeightStack` (`HeightLayersViewModel`, `ViewModels/MainViewModel.HeightLayers.cs`):
-  the Terrain panel's list (`Views/MapPanels/HeightLayersPanel`, the highest first, a check box to
-  show, one to lock) and the chosen layer, which is the session's `SculptLayer`: the sculpt tool
-  writes into it, and refuses with the reason in the status line when it cannot
-  (`HeightLayers.SculptProblem`). The inspector's "Layer or curve" (`HeightLayerPanel`) shows its
-  settings (`SettingGroup`s `Layer` and `Curve`, made again when the map's masks change). The list
-  is made again only when what it shows changes, not with each dab.
-- Commands: `terrain.addLayer {kind?: sculpt|imported|curve, name?, path?, combine?}` (above the
+- `MainViewModel.HeightStack` (`HeightLayersViewModel`, a `LayerStackViewModel`,
+  `ViewModels/MainViewModel.HeightLayers.cs`): the Terrain panel's stack control
+  (`Views/MapPanels/HeightLayersPanel`, with Bake under it) and the chosen layer, which is the
+  session's `SculptLayer`: the sculpt tool writes into it, and refuses with the reason in the status
+  line when it cannot (`HeightLayers.SculptProblem`). The inspector's "Layer or curve"
+  (`HeightLayerPanel`) shows its settings (`SettingGroup`s `Layer` and `Curve`, made again when the
+  map's masks change; the clip is labelled `Mask`).
+- Commands: `terrain.addLayer {kind?: sculpt|imported|curve, name?, path?, combine?}` (combine also
+  `Subtract` and `Multiply`; above the
   chosen layer; the first starts the stack), `terrain.addCurve {points, profile?, width?, falloff?,
   height?, closed?, name?}`, `terrain.setCurve {layer?, profile?, width?, falloff?, height?, closed?,
   points?}` (a field typed again is one step, points a step each), `terrain.setLayer {layer?, name?,
@@ -1617,7 +1661,8 @@ User stories T-5 and T-4; the library does the work (its guide, "Height layers a
   of at most two ogrids so the line follows the ground (`TerrainViewGpu.TerrainLine`), and the
   tool works there as in the top view (on the ground under the mouse).
 - Automation: `state.heightLayers` (chosen, the session's sculpt layer, the sculpt problem, the
-  layers with their settings and curves, the curve tool's settings).
+  layers with their settings and curves, the curve tool's settings; each layer's `kind` as before,
+  `Base`, `Sculpt`, `Imported`, `Curve`, and its `sourceKind`, `painted`, `image`, `curve`, `mask`).
 - On an 81 km map: adding the first layer 0.2 s, a stroke's move about 30 ms, a curve edit 0.3 to
   0.7 s with the views' own reaction to the new heights (debug build).
 - Not built yet: a height per point by hand in the views, exporting a layer for World Machine or

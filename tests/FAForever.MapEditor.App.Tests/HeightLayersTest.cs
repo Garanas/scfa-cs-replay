@@ -57,7 +57,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreSame(opened.Terrain.Heightmap.Samples, model.Map.Document.Terrain.Heightmap.Samples, "a new layer changes no height");
 
             float before = HeightAt(model, 100, 100);
-            TiledBuffer<float> baseValues = model.Map.Document.HeightLayers[0].Values;
+            TiledBuffer<float> baseValues = model.Map.Document.HeightStack.Layers[0].Values!;
             model.SelectTool("terrain.sculpt");
             SculptTool sculpt = model.Tool<SculptTool>();
             sculpt.Mode = HeightBrushMode.Raise;
@@ -67,8 +67,8 @@ namespace FAForever.MapEditor.App.Tests
             model.Stroke([(100, 100), (104, 100)]);
             Assert.AreEqual(steps + 1, model.History.Count, "one step");
             Assert.IsTrue(HeightAt(model, 100, 100) > before + 1, "the terrain rose");
-            Assert.AreSame(baseValues, model.Map.Document.HeightLayers[0].Values, "the base is untouched");
-            Assert.IsTrue(model.Map.Document.HeightLayers[1].Values[100, 100] > 1, "the sculpting layer holds the change");
+            Assert.AreSame(baseValues, model.Map.Document.HeightStack.Layers[0].Values, "the base is untouched");
+            Assert.IsTrue(model.Map.Document.HeightStack.Layers[1].Values![100, 100] > 1, "the sculpting layer holds the change");
 
             // hidden, it counts for nothing and takes no stroke
             await Run(model, "terrain.setLayer", new JsonObject { ["visible"] = false });
@@ -80,7 +80,7 @@ namespace FAForever.MapEditor.App.Tests
             model.Undo();
 
             await Run(model, "terrain.bake");
-            Assert.IsTrue(model.Map.Document.HeightLayers.IsEmpty);
+            Assert.IsTrue(model.Map.Document.HeightStack.IsEmpty);
             Assert.IsTrue(model.HeightStack.IsEmpty);
             Assert.IsTrue(HeightAt(model, 100, 100) > before + 1, "the sum stays");
             model.Undo();
@@ -99,24 +99,24 @@ namespace FAForever.MapEditor.App.Tests
             NumberSetting strength = Setting<NumberSetting>(stack.Layer, "Strength");
             strength.Value = 0.6;
             strength.Value = 0.5;
-            Assert.AreEqual(0.5f, model.Map!.Document.HeightLayers[1].Strength);
+            Assert.AreEqual(0.5f, model.Map!.Document.HeightStack.Layers[1].Strength);
             Assert.AreEqual(steps + 1, model.History.Count, "a slider dragged is one step");
 
             Setting<ChoiceSetting>(stack.Layer, "Combine").Chosen = "Maximum";
-            Assert.AreEqual(HeightCombine.Maximum, model.Map.Document.HeightLayers[1].Combine);
+            Assert.AreEqual(LayerCombine.Maximum, model.Map.Document.HeightStack.Layers[1].Combine);
             ChoiceSetting mask = Setting<ChoiceSetting>(stack.Layer, "Mask");
             CollectionAssert.Contains(mask.Choices.ToArray(), "mask rivers");
             mask.Chosen = "mask rivers";
-            Assert.AreEqual(HeightLayers.MaskKey("rivers"), model.Map.Document.HeightLayers[1].Mask);
+            Assert.AreEqual(LayerStacks.MaskKey("rivers"), model.Map.Document.HeightStack.Layers[1].Clip);
             mask.Chosen = HeightLayersViewModel.Everywhere;
-            Assert.IsNull(model.Map.Document.HeightLayers[1].Mask);
+            Assert.IsNull(model.Map.Document.HeightStack.Layers[1].Clip);
 
             Setting<TextSetting>(stack.Layer, "Name").Text = "Hills";
             Assert.AreEqual("Hills", stack.Chosen, "the renamed layer stays chosen");
             Assert.AreEqual("Hills", model.Map.Session.SculptLayer);
 
             stack.Items.Single(item => item.Name == "Hills").IsLocked = true;
-            Assert.IsTrue(model.Map.Document.HeightLayers[1].Locked);
+            Assert.IsTrue(model.Map.Document.HeightStack.Layers[1].Locked);
             model.SelectTool("terrain.sculpt");
             int before = model.History.Count;
             model.Stroke([(50, 50)]);
@@ -190,13 +190,13 @@ namespace FAForever.MapEditor.App.Tests
             float there = HeightAt(model, 140, 150);
 
             model.Stroke([(40, 100)]);
-            Assert.AreEqual(1, model.Map!.Document.HeightLayers.Count(layer => layer.Kind == HeightLayerKind.Curve), "the first click starts a curve layer");
+            Assert.AreEqual(1, model.Map!.Document.HeightStack.Layers.Count(layer => layer.Source is CurveSource), "the first click starts a curve layer");
             Assert.AreEqual("Ridge", model.HeightStack.Chosen);
             model.Stroke([(80, 100)]);
             model.Stroke([(120, 110)]);
-            HeightCurve curve = model.Map.Document.HeightLayers[^1].Curve!;
+            HeightCurve curve = model.Map.Document.HeightStack.Layers[^1].Curve!;
             Assert.AreEqual(3, curve.Points.Length, "each click adds a point");
-            Assert.AreEqual(15, model.Map.Document.HeightLayers[^1].Values[60, 100], 0.01, "the ridge's layer");
+            Assert.AreEqual(15, model.Map.Document.HeightStack.Layers[^1].Values![60, 100], 0.01, "the ridge's layer");
             Assert.AreEqual(before + 15, HeightAt(model, 60, 100), 0.2, "the ridge rises along it");
             Assert.AreEqual(3, tool.Marks!.Handles.Count);
             Assert.IsTrue(tool.Marks.Path!.Count > 3, "the view draws the spline");
@@ -205,24 +205,24 @@ namespace FAForever.MapEditor.App.Tests
             int steps = model.History.Count;
             model.Stroke([(120, 110), (130, 130), (140, 150)]);
             Assert.AreEqual(steps + 1, model.History.Count);
-            Assert.AreEqual(new CurvePoint(140, 150, 15), model.Map.Document.HeightLayers[^1].Curve!.Points[2]);
+            Assert.AreEqual(new CurvePoint(140, 150, 15), model.Map.Document.HeightStack.Layers[^1].Curve!.Points[2]);
             Assert.AreEqual(there + 15, HeightAt(model, 140, 150), 0.2);
 
             // control and a click removes a point
             tool.Press(80, 100, new ToolInput(ToolModifiers.Control, 0.5f));
             tool.Release();
-            Assert.AreEqual(2, model.Map.Document.HeightLayers[^1].Curve!.Points.Length);
+            Assert.AreEqual(2, model.Map.Document.HeightStack.Layers[^1].Curve!.Points.Length);
 
             // the inspector changes the curve
             Setting<NumberSetting>(model.HeightStack.Curve, "Height").Text = "5";
-            Assert.AreEqual(5, model.Map.Document.HeightLayers[^1].Curve!.Points[0].Height);
+            Assert.AreEqual(5, model.Map.Document.HeightStack.Layers[^1].Curve!.Points[0].Height);
             Setting<ChoiceSetting>(model.HeightStack.Curve, "Profile").Chosen = "Valley";
-            Assert.AreEqual(CurveProfile.Valley, model.Map.Document.HeightLayers[^1].Curve!.Profile);
+            Assert.AreEqual(CurveProfile.Valley, model.Map.Document.HeightStack.Layers[^1].Curve!.Profile);
 
             // Escape: the next click starts another curve
             Assert.IsTrue(tool.Key("Escape", ToolModifiers.None));
             model.Stroke([(200, 200)]);
-            Assert.AreEqual(2, model.Map.Document.HeightLayers.Count(layer => layer.Kind == HeightLayerKind.Curve));
+            Assert.AreEqual(2, model.Map.Document.HeightStack.Layers.Count(layer => layer.Source is CurveSource));
         }
     }
 }

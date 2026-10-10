@@ -237,8 +237,9 @@ reads again when it changes; and nothing that generates runs by itself.
       editor, bake it with the external tool, take the result back as a layer. Today: the Terrain
       panel's stack (the sculpt tool writes into the chosen layer, the heightmap follows tile by
       tile), the inspector's settings, imported layers read again when their file changes, bake;
-      kept in the project's `layers/`. Missing: exporting a layer for the external tool, merging
-      two layers.
+      the heightmap's stack is the first of the layer stacks (also subtract and multiply, a preview
+      per layer, larger in its tool tip), kept in the project's `stacks/heightmap.json` (format 6).
+      Missing: exporting a layer for the external tool, merging two layers.
 - [x] **T-6 Terrain types.** Paint the terrain type of each ogrid (what the game uses for footsteps
       and effects), from the list of types with their colours. Today: the Terrain types tool sets
       the chosen type where the brush works at least half; the top view shows every ogrid's type in

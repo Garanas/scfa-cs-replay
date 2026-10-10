@@ -97,7 +97,7 @@ namespace FAForever.MapEditor.App.Tests
 
             Click(window, OnMap(window, 60, 60));
             Click(window, OnMap(window, 120, 80));
-            HeightCurve curve = model.Map!.Document.HeightLayers[^1].Curve!;
+            HeightCurve curve = model.Map!.Document.HeightStack.Layers[^1].Curve!;
             Assert.AreEqual(2, curve.Points.Length, "two clicks, two points");
             StringAssert.Contains(model.Map.Session.UndoDescription, "add a point", "the history says a point was added");
             Assert.AreEqual(60, curve.Points[0].X, 1.5);
@@ -113,13 +113,13 @@ namespace FAForever.MapEditor.App.Tests
             window.MouseUp(to, MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
             Assert.AreEqual(steps + 1, model.History.Count);
-            CurvePoint moved = model.Map.Document.HeightLayers[^1].Curve!.Points[1];
+            CurvePoint moved = model.Map.Document.HeightStack.Layers[^1].Curve!.Points[1];
             Assert.AreEqual(150, moved.X, 1.5);
             Assert.AreEqual(130, moved.Z, 1.5);
 
             // control and a click removes it
             Click(window, to, RawInputModifiers.Control);
-            Assert.AreEqual(1, model.Map.Document.HeightLayers[^1].Curve!.Points.Length);
+            Assert.AreEqual(1, model.Map.Document.HeightStack.Layers[^1].Curve!.Points.Length);
             window.Close();
         });
     }

@@ -40,9 +40,9 @@ public sealed class ImportHeightmapHandler(MainViewModel model, IEditorDialogs d
         }, cancellationToken);
         Heightmap heights = imported.Terrain.Heightmap;
         // with height layers (T-5) the file becomes the base layer, and the heightmap follows
-        model.EditMap($"Import the heightmap {System.IO.Path.GetFileName(path)}", imported.HeightLayers.IsEmpty
+        model.EditMap($"Import the heightmap {System.IO.Path.GetFileName(path)}", imported.HeightStack.IsEmpty
             ? d => d with { Terrain = d.Terrain with { Heightmap = heights } }
-            : d => d with { HeightLayers = imported.HeightLayers });
+            : d => d with { HeightStack = imported.HeightStack });
         double milliseconds = Math.Round(Stopwatch.GetElapsedTime(start).TotalMilliseconds);
         EditorMetrics.OperationDuration.Record(milliseconds, EditorMetrics.Tag("operation", "import-heightmap"), EditorMetrics.Tag("result", "ok"));
         string resampled = original == (heights.Samples.Width, heights.Samples.Height)

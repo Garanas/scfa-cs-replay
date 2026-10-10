@@ -735,6 +735,12 @@
     <Setter Property="Width" Value="{StaticResource AssetTooltipPreviewSize}" />
     <Setter Property="Height" Value="{StaticResource AssetTooltipPreviewSize}" />
   </Style>
+  <!-- the small picture of a grid or file (ImagePreview), larger in its tool tip: a layer of a stack, a mask -->
+  <Style Selector="Border.imagepreview">
+    <Setter Property="Width" Value="{StaticResource ImagePreviewSize}" />
+    <Setter Property="Height" Value="{StaticResource ImagePreviewSize}" />
+    <Setter Property="Margin" Value="{StaticResource ImagePreviewGap}" />
+  </Style>
 
   <!-- a list of many short lines: the Console -->
   <Style Selector="ListBox.log ListBoxItem">

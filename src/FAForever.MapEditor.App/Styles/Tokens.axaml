@@ -300,6 +300,9 @@
   <x:Double x:Key="ToolFieldWidth">52</x:Double>
   <!-- a choice of many long names in the tool options (a terrain type) -->
   <x:Double x:Key="ToolChoiceWidth">180</x:Double>
+  <!-- the small picture of an ImagePreview: a layer of a stack, a mask -->
+  <x:Double x:Key="ImagePreviewSize">32</x:Double>
+  <Thickness x:Key="ImagePreviewGap">0,0,8,0</Thickness>
   <!-- a colour of the map's data (a terrain type's) in a legend or list -->
   <x:Double x:Key="SwatchSize">12</x:Double>
   <x:Double x:Key="TabHeight">30</x:Double>

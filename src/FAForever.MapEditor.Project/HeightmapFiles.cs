@@ -131,7 +131,7 @@ namespace FAForever.MapEditor.Project
             ushort[] resampled = ReadResampled(document, path, out original);
             int toWidth = document.Width + 1;
             int toHeight = document.Height + 1;
-            if (!document.HeightLayers.IsEmpty)
+            if (!document.HeightStack.IsEmpty)
             {
                 return HeightLayerEdits.SetBase(document, TiledBuffer<ushort>.FromArray(toWidth, toHeight, resampled));
             }
