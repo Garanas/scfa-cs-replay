@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
@@ -11,7 +12,9 @@ namespace FAForever.MapEditor.App.Tools;
 /// points, seen from the middle of the map. The direction from the middle to the mouse is the
 /// azimuth; the distance is the elevation, straight up at the middle and low over the horizon at
 /// half the map's size from it. A drag is one step of undo, and the 3D view is lit by it while
-/// the mouse moves. The top view draws the line from the middle to the sun.
+/// the mouse moves. The top view draws the line from the middle to the sun; the 3D view an arrow
+/// from the middle of the map towards the sun, whose head can be dragged across the sky: the sun
+/// then stands where the mouse points on the sphere the head moves on.
 /// </summary>
 public sealed partial class SunTool(MainViewModel model) : ObservableObject, IMapTool
 {
@@ -20,8 +23,102 @@ public sealed partial class SunTool(MainViewModel model) : ObservableObject, IMa
     /// </summary>
     public const double LowestElevation = 5;
 
+    /// <summary>
+    /// How far, in pixels, the mouse may be from the arrow's head in 3D to take it.
+    /// </summary>
+    private const float HeadPixels = 10;
+
     private EditTransaction? _turn;
     private MapDocument? _before;
+    private bool _head;
+    private ToolView? _view;
+
+    /// <summary>
+    /// Whether the mouse is over the arrow's head in 3D (when the view last drew) or drags it.
+    /// </summary>
+    public bool HeadHovered { get; private set; }
+
+    /// <summary>
+    /// The 3D view's arrow: from the middle of the map on the terrain towards the sun, a quarter of
+    /// the map's size long.
+    /// </summary>
+    public static (Vector3 From, Vector3 To) Arrow(MapDocument document)
+    {
+        float x = document.Width / 2f;
+        float z = document.Height / 2f;
+        Vector3 from = new Vector3(x, document.Terrain.Heightmap.HeightAt(x, z), z);
+        Vector3 sun = document.Lighting.SunDirection.LengthSquared() > 0 ? Vector3.Normalize(document.Lighting.SunDirection) : Vector3.UnitY;
+        return (from, from + sun * ArrowLength(document));
+    }
+
+    private static float ArrowLength(MapDocument document) => Math.Min(document.Width, document.Height) / 4f;
+
+    /// <summary>
+    /// The sun's direction for a ray: towards where it meets the sphere the arrow's head moves on
+    /// (or the point of the ray nearest the sphere's middle when it misses), never lower than
+    /// <see cref="LowestElevation"/>.
+    /// </summary>
+    public static Vector3 DirectionAt(MapDocument document, Vector3 origin, Vector3 direction)
+    {
+        (Vector3 centre, _) = Arrow(document);
+        float radius = ArrowLength(document);
+        Vector3 d = Vector3.Normalize(direction);
+        Vector3 oc = origin - centre;
+        float b = Vector3.Dot(oc, d);
+        float c = oc.LengthSquared() - radius * radius;
+        float discriminant = b * b - c;
+        float t = discriminant >= 0 ? -b - MathF.Sqrt(discriminant) : MathF.Max(-b, 0);
+        if (t < 0)
+        {
+            t = -b + MathF.Sqrt(MathF.Max(discriminant, 0));
+        }
+        Vector3 towards = origin + d * t - centre;
+        if (towards.LengthSquared() < 1e-9f)
+        {
+            return Vector3.UnitY;
+        }
+        (double azimuth, double elevation) = SunAngles.Of(Vector3.Normalize(towards));
+        return SunAngles.Direction(azimuth, Math.Clamp(elevation, LowestElevation, 90));
+    }
+
+    public IReadOnlyList<ToolShape> Shapes(ToolView view)
+    {
+        if (view.IsTopDown || model.ShownDocument is not MapDocument document)
+        {
+            return [];
+        }
+        (Vector3 from, Vector3 to) = Arrow(document);
+        if (view.ToScreen(from) is not Vector2 start || view.ToScreen(to) is not Vector2 head)
+        {
+            return [];
+        }
+        HeadHovered = _turn is not null ? _head : view.Mouse is Vector2 mouse && Vector2.Distance(mouse, head) <= HeadPixels;
+        return
+        [
+            new ToolLine([start, head], false, 5, ToolInk.Shadow),
+            new ToolLine([start, head], false, 3, ToolInk.Sun),
+            new ToolSquare(head, 6, HeadHovered ? ToolInk.Hover : ToolInk.Sun, ToolInk.Shadow),
+        ];
+    }
+
+    public void Press(float x, float z, ToolInput input)
+    {
+        _head = false;
+        _view = null;
+        if (input.View is { IsTopDown: false, Mouse: Vector2 mouse } view && model.ShownDocument is MapDocument document
+            && view.ToScreen(Arrow(document).To) is Vector2 head && Vector2.Distance(mouse, head) <= HeadPixels)
+        {
+            _head = true;
+            _view = view;
+        }
+        Press(x, z);
+    }
+
+    public void Drag(float x, float z, ToolInput input)
+    {
+        _view = input.View ?? _view;
+        Drag(x, z);
+    }
 
     public double CursorRadius => 0;
 
@@ -109,8 +206,19 @@ public sealed partial class SunTool(MainViewModel model) : ObservableObject, IMa
         {
             return;
         }
-        (double azimuth, double elevation) = AnglesAt(before, x, z);
-        System.Numerics.Vector3 direction = SunAngles.Direction(azimuth, elevation);
+        Vector3 direction;
+        double azimuth;
+        double elevation;
+        if (_head && _view?.Ray is (Vector3 origin, Vector3 ray))
+        {
+            direction = DirectionAt(before, origin, ray);
+            (azimuth, elevation) = SunAngles.Of(direction);
+        }
+        else
+        {
+            (azimuth, elevation) = AnglesAt(before, x, z);
+            direction = SunAngles.Direction(azimuth, elevation);
+        }
         _turn!.Apply(_ => before with { Lighting = before.Lighting with { SunDirection = direction } });
         Angles = Describe(azimuth, elevation);
         model.Status = Angles;

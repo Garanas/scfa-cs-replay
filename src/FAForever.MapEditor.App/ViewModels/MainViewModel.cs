@@ -131,6 +131,7 @@ public sealed partial class MainViewModel : ObservableObject
         Props = new PropsViewModel(this);
         InitializePainting();
         InitializeMapPanels();
+        InitializeHandles();
     }
 
     /// <summary>
@@ -183,6 +184,11 @@ public sealed partial class MainViewModel : ObservableObject
     /// The symmetry edits are mirrored by, and whose guides the top view draws (user story F-12).
     /// </summary>
     public SymmetryViewModel Symmetry { get; }
+
+    /// <summary>
+    /// How the handles of the selection work: shown, the pivot, the snap (user story F-11).
+    /// </summary>
+    public HandleSettings Handles { get; } = new HandleSettings();
 
     /// <summary>
     /// What is generated when asked, and which results are out of date (user story F-7).

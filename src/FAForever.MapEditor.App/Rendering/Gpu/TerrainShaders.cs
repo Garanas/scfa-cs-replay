@@ -391,4 +391,119 @@ internal static class TerrainShaders
             outColor = vec4(clamp(mix(vec3(1.0), factor, opacity) * 0.5, 0.0, 1.0), 1.0);
         }
         """;
+
+    /// <summary>
+    /// What the 3D view lays over the terrain (user story V-3), drawn on the whole lattice of the
+    /// terrain, made as the terrain makes it, so the two are one surface at any distance.
+    /// </summary>
+    public static string OverlayVertex(bool es) => Header(es) + Heights + Lattice + """
+        layout(location = 0) in vec2 aCorner;
+        out vec3 vWorld;
+
+        void main()
+        {
+            vWorld = latticePlace(aCorner);
+            gl_Position = uViewProjection * vec4(vWorld, 1.0);
+        }
+        """;
+
+    /// <summary>
+    /// The overlays, premultiplied, each over the one before: the shade outside the playable area,
+    /// walkability (one texel an ogrid, its colours made on the processor), the grid being painted
+    /// or the mask for tools (its colours made on the processor), the areas' outlines two pixels
+    /// wide (the selected ones in the selection's colour, the one under the mouse lighter), and the
+    /// symmetry's guides, dashed.
+    /// </summary>
+    public static string OverlayFragment(bool es) => Header(es) + """
+        in vec3 vWorld;
+        out vec4 outColor;
+        uniform vec2 uMapSize;
+        uniform int uWalk;
+        uniform sampler2D uWalkTexture;
+        uniform int uGrid;
+        uniform sampler2D uGridTexture;
+        uniform int uAreaCount;
+        uniform vec4 uAreas[32];
+        // 0 an area, 1 selected, 2 under the mouse
+        uniform float uAreaStates[32];
+        uniform vec4 uAreaColor;
+        uniform vec4 uSelectionColor;
+        uniform vec4 uHoverColor;
+        uniform vec4 uOutside;
+        uniform int uShade;
+        uniform int uGuideCount;
+        uniform vec4 uGuides[8];
+        uniform vec4 uGuideColor;
+        uniform vec4 uShadowColor;
+
+        vec4 over(vec4 below, vec4 above)
+        {
+            return above + below * (1.0 - above.a);
+        }
+
+        void main()
+        {
+            vec2 p = vWorld.xz;
+            vec2 pixel = max(fwidth(p), vec2(1e-5));
+            vec4 color = vec4(0.0);
+            if (uShade == 1 && uAreaCount > 0)
+            {
+                vec4 a = uAreas[0];
+                if (p.x < min(a.x, a.z) || p.x > max(a.x, a.z) || p.y < min(a.y, a.w) || p.y > max(a.y, a.w))
+                {
+                    color = over(color, vec4(uOutside.rgb * uOutside.a, uOutside.a));
+                }
+            }
+            if (uWalk == 1)
+            {
+                ivec2 size = textureSize(uWalkTexture, 0);
+                color = over(color, texelFetch(uWalkTexture, clamp(ivec2(floor(p)), ivec2(0), size - 1), 0));
+            }
+            if (uGrid == 1)
+            {
+                color = over(color, texture(uGridTexture, p / uMapSize));
+            }
+            for (int i = 0; i < uAreaCount; i++)
+            {
+                vec4 a = uAreas[i];
+                vec2 low = min(a.xy, a.zw);
+                vec2 high = max(a.xy, a.zw);
+                vec2 inside = min(p - low, high - p) / pixel;
+                float d = min(inside.x, inside.y);
+                vec2 outside = max(max(low - p, p - high), vec2(0.0)) / pixel;
+                float outer = length(outside);
+                float distance = d >= 0.0 ? d : outer;
+                float width = uAreaStates[i] > 0.5 || i == 0 ? 2.5 : 1.5;
+                if (distance < width + 1.0)
+                {
+                    vec4 line = uAreaStates[i] > 1.5 ? uHoverColor : uAreaStates[i] > 0.5 ? uSelectionColor : uAreaColor;
+                    float alpha = line.a * (distance < width ? 1.0 : 0.6);
+                    // a dark edge outside the line, so it shows on light ground
+                    vec4 shown = distance < width ? vec4(line.rgb * alpha, alpha) : vec4(uShadowColor.rgb * uShadowColor.a * 0.6, uShadowColor.a * 0.6);
+                    color = over(color, shown);
+                }
+            }
+            for (int i = 0; i < uGuideCount; i++)
+            {
+                vec2 a = uGuides[i].xy;
+                vec2 b = uGuides[i].zw;
+                vec2 ab = b - a;
+                float t = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+                vec2 d = (p - (a + ab * t)) / pixel;
+                float distance = length(d);
+                float along = t * length(ab) / max(pixel.x, pixel.y);
+                if (distance < 2.5)
+                {
+                    bool dash = mod(along, 14.0) < 8.0;
+                    vec4 line = distance < 1.0 && dash ? vec4(uGuideColor.rgb * uGuideColor.a, uGuideColor.a) : vec4(uShadowColor.rgb * uShadowColor.a, uShadowColor.a);
+                    color = over(color, line);
+                }
+            }
+            if (color.a < 0.004)
+            {
+                discard;
+            }
+            outColor = color;
+        }
+        """;
 }

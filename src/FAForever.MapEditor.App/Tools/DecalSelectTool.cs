@@ -77,6 +77,13 @@ public sealed partial class DecalSelectTool : ObservableObject, IMapTool
     public (float X0, float Z0, float X1, float Z1)? Box => _select.Box;
 
     /// <summary>
+    /// The select tool it wraps, which holds the handles of the selection.
+    /// </summary>
+    public SelectTool Select => _select;
+
+    public IReadOnlyList<ToolShape> Shapes(ToolView view) => _select.Shapes(view);
+
+    /// <summary>
     /// What the options bar says about using it.
     /// </summary>
     public string Help => "Click to select, shift adds, control toggles; drag a box; drag the selection to move or scale it (S: the next drag mode); Q and E turn, plus and minus scale, the arrows move, Delete removes";
@@ -90,6 +97,13 @@ public sealed partial class DecalSelectTool : ObservableObject, IMapTool
         _input = input;
         _scaling = false;
         _dragging = false;
+        // the handles before what lies under them
+        // (in a scale drag mode the decal under the middle square scales, as without handles)
+        if (_select.HandleAt(x, z, input) is { IsNone: false } part && !(part.Kind == HandleKind.Move && DragMode != DecalDrag.Move))
+        {
+            _select.Press(x, z, input);
+            return;
+        }
         if (DragMode != DecalDrag.Move && _model.ShownDocument is MapDocument document)
         {
             ObjectRef? under = input.Picks

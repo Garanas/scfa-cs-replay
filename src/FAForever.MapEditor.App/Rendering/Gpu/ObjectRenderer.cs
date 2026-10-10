@@ -23,6 +23,7 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 /// <param name="MissingColor">The colour of the box that stands in for a model the workspace does
 /// not have, from the theme.</param>
 /// <param name="MarkerKinds">The kinds of markers that show, of those <paramref name="Markers"/> and <paramref name="PathNodes"/> show (user story R-6).</param>
+/// <param name="Hovered">The object under the mouse, drawn lightly highlighted; null for none.</param>
 internal sealed record ObjectFrame(
     AssetCatalog Catalog,
     bool Props,
@@ -33,7 +34,19 @@ internal sealed record ObjectFrame(
     Vector3 Eye,
     Vector3 HighlightColor,
     Vector3 MissingColor,
-    MarkerKinds MarkerKinds = MarkerKinds.All);
+    MarkerKinds MarkerKinds = MarkerKinds.All,
+    ObjectRef? Hovered = null)
+{
+    /// <summary>
+    /// How strongly an object is highlighted: 1 selected, less under the mouse, else 0.
+    /// </summary>
+    public float HighlightOf(ObjectRef thing) => Highlighted?.Contains(thing) == true ? 1 : Hovered == thing ? HoverStrength : 0;
+
+    /// <summary>
+    /// How strongly the object under the mouse is highlighted.
+    /// </summary>
+    public const float HoverStrength = 0.45f;
+}
 
 /// <summary>
 /// Draws the objects on the map: the props and units with their models (<see cref="ObjectModels"/>),
@@ -129,8 +142,8 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         if (frame.Props)
         {
             using Performance.Span measure = Performance.Measure("3d.draw-props");
-            _props.Update((document.Props, frame.Highlighted), () => document.Props.Select(prop =>
-                (prop.Blueprint, ObjectPlacement.Prop(prop), frame.Highlighted?.Contains(ObjectRef.Prop(prop.Id)) == true)));
+            _props.Update((document.Props, frame.Highlighted, frame.Hovered), () => document.Props.Select(prop =>
+                (prop.Blueprint, ObjectPlacement.Prop(prop), frame.HighlightOf(ObjectRef.Prop(prop.Id)))));
             _props.Arrange(blueprint => _models.Get(blueprint, frame.Catalog, out _), viewProjection, frame.Eye, _models.Loaded);
             (int drawn, int runs, int boxes) = DrawRuns(_props, frame);
             props = drawn;
@@ -140,8 +153,8 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         if (frame.Units)
         {
             using Performance.Span measure = Performance.Measure("3d.draw-units");
-            _units.Update((document.Armies, frame.Highlighted), () => ObjectPlacement.Units(document).Select(placed =>
-                (placed.Unit.Blueprint, ObjectPlacement.Unit(placed.Unit), frame.Highlighted?.Contains(ObjectRef.Unit(placed.Unit.Name)) == true)));
+            _units.Update((document.Armies, frame.Highlighted, frame.Hovered), () => ObjectPlacement.Units(document).Select(placed =>
+                (placed.Unit.Blueprint, ObjectPlacement.Unit(placed.Unit), frame.HighlightOf(ObjectRef.Unit(placed.Unit.Name)))));
             _units.Arrange(blueprint => _models.Get(blueprint, frame.Catalog, out _), viewProjection, frame.Eye, _models.Loaded);
             (int drawn, int runs, int boxes) = DrawRuns(_units, frame);
             units = drawn;
@@ -268,7 +281,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
 
     private void UpdateMarkers(MapDocument document, ObjectFrame frame)
     {
-        object key = (document.Markers, document.Terrain.Heightmap, frame.Markers, frame.PathNodes, frame.Highlighted, frame.MarkerKinds);
+        object key = (document.Markers, document.Terrain.Heightmap, frame.Markers, frame.PathNodes, frame.Highlighted, frame.MarkerKinds, frame.Hovered);
         if (Equals(key, _markersOf))
         {
             return;
@@ -280,9 +293,8 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         {
             Vector3 place = ObjectPlacement.MarkerPlace(marker, document.Terrain.Heightmap);
             Color32 color = marker.Color;
-            bool highlighted = frame.Highlighted?.Contains(ObjectRef.Marker(marker.Id)) == true;
             data.AddRange([place.X, place.Y, place.Z, ObjectPlacement.MarkerBase(marker),
-                color.Red / 255f, color.Green / 255f, color.Blue / 255f, highlighted ? 1 : 0]);
+                color.Red / 255f, color.Green / 255f, color.Blue / 255f, frame.HighlightOf(ObjectRef.Marker(marker.Id))]);
         }
         _markerCount = data.Count / 8;
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _markerInstances);
@@ -459,7 +471,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         public List<Run> Runs { get; } = [];
 
         /// <param name="of">What the instances are made of; they are made again when it changes.</param>
-        public void Update(object of, Func<IEnumerable<(string Blueprint, Matrix4x4 Placement, bool Highlighted)>> objects)
+        public void Update(object of, Func<IEnumerable<(string Blueprint, Matrix4x4 Placement, float Highlighted)>> objects)
         {
             if (Equals(of, _of))
             {
@@ -470,7 +482,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
             using Performance.Span measure = Performance.Measure("3d.update-objects");
             Dictionary<string, Group> byBlueprint = new Dictionary<string, Group>(StringComparer.OrdinalIgnoreCase);
             _groups.Clear();
-            foreach ((string blueprint, Matrix4x4 m, bool highlighted) in objects())
+            foreach ((string blueprint, Matrix4x4 m, float highlighted) in objects())
             {
                 if (!byBlueprint.TryGetValue(blueprint, out Group? group))
                 {
@@ -478,7 +490,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
                     byBlueprint[blueprint] = group;
                     _groups.Add(group);
                 }
-                group.Building.AddRange([m.M11, m.M12, m.M13, highlighted ? 1 : 0, m.M21, m.M22, m.M23, 0, m.M31, m.M32, m.M33, 0, m.M41, m.M42, m.M43, 1]);
+                group.Building.AddRange([m.M11, m.M12, m.M13, highlighted, m.M21, m.M22, m.M23, 0, m.M31, m.M32, m.M33, 0, m.M41, m.M42, m.M43, 1]);
             }
             foreach (Group group in _groups)
             {

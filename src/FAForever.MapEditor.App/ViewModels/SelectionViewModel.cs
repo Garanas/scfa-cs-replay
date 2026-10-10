@@ -73,6 +73,25 @@ public sealed partial class SelectionViewModel : ObservableObject
     /// </summary>
     public event EventHandler? Changed;
 
+    /// <summary>
+    /// The thing under the mouse in the 3D view while a select tool is active, drawn lightly
+    /// highlighted; null for none.
+    /// </summary>
+    public ObjectRef? Hovered
+    {
+        get => _hovered;
+        set
+        {
+            if (_hovered != value)
+            {
+                _hovered = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private ObjectRef? _hovered;
+
     public bool Contains(ObjectRef thing) => _set.Contains(thing);
 
     /// <summary>

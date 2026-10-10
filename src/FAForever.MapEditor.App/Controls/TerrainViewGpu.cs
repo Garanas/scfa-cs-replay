@@ -48,6 +48,11 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private GL? _gl;
     private TerrainRenderer? _renderer;
     private ObjectRenderer? _objects;
+    private ShapeRenderer? _shapes;
+    // X and Z held: moves go along one axis
+    private ToolModifiers _axes;
+    // the mouse moved since the thing under it was picked
+    private bool _hoverStale;
     private readonly ObjectModels _models;
     private IReadOnlySet<ObjectRef>? _highlighted;
     private MainViewModel? _model;
@@ -241,6 +246,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             }
             _renderer = new TerrainRenderer(_gl, es, () => Dispatcher.UIThread.Post(RequestNextFrameRendering));
             _objects = new ObjectRenderer(_gl, es, _models, () => Dispatcher.UIThread.Post(RequestNextFrameRendering));
+            _shapes = new ShapeRenderer(_gl, es);
             _timer = new GpuTimer(_gl, GpuTimer.Offered(_gl, es, GlVersion.Major, GlVersion.Minor), es);
             Log.LogInformation("The 3D view times frames on the card with {Method}", _timer.HasQueries ? "timer queries" : "glFinish (no timer queries)");
             Error = null;
@@ -264,6 +270,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         _renderer = null;
         _objects?.Dispose();
         _objects = null;
+        _shapes?.Dispose();
+        _shapes = null;
         _gl = null;
         base.OnOpenGlDeinit(gl);
     }
@@ -305,13 +313,15 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             }
             Workspace? workspace = _model?.Setup.Workspace;
             _renderer.Debug = _debug;
+            UpdateHover();
             try
             {
                 _renderer.Render(document, camera.ViewProjection((float)width / height), path =>
                 {
                     using Performance.Span lookup = Performance.Measure("3d.find-texture");
                     return FindTexture(path, document, workspace);
-                }, BrushUnderMouse(document), BrushColor(), Objects(camera), Decals());
+                }, BrushUnderMouse(document), BrushColor(), Objects(camera), Decals(), Overlays(document));
+                _shapes?.Draw(ToolShapes(document), new Vector2((float)Bounds.Width, (float)Bounds.Height), Ink);
             }
             catch (InvalidOperationException exception)
             {
@@ -443,7 +453,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             return null;
         }
         ObjectFrame frame = new ObjectFrame(_model.Assets.Catalog, _model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes,
-            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"), _model.ShownMarkerKinds);
+            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"), _model.ShownMarkerKinds, _model.Selection.Hovered);
         return (_objects, frame);
     }
 
@@ -555,6 +565,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     {
         base.OnPointerExited(e);
         _mouseInside = false;
+        _hoverStale = true;
         CursorMoved?.Invoke("");
         RequestNextFrameRendering();
     }
@@ -575,7 +586,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             // the left mouse is the active tool's, on the place of the terrain it points at
             _mouse = e.GetPosition(this);
             _mouseInside = true;
-            if (PlaceUnderMouse(document) is Vector3 place)
+            if ((PlaceUnderMouse(document) ?? PlaneUnderMouse()) is Vector3 place)
             {
                 _pressed = tool;
                 // the thing under the mouse is the one the ray meets, not the nearest on the ground
@@ -604,13 +615,14 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model?.Camera.Rotate(new Vector2((float)delta.X, (float)delta.Y));
             Moved();
         }
-        if (_pressed is IMapTool tool && _model?.ShownDocument is MapDocument document && PlaceUnderMouse(document) is Vector3 place)
+        if (_pressed is IMapTool tool && _model?.ShownDocument is MapDocument document && (PlaceUnderMouse(document) ?? PlaneUnderMouse()) is Vector3 place)
         {
             tool.Drag(place.X, place.Z, InputAt(place, e.KeyModifiers));
         }
-        if (_model?.ActiveTool?.Tool is { CursorRadius: > 0 })
+        if (_model?.ActiveTool?.Tool is { CursorRadius: > 0 } or SelectTool or DecalSelectTool or AreaTool or SunTool)
         {
-            // the brush follows the mouse
+            // the brush follows the mouse; the handle and the thing under it light up
+            _hoverStale = true;
             RequestNextFrameRendering();
         }
         ReportCursor();
@@ -644,6 +656,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+        _axes |= HeightmapView.AxisOf(e.Key);
         if (e.Key == Key.Space)
         {
             if (!_turning)
@@ -660,9 +673,14 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             Moved();
             e.Handled = true;
         }
+        else if (e.Key == Key.F && e.KeyModifiers == KeyModifiers.None && _model?.FocusOnSelection() == true)
+        {
+            // as the FAF map editor: on the selection
+            e.Handled = true;
+        }
         else if (e.Key == Key.F && _model?.Camera.PointAt(InView(_mouse)) is Vector3 place)
         {
-            // the FAF map editor focuses on the selection; with none, on what the mouse points at, half as far
+            // with nothing selected, on what the mouse points at, half as far
             _model.FocusCamera(place.X, place.Z, _model.Camera.Now.Distance * 0.26f);
             e.Handled = true;
         }
@@ -681,7 +699,157 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     {
         float distance = _model is null ? 1 : Vector3.Distance(_model.Camera.Eye, place);
         float ogridsPerPixel = 2 * distance * MathF.Tan(EditorCamera.FieldOfView / 2) / (float)Math.Max(1, Bounds.Height);
-        return new ToolInput(HeightmapView.ModifiersOf(modifiers), ogridsPerPixel);
+        return new ToolInput(HeightmapView.ModifiersOf(modifiers) | _axes, ogridsPerPixel, View: ToolViewOf());
+    }
+
+    /// <summary>
+    /// The place on the level plane at height 0 the mouse points at, for a press or drag where the
+    /// mouse points at no terrain (the sky, beyond the map): a handle may be dragged there.
+    /// </summary>
+    private Vector3? PlaneUnderMouse()
+    {
+        if (_model is null)
+        {
+            return null;
+        }
+        (Vector3 origin, Vector3 direction) = _model.Camera.RayAt(InView(_mouse));
+        // pointing at the sky: the place under the eye, the ray goes with the press
+        Vector2 hit = HandleMaths.PlaneHit(origin, direction, 0) ?? new Vector2(origin.X, origin.Z);
+        return new Vector3(hit.X, 0, hit.Y);
+    }
+
+    /// <summary>
+    /// The view as a tool sees it: where a place shows in the view's pixels, how large a pixel is
+    /// on the map at a place, the mouse and the ray under it.
+    /// </summary>
+    public ToolView ToolViewOf()
+    {
+        EditorCamera camera = _model?.Camera ?? new EditorCamera((_, _, _) => 0, (_, _) => 0);
+        Size size = Bounds.Size;
+        float height = (float)Math.Max(1, size.Height);
+        Vector2? mouse = _mouseInside ? new Vector2((float)_mouse.X, (float)_mouse.Y) : null;
+        return new ToolView(false, mouse,
+            place => Automation.AutomationServer.Project(camera, size, place) is Point at ? new Vector2((float)at.X, (float)at.Y) : null,
+            place => 2 * Vector3.Distance(camera.Eye, place) * MathF.Tan(EditorCamera.FieldOfView / 2) / height,
+            camera.RayAt(InView(_mouse)), camera.Eye);
+    }
+
+    /// <summary>
+    /// What the active tool draws at its size on screen: its shapes (the handles of the selection,
+    /// the sun's arrow), and its marks (the area tool's handles, the ruler's line) at the terrain's
+    /// height.
+    /// </summary>
+    private IReadOnlyList<ToolShape> ToolShapes(MapDocument document)
+    {
+        if (_model?.ActiveTool?.Tool is not IMapTool tool)
+        {
+            return [];
+        }
+        using Performance.Span measure = Performance.Measure("3d.tool-shapes");
+        ToolView view = ToolViewOf();
+        List<ToolShape> shapes = [];
+        if (tool.Marks is ToolMarks marks && tool is not SunTool)
+        {
+            Heightmap heights = document.Terrain.Heightmap;
+            Vector2? At(float x, float z) => view.ToScreen(new Vector3(x, heights.HeightAt(x, z), z));
+            if (marks.Line is (float x0, float z0, float x1, float z1) && At(x0, z0) is Vector2 from && At(x1, z1) is Vector2 to)
+            {
+                shapes.Add(new ToolLine([from, to], false, 4, ToolInk.Shadow));
+                shapes.Add(new ToolLine([from, to], false, 2, ToolInk.Selection));
+            }
+            foreach ((float x, float z) in marks.Handles)
+            {
+                if (At(x, z) is Vector2 at)
+                {
+                    shapes.Add(new ToolSquare(at, 4, ToolInk.Fill, ToolInk.Selection));
+                }
+            }
+        }
+        shapes.AddRange(tool.Shapes(view));
+        return shapes;
+    }
+
+    private Vector4 Ink(ToolInk ink)
+    {
+        string key = ink switch
+        {
+            ToolInk.Selection => "MapSelectionBrush",
+            ToolInk.Fill => "CanvasBrush",
+            ToolInk.Hover => "OverlayBrush",
+            ToolInk.AxisX => "MapHandleAxisXBrush",
+            ToolInk.AxisZ => "MapHandleAxisZBrush",
+            ToolInk.Shadow => "OverlayShadowBrush",
+            _ => "WarningBrush",
+        };
+        return ThemeColorWithAlpha(key);
+    }
+
+    private Vector4 ThemeColorWithAlpha(string key) =>
+        this.TryFindResource(key, ActualThemeVariant, out object? token) && token is Avalonia.Media.ISolidColorBrush brush
+            ? new Vector4(brush.Color.R / 255f, brush.Color.G / 255f, brush.Color.B / 255f, brush.Color.A / 255f * (float)brush.Opacity)
+            : Vector4.One;
+
+    /// <summary>
+    /// What is under the mouse, while a select tool is active: picked again once a frame after the
+    /// mouse moved, for the light highlight and automation.
+    /// </summary>
+    private void UpdateHover()
+    {
+        if (_model is null || !_hoverStale)
+        {
+            return;
+        }
+        _hoverStale = false;
+        bool selecting = _model.ActiveTool?.Tool is SelectTool or DecalSelectTool && _pressed is null;
+        _model.Selection.Hovered = selecting && _mouseInside ? PickAt(_mouse, _model.SelectableKinds) : null;
+    }
+
+    /// <summary>
+    /// What lies over the terrain: the areas (the playable one marked, the selected and hovered
+    /// ones in their colours), walkability, the grid being painted or the mask for tools, and the
+    /// symmetry's guides, each while its overlay is on; null for nothing.
+    /// </summary>
+    private TerrainOverlays? Overlays(MapDocument document)
+    {
+        if (_model is not MainViewModel model)
+        {
+            return null;
+        }
+        using Performance.Span measure = Performance.Measure("3d.overlays");
+        Func<uint[]>? walk = null;
+        object? walkOf = null;
+        int walkWidth = 0;
+        int walkHeight = 0;
+        if (model.ShowWalkability && model.Walkability.Grid is FAForever.FileFormats.Map.NavGrid grid)
+        {
+            Project.Generation.WalkabilityChanges? changes = model.Walkability.ShowChanges && model.Walkability.Changes is { } shown && shown.Width == grid.Width && shown.Height == grid.Height ? shown : null;
+            Vector4 blocked = ThemeColorWithAlpha("MapBlockedBrush");
+            Vector4 newly = ThemeColorWithAlpha("MapNewlyBlockedBrush");
+            Vector4 opened = ThemeColorWithAlpha("MapOpenedBrush");
+            walkOf = (grid, changes, blocked, newly, opened);
+            walk = () => WalkabilityPixels.Of(grid, changes, blocked, newly, opened);
+            walkWidth = grid.Width;
+            walkHeight = grid.Height;
+        }
+        Rendering.GridOverlay? shownGrid = model.ShownGrid;
+        TiledBuffer<byte>? painted = shownGrid?.Select(document);
+        IReadOnlyList<Area>? areas = model.ShowAreas ? document.Markers.Areas : null;
+        float[] states = [];
+        if (areas is not null)
+        {
+            states = new float[areas.Count];
+            for (int i = 0; i < areas.Count; i++)
+            {
+                ObjectRef area = ObjectRef.Area(areas[i].Name);
+                states[i] = model.Selection.Contains(area) ? 1 : model.Selection.Hovered == area ? 2 : 0;
+            }
+        }
+        IReadOnlyList<(Vector2 From, Vector2 To)> guides = model is { ShowSymmetry: true, Symmetry.IsOn: true } ? model.Symmetry.Guides(document) : [];
+        Vector4 hover = ThemeColorWithAlpha("SelectedStrokeBrush");
+        TerrainOverlays overlays = new TerrainOverlays(walkOf, walk, walkWidth, walkHeight, painted, shownGrid?.Palette, ThemeColorWithAlpha("MapMaskBrush"),
+            areas, states, guides, ThemeColorWithAlpha("MapAreaBrush"), ThemeColorWithAlpha("MapSelectionBrush"), hover,
+            ThemeColorWithAlpha("MapOutsidePlayableBrush"), ThemeColorWithAlpha("OverlayStrokeBrush"), ThemeColorWithAlpha("OverlayShadowBrush"));
+        return overlays.IsEmpty ? null : overlays;
     }
 
     /// <summary>
@@ -690,9 +858,16 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private void OnSelectionChanged(object? sender, EventArgs e) =>
         Highlighted = _model is { Selection.IsEmpty: false } ? _model.Selection.Items.ToHashSet() : null;
 
+    protected override void OnLostFocus(FocusChangedEventArgs e)
+    {
+        base.OnLostFocus(e);
+        _axes = ToolModifiers.None;
+    }
+
     protected override void OnKeyUp(KeyEventArgs e)
     {
         base.OnKeyUp(e);
+        _axes &= ~HeightmapView.AxisOf(e.Key);
         if (e.Key == Key.Space)
         {
             _turning = false;

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Numerics;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
 using MediatR;
@@ -26,21 +27,62 @@ public sealed class NudgeHandler(SelectionViewModel selection, CurrentEdit edit)
 }
 
 /// <summary>
-/// Turns each selected thing about the up axis through its own centre (user story F-11), one step
-/// of undo: what Q and E do in a view with the select tool (15 degrees, 90 with shift). A prop's
-/// whole rotation turns, so a tilted rock stays tilted; areas do not turn.
+/// Turns the selection about the up axis (user story F-11), one step of undo: what Q and E do in
+/// a view with the select tool (15 degrees, 90 with shift). About the selection's centre the things
+/// go round it and each turns too; about each centre they turn where they are (the handles'
+/// pivot, <see cref="HandleSettings.Pivot"/>, unless given). A prop's whole rotation turns, so a
+/// tilted rock stays tilted; areas do not turn.
 /// </summary>
 /// <param name="Degrees">Clockwise in the top view; negative turns the other way. Left out, 15.</param>
+/// <param name="About"><c>selection</c> or <c>each</c>; left out, the handles' pivot.</param>
 [UndoStep]
 [EditorCommand("edit.rotate", "Turn the selection", Story = "F-11", Needs = Needs.Selection)]
-public sealed record Rotate(float Degrees = 15) : IRequest;
+public sealed record Rotate(float Degrees = 15, string? About = null) : IRequest;
 
-public sealed class RotateHandler(SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<Rotate>
+public sealed class RotateHandler(MainViewModel model, SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<Rotate>
 {
     public Task Handle(Rotate request, CancellationToken cancellationToken)
     {
         ImmutableArray<ObjectRef> things = selection.Items;
-        edit.Transaction.Apply(document => document.RotateObjects(things, request.Degrees * MathF.PI / 180));
+        float radians = request.Degrees * MathF.PI / 180;
+        HandlePivot pivot = request.About is string about ? SetHandlesHandler.ParsePivot(about) : model.Handles.Pivot;
+        edit.Transaction.Apply(document => pivot == HandlePivot.Selection && things.Length > 1 && SelectionFrame.Of(document, things) is SelectionFrame frame
+            ? document.RotateObjectsAbout(things, radians, frame.Middle)
+            : document.RotateObjects(things, radians));
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>
+/// Scales the selection (user story F-11), one step of undo: what the scale handles do. Props
+/// scale alike along every axis, decals by their width and length, areas by their sides; about
+/// the selection's centre the things spread from it (markers and units too), about each centre
+/// they scale where they are.
+/// </summary>
+/// <param name="Factor">Both sides alike; left out, 1.</param>
+/// <param name="X">The width (along the selection's box) on top of the factor.</param>
+/// <param name="Z">The length on top of the factor.</param>
+/// <param name="About"><c>selection</c> or <c>each</c>; left out, the handles' pivot.</param>
+[UndoStep]
+[EditorCommand("edit.scale", "Scale the selection", Story = "F-11", Needs = Needs.Selection)]
+public sealed record ScaleSelection(float? Factor = null, float? X = null, float? Z = null, string? About = null) : IRequest;
+
+public sealed class ScaleSelectionHandler(MainViewModel model, SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<ScaleSelection>
+{
+    public Task Handle(ScaleSelection request, CancellationToken cancellationToken)
+    {
+        float factor = request.Factor ?? 1;
+        float x = factor * (request.X ?? 1);
+        float z = factor * (request.Z ?? 1);
+        if (!(x > 0) || !(z > 0) || !float.IsFinite(x) || !float.IsFinite(z))
+        {
+            throw new ArgumentException("A scale is above 0: factor=1.5, or x=2 for the width only");
+        }
+        ImmutableArray<ObjectRef> things = selection.Items;
+        HandlePivot pivot = request.About is string about ? SetHandlesHandler.ParsePivot(about) : model.Handles.Pivot;
+        edit.Transaction.Apply(document => SelectionFrame.Of(document, things) is SelectionFrame frame
+            ? document.ScaleObjects(things, x, z, frame.Heading, pivot == HandlePivot.Selection ? frame.Middle : null)
+            : document);
         return Task.CompletedTask;
     }
 }
