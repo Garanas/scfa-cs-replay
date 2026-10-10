@@ -32,7 +32,7 @@ reads again when it changes; and nothing that generates runs by itself.
       publishable (exported to play with a warning, never uploaded).
 - [x] **F-6 Assets on disk, read again when they change.** The project's files (JSON, PNG) and the
       workspace's assets: a tool that saves one, the editor shows it.
-- [ ] **F-7 Generation only when asked.** A layer or result that is generated (walkability, props
+- [x] **F-7 Generation only when asked.** A layer or result that is generated (walkability, props
       from rules, a baked heightmap) shows that its inputs changed and offers to generate again; it
       never runs by itself. Today: the generators' registry with the inputs each result was made
       from; the status bar names the results out of date, and Generate, Everything out of date makes
@@ -67,7 +67,7 @@ reads again when it changes; and nothing that generates runs by itself.
       a group (U-4); prop palettes (P-2); markers presets: the Markers panel's Marker presets (the
       selected markers, with their links and chains), placed with the Preset tool
       (`markers.placePreset`). Missing: a preset of a selection of several kinds at once.
-- [ ] **F-11 Selection.** Select anything that lies on the map (marker, prop, decal, unit, area) in
+- [x] **F-11 Selection.** Select anything that lies on the map (marker, prop, decal, unit, area) in
       the top and 3D views, one or many; an inspector shows and edits what is selected; move,
       rotate and scale with handles; copy, paste, duplicate and delete.
       Today: the Select tool of the Markers, Props, Decals and Units modes in the top and 3D views
@@ -83,7 +83,7 @@ reads again when it changes; and nothing that generates runs by itself.
       the selection filter in the select tools' options (lock a kind), hide a kind (decals too),
       isolate the selection, R and a drag to turn, a Select anything tool in the Map mode; a box
       and Select all leave areas alone outside the Map mode.
-- [ ] **F-12 Symmetry.** Mirror every edit: horizontally, vertically, diagonally, or around the
+- [x] **F-12 Symmetry.** Mirror every edit: horizontally, vertically, diagonally, or around the
       middle for 2 to 8 players; shown as guides in the views. Today: the symmetry is chosen (off,
       rotational for 2 to 8, four mirrors; on and off takes the map's own) and the top view shows
       its guides; the maths mirrors points, yaws and rotations. Every brush stroke paints in every
