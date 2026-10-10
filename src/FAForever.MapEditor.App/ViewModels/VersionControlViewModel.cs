@@ -177,8 +177,9 @@ public sealed partial class VersionControlViewModel(MainViewModel editor) : Obse
         {
             await ReadAsync(folder);
         }
-        IReadOnlyList<CommitFile> files = await Task.Run(() => ProjectRepository.FilesOf(folder, commit));
-        ChosenCommit = History.FirstOrDefault(info => info.Hash.StartsWith(commit, StringComparison.OrdinalIgnoreCase) || info.ShortHash == commit);
+        string hash = await Task.Run(() => ProjectRepository.Resolve(folder, commit));
+        IReadOnlyList<CommitFile> files = await Task.Run(() => ProjectRepository.FilesOf(folder, hash));
+        ChosenCommit = History.FirstOrDefault(info => info.Hash == hash);
         ChosenFiles = files;
         return files;
     }
@@ -229,8 +230,9 @@ public sealed partial class VersionControlViewModel(MainViewModel editor) : Obse
     public Task RestoreAsync(string commit) => editor.BusyAsync("git-restore", "Reading the commit...", async () =>
     {
         string folder = RequireFolder();
-        MapDocument old = await Task.Run(() => ProjectRepository.ReadAt(folder, commit));
-        CommitInfo? info = History.FirstOrDefault(c => c.Hash.StartsWith(commit, StringComparison.OrdinalIgnoreCase) || c.ShortHash == commit);
+        string hash = await Task.Run(() => ProjectRepository.Resolve(folder, commit));
+        MapDocument old = await Task.Run(() => ProjectRepository.ReadAt(folder, hash));
+        CommitInfo? info = History.FirstOrDefault(c => c.Hash == hash);
         string name = info is null ? commit : $"{info.ShortHash} ({info.Subject})";
         bool changed = editor.EditMap($"Go back to commit {name}", _ => old);
         Log.LogInformation("Went back to commit {Commit}", info?.ShortHash ?? commit);

@@ -377,6 +377,16 @@ namespace FAForever.MapEditor.Project.Versioning
             }
         }
 
+        /// <summary>
+        /// The full hash of a commit given by its hash, a part of it, or a name git knows (<c>HEAD~1</c>, a branch).
+        /// </summary>
+        /// <exception cref="MapProjectException">The folder is no repository, or it has no such commit.</exception>
+        public static string Resolve(string folder, string commit)
+        {
+            RequireRepository(folder);
+            return RequireCommit(folder, commit);
+        }
+
         private static void RequireRepository(string folder)
         {
             if (!IsRepository(folder))

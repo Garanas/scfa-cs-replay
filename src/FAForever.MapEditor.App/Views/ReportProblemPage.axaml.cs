@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Threading;
 
 namespace FAForever.MapEditor.App.Views;
 
@@ -15,7 +16,7 @@ public sealed partial class ReportProblemPage : UserControl
         {
             if (change.Property == IsVisibleProperty && IsVisible)
             {
-                Description.Focus();
+                Dispatcher.UIThread.Post(() => Description.Focus(), DispatcherPriority.Loaded);
             }
         };
     }

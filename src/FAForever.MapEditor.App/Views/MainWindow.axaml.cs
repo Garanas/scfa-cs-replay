@@ -15,6 +15,7 @@ public sealed partial class MainWindow : Window
 {
     private bool _mayClose;
     private MainViewModel? _model;
+    private MapViewTab? _shownView;
     private readonly List<CommandAdapter> _adapters = [];
 
     public MainWindow()
@@ -237,6 +238,12 @@ public sealed partial class MainWindow : Window
     {
         MapViewTab view = _model?.View ?? MapViewTab.Top;
         bool sideBySide = view == MapViewTab.SideBySide;
+        // the top view's width changes by half or double: it shows the whole map again, once laid out
+        if (_shownView is MapViewTab shown && shown != view && (shown == MapViewTab.SideBySide || view == MapViewTab.SideBySide) && view != MapViewTab.ThreeD)
+        {
+            Dispatcher.UIThread.Post(Heightmap.Fit, DispatcherPriority.Loaded);
+        }
+        _shownView = view;
         Heightmap.IsVisible = view is MapViewTab.Top or MapViewTab.SideBySide;
         Terrain3D.IsVisible = view is MapViewTab.ThreeD or MapViewTab.SideBySide;
         ViewsSplitter.IsVisible = sideBySide;

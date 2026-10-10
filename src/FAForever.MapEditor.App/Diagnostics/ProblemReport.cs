@@ -78,7 +78,7 @@ public static class ProblemReport
             ZipArchiveEntry entry = zip.CreateEntry("report.json", CompressionLevel.Optimal);
             using (Stream json = entry.Open())
             {
-                JsonSerializer.Serialize(json, report, new JsonSerializerOptions { WriteIndented = true });
+                JsonSerializer.Serialize(json, report, new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
             }
             foreach (string file in sessions)
             {
