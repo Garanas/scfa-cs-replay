@@ -197,6 +197,7 @@ public sealed class SetHeightCurveHandler(MainViewModel model) : IRequestHandler
         string description = request.Points is null ? $"Curve {layer.Name}: {fields}" : $"Curve {layer.Name}: {changed.Points.Length} points";
         using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap(description, d => HeightLayerEdits.SetCurve(d, layer.Name, changed), request.Points is null ? $"terrain.setCurve:{layer.Name}:{fields}" : null);
+        model.Status = description;
         return Task.CompletedTask;
     }
 }

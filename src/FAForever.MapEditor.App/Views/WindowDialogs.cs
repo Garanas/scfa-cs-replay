@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Workspaces;
@@ -7,8 +6,8 @@ using FAForever.MapEditor.Project.Workspaces;
 namespace FAForever.MapEditor.App.Views;
 
 /// <summary>
-/// The editor's questions, answered with the dialogs of the operating system and the editor's own,
-/// and the picker of an asset.
+/// The editor's questions: files and folders with the dialogs of the operating system, the rest
+/// over the window (<see cref="QuestionViewModel"/>, the picker of an asset).
 /// </summary>
 public sealed class WindowDialogs(Window window) : IEditorDialogs
 {
@@ -25,79 +24,30 @@ public sealed class WindowDialogs(Window window) : IEditorDialogs
         return folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
     }
 
+    /// <summary>
+    /// Save, Don't save or Cancel, asked over the window (<see cref="QuestionViewModel"/>); Save has the keyboard first.
+    /// </summary>
     public async Task<SaveChoice> AskToSaveChangesAsync(string mapName)
     {
-        Window dialog = new Window
+        if (window.DataContext is not MainViewModel model)
         {
-            Title = "Unsaved changes",
-            SizeToContent = SizeToContent.WidthAndHeight,
-            CanResize = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-        };
-        Button Choice(string text, SaveChoice choice)
-        {
-            Button button = new Button { Content = text, MinWidth = 90, HorizontalContentAlignment = HorizontalAlignment.Center };
-            button.Click += (_, _) => dialog.Close(choice);
-            return button;
+            return SaveChoice.Cancel;
         }
-        dialog.Content = new StackPanel
+        int answer = await model.Question.AskAsync("Unsaved changes", $"Save the changes to {mapName}?", ["Save", "Don't save", "Cancel"], cancel: 2, focus: 0);
+        return answer switch
         {
-            Margin = new Avalonia.Thickness(20),
-            Spacing = 16,
-            Children =
-            {
-                new TextBlock { Text = $"Save the changes to {mapName}?" },
-                new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Spacing = 8,
-                    Children = { Choice("Save", SaveChoice.Save), Choice("Don't save", SaveChoice.Discard), Choice("Cancel", SaveChoice.Cancel) },
-                },
-            },
+            0 => SaveChoice.Save,
+            1 => SaveChoice.Discard,
+            _ => SaveChoice.Cancel,
         };
-        return await dialog.ShowDialog<SaveChoice?>(window) ?? SaveChoice.Cancel;
     }
 
     /// <summary>
-    /// A small dialog with the message, the action's button and Cancel, which has the keyboard first.
+    /// The message with the action's button and Cancel, asked over the window; Cancel has the keyboard first.
     /// </summary>
-    public async Task<bool> ConfirmAsync(string title, string message, string action)
-    {
-        Window dialog = new Window
-        {
-            Title = title,
-            SizeToContent = SizeToContent.WidthAndHeight,
-            CanResize = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-        };
-        Button Choice(string text, bool choice)
-        {
-            Button button = new Button { Content = text, MinWidth = 90, HorizontalContentAlignment = HorizontalAlignment.Center };
-            button.Click += (_, _) => dialog.Close(choice);
-            return button;
-        }
-        Button cancel = Choice("Cancel", false);
-        dialog.Content = new StackPanel
-        {
-            Margin = new Avalonia.Thickness(20),
-            Spacing = 16,
-            MaxWidth = 520,
-            Children =
-            {
-                new TextBlock { Text = message, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
-                new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Spacing = 8,
-                    Children = { Choice(action, true), cancel },
-                },
-            },
-        };
-        dialog.Opened += (_, _) => cancel.Focus();
-        return await dialog.ShowDialog<bool?>(window) ?? false;
-    }
+    public async Task<bool> ConfirmAsync(string title, string message, string action) =>
+        window.DataContext is MainViewModel model
+        && await model.Question.AskAsync(title, message, [action, "Cancel"], cancel: 1, focus: 1) == 0;
 
     /// <summary>
     /// The system's browser, through the shell.

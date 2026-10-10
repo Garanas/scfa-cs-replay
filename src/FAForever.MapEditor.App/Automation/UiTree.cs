@@ -33,15 +33,44 @@ public static class UiTree
     /// The first control (in the order of the tree) whose <c>x:Name</c>, label or text is
     /// <paramref name="text"/>, ignoring case; hidden controls only when <paramref name="hidden"/>.
     /// </summary>
-    public static Control? Find(Visual root, string text, bool hidden = false) => root.GetVisualDescendants().OfType<Control>()
-        .Where(control => hidden || control.IsEffectivelyVisible)
-        .FirstOrDefault(control => string.Equals(control.Name, text, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(AutomationProperties.GetName(control), text, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(TextOf(control), text, StringComparison.OrdinalIgnoreCase));
+    /// <remarks>
+    /// A control named or labelled so comes before one that only reads the text, and a control
+    /// one can use before a plain text: <c>Combine</c> finds the combo box labelled so, not the
+    /// text beside it.
+    /// </remarks>
+    public static Control? Find(Visual root, string text, bool hidden = false)
+    {
+        List<Control> controls = [.. root.GetVisualDescendants().OfType<Control>().Where(control => hidden || control.IsEffectivelyVisible)];
+        return controls.FirstOrDefault(control => string.Equals(control.Name, text, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(AutomationProperties.GetName(control), text, StringComparison.OrdinalIgnoreCase))
+            ?? controls.FirstOrDefault(control => control is not TextBlock && string.Equals(TextOf(control), text, StringComparison.OrdinalIgnoreCase))
+            ?? controls.FirstOrDefault(control => string.Equals(TextOf(control), text, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// What an item of a list or combo box shows: a text as it is, else its <c>Title</c>,
+    /// <c>Name</c>, <c>Label</c> or <c>Text</c>, else its own text (a record's would list its fields).
+    /// </summary>
+    public static string? DisplayText(object? item)
+    {
+        if (item is null or string)
+        {
+            return (string?)item;
+        }
+        foreach (string property in (string[])["Title", "Label", "Name", "Text", "DisplayName"])
+        {
+            if (item.GetType().GetProperty(property)?.GetValue(item) is string { Length: > 0 } text)
+            {
+                return text;
+            }
+        }
+        return item.ToString();
+    }
 
     private static IEnumerable<JsonNode> Nodes(Visual visual, Visual root, bool hidden)
     {
-        if (visual is Control { IsVisible: false } && !hidden)
+        // hidden, transparent, or a text without room: nothing a person sees
+        if (!hidden && visual is Control { IsVisible: false } or Control { Opacity: 0 } or TextBlock { Bounds.Width: 0 } or TextBlock { Bounds.Height: 0 })
         {
             yield break;
         }
@@ -127,7 +156,8 @@ public static class UiTree
                 node["selected"] = item.IsSelected;
                 break;
             case ComboBox combo:
-                node["selected"] = combo.SelectedItem?.ToString();
+                node["selected"] = DisplayText(combo.SelectedItem);
+                node["items"] = new JsonArray([.. combo.Items.Take(40).Select(item => (JsonNode?)JsonValue.Create(DisplayText(item)))]);
                 break;
         }
         if (!control.IsEffectivelyEnabled)
@@ -170,8 +200,8 @@ public static class UiTree
                 .Select(block => block.Text).Where(t => !string.IsNullOrWhiteSpace(t))),
             _ => null,
         };
-        // menu headers carry the access key's underscore
-        return string.IsNullOrWhiteSpace(text) ? null : text.Replace("_", "", StringComparison.Ordinal);
+        // menu headers carry the access key's underscore; other texts keep theirs (rocklight_albedo)
+        return string.IsNullOrWhiteSpace(text) ? null : control is MenuItem ? text.Replace("_", "", StringComparison.Ordinal) : text;
     }
 
     private static JsonArray Bounds(Control control, Visual root)

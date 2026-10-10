@@ -650,6 +650,12 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
+        // control and the wheel: the brush's radius (shift too: its strength)
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && _model?.BrushWheel(Math.Sign(e.Delta.Y) * Math.Max(1, (int)Math.Round(Math.Abs(e.Delta.Y))), e.KeyModifiers.HasFlag(KeyModifiers.Shift)) == true)
+        {
+            e.Handled = true;
+            return;
+        }
         int notches = Math.Sign(e.Delta.Y) * Math.Max(1, (int)Math.Round(Math.Abs(e.Delta.Y)));
         _model?.Camera.Zoom(InView(e.GetPosition(this)), (float)(Bounds.Width / Math.Max(1, Bounds.Height)), notches);
         Moved();
@@ -688,7 +694,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             e.Handled = true;
         }
         // the keys the view does not use itself are the active tool's (the select tool's Q, E, arrows, Escape)
-        else if (_model?.HasMap == true && _model.ActiveTool?.Tool is IMapTool tool && tool.Key(e.Key.ToString(), HeightmapView.ModifiersOf(e.KeyModifiers)))
+        else if (_model?.ToolKey(e.Key.ToString(), HeightmapView.ModifiersOf(e.KeyModifiers)) == true)
         {
             e.Handled = true;
         }

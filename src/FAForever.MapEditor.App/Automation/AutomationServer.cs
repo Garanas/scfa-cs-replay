@@ -180,7 +180,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             case "" or "help":
                 return new JsonObject
                 {
-                    ["automation"] = new JsonArray([.. Own.Concat(InputCommands).Concat(ToolingCommands).Select(line => (JsonNode)JsonValue.Create(line))]),
+                    ["automation"] = new JsonArray([.. Own.Concat(InputCommands).Concat(ToolingCommands).Concat(DialogCommands).Select(line => (JsonNode)JsonValue.Create(line))]),
                     ["commands"] = new JsonArray([.. model.Commands.All.Where(c => !c.IsIncomplete).Select(c => (JsonNode)JsonValue.Create(c.Usage))]),
                     ["aliases"] = new JsonObject([.. Aliases.Select(alias => KeyValuePair.Create(alias.Key, (JsonNode?)JsonValue.Create(alias.Value.Runs)))]),
                 };
@@ -670,6 +670,9 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["handles"] = DescribeHandles(),
             ["hover"] = model.Selection.Hovered?.ToString(),
             ["plugins"] = model.Plugins.Describe(),
+            ["dialog"] = model.Question.Describe(),
+            ["overlays"] = OverlaysState(),
+            ["paletteResults"] = PaletteState(),
         };
     }
 

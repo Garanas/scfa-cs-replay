@@ -83,7 +83,7 @@ public sealed partial class AutomationServer
                 arguments["gpu"] = true;
                 return false;
             default:
-                return false;
+                return await RunDialogToolingAsync(command, arguments, result);
         }
     }
 
@@ -202,7 +202,7 @@ public sealed partial class AutomationServer
                 RangeBase range => Math.Round(range.Value, 3),
                 TextBox box => box.Text,
                 ToggleButton toggle => toggle.IsChecked,
-                ComboBox combo => combo.SelectedItem?.ToString(),
+                ComboBox combo => UiTree.DisplayText(combo.SelectedItem),
                 ListBox list => list.SelectedItem?.ToString(),
                 TreeView tree => tree.SelectedItem?.ToString(),
                 ListBoxItem item => item.IsSelected,
@@ -261,7 +261,8 @@ public sealed partial class AutomationServer
     private static int IndexOf(List<object?> items, JsonNode value, string label)
     {
         string text = value.GetValueKind() == JsonValueKind.String ? value.GetValue<string>() : value.ToJsonString();
-        int found = items.FindIndex(item => string.Equals(item?.ToString(), text, StringComparison.OrdinalIgnoreCase));
+        int found = items.FindIndex(item => string.Equals(UiTree.DisplayText(item), text, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(item?.ToString(), text, StringComparison.OrdinalIgnoreCase));
         if (found >= 0)
         {
             return found;
@@ -270,7 +271,7 @@ public sealed partial class AutomationServer
         {
             return index;
         }
-        throw new ArgumentException($"'{label}' has no item '{text}': {string.Join(", ", items.Take(30).Select(item => item?.ToString()))}");
+        throw new ArgumentException($"'{label}' has no item '{text}': {string.Join(", ", items.Take(30).Select(UiTree.DisplayText))}");
     }
 
     private static double ValueNumber(JsonNode value) => value.GetValueKind() == JsonValueKind.Number

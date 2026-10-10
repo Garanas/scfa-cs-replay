@@ -14,6 +14,35 @@ public sealed partial class ModePanel : UserControl
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
     }
 
+    private ViewModels.MainViewModel? _model;
+
+    /// <summary>
+    /// Another mode: its panel opens at its top, with its name and tools in sight.
+    /// </summary>
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        if (_model is not null)
+        {
+            _model.PropertyChanged -= OnModelChanged;
+        }
+        _model = DataContext as ViewModels.MainViewModel;
+        if (_model is not null)
+        {
+            _model.PropertyChanged += OnModelChanged;
+        }
+    }
+
+    private void OnModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ViewModels.MainViewModel.SelectedMode))
+        {
+            Scroller.Offset = default;
+            // again once the new mode's sections are laid out: the scroll viewer keeps what it showed in sight otherwise
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => Scroller.Offset = default, Avalonia.Threading.DispatcherPriority.Background);
+        }
+    }
+
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter && e.Source is TextBox field && field.Classes.Contains("commit"))

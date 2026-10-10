@@ -268,6 +268,8 @@
   <!-- the picker of an asset (concept C2): wide enough for the facets and six tiles a row -->
   <x:Double x:Key="PickerWidth">920</x:Double>
   <x:Double x:Key="PickerListHeight">420</x:Double>
+  <!-- a question over the window (unsaved changes, confirmations) -->
+  <x:Double x:Key="QuestionWidth">460</x:Double>
   <Thickness x:Key="DialogPadding">14,10</Thickness>
   <Thickness x:Key="DividerGap">8,4</Thickness>
   <Thickness x:Key="DividerTop">0,1,0,0</Thickness>

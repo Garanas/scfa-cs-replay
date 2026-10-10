@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Controls;
 using FAForever.MapEditor.App.Rendering.Gpu;
@@ -90,6 +91,10 @@ public sealed partial class AutomationServer
                             Input.Down(at, button, modifiers);
                             Input.Up(at, button, modifiers);
                         }
+                        break;
+                    case "drag" when window.InputHitTest(at) is Visual grabbed && grabbed.FindAncestorOfType<Avalonia.Controls.Primitives.Thumb>(includeSelf: true) is not null:
+                        // a splitter or another thumb moves by the layout between the moves: one at a time
+                        await DragStepwiseAsync(at, InWindow(view, Pair(arguments, "to")), button, (int)(Number(arguments, "steps") ?? 10), modifiers);
                         break;
                     case "drag":
                         Input.Drag(at, InWindow(view, Pair(arguments, "to")), button, (int)(Number(arguments, "steps") ?? 10), modifiers);
@@ -305,6 +310,25 @@ public sealed partial class AutomationServer
         TaskCompletionSource drawn = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         window.RequestAnimationFrame(_ => drawn.TrySetResult());
         await Task.WhenAny(drawn.Task, Task.Delay(1000));
+    }
+
+    /// <summary>
+    /// A drag with the layout done between its events, as a person's hand gives the window time:
+    /// what moves a part of the window (a <see cref="GridSplitter"/>) reads where it is now.
+    /// </summary>
+    private async Task DragStepwiseAsync(Point from, Point to, MouseButton button, int steps, RawInputModifiers modifiers)
+    {
+        Input.Move(from, modifiers);
+        Input.Down(from, button, modifiers);
+        await NextFrameAsync();
+        steps = Math.Max(1, steps);
+        for (int i = 1; i <= steps; i++)
+        {
+            Input.Move(from + (to - from) * ((double)i / steps), modifiers);
+            await NextFrameAsync();
+        }
+        Input.Up(to, button, modifiers);
+        await LetInputSettleAsync();
     }
 
     /// <summary>

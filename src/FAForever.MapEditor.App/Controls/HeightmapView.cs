@@ -397,6 +397,12 @@ public sealed class HeightmapView : Control
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
+        // control and the wheel: the brush's radius (shift too: its strength)
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && _model?.BrushWheel(Math.Sign(e.Delta.Y) * Math.Max(1, (int)Math.Round(Math.Abs(e.Delta.Y))), e.KeyModifiers.HasFlag(KeyModifiers.Shift)) == true)
+        {
+            e.Handled = true;
+            return;
+        }
         Point at = e.GetPosition(this);
         Point map = ControlToMap(at);
         _zoom = Math.Clamp(_zoom * Math.Pow(1.2, e.Delta.Y), 0.05, 64);
@@ -485,7 +491,7 @@ public sealed class HeightmapView : Control
         base.OnKeyDown(e);
         _axes |= AxisOf(e.Key);
         // the keys the view does not use itself are the active tool's (the select tool's Q, E, arrows, Escape)
-        if (!e.Handled && _model?.HasMap == true && _model.ActiveTool?.Tool is IMapTool tool && tool.Key(e.Key.ToString(), ModifiersOf(e.KeyModifiers)))
+        if (!e.Handled && _model?.ToolKey(e.Key.ToString(), ModifiersOf(e.KeyModifiers)) == true)
         {
             e.Handled = true;
         }
@@ -784,7 +790,11 @@ public sealed class HeightmapView : Control
             if (marks.Label is { Length: > 0 } label)
             {
                 FormattedText text = new FormattedText(label, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, overlay.LabelFont, overlay.LabelSize, overlay.Strong);
-                Rect back = new Rect(to + new Vector(8, 4), new Size(text.Width + 6, text.Height + 2));
+                // beside the line's end, kept inside the view (left of the end near the right edge, above it near the bottom)
+                Size size = new Size(text.Width + 6, text.Height + 2);
+                double left = to.X + 8 + size.Width <= Bounds.Width ? to.X + 8 : to.X - 8 - size.Width;
+                double top = to.Y + 4 + size.Height <= Bounds.Height ? to.Y + 4 : to.Y - 4 - size.Height;
+                Rect back = new Rect(new Point(Math.Clamp(left, 0, Math.Max(0, Bounds.Width - size.Width)), Math.Clamp(top, 0, Math.Max(0, Bounds.Height - size.Height))), size);
                 context.FillRectangle(overlay.Canvas, back);
                 context.DrawText(text, back.TopLeft + new Vector(3, 1));
             }
