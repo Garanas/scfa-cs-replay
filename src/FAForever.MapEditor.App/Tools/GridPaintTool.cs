@@ -113,18 +113,18 @@ public abstract partial class GridPaintTool : ObservableObject, IShapedBrushTool
         (int width, int height) = (document.Width, document.Height);
         // the heights do not change while a grid is painted: the limits are checked against them as they are
         Heightmap? terrain = Limits is { Limits: true } ? document.Terrain.Heightmap : null;
-        Action<EditTransaction, float, float> dab;
+        Action<EditTransaction, SymmetricDab> dab;
         if (SetsCodes)
         {
             CodeBrush brush = new CodeBrush { Radius = (float)Radius, Value = Code, Shape = shape, Falloff = Falloff, Limits = Limits };
-            dab = (edit, at, to) => (brush with { Rotation = Shape.NextRotation() }).Apply(edit.Grid(target), width, height, at, to, terrain);
+            dab = (edit, at) => (brush with { Rotation = at.Rotation, Mirrored = at.Mirrored }).Apply(edit.Grid(target), width, height, at.X, at.Z, terrain);
         }
         else
         {
             MaskBrush brush = new MaskBrush { Radius = (float)Radius, Strength = (float)Strength, Erase = Erase, Shape = shape, Falloff = Falloff, Limits = Limits };
-            dab = (edit, at, to) => (brush with { Rotation = Shape.NextRotation() }).Apply(edit.Grid(target), width, height, at, to, terrain);
+            dab = (edit, at) => (brush with { Rotation = at.Rotation, Mirrored = at.Mirrored }).Apply(edit.Grid(target), width, height, at.X, at.Z, terrain);
         }
-        _stroke = new BrushStroke(Model, Describe(target), Radius, x, z, dab);
+        _stroke = new BrushStroke(Model, Describe(target), Radius, x, z, dab, shape is null ? null : Shape.NextRotation);
     }
 
     public void Drag(float x, float z) => _stroke?.MoveTo(x, z);

@@ -40,6 +40,7 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
     private EditTransaction? _move;
     private MapDocument? _before;
     private ImmutableArray<ObjectRef> _moving = [];
+    private ImmutableArray<SymmetryPartner> _partners = [];
 
     /// <summary>
     /// The kinds it picks, of those the views show: the Markers mode's tool markers and areas, the
@@ -142,6 +143,7 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
         _move = null;
         _before = null;
         _moving = [];
+        _partners = [];
         Box = null;
     }
 
@@ -198,6 +200,8 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             _moving = model.Selection.Items;
             _move = model.StartStroke("Move the selection");
             _before = _move.Document;
+            // with the symmetry, the mirror partners as they were at the press move along (F-12)
+            _partners = model.PartnersOf(_before, _moving);
         }
         if (model.StrokeInProgress != _move)
         {
@@ -206,9 +210,10 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
         }
         MapDocument before = _before!;
         ImmutableArray<ObjectRef> moving = _moving;
+        ImmutableArray<SymmetryPartner> partners = _partners;
         float dx = x - _from.X;
         float dz = z - _from.Z;
-        _move.Apply(_ => before.MoveObjects(moving, dx, dz));
+        _move.Apply(_ => before.MoveObjects(moving, partners, dx, dz));
         model.ShowStroke();
     }
 

@@ -36,13 +36,16 @@ public sealed class PlaceDecalHandler(MainViewModel model, SelectionViewModel se
             throw new ArgumentException($"'{key}' is a {AssetsViewModel.Noun(entry.Kind, 1).ToLowerInvariant()}, not a decal");
         }
         ObjectRef added = default;
+        System.Collections.Immutable.ImmutableArray<ObjectRef> all = [];
         edit.Transaction.Apply(document =>
         {
             Decal decal = tool.Make(document, key, request.X, request.Z, request.Width, request.Length,
                 request.Heading is float degrees ? degrees * MathF.PI / 180 : null, request.CutOff);
-            return document.PlaceDecal(decal, out added);
+            document = document.PlaceDecal(decal, out added);
+            // with the symmetry, its image in every part of the map (F-12)
+            return model.MirrorPlaced(document, [added], out all);
         });
-        selection.Set([added]);
+        selection.Set(all);
         model.Status = $"Placed {Path.GetFileNameWithoutExtension(key)}";
         return Task.FromResult(added.ToString());
     }

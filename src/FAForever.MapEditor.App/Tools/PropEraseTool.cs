@@ -44,10 +44,10 @@ public sealed partial class PropEraseTool(MainViewModel model) : ObservableObjec
             _grid = new PropGrid(document.Props);
         }
         float radius = (float)Radius;
-        _stroke = new BrushStroke(model, "Erase props", Radius, x, z, (edit, at, to) =>
+        _stroke = new BrushStroke(model, "Erase props", Radius, x, z, (edit, dab) =>
         {
             PropGrid grid = _grid!;
-            List<(int Id, float X, float Z, string Blueprint)> under = [.. grid.Near(at, to, radius)
+            List<(int Id, float X, float Z, string Blueprint)> under = [.. grid.Near(dab.X, dab.Z, radius)
                 .Where(prop => palette is null || palette.Contains(Project.Workspaces.AssetCatalog.KeyOf(prop.Blueprint)))];
             if (under.Count == 0)
             {

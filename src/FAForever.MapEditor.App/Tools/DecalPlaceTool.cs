@@ -30,6 +30,7 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
     private ToolInput _input = ToolInput.Default;
     private bool _dragging;
     private ObjectRef? _added;
+    private System.Collections.Immutable.ImmutableArray<ObjectRef> _all = [];
     private float _dragWidth;
     private float _dragHeading;
 
@@ -150,7 +151,7 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
             model.EndStroke(place);
             if (_added is ObjectRef added && model.ShownDocument?.Exists(added) == true)
             {
-                model.Selection.Set([added]);
+                model.Selection.Set(_all.Where(model.ShownDocument.Exists));
                 model.Status = $"Placed {Title}";
             }
         }
@@ -198,8 +199,11 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
         MapDocument before = _before!;
         Decal decal = Make(before, key, _from.X, _from.Z, _dragWidth, null, _dragHeading);
         ObjectRef added = default;
-        _place.Apply(_ => before.PlaceDecal(decal, out added));
+        System.Collections.Immutable.ImmutableArray<ObjectRef> all = [];
+        // with the symmetry, its images follow the size and turn of the drag (F-12)
+        _place.Apply(_ => model.MirrorPlaced(before.PlaceDecal(decal, out added), [added], out all));
         _added = added;
+        _all = all;
         model.ShowStroke();
     }
 

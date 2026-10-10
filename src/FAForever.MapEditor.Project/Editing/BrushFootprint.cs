@@ -35,13 +35,17 @@ namespace FAForever.MapEditor.Project.Editing
         private readonly BrushFalloff _falloff;
         private readonly float _cos;
         private readonly float _sin;
+        private readonly bool _mirrored;
 
         /// <param name="rotation">In degrees clockwise in the top view, where x runs east and z south.</param>
-        public BrushFootprint(float radius, BrushShape? shape, float rotation, BrushFalloff falloff = BrushFalloff.Smooth)
+        /// <param name="mirrored">Whether the shape is flipped left to right before it is turned: the
+        /// image of a dab in a mirrored part of a symmetric map.</param>
+        public BrushFootprint(float radius, BrushShape? shape, float rotation, BrushFalloff falloff = BrushFalloff.Smooth, bool mirrored = false)
         {
             _radius = radius;
             _shape = shape;
             _falloff = falloff;
+            _mirrored = mirrored;
             (_sin, _cos) = MathF.SinCos(rotation * MathF.PI / 180);
         }
 
@@ -62,7 +66,7 @@ namespace FAForever.MapEditor.Project.Editing
             // turned back by the rotation into the shape's square
             float u = (dx * _cos + dz * _sin) / _radius;
             float v = (dz * _cos - dx * _sin) / _radius;
-            return _shape.Sample(u, v);
+            return _shape.Sample(_mirrored ? -u : u, v);
         }
 
         /// <summary>

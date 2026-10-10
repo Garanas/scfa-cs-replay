@@ -67,17 +67,24 @@ public sealed class AddUnitHandler(MainViewModel model, AssetsViewModel assets, 
         radians = UnitCommands.Wrap(radians);
 
         string name = "";
+        ImmutableArray<ObjectRef> all = [];
         UnitCommands.Apply(edit, d =>
         {
             name = d.NextUnitName();
-            return d.AddUnit(army, group, new Project.Files.InMemory.Unit
+            d = d.AddUnit(army, group, new Project.Files.InMemory.Unit
             {
                 Name = name,
                 Blueprint = id,
                 Position = new System.Numerics.Vector3(x, d.Terrain.Heightmap.HeightAt(x, z), z),
                 Orientation = new System.Numerics.Vector3(0, radians, 0),
             });
+            // with the symmetry, its image in every part of the map, a structure on the build grid (F-12)
+            return model.MirrorPlaced(d, [ObjectRef.Unit(name)], out all);
         });
+        if (all.Length > 1)
+        {
+            model.Selection.Set(all);
+        }
         model.Status = $"Placed {name} ({entry?.Name ?? id}) for {army}";
         return Task.FromResult(new JsonObject
         {

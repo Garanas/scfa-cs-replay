@@ -44,6 +44,12 @@ namespace FAForever.MapEditor.Project.Editing
         public float Rotation { get; init; }
 
         /// <summary>
+        /// Whether the shape is flipped left to right before it is turned by <see cref="Rotation"/>:
+        /// the image of a dab in a mirrored part of a symmetric map (<see cref="SymmetricDabs"/>).
+        /// </summary>
+        public bool Mirrored { get; init; }
+
+        /// <summary>
         /// Where it may paint, by the terrain's slope and height; null paints everywhere.
         /// </summary>
         public PaintLimits? Limits { get; init; }
@@ -62,7 +68,7 @@ namespace FAForever.MapEditor.Project.Editing
             }
             float target = Erase ? 0 : 255;
             float strength = Strength;
-            GridDab.Paint(mask.Width, mask.Height, mapWidth, mapHeight, x, z, new BrushFootprint(Radius, Shape, Rotation, Falloff), Limits, terrain,
+            GridDab.Paint(mask.Width, mask.Height, mapWidth, mapHeight, x, z, new BrushFootprint(Radius, Shape, Rotation, Falloff, Mirrored), Limits, terrain,
                 (px, pz, weight) =>
                 {
                     float value = mask[px, pz];
@@ -104,6 +110,9 @@ namespace FAForever.MapEditor.Project.Editing
         /// <inheritdoc cref="MaskBrush.Rotation"/>
         public float Rotation { get; init; }
 
+        /// <inheritdoc cref="MaskBrush.Mirrored"/>
+        public bool Mirrored { get; init; }
+
         /// <inheritdoc cref="MaskBrush.Limits"/>
         public PaintLimits? Limits { get; init; }
 
@@ -116,7 +125,7 @@ namespace FAForever.MapEditor.Project.Editing
             }
             byte value = Value;
             float threshold = Math.Max(Threshold, float.Epsilon);
-            GridDab.Paint(grid.Width, grid.Height, mapWidth, mapHeight, x, z, new BrushFootprint(Radius, Shape, Rotation, Falloff), Limits, terrain,
+            GridDab.Paint(grid.Width, grid.Height, mapWidth, mapHeight, x, z, new BrushFootprint(Radius, Shape, Rotation, Falloff, Mirrored), Limits, terrain,
                 (px, pz, weight) =>
                 {
                     if (weight >= threshold)

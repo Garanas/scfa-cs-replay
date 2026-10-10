@@ -68,8 +68,12 @@ reads again when it changes; and nothing that generates runs by itself.
 - [ ] **F-12 Symmetry.** Mirror every edit: horizontally, vertically, diagonally, or around the
       middle for 2 to 8 players; shown as guides in the views. Today: the symmetry is chosen (off,
       rotational for 2 to 8, four mirrors; on and off takes the map's own) and the top view shows
-      its guides; the maths mirrors points, yaws and rotations. Missing: mirroring strokes and
-      placing, guides in the 3D view.
+      its guides; the maths mirrors points, yaws and rotations. Every brush stroke paints in every
+      part (shapes turned and flipped, props painted as mirrored props); placing markers, props,
+      decals and units places their images; moving, turning and deleting take the mirror partners
+      along; "Mirror edits" off keeps the guides only; Select the mirror partners, Mirror the
+      selection, and the check "not symmetric". Missing: guides and the brush's images in the 3D
+      view, decal scaling with partners.
 - [ ] **F-13 Events.** C# and Lua react to what happens (workspace opened, map opened or saved,
       document changed) and may check things before a save or export. Today: C# handlers of
       workspace opened, map opened, saved or exported, document changed, and checks that stop a
@@ -158,7 +162,7 @@ reads again when it changes; and nothing that generates runs by itself.
 
 - [x] **S-1 Paint strata.** Paint and erase a layer's mask with a brush, round or the shape of one
       of the workspace's brushes (T-2), turned; only where the slope (degrees) and height are within
-      limits, each pair on or off. Missing: painting with symmetry.
+      limits, each pair on or off; with symmetry (F-12) in every part of the map.
 - [x] **S-2 Layers.** Choose each layer's albedo and normal texture (picker, F-9) and their scales;
       add, remove and reorder layers; the lower and upper layer. The Paint panel's layer textures
       and the inspector; the strata the version holds (4 or 8), masks moving with them.

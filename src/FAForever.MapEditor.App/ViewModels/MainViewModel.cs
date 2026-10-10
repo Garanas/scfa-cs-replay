@@ -131,6 +131,7 @@ public sealed partial class MainViewModel : ObservableObject
         Props = new PropsViewModel(this);
         InitializePainting();
         InitializeMapPanels();
+        InitializeSymmetry();
     }
 
     /// <summary>

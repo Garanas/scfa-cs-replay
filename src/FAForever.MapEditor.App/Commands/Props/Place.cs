@@ -50,14 +50,16 @@ public sealed class PlacePropHandler(MainViewModel model, CurrentEdit edit) : IR
         Prop prop = model.Props.Placement.Make(blueprint, request.X, request.Z, document.Terrain.Heightmap, model.Props.Random,
             request.Heading is float degrees ? degrees * MathF.PI / 180 : null);
         int id = 0;
+        System.Collections.Immutable.ImmutableArray<ObjectRef> all = [];
         edit.Transaction.Apply(current =>
         {
             MapDocument added = current.AddProp(prop);
             id = added.Props[^1].Id;
-            return added;
+            // with the symmetry, its mirror image in every part of the map (F-12)
+            return model.MirrorPlaced(added, [ObjectRef.Prop(id)], out all);
         });
         ObjectRef placed = ObjectRef.Prop(id);
-        model.Selection.Set([placed]);
+        model.Selection.Set(all);
         model.Status = $"Placed {Path.GetFileNameWithoutExtension(blueprint)} at {request.X:0.#}, {request.Z:0.#}";
         return Task.FromResult(placed.ToString());
     }

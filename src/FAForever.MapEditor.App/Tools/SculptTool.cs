@@ -165,7 +165,9 @@ public sealed partial class SculptTool : ObservableObject, IShapedBrushTool
             HeightBrushMode.Scale => "Scale terrain",
             _ => "Flatten terrain",
         };
-        _stroke = new BrushStroke(_model, description, Radius, x, z, (edit, at, to) => (brush with { Rotation = Shape.NextRotation() }).Apply(edit.Heightmap, scale, at, to));
+        _stroke = new BrushStroke(_model, description, Radius, x, z,
+            (edit, dab) => (brush with { Rotation = dab.Rotation, Mirrored = dab.Mirrored, NoisePlace = dab.Image.Inverse() }).Apply(edit.Heightmap, scale, dab.X, dab.Z),
+            shape is null ? null : Shape.NextRotation);
     }
 
     public void Drag(float x, float z) => _stroke?.MoveTo(x, z);
