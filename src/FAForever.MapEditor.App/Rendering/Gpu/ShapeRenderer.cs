@@ -9,18 +9,23 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 /// Draws what a tool shows at a fixed size on screen (<see cref="IMapTool.Shapes"/>: the handles of
 /// the selection, the sun's arrow, the marks of the area tool and the ruler) over everything else
 /// in the 3D view: the shapes are in the view's pixels, made triangles on the processor every frame
-/// (a few hundred), drawn without the depth test.
+/// (a few hundred), drawn without the depth test. Lines with a depth (<see cref="ToolMapLine.Depth"/>:
+/// the links between path nodes) are drawn first, with the depth test, so hills and models in front
+/// of them hide them.
 /// </summary>
 internal sealed unsafe class ShapeRenderer : IDisposable
 {
-    // x, y in pixels; r, g, b, a premultiplied
-    private const int Stride = 6 * sizeof(float);
+    // x, y in pixels, the depth (normalized device coordinates); r, g, b, a premultiplied
+    private const int Stride = 7 * sizeof(float);
 
     private readonly GL _gl;
     private readonly TerrainRenderer.Program _program;
     private readonly uint _vao;
     private readonly uint _buffer;
     private readonly List<float> _vertices = [];
+    private readonly List<float> _deep = [];
+    private List<float> _into = null!;
+    private (float From, float To) _depth;
 
     public ShapeRenderer(GL gl, bool es)
     {
@@ -31,9 +36,9 @@ internal sealed unsafe class ShapeRenderer : IDisposable
         gl.BindVertexArray(_vao);
         gl.BindBuffer(BufferTargetARB.ArrayBuffer, _buffer);
         gl.EnableVertexAttribArray(0);
-        gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, Stride, null);
+        gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, Stride, null);
         gl.EnableVertexAttribArray(1);
-        gl.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, Stride, (void*)(2 * sizeof(float)));
+        gl.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, Stride, (void*)(3 * sizeof(float)));
         gl.BindVertexArray(0);
     }
 
@@ -53,8 +58,11 @@ internal sealed unsafe class ShapeRenderer : IDisposable
         }
         using Performance.Span measure = Performance.Measure("3d.draw-shapes");
         _vertices.Clear();
+        _deep.Clear();
         foreach (ToolShape shape in shapes)
         {
+            _into = shape is ToolMapLine { Depth: not null } ? _deep : _vertices;
+            _depth = shape is ToolMapLine { Depth: (float, float) depth } ? depth : (0, 0);
             switch (shape)
             {
                 case ToolLine { Points.Length: >= 2 } line:
@@ -77,7 +85,7 @@ internal sealed unsafe class ShapeRenderer : IDisposable
                     }
                     break;
                 case ToolMapLine mapLine:
-                    Segment(mapLine.From, mapLine.To, mapLine.Width, mapLine.Color);
+                    Segment(mapLine.From, mapLine.To, mapLine.Width, mapLine.Color, deep: mapLine.Depth is not null);
                     break;
                 case ToolTriangle triangle:
                     Vector4 fill = ink(triangle.Ink);
@@ -87,27 +95,43 @@ internal sealed unsafe class ShapeRenderer : IDisposable
                     break;
             }
         }
-        if (_vertices.Count == 0)
+        Triangles = (_vertices.Count + _deep.Count) / 21;
+        if (Triangles == 0)
         {
             return;
         }
-        Triangles = _vertices.Count / 18;
-        _gl.Disable(EnableCap.DepthTest);
         _gl.Enable(EnableCap.Blend);
         _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
         _program.Use();
         _program.Set("uViewSize", size.X, size.Y);
         _gl.BindVertexArray(_vao);
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _buffer);
-        ReadOnlySpan<float> data = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_vertices);
-        _gl.BufferData<float>(BufferTargetARB.ArrayBuffer, data, BufferUsageARB.StreamDraw);
-        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint)(data.Length / 6));
+        // the lines in the scene: tested against what was drawn, without writing their own depth
+        _gl.Enable(EnableCap.DepthTest);
+        _gl.DepthFunc(DepthFunction.Lequal);
+        _gl.DepthMask(false);
+        DrawTriangles(_deep);
+        _gl.DepthMask(true);
+        // the rest over everything
+        _gl.Disable(EnableCap.DepthTest);
+        DrawTriangles(_vertices);
         _gl.BindVertexArray(0);
         _gl.Disable(EnableCap.Blend);
         _gl.Enable(EnableCap.DepthTest);
     }
 
-    private void Segment(Vector2 a, Vector2 b, float width, Vector4 color)
+    private void DrawTriangles(List<float> vertices)
+    {
+        if (vertices.Count == 0)
+        {
+            return;
+        }
+        ReadOnlySpan<float> data = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(vertices);
+        _gl.BufferData<float>(BufferTargetARB.ArrayBuffer, data, BufferUsageARB.StreamDraw);
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint)(data.Length / 7));
+    }
+
+    private void Segment(Vector2 a, Vector2 b, float width, Vector4 color, bool deep = false)
     {
         Vector2 d = b - a;
         if (d.LengthSquared() < 1e-6f)
@@ -118,6 +142,18 @@ internal sealed unsafe class ShapeRenderer : IDisposable
         Vector2 across = new Vector2(-along.Y, along.X) * (width / 2);
         // a little past each end, so joined segments close their corners
         Vector2 extend = along * (width / 2);
+        if (deep)
+        {
+            // each end at its own depth; not past the ends, which would stick out of the scene
+            (float from, float to) = _depth;
+            Add(a + across, color, from);
+            Add(b + across, color, to);
+            Add(b - across, color, to);
+            Add(a + across, color, from);
+            Add(b - across, color, to);
+            Add(a - across, color, from);
+            return;
+        }
         Quad(a - extend + across, b + extend + across, b + extend - across, a - extend - across, color);
     }
 
@@ -131,18 +167,19 @@ internal sealed unsafe class ShapeRenderer : IDisposable
         Add(d, color);
     }
 
-    private void Add(Vector2 p, Vector4 color)
+    private void Add(Vector2 p, Vector4 color, float depth = 0)
     {
-        _vertices.Add(p.X);
-        _vertices.Add(p.Y);
-        _vertices.Add(color.X * color.W);
-        _vertices.Add(color.Y * color.W);
-        _vertices.Add(color.Z * color.W);
-        _vertices.Add(color.W);
+        _into.Add(p.X);
+        _into.Add(p.Y);
+        _into.Add(depth);
+        _into.Add(color.X * color.W);
+        _into.Add(color.Y * color.W);
+        _into.Add(color.Z * color.W);
+        _into.Add(color.W);
     }
 
     private static string Vertex(bool es) => TerrainShaders.Header(es) + """
-        layout(location = 0) in vec2 aPixel;
+        layout(location = 0) in vec3 aPixel;
         layout(location = 1) in vec4 aColor;
         uniform vec2 uViewSize;
         out vec4 vColor;
@@ -150,7 +187,7 @@ internal sealed unsafe class ShapeRenderer : IDisposable
         void main()
         {
             vColor = aColor;
-            gl_Position = vec4(aPixel.x / uViewSize.x * 2.0 - 1.0, 1.0 - aPixel.y / uViewSize.y * 2.0, 0.0, 1.0);
+            gl_Position = vec4(aPixel.x / uViewSize.x * 2.0 - 1.0, 1.0 - aPixel.y / uViewSize.y * 2.0, aPixel.z, 1.0);
         }
         """;
 

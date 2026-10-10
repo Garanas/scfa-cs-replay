@@ -162,7 +162,10 @@ public sealed partial class MainViewModel
     /// </summary>
     /// <param name="from">A corner, in the view's pixels; <paramref name="to"/> the other, in any order.</param>
     /// <param name="toScreen">Where a place shows in the view; null behind the camera.</param>
-    public void SelectOnScreen(System.Numerics.Vector2 from, System.Numerics.Vector2 to, Func<System.Numerics.Vector3, System.Numerics.Vector2?> toScreen, SelectionChange change, ObjectKinds? kinds = null)
+    /// <param name="eye">Where the camera is: what the terrain hides from it is left out
+    /// (<see cref="Rendering.ObjectPlacement.IsHiddenByTerrain"/>); null to take everything inside.</param>
+    public void SelectOnScreen(System.Numerics.Vector2 from, System.Numerics.Vector2 to, Func<System.Numerics.Vector3, System.Numerics.Vector2?> toScreen, SelectionChange change, ObjectKinds? kinds = null,
+        System.Numerics.Vector3? eye = null)
     {
         if (ShownDocument is not MapDocument document)
         {
@@ -176,7 +179,8 @@ public sealed partial class MainViewModel
             foreach (ObjectRef thing in document.All(kinds ?? SelectableKinds, ShownMarkerKinds).Where(Decals.IsShown))
             {
                 if (document.PlaceOf(thing) is System.Numerics.Vector3 place && toScreen(place) is System.Numerics.Vector2 at
-                    && at.X >= min.X && at.Y >= min.Y && at.X <= max.X && at.Y <= max.Y)
+                    && at.X >= min.X && at.Y >= min.Y && at.X <= max.X && at.Y <= max.Y
+                    && (eye is not System.Numerics.Vector3 seenFrom || !Rendering.ObjectPlacement.IsHiddenByTerrain(document.Terrain.Heightmap, seenFrom, place)))
                 {
                     inside.Add(thing);
                 }
