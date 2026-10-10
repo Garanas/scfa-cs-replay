@@ -21,5 +21,17 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// <c>All</c>; absent for <c>Nearest</c>.
         /// </summary>
         public string? Routes { get; init; }
+
+        /// <summary>
+        /// The masks for tools written beside the draft heightmap for World Machine or Gaea
+        /// (<c>procedural/temp/draft-mask-&lt;name&gt;.png</c>); absent for none.
+        /// </summary>
+        public List<string>? DraftMasks { get; init; }
+
+        /// <summary>
+        /// Whether the draft heightmap and those masks are written again whenever they change;
+        /// absent for no.
+        /// </summary>
+        public bool? WriteDraft { get; init; }
     }
 }

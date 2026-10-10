@@ -133,7 +133,9 @@ namespace FAForever.MapEditor.Project
         /// <remarks>
         /// A file that holds what the last save wrote is the editor's own and is left alone, also
         /// when the document changed since (the editing goes on during a save in the background).
-        /// A file another tool changed replaces its part of the current document.
+        /// A file another tool changed replaces its part of the current document; an image layer's
+        /// file (the final's base read from a procedural tool's output, an imported layer) is read
+        /// again whenever it changes, saved or not.
         /// </remarks>
         /// <param name="changedFiles">The files, relative to the project folder.</param>
         /// <returns>Whether the document changed.</returns>
@@ -145,9 +147,12 @@ namespace FAForever.MapEditor.Project
             }
 
             string folder = ProjectFolder;
+            // the file of an image layer is always another tool's (the save never writes it), also
+            // for a layer added since the last save
             string[] external = ReferenceEquals(Document, _savedDocument)
                 ? [.. changedFiles]
-                : [.. changedFiles.Where(file => !ReferenceEquals(MapProjectStore.Reload(_savedDocument, folder, [file]), _savedDocument))];
+                : [.. changedFiles.Where(file => MapProjectStore.IsImageLayerFile(Document, folder, file)
+                    || !ReferenceEquals(MapProjectStore.Reload(_savedDocument, folder, [file]), _savedDocument))];
             if (external.Length == 0)
             {
                 return false;

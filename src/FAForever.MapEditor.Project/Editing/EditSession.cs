@@ -127,6 +127,14 @@ namespace FAForever.MapEditor.Project.Editing
         public string? SculptLayer { get; set; }
 
         /// <summary>
+        /// The heightmap brushes write (the one the editor shows): the final, or the draft. While the
+        /// map has a draft of its own, <see cref="EditTransaction.Heightmap"/> hands out the draft's
+        /// samples for the draft, and what a brush writes goes into <see cref="SculptLayer"/> of the
+        /// draft's stack.
+        /// </summary>
+        public HeightStackKind Heights { get; set; }
+
+        /// <summary>
         /// Makes one edit, which can be undone as one step.
         /// </summary>
         /// <param name="mergeKey">Merges the edit into the previous step when that was an edit

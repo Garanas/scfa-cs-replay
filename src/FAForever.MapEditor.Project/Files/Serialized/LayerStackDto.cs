@@ -21,6 +21,31 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         public required string Target { get; init; }
 
         public required IReadOnlyList<LayerDto> Layers { get; init; }
+
+        /// <summary>
+        /// For the heightmap: the draft heightmap's layers in their order, lowest first, each with
+        /// whether it shows in the draft (<see cref="LayerDto.Hidden"/> is the final's choice for a
+        /// shared layer). Every layer whose <see cref="LayerDto.Use"/> is not <c>final</c> is in it.
+        /// Left out while the draft holds the same layers as the final in the same order, shown
+        /// alike; a project without it (older ones too) has every layer in both.
+        /// </summary>
+        public IReadOnlyList<DraftLayerDto>? Draft { get; init; }
+    }
+
+    /// <summary>
+    /// A layer's place in the draft heightmap's stack (<see cref="LayerStackDto.Draft"/>).
+    /// </summary>
+    public sealed record DraftLayerDto
+    {
+        /// <summary>
+        /// The layer's name, as in <see cref="LayerStackDto.Layers"/>.
+        /// </summary>
+        public required string Name { get; init; }
+
+        /// <summary>
+        /// Left out while the layer shows in the draft.
+        /// </summary>
+        public bool? Hidden { get; init; }
     }
 
     /// <summary>
@@ -104,6 +129,13 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// A curve layer's curve.
         /// </summary>
         public HeightCurveDto? Curve { get; init; }
+
+        /// <summary>
+        /// For a layer of the heightmap, which of its stacks hold it: <c>draft</c> (only the draft,
+        /// not listed in the final's order) or <c>final</c> (only the final); left out for both. The
+        /// layers listed without <c>draft</c> are the final's, in its order.
+        /// </summary>
+        public string? Use { get; init; }
     }
 
     public sealed record HeightCurveDto
