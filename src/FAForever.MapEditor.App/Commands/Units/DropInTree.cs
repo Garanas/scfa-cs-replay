@@ -54,6 +54,7 @@ public sealed class DropInUnitTreeHandler(MainViewModel model, ArmiesViewModel a
             UnitCommands.Apply(edit, d => d.MoveGroup(fromArmy, source, request.Army, target, out moved));
             armies.ChooseWhenShown(request.Army, moved);
             model.Status = $"Moved the group {from} of {fromArmy} into {where}";
+            edit.Transaction.Description = $"Move the group {from} of {fromArmy} into {where}";
             return Task.FromResult(new JsonObject { ["army"] = request.Army, ["group"] = UnitGroupEdits.PathText(moved) });
         }
         string[] names = [.. (request.Units ?? []).Distinct(StringComparer.Ordinal)];
@@ -69,6 +70,7 @@ public sealed class DropInUnitTreeHandler(MainViewModel model, ArmiesViewModel a
         }
         armies.ChooseWhenShown(request.Army, target);
         model.Status = count == 1 ? $"Moved a unit into {where}" : $"Moved {count} units into {where}";
+        edit.Transaction.Description = count == 1 ? $"Move a unit into {where}" : $"Move {count} units into {where}";
         return Task.FromResult(new JsonObject { ["army"] = request.Army, ["group"] = request.Group, ["units"] = count });
     }
 }

@@ -25,7 +25,7 @@ public sealed class MoveUnitsToArmyHandler(MainViewModel model, SelectionViewMod
         ImmutableArray<string> group = request.Group is null ? [UnitGroupEdits.InitialGroup] : UnitGroupEdits.ParsePath(request.Group);
         int count = 0;
         UnitCommands.Apply(edit, d => d.MoveUnits(names, request.Army, group, out count));
-        model.Status = $"Gave {count} units to {request.Army}";
+        model.Status = $"Gave {MainViewModel.Units(count)} to {request.Army}";
         return Task.FromResult(count);
     }
 }
@@ -64,7 +64,7 @@ public sealed class MoveUnitsToGroupHandler(MainViewModel model, SelectionViewMo
             }
             return d;
         });
-        model.Status = $"Moved {count} units to the group {(group.IsEmpty ? "at the root" : request.Group)}";
+        model.Status = $"Moved {MainViewModel.Units(count)} to the group {(group.IsEmpty ? "at the root" : request.Group)}";
         return Task.FromResult(count);
     }
 }

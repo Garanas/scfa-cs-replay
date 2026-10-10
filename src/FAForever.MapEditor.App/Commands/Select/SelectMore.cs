@@ -39,6 +39,7 @@ public sealed class InvertSelectionHandler(MainViewModel model) : IRequestHandle
     public Task<int> Handle(InvertSelection request, CancellationToken cancellationToken)
     {
         model.InvertSelection();
+        model.Status = model.SelectedText;
         return Task.FromResult(model.Selection.Count);
     }
 }

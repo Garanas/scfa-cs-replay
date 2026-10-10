@@ -154,6 +154,11 @@ faf-map editor run id=decals.forward --port 5372          # a command that refus
 faf-map editor run id=file.open interactive=true --port 5372 # answers at once with asked (the question it opened); then dialog button=Cancel
 faf-map editor screenshot part=dialog path=<scratch>/q.png --port 5372   # the question's card
 faf-map editor focus ref=unit:UNIT_1 --port 5372          # the 3D camera at 50 degrees, at once, framing it with a margin (pitch=90: straight down)
+faf-map editor menu path=File --port 5372                 # a menu's items; path="File/Save as a template" clicks one
+faf-map editor window width=1280 height=800 --port 5372   # the window's size; close=true closes it as its close button (the unsaved-changes question)
+faf-map editor dialog text="My template" button="Save the settings" --port 5372   # a question with a text field
+faf-map editor ui under=Sky type=Button --port 5372       # under takes a section's heading too
+faf-map editor run id=file.open folder=<project> discard=true --port 5372   # without discard it refuses while the map has unsaved changes
 ```
 
 `faf-map editor start` detaches the editor (its output in `editor-<port>.log` beside the settings

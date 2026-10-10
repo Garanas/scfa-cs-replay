@@ -109,7 +109,8 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             status = 400;
-            Dispatcher.UIThread.Post(() => model.Logger("Automation").LogWarning("An automation command failed: {Reason}", exception.Message));
+            // the caller gets the error in the answer: logged as information, so the Console's count stays the editor's own warnings
+            Dispatcher.UIThread.Post(() => model.Logger("Automation").LogInformation("An automation command failed: {Reason}", exception.Message));
             response = new JsonObject { ["ok"] = false, ["error"] = exception.Message };
             bytes = Encoding.UTF8.GetBytes(response.ToJsonString(Json));
         }
@@ -182,7 +183,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             case "" or "help":
                 return new JsonObject
                 {
-                    ["automation"] = new JsonArray([.. Own.Concat(InputCommands).Concat(ToolingCommands).Concat(DialogCommands).Concat(LayoutCommands).Concat(AnswerCommands).Select(line => (JsonNode)JsonValue.Create(line))]),
+                    ["automation"] = new JsonArray([.. Own.Concat(InputCommands).Concat(ToolingCommands).Concat(DialogCommands).Concat(LayoutCommands).Concat(ShellCommands).Concat(AnswerCommands).Select(line => (JsonNode)JsonValue.Create(line))]),
                     ["commands"] = new JsonArray([.. model.Commands.All.Where(c => !c.IsIncomplete).Select(c => (JsonNode)JsonValue.Create(c.Usage))]),
                     ["aliases"] = new JsonObject([.. Aliases.Select(alias => KeyValuePair.Create(alias.Key, (JsonNode?)JsonValue.Create(alias.Value.Runs)))]),
                 };
@@ -825,7 +826,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
         result["ran"] = run.Ran;
         if (run.Error is Exception error)
         {
-            model.Logger("Automation").LogWarning("The command {Command} refused: {Reason}", id, error.Message);
+            model.Logger("Automation").LogInformation("The command {Command} refused: {Reason}", id, error.Message);
         }
         if (run.Why is string why)
         {

@@ -65,7 +65,7 @@ public sealed class PlaceUnitPresetHandler(MainViewModel model, PresetsViewModel
         });
         // what was placed is selected, as placing a unit selects it
         selection.Set(placed);
-        model.Status = $"Placed the preset {preset.Name}: {names.Length} units in {UnitGroupEdits.PathText(group)} of {army}";
+        model.Status = $"Placed the preset {preset.Name}: {MainViewModel.Units(names.Length)} in {UnitGroupEdits.PathText(group)} of {army}";
         return Task.FromResult(new JsonObject
         {
             ["army"] = army,

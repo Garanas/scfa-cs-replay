@@ -93,7 +93,7 @@ public sealed class PlaceMarkerHandler(MainViewModel model, MarkersViewModel mar
             }
             markers.PlacementWarning = warning;
         }
-        model.Status = warning ?? (placed.Length > 1 ? $"Placed {added.Name} and {placed.Length - 1} mirrored" : $"Placed {added.Name}");
+        model.Status = warning ?? $"Placed {added.Name}{MainViewModel.Mirrored(placed.Length)}";
         return Task.FromResult(new JsonObject
         {
             ["ref"] = ObjectRef.Marker(added.Id).ToString(),

@@ -284,12 +284,19 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
     {
         if (Selected is AssetTile tile && Shelf is AssetsViewModel shelf)
         {
-            tile.IsStarred = shelf.SetStar(tile.Entry.Key, !shelf.Favourites.IsStarred(tile.Entry.Key));
+            bool was = shelf.Favourites.IsStarred(tile.Entry.Key);
+            tile.IsStarred = shelf.SetStar(tile.Entry.Key, !was);
             OnPropertyChanged(nameof(SelectedStarred));
             OnPropertyChanged(nameof(StarText));
             if (Show == Starred)
             {
                 Rebuild();
+            }
+            else if (tile.IsStarred != was)
+            {
+                // the Starred chip counts it at once (the tile matches the search, or it would not show)
+                Shows = [.. Shows.Select(choice => choice.Value == Starred ? choice with { Count = Math.Max(0, choice.Count + (tile.IsStarred ? 1 : -1)) } : choice)];
+                OnPropertyChanged(nameof(Shows));
             }
         }
     }

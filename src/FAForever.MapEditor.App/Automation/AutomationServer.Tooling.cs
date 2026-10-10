@@ -90,7 +90,7 @@ public sealed partial class AutomationServer
                 arguments["gpu"] = true;
                 return false;
             default:
-                return await RunDialogToolingAsync(command, arguments, result);
+                return await RunDialogToolingAsync(command, arguments, result) || await RunShellAsync(command, arguments, result);
         }
     }
 

@@ -50,6 +50,20 @@ public sealed class WindowDialogs(Window window) : IEditorDialogs
         && await model.Question.AskAsync(title, message, [action, "Cancel"], cancel: 1, focus: 1) == 0;
 
     /// <summary>
+    /// The message with a text field, the buttons and Cancel, asked over the window; the field has
+    /// the keyboard first and Enter in it presses the first button.
+    /// </summary>
+    public async Task<(int Button, string Text)?> AskTextAsync(string title, string message, string label, string text, IReadOnlyList<string> buttons)
+    {
+        if (window.DataContext is not MainViewModel model)
+        {
+            return null;
+        }
+        (int button, string answer) = await model.Question.AskWithTextAsync(title, message, label, text, [.. buttons, "Cancel"], cancel: buttons.Count);
+        return button < buttons.Count ? (button, answer) : null;
+    }
+
+    /// <summary>
     /// The system's browser, through the shell.
     /// </summary>
     public Task OpenInBrowserAsync(Uri page)

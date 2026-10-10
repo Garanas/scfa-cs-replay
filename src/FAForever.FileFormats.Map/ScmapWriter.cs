@@ -271,7 +271,7 @@ namespace FAForever.FileFormats.Map
         {
             if (!condition)
             {
-                throw new ArgumentException(message, "scmap");
+                throw new ArgumentException(message);
             }
         }
 

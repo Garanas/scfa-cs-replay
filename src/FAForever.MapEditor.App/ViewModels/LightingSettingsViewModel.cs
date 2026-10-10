@@ -51,7 +51,20 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
     private Lighting? _shown;
     private Sky? _shownSky;
 
-    public LightingSettingsViewModel(Func<string, JsonObject, Task> run)
+    /// <summary>
+    /// The backgrounds the game has in <c>/textures/environment</c>, as the maps name them, with
+    /// what the question of Choose... calls them.
+    /// </summary>
+    public static IReadOnlyList<(string Title, string Path)> Backgrounds { get; } =
+    [
+        ("Default", "/textures/environment/defaultbackground.dds"),
+        ("Black", "/textures/environment/blackbackground.dds"),
+        ("Seraphim", "/textures/environment/seraphim iibackground3.dds"),
+    ];
+
+    /// <param name="ask">Asks a question over the window with these buttons (the last cancels) and
+    /// answers the index of the one pressed: Choose... of the background.</param>
+    public LightingSettingsViewModel(Func<string, JsonObject, Task> run, Func<string, IReadOnlyList<string>, Task<int>>? ask = null)
     {
         const string set = "lighting.set";
         Sun = new SettingGroup("Sun",
@@ -85,7 +98,17 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
             {
                 Help = "The cube map units and props reflect (the map's <default> environment cube map)",
             },
-            new TextureSetting("Background", sky, "background", d => d.Sky.Background, run) { Help = "The picture far behind the sky, e.g. /textures/environment/defaultbackground.dds" },
+            new TextureSetting("Background", sky, "background", d => d.Sky.Background, run, null, ask is null ? null : async () =>
+            {
+                int chosen = await ask("The picture far behind the sky: one of the game's", [.. Backgrounds.Select(background => background.Title), "Cancel"]);
+                if (chosen >= 0 && chosen < Backgrounds.Count)
+                {
+                    await run(sky, new JsonObject { ["background"] = Backgrounds[chosen].Path });
+                }
+            })
+            {
+                Help = "The picture far behind the sky, e.g. /textures/environment/defaultbackground.dds; Choose offers the game's",
+            },
         ]);
         Fog = new SettingGroup("Fog",
         [

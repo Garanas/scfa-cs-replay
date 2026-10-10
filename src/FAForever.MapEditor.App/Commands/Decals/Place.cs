@@ -46,7 +46,7 @@ public sealed class PlaceDecalHandler(MainViewModel model, SelectionViewModel se
             return model.MirrorPlaced(document, [added], out all);
         });
         selection.Set(all);
-        model.Status = $"Placed {Path.GetFileNameWithoutExtension(key)}";
+        model.Status = $"Placed {Path.GetFileNameWithoutExtension(key)}{MainViewModel.Mirrored(all.Length)}";
         return Task.FromResult(added.ToString());
     }
 }

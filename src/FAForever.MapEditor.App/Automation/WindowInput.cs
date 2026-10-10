@@ -202,8 +202,15 @@ public sealed class WindowInput
     /// </summary>
     public static (Key Key, RawInputModifiers Modifiers) ParseKey(string text)
     {
-        string trimmed = text.Trim();
-        string? alias = trimmed.ToLowerInvariant() switch
+        string[] parts = text.Trim().Split('+', StringSplitOptions.TrimEntries);
+        if (parts.Length == 0 || parts[^1].Length == 0)
+        {
+            throw new ArgumentException($"'{text}' is no key: give its name (E, Delete, Escape, F5, Up, 5) or a gesture (Ctrl+K, Ctrl+2)");
+        }
+        // a modifier alone (Shift) is a key; with others it is the last part's modifier
+        RawInputModifiers modifiers = parts.Length > 1 ? ParseModifiers(parts[..^1]) : RawInputModifiers.None;
+        string name = parts[^1];
+        name = name.ToLowerInvariant() switch
         {
             "esc" => "Escape",
             "del" => "Delete",
@@ -218,29 +225,22 @@ public sealed class WindowInput
             "shift" => "LeftShift",
             "ctrl" or "control" => "LeftCtrl",
             "alt" => "LeftAlt",
-            _ => null,
+            "[" => "OemOpenBrackets",
+            "]" => "OemCloseBrackets",
+            "+" or "plus" => "OemPlus",
+            "-" or "minus" => "OemMinus",
+            _ => name,
         };
-        if (alias is not null)
+        // a digit is the key above the letters (D2), as a menu writes Ctrl+2
+        if (name.Length == 1 && char.IsDigit(name[0]))
         {
-            trimmed = alias;
+            name = "D" + name;
         }
-        if (trimmed.Length == 1 && char.IsDigit(trimmed[0]))
+        if (int.TryParse(name, out _) || !Enum.TryParse(name, ignoreCase: true, out Key key) || !Enum.IsDefined(key))
         {
-            trimmed = "D" + trimmed;
+            throw new ArgumentException($"'{text}' is no key: '{name}' is not a key's name (E, Delete, Escape, F5, Up, 5, OemPlus); a gesture joins modifiers with + (Ctrl+K, Ctrl+2)");
         }
-        if (!trimmed.Contains('+') && Enum.TryParse(trimmed, ignoreCase: true, out Key key) && !int.TryParse(trimmed, out _))
-        {
-            return (key, RawInputModifiers.None);
-        }
-        try
-        {
-            KeyGesture gesture = KeyGesture.Parse(trimmed);
-            return (gesture.Key, Modifiers(gesture.KeyModifiers));
-        }
-        catch (Exception exception) when (exception is ArgumentException or FormatException or KeyNotFoundException)
-        {
-            throw new ArgumentException($"'{text}' is no key: give its name (E, Delete, Escape, F5, Up) or a gesture (Ctrl+K)", exception);
-        }
+        return (key, modifiers);
     }
 
     /// <summary>

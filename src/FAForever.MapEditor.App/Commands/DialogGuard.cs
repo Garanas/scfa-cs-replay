@@ -39,6 +39,10 @@ public sealed class DialogGuard(IEditorDialogs dialogs) : IEditorDialogs
         ? throw new InvalidOperationException($"The command would ask: \"{title}\". Give the argument confirm: true")
         : dialogs.ConfirmAsync(title, message, action);
 
+    public Task<(int Button, string Text)?> AskTextAsync(string title, string message, string label, string text, IReadOnlyList<string> buttons) => Quiet
+        ? throw new InvalidOperationException($"The command would ask: \"{title}\". Give its arguments")
+        : dialogs.AskTextAsync(title, message, label, text, buttons);
+
     public Task OpenInBrowserAsync(Uri page) => Quiet
         ? throw new InvalidOperationException("The command would open the browser to sign in, which needs a person")
         : dialogs.OpenInBrowserAsync(page);

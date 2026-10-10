@@ -21,7 +21,7 @@ public sealed partial class AutomationServer
     /// </summary>
     private static readonly string[] DialogCommands =
     [
-        "dialog {button?}: presses a button of the question over the window (state.dialog); without one, the question",
+        "dialog {button?, text?}: presses a button of the question over the window (state.dialog), its text field holding text first; without a button, the question",
         "click {label, under?, button?: left|right, doubleClick?}: scrolls the control into view and clicks its centre",
     ];
 
@@ -38,6 +38,14 @@ public sealed partial class AutomationServer
                 if (!question.IsOpen)
                 {
                     throw new InvalidOperationException("No question is open");
+                }
+                if (arguments["text"]?.GetValue<string>() is string text)
+                {
+                    if (!question.HasField)
+                    {
+                        throw new ArgumentException($"The question '{question.Title}' has no text field");
+                    }
+                    question.FieldText = text;
                 }
                 if (arguments["button"]?.GetValue<string>() is { Length: > 0 } button)
                 {
@@ -77,11 +85,22 @@ public sealed partial class AutomationServer
             await LetInputSettleAsync();
         }
         control.BringIntoView();
-        await LetInputSettleAsync();
-        await NextFrameAsync();
         TopLevel top = WindowOf(control);
-        Point centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), top)
-            ?? throw new InvalidOperationException($"'{label}' is not in the window");
+        // measured once it stays where it is: a scroll and the layout after it may take frames
+        Point? last = null;
+        Point centre = default;
+        for (int frame = 0; frame < 20; frame++)
+        {
+            await LetInputSettleAsync();
+            await NextFrameAsync();
+            centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), top)
+                ?? throw new InvalidOperationException($"'{label}' is not in the window");
+            if (last == centre)
+            {
+                break;
+            }
+            last = centre;
+        }
         if (!new Rect(top.Bounds.Size).Contains(centre))
         {
             throw new InvalidOperationException($"'{label}' lies outside the window at {centre.X:0}, {centre.Y:0}");

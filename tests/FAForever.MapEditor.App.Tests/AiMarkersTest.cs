@@ -162,7 +162,7 @@ namespace FAForever.MapEditor.App.Tests
 
             PlacedUnit placed = model.ShownDocument!.FindUnit(unit)!;
             CollectionAssert.AreEqual(new[] { "Optional_Civilian_Defenses_3" }, placed.Group.ToArray());
-            Assert.AreEqual("Optional_Civilian_Defenses_3 (ARMY_17): 1 units, from value 3 of optional_civilian_defenses", model.Markers.OptionalGroups.Single().Line);
+            Assert.AreEqual("Optional_Civilian_Defenses_3 (ARMY_17): 1 unit, from value 3 of optional_civilian_defenses", model.Markers.OptionalGroups.Single().Line);
 
             // civilians of NEUTRAL_CIVILIAN keep their army: the script creates a group of any army
             await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1101", ["x"] = 70, ["z"] = 50, ["army"] = "NEUTRAL_CIVILIAN" });
@@ -172,13 +172,13 @@ namespace FAForever.MapEditor.App.Tests
             PlacedUnit kept = model.ShownDocument!.FindUnit(house)!;
             Assert.AreEqual("NEUTRAL_CIVILIAN", kept.Army);
             CollectionAssert.AreEqual(new[] { "Optional_Players_3" }, kept.Group.ToArray());
-            Assert.AreEqual("Added Optional_Players_3 to NEUTRAL_CIVILIAN with 1 units", model.Status);
+            Assert.AreEqual("Added Optional_Players_3 to NEUTRAL_CIVILIAN with 1 unit", model.Status);
 
             // units of a playable army go to the civilians, and the status line says so
             await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1101", ["x"] = 90, ["z"] = 50, ["army"] = "ARMY_1" });
             model.Selection.Set([ObjectRef.Unit(model.ShownDocument!.AllUnits().Single(u => u.Army == "ARMY_1" && u.Unit.Position.X == 90).Unit.Name)]);
             await Run(model, "markers.addOptionalGroup", new JsonObject { ["option"] = "Players", ["level"] = 4, ["fromSelection"] = true });
-            Assert.AreEqual("Added Optional_Players_4 to ARMY_17 with 1 units, moved from ARMY_1 into ARMY_17", model.Status);
+            Assert.AreEqual("Added Optional_Players_4 to ARMY_17 with 1 unit, moved from ARMY_1 into ARMY_17", model.Status);
         }
     }
 }

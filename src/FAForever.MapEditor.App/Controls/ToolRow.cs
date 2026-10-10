@@ -201,8 +201,14 @@ public sealed class ToolRow : Panel
                 rowX = left;
                 rowY += height;
             }
-            item.Arrange(new Rect(rowX, rowY, item.DesiredSize.Width, height));
-            rowX += item.DesiredSize.Width + Spacing;
+            // wider than a row (a tool's help text): as wide as the row, trimmed
+            double width = Math.Min(item.DesiredSize.Width, Math.Max(0, right - rowX));
+            if (width < item.DesiredSize.Width)
+            {
+                item.Measure(new Size(width, height));
+            }
+            item.Arrange(new Rect(rowX, rowY, width, height));
+            rowX += width + Spacing;
         }
         // the box behind them spans the bar the row lies in (from the tool's name on)
         double boxLeft = 0, boxRight = finalSize.Width;

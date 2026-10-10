@@ -14,7 +14,7 @@ namespace FAForever.MapEditor.App.Tests
 {
     /// <summary>
     /// Symmetry applied to edits in the real window (user stories F-12, S-1): a stroke and a click
-    /// with the mouse in the top view, and the "Mirror edits" check box beside the choice.
+    /// with the mouse in the top view, and the "Mirror edits" chip beside the choice.
     /// </summary>
     [TestClass]
     public sealed class SymmetryWindowTest
@@ -78,7 +78,12 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(masses + 4, model.ShownDocument!.Markers.Resources.Length);
             Assert.AreEqual(4, model.Selection.Count, "selected together");
 
-            CheckBox mirror = window.GetVisualDescendants().OfType<CheckBox>().Single(box => box.Content as string == "Mirror edits");
+            Avalonia.Controls.Primitives.ToggleButton mirror = Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(window).OfType<Avalonia.Controls.Primitives.ToggleButton>()
+                .Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Mirror edits");
+            // with the symmetry on, the overlays' chips keep room beside it at 1280 pixels
+            FAForever.MapEditor.App.Controls.ToolRow views = Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(window).OfType<FAForever.MapEditor.App.Controls.ToolRow>().Single(row => row.Name == "ViewOptions");
+            int chips = views.Children.Count(child => child.Classes.Contains("chip") && child != mirror);
+            Assert.IsTrue(views.OverflowCount <= chips - 2, $"at least two chips beside the symmetry, {views.OverflowCount} of {chips} behind More");
             Assert.IsTrue(mirror.IsVisible && mirror.IsChecked == true);
             mirror.IsChecked = false;
             Assert.IsFalse(model.Symmetry.IsMirroring);

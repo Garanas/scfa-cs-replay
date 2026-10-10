@@ -1162,6 +1162,11 @@ public sealed class HeightmapView : Control
             changed = [new SampleRect(0, 0, _picture.Width - 1, _picture.Height - 1)];
         }
         Copy(changed);
+        if (!_fitted)
+        {
+            // a map opened: the whole of it, also when its picture was coloured on the pool after the map changed
+            Fit();
+        }
         InvalidateVisual();
     }
 

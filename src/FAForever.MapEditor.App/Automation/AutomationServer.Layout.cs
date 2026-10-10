@@ -44,8 +44,15 @@ public sealed partial class AutomationServer
     /// Where to look for <paramref name="arguments"/>' <c>under</c>: that control, else null for every window.
     /// </summary>
     private Visual? UnderOf(JsonObject arguments) => arguments["under"]?.GetValue<string>() is { Length: > 0 } under
-        ? FindInWindows(under) ?? throw new ArgumentException($"No control is named, labelled or reads '{under}'")
+        ? FindPartInWindows(under) ?? throw new ArgumentException($"No control or heading is named, labelled or reads '{under}'")
         : null;
+
+    /// <summary>
+    /// The first control or the part under a section heading named, labelled or reading the text, in
+    /// the editor's window or a floating one.
+    /// </summary>
+    private Control? FindPartInWindows(string text, bool hidden = false) =>
+        Windows.Select(each => UiTree.FindPart(each, text, hidden)).FirstOrDefault(control => control is not null);
 
     /// <summary>
     /// The window a control lies in: the editor's or a floating panel's.

@@ -195,6 +195,22 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     path in the brushes folder) go to the active tool's brush; a limit given turns its limit on,
     `limits: false` turns them off first.
 - Shortcuts are never a single letter (`IdsAndShortcutsAreUnique`): it would fire while typing.
+- **Who gets a key** (`MainWindow.OnShortcutKey`, a tunnel handler; the window has no `KeyBindings`):
+  the commands' gestures run before the focused control sees the key, except a text field's own
+  keys (`MainWindow.IsTextKey`: every key without control or alt but the function keys, and with
+  control A, C, X, V, Z, Y, the arrows, Home, End, Back, Delete), and none while a question, the
+  palette or the picker shows. **Pages** (diagnostics, plugins, version control, report a problem,
+  new map: `MainViewModel.OpenPageName`, `ClosePage`) take the keyboard when they open, give it
+  back to the views when they close, take no shortcut and no tool key, and Escape closes them
+  (after a combo box's list). Enter in a one-line text field gives its text to its binding as losing
+  the keyboard does (`OnEnterInField`: the options row's numbers); Enter in New map's fields presses
+  Create. Tests: `ShellKeysTest`.
+- **The status line** says what the last operation did (`MainViewModel.Status.cs`): a step of undo
+  made outside a command (a stroke, a drag, a tool's key) gets `Done: <step>`, a mode `Terrain mode:
+  Sculpt`, selection commands `Selected ...`; placing with the symmetry ends with `and N mirrored`
+  (`MainViewModel.Mirrored`), counts of units read `1 unit` (`MainViewModel.Units`). A command may
+  name its undo step after what it did (`EditTransaction.Description`: `Move 2 units into INITIAL
+  of ARMY_1`, `Set the X of the marker`).
 
 ## Layouts and the toolbar
 
@@ -2062,6 +2078,29 @@ last frame drawn.
   once at `pitch` degrees above the horizon (50 by default; 90 straight down), far enough to see
   them with a margin (`view.frame {refs, pitch}`; `MainViewModel.FrameMargin`); without `pitch` the
   command `view.frame` glides keeping the camera's angles, as Ctrl+Shift+F does.
+
+### The menus and the window
+
+`Automation/AutomationServer.Shell.cs` (tests: `AutomationShellTest`).
+
+- `menu {path?}`: without a path the menu bar; `path: "File"` a menu's items (header, shortcut,
+  enabled, notBuilt, submenu); `path: "File/Save as a template"` clicks that item (its command, as a
+  click does; refused while disabled). The menus' popups lie outside the window's tree, so `ui` and
+  `click` do not reach them.
+- `window {width?, height?}` sizes the window (a maximized one becomes normal); `window {close: true}`
+  closes it as its close button does: with unsaved changes the question shows (`state.dialog`).
+- `key` reads `Ctrl+2` as the digit's key (`D2`), `[` `]` `+` `-` as theirs, and refuses a name that is
+  no key. Its answer's `focused` names the control with the keyboard and the text it holds
+  (`TextBox Name of the new map "QA Ridge"`, `Button "Save"`). `click` measures the control once a
+  scroll has settled. `under` (in `ui`, `set`, `click`) takes a section's heading too (`Sky`,
+  `Generated from the layers`): the part it heads. `dialog {text, button}` fills a question's text
+  field first (Save as a template's name; `state.dialog.field`).
+- A call that fails or a command that refuses is logged as information (category `Automation`): the
+  caller has the answer, and the Console's count stays the editor's own warnings.
+- Commands run without a person that would replace the open map (`file.open`, `file.import`,
+  `file.new` with arguments) refuse while it has unsaved changes, unless given `discard: true`.
+- Results kept outside the map (walkability) that were current at a save are noted in the project's
+  `.generated.json` (`KeptResults`) and generated again in the background when it opens.
 
 ### A test editor of one's own
 

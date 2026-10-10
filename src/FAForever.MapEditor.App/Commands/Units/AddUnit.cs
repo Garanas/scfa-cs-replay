@@ -88,7 +88,7 @@ public sealed class AddUnitHandler(MainViewModel model, AssetsViewModel assets, 
         {
             model.Selection.Set(all);
         }
-        model.Status = $"Placed {name} ({entry?.Name ?? id}) for {army}{(wreck ? " as a wreck" : "")}";
+        model.Status = $"Placed {name} ({entry?.Name ?? id}) for {army}{(wreck ? " as a wreck" : "")}{MainViewModel.Mirrored(all.Length)}";
         return Task.FromResult(new JsonObject
         {
             ["name"] = name,

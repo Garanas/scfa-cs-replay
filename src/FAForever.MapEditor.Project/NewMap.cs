@@ -93,6 +93,17 @@ namespace FAForever.MapEditor.Project
         public static IReadOnlyList<int> Sizes { get; } = [256, 512, 1024, 2048, 4096];
 
         /// <summary>
+        /// The version of the <c>.scmap</c> a new map is, made from a biome or a settings template alike.
+        /// </summary>
+        public const int ScmapVersion = 56;
+
+        /// <summary>
+        /// The terrain layers a map of <see cref="ScmapVersion"/> holds: the lower layer, eight
+        /// strata and the upper layer.
+        /// </summary>
+        public const int LayerCount = 10;
+
+        /// <summary>
         /// The script of a skirmish map, as the map editors write it.
         /// </summary>
         public const string DefaultScript = """
@@ -249,11 +260,11 @@ namespace FAForever.MapEditor.Project
                 },
                 Terrain = new Terrain
                 {
-                    ScmapVersion = 56,
+                    ScmapVersion = ScmapVersion,
                     Heightmap = new Heightmap { Scale = scale, Samples = TiledBuffer<ushort>.Create(size + 1, size + 1, sample) },
                     Types = TiledBuffer<byte>.Create(size, size, 1),
                     Shader = "TTerrainXP",
-                    Layers = settings.Layers is ImmutableArray<TerrainLayer> layers ? Layers(layers) : biome.Layers,
+                    Layers = settings.Layers is ImmutableArray<TerrainLayer> layers ? FitLayers(layers) : biome.Layers,
                     StratumMasks = new StratumMasks { Layers = [.. Enumerable.Range(0, 8).Select(_ => TiledBuffer<byte>.Create(size / 2, size / 2))] },
                     // flat: x and y of the normal at the middle (DXT5nm, x in alpha, y in green)
                     NormalMap = TiledBuffer<Color32>.Create(size, size, new Color32(128, 0, 128, 0)),
@@ -327,12 +338,14 @@ namespace FAForever.MapEditor.Project
         }
 
         /// <summary>
-        /// A template's layers as many as a version 56 map holds (6: lower, four strata, upper):
-        /// the lower first and the upper last, the strata between filled or cut.
+        /// A template's layers as many as the new map's version 56 holds (ten: the lower layer,
+        /// eight strata, the upper layer): the lower first and the upper last, the strata between
+        /// kept in their order, filled with empty ones when the template has fewer (one saved
+        /// from a version 53 map has four) and cut when it has more.
         /// </summary>
-        private static ImmutableArray<TerrainLayer> Layers(ImmutableArray<TerrainLayer> layers)
+        internal static ImmutableArray<TerrainLayer> FitLayers(ImmutableArray<TerrainLayer> layers)
         {
-            const int count = 6;
+            const int count = LayerCount;
             if (layers.Length == count)
             {
                 return layers;

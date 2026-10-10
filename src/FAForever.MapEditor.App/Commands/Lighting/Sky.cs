@@ -66,7 +66,7 @@ public sealed class ChooseCubemapHandler(MainViewModel model, AssetsViewModel as
             ? found
             : throw new ArgumentException($"The workspace has no cube map '{key}'");
         string path = "/" + entry.Key;
-        model.EditMap($"{title[7..]}: {entry.Name}", d => target switch
+        model.EditMap($"Set {title[7..]}: {entry.Name}", d => target switch
         {
             "sky" => d with { Sky = SkyFields.With(d.Sky, path, null, null) },
             "environment" => d with { Sky = SkyFields.With(d.Sky, null, path, null) },

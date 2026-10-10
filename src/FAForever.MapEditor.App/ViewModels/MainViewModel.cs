@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Generation;
 using FAForever.MapEditor.Project.Workspaces;
 using Microsoft.Extensions.Logging;
 
@@ -56,6 +57,17 @@ public interface IEditorDialogs
     /// </summary>
     /// <param name="action">The button that agrees, e.g. <c>Upload</c>.</param>
     Task<bool> ConfirmAsync(string title, string message, string action) => Task.FromResult(false);
+
+    /// <summary>
+    /// A text the person gives (a name) with one of the buttons, asked over the window; null when
+    /// they cancel (the last button, or Escape). Without a dialog of its own (a test's answers), null.
+    /// </summary>
+    /// <param name="label">The field's label, e.g. <c>Name of the template</c>.</param>
+    /// <param name="text">What the field holds first.</param>
+    /// <param name="buttons">The buttons that answer, the first the accent; Cancel follows them.</param>
+    /// <returns>The index of the button pressed and the text.</returns>
+    Task<(int Button, string Text)?> AskTextAsync(string title, string message, string label, string text, IReadOnlyList<string> buttons) =>
+        Task.FromResult<(int, string)?>(null);
 
     /// <summary>
     /// Opens a page in the system's browser (user story M-8: signing in to FAForever). Without a
@@ -500,6 +512,7 @@ public sealed partial class MainViewModel : ObservableObject
         await BusyAsync("save", "Saving...", async () =>
         {
             await map.SaveAsync();
+            KeepResults(map);
             Refresh($"Saved {map.ProjectFolder}");
         });
         Events.OnMapSaved(map);
@@ -513,6 +526,7 @@ public sealed partial class MainViewModel : ObservableObject
         await BusyAsync("save-as", "Saving...", async () =>
         {
             await map.SaveAsAsync(folder);
+            KeepResults(map);
             Watch(map.ProjectFolder!);
             Refresh($"Saved as {map.ProjectFolder}");
         });
@@ -705,6 +719,51 @@ public sealed partial class MainViewModel : ObservableObject
         MapChanged?.Invoke(this, EventArgs.Empty);
         Refresh(map.Document.IsPublishable ? status : $"{status}. This is the sandbox: try anything here; it can be exported to play, not uploaded to the vault");
         Events.OnMapOpened(map);
+        GenerateKeptResults(map);
+    }
+
+    /// <summary>
+    /// Notes in the project which results kept outside the map (walkability) are current as saved
+    /// (<see cref="KeptResults"/>), so that opening it generates them again.
+    /// </summary>
+    private void KeepResults(EditedMap map)
+    {
+        string[] current = [.. Generation.Results.States(map.Document)
+            .Where(state => state.Status == GeneratedStatus.Current && state.Generator is not IDocumentGenerator)
+            .Select(state => state.Generator.Id)];
+        try
+        {
+            KeptResults.Write(map.ProjectFolder!, current);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            FilesLog.LogWarning(exception, "Noting the generated results of {Folder} failed: {Reason}", map.ProjectFolder, exception.Message);
+        }
+    }
+
+    /// <summary>
+    /// Generates again, in the background, the results that were current when the project was
+    /// saved: what the map maker generated is there as before (user story F-7).
+    /// </summary>
+    private void GenerateKeptResults(EditedMap map)
+    {
+        if (map.ProjectFolder is not string folder)
+        {
+            return;
+        }
+        foreach (string id in KeptResults.Read(folder))
+        {
+            if (Generation.Results.Find(id) is IGenerator generator and not IDocumentGenerator)
+            {
+                _ = TryAsync(async () =>
+                {
+                    if (Map == map)
+                    {
+                        await GenerateAsync(generator.Id);
+                    }
+                });
+            }
+        }
     }
 
     /// <summary>
@@ -752,7 +811,11 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void OnSessionChanged(object? sender, EventArgs e) => Refresh(null);
 
-    private void OnDocumentChange(object? sender, DocumentChange change) => Events.OnDocumentChanged(change);
+    private void OnDocumentChange(object? sender, DocumentChange change)
+    {
+        SayDone(change);
+        Events.OnDocumentChanged(change);
+    }
 
     partial void OnIsBusyChanged(bool value) => Refresh(null);
 

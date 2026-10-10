@@ -520,7 +520,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(window.MapView.Bounds.Height >= 450, $"at 1280 by 800 the top view is {window.MapView.Bounds.Height:0} high: the bar above it is one row");
 
             ToolRow row = window.GetVisualDescendants().OfType<ToolRow>().Single(r => Avalonia.Automation.AutomationProperties.GetName(r) == "Shown over the terrain");
-            List<Avalonia.Controls.Primitives.ToggleButton> chips = [.. row.Children.OfType<Avalonia.Controls.Primitives.ToggleButton>().Where(chip => chip.Classes.Contains("chip"))];
+            List<Avalonia.Controls.Primitives.ToggleButton> chips = [.. row.Children.OfType<Avalonia.Controls.Primitives.ToggleButton>().Where(chip => chip.Classes.Contains("chip") && chip.DataContext is OverlayItem)];
             Assert.AreEqual(model.Overlays.Count, chips.Count, "a chip per overlay");
             Assert.IsTrue(row.OverflowCount > 0 && row.MoreButton.IsVisible, "what does not fit at 1280 lies behind More");
 

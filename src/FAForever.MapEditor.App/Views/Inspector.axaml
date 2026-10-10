@@ -84,14 +84,15 @@
           <Border Classes="group">
             <StackPanel Classes="stack">
               <TextBlock Classes="caption" Text="{Binding Assets.ShownUse}" IsVisible="{Binding Assets.ShownUse, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-              <StackPanel Classes="inline">
+              <!-- the buttons wrap onto another line when the inspector is narrow -->
+              <WrapPanel Classes="chips">
                 <Button Content="{Binding Assets.ShownStarText}" Command="{Binding RunCommand}" CommandParameter="assets.star"
                         AutomationProperties.Name="Star the asset" AutomationProperties.HelpText="Starred assets show under Starred on the shelf and in the picker, in every map of the workspace" />
                 <Button Content="Show the file" Command="{Binding RunCommand}" CommandParameter="assets.showFile" />
                 <Button Content="Read again" Command="{Binding RunCommand}" CommandParameter="assets.reloadShown" AutomationProperties.Name="Read this asset again"
                         AutomationProperties.HelpText="Reads its blueprint and pictures from the workspace again, after a tool changed them; the other assets stay as they are" />
                 <Button Content="Clear" Command="{Binding Assets.ClearSelectionCommand}" AutomationProperties.HelpText="The inspector shows the mode again" />
-              </StackPanel>
+              </WrapPanel>
             </StackPanel>
           </Border>
         </StackPanel>

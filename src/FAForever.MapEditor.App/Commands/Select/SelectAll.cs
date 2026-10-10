@@ -17,6 +17,7 @@ public sealed class SelectAllHandler(MainViewModel model) : IRequestHandler<Sele
     public Task<int> Handle(SelectAll request, CancellationToken cancellationToken)
     {
         model.SelectAll();
+        model.Status = model.SelectedText;
         return Task.FromResult(model.Selection.Count);
     }
 }
@@ -27,11 +28,12 @@ public sealed class SelectAllHandler(MainViewModel model) : IRequestHandler<Sele
 [EditorCommand("select.none", "Select none", Story = "F-11")]
 public sealed record SelectNone : IRequest;
 
-public sealed class SelectNoneHandler(SelectionViewModel selection) : IRequestHandler<SelectNone>
+public sealed class SelectNoneHandler(MainViewModel model, SelectionViewModel selection) : IRequestHandler<SelectNone>
 {
     public Task Handle(SelectNone request, CancellationToken cancellationToken)
     {
         selection.Clear();
+        model.Status = model.SelectedText;
         return Task.CompletedTask;
     }
 }

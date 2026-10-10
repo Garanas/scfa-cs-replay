@@ -51,8 +51,8 @@ public sealed class AddOptionalGroupHandler(MainViewModel model, SelectionViewMo
         edit.Transaction.Apply(_ => document);
         string[] others = [.. armies.Where(other => other != army)];
         model.Status = moved == 0 ? $"Added {name} to {army}"
-            : others.Length > 0 ? $"Added {name} to {army} with {moved} units, moved from {string.Join(", ", others)} into {army}"
-            : $"Added {name} to {army} with {moved} units";
+            : others.Length > 0 ? $"Added {name} to {army} with {MainViewModel.Units(moved)}, moved from {string.Join(", ", others)} into {army}"
+            : $"Added {name} to {army} with {MainViewModel.Units(moved)}";
         return Task.FromResult(new JsonObject { ["army"] = army, ["group"] = name, ["moved"] = moved });
     }
 }

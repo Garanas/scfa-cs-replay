@@ -23,7 +23,7 @@ public sealed class PlaceAsWrecksHandler(MainViewModel model, SelectionViewModel
         int count = 0;
         UnitCommands.Apply(edit, d => d.SetWrecks(names, request.Wreck, out count));
         string[] playable = [.. edit.Transaction.Document.PlayableArmiesWithWrecks()];
-        model.Status = (request.Wreck ? $"Made {count} units wrecks" : $"Made {count} wrecks units again")
+        model.Status = (request.Wreck ? (count == 1 ? "Made a unit a wreck" : $"Made {count} units wrecks") : (count == 1 ? "Made a wreck a unit again" : $"Made {count} wrecks units again"))
             + (request.Wreck && playable.Length > 0 ? $"; {string.Join(", ", playable)} is playable, so its wrecks show only when a player takes it" : "");
         return Task.FromResult(count);
     }

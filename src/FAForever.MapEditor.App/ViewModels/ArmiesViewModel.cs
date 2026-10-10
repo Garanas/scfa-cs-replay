@@ -59,7 +59,7 @@ public sealed partial class GroupNode(string army, ImmutableArray<string> path, 
     /// <summary>
     /// What a screen reader says: the army and the group.
     /// </summary>
-    public string Description => path.IsEmpty ? $"Army {army}, {count} units" : $"Group {PathText} of {army}, {count} units";
+    public string Description => path.IsEmpty ? $"Army {army}, {MainViewModel.Units(count)}" : $"Group {PathText} of {army}, {MainViewModel.Units(count)}";
 
     /// <summary>
     /// Whether the tree shows its children; kept when the tree is made again.
@@ -92,7 +92,7 @@ public sealed record ArmyRow(string Name, bool Playable, string? Team, bool HasS
         Team is null ? null : $"team {Team}",
         Playable && !HasSpawn ? "no spawn" : null,
         Factions.Length == 0 ? null : Factions,
-        $"{Units} units",
+        MainViewModel.Units(Units),
     }.OfType<string>());
 }
 

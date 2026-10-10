@@ -29,6 +29,23 @@ public sealed partial class AssetPicker : UserControl
         Grid.SizeChanged += (_, _) => MeasureColumns();
         Grid.AddHandler(KeyDownEvent, OnGridKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnEscape, RoutingStrategies.Tunnel);
+        // after a filter, Star or another button of the picker the search has the keyboard again,
+        // so the arrows move through the tiles and Enter chooses (a tile keeps it: its arrows move on)
+        AddHandler(Button.ClickEvent, OnButtonClicked, RoutingStrategies.Bubble, handledEventsToo: true);
+    }
+
+    private void OnButtonClicked(object? sender, RoutedEventArgs e)
+    {
+        if (e.Source is Button button && !button.Classes.Contains("tile") && _model?.IsOpen == true)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_model?.IsOpen == true)
+                {
+                    Search.Focus();
+                }
+            }, DispatcherPriority.Input);
+        }
     }
 
     protected override void OnDataContextChanged(EventArgs e)

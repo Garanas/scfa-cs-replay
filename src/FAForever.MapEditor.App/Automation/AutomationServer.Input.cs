@@ -286,8 +286,8 @@ public sealed partial class AutomationServer
         }
         else
         {
-            Control control = FindInWindows(under, hidden)
-                ?? throw new ArgumentException($"No control is named, labelled or reads '{under}'");
+            Control control = FindPartInWindows(under, hidden)
+                ?? throw new ArgumentException($"No control or heading is named, labelled or reads '{under}'");
             tree = UiTree.Describe(control, WindowOf(control), hidden);
         }
         string? type = arguments["type"]?.GetValue<string>() is { Length: > 0 } t ? t : null;
@@ -642,9 +642,32 @@ public sealed partial class AutomationServer
     /// <summary>
     /// The control with the keyboard: its type and name or label.
     /// </summary>
-    private string? Focused() => window.FocusManager?.GetFocusedElement() is Control control
-        ? $"{control.GetType().Name} {control.Name ?? Avalonia.Automation.AutomationProperties.GetName(control)}".TrimEnd()
-        : null;
+    /// <summary>
+    /// The control with the keyboard as an agent reads it: its type, its name or label, and the
+    /// text it holds or shows in quotes (<c>TextBox Name of the new map "QA Ridge"</c>,
+    /// <c>Button "Save"</c>); a part of a control's template counts as the control it lies in.
+    /// </summary>
+    private string? Focused()
+    {
+        Control? control = window.FocusManager?.GetFocusedElement() as Control;
+        while (control is not null && control.TemplatedParent is Control owner && control is not (TextBox or Button or ListBoxItem or TreeViewItem))
+        {
+            control = owner;
+        }
+        if (control is null)
+        {
+            return null;
+        }
+        string? label = control.Name ?? Avalonia.Automation.AutomationProperties.GetName(control);
+        string? text = control switch
+        {
+            TextBox box => box.Text ?? "",
+            ContentControl { Content: string content } => content,
+            ContentControl { Content: TextBlock block } => block.Text,
+            _ => null,
+        };
+        return $"{control.GetType().Name}{(string.IsNullOrEmpty(label) ? "" : " " + label)}{(text is null ? "" : $" \"{text}\"")}";
+    }
 
     private static RawInputModifiers ModifiersOf(JsonObject arguments) => arguments["modifiers"] switch
     {
