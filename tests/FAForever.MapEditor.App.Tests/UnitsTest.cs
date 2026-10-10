@@ -134,6 +134,7 @@ namespace FAForever.MapEditor.App.Tests
             armies.GroupName = "Town";
             await armies.AddGroupCommand.ExecuteAsync(null);
             Assert.AreEqual("INITIAL/Town", armies.ChosenGroup?.PathText, "the new group is chosen");
+            Assert.AreEqual("INITIAL/Town", model.Tool<UnitPlaceTool>().Group, "and the place tool places into it");
             Assert.IsTrue(armies.Tree.Single(node => node.Army == "ARMY_1").Children[0].IsExpanded, "and shown");
 
             model.Selection.Set([ObjectRef.Unit("UNIT_1")]);

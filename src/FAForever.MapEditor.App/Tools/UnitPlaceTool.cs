@@ -192,6 +192,10 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
     public void PlaceInto(string army, string group)
     {
         Army = army;
+        if (Groups.All(choice => choice.Path != group))
+        {
+            RefreshGroups(model.ShownDocument);
+        }
         ChosenGroup = Groups.FirstOrDefault(choice => choice.Path == group) ?? ChosenGroup;
     }
 

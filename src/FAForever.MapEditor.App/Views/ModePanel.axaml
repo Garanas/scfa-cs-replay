@@ -83,7 +83,7 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <TextBlock Classes="caption" Text="None yet: save the tool's settings to use them again."
+                  <TextBlock Classes="caption" Text="{Binding EmptyText}"
                              IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.IsEmpty}" />
                   <DockPanel>
                     <Button DockPanel.Dock="Right" Classes="beside" Content="Save"

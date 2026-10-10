@@ -31,8 +31,9 @@ public sealed partial class MainViewModel
         DocumentChanged += (_, _) =>
         {
             using Performance.Span measure = Performance.Measure("model.units");
-            Armies.Refresh(ShownDocument);
+            // the tool first: the tree's chosen group goes to the tool, which must know the group
             place.Refresh(ShownDocument);
+            Armies.Refresh(ShownDocument);
         };
 
         // a unit chosen on the shelf or in the picker is what the place tool places

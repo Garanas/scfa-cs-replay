@@ -179,7 +179,7 @@ public static class EditorModes
             ],
             [
                 new UnitGroupsSection(),
-                new PresetSection(UnitPreset.Kind, "Presets"),
+                new PresetSection(UnitPreset.Kind, "Presets") { EmptyText = "None yet: select units, or choose a group in the tree, and save them to place them again." },
             ],
             [new PlannedSection("Units", "U-3", "The selected group or units")]),
     ];
