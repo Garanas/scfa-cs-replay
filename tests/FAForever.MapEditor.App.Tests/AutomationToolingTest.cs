@@ -137,5 +137,27 @@ namespace FAForever.MapEditor.App.Tests
             }
             window.Close();
         });
+
+        [TestMethod]
+        public Task TheDriverPaintsAStratumOnlyOnTheSlopeOfTheSlopeMap() => HeadlessApp.Run(async () =>
+        {
+            MainWindow window = new MainWindow { Width = 1280, Height = 800 };
+            MainViewModel model = new MainViewModel(new WindowDialogs(window));
+            await model.OpenAsync(TestMaps.SlopeProject(degrees: 30));
+            window.DataContext = model;
+            window.Show();
+            EditorDriver editor = EditorDriver.InProcess(new AutomationServer(window, model, port: 0));
+
+            await editor.Send("brush", new JsonObject { ["layer"] = 1, ["radius"] = 128, ["strength"] = 1 });
+            await editor.Set("Paint only within a range of slopes", true);
+            await editor.Set("Gentlest slope to paint, in degrees", "20");
+            await editor.Set("Steepest slope to paint, in degrees", "40");
+            await editor.Send("stroke", new JsonObject { ["points"] = new JsonArray(new JsonArray(128f, 64f), new JsonArray(128f, 192f)) });
+
+            Assert.IsTrue(await editor.Grid("stratum:1", 128, 128) > 0, "the ramp (30 degrees) is painted");
+            Assert.AreEqual(0, await editor.Grid("stratum:1", 40, 128), "the flat ground is not");
+            Assert.AreEqual(0, await editor.Grid("stratum:1", 220, 128));
+            window.Close();
+        });
     }
 }
