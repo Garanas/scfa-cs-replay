@@ -192,7 +192,8 @@ namespace FAForever.MapEditor.Project.Editing
         /// <summary>
         /// Adds a marker of any kind into its kind's list under a new id; a marker whose name is taken
         /// gets the next free number after the same text (<c>Mass 08</c> becomes <c>Mass 12</c>). A
-        /// path node's links are kept to the nodes that exist.
+        /// path node's links are kept to the nodes that exist. A spawn is named <c>ARMY_n</c> (its own name
+        /// when free, else <see cref="MarkerEdits.NextSpawnName"/>) and its playable army is added with it.
         /// </summary>
         public static MapDocument AddMarker(this MapDocument document, Marker marker) => document.AddMarker(marker, out _);
 
@@ -202,7 +203,12 @@ namespace FAForever.MapEditor.Project.Editing
         {
             MarkerSet markers = document.Markers;
             string name = marker.Name;
-            if (name.Length == 0 || markers.All.Any(m => m.Name == name))
+            if (marker is Spawn)
+            {
+                // a spawn is a playable army's start: ARMY_n, its army added with it
+                name = MarkerEdits.IsFreeSpawnName(document, name) ? name : document.NextSpawnName();
+            }
+            else if (name.Length == 0 || markers.All.Any(m => m.Name == name))
             {
                 name = FreeName(markers.All.Select(m => m.Name), name.Length == 0 ? "Marker" : name);
             }
@@ -212,7 +218,8 @@ namespace FAForever.MapEditor.Project.Editing
                 HashSet<int> nodes = [.. markers.PathNodes.Select(n => n.Id)];
                 added = node with { AdjacentTo = [.. node.AdjacentTo.Where(nodes.Contains)] };
             }
-            return document with { Markers = Change(markers, added.Id, added, add: true) };
+            document = document with { Markers = Change(markers, added.Id, added, add: true) };
+            return added is Spawn ? document.WithPlayableArmy(name) : document;
         }
 
         /// <summary>
@@ -233,17 +240,15 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// Removes a marker of any kind, and every link to it: from the path nodes that link to it
-        /// and from the chains that hold it.
+        /// and from the chains that hold it. A spawn takes its playable army with it, and the spawns
+        /// after it are numbered down (<see cref="MarkerEdits.RenumberSpawns"/>).
         /// </summary>
         /// <exception cref="KeyNotFoundException">No marker has the id.</exception>
         public static MapDocument RemoveMarker(this MapDocument document, int id)
         {
-            if (document.FindMarker(id) is null)
-            {
-                throw new KeyNotFoundException($"The map has no marker {id}");
-            }
+            Marker removed = document.FindMarker(id) ?? throw new KeyNotFoundException($"The map has no marker {id}");
             MarkerSet markers = Change(document.Markers, id, null, add: false);
-            return document with
+            document = document with
             {
                 Markers = markers with
                 {
@@ -251,6 +256,10 @@ namespace FAForever.MapEditor.Project.Editing
                     Chains = [.. markers.Chains.Select(chain => chain.MarkerIds.Contains(id) ? chain with { MarkerIds = [.. chain.MarkerIds.Where(other => other != id)] } : chain)],
                 },
             };
+            // a spawn takes its playable army with it, and the spawns after it are numbered down
+            return removed is Spawn spawn && MarkerEdits.SpawnNumber(spawn.Name) is not null
+                ? document.WithoutPlayableArmy(spawn.Name).RenumberSpawns()
+                : document;
         }
 
         /// <exception cref="KeyNotFoundException">No deposit has the name.</exception>

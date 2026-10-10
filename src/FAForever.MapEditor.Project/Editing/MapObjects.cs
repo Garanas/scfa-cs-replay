@@ -23,19 +23,20 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// Every thing of the chosen kinds, markers first, then areas, props, units and decals.
+        /// Of the markers, only the kinds of <paramref name="markers"/>.
         /// </summary>
-        public static IEnumerable<ObjectRef> All(this MapDocument document, ObjectKinds kinds)
+        public static IEnumerable<ObjectRef> All(this MapDocument document, ObjectKinds kinds, MarkerKinds markers = MarkerKinds.All)
         {
             if (kinds.HasFlag(ObjectKinds.Markers))
             {
-                foreach (Marker marker in document.Markers.All.Where(marker => marker is not PathNode))
+                foreach (Marker marker in document.Markers.All.Where(marker => marker is not PathNode && (markers & MarkerEdits.KindOf(marker)) != 0))
                 {
                     yield return ObjectRef.Marker(marker.Id);
                 }
             }
             if (kinds.HasFlag(ObjectKinds.PathNodes))
             {
-                foreach (PathNode node in document.Markers.PathNodes)
+                foreach (PathNode node in document.Markers.PathNodes.Where(node => (markers & MarkerEdits.KindOf(node.Layer)) != 0))
                 {
                     yield return ObjectRef.Marker(node.Id);
                 }
@@ -124,9 +125,10 @@ namespace FAForever.MapEditor.Project.Editing
         /// within a few pixels of its edge, a decal when the place lies in its rectangle. Things picked
         /// by their centre win over decals; among decals the one on top (the last) wins.
         /// </summary>
+        /// <param name="markers">The kinds of markers among them (those the views show, user story R-6).</param>
         /// <param name="ogridsPerPixel">How large a pixel of the view is on the map: the sizes on
         /// screen become distances on the map with it.</param>
-        public static ObjectRef? Nearest(this MapDocument document, float x, float z, float ogridsPerPixel, ObjectKinds kinds)
+        public static ObjectRef? Nearest(this MapDocument document, float x, float z, float ogridsPerPixel, ObjectKinds kinds, MarkerKinds markers = MarkerKinds.All)
         {
             ObjectRef? best = null;
             float bestScore = float.MaxValue;
@@ -143,14 +145,14 @@ namespace FAForever.MapEditor.Project.Editing
 
             if (kinds.HasFlag(ObjectKinds.Markers))
             {
-                foreach (Marker marker in document.Markers.All.Where(marker => marker is not PathNode))
+                foreach (Marker marker in document.Markers.All.Where(marker => marker is not PathNode && (markers & MarkerEdits.KindOf(marker)) != 0))
                 {
                     Consider(ObjectRef.Marker(marker.Id), Distance(marker.Position), marker is Spawn ? 12 : 8);
                 }
             }
             if (kinds.HasFlag(ObjectKinds.PathNodes))
             {
-                foreach (PathNode node in document.Markers.PathNodes)
+                foreach (PathNode node in document.Markers.PathNodes.Where(node => (markers & MarkerEdits.KindOf(node.Layer)) != 0))
                 {
                     Consider(ObjectRef.Marker(node.Id), Distance(node.Position), 6);
                 }
@@ -197,11 +199,12 @@ namespace FAForever.MapEditor.Project.Editing
         /// The things of the chosen kinds whose centre lies in a rectangle, as a box drawn with the
         /// mouse selects them; the corners may come in any order.
         /// </summary>
-        public static IEnumerable<ObjectRef> Inside(this MapDocument document, float x0, float z0, float x1, float z1, ObjectKinds kinds)
+        /// <param name="markers">The kinds of markers among them (those the views show, user story R-6).</param>
+        public static IEnumerable<ObjectRef> Inside(this MapDocument document, float x0, float z0, float x1, float z1, ObjectKinds kinds, MarkerKinds markers = MarkerKinds.All)
         {
             (float left, float right) = (MathF.Min(x0, x1), MathF.Max(x0, x1));
             (float top, float bottom) = (MathF.Min(z0, z1), MathF.Max(z0, z1));
-            foreach (ObjectRef thing in document.All(kinds))
+            foreach (ObjectRef thing in document.All(kinds, markers))
             {
                 if (document.PlaceOf(thing) is Vector3 place && place.X >= left && place.X <= right && place.Z >= top && place.Z <= bottom)
                 {
