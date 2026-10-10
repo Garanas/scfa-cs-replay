@@ -1685,7 +1685,7 @@ water stacks and the draft and final heightmaps on these two pieces.
 - **`ImagePreview`** (`Controls/ImagePreview`, in a `Border.thumbnail.imagepreview` of
   `ImagePreviewSize`): a small picture of a `Rendering/PreviewPicture`, the whole picture in its
   proportions, and the same picture `LargeSize` (512) pixels on its longer side in its tool tip
-  (placed right of it, over the views; its `LargeSize` of 0 means no tool tip). Pictures:
+  (placed right of it, over the views, in a `ToolTip` of its own without the theme's limit of about 320 pixels on a tool tip's width, which cut it to a tall strip; its `LargeSize` of 0 means no tool tip). Pictures:
   `CoveragePicture` (a byte grid in grey), `HeightPicture` (heights with the top view's ramp and
   light from the north-west; `Differences` grey at 0, lighter up, darker down; a coverage shows a
   dark checker where there is none of the layer), `HeightmapPicture` (the heightmap's samples, for

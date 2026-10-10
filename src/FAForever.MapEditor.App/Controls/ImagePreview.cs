@@ -77,7 +77,14 @@ public sealed class ImagePreview : Control
             return;
         }
         (int width, int height) = picture.GridSize is (int w, int h) ? Fit(w, h, LargeSize) : (LargeSize, LargeSize);
-        ToolTip.SetTip(this, new ImagePreview { LargeSize = 0, Picture = picture, Width = width, Height = height });
+        // a tool tip of its own: Fluent's theme limits a tool tip's width (about 320 pixels), which
+        // would cut the picture to a tall strip
+        ToolTip.SetTip(this, new ToolTip
+        {
+            MaxWidth = double.PositiveInfinity,
+            MaxHeight = double.PositiveInfinity,
+            Content = new ImagePreview { LargeSize = 0, Picture = picture, Width = width, Height = height },
+        });
     }
 
     private static (int Width, int Height) Fit(int width, int height, int size)
