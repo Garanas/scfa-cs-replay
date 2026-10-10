@@ -61,8 +61,10 @@ public sealed record PluginCheck(string Id, string Title, LuaFunction Run);
 /// <param name="Press">Called with the place and the keys held when the mouse is pressed; the stroke's edits start.</param>
 /// <param name="Drag">Called at each place the mouse is dragged to.</param>
 /// <param name="Release">Called when the mouse is let go; the stroke's edits become one step of undo.</param>
+/// <param name="Symmetry">Whether the handlers are called for every image of the place while the
+/// symmetry mirrors edits (<c>symmetry = false</c>: only for the place the mouse is at).</param>
 public sealed record PluginToolSpec(string Id, string Title, string Mode, string? Description, double Radius, string? RadiusField,
-    IReadOnlyList<string> Fields, LuaFunction? Press, LuaFunction? Drag, LuaFunction? Release);
+    IReadOnlyList<string> Fields, LuaFunction? Press, LuaFunction? Drag, LuaFunction? Release, bool Symmetry = true);
 
 /// <summary>
 /// A field of a plugin's panel (<c>plugin.field{...}</c>), shown on the Plugins page; its value is

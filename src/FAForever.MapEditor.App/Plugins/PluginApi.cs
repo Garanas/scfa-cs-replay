@@ -146,7 +146,8 @@ internal static class PluginApi
                 }
             }
             plugin.Tools.Add(new PluginToolSpec(FullId(plugin, id), LuaConvert.Text(spec, "title") ?? id, mode, LuaConvert.Text(spec, "description"),
-                radius.Type == LuaValueType.Number ? Math.Max(0, radius.Read<double>()) : 0, radiusField, fields, press, drag, release));
+                radius.Type == LuaValueType.Number ? Math.Max(0, radius.Read<double>()) : 0, radiusField, fields, press, drag, release,
+                LuaConvert.Field(spec, "symmetry") is not { Type: LuaValueType.Boolean } symmetry || symmetry.Read<bool>()));
             return FullId(plugin, id);
         }, plugin);
         table["value"] = Function("plugin.value", (context, ctx) =>

@@ -95,6 +95,37 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task WithTheSymmetryTheHandlersAreCalledForEveryImage()
+        {
+            MainViewModel model = await Open(Folder("raiser", Raise));
+            await model.Commands.RunAsync("select.symmetry", new JsonObject { ["kind"] = "leftRight" }, interactive: false);
+            model.Symmetry.MirrorsEdits = true;
+            model.SelectTool("plugin.raiser.raise");
+            MapDocument before = model.Map!.Document;
+            float mirroredX = before.Width - 100;
+
+            model.Stroke([(100, 100)]);
+
+            MapDocument after = model.Map.Document;
+            Assert.AreEqual(before.Terrain.Heightmap.GetHeight(100, 100) + 5, after.Terrain.Heightmap.GetHeight(100, 100), 0.05, "where it was pressed");
+            Assert.AreEqual(before.Terrain.Heightmap.GetHeight((int)mirroredX, 100) + 5, after.Terrain.Heightmap.GetHeight((int)mirroredX, 100), 0.05, "and in the mirrored half");
+            JsonObject report = (JsonObject)(await model.Commands.RunAsync("plugin.raiser.report", [], interactive: false)).Result!;
+            Assert.AreEqual(2, report["presses"]!.GetValue<int>(), "press is called once per image");
+            Assert.IsTrue(model.Undo());
+            Assert.AreEqual(before.Terrain.Heightmap.GetHeight((int)mirroredX, 100), model.Map.Document.Terrain.Heightmap.GetHeight((int)mirroredX, 100), 0.01, "one step for both");
+
+            // a tool that does its own symmetry gets the mouse's place only
+            MainViewModel own = await Open(Folder("raiser", Raise.Replace("radius = \"size\",", "radius = \"size\", symmetry = false,")));
+            await own.Commands.RunAsync("select.symmetry", new JsonObject { ["kind"] = "leftRight" }, interactive: false);
+            own.Symmetry.MirrorsEdits = true;
+            own.SelectTool("plugin.raiser.raise");
+            own.Stroke([(100, 100)]);
+            JsonObject once = (JsonObject)(await own.Commands.RunAsync("plugin.raiser.report", [], interactive: false)).Result!;
+            Assert.AreEqual(1, once["presses"]!.GetValue<int>());
+            Assert.AreEqual(before.Terrain.Heightmap.GetHeight((int)mirroredX, 100), own.Map!.Document.Terrain.Heightmap.GetHeight((int)mirroredX, 100), 0.01);
+        }
+
+        [TestMethod]
         public async Task ItsFieldsAreItsOptionsAndTheKeysHeldReachIt()
         {
             MainViewModel model = await Open(Folder("raiser", Raise));
