@@ -183,6 +183,15 @@ public sealed partial class LayerTexturesViewModel : ObservableObject
     public static string TitleOf(int layer, int count) =>
         layer == 0 ? "Lower layer" : layer == count - 1 ? "Upper layer" : string.Create(CultureInfo.InvariantCulture, $"Stratum {layer}");
 
+    /// <summary>
+    /// Shows the textures' pictures again: the converted assets were read anew.
+    /// </summary>
+    public void RefreshTextures()
+    {
+        _shown = default;
+        Refresh(_document);
+    }
+
     public void Refresh(MapDocument? document)
     {
         _document = document;

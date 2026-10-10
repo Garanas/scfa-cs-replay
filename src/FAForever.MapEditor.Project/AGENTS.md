@@ -721,6 +721,67 @@ for tools and the water's masks theirs in the same shape (the plan "Map Editor R
   tiles, and a composite that came out as it was is the previous grid (no step). A stratum's or
   mask's stack follows the same way from `EditSession.Record` and `EditTransaction`'s read.
 
+## Stacks of coverage: strata, masks and water maps
+
+Wave 9B (`MapDocument.CoverageStacks`, `Editing/CoverageLayers`, `CoverageLayerEdits`,
+`MapProjectStore.CoverageStacks.cs`): every stratum mask, mask for tools and water map is a stack
+of the model above, keyed by its target's key (`stratum-2`, `mask-forest`, `water-foam`;
+`LayerTarget.FromKey`).
+
+- **A grid without a stack is its own painted layer.** `CoverageLayers.StackOf` gives the stored
+  stack or `Trivial` (one painted layer `Painted`, replacing, holding the grid itself). The first
+  stack edit stores it; a stack that comes back to that shape (`IsTrivialShape`, its layer as the
+  grid holds it) leaves the dictionary again. So an older project opens with one painted layer per
+  grid holding what it held (lossless) and saves as before; the composite stays in its usual file
+  (`stratum-masks/`, `masks/`, `water-*.png`) for the export and other tools.
+- **The untouched part of a painted layer** (8A's caveat): a coverage layer gets an alpha,
+  `Layer.Alpha` (0 to 255, the target's size; null for all of it). A painted layer added to a stack
+  (`NewPainted`) starts with value and alpha 0 and combines by Replace, so it changes nothing until
+  painted; `LayerStacks.TakeChanges` raises the alpha to 255 where a brush paints, starting from
+  what the layers below make (Add and Subtract from 0, Multiply from 1), as a height layer's
+  coverage does. The weight of a coverage layer is strength × clip × alpha. Erasing in such a layer
+  paints towards 0 where it was painted (it does not give the place back to the layers below: hide
+  or remove the layer for that). The grid's own painted layer has no alpha. Saved as
+  `stacks/<key>/<layer>.coverage.png`, the name a height layer's coverage has.
+- **New layers** (`CoverageLayerEdits.New*`): painted (Replace, alpha), image (`ReadImage`: the
+  file's grey resampled to the grid, Maximum), mask reference (`NewMaskRef`: any name of a mask,
+  stored as its key; Maximum), rules (`NewRules`, empty until generated; Maximum). A stack never
+  reads its own target (refused), and keeps its last layer (`Remove` refuses).
+- **Following** (`CoverageLayers.Follow(previous, next, chosen)`): run by `EditSession.Record` and
+  `EditTransaction`'s flush before `HeightLayers.Follow` (height clips read the composites). Stacks
+  follow in `Order` (after the stacks of the masks they read; a circle is broken where it closes):
+  renamed masks followed, `ChangedTiles`, a change of the grid itself (a brush) into the chosen
+  painted layer (`EditSession.PaintLayers[key]`, else the highest that can be painted;
+  `PaintProblem` says why none can), composited over the dirty tiles. A stack whose target is gone
+  goes. `Recomposite` after opening and resizing.
+- **What takes stacks along**: `MaskLayers.Rename` (via `RuleEdits.MaskRenamed`: the stack under the
+  new key, clips, references, rules and prop conditions reading the new name), `Duplicate` (the
+  same layers), `Remove`; `StrataEdits` add/remove/move (`CoverageLayers.MoveStrata`; a stratum's
+  references elsewhere are not renumbered, as height clips are not); `MapResize` (masks' layers gain
+  nothing, the others continue their edge, alphas gain nothing).
+- **Rules are rules layers** (`RulesSource`): `MapDocument.MaskRules` is now computed (per mask, its
+  lowest rules layer's rules). `RuleEdits` take an owner (a mask's name or `stratum:N`) and an
+  optional rules layer; `SetMaskRules` on a mask without one adds `Rules` (Replace, holding the
+  mask, as a mask made from rules was); without its last rule the layer becomes painted, keeping
+  what it made. `MaskRules.Order` gives stack keys; `CoverageLayerEdits.Generate` makes every rules
+  layer of every stack (masks and strata) in that order, each from what the stacks it reads make by
+  then (`GeneratedBefore` for a preview); `MaskRulesGenerator` applies them and follows. Its inputs
+  are the rules layers' sources and what they read that rules do not make (`RuleInputs`).
+- **One way to name a mask**: the key (`mask:forest`, `stratum:3`). `LayerStacks.KeyOf` turns any
+  name (key, title `mask forest`/`stratum 3`, plain mask name) into it; `MaskOf` and
+  `MaskRuleSources.Read` read plain names and keys alike, so prop rules, the props brush, height
+  clips and mask references take any mask or stratum.
+- **On disk**: `stacks/<key>.json` (`LayerStackDto`, unchanged), layers' PNGs in `stacks/<key>/`;
+  no DTO changed. An older project's `masks/<name>.rules.json` loads as a rules layer holding the
+  mask's PNG (when the mask has no stack file); the first save removes it. Reload reads a stack again
+  when one of its files changes. Image layers of coverage are not read again when their file
+  changes (gap).
+- **A new source** (9C's decal masks): its record and name in `LayerSources`, its fields in
+  `LayerDto` and its read in `ReadStack`, a `CoverageLayerEdits.New...`, the masks or things it reads
+  in `CoverageLayers.ReadsOf` when they decide the order, and a follow step (like rules: made again
+  in the edit that changes what it reads). The window's side is one add choice and a `layers.add`
+  source (the App guide, "Stacks of coverage").
+
 ## Height layers and curves
 
 User stories T-5 and T-4 (`MapDocument.HeightStack`, `Editing/HeightLayers`, `HeightLayerEdits`,

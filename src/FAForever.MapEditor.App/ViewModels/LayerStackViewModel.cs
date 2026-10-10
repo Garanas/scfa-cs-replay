@@ -206,7 +206,12 @@ public partial class LayerStackViewModel : ObservableObject
 
     public Layer? ChosenLayer => ChosenItem?.Layer;
 
-    public bool CanRemove => ChosenItem is { IsBase: false };
+    public bool CanRemove => ChosenItem is { IsBase: false } && (!KeepsLastLayer || Items.Count > 1);
+
+    /// <summary>
+    /// Whether the last layer stays (a grid of coverage is made by at least one).
+    /// </summary>
+    protected virtual bool KeepsLastLayer => false;
 
     public bool CanMoveUp => ChosenItem?.CanMoveUp == true;
 
@@ -287,6 +292,16 @@ public partial class LayerStackViewModel : ObservableObject
             RefreshSettings();
         }
         Chosen = chosen;
+    }
+
+    /// <summary>
+    /// Forgets what the list shows, so the next <see cref="Refresh"/> makes it again and chooses
+    /// anew (another target shown whose layers look the same).
+    /// </summary>
+    protected void ForgetShown()
+    {
+        _shown = null;
+        _signature = "";
     }
 
     /// <summary>

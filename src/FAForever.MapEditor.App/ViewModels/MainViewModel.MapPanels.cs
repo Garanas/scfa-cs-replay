@@ -65,6 +65,13 @@ public sealed partial class MainViewModel
         WaterSettings = new WaterSettingsViewModel(RunWithAsync);
         LightingSettings = new LightingSettingsViewModel(RunWithAsync, (message, buttons) => Question.AskAsync("Background", message, buttons, cancel: buttons.Count - 1, focus: 0));
         LayerTextures = new LayerTexturesViewModel(RunWithAsync, path => Assets.Catalog.Find(path)?.File);
+        Assets.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(AssetsViewModel.Catalog))
+            {
+                LayerTextures.RefreshTextures();
+            }
+        };
         NewMapPage = new NewMapPageViewModel(ConfirmCloseAsync, RunWithAsync);
         Presets.Register(new PresetKind(AtmospherePresets.LightingKind, "Lighting presets", CaptureLighting, ApplyLighting));
         Presets.Register(new PresetKind(AtmospherePresets.WaterKind, "Water presets", CaptureWater, ApplyWater));

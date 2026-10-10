@@ -284,17 +284,19 @@ reads again when it changes; and nothing that generates runs by itself.
 
 - [x] **K-1 Mask layers.** Named masks for one's own purposes (where rivers go, where forests grow,
       what to erode), painted like strata, saved as PNG for World Machine, Gaea and the editor's
-      own rules. Today: `masks/<name>.png` in the project (the map's size or half, read again when
-      another tool changes them, never exported); the Paint panel's "Masks for tools" adds, renames,
-      deletes and chooses them; the Masks tool paints the chosen one; the overlay Mask shows it.
-      The Masks mode on the rail (Shift+F3) is the shell they move into, with stacks of layers.
+      own rules. Today: the Masks mode (Shift+F3) lists them with a preview each and adds, renames,
+      duplicates and deletes them; the inspector shows the chosen mask as a stack of layers
+      (painted, image, another mask, a stratum, rules; `layers.*`); the mask brush paints its chosen
+      painted layer; the overlay Mask shows it. `masks/<name>.png` is the composite (never exported),
+      `stacks/mask-<name>.json` the stack. Stratum masks (the Paint inspector) and the water's three
+      maps (the Water inspector) are stacks the same way, exported as what they make.
 - [x] **K-2 Masks from rules.** Generate a mask from slope, height, distance to water or other masks,
-      when asked. Today: Rules... beside a mask in the Paint panel opens its rules in the inspector:
+      when asked. Today: a rules layer of a mask's or stratum's stack shows its rules under the stack:
       slope, height and distance to water (ranges with soft edges), other masks or strata, noise,
       combined in order (multiply, min, max, add, subtract) and changed by blur, grow, shrink,
       threshold and invert; a preview in the top view; `generate.masks` makes them (one step of
-      undo), out of date when the terrain, water level, strata, rules or masks they read change.
-      Kept as `masks/<name>.rules.json`.
+      undo), out of date when the terrain, water level, rules or masks they read change. Kept in
+      the stack's JSON; an older project's `masks/<name>.rules.json` becomes a rules layer.
 
 ## W: Water
 

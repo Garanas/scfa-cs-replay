@@ -117,8 +117,19 @@ namespace FAForever.MapEditor.Project.Editing
             return values;
         }
 
-        public static MapDocument Remove(MapDocument document, LayerTarget target, string name) =>
-            CoverageLayers.WithStack(document, LayerStackEdits.Remove(Stack(document, target), name, CoverageLayers.What(target)));
+        /// <summary>
+        /// The document without a layer of a target's stack; the last layer stays (a grid is made by at least one).
+        /// </summary>
+        /// <exception cref="ArgumentException">There is no such layer, or it is the last.</exception>
+        public static MapDocument Remove(MapDocument document, LayerTarget target, string name)
+        {
+            LayerStack stack = Stack(document, target);
+            if (stack.Count == 1 && stack.Find(name) is not null)
+            {
+                throw new ArgumentException($"The {CoverageLayers.What(target)} {stack.Layers[0].Name} is the last of {target.Grid!.Title}: it stays", nameof(name));
+            }
+            return CoverageLayers.WithStack(document, LayerStackEdits.Remove(stack, name, CoverageLayers.What(target)));
+        }
 
         /// <summary>
         /// The document with a layer at another place of its stack: 0 is the bottom.

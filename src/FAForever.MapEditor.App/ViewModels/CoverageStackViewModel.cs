@@ -70,6 +70,7 @@ public sealed partial class CoverageStackViewModel : LayerStackViewModel
     public void Retarget(MapDocument? document)
     {
         Chosen = null;
+        ForgetShown();
         Refresh(document);
     }
 
@@ -78,6 +79,8 @@ public sealed partial class CoverageStackViewModel : LayerStackViewModel
 
     protected override string SummaryOfStack(int count) =>
         count <= 1 ? "Its own painted layer: add a layer to build it from others" : string.Create(CultureInfo.InvariantCulture, $"{count} layers, the highest first");
+
+    protected override bool KeepsLastLayer => true;
 
     protected override string CombineHelp => "Add or subtract its coverage, keep the higher (maximum) or lower (minimum) of it and the layers below, replace them, or multiply";
 
