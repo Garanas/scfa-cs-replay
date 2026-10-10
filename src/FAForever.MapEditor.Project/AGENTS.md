@@ -344,6 +344,52 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   water (`WaterPresetSettings`; the elevations, whether it has water, the wave generators and the
   masks stay the map's).
 
+## Height layers and curves
+
+User stories T-5 and T-4 (`Files/InMemory/HeightLayer.cs`, `Editing/HeightLayers`, `HeightLayerEdits`,
+`HeightCurves`).
+
+- `MapDocument.HeightLayers`, lowest first, empty for a map without them (its heightmap is simply
+  its heights). With layers, `Terrain.Heightmap` is what they add up to, so everything that reads
+  the heights (views, walkability, normal map, export) is unchanged. The base (`Kind.Base`, the
+  heights as they were when the stack began) is always the lowest layer, one per map, at full
+  strength, unmasked, replacing; it cannot be moved or removed. `HeightLayerEdits.Bake` ends the
+  stack: the heightmap keeps the sum.
+- A layer: name (a file name, unique without case), kind (`Base`, `Sculpt`, `Imported`, `Curve`),
+  `Combine` (`Add` differences; `Maximum`, `Minimum`, `Replace` absolute heights), `Strength` 0 to
+  1, `Mask` (`mask:<name>` for a mask for tools, `stratum:<n>`; a missing mask counts as none, a
+  renamed mask for tools is followed), `Visible`, `Locked`, `Values` in game units at the
+  heightmap's corners (its tiles are the heightmap's tiles) and an optional `Coverage` (0 to 255:
+  a road's soft edge, the part of a replacing sculpt layer that was sculpted). Per corner the
+  weight is strength × mask (bilinear between the mask's pixels, any size) × coverage.
+- **The heightmap follows** (`HeightLayers.Follow(previous, next, sculptLayer)`): run by
+  `EditSession` on every step and by `EditTransaction` on every read of its document. It adds up
+  again only the tiles whose layer values, coverage or masks changed (all of them when a layer's
+  settings or the stack changed); tiles that come out the same stay shared, and a sum equal to the
+  previous one is the previous heightmap (so an edit that changes nothing is no step). A change of
+  the heightmap itself (a brush through `EditTransaction.Heightmap`, any edit that sets it) is not
+  the sum: it goes into `EditSession.SculptLayer` (the editor's chosen layer) so that the sum is
+  what the brush made (a weaker or masked layer gets more; under a replacing layer it does not
+  show), or, without a layer that can be sculpted (`SculptProblem`: locked, hidden, a curve, an
+  import), is undone. Smooth, flatten and erode work on the sum.
+- `SetCombine` of a sculpt layer between adding and an absolute way converts its values over the
+  layers below, so it keeps its look. `HeightmapFiles.Import` and a `heightmap.png` another tool
+  saves go into the base of a map with layers.
+- **Curves** (`HeightCurve`: points with a height, `Profile` ridge, valley, road, cliff; width,
+  falloff, closed): a Catmull-Rom spline about an ogrid between samples (`HeightCurves.Spline`);
+  `Rasterize` makes the layer's values (ridge `+h`, valley `-h`, cliff `+h` on the left of the
+  direction of travel in the top view, all `Add`; a road `h` with coverage, `Replace`), full over
+  the width (a cliff: a drop of an ogrid at the curve, full over the width on the high side) and
+  a smooth fade over the falloff. `SetCurve` rasterizes again, reusing the tiles that come out the
+  same, within the tiles the old and new curve reach; a new profile brings its way of combining.
+- **On disk**: `layers/layers.json` (`HeightLayersDto`; absent without layers) and per layer except
+  curves `layers/<name>.png` (16-bit, sample 0 at `offset`: -32768 steps for adding layers, 0
+  otherwise) and `layers/<name>.coverage.png`. Load adds the layers up again (the saved
+  `heightmap.png` is their sum, written by the editor). A save writes only the layers whose values
+  changed. Reload reads `layers/` again, an imported layer's `Source` (relative to the project when
+  inside it) when that file changes, and a changed `heightmap.png` into the base. Old projects have
+  no layers.
+
 ## Generated results
 
 Something made from the map when asked (user story F-7: walkability, the normal map and

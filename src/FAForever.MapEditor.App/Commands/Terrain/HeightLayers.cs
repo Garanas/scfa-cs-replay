@@ -98,6 +98,7 @@ public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs di
                 throw new ArgumentException($"A height layer is sculpt, imported or curve, not '{request.Kind}'");
         }
         string? above = model.HeightStack.Chosen is string chosenLayer && HeightLayers.Find(document, chosenLayer) is not null ? chosenLayer : null;
+        using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap($"Add the height layer {layer.Name}", d => HeightLayerEdits.Add(d, layer, above));
         model.HeightStack.Refresh(model.ShownDocument);
         model.HeightStack.Choose(layer.Name);
@@ -147,17 +148,19 @@ public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler
         };
         string name = request.Name?.Trim() ?? HeightLayerEdits.FreeName(document, profile.ToString());
         string? above = model.HeightStack.Chosen is string chosen && HeightLayers.Find(document, chosen) is not null ? chosen : null;
+        using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap($"Add the curve {name}", d => HeightLayerEdits.Add(d, HeightLayerEdits.NewCurve(d, name, curve), above));
         model.HeightStack.Refresh(model.ShownDocument);
         model.HeightStack.Choose(name);
-        model.Status = string.Create(CultureInfo.InvariantCulture, $"Added the curve {name}: a {profile.ToString().ToLowerInvariant()} through {curve.Points.Length} points");
+        model.Status = string.Create(CultureInfo.InvariantCulture, $"Added the curve {name}: a {profile.ToString().ToLowerInvariant()} through {curve.Points.Length} point{(curve.Points.Length == 1 ? "" : "s")}");
         return Task.FromResult(name);
     }
 }
 
 /// <summary>
 /// Changes a curve layer's curve (user story T-4), one step of undo; the steps that change the
-/// same fields of the same curve one after the other are one step (a slider dragged). The terrain
+/// same fields of the same curve one after the other are one step (a slider dragged), except new
+/// points, which are a step each. The terrain
 /// follows, the tiles near the curve only.
 /// </summary>
 /// <param name="Height">Every point's height.</param>
@@ -190,7 +193,10 @@ public sealed class SetHeightCurveHandler(MainViewModel model) : IRequestHandler
         };
         string fields = HeightLayerSettings.Fields(("profile", request.Profile), ("width", request.Width), ("falloff", request.Falloff), ("height", request.Height),
             ("closed", request.Closed), ("points", request.Points));
-        model.EditMap($"Curve {layer.Name}: {fields}", d => HeightLayerEdits.SetCurve(d, layer.Name, changed), $"terrain.setCurve:{layer.Name}:{fields}");
+        // a point added, moved or removed is a step of its own; a field typed in again or a slider dragged is one
+        string description = request.Points is null ? $"Curve {layer.Name}: {fields}" : $"Curve {layer.Name}: {changed.Points.Length} points";
+        using Performance.Span span = Performance.Measure("model.height-layers");
+        model.EditMap(description, d => HeightLayerEdits.SetCurve(d, layer.Name, changed), request.Points is null ? $"terrain.setCurve:{layer.Name}:{fields}" : null);
         return Task.CompletedTask;
     }
 }
@@ -208,6 +214,7 @@ public sealed class RemoveHeightLayerHandler(MainViewModel model) : IRequestHand
     public Task Handle(RemoveHeightLayer request, CancellationToken cancellationToken)
     {
         HeightLayer layer = HeightLayerArgument.Of(model, request.Layer);
+        using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap($"Remove the height layer {layer.Name}", d => HeightLayerEdits.Remove(d, layer.Name));
         model.Status = $"Removed the height layer {layer.Name}";
         return Task.CompletedTask;
@@ -235,6 +242,7 @@ public sealed class MoveHeightLayerHandler(MainViewModel model) : IRequestHandle
         {
             return Task.CompletedTask;
         }
+        using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap(to > from ? $"Move the height layer {layer.Name} up" : $"Move the height layer {layer.Name} down", d => HeightLayerEdits.Move(d, layer.Name, to));
         return Task.CompletedTask;
     }
@@ -275,6 +283,7 @@ public sealed class SetHeightLayerHandler(MainViewModel model) : IRequestHandler
             return Task.CompletedTask;
         }
         string current = layer.Name;
+        using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap($"Height layer {layer.Name}: {fields}", d =>
         {
             if (combine is HeightCombine way && way != layer.Combine)
@@ -343,6 +352,7 @@ public sealed class ReloadHeightLayerHandler(MainViewModel model) : IRequestHand
         MapDocument document = model.ShownDocument!;
         string path = Path.IsPathRooted(source) || model.Map?.ProjectFolder is not string folder ? source : Path.Combine(folder, source);
         ushort[] samples = await Task.Run(() => HeightmapFiles.ReadResampled(document, path, out _), cancellationToken);
+        using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap($"Read the height layer {layer.Name} again", d => HeightLayerEdits.SetImported(d, layer.Name, samples));
         model.Status = $"Read the height layer {layer.Name} again from {source}";
     }
@@ -366,6 +376,7 @@ public sealed class BakeHeightLayersHandler(MainViewModel model) : IRequestHandl
             return Task.CompletedTask;
         }
         int count = document.HeightLayers.Length;
+        using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap("Bake the height layers", HeightLayerEdits.Bake);
         model.Status = string.Create(CultureInfo.InvariantCulture, $"Baked {count} height layers into the heightmap");
         return Task.CompletedTask;

@@ -183,7 +183,7 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 return document;
             }
-            (TiledBuffer<float> values, TiledBuffer<byte>? coverage) = HeightCurves.Rasterize(curve, document.Width, document.Height, layer.Values, layer.Coverage);
+            (TiledBuffer<float> values, TiledBuffer<byte>? coverage) = HeightCurves.Rasterize(curve, document.Width, document.Height, layer.Values, layer.Coverage, layer.Curve);
             // a new profile brings its way of combining, unless the map maker chose another
             HeightCombine combine = layer.Curve is HeightCurve before && before.Profile != curve.Profile && layer.Combine == HeightCurves.CombineOf(before.Profile)
                 ? HeightCurves.CombineOf(curve.Profile)

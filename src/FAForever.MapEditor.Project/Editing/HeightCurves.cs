@@ -12,9 +12,9 @@ namespace FAForever.MapEditor.Project.Editing
     public static class HeightCurves
     {
         /// <summary>
-        /// About how far apart the spline is sampled, in ogrids.
+        /// About how far apart the spline is sampled, in ogrids: a corner's distance.
         /// </summary>
-        private const float Step = 0.5f;
+        private const float Step = 1f;
 
         /// <summary>
         /// How a new curve layer of a profile combines: a road replaces the terrain where it lies (by
@@ -24,7 +24,7 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// The spline through the points (Catmull-Rom), as a line of places with their heights,
-        /// about half an ogrid apart; the points themselves are on it.
+        /// about an ogrid apart; the points themselves are on it.
         /// </summary>
         public static IReadOnlyList<CurvePoint> Spline(HeightCurve curve)
         {
@@ -63,7 +63,8 @@ namespace FAForever.MapEditor.Project.Editing
         /// up again.
         /// </summary>
         public static (TiledBuffer<float> Values, TiledBuffer<byte>? Coverage) Rasterize(
-            HeightCurve curve, int mapWidth, int mapHeight, TiledBuffer<float>? previousValues = null, TiledBuffer<byte>? previousCoverage = null)
+            HeightCurve curve, int mapWidth, int mapHeight, TiledBuffer<float>? previousValues = null, TiledBuffer<byte>? previousCoverage = null,
+            HeightCurve? previousCurve = null)
         {
             int width = mapWidth + 1;
             int height = mapHeight + 1;
@@ -87,10 +88,25 @@ namespace FAForever.MapEditor.Project.Editing
                 float[] heights = new float[columns * rows];
                 float[] side = new float[columns * rows];
                 Array.Fill(distance, float.PositiveInfinity);
+                // rows in bands, each band with the parts of the line that reach it; the rows apart on the pool
+                const int band = 16;
+                List<int>[] bands = [.. Enumerable.Range(0, (rows + band - 1) / band).Select(_ => new List<int>())];
                 for (int s = 0; s + 1 < line.Count; s++)
                 {
-                    Nearest(line[s], line[s + 1], reach, x0, z0, x1, z1, columns, distance, heights, side);
+                    int from = Math.Max(0, (int)MathF.Floor(Math.Min(line[s].Z, line[s + 1].Z) - reach) - z0) / band;
+                    int to = Math.Min(rows - 1, (int)MathF.Ceiling(Math.Max(line[s].Z, line[s + 1].Z) + reach) - z0) / band;
+                    for (int b = from; b <= to; b++)
+                    {
+                        bands[b].Add(s);
+                    }
                 }
+                Parallel.For(0, rows, row =>
+                {
+                    foreach (int s in bands[row / band])
+                    {
+                        Nearest(line[s], line[s + 1], reach, z0 + row, x0, z0, x1, columns, distance, heights, side);
+                    }
+                });
                 for (int row = 0; row < rows; row++)
                 {
                     for (int column = 0; column < columns; column++)
@@ -124,7 +140,9 @@ namespace FAForever.MapEditor.Project.Editing
                     }
                 }
             }
-            return (Reuse(values.ToBuffer(), previousValues), coverage is null ? null : Reuse(coverage.ToBuffer(), previousCoverage));
+            // the tiles that can differ lie where either curve reaches; without the previous curve, anywhere
+            (int X0, int Z0, int X1, int Z1)? tiles = previousCurve is null ? null : Union(TilesOf(curve, width, height), TilesOf(previousCurve, width, height));
+            return (Reuse(values.ToBuffer(), previousValues, tiles), coverage is null ? null : Reuse(coverage.ToBuffer(), previousCoverage, tiles));
         }
 
         /// <summary>
@@ -163,16 +181,20 @@ namespace FAForever.MapEditor.Project.Editing
             return Across(signed, width, falloff);
         }
 
-        private static void Nearest(CurvePoint a, CurvePoint b, float reach, int minX, int minZ, int maxX, int maxZ, int columns, float[] distance, float[] heights, float[] side)
+        /// <summary>
+        /// Keeps, for the corners of one row near a part of the line, the part nearest to them.
+        /// </summary>
+        private static void Nearest(CurvePoint a, CurvePoint b, float reach, int z, int minX, int minZ, int maxX, int columns, float[] distance, float[] heights, float[] side)
         {
+            if (z < Math.Min(a.Z, b.Z) - reach || z > Math.Max(a.Z, b.Z) + reach)
+            {
+                return;
+            }
             Vector2 from = new Vector2(a.X, a.Z);
             Vector2 along = new Vector2(b.X, b.Z) - from;
             float lengthSquared = along.LengthSquared();
             int x0 = Math.Max(minX, (int)MathF.Floor(Math.Min(a.X, b.X) - reach));
             int x1 = Math.Min(maxX, (int)MathF.Ceiling(Math.Max(a.X, b.X) + reach));
-            int z0 = Math.Max(minZ, (int)MathF.Floor(Math.Min(a.Z, b.Z) - reach));
-            int z1 = Math.Min(maxZ, (int)MathF.Ceiling(Math.Max(a.Z, b.Z) + reach));
-            for (int z = z0; z <= z1; z++)
             {
                 for (int x = x0; x <= x1; x++)
                 {
@@ -195,16 +217,17 @@ namespace FAForever.MapEditor.Project.Editing
         /// <summary>
         /// The buffer with the tiles that hold the same values as the previous one's taken from it.
         /// </summary>
-        private static TiledBuffer<T> Reuse<T>(TiledBuffer<T> made, TiledBuffer<T>? previous) where T : unmanaged, IEquatable<T>
+        private static TiledBuffer<T> Reuse<T>(TiledBuffer<T> made, TiledBuffer<T>? previous, (int X0, int Z0, int X1, int Z1)? tiles) where T : unmanaged, IEquatable<T>
         {
             if (previous is null || previous.Width != made.Width || previous.Height != made.Height)
             {
                 return made;
             }
             TiledBuffer<T>.Builder builder = previous.ToBuilder();
-            for (int tileY = 0; tileY < made.TilesY; tileY++)
+            (int x0, int z0, int x1, int z1) = tiles ?? (0, 0, made.TilesX - 1, made.TilesY - 1);
+            for (int tileY = z0; tileY <= z1; tileY++)
             {
-                for (int tileX = 0; tileX < made.TilesX; tileX++)
+                for (int tileX = x0; tileX <= x1; tileX++)
                 {
                     ReadOnlySpan<T> tile = made.Tile(tileX, tileY);
                     if (!made.SharesTile(previous, tileX, tileY) && !HeightLayers.SameTile(made, tileX, tileY, tile, previous.Tile(tileX, tileY)))
@@ -215,6 +238,27 @@ namespace FAForever.MapEditor.Project.Editing
             }
             return builder.ToBuffer();
         }
+
+        /// <summary>
+        /// The tiles (columns and rows, inclusive) a curve's values can reach; an empty range for a
+        /// curve that reaches nothing.
+        /// </summary>
+        private static (int X0, int Z0, int X1, int Z1) TilesOf(HeightCurve curve, int width, int height)
+        {
+            const int size = TiledBuffer<float>.TileSize;
+            IReadOnlyList<CurvePoint> line = Spline(curve);
+            float reach = (curve.Profile == CurveProfile.Cliff ? Math.Max(0, curve.Width) : Math.Max(0, curve.Width) / 2) + Math.Max(0, curve.Falloff) + 1;
+            if (line.Count < 2)
+            {
+                return (0, 0, -1, -1);
+            }
+            int Clamp(float value, int limit) => Math.Clamp((int)value, 0, limit - 1) / size;
+            return (Clamp(line.Min(p => p.X) - reach, width), Clamp(line.Min(p => p.Z) - reach, height),
+                Clamp(line.Max(p => p.X) + reach + 1, width), Clamp(line.Max(p => p.Z) + reach + 1, height));
+        }
+
+        private static (int X0, int Z0, int X1, int Z1) Union((int X0, int Z0, int X1, int Z1) a, (int X0, int Z0, int X1, int Z1) b) =>
+            a.X1 < a.X0 ? b : b.X1 < b.X0 ? a : (Math.Min(a.X0, b.X0), Math.Min(a.Z0, b.Z0), Math.Max(a.X1, b.X1), Math.Max(a.Z1, b.Z1));
 
         private static CurvePoint Mirror(CurvePoint about, CurvePoint point) =>
             new CurvePoint(2 * about.X - point.X, 2 * about.Z - point.Z, point.Height);

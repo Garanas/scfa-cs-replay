@@ -960,6 +960,37 @@ mode panel's and inspector's templates only name it).
 - Not built yet: the sky and cube maps (L-1), a sun handle and area handles drawn in 3D,
   placing wave generators with the mouse, templates for a new map.
 
+## Height layers and curves
+
+User stories T-5 and T-4; the library does the work (its guide, "Height layers and curves").
+
+- `MainViewModel.HeightStack` (`HeightLayersViewModel`, `ViewModels/MainViewModel.HeightLayers.cs`):
+  the Terrain panel's list (`Views/MapPanels/HeightLayersPanel`, the highest first, a check box to
+  show, one to lock) and the chosen layer, which is the session's `SculptLayer`: the sculpt tool
+  writes into it, and refuses with the reason in the status line when it cannot
+  (`HeightLayers.SculptProblem`). The inspector's "Layer or curve" (`HeightLayerPanel`) shows its
+  settings (`SettingGroup`s `Layer` and `Curve`, made again when the map's masks change). The list
+  is made again only when what it shows changes, not with each dab.
+- Commands: `terrain.addLayer {kind?: sculpt|imported|curve, name?, path?, combine?}` (above the
+  chosen layer; the first starts the stack), `terrain.addCurve {points, profile?, width?, falloff?,
+  height?, closed?, name?}`, `terrain.setCurve {layer?, profile?, width?, falloff?, height?, closed?,
+  points?}` (a field typed again is one step, points a step each), `terrain.setLayer {layer?, name?,
+  combine?, strength?, mask?, visible?, locked?}`, `terrain.moveLayer {layer?, to?, by?}`,
+  `terrain.removeLayer {layer?}`, `terrain.chooseLayer {layer}`, `terrain.reloadLayer {layer?}`,
+  `terrain.bake`. Each edit runs in the span `model.height-layers`.
+- **The curve tool** (`terrain.curve`, `Tools/CurveTool`): while the chosen layer is an unlocked
+  curve, a click adds a point at its end (shift: into the nearest part), dragging a point moves it
+  (one step), control and a click removes one, Delete or Backspace the last; otherwise the first
+  click makes a curve layer with the tool's profile, width, falloff and height (a road's points lie
+  on the terrain). Escape: the next click starts another curve. The top view draws the spline and
+  the points (`ToolMarks.Path`, `Handles`); the 3D view does not yet.
+- Automation: `state.heightLayers` (chosen, the session's sculpt layer, the sculpt problem, the
+  layers with their settings and curves, the curve tool's settings).
+- On an 81 km map: adding the first layer 0.2 s, a stroke's move about 30 ms, a curve edit 0.3 to
+  0.7 s with the views' own reaction to the new heights (debug build).
+- Not built yet: the curve in 3D, a height per point by hand in the views, exporting a layer for
+  World Machine or Gaea, merging layers.
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session
