@@ -1665,8 +1665,46 @@ User stories T-5 and T-4; the library does the work (its guide, "Height layers a
   `Base`, `Sculpt`, `Imported`, `Curve`, and its `sourceKind`, `painted`, `image`, `curve`, `mask`).
 - On an 81 km map: adding the first layer 0.2 s, a stroke's move about 30 ms, a curve edit 0.3 to
   0.7 s with the views' own reaction to the new heights (debug build).
-- Not built yet: a height per point by hand in the views, exporting a layer for World Machine or
-  Gaea, merging layers.
+- Not built yet: a height per point by hand in the views, merging layers.
+
+## Draft and final heightmaps
+
+User story T-9 (wave 9A); the library does the work (its guide, "Draft and final heightmaps").
+
+- **The switch** (`MainViewModel.ShownHeights`, `ViewModels/MainViewModel.DraftAndFinal.cs`;
+  `terrain.switchHeights {to?: draft|final}`, Ctrl+Shift+D, in the Terrain menu; the panel's Draft and
+  Final chips): which heightmap both views show and brushes write (`EditSession.Heights`). It is the
+  view's, not a step of undo. Units, markers, props, decals and areas stay; generators and the
+  export read the final.
+- **What the views draw**: `MainViewModel.ViewDocument`, the shown document with the draft's heights
+  as the terrain's while the draft shows (the same object per version, so views compare cheaply);
+  `ShownHeightmap` for the camera's ground and the curve tool's road points. Only drawing and looking
+  use them (the top view's picture and cursor height, the 3D frame and picking); tools and edits
+  take `ShownDocument`. A new view part that draws the terrain's heights reads `ViewDocument`. The
+  switch raises `OverlaysChanged` and the property change: the top view colours the tiles that
+  differ, the 3D view uploads them (the two heightmaps share every other tile).
+- **The panel** (`Views/MapPanels/HeightLayersPanel`): "Heightmap" (the chips, `ImagePreview`s of
+  both heightmaps as `HeightmapPicture`s, what the final's base is), "Height layers" (filter chips by
+  use, `all`, `shared`, `draft`, `final`, and by source, `all`, `sculpt`, `image`, `curve`, `mask`:
+  `terrain.filterLayers {use?, source?}`; the stack control over the shown stack, rows saying
+  `shared`, `draft only` or `final only` once the stacks differ; a line naming the layers only the
+  other heightmap has), and "World Machine and Gaea" (masks to tick, Write again whenever it changes,
+  Write the draft, Use as the final's base..., Share the draft's base). `DraftFinalViewModel` holds
+  its state. The inspector adds "Used in" (`terrain.setLayer use=...`: `Draft and final`, `Draft
+  only`, `Final only`); its Shown is the shown heightmap's on/off.
+- **Commands**: `terrain.writeDraft` (Needs a project; writes `procedural/temp/draft-heightmap.png`,
+  `.r16` and the ticked masks; span `model.write-draft`), `terrain.setDraftOut {masks?, auto?}` (the
+  map's settings, a step of undo), `terrain.useAsFinalBase {path?}` (asks for the output, starting in
+  `procedural/temp/`; a step of undo; a file outside the project is read again only when the project
+  opens, a warning in the log), `terrain.shareDraftBase`; `terrain.addLayer` takes `use`. With
+  "Write again whenever it changes" on, the draft is written `DraftWriteDelay` (1 s) after the last
+  change to it or a ticked mask, not during a stroke (`WhenDraftWrittenAsync` for tests).
+- Automation: `state.draftFinal` (shown, both stacks with each layer's use and on/off, the final's
+  base, whether the draft has heights of its own, the height at the map's centre in the shown
+  heightmap, the settings, how many writes, the outputs in `procedural/temp/`); `state.heightLayers`
+  adds each layer's `use`, the filters and the listed names.
+- Tests: `DraftAndFinalTest` (the commands), `DraftAndFinalWindowTest` (the shortcut and buttons with
+  the top and 3D views' height under the mouse and the top view's picture, headless).
 
 ## Lua plugins
 

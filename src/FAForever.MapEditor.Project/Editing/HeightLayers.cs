@@ -163,6 +163,12 @@ namespace FAForever.MapEditor.Project.Editing
                     draftDirty[i] |= draftTaken[i];
                 }
             }
+            if (previous.DraftSamples is not null && !draftDirty.Contains(true)
+                && !HeightStacks.MakeTheSame(result.HeightStack, result.DraftStack))
+            {
+                // a change of the final alone (a stroke in a layer of its own): the draft stays as it was
+                return ReferenceEquals(result.DraftSamples, previous.DraftSamples) ? result : result with { DraftSamples = previous.DraftSamples };
+            }
             return WithDraftComposite(result, draftBefore, draftDirty);
         }
 

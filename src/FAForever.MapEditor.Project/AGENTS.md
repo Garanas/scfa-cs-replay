@@ -218,9 +218,11 @@ the map's ogrids whatever the grid's size (`GridDab`: each pixel counts at its c
   document changed since (an edit during a save in the background must not be undone by it). A `map.json` that changes the map's size is refused: the grids would
   no longer fit.
 - `procedural/` holds the procedural work: `sources/` the map maker's World Machine and Gaea files
-  (versioned with the project), `temp/` what those tools build from them (heightmaps, masks; left
-  out of version control). Every save makes both folders; the editor reads nothing in them by
-  itself: a result comes into the map when the map maker brings it in (T-3, later T-5).
+  (versioned with the project), `temp/` what goes between the editor and those tools (left out of
+  version control): the draft and ticked masks the editor writes for them and the outputs they
+  write beside them (`ProceduralFiles`, section "Draft and final heightmaps"). Every save makes
+  both folders; an output comes into the map when the map maker chooses it (an image layer, or the
+  final's base), and is read again whenever the tool writes it.
 - `ProjectWatcher` reports the changed files of a folder once it has been quiet for a moment
   (tools save in bursts), on a pool thread. `faf-map pack --watch` opens the project once and
   reloads only what changed before each export. Tests wait for a report with `NextChangeAsync`
@@ -709,12 +711,11 @@ for tools and the water's masks theirs in the same shape (the plan "Map Editor R
   a base only at the bottom), `Remove`, `Move` (above the base), `Rename`, `SetCombine`,
   `SetStrength`, `SetClip`, `SetVisible`, `SetLocked`. A target's own edits put the stack in its
   place and add the target's rules (`HeightLayerEdits` for the heightmap).
-- **Two stacks of one target** (9A's draft and final heightmaps): each a `LayerStack` of its own; a
-  shared layer is the same name in both with the same source and grids (the same objects), at a
-  place of its own in each and with its own `Visible`. 9A adds the draft beside
-  `MapDocument.HeightStack` (which stays the final, the one exported) and an edit that changes a
-  shared layer's content in both; `stacks/heightmap.json` can then list the draft's order beside
-  the layers. The conversion of older projects then puts every layer in both.
+- **Two stacks of one target** (the draft and final heightmaps, section "Draft and final
+  heightmaps"): each a `LayerStack` of its own; a shared layer is the same name in both with the
+  same source, grids and settings, at a place of its own in each and with its own `Visible`
+  (`HeightStacks.WithLayer` makes an edit of its content in both, `HeightStacks.Sync` after every
+  step carries what a brush wrote). Another target that gets two stacks follows the same pattern.
 - **Following after every step** (for wave 9's targets): the heightmap's `HeightLayers.Follow` is
   the pattern: `FollowRenamedMasks`, `ChangedTiles`, `TakeChanges` when the target grid itself
   changed (a brush through `EditTransaction`), `CompositeHeights`/`CompositeCoverage` over the dirty
@@ -772,9 +773,61 @@ User stories T-5 and T-4 (`MapDocument.HeightStack`, `Editing/HeightLayers`, `He
   changes, an image layer's file when that changes, and a changed `heightmap.png` into the base.
   **Older projects** (format 3 to 5) keep the layers as `layers/layers.json` (`HeightLayersDto`, kinds
   `Base`, `Sculpt`, `Imported`, `Curve`) and `layers/<name>.png`: they open unchanged (read into the
-  stack in memory), and their first save writes `stacks/` and removes `layers/`. An image layer added
-  since the last save is not read again when its file changes until the map is saved
-  (`EditedMap.Reload` compares with the saved version); saving first works.
+  stack in memory), and their first save writes `stacks/` and removes `layers/`. An image layer's
+  file is read again whenever it changes, also for a layer added since the last save
+  (`EditedMap.Reload` takes such a file as another tool's, `MapProjectStore.IsImageLayerFile`).
+
+## Draft and final heightmaps
+
+User story T-9 (wave 9A; `Editing/HeightStacks`, `Files/InMemory/HeightStackKind.cs`,
+`ProceduralFiles`). The draft is the rough shape blocked out and the input of World Machine or Gaea;
+the final starts from their output and is what the game gets.
+
+- **The model**: `MapDocument.HeightStack` is the final (its composite is `Terrain.Heightmap`,
+  which the export, walkability, the normal map, navigation and every generator read: the export
+  always takes the final), `MapDocument.DraftStack` the draft, `DraftSamples` the draft's
+  composite (null while both stacks hold the same layers in the same order, `MakeTheSame`: then
+  `DraftHeightmap` is the heightmap itself, so a map that never parts costs nothing), `DraftHeightmap`
+  the draft as a `Heightmap`. Both stacks are empty or both have a base; names are unique over
+  both (`HeightStacks.NameProblem`, `FreeName`). `HeightStackKind` names a stack (`Final`, `Draft`),
+  `LayerUse` a layer's membership (`Shared`, `Draft`, `Final`; `UseOf`).
+- **Shared layers**: one layer, the same source, grids and settings in both, its own place and
+  `Visible` in each. `HeightLayerEdits` finds a layer in either stack (`HeightStacks.Locate`, the
+  final first) and makes a content edit (strength, combine, mask, lock, rename, curve, image read
+  again) in both; `SetVisible` and `Move` take the stack (`kind`, the final by default); `Remove`
+  takes it out of both; `HeightStacks.SetUse` changes membership (added on top, shown; a base keeps
+  its use). `SetCombine` keeps a sculpt layer's look in the stack named.
+- **New layers** (`HeightLayerEdits.Add(..., shown, use)`): into both while the final shares the
+  draft's base (`HeightStacks.DefaultUse`: a map without a procedural step exports what was drawn),
+  else into the stack shown. `Start` begins both stacks with one shared base.
+- **The final's base** (`HeightStacks.UseAsFinalBase(document, samples, source)`): an image layer
+  marked base (`Procedural base`, `FinalBaseName`) replaces the final's lowest layer; the old base
+  stays the draft's (draft only). Read again whenever its file changes, as any image layer.
+  `ShareDraftBase` makes the final start from the draft's base again; `SharesBase`, `FinalBase`.
+- **Following** (`HeightLayers.Follow`, every step): `Normalized` (a final with layers gets a draft
+  holding every layer; none without), a brush's change of the draft's samples goes into the draft's
+  sculpting layer (`TakeChanges`), a brush's change of the heightmap into the final's, `Sync`
+  carries changed layers into the other stack (unless that stack changed them in the same step), the
+  final composites its dirty tiles, and the draft composites its own from its previous samples
+  (which share every tile the two have in common, so switching uploads only what differs).
+  `EditSession.Heights` says which heightmap brushes write; `EditTransaction.Heightmap` hands out the
+  draft's samples for the draft (while the map has layers). `HeightLayers.SculptProblem(document,
+  layer, kind)` refuses a layer the stack lacks.
+- **On disk** (format 6, optional additions): `stacks/heightmap.json` lists every layer once (the
+  final's in its order, then those only in the draft), each with `use` (`draft`, `final`; left out
+  for both), and `draft`, the draft's order with each layer's `hidden` there (`DraftLayerDto`; left
+  out while the two stacks are the same). A project without `draft` (every older one) opens with
+  every layer in both: the same terrain. Shared layers load as one object in both stacks.
+- **Files for World Machine and Gaea** (`ProceduralFiles`, all in `procedural/temp/`):
+  `draft-heightmap.png` (16-bit grey, (width + 1) by (height + 1), one step 1/128 game unit),
+  `draft-heightmap.r16` (the same samples, raw little-endian, row by row from the north-west),
+  `draft-mask-<name>.png` (a ticked mask for tools, 8-bit at its own size; an unticked one's file is
+  removed); every other image file there is an output (`Outputs`, newest first). `WriteDraft` writes
+  them; the map's settings (`ProceduralSettings.DraftMasks`, `WriteDraftOnChange`; `map.json`'s
+  `procedural.draftMasks`, `procedural.writeDraft`) say which masks and whether the editor writes them
+  again whenever they change.
+- `MapResize` keeps shared layers one object; `HeightmapFiles.Import` and a changed `heightmap.png`
+  go into the final's base (the draft's too while shared).
 
 ## Generated results
 
