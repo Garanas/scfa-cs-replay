@@ -22,6 +22,8 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 /// <param name="Areas">The areas, the first the playable area; null when the overlay is off.</param>
 /// <param name="AreaStates">Per area: 0, 1 selected, 2 under the mouse.</param>
 /// <param name="Guides">The symmetry's guides; empty for none.</param>
+/// <param name="Eye">Where the camera is, and <paramref name="PixelScale"/> the ogrids a pixel
+/// covers an ogrid from it: the lines keep their width on screen.</param>
 internal sealed record TerrainOverlays(
     object? WalkabilityOf,
     Func<uint[]>? Walkability,
@@ -38,7 +40,9 @@ internal sealed record TerrainOverlays(
     Vector4 HoverColor,
     Vector4 OutsideColor,
     Vector4 GuideColor,
-    Vector4 ShadowColor)
+    Vector4 ShadowColor,
+    Vector3 Eye,
+    float PixelScale)
 {
     public bool IsEmpty => Walkability is null && Grid is null && (Areas is null || Areas.Count == 0) && Guides.Count == 0;
 }
@@ -226,11 +230,10 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         {
             using (Performance.Measure("3d.draw-overlays"))
             {
-                // on the terrain's own lattice, over the decals and the water, behind what stands on the terrain
-                _gl.Enable(EnableCap.PolygonOffsetFill);
-                _gl.PolygonOffset(-1, -8);
+                // on the terrain's own lattice, made invariantly as the terrain's: the same depth, which
+                // the depth test (less or equal) passes without an offset, so what stands on the terrain
+                // (trees far away included) stays in front; over the decals and the water
                 DrawOverlays(document, viewProjection, overlays);
-                _gl.Disable(EnableCap.PolygonOffsetFill);
             }
         }
         if (brush is not null)
@@ -355,6 +358,8 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         Set(program, "uGuideColor", overlays.GuideColor);
         Set(program, "uShadowColor", overlays.ShadowColor);
         int guides = Math.Min(overlays.Guides.Count, 8);
+        program.Set("uEye", overlays.Eye.X, overlays.Eye.Y, overlays.Eye.Z);
+        program.Set("uPixelScale", overlays.PixelScale);
         program.Set("uGuideCount", guides);
         for (int i = 0; i < guides; i++)
         {

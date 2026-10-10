@@ -410,8 +410,8 @@ internal static class TerrainShaders
     /// <summary>
     /// The overlays, premultiplied, each over the one before: the shade outside the playable area,
     /// walkability (one texel an ogrid, its colours made on the processor), the grid being painted
-    /// or the mask for tools (its colours made on the processor), the areas' outlines two pixels
-    /// wide (the selected ones in the selection's colour, the one under the mouse lighter), and the
+    /// or the mask for tools (its colours made on the processor), the areas' outlines (two and a half
+    /// pixels wide for the playable area and the selected ones, else one and a half) (the selected ones in the selection's colour, the one under the mouse lighter), and the
     /// symmetry's guides, dashed.
     /// </summary>
     public static string OverlayFragment(bool es) => Header(es) + """
@@ -435,6 +435,9 @@ internal static class TerrainShaders
         uniform vec4 uGuides[8];
         uniform vec4 uGuideColor;
         uniform vec4 uShadowColor;
+        uniform vec3 uEye;
+        // ogrids a pixel at a distance of one ogrid from the eye
+        uniform float uPixelScale;
 
         vec4 over(vec4 below, vec4 above)
         {
@@ -444,7 +447,8 @@ internal static class TerrainShaders
         void main()
         {
             vec2 p = vWorld.xz;
-            vec2 pixel = max(fwidth(p), vec2(1e-5));
+            // how large a pixel is on the map here: the lines keep their width on screen
+            vec2 pixel = vec2(max(distance(uEye, vWorld) * uPixelScale, 1e-5));
             vec4 color = vec4(0.0);
             if (uShade == 1 && uAreaCount > 0)
             {
@@ -473,7 +477,8 @@ internal static class TerrainShaders
                 vec2 outside = max(max(low - p, p - high), vec2(0.0)) / pixel;
                 float outer = length(outside);
                 float distance = d >= 0.0 ? d : outer;
-                float width = uAreaStates[i] > 0.5 || i == 0 ? 2.5 : 1.5;
+                // half the line's width: it lies on both sides of the edge
+                float width = uAreaStates[i] > 0.5 || i == 0 ? 1.25 : 0.75;
                 if (distance < width + 1.0)
                 {
                     vec4 line = uAreaStates[i] > 1.5 ? uHoverColor : uAreaStates[i] > 0.5 ? uSelectionColor : uAreaColor;

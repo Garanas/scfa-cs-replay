@@ -53,6 +53,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private ToolModifiers _axes;
     // the mouse moved since the thing under it was picked
     private bool _hoverStale;
+    private TimeSpan _lastHoverPick;
     private readonly ObjectModels _models;
     private IReadOnlySet<ObjectRef>? _highlighted;
     private MainViewModel? _model;
@@ -799,6 +800,13 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             return;
         }
+        // a pick costs milliseconds on a map of thousands of props: at most every 60 ms, the last place
+        if (_clock.Elapsed - _lastHoverPick < TimeSpan.FromMilliseconds(60))
+        {
+            RequestNextFrameRendering();
+            return;
+        }
+        _lastHoverPick = _clock.Elapsed;
         _hoverStale = false;
         bool selecting = _model.ActiveTool?.Tool is SelectTool or DecalSelectTool && _pressed is null;
         _model.Selection.Hovered = selecting && _mouseInside ? PickAt(_mouse, _model.SelectableKinds) : null;
@@ -848,7 +856,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         Vector4 hover = ThemeColorWithAlpha("SelectedStrokeBrush");
         TerrainOverlays overlays = new TerrainOverlays(walkOf, walk, walkWidth, walkHeight, painted, shownGrid?.Palette, ThemeColorWithAlpha("MapMaskBrush"),
             areas, states, guides, ThemeColorWithAlpha("MapAreaBrush"), ThemeColorWithAlpha("MapSelectionBrush"), hover,
-            ThemeColorWithAlpha("MapOutsidePlayableBrush"), ThemeColorWithAlpha("OverlayStrokeBrush"), ThemeColorWithAlpha("OverlayShadowBrush"));
+            ThemeColorWithAlpha("MapOutsidePlayableBrush"), ThemeColorWithAlpha("OverlayStrokeBrush"), ThemeColorWithAlpha("OverlayShadowBrush"),
+            model.Camera.Eye, 2 * MathF.Tan(EditorCamera.FieldOfView / 2) / (float)Math.Max(1, Bounds.Height));
         return overlays.IsEmpty ? null : overlays;
     }
 
