@@ -410,8 +410,17 @@ the environment variable `FAF_MAP_EDITOR_SETTINGS` names another file, which tes
 use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.lua` for the defaults.
 
 - `GameArchives` lays the archives over each other as the game mounts them: per name (`env`,
-  `units`) the game's `.scd`, then FAF's `.nx2`, which wins. `props.scd` holds only placeholders.
-  Paths are compared in lower case.
+  `units`, and `textures` when the game has it) the game's `.scd`, then FAF's `.nx2`, which wins.
+  `props.scd` holds only placeholders. Paths are compared in lower case. Of `textures` only
+  `GameArchives.TextureFolders` is converted (`IsConverted`): `textures/environment` (the sky's
+  cube maps and backgrounds, the cube maps units reflect), `textures/engine` (the water's ramps,
+  waves and cube map) and `textures/ui/common/icons/units` (the units' icons and the pictures of
+  their layers behind them), about 900 files and 76 MB.
+- **Cube maps** (`CubeMaps`): a DDS cube map (`DDSCAPS2_CUBEMAP`) becomes one PNG with its six faces
+  side by side, square each, in the order +x, -x, +y, -y, +z, -z (a strip six times as wide as
+  high), each face as the DDS holds it; `CubeMaps.Decode` reads a strip, a DDS cube map (a map's
+  own) or a plain picture (the same on every side) into a strip, and `Face` cuts one out.
+  `GameTextures.FindCube` finds the cube map a map names as `Find` finds a texture, with its own key.
 - `AssetConverter` turns them into `assets/`, keeping the game's paths in lower case: textures as
   8-bit PNG with alpha, prop and unit blueprints as the editor's JSON (`PropBlueprintDto`,
   `UnitBlueprintDto`, read with FileFormats.Blueprints by `AssetBlueprints`), meshes as glTF
@@ -420,15 +429,26 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   fills in (`<name>_lod<n>.scm`, `_albedo.dds`, `_normalsts.dds`, `_specteam.dds`); a name is
   relative to the blueprint's folder and may step out of it (the tree groups use
   `../Brch01_s1_albedo.dds`), and a file the archives lack is left out. It writes into `assets.new/` and replaces `assets/` when done; a stopped
-  conversion goes on where it was. For game version 3839: 32 s, 2.9 GB, 6256 textures, 2188 meshes,
-  563 props, 606 units.
+  conversion goes on where it was. For game version 3839 (FAF of October 2026): 30 s, 3 GB, 7044
+  textures, 2184 meshes, 563 props, 606 units.
 - `AssetCheck` tells whether the assets are current: converted by this editor version (and
   `AssetConverter.FormatVersion`, raise it when the output changes) from the archives as they are.
   Only FAF's `.nx2` are checked; same size and time is unchanged, otherwise the SHA-256 decides.
 - `Workspace.FindAsset("/env/Evergreen/layers/Eg_Grass001_albedo.dds")` gives the converted file.
 - `AssetCatalog.Load(assets)` lists what a map maker chooses from (user stories F-8, F-9): the
   props and units from their converted blueprints, the decals (`decals/`, `splats/`) and the
-  stratum textures (`layers/`, albedo and normal map as one) from their PNGs. Each `AssetEntry`
+  stratum textures (`layers/`, albedo and normal map as one) from their PNGs, and the cube maps
+  (`AssetKind.Cubemap`, L-1: the strips of `textures/environment` and `textures/engine`; the
+  folder is the group, the category `sky`, `reflection`, `water` or `other` by the name). A unit
+  has the game's icon (`AssetEntry.Icon`, U-1: `textures/ui/common/icons/units/<id>_icon`) and the
+  picture of its layer behind it (`IconBackground`: `<General.Icon>_up`, land when the blueprint
+  names none of land, air, sea and amph, as `GetBackgroundTextures` of `lua/ui/game/construction.lua`;
+  the converted blueprint keeps it as `buildIcon`).
+- **Reading one asset again** (F-8): `catalog.Reload(key, assetsFolder)` reads one asset's files
+  again by the reader of its kind (over its folder) and answers a new catalogue with it replaced
+  (left out when its files are gone) and the asset as it is now; the new catalogue names the one it
+  was made from (`ReloadedFrom`) and the keys read again (`ReloadedKeys`), so what keeps something
+  per asset drops only those. Each `AssetEntry`
   has its kind, the keys a map names it by (`AssetCatalog.KeyOf`: the game path as
   `GameArchives.Normalize` writes it, `.dds`; a unit's id), its group (the biome of `env/`, or a
   unit's faction), its category (a prop's folder, a unit's layer, ...), its family (a prop without
@@ -442,7 +462,10 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   prop and unit is FAF's by its blueprint; textures and decals are mostly the game's.
 - **Missing assets** (F-8, `MissingAssets.Find(document, catalog)`): what a map uses that neither
   the catalogue nor the map's own files have, with how often and the check that finds it too
-  (`missing-texture`, `missing-model`), most used first.
+  (`missing-texture`, `missing-model`), most used first. The cube maps a map names (`CubemapsOf`:
+  the sky's, those units reflect, the water's) count only when the catalogue has cube maps at all
+  (`ChecksCubemaps`): a workspace converted before them knows none, and nothing is missing then;
+  `missing-texture` finds them under the same rule.
 - A prop's or unit's picture is drawn from its most detailed mesh (`AssetEntry.Model`: the
   `.glb`, the albedo, normal and specular maps and the shader of its first level of detail) by
   `AssetPreview.Render`, with `MeshPreview` of FileFormats.Mesh: on the processor, from above and
@@ -626,6 +649,20 @@ other from the document each leaves (the editor's `generate.stale`) leaves nothi
   opened or blocked, and where regions were joined (a new region over two or more old ones: a new
   passage) or split (a closed path), each at the changed ogrid nearest the centre of its changes.
   A culled region (small, without deposits) counts as blocked, as it does for the game's AI.
+- **The terrain shaders** (user story S-4, `Editing/TerrainShaderCatalog`): the techniques of FAF's
+  `effects/terrain.fx` a map can name (`TTerrain`, `TTerrainXP`, `TTerrainXPExt`, `Terrain000` to
+  `Terrain301`), each with how it blends (`Strata`: 4 or 8; `FullMaskRange`: a mask whole, or only its
+  upper half as `saturate(mask * 2 - 1)`; `Stratum8IsData` and `UpperIsAlbedo`: whether stratum 8
+  and the upper layer are textures or map-wide data) and the layers and settings it reads, from the
+  layout comments in `terrain.fx`. `Of(name)` takes an unknown name as `TTerrainXP`.
+- **The textured preview** (user story S-4, `Generation/TexturedPreview.Render(document, texture, size)`):
+  the map from above, each pixel the layers blended as the shader says, the textures made smaller in
+  steps of two and sampled at the step whose texel is as large as the ground a pixel covers (a
+  texture is read at most 256 wide); lit as the 3D view lights (`CalculateXPLighting` without the
+  specular part); under the water the ramp's colour at the depth over the ground (`terrain.fx`),
+  then the surface colour by the depth clamped to the colour's near and far (FAF's `water2.fx`).
+  A texture that cannot be read is grey (an upper layer covers nothing). The editor's preview
+  generator uses it with the workspace's textures.
 - **The normal map** (user story S-4, `Generation/TerrainImages.NormalMap`, `NormalMapGenerator`):
   per pixel the terrain's normal at its centre (the four corners' normals blended), written as the
   FAF map editor writes it and the game reads it: x in alpha and z in green as 0.5 + n / 2, red and

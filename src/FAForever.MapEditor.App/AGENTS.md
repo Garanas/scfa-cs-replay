@@ -283,7 +283,8 @@ compact density) draws the standard controls; `Styles/` holds the look of everyt
   does) and shows it with `EditorCulture.Format`; a `TextBox` bound straight to a number
   (`double`, `float`, `int`) takes `Converter={x:Static controls:NumberTextConverter.Instance}`.
   `EditorCultureTest` checks a Dutch computer.
-- Code that draws (the overlays of the top view, the 3D view's sky) reads the tokens with
+- Code that draws (the overlays of the top view, the 3D view's background where the map has no
+  sky cube map) reads the tokens with
   `TryFindResource` and reads them again when the theme variant changes. Only colours that come
   from the map (a marker's) are made in code.
 - `StyleRulesTest` fails on a colour, font size or weight, opacity or non-zero distance written
@@ -606,7 +607,9 @@ workspace's `AssetCatalog` (the library's guide), read on a pool thread when the
 ready and again with Modes, Assets, Read the assets again (`assets.reload`):
 
 - **Kind** follows the mode (Terrain brushes, Paint textures, Props props, Decals decals, Units
-  units; another mode keeps it); the chips above choose it by hand, with how many each shows.
+  units, Lighting cube maps; another mode keeps it); the chips above choose it by hand, with how
+  many each shows. Cube maps (L-1) show their first face; their Narrow scope is the sky's and
+  the reflections' (`Sky and reflections`), Everything adds the water's.
 - **Brushes** are the workspace's own, not the game's: the greyscale PNGs of its `brushes` folder,
   in folders as the map maker likes (the folders are the shelf's groups; Modes, Assets, Show the
   brushes folder, `assets.brushesFolder`). The editor watches the folder and reads the brushes
@@ -647,7 +650,9 @@ ready and again with Modes, Assets, Read the assets again (`assets.reload`):
   prop's variants each have a tile (a slot takes one). The search has the keyboard; up and down
   move a row from it, the four arrows in the tiles; Enter or a double click chooses, Escape or a
   click beside it cancels. The shelf and the picker search alike (`AssetSearch`). Units show
-  their mesh: the workspace converts no unit icons.
+  their mesh, with the game's icon in the tile's corner (U-1: `AssetTile.Icon` over
+  `IconBackground`, the picture of its layer as the build menu draws it; `AssetThumbnail` with
+  `Checker="False"`, so no checker shows through); the inspector shows the icon larger.
   - `assets.pick {kind?, key?}` (Ctrl+P, F-9) picks an asset of the active mode's kind (else the
     shelf's) and `units.pick {key?}` (U-1) a unit; the chosen one shows in the inspector, as one
     chosen on the shelf (a brush also becomes the active tool's shape).
@@ -670,8 +675,55 @@ ready and again with Modes, Assets, Read the assets again (`assets.reload`):
   that shows the `missing-texture` or `missing-model` problem of that path
   (`MainViewModel.ShowMissingAsset`). `assets.browse {scope: missing}` answers `missing` and
   `missingCount`.
-- Not built yet: stars and recents; a mark of the drop place drawn in the views; reading one asset
-  again (the whole catalogue is read again).
+- **Reading one asset again** (F-8): the inspector's Read again (`assets.reloadShown`), or
+  `assets.reload {key}` (without a key the whole catalogue): `AssetsViewModel.ReloadOne` reads that
+  asset's files again (`AssetCatalog.Reload`, the library's; span `assets.reload-one`), forgets its
+  thumbnails (`AssetThumbnail.Cache.Forget`), and the 3D view reads only its model again
+  (`ObjectModels` drops the catalogue's `ReloadedKeys` when the new catalogue was made from the one
+  it knows).
+- The cube maps a map names (the sky's, those units reflect, the water's) are missing too when the
+  workspace has cube maps and lacks one; a change of them alone finds the missing again.
+- Not built yet: stars and recents; a mark of the drop place drawn in the views.
+
+## The map's look: shader, sky, grid and decals
+
+User stories S-4, L-1 and V-3. What the views draw follows the map's settings as the game does:
+
+- **The terrain shader** (S-4): the Paint panel's Shader list under the layers (`LayerTextures.Shader`,
+  `paint.shader {name}`, one step of undo), with what the chosen one reads, a line each
+  (`TerrainShaderCatalog`, the library's: the game's and FAF's techniques of `effects/terrain.fx`).
+  A name the editor does not know (a mod's) is kept, listed and drawn as `TTerrainXP`. The 3D view's
+  terrain shader blends as it says (`uBlend`): four or eight strata, a mask whole or from its
+  middle up (`saturate(mask * 2 - 1)`), stratum 8 and the upper layer as textures or left out as
+  map-wide data. The generated preview blends alike.
+- **The sky** (L-1): the Lighting mode's inspector (`SkySection`, `LightingSettings.Sky`): the
+  sky's cube map, the one units reflect (the map's `<default>` environment cube map, added when
+  it has none), the background; `lighting.setSky {cubemap?, environmentCubemap?, background?}`
+  and `lighting.chooseCubemap {target: sky|environment|water, key?}`, which opens the picker of
+  the workspace's cube maps (the Water inspector's Cubemap has its Choose too). The 3D view draws
+  the sky's cube map behind everything (`TerrainShaders.SkyFragment`: the direction of each pixel
+  from the inverse camera matrix; span `3d.draw-sky`), and the water reflects its own cube map
+  (else the sky's) by FAF's Fresnel term (`water2.fx`, F0 0.08) times its sky reflection (its
+  old default 1.5 counts as 1). The water itself is drawn as the game: its ramp's colour at the
+  depth over the ground (`terrain.fx`), then the surface colour by the depth, clamped to the
+  colour's near and far. Cube maps are a strip of six faces in the workspace (`CubeMaps`, the
+  library's), uploaded as a cube by `GpuTextureCache.GetCube` (texture unit 14, which no 2D
+  texture shares); a map's own DDS cube map is read as one (`GameTextures.FindCube`).
+- **The grid** (V-3): the Grid chip (`ShowGrid`) says its spacing (`OverlayItem.Text`, `Grid 16`);
+  its context menu and `view.gridSpacing {spacing}` (1 to 256 ogrids, shows the grid) set it. The
+  top view draws a line a pixel wide every spacing ogrids in sight, none closer than
+  `HeightmapView.MinGridLineGap` pixels (span `top.grid`); the 3D view draws them on the terrain in
+  the overlay shader (`TerrainOverlays.LineSpacing`), fading where they would lie closer than a few
+  pixels. Token `MapGridLineBrush`.
+- **The decals** (V-3): the Decals chip turns `ShowDecals` over (the same switch as Select's hide
+  a kind): in 3D they are drawn or not; the top view draws each as a faint outline, turned as it
+  lies, those in sight and not smaller than `HeightmapView.MinDecalSize` pixels, in one geometry
+  (span `top.decals`, about 1.5 ms for Archsimkats Valley's 3634). Token `MapDecalBrush`.
+- **Automation**: `state.looks`: the shader (name, known, strata, whole mask range), the sky (its
+  cube maps, background, the water's, whether the 3D view drew the sky and the reflection), the
+  grid (shown, spacing, lines the top view drew), the decals (shown, outlines the top view drew),
+  the units with icons and the cube maps of the workspace, and the cube maps the map names that
+  are missing.
 
 ## Events, presets, symmetry and generated results
 
@@ -813,8 +865,13 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   `terrain.walkability`, which needs a layer of its own in the project).
 - **The normal map and the preview** (`generate.normalMap`, `file.renderPreview`): the normal map
   at the size of the map's own, its format kept (`TerrainImages.NormalMap`); the preview
-  (`Rendering/MapPreview`) is the top view's picture (`TerrainPicture`, without a mask) reduced
-  to 256 by 256 by averaging. Both are out of date when the heightmap changes, the preview also
+  (`Rendering/MapPreview`, S-4), the one the `.scmap` ships with, is drawn with the strata's
+  textures by `TexturedPreview` (the library's): the layers blended as the terrain shader
+  blends them, lit by the map's sun, the water's ramp and surface colour over the ground, 256 by
+  256; the textures found as the 3D view finds them. Without a workspace it is the top view's
+  picture (`TerrainPicture`, without a mask) reduced to 256 by 256 by averaging. The preview's
+  inputs are the heightmap, the water, the strata, their masks, the lighting and the terrain
+  shader. Both are out of date when the heightmap changes, the preview also
   with the water level.
 - **Problems** (`ViewModels/ProblemsViewModel`, `model.Problems`, the dock's Problems tab): the
   library's `ProblemChecks` (`Problems.Checks`; a feature registers an `IProblemCheck` of its own),
@@ -1320,8 +1377,8 @@ mode panel's and inspector's templates only name it).
 - The top view labels the playable area (the one the scenario names, else the first, M-3). `state.mapPanels` has the information,
   areas, script and files, water, lighting angles, layers, the ruler's measurement and whether
   the page of a new map is open.
-- Not built yet: the sky and cube maps (L-1), placing wave generators with the mouse, templates
-  for a new map.
+- The sky's cube maps are in the Lighting mode's inspector (section "The map's look").
+- Not built yet: placing wave generators with the mouse, templates for a new map.
 
 ## Map size, playable area and versions
 
