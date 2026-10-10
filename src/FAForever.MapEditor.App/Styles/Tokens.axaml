@@ -91,6 +91,8 @@
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
       <!-- things on the map in the top view: props as dots, units as squares, areas as dashed rectangles; what is selected, and the box being drawn -->
       <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
+      <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
+      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#998FD18A" />
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
@@ -143,6 +145,8 @@
       <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
       <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
+      <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
+      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#998FD18A" />
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />

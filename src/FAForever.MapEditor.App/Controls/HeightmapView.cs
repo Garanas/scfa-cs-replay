@@ -36,7 +36,7 @@ public sealed class HeightmapView : Control
     /// tokens (<c>Styles/Tokens.axaml</c>).
     /// </summary>
     internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, Typeface LabelFont, double LabelSize,
-        IBrush Prop, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box,
+        IBrush Prop, IBrush PropSparse, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box,
         IBrush Blocked, IBrush NewlyBlocked, IBrush Opened);
 
     public HeightmapView()
@@ -79,6 +79,7 @@ public sealed class HeightmapView : Control
         new Typeface(Token<FontFamily>("SansFontFamily"), FontStyle.Normal, FontWeight.Bold),
         Token<double>("FontSizeMapLabel"),
         Token<IBrush>("MapPropBrush"),
+        Token<IBrush>("MapPropSparseBrush"),
         Token<IBrush>("MapUnitBrush"),
         new Pen(Token<IBrush>("MapAreaBrush"), 1.5, new DashStyle([4, 3], 0)),
         Token<IBrush>("MapAreaBrush"),
@@ -550,14 +551,7 @@ public sealed class HeightmapView : Control
         }
         if (model.ShowProps)
         {
-            foreach (Prop prop in document.Props)
-            {
-                Point at = MapToControl(prop.Position.X, prop.Position.Z);
-                if (shown.Contains(at))
-                {
-                    context.FillRectangle(overlay.Prop, new Rect(at.X - 1.5, at.Y - 1.5, 3, 3));
-                }
-            }
+            DrawProps(context, overlay, document, shown);
         }
         if (model.ShowUnits)
         {
@@ -571,6 +565,45 @@ public sealed class HeightmapView : Control
             }
         }
     }
+
+    /// <summary>
+    /// Below this zoom (pixels an ogrid) the props are drawn sparse: smaller, fainter, at most one
+    /// dot per <see cref="PropCell"/> pixels square, so a forest of thousands of props does not
+    /// hide the terrain. Picking takes every prop whatever is drawn.
+    /// </summary>
+    public const double PropSparseZoom = 2;
+
+    private const int PropCell = 3;
+
+    /// <summary>
+    /// The props as dots, sparse when zoomed out (<see cref="PropSparseZoom"/>); the number drawn is
+    /// <see cref="PropDotsDrawn"/>.
+    /// </summary>
+    private void DrawProps(DrawingContext context, Overlay overlay, MapDocument document, Rect shown)
+    {
+        bool sparse = _zoom < PropSparseZoom;
+        HashSet<long>? taken = sparse ? [] : null;
+        double size = sparse ? 2 : 3;
+        IBrush brush = sparse ? overlay.PropSparse : overlay.Prop;
+        int drawn = 0;
+        foreach (Prop prop in document.Props)
+        {
+            Point at = MapToControl(prop.Position.X, prop.Position.Z);
+            if (!shown.Contains(at)
+                || (taken is not null && !taken.Add(((long)Math.Floor(at.X / PropCell) << 32) | (uint)(int)Math.Floor(at.Y / PropCell))))
+            {
+                continue;
+            }
+            context.FillRectangle(brush, new Rect(at.X - size / 2, at.Y - size / 2, size, size));
+            drawn++;
+        }
+        PropDotsDrawn = drawn;
+    }
+
+    /// <summary>
+    /// How many prop dots the last frame drew (for tests and automation).
+    /// </summary>
+    public int PropDotsDrawn { get; private set; }
 
     /// <summary>
     /// What the active tool shows (<see cref="IMapTool.Marks"/>): its line with the label at its

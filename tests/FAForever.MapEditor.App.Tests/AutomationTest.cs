@@ -287,5 +287,39 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsNull(point["3d"], "the 3D view never shown has no size, so no point (and the answer is valid JSON)");
             window.Close();
         });
+
+        [TestMethod]
+        public Task ManyPropsAreDrawnSparseWhenZoomedOutAndStillPicked() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            model.View = MapViewTab.Top;
+            // a forest: 4000 props on 40 by 40 ogrids
+            List<Prop> forest = [.. Enumerable.Range(0, 4000).Select(i => new Prop
+            {
+                Id = 0,
+                Blueprint = "/env/evergreen/props/rocks/rock01_prop.bp",
+                Position = new Vector3(60 + i % 63 * 0.63f, 20, 60 + i / 63 * 0.63f),
+                Scale = Vector3.One,
+            })];
+            model.EditMap("A forest", document => document.AddProps(forest, out _));
+            await Send(automation, "show", new JsonObject { ["props"] = true });
+
+            await Send(automation, "view", new JsonObject { ["x"] = 80, ["z"] = 80, ["zoom"] = 1 });
+            await Send(automation, "state"); // a frame drawn at that zoom
+            int sparse = window.MapView.PropDotsDrawn;
+            int props = model.ShownDocument!.Props.Length;
+            Assert.IsTrue(sparse > 0 && sparse < props / 3, $"zoomed out a dot per few pixels: {sparse} of {props}");
+
+            await Send(automation, "view", new JsonObject { ["x"] = 80, ["z"] = 80, ["zoom"] = 8 });
+            await Send(automation, "state");
+            Assert.IsTrue(window.MapView.PropDotsDrawn > 3000, $"zoomed in every prop in the view has its dot: {window.MapView.PropDotsDrawn}");
+
+            model.SelectTool("props.select");
+            await Send(automation, "view", new JsonObject { ["x"] = 80, ["z"] = 80, ["zoom"] = 1 });
+            JsonObject point = (JsonObject)(await Send(automation, "view-point", new JsonObject { ["x"] = 70, ["z"] = 70 }))["point"]!;
+            await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = point["top"]!["x"]!.DeepClone(), ["y"] = point["top"]!["y"]!.DeepClone() });
+            Assert.AreEqual(1, model.Selection.Count, "a click still picks a prop, whatever dot shows");
+            window.Close();
+        });
     }
 }
