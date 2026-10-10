@@ -103,6 +103,17 @@ namespace FAForever.MapEditor.Project.Workspaces
         public int? TechLevel { get; init; }
 
         /// <summary>
+        /// The space a unit takes up on the map in ogrids, along x and z when it is not turned;
+        /// null for the other kinds and for units whose blueprint names none.
+        /// </summary>
+        public (double SizeX, double SizeZ)? Footprint { get; init; }
+
+        /// <summary>
+        /// Whether a unit is a structure, which stands on the build grid (<see cref="Editing.BuildGrid"/>).
+        /// </summary>
+        public bool IsStructure => Kind == AssetKind.Unit && Category == "structure";
+
+        /// <summary>
         /// The picture of it, a PNG of the workspace's assets: a decal's or texture's albedo, or
         /// its normal map when it has no albedo. Props and units are drawn from their <see cref="Model"/>.
         /// </summary>
@@ -382,6 +393,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                     Family = id,
                     IsCivilian = categories.Contains("CIVILIAN"),
                     TechLevel = unit.TechLevel,
+                    Footprint = unit.Footprint is { } size ? (size.SizeX, size.SizeZ) : null,
                     Model = ModelOf(assets, unit.Lods),
                     File = file,
                     Facts = [.. facts],

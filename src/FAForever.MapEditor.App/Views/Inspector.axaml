@@ -155,6 +155,12 @@
                   <StackPanel Classes="stack">
                     <TextBlock Classes="heading" Text="{Binding Title}" />
                     <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected units" />
+                    <StackPanel Classes="inline">
+                      <TextBlock Classes="label" Text="Army" />
+                      <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" AutomationProperties.Name="Army of the selected units"
+                                AutomationProperties.HelpText="Choosing another gives the selected units to it, in its group INITIAL" />
+                    </StackPanel>
+                    <TextBlock Classes="caption" Text="{Binding Group, StringFormat='Group: {0}'}" />
                   </StackPanel>
                 </Border>
               </DataTemplate>

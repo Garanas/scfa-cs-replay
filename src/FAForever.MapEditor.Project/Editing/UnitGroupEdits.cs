@@ -177,7 +177,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// <summary>
         /// A template of units to place again (a preset, user story U-4): a group named
         /// <paramref name="name"/> with the units, their places relative to the middle of them (x
-        /// and z) and their heights above the terrain (y), in the groups they are in below the
+        /// and z, the middle rounded to a whole ogrid) and their heights above the terrain (y), in the groups they are in below the
         /// deepest group that holds them all. Names are kept, to be replaced when placed.
         /// </summary>
         /// <exception cref="ArgumentException">None of the names is a unit.</exception>
@@ -189,8 +189,9 @@ namespace FAForever.MapEditor.Project.Editing
                 throw new ArgumentException("Choose units to save: none of them is on the map");
             }
             Heightmap heights = document.Terrain.Heightmap;
-            float cx = units.Average(u => u.Unit.Position.X);
-            float cz = units.Average(u => u.Unit.Position.Z);
+            // the middle on a whole ogrid, so structures stay on the build grid wherever it is placed
+            float cx = MathF.Round(units.Average(u => u.Unit.Position.X));
+            float cz = MathF.Round(units.Average(u => u.Unit.Position.Z));
 
             // the deepest group that holds them all, in the army of the first
             ImmutableArray<string> common = units[0].Group;

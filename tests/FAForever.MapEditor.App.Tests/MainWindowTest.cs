@@ -750,5 +750,35 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(SelectionInspector.Mixed, x.Text);
             window.Close();
         });
+
+        [TestMethod]
+        public Task AClickInTheTopViewPlacesTheChosenUnitAndTheTreeCountsIt() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            model.Assets.Use(UnitsTest.Catalog());
+            Show(window, MapViewTab.Top);
+            model.SelectTool("units.place");
+            await model.Commands.RunAsync("units.pick", new JsonObject { ["key"] = "uel0101" }, interactive: false);
+            Dispatcher.UIThread.RunJobs();
+            TextBlock title = window.GetVisualDescendants().OfType<TextBlock>().First(block => block.Text == "Snoop (uel0101)");
+            Assert.IsTrue(title.IsEffectivelyVisible, "the options bar says what a click places");
+
+            Point at = Middle(window.MapView, window);
+            Point place = window.MapView.ControlToMap(window.TranslatePoint(at, window.MapView)!.Value);
+            window.MouseMove(at);
+            window.MouseDown(at, MouseButton.Left);
+            window.MouseUp(at, MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+
+            PlacedUnit unit = model.ShownDocument!.FindUnit("UNIT_1")!;
+            Assert.AreEqual(place.X, unit.Unit.Position.X, 0.01, "where the mouse is");
+            Assert.AreEqual(place.Y, unit.Unit.Position.Z, 0.01);
+            Assert.AreEqual(("NEUTRAL_CIVILIAN", 2), (unit.Army, model.History.Count), "for the civilians, one step");
+
+            TreeView tree = window.GetVisualDescendants().OfType<TreeView>().Single(view => Avalonia.Automation.AutomationProperties.GetName(view) == "Armies and their unit groups");
+            Assert.IsTrue(tree.IsEffectivelyVisible, "the Units mode's panel shows the armies");
+            CollectionAssert.Contains(tree.GetVisualDescendants().OfType<TextBlock>().Select(block => block.Text).ToList(), "NEUTRAL_CIVILIAN (1)");
+            window.Close();
+        });
     }
 }
