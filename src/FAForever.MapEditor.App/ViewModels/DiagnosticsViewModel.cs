@@ -145,7 +145,7 @@ public sealed partial class DiagnosticsViewModel : ObservableObject
         {
             Settings?.SetTelemetry(settings);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FAForever.MapEditor.Project.MapProjectException)
         {
             Telemetry.CreateLogger("Editor").LogWarning("The choices about diagnostics could not be remembered: {Reason}", exception.Message);
         }

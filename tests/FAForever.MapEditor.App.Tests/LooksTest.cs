@@ -270,6 +270,17 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(0, window.MapView.GridLinesDrawn, "no grid at first");
             Assert.AreEqual(model.ShownDocument.Terrain.Shader, (string?)looks["shader"]?["name"]);
 
+            // a decal 24 ogrids wide at a pixel an ogrid: too small for an outline outside the Decals mode,
+            // where one works with them it shows
+            await Send("view", new JsonObject { ["zoom"] = 1 });
+            await Send("state");
+            Assert.AreEqual(0, window.MapView.DecalOutlinesDrawn, "small decals are left out outside the Decals mode");
+            await Send("mode", new JsonObject { ["id"] = "decals" });
+            await Send("state");
+            Assert.AreEqual(1, window.MapView.DecalOutlinesDrawn, "in the Decals mode they show");
+            await Send("mode", new JsonObject { ["id"] = "terrain" });
+            await Send("view", new JsonObject { ["zoom"] = 2 });
+
             await Send("run", new JsonObject { ["id"] = "view.gridSpacing", ["spacing"] = 16 });
             await Send("state");
             Assert.IsTrue(window.MapView.GridLinesDrawn > 0, "the grid's lines");

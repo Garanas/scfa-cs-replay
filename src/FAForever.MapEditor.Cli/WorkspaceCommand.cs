@@ -44,8 +44,11 @@ namespace FAForever.MapEditor.Cli
                 ?? throw new MapProjectException("FAF's fa_path.lua names no vault: pass --vault");
 
             Workspace workspace = Workspace.Create(folder, game, o.FafDataFolder ?? faf?.DataFolder, vault);
-            UserSettings.Default.SetWorkspace(workspace.Folder);
+            // --settings: another settings file remembers it, and the user's own stays as it is
+            UserSettings settings = o.Settings is string file ? new UserSettings(Path.GetFullPath(file)) : UserSettings.Default;
+            settings.SetWorkspace(workspace.Folder);
             Console.WriteLine($"Set up the workspace in {workspace.Folder}");
+            Console.WriteLine($"  remembered in {settings.File}");
             Console.WriteLine($"  game  {workspace.GameFolder}");
             Console.WriteLine($"  FAF   {workspace.FafDataFolder ?? "(none)"}");
             Console.WriteLine($"  vault {workspace.VaultFolder}");
@@ -60,7 +63,7 @@ namespace FAForever.MapEditor.Cli
         {
             string folder = o.Folder ?? throw new MapProjectException("Name the folder of the scratch workspace");
             Workspace source = Open(o.From);
-            (Workspace workspace, ScratchWorkspace.AssetLink link) = ScratchWorkspace.Create(folder, source);
+            (Workspace workspace, ScratchWorkspace.AssetLink link) = ScratchWorkspace.Create(folder, source, o.ConvertInto);
             Console.WriteLine($"Made the scratch workspace {workspace.Folder}");
             Console.WriteLine($"  assets  {link switch
             {
@@ -68,7 +71,22 @@ namespace FAForever.MapEditor.Cli
                 ScratchWorkspace.AssetLink.SymbolicLink => "a link to",
                 ScratchWorkspace.AssetLink.Copy => "copied from",
                 _ => "none: there are none in",
-            }} {source.AssetsFolder}");
+            }} {(o.ConvertInto is string into ? Path.GetFullPath(into) : source.AssetsFolder)}");
+            if (o.ConvertInto is not null)
+            {
+                // the assets of its own, converted from the game unless they are current already
+                AssetCheck check = workspace.CheckAssets();
+                if (check.State == AssetState.Current)
+                {
+                    Console.WriteLine("  the assets there are current: nothing to convert");
+                }
+                else
+                {
+                    Console.WriteLine($"  converting the assets ({string.Join("; ", check.Reasons)})");
+                    Convert(workspace);
+                    SandboxMap.Ensure(workspace);
+                }
+            }
             Console.WriteLine($"  vault   {workspace.VaultFolder} (exports go here)");
             Console.WriteLine($"  sandbox {SandboxMap.FolderOf(workspace)}");
             if (o.Settings is string settings)

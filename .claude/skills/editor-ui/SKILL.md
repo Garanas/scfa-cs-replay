@@ -88,6 +88,9 @@ UPDATE_SNAPSHOTS=1 dotnet test tests/FAForever.MapEditor.App.Tests --artifacts-p
 faf-map workspace scratch <scratch>/ws --from "<real workspace>" --settings <scratch>/settings.json
 faf-map editor start --port 5372 --settings <scratch>/settings.json   # waits until ready; opens the sandbox
 faf-map editor start --port 5372 --settings <scratch>/settings.json --map <map folder>
+faf-map editor restart --port 5372                    # stop and start with the same arguments: runs the new build
+faf-map editor run id=view.movePanel panel=inspector place=float --port 5372   # left|right|bottom|float, a dock tab also dock
+faf-map editor expand label="Armies and their unit groups" all=true --port 5372 # tree items open, so ui lists them
 faf-map editor ui --port 5372                         # the controls, labels, values and places
 faf-map editor ui under=MainMenu --port 5372          # one part of the window
 faf-map editor state --port 5372                      # views (bounds, pixels, scaling), loading, selection
@@ -172,5 +175,12 @@ The files are CRLF and UTF-8: heredocs with apostrophes break, `sed -i` may writ
 run `faf-map dev replace <file> --old-file old.txt --new-file new.txt [--count n | --all]`: it keeps
 the file's line endings, UTF-8 and byte order mark, and refuses when the old text does not occur as
 often as expected (once by default).
+
+A floating panel lies in a window of its own: `ui` lists it as a `FloatingWindow` node (places
+inside relative to it), and `click`, `set` and `screenshot part=` reach it. In Git Bash, an
+argument starting with `/` (`value=/env/...`) is rewritten into a Windows path: prefix the call
+with `MSYS_NO_PATHCONV=1`. `faf-map workspace scratch <ws> --convert-into <assets>` converts the
+assets into a folder of its own (an asset-format change); `workspace init --settings <file>`
+never touches the user's settings.
 
 Read `ui` before guessing from a screenshot; look at a screenshot before saying a look is right.

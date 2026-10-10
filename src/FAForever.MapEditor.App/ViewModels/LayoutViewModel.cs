@@ -117,19 +117,22 @@ public sealed partial class LayoutViewModel : ObservableObject
     public partial bool ShowToolbar { get; set; } = true;
 
     /// <summary>
-    /// The width of the mode's panel; null for the editor's own (the token <c>ModePanelWidth</c>).
+    /// The width of the left side, where the mode's panel lies unless it is moved; null for the
+    /// editor's own (the token <c>ModePanelWidth</c>).
     /// </summary>
     [ObservableProperty]
     public partial double? ModePanelWidth { get; set; }
 
     /// <summary>
-    /// The width of the inspector; null for the editor's own (<c>InspectorWidth</c>).
+    /// The width of the right side, where the inspector lies unless it is moved; null for the
+    /// editor's own (<c>InspectorWidth</c>).
     /// </summary>
     [ObservableProperty]
     public partial double? InspectorWidth { get; set; }
 
     /// <summary>
-    /// The height of the dock; null for the editor's own, which grows while the asset shelf shows.
+    /// The height of the bottom, where the dock lies unless it is moved; null for the editor's own,
+    /// which grows while the asset shelf shows in the dock.
     /// </summary>
     [ObservableProperty]
     public partial double? DockHeight { get; set; }
@@ -209,12 +212,14 @@ public sealed partial class LayoutViewModel : ObservableObject
                 View = remembered;
             }
             SetToolbar(layout.ToolbarCommands);
+            LoadPlaces(layout);
         }
         finally
         {
             _loading = false;
         }
         Changed?.Invoke(this, EventArgs.Empty);
+        PlacesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -254,28 +259,21 @@ public sealed partial class LayoutViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Gives a panel a size, as its splitter does: the width of the mode's panel or inspector, the
-    /// height of the dock; between <see cref="MinimumPanelSize"/> and <see cref="MaximumPanelSize"/>.
+    /// Gives a panel a size, as its splitter does: the size of the side it lies on (the width of the
+    /// left or right, the height of the bottom; <see cref="LayoutViewModel"/>'s places), between
+    /// <see cref="MinimumPanelSize"/> and <see cref="MaximumPanelSize"/>.
     /// </summary>
-    /// <exception cref="ArgumentException">The toolbar has no size.</exception>
+    /// <exception cref="ArgumentException">The toolbar has no size; a floating panel's window has its own.</exception>
     public void Resize(LayoutPanel panel, double size)
     {
-        double clamped = Math.Clamp(size, MinimumPanelSize, MaximumPanelSize);
-        switch (panel)
+        MovablePanel movable = panel switch
         {
-            case LayoutPanel.ModePanel:
-                ModePanelWidth = clamped;
-                break;
-            case LayoutPanel.Inspector:
-                InspectorWidth = clamped;
-                break;
-            case LayoutPanel.Dock:
-                DockHeight = clamped;
-                break;
-            default:
-                throw new ArgumentException("The toolbar is as high as its buttons; it has no size to give", nameof(panel));
-        }
-        Changed?.Invoke(this, EventArgs.Empty);
+            LayoutPanel.ModePanel => MovablePanel.ModePanel,
+            LayoutPanel.Inspector => MovablePanel.Inspector,
+            LayoutPanel.Dock => MovablePanel.Dock,
+            _ => throw new ArgumentException("The toolbar is as high as its buttons; it has no size to give", nameof(panel)),
+        };
+        ResizeSide(SideOf(movable), size);
     }
 
     /// <summary>
@@ -288,8 +286,8 @@ public sealed partial class LayoutViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Every panel shown at its own size, the views split in half; the toolbar keeps its commands
-    /// and the view that shows stays.
+    /// Every panel shown in its own place at its own size (none floats), the views split in half;
+    /// the toolbar keeps its commands and the view that shows stays.
     /// </summary>
     public void Reset()
     {
@@ -298,6 +296,7 @@ public sealed partial class LayoutViewModel : ObservableObject
         {
             ShowModePanel = ShowInspector = ShowDock = ShowToolbar = true;
             ModePanelWidth = InspectorWidth = DockHeight = SideBySideSplit = null;
+            ResetPlaces();
         }
         finally
         {
@@ -305,6 +304,7 @@ public sealed partial class LayoutViewModel : ObservableObject
         }
         Save();
         Changed?.Invoke(this, EventArgs.Empty);
+        PlacesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -363,6 +363,7 @@ public sealed partial class LayoutViewModel : ObservableObject
         ["sideBySideSplit"] = SideBySideSplit,
         ["toolbarCommands"] = new JsonArray([.. Toolbar.Select(item => (JsonNode)new JsonObject { ["id"] = item.Id, ["canRun"] = item.CanRun })]),
         ["settings"] = _settings?.File,
+        ["places"] = DescribePlaces(),
     };
 
     partial void OnShowModePanelChanged(bool value) => Save();
@@ -403,7 +404,7 @@ public sealed partial class LayoutViewModel : ObservableObject
         }
         try
         {
-            _settings.SetLayout(new LayoutSettingsDto
+            _settings.SetLayout(WithPlaces(new LayoutSettingsDto
             {
                 ModePanel = ShowModePanel,
                 Inspector = ShowInspector,
@@ -415,7 +416,7 @@ public sealed partial class LayoutViewModel : ObservableObject
                 SideBySideSplit = SideBySideSplit,
                 View = View.ToString(),
                 ToolbarCommands = ReferenceEquals(ToolbarCommands, DefaultToolbar) ? null : [.. ToolbarCommands],
-            });
+            }));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FAForever.MapEditor.Project.MapProjectException)
         {

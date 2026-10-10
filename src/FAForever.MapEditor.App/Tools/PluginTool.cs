@@ -80,6 +80,25 @@ public sealed partial class PluginTool : ObservableObject, IMapTool
         OnPropertyChanged(nameof(CursorRadius));
     }
 
+    /// <summary>
+    /// Whether the brush keys (<c>[</c>, <c>]</c>, control and the wheel) change the radius: when it
+    /// is a field of the plugin.
+    /// </summary>
+    public bool HasRadiusField => Spec.RadiusField is not null;
+
+    /// <summary>
+    /// Sets the radius field, within its limits, as the brush keys do.
+    /// </summary>
+    /// <returns>The radius it has now.</returns>
+    public double SetRadius(double radius)
+    {
+        if (Spec.RadiusField is string key)
+        {
+            _host.SetValue(Plugin.Id, key, System.Text.Json.Nodes.JsonValue.Create(radius));
+        }
+        return CursorRadius;
+    }
+
     public void Press(float x, float z) => _host.ToolPress(this, x, z, ToolInput.Default);
 
     public void Press(float x, float z, ToolInput input) => _host.ToolPress(this, x, z, input);

@@ -56,7 +56,7 @@ public sealed partial class AutomationServer
                 result["clicked"] = await ClickLabelAsync(arguments);
                 return true;
             default:
-                return false;
+                return await RunLayoutToolingAsync(command, arguments, result);
         }
     }
 
@@ -68,10 +68,10 @@ public sealed partial class AutomationServer
     private async Task<JsonObject> ClickLabelAsync(JsonObject arguments)
     {
         string label = Text(arguments, "label");
-        Visual root = arguments["under"]?.GetValue<string>() is { Length: > 0 } under
-            ? UiTree.Find(window, under) ?? throw new ArgumentException($"No control is named, labelled or reads '{under}'")
-            : window;
-        Control control = UiTree.Find(root, label) ?? throw new ArgumentException($"No control is named, labelled or reads '{label}'");
+        // in the editor's window or a floating panel's (user story V-4)
+        Visual? under = UnderOf(arguments);
+        Control control = (under is not null ? UiTree.Find(under, label) : FindInWindows(label))
+            ?? throw new ArgumentException($"No control is named, labelled or reads '{label}'");
         if (ToolRow.Reveal(control))
         {
             await LetInputSettleAsync();
@@ -79,19 +79,21 @@ public sealed partial class AutomationServer
         control.BringIntoView();
         await LetInputSettleAsync();
         await NextFrameAsync();
-        Point centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)
+        TopLevel top = WindowOf(control);
+        Point centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), top)
             ?? throw new InvalidOperationException($"'{label}' is not in the window");
-        if (!new Rect(window.Bounds.Size).Contains(centre))
+        if (!new Rect(top.Bounds.Size).Contains(centre))
         {
             throw new InvalidOperationException($"'{label}' lies outside the window at {centre.X:0}, {centre.Y:0}");
         }
         Avalonia.Input.MouseButton button = WindowInput.ParseButton(arguments["button"]?.GetValue<string>());
         int clicks = arguments["doubleClick"]?.GetValue<bool>() == true ? 2 : 1;
-        Input.Move(centre);
+        WindowInput input = InputOf(top);
+        input.Move(centre);
         for (int i = 0; i < clicks; i++)
         {
-            Input.Down(centre, button);
-            Input.Up(centre, button);
+            input.Down(centre, button);
+            input.Up(centre, button);
         }
         await LetInputSettleAsync();
         return new JsonObject
@@ -99,6 +101,7 @@ public sealed partial class AutomationServer
             ["type"] = control.GetType().Name,
             ["label"] = Avalonia.Automation.AutomationProperties.GetName(control) is { Length: > 0 } name ? name : label,
             ["at"] = new JsonArray(Math.Round(centre.X), Math.Round(centre.Y)),
+            ["window"] = top == window ? null : top is Views.FloatingPanelWindow floating ? ViewModels.LayoutViewModel.Name(floating.Panel) : "other",
             ["checked"] = control is ToggleButton toggle ? toggle.IsChecked : null,
             ["focused"] = Focused(),
         };

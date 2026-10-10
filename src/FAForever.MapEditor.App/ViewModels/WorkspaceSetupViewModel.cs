@@ -179,7 +179,15 @@ public sealed partial class WorkspaceSetupViewModel(IEditorDialogs dialogs, ILog
             log.LogError(exception, "Setting up the workspace {Folder} failed: {Reason}", Folder, exception.Message);
             return false;
         }
-        _settings?.SetWorkspace(workspace.Folder);
+        try
+        {
+            _settings?.SetWorkspace(workspace.Folder);
+        }
+        catch (Exception exception) when (exception is MapProjectException or IOException or UnauthorizedAccessException)
+        {
+            // the workspace is used now; the next start asks for it again
+            log.LogWarning(exception, "The workspace {Folder} could not be remembered: {Reason}", workspace.Folder, exception.Message);
+        }
         await UseAsync(workspace, convertWhenMissing: true);
         return true;
     }

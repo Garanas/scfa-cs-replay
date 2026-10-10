@@ -182,7 +182,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             case "" or "help":
                 return new JsonObject
                 {
-                    ["automation"] = new JsonArray([.. Own.Concat(InputCommands).Concat(ToolingCommands).Concat(DialogCommands).Concat(AnswerCommands).Select(line => (JsonNode)JsonValue.Create(line))]),
+                    ["automation"] = new JsonArray([.. Own.Concat(InputCommands).Concat(ToolingCommands).Concat(DialogCommands).Concat(LayoutCommands).Concat(AnswerCommands).Select(line => (JsonNode)JsonValue.Create(line))]),
                     ["commands"] = new JsonArray([.. model.Commands.All.Where(c => !c.IsIncomplete).Select(c => (JsonNode)JsonValue.Create(c.Usage))]),
                     ["aliases"] = new JsonObject([.. Aliases.Select(alias => KeyValuePair.Create(alias.Key, (JsonNode?)JsonValue.Create(alias.Value.Runs)))]),
                 };
@@ -667,6 +667,8 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["favourites"] = model.Assets.DescribeFavourites(),
             ["walkabilityMarks"] = model.Tool<WalkabilityMarkTool>().Describe(),
             ["adaptiveFiles"] = new JsonObject { ["writes"] = model.Markers.WritesAdaptiveFiles, ["text"] = model.Markers.AdaptiveFilesText },
+            ["floatingWindows"] = FloatingWindowsState(),
+            ["waves"] = WavesState(),
         };
     }
 

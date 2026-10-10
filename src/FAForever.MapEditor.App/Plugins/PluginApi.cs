@@ -36,6 +36,17 @@ internal interface IPluginHost
     /// A field's value as text: the user's, else its default.
     /// </summary>
     string ValueOf(LuaPlugin plugin, PluginField field);
+
+    /// <summary>
+    /// The parts of the map edits are mirrored into, the identity first: only it while the symmetry
+    /// does not mirror edits (user story F-12).
+    /// </summary>
+    IReadOnlyList<FAForever.FileFormats.Map.MapSymmetryTransform> Mirrors(MapDocument document);
+
+    /// <summary>
+    /// Adds the images of things just placed in the other parts of the map while the symmetry mirrors edits.
+    /// </summary>
+    MapDocument MirrorPlaced(MapDocument document, IReadOnlyList<ObjectRef> placed);
 }
 
 /// <summary>
@@ -146,7 +157,8 @@ internal static class PluginApi
                 }
             }
             plugin.Tools.Add(new PluginToolSpec(FullId(plugin, id), LuaConvert.Text(spec, "title") ?? id, mode, LuaConvert.Text(spec, "description"),
-                radius.Type == LuaValueType.Number ? Math.Max(0, radius.Read<double>()) : 0, radiusField, fields, press, drag, release));
+                radius.Type == LuaValueType.Number ? Math.Max(0, radius.Read<double>()) : 0, radiusField, fields, press, drag, release,
+                LuaConvert.Field(spec, "symmetry") is not { Type: LuaValueType.Boolean } symmetry || symmetry.Read<bool>()));
             return FullId(plugin, id);
         }, plugin);
         table["value"] = Function("plugin.value", (context, ctx) =>
@@ -456,6 +468,10 @@ internal static class PluginApi
             float z = (float)(LuaConvert.Number(spec, "z") ?? throw new ArgumentException("map.addProp needs z"));
             float? heading = LuaConvert.Number(spec, "heading") is double degrees ? (float)(degrees * Math.PI / 180) : null;
             float scale = (float)(LuaConvert.Number(spec, "scale") ?? 1);
+            // a command's prop gets its images while the symmetry mirrors edits, as a placed one does;
+            // a tool's handlers are called for every image themselves (and mirror = false leaves it alone)
+            LuaValue mirrorField = LuaConvert.Field(spec, "mirror");
+            bool mirror = !run.IsStroke && (mirrorField.Type != LuaValueType.Boolean || mirrorField.Read<bool>());
             MapDocument document = run.Document;
             Prop prop = new PropPlacement { RandomTurn = heading is null, ScaleMin = scale, ScaleMax = scale }
                 .Make("/" + blueprint.TrimStart('/'), x, z, document.Terrain.Heightmap, Random.Shared, heading);
@@ -464,9 +480,26 @@ internal static class PluginApi
             {
                 MapDocument added = now.AddProp(prop);
                 id = added.Props[^1].Id;
-                return added;
+                return mirror ? host.MirrorPlaced(added, [ObjectRef.Prop(id)]) : added;
             });
             return ObjectRef.Prop(id).ToString();
+        }, plugin);
+        table["images"] = Function("map.images", (context, ctx) =>
+        {
+            // the place and its images in the other parts of the map while the symmetry mirrors edits
+            float x = (float)context.GetArgument<double>(0);
+            float z = (float)context.GetArgument<double>(1);
+            IReadOnlyList<FAForever.FileFormats.Map.MapSymmetryTransform> parts = host.Mirrors(ctx.RequireDocument());
+            return LuaConvert.List(parts.Select(part =>
+            {
+                Vector2 at = part.Apply(new Vector2(x, z));
+                LuaTable image = new LuaTable(0, 4);
+                image["x"] = at.X;
+                image["z"] = at.Y;
+                image["mirrored"] = part.IsMirror;
+                image["turn"] = Math.Round(part.TurnAngle * 180 / Math.PI, 3);
+                return (LuaValue)image;
+            }));
         }, plugin);
         table["move"] = Function("map.move", (context, ctx) =>
         {

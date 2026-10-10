@@ -131,7 +131,7 @@ namespace FAForever.MapEditor.App.Tests
                     "props.removeRuleCondition", "props.scale", "props.set", "props.setRule", "props.setRuleCondition", "props.setRulePalette", "props.tilt",
                     "select.hideKind", "select.lockKind", "select.set", "terrain.addCurve", "terrain.captureStamp", "terrain.chooseLayer", "terrain.moveLayer", "terrain.reloadLayer", "terrain.removeLayer", "terrain.setCurve",
                     "terrain.setLayer", "units.add", "units.drop", "units.moveGroup", "units.moveToArmy", "units.moveToGroup", "units.removeGroup", "units.renameGroup",
-                    "view.addToToolbar", "view.gpuDebug", "view.removeFromToolbar", "view.resizePanel", "view.setToolbar", "view.togglePanel", "view.walkability",
+                    "view.addToToolbar", "view.gpuDebug", "view.movePanel", "view.removeFromToolbar", "view.resizePanel", "view.returnPanel", "view.setToolbar", "view.togglePanel", "view.walkability",
                     "view.zoomTo", "water.removeWaveGenerator",
                     "water.set", "water.setWaveGenerator", "water.setWaveTexture", "workspace.convert", "workspace.setUp",
                 }, outside,
@@ -157,13 +157,14 @@ namespace FAForever.MapEditor.App.Tests
         public async Task ACommandNotBuiltYetSaysWhatItIsToDo()
         {
             MainViewModel model = NewModel();
+            TestCommands.RegisterNotBuilt(model);
 
-            bool ran = await model.Commands.RunAsync("water.placeWaveGenerator");
+            bool ran = await model.Commands.RunAsync(TestCommands.NotBuiltId);
 
             Assert.IsFalse(ran);
-            StringAssert.Contains(model.Status, "Not built yet: Water: Place a wave generator");
-            StringAssert.Contains(model.Status, "user story W-1");
-            StringAssert.Contains(model.Diagnostics.Console.Last().Message, "water.placeWaveGenerator: not built yet, user story W-1");
+            StringAssert.Contains(model.Status, "Not built yet: Plugins: Something not built yet");
+            StringAssert.Contains(model.Status, "user story F-1");
+            StringAssert.Contains(model.Diagnostics.Console.Last().Message, $"{TestCommands.NotBuiltId}: not built yet, user story F-1");
         }
 
         [TestMethod]

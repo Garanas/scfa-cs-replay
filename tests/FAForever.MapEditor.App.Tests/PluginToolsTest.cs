@@ -95,6 +95,103 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task WithTheSymmetryTheHandlersAreCalledForEveryImage()
+        {
+            MainViewModel model = await Open(Folder("raiser", Raise));
+            await model.Commands.RunAsync("select.symmetry", new JsonObject { ["kind"] = "leftRight" }, interactive: false);
+            model.Symmetry.MirrorsEdits = true;
+            model.SelectTool("plugin.raiser.raise");
+            MapDocument before = model.Map!.Document;
+            float mirroredX = before.Width - 100;
+
+            model.Stroke([(100, 100)]);
+
+            MapDocument after = model.Map.Document;
+            Assert.AreEqual(before.Terrain.Heightmap.GetHeight(100, 100) + 5, after.Terrain.Heightmap.GetHeight(100, 100), 0.05, "where it was pressed");
+            Assert.AreEqual(before.Terrain.Heightmap.GetHeight((int)mirroredX, 100) + 5, after.Terrain.Heightmap.GetHeight((int)mirroredX, 100), 0.05, "and in the mirrored half");
+            JsonObject report = (JsonObject)(await model.Commands.RunAsync("plugin.raiser.report", [], interactive: false)).Result!;
+            Assert.AreEqual(2, report["presses"]!.GetValue<int>(), "press is called once per image");
+            Assert.IsTrue(model.Undo());
+            Assert.AreEqual(before.Terrain.Heightmap.GetHeight((int)mirroredX, 100), model.Map.Document.Terrain.Heightmap.GetHeight((int)mirroredX, 100), 0.01, "one step for both");
+
+            // a tool that does its own symmetry gets the mouse's place only
+            MainViewModel own = await Open(Folder("raiser", Raise.Replace("radius = \"size\",", "radius = \"size\", symmetry = false,")));
+            await own.Commands.RunAsync("select.symmetry", new JsonObject { ["kind"] = "leftRight" }, interactive: false);
+            own.Symmetry.MirrorsEdits = true;
+            own.SelectTool("plugin.raiser.raise");
+            own.Stroke([(100, 100)]);
+            JsonObject once = (JsonObject)(await own.Commands.RunAsync("plugin.raiser.report", [], interactive: false)).Result!;
+            Assert.AreEqual(1, once["presses"]!.GetValue<int>());
+            Assert.AreEqual(before.Terrain.Heightmap.GetHeight((int)mirroredX, 100), own.Map!.Document.Terrain.Heightmap.GetHeight((int)mirroredX, 100), 0.01);
+        }
+
+        [TestMethod]
+        public async Task ACommandsPropsAreMirroredAndMapImagesGivesThePlaces()
+        {
+            MainViewModel model = await Open(Folder("mirror", """
+                plugin.command{ id = "rock", title = "A rock", run = function(args)
+                  map.addProp{ blueprint = "env/evergreen/props/rocks/rock01_prop.bp", x = 40, z = 60 }
+                  map.addProp{ blueprint = "env/evergreen/props/rocks/rock01_prop.bp", x = 40, z = 90, mirror = false }
+                  local images = map.images(40, 60)
+                  return { count = #images, x = images[#images].x, mirrored = images[#images].mirrored }
+                end }
+                """));
+            await model.Commands.RunAsync("select.symmetry", new JsonObject { ["kind"] = "leftRight" }, interactive: false);
+            model.Symmetry.MirrorsEdits = true;
+            int before = model.Map!.Document.Props.Length;
+
+            JsonObject result = (JsonObject)(await model.Commands.RunAsync("plugin.mirror.rock", [], interactive: false)).Result!;
+
+            MapDocument after = model.Map.Document;
+            Assert.AreEqual(before + 3, after.Props.Length, "the first rock and its image, the second alone");
+            Assert.IsTrue(after.Props.Any(prop => Math.Abs(prop.Position.X - (after.Width - 40)) < 0.6 && Math.Abs(prop.Position.Z - 60) < 0.6), "the image in the other half");
+            Assert.AreEqual(2, result["count"]!.GetValue<int>());
+            Assert.AreEqual(after.Width - 40, result["x"]!.GetValue<double>(), 1e-3);
+            Assert.IsTrue(result["mirrored"]!.GetValue<bool>());
+            Assert.IsTrue(model.Undo());
+            Assert.AreEqual(before, model.Map.Document.Props.Length, "one step for all of them");
+        }
+
+        [TestMethod]
+        public async Task TheBrushKeysChangeAToolsRadiusField()
+        {
+            MainViewModel model = await Open(Folder("raiser", Raise));
+            model.SelectTool("plugin.raiser.raise");
+            PluginTool tool = (PluginTool)model.ActiveTool!.Tool!;
+            Assert.AreEqual(2, tool.CursorRadius);
+
+            Assert.IsTrue(model.ToolKey("OemCloseBrackets", ToolModifiers.None));
+            Assert.AreEqual(3, tool.CursorRadius, "] makes the radius field larger");
+            StringAssert.Contains(model.Status, "radius");
+            for (int i = 0; i < 20; i++)
+            {
+                model.ToolKey("OemCloseBrackets", ToolModifiers.None);
+            }
+            Assert.AreEqual(8, tool.CursorRadius, "within the field's own limits");
+            Assert.IsTrue(model.ToolKey("OemOpenBrackets", ToolModifiers.None));
+            Assert.IsTrue(tool.CursorRadius < 8);
+        }
+
+        [TestMethod]
+        public Task EachFieldIsASettingOfTheRowOfItsOwn() => HeadlessApp.Run(async () =>
+        {
+            MainViewModel model = await Open(Folder("raiser", Raise.Replace(
+                "fields = { { key = \"size\", label = \"Size\", type = \"number\", default = 2, min = 1, max = 8 } },",
+                "fields = { { key = \"size\", label = \"Size\", type = \"number\", default = 2, min = 1, max = 8 }, { key = \"a\", label = \"Height to add\", type = \"number\", default = 5, min = 0, max = 50 }, { key = \"b\", label = \"Something else\", type = \"number\", default = 1, min = 0, max = 9 } },")));
+            MainWindow window = new MainWindow { DataContext = model, Width = 1280, Height = 800 };
+            window.Show();
+            model.SelectTool("plugin.raiser.raise");
+            Dispatcher.UIThread.RunJobs();
+            Avalonia.Controls.Slider size = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<Avalonia.Controls.Slider>()
+                .Single(slider => Avalonia.Automation.AutomationProperties.GetName(slider) == "Size");
+            Assert.IsFalse(FAForever.MapEditor.App.Controls.ToolRow.IsOverflowHidden(size), "the first field shows in the row");
+            Avalonia.Controls.Slider other = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<Avalonia.Controls.Slider>()
+                .Single(slider => Avalonia.Automation.AutomationProperties.GetName(slider) == "Something else");
+            Assert.IsTrue(FAForever.MapEditor.App.Controls.ToolRow.IsOverflowHidden(other), "the last one, which does not fit at 1280, lies behind More");
+            window.Close();
+        });
+
+        [TestMethod]
         public async Task ItsFieldsAreItsOptionsAndTheKeysHeldReachIt()
         {
             MainViewModel model = await Open(Folder("raiser", Raise));

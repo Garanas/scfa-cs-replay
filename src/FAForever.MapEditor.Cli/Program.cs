@@ -33,7 +33,7 @@ namespace FAForever.MapEditor.Cli
     [Verb("editor", HelpText = "Send a command to a running editor started with --automation, e.g. 'editor stroke points=[[10,10],[50,50]]'.")]
     public sealed class EditorOptions
     {
-        [Value(0, MetaName = "command", Required = true, HelpText = "start or stop a test editor; or a command for a running one: state, mouse, key, open, save, export, undo, stroke, screenshot, close (help lists them).")]
+        [Value(0, MetaName = "command", Required = true, HelpText = "start, stop or restart a test editor (restart: with the arguments of its last start, the newest build); or a command for a running one: state, mouse, key, open, save, export, undo, stroke, screenshot, close (help lists them).")]
         public string Command { get; set; } = "";
 
         [Value(1, MetaName = "arguments", HelpText = "name=value pairs; a value that reads as JSON (a number, [..], true) is sent as JSON, any other as text.")]
@@ -91,8 +91,11 @@ namespace FAForever.MapEditor.Cli
         [Option("from", HelpText = "scratch: the workspace whose converted assets it links to; by default the one the editor remembers.")]
         public string? From { get; set; }
 
-        [Option("settings", HelpText = "scratch: a settings file to write that names the scratch workspace, for FAF_MAP_EDITOR_SETTINGS.")]
+        [Option("settings", HelpText = "init and scratch: the settings file to write that names the workspace, for FAF_MAP_EDITOR_SETTINGS; init without it writes the user's own.")]
         public string? Settings { get; set; }
+
+        [Option("convert-into", HelpText = "scratch: a folder of its own for the assets (made when absent, shared by several scratch workspaces), converted from the game unless current: for a change of the assets' format, without touching --from's assets.")]
+        public string? ConvertInto { get; set; }
     }
 
     [Verb("dev", HelpText = "Tools for working on the editor's source, e.g. 'dev replace <file> --old-file a.txt --new-file b.txt': replaces text keeping the file's line endings and UTF-8.")]
@@ -133,6 +136,7 @@ namespace FAForever.MapEditor.Cli
                 {
                     "start" => EditorProcess.Start(o),
                     "stop" => EditorProcess.Stop(o),
+                    "restart" => EditorProcess.Restart(o),
                     _ => EditorClient.Send(o.Port, o.Command, o.Arguments),
                 },
                 (WorkspaceOptions o) => Run(() => WorkspaceCommand.Run(o)),

@@ -130,6 +130,7 @@ public static class EditorModes
         new ModeDefinition("water", "Water", "Icon.Water", "Levels, colours, waves, paintable water", 0, "F4", "W-1",
             [
                 new ToolDefinition("water.paint", "Paint water", "W-2") { Make = model => new WaterPaintTool(model) },
+                new ToolDefinition("water.waves", "Waves", "W-1") { Make = model => new WaveTool(model) },
             ],
             [new WaterSection(), new PresetSection("water", "Water presets") { EmptyText = "None yet: save the water's levels, colours and waves to use them on another map.", SaveLabel = "Save the water settings as a preset" }],
             [new WaterDetailsSection()]),

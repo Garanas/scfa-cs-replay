@@ -396,7 +396,11 @@ namespace FAForever.MapEditor.App.Tests
             CollectionAssert.AreEqual(new[] { "_File", "_Edit", "_Select", "_View", "_Map", "_Modes", "_Generate", "_Plugins", "_Help" },
                 bar.Select(item => (string?)item.Header).ToArray());
             MenuItem terrain = Item(bar[5], "Terrain");
-            Assert.IsTrue(Item(Item(bar[5], "Water"), "Place a wave generator...").Classes.Contains("planned"), "a command not built yet shows as planned");
+            TestCommands.RegisterNotBuilt(model);
+            bar = [.. menu.Items.OfType<MenuItem>()];
+            terrain = Item(bar[5], "Terrain");
+            Assert.IsTrue(Item(bar[7], TestCommands.NotBuiltTitle).Classes.Contains("planned"), "a command not built yet shows as planned");
+            Assert.IsFalse(Item(Item(bar[5], "Water"), "Place a wave generator...").Classes.Contains("planned"));
             Assert.IsFalse(Item(terrain, "Save the brush as a preset").Classes.Contains("planned"));
             Assert.IsNotNull(Item(terrain, "Curve"), "the tools of the mode follow");
             Assert.AreEqual(KeyGesture.Parse("F2"), Item(terrain, "Terrain mode").InputGesture);

@@ -222,6 +222,11 @@ public sealed class HeightmapView : Control
         {
             OnDocumentChanged(sender, e);
         }
+        else if (e.PropertyName == nameof(MainViewModel.SelectedMode))
+        {
+            // the decals' outlines and the tool's shapes depend on the mode
+            OnOverlayChanged(sender, e);
+        }
     }
 
     // only the overlay changes (markers turned on or off, the camera, the brush around the mouse):
@@ -323,7 +328,7 @@ public sealed class HeightmapView : Control
                 GridLinesDrawn = 0;
                 if (_model.ShowDecals)
                 {
-                    DrawDecals(context, overlay, document, _model.HiddenDecalIds);
+                    DrawDecals(context, overlay, document, _model.HiddenDecalIds, DecalOutlineMinimum(_model));
                 }
                 if (_model.ShowGrid)
                 {
@@ -809,9 +814,9 @@ public sealed class HeightmapView : Control
     /// <summary>
     /// The decals (user story V-3) as faint outlines, each turned as it lies (its rectangle from its
     /// corner along its two edges, as the 3D view draws it); only those in view and not hidden,
-    /// and none smaller than a few pixels.
+    /// and none smaller than <paramref name="minimum"/> pixels (<see cref="DecalOutlineMinimum"/>).
     /// </summary>
-    private void DrawDecals(DrawingContext context, Overlay overlay, MapDocument document, IReadOnlySet<int> hidden)
+    private void DrawDecals(DrawingContext context, Overlay overlay, MapDocument document, IReadOnlySet<int> hidden, double minimum)
     {
         using Performance.Span measure = Performance.Measure("top.decals");
         Rect shown = new Rect(Bounds.Size);
@@ -821,7 +826,7 @@ public sealed class HeightmapView : Control
         {
             foreach (Decal decal in document.Decals)
             {
-                if (hidden.Contains(decal.Id) || Math.Max(Math.Abs(decal.Scale.X), Math.Abs(decal.Scale.Z)) * _zoom < MinDecalSize)
+                if (hidden.Contains(decal.Id) || Math.Max(Math.Abs(decal.Scale.X), Math.Abs(decal.Scale.Z)) * _zoom < minimum)
                 {
                     continue;
                 }
@@ -850,14 +855,35 @@ public sealed class HeightmapView : Control
                 drawn++;
             }
         }
-        context.DrawGeometry(null, overlay.DecalOutline, outlines);
+        // what sticks out past the map's edge is cut off at it
+        Point corner = MapToControl(0, 0);
+        Point opposite = MapToControl(document.Width, document.Height);
+        using (context.PushClip(new Rect(corner, opposite)))
+        {
+            context.DrawGeometry(null, overlay.DecalOutline, outlines);
+        }
         DecalOutlinesDrawn = drawn;
     }
 
     /// <summary>
-    /// The fewest pixels a decal's longer side takes for the top view to draw its outline.
+    /// The fewest pixels a decal's longer side takes for the top view to draw its outline in the
+    /// Decals mode, where one works with them.
     /// </summary>
-    public const double MinDecalSize = 3;
+    public const double MinDecalSize = 8;
+
+    /// <summary>
+    /// The fewest pixels a decal's longer side takes for its outline in the other modes: on a map
+    /// covered in decals (Archsimkats Valley's 3634) the outlines of all of them would hide the
+    /// terrain, so only the large ones show from afar and the rest come as one zooms in.
+    /// </summary>
+    public const double MinDecalSizeOutsideDecals = 40;
+
+    /// <summary>
+    /// How large a decal must show for its outline: <see cref="MinDecalSize"/> in the Decals mode,
+    /// else <see cref="MinDecalSizeOutsideDecals"/>.
+    /// </summary>
+    public static double DecalOutlineMinimum(MainViewModel model) =>
+        model.SelectedMode?.Definition.Id == "decals" ? MinDecalSize : MinDecalSizeOutsideDecals;
 
     /// <summary>
     /// How many decal outlines the last frame drew (for tests and automation).

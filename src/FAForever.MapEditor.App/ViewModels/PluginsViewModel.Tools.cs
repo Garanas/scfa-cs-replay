@@ -1,3 +1,4 @@
+using FAForever.FileFormats.Map;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.Plugins;
@@ -150,7 +151,12 @@ public sealed partial class PluginsViewModel
 
     /// <summary>
     /// Calls a handler of a plugin's tool with the place and the keys held, at once: the stroke's
-    /// run lets it edit; a failure throws the stroke away and is the plugin's error.
+    /// run lets it edit; a failure throws the stroke away and is the plugin's error. While the
+    /// symmetry mirrors edits (user story F-12) it is called once per image of the place, the
+    /// mouse's first, each with <c>keys.image</c> (1 for the mouse's, 2 and on for the images),
+    /// <c>keys.images</c> (how many), <c>keys.mirrored</c> and <c>keys.turn</c> (the degrees the
+    /// image is turned by), so what the handlers edit is mirrored as a built-in brush's dabs are;
+    /// a tool registered with <c>symmetry = false</c> gets the mouse's place only.
     /// </summary>
     private void Call(PluginTool tool, LuaFunction? handler, float x, float z, ToolInput input)
     {
@@ -158,22 +164,44 @@ public sealed partial class PluginsViewModel
         {
             return;
         }
+        IReadOnlyList<MapSymmetryTransform> images = tool.Spec.Symmetry ? _model.EditTransforms(run.Document) : [MapSymmetryTransform.Identity];
+        for (int i = 0; i < images.Count; i++)
+        {
+            System.Numerics.Vector2 at = images[i].Apply(new System.Numerics.Vector2(x, z));
+            if (!CallImage(tool, handler, at.X, at.Y, input, i, images))
+            {
+                return;
+            }
+        }
+        _model.ShowStroke();
+    }
+
+    /// <returns>Whether it went well; false when it failed and the stroke is thrown away.</returns>
+    private bool CallImage(PluginTool tool, LuaFunction handler, float x, float z, ToolInput input, int image, IReadOnlyList<MapSymmetryTransform> images)
+    {
+        if (tool.Run is not PluginRun run)
+        {
+            return false;
+        }
         LuaPlugin plugin = tool.Plugin;
         using Performance.Span measure = Performance.Measure("plugins.tool");
         using PluginClock clock = new PluginClock(CallLimit);
-        LuaTable keys = new LuaTable(0, 4);
+        LuaTable keys = new LuaTable(0, 8);
         keys["shift"] = input.Modifiers.HasFlag(ToolModifiers.Shift);
         keys["control"] = input.Modifiers.HasFlag(ToolModifiers.Control);
         keys["alt"] = input.Modifiers.HasFlag(ToolModifiers.Alt);
-        if (input.Picked is ObjectRef picked)
+        if (input.Picked is ObjectRef picked && image == 0)
         {
             keys["picked"] = picked.ToString();
         }
+        keys["image"] = image + 1;
+        keys["images"] = images.Count;
+        keys["mirrored"] = images[image].IsMirror;
+        keys["turn"] = Math.Round(images[image].TurnAngle * 180 / Math.PI, 3);
         if (CallNow(plugin, new PluginContext($"The tool {tool.Title}", () => run.Document, clock, run), $"the tool {tool.Title}",
             () => plugin.State!.CallAsync(handler, [x, z, keys], clock.Token), out _))
         {
-            _model.ShowStroke();
-            return;
+            return true;
         }
         // the map shows as it was at once; what the mouse does until it is let go does nothing
         if (tool.Stroke is EditTransaction stroke)
@@ -183,5 +211,6 @@ public sealed partial class PluginsViewModel
             _model.EndStroke(stroke, keep: false);
         }
         _model.Status = $"{plugin.Errors[^1]}; nothing was changed";
+        return false;
     }
 }

@@ -56,6 +56,23 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
+    /// What a panel's context menu asks (user story V-4): <c>move:panel:place</c>,
+    /// <c>return:panel</c>, <c>hide:panel</c> or <c>reset</c>, run as their commands.
+    /// </summary>
+    [RelayCommand]
+    private Task LayoutMenu(string what)
+    {
+        string[] parts = what.Split(':');
+        return parts[0] switch
+        {
+            "move" => RunWithAsync("view.movePanel", new JsonObject { ["panel"] = parts[1], ["place"] = parts[2] }),
+            "return" => RunWithAsync("view.returnPanel", new JsonObject { ["panel"] = parts[1] }),
+            "hide" => RunWithAsync("view.togglePanel", new JsonObject { ["panel"] = parts[1], ["on"] = false }),
+            _ => RunAsync("view.resetLayout"),
+        };
+    }
+
+    /// <summary>
     /// Takes a command off the toolbar, as its button's context menu does.
     /// </summary>
     [RelayCommand]

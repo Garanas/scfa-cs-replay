@@ -134,6 +134,10 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
 
     public Task<CommandRun> RunCommandAsync(string id, JsonObject arguments) => _model.Commands.RunAsync(id, arguments, interactive: false);
 
+    public IReadOnlyList<FAForever.FileFormats.Map.MapSymmetryTransform> Mirrors(MapDocument document) => _model.EditTransforms(document);
+
+    public MapDocument MirrorPlaced(MapDocument document, IReadOnlyList<ObjectRef> placed) => _model.MirrorPlaced(document, placed, out _);
+
     public void Show() => IsOpen = true;
 
     [RelayCommand]
@@ -531,7 +535,7 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
                 Values = _values.Count == 0 ? null : _values.ToDictionary(pair => pair.Key, pair => pair.Value),
             });
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FAForever.MapEditor.Project.MapProjectException)
         {
             Log.LogWarning(exception, "Could not remember the plugins' settings in {File}: {Reason}", settings.File, exception.Message);
         }
