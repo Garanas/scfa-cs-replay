@@ -72,6 +72,25 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void FindsTheSetsOfTheMapsOwnFiles()
+        {
+            MapDocument document = Flat();
+            byte[] png = File.ReadAllBytes(Path.Combine(assets, "env", "rocky", "decals", "rock01_albedo.png"));
+            document = document with
+            {
+                Files = document.Files.SetItem("env/decals/cliff_albedo.dds", [.. png]).SetItem("env/decals/cliff_mask_moss.png", [.. png]).SetItem("env/decals/lone_albedo.dds", [.. png]),
+            };
+
+            DecalSetAssets cliff = DecalSets.OfMap(document).Single();
+
+            Assert.AreEqual("/maps/sets.v0001/env/decals/cliff", cliff.Name);
+            Assert.AreEqual("/maps/sets.v0001/env/decals/cliff_albedo.dds", cliff.Albedo);
+            Assert.AreEqual("/maps/sets.v0001/env/decals/cliff_mask_moss.png", cliff.Masks["moss"]);
+            Assert.AreEqual(cliff, DecalSets.Find([], document, "maps/sets.v0001/env/decals/cliff"), "found with or without the leading slash");
+            Assert.IsNull(DecalSets.Find([], document, "/maps/sets.v0001/env/decals/lone"), "one texture is no set");
+        }
+
+        [TestMethod]
         public void PlacesASetAsOneDecalCarryingItsOtherTextures()
         {
             MapDocument document = Flat();

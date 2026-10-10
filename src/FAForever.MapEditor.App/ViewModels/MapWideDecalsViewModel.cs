@@ -214,7 +214,9 @@ public sealed partial class MapWideDecalsViewModel : ObservableObject
     private readonly Func<string?> _projectFolder;
     private readonly Func<Workspace?> _workspace;
     private readonly GenerationViewModel _generation;
-    private readonly Dictionary<string, (DateTime Written, DecodedTexture? Picture)> _files = new Dictionary<string, (DateTime, DecodedTexture?)>(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (object Version, DecodedTexture? Picture, string? Problem)> _files = new Dictionary<string, (object, DecodedTexture?, string?)>(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _loading = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    private readonly SynchronizationContext? _ui = SynchronizationContext.Current;
     private (ImmutableArray<Decal> Decals, ImmutableArray<Decal> Wide, ImmutableArray<Decal> Combined)? _shown;
     private ImmutableArray<Decal> _wide = [];
     private readonly Dictionary<string, TextureSource> _textures = new Dictionary<string, TextureSource>(StringComparer.Ordinal);
@@ -360,37 +362,67 @@ public sealed partial class MapWideDecalsViewModel : ObservableObject
     private DecodedTexture? FilePicture(MapDocument document, string file, out string? problem)
     {
         problem = null;
-        try
+        string key;
+        object version;
+        Func<byte[]> read;
+        if (MapWideDecalsExport.OwnFile(document, file) is string own)
         {
-            if (MapWideDecalsExport.OwnFile(document, file) is string own)
+            if (!document.Files.TryGetValue(own, out ImmutableArray<byte> bytes))
             {
-                if (!document.Files.TryGetValue(own, out ImmutableArray<byte> bytes))
-                {
-                    problem = $"The map's own files lack {file}";
-                    return null;
-                }
-                return Small(System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(bytes)!, 1024);
+                problem = $"The map's own files lack {file}";
+                return null;
             }
+            byte[] content = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(bytes)!;
+            (key, version, read) = ("map:" + own, content, () => content);
+        }
+        else
+        {
             string path = FullPath(file);
             if (!File.Exists(path))
             {
                 problem = $"{file} is missing: choose another file";
                 return null;
             }
-            DateTime written = File.GetLastWriteTimeUtc(path);
-            if (_files.TryGetValue(path, out (DateTime Written, DecodedTexture? Picture) held) && held.Written == written)
+            (key, version, read) = (path, File.GetLastWriteTimeUtc(path), () => File.ReadAllBytes(path));
+        }
+        if (_files.TryGetValue(key, out (object Version, DecodedTexture? Picture, string? Problem) held) && Equals(held.Version, version))
+        {
+            problem = held.Problem;
+            return held.Picture;
+        }
+        (DecodedTexture? Picture, string? Problem) Decode()
+        {
+            try
             {
-                return held.Picture;
+                return (Small(read(), 1024), null);
             }
-            DecodedTexture? picture = Small(File.ReadAllBytes(path), 1024);
-            _files[path] = (written, picture);
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or MagickException)
+            {
+                return (null, $"{file} cannot be read: {exception.Message}");
+            }
+        }
+        if (_ui is null)
+        {
+            (DecodedTexture? picture, problem) = Decode();
+            _files[key] = (version, picture, problem);
             return picture;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or MagickException)
+        // a large file (an albedo of 8192) is read on the pool; the slot shows it when it is there
+        if (_loading.Add(key))
         {
-            problem = $"{file} cannot be read: {exception.Message}";
-            return null;
+            _ = Task.Run(() =>
+            {
+                (DecodedTexture? picture, string? failed) = Decode();
+                _ui.Post(_ =>
+                {
+                    _loading.Remove(key);
+                    _files[key] = (version, picture, failed);
+                    Refresh();
+                }, null);
+            });
         }
+        problem = $"Reading {Path.GetFileName(file)}...";
+        return null;
     }
 
     /// <summary>

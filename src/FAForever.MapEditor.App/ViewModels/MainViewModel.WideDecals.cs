@@ -33,6 +33,14 @@ public sealed partial class MainViewModel
 
         DocumentChanged += (_, _) => WideDecals.Refresh();
         MapChanged += (_, _) => WideDecals.Clear();
+        WideDecals.Shadow.PropertyChanged += (_, e) =>
+        {
+            // the Lighting panel's entry says the shadow decal's source, as the Decals panel's does
+            if (e.PropertyName == nameof(MapWideSlotViewModel.Detail) || e.PropertyName == nameof(MapWideSlotViewModel.Slot))
+            {
+                LightingSettings.Parts.Find(LightingSettingsViewModel.ShadowDecalPart)!.Detail = WideDecals.Shadow.Detail;
+            }
+        };
         Generation.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(GenerationViewModel.States) or nameof(GenerationViewModel.Rows))
