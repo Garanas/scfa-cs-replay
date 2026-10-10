@@ -6,13 +6,6 @@ using FAForever.MapEditor.Project.Generation;
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
-/// The Terrain panel's part that lists what is generated from the height layers (user stories
-/// T-7, S-4): walkability, the normal map and the preview, each with how it stands and its button,
-/// and walkability's layer and what changed.
-/// </summary>
-public sealed record GeneratedSection() : PanelSection("Generated from the layers");
-
-/// <summary>
 /// A line of the panel that lists the generated results: how one stands, and the command that
 /// generates it.
 /// </summary>

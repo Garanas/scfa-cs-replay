@@ -55,7 +55,8 @@ namespace FAForever.MapEditor.Project
     /// </remarks>
     public static class MapExporter
     {
-        public static MapGameFiles Export(MapDocument document)
+        /// <param name="stamp">The editor to name in the scenario (<see cref="EditorStamp"/>); null names none.</param>
+        public static MapGameFiles Export(MapDocument document, EditorStamp? stamp = null)
         {
             MapFolderName folder = document.Folder;
             string root = $"/maps/{folder}/{document.FileName}";
@@ -73,7 +74,7 @@ namespace FAForever.MapEditor.Project
                     Chains = [.. MarkerTranslation.ToMapChains(document.Markers)],
                     Armies = [.. document.Armies.Select(ToMapArmy)],
                 },
-                Scenario = ToMapScenario(document, root),
+                Scenario = ToMapScenario(document, root, stamp),
                 Script = AdaptiveScript.Writes(document) ? AdaptiveScriptOf(document, root) : ScriptOf(document),
                 Files = FilesOf(document),
             };
@@ -131,9 +132,11 @@ namespace FAForever.MapEditor.Project
         /// The files of the map folder by their path in it, with the paths in them pointed at the folder.
         /// </summary>
         /// <exception cref="ArgumentException">The document does not make a valid map (see <see cref="ScmapWriter.Write(Scmap)"/>).</exception>
-        public static IReadOnlyDictionary<string, byte[]> ToBytes(MapDocument document)
+        /// <param name="stamp">The editor to name in <c>_scenario.lua</c>: its comment line at the top
+        /// and its <c>map_editor</c> table; null names none, so two exports give the same bytes.</param>
+        public static IReadOnlyDictionary<string, byte[]> ToBytes(MapDocument document, EditorStamp? stamp = null)
         {
-            MapGameFiles game = Export(document);
+            MapGameFiles game = Export(document, stamp);
             Func<string, string> rewrite = game.Folder.RewritePaths;
 
             Dictionary<string, byte[]> files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
@@ -143,7 +146,8 @@ namespace FAForever.MapEditor.Project
             }
             files[$"{game.FileName}.scmap"] = ScmapWriter.Write(RewritePaths(game.Scmap, rewrite));
             files[$"{game.FileName}_save.lua"] = MapImporter.LuaEncoding.GetBytes(rewrite(MapSaveWriter.Write(game.Save)));
-            files[$"{game.FileName}_scenario.lua"] = MapImporter.LuaEncoding.GetBytes(rewrite(MapScenarioWriter.Write(game.Scenario)));
+            string scenario = rewrite(MapScenarioWriter.Write(game.Scenario));
+            files[$"{game.FileName}_scenario.lua"] = MapImporter.LuaEncoding.GetBytes(stamp is null ? scenario : stamp.Comment + "\n" + scenario);
             if (game.Script is byte[] script)
             {
                 files[$"{game.FileName}_script.lua"] = RewriteLua(script, rewrite);
@@ -158,9 +162,10 @@ namespace FAForever.MapEditor.Project
         /// watcher never reads half a file.
         /// </summary>
         /// <returns>The map folder.</returns>
-        public static string WriteFolder(MapDocument document, string outputFolder)
+        /// <param name="stamp">The editor to name in <c>_scenario.lua</c> (<see cref="ToBytes"/>).</param>
+        public static string WriteFolder(MapDocument document, string outputFolder, EditorStamp? stamp = null)
         {
-            IReadOnlyDictionary<string, byte[]> files = ToBytes(document);
+            IReadOnlyDictionary<string, byte[]> files = ToBytes(document, stamp);
             string target = Path.Combine(outputFolder, document.Folder.ToString());
             foreach ((string path, byte[] bytes) in files)
             {
@@ -299,7 +304,7 @@ namespace FAForever.MapEditor.Project
         /// The map maker's teams follow the team <c>FFA</c> (the lobby reads only the first team),
         /// each with its playable armies; a team without any is left out.
         /// </summary>
-        private static MapScenario ToMapScenario(MapDocument d, string root)
+        private static MapScenario ToMapScenario(MapDocument d, string root, EditorStamp? stamp)
         {
             ScenarioInfo s = d.Scenario;
             Dictionary<string, LuaData> extra = new Dictionary<string, LuaData>();
@@ -314,6 +319,10 @@ namespace FAForever.MapEditor.Project
                     extra[$"norushoffsetX_{spawn.Army}"] = new LuaData.Number(offset.X);
                     extra[$"norushoffsetY_{spawn.Army}"] = new LuaData.Number(offset.Y);
                 }
+            }
+            if (stamp is not null)
+            {
+                extra[EditorStamp.ScenarioKey] = stamp.ToLua();
             }
 
             Dictionary<string, LuaData> configuration = new Dictionary<string, LuaData>();

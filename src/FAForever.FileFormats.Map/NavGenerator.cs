@@ -89,8 +89,10 @@ namespace FAForever.FileFormats.Map
         /// <param name="forcedOpen">Per ogrid, row by row, whether it counts as flat and on a terrain
         /// type that does not block, whatever the heights and types say: a map editor's marks of
         /// where units must be able to pass; null for none. The game itself has no such thing.</param>
+        /// <param name="cancel">Stops the generation between its steps (a map editor that wants a newer one).</param>
+        /// <exception cref="OperationCanceledException"><paramref name="cancel"/> was cancelled.</exception>
         public static MapNavigation Generate(ScmapHeightmap heightmap, float? waterElevation, byte[] terrainTypes, IReadOnlyList<MapMarker> markers, MapArea? playableArea = null,
-            bool[]? forcedOpen = null)
+            bool[]? forcedOpen = null, CancellationToken cancel = default)
         {
             int width = heightmap.Width;
             int height = heightmap.Height;
@@ -107,7 +109,9 @@ namespace FAForever.FileFormats.Map
             {
                 throw new ArgumentException($"Expected {width * height} ogrids forced open or not, got {forcedOpen.Length}", nameof(forcedOpen));
             }
+            cancel.ThrowIfCancellationRequested();
             Caches caches = PopulateCaches(heightmap, waterElevation, terrainTypes, playableArea, forcedOpen);
+            cancel.ThrowIfCancellationRequested();
             bool hasWater = Array.Exists(caches.Depth, depth => depth > 0);
 
             LayerBuilder land = new LayerBuilder(NavLayer.Land, width, height, Pathable(caches, LandRule));
@@ -122,6 +126,7 @@ namespace FAForever.FileFormats.Map
                 int blockSize = Math.Min(layer.Layer == NavLayer.Water ? 2 * threshold : threshold, treeSize / 2);
                 ApplyCompression(layer.Pathable, width, height, blockSize);
                 layer.GenerateLabels();
+                cancel.ThrowIfCancellationRequested();
             }
 
             // GenerateMarkerMetadata: only the land layer, and on maps with water the hover and amphibious layers

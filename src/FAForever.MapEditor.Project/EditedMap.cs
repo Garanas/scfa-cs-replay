@@ -107,10 +107,14 @@ namespace FAForever.MapEditor.Project
         }
 
         /// <inheritdoc cref="Export"/>
-        public Task<string> ExportAsync(string outputFolder, int? version = null)
+        /// <param name="document">The version of the map to write, e.g. with what only the export
+        /// adds (the editor's export steps); null for the map as it is.</param>
+        public Task<string> ExportAsync(string outputFolder, int? version = null, MapDocument? document = null)
         {
-            MapDocument document = version is null ? Document : Document with { Version = version };
-            return Task.Run(() => MapExporter.WriteFolder(document, outputFolder));
+            MapDocument exported = document ?? Document;
+            exported = version is null ? exported : exported with { Version = version };
+            EditorStamp stamp = EditorStamp.Now();
+            return Task.Run(() => MapExporter.WriteFolder(exported, outputFolder, stamp));
         }
 
         /// <summary>
@@ -120,7 +124,7 @@ namespace FAForever.MapEditor.Project
         /// <param name="version">The version to give the map, instead of its own.</param>
         /// <returns>The map folder, e.g. <c>maps/theta_passage.v0005</c>.</returns>
         public string Export(string outputFolder, int? version = null) =>
-            MapExporter.WriteFolder(version is null ? Document : Document with { Version = version }, outputFolder);
+            MapExporter.WriteFolder(version is null ? Document : Document with { Version = version }, outputFolder, EditorStamp.Now());
 
         /// <summary>
         /// Reads the files another tool changed in the project folder again, as one edit that can

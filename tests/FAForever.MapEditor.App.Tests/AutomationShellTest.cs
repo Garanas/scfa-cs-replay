@@ -88,8 +88,8 @@ namespace FAForever.MapEditor.App.Tests
         public Task UnderTakesASectionsHeadingAndKeyAnswersNameTheFocusedField() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
-            model.SelectMode("terrain");
-            JsonArray part = (JsonArray)(await Send(automation, "ui", new JsonObject { ["under"] = "Generated from the layers", ["type"] = "Button" }))["ui"]!;
+            model.SelectMode("procedural");
+            JsonArray part = (JsonArray)(await Send(automation, "ui", new JsonObject { ["under"] = "Generated results", ["type"] = "Button" }))["ui"]!;
             Assert.IsTrue(part.Count >= 2, "the buttons of the part the heading heads");
 
             model.NewMapPage.Open();

@@ -105,6 +105,18 @@
       <SolidColorBrush x:Key="MapBlockedBrush" Color="#70C0392B" />
       <SolidColorBrush x:Key="MapNewlyBlockedBrush" Color="#F0FF5A36" />
       <SolidColorBrush x:Key="MapOpenedBrush" Color="#F03FE0C8" />
+      <!-- the navigation mesh's regions (T-8): a colour per region in turn, as the Vault's pathing panel -->
+      <SolidColorBrush x:Key="MapRegion1Brush" Color="#8C3987E5" />
+      <SolidColorBrush x:Key="MapRegion2Brush" Color="#8C199E70" />
+      <SolidColorBrush x:Key="MapRegion3Brush" Color="#8CD95926" />
+      <SolidColorBrush x:Key="MapRegion4Brush" Color="#8C9085E9" />
+      <SolidColorBrush x:Key="MapRegion5Brush" Color="#8CC98500" />
+      <SolidColorBrush x:Key="MapRegion6Brush" Color="#8CD55181" />
+      <SolidColorBrush x:Key="MapRegion7Brush" Color="#8C008300" />
+      <SolidColorBrush x:Key="MapRegion8Brush" Color="#8CE66767" />
+      <!-- the chosen region, and the routes between starts -->
+      <SolidColorBrush x:Key="MapRegionChosenBrush" Color="#D0FFD23F" />
+      <SolidColorBrush x:Key="MapRouteBrush" Color="#FFFFFFFF" />
       <SolidColorBrush x:Key="MapHandleAxisXBrush" Color="#FFFF6B5A" />
       <SolidColorBrush x:Key="MapHandleAxisZBrush" Color="#FF5AAEF5" />
       <SolidColorBrush x:Key="MapOutsidePlayableBrush" Color="#66000000" />
@@ -174,6 +186,18 @@
       <SolidColorBrush x:Key="MapBlockedBrush" Color="#70C0392B" />
       <SolidColorBrush x:Key="MapNewlyBlockedBrush" Color="#F0FF5A36" />
       <SolidColorBrush x:Key="MapOpenedBrush" Color="#F03FE0C8" />
+      <!-- the navigation mesh's regions (T-8): a colour per region in turn, as the Vault's pathing panel -->
+      <SolidColorBrush x:Key="MapRegion1Brush" Color="#8C3987E5" />
+      <SolidColorBrush x:Key="MapRegion2Brush" Color="#8C199E70" />
+      <SolidColorBrush x:Key="MapRegion3Brush" Color="#8CD95926" />
+      <SolidColorBrush x:Key="MapRegion4Brush" Color="#8C9085E9" />
+      <SolidColorBrush x:Key="MapRegion5Brush" Color="#8CC98500" />
+      <SolidColorBrush x:Key="MapRegion6Brush" Color="#8CD55181" />
+      <SolidColorBrush x:Key="MapRegion7Brush" Color="#8C008300" />
+      <SolidColorBrush x:Key="MapRegion8Brush" Color="#8CE66767" />
+      <!-- the chosen region, and the routes between starts -->
+      <SolidColorBrush x:Key="MapRegionChosenBrush" Color="#D0FFD23F" />
+      <SolidColorBrush x:Key="MapRouteBrush" Color="#FFFFFFFF" />
       <SolidColorBrush x:Key="MapHandleAxisXBrush" Color="#FFFF6B5A" />
       <SolidColorBrush x:Key="MapHandleAxisZBrush" Color="#FF5AAEF5" />
       <SolidColorBrush x:Key="MapOutsidePlayableBrush" Color="#66000000" />

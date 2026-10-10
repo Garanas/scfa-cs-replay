@@ -637,6 +637,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 ["changed"] = new JsonArray([.. state.ChangedInputs.Select(input => (JsonNode)JsonValue.Create(input))]),
             })]),
             ["walkability"] = GenerateWalkabilityHandler.Describe(model.Walkability),
+            ["procedural"] = ProceduralState(),
             ["problems"] = CheckMapHandler.Describe(model.Problems),
             ["props"] = model.Props.Describe(),
             ["rules"] = new JsonObject { ["masks"] = model.MaskRules.Describe(model.ShownDocument), ["props"] = model.PropRules.Describe() },

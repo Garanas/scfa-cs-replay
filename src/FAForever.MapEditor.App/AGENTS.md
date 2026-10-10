@@ -903,11 +903,10 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   Editing goes on meanwhile; a result of a version edited since shows as out of date. A second
   run of the same generator while one runs is refused. `generate.stale` puts what it makes into
   the map the same way (`MainViewModel.GenerateStale`).
-- **The Terrain panel's "Generated from the layers"** (`GeneratedSection`, its template in
-  `Views/ModePanel.axaml`): a line per registered generator (`GenerationViewModel.Rows`: how it
-  stands, Generate or Generate again), then walkability's choices: the layer of units (land,
-  hover, amphibious, water for naval units), the overlay, whether what changed shows, and what
-  changed in words.
+- **The list of generated results** is the Procedural mode's (section "The Procedural mode"
+  below): a line per registered generator (`GenerationViewModel.Rows`, shown through
+  `ProceduralViewModel.Rows`), and walkability's choices (the layer of units, what changed) in its
+  own section there.
 - **Walkability** (`generate.walkability`, `ViewModels/WalkabilityViewModel`, `model.Walkability`):
   the library's `Walkability.Generate`, the game's navigational mesh made from the document.
   The part notices when the registry keeps another result (by any command) and compares it with
@@ -943,6 +942,66 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   Enter on a line runs `problems.show {index}` (`MainViewModel.ShowProblem`): it selects the
   problem's thing, the top view centres on its place at 4 pixels an ogrid and the 3D camera
   focuses on it (30 ogrids around). `plugins.check` runs the checks now and shows the tab.
+
+## The Procedural mode: generated results, the navigation mesh, export steps
+
+User stories F-7, T-7, T-8 and M-9 (wave 8C). The mode at the bottom of the rail (`procedural`,
+F11; its definition is the last of `EditorModes.All`, its tools and sections are
+`ViewModels/ProceduralSections.cs`'s `ProceduralMode`, so the rail's entry and the contents change
+apart). Its panel: Generated results, Walkability, Navigation mesh, Path networks (moved from the
+Markers panel) and Export, each a view of its own in `Views/ProceduralPanels/`. The core's side is
+`ViewModels/MainViewModel.Procedural.cs` (`InitializeProcedural`, after every other part).
+
+- **Generated results** (`model.Procedural`, `ProceduralViewModel`): a line per generator with a
+  command (`GenerationViewModel.Rows`, the commands keep their ids: `generate.walkability`,
+  `markers.connectPaths`, ...), with "Preview in the views" when an overlay shows its result
+  (`ProceduralViewModel.PreviewWith(generator, overlay)`: walkability, `navigation`, `pathNodes`;
+  the check box runs the overlay's command), "Regenerate on its own" for a generator that opted in,
+  and what the export does (`OnExport(generator, ExportUse)`: the normal map `WhenOutOfDate` with a
+  check box, the preview `Always`). The settings are the map's (`MapDocument.Procedural`, the
+  library's `ProceduralSettings`, kept in `map.json`): `generate.auto {id?, on?}` and
+  `generate.onExport {id, on?}`, each a step of undo, in no menu.
+- **Regenerating on its own** (`model.AutoGeneration`, `ViewModels/AutoGeneration.cs`): for a
+  generator in `ProceduralSettings.AutoGenerate` that opted in (`AutoGeneration.Allow(id)`;
+  walkability does), `Follow` (on every `DocumentChanged`) compares its inputs (`IGenerator.Inputs`)
+  with those it was scheduled for: a change restarts a timer of `Delay` (1 s); then it generates on a
+  pool thread from the map as it is (`IGenerator.Generate(document, CancellationToken)`, span
+  `model.generate-auto`) and keeps the result as any other; a newer change to its inputs cancels the
+  run (walkability stops between the steps of `NavGenerator`) and starts the timer again. A
+  person's Generate takes over (`GenerateAsync` stops it), another map stops everything. Another
+  generator opts in with one `Allow` line, and overrides `Generate(document, token)` when it can stop
+  midway. `state.procedural.auto` (`pending`, `kept`, `cancelled`); tests set `Delay` small and await
+  `WhenIdleAsync`.
+- **The navigation mesh** (`generate.navigation`, Generate menu; `model.Navigation`,
+  `NavigationViewModel`; the library's `NavigationMeshGenerator`): per layer the regions (largest
+  first, the first 12 listed: size, starts, deposits; a start within 8 ogrids of a region belongs to
+  it, starts in none are named), the routes between the nearest starts or every pair
+  (`generate.setNavigation {layer?, routes?, region?}`: the layer and the chosen region are the
+  view's, the routes the map's, a step of undo). The overlay `navigation` (the Regions chip) colours
+  the regions of the chosen layer (`Rendering/RegionPixels`, tokens `MapRegion1Brush` to
+  `MapRegion8Brush`, `MapRegionChosenBrush`; dark where units cannot go) in the top view
+  (`HeightmapView.Navigation.cs`, span `top.regions`, made again only for another mesh, layer, region
+  or theme: 28 ms on a 4096 map) and in 3D in walkability's slot of the overlays' pass
+  (`TerrainViewGpu.Navigation.cs`), with the routes as lines (`MapRouteBrush`; 3D: on the terrain,
+  span `3d.routes`). One tint at a time: walkability, the mask and the regions turn each other off.
+  The Regions tool (`procedural.regions`) chooses the region under a click. On a 4096 map the mesh
+  with its routes takes about 2.2 s (routes are searched in the game's blocks of 4 ogrids).
+- **Export as steps** (`model.Export`, `ExportViewModel`; `MainViewModel.ExportAsync`): the
+  registered `ExportStep`s in their `Order` (`GenerateOrder` 100: the normal map when out of date
+  and the map does not keep its own; `PreviewOrder` 200: the preview, always, into the map only when
+  it differs; `GameFilesOrder` 500: the walkability marks into the terrain types), then writing the
+  map folder. Each step may change `ExportRun.Document`, the version the export writes, without
+  touching the project: wave 9 registers the map-wide decals at `DecalsOrder` and generated path
+  nodes at `PathNodesOrder` the same way (`model.Export.Register(new ExportStep(id, title, order) {
+  Applies = run => ..., Run = async run => run.Document = ... })`). The status line says each step
+  (`Exporting, step 2 of 4: Render the preview`), the Export section lists them with how each stands
+  (waiting, running, done or not needed with a note, failed with why; a failed step stops the
+  export), `state.procedural.export`. The file the export writes names the editor (the library's
+  `EditorStamp`).
+- Automation: `state.procedural` (rows, auto, navigation with regions and routes, `showNavigation`,
+  `routesTop`, `routes3d`, export steps).
+- Not built yet (wave 9 and 10): path nodes from the navigation mesh as an export step, the
+  normal and shadow decals, the sky cube map.
 
 ## Selection: picking things on the map and changing them
 
@@ -1190,7 +1249,7 @@ inspector's `MarkerSelection`.
   markers, the chosen chain, adaptive, the last warning, `paths`: the panel's layers, spacing,
   replace, status and result; `optionalGroups`; the active marker tool's settings, the Preset
   tool's preset).
-- **Generated path networks** (R-3, F-7; the panel's `PathNetworkSection`, `MarkersViewModel.Paths`
+- **Generated path networks** (R-3, F-7; the Procedural panel's `PathNetworkSection`, `MarkersViewModel.Paths`
   as `PathNetworkPanel`): check boxes per layer, the spacing (empty: the library's default by the
   map's size), "Replace the layers' own nodes", Generate, and how the result stands (the generated
   results' line of `pathNetwork`, in the warning colour when out of date). `markers.connectPaths
@@ -1201,7 +1260,7 @@ inspector's `MarkerSelection`.
   map's nodes that reach each other already get no new way, so generating twice adds nothing.
   The result is out of date when walkability's inputs change (the heightmap, terrain types, water
   level, deposits, areas), and `generate.stale` makes it again with the same settings, replacing
-  or adding as they say. The Terrain panel's generated results list it too. About 130 ms on
+  or adding as they say. The Procedural mode's generated results list it too. About 130 ms on
   Archsimkats Valley, all four layers with walkability.
 - **Weather** (R-1): the tools Weather and Clouds (`PlaceMarkerTool` with
   `MarkerPlacement.WeatherDefinition`, `WeatherGenerator`) place the game's templates
@@ -2093,7 +2152,7 @@ last frame drawn.
   no key. Its answer's `focused` names the control with the keyboard and the text it holds
   (`TextBox Name of the new map "QA Ridge"`, `Button "Save"`). `click` measures the control once a
   scroll has settled. `under` (in `ui`, `set`, `click`) takes a section's heading too (`Sky`,
-  `Generated from the layers`): the part it heads. `dialog {text, button}` fills a question's text
+  `Generated results`): the part it heads. `dialog {text, button}` fills a question's text
   field first (Save as a template's name; `state.dialog.field`).
 - A call that fails or a command that refuses is logged as information (category `Automation`): the
   caller has the answer, and the Console's count stays the editor's own warnings.

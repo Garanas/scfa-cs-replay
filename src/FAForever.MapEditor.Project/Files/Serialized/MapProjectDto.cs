@@ -55,5 +55,10 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// The symmetry the editor mirrors edits by; absent when none was chosen.
         /// </summary>
         public SymmetryDto? Symmetry { get; init; }
+
+        /// <summary>
+        /// How the generated results are made (the Procedural mode); absent for the defaults.
+        /// </summary>
+        public ProceduralDto? Procedural { get; init; }
     }
 }

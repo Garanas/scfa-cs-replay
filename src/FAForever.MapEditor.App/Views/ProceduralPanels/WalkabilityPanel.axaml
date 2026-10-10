@@ -1,0 +1,22 @@
+<!-- Walkability's choices in the Procedural mode (T-7): the layer of units the views show, what changed since the time before. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.ProceduralPanels.WalkabilityPanel"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group" IsVisible="{Binding HasMap}">
+    <StackPanel Classes="stack">
+      <TextBlock Classes="overline" Text="{Binding Source=Walkability, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left" Classes="label" Text="Units" VerticalAlignment="Center" />
+        <ComboBox Margin="{StaticResource InlineGap}" HorizontalAlignment="Stretch" ItemsSource="{Binding Walkability.Layers}" SelectedItem="{Binding Walkability.Layer}"
+                  AutomationProperties.Name="Walkability of the units of a layer"
+                  AutomationProperties.HelpText="Land, hover, amphibious or naval (water) units" />
+      </DockPanel>
+      <CheckBox Content="Show what changed" IsChecked="{Binding Walkability.ShowChanges}"
+                AutomationProperties.HelpText="Ogrids blocked or opened since walkability was generated the time before" />
+      <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Walkability.ChangesText}" AutomationProperties.Name="What changed in walkability" />
+    </StackPanel>
+  </Border>
+</UserControl>

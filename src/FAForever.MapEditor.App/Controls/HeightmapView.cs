@@ -31,7 +31,7 @@ namespace FAForever.MapEditor.App.Controls;
 /// The picture has one pixel per sample of the heightmap. After a change only what the picture
 /// coloured again is copied into the bitmap, so a brush stroke on a large map stays smooth.
 /// </remarks>
-public sealed class HeightmapView : Control
+public sealed partial class HeightmapView : Control
 {
     /// <summary>
     /// What the view draws besides the terrain and the markers' own colours, from the theme's
@@ -318,6 +318,10 @@ public sealed class HeightmapView : Control
         if (_model is { ShowWalkability: true })
         {
             DrawWalkability(context, overlay, _model.Walkability);
+        }
+        if (_model is { ShowNavigation: true })
+        {
+            DrawNavigation(context, overlay, _model.Navigation);
         }
 
         if (_model?.ShownDocument is MapDocument document)

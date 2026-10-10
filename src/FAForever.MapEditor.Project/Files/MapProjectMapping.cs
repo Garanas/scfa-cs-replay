@@ -56,7 +56,35 @@ namespace FAForever.MapEditor.Project.Files
             Sky = ToDto(document.Sky),
             Minimap = document.Minimap is null ? null : ToDto(document.Minimap),
             Symmetry = ToDto(document.Symmetry),
+            Procedural = ToDto(document.Procedural),
         };
+
+        /// <summary>
+        /// The Procedural mode's settings as <c>map.json</c> keeps them; null for the defaults.
+        /// </summary>
+        internal static ProceduralDto? ToDto(ProceduralSettings settings) => settings.IsDefault
+            ? null
+            : new ProceduralDto
+            {
+                AutoGenerate = settings.AutoGenerate.IsEmpty ? null : [.. settings.AutoGenerate],
+                NotOnExport = settings.NotOnExport.IsEmpty ? null : [.. settings.NotOnExport],
+                Routes = settings.Navigation.Routes == RoutePairs.Nearest ? null : settings.Navigation.Routes.ToString(),
+            };
+
+        /// <summary>
+        /// The Procedural mode's settings of <c>map.json</c>; a route choice this editor does not know is the default.
+        /// </summary>
+        internal static ProceduralSettings ToModel(ProceduralDto? settings) => settings is null
+            ? ProceduralSettings.Default
+            : new ProceduralSettings
+            {
+                AutoGenerate = ImmutableSortedSet.CreateRange(StringComparer.Ordinal, settings.AutoGenerate ?? []),
+                NotOnExport = ImmutableSortedSet.CreateRange(StringComparer.Ordinal, settings.NotOnExport ?? []),
+                Navigation = new NavigationSettings
+                {
+                    Routes = Enum.TryParse(settings.Routes, ignoreCase: true, out RoutePairs routes) && Enum.IsDefined(routes) ? routes : RoutePairs.Nearest,
+                },
+            };
 
         /// <summary>
         /// A symmetry as <c>map.json</c> and <c>layers.json</c> keep it; null for none.
@@ -106,6 +134,7 @@ namespace FAForever.MapEditor.Project.Files
                 Sky = ToModel(map.Sky),
                 Minimap = map.Minimap is null ? null : ToModel(map.Minimap),
                 Symmetry = ToModel(map.Symmetry),
+                Procedural = ToModel(map.Procedural),
                 Decals = [.. decals.Decals.Select(decal => ToModel(decal))],
                 DecalGroups = [.. decals.Groups.Select(group => ToModel(group))],
                 Props = [.. props.Select((prop, index) => ToModel(prop, index + 1))],
@@ -155,6 +184,7 @@ namespace FAForever.MapEditor.Project.Files
                 Sky = ToModel(map.Sky),
                 Minimap = map.Minimap is null ? null : ToModel(map.Minimap),
                 Symmetry = ToModel(map.Symmetry),
+                Procedural = ToModel(map.Procedural),
             };
         }
 

@@ -25,4 +25,6 @@
   <StreamGeometry x:Key="Icon.SideBySide">M3 5 L21 5 L21 19 L3 19 Z M12 5 L12 19</StreamGeometry>
   <!-- a starred asset (F-9) -->
   <StreamGeometry x:Key="Icon.Star">M12 3 L14.6 9 L21 9.3 L16 13.5 L17.7 20 L12 16.4 L6.3 20 L8 13.5 L3 9.3 L9.4 9 Z</StreamGeometry>
+  <!-- the Procedural mode: what is generated from the map -->
+  <StreamGeometry x:Key="Icon.Procedural">M12 3 L13.5 10.5 L21 12 L13.5 13.5 L12 21 L10.5 13.5 L3 12 L10.5 10.5 Z M19 3 L19 7 M17 5 L21 5</StreamGeometry>
 </ResourceDictionary>

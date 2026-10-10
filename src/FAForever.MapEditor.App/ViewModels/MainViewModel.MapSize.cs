@@ -122,17 +122,6 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// Renders the preview before an export when it is out of date (user story M-8).
-    /// </summary>
-    private async Task RenderPreviewWhenStaleAsync()
-    {
-        if (Generation.States.FirstOrDefault(state => state.Generator.Id == MapPreview.GeneratorId) is { Status: GeneratedStatus.Stale })
-        {
-            await GenerateAsync(MapPreview.GeneratorId);
-        }
-    }
-
-    /// <summary>
     /// The map's size, playable area and version for automation's <c>state</c>.
     /// </summary>
     public JsonObject DescribeMapSize()
