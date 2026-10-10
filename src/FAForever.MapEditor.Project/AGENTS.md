@@ -870,6 +870,35 @@ Wave 9C, user story D-1.
   (`IDecalMaskPictures`; `GameMaskPictures`: the map's own files, else the workspace's assets, read
   once per version); without them the layers keep their grids, which the project saves.
 
+## Textures as DDS on export
+
+Wave 10E, user story M-10. `TextureExport.Apply(document, out converted, cache)` (the editor's export
+step `ddsTextures`, `faf-map pack`, `EditedMap.Export(ddsTextures: true)`) turns the map's own files
+that are pictures of another format (`IsPicture`: PNG, JPEG, TGA, BMP, GIF, TIFF, WebP) into DDS for
+the version an export writes, and points every reference at the DDS file: the strata's albedo and
+normals, decals and their sets (normals and masks), the water's cube map, ramp, waves and wave
+generators, the sky's background, cube maps and sky dome, and the paths in the map's `.lua` and
+`.bp` files (after a slash, in any case). The project keeps its pictures.
+
+- **What is converted** (`Pending`): every picture the document or a Lua file names, and every
+  picture in a folder of the map (`env/`, `textures/`, a prop's texture found by its name); a picture
+  at the top of the folder that nothing names (the vault's `.small.png`, a scenario preview) is no
+  texture and stays. DDS files are left as they are; the game's and FAF's textures are only named.
+- **How** (`TextureRole`, the strongest use when a file has two): the channels as the picture holds
+  them, since the map's pictures are in the layout the game reads from DDS (as the converted assets
+  are; a normals decal's x in alpha). `Normal` (strata normals, normals decals and sets' normals, the
+  water's waves): DXT5 with mipmaps, as nearly every vault map has them. `Ramp` (the water's and the
+  wave generators'): uncompressed A8R8G8B8 without mipmaps, as the game's `waterramp_tundra.dds`, so
+  the gradient keeps every step. `Cube` (the cube maps): a DDS cube (caps2 0xfe00) of the strip's six
+  faces (`CubeMaps.Decode`: a strip, else one picture on every side), DXT1 or DXT5 with mipmaps per
+  face, one face after the other. `Plain`: DXT5 with mipmaps when any pixel is not opaque, DXT1 with
+  mipmaps otherwise (`DdsTexture.WriteMipmapped`). A picture nothing names gets its role from its
+  name (`normal`, `ramp`, `cube`). A TGA is read by its extension (it has no signature).
+- **Names**: the picture's with `.dds`; when the map has a file of that name already, `_2`, `_3`, ...
+- **Cache** (`TextureExportCache`, `TextureExport.SharedCache` within a process): DDS files by the
+  SHA-256 of the picture and its role, at most 512 MB, the oldest dropped first; `ConvertedTexture.Cached`
+  says which came from it. `FormatOf(dds)` reads how a DDS file is written (`DXT1 cube with mipmaps`).
+
 ## Height layers and curves
 
 User stories T-5 and T-4 (`MapDocument.HeightStack`, `Editing/HeightLayers`, `HeightLayerEdits`,

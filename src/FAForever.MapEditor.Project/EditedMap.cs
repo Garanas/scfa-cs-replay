@@ -124,8 +124,12 @@ namespace FAForever.MapEditor.Project
         /// <param name="version">The version to give the map, instead of its own.</param>
         /// <param name="wideDecals">Whether the map-wide decals are written too (<see cref="MapWideDecalsExport"/>:
         /// generated from the heightmap, files read relative to the project), as the editor's export does.</param>
+        /// <param name="ddsTextures">Whether the map's own textures in other formats are converted to DDS
+        /// and every reference pointed at them (<see cref="TextureExport"/>, with its shared cache), as the
+        /// editor's export does.</param>
+        /// <param name="converted">Hears what was converted, when given.</param>
         /// <returns>The map folder, e.g. <c>maps/theta_passage.v0005</c>.</returns>
-        public string Export(string outputFolder, int? version = null, bool wideDecals = false)
+        public string Export(string outputFolder, int? version = null, bool wideDecals = false, bool ddsTextures = false, Action<IReadOnlyList<ConvertedTexture>>? converted = null)
         {
             MapDocument document = version is null ? Document : Document with { Version = version };
             if (wideDecals)
@@ -135,6 +139,11 @@ namespace FAForever.MapEditor.Project
                     string path = Path.IsPathRooted(file) || ProjectFolder is null ? file : Path.Combine(ProjectFolder, file);
                     return File.Exists(path) ? File.ReadAllBytes(path) : null;
                 }, out _);
+            }
+            if (ddsTextures)
+            {
+                document = TextureExport.Apply(document, out IReadOnlyList<ConvertedTexture> textures);
+                converted?.Invoke(textures);
             }
             return MapExporter.WriteFolder(document, outputFolder, EditorStamp.Now());
         }

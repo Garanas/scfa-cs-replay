@@ -58,6 +58,9 @@ public sealed record ExportStep(string Id, string Title, int Order)
     /// <summary>What only the game's files hold, made from the map: walkability marks as terrain types.</summary>
     public const int GameFilesOrder = 500;
 
+    /// <summary>Wave 10: the map's own textures in other formats converted to DDS, after every step that adds one.</summary>
+    public const int TexturesOrder = 600;
+
     /// <summary>
     /// Whether the step has anything to do for this export; a step that has not shows as skipped.
     /// Null: always.
