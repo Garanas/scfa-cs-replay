@@ -148,6 +148,17 @@ namespace FAForever.MapEditor.Project.Editing
                 }
             }
 
+            // the grids of coverage stay what their stacks make, a brush's work in the chosen painted layer
+            if (!ReferenceEquals(_followed, _document) && !_document.CoverageStacks.IsEmpty)
+            {
+                MapDocument followed = CoverageLayers.Follow(_followed, _document, _session.PaintLayerOf);
+                if (!ReferenceEquals(followed, _document))
+                {
+                    _grids.Clear();
+                }
+                _document = followed;
+            }
+
             // the heightmap stays what the height layers add up to, a brush's work in the sculpting layer
             if (!ReferenceEquals(_followed, _document) && !_document.HeightStack.IsEmpty)
             {

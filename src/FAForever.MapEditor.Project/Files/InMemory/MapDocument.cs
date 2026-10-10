@@ -117,10 +117,25 @@ namespace FAForever.MapEditor.Project.Files.InMemory
 
         /// <summary>
         /// The rules of the masks for tools that are made from rules (user story K-2), by the mask's
-        /// name: such a mask is generated from them when asked. Kept as <c>masks/&lt;name&gt;.rules.json</c>.
+        /// name: such a mask's rules layer is generated from them when asked.
         /// </summary>
-        public ImmutableSortedDictionary<string, MaskRuleSet> MaskRules { get; init; } =
-            ImmutableSortedDictionary.Create<string, MaskRuleSet>(StringComparer.Ordinal);
+        /// <remarks>
+        /// The rules live in the masks' stacks (<see cref="CoverageStacks"/>) as rules layers
+        /// (<see cref="RulesSource"/>): this is, per mask with one, the rules of its lowest rules layer.
+        /// </remarks>
+        public ImmutableSortedDictionary<string, MaskRuleSet> MaskRules => Editing.CoverageLayers.MaskRulesOf(this);
+
+        /// <summary>
+        /// The stacks of layers of the grids of coverage (user stories K-1, K-2, S-1, W-2; the plan
+        /// "Map Editor Rework"): stratum masks, masks for tools and the water's three maps, by their
+        /// target's key (<see cref="LayerTarget.Key"/>: <c>stratum-2</c>, <c>mask-forest</c>,
+        /// <c>water-foam</c>). A grid without a stack here is simply its own painted layer
+        /// (<see cref="Editing.CoverageLayers.StackOf"/>); with one, the grid is what the stack makes,
+        /// kept so by <see cref="Editing.CoverageLayers.Follow"/> after every change, so everything that
+        /// reads the grids (the views, the rules, the export) reads the composite.
+        /// </summary>
+        public ImmutableSortedDictionary<string, LayerStack> CoverageStacks { get; init; } =
+            ImmutableSortedDictionary.Create<string, LayerStack>(StringComparer.Ordinal);
 
         /// <summary>
         /// The rules that place props from the layers when asked (user story P-4), in the order they

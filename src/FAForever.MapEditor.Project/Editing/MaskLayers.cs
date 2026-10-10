@@ -98,6 +98,29 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// The document with a copy of a mask under a new name: its pixels and its stack of layers
+        /// (the copy's layers are the same layers, so nothing is copied until one of them changes).
+        /// </summary>
+        /// <exception cref="ArgumentException">There is no such mask, or the new name cannot be a mask's.</exception>
+        public static MapDocument Duplicate(MapDocument document, string name, string newName)
+        {
+            if (!document.Masks.TryGetValue(name, out TiledBuffer<byte>? mask))
+            {
+                throw new ArgumentException($"The map has no mask '{name}'", nameof(name));
+            }
+            if (Problem(document, newName) is string problem)
+            {
+                throw new ArgumentException(problem, nameof(newName));
+            }
+            MapDocument copy = document with { Masks = document.Masks.Add(newName, mask) };
+            if (document.CoverageStacks.TryGetValue(LayerTarget.Mask(name).Key, out LayerStack? stack))
+            {
+                copy = copy with { CoverageStacks = copy.CoverageStacks.SetItem(LayerTarget.Mask(newName).Key, stack with { Target = LayerTarget.Mask(newName) }) };
+            }
+            return copy;
+        }
+
+        /// <summary>
         /// The document without a mask and its rules.
         /// </summary>
         /// <exception cref="ArgumentException">There is no such mask.</exception>

@@ -192,6 +192,22 @@ namespace FAForever.MapEditor.Project.Editing
                     })],
                 },
             };
+            // the stacks of coverage (strata, masks, water) as their grids: a mask's layers gain nothing,
+            // the others continue their edge; a painted layer's alpha gains nothing
+            resized = resized with
+            {
+                CoverageStacks = document.CoverageStacks.ToImmutableSortedDictionary(entry => entry.Key, entry => entry.Value with
+                {
+                    Layers = [.. entry.Value.Layers.Select(layer => layer with
+                    {
+                        Coverage = layer.Coverage is TiledBuffer<byte> coverage
+                            ? (entry.Key.StartsWith("mask-", StringComparison.Ordinal) ? Resized(coverage, (byte)0) : Resized(coverage))
+                            : null,
+                        Alpha = layer.Alpha is TiledBuffer<byte> alpha ? Resized(alpha, (byte)0) : null,
+                    })],
+                }, StringComparer.Ordinal),
+            };
+            resized = CoverageLayers.Recomposite(resized);
             // with layers, the heightmap is their sum again
             resized = HeightLayers.Recomposite(resized);
 

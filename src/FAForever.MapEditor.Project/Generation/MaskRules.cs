@@ -5,75 +5,90 @@ using FAForever.MapEditor.Project.Files.InMemory;
 namespace FAForever.MapEditor.Project.Generation
 {
     /// <summary>
-    /// Makes the masks for tools that have rules (user story K-2) from the terrain, the water and
-    /// the other layers. A mask keeps its size (the map's or half); each pixel counts at its centre.
-    /// The rules run in order on a value from 0 to 1 per pixel (<see cref="MaskRule"/>), which ends as
-    /// the mask's bytes. A mask whose rules read another mask with rules is made after it, from what
-    /// that one becomes.
+    /// Makes the rules layers (user story K-2; <see cref="RulesSource"/>) of the stacks of coverage
+    /// (masks for tools and stratum masks) from the terrain, the water and the other layers. A layer
+    /// keeps its target grid's size (the map's or half); each pixel counts at its centre. The rules run
+    /// in order on a value from 0 to 1 per pixel (<see cref="MaskRule"/>), which ends as the layer's
+    /// bytes. A stack whose rules read another mask with rules is made after it, from what that one
+    /// becomes.
     /// </summary>
     public static class MaskRules
     {
         /// <summary>
-        /// Every mask with rules, made from <paramref name="document"/>, by name.
+        /// Every rules layer made from <paramref name="document"/>: per stack and layer, its grid.
         /// </summary>
         /// <exception cref="ArgumentException">A rule reads a layer the map has not, or masks read each other in a circle.</exception>
-        public static ImmutableSortedDictionary<string, TiledBuffer<byte>> GenerateAll(MapDocument document)
-        {
-            ImmutableSortedDictionary<string, TiledBuffer<byte>>.Builder made = ImmutableSortedDictionary.CreateBuilder<string, TiledBuffer<byte>>(StringComparer.Ordinal);
-            MapDocument working = document;
-            foreach (string name in Order(document))
-            {
-                TiledBuffer<byte> mask = Generate(working, name, document.MaskRules[name]);
-                made[name] = mask;
-                working = working with { Masks = working.Masks.SetItem(name, mask) };
-            }
-            return made.ToImmutable();
-        }
+        public static IReadOnlyList<(string Target, string Layer, TiledBuffer<byte> Grid)> GenerateAll(MapDocument document) =>
+            CoverageLayerEdits.Generate(document);
 
         /// <summary>
-        /// The masks with rules in the order they are made: each after the masks with rules it reads.
+        /// The keys of the stacks with rules layers (<c>mask-forest</c>, <c>stratum-3</c>) in the order
+        /// they are made: each after the stacks with rules it reads.
         /// </summary>
-        /// <exception cref="ArgumentException">Masks read each other in a circle.</exception>
+        /// <exception cref="ArgumentException">Stacks with rules read each other in a circle.</exception>
         public static IReadOnlyList<string> Order(MapDocument document)
         {
+            bool HasRules(string key) => document.CoverageStacks.TryGetValue(key, out LayerStack? stack) && stack.Layers.Any(layer => layer.Source is RulesSource);
             List<string> order = [];
             HashSet<string> done = new HashSet<string>(StringComparer.Ordinal);
             HashSet<string> visiting = new HashSet<string>(StringComparer.Ordinal);
-            void Visit(string name, string? from)
+            void Visit(string key, string? from)
             {
-                if (done.Contains(name))
+                if (done.Contains(key))
                 {
                     return;
                 }
-                if (!visiting.Add(name))
+                if (!visiting.Add(key))
                 {
-                    throw new ArgumentException($"The rules of the masks '{from}' and '{name}' read each other: a mask cannot be made from itself");
+                    throw new ArgumentException($"The rules of '{Title(from)}' and '{Title(key)}' read each other: a mask cannot be made from itself");
                 }
-                foreach (string source in document.MaskRules[name].Sources.Where(document.MaskRules.ContainsKey))
+                foreach (string read in CoverageLayers.ReadsOf(document.CoverageStacks[key]))
                 {
-                    Visit(source, name);
+                    if (LayerStacks.StackKeyOf(read) is string stackKey && stackKey != key && HasRules(stackKey))
+                    {
+                        Visit(stackKey, key);
+                    }
+                    else if (LayerStacks.StackKeyOf(read) == key && document.CoverageStacks[key].Layers.Any(layer => layer.Source is RulesSource rules && rules.Rules.Rules.Any(rule => rule.Kind == MaskRuleKind.Layer && LayerStacks.StackKeyOf(rule.Source) == key)))
+                    {
+                        throw new ArgumentException($"The rules of '{Title(key)}' read '{Title(key)}': a mask cannot be made from itself");
+                    }
                 }
-                visiting.Remove(name);
-                done.Add(name);
-                order.Add(name);
+                visiting.Remove(key);
+                done.Add(key);
+                order.Add(key);
             }
-            foreach (string name in document.MaskRules.Keys)
+            foreach (string key in document.CoverageStacks.Keys.Where(HasRules))
             {
-                Visit(name, null);
+                Visit(key, null);
             }
             return order;
         }
 
         /// <summary>
-        /// One mask made from its rules, at the size the document's mask of that name has (the map's
-        /// size when it has none). The layers its rules read are the document's as they are.
+        /// A stack's key for people: the mask's name, or <c>stratum:3</c>.
+        /// </summary>
+        private static string Title(string? key) =>
+            key is null ? "" : key.StartsWith("mask-", StringComparison.Ordinal) ? key["mask-".Length..]
+            : key.StartsWith("stratum-", StringComparison.Ordinal) ? MaskRuleSources.Stratum(int.Parse(key["stratum-".Length..], System.Globalization.CultureInfo.InvariantCulture)) : key;
+
+        /// <summary>
+        /// One mask made from rules, at the size the document's mask of that name has (the map's size
+        /// when it has none). The layers its rules read are the document's as they are.
         /// </summary>
         /// <exception cref="ArgumentException">A rule reads a layer the map has not.</exception>
         public static TiledBuffer<byte> Generate(MapDocument document, string name, MaskRuleSet rules)
         {
             TiledBuffer<byte>? existing = document.Masks.GetValueOrDefault(name);
-            int width = existing?.Width ?? document.Width;
-            int height = existing?.Height ?? document.Height;
+            return Generate(document, existing?.Width ?? document.Width, existing?.Height ?? document.Height, rules, name);
+        }
+
+        /// <summary>
+        /// A grid of <paramref name="width"/> by <paramref name="height"/> made from rules.
+        /// </summary>
+        /// <param name="name">What it is for, for what a failure says.</param>
+        /// <exception cref="ArgumentException">A rule reads a layer the map has not.</exception>
+        public static TiledBuffer<byte> Generate(MapDocument document, int width, int height, MaskRuleSet rules, string name)
+        {
             float[] values = Evaluate(document, rules, width, height, name);
             byte[] bytes = new byte[values.Length];
             for (int i = 0; i < values.Length; i++)
@@ -489,9 +504,9 @@ namespace FAForever.MapEditor.Project.Generation
     }
 
     /// <summary>
-    /// The masks for tools that have rules (user story K-2), made when asked and put in their place:
-    /// one step of undo. Out of date when the terrain, the water level, the strata, the rules or the
-    /// masks they read change.
+    /// The rules layers of the masks for tools and stratum masks (user story K-2), made when asked and
+    /// put in their place: one step of undo. Out of date when the terrain, the water level, the rules
+    /// or the masks they read change.
     /// </summary>
     public sealed class MaskRulesGenerator : IDocumentGenerator
     {
@@ -504,7 +519,7 @@ namespace FAForever.MapEditor.Project.Generation
         public string Story => "K-2";
 
         public IReadOnlyList<GeneratedInput> Inputs { get; } =
-            [GeneratedInput.Heightmap, GeneratedInput.WaterLevel, GeneratedInput.StratumMasks, RuleInputs.MaskRules, RuleInputs.MaskRuleSources];
+            [GeneratedInput.Heightmap, GeneratedInput.WaterLevel, RuleInputs.MaskRules, RuleInputs.MaskRuleSources];
 
         /// <summary>
         /// The masks it puts in place may be ones the prop rules read.
@@ -514,22 +529,10 @@ namespace FAForever.MapEditor.Project.Generation
         public object Generate(MapDocument document) => MaskRules.GenerateAll(document);
 
         /// <summary>
-        /// The document with the generated masks in place of the masks of those names that still have
-        /// rules and the same size.
+        /// The document with the generated grids in their rules layers, where the layer is still
+        /// there with rules and of the same size; the stacks' grids follow.
         /// </summary>
-        public MapDocument Apply(MapDocument document, object value)
-        {
-            ImmutableSortedDictionary<string, TiledBuffer<byte>> masks = document.Masks;
-            foreach ((string name, TiledBuffer<byte> mask) in (ImmutableSortedDictionary<string, TiledBuffer<byte>>)value)
-            {
-                if (document.MaskRules.ContainsKey(name)
-                    && masks.TryGetValue(name, out TiledBuffer<byte>? held)
-                    && held.Width == mask.Width && held.Height == mask.Height)
-                {
-                    masks = masks.SetItem(name, mask);
-                }
-            }
-            return ReferenceEquals(masks, document.Masks) ? document : document with { Masks = masks };
-        }
+        public MapDocument Apply(MapDocument document, object value) =>
+            CoverageLayerEdits.ApplyGenerated(document, (IReadOnlyList<(string Target, string Layer, TiledBuffer<byte> Grid)>)value);
     }
 }

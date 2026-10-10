@@ -43,6 +43,34 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// </summary>
         public bool IsHeights => Grid is null;
 
+        /// <summary>
+        /// The target a key names (<see cref="Key"/>: <c>stratum-2</c>, <c>mask-highlands</c>,
+        /// <c>water-foam</c>, <c>heightmap</c>), or null for a key of no target.
+        /// </summary>
+        public static LayerTarget? FromKey(string key)
+        {
+            if (key == Heightmap.Key)
+            {
+                return Heightmap;
+            }
+            if (key.StartsWith("stratum-", StringComparison.Ordinal)
+                && int.TryParse(key["stratum-".Length..], NumberStyles.None, CultureInfo.InvariantCulture, out int layer) && layer >= 1)
+            {
+                return Stratum(layer);
+            }
+            if (key.StartsWith("mask-", StringComparison.Ordinal) && key.Length > "mask-".Length)
+            {
+                return Mask(key["mask-".Length..]);
+            }
+            return key switch
+            {
+                "water-foam" => Water(WaterMask.Foam),
+                "water-flatness" => Water(WaterMask.Flatness),
+                "water-depth-bias" => Water(WaterMask.DepthBias),
+                _ => null,
+            };
+        }
+
         public override string ToString() => Key;
     }
 
@@ -219,6 +247,15 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// all of it everywhere; in a stack of coverage the layer's values.
         /// </summary>
         public TiledBuffer<byte>? Coverage { get; init; }
+
+        /// <summary>
+        /// In a stack of coverage, how much of the layer there is per pixel, 0 to 255 (the target
+        /// grid's size), or null for all of it everywhere; null in a stack of heights, whose
+        /// <see cref="Coverage"/> does this. A painted layer added to a stack of coverage starts
+        /// with an alpha of 0 everywhere ("untouched"), and a brush raises it to 255 where it paints,
+        /// so a replacing, minimum or multiplying painted layer works only where it was painted.
+        /// </summary>
+        public TiledBuffer<byte>? Alpha { get; init; }
 
         /// <summary>
         /// For a curve layer, its curve; else null.

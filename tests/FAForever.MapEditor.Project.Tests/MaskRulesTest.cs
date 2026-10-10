@@ -138,9 +138,10 @@ namespace FAForever.MapEditor.Project.Tests
             MapDocument document = MaskLayers.Add(MaskLayers.Add(Ramp(), "high"), "high edge", half: true);
             document = document.SetMaskRules("high", [new MaskRule { Kind = MaskRuleKind.Height, Min = 50, Max = 1000 }]);
             document = document.SetMaskRules("high edge", [new MaskRule { Kind = MaskRuleKind.Layer, Source = "high" }, new MaskRule { Kind = MaskRuleKind.Invert }]);
-            CollectionAssert.AreEqual(new[] { "high", "high edge" }, MaskRules.Order(document).ToArray());
+            CollectionAssert.AreEqual(new[] { "mask-high", "mask-high edge" }, MaskRules.Order(document).ToArray());
 
-            ImmutableSortedDictionary<string, TiledBuffer<byte>> made = MaskRules.GenerateAll(document);
+            IReadOnlyList<(string Target, string Layer, TiledBuffer<byte> Grid)> generated = MaskRules.GenerateAll(document);
+            Dictionary<string, TiledBuffer<byte>> made = generated.ToDictionary(entry => entry.Target["mask-".Length..], entry => entry.Grid);
             Assert.AreEqual(256, made["high"].Width);
             Assert.AreEqual(128, made["high edge"].Width, "a mask keeps its size");
             Assert.AreEqual(255, made["high"][200, 10]);
@@ -148,8 +149,8 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(255, made["high edge"][10, 5]);
 
             MaskRulesGenerator generator = new MaskRulesGenerator();
-            MapDocument applied = generator.Apply(document, made);
-            Assert.AreSame(made["high"], applied.Masks["high"]);
+            MapDocument applied = generator.Apply(document, generated);
+            CollectionAssert.AreEqual(made["high"].ToArray(), applied.Masks["high"].ToArray(), "the rules layer replaces: the mask is what the rules made");
 
             // read each other in a circle
             MapDocument circle = applied.SetMaskRules("high", [new MaskRule { Kind = MaskRuleKind.Layer, Source = "high edge" }]);
@@ -211,24 +212,48 @@ namespace FAForever.MapEditor.Project.Tests
             ]);
             string project = ProjectFolders.New("mask-rules");
             MapProjectStore.Save(document, project);
-            string file = Path.Combine(project, "masks", "forest.rules.json");
+            // the rules live in the mask's stack, as a rules layer
+            string file = Path.Combine(project, "stacks", "mask-forest.json");
             Assert.IsTrue(File.Exists(file));
-            Assert.IsFalse(File.Exists(Path.Combine(project, "masks", "plain.rules.json")), "a mask without rules has no file of rules");
+            Assert.IsFalse(File.Exists(Path.Combine(project, "stacks", "mask-plain.json")), "a mask without layers of its own has no stack file");
+            StringAssert.Contains(File.ReadAllText(file), "\"source\": \"rules\"");
             StringAssert.DoesNotMatch(File.ReadAllText(file), new System.Text.RegularExpressions.Regex("\"radius\": 2\\b"), "a rule writes only what its kind reads");
 
             MapDocument loaded = MapProjectStore.Load(project);
             Assert.AreEqual(document.MaskRules["forest"].Rules.Length, loaded.MaskRules["forest"].Rules.Length);
             CollectionAssert.AreEqual(document.MaskRules["forest"].Rules.ToArray(), loaded.MaskRules["forest"].Rules.ToArray());
-            Assert.AreSame(loaded, MapProjectStore.Reload(loaded, project, ["masks/forest.rules.json"]), "the file holds what the document holds");
+            Assert.AreSame(loaded, MapProjectStore.Reload(loaded, project, ["stacks/mask-forest.json"]), "the file holds what the document holds");
 
             MapDocument changed = loaded.RemoveMaskRule("forest", 4);
             MapProjectStore.Save(changed, project, previous: loaded);
-            Assert.AreEqual(4, MapProjectStore.Reload(loaded, project, ["masks/forest.rules.json"]).MaskRules["forest"].Rules.Length, "another tool changed the rules");
+            Assert.AreEqual(4, MapProjectStore.Reload(loaded, project, ["stacks/mask-forest.json"]).MaskRules["forest"].Rules.Length, "another tool changed the rules");
 
             MapDocument painted = MaskLayers.Remove(changed, "forest");
             MapProjectStore.Save(painted, project, previous: changed);
-            Assert.IsFalse(File.Exists(file), "the rules of a removed mask go with it");
-            Assert.IsFalse(MapProjectStore.Reload(changed, project, ["masks/forest.rules.json"]).MaskRules.ContainsKey("forest"));
+            Assert.IsFalse(File.Exists(file), "the stack of a removed mask goes with it");
+        }
+
+        [TestMethod]
+        public void TheRulesOfAnOlderProjectBecomeARulesLayerHoldingTheMask()
+        {
+            MapDocument document = MaskLayers.Add(Ramp(), "forest");
+            document = document with { Masks = document.Masks.SetItem("forest", TiledBuffer<byte>.Create(256, 256, 200)) };
+            string project = ProjectFolders.New("mask-rules-legacy");
+            MapProjectStore.Save(document, project);
+            // an older project kept a mask's rules beside its PNG
+            string legacy = Path.Combine(project, "masks", "forest.rules.json");
+            File.WriteAllText(legacy, "{ \"rules\": [ { \"kind\": \"Height\", \"min\": 50, \"max\": 1000 } ] }");
+
+            MapDocument loaded = MapProjectStore.Load(project);
+            Layer rules = CoverageLayers.StackOf(loaded, LayerTarget.Mask("forest")).Layers.Single(layer => layer.Source is RulesSource);
+            Assert.AreEqual(1, loaded.MaskRules["forest"].Rules.Length);
+            Assert.AreEqual(200, rules.Coverage![10, 10], "the layer holds what the rules made last: the mask's PNG");
+            Assert.AreEqual(200, loaded.Masks["forest"][10, 10], "the mask is unchanged");
+
+            MapProjectStore.Save(loaded, project);
+            Assert.IsFalse(File.Exists(legacy), "the first save writes the stack and removes the old file");
+            Assert.IsTrue(File.Exists(Path.Combine(project, "stacks", "mask-forest.json")));
+            Assert.AreEqual(1, MapProjectStore.Load(project).MaskRules["forest"].Rules.Length);
         }
     }
 }

@@ -81,8 +81,52 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 return document.Terrain.StratumMasks.Layers[layer - 1];
             }
+            // a mask for tools by its plain name, as the rules of masks and props name it
+            return !key.StartsWith(StratumPrefix, StringComparison.Ordinal) && document.Masks.TryGetValue(key, out TiledBuffer<byte>? named) ? named : null;
+        }
+
+        /// <summary>
+        /// The one way to name a mask for tools or a stratum's mask, from any way a person or an older
+        /// project names it: a key (<c>mask:rivers</c>, <c>stratum:3</c>), a title (<c>mask rivers</c>,
+        /// <c>stratum 3</c>) or a mask's plain name (<c>rivers</c>, as the rules of masks and props
+        /// name it); null for a name the document has no mask of.
+        /// </summary>
+        public static string? KeyOf(MapDocument document, string? reference)
+        {
+            if (string.IsNullOrWhiteSpace(reference))
+            {
+                return null;
+            }
+            string text = reference.Trim();
+            if (text.StartsWith(MaskPrefix, StringComparison.Ordinal) || text.StartsWith(StratumPrefix, StringComparison.Ordinal))
+            {
+                return MaskOf(document, text) is null ? null : text;
+            }
+            if (document.Masks.ContainsKey(text))
+            {
+                return MaskKey(text);
+            }
+            if (text.StartsWith("mask ", StringComparison.OrdinalIgnoreCase) && document.Masks.ContainsKey(text[5..]))
+            {
+                return MaskKey(text[5..]);
+            }
+            if (text.StartsWith("stratum ", StringComparison.OrdinalIgnoreCase) && MaskOf(document, StratumPrefix + text[8..].Trim()) is not null)
+            {
+                return StratumPrefix + text[8..].Trim();
+            }
             return null;
         }
+
+        /// <summary>
+        /// The key of the stack (<see cref="LayerTarget.Key"/>) that makes the mask a mask key names:
+        /// <c>mask:rivers</c> is made by <c>mask-rivers</c>, <c>stratum:3</c> by <c>stratum-3</c>; null
+        /// for no key.
+        /// </summary>
+        public static string? StackKeyOf(string? key) =>
+            key is null ? null
+            : key.StartsWith(MaskPrefix, StringComparison.Ordinal) ? LayerTarget.Mask(key[MaskPrefix.Length..]).Key
+            : key.StartsWith(StratumPrefix, StringComparison.Ordinal) ? "stratum-" + key[StratumPrefix.Length..]
+            : LayerTarget.Mask(key).Key;
 
         /// <summary>
         /// A mask's value at a corner of the map, 0 to 1, between the centres of its pixels.
@@ -218,6 +262,10 @@ namespace FAForever.MapEditor.Project.Editing
                 if (layer.Coverage is not null && was.Coverage is not null)
                 {
                     Mark(dirty, grid.TilesX, layer.Coverage.ChangedTiles(was.Coverage));
+                }
+                if (layer.Alpha is not null && was.Alpha is not null)
+                {
+                    Mark(dirty, grid.TilesX, layer.Alpha.ChangedTiles(was.Alpha));
                 }
             }
             if (!ReferenceEquals(previous.Masks, next.Masks) || !ReferenceEquals(previous.Terrain.StratumMasks, next.Terrain.StratumMasks))
@@ -482,6 +530,14 @@ namespace FAForever.MapEditor.Project.Editing
                     weights[i] *= covered[i] / 255f;
                 }
             }
+            else if (!grid.Corners && layer.Alpha is TiledBuffer<byte> alpha && layer.Source is not MaskRefSource)
+            {
+                ReadOnlySpan<byte> covered = alpha.Tile(tileX, tileY);
+                for (int i = 0; i < weights.Length; i++)
+                {
+                    weights[i] *= covered[i] / 255f;
+                }
+            }
             if (resolved.Clip is TiledBuffer<byte> clip)
             {
                 for (int row = 0; row < rows; row++)
@@ -628,6 +684,8 @@ namespace FAForever.MapEditor.Project.Editing
             bool heights = grid.Corners;
             TiledBuffer<float>.Builder? heightValues = heights ? layer.Values?.ToBuilder() : null;
             TiledBuffer<byte>.Builder? coverage = layer.Coverage?.ToBuilder();
+            // in a stack of coverage the layer's alpha says how much of it there is, as coverage does for heights
+            TiledBuffer<byte>.Builder? alpha = heights ? null : layer.Alpha?.ToBuilder();
             if ((heights && heightValues is null) || (!heights && coverage is null))
             {
                 return stack;
@@ -670,6 +728,25 @@ namespace FAForever.MapEditor.Project.Editing
                                 w *= covered / 255f;
                             }
                         }
+                        else if (alpha is not null)
+                        {
+                            byte covered = alpha[x, z];
+                            if (covered == 0 && w > 0)
+                            {
+                                // a part of the layer not painted before starts from what the layers below make
+                                alpha[x, z] = 255;
+                                v = layer.Combine switch
+                                {
+                                    LayerCombine.Add or LayerCombine.Subtract => 0,
+                                    LayerCombine.Multiply => 1,
+                                    _ => below,
+                                };
+                            }
+                            else
+                            {
+                                w *= covered / 255f;
+                            }
+                        }
                         if (w < 1e-3f)
                         {
                             continue;
@@ -694,7 +771,7 @@ namespace FAForever.MapEditor.Project.Editing
                     }
                 }
             }
-            Layer painted = layer with { Values = heightValues?.ToBuffer() ?? layer.Values, Coverage = coverage?.ToBuffer() };
+            Layer painted = layer with { Values = heightValues?.ToBuffer() ?? layer.Values, Coverage = coverage?.ToBuffer(), Alpha = alpha?.ToBuffer() ?? layer.Alpha };
             return stack.With(target, painted);
         }
 
@@ -718,7 +795,7 @@ namespace FAForever.MapEditor.Project.Editing
                 }
                 if (a.Combine != b.Combine || a.Strength != b.Strength || a.Clip != b.Clip || a.Visible != b.Visible || a.IsBase != b.IsBase
                     || a.Source.GetType() != b.Source.GetType() || (a.Source is MaskRefSource && a.Source != b.Source)
-                    || (a.Values is null) != (b.Values is null) || (a.Coverage is null) != (b.Coverage is null)
+                    || (a.Values is null) != (b.Values is null) || (a.Coverage is null) != (b.Coverage is null) || (a.Alpha is null) != (b.Alpha is null)
                     || (a.Values is not null && (a.Values.Width != b.Values!.Width || a.Values.Height != b.Values.Height))
                     || (a.Coverage is not null && (a.Coverage.Width != b.Coverage!.Width || a.Coverage.Height != b.Coverage.Height)))
                 {
