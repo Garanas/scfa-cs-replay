@@ -12,6 +12,9 @@ using FAForever.MapEditor.App.Controls;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
+using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Files.InMemory;
+using Vector3 = System.Numerics.Vector3;
 
 namespace FAForever.MapEditor.App.Tests
 {
@@ -194,16 +197,16 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
-        public Task ControlAndAClickInTheTopViewSendTheCameraThere() => Run(async () =>
+        public Task AltAndAClickInTheTopViewSendTheCameraThere() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
             Show(window, MapViewTab.Top);
             Point at = Middle(window.MapView, window) + new Vector(-120, 80);
             Point place = window.MapView.ControlToMap(window.TranslatePoint(at, window.MapView)!.Value);
 
-            window.MouseMove(at, RawInputModifiers.Control);
-            window.MouseDown(at, MouseButton.Left, RawInputModifiers.Control);
-            window.MouseUp(at, MouseButton.Left, RawInputModifiers.Control);
+            window.MouseMove(at, RawInputModifiers.Alt);
+            window.MouseDown(at, MouseButton.Left, RawInputModifiers.Alt);
+            window.MouseUp(at, MouseButton.Left, RawInputModifiers.Alt);
 
             Assert.AreEqual(place.X, model.Camera.Now.X, 0.01);
             Assert.AreEqual(place.Y, model.Camera.Now.Z, 0.01);
@@ -656,6 +659,50 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task TheSelectToolSelectsMovesAndClearsInTheTopView() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.Top);
+            model.SelectTool("markers.select");
+            Dispatcher.UIThread.RunJobs();
+            Spawn spawn = model.ShownDocument!.Markers.Spawns[0];
+            ObjectRef thing = ObjectRef.Marker(spawn.Id);
+            Point at = window.MapView.TranslatePoint(window.MapView.MapToControl(spawn.Position.X, spawn.Position.Z), window)!.Value + new Vector(3, 0);
+            Point place = window.MapView.ControlToMap(window.TranslatePoint(at, window.MapView)!.Value);
+            thing = model.PickAt((float)place.X, (float)place.Y, (float)(1 / window.MapView.Zoom))!.Value;
+            Vector3 start = model.ShownDocument.PlaceOf(thing)!.Value;
+
+            window.MouseMove(at);
+            window.MouseDown(at, MouseButton.Left);
+            for (int i = 1; i <= 5; i++)
+            {
+                window.MouseMove(at + new Vector(i * 10, 0));
+            }
+            window.MouseUp(at + new Vector(50, 0), MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.IsTrue(model.Selection.Contains(thing), "a click selects what lies under it");
+            Assert.AreEqual(start.X + 50 / window.MapView.Zoom, model.ShownDocument!.PlaceOf(thing)!.Value.X, 0.01, "the drag moved it with the mouse");
+            Assert.AreEqual(2, model.History.Count, "opened, and the move");
+
+            window.KeyPress(Key.E, RawInputModifiers.None, PhysicalKey.E, "e");
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual("Turn the selection", model.Map!.Session.UndoDescription, "the view has the keyboard after the click: E turns");
+
+            window.KeyPress(Key.Delete, RawInputModifiers.None, PhysicalKey.Delete, null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.IsFalse(model.ShownDocument!.Exists(thing), "Delete removes it");
+            Assert.IsTrue(model.Selection.IsEmpty);
+
+            model.Undo();
+            model.Selection.Set([thing]);
+            window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.IsTrue(model.Selection.IsEmpty, "Escape selects nothing");
+            window.Close();
+        });
+
+        [TestMethod]
         public Task TheBrushPresetsOfThePanelSaveAndApply() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
@@ -675,6 +722,32 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(25, sculpt.Radius);
             Click(window, Named("Delete the preset Raise 25"));
             Assert.AreEqual(0, model.Presets.Shown.Count);
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task ABoxDrawnOnEmptyGroundSelectsAndTheInspectorShowsIt() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.Top);
+            model.SelectTool("markers.select");
+            Dispatcher.UIThread.RunJobs();
+            Point from = window.MapView.TranslatePoint(new Point(2, 2), window)!.Value;
+            Point to = window.MapView.TranslatePoint(new Point(window.MapView.Bounds.Width - 2, window.MapView.Bounds.Height - 2), window)!.Value;
+
+            window.MouseMove(from);
+            window.MouseDown(from, MouseButton.Left);
+            window.MouseMove(Middle(window.MapView, window));
+            Assert.IsNotNull(model.ActiveTool!.Tool!.Box, "the box shows while it is drawn");
+            window.MouseMove(to);
+            window.MouseUp(to, MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.IsTrue(model.Selection.Count > 1);
+            Assert.IsFalse(model.CanUndo, "selecting changes nothing on the map");
+            TextBox x = window.GetVisualDescendants().OfType<TextBox>().Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == "X of the selection");
+            Assert.IsTrue(x.IsEffectivelyVisible, "the inspector shows the selection");
+            Assert.AreEqual(SelectionInspector.Mixed, x.Text);
             window.Close();
         });
     }

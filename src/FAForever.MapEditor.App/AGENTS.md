@@ -128,7 +128,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   so its settings last while the person switches tools (`ToolItem.Tool`; `MainViewModel.Tool<T>()`
   finds one by class). It implements `IMapTool`: `Press`, `Drag` and `Release` of the left mouse,
   in ogrids, and the radius of the circle drawn around the mouse. The views keep the rest of the
-  mouse (moving, zooming, control and a click for the camera) and send the left button to the
+  mouse (moving, zooming, alt and a click for the camera) and send the left button to the
   active tool, without knowing which tools exist. Its settings are observable properties; the
   options bar picks the tool's `DataTemplate` by class.
   - `BrushStroke`, which both brushes use, holds the stroke's `EditTransaction` from press to
@@ -293,7 +293,7 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   it looks at. The left mouse button is the active tool's, as in the top view.
   - The camera belongs to the view model (`MainViewModel.Camera`, `CameraMoved`), so both views
     share it: the top view draws what it sees (its footprint on the ground, the eye and a line to
-    the pivot; View menu), and control and a click there sends it to that place at once. Opening
+    the pivot; View menu), and alt and a click there sends it to that place at once. Opening
     a map puts it over the whole map. The status bar shows the place under the mouse in both
     views (`EditorCamera.PointAt` on the terrain itself in 3D).
   - That ground is the terrain blurred (`Rendering/Gpu/SmoothGround`: averages over squares of
@@ -391,7 +391,7 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
 
 - `tests/FAForever.MapEditor.App.Tests/MainWindowTest` runs the real `MainWindow` without a screen
   (Avalonia.Headless with Skia): the mouse, wheel and keys as a person uses them, and frames of
-  what it shows. Test input and views there: the camera's controls, control and a click in the
+  what it shows. Test input and views there: the camera's controls, alt and a click in the
   top view, painting as one undo step, switching views. The headless platform has no graphics
   card, so the 3D view draws nothing and its camera does not glide by itself (the tests let it
   arrive); what it draws is checked with automation in a real editor. The tests of the 3D view's
@@ -544,6 +544,63 @@ Four small parts that later features build on:
   (`generate.walkability`, ...). Another map forgets the results. No generator exists yet: the
   walkability, normal map and preview of wave 1 plug in here.
 
+## Selection: picking things on the map and changing them
+
+User story F-11. `MainViewModel.Selection` (`SelectionViewModel`) holds what is selected as the
+library's `ObjectRef`s (`marker:12`, `prop:5`, `decal:3`, `unit:UNIT_5`, `area:AREA_1`), in the order
+they were selected, and what was copied (`Clipboard`). It holds references, never the things: on
+`DocumentChanged` what the document no longer has drops out (an undo of a paste), and a thing
+that moves stays selected. Another map clears it. The core's side is
+`ViewModels/MainViewModel.Selection.cs`; the editing itself is the library's (`MapObjects`,
+`ObjectEdits`, its guide).
+
+- **What can be picked** (`SelectableKinds`): the active `SelectTool`'s `Kinds`, else the mode's
+  (`ModeKinds`: Markers mode markers, path nodes and areas; Props props; Decals decals; Units units;
+  Map areas; the others every kind), of what the views show (`ShownKinds`: the overlays Markers,
+  Path nodes, Props, Units, Areas; decals always). A hidden kind is not picked. A later global
+  Select tool is a `SelectTool` with `ObjectKinds.All`.
+- **The select tool** (`Tools/SelectTool`, `markers.select` and `units.select`; the Props and
+  Decals modes get theirs with their stories): a click selects the nearest thing within a few
+  pixels (`PickAt`, the library's `Nearest`: markers, props and units by their centre, areas by
+  their edge, decals inside their rectangle), shift adds, control toggles, a click on nothing
+  clears; dragging on empty ground draws a box (`IMapTool.Box`, drawn by the view) that selects
+  what lies in it; dragging a selected thing moves the whole selection, one step of undo held
+  from press to release as a brush stroke is (`StartStroke`, `Move the selection`), each thing as
+  high above the terrain as it was. Its keys (`IMapTool.Key`, which the top view sends while it
+  has the keyboard, after a click): Escape runs `select.none`, Q and E `edit.rotate` by 15
+  degrees (shift 90), the arrows `edit.nudge` by an ogrid (shift 8). Letters are the tool's and
+  not menu shortcuts, which may never be a single letter.
+- **The views give a tool more**: `Press` and `Drag` with a `ToolInput` (the keys held, the size
+  of a pixel on the map, so "a few pixels" holds at any zoom) and `Key`; a tool that needs
+  neither implements the plain methods. The 3D view (and its picking) may call the same
+  operations with places in ogrids: `PickAt`, `SelectAt`, `SelectInside`.
+- **Commands**: `edit.copy` (Ctrl+C), `edit.paste {x?, z?, dx?, dz?}` (Ctrl+V: centred on the
+  place, else at the mouse, `Pointer`, else where the originals were; selects the copies),
+  `edit.duplicate {dx?, dz?}` (Ctrl+D, 2 ogrids beside), `edit.delete` (Delete, with the links
+  to a removed marker), `edit.rotate {degrees?}` (15 when left out, clockwise in the top view),
+  `select.all` (Ctrl+A, the kinds that can be picked), `select.none`; outside the menus
+  `edit.nudge {dx, dz}`, `edit.place {x?, z?, heading?}` (the inspector's fields) and
+  `select.set {refs, change?}` (automation; `change` is `Replace`, `Add` or `Toggle`). The ones
+  that edit are `[UndoStep]` and need `Needs.Selection`, which `Selection.Changed` raises.
+- **The inspector** shows the selection in place of the mode's parts (the shelf's chosen asset
+  and the selection take the inspector from each other): the count and kinds, X, Z, the height
+  (read only: it follows the terrain) and the heading in degrees (when something turns; areas
+  do not), with "—" where the selected things differ; a value typed (Enter or leaving the field)
+  goes to every selected thing through `edit.place`. Below, a section per kind
+  (`SelectionSection`: `MarkerSelection`, `PropSelection`, `DecalSelection`, `UnitSelection`,
+  `AreaSelection` in `ViewModels/SelectionInspector.cs`, each with its `DataTemplate` in
+  `Views/Inspector.axaml`); a kind's own fields go into its class (refreshed by `Refresh` with
+  the document, kept while its kind stays selected) and its template.
+- **The top view draws** the areas (dashed, with their names), props (dots, overlay off by
+  default) and units (squares), only what lies in the view (span `top.things`), and an outline
+  per selected thing: a ring, or the rectangle of a decal or area (`top.selection`, tokens
+  `MapSelectionBrush`, `MapSelectionFillBrush`). Alt and a click send the 3D camera there.
+- Automation: `state.selection` (count, kinds, the first 200 references, what can be picked, how
+  many are copied, the inspector's X, Z and heading). `stroke` drives the active tool with no
+  keys held and two pixels an ogrid.
+- Not built yet: picking and a box in the 3D view (its `Pick(ray)` will call `SelectAt` and the
+  like), handles, scaling, snapping, moving along one axis, turning about the selection's centre.
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session
@@ -627,11 +684,11 @@ faf-map editor close                                      # closes without askin
   `goto {step}` (`done`), `brush {layer?, mode?, radius?, strength?, target?, erase?, shape?, rotation?, randomRotation?}`
   (`brush.set`, above), `fit`, `camera {x?, z?, distance?, yaw?, pitch?}`
   (`camera.look`: the 3D view, degrees; at once), `focus {x, z, radius?}` (`camera.focus`: with a
-  radius as F, gliding while the 3D view shows; without, as control and a click in the top view),
+  radius as F, gliding while the 3D view shows; without, as alt and a click in the top view),
   `view {x, z, zoom?}` (`view.zoomTo`: the top view), `gpu-debug {mode}` (`view.gpuDebug`: what
   the 3D view's terrain shows: 0 the picture, 1 the albedo, 2 the light, 3 the normals, 4 the
   heights, 5 the lower layer, 6 the first four masks after the remap, 7 as stored), `mode {id}`,
-  `tool {id}`, `tab {name: top|3d}`, `show {markers?, pathNodes?, camera?, props?, units?}` (each overlay's
+  `tool {id}`, `tab {name: top|3d}`, `show {markers?, pathNodes?, camera?, props?, units?, areas?}` (each overlay's
   command with `on`).
 - `state` has `symmetry` (kind, count, title), `presets` (folder, the panel's kind, the names it
   lists) and `generated` (per generator its status, `Missing`, `Stale` or `Current`, and the

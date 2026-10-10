@@ -1,4 +1,5 @@
 using FAForever.MapEditor.App.Tools;
+using FAForever.MapEditor.Project.Editing;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
@@ -136,7 +137,7 @@ public static class EditorModes
 
         new ModeDefinition("markers", "Markers", "Icon.Markers", "Spawns, deposits, path nodes, AI markers, chains, adaptive maps", 1, "F6", "R-1",
             [
-                new ToolDefinition("markers.select", "Select", "F-11", "Select markers to move or delete them"),
+                new ToolDefinition("markers.select", "Select", "F-11") { Make = model => new SelectTool(model, ObjectKinds.Markers | ObjectKinds.PathNodes | ObjectKinds.Areas) },
                 new ToolDefinition("markers.spawn", "Spawn", "R-1", "Place spawns"),
                 new ToolDefinition("markers.mass", "Mass", "R-1", "Place mass deposits"),
                 new ToolDefinition("markers.hydrocarbon", "Hydrocarbon", "R-1", "Place hydrocarbon deposits"),
@@ -174,7 +175,7 @@ public static class EditorModes
         new ModeDefinition("units", "Units", "Icon.Units", "Place units, groups per army, presets", 1, "F9", "U-2",
             [
                 new ToolDefinition("units.place", "Place", "U-2", "Place units for an army, from the unit picker (U-1)"),
-                new ToolDefinition("units.select", "Select", "F-11", "Select units and groups"),
+                new ToolDefinition("units.select", "Select", "F-11") { Make = model => new SelectTool(model, ObjectKinds.Units) },
             ],
             [
                 new PlannedSection("Armies and groups", "U-3", "Per army a tree of groups"),
@@ -219,7 +220,7 @@ public static class EditorOverlays
         new OverlayDefinition("mask", "Mask", "Show a mask", "K-1", "Show a mask over the terrain"),
         new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12"),
         new OverlayDefinition("grid", "Grid", "Show the grid", "V-3", "Show a grid over the terrain"),
-        new OverlayDefinition("areas", "Areas", "Show areas", "M-5", "Show the areas"),
+        new OverlayDefinition("areas", "Areas", "Show areas", "M-5"),
         new OverlayDefinition("props", "Props", "Show props", "V-2"),
         new OverlayDefinition("units", "Units", "Show units", "V-2"),
     ];

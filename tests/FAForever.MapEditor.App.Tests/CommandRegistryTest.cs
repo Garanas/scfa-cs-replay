@@ -63,7 +63,7 @@ namespace FAForever.MapEditor.App.Tests
             EditorCommand[] incomplete = [.. NewModel().Commands.All.Where(command => command.IsIncomplete)];
             HashSet<string> stories = Stories();
 
-            Assert.IsTrue(incomplete.Length > 40);
+            Assert.IsTrue(incomplete.Length > 20);
             foreach (EditorCommand command in incomplete)
             {
                 Assert.IsTrue(stories.Contains(command.Incomplete!.Story), $"{command.Id} names {command.Incomplete.Story}, which is not in USER_STORIES.md");
@@ -119,7 +119,7 @@ namespace FAForever.MapEditor.App.Tests
                 new[]
                 {
                     "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look", "diagnostics.flush", "diagnostics.set", "diagnostics.upload",
-                    "edit.goTo", "file.enableVersionControl", "presets.apply", "presets.delete", "view.gpuDebug", "view.zoomTo", "workspace.convert", "workspace.setUp",
+                    "edit.goTo", "edit.nudge", "edit.place", "file.enableVersionControl", "presets.apply", "presets.delete", "select.set", "view.gpuDebug", "view.zoomTo", "workspace.convert", "workspace.setUp",
                 }, outside,
                 "the commands outside the menus are for automation and plugins: their buttons are on a page or panel");
             Assert.AreEqual("Terrain", model.Commands.Find("tool.terrain.curve")!.Menu, "a tool is in its mode's menu");

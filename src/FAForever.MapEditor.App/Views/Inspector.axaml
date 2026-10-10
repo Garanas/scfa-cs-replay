@@ -1,5 +1,6 @@
 <!-- The inspector: the properties of what is selected or active (F-11), by mode; its parts a line apart.
-     An asset chosen in the shelf shows here until the choice is cleared (F-8, F-9). -->
+     An asset chosen in the shelf shows here until the choice is cleared (F-8, F-9); what is selected on
+     the map shows here instead of the mode's parts, with its shared fields and a section per kind. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -83,7 +84,98 @@
             </StackPanel>
           </Border>
         </StackPanel>
-        <StackPanel IsVisible="{Binding !Assets.HasSelection}">
+        <!-- what is selected on the map (F-11): the fields all kinds share, then a section per kind -->
+        <StackPanel IsVisible="{Binding Selection.HasAny}" AutomationProperties.Name="Selection">
+          <Border Classes="panelhead">
+            <StackPanel>
+              <TextBlock Classes="overline" Text="{Binding Source=Selection, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <TextBlock Classes="panelname" Text="{Binding Selection.Inspector.Title}" TextWrapping="Wrap" AutomationProperties.Name="Selected" />
+              <TextBlock Classes="caption" Text="{Binding Selection.Inspector.Kinds}" AutomationProperties.Name="Kinds selected" />
+            </StackPanel>
+          </Border>
+          <Border Classes="group">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="heading" Text="Place" />
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="X" Width="{StaticResource FactLabelWidth}" />
+                <TextBox Classes="mono commit" Text="{Binding Selection.Inspector.X, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="X of the selection"
+                         AutomationProperties.HelpText="In ogrids; a value puts every selected thing there; a dash when they differ" />
+              </DockPanel>
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Z" Width="{StaticResource FactLabelWidth}" />
+                <TextBox Classes="mono commit" Text="{Binding Selection.Inspector.Z, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Z of the selection"
+                         AutomationProperties.HelpText="In ogrids; a value puts every selected thing there; a dash when they differ" />
+              </DockPanel>
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Height" Width="{StaticResource FactLabelWidth}" />
+                <TextBlock Classes="mono" Text="{Binding Selection.Inspector.Height}" AutomationProperties.Name="Height of the selection"
+                           ToolTip.Tip="It follows the terrain" />
+              </DockPanel>
+              <DockPanel IsVisible="{Binding Selection.Inspector.CanTurn}">
+                <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Heading" Width="{StaticResource FactLabelWidth}" />
+                <TextBox Classes="mono commit" Text="{Binding Selection.Inspector.Heading, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Heading of the selection"
+                         AutomationProperties.HelpText="In degrees, clockwise from the right in the top view; a value turns every selected thing to it; a dash when they differ" />
+              </DockPanel>
+              <StackPanel Classes="inline">
+                <Button Content="Duplicate" Command="{Binding RunCommand}" CommandParameter="edit.duplicate" />
+                <Button Content="Delete" Command="{Binding RunCommand}" CommandParameter="edit.delete" />
+                <Button Content="Select none" Command="{Binding RunCommand}" CommandParameter="select.none" AutomationProperties.HelpText="The inspector shows the mode again" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <!-- a template per kind: each kind's own fields go into its section class (ViewModels/SelectionInspector.cs) and its template -->
+          <ItemsControl ItemsSource="{Binding Selection.Inspector.Sections}" AutomationProperties.Name="Selected by kind">
+            <ItemsControl.DataTemplates>
+              <DataTemplate DataType="vm:MarkerSelection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected markers" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+              <DataTemplate DataType="vm:PropSelection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected props" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+              <DataTemplate DataType="vm:DecalSelection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected decals" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+              <DataTemplate DataType="vm:UnitSelection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected units" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+              <DataTemplate DataType="vm:AreaSelection">
+                <Border Classes="group">
+                  <StackPanel Classes="stack">
+                    <TextBlock Classes="heading" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected areas" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.DataTemplates>
+          </ItemsControl>
+        </StackPanel>
+        <StackPanel>
+          <StackPanel.IsVisible>
+            <MultiBinding Converter="{x:Static BoolConverters.And}">
+              <Binding Path="!Assets.HasSelection" />
+              <Binding Path="!Selection.HasAny" />
+            </MultiBinding>
+          </StackPanel.IsVisible>
           <Border Classes="panelhead">
             <StackPanel>
               <TextBlock Classes="overline" Text="{Binding Source=Inspector, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
@@ -110,9 +202,10 @@
           <Border Classes="group">
             <StackPanel Classes="stack">
               <TextBlock Classes="heading" Text="Selection" />
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="Nothing is selected. Choose a mode's Select tool and click a thing in the top view, or drag a box around several; shift adds, control toggles." />
               <Border Classes="planned">
                 <StackPanel Classes="stack">
-                  <TextBlock Classes="caption" Text="Select markers, props, decals, units and areas in the views; move, rotate and scale them with handles." />
+                  <TextBlock Classes="caption" Text="Move, rotate and scale with handles in the views." />
                   <TextBlock Classes="story" Text="Not built yet: user story F-11" />
                 </StackPanel>
               </Border>

@@ -54,6 +54,12 @@ reads again when it changes; and nothing that generates runs by itself.
 - [ ] **F-11 Selection.** Select anything that lies on the map (marker, prop, decal, unit, area) in
       the top and 3D views, one or many; an inspector shows and edits what is selected; move,
       rotate and scale with handles; copy, paste, duplicate and delete.
+      Today: the Select tool of the Markers and Units modes in the top view (click, shift adds,
+      control toggles, a box on empty ground, drag to move as one step, Q and E turn, the arrows
+      nudge, Escape clears); copy, paste (at the mouse), duplicate, delete, turn, select all and
+      none as commands; the inspector edits the position and heading of one or many; props, units
+      and areas drawn in the top view. Missing: picking in the 3D view, handles, scaling, the
+      Select tools of the Props and Decals modes.
 - [ ] **F-12 Symmetry.** Mirror every edit: horizontally, vertically, diagonally, or around the
       middle for 2 to 8 players; shown as guides in the views. Today: the symmetry is chosen (off,
       rotational for 2 to 8, four mirrors; on and off takes the map's own) and the top view shows
