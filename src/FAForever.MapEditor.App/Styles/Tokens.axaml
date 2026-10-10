@@ -106,7 +106,11 @@
       <SolidColorBrush x:Key="MapHandleAxisXBrush" Color="#FFFF6B5A" />
       <SolidColorBrush x:Key="MapHandleAxisZBrush" Color="#FF5AAEF5" />
       <SolidColorBrush x:Key="MapOutsidePlayableBrush" Color="#66000000" />
-      <SolidColorBrush x:Key="MapMaskBrush" Color="#FFFF8C00" />
+      <!-- a mask over the terrain (K-1, S-1, W-2, the rules preview): violet, apart from walkability's red,
+           the playable area's dark shade and the selection's yellow -->
+      <SolidColorBrush x:Key="MapMaskBrush" Color="#FFB86BFF" />
+      <!-- props the game draws as an effect (steam, blowing sand): a small diamond in 3D -->
+      <SolidColorBrush x:Key="MapEffectPropBrush" Color="#FF9FB4C7" />
       <!-- lines between parts of the window, and between the groups of a panel -->
       <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource Gray690}" />
       <SolidColorBrush x:Key="GroupDividerBrush" Color="{StaticResource Gray700}" />
@@ -165,7 +169,11 @@
       <SolidColorBrush x:Key="MapHandleAxisXBrush" Color="#FFFF6B5A" />
       <SolidColorBrush x:Key="MapHandleAxisZBrush" Color="#FF5AAEF5" />
       <SolidColorBrush x:Key="MapOutsidePlayableBrush" Color="#66000000" />
-      <SolidColorBrush x:Key="MapMaskBrush" Color="#FFFF8C00" />
+      <!-- a mask over the terrain (K-1, S-1, W-2, the rules preview): violet, apart from walkability's red,
+           the playable area's dark shade and the selection's yellow -->
+      <SolidColorBrush x:Key="MapMaskBrush" Color="#FFB86BFF" />
+      <!-- props the game draws as an effect (steam, blowing sand): a small diamond in 3D -->
+      <SolidColorBrush x:Key="MapEffectPropBrush" Color="#FF9FB4C7" />
       <SolidColorBrush x:Key="DividerBrush" Color="#FFD6D6D6" />
       <SolidColorBrush x:Key="GroupDividerBrush" Color="#FFE0E0E0" />
       <SolidColorBrush x:Key="SelectedBrush" Color="{StaticResource Blue100}" />

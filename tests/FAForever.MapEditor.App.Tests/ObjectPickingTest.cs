@@ -30,6 +30,14 @@ namespace FAForever.MapEditor.App.Tests
         private static readonly Vector3 Down = new Vector3(0, -1, 0);
 
         [TestMethod]
+        public void PropsOfTheMarkerMeshAreEffects()
+        {
+            Assert.IsTrue(EffectProps.IsEffectMesh(@"D:\ws\assets\env\common\props\marker01_lod0.glb"), "lavasteam02_prop, blowing sand, mist: the game shows an effect");
+            Assert.IsFalse(EffectProps.IsEffectMesh(@"D:\ws\assets\env\evergreen\props\rocks\rock01_lod0.glb"));
+            Assert.AreEqual(1, EffectProps.Bounds.Max.Y, "picked by the small diamond drawn in its place");
+        }
+
+        [TestMethod]
         public async Task FindsThePropUnderAPointAndNotTheOneBesideIt()
         {
             MapDocument document = (await HardFfaAsync()) with { Props = [PropAt(1, 100, 100), PropAt(2, 110, 100)] };

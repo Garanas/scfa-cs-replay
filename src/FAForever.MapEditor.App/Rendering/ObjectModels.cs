@@ -27,6 +27,13 @@ internal sealed class ObjectModels(Action loaded)
     public sealed record Model(string Key, ImmutableArray<Lod> Lods, ObjectBounds Bounds)
     {
         /// <summary>
+        /// Whether the game draws the blueprint as an effect (steam over lava, blowing sand, mist):
+        /// its mesh is the game's marker (<c>/env/common/props/marker01_lod0.scm</c>), which the game
+        /// does not show. The 3D view draws a small diamond in its place.
+        /// </summary>
+        public bool IsEffect { get; init; }
+
+        /// <summary>
         /// The level that shows at a distance from the camera: the first whose cutoff reaches it,
         /// and the last beyond them all (the game hides a prop there; the editor keeps it in sight).
         /// </summary>
@@ -172,6 +179,7 @@ internal sealed class ObjectModels(Action loaded)
 
         List<Lod> read = [];
         ObjectBounds bounds = default;
+        bool effect = levels.All(level => EffectProps.IsEffectMesh(level.Mesh));
         foreach ((float cutoff, string meshFile, string? albedoFile, string? shaderName) in levels)
         {
             if (!File.Exists(meshFile))
@@ -195,7 +203,12 @@ internal sealed class ObjectModels(Action loaded)
             (PreviewShader shader, float? alphaTest) = MeshPreview.ShaderOf(shaderName);
             read.Add(new Lod(cutoff, vertices, mesh.Indices, albedo, alphaTest, shader));
         }
-        return read.Count == 0 ? null : new Model(key, [.. read], bounds);
+        if (read.Count == 0)
+        {
+            return null;
+        }
+        // an effect is picked by the diamond drawn in its place
+        return new Model(key, [.. read], effect ? EffectProps.Bounds : bounds) { IsEffect = effect };
     }
 
     /// <summary>

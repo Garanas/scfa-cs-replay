@@ -24,6 +24,7 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 /// not have, from the theme.</param>
 /// <param name="MarkerKinds">The kinds of markers that show, of those <paramref name="Markers"/> and <paramref name="PathNodes"/> show (user story R-6).</param>
 /// <param name="Hovered">The object under the mouse, drawn lightly highlighted; null for none.</param>
+/// <param name="EffectColor">The colour of the diamond drawn for a prop the game shows as an effect, from the theme.</param>
 internal sealed record ObjectFrame(
     AssetCatalog Catalog,
     bool Props,
@@ -35,7 +36,8 @@ internal sealed record ObjectFrame(
     Vector3 HighlightColor,
     Vector3 MissingColor,
     MarkerKinds MarkerKinds = MarkerKinds.All,
-    ObjectRef? Hovered = null)
+    ObjectRef? Hovered = null,
+    Vector3 EffectColor = default)
 {
     /// <summary>
     /// How strongly an object is highlighted: 1 selected, less under the mouse, else 0.
@@ -225,7 +227,14 @@ internal sealed unsafe class ObjectRenderer : IDisposable
             GpuMesh mesh;
             uint texture = _white;
             float alphaTest = -1;
-            if (model is not null)
+            if (model is { IsEffect: true })
+            {
+                // the game shows an effect (steam, sand, mist) where the blueprint stands, not its marker mesh
+                mesh = _diamond;
+                _model.Set("uColor", frame.EffectColor.X, frame.EffectColor.Y, frame.EffectColor.Z);
+                _model.Set("uShading", 0);
+            }
+            else if (model is not null)
             {
                 int level = Math.Min(run.Lod, model.Lods.Length - 1);
                 ObjectModels.Lod lod = model.Lods[level];

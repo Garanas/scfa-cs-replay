@@ -68,6 +68,8 @@ public sealed class HeightmapView : Control
     {
         _overlay = null;
         _inks = null;
+        // a mask over the terrain takes the variant's colour
+        OnDocumentChanged(this, EventArgs.Empty);
         InvalidateVisual();
     }
 
@@ -894,6 +896,7 @@ public sealed class HeightmapView : Control
             return;
         }
         GridOverlay? grid = _model!.ShownGrid;
+        _picture.MaskColour = Token<ISolidColorBrush>("MapMaskBrush").Color.ToUInt32();
         if ((long)document.Terrain.Heightmap.Samples.Width * document.Terrain.Heightmap.Samples.Height >= ColourOnPool
             && _picture.ColoursAll(document, grid))
         {

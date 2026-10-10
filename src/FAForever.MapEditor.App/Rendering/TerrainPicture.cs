@@ -11,8 +11,8 @@ public readonly record struct SampleRect(int X0, int Y0, int X1, int Y1);
 /// <summary>
 /// The terrain seen from above as colours, one per sample of the heightmap (BGRA, opaque): shaded
 /// by a light from the north-west, coloured by height, blue below the water, and with a grid laid
-/// over it (<see cref="GridOverlay"/>) while one is being painted: a mask in orange, or the
-/// terrain's types in their colours. The 2D view shows it.
+/// over it (<see cref="GridOverlay"/>) while one is being painted: a mask in the theme's mask colour
+/// (<see cref="MaskColour"/>), or the terrain's types in their colours. The 2D view shows it.
 /// </summary>
 /// <remarks>
 /// <see cref="Update"/> colours again only what changed since the last update: the tiles of the
@@ -20,8 +20,6 @@ public readonly record struct SampleRect(int X0, int Y0, int X1, int Y1);
 /// </remarks>
 public sealed class TerrainPicture
 {
-    private static readonly (float R, float G, float B) Overlay = (255, 140, 0);
-
     private TiledBuffer<ushort>? _samples;
     private TiledBuffer<byte>? _mask;
     private float _scale;
@@ -30,6 +28,14 @@ public sealed class TerrainPicture
     private IReadOnlyList<uint>? _palette;
     private float _low;
     private float _high;
+    private uint _maskColourOf;
+    private (float R, float G, float B) _maskColour;
+
+    /// <summary>
+    /// The colour a mask is laid over the terrain in, <c>0xAARRGGBB</c> (the theme's
+    /// <c>MapMaskBrush</c>); another colour colours the whole picture again.
+    /// </summary>
+    public uint MaskColour { get; set; }
 
     public int Width { get; private set; }
 
@@ -73,6 +79,8 @@ public sealed class TerrainPicture
             _water = water;
             _overlay = key;
             _palette = overlay?.Palette;
+            _maskColourOf = MaskColour;
+            _maskColour = (MaskColour >> 16 & 0xff, MaskColour >> 8 & 0xff, MaskColour & 0xff);
             ushort[] values = samples.ToArray();
             _low = values.Min() * _scale;
             _high = Math.Max(_low + 1, values.Max() * _scale);
@@ -133,6 +141,7 @@ public sealed class TerrainPicture
             || document.Terrain.Heightmap.Scale != _scale
             || water != _water
             || key != _overlay
+            || (mask is not null && MaskColour != _maskColourOf)
             || (mask is not null && (_mask is null || mask.Width != _mask.Width || mask.Height != _mask.Height));
     }
 
@@ -214,7 +223,7 @@ public sealed class TerrainPicture
         }
         if (value > 0 && _palette is null)
         {
-            (r, g, b) = Mix((r, g, b), Overlay, value / 255f * 0.7f);
+            (r, g, b) = Mix((r, g, b), _maskColour, value / 255f * 0.7f);
         }
         else if (value >= 0 && _palette is not null && _palette[value] >> 24 != 0)
         {
