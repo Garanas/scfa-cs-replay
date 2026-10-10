@@ -99,6 +99,7 @@ namespace FAForever.MapEditor.App.Tests
             Click(window, OnMap(window, 120, 80));
             HeightCurve curve = model.Map!.Document.HeightLayers[^1].Curve!;
             Assert.AreEqual(2, curve.Points.Length, "two clicks, two points");
+            StringAssert.Contains(model.Map.Session.UndoDescription, "add a point", "the history says a point was added");
             Assert.AreEqual(60, curve.Points[0].X, 1.5);
 
             // dragging the second point moves it, one step of undo

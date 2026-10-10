@@ -110,6 +110,13 @@ public sealed class PlaceSelectionHandler(MainViewModel model, SelectionViewMode
         ImmutableArray<ObjectRef> things = selection.Items;
         edit.Transaction.Apply(document => document.PlaceObjects(things, model.PartnersOf(document, things), request.X, request.Z,
             request.Heading is float heading ? heading * MathF.PI / 180 : null));
+        // named after the fields given: what the inspector's field changed
+        string[] given = [.. new[] { request.X is null ? null : "X", request.Z is null ? null : "Z", request.Heading is null ? null : "heading" }.OfType<string>()];
+        if (given.Length > 0)
+        {
+            string of = things.Length == 1 ? $"the {things[0].Kind.ToString().ToLowerInvariant()}" : $"{things.Length} things";
+            edit.Transaction.Description = $"Set the {string.Join(" and ", given)} of {of}";
+        }
         return Task.CompletedTask;
     }
 }

@@ -29,7 +29,11 @@ namespace FAForever.MapEditor.Project.Editing
             Description = description;
         }
 
-        public string Description { get; }
+        /// <summary>
+        /// The step's name in the history; the code that edits may name it after what it did
+        /// before the transaction ends (<c>Move 3 units into INITIAL of ARMY_1</c>).
+        /// </summary>
+        public string Description { get; set; }
 
         /// <summary>
         /// The document with the changes made so far.

@@ -38,6 +38,15 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task HistoryLabelsSayWhatChanged()
+        {
+            MainViewModel model = await Open();
+            await model.Commands.RunAsync("select.set", new JsonObject { ["refs"] = new JsonArray("marker:1") }, interactive: false);
+            await model.Commands.RunAsync("edit.place", new JsonObject { ["x"] = 30 }, interactive: false);
+            Assert.AreEqual("Set the X of the marker", model.Map!.Session.UndoDescription);
+        }
+
+        [TestMethod]
         public async Task PlacingWithTheSymmetrySaysHowManyImagesItMade()
         {
             MainViewModel model = await Open();

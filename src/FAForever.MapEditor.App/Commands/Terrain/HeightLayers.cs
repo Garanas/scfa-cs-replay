@@ -200,7 +200,11 @@ public sealed class SetHeightCurveHandler(MainViewModel model) : IRequestHandler
         string fields = HeightLayerSettings.Fields(("profile", request.Profile), ("width", request.Width), ("falloff", request.Falloff), ("height", request.Height),
             ("closed", request.Closed), ("points", request.Points), ("mirrored", request.Mirrored));
         // a point added, moved or removed is a step of its own; a field typed in again or a slider dragged is one
-        string description = request.Points is null ? $"Curve {layer.Name}: {fields}" : $"Curve {layer.Name}: {changed.Points.Length} points";
+        int added = changed.Points.Length - curve.Points.Length;
+        string description = request.Points is null ? $"Curve {layer.Name}: {fields}"
+            : added == 1 ? $"Curve {layer.Name}: add a point ({changed.Points.Length})"
+            : added == -1 ? $"Curve {layer.Name}: remove a point ({changed.Points.Length})"
+            : $"Curve {layer.Name}: {changed.Points.Length} points";
         using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap(description, d => HeightLayerEdits.SetCurve(d, layer.Name, changed), request.Points is null ? $"terrain.setCurve:{layer.Name}:{fields}" : null);
         model.Status = description;

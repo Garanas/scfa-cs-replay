@@ -73,7 +73,7 @@ namespace FAForever.MapEditor.App.Tests
 
             CollectionAssert.AreEqual(new[] { "INITIAL", "Town" }, model.ShownDocument!.FindUnit("UNIT_1")!.Group.ToArray(), "dropped into the group");
             Assert.AreEqual(steps + 1, model.History.Count, "one step");
-            Assert.AreEqual("Drop units or a group in the tree", model.Map!.Session.UndoDescription);
+            StringAssert.StartsWith(model.Map!.Session.UndoDescription, "Move ", "named after what moved");
             Assert.IsFalse(window.GetVisualDescendants().OfType<TreeViewItem>().Any(item => item.Classes.Contains("unitdroptarget")), "the light goes out");
 
             // a group dragged onto a group of another army
