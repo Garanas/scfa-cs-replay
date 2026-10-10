@@ -44,6 +44,24 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void FindsADepositOnSteepGround()
+        {
+            ResourceMarker mass = hardFfa.Markers.Resources.First(resource => resource.Kind == ResourceKind.Mass);
+            Heightmap heights = hardFfa.Terrain.Heightmap;
+            int x = (int)mass.Position.X;
+            int z = (int)mass.Position.Z;
+            TiledBuffer<ushort>.Builder builder = heights.Samples.ToBuilder();
+            builder[x + 1, z] = (ushort)(heights.Samples[x + 1, z] + 20 / heights.Scale);
+            MapDocument document = hardFfa with { Terrain = hardFfa.Terrain with { Heightmap = heights with { Samples = builder.ToBuffer() } } };
+
+            Problem problem = Run(new ProblemContext(document), "steep-deposit").Single();
+
+            Assert.AreEqual(ProblemSeverity.Warning, problem.Severity);
+            Assert.AreEqual(ObjectRef.Marker(mass.Id), problem.Thing, "double-clicking it selects the deposit");
+            StringAssert.Contains(problem.Message, mass.Name);
+        }
+
+        [TestMethod]
         public void FindsASpawnWithoutMassNearby()
         {
             Spawn spawn = hardFfa.Markers.Spawns[0];

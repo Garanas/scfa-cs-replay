@@ -46,14 +46,18 @@ namespace FAForever.MapEditor.Project.Editing
         /// Adds an army without units (a root group <c>Units</c> holding an empty <c>INITIAL</c>),
         /// playable (at the end of the playable armies, with a spawn) or extra.
         /// </summary>
-        /// <param name="name">Null or empty for the next free <c>ARMY_n</c>.</param>
+        /// <param name="name">Null or empty for the next player's <c>ARMY_n</c> (after the playable
+        /// armies' spawns, not after the extra armies such as <c>ARMY_17</c>), or for an extra army the
+        /// next free name after <c>ARMY_17</c>.</param>
         /// <param name="spawn">Where a playable army's spawn goes (x, z in ogrids); the middle of the map when null.</param>
         /// <param name="added">The army's name.</param>
         /// <exception cref="ArgumentException">The name is taken or cannot be an army's.</exception>
         public static MapDocument AddArmy(this MapDocument document, string? name, bool playable, Vector2? spawn, out string added)
         {
             IEnumerable<string> taken = document.Armies.Select(army => army.Name).Concat(document.Scenario.PlayableArmies).Concat(document.Scenario.ExtraArmies);
-            added = string.IsNullOrWhiteSpace(name) ? DocumentEdits.FreeName(taken, "ARMY_1") : name.Trim();
+            added = !string.IsNullOrWhiteSpace(name) ? name.Trim()
+                : playable ? document.NextSpawnName()
+                : DocumentEdits.FreeName(taken, "ARMY_17");
             CheckNewName(document, added, null);
             Army army = new Army
             {

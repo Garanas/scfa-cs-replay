@@ -220,13 +220,13 @@ namespace FAForever.MapEditor.App.Tests
             PlacedUnit[] placed = [.. model.ShownDocument!.AllUnits().Where(unit => unit.Army == "ARMY_3")];
             Assert.AreEqual(2, placed.Length, "for another army");
             PlacedUnit farm = placed.Single(unit => unit.Unit.Blueprint == "uec1201");
-            CollectionAssert.AreEqual(new[] { "INITIAL", "Town" }, farm.Group.ToArray(), "in a group of the preset's name");
+            CollectionAssert.AreEqual(new[] { "INITIAL", "Village" }, farm.Group.ToArray(), "in a group of the preset's name");
             Assert.AreEqual((94.5f, 120f), (farm.Unit.Position.X, farm.Unit.Position.Z), "its middle on a whole ogrid: the farm stays on the grid");
-            CollectionAssert.AreEqual(new[] { "INITIAL", "Town", "Houses" }, placed.Single(unit => unit.Unit.Blueprint == "uec1101").Group.ToArray());
+            CollectionAssert.AreEqual(new[] { "INITIAL", "Village", "Houses" }, placed.Single(unit => unit.Unit.Blueprint == "uec1101").Group.ToArray());
             Assert.AreEqual("Place a preset", model.Map!.Session.UndoDescription);
 
             CommandRun again = await Run(model, "units.placePreset", new JsonObject { ["name"] = "Village", ["x"] = 30, ["z"] = 30, ["army"] = "ARMY_4", ["heading"] = 90 });
-            Assert.AreEqual("INITIAL/Town", ((JsonObject)again.Result!)["group"]!.GetValue<string>());
+            Assert.AreEqual("INITIAL/Village", ((JsonObject)again.Result!)["group"]!.GetValue<string>());
             Unit turned = model.ShownDocument!.AllUnits().Single(unit => unit.Army == "ARMY_4" && unit.Unit.Blueprint == "uec1201").Unit;
             Assert.AreEqual(30, turned.Position.X, 1e-4, "turned a quarter about its middle");
             Assert.AreEqual(24.5, turned.Position.Z, 1e-4);

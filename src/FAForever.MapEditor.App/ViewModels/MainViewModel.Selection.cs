@@ -81,6 +81,13 @@ public sealed partial class MainViewModel
     /// </summary>
     public ObjectKinds SelectableKinds => ((ActiveTool?.Tool as SelectTool)?.Kinds ?? ModeKinds) & ShownKinds;
 
+    /// <summary>
+    /// What a box or Select all takes: the kinds that can be picked, without areas unless areas are
+    /// all that can be (the Map mode), so that a box over markers never takes the playable area
+    /// along (a click still picks an area by its edge).
+    /// </summary>
+    public ObjectKinds BoxKinds => SelectableKinds == ObjectKinds.Areas ? ObjectKinds.Areas : SelectableKinds & ~ObjectKinds.Areas;
+
     private void InitializeSelection()
     {
         // selecting on the map takes the inspector from the shelf's asset, and choosing an asset gives it back
@@ -151,7 +158,7 @@ public sealed partial class MainViewModel
     {
         if (ShownDocument is MapDocument document)
         {
-            Selection.Apply(document.Inside(x0, z0, x1, z1, kinds ?? SelectableKinds, ShownMarkerKinds).Where(Decals.IsShown), change);
+            Selection.Apply(document.Inside(x0, z0, x1, z1, kinds ?? BoxKinds, ShownMarkerKinds).Where(Decals.IsShown), change);
         }
     }
 
@@ -173,7 +180,7 @@ public sealed partial class MainViewModel
         List<ObjectRef> inside = [];
         using (Performance.Measure("model.select-on-screen"))
         {
-            foreach (ObjectRef thing in document.All(kinds ?? SelectableKinds, ShownMarkerKinds).Where(Decals.IsShown))
+            foreach (ObjectRef thing in document.All(kinds ?? BoxKinds, ShownMarkerKinds).Where(Decals.IsShown))
             {
                 if (document.PlaceOf(thing) is System.Numerics.Vector3 place && toScreen(place) is System.Numerics.Vector2 at
                     && at.X >= min.X && at.Y >= min.Y && at.X <= max.X && at.Y <= max.Y)
@@ -192,7 +199,7 @@ public sealed partial class MainViewModel
     {
         if (ShownDocument is MapDocument document)
         {
-            Selection.Set(document.All(kinds ?? SelectableKinds, ShownMarkerKinds).Where(Decals.IsShown));
+            Selection.Set(document.All(kinds ?? BoxKinds, ShownMarkerKinds).Where(Decals.IsShown));
         }
     }
 

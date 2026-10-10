@@ -31,7 +31,9 @@ public sealed class AddAreaHandler(MainViewModel model, SelectionViewModel selec
         {
             throw new ArgumentException("An area is a rectangle of some size");
         }
-        Area added = area;
+        // the free name first, so that the step of undo names the area added
+        document.AddArea(area, out Area added);
+        area = added;
         model.EditMap($"Add the area {area.Name}", d => d.AddArea(area, out added));
         selection.Set([ObjectRef.Area(added.Name)]);
         if (model.ActiveTool?.Definition.Id != "map.areas")
