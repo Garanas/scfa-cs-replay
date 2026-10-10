@@ -615,6 +615,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                     ["shown"] = group.IsShown,
                 })]),
             },
+            ["wideDecals"] = model.WideDecals.Describe(),
             ["mapPanels"] = model.DescribeMapPanels(),
             ["mapSize"] = model.DescribeMapSize(),
             ["heightLayers"] = HeightLayersState.Describe(model),

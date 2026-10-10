@@ -119,8 +119,8 @@ namespace FAForever.MapEditor.App.Tests
             CollectionAssert.AreEqual(
                 new[]
                 {
-                    "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look", "decals.addToGroup", "decals.deleteGroup",
-                    "decals.lod", "decals.place", "decals.removeFromGroup", "decals.renameGroup", "decals.scale", "decals.selectGroup", "decals.showGroup", "decals.size",
+                    "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look", "decals.addToGroup", "decals.chooseWideFile", "decals.deleteGroup",
+                    "decals.lod", "decals.place", "decals.removeFromGroup", "decals.renameGroup", "decals.scale", "decals.selectGroup", "decals.setShadow", "decals.setWide", "decals.showGroup", "decals.size",
                     "diagnostics.flush", "diagnostics.set", "diagnostics.upload", "edit.goTo", "edit.nudge", "edit.place", "file.enableVersionControl",
                     "file.restoreCommit", "file.showCommit", "file.showMapFiles", "generate.auto", "generate.onExport", "generate.setNavigation", "lighting.set", "lighting.setSky", "map.removeArea", "map.removeArmy", "map.renameArmy", "map.setAlliance",
                     "map.setArea", "map.setArmy", "map.setPlayableArea", "markers.addOptionalGroup", "markers.deleteChain", "markers.link", "markers.place",
@@ -130,6 +130,7 @@ namespace FAForever.MapEditor.App.Tests
                     "presets.delete", "presets.showFolder", "problems.show", "props.addRuleCondition", "props.chooseRule", "props.place", "props.removeFromPalette", "props.removeRule",
                     "props.removeRuleCondition", "props.scale", "props.set", "props.setRule", "props.setRuleCondition", "props.setRulePalette", "props.tilt",
                     "select.hideKind", "select.lockKind", "select.set", "terrain.addCurve", "terrain.captureStamp", "terrain.chooseLayer", "terrain.moveLayer", "terrain.reloadLayer", "terrain.removeLayer", "terrain.setCurve",
+                    "terrain.setDecalMasks",
                     "terrain.setLayer", "units.add", "units.drop", "units.moveGroup", "units.moveToArmy", "units.moveToGroup", "units.removeGroup", "units.renameGroup",
                     "view.addToToolbar", "view.gpuDebug", "view.inspectPart", "view.movePanel", "view.removeFromToolbar", "view.resizePanel", "view.returnPanel", "view.setToolbar", "view.togglePanel", "view.walkability",
                     "view.zoomTo", "water.removeWaveGenerator",

@@ -742,6 +742,14 @@
     <Setter Property="Margin" Value="{StaticResource ImagePreviewGap}" />
   </Style>
 
+  <!-- an entry of the map-wide decals (D-1): as tall as its preview -->
+  <Style Selector="Button.partentry.widedecalentry">
+    <Setter Property="Height" Value="{StaticResource WideDecalEntryHeight}" />
+  </Style>
+  <Style Selector="Button.partentry TextBlock.partdetail.widedecaldetail">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+
   <!-- a list of many short lines: the Console -->
   <Style Selector="ListBox.log ListBoxItem">
     <Setter Property="Padding" Value="{StaticResource BarPadding}" />

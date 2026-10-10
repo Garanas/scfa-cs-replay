@@ -335,6 +335,13 @@
               <DataTemplate DataType="vm:LightingDetailsSection">
                 <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).LightingSettings.Parts}" />
               </DataTemplate>
+              <!-- the chosen map-wide decal (D-1) of the Decals panel and of the Procedural mode -->
+              <DataTemplate DataType="vm:MapWideDecalDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WideDecals.Parts}" />
+              </DataTemplate>
+              <DataTemplate DataType="vm:MapWideProceduralDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WideDecals.ProceduralParts}" />
+              </DataTemplate>
               <DataTemplate DataType="vm:WaterDetailsSection">
                 <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WaterSettings.Parts}" />
               </DataTemplate>

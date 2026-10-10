@@ -41,12 +41,18 @@ public static class ProceduralMode
     ];
 
     /// <summary>
-    /// The mode's panel: the generated results, walkability's choices, the navigation mesh, the path
-    /// networks and the export's steps.
+    /// The mode's inspector: the chosen map-wide decal's settings.
+    /// </summary>
+    public static IReadOnlyList<PanelSection> Inspector { get; } = [new MapWideProceduralDetailsSection()];
+
+    /// <summary>
+    /// The mode's panel: the generated results, the map-wide decals, walkability's choices, the
+    /// navigation mesh, the path networks and the export's steps.
     /// </summary>
     public static IReadOnlyList<PanelSection> Sections { get; } =
     [
         new GeneratedResultsSection(),
+        new MapWideDecalsProceduralSection(),
         new WalkabilitySection(),
         new NavigationSection(),
         new PathNetworkSection(),

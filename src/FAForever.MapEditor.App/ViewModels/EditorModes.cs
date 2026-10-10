@@ -227,8 +227,8 @@ public static class EditorModes
                 new ToolDefinition("decals.select", "Select", "D-1") { Make = model => new DecalSelectTool(model) },
                 new ToolDefinition("decals.place", "Place", "D-1") { Make = model => new DecalPlaceTool(model) },
             ],
-            [new DecalGroupsSection()],
-            []),
+            [new MapWideDecalsSection(), new DecalGroupsSection()],
+            [new MapWideDecalDetailsSection()]),
 
         new ModeDefinition("units", "Units", "Icon.Units", "Place units, groups per army, presets", 1, "F9", "U-2",
             [
@@ -245,7 +245,7 @@ public static class EditorModes
         new ModeDefinition(ProceduralMode.Id, "Procedural", "Icon.Procedural", "Generated results, navigation mesh, export steps", BottomGroup, "F11", "F-7",
             ProceduralMode.Tools,
             ProceduralMode.Sections,
-            []),
+            ProceduralMode.Inspector),
     ];
 }
 

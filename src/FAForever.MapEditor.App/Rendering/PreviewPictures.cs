@@ -209,3 +209,49 @@ public sealed record HeightmapPicture(TiledBuffer<ushort> Samples, float Scale) 
     public override (uint[] Pixels, int Width, int Height)? Render(int size) =>
         HeightPicture.Draw(Samples.Width, Samples.Height, (x, z) => Samples[x, z] * Scale, null, false, size);
 }
+
+/// <summary>
+/// A decoded texture (a map-wide decal's generated result or file): its colour over a dark
+/// checker where it is clear, its normal (x from alpha as red, z from green, up as blue), or its
+/// darkness (black over white by its alpha, as the shadow decal darkens the terrain).
+/// </summary>
+/// <param name="Mode"><see cref="Colour"/>, <see cref="Normals"/> or <see cref="Darkness"/>.</param>
+public sealed record TexturePicture(FAForever.MapEditor.Project.Workspaces.DecodedTexture Texture, string Mode) : PreviewPicture
+{
+    public const string Colour = "colour";
+    public const string Normals = "normals";
+    public const string Darkness = "darkness";
+
+    public override object Key => Texture;
+
+    public override string Variant => Mode;
+
+    public override (int Width, int Height)? GridSize => (Texture.Width, Texture.Height);
+
+    public override (uint[] Pixels, int Width, int Height)? Render(int size)
+    {
+        (int width, int height) = Fit(Texture.Width, Texture.Height, size);
+        uint[] pixels = new uint[width * height];
+        byte[] rgba = Texture.Rgba;
+        for (int y = 0; y < height; y++)
+        {
+            int row = Math.Min(Texture.Height - 1, (int)((y + 0.5) * Texture.Height / height));
+            for (int x = 0; x < width; x++)
+            {
+                int column = Math.Min(Texture.Width - 1, (int)((x + 0.5) * Texture.Width / width));
+                int at = (row * Texture.Width + column) * 4;
+                (uint r, uint g, uint b) = Mode switch
+                {
+                    Normals => (rgba[at + 3], rgba[at + 1], 255u),
+                    Darkness => (255u - rgba[at + 3], 255u - rgba[at + 3], 255u - rgba[at + 3]),
+                    _ => Over(rgba[at], rgba[at + 1], rgba[at + 2], rgba[at + 3], ((x / 4) + (y / 4)) % 2 == 0 ? 40u : 64u),
+                };
+                pixels[y * width + x] = 0xFF000000u | r << 16 | g << 8 | b;
+            }
+        }
+        return (pixels, width, height);
+    }
+
+    private static (uint, uint, uint) Over(byte r, byte g, byte b, byte a, uint under) =>
+        ((r * (uint)a + under * (255u - a)) / 255, (g * (uint)a + under * (255u - a)) / 255, (b * (uint)a + under * (255u - a)) / 255);
+}

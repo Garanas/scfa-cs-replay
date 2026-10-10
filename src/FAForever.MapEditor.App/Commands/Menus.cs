@@ -72,7 +72,7 @@ public static class Menus
         new MenuLayout("Generate",
         [
             "generate.walkability", "generate.navigation", "generate.props", "generate.masks", Separator,
-            "generate.normalMap", Separator,
+            "generate.normalMap", "decals.generateNormal", "decals.generateShadow", Separator,
             "generate.stale",
         ]),
         new MenuLayout(PluginsMenu, ["plugins.manage", "plugins.reload", Separator, "plugins.check"]),

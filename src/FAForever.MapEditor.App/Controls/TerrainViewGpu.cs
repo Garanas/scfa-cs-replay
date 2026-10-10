@@ -350,10 +350,12 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             UpdateHover();
             try
             {
-                _renderer.Render(document, camera.ViewProjection((float)width / height), path =>
+                // the map-wide decals' previews lie under the map's decals (D-1)
+                MapDocument drawn = _model.WideDecals.Shown(document);
+                _renderer.Render(drawn, camera.ViewProjection((float)width / height), path =>
                 {
                     using Performance.Span lookup = Performance.Measure("3d.find-texture");
-                    return FindTexture(path, document, workspace);
+                    return _model.WideDecals.TextureOf(path) ?? FindTexture(path, document, workspace);
                 }, BrushUnderMouse(document), BrushColor(), Objects(camera), Decals(), Overlays(document),
                     path => FindCube(path, document, workspace), camera.Eye, _model.ShowDecals);
                 _shapes?.Draw(ToolShapes(document), new Vector2((float)Bounds.Width, (float)Bounds.Height), Ink);

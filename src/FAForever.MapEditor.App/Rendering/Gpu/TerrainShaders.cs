@@ -453,9 +453,13 @@ internal static class TerrainShaders
         """;
 
     /// <summary>
-    /// A normal decal (DXT5nm: x in alpha, y in green, opacity in red). The view draws no
-    /// deferred lighting, so the decal changes the lit colour below it by how much its normal
-    /// changes the light: it outputs half that factor, blended as <c>2 × source × destination</c>.
+    /// A normal decal (DXT5nm: x in alpha, z in green, opacity in red). As the game's terrain shader
+    /// reads it (<c>effects/terrain.fx</c>, <c>DecalsNormalsPS</c>): the normal is the decal's own,
+    /// up in its frame and turned only by the decal's turn about the vertical axis (the engine's
+    /// <c>TangentMatrix</c>), and it replaces the terrain's normal by the red channel's weight; so a
+    /// map-wide normals decal holds the terrain's normals themselves. The view draws no deferred
+    /// lighting, so the decal changes the lit colour below it by how much its normal changes the
+    /// light: it outputs half that factor, blended as <c>2 × source × destination</c>.
     /// </summary>
     public static string DecalNormalFragment(bool es) => Header(es) + Heights + Lighting + """
         in vec2 vUv;
@@ -480,10 +484,10 @@ internal static class TerrainShaders
             float z = sqrt(max(0.0, 1.0 - dot(xy, xy)));
 
             vec3 normal = normalAt(vWorld.xz);
+            // the decal's own axes on the ground: x along its width, z along its length
             vec3 tangent = normalize(vec3(vTangent.x, 0.0, vTangent.y));
-            tangent = normalize(tangent - normal * dot(normal, tangent));
-            vec3 bitangent = cross(normal, tangent);
-            vec3 decalNormal = normalize(tangent * xy.x + bitangent * xy.y + normal * z);
+            vec3 bitangent = vec3(-tangent.z, 0.0, tangent.x);
+            vec3 decalNormal = normalize(tangent * xy.x + bitangent * xy.y + vec3(0.0, z, 0.0));
 
             vec3 factor = lightOf(decalNormal) / max(lightOf(normal), vec3(0.02));
             outColor = vec4(clamp(mix(vec3(1.0), factor, opacity) * 0.5, 0.0, 1.0), 1.0);

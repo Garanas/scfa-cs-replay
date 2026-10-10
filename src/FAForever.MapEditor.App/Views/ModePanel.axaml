@@ -7,6 +7,7 @@
              xmlns:panels="using:FAForever.MapEditor.App.Views.MapPanels"
              xmlns:rules="using:FAForever.MapEditor.App.Views.RulePanels"
              xmlns:procedural="using:FAForever.MapEditor.App.Views.ProceduralPanels"
+             xmlns:decalpanels="using:FAForever.MapEditor.App.Views.DecalPanels"
              x:Class="FAForever.MapEditor.App.Views.ModePanel"
              x:DataType="vm:MainViewModel">
   <Border Classes="modepanel">
@@ -413,6 +414,13 @@
             <!-- the height layers (T-5): a view of its own -->
             <DataTemplate DataType="vm:HeightLayersSection">
               <panels:HeightLayersPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+            </DataTemplate>
+            <!-- the map-wide decals (D-1): the Decals panel's three slots, the Procedural mode's normal and shadow -->
+            <DataTemplate DataType="vm:MapWideDecalsSection">
+              <decalpanels:MapWideDecalsList DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WideDecals.DecalList}" />
+            </DataTemplate>
+            <DataTemplate DataType="vm:MapWideDecalsProceduralSection">
+              <decalpanels:MapWideDecalsList DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WideDecals.ProceduralList}" />
             </DataTemplate>
             <DataTemplate DataType="vm:OverlaySection">
               <Border Classes="group">
