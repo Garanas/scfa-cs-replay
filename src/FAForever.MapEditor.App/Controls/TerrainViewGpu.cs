@@ -89,6 +89,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private string? _loggedTextureError;
     private string? _loggedModelError;
 
+    private GpuTimer? _timer;
+
     public TerrainViewGpu()
     {
         Focusable = true;
@@ -230,6 +232,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             }
             _renderer = new TerrainRenderer(_gl, es, () => Dispatcher.UIThread.Post(RequestNextFrameRendering));
             _objects = new ObjectRenderer(_gl, es, _models, () => Dispatcher.UIThread.Post(RequestNextFrameRendering));
+            _timer = new GpuTimer(_gl, GpuTimer.Offered(_gl, es, GlVersion.Major, GlVersion.Minor), es);
+            Log.LogInformation("The 3D view times frames on the card with {Method}", _timer.HasQueries ? "timer queries" : "glFinish (no timer queries)");
             Error = null;
             Log.LogInformation("The 3D view runs on {Renderer}", Renderer);
         }
@@ -245,6 +249,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
 
     protected override void OnOpenGlDeinit(GlInterface gl)
     {
+        _timer?.Dispose();
+        _timer = null;
         _renderer?.Dispose();
         _renderer = null;
         _objects?.Dispose();
@@ -265,6 +271,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         int height = Math.Max(1, (int)(Bounds.Height * scaling));
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)fb);
         _gl.Viewport(0, 0, (uint)width, (uint)height);
+        _timer?.Begin();
         // the sky: the canvas of the views (Styles/Tokens.axaml)
         Avalonia.Media.Color sky = this.TryFindResource("CanvasBrush", ActualThemeVariant, out object? canvas) && canvas is Avalonia.Media.ISolidColorBrush brush
             ? brush.Color
@@ -318,6 +325,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             WatchAssets(workspace);
         }
 
+        _timer?.End();
         if (_capture is { } capture && _capturePath is string path)
         {
             _capture = null;

@@ -41,18 +41,22 @@ public static class Performance
 
     public readonly struct Span(string name, long start) : IDisposable
     {
-        public void Dispose()
+        public void Dispose() => Record(name, Stopwatch.GetElapsedTime(start).TotalMilliseconds);
+    }
+
+    /// <summary>
+    /// Records a span measured elsewhere (the graphics card's time for a frame), as if it ended now.
+    /// </summary>
+    public static void Record(string name, double milliseconds)
+    {
+        long end = Stopwatch.GetTimestamp();
+        Statistics.GetOrAdd(name, _ => new Statistic()).Add(milliseconds);
+        EditorMetrics.SpanDuration.Record(milliseconds, EditorMetrics.Tag("span", name));
+        if (milliseconds >= 1)
         {
-            long end = Stopwatch.GetTimestamp();
-            double milliseconds = Stopwatch.GetElapsedTime(start, end).TotalMilliseconds;
-            Statistics.GetOrAdd(name, _ => new Statistic()).Add(milliseconds);
-            EditorMetrics.SpanDuration.Record(milliseconds, EditorMetrics.Tag("span", name));
-            if (milliseconds >= 1)
+            Finished.Enqueue((end, name, milliseconds));
+            while (Finished.Count > 4096 && Finished.TryDequeue(out _))
             {
-                Finished.Enqueue((end, name, milliseconds));
-                while (Finished.Count > 4096 && Finished.TryDequeue(out _))
-                {
-                }
             }
         }
     }

@@ -156,7 +156,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
     /// </summary>
     private static readonly string[] Own =
     [
-        "state", "commands", "run {id, interactive?, wait?, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?, under?}", "perf {reset?}", "logs {problems?, count?}",
+        "state", "commands", "run {id, interactive?, wait?, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?, under?}", "perf {reset?, gpu?}", "logs {problems?, count?}",
         "diagnostics {record?, send?, endpoint?, flush?, upload?}", "version-control {open?, enable?, name?, email?, lfs?, remote?}",
         "picker {open?, query?, group?, category?, tech?, move?: [across, down], choose?, cancel?}",
         "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "pick {x, y, highlight?}",
@@ -228,7 +228,15 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 {
                     Performance.Reset();
                 }
-                return Performance.Snapshot();
+                if (arguments["gpu"]?.GetValue<bool>() is bool gpu)
+                {
+                    // the card's time per frame of the 3D view: 3d.gpu-frame (or 3d.gpu-frame-finish)
+                    Rendering.Gpu.GpuTimer.Enabled = gpu;
+                    window.View3D.RequestNextFrameRendering();
+                }
+                JsonObject performance = Performance.Snapshot();
+                performance["gpuTiming"] = new JsonObject { ["on"] = Rendering.Gpu.GpuTimer.Enabled, ["method"] = Rendering.Gpu.GpuTimer.Method };
+                return performance;
             case "logs":
                 // what the Console shows, newest last
                 {
