@@ -1258,6 +1258,15 @@ change, span `model.armies`), the place tool and the commands.
   Applying one makes it what the place tool places (`Preset`); a click runs `units.placePreset
   {name?, x?, z?, army?, group?, heading?}`: a new group named after the preset in the tool's
   group, turned in quarter turns. Choosing a unit leaves the preset.
+- **Example unit presets and army roles** (U-6): the library's `ExampleUnitPresets` (36 presets
+  embedded in FAForever.MapEditor.Project) are written into `presets/units` when the workspace
+  opens (`PresetsViewModel.Open`; a deleted one stays deleted, an edited one is left alone). A
+  preset may name an army role (`UnitPresetSettings.Role`: civilian, enemy, player) and wrecks
+  (`Wrecks`): `units.placePreset {..., wreck?}` then places it for `UnitPresets.ArmyFor` (the
+  civilians; an army no player takes, `ARMY_9` first, else the civilians; the nearest spawn's army)
+  in place of the tool's army, unless `army` is given, and wrecks into the army's `WRECKAGE` group;
+  with the symmetry a player's preset's images go to the partner spawns' armies (`MirrorPlaced`).
+  The tool keeps the role (`PresetRole`, `state` `presetRole`); applying says the army in the status line.
 - **Armies** (`ArmiesSection` in the Map mode, `map.armies {army?}` shows it): the list with each
   army's summary, Add army and Add extra (`map.addArmy {name?, extra?, x?, z?}`), and the chosen
   army's name (`map.renameArmy`), playable, team and factions (`map.setArmy {army, playable?,

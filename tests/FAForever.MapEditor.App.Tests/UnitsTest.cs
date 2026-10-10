@@ -239,6 +239,33 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task AnExampleUnitsPresetGoesToTheArmyOfItsRoleAndAWreckFieldIntoTheWreckage()
+        {
+            MainViewModel model = await Open();
+            string folder = Path.Combine(AppContext.BaseDirectory, "presets", Guid.NewGuid().ToString("N"));
+            ExampleUnitPresets.Ensure(Path.Combine(folder, PresetKinds.Units));
+            model.Presets.Use(new PresetLibrary(folder));
+            Assert.IsTrue(model.Presets.Shown.Any(preset => preset.Name == "Aeon base, small"), "the Units mode's panel lists the examples");
+
+            await Run(model, "presets.apply", new JsonObject { ["kind"] = UnitPreset.Kind, ["name"] = "Aeon base, small" });
+            UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
+            Assert.AreEqual(ArmyRoles.Enemy, tool.PresetRole);
+            tool.PlaceInto("ARMY_3", "INITIAL");
+            tool.Press(200, 200);
+            Assert.IsTrue(model.Selection.Items.Count() > 20);
+            Assert.IsTrue(model.Selection.Items.All(unit => model.ShownDocument!.FindUnit(unit.Name!)!.Army == "ARMY_9"), "an enemy's base goes to the army no player takes, whatever the tool's army");
+            CollectionAssert.AreEqual(new[] { "INITIAL", "Aeon base, small", "Factories" }, model.ShownDocument!.FindUnit(model.Selection.Items[0].Name!)!.Group.ToArray(), "with the base's role groups");
+
+            CommandRun wrecks = await Run(model, "units.placePreset", new JsonObject { ["name"] = "Wreck field, mixed", ["x"] = 100, ["z"] = 300 });
+            Assert.AreEqual("NEUTRAL_CIVILIAN", ((JsonObject)wrecks.Result!)["army"]!.GetValue<string>());
+            StringAssert.StartsWith(((JsonObject)wrecks.Result!)["group"]!.GetValue<string>(), UnitWrecks.GroupName + "/");
+            Assert.IsTrue(model.Selection.Items.All(unit => UnitWrecks.IsWreck(model.ShownDocument!.FindUnit(unit.Name!)!)));
+
+            CommandRun given = await Run(model, "units.placePreset", new JsonObject { ["name"] = "UEF wall line", ["x"] = 300, ["z"] = 100, ["army"] = "ARMY_4" });
+            Assert.AreEqual("ARMY_4", ((JsonObject)given.Result!)["army"]!.GetValue<string>(), "an army given wins over the role");
+        }
+
+        [TestMethod]
         public async Task TheArmiesAreAddedRenamedChangedAndRemoved()
         {
             MainViewModel model = await Open();
