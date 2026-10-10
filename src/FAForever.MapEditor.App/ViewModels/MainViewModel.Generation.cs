@@ -185,6 +185,7 @@ public sealed partial class MainViewModel
                 return result;
             }
             Generation.Results.Keep(result);
+            Generation.NoteMade(id, Stopwatch.GetElapsedTime(start), GenerationWay.Asked);
             if (generator is IDocumentGenerator part)
             {
                 WhenNoStroke(() =>

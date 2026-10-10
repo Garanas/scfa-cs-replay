@@ -31,6 +31,7 @@ public sealed partial class AutomationServer
             ["kept"] = model.AutoGeneration.Kept,
             ["cancelled"] = model.AutoGeneration.Cancelled,
         },
+        ["list"] = model.DescribeProceduralList(),
         ["navigation"] = GenerateNavigationHandler.Describe(model.Navigation),
         ["showNavigation"] = model.ShowNavigation,
         ["routesTop"] = window.MapView.RoutesDrawn,

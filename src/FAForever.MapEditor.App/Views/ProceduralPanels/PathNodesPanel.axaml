@@ -7,7 +7,7 @@
              x:DataType="vm:PathNodesViewModel">
   <Border Classes="group">
     <StackPanel Classes="stack">
-      <TextBlock Classes="overline" Text="{Binding Source=Path networks, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <TextBlock Classes="overline" Text="{Binding Source=How they are generated, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
       <UniformGrid Columns="2">
         <CheckBox Content="Land" IsChecked="{Binding Land}" AutomationProperties.Name="Generate the land network" />
         <CheckBox Content="Water" IsChecked="{Binding Water}" AutomationProperties.Name="Generate the water network" />

@@ -140,6 +140,7 @@ faf-map editor state --port 5372                                        # looks:
 faf-map editor run id=plugin.scatter-rocks.scatter count=10 --port 5372  # a Lua plugin's command (state.plugins: errors, commands, tools)
 faf-map editor tool id=plugin.plateau-brush.plateau --port 5372          # a Lua plugin's tool: then mouse/stroke as with any tool
 faf-map editor run id=generate.navigation --port 5372                    # the Procedural mode: regions, starts, routes (state.procedural)
+faf-map editor run id=view.inspectPart part=procedural.navigationMesh --port 5372   # a generated result's entry in the inspector (state.procedural.list)
 faf-map editor run id=terrain.switchHeights to=draft --port 5372          # both views show the draft, brushes write it (state.draftFinal); Ctrl+Shift+D
 faf-map editor run id=generate.auto on=true --port 5372                  # walkability regenerates 1 s after a change; wait path=procedural.auto.kept
 faf-map editor run id=file.export --port 5372 && faf-map editor state path=procedural.export --port 5372   # the export's steps

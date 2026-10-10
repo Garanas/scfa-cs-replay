@@ -255,3 +255,60 @@ public sealed record TexturePicture(FAForever.MapEditor.Project.Workspaces.Decod
     private static (uint, uint, uint) Over(byte r, byte g, byte b, byte a, uint under) =>
         ((r * (uint)a + under * (255u - a)) / 255, (g * (uint)a + under * (255u - a)) / 255, (b * (uint)a + under * (255u - a)) / 255);
 }
+
+/// <summary>
+/// A grid of colours of the document (the preview, the normal map): its red, green and blue, opaque.
+/// </summary>
+public sealed record ColourGridPicture(TiledBuffer<Color32> Grid) : PreviewPicture
+{
+    public override object Key => Grid;
+
+    public override (int Width, int Height)? GridSize => (Grid.Width, Grid.Height);
+
+    public override (uint[] Pixels, int Width, int Height)? Render(int size)
+    {
+        (int width, int height) = Fit(Grid.Width, Grid.Height, size);
+        uint[] pixels = new uint[width * height];
+        for (int y = 0; y < height; y++)
+        {
+            int z = Math.Min(Grid.Height - 1, (int)((y + 0.5) * Grid.Height / height));
+            for (int x = 0; x < width; x++)
+            {
+                Color32 colour = Grid[Math.Min(Grid.Width - 1, (int)((x + 0.5) * Grid.Width / width)), z];
+                pixels[y * width + x] = 0xFF000000u | (uint)colour.Red << 16 | (uint)colour.Green << 8 | colour.Blue;
+            }
+        }
+        return (pixels, width, height);
+    }
+}
+
+/// <summary>
+/// A layer of the navigational mesh (walkability, the navigation mesh's regions): black where its
+/// units cannot go; where they go white, or with <paramref name="Regions"/> a grey of its own per
+/// region, so neighbouring regions tell apart.
+/// </summary>
+public sealed record NavGridPicture(FAForever.FileFormats.Map.NavGrid Grid, bool Regions = false) : PreviewPicture
+{
+    public override object Key => Grid;
+
+    public override string Variant => Regions ? "regions" : "walkability";
+
+    public override (int Width, int Height)? GridSize => (Grid.Width, Grid.Height);
+
+    public override (uint[] Pixels, int Width, int Height)? Render(int size)
+    {
+        (int width, int height) = Fit(Grid.Width, Grid.Height, size);
+        uint[] pixels = new uint[width * height];
+        for (int y = 0; y < height; y++)
+        {
+            int z = Math.Min(Grid.Height - 1, (int)((y + 0.5) * Grid.Height / height));
+            for (int x = 0; x < width; x++)
+            {
+                int label = Grid.Cells[z * Grid.Width + Math.Min(Grid.Width - 1, (int)((x + 0.5) * Grid.Width / width))];
+                uint value = label <= 0 ? 0u : Regions ? 255u - (uint)((label - 1) * 37 % 160) : 230u;
+                pixels[y * width + x] = 0xFF000000u | value << 16 | value << 8 | value;
+            }
+        }
+        return (pixels, width, height);
+    }
+}

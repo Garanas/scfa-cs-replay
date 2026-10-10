@@ -206,7 +206,7 @@ public sealed class AutoGeneration
                 return generator.Generate(document, token);
             }, token).ConfigureAwait(false);
             _log.LogInformation("Regenerated the {Generator} on its own ({Milliseconds} ms)", generator.Id, Math.Round(Stopwatch.GetElapsedTime(begin).TotalMilliseconds));
-            Finish(generator.Id, pending, document, value);
+            Finish(generator.Id, pending, document, value, Stopwatch.GetElapsedTime(begin));
         }
         catch (OperationCanceledException)
         {
@@ -219,7 +219,7 @@ public sealed class AutoGeneration
         }
     }
 
-    private void Finish(string id, Pending pending, MapDocument? document, object? value) => UiThread.Run(_ui, () =>
+    private void Finish(string id, Pending pending, MapDocument? document, object? value, TimeSpan took = default) => UiThread.Run(_ui, () =>
     {
         if (!_pending.TryGetValue(id, out Pending? now) || now != pending)
         {
@@ -234,6 +234,7 @@ public sealed class AutoGeneration
         if (document is not null && value is not null && !pending.Cancel.IsCancellationRequested && _generation.Results.Find(id) is IGenerator generator)
         {
             _generation.Results.Keep(GeneratedResult.Of(generator, document, value));
+            _generation.NoteMade(id, took, GenerationWay.OnItsOwn);
             Kept++;
             _generation.Refresh(_document());
             Generated?.Invoke(id);

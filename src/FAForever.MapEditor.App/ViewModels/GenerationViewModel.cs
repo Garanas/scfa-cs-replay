@@ -20,6 +20,44 @@ public sealed record GeneratedRow(string Id, string Title, string Status, string
 }
 
 /// <summary>
+/// How a result came to be made.
+/// </summary>
+public enum GenerationWay
+{
+    /// <summary>A person's Generate (or a command that generates it).</summary>
+    Asked,
+
+    /// <summary>On its own, a second after a change to its inputs.</summary>
+    OnItsOwn,
+
+    /// <summary>With everything out of date (<c>generate.stale</c>).</summary>
+    Stale,
+}
+
+/// <summary>
+/// When a result was last made in this session, how long it took and how.
+/// </summary>
+public sealed record GenerationTiming(DateTimeOffset Made, TimeSpan Took, GenerationWay Way)
+{
+    /// <summary>
+    /// E.g. <c>Made at 14:02:11 in 2.3 s, on its own</c>.
+    /// </summary>
+    public string Text => $"Made at {Made.ToLocalTime():HH:mm:ss} in {Duration(Took)}{Way switch
+    {
+        GenerationWay.OnItsOwn => ", on its own",
+        GenerationWay.Stale => ", with everything out of date",
+        _ => "",
+    }}";
+
+    /// <summary>
+    /// E.g. <c>340 ms</c>, <c>2.3 s</c>.
+    /// </summary>
+    public static string Duration(TimeSpan took) => took.TotalSeconds < 1
+        ? $"{Math.Round(took.TotalMilliseconds).ToString(System.Globalization.CultureInfo.InvariantCulture)} ms"
+        : $"{took.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} s";
+}
+
+/// <summary>
 /// What the editor generates when asked (user story F-7): the generators of the features
 /// (walkability, the normal map and preview, props from rules, ...), their last results for the
 /// open map, and which of those are out of date. Nothing generates by itself; the status bar says
@@ -43,6 +81,38 @@ public sealed partial class GenerationViewModel : ObservableObject
     {
         Results.Register(generator);
         _commands[generator.Id] = commandId;
+        Registered?.Invoke(generator);
+    }
+
+    /// <summary>
+    /// Raised when a generator with a command is registered: the Procedural mode lists it.
+    /// </summary>
+    public event Action<IGenerator>? Registered;
+
+    /// <summary>
+    /// The generators that have a command, in the order they were registered.
+    /// </summary>
+    public IReadOnlyList<IGenerator> Listed => [.. Results.Generators.Where(generator => _commands.ContainsKey(generator.Id))];
+
+    /// <summary>
+    /// The command that generates a result, e.g. <c>generate.walkability</c>; null for none.
+    /// </summary>
+    public string? CommandOf(string id) => _commands.GetValueOrDefault(id);
+
+    private readonly Dictionary<string, GenerationTiming> _timings = new Dictionary<string, GenerationTiming>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// When a result was last made in this session and how long it took; null when it was not.
+    /// </summary>
+    public GenerationTiming? TimingOf(string id) => _timings.GetValueOrDefault(id);
+
+    /// <summary>
+    /// Says that a result was made and kept: by Generate, on its own, or by Everything out of date.
+    /// </summary>
+    public void NoteMade(string id, TimeSpan took, GenerationWay way)
+    {
+        _timings[id] = new GenerationTiming(DateTimeOffset.Now, took, way);
+        OnPropertyChanged(nameof(Rows));
     }
 
     /// <summary>
@@ -115,6 +185,7 @@ public sealed partial class GenerationViewModel : ObservableObject
     public void Forget()
     {
         Results.Forget();
+        _timings.Clear();
         States = [];
     }
 
@@ -137,7 +208,9 @@ public sealed partial class GenerationViewModel : ObservableObject
             using Performance.Span measure = Performance.Measure("model.generate");
             done.Add(state.Generator.Id);
             generated.Add(state);
+            long start = System.Diagnostics.Stopwatch.GetTimestamp();
             GeneratedResult result = Results.Generate(state.Generator.Id, document);
+            NoteMade(state.Generator.Id, System.Diagnostics.Stopwatch.GetElapsedTime(start), GenerationWay.Stale);
             if (state.Generator is IDocumentGenerator generator && apply is not null)
             {
                 document = apply(generator, result.Value);

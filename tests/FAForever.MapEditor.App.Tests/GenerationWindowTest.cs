@@ -70,8 +70,10 @@ namespace FAForever.MapEditor.App.Tests
             await Until(() => model.Walkability.Navigation is not null && !model.Generation.IsRunning("walkability"));
 
             Assert.IsTrue(model.ShowWalkability);
+            // the panel's entry says how it stands, the inspector shows the chosen entry (walkability, the first)
+            Assert.AreEqual("Current", model.ProceduralList.Parts.Find("procedural.walkability")!.Detail);
             Button again = window.GetVisualDescendants().OfType<Button>()
-                .Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == "Generate the walkability");
+                .Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == "Generate the walkability from the inspector");
             Assert.AreEqual("Generate again", again.Content);
             TextBlock status = window.GetVisualDescendants().OfType<TextBlock>().First(text => text.Text == "Up to date");
             Assert.IsTrue(status.IsVisible);
