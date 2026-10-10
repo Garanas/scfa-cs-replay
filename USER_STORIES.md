@@ -93,8 +93,11 @@ reads again when it changes; and nothing that generates runs by itself.
       in the window.
 - [ ] **M-2 New map.** Size, starting height, water, biome or template; from scratch.
 - [ ] **M-3 Size and playable area.** Grow or crop the map; set the playable area.
-- [ ] **M-4 Armies.** Add, remove and rename armies; playable or extra (civilians); factions an army
-      is limited to; alliances; teams for the lobby.
+- [x] **M-4 Armies.** Add, remove and rename armies; playable or extra (civilians); factions an army
+      is limited to; alliances; teams for the lobby. The Map mode's Armies and teams: a renamed army
+      renames its spawn, a removed one takes its units and spawn along, a playable one gets a spawn.
+      Teams are kept in the project and written after the team FFA, the only one the game's lobby
+      reads; the lobby does not use them yet.
 - [ ] **M-5 Areas.** Draw, name, move and resize areas (rectangles) in the views.
 - [ ] **M-6 Script.** Open the map's script in the user's editor; see the files of the map folder.
 - [x] **M-7 Import and export.** Import a map folder of the game or the vault; export into the
@@ -195,11 +198,17 @@ reads again when it changes; and nothing that generates runs by itself.
       (land, air, naval, structure, civilian), with the unit's icon and size. Today: Units,
       Choose a unit opens the picker with those filters and each unit's mesh, tech and id; the
       inspector shows the chosen unit with its footprint. Missing: the game's unit icons (the
-      workspace does not convert them), placing the chosen unit (U-2).
-- [ ] **U-2 Place units.** Place units for an army, rotate and move them.
+      workspace does not convert them).
+- [x] **U-2 Place units.** Place units for an army, rotate and move them. The Units mode's Place
+      tool: the unit from the picker, the shelf or a dropped tile, the army and group in its
+      options; structures snap to the build grid and turn in quarter turns; the selection's army in
+      the inspector. Missing: mirroring with symmetry (wave 2).
 - [ ] **U-3 Unit groups.** Per army a tree of groups: create, rename, nest, move units between groups.
-- [ ] **U-4 Unit presets.** A civilian base, a defence line: a group saved as a preset and placed
-      again, for any army (F-10).
+      Today: the Units mode's tree with the units per group; nesting and moving between groups by command
+      (`units.moveGroup`, Move here); missing: dragging in the tree.
+- [x] **U-4 Unit presets.** A civilian base, a defence line: a group saved as a preset and placed
+      again, for any army (F-10). The Units mode's Presets: the selected units or the chosen group,
+      placed with the Place tool at the mouse as a new group, turned in quarter turns.
 - [ ] **U-5 Wrecks.** Place units as wrecks.
 
 ## V: Views

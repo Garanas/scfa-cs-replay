@@ -41,6 +41,13 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
   configuration, `standard`, with one team, `FFA`, and `customprops.ExtraArmies`; the export builds
   them. Factions a playable army is limited to (two co-op missions) are in `ArmyFactions`. The type
   is an enum, text fields are never null (empty instead), `Reclaim` is optional as a whole.
+- **Teams** (`ScenarioInfo.Teams`, user story M-4; optional in the project, absent for none): the
+  game's lobby (`lua/ui/maputil.lua`, `GetArmies`) reads only the first team of `standard`, and
+  only when it is named `FFA`; so the export always writes `FFA` with every playable army first,
+  and the map maker's teams after it, each with its playable armies. The import takes the armies
+  of a first team `FFA` as the playable ones and the teams after it as the map maker's (a first
+  team of another name: all teams' armies are playable, and those teams are kept). An army is in
+  one team at most; a map without teams exports as it always did.
 - Markers derive from `Marker` (`Id`, `Name`, `Position`, `Orientation`, and a `Color` each kind
   fixes). Links between markers (`PathNode.AdjacentTo`, `Chain.MarkerIds`) are ids; names are what
   the files hold, on disk and in the game. A link to a name no marker has is dropped on import
@@ -67,6 +74,20 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     (`AddMarker` gives a new id and a free name, `FreeName`: `Mass 08` becomes `Mass 12`;
     `RemoveMarker` drops every path node link and chain entry to it; `UpdateMarker` may not change
     a marker's kind or id) and areas by name.
+  - `ArmyEdits` (M-4): add an army (a free `ARMY_n`; playable ones get a spawn, at a place or the
+    middle), remove one (with its units, its spawn, and every mention), rename one (the scenario's
+    lists, factions, team, the others' alliances and its spawn marker; a name a marker has is
+    refused), make it playable or extra (extra leaves its team and factions), its factions (none or
+    all four: no limit), alliances (both ways unless told) and team. Army names are Lua names
+    (`IsArmyName`): the scenario lists extra armies separated by spaces.
+  - `UnitGroupEdits` (U-2, U-3, U-4): groups by army and path (`INITIAL/Town`, empty for the root
+    group `Units`): add, rename (unique among siblings), remove (its units and groups to the group
+    above, or along with it), move into another group of any army; `MoveUnits` between armies and
+    groups; `CaptureUnits` and `PlaceUnits`, a template of units relative to its middle (rounded
+    to a whole ogrid, so structures stay on the build grid) placed as a new group, turned. The game
+    creates the units of each army's `INITIAL`, with the groups in it, at the start.
+    `BuildGrid.Snap`: a structure an odd number of ogrids wide on a half ogrid, an even one on a
+    whole; a quarter turn swaps its sides.
   - `ObjectRef` names one thing of any kind (`marker:12`, `prop:5`, `decal:3`, `unit:UNIT_5`,
     `area:AREA_1`), for the editor's selection (user story F-11). `MapObjects` gives a thing's
     place (its centre: a decal's position is a corner), heading (about the up axis, from +x towards

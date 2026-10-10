@@ -604,6 +604,55 @@ that moves stays selected. Another map clears it. The core's side is
 - Not built yet: picking and a box in the 3D view (its `Pick(ray)` will call `SelectAt` and the
   like), handles, scaling, snapping, moving along one axis, turning about the selection's centre.
 
+## Units and armies
+
+User stories U-2, U-3, U-4 and M-4. The editing is the library's (`ArmyEdits`, `UnitGroupEdits`,
+`BuildGrid`; its guide); the window's side is `MainViewModel.Armies` (`ArmiesViewModel`: the
+Units mode's tree and the Map mode's list, made again only when the armies, groups or counts
+change, span `model.armies`), the place tool and the commands.
+
+- **The place tool** (`Tools/UnitPlaceTool`, `units.place`): a click runs `units.add {x, z,
+  blueprint?, heading?, army?, group?, snap?}`, one step of undo, a free `UNIT_n`; what is left out
+  is the tool's. Its unit comes from the picker (Choose..., `units.pick`), a unit tile chosen on
+  the shelf (`Assets.Shown`), or a tile dropped on a view (`IAssetDropTarget`; a unit dropped while
+  another tool is active chooses the place tool and places it, through `AssetDropped`). Its army
+  is the civilians (`NEUTRAL_CIVILIAN`, else the first extra army) until another is chosen, its
+  group `INITIAL` (the group whose units the game creates at the start) or the group chosen in the
+  tree. A structure (the catalogue's `IsStructure`, its `Footprint` from the converted JSON;
+  1 by 1 without one) turns in quarter turns and snaps to the build grid: an odd size on a half
+  ogrid, an even one on a whole. Q and E turn what is placed next (a structure or preset 90
+  degrees, a mobile unit 15, shift 90); the select tool turns a selection of structures 90.
+  A blueprint the workspace lacks is placed as it is, with a warning.
+- **The tree** (`UnitGroupsSection`, a `TreeView` of `GroupNode`s with their units counted
+  with the groups in them; expanded nodes stay expanded when it is made again): choosing a node is
+  where the place tool places and the buttons work: Add (`units.addGroup {army?, parent?, name?}`,
+  the chosen group when left out; the new group is chosen), Rename (`units.renameGroup`), Remove
+  (`units.removeGroup {keepUnits}`: the panel keeps the units, which go to the group above),
+  Select units (`units.selectGroup`), Move here (`units.moveToGroup {group, army?}`: without an
+  army each unit stays in its own). `units.moveGroup {army, group, toParent, toArmy?}` nests a
+  group. The inspector's unit section shows the selection's army (choosing another runs
+  `units.moveToArmy {army, group?}`) and group. A path is `INITIAL/Town`, empty for the root.
+- **Units presets** (`Tools/UnitPreset`, kind `units`, the Units mode's Presets): Save keeps the
+  selected units, else the chosen group's, with places relative to their middle (on a whole
+  ogrid) and heights above the terrain, in their groups below the deepest one holding them all.
+  Applying one makes it what the place tool places (`Preset`); a click runs `units.placePreset
+  {name?, x?, z?, army?, group?, heading?}`: a new group named after the preset in the tool's
+  group, turned in quarter turns. Choosing a unit leaves the preset.
+- **Armies** (`ArmiesSection` in the Map mode, `map.armies {army?}` shows it): the list with each
+  army's summary, Add army and Add extra (`map.addArmy {name?, extra?, x?, z?}`), and the chosen
+  army's name (`map.renameArmy`), playable, team and factions (`map.setArmy {army, playable?,
+  factions?, team?}`, one step), alliances (`map.setAlliance {army, other, stance?, mutual?}`)
+  and Remove (`map.removeArmy`). The spawn follows its army (renamed, removed, added for a
+  playable army); the library's guide says why teams are written after the team FFA.
+- The panel's and inspector's commands are in no menu (`units.add`, `units.renameGroup`,
+  `units.removeGroup`, `units.moveGroup`, `units.moveToArmy`, `units.moveToGroup`,
+  `map.renameArmy`, `map.setArmy`, `map.setAlliance`, `map.removeArmy`).
+- Automation: `state.units` (`place`: unit, preset, army, group, heading, structure, footprint;
+  `tree`: the chosen group and the first 200 groups with their units) and `state.armies` (name,
+  playable, team, factions, spawn, units, alliances, chosen).
+- Not built yet: dragging units or groups in the tree, mirroring placed units with symmetry,
+  team colours in the views.
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session
