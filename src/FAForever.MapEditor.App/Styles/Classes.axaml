@@ -267,18 +267,17 @@
     <Setter Property="BorderThickness" Value="1" />
   </Style>
 
-  <!-- the panels around the views: a head, then groups a line apart -->
+  <!-- the panels around the views: a head, then groups a line apart; their widths and the dock's height are the
+       layout's (MainWindow.ApplyLayout) -->
   <Style Selector="Border.modepanel">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
     <Setter Property="BorderThickness" Value="{StaticResource DividerRight}" />
-    <Setter Property="Width" Value="{StaticResource ModePanelWidth}" />
   </Style>
   <Style Selector="Border.inspector">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
     <Setter Property="BorderThickness" Value="{StaticResource DividerLeft}" />
-    <Setter Property="Width" Value="{StaticResource InspectorWidth}" />
   </Style>
   <Style Selector="Border.panelhead">
     <Setter Property="Padding" Value="{StaticResource PanelHeadPadding}" />
@@ -315,7 +314,6 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
     <Setter Property="BorderThickness" Value="{StaticResource DividerTop}" />
-    <Setter Property="Height" Value="{StaticResource DockHeight}" />
   </Style>
 
   <!-- a row of controls that wraps -->
@@ -501,10 +499,6 @@
     <Setter Property="IsVisible" Value="False" />
   </Style>
 
-  <!-- the asset shelf (concept C1): the dock grows while it shows -->
-  <Style Selector="Border.dock.tall">
-    <Setter Property="Height" Value="{StaticResource DockTallHeight}" />
-  </Style>
   <!-- the biomes or factions and the categories, left of the tiles -->
   <Style Selector="Border.facets">
     <Setter Property="Width" Value="{StaticResource AssetFacetsWidth}" />
@@ -693,5 +687,41 @@
     <Setter Property="Width" Value="{StaticResource MapPreviewSize}" />
     <Setter Property="Height" Value="{StaticResource MapPreviewSize}" />
     <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+
+  <!-- the window's layout (V-4): a splitter between a panel and the views, a line in the accent while held -->
+  <Style Selector="GridSplitter.layoutsplitter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="MinWidth" Value="{StaticResource LayoutSplitterSize}" />
+    <Setter Property="MinHeight" Value="{StaticResource LayoutSplitterSize}" />
+  </Style>
+  <Style Selector="GridSplitter.layoutsplitter:pointerover">
+    <Setter Property="Background" Value="{DynamicResource DividerBrush}" />
+  </Style>
+  <Style Selector="GridSplitter.layoutsplitter:pressed">
+    <Setter Property="Background" Value="{DynamicResource SelectedStrokeBrush}" />
+  </Style>
+  <!-- the toolbar of commands in the menu bar (F-1) -->
+  <Style Selector="StackPanel.toolbarrow">
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="Spacing" Value="{StaticResource SpaceSmall}" />
+    <Setter Property="Margin" Value="{StaticResource ToolbarDividerGap}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.toolbarbutton">
+    <Setter Property="Height" Value="{StaticResource ToolbarButtonSize}" />
+    <Setter Property="Padding" Value="{StaticResource ToolbarButtonPadding}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.toolbarbutton.icononly">
+    <Setter Property="Width" Value="{StaticResource ToolbarButtonSize}" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Button.toolbarbutton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ControlRaisedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
 </Styles>

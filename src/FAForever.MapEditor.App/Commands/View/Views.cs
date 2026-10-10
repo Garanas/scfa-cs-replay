@@ -63,6 +63,17 @@ public sealed class OpenPaletteHandler(PaletteViewModel palette) : IRequestHandl
     }
 }
 
-[Incomplete("V-4", "The top and 3D views side by side")]
+/// <summary>
+/// Shows the top and 3D views side by side, sharing the camera, each with its own mouse (user story V-4).
+/// </summary>
 [EditorCommand("view.sideBySide", "Side by side", Gesture = "Ctrl+D3", Story = "V-4")]
 public sealed record ShowSideBySide : IRequest;
+
+public sealed class ShowSideBySideHandler(MainViewModel model) : IRequestHandler<ShowSideBySide>
+{
+    public Task Handle(ShowSideBySide request, CancellationToken cancellationToken)
+    {
+        model.View = MapViewTab.SideBySide;
+        return Task.CompletedTask;
+    }
+}

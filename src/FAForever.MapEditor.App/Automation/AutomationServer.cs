@@ -123,6 +123,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
     [
         ("top", MapViewTab.Top, "view.top"),
         ("3d", MapViewTab.ThreeD, "view.3d"),
+        ("side", MapViewTab.SideBySide, "view.sideBySide"),
     ];
 
     /// <summary>
@@ -156,7 +157,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
     /// </summary>
     private static readonly string[] Own =
     [
-        "state", "commands", "run {id, interactive?, wait?, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?, under?}", "perf {reset?, gpu?}", "logs {problems?, count?}",
+        "state", "commands", "run {id, interactive?, wait?, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d|side}", "ui {hidden?, under?}", "perf {reset?, gpu?}", "logs {problems?, count?}",
         "diagnostics {record?, send?, endpoint?, flush?, upload?}", "version-control {open?, enable?, name?, email?, lfs?, remote?}",
         "picker {open?, query?, group?, category?, tech?, move?: [across, down], choose?, cancel?}",
         "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "pick {x, y, highlight?}",
@@ -429,7 +430,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                     result["settled"] = await SettleAsync(arguments["gpu"]?.GetValue<bool>() == true);
                 }
                 result["file"] = arguments["gpu"]?.GetValue<bool>() == true
-                    ? model.View == MapViewTab.ThreeD
+                    ? model.Shows3DView
                         ? await window.View3D.CaptureAsync(Text(arguments, "path"), arguments["brush"] is JsonArray brush
                             ? new System.Numerics.Vector2(brush[0]!.GetValue<float>(), brush[1]!.GetValue<float>())
                             : null).WaitAsync(TimeSpan.FromSeconds(10))
@@ -631,6 +632,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["walkability"] = GenerateWalkabilityHandler.Describe(model.Walkability),
             ["problems"] = CheckMapHandler.Describe(model.Problems),
             ["props"] = model.Props.Describe(),
+            ["layout"] = model.Layout.Describe(),
             ["gpu"] = new JsonObject
             {
                 ["renderer"] = window.View3D.Renderer,

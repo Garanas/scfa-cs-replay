@@ -125,7 +125,8 @@ namespace FAForever.MapEditor.App.Tests
                     "markers.deleteChain", "markers.link", "markers.place", "markers.renameChain", "markers.set", "markers.setChain", "markers.showKind",
                     "paint.chooseMask", "paint.moveStratum", "paint.removeStratum", "paint.setLayer", "presets.apply", "presets.delete", "problems.show", "props.place",
                     "props.removeFromPalette", "props.scale", "props.set", "props.tilt", "select.set", "units.add", "units.moveGroup", "units.moveToArmy",
-                    "units.moveToGroup", "units.removeGroup", "units.renameGroup", "view.gpuDebug", "view.walkability", "view.zoomTo", "water.removeWaveGenerator",
+                    "units.moveToGroup", "units.removeGroup", "units.renameGroup", "view.addToToolbar", "view.gpuDebug", "view.removeFromToolbar", "view.resizePanel",
+                    "view.setToolbar", "view.togglePanel", "view.walkability", "view.zoomTo", "water.removeWaveGenerator",
                     "water.set", "water.setWaveGenerator", "water.setWaveTexture", "workspace.convert", "workspace.setUp",
                 }, outside,
                 "the commands outside the menus are for automation and plugins: their buttons are on a page or panel");

@@ -22,6 +22,19 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         Heightmap.CursorMoved += text => CursorText.Text = text;
         Terrain3D.CursorMoved += text => CursorText.Text = text;
+        // a splitter let go: the layout remembers the size it left (user story V-4)
+        ModePanelSplitter.DragCompleted += (_, _) => _model?.Layout.Resize(LayoutPanel.ModePanel, Shell.ColumnDefinitions[0].ActualWidth);
+        InspectorSplitter.DragCompleted += (_, _) => _model?.Layout.Resize(LayoutPanel.Inspector, Shell.ColumnDefinitions[4].ActualWidth);
+        DockSplitter.DragCompleted += (_, _) => _model?.Layout.Resize(LayoutPanel.Dock, Middle.RowDefinitions[2].ActualHeight);
+        ViewsSplitter.DragCompleted += (_, _) =>
+        {
+            double top = Maps.ColumnDefinitions[0].ActualWidth;
+            double both = top + Maps.ColumnDefinitions[2].ActualWidth;
+            if (both > 0)
+            {
+                _model?.Layout.Split(top / both);
+            }
+        };
     }
 
     /// <summary>
@@ -55,6 +68,8 @@ public sealed partial class MainWindow : Window
             _model.TopViewRequested -= OnTopViewRequested;
             _model.ShowFolderRequested -= OnShowFolderRequested;
             _model.OpenFileRequested -= OnOpenFileRequested;
+            _model.Layout.PropertyChanged -= OnLayoutChanged;
+            _model.Layout.Changed -= OnLayoutResized;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
@@ -66,8 +81,11 @@ public sealed partial class MainWindow : Window
             _model.TopViewRequested += OnTopViewRequested;
             _model.ShowFolderRequested += OnShowFolderRequested;
             _model.OpenFileRequested += OnOpenFileRequested;
+            _model.Layout.PropertyChanged += OnLayoutChanged;
+            _model.Layout.Changed += OnLayoutResized;
             BuildMenusAndShortcuts(_model);
             ShowChosenView();
+            ApplyLayout();
         }
     }
 
@@ -137,8 +155,50 @@ public sealed partial class MainWindow : Window
             case nameof(MainViewModel.GpuDebug):
                 Terrain3D.Debug = _model!.GpuDebug;
                 break;
+            case nameof(MainViewModel.IsDockTall):
+                ApplyLayout();
+                break;
         }
     }
+
+    private void OnLayoutChanged(object? sender, PropertyChangedEventArgs e) => ApplyLayout();
+
+    private void OnLayoutResized(object? sender, EventArgs e)
+    {
+        ApplyLayout();
+        ShowChosenView();
+    }
+
+    /// <summary>
+    /// Lays the panels out as the layout says (user story V-4): a shown panel's column or row at
+    /// its size (the editor's own from the tokens when the user gave none), a hidden one's
+    /// collapsed with its splitter. The dock is higher while the asset shelf shows, unless the
+    /// user gave it a height.
+    /// </summary>
+    private void ApplyLayout()
+    {
+        if (_model is null)
+        {
+            return;
+        }
+        LayoutViewModel layout = _model.Layout;
+        ColumnDefinition modePanel = Shell.ColumnDefinitions[0];
+        modePanel.Width = layout.ShowModePanel ? new GridLength(layout.ModePanelWidth ?? Token("ModePanelWidth")) : GridLength.Auto;
+        modePanel.MinWidth = layout.ShowModePanel ? Token("LayoutPanelMinWidth") : 0;
+        ColumnDefinition inspector = Shell.ColumnDefinitions[4];
+        inspector.Width = layout.ShowInspector ? new GridLength(layout.InspectorWidth ?? Token("InspectorWidth")) : GridLength.Auto;
+        inspector.MinWidth = layout.ShowInspector ? Token("LayoutPanelMinWidth") : 0;
+        Shell.ColumnDefinitions[2].MinWidth = Token("LayoutViewMinWidth");
+        RowDefinition dock = Middle.RowDefinitions[2];
+        dock.Height = layout.ShowDock ? new GridLength(layout.DockHeight ?? Token(_model.IsDockTall ? "DockTallHeight" : "DockHeight")) : GridLength.Auto;
+        dock.MinHeight = layout.ShowDock ? Token("LayoutDockMinHeight") : 0;
+        Middle.RowDefinitions[0].MinHeight = Token("LayoutDockMinHeight");
+    }
+
+    /// <summary>
+    /// A size of <c>Styles/Tokens.axaml</c>.
+    /// </summary>
+    private double Token(string key) => this.TryFindResource(key, ActualThemeVariant, out object? value) && value is double size ? size : 0;
 
     // the menu items and shortcuts ask the registry again whether their command can run
     private void OnCanRunChanged(object? sender, EventArgs e)
@@ -169,11 +229,25 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private async void OnOpenFileRequested(string file) => await Launcher.LaunchFileInfoAsync(new FileInfo(file));
 
+    /// <summary>
+    /// Shows the chosen view, or both side by side (user story V-4): the views only change their
+    /// visibility and column, so both stay in the tree and the 3D view keeps its context.
+    /// </summary>
     private void ShowChosenView()
     {
         MapViewTab view = _model?.View ?? MapViewTab.Top;
-        Heightmap.IsVisible = view == MapViewTab.Top;
-        Terrain3D.IsVisible = view == MapViewTab.ThreeD;
+        bool sideBySide = view == MapViewTab.SideBySide;
+        Heightmap.IsVisible = view is MapViewTab.Top or MapViewTab.SideBySide;
+        Terrain3D.IsVisible = view is MapViewTab.ThreeD or MapViewTab.SideBySide;
+        ViewsSplitter.IsVisible = sideBySide;
+        Grid.SetColumnSpan(Heightmap, sideBySide ? 1 : 3);
+        Grid.SetColumn(Terrain3D, sideBySide ? 2 : 0);
+        Grid.SetColumnSpan(Terrain3D, sideBySide ? 1 : 3);
+        double split = _model?.Layout.SideBySideSplit ?? 0.5;
+        Maps.ColumnDefinitions[0].Width = new GridLength(split, GridUnitType.Star);
+        Maps.ColumnDefinitions[2].Width = new GridLength(1 - split, GridUnitType.Star);
+        Maps.ColumnDefinitions[0].MinWidth = sideBySide ? Token("LayoutViewMinWidth") : 0;
+        Maps.ColumnDefinitions[2].MinWidth = sideBySide ? Token("LayoutViewMinWidth") : 0;
     }
 
     protected override async void OnClosing(WindowClosingEventArgs e)

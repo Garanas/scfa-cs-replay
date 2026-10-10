@@ -12,8 +12,8 @@ namespace FAForever.MapEditor.Project.Workspaces
     public sealed record TelemetrySettings(bool Record, bool Send, string? Endpoint, string InstallId);
 
     /// <summary>
-    /// What the editor remembers for the user, outside the workspace: where the workspace is, and the
-    /// choices about diagnostics.
+    /// What the editor remembers for the user, outside the workspace: where the workspace is, the
+    /// choices about diagnostics, and the window's layout.
     /// </summary>
     /// <param name="File">The settings file; <see cref="DefaultFile"/> for the user.</param>
     public sealed record UserSettings(string File)
@@ -56,6 +56,18 @@ namespace FAForever.MapEditor.Project.Workspaces
                 return new TelemetrySettings(telemetry.Record, telemetry.Send, telemetry.Endpoint, telemetry.InstallId!);
             }
         }
+
+        /// <summary>
+        /// How the window is laid out and its toolbar (user stories V-4, F-1): the defaults until
+        /// the user changes them.
+        /// </summary>
+        public LayoutSettingsDto Layout => Read().Layout ?? new LayoutSettingsDto();
+
+        /// <summary>
+        /// Remembers how the window is laid out.
+        /// </summary>
+        /// <exception cref="IOException">The file cannot be written.</exception>
+        public void SetLayout(LayoutSettingsDto layout) => Update(settings => settings with { Layout = layout });
 
         /// <summary>
         /// Remembers <paramref name="folder"/> as the workspace.

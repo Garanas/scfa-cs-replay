@@ -29,6 +29,33 @@
               </StackPanel>
             </DockPanel>
           </Button>
+          <!-- the toolbar of commands (F-1), made from the registry as the menus are -->
+          <ItemsControl DockPanel.Dock="Right" x:Name="Toolbar" ItemsSource="{Binding Layout.Toolbar}" IsVisible="{Binding Layout.ShowToolbar}"
+                        AutomationProperties.Name="Toolbar">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Classes="toolbarrow" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ToolbarItem">
+                <Button Classes="toolbarbutton" Classes.icononly="{Binding HasIcon}" IsEnabled="{Binding CanRun}"
+                        Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding Id}"
+                        ToolTip.Tip="{Binding Tip}" AutomationProperties.Name="{Binding Title}">
+                  <Button.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="Remove from the toolbar" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RemoveFromToolbarCommand}" CommandParameter="{Binding Id}" />
+                      <MenuItem Header="Hide the toolbar" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="view.toolbar" />
+                    </ContextMenu>
+                  </Button.ContextMenu>
+                  <Panel>
+                    <Path Classes="icon small" Data="{Binding Icon, Converter={x:Static controls:IconConverter.Instance}}" IsVisible="{Binding HasIcon}" />
+                    <TextBlock Text="{Binding Title}" IsVisible="{Binding !HasIcon}" />
+                  </Panel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
           <Menu x:Name="MainMenu" />
         </DockPanel>
       </Border>
@@ -47,56 +74,72 @@
       </Border>
 
       <views:ModeRail DockPanel.Dock="Left" />
-      <views:ModePanel DockPanel.Dock="Left" />
-      <views:Inspector DockPanel.Dock="Right" />
 
-      <DockPanel>
-        <views:ToolOptions DockPanel.Dock="Top" />
+      <!-- the panels and the views (V-4): the mode's panel, the views with the dock under them and the
+           inspector, each panel with a splitter that resizes it; MainWindow.axaml.cs lays the columns and
+           rows out from the layout the user's settings remember -->
+      <Grid x:Name="Shell" ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+        <views:ModePanel x:Name="ModePanelView" Grid.Column="0" IsVisible="{Binding Layout.ShowModePanel}" />
+        <GridSplitter x:Name="ModePanelSplitter" Grid.Column="1" Classes="layoutsplitter" ResizeDirection="Columns" IsVisible="{Binding Layout.ShowModePanel}"
+                      AutomationProperties.Name="Resize the mode panel" />
 
-        <!-- which view, and what it shows over the terrain; the tabs only choose: both views stay in the tree,
-             so the 3D view keeps its textures on the graphics card -->
-        <Border DockPanel.Dock="Top" Classes="toolbar views">
-          <WrapPanel Classes="row">
-            <!-- in the order of MapViewTab -->
-            <TabControl x:Name="Views" Classes="segmented" SelectedIndex="{Binding View, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="View">
-              <TabItem Header="Top" />
-              <TabItem Header="3D" />
-            </TabControl>
-            <Button Classes="chip planned" Content="Side by side" Command="{Binding RunCommand}" CommandParameter="view.sideBySide"
-                    ToolTip.Tip="Not built yet: user story V-4" />
-            <Border Classes="barseparator" />
-            <TextBlock Classes="caption" Text="Show" />
-            <ItemsControl ItemsSource="{Binding Overlays}" AutomationProperties.Name="Shown over the terrain">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <WrapPanel Classes="chips" />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:OverlayItem">
-                  <Button Classes="chip" Classes.on="{Binding IsOn}" Classes.planned="{Binding IsIncomplete}" Content="{Binding Title}"
-                          Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding Definition.CommandId}"
-                          AutomationProperties.Name="{Binding Title, StringFormat='Show {0}'}" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <Border Classes="barseparator" />
-            <TextBlock Classes="caption" Text="Symmetry" />
-            <ComboBox ItemsSource="{Binding Symmetry.Choices}" SelectedItem="{Binding Symmetry.Chosen}"
-                      AutomationProperties.Name="Symmetry"
-                      AutomationProperties.HelpText="The symmetry edits are mirrored by; the top view shows its guides" />
-          </WrapPanel>
-        </Border>
+        <DockPanel Grid.Column="2">
+          <views:ToolOptions DockPanel.Dock="Top" />
 
-        <views:Dock DockPanel.Dock="Bottom" />
+          <!-- which view, and what it shows over the terrain; the tabs only choose: both views stay in the tree,
+               so the 3D view keeps its textures on the graphics card -->
+          <Border DockPanel.Dock="Top" Classes="toolbar views">
+            <WrapPanel Classes="row">
+              <!-- in the order of MapViewTab -->
+              <TabControl x:Name="Views" Classes="segmented" SelectedIndex="{Binding View, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="View">
+                <TabItem Header="Top" />
+                <TabItem Header="3D" />
+                <TabItem Header="Side by side" />
+              </TabControl>
+              <Border Classes="barseparator" />
+              <TextBlock Classes="caption" Text="Show" />
+              <ItemsControl ItemsSource="{Binding Overlays}" AutomationProperties.Name="Shown over the terrain">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel Classes="chips" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:OverlayItem">
+                    <Button Classes="chip" Classes.on="{Binding IsOn}" Classes.planned="{Binding IsIncomplete}" Content="{Binding Title}"
+                            Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding Definition.CommandId}"
+                            AutomationProperties.Name="{Binding Title, StringFormat='Show {0}'}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Border Classes="barseparator" />
+              <TextBlock Classes="caption" Text="Symmetry" />
+              <ComboBox ItemsSource="{Binding Symmetry.Choices}" SelectedItem="{Binding Symmetry.Chosen}"
+                        AutomationProperties.Name="Symmetry"
+                        AutomationProperties.HelpText="The symmetry edits are mirrored by; the top view shows its guides" />
+            </WrapPanel>
+          </Border>
 
-        <Grid>
-          <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" AutomationProperties.Name="Top view"
-                                   AutomationProperties.HelpText="The left mouse uses the tool; right or middle moves; the wheel zooms; alt and a click sends the 3D camera there; after a click the active tool takes keys (the Select tool: Q, E, the arrows, Escape)" />
-          <controls:TerrainViewGpu x:Name="Terrain3D" IsVisible="False" AutomationProperties.Name="3D view"
-                                    AutomationProperties.HelpText="The wheel zooms towards the mouse; middle moves; space and the mouse turn; F focuses; Home shows the whole map" />
-        </Grid>
-      </DockPanel>
+          <Grid x:Name="Middle" RowDefinitions="*,Auto,Auto">
+            <!-- the views: one of them, or both side by side (MainWindow.ShowChosenView) -->
+            <Grid x:Name="Maps" ColumnDefinitions="*,Auto,*">
+              <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" AutomationProperties.Name="Top view"
+                                       AutomationProperties.HelpText="The left mouse uses the tool; right or middle moves; the wheel zooms; alt and a click sends the 3D camera there; after a click the active tool takes keys (the Select tool: Q, E, the arrows, Escape)" />
+              <GridSplitter x:Name="ViewsSplitter" Grid.Column="1" Classes="layoutsplitter" ResizeDirection="Columns" IsVisible="False"
+                            AutomationProperties.Name="Resize the views" />
+              <controls:TerrainViewGpu x:Name="Terrain3D" IsVisible="False" AutomationProperties.Name="3D view"
+                                        AutomationProperties.HelpText="The wheel zooms towards the mouse; middle moves; space and the mouse turn; F focuses; Home shows the whole map" />
+            </Grid>
+            <GridSplitter x:Name="DockSplitter" Grid.Row="1" Classes="layoutsplitter" ResizeDirection="Rows" IsVisible="{Binding Layout.ShowDock}"
+                          AutomationProperties.Name="Resize the dock" />
+            <views:Dock x:Name="DockView" Grid.Row="2" IsVisible="{Binding Layout.ShowDock}" />
+          </Grid>
+        </DockPanel>
+
+        <GridSplitter x:Name="InspectorSplitter" Grid.Column="3" Classes="layoutsplitter" ResizeDirection="Columns" IsVisible="{Binding Layout.ShowInspector}"
+                      AutomationProperties.Name="Resize the inspector" />
+        <views:Inspector x:Name="InspectorView" Grid.Column="4" IsVisible="{Binding Layout.ShowInspector}" />
+      </Grid>
     </DockPanel>
 
     <views:SetupPage IsVisible="{Binding Setup.IsSettingUp}" />

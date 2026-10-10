@@ -37,6 +37,7 @@ public static class Menus
             "view.top", "view.3d", "view.sideBySide", "view.fit", "camera.home", Separator,
             "view.palette", Separator,
             "view.problems", "view.history", "view.assets", "view.console", Separator,
+            "view.modePanel", "view.inspector", "view.dock", "view.toolbar", "view.resetLayout", Separator,
             .. EditorOverlays.All.Select(overlay => overlay.CommandId),
         ]),
         new MenuLayout("Map",

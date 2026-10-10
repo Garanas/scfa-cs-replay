@@ -232,12 +232,12 @@ public sealed partial class AutomationServer
         bool clean = false;
         while (clock.Elapsed < TimeSpan.FromSeconds(15))
         {
-            if (model.View == MapViewTab.ThreeD)
+            if (model.Shows3DView)
             {
                 window.View3D.RequestNextFrameRendering();
             }
             await NextFrameAsync();
-            waiting = Waiting(gpu || model.View == MapViewTab.ThreeD);
+            waiting = Waiting(gpu || model.Shows3DView);
             if (waiting is null && clean)
             {
                 break;

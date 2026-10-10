@@ -131,6 +131,7 @@ public sealed partial class MainViewModel : ObservableObject
         Props = new PropsViewModel(this);
         InitializePainting();
         InitializeMapPanels();
+        InitializeLayout();
     }
 
     /// <summary>
@@ -217,6 +218,7 @@ public sealed partial class MainViewModel : ObservableObject
     public Task StartAsync(UserSettings settings, string? openFolder = null)
     {
         Diagnostics.Settings = settings;
+        LoadLayout(settings);
         _openWhenReady = openFolder;
         return Setup.StartAsync(settings);
     }
