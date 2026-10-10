@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.Plugins;
+using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Checks;
 using FAForever.MapEditor.Project.Editing;
@@ -278,6 +279,10 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
             });
             plugin.CommandItems.Add(new PluginCommandItem(command.Id, command.Title, command.Description));
         }
+        foreach (PluginToolSpec spec in plugin.Tools)
+        {
+            AddTool(plugin, spec);
+        }
         foreach (PluginCheck check in plugin.Checks)
         {
             try
@@ -311,6 +316,10 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
             {
                 _model.Commands.Unregister(command.Id);
             }
+        }
+        foreach (PluginTool tool in plugin.MadeTools)
+        {
+            RemoveTool(plugin, tool);
         }
         bool hadChecks = false;
         foreach (PluginCheck check in plugin.Checks)
@@ -447,7 +456,17 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
         values[key] = text;
         SaveSettings();
         plugin.Panel?.Refresh(_model.Map?.Document);
+        foreach (PluginTool tool in plugin.MadeTools)
+        {
+            tool.Refresh(_model.Map?.Document);
+        }
     }
+
+    /// <summary>
+    /// A number field's value, 0 when it reads as none.
+    /// </summary>
+    internal double NumberOf(LuaPlugin plugin, string key) =>
+        plugin.Fields.FirstOrDefault(f => f.Key == key) is PluginField field && Setting.TryParse(ValueOf(plugin, field), out double number) ? number : 0;
 
     private Setting FieldSetting(LuaPlugin plugin, PluginField field)
     {
@@ -475,6 +494,10 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
         foreach (LuaPlugin plugin in Items)
         {
             plugin.Panel?.Refresh(_model.Map?.Document);
+            foreach (PluginTool tool in plugin.MadeTools)
+            {
+                tool.Refresh(_model.Map?.Document);
+            }
         }
     }
 
@@ -745,6 +768,7 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
             ["errors"] = new JsonArray([.. plugin.Errors.Select(error => (JsonNode)JsonValue.Create(error))]),
             ["commands"] = new JsonArray([.. plugin.Commands.Select(command => (JsonNode)JsonValue.Create(command.Id))]),
             ["checks"] = new JsonArray([.. plugin.Checks.Select(check => (JsonNode)JsonValue.Create(check.Id))]),
+            ["tools"] = new JsonArray([.. plugin.Tools.Select(tool => (JsonNode)new JsonObject { ["id"] = tool.Id, ["mode"] = tool.Mode, ["title"] = tool.Title, ["fields"] = new JsonArray([.. tool.Fields.Select(key => (JsonNode)JsonValue.Create(key))]) })]),
             ["events"] = new JsonArray([.. plugin.Handlers.Keys.Order(StringComparer.Ordinal).Select(name => (JsonNode)JsonValue.Create(name))]),
             ["fields"] = new JsonObject([.. plugin.Fields.Select(field => new KeyValuePair<string, JsonNode?>(field.Key, ValueOf(plugin, field)))]),
         })]),

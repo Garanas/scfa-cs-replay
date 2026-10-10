@@ -107,33 +107,47 @@ internal static class PluginApi
         }, plugin);
         table["field"] = Function("plugin.field", (context, ctx) =>
         {
-            LuaTable spec = Loading(ctx, context, "plugin.field");
-            string key = LocalId(LuaConvert.Text(spec, "key"), "plugin.field", "key");
-            string type = LuaConvert.Text(spec, "type") ?? "text";
-            if (type is not ("number" or "text" or "bool" or "choice"))
-            {
-                throw new ArgumentException($"A field's type is number, text, bool or choice, not '{type}'");
-            }
-            IReadOnlyList<string> choices = LuaConvert.Texts(LuaConvert.Field(spec, "choices"));
-            if (type == "choice" && choices.Count == 0)
-            {
-                throw new ArgumentException($"The field '{key}' is a choice without choices");
-            }
-            LuaValue fallback = LuaConvert.Field(spec, "default");
-            string value = fallback.Type switch
-            {
-                LuaValueType.Nil => type switch { "number" => "0", "bool" => "false", "choice" => choices[0], _ => "" },
-                LuaValueType.Number => fallback.Read<double>().ToString(CultureInfo.InvariantCulture),
-                LuaValueType.Boolean => fallback.Read<bool>() ? "true" : "false",
-                _ => fallback.ToString(),
-            };
-            if (plugin.Fields.Any(field => field.Key == key))
-            {
-                throw new ArgumentException($"The plugin has a field '{key}' already");
-            }
-            plugin.Fields.Add(new PluginField(key, LuaConvert.Text(spec, "label") ?? key, type, value,
-                LuaConvert.Number(spec, "min"), LuaConvert.Number(spec, "max"), choices, LuaConvert.Text(spec, "help")));
+            AddField(plugin, Loading(ctx, context, "plugin.field"));
             return LuaValue.Nil;
+        }, plugin);
+        table["tool"] = Function("plugin.tool", (context, ctx) =>
+        {
+            LuaTable spec = Loading(ctx, context, "plugin.tool");
+            string id = LocalId(LuaConvert.Text(spec, "id"), "plugin.tool");
+            if (plugin.Tools.Any(tool => tool.Id == FullId(plugin, id)))
+            {
+                throw new ArgumentException($"The plugin registered a tool '{id}' already");
+            }
+            string mode = LuaConvert.Text(spec, "mode") ?? "terrain";
+            if (!EditorModes.All.Any(m => m.Id == mode))
+            {
+                throw new ArgumentException($"There is no mode '{mode}': {string.Join(", ", EditorModes.All.Select(m => m.Id))}");
+            }
+            LuaFunction? press = LuaConvert.Function(spec, "press");
+            LuaFunction? drag = LuaConvert.Function(spec, "drag");
+            LuaFunction? release = LuaConvert.Function(spec, "release");
+            if (press is null && drag is null && release is null)
+            {
+                throw new ArgumentException("plugin.tool needs press, drag or release, a function");
+            }
+            // its options: the plugin's fields by key, or fields made here
+            List<string> fields = [];
+            foreach (LuaValue item in LuaConvert.Field(spec, "fields") is { Type: LuaValueType.Table } list ? LuaConvert.Items(list.Read<LuaTable>()) : [])
+            {
+                fields.Add(item.Type == LuaValueType.Table ? AddField(plugin, item.Read<LuaTable>()).Key : item.Read<string>());
+            }
+            LuaValue radius = LuaConvert.Field(spec, "radius");
+            string? radiusField = radius.Type == LuaValueType.String ? radius.Read<string>() : null;
+            foreach (string key in fields.Append(radiusField).OfType<string>())
+            {
+                if (!plugin.Fields.Any(field => field.Key == key))
+                {
+                    throw new ArgumentException($"The tool '{id}' names a field '{key}' the plugin does not have: plugin.field first, or give the field's table");
+                }
+            }
+            plugin.Tools.Add(new PluginToolSpec(FullId(plugin, id), LuaConvert.Text(spec, "title") ?? id, mode, LuaConvert.Text(spec, "description"),
+                radius.Type == LuaValueType.Number ? Math.Max(0, radius.Read<double>()) : 0, radiusField, fields, press, drag, release));
+            return FullId(plugin, id);
         }, plugin);
         table["value"] = Function("plugin.value", (context, ctx) =>
         {
@@ -149,6 +163,40 @@ internal static class PluginApi
         }, plugin);
         table["read"] = Function("plugin.read", (context, ctx) => File.ReadAllText(InFolder(plugin, context.GetArgument<string>(0))), plugin);
         return table;
+    }
+
+    /// <summary>
+    /// A field of the plugin's panel from its table (<c>plugin.field{...}</c>, or a tool's <c>fields</c>).
+    /// </summary>
+    private static PluginField AddField(LuaPlugin plugin, LuaTable spec)
+    {
+        string key = LocalId(LuaConvert.Text(spec, "key"), "plugin.field", "key");
+        string type = LuaConvert.Text(spec, "type") ?? "text";
+        if (type is not ("number" or "text" or "bool" or "choice"))
+        {
+            throw new ArgumentException($"A field's type is number, text, bool or choice, not '{type}'");
+        }
+        IReadOnlyList<string> choices = LuaConvert.Texts(LuaConvert.Field(spec, "choices"));
+        if (type == "choice" && choices.Count == 0)
+        {
+            throw new ArgumentException($"The field '{key}' is a choice without choices");
+        }
+        LuaValue fallback = LuaConvert.Field(spec, "default");
+        string value = fallback.Type switch
+        {
+            LuaValueType.Nil => type switch { "number" => "0", "bool" => "false", "choice" => choices[0], _ => "" },
+            LuaValueType.Number => fallback.Read<double>().ToString(CultureInfo.InvariantCulture),
+            LuaValueType.Boolean => fallback.Read<bool>() ? "true" : "false",
+            _ => fallback.ToString(),
+        };
+        if (plugin.Fields.Any(field => field.Key == key))
+        {
+            throw new ArgumentException($"The plugin has a field '{key}' already");
+        }
+        PluginField made = new PluginField(key, LuaConvert.Text(spec, "label") ?? key, type, value,
+            LuaConvert.Number(spec, "min"), LuaConvert.Number(spec, "max"), choices, LuaConvert.Text(spec, "help"));
+        plugin.Fields.Add(made);
+        return made;
     }
 
     /// <summary>

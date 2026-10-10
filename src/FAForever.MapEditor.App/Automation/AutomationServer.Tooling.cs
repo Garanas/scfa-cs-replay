@@ -306,7 +306,8 @@ public sealed partial class AutomationServer
     }
 
     private static double ValueNumber(JsonNode value) => value.GetValueKind() == JsonValueKind.Number
-        ? value.GetValue<double>()
+        // read from its text: a value made in this process (an int) does not convert to a double
+        ? double.Parse(value.ToJsonString(), System.Globalization.CultureInfo.InvariantCulture)
         : double.Parse(value.GetValue<string>(), System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>

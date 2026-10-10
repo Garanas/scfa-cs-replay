@@ -78,7 +78,7 @@ is an extension in `Avalonia.Input`; `Bitmap.Save` takes encoder options).
 ## Check it
 
 ```sh
-# build and test outside the user's editor's output (it locks bin/)
+# build and test outside the user's editor's output (an editor started with faf-map editor start runs a copy and locks nothing)
 dotnet test tests/FAForever.MapEditor.App.Tests --artifacts-path <scratch>/artifacts
 # a changed look: look at snapshot-results/*.png in the test output, then accept it
 UPDATE_SNAPSHOTS=1 dotnet test tests/FAForever.MapEditor.App.Tests --artifacts-path <scratch>/artifacts
@@ -133,11 +133,29 @@ faf-map editor screenshot part=options path=<scratch>/o.png --port 5372 # option
 faf-map editor undo --port 5372                                         # ran: false comes with why ("nothing to undo")
 faf-map editor wait path=selection.count value=4 timeout=5 --port 5372  # polls the state until it matches; state.build: version, built
 faf-map editor view zoom=4 --port 5372                                  # the top view zooms about its middle
-faf-map editor run id=plugin.scatter-rocks.scatter count=10 --port 5372  # a Lua plugin's command (state.plugins: errors, commands)
+faf-map editor run id=plugin.scatter-rocks.scatter count=10 --port 5372  # a Lua plugin's command (state.plugins: errors, commands, tools)
+faf-map editor tool id=plugin.plateau-brush.plateau --port 5372          # a Lua plugin's tool: then mouse/stroke as with any tool
+```
+
+Keep answers small, compare, and see what a command opened:
+
+```sh
+faf-map editor key key=E --port 5372                      # every command answers its result and a short state (mode, tool, status, undo, selection count, dialog)
+faf-map editor key key=E full=true --port 5372            # the whole state; quiet=true none; paths='["selection.count","history"]' only those
+faf-map editor state path=selection.count --port 5372     # one value of the state ({"selection.count": 3})
+faf-map editor ui type=Button text=save --port 5372       # a flat list of the controls of a type and/or holding a text (with under: one part)
+faf-map editor perf save=<scratch>/before.json --port 5372   # then change something, and:
+faf-map editor perf before=<scratch>/before.json --port 5372 # each span's change, the one that grew most first (spans=3d. filters by name)
+faf-map editor run id=decals.forward --port 5372          # a command that refuses answers ran: false with why, never an error
+faf-map editor run id=file.open interactive=true --port 5372 # answers at once with asked (the question it opened); then dialog button=Cancel
+faf-map editor screenshot part=dialog path=<scratch>/q.png --port 5372   # the question's card
+faf-map editor focus ref=unit:UNIT_1 --port 5372          # the 3D camera at 50 degrees, at once, framing it with a margin (pitch=90: straight down)
 ```
 
 `faf-map editor start` detaches the editor (its output in `editor-<port>.log` beside the settings
-file, or `--log`), so the call returns with its JSON even inside a pipe.
+file, or `--log`), so the call returns with its JSON even inside a pipe. It runs a copy of the build
+(`faf-map-editor-shadow/<port>` in the temporary folder, `--shadow`), so `dotnet build` works while
+it runs; stop and start it again to run a new build (`--no-shadow` runs the build itself).
 
 Headless: `new AutomationServer(window, model, 0).HandleAsync("mouse", ...)` runs the same commands
 (`AutomationTest`), and `EditorDriver.InProcess(automation)` (or `EditorDriver.Http(port)`) wraps them

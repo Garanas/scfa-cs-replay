@@ -70,13 +70,13 @@ namespace FAForever.MapEditor.App.Tests
             PluginsPage page = window.GetVisualDescendants().OfType<PluginsPage>().Single();
             Assert.IsTrue(page.IsVisible);
 
-            Button count = page.GetVisualDescendants().OfType<Button>().Single(button => (string?)button.Content == "Count reclaim per army");
+            Button count = page.GetVisualDescendants().OfType<Button>().Single(button => button.Content as string == "Count reclaim per army");
             Click(window, count);
             await Task.Delay(50);
             Dispatcher.UIThread.RunJobs();
             StringAssert.StartsWith(model.Status, "Mass of reclaim per army:", "the button runs the plugin's command");
 
-            CheckBox scatter = page.GetVisualDescendants().OfType<CheckBox>().Single(box => (string?)box.Content == "Scatter rocks 1.0");
+            CheckBox scatter = page.GetVisualDescendants().OfType<CheckBox>().Single(box => box.Content as string == "Scatter rocks 1.0");
             Assert.IsTrue(scatter.IsChecked);
             Click(window, scatter);
             await Task.Delay(50);

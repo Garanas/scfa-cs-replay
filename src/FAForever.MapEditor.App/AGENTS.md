@@ -1474,6 +1474,25 @@ managed code, its calls cancellable in the middle of a loop.
 - **Performance**: a check runs a moment after every step, so it must be cheap; one that reads many
   things keeps its result while `map.revision(part)` stays the same (the example's check: 60 ms to
   count Archsimkats Valley's 8304 props, nothing when they did not change).
+- **Tools** (`plugin.tool{...}`; `Tools/PluginTool`, `ViewModels/PluginsViewModel.Tools`,
+  `MainViewModel.PluginTools`): a plugin's tool joins a mode's tools after its own
+  (`ModeItem.PluginTools`), with a command `tool.plugin.<folder>.<id>` in the Plugins menu, the
+  palette and automation (`tool id=plugin.<folder>.<id>`); turned off or read again, it leaves the
+  mode (its mode's first tool takes its place while it was active). The left mouse calls its
+  `press(x, z, keys)`, `drag(x, z, keys)` and `release(x, z)` (places in ogrids; `keys`: `shift`,
+  `control`, `alt`, and `picked`, the reference the 3D view picked). From press to release is one
+  stroke (`MainViewModel.StartStroke`, `PluginRun` over it): the handlers edit with the same
+  `map.*` calls as a command, the views show the edits while the mouse is down, and the stroke is
+  one step of undo named `<plugin's name>: <tool's title>` when it is let go (none when nothing
+  changed). Each call has `CallLimit` (2 s) and may not wait; `editor.run` reaches only commands
+  that work during a stroke (those with `[UndoStep]` refuse). A call that fails or runs out of time
+  throws the whole stroke away (the map shows as it was at once), says so in the status line and
+  on the page, and the rest of that stroke does nothing. Symmetry is the plugin's: the handlers get
+  the place the mouse is at. Its options row (`ToolOptions.axaml`, `tools:PluginTool`) shows the
+  plugin's fields the tool names, set as on the page; `radius` (a number, or a number field's key)
+  is the circle the views draw. `state.plugins.items[].tools` lists them. Span `plugins.tool`. The
+  example `plateau-brush` (Terrain mode) flattens what it is dragged over to the height where it
+  was pressed.
 
 The Lua API (`Plugins/PluginApi.cs`; places in ogrids, heights in game units, headings in degrees,
 things named by reference as in automation: `prop:5`, `marker:3`, `unit:UNIT_1`, `decal:2`, `area:AREA_1`):
@@ -1483,6 +1502,7 @@ things named by reference as in automation: `prop:5`, `marker:3`, `unit:UNIT_1`,
 | `plugin.command{ id, title, description?, run = function(args) ... end }` | A command `plugin.<folder>.<id>`; `args` is the table of its arguments (automation's, or empty). Returns its id. Only at the top level of `plugin.lua`, as the next two. |
 | `plugin.check{ id, title, run = function() return problems end }` | A check of the Problems tab; a problem is a text (a warning) or `{ message, severity = "error"/"warning"/"info", thing = ref?, x?, z? }`. |
 | `plugin.field{ key, label, type = "number"/"text"/"bool"/"choice", default?, min?, max?, choices?, help? }` | A field of the plugin's panel; a number with `min` and `max` has a slider. |
+| `plugin.tool{ id, title, mode = "terrain", description?, radius? (number or a field's key), fields? = { key or field table, ... }, press = function(x, z, keys) end, drag?, release? }` | A tool `plugin.<folder>.<id>` of a mode (`map`, `terrain`, `paint`, `water`, `lighting`, `decals`, `props`, `units`, `markers`, ...); its options row shows the fields named (a table is a new field, as `plugin.field` takes); a stroke is one step of undo. Returns its id. |
 | `editor.on(event, function(...) end)` | `mapOpened`, `mapSaved`, `mapExported (folder)`, `changed (description, reason)`, `beforeSave (folder)`, `beforeExport (folder)`; a `before...` handler that returns a text stops the save or export with it as the reason. |
 | `plugin.value(key)`, `plugin.read(file)`, `require(name)`, `plugin.id`, `plugin.name` | A field's value; a text file of the plugin's folder; `name.lua` of its folder (dots are folders), run once. |
 | `editor.log(...)`, `editor.warn(...)`, `editor.error(...)`, `print(...)`, `editor.status(text)` | The Console (category `Plugins`), the status line. |
@@ -1547,8 +1567,10 @@ User story F-17. The editor keeps what a service keeps for Loki and Prometheus, 
 
 Started with `--automation <port>`, the editor takes commands over HTTP on
 `http://localhost:<port>/` (`Automation/AutomationServer`): the operations of the menu, each run on
-the user interface's thread and answered with the editor's state as JSON (title, map, modified,
-undo/redo, history, the brush tools' settings, zoom). Use it to check a change in the real editor:
+the user interface's thread and answered with its result and a short state as JSON (title, map,
+modified, mode, tool, status, undo/redo, the selection's count, the question over the window);
+`state` answers the whole state (section "What an answer carries" below). Use it to check a change
+in the real editor:
 
 ```sh
 faf-map-editor tests/FAForever.FileFormats.Map.Tests/assets/maps/HardFFA.v0001 --automation 5371 &
@@ -1703,7 +1725,8 @@ last frame drawn.
   the mouse dragged with a button held.
 - `run {id, interactive: true, wait: false}` starts a command as the menu does and answers at once
   (`started`, `finished`), so a picker or question it opens can be driven with `key` and `type`;
-  `interactive: true` alone waits for it.
+  `interactive: true` alone waits for it, unless it asks a question over the window (then it
+  answers at once with `asked`, see "What an answer carries").
 - `view-point {x, z, y?}` or `{ref}`: where a place (or a thing, at its own height) shows, in the top
   view's and the 3D view's pixels (`point.top`, `point.3d`, each with `inside`; null in 3D behind the
   camera), for `mouse` and `pick`. `get {ref}` describes one thing (`prop:5`, `unit:UNIT_1`,
@@ -1784,6 +1807,41 @@ last frame drawn.
   first drag, the ruler's label stays inside the top view, and a combo box of a setting shows a
   value the map has that is none of its choices (added at the end of the list).
 
+### What an answer carries, and reads that compare
+
+`Automation/AutomationServer.Answers.cs` (tests: `AutomationAnswersTest`).
+
+- **The state in an answer**: every command but `state` answers its own result and a short state
+  (`title`, `stage`, `busy`, `map.name`, `modified`, `mode`, `tool`, `status`, `undo`, `redo`,
+  `selection.count` and `kinds`, `dialog`). Any command also takes `full: true` (the whole state, as
+  every answer had before), `quiet: true` (no state, only its result, `ran` and `ok`) and
+  `paths: ["selection.count", "history"]` (only those values, each under its path as the key:
+  `{"selection.count": 3}`; a path that leads nowhere is null). `state` and `perf` also take
+  `path`. A path is keys joined by dots and numbers for a list's items; a key that holds dots (a
+  span `3d.frame`) is found too, the longest key first: `perf path=spans.3d.frame.meanMs`.
+  `faf-map editor state path=selection.count --port 5372`
+- **perf**: `spans: "plugins"` keeps the spans whose name holds the text; `save: <file>` writes the
+  snapshot (answers `saved`); `before: <file>` (and `after: <file>`, else now) answers `compare`:
+  per span the change of its mean and total and both sides' count, mean, 95th percentile and total,
+  the one whose mean grew most first (a span on one side only counts as zero on the other).
+  `faf-map editor perf reset=true` ... `perf save=D:/s/before.json` ... change ... `perf before=D:/s/before.json`
+- **ui {type?, text?}**: the controls of a type (`Button`, `Slider`, ignoring case) and/or whose
+  name, label or text holds the text (ignoring case), as a flat list without what lies in them;
+  with `under` only that part. `faf-map editor ui type=Slider text=radius --port 5372`
+- **A command that refuses** (its handler throws because it cannot do it: nothing selected, a value
+  it does not take, a file it cannot write) answers `ran: false` with `why`, as one that cannot run
+  now does (`CommandRegistry.TryRunAsync`, logged as a warning), not an error; a command that does
+  not exist stays an error (status 400). In-process the same: `HandleAsync("run", ...)`;
+  `EditorDriver.Run` throws with `why`.
+- **run and questions**: `run {id, interactive: true}` waits for the command unless it asks a
+  question over the window: then it answers at once with `started`, `finished: false` and `asked`
+  (the question, as `state.dialog`), for `dialog {button}`; `wait: false` answers `asked` too.
+  `screenshot {part: dialog}` is a picture of the question's card (an error when none shows).
+- **focus {ref | refs | selection, pitch?}** frames them in both views and puts the 3D camera at
+  once at `pitch` degrees above the horizon (50 by default; 90 straight down), far enough to see
+  them with a margin (`view.frame {refs, pitch}`; `MainViewModel.FrameMargin`); without `pitch` the
+  command `view.frame` glides keeping the camera's angles, as Ctrl+Shift+F does.
+
 ### A test editor of one's own
 
 ```sh
@@ -1794,8 +1852,13 @@ faf-map editor stop --port 5398                                                 
 faf-map workspace remove-scratch D:/scratch/ws                                           # the assets stay
 ```
 
-- `faf-map editor start` runs the editor built beside the CLI (or `--exe`, `FAF_MAP_EDITOR_EXE`) with
-  `FAF_MAP_EDITOR_SETTINGS` set to `--settings`, detached: its output goes to a log (`--log`, by
+- `faf-map editor start` runs the editor built beside the CLI (or `--exe`, `FAF_MAP_EDITOR_EXE`) from
+  a copy of its build folder (`ShadowCopy`, the CLI's: `--shadow <folder>`, by default
+  `faf-map-editor-shadow/<port>` in the temporary folder; only files that changed are copied again,
+  and of `runtimes/` only this computer's; files the build no longer has are removed), so
+  `dotnet build` writes the build output while the test editor runs; restart it to run the new
+  build (`state.build.built` tells). `--no-shadow` runs the build itself. It sets
+  `FAF_MAP_EDITOR_SETTINGS` to `--settings`, detached: its output goes to a log (`--log`, by
   default `editor-<port>.log` beside the settings file) and it inherits none of the CLI's handles,
   so a caller reading the CLI's output (an agent's shell) gets it when the CLI exits
   (`DetachedProcess`). It refuses a port that answers already, and waits (up

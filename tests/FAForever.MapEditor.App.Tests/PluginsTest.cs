@@ -394,7 +394,7 @@ namespace FAForever.MapEditor.App.Tests
             string folder = NewFolder();
             MainViewModel model = await Open(folder, TestAssets.SandboxProject());
 
-            CollectionAssert.AreEqual(new[] { "reclaim-per-army", "scatter-rocks" }, model.Plugins.Items.Select(plugin => plugin.Id).ToArray());
+            CollectionAssert.AreEqual(new[] { "plateau-brush", "reclaim-per-army", "scatter-rocks" }, model.Plugins.Items.Select(plugin => plugin.Id).ToArray());
             Assert.IsTrue(model.Plugins.Items.All(plugin => plugin.IsLoaded && !plugin.HasErrors), string.Join("; ", model.Plugins.Items.Select(p => p.ErrorText)));
             Directory.Delete(Path.Combine(folder, "scatter-rocks"), recursive: true);
             Assert.AreEqual(0, ExamplePlugins.Ensure(folder).Count, "an example deleted is not written again");
