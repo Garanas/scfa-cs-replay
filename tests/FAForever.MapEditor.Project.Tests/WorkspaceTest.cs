@@ -1,4 +1,5 @@
 using FAForever.MapEditor.Project.Workspaces;
+using FAForever.MapEditor.Project.Workspaces.Serialized;
 
 namespace FAForever.MapEditor.Project.Tests
 {
@@ -47,6 +48,29 @@ namespace FAForever.MapEditor.Project.Tests
             ScratchWorkspace.Delete(scratch.Folder);
             Assert.IsFalse(Directory.Exists(scratch.Folder));
             Assert.IsTrue(File.Exists(texture), "deleting the scratch workspace leaves the assets alone");
+        }
+
+        [TestMethod]
+        public void AScratchWorkspaceCanHaveAssetsOfItsOwnToConvertInto()
+        {
+            Workspace source = Workspace.Create(ProjectFolders.New("workspace"), "C:/game", null, "D:/faf-vault");
+            string texture = Path.Combine(source.AssetsFolder, "env", "grass.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(texture)!);
+            File.WriteAllBytes(texture, [1, 2, 3]);
+            string into = Path.Combine(ProjectFolders.New("converted"), "assets");
+
+            (Workspace scratch, ScratchWorkspace.AssetLink link) = ScratchWorkspace.Create(ProjectFolders.New("scratch"), source, into);
+
+            Assert.AreEqual(OperatingSystem.IsWindows() ? ScratchWorkspace.AssetLink.Junction : ScratchWorkspace.AssetLink.SymbolicLink, link);
+            Assert.IsTrue(Directory.Exists(into), "the folder is made");
+            Assert.IsFalse(File.Exists(Path.Combine(scratch.AssetsFolder, "env", "grass.png")), "the source's assets are not linked");
+            File.WriteAllBytes(Path.Combine(scratch.AssetsFolder, "converted.png"), [4]);
+            Assert.IsTrue(File.Exists(Path.Combine(into, "converted.png")), "what is converted lands in the folder of its own");
+            Assert.IsFalse(File.Exists(Path.Combine(source.AssetsFolder, "converted.png")));
+            Assert.ThrowsException<MapProjectException>(() => ScratchWorkspace.Create(ProjectFolders.New("scratch"), source, source.AssetsFolder),
+                "never the source's own assets");
+            ScratchWorkspace.Delete(scratch.Folder);
+            Assert.IsTrue(File.Exists(Path.Combine(into, "converted.png")), "deleting the scratch workspace leaves them");
         }
 
         [TestMethod]
@@ -136,6 +160,51 @@ namespace FAForever.MapEditor.Project.Tests
 
             Assert.AreEqual(first with { Send = true, Endpoint = "http://localhost:4318" }, settings.Telemetry);
             Assert.AreEqual(Path.GetFullPath("D:/maps/other"), settings.Workspace);
+        }
+
+        [TestMethod]
+        [DataRow("""{ "workspace": "D:/maps/workspace", "telemetry": { "record": true, "send": false } }""")]
+        [DataRow("""{ "workspace": "D:/maps/workspace", "telemetry": { } }""")]
+        [DataRow("""{ "workspace": "D:/maps/workspace", "telemetry": { "installId": null, "endpoint": null } }""")]
+        [DataRow("""{ "workspace": "D:/maps/workspace", "telemetry": null, "layout": { "modePanel": false } }""")]
+        [DataRow("""{ "workspace": "D:/maps/workspace" }""")]
+        public void ASettingsFileWithoutAnInstallIdIsReadAsItIs(string text)
+        {
+            UserSettings settings = new UserSettings(Path.Combine(ProjectFolders.New("settings"), "settings.json"));
+            Directory.CreateDirectory(Path.GetDirectoryName(settings.File)!);
+            File.WriteAllText(settings.File, text);
+
+            Assert.AreEqual("D:/maps/workspace", settings.Workspace);
+            TelemetrySettings telemetry = settings.Telemetry;
+            Assert.AreEqual(32, telemetry.InstallId.Length);
+            Assert.AreEqual("D:/maps/workspace", settings.Workspace, "giving it an install id keeps the rest");
+            Assert.AreEqual(telemetry.InstallId, settings.Telemetry.InstallId);
+        }
+
+        [TestMethod]
+        public void APartOfTheSettingsThatCannotBeReadLosesOnlyItself()
+        {
+            UserSettings settings = new UserSettings(Path.Combine(ProjectFolders.New("settings"), "settings.json"));
+            Directory.CreateDirectory(Path.GetDirectoryName(settings.File)!);
+            File.WriteAllText(settings.File, """{ "workspace": "D:/maps/workspace", "layout": { "modePanel": "no" }, "telemetry": { "send": true } }""");
+
+            Assert.AreEqual("D:/maps/workspace", settings.Workspace);
+            StringAssert.Contains(settings.Problem, "layout");
+            Assert.IsTrue(settings.Layout.ModePanel, "the part that cannot be read is the default");
+            Assert.IsTrue(settings.Telemetry.Send, "the other parts are read");
+        }
+
+        [TestMethod]
+        public void ASettingsFileThatIsNotJsonIsNeverWrittenOver()
+        {
+            UserSettings settings = new UserSettings(Path.Combine(ProjectFolders.New("settings"), "settings.json"));
+            Directory.CreateDirectory(Path.GetDirectoryName(settings.File)!);
+            File.WriteAllText(settings.File, "{ not json");
+
+            Assert.ThrowsException<MapProjectException>(() => settings.SetLayout(new LayoutSettingsDto { Dock = false }));
+            Assert.AreEqual("{ not json", File.ReadAllText(settings.File));
+            Assert.AreEqual(32, settings.Telemetry.InstallId.Length, "an install id for this session all the same");
+            Assert.AreEqual("{ not json", File.ReadAllText(settings.File));
         }
 
         [TestMethod]

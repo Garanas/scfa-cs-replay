@@ -100,22 +100,83 @@ namespace FAForever.MapEditor.Project.Workspaces
             },
         });
 
+        /// <summary>
+        /// What was wrong with the file when it was last read, or null when it was read in full: a
+        /// part that cannot be read (a value of the wrong type) is left out and named here, the rest
+        /// is read; a file that is not JSON at all is read as empty, and never written over.
+        /// </summary>
+        public string? Problem { get; private set; }
+
+        private bool _notJson;
+
         private UserSettingsDto Read()
         {
+            string text;
             try
             {
-                return System.IO.File.Exists(File) ? ProjectJson.Read<UserSettingsDto>(File) : new UserSettingsDto();
+                if (!System.IO.File.Exists(File))
+                {
+                    Problem = null;
+                    return new UserSettingsDto();
+                }
+                text = System.IO.File.ReadAllText(File);
             }
-            catch (Exception exception) when (exception is MapProjectException or IOException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
+                Problem = exception.Message;
                 return new UserSettingsDto();
             }
+            System.Text.Json.Nodes.JsonObject root;
+            _notJson = false;
+            try
+            {
+                root = System.Text.Json.Nodes.JsonNode.Parse(text,
+                    new System.Text.Json.Nodes.JsonNodeOptions { PropertyNameCaseInsensitive = true },
+                    new System.Text.Json.JsonDocumentOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip, AllowTrailingCommas = true }) as System.Text.Json.Nodes.JsonObject
+                    ?? throw new System.Text.Json.JsonException("it holds no JSON object");
+            }
+            catch (System.Text.Json.JsonException exception)
+            {
+                Problem = $"{File} is not JSON: {exception.Message}";
+                _notJson = true;
+                return new UserSettingsDto();
+            }
+            // each part on its own, so one value of the wrong type loses only its part
+            List<string> problems = [];
+            T? Part<T>(string name) where T : class
+            {
+                try
+                {
+                    return root[name] is System.Text.Json.Nodes.JsonNode node ? System.Text.Json.JsonSerializer.Deserialize<T>(node, ProjectJson.Options) : null;
+                }
+                catch (Exception exception) when (exception is System.Text.Json.JsonException or InvalidOperationException or FormatException)
+                {
+                    problems.Add($"{name}: {exception.Message}");
+                    return null;
+                }
+            }
+            UserSettingsDto settings = new UserSettingsDto
+            {
+                Workspace = Part<string>("workspace"),
+                Telemetry = Part<TelemetrySettingsDto>("telemetry"),
+                Layout = Part<LayoutSettingsDto>("layout"),
+                Plugins = Part<PluginSettingsDto>("plugins"),
+            };
+            Problem = problems.Count == 0 ? null : $"{File}: {string.Join("; ", problems)}";
+            return settings;
         }
 
+        /// <exception cref="MapProjectException">The file is not JSON: written over, the user's
+        /// workspace and choices in it would be lost.</exception>
         private void Update(Func<UserSettingsDto, UserSettingsDto> change)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(File))!);
-            ProjectJson.Write(File, change(Read()));
+            UserSettingsDto settings = Read();
+            if (_notJson && Problem is string problem)
+            {
+                throw new MapProjectException($"{problem}; it is left as it is");
+            }
+            ProjectJson.Write(File, change(settings));
         }
 
         private void TryUpdate(Func<UserSettingsDto, UserSettingsDto> change)
@@ -124,7 +185,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             {
                 Update(change);
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or MapProjectException)
             {
                 // the id is new on the next start too
             }

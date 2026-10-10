@@ -30,14 +30,31 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <paramref name="source"/>, and its sandbox made of them.
         /// </summary>
         /// <exception cref="MapProjectException">The folder holds something else.</exception>
-        public static (Workspace Workspace, AssetLink Assets) Create(string folder, Workspace source)
+        /// <param name="assetsInto">A folder of its own for the assets, linked in instead of the
+        /// source's: made when absent, and converted into by the caller (<c>faf-map workspace scratch
+        /// --convert-into</c>), so a change of the assets' format is tried without touching the
+        /// source's. Several scratch workspaces may share it.</param>
+        public static (Workspace Workspace, AssetLink Assets) Create(string folder, Workspace source, string? assetsInto = null)
         {
             string vault = Path.Combine(Path.GetFullPath(folder), "vault");
             Workspace workspace = Workspace.Create(folder, source.GameFolder, source.FafDataFolder, vault);
             Directory.CreateDirectory(workspace.MapsFolder);
 
             AssetLink link = AssetLink.None;
-            if (Directory.Exists(source.AssetsFolder) && !Directory.Exists(workspace.AssetsFolder))
+            if (assetsInto is not null)
+            {
+                string target = Path.GetFullPath(assetsInto);
+                if (string.Equals(target.TrimEnd(Path.DirectorySeparatorChar), Path.GetFullPath(source.AssetsFolder).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new MapProjectException($"{target} holds the assets of {source.Folder}: convert into a folder of its own");
+                }
+                Directory.CreateDirectory(target);
+                if (!Directory.Exists(workspace.AssetsFolder))
+                {
+                    link = Link(workspace.AssetsFolder, target);
+                }
+            }
+            else if (Directory.Exists(source.AssetsFolder) && !Directory.Exists(workspace.AssetsFolder))
             {
                 link = Link(workspace.AssetsFolder, source.AssetsFolder);
             }

@@ -269,6 +269,12 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Diagnostics.Settings = settings;
         LoadLayout(settings);
+        if (settings.Problem is string problem)
+        {
+            // a part of the settings that cannot be read is left out, never silently
+            Logger("Editor").LogWarning("The settings file {File} could not be read in full: {Reason}", settings.File, problem);
+            Status = $"The settings file could not be read in full: {problem}";
+        }
         _openWhenReady = openFolder;
         return Setup.StartAsync(settings);
     }

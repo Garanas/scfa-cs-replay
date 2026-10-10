@@ -44,6 +44,9 @@ namespace FAForever.MapEditor.Cli
                 }
             }
 
+            // what restart starts again with: the build itself (not the copy), the settings, the map
+            Remember(o, FindEditor(o.Exe)!);
+
             ProcessStartInfo start = new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true };
             if (o.Map is string map)
             {
@@ -95,6 +98,92 @@ namespace FAForever.MapEditor.Cli
             }
             Console.Error.WriteLine($"The editor was not ready after {o.Timeout} s: waiting for {waiting}");
             return 1;
+        }
+
+        /// <summary>
+        /// <c>faf-map editor restart</c>: stops the editor on the port and starts it again with the
+        /// arguments it was started with (<see cref="StartFile"/>), each option given now taking the
+        /// place of the remembered one. The copy it runs from is brought up to date first, so the
+        /// restarted editor runs the newest build.
+        /// </summary>
+        /// <returns>As <see cref="Start"/>; 1 when the editor would not stop.</returns>
+        public static int Restart(EditorOptions o)
+        {
+            EditorOptions again = WithRemembered(o);
+            if (Stop(again) != 0)
+            {
+                return 1;
+            }
+            return Start(again);
+        }
+
+        /// <summary>
+        /// The file that remembers what the editor on a port was started with: in the temporary
+        /// folder, beside the shadow copies.
+        /// </summary>
+        public static string StartFile(int port) =>
+            Path.Combine(Path.GetTempPath(), "faf-map-editor-shadow", $"start-{port.ToString(System.Globalization.CultureInfo.InvariantCulture)}.json");
+
+        /// <summary>
+        /// The options of <paramref name="o"/>, with what the last start on its port remembered for
+        /// each one left out.
+        /// </summary>
+        public static EditorOptions WithRemembered(EditorOptions o)
+        {
+            JsonObject? remembered = null;
+            try
+            {
+                string file = StartFile(o.Port);
+                remembered = File.Exists(file) ? JsonNode.Parse(File.ReadAllText(file)) as JsonObject : null;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+            {
+                Console.Error.WriteLine($"Cannot read what the editor on port {o.Port} was started with: {exception.Message}");
+            }
+            if (remembered is null)
+            {
+                Console.Error.WriteLine($"No start on port {o.Port} is remembered: the options given are used");
+                return o;
+            }
+            string? Text(string key) => remembered[key]?.GetValue<string>();
+            return new EditorOptions
+            {
+                Command = "start",
+                Arguments = o.Arguments,
+                Port = o.Port,
+                Settings = o.Settings ?? Text("settings"),
+                Map = o.Map ?? Text("map"),
+                Exe = o.Exe ?? Text("exe"),
+                NoWait = o.NoWait,
+                Timeout = o.Timeout,
+                Force = o.Force,
+                Shadow = o.Shadow ?? Text("shadow"),
+                NoShadow = o.NoShadow || remembered["noShadow"]?.GetValue<bool>() == true,
+                Log = o.Log ?? Text("log"),
+            };
+        }
+
+        private static void Remember(EditorOptions o, string exe)
+        {
+            JsonObject start = new JsonObject
+            {
+                ["exe"] = exe,
+                ["settings"] = o.Settings is string settings ? Path.GetFullPath(settings) : null,
+                ["map"] = o.Map is string map ? Path.GetFullPath(map) : null,
+                ["shadow"] = o.Shadow is string shadow ? Path.GetFullPath(shadow) : null,
+                ["noShadow"] = o.NoShadow,
+                ["log"] = o.Log is string log ? Path.GetFullPath(log) : null,
+            };
+            try
+            {
+                string file = StartFile(o.Port);
+                Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+                File.WriteAllText(file, start.ToJsonString());
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                Console.Error.WriteLine($"Cannot remember the start for restart: {exception.Message}");
+            }
         }
 
         /// <returns>0 when no editor runs on the port any more, 1 when it is still running.</returns>

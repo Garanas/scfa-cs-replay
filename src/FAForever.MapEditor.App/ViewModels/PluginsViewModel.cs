@@ -531,7 +531,7 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
                 Values = _values.Count == 0 ? null : _values.ToDictionary(pair => pair.Key, pair => pair.Value),
             });
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FAForever.MapEditor.Project.MapProjectException)
         {
             Log.LogWarning(exception, "Could not remember the plugins' settings in {File}: {Reason}", settings.File, exception.Message);
         }
