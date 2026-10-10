@@ -13,6 +13,8 @@ using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Generation;
+using FAForever.FileFormats.Map;
 
 namespace FAForever.MapEditor.App.Controls;
 
@@ -34,7 +36,8 @@ public sealed class HeightmapView : Control
     /// tokens (<c>Styles/Tokens.axaml</c>).
     /// </summary>
     internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, Typeface LabelFont, double LabelSize,
-        IBrush Prop, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box);
+        IBrush Prop, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box,
+        IBrush Blocked, IBrush NewlyBlocked, IBrush Opened);
 
     public HeightmapView()
     {
@@ -81,7 +84,10 @@ public sealed class HeightmapView : Control
         Token<IBrush>("MapAreaBrush"),
         new Pen(Token<IBrush>("MapSelectionBrush"), 2),
         Token<IBrush>("MapSelectionFillBrush"),
-        new Pen(Token<IBrush>("MapSelectionBrush"), 1, new DashStyle([4, 3], 0)));
+        new Pen(Token<IBrush>("MapSelectionBrush"), 1, new DashStyle([4, 3], 0)),
+        Token<IBrush>("MapBlockedBrush"),
+        Token<IBrush>("MapNewlyBlockedBrush"),
+        Token<IBrush>("MapOpenedBrush"));
 
     private T Token<T>(string key) => this.TryFindResource(key, ActualThemeVariant, out object? value) && value is T token
         ? token
@@ -158,6 +164,7 @@ public sealed class HeightmapView : Control
             _model.CameraMoved -= OnOverlayChanged;
             _model.CursorChanged -= OnOverlayChanged;
             _model.SelectionChanged -= OnOverlayChanged;
+            _model.Walkability.Changed -= OnOverlayChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
@@ -169,6 +176,7 @@ public sealed class HeightmapView : Control
             _model.CameraMoved += OnOverlayChanged;
             _model.CursorChanged += OnOverlayChanged;
             _model.SelectionChanged += OnOverlayChanged;
+            _model.Walkability.Changed += OnOverlayChanged;
         }
         OnMapChanged(this, EventArgs.Empty);
     }
@@ -259,6 +267,11 @@ public sealed class HeightmapView : Control
         using (context.PushRenderOptions(new RenderOptions { BitmapInterpolationMode = _zoom >= 2 ? BitmapInterpolationMode.None : BitmapInterpolationMode.HighQuality }))
         {
             context.DrawImage(_bitmap, new Rect(0, 0, size.Width, size.Height), destination);
+        }
+
+        if (_model is { ShowWalkability: true })
+        {
+            DrawWalkability(context, overlay, _model.Walkability);
         }
 
         if (_model?.ShownDocument is MapDocument document)
@@ -426,6 +439,77 @@ public sealed class HeightmapView : Control
         (modifiers.HasFlag(KeyModifiers.Shift) ? ToolModifiers.Shift : ToolModifiers.None)
         | (modifiers.HasFlag(KeyModifiers.Control) ? ToolModifiers.Control : ToolModifiers.None)
         | (modifiers.HasFlag(KeyModifiers.Alt) ? ToolModifiers.Alt : ToolModifiers.None);
+
+    private WriteableBitmap? _walkability;
+    private (NavGrid Grid, WalkabilityChanges? Changes, Overlay Overlay)? _walkabilityOf;
+
+    /// <summary>
+    /// Walkability (user story T-7) over the terrain, one pixel an ogrid: the ogrids units of the
+    /// chosen layer cannot go tinted, and, while the changes show, those blocked or opened since the
+    /// time before in strong colours. Made again only for another result, layer or theme.
+    /// </summary>
+    private void DrawWalkability(DrawingContext context, Overlay overlay, WalkabilityViewModel walkability)
+    {
+        if (walkability.Grid is not NavGrid grid)
+        {
+            return;
+        }
+        WalkabilityChanges? changes = walkability.ShowChanges && walkability.Changes is { } shown && shown.Width == grid.Width && shown.Height == grid.Height
+            ? shown
+            : null;
+        if (_walkabilityOf is not { } made || !ReferenceEquals(made.Grid, grid) || !ReferenceEquals(made.Changes, changes) || !ReferenceEquals(made.Overlay, overlay))
+        {
+            using Performance.Span measure = Performance.Measure("top.walkability");
+            _walkability?.Dispose();
+            _walkability = WalkabilityPicture(grid, changes, overlay);
+            _walkabilityOf = (grid, changes, overlay);
+        }
+        if (_walkability is null)
+        {
+            return;
+        }
+        Rect destination = new Rect(_offset.X, _offset.Y, grid.Width * _zoom, grid.Height * _zoom);
+        using (context.PushRenderOptions(new RenderOptions { BitmapInterpolationMode = _zoom >= 2 ? BitmapInterpolationMode.None : BitmapInterpolationMode.HighQuality }))
+        {
+            context.DrawImage(_walkability, new Rect(0, 0, grid.Width, grid.Height), destination);
+        }
+    }
+
+    private static unsafe WriteableBitmap? WalkabilityPicture(NavGrid grid, WalkabilityChanges? changes, Overlay overlay)
+    {
+        if (overlay.Blocked is not ISolidColorBrush blocked || overlay.NewlyBlocked is not ISolidColorBrush newlyBlocked || overlay.Opened is not ISolidColorBrush opened)
+        {
+            return null;
+        }
+        static uint Premultiplied(Color color) =>
+            (uint)color.A << 24 | (uint)(color.R * color.A / 255) << 16 | (uint)(color.G * color.A / 255) << 8 | (uint)(color.B * color.A / 255);
+        uint blockedPixel = Premultiplied(blocked.Color);
+        uint newlyBlockedPixel = Premultiplied(newlyBlocked.Color);
+        uint openedPixel = Premultiplied(opened.Color);
+
+        WriteableBitmap bitmap = new WriteableBitmap(new PixelSize(grid.Width, grid.Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
+        using ILockedFramebuffer frame = bitmap.Lock();
+        nint address = frame.Address;
+        int rowBytes = frame.RowBytes;
+        int[] cells = grid.Cells;
+        WalkabilityChange[]? changed = changes?.Cells;
+        int width = grid.Width;
+        Parallel.For(0, grid.Height, z =>
+        {
+            uint* row = (uint*)(address + z * rowBytes);
+            for (int x = 0; x < width; x++)
+            {
+                int i = z * width + x;
+                row[x] = changed?[i] switch
+                {
+                    WalkabilityChange.Opened => openedPixel,
+                    WalkabilityChange.Blocked => newlyBlockedPixel,
+                    _ => cells[i] > 0 ? 0u : blockedPixel,
+                };
+            }
+        });
+        return bitmap;
+    }
 
     /// <summary>
     /// The areas as dashed rectangles with their names, the props as dots and the units as squares,

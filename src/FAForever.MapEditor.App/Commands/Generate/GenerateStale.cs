@@ -20,7 +20,7 @@ public sealed class GenerateStaleHandler(MainViewModel model, GenerationViewMode
     {
         IReadOnlyList<GeneratedState> stale = request.List == true
             ? generation.Results.Stale(model.Map!.Document)
-            : generation.GenerateStale(model.Map!.Document);
+            : model.GenerateStale();
         model.Status = stale.Count == 0
             ? "Nothing is out of date"
             : $"{(request.List == true ? "Out of date" : "Generated again")}: {string.Join(", ", stale.Select(state => $"{state.Generator.Title} ({string.Join(", ", state.ChangedInputs)} changed)"))}";

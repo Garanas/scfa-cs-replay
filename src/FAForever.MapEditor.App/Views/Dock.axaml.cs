@@ -1,6 +1,9 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Text.Json.Nodes;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using FAForever.MapEditor.App.ViewModels;
 
@@ -16,6 +19,8 @@ public sealed partial class Dock : UserControl
     public Dock()
     {
         InitializeComponent();
+        // before the list box, which takes Enter itself
+        ProblemList.AddHandler(KeyDownEvent, OnProblemKeyDown, RoutingStrategies.Tunnel);
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -56,6 +61,27 @@ public sealed partial class Dock : UserControl
     /// Whether the Console shows its end (or has nothing to scroll), before the new line.
     /// </summary>
     private bool AtTheEnd() => ConsoleList.Scroll is not { } scroll || scroll.Offset.Y + scroll.Viewport.Height >= scroll.Extent.Height - 4;
+
+    // a double click or Enter on a problem goes to its place (user story F-14)
+    private void OnProblemDoubleTapped(object? sender, TappedEventArgs e) => ShowSelectedProblem();
+
+    private void OnProblemKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && ShowSelectedProblem())
+        {
+            e.Handled = true;
+        }
+    }
+
+    private bool ShowSelectedProblem()
+    {
+        if (_model is null || ProblemList.SelectedIndex < 0)
+        {
+            return false;
+        }
+        _ = _model.RunWithAsync("problems.show", new JsonObject { ["index"] = ProblemList.SelectedIndex });
+        return true;
+    }
 
     private void ShowNewest()
     {

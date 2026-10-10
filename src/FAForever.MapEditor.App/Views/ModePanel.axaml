@@ -97,6 +97,48 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
+            <!-- what is generated from the height layers: per result how it stands and its button; walkability's layer and what changed -->
+            <DataTemplate DataType="vm:GeneratedSection">
+              <Border Classes="group">
+                <StackPanel Classes="stack">
+                  <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <TextBlock Classes="caption" Text="Open a map to generate from it." IsVisible="{Binding !$parent[UserControl].((vm:MainViewModel)DataContext).HasMap}" />
+                  <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Generation.Rows}" AutomationProperties.Name="Generated results">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Classes="stack" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:GeneratedRow">
+                        <DockPanel>
+                          <Button DockPanel.Dock="Right" Classes="beside" Content="{Binding ButtonText}" IsEnabled="{Binding !IsRunning}"
+                                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding CommandId}"
+                                  AutomationProperties.Name="{Binding ButtonLabel}" />
+                          <StackPanel>
+                            <TextBlock Text="{Binding Title}" />
+                            <TextBlock Classes="caption" Classes.warning="{Binding IsStale}" Text="{Binding Status}" />
+                          </StackPanel>
+                        </DockPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <StackPanel Classes="stack" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HasMap}">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="label" Text="Units" VerticalAlignment="Center" />
+                      <ComboBox Margin="{StaticResource InlineGap}" HorizontalAlignment="Stretch" ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Walkability.Layers}" SelectedItem="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Walkability.Layer}"
+                                AutomationProperties.Name="Walkability of the units of a layer"
+                                AutomationProperties.HelpText="Land, hover, amphibious or naval (water) units" />
+                    </DockPanel>
+                    <CheckBox Content="Show walkability" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ShowWalkability, Mode=OneWay}"
+                              Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="view.overlay.walkability" />
+                    <CheckBox Content="Show what changed" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Walkability.ShowChanges}"
+                              AutomationProperties.HelpText="Ogrids blocked or opened since walkability was generated the time before" />
+                    <TextBlock Classes="caption" Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Walkability.ChangesText}" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
             <!-- the mode's overlays; a check box runs the overlay's command, as its chip does -->
             <DataTemplate DataType="vm:OverlaySection">
               <Border Classes="group">

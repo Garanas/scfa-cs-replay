@@ -232,7 +232,46 @@ versions share what they do not change, `ChangedInputs(document)` is a few refer
 `Stale` or `Current`; nothing generates by itself. A generator that runs on a pool thread makes
 its result with `GeneratedResult.Of(generator, document, value)` from the version it started
 with and hands it to `Keep`. Results live in memory only; keeping them in the project is for the
-generators that need it.
+generators that need it. A generator whose result is a part of the map (`IDocumentGenerator`)
+also puts it in its place (`Apply`); the editor makes that a step of undo. Inputs read only what
+a generator needs (`WaterLevel`, `DepositsAndAreas`, `MapType`), so a change of the water's colour
+or a path node leaves walkability current.
+
+- **Walkability** (user story T-7, `Generation/Walkability`, `WalkabilityGenerator`): the game's
+  navigational mesh, `NavGenerator` of FileFormats.Map (which stays browser-safe), made from the
+  document: the heightmap and terrain types as the `.scmap` holds them, the water level, the mass
+  and hydrocarbon markers, and the playable area of a skirmish map (its first area when larger
+  than 32 by 32 ogrids, as `NavGenerator.FindPlayableArea`). `WalkabilityTest` checks that it is
+  ogrid for ogrid what FileFormats.Map makes from the game's files of the three test maps.
+  `WalkabilityChanges.Compare` gives what changed in a layer between two generations: per ogrid
+  opened or blocked, and where regions were joined (a new region over two or more old ones: a new
+  passage) or split (a closed path), each at the changed ogrid nearest the centre of its changes.
+  A culled region (small, without deposits) counts as blocked, as it does for the game's AI.
+- **The normal map** (user story S-4, `Generation/TerrainImages.NormalMap`, `NormalMapGenerator`):
+  per pixel the terrain's normal at its centre (the four corners' normals blended), written as the
+  FAF map editor writes it and the game reads it: x in alpha and z in green as 0.5 + n / 2, red and
+  blue 0. Theta Passage's own normal map differs from the generated one by less than one step per
+  channel on average.
+
+## Checks: problems of a map
+
+User story F-14 (`Checks/`): an `IProblemCheck` (or a `ProblemCheck` made of a function) reads a
+`ProblemContext` (the document; the workspace's catalogue and whether it has a file, the generated
+results, the last walkability changes: each may be missing) and yields `Problem`s (check, severity
+`Info`/`Warning`/`Error`, message, the `ObjectRef` to select and the place to look at).
+`ProblemChecks` holds the editor's own (`MapChecks.All`) and those registered, and runs them all,
+worst first; a check that throws is reported apart and finds nothing. Checks run after each step,
+so they stay cheap: no disk access but through the context's function, nothing slower than the
+map's things.
+
+- `army-without-spawn` (error): a playable army of a skirmish map without its spawn marker.
+- `spawn-without-mass` (warning): no mass deposit within 30 ogrids of a spawn.
+- `missing-texture` (warning): a stratum's or decal's texture that neither the map's own files
+  nor the workspace has (decals grouped by texture); without a workspace only the map's own files.
+- `missing-model` (warning, or a note): props and units grouped by blueprint whose blueprint the
+  workspace lacks, or has without a converted model (drawn as a box). Needs the catalogue.
+- `walkability-changes` (warning): new passages and closed paths of the land since walkability was
+  generated the time before.
 
 ## Tests
 
