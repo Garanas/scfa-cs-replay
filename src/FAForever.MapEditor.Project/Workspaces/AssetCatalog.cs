@@ -97,6 +97,12 @@ namespace FAForever.MapEditor.Project.Workspaces
         public bool IsCivilian { get; init; }
 
         /// <summary>
+        /// A unit's tech level: 1 to 3, or 4 for an experimental; null for the other kinds and for
+        /// units without one (commanders, most civilian props).
+        /// </summary>
+        public int? TechLevel { get; init; }
+
+        /// <summary>
         /// The picture of it, a PNG of the workspace's assets: a decal's or texture's albedo, or
         /// its normal map when it has no albedo. Props and units are drawn from their <see cref="Model"/>.
         /// </summary>
@@ -375,6 +381,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                     Category = layer,
                     Family = id,
                     IsCivilian = categories.Contains("CIVILIAN"),
+                    TechLevel = unit.TechLevel,
                     Model = ModelOf(assets, unit.Lods),
                     File = file,
                     Facts = [.. facts],

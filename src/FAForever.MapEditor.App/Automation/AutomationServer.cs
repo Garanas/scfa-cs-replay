@@ -158,6 +158,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
     [
         "state", "commands", "run {id, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?}", "perf {reset?}", "logs {problems?, count?}",
         "diagnostics {record?, send?, endpoint?, flush?, upload?}", "version-control {open?, enable?, name?, email?, lfs?, remote?}",
+        "picker {open?, query?, group?, category?, tech?, move?: [across, down], choose?, cancel?}",
         "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}",
         "show {markers?, pathNodes?, camera?}", "screenshot {path, map?, gpu?, brush?}", "close",
     ];
@@ -310,6 +311,59 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 };
                 break;
             }
+            case "picker":
+            {
+                // input to the picker as a person gives it: open runs a command that picks
+                // (assets.pick, units.pick) as the menu does, without waiting for the answer;
+                // the rest types, filters, moves and chooses
+                if (arguments["open"]?.GetValue<string>() is string open)
+                {
+                    arguments.Remove("open");
+                    _ = model.RunAsync(open);
+                }
+                AssetPickerViewModel picker = model.Picker;
+                if (arguments.Count > 0 && !picker.IsOpen)
+                {
+                    throw new ArgumentException("The picker is not open: give open: assets.pick or units.pick");
+                }
+                string? Filter(string name) => arguments[name]?.GetValue<string>() is { Length: > 0 } value ? value : null;
+                if (arguments.ContainsKey("query"))
+                {
+                    picker.Query = arguments["query"]?.GetValue<string>() ?? "";
+                }
+                if (arguments.ContainsKey("group"))
+                {
+                    picker.Group = Filter("group");
+                }
+                if (arguments.ContainsKey("category"))
+                {
+                    picker.Category = Filter("category");
+                }
+                if (arguments.ContainsKey("tech"))
+                {
+                    picker.Tech = Filter("tech");
+                }
+                if (arguments["move"] is JsonArray move)
+                {
+                    picker.Move(move[0]!.GetValue<int>(), move[1]!.GetValue<int>());
+                }
+                if (arguments["choose"]?.GetValue<bool>() == true)
+                {
+                    picker.Choose();
+                }
+                if (arguments["cancel"]?.GetValue<bool>() == true)
+                {
+                    picker.Cancel();
+                }
+                // the state has the picker's filters; its first tiles come with this answer
+                result["pickerTiles"] = new JsonArray([.. picker.Tiles.Take(60).Select(tile => (JsonNode)new JsonObject
+                {
+                    ["title"] = tile.Title,
+                    ["detail"] = tile.Detail,
+                    ["key"] = tile.Entry.Key,
+                })]);
+                break;
+            }
             case "stroke":
                 // input: the left mouse down, dragged along the points and up again
                 model.Stroke([.. (arguments["points"] as JsonArray ?? throw new ArgumentException("points: [[x, z], ...] is missing"))
@@ -391,6 +445,30 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
         return result;
     }
 
+    /// <summary>
+    /// The picker as automation reads it: what it asks, its filters with their choices.
+    /// </summary>
+    private static JsonObject DescribePicker(AssetPickerViewModel picker)
+    {
+        static JsonObject Choices(IReadOnlyList<AssetChoice> choices) =>
+            new JsonObject([.. choices.Select(choice => KeyValuePair.Create(choice.Value!, (JsonNode?)choice.Count))]);
+        return new JsonObject
+        {
+            ["open"] = picker.IsOpen,
+            ["kind"] = picker.Kind.ToString(),
+            ["title"] = picker.Title,
+            ["query"] = picker.Query,
+            ["group"] = picker.Group,
+            ["category"] = picker.Category,
+            ["tech"] = picker.Tech,
+            ["summary"] = picker.Summary,
+            ["selected"] = picker.Selected?.Entry.Key,
+            ["groups"] = Choices(picker.Groups),
+            ["categories"] = Choices(picker.Categories),
+            ["techs"] = Choices(picker.Techs),
+        };
+    }
+
     private JsonObject State()
     {
         MapDocument? document = model.Map?.Document;
@@ -468,6 +546,7 @@ public sealed class AutomationServer(MainWindow window, MainViewModel model, int
                 ["summary"] = model.Assets.Summary,
                 ["selected"] = model.Assets.Shown?.Key,
             },
+            ["picker"] = DescribePicker(model.Picker),
             ["gpu"] = new JsonObject
             {
                 ["renderer"] = window.View3D.Renderer,

@@ -85,6 +85,13 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     public TerrainViewGpu()
     {
         Focusable = true;
+        // an asset dragged from the shelf lands on the place of the terrain under the mouse
+        AssetDrag.Attach(this, () => _model, at =>
+            _model?.ShownDocument is MapDocument document && _model.Camera.PointAt(InView(at)) is Vector3 place
+                && place.X >= 0 && place.Z >= 0 && place.X <= document.Width && place.Z <= document.Height
+                ? new Point(place.X, place.Z)
+                : null,
+            text => CursorMoved?.Invoke(text));
     }
 
     private ILogger Log => _model?.Logger("Rendering") ?? NullLogger.Instance;
