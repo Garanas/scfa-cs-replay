@@ -2,6 +2,7 @@ using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.App.Diagnostics;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
 using Microsoft.Extensions.Logging;
@@ -47,10 +48,18 @@ public enum AssetScope
 }
 
 /// <summary>
-/// A tile of the shelf: an asset, or a prop's family of variants (<see cref="AssetEntry.Family"/>).
+/// A tile of the shelf: an asset, a prop's family of variants (<see cref="AssetEntry.Family"/>), or
+/// a decal set (its textures named alike with a suffix each, <see cref="DecalSets"/>).
 /// </summary>
-public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry> members) : ObservableObject
+/// <param name="set">The decal set the tile stands for; null for any other tile.</param>
+public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry> members, DecalSetAssets? set = null) : ObservableObject
 {
+    /// <summary>
+    /// The decal set it stands for: placed as one decal with all its textures; null for another tile.
+    /// </summary>
+    public DecalSetAssets? Set => set;
+
+    public bool IsSet => set is not null;
     /// <summary>
     /// The asset it shows: the first of its family.
     /// </summary>
@@ -63,12 +72,13 @@ public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry
 
     public bool IsFamily => members.Count > 1;
 
-    public string Title => IsFamily ? entry.Family : entry.Name;
+    public string Title => IsFamily ? Path.GetFileName(entry.Family) : entry.Name;
 
     /// <summary>
     /// What it is beside its name: the number of variants, a unit's id, a texture's category.
     /// </summary>
-    public string Detail => IsFamily ? $"{members.Count} variants"
+    public string Detail => set is not null ? $"set of {set.Count}"
+        : IsFamily ? $"{members.Count} variants"
         : entry.Kind == AssetKind.Unit ? (entry.TechLevel is null ? entry.Code : $"{AssetSearch.TechTitle(entry.TechLevel)} · {entry.Code}")
         : entry.Category;
 
@@ -192,13 +202,25 @@ public sealed partial class AssetsViewModel : ObservableObject
     public bool IsLoaded { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsProps), nameof(GroupsTitle), nameof(CanSort))]
+    [NotifyPropertyChangedFor(nameof(IsProps), nameof(HasFamilies), nameof(FamiliesHelp), nameof(GroupsTitle), nameof(CanSort))]
     public partial AssetKind Kind { get; set; } = AssetKind.Prop;
 
     /// <summary>
     /// Whether the shelf shows props, which come in families.
     /// </summary>
     public bool IsProps => Kind == AssetKind.Prop;
+
+    /// <summary>
+    /// Whether the shown kind groups its assets into one tile: a prop's variants, a decal set's textures.
+    /// </summary>
+    public bool HasFamilies => Kind is AssetKind.Prop or AssetKind.Decal;
+
+    /// <summary>
+    /// What the Variants chip does for the shown kind.
+    /// </summary>
+    public string FamiliesHelp => Kind == AssetKind.Decal
+        ? "A decal set's textures (_albedo, _normals, _spec, _mask) as one tile, placed as one decal"
+        : "A prop's sizes and variants as one tile";
 
     /// <summary>
     /// What the groups are: the biomes, or the units' factions.
@@ -343,8 +365,53 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// The tile chosen, shown in the inspector; null for none.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelection), nameof(IsFamilySelected), nameof(Shown), nameof(ShownUses), nameof(ShownGlyph), nameof(ShownStarred), nameof(ShownStarText))]
+    [NotifyPropertyChangedFor(nameof(HasSelection), nameof(IsFamilySelected), nameof(IsSetSelected), nameof(MembersTitle), nameof(Shown), nameof(ShownUses), nameof(ShownGlyph), nameof(ShownStarred), nameof(ShownStarText), nameof(ShownSet), nameof(SetText))]
     public partial AssetTile? Selected { get; private set; }
+
+    /// <summary>
+    /// Whether choosing a decal set's tile chooses the whole set (until one of its textures is
+    /// chosen in the inspector, which chooses that one alone).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShownSet), nameof(SetText))]
+    public partial bool WholeSet { get; private set; }
+
+    /// <summary>
+    /// The decal set chosen as a whole: what the Decals mode's place tool places; null otherwise.
+    /// </summary>
+    public DecalSetAssets? ShownSet => WholeSet ? Selected?.Set : null;
+
+    public bool IsSetSelected => Selected?.IsSet == true;
+
+    /// <summary>
+    /// The heading over the tile's members in the inspector.
+    /// </summary>
+    public string MembersTitle => IsSetSelected ? "Textures of the set" : "Variants";
+
+    /// <summary>
+    /// What the inspector says of a chosen decal set: its parts, and whether the whole set or one
+    /// texture is chosen.
+    /// </summary>
+    public string SetText => Selected?.Set is not DecalSetAssets set ? ""
+        : WholeSet ? $"The whole set is chosen: {set.Summary}. It is placed as one decal and written as one decal per texture; its masks feed decal-masks layers."
+        : $"One texture of the set is chosen; the set has {set.Summary}.";
+
+    private bool _choosingTile;
+
+    /// <summary>
+    /// Chooses the whole decal set of the chosen tile again, after one of its textures was chosen.
+    /// </summary>
+    [RelayCommand]
+    private void ChooseWholeSet()
+    {
+        if (Selected?.IsSet == true)
+        {
+            _choosingTile = true;
+            SelectedMember = Selected.Entry;
+            _choosingTile = false;
+            WholeSet = true;
+        }
+    }
 
     /// <summary>
     /// The variant of the selected family the inspector shows.
@@ -688,8 +755,11 @@ public sealed partial class AssetsViewModel : ObservableObject
         {
             old.IsSelected = false;
         }
+        _choosingTile = true;
         Selected = tile;
         SelectedMember = tile?.Entry;
+        _choosingTile = false;
+        WholeSet = tile?.IsSet == true;
         if (tile is not null)
         {
             tile.IsSelected = true;
@@ -793,6 +863,11 @@ public sealed partial class AssetsViewModel : ObservableObject
 
     partial void OnSelectedMemberChanged(AssetEntry? value)
     {
+        // a texture of a set chosen in the inspector is placed alone
+        if (!_choosingTile)
+        {
+            WholeSet = false;
+        }
         OnPropertyChanged(nameof(ShownUse));
         OnPropertyChanged(nameof(ShownSource));
     }
@@ -837,9 +912,25 @@ public sealed partial class AssetsViewModel : ObservableObject
         IEnumerable<AssetEntry> shown = AssetSearch.Sorted(InFavouritesOrder(ofKind).Where(entry => (Group is null || entry.Group == Group) && (Category is null || entry.Category == Category)
             && (Source is null || Origins.Of(entry).Short == Source)), CanSort ? Sort : AssetSort.Listed);
         AssetEntry? selected = Shown;
-        List<AssetTile> tiles = Kind == AssetKind.Prop && Families
-            ? [.. shown.GroupBy(entry => (entry.Group, entry.Category, entry.Family)).Select(family => new AssetTile(family.First(), [.. family]))]
-            : [.. shown.Select(entry => new AssetTile(entry, [entry]))];
+        List<AssetTile> tiles;
+        if (Kind == AssetKind.Prop && Families)
+        {
+            tiles = [.. shown.GroupBy(entry => (entry.Group, entry.Category, entry.Family)).Select(family => new AssetTile(family.First(), [.. family]))];
+        }
+        else if (Kind == AssetKind.Decal && Families)
+        {
+            // a decal set's textures share a tile, its albedo first (D-1)
+            Dictionary<string, DecalSetAssets> sets = DecalSets.Of(Catalog.Entries).ToDictionary(set => set.Name, StringComparer.Ordinal);
+            tiles = [.. shown.GroupBy(entry => DecalSets.PartOf(entry.Key).Name, StringComparer.Ordinal).Select(family =>
+            {
+                AssetEntry[] members = [.. family.OrderBy(entry => PartOrder(DecalSets.PartOf(entry.Key).Part))];
+                return new AssetTile(members[0], members, sets.GetValueOrDefault(family.Key));
+            })];
+        }
+        else
+        {
+            tiles = [.. shown.Select(entry => new AssetTile(entry, [entry]))];
+        }
         foreach (AssetTile tile in tiles)
         {
             tile.Uses = UsesOf(tile.Members);
@@ -866,12 +957,28 @@ public sealed partial class AssetsViewModel : ObservableObject
         // by its key: read again, the catalogue holds other objects for the same assets
         AssetEntry? current = selected is null ? null : Catalog.Find(selected.Key);
         AssetTile? again = current is null ? null : TileOf(current);
+        bool whole = WholeSet;
         Select(again);
         if (again is not null)
         {
+            _choosingTile = true;
             SelectedMember = current;
+            _choosingTile = false;
+            WholeSet = whole && again.IsSet;
         }
     }
+
+    /// <summary>
+    /// The order of a decal set's textures on its tile: the albedo first, which its picture shows.
+    /// </summary>
+    private static int PartOrder(DecalSetPart part) => part switch
+    {
+        DecalSetPart.Albedo => 0,
+        DecalSetPart.Normals => 1,
+        DecalSetPart.Specular => 2,
+        DecalSetPart.Mask => 3,
+        _ => 4,
+    };
 
     private void MakeRows()
     {

@@ -396,6 +396,10 @@ public partial class LayerStackViewModel : ObservableObject
         {
             parts.Add("reads " + LayerStacks.MaskTitle(reference.Key));
         }
+        if (layer.Source is DecalMasksSource decals)
+        {
+            parts.Add(DecalMasksSummary(decals));
+        }
         if (layer.Curve is HeightCurve curve)
         {
             parts.Add(string.Create(CultureInfo.InvariantCulture, $"{curve.Profile.ToString().ToLowerInvariant()}, {curve.Points.Length} points"));
@@ -412,7 +416,7 @@ public partial class LayerStackViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The kind of a layer for people: <c>Base</c>, <c>Painted</c>, <c>Image</c>, <c>Mask</c>, <c>Rules</c>, <c>Curve</c>.
+    /// The kind of a layer for people: <c>Base</c>, <c>Painted</c>, <c>Image</c>, <c>Mask</c>, <c>Rules</c>, <c>Curve</c>, <c>Decal masks</c>.
     /// </summary>
     public virtual string KindOf(Layer layer) => layer.IsBase ? "Base" : layer.Source switch
     {
@@ -421,8 +425,24 @@ public partial class LayerStackViewModel : ObservableObject
         MaskRefSource => "Mask",
         RulesSource => "Rules",
         CurveSource => "Curve",
+        DecalMasksSource => "Decal masks",
         _ => LayerSources.NameOf(layer.Source),
     };
+
+    /// <summary>
+    /// What a decal-masks layer draws, in words: <c>mask moss of every set</c>, <c>mask main of rock01, rock02</c>.
+    /// </summary>
+    public static string DecalMasksSummary(DecalMasksSource source) =>
+        $"mask {source.Mask} of " + (source.Sets.IsEmpty ? "every set" : string.Join(", ", source.Sets.Select(set => Path.GetFileName(set))));
+
+    /// <summary>
+    /// The add choice of a decal-masks layer (the masks of the placed decal sets at their place,
+    /// turn and size), for any stack: its command adds the layer with the arguments given, and the
+    /// layer's mask name and sets are then set in its settings.
+    /// </summary>
+    public static LayerAddChoice DecalMasksChoice(string command, JsonObject arguments) =>
+        new LayerAddChoice("Decal masks", "Add a decal-masks layer",
+            "The greyscale _mask of every placed decal set at its place, turn and size; it follows the decals when they move", command, arguments);
 
     [RelayCommand]
     private Task Remove() => Chosen is string name ? _run(Commands.Remove, new JsonObject { [Commands.LayerArgument] = name }) : Task.CompletedTask;

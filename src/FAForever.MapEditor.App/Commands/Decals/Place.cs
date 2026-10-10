@@ -14,7 +14,8 @@ namespace FAForever.MapEditor.App.Commands;
 /// beyond which it is not drawn; its length follows the texture's shape.
 /// </summary>
 /// <param name="Key">The decal's texture, an asset of the workspace (<c>env/common/decals/erosion018_normals.dds</c>)
-/// or a game path; left out, the place tool's decal.</param>
+/// or a game path, or a decal set's name (<c>env/rocky/decals/rock01</c>: one decal carrying all its
+/// textures); left out, the place tool's decal.</param>
 /// <param name="X">The decal's middle, in ogrids.</param>
 /// <param name="Width">Along the decal's own x axis, in ogrids.</param>
 /// <param name="Heading">In degrees, clockwise from +x in the top view.</param>
@@ -46,7 +47,7 @@ public sealed class PlaceDecalHandler(MainViewModel model, SelectionViewModel se
             return model.MirrorPlaced(document, [added], out all);
         });
         selection.Set(all);
-        model.Status = $"Placed {Path.GetFileNameWithoutExtension(key)}{MainViewModel.Mirrored(all.Length)}";
+        model.Status = $"Placed {Path.GetFileNameWithoutExtension(key)}{(model.ShownDocument?.Find(added) is Decal { Set: not null } ? " (a decal set)" : "")}{MainViewModel.Mirrored(all.Length)}";
         return Task.FromResult(added.ToString());
     }
 }

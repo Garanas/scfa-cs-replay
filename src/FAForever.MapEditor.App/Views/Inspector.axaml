@@ -52,8 +52,11 @@
           </Border>
           <Border Classes="group" IsVisible="{Binding Assets.IsFamilySelected}">
             <StackPanel Classes="stack">
-              <TextBlock Classes="heading" Text="Variants" />
-              <ListBox ItemsSource="{Binding Assets.Selected.Members}" SelectedItem="{Binding Assets.SelectedMember}" AutomationProperties.Name="Variants">
+              <TextBlock Classes="heading" Text="{Binding Assets.MembersTitle}" />
+              <TextBlock Classes="caption" Text="{Binding Assets.SetText}" IsVisible="{Binding Assets.IsSetSelected}" AutomationProperties.Name="Decal set" />
+              <Button Content="Choose the whole set" Command="{Binding Assets.ChooseWholeSetCommand}" IsVisible="{Binding Assets.IsSetSelected}"
+                      AutomationProperties.HelpText="Places the set as one decal with all its textures; choosing a texture below places that one alone" />
+              <ListBox ItemsSource="{Binding Assets.Selected.Members}" SelectedItem="{Binding Assets.SelectedMember}" AutomationProperties.Name="{Binding Assets.MembersTitle}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="workspaces:AssetEntry">
                     <TextBlock Text="{Binding Name}" />

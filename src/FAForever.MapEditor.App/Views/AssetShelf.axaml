@@ -45,9 +45,9 @@
                   ToolTip.Tip="{Binding SortHelp}" AutomationProperties.Name="Sort the assets" AutomationProperties.HelpText="{Binding SortHelp}">
             <Path Classes="icon small" Data="{StaticResource Icon.Sort}" />
           </Button>
-          <Button Classes="chip" Classes.on="{Binding Families}" IsVisible="{Binding IsProps}" Content="Variants"
+          <Button Classes="chip" Classes.on="{Binding Families}" IsVisible="{Binding HasFamilies}" Content="Variants"
                   Command="{Binding ToggleFamiliesCommand}"
-                  ToolTip.Tip="A prop's sizes and variants as one tile" AutomationProperties.HelpText="A prop's sizes and variants as one tile" />
+                  ToolTip.Tip="{Binding FamiliesHelp}" AutomationProperties.HelpText="{Binding FamiliesHelp}" />
           <Button Classes="chip icononly" Command="{Binding NextTileSizeCommand}"
                   ToolTip.Tip="{Binding TileSizeHelp}" AutomationProperties.Name="Tile size" AutomationProperties.HelpText="{Binding TileSizeHelp}">
             <Path Classes="icon small" Data="{StaticResource Icon.Tiles}" />

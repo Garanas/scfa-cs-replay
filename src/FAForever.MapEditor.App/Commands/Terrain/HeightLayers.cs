@@ -34,14 +34,16 @@ internal static class HeightLayerArgument
 /// file changes while it lies in the project folder; a curve layer gets its points from the curve
 /// tool (or <c>terrain.addCurve</c>).
 /// </summary>
-/// <param name="Kind"><c>sculpt</c> (left out), <c>imported</c> or <c>curve</c>.</param>
+/// <param name="Kind"><c>sculpt</c> (left out), <c>imported</c>, <c>curve</c> or <c>decals</c> (the masks of the placed decal sets).</param>
 /// <param name="Name">Left out, a free one (<c>Sculpt 2</c>, the file's name, <c>Curve</c>).</param>
 /// <param name="Path">An imported layer's file (PNG, <c>.r16</c>, ...); left out, the editor asks.</param>
 /// <param name="Combine"><c>Add</c>, <c>Subtract</c>, <c>Maximum</c>, <c>Minimum</c>, <c>Replace</c> or <c>Multiply</c>; left out, the
 /// kind's own (sculpting adds, an image replaces).</param>
+/// <param name="Mask">A decals layer's mask name (<c>main</c> when left out, the plain <c>_mask</c>).</param>
+/// <param name="Height">A decals layer's height at a full mask, in game units (4 when left out).</param>
 /// <returns>The new layer's name, or null when no file was chosen.</returns>
 [EditorCommand("terrain.addLayer", "Add a height layer...", Story = "T-5", Needs = Needs.Map | Needs.NoStroke)]
-public sealed record AddHeightLayer(string? Kind = null, string? Name = null, string? Path = null, string? Combine = null) : IRequest<string?>;
+public sealed record AddHeightLayer(string? Kind = null, string? Name = null, string? Path = null, string? Combine = null, string? Mask = null, float? Height = null) : IRequest<string?>;
 
 public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs dialogs) : IRequestHandler<AddHeightLayer, string?>
 {
@@ -94,8 +96,19 @@ public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs di
                 }
                 break;
             }
+            case "decals":
+            {
+                // the masks of the placed decal sets, raising the terrain by Height where they are full
+                string name = request.Name?.Trim() ?? HeightLayerEdits.FreeName(document, "Decal masks");
+                layer = DecalMaskLayers.New(document, document.HeightStack, name, new DecalMasksSource(request.Mask ?? DecalSets.MainMask, [], request.Height ?? 4), model.DecalPictures);
+                if (combine is LayerCombine chosen)
+                {
+                    layer = layer with { Combine = chosen };
+                }
+                break;
+            }
             default:
-                throw new ArgumentException($"A height layer is sculpt, imported or curve, not '{request.Kind}'");
+                throw new ArgumentException($"A height layer is sculpt, imported, curve or decals, not '{request.Kind}'");
         }
         string? above = model.HeightStack.Chosen is string chosenLayer && HeightLayers.Find(document, chosenLayer) is not null ? chosenLayer : null;
         using Performance.Span span = Performance.Measure("model.height-layers");

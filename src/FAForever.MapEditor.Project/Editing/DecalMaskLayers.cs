@@ -192,6 +192,44 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// A new decal-masks layer of a stack, drawn: in a stack of heights it adds (its height times
+        /// the masks), in a stack of coverage it keeps the higher of its masks and the layers below.
+        /// </summary>
+        public static Layer New(MapDocument document, LayerStack stack, string name, DecalMasksSource source, IDecalMaskPictures pictures) =>
+            Draw(document, stack, new Layer
+            {
+                Name = name,
+                Source = source,
+                Combine = stack.Target.IsHeights ? LayerCombine.Add : LayerCombine.Maximum,
+            }, pictures);
+
+        /// <summary>
+        /// A stack with a decal-masks layer's source changed (another mask name, other sets, another
+        /// height) and the layer drawn again.
+        /// </summary>
+        /// <exception cref="ArgumentException">The stack has no decal-masks layer of that name.</exception>
+        public static LayerStack SetSource(MapDocument document, LayerStack stack, string name, DecalMasksSource source, IDecalMaskPictures pictures)
+        {
+            int index = stack.IndexOf(name);
+            if (index < 0 || stack.Layers[index].Source is not DecalMasksSource)
+            {
+                throw new ArgumentException($"There is no decal-masks layer {name}");
+            }
+            Layer layer = stack.Layers[index];
+            if (layer.Source.Equals(source))
+            {
+                return stack;
+            }
+            return stack.With(index, Draw(document, stack, layer with { Source = source }, pictures));
+        }
+
+        /// <summary>
+        /// The names of the masks the map's decal sets have (<c>main</c>, <c>moss</c>, ...), sorted.
+        /// </summary>
+        public static IReadOnlyList<string> MaskNamesOf(MapDocument document) =>
+            [.. document.Decals.Where(decal => decal.Set is not null).SelectMany(decal => decal.Set!.Masks.Keys).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
+
+        /// <summary>
         /// A decal-masks layer with its grid drawn from the decals of a document: over the tiles
         /// marked in <paramref name="dirty"/> (all of them when null or when the layer has no grid
         /// of the stack's size yet), keeping tiles that come out the same.

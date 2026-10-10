@@ -922,20 +922,35 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             int index = instances.Count / 6;
             instances.AddRange([corner.X, corner.Y, edgeU.X, edgeU.Y, edgeV.X, edgeV.Y]);
 
-            string texture = decal.Textures[0];
-            if (_runs.Count > 0 && _runs[^1] is DecalRun last && last.Normals == normals && last.SizeClass == sizeClass && string.Equals(last.Texture, texture, StringComparison.OrdinalIgnoreCase))
+            AddToRun(normals, decal.Textures[0], sizeClass, index);
+            // a decal set's normals lie with its albedo: the same place, turn and size (D-1)
+            if (!normals && decal.Set?.Normals is { Length: > 0 } setNormals)
             {
-                _runs[^1] = last with { Count = last.Count + 1 };
-            }
-            else
-            {
-                _runs.Add(new DecalRun(normals, texture, sizeClass, index, 1));
+                instances.AddRange([corner.X, corner.Y, edgeU.X, edgeU.Y, edgeV.X, edgeV.Y]);
+                AddToRun(true, setNormals, sizeClass, index + 1);
             }
         }
 
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _decalInstances);
         float[] data = instances.Count > 0 ? [.. instances] : [0f];
         _gl.BufferData<float>(BufferTargetARB.ArrayBuffer, data, BufferUsageARB.StaticDraw);
+    }
+
+    /// <summary>
+    /// Adds a decal's instance to the last run when it shares its texture and size class, else
+    /// starts a run.
+    /// </summary>
+    private void AddToRun(bool normals, string texture, int sizeClass, int index)
+    {
+        if (_runs.Count > 0 && _runs[^1] is DecalRun last && last.Normals == normals && last.SizeClass == sizeClass
+            && string.Equals(last.Texture, texture, StringComparison.OrdinalIgnoreCase) && last.First + last.Count == index)
+        {
+            _runs[^1] = last with { Count = last.Count + 1 };
+        }
+        else
+        {
+            _runs.Add(new DecalRun(normals, texture, sizeClass, index, 1));
+        }
     }
 
     /// <summary>

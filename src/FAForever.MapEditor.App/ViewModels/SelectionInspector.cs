@@ -180,6 +180,7 @@ public sealed partial class SelectionInspector : ObservableObject
     {
         Marker marker => marker.Name,
         Prop prop => Path.GetFileNameWithoutExtension(prop.Blueprint),
+        Decal { Set: DecalSet set } => $"{Path.GetFileName(set.Name)} (decal set)",
         Decal decal => decal.Textures.IsDefaultOrEmpty ? $"Decal {decal.Id}" : Path.GetFileNameWithoutExtension(decal.Textures[0]),
         PlacedUnit unit => $"{unit.Unit.Name} ({unit.Unit.Blueprint})",
         Area area => area.Name,
@@ -505,7 +506,10 @@ public sealed class DecalSelection : SelectionSection
         Show(ref _length, nameof(Length), SelectionInspector.Shared(decals.Select(decal => decal.Scale.Z), "0.##"));
         Show(ref _cutOff, nameof(CutOff), SelectionInspector.Shared(decals.Select(decal => decal.CutOffLod), "0.#"));
         Show(ref _nearCutOff, nameof(NearCutOff), SelectionInspector.Shared(decals.Select(decal => decal.NearCutOffLod), "0.#"));
-        string types = string.Join(", ", decals.Select(decal => decal.Type.ToString().ToLowerInvariant()).Distinct().Order());
+        // a decal set says what it is written as: its albedo, its normals, and its masks
+        string types = string.Join(", ", decals.Select(decal => decal.Set is DecalSet set
+            ? $"set of {decal.Type.ToString().ToLowerInvariant()}{(set.Normals is null ? "" : " + normals")}{(set.Masks.IsEmpty ? "" : $" + mask {string.Join(", ", set.Masks.Keys)}")}"
+            : decal.Type.ToString().ToLowerInvariant()).Distinct().Order());
         if (types != Types)
         {
             Types = types;

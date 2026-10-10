@@ -16,6 +16,7 @@
       <Button Content="Read the file again" Command="{Binding HeightStack.ReloadCommand}" IsVisible="{Binding HeightStack.IsImported}"
               AutomationProperties.HelpText="Reads the imported layer's file again, as the editor does when it changes in the project folder" />
       <controls:SettingList DataContext="{Binding HeightStack.Curve}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HeightStack.IsCurve}" />
+      <controls:SettingList DataContext="{Binding HeightStack.DecalMasks}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HeightStack.IsDecalMasks}" />
     </StackPanel>
   </Border>
 </UserControl>
