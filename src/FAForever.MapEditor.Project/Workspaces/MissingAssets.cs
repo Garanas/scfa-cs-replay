@@ -60,12 +60,32 @@ namespace FAForever.MapEditor.Project.Workspaces
             {
                 Add(placed.Unit.Blueprint, AssetKind.Unit);
             }
+            if (ChecksCubemaps(catalog))
+            {
+                foreach (string cubemap in CubemapsOf(document))
+                {
+                    Add(cubemap, AssetKind.Cubemap);
+                }
+            }
             return [.. found
                 .Select(item => new MissingAsset(item.Key, item.Value.Kind, item.Value.Uses,
                     item.Value.Kind is AssetKind.Prop or AssetKind.Unit ? "missing-model" : "missing-texture"))
                 .OrderByDescending(missing => missing.Uses)
                 .ThenBy(missing => missing.Path, StringComparer.Ordinal)];
         }
+
+        /// <summary>
+        /// The cube maps a map names: the sky's, those units reflect and the water's.
+        /// </summary>
+        public static IEnumerable<string> CubemapsOf(MapDocument document) =>
+            [document.Sky.Cubemap, .. document.Sky.EnvironmentCubemaps.Select(cubemap => cubemap.Texture), document.Water.Cubemap];
+
+        /// <summary>
+        /// Whether the workspace converted the game's cube maps (<c>textures/environment</c>), so
+        /// that a cube map it lacks is missing; a workspace converted before it did knows none.
+        /// </summary>
+        public static bool ChecksCubemaps(AssetCatalog? catalog) =>
+            catalog is not null && catalog.Entries.Any(entry => entry.Kind == AssetKind.Cubemap);
 
         private static bool Has(MapDocument document, AssetCatalog catalog, string key)
         {

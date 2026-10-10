@@ -172,6 +172,23 @@ namespace FAForever.MapEditor.Project.Checks
                 yield return new Problem("missing-texture", ProblemSeverity.Warning,
                     $"{(count == 1 ? "A decal's texture is" : $"The texture of {count} decals is")} in neither the map nor the workspace: {uses.Key}", ObjectRef.Decal(first.Id));
             }
+
+            if (MissingAssets.ChecksCubemaps(context.Catalog))
+            {
+                IEnumerable<(string Path, string What)> cubemaps =
+                [
+                    (document.Sky.Cubemap, "The sky's cube map"),
+                    .. document.Sky.EnvironmentCubemaps.Select(cubemap => (cubemap.Texture, $"The cube map units reflect ({cubemap.Name})")),
+                    (document.Water.Cubemap, "The cube map the water reflects"),
+                ];
+                foreach ((string path, string what) in cubemaps)
+                {
+                    if (!string.IsNullOrWhiteSpace(path) && Has(path) == false)
+                    {
+                        yield return new Problem("missing-texture", ProblemSeverity.Warning, $"{what} is in neither the map nor the workspace: {path}");
+                    }
+                }
+            }
         }
 
         /// <summary>
