@@ -95,6 +95,26 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void AUnitHasItsBuildCostAndAPropItsReclaimAsNumbers()
+        {
+            string assets = Assets();
+            string asylum = Path.Combine(assets, "units/uab0301/uab0301_unit.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(asylum)!);
+            File.WriteAllText(asylum, """{ "id": "UAB0301", "name": "Land Factory HQ", "faction": "Aeon", "techLevel": 3, "categories": ["AEON", "STRUCTURE"], "massCost": 5220, "energyCost": 47400 }""");
+            AssetCatalog catalog = AssetCatalog.Load(assets);
+
+            AssetEntry factory = catalog.Find("uab0301")!;
+            Assert.AreEqual(5220, factory.MassCost);
+            Assert.AreEqual(47400, factory.EnergyCost);
+            Assert.AreEqual((5220, 47400), (factory.Mass, factory.Energy), "a unit stands for its cost");
+            Assert.IsNull(catalog.Find("uel0101")!.MassCost, "a blueprint without a cost has none");
+            AssetEntry pine = catalog.Find("/env/evergreen/props/trees/pine06_prop.bp")!;
+            Assert.IsNull(pine.MassCost, "only units cost something");
+            Assert.AreEqual((0, 30), (pine.Mass, pine.Energy), "a prop stands for its reclaim");
+            Assert.AreEqual(5220, catalog.Reload("uab0301", assets).Entry!.MassCost, "read again, it keeps them");
+        }
+
+        [TestMethod]
         public void ReadsTheWorkspacesBrushesInTheirFolders()
         {
             string brushes = ProjectFolders.New("brushes");

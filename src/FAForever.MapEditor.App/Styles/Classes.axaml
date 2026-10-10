@@ -389,6 +389,48 @@
     <Setter Property="FontStyle" Value="Italic" />
   </Style>
 
+  <!-- an entry of a mode panel's list (Controls/PanelPartList): its title, its detail at the right; the chosen one filled -->
+  <!-- a tile's line of mass and energy (F-8): a unit's cost, a prop's reclaim -->
+  <Style Selector="TextBlock.tileeconomy">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style Selector="StackPanel.partgroup">
+    <Setter Property="Spacing" Value="{StaticResource SpaceSmall}" />
+  </Style>
+  <Style Selector="StackPanel.partentries">
+    <Setter Property="Spacing" Value="{StaticResource SpaceTiny}" />
+  </Style>
+  <Style Selector="Button.partentry">
+    <Setter Property="Height" Value="{StaticResource PartEntryHeight}" />
+    <Setter Property="Padding" Value="{StaticResource PartEntryPadding}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.partentry TextBlock.partdetail">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="{StaticResource PartEntryPadding}" />
+  </Style>
+  <Style Selector="Button.partentry.selected">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.partentry.selected TextBlock.partdetail">
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.partentry.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectedHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+
   <!-- something the views show, on or off: a Button with the class on, or a ToggleButton checked (the views' row) -->
   <Style Selector=":is(Button).chip">
     <Setter Property="Height" Value="{StaticResource ChipHeight}" />
@@ -804,6 +846,21 @@
   </Style>
   <Style Selector="ScrollViewer.pluginslist">
     <Setter Property="MaxHeight" Value="{StaticResource PluginsListHeight}" />
+  </Style>
+  <!-- the keyboard shortcuts page (F-1) and the workspace settings page (F-5): as wide as the Plugins page, their lists scroll -->
+  <Style Selector="Border.dialog.shortcuts, Border.dialog.workspacesettings">
+    <Setter Property="Width" Value="{StaticResource PluginsDialogWidth}" />
+  </Style>
+  <Style Selector="ScrollViewer.shortcutslist">
+    <Setter Property="MaxHeight" Value="{StaticResource PluginsListHeight}" />
+  </Style>
+  <Style Selector="ScrollViewer.workspacesettingslist">
+    <Setter Property="MaxHeight" Value="{StaticResource WorkspaceSettingsListHeight}" />
+  </Style>
+  <Style Selector="TextBlock.shortcutkeys">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="Width" Value="{StaticResource ShortcutKeysWidth}" />
   </Style>
   <!-- the description of a problem report (F-17): a few lines high -->
   <Style Selector="TextBox.reportdescription">

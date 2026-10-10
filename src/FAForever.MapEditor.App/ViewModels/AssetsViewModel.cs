@@ -102,6 +102,27 @@ public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry
     public string Glyph => AssetsViewModel.IconOf(entry.Kind);
 
     /// <summary>
+    /// Whether its tile has a line of mass and energy: a unit's cost, a prop's reclaim.
+    /// </summary>
+    public bool ShowsEconomy => entry.Kind is AssetKind.Unit or AssetKind.Prop;
+
+    /// <summary>
+    /// Its mass and energy in a short line, mass first: <c>5.2k · 47.4k</c> (in full in
+    /// <see cref="EconomyHelp"/>); empty for the other kinds.
+    /// </summary>
+    public string Economy => !ShowsEconomy ? ""
+        : entry.Mass == 0 && entry.Energy == 0 ? (entry.Kind == AssetKind.Unit ? "No cost" : "No reclaim")
+        : $"{AssetSearch.Short(entry.Mass)} · {AssetSearch.Short(entry.Energy)}";
+
+    /// <summary>
+    /// Its mass and energy in full: what its tile's tool tip and a screen reader say.
+    /// </summary>
+    public string EconomyHelp => !ShowsEconomy ? ""
+        : entry.Kind == AssetKind.Unit
+            ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Costs {entry.Mass:#,0} mass and {entry.Energy:#,0} energy")
+            : string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Reclaim: {entry.Mass:#,0} mass and {entry.Energy:#,0} energy");
+
+    /// <summary>
     /// How often the map uses it (its family together).
     /// </summary>
     [ObservableProperty]
@@ -122,7 +143,7 @@ public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry
     /// <summary>
     /// What a screen reader says of it.
     /// </summary>
-    public string Label => $"{Title}, {Detail}" + (Uses > 0 ? $", {Uses} on the map" : "");
+    public string Label => $"{Title}, {Detail}" + (ShowsEconomy ? $", {EconomyHelp}" : "") + (Uses > 0 ? $", {Uses} on the map" : "");
 }
 
 /// <summary>
@@ -171,7 +192,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     public bool IsLoaded { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsProps), nameof(GroupsTitle))]
+    [NotifyPropertyChangedFor(nameof(IsProps), nameof(GroupsTitle), nameof(CanSort))]
     public partial AssetKind Kind { get; set; } = AssetKind.Prop;
 
     /// <summary>
@@ -259,6 +280,45 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     public partial bool Families { get; set; } = true;
+
+    /// <summary>
+    /// How the tiles are ordered: as listed, or the most mass or energy first (units and props).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SortIndex), nameof(IsSorted), nameof(SortHelp))]
+    public partial AssetSort Sort { get; set; }
+
+    /// <summary>
+    /// Whether the tiles are in another order than listed (the sort button is on).
+    /// </summary>
+    public bool IsSorted => Sort != AssetSort.Listed;
+
+    /// <summary>
+    /// What the sort button says: the order now, and what a click does.
+    /// </summary>
+    public string SortHelp => $"Order: {AssetSearch.SortTitles[(int)Sort].ToLowerInvariant()}. Click for the next: as listed, the most mass first, the most energy first (a unit's build cost, a prop's reclaim)";
+
+    /// <summary>
+    /// The shelf's sort button: the next order.
+    /// </summary>
+    [RelayCommand]
+    private void NextSort() => Sort = (AssetSort)(((int)Sort + 1) % AssetSearch.SortTitles.Count);
+
+    /// <summary>
+    /// <see cref="Sort"/> as the shelf's combo box chooses it (<see cref="AssetSearch.SortTitles"/>).
+    /// </summary>
+    public int SortIndex
+    {
+        get => (int)Sort;
+        set => Sort = Enum.IsDefined((AssetSort)value) ? (AssetSort)value : AssetSort.Listed;
+    }
+
+    public IReadOnlyList<string> SortTitles => AssetSearch.SortTitles;
+
+    /// <summary>
+    /// Whether the shown kind has mass and energy to sort by: units and props.
+    /// </summary>
+    public bool CanSort => Kind is AssetKind.Unit or AssetKind.Prop;
 
     /// <summary>
     /// How many tiles fit in a row, as the view measures it.
@@ -721,6 +781,8 @@ public sealed partial class AssetsViewModel : ObservableObject
 
     partial void OnFamiliesChanged(bool value) => Rebuild();
 
+    partial void OnSortChanged(AssetSort value) => Rebuild();
+
     partial void OnColumnsChanged(int value) => MakeRows();
 
     partial void OnSelectedChanged(AssetTile? value)
@@ -772,8 +834,8 @@ public sealed partial class AssetsViewModel : ObservableObject
             .GroupBy(entry => Origins.Of(entry).Short)
             .OrderByDescending(source => source.Count())
             .Select(source => new AssetChoice(source.Key, source.Key, source.Count(), source.Key == Source))];
-        IEnumerable<AssetEntry> shown = InFavouritesOrder(ofKind).Where(entry => (Group is null || entry.Group == Group) && (Category is null || entry.Category == Category)
-            && (Source is null || Origins.Of(entry).Short == Source));
+        IEnumerable<AssetEntry> shown = AssetSearch.Sorted(InFavouritesOrder(ofKind).Where(entry => (Group is null || entry.Group == Group) && (Category is null || entry.Category == Category)
+            && (Source is null || Origins.Of(entry).Short == Source)), CanSort ? Sort : AssetSort.Listed);
         AssetEntry? selected = Shown;
         List<AssetTile> tiles = Kind == AssetKind.Prop && Families
             ? [.. shown.GroupBy(entry => (entry.Group, entry.Category, entry.Family)).Select(family => new AssetTile(family.First(), [.. family]))]

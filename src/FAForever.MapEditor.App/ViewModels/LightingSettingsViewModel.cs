@@ -78,12 +78,18 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
                 Minimum = 0, Maximum = 90, HasSlider = true, Help = "How high the sun stands above the horizon, in degrees",
             },
             new ColorSetting("Sun colour", set, "sunColor", d => d.Lighting.SunColor, run),
+            new NumberSetting("Multiplier", set, "multiplier", d => d.Lighting.Multiplier, run) { Minimum = 0, Maximum = 4, HasSlider = true, Help = "How strongly the sun lights" },
+        ]);
+        Colours = new SettingGroup("Colours and ambience",
+        [
             new ColorSetting("Ambience", set, "sunAmbience", d => d.Lighting.SunAmbience, run) { Help = "The light that comes from everywhere" },
             new ColorSetting("Shadow fill", set, "shadowFillColor", d => d.Lighting.ShadowFillColor, run) { Help = "The colour of what lies in shadow" },
-            new NumberSetting("Multiplier", set, "multiplier", d => d.Lighting.Multiplier, run) { Minimum = 0, Maximum = 4, HasSlider = true, Help = "How strongly the sun lights" },
             new ColorSetting("Specular", set, "specularColor", d => new Vector3(d.Lighting.SpecularColor.X, d.Lighting.SpecularColor.Y, d.Lighting.SpecularColor.Z), run),
             new NumberSetting("Specular strength", set, "specularAlpha", d => d.Lighting.SpecularColor.W, run) { Minimum = 0, Maximum = 1, HasSlider = true },
-            new NumberSetting("Bloom", set, "bloom", d => d.Lighting.Bloom, run) { Minimum = 0, Maximum = 0.5, HasSlider = true },
+        ]);
+        Bloom = new SettingGroup("Bloom",
+        [
+            new NumberSetting("Bloom", set, "bloom", d => d.Lighting.Bloom, run) { Minimum = 0, Maximum = 0.5, HasSlider = true, Help = "How much bright parts glow beyond their edges" },
         ]);
         const string sky = "lighting.setSky";
         Sky = new SettingGroup("Sky",
@@ -116,9 +122,44 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
             new NumberSetting("Fog start", set, "fogStart", d => d.Lighting.FogStart, run) { Minimum = 0, Maximum = 2000, HasSlider = true },
             new NumberSetting("Fog end", set, "fogEnd", d => d.Lighting.FogEnd, run) { Minimum = 0, Maximum = 4000, HasSlider = true },
         ]);
+        Parts = new PanelParts(
+        [
+            new PanelPart(SunPart, "Sun", "Settings", new SettingsPart([Sun], "The Sun tool turns the sun: drag in a view to where it is to stand."), "Where the sun stands, its colour and strength"),
+            new PanelPart(ColoursPart, "Colours and ambience", "Settings", new SettingsPart([Colours]), "The light from everywhere, the shadows' colour and the shine"),
+            new PanelPart(FogPart, "Fog", "Settings", new SettingsPart([Fog]), "The haze far from the camera"),
+            new PanelPart(BloomPart, "Bloom", "Settings", new SettingsPart([Bloom]), "How bright parts glow"),
+            new PanelPart(SkyPart, "Sky and cube maps", "Sky", new SettingsPart([Sky], "The 3D view shows the sky's cube map around the map, and the water reflects it."), "The sky around the map, what units reflect, the background"),
+            new PanelPart(ShadowDecalPart, "Shadow decal", "Map-wide decals",
+                new PlannedPart("L-1", "A decal over the whole map that darkens the crevices: generated from the final heightmap (ambient occlusion, and the sun's shadows as an option) or a file of your own, generated again from here."),
+                "The map-wide shadow decal"),
+        ]);
     }
 
+    // the ids of the Lighting panel's entries (view.inspectPart)
+    public const string SunPart = "lighting.sun";
+    public const string ColoursPart = "lighting.colours";
+    public const string FogPart = "lighting.fog";
+    public const string BloomPart = "lighting.bloom";
+    public const string SkyPart = "lighting.sky";
+    public const string ShadowDecalPart = "lighting.shadowDecal";
+
+    /// <summary>
+    /// What the Lighting panel lists: the sun, the colours, fog, bloom, the sky and the map-wide
+    /// shadow decal; the inspector edits the chosen one.
+    /// </summary>
+    public PanelParts Parts { get; }
+
+    /// <summary>
+    /// The sun's place, colour and multiplier.
+    /// </summary>
     public SettingGroup Sun { get; }
+
+    /// <summary>
+    /// The ambience, shadow fill and specular colour.
+    /// </summary>
+    public SettingGroup Colours { get; }
+
+    public SettingGroup Bloom { get; }
 
     public SettingGroup Fog { get; }
 
@@ -133,6 +174,7 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
         {
             _shownSky = document?.Sky;
             Sky.Refresh(document);
+            Parts.Find(SkyPart)!.Detail = document is null ? "" : Path.GetFileNameWithoutExtension(document.Sky.Cubemap);
         }
         if (document is not null && ReferenceEquals(document.Lighting, _shown))
         {
@@ -140,6 +182,28 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
         }
         _shown = document?.Lighting;
         Sun.Refresh(document);
+        Colours.Refresh(document);
+        Bloom.Refresh(document);
         Fog.Refresh(document);
+        RefreshDetails(document?.Lighting);
+    }
+
+    /// <summary>
+    /// The lines beside the Lighting panel's entries: where the sun stands, how far the fog lies, the bloom.
+    /// </summary>
+    private void RefreshDetails(Lighting? lighting)
+    {
+        if (lighting is null)
+        {
+            foreach (PanelPart part in Parts.Items)
+            {
+                part.Detail = "";
+            }
+            return;
+        }
+        (double azimuth, double elevation) = SunAngles.Of(lighting.SunDirection);
+        Parts.Find(SunPart)!.Detail = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{azimuth:0}° · {elevation:0}° up");
+        Parts.Find(FogPart)!.Detail = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{lighting.FogStart:0} to {lighting.FogEnd:0}");
+        Parts.Find(BloomPart)!.Detail = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{lighting.Bloom:0.###}");
     }
 }

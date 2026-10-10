@@ -285,6 +285,9 @@
   <Thickness x:Key="ToolOverflowPadding">8,6,8,6</Thickness>
   <x:Double x:Key="ToolButtonHeight">30</x:Double>
   <Thickness x:Key="ToolButtonPadding">4,0</Thickness>
+  <!-- an entry of a mode panel's list (Water, Lighting): the panel says what there is, the inspector edits the chosen one -->
+  <x:Double x:Key="PartEntryHeight">28</x:Double>
+  <Thickness x:Key="PartEntryPadding">8,0</Thickness>
   <x:Double x:Key="ActionButtonHeight">28</x:Double>
   <x:Double x:Key="ChipHeight">24</x:Double>
   <x:Double x:Key="ToolSliderWidth">120</x:Double>
@@ -356,4 +359,8 @@
   <!-- the Plugins page (F-15): its width and the most its list of plugins takes before it scrolls -->
   <x:Double x:Key="PluginsDialogWidth">760</x:Double>
   <x:Double x:Key="PluginsListHeight">480</x:Double>
+  <!-- the keys' column of the keyboard shortcuts page -->
+  <x:Double x:Key="ShortcutKeysWidth">170</x:Double>
+  <!-- the workspace settings page's folders and assets, without scrolling at 1280 by 800 -->
+  <x:Double x:Key="WorkspaceSettingsListHeight">560</x:Double>
 </ResourceDictionary>

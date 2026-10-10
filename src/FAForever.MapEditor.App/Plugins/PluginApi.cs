@@ -366,6 +366,14 @@ internal static class PluginApi
                 item["category"] = entry.Category;
                 item["reclaimMass"] = entry.ReclaimMass;
                 item["reclaimEnergy"] = entry.ReclaimEnergy;
+                if (entry.MassCost is double mass)
+                {
+                    item["massCost"] = mass;
+                }
+                if (entry.EnergyCost is double energy)
+                {
+                    item["energyCost"] = energy;
+                }
                 return (LuaValue)item;
             }));
     }

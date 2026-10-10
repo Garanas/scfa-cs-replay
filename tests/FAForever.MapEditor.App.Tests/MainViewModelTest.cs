@@ -638,7 +638,7 @@ namespace FAForever.MapEditor.App.Tests
             StrataTool strata = model.StrataTool;
 
             model.SelectTool("terrain.sculpt");
-            Assert.AreEqual("brush", model.Presets.Kind, "the Terrain panel lists the brush presets");
+            Assert.AreEqual(BrushPreset.Kind, model.Presets.Kind, "the Terrain panel lists the brush presets");
             sculpt.Mode = HeightBrushMode.Flatten;
             sculpt.Radius = 30;
             sculpt.Strength = 0.8;

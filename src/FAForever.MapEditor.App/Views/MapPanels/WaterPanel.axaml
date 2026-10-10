@@ -1,4 +1,5 @@
-<!-- The Water panel (W-1): on or off, the elevations and colours; the rest is in the inspector. -->
+<!-- The Water panel (W-1, W-2): on or off, then what there is: the settings groups, the three maps and the wave generators;
+     the inspector edits the chosen one (Views/MapPanels/PanelPartView). -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -7,9 +8,8 @@
              x:DataType="vm:MainViewModel">
   <Border Classes="group">
     <StackPanel Classes="stack">
-      <TextBlock Classes="overline" Text="{Binding Source=Water, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-      <controls:SettingList DataContext="{Binding WaterSettings.Basic}" ShowsTitle="False" />
-      <TextBlock Classes="caption" Text="The sun on the water, reflection, textures and wave generators are in the inspector." />
+      <controls:SettingList DataContext="{Binding WaterSettings.On}" ShowsTitle="False" />
+      <controls:PanelPartList DataContext="{Binding WaterSettings.Parts}" />
     </StackPanel>
   </Border>
 </UserControl>

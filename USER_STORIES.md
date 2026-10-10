@@ -29,7 +29,11 @@ reads again when it changes; and nothing that generates runs by itself.
       converted again when FAF or the editor changes. Every workspace has a sandbox
       (`projects/Sandbox`: a small map with one of each kind of thing, made of its own assets),
       written again when missing and opened when the editor starts without a folder; it is not
-      publishable (exported to play with a warning, never uploaded).
+      publishable (exported to play with a warning, never uploaded). File, Workspace settings
+      changes where the game, FAF's data and the vault are and shows the converted assets (format,
+      date, current or not, Convert again); Help, Folders opens each of the workspace's folders.
+      Help, Keyboard shortcuts (Shift+F1) lists every command's shortcut, the tools' keys and the
+      mouse in each view, with a search.
 - [x] **F-6 Assets on disk, read again when they change.** The project's files (JSON, PNG) and the
       workspace's assets: a tool that saves one, the editor shows it.
 - [x] **F-7 Generation only when asked.** A layer or result that is generated (walkability, props
@@ -48,7 +52,8 @@ reads again when it changes; and nothing that generates runs by itself.
       the workspace's own) and the shelf filters by it; its Missing scope lists what the map uses
       that the workspace and the map's own files lack (its cube maps too), each leading to its
       problem; the inspector's Read again (`assets.reload {key}`) reads one asset again, the rest
-      of the catalogue kept.
+      of the catalogue kept. Unit and prop tiles show their mass and energy (build cost, reclaim)
+      in the shelf and the picker, which sort by them.
 - [x] **F-9 Pickers.** One way to choose an asset everywhere: a searchable picker with thumbnails
       and filters, for textures, decals, props and units (see UNT-1). Today: the asset shelf in the
       dock (Ctrl+Shift+A): the kind follows the mode; what the map uses, its biomes or everything;
@@ -74,6 +79,9 @@ reads again when it changes; and nothing that generates runs by itself.
       civilian base's units, props, decals and markers; Edit, Save the selection as a preset, or the
       Map panel's Selection presets), placed with the Map mode's Preset tool (`edit.placePreset`),
       turned in quarter turns, the units in a new group of an army, with the symmetry's images.
+      One `presets/` folder of plural kinds (brushes, stamps, lighting, water, sky, props, units,
+      markers, selections, maps: the map templates), the old folders moved once; stamp and sky
+      presets; each preset section shows its folder.
 - [x] **F-11 Selection.** Select anything that lies on the map (marker, prop, decal, unit, area) in
       the top and 3D views, one or many; an inspector shows and edits what is selected; move,
       rotate and scale with handles; copy, paste, duplicate and delete.
@@ -278,6 +286,7 @@ reads again when it changes; and nothing that generates runs by itself.
       own rules. Today: `masks/<name>.png` in the project (the map's size or half, read again when
       another tool changes them, never exported); the Paint panel's "Masks for tools" adds, renames,
       deletes and chooses them; the Masks tool paints the chosen one; the overlay Mask shows it.
+      The Masks mode on the rail (Shift+F3) is the shell they move into, with stacks of layers.
 - [x] **K-2 Masks from rules.** Generate a mask from slope, height, distance to water or other masks,
       when asked. Today: Rules... beside a mask in the Paint panel opens its rules in the inspector:
       slope, height and distance to water (ranges with soft edges), other masks or strata, noise,
@@ -292,8 +301,11 @@ reads again when it changes; and nothing that generates runs by itself.
       refraction, textures; wave generators. The Water panel and inspector (`water.set`, the wave
       textures and generators); water presets; the Waves tool: a click places a generator, a drag
       aims its waves, with the symmetry, its square dragged moves it (`water.placeWaveGenerator`).
+      The panel lists the settings groups, the maps and the wave generators; the inspector edits
+      the chosen one.
 - [x] **W-2 Paintable water.** Paint the water's foam, flatness and depth bias. Today: the Paint
-      water tool, the chosen mask shown in the top view while it is active.
+      water tool, the chosen mask shown in the top view while it is active; a map chosen in the
+      Water panel is the one it paints.
 
 ## L: Lighting and atmosphere
 
@@ -303,7 +315,9 @@ reads again when it changes; and nothing that generates runs by itself.
       with an arrow in the 3D view whose head is dragged across the sky; the Lighting inspector's
       Sky: the sky's cube map, the one units reflect and the background, cube maps chosen in the
       picker from the workspace's (`lighting.chooseCubemap`, the water's too); the 3D view draws the
-      sky's cube map around the map and the water reflects its own.
+      sky's cube map around the map and the water reflects its own. The panel lists the sun,
+      colours and ambience, fog, bloom, sky and cube maps and the shadow decal (to come); the
+      inspector edits the chosen one; sky presets.
 - [x] **L-2 Lighting presets.** The lighting of a biome as a preset (F-10): the Lighting panel's
       presets, `lighting.preset`.
 
@@ -343,7 +357,7 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **P-2 Paint props.** A palette of props with weights; density, random scale and rotation;
       an eraser. Today: the paint tool (radius, density, spacing; the Placing settings), the
       palette in the Props panel (from the picker, or the shelf while painting) saved as presets
-      (Palettes), the eraser (all props, or only the palette's).
+      (Palettes), cleared at once (`props.clearPalette`), the eraser (all props, or only the palette's).
 - [x] **P-3 Paint where a layer is.** Paint only where a stratum or mask covers the terrain (trees
       only on grass), and not where another one does: the paint tool's Only on and Not on offer
       the strata and the masks for tools of K-1 (`Mask: forest`), with a threshold.

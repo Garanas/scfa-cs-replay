@@ -57,6 +57,20 @@ namespace FAForever.MapEditor.Project.Workspaces
         public const string WaterKind = "water";
 
         /// <summary>
+        /// The sky (<see cref="Sky"/>): its cube map, the ones units reflect, the background and,
+        /// on a version 60 map, its dome.
+        /// </summary>
+        public const string SkyKind = PresetKinds.Sky;
+
+        /// <summary>
+        /// The sky as a preset, as the project's <c>map.json</c> writes it.
+        /// </summary>
+        public static Preset OfSky(string name, Sky sky) => Preset.Of(SkyKind, name, MapProjectMapping.ToDto(sky));
+
+        /// <exception cref="MapProjectException">The preset holds no sky.</exception>
+        public static Sky ReadSky(Preset preset) => MapProjectMapping.ToModel(preset.Read<SkyDto>());
+
+        /// <summary>
         /// A lighting as a preset: every setting of it, as the project's <c>map.json</c> writes it.
         /// </summary>
         public static Preset OfLighting(string name, Lighting lighting) => Preset.Of(LightingKind, name, MapProjectMapping.ToDto(lighting));

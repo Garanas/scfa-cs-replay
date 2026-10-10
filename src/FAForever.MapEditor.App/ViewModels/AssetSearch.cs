@@ -6,6 +6,27 @@ namespace FAForever.MapEditor.App.ViewModels;
 /// How the shelf and the picker search the assets: each word of the search must be in an asset's
 /// name, code, group (biome, faction, folder) or category.
 /// </summary>
+/// <summary>
+/// How the shelf and the picker order their tiles.
+/// </summary>
+public enum AssetSort
+{
+    /// <summary>
+    /// As the catalogue lists them (starred and recent first where the scope says so).
+    /// </summary>
+    Listed,
+
+    /// <summary>
+    /// The most mass first: a unit's build cost, a prop's reclaim.
+    /// </summary>
+    Mass,
+
+    /// <summary>
+    /// The most energy first.
+    /// </summary>
+    Energy,
+}
+
 public static class AssetSearch
 {
     /// <summary>
@@ -27,6 +48,33 @@ public static class AssetSearch
     /// A unit's tech level as the game says it: <c>T1</c> to <c>T3</c>, <c>Experimental</c>;
     /// <c>No tech level</c> for null.
     /// </summary>
+    /// <summary>
+    /// The entries in the order a sort asks for: as they come, or the most mass or energy first (a
+    /// unit's cost, a prop's reclaim); entries of equal value keep their order.
+    /// </summary>
+    public static IEnumerable<AssetEntry> Sorted(IEnumerable<AssetEntry> entries, AssetSort sort) => sort switch
+    {
+        AssetSort.Mass => entries.OrderByDescending(entry => entry.Mass),
+        AssetSort.Energy => entries.OrderByDescending(entry => entry.Energy),
+        _ => entries,
+    };
+
+    /// <summary>
+    /// What a sort's choice says, in the order of <see cref="AssetSort"/>.
+    /// </summary>
+    public static IReadOnlyList<string> SortTitles { get; } = ["As listed", "Most mass first", "Most energy first"];
+
+    /// <summary>
+    /// Mass or energy in a few characters for a tile: <c>0.27</c>, <c>850</c>, <c>5.2k</c>, <c>7.5M</c>.
+    /// </summary>
+    public static string Short(double value) => value switch
+    {
+        >= 1_000_000 => (value / 1_000_000).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "M",
+        >= 1000 => (value / 1000).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "k",
+        < 10 => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture),
+        _ => value.ToString("0", System.Globalization.CultureInfo.InvariantCulture),
+    };
+
     public static string TechTitle(int? level) => level switch
     {
         null => "No tech level",

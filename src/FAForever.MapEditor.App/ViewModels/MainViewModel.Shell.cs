@@ -41,6 +41,11 @@ public sealed partial class ModeItem(ModeDefinition definition) : ObservableObje
 {
     public ModeDefinition Definition => definition;
 
+    /// <summary>
+    /// Its button's tool tip: its title with its shortcut, and what it holds.
+    /// </summary>
+    public string Tip => $"{definition.Title} ({definition.Gesture}): {definition.Help}";
+
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
 
@@ -132,6 +137,16 @@ public sealed partial class MainViewModel
     public CommandRegistry Commands { get; }
 
     public IReadOnlyList<ModeItem> Modes { get; private set; } = [];
+
+    /// <summary>
+    /// The modes at the rail's top: those of the map, its look and its things.
+    /// </summary>
+    public IReadOnlyList<ModeItem> RailModes => [.. Modes.Where(mode => mode.Definition.Group < EditorModes.BottomGroup)];
+
+    /// <summary>
+    /// The modes at the rail's bottom, above the Plugins entry: the Procedural mode.
+    /// </summary>
+    public IReadOnlyList<ModeItem> BottomRailModes => [.. Modes.Where(mode => mode.Definition.Group >= EditorModes.BottomGroup)];
 
     [ObservableProperty]
     public partial ModeItem? SelectedMode { get; private set; }
@@ -255,6 +270,7 @@ public sealed partial class MainViewModel
 
         Assets.PropertyChanged += OnAssetsChanged;
         Presets.Register(BrushPreset.Of(this));
+        Presets.Register(BrushPreset.Stamps(this));
         Symmetry.Changed += (_, _) => RefreshOverlays();
         foreach (IMapTool tool in _tools.Values)
         {

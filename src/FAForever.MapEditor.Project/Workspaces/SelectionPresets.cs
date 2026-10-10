@@ -66,7 +66,7 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// </summary>
     public static class SelectionPresets
     {
-        public const string Kind = "selection";
+        public const string Kind = PresetKinds.Selections;
 
         /// <summary>
         /// The things as a preset, around their middle (rounded to a whole ogrid, so structures stay

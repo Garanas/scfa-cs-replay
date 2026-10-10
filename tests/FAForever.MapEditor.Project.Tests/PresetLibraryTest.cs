@@ -24,26 +24,28 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsTrue(Directory.Exists(workspace.PresetsFolder), "a new workspace has the folder");
             PresetLibrary presets = workspace.Presets;
 
-            string file = presets.Save(Preset.Of("brush", "Big crater", new BrushSettings(Mode.Flatten, 40, "craters/crater01.png")));
-            presets.Save(Preset.Of("brush", "a small hill", new BrushSettings(Mode.Raise, 6)));
+            string file = presets.Save(Preset.Of("brushes", "Big crater", new BrushSettings(Mode.Flatten, 40, "craters/crater01.png")));
+            presets.Save(Preset.Of("brushes", "a small hill", new BrushSettings(Mode.Raise, 6)));
             presets.Save(new Preset("lighting", "Evergreen dusk", new JsonObject { ["sunColor"] = "#ffcc8844" }));
 
-            Assert.AreEqual(Path.Combine(workspace.PresetsFolder, "brush", "Big crater.json"), file);
+            Assert.AreEqual(Path.Combine(workspace.PresetsFolder, "brushes", "Big crater.json"), file);
             StringAssert.Contains(File.ReadAllText(file), "\"mode\": \"Flatten\"", "the editor's JSON: camel case, enums as text");
-            CollectionAssert.AreEqual(new[] { "brush", "lighting" }, presets.Kinds().ToArray());
-            CollectionAssert.AreEqual(new[] { "a small hill", "Big crater" }, presets.List("brush").Select(preset => preset.Name).ToArray());
-            Assert.AreEqual(new BrushSettings(Mode.Flatten, 40, "craters/crater01.png"), presets.Find("brush", "Big crater")!.Read<BrushSettings>());
-            Assert.IsNull(presets.Find("brush", "nothing"));
+            CollectionAssert.AreEqual(new[] { "brushes", "lighting" }, presets.Kinds().ToArray());
+            CollectionAssert.AreEqual(new[] { "a small hill", "Big crater" }, presets.List("brushes").Select(preset => preset.Name).ToArray());
+            Assert.AreEqual(new BrushSettings(Mode.Flatten, 40, "craters/crater01.png"), presets.Find("brushes", "Big crater")!.Read<BrushSettings>());
+            Assert.IsNull(presets.Find("brushes", "nothing"));
             Assert.AreEqual(0, presets.List("water").Count);
 
-            presets.Save(Preset.Of("brush", "Big crater", new BrushSettings(Mode.Raise, 41)));
-            Assert.AreEqual(41, presets.Find("brush", "Big crater")!.Read<BrushSettings>().Radius, "saved again under its name");
-            Assert.AreEqual("Big crater 2", presets.FreeName("brush", "Big crater"));
-            Assert.AreEqual("Water", presets.FreeName("brush", "Water"));
+            presets.Save(Preset.Of("brushes", "Big crater", new BrushSettings(Mode.Raise, 41)));
+            Assert.AreEqual(41, presets.Find("brushes", "Big crater")!.Read<BrushSettings>().Radius, "saved again under its name");
+            Assert.AreEqual("Big crater 2", presets.FreeName("brushes", "Big crater"));
+            Assert.AreEqual("Water", presets.FreeName("brushes", "Water"));
 
-            Assert.IsTrue(presets.Delete("brush", "Big crater"));
-            Assert.IsFalse(presets.Delete("brush", "Big crater"));
-            Assert.AreEqual(1, presets.List("brush").Count);
+            Assert.IsTrue(presets.Delete("brushes", "Big crater"));
+            Assert.IsFalse(presets.Delete("brushes", "Big crater"));
+            Assert.AreEqual(1, presets.List("brushes").Count);
+            Assert.AreEqual(1, presets.List("brush").Count, "an old kind name means its new folder");
+            Assert.AreEqual(Path.Combine(workspace.PresetsFolder, "brushes"), presets.FolderOf("brush"));
         }
 
         [TestMethod]
@@ -66,7 +68,7 @@ namespace FAForever.MapEditor.Project.Tests
         {
             PresetLibrary presets = new PresetLibrary(ProjectFolders.New("presets"));
             presets.Save(Preset.Of("brush", "Good", new BrushSettings(Mode.Raise, 10)));
-            File.WriteAllText(Path.Combine(presets.Folder, "brush", "broken.json"), "{ not json");
+            File.WriteAllText(Path.Combine(presets.Folder, "brushes", "broken.json"), "{ not json");
             List<string> unreadable = [];
 
             IReadOnlyList<Preset> listed = presets.List("brush", unreadable);

@@ -303,22 +303,59 @@ public sealed partial class WorkspaceSetupViewModel(IEditorDialogs dialogs, ILog
         {
             return $"{Folder} holds other files: choose an empty folder or an existing workspace.";
         }
+        return ValidateFolders(GameFolder, FafDataFolder, VaultFolder);
+    }
+
+    /// <summary>
+    /// What is wrong with the folders of a workspace: the game's must hold its archives, FAF's data
+    /// folder (optional) and the vault must exist; null when nothing is.
+    /// </summary>
+    public static string? ValidateFolders(string gameFolder, string? fafDataFolder, string vaultFolder)
+    {
         foreach (string name in GameArchives.Names)
         {
-            if (!File.Exists(Path.Combine(GameFolder, "gamedata", name + ".scd")))
+            if (!File.Exists(Path.Combine(gameFolder, "gamedata", name + ".scd")))
             {
                 return $"The game folder has no gamedata\\{name}.scd: choose the folder Supreme Commander: Forged Alliance is installed in.";
             }
         }
-        if (!string.IsNullOrWhiteSpace(FafDataFolder) && !Directory.Exists(FafDataFolder))
+        if (!string.IsNullOrWhiteSpace(fafDataFolder) && !Directory.Exists(fafDataFolder))
         {
-            return $"FAF's data folder {FafDataFolder} does not exist; leave it empty without FAF.";
+            return $"FAF's data folder {fafDataFolder} does not exist; leave it empty without FAF.";
         }
-        if (string.IsNullOrWhiteSpace(VaultFolder) || !Directory.Exists(VaultFolder))
+        if (string.IsNullOrWhiteSpace(vaultFolder) || !Directory.Exists(vaultFolder))
         {
             return "Choose the vault folder: the one the FAF client keeps maps and mods in.";
         }
         return null;
+    }
+
+    /// <summary>
+    /// Changes where the workspace finds the game, FAF's data and the vault (File, Workspace
+    /// settings), writing its <c>workspace.json</c>. Its assets stay as they are: a game or FAF
+    /// folder of other archives makes them out of date, and converting them again is asked for.
+    /// </summary>
+    /// <returns>The workspace as it is now.</returns>
+    /// <exception cref="InvalidOperationException">No workspace is set up.</exception>
+    /// <exception cref="ArgumentException">A folder is not what it should be.</exception>
+    public Workspace ChangeFolders(string gameFolder, string? fafDataFolder, string vaultFolder)
+    {
+        Workspace workspace = Workspace ?? throw new InvalidOperationException("No workspace is set up");
+        if (ValidateFolders(gameFolder, fafDataFolder, vaultFolder) is string problem)
+        {
+            throw new ArgumentException(problem);
+        }
+        Workspace changed = workspace with
+        {
+            GameFolder = Path.GetFullPath(gameFolder),
+            FafDataFolder = string.IsNullOrWhiteSpace(fafDataFolder) ? null : Path.GetFullPath(fafDataFolder),
+            VaultFolder = Path.GetFullPath(vaultFolder),
+        };
+        changed.Save();
+        Workspace = changed;
+        log.LogInformation("The workspace {Folder} finds the game in {Game}, FAF's data in {Faf} and the vault in {Vault}",
+            changed.Folder, changed.GameFolder, changed.FafDataFolder ?? "(none)", changed.VaultFolder);
+        return changed;
     }
 
     private static string? NullIfEmpty(string text) => string.IsNullOrWhiteSpace(text) ? null : text;

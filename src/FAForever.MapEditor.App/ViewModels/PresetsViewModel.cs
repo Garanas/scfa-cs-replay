@@ -121,8 +121,40 @@ public sealed partial class PresetsViewModel : ObservableObject
     {
         _watcher?.Dispose();
         _watcher = null;
+        MoveOldFolders(workspace);
         Use(workspace.Presets);
         Watch();
+    }
+
+    /// <summary>
+    /// What the last workspace opened moved from its old folders into <c>presets/</c> (<see cref="PresetFolders"/>).
+    /// </summary>
+    public IReadOnlyList<PresetMove> Moved { get; private set; } = [];
+
+    /// <summary>
+    /// Brings the presets of the old kind names and the map templates of <c>templates/</c> into the
+    /// plural folders of <c>presets/</c>, once: a workspace without them stays as it is.
+    /// </summary>
+    private void MoveOldFolders(Workspace workspace)
+    {
+        try
+        {
+            Moved = PresetFolders.Move(workspace.Folder);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            Moved = [];
+            _log.LogError(exception, "Moving the presets of {Folder} into presets failed: {Reason}", workspace.Folder, exception.Message);
+            return;
+        }
+        foreach (PresetMove move in Moved)
+        {
+            _log.LogInformation("Moved the preset {From} to {To}", move.From, move.To);
+        }
+        if (Moved.Count > 0)
+        {
+            _log.LogInformation("Moved {Count} presets and templates into {Folder}", Moved.Count, workspace.PresetsFolder);
+        }
     }
 
     private void Watch()
@@ -150,11 +182,41 @@ public sealed partial class PresetsViewModel : ObservableObject
     /// <summary>
     /// Lists the presets of the kind of a mode's panel.
     /// </summary>
-    public void FollowMode(ModeDefinition mode)
+    public void FollowMode(ModeDefinition mode) => FollowSections(mode.Sections);
+
+    /// <summary>
+    /// Lists the presets of the first preset section among the parts a mode's panel shows (those for
+    /// the active tool and the chosen entry, <c>MainViewModel.PanelSections</c>).
+    /// </summary>
+    public void FollowSections(IEnumerable<PanelSection> sections)
     {
-        Kind = mode.Sections.OfType<PresetSection>().FirstOrDefault()?.Kind;
+        string? kind = sections.OfType<PresetSection>().FirstOrDefault()?.Kind;
+        if (kind == Kind && Kind is not null)
+        {
+            return;
+        }
+        Kind = kind;
         Refresh();
     }
+
+    /// <summary>
+    /// Shows the folder of the panel's kind, or of another, made when it is missing.
+    /// </summary>
+    /// <returns>The folder.</returns>
+    /// <exception cref="InvalidOperationException">No workspace, or no kind.</exception>
+    public string FolderOf(string? kind)
+    {
+        PresetLibrary library = Library ?? throw new InvalidOperationException("Presets need a workspace");
+        string folder = library.FolderOf(kind ?? Kind ?? throw new InvalidOperationException("Name the kind of preset: this panel lists none"));
+        Directory.CreateDirectory(folder);
+        return folder;
+    }
+
+    /// <summary>
+    /// The panel's Show the folder.
+    /// </summary>
+    [RelayCommand]
+    private Task ShowFolder() => _run("presets.showFolder", new JsonObject { ["kind"] = Kind });
 
     /// <summary>
     /// Reads the presets of <see cref="Kind"/> again.
@@ -254,6 +316,6 @@ public sealed partial class PresetsViewModel : ObservableObject
     [RelayCommand]
     private Task DeleteShown(Preset preset) => _run("presets.delete", new JsonObject { ["kind"] = preset.Kind, ["name"] = preset.Name });
 
-    private PresetKind Handler(string kind) => _kinds.GetValueOrDefault(kind)
+    private PresetKind Handler(string kind) => _kinds.GetValueOrDefault(PresetKinds.Of(kind))
         ?? throw new ArgumentException($"The editor cannot save or apply presets of kind '{kind}' yet: {string.Join(", ", _kinds.Keys)}");
 }

@@ -210,7 +210,7 @@ namespace FAForever.MapEditor.App.Tests
             Setting<ColorSetting>(model.WaterSettings.Basic, "Surface colour").Text = "0.1, 0.5, 2";
             Assert.AreEqual(new Vector3(0.1f, 0.5f, 2), model.Map.Document.Water.SurfaceColor);
             Assert.AreEqual("#1a80ff", Setting<ColorSetting>(model.WaterSettings.Basic, "Surface colour").Swatch);
-            Setting<BoolSetting>(model.WaterSettings.Basic, "Water").IsOn = !model.Map.Document.Water.HasWater;
+            Setting<BoolSetting>(model.WaterSettings.On, "Water on").IsOn = !model.Map.Document.Water.HasWater;
             Setting<TextureSetting>(model.WaterSettings.Textures, "Ramp").Text = "/textures/engine/waterramp_tundra.dds";
             Assert.AreEqual("/textures/engine/waterramp_tundra.dds", model.Map.Document.Water.Ramp);
 

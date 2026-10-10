@@ -42,7 +42,7 @@
           </StackPanel>
         </Border>
 
-        <ItemsControl ItemsSource="{Binding SelectedMode.Definition.Sections}">
+        <ItemsControl ItemsSource="{Binding PanelSections}">
           <ItemsControl.DataTemplates>
             <DataTemplate DataType="vm:PlannedSection">
               <Border Classes="group">
@@ -133,6 +133,10 @@
                              AutomationProperties.Name="Name of the new preset"
                              AutomationProperties.HelpText="Left empty, the preset is named after its settings" />
                   </DockPanel>
+                  <Button Content="Show the folder" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.ShowFolderCommand}"
+                          IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.HasLibrary}"
+                          AutomationProperties.Name="{Binding Title, StringFormat='Show the folder of the {0}'}"
+                          AutomationProperties.HelpText="A JSON file per preset, in the workspace's presets folder; other tools may write them too" />
                 </StackPanel>
               </Border>
             </DataTemplate>
@@ -361,8 +365,13 @@
                   </ItemsControl>
                   <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding IsPaletteEmpty}"
                              Text="Empty: add props, or choose them on the shelf while the paint tool is active." />
-                  <Button Content="Add a prop..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.addToPalette"
-                          AutomationProperties.HelpText="Choose a prop for the palette in the picker" />
+                  <StackPanel Classes="inline">
+                    <Button Content="Add a prop..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.addToPalette"
+                            AutomationProperties.HelpText="Choose a prop for the palette in the picker" />
+                    <Button Content="Clear" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.clearPalette"
+                            IsEnabled="{Binding !IsPaletteEmpty}"
+                            AutomationProperties.Name="Clear the palette" AutomationProperties.HelpText="Takes every prop out of the palette, to start a new one" />
+                  </StackPanel>
                 </StackPanel>
               </Border>
             </DataTemplate>

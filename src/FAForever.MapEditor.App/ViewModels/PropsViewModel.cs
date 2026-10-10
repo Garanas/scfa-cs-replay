@@ -91,7 +91,7 @@ public sealed record PropPaletteSettings(
 /// </summary>
 public sealed partial class PropsViewModel : ObservableObject
 {
-    public const string PaletteKind = "props-palette";
+    public const string PaletteKind = PresetKinds.Props;
 
     private readonly MainViewModel _model;
     private readonly ILogger _log;
@@ -260,6 +260,17 @@ public sealed partial class PropsViewModel : ObservableObject
             item.Weight = Math.Max(0, given);
         }
         return item;
+    }
+
+    /// <summary>
+    /// Empties the palette.
+    /// </summary>
+    /// <returns>How many props it held.</returns>
+    public int ClearPalette()
+    {
+        int count = Palette.Count;
+        Palette.Clear();
+        return count;
     }
 
     /// <summary>

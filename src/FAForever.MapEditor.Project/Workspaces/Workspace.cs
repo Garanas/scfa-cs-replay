@@ -37,14 +37,15 @@ namespace FAForever.MapEditor.Project.Workspaces
         public string BrushesFolder => Path.Combine(Folder, WorkspaceLayout.Brushes);
 
         /// <summary>
-        /// The map templates a new map starts from (<see cref="MapTemplates"/>, user story M-2).
-        /// </summary>
-        public string TemplatesFolder => Path.Combine(Folder, WorkspaceLayout.Templates);
-
-        /// <summary>
-        /// The saved settings to apply again (user story F-10), a folder per kind.
+        /// The saved settings to apply again (user story F-10), a folder per kind (<see cref="PresetKinds"/>).
         /// </summary>
         public string PresetsFolder => Path.Combine(Folder, WorkspaceLayout.Presets);
+
+        /// <summary>
+        /// The map templates a new map starts from (<see cref="MapTemplates"/>, user story M-2): the
+        /// presets' <c>maps</c>.
+        /// </summary>
+        public string TemplatesFolder => Path.Combine(PresetsFolder, PresetKinds.Maps);
 
         /// <summary>
         /// The Lua plugins (user story F-15), a folder each with its <c>plugin.lua</c>.

@@ -1,0 +1,44 @@
+<!-- A mode panel's list of what there is to edit (the Water and Lighting panels): its entries under their headings,
+     each a button with its title and a short detail; the chosen one is filled and the inspector edits it. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Controls.PanelPartList"
+             x:DataType="vm:PanelParts"
+             x:Name="Root">
+  <ItemsControl ItemsSource="{Binding Groups}">
+    <ItemsControl.ItemsPanel>
+      <ItemsPanelTemplate>
+        <StackPanel Classes="stack" />
+      </ItemsPanelTemplate>
+    </ItemsControl.ItemsPanel>
+    <ItemsControl.ItemTemplate>
+      <DataTemplate x:DataType="vm:PanelPartGroup">
+        <StackPanel Classes="partgroup">
+          <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+          <ItemsControl ItemsSource="{Binding Parts}" AutomationProperties.Name="{Binding Title}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Classes="partentries" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:PanelPart">
+                <Button Classes="partentry" Classes.selected="{Binding IsChosen}"
+                        Command="{Binding #Root.((vm:PanelParts)DataContext).ChooseItemCommand}" CommandParameter="{Binding}"
+                        ToolTip.Tip="{Binding Help}"
+                        AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding Label}">
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Right" Classes="partdetail" Text="{Binding Detail}" />
+                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                  </DockPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </DataTemplate>
+    </ItemsControl.ItemTemplate>
+  </ItemsControl>
+</UserControl>

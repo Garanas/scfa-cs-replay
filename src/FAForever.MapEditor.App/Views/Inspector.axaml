@@ -328,16 +328,12 @@
               <DataTemplate DataType="vm:MapFactsSection">
                 <panels:MapFactsPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
               </DataTemplate>
-              <DataTemplate DataType="vm:SkySection">
-                <Border Classes="group">
-                  <StackPanel Classes="stack">
-                    <controls:SettingList DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).LightingSettings.Sky}" />
-                    <TextBlock Classes="caption" TextWrapping="Wrap" Text="The 3D view shows the sky's cube map around the map, and the water reflects it." />
-                  </StackPanel>
-                </Border>
+              <!-- what is chosen in the Lighting and Water panels' lists -->
+              <DataTemplate DataType="vm:LightingDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).LightingSettings.Parts}" />
               </DataTemplate>
               <DataTemplate DataType="vm:WaterDetailsSection">
-                <panels:WaterDetailsPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).WaterSettings.Parts}" />
               </DataTemplate>
               <!-- the rules of masks (K-2) and props (P-4): a view of their own each -->
               <DataTemplate DataType="vm:MaskRulesSection">

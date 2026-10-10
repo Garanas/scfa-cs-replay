@@ -1,4 +1,5 @@
-<!-- The Lighting panel (L-1): the sun's direction, colours, ambience, shadow fill, multiplier, specular, bloom and fog; the 3D view shows them at once. -->
+<!-- The Lighting panel (L-1): what there is, the sun, the colours, fog, bloom, the sky and the map-wide shadow decal;
+     the inspector edits the chosen one (Views/MapPanels/PanelPartView). -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -6,11 +7,6 @@
              x:Class="FAForever.MapEditor.App.Views.MapPanels.LightingPanel"
              x:DataType="vm:MainViewModel">
   <Border Classes="group">
-    <StackPanel Classes="stack">
-      <TextBlock Classes="overline" Text="{Binding Source=Lighting, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-      <controls:SettingList DataContext="{Binding LightingSettings.Sun}" />
-      <controls:SettingList DataContext="{Binding LightingSettings.Fog}" Classes="section" />
-      <TextBlock Classes="caption" Text="The Sun tool turns the sun: drag in a view to where it is to stand." />
-    </StackPanel>
+    <controls:PanelPartList DataContext="{Binding LightingSettings.Parts}" />
   </Border>
 </UserControl>
