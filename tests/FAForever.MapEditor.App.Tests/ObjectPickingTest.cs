@@ -30,6 +30,46 @@ namespace FAForever.MapEditor.App.Tests
         private static readonly Vector3 Down = new Vector3(0, -1, 0);
 
         [TestMethod]
+        public void PropsOfTheMarkerMeshAreEffects()
+        {
+            Assert.IsTrue(EffectProps.IsEffectMesh(@"D:\ws\assets\env\common\props\marker01_lod0.glb"), "lavasteam02_prop, blowing sand, mist: the game shows an effect");
+            Assert.IsFalse(EffectProps.IsEffectMesh(@"D:\ws\assets\env\evergreen\props\rocks\rock01_lod0.glb"));
+            Assert.AreEqual(1, EffectProps.Bounds.Max.Y, "picked by the small diamond drawn in its place");
+        }
+
+        [TestMethod]
+        public void TheTerrainHidesWhatLiesBehindAHillFromTheEye()
+        {
+            Heightmap heights = TestMaps.Slope(30).Terrain.Heightmap;
+            float high = TestMaps.High(30);
+            Vector3 lowEye = new Vector3(20, TestMaps.Low + 5, 128);
+
+            Assert.IsTrue(ObjectPlacement.IsHiddenByTerrain(heights, lowEye, new Vector3(220, high, 128)), "the plateau's edge hides what stands far behind it");
+            Assert.IsFalse(ObjectPlacement.IsHiddenByTerrain(heights, lowEye, new Vector3(60, TestMaps.Low, 128)), "on the low ground in front: seen");
+            Assert.IsFalse(ObjectPlacement.IsHiddenByTerrain(heights, lowEye, new Vector3(128, TestMaps.Low + TestMaps.Rise(30) * 32, 128)), "on the ramp facing the eye: its own slope does not hide it");
+            Assert.IsFalse(ObjectPlacement.IsHiddenByTerrain(heights, new Vector3(128, 400, 128), new Vector3(220, high, 128)), "from high above: seen");
+            Assert.IsFalse(ObjectPlacement.IsHiddenByTerrain(heights, new Vector3(128, 400, 128), new Vector3(220, 0, 128)), "a marker kept at height 0 stands on the ground");
+        }
+
+        [TestMethod]
+        public async Task TheBoxIn3DLeavesOutWhatTheTerrainHides()
+        {
+            MainViewModel model = new MainViewModel(new MainViewModelTest.Answers());
+            await model.OpenAsync(TestMaps.SlopeProject(30));
+            model.SelectTool("props.select");
+            float high = TestMaps.High(30);
+            model.Map!.Session.Edit("Two props", document => document with
+            {
+                Props = [PropAt(1, 60, 128, TestMaps.Low), PropAt(2, 220, 128, high)],
+            });
+            Vector3 eye = new Vector3(20, TestMaps.Low + 5, 128);
+            // a screen where everything lies inside the box
+            model.SelectOnScreen(new Vector2(0, 0), new Vector2(100, 100), _ => new Vector2(50, 50), SelectionChange.Replace, eye: eye);
+
+            CollectionAssert.AreEqual(new[] { ObjectRef.Prop(1) }, model.Selection.Items.ToArray(), "the prop behind the plateau's edge is not selected");
+        }
+
+        [TestMethod]
         public async Task FindsThePropUnderAPointAndNotTheOneBesideIt()
         {
             MapDocument document = (await HardFfaAsync()) with { Props = [PropAt(1, 100, 100), PropAt(2, 110, 100)] };

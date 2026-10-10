@@ -134,6 +134,30 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task TheNormalMapAMapOpensWithIsCurrentUnlessItIsAPlaceholder()
+        {
+            MainViewModel model = await Open();
+            GeneratedStatus Of(string id) => model.Generation.Rows.Single(row => row.Id == id).State;
+            Assert.AreEqual(GeneratedStatus.Current, Of("normalMap"), "the map's own normal map counts as generated for the map as opened");
+            BuildWall(model);
+            Assert.AreEqual(GeneratedStatus.Stale, Of("normalMap"), "until the heights change");
+
+            // generated, saved and opened again: still current
+            await Run(model, "generate.normalMap");
+            string folder = Path.Combine(AppContext.BaseDirectory, "projects", Guid.NewGuid().ToString("N"));
+            await model.SaveAsAsync(folder);
+            MainViewModel reopened = new MainViewModel(new MainViewModelTest.Answers());
+            await reopened.OpenAsync(folder);
+            Assert.AreEqual(GeneratedStatus.Current, reopened.Generation.Rows.Single(row => row.Id == "normalMap").State);
+
+            // a normal map of one colour everywhere (a new map's, the sandbox's) was never generated
+            MainViewModel sandbox = new MainViewModel(new MainViewModelTest.Answers());
+            await sandbox.OpenAsync(TestAssets.SandboxProject());
+            Assert.AreEqual(GeneratedStatus.Missing, sandbox.Generation.Rows.Single(row => row.Id == "normalMap").State);
+            Assert.IsTrue(MainViewModel.IsOneColour(sandbox.Map!.Document.Terrain.NormalMap));
+        }
+
+        [TestMethod]
         public void ReducesAPictureByAveraging()
         {
             uint[] pixels = [0xFF000000, 0xFFFFFFFF, 0xFF000000, 0xFFFFFFFF];

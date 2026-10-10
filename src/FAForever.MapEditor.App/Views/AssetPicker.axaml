@@ -125,7 +125,7 @@
                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Panel>
                           </Border>
-                          <TextBlock Text="{Binding Title}" />
+                          <TextBlock Classes="tiletitle" Text="{Binding Title}" />
                           <TextBlock Classes="caption" Text="{Binding Detail}" TextWrapping="NoWrap" />
                         </StackPanel>
                       </Button>

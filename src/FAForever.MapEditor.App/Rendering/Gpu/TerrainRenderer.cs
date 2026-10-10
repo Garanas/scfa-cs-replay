@@ -749,24 +749,51 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _masksOf = masks;
     }
 
+    /// <summary>
+    /// Four layers of masks as the channels of one picture, over a part of the map: tile by tile from
+    /// the masks' own tiles (an 81 km map's masks are 16 million values a layer), the rows of
+    /// tiles in parallel when the part is larger than a tile.
+    /// </summary>
     private static byte[] Interleave(ImmutableArray<TiledBuffer<byte>> masks, int half, int x, int y, int width, int height)
     {
+        const int size = TiledBuffer<byte>.TileSize;
         byte[] rgba = new byte[width * height * 4];
-        for (int channel = 0; channel < 4; channel++)
+        int firstRow = y / size, lastRow = (y + height - 1) / size;
+        int firstColumn = x / size, lastColumn = (x + width - 1) / size;
+        void Row(int tileY)
         {
-            int layer = half * 4 + channel;
-            if (layer >= masks.Length)
+            for (int channel = 0; channel < 4; channel++)
             {
-                continue;
-            }
-            TiledBuffer<byte> mask = masks[layer];
-            for (int row = 0; row < height; row++)
-            {
-                for (int column = 0; column < width; column++)
+                int layer = half * 4 + channel;
+                if (layer >= masks.Length)
                 {
-                    rgba[(row * width + column) * 4 + channel] = mask[x + column, y + row];
+                    continue;
+                }
+                TiledBuffer<byte> mask = masks[layer];
+                for (int tileX = firstColumn; tileX <= lastColumn; tileX++)
+                {
+                    ReadOnlySpan<byte> tile = mask.Tile(tileX, tileY);
+                    int x0 = Math.Max(x, tileX * size), x1 = Math.Min(x + width, Math.Min(mask.Width, (tileX + 1) * size));
+                    int y0 = Math.Max(y, tileY * size), y1 = Math.Min(y + height, Math.Min(mask.Height, (tileY + 1) * size));
+                    for (int row = y0; row < y1; row++)
+                    {
+                        int from = (row - tileY * size) * size - tileX * size;
+                        int to = ((row - y) * width - x) * 4 + channel;
+                        for (int column = x0; column < x1; column++)
+                        {
+                            rgba[to + column * 4] = tile[from + column];
+                        }
+                    }
                 }
             }
+        }
+        if (lastRow == firstRow)
+        {
+            Row(firstRow);
+        }
+        else
+        {
+            Parallel.For(firstRow, lastRow + 1, Row);
         }
         return rgba;
     }

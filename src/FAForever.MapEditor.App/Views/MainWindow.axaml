@@ -86,42 +86,32 @@
                       AutomationProperties.Name="Resize the mode panel" />
 
         <DockPanel Grid.Column="2">
-          <views:ToolOptions DockPanel.Dock="Top" ZIndex="1" />
+          <views:ToolOptions DockPanel.Dock="Top" ZIndex="2" />
 
-          <!-- which view, and what it shows over the terrain; the tabs only choose: both views stay in the tree,
-               so the 3D view keeps its textures on the graphics card -->
-          <Border DockPanel.Dock="Top" Classes="toolbar views">
-            <WrapPanel Classes="row">
+          <!-- which view, and what it shows over the terrain, in one row of a fixed height: the symmetry and the
+               overlays' chips (made by MainWindow from the model's overlays) in a controls:ToolRow, what does not fit
+               behind its More, over the views; the tabs only choose: both views stay in the tree, so the 3D view keeps
+               its textures on the graphics card -->
+          <Border DockPanel.Dock="Top" Classes="toolbar views" ZIndex="1">
+            <DockPanel>
               <!-- in the order of MapViewTab -->
-              <TabControl x:Name="Views" Classes="segmented" SelectedIndex="{Binding View, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="View">
+              <TabControl x:Name="Views" DockPanel.Dock="Left" Classes="segmented" SelectedIndex="{Binding View, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="View">
                 <TabItem Header="Top" />
                 <TabItem Header="3D" />
                 <TabItem Header="Side by side" />
               </TabControl>
-              <Border Classes="barseparator" />
-              <TextBlock Classes="caption" Text="Show" />
-              <ItemsControl ItemsSource="{Binding Overlays}" AutomationProperties.Name="Shown over the terrain">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <WrapPanel Classes="chips" />
-                  </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:OverlayItem">
-                    <Button Classes="chip" Classes.on="{Binding IsOn}" Classes.planned="{Binding IsIncomplete}" Content="{Binding Title}"
-                            Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding Definition.CommandId}"
-                            AutomationProperties.Name="{Binding Title, StringFormat='Show {0}'}" />
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <Border Classes="barseparator" />
-              <TextBlock Classes="caption" Text="Symmetry" />
-              <ComboBox ItemsSource="{Binding Symmetry.Choices}" SelectedItem="{Binding Symmetry.Chosen}"
-                        AutomationProperties.Name="Symmetry"
-                        AutomationProperties.HelpText="The symmetry edits are mirrored by; the top view shows its guides" />
-              <CheckBox Content="Mirror edits" IsVisible="{Binding Symmetry.IsOn}" IsChecked="{Binding Symmetry.MirrorsEdits}"
-                        AutomationProperties.HelpText="On, brush strokes, placing, moving, turning and deleting work in every part of the map; off, the symmetry shows its guides only" />
-            </WrapPanel>
+              <Border DockPanel.Dock="Left" Classes="barseparator" />
+              <controls:ToolRow x:Name="ViewOptions" Classes="toolrow" AutomationProperties.Name="Shown over the terrain">
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="caption" Text="Symmetry" />
+                  <ComboBox ItemsSource="{Binding Symmetry.Choices}" SelectedItem="{Binding Symmetry.Chosen}"
+                            AutomationProperties.Name="Symmetry"
+                            AutomationProperties.HelpText="The symmetry edits are mirrored by; the views show its guides" />
+                </StackPanel>
+                <CheckBox Content="Mirror edits" IsVisible="{Binding Symmetry.IsOn}" IsChecked="{Binding Symmetry.MirrorsEdits}"
+                          AutomationProperties.HelpText="On, brush strokes, placing, moving, turning and deleting work in every part of the map; off, the symmetry shows its guides only" />
+              </controls:ToolRow>
+            </DockPanel>
           </Border>
 
           <Grid x:Name="Middle" RowDefinitions="*,Auto,Auto">

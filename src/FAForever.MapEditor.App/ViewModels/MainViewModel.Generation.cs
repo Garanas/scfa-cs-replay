@@ -42,7 +42,15 @@ public sealed partial class MainViewModel
     [ObservableProperty]
     public partial bool ShowWalkability { get; set; }
 
-    partial void OnShowWalkabilityChanged(bool value) => RefreshOverlays();
+    partial void OnShowWalkabilityChanged(bool value)
+    {
+        // one tint over the terrain at a time: walkability's red or a mask's violet
+        if (value)
+        {
+            ShowMask = false;
+        }
+        RefreshOverlays();
+    }
 
     private void InitializeGeneration()
     {

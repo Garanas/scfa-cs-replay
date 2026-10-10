@@ -348,7 +348,8 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
                 model.SelectInside(x0, z0, x1, z1, ChangeOf(_input.Modifiers));
                 break;
             case Gesture.Box when ScreenBox is (Vector2 from, Vector2 to) && _screenView is ToolView view:
-                model.SelectOnScreen(from, to, view.ToScreen, ChangeOf(_input.Modifiers));
+                // what a hill hides from the camera is not selected
+                model.SelectOnScreen(from, to, view.ToScreen, ChangeOf(_input.Modifiers), eye: view.Eye);
                 break;
             case Gesture.Box when ChangeOf(_input.Modifiers) == SelectionChange.Replace:
                 // a click on nothing

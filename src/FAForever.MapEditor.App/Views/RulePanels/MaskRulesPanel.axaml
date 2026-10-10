@@ -45,7 +45,7 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
         <DockPanel>
-          <Button DockPanel.Dock="Right" Classes="beside" Content="Add" Command="{Binding AddCommand}" AutomationProperties.Name="Add a rule of the kind chosen" />
+          <Button DockPanel.Dock="Right" Classes="beside" Content="Add rule" Command="{Binding AddCommand}" AutomationProperties.Name="Add a rule of the kind chosen" />
           <ComboBox ItemsSource="{x:Static vm:MaskRulesViewModel.Kinds}" SelectedItem="{Binding NewKind}" HorizontalAlignment="Stretch"
                     AutomationProperties.Name="Kind of rule to add"
                     AutomationProperties.HelpText="Slope, height, distance to water, a layer and noise make a value; blur, grow, shrink, threshold and invert change what the rules before made" />

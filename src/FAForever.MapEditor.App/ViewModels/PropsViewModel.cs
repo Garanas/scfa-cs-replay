@@ -117,7 +117,7 @@ public sealed partial class PropsViewModel : ObservableObject
     /// </summary>
     public IReadOnlyList<AlignmentChoice> Alignments { get; } =
     [
-        new AlignmentChoice(PropAlignment.ByCategory, "By kind: rocks tilt, trees stand"),
+        new AlignmentChoice(PropAlignment.ByCategory, "By kind"),
         new AlignmentChoice(PropAlignment.Upright, "Upright"),
         new AlignmentChoice(PropAlignment.Terrain, "With the terrain"),
     ];

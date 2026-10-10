@@ -70,6 +70,23 @@ public sealed partial class MainViewModel
         Presets.Register(new PresetKind(AtmospherePresets.WaterKind, "Water presets", CaptureWater, ApplyWater));
         DocumentChanged += (_, _) => RefreshMapPanels();
         MapChanged += (_, _) => RefreshMapPanels();
+
+        // the Paint panel's one list of layers (S-1, S-2): a stratum chosen there is the one the strata tool paints, and back
+        LayerTextures.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(LayerTexturesViewModel.Selected) && LayerTextures.Selected is { IsStratum: true } item
+                && StrataTool.Strata.Any(stratum => stratum.Layer == item.Index))
+            {
+                StrataTool.Choose(item.Index);
+            }
+        };
+        StrataTool.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(StrataTool.Painted) && StrataTool.Painted is Stratum painted)
+            {
+                LayerTextures.Choose(painted.Layer);
+            }
+        };
     }
 
     /// <summary>

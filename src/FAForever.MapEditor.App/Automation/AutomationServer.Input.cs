@@ -244,8 +244,8 @@ public sealed partial class AutomationServer
     }
 
     /// <summary>
-    /// Waits until what the window shows has settled: no operation busy, the assets read, no
-    /// thumbnail being drawn, and (for the 3D view) no model or texture being read, each checked
+    /// Waits until what the window shows has settled: no operation busy, the assets read, the top
+    /// view's picture coloured, no thumbnail being drawn, and (for the 3D view) no model or texture being read, each checked
     /// after a frame. At most 15 seconds.
     /// </summary>
     private async Task<JsonObject> SettleAsync(bool gpu)
@@ -286,6 +286,10 @@ public sealed partial class AutomationServer
         if (model.Setup.Workspace is not null && !model.Assets.IsLoaded)
         {
             return "the assets";
+        }
+        if (window.MapView.IsColouring)
+        {
+            return "the top view's picture";
         }
         if (AssetThumbnail.Cache.Pending > 0)
         {

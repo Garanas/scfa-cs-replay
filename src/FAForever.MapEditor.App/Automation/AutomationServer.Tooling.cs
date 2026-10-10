@@ -104,12 +104,15 @@ public sealed partial class AutomationServer
             : window;
         Control control = FindSettable(root, label) ?? throw new ArgumentException($"No control one can set is named, labelled or reads '{label}'");
         bool revealed = ToolRow.Reveal(control);
-        if (revealed)
-        {
-            await LetInputSettleAsync();
-        }
+        Avalonia.Point? before = control.TranslatePoint(default, window);
         control.BringIntoView();
         await LetInputSettleAsync();
+        if (revealed || control.TranslatePoint(default, window) != before)
+        {
+            // the mouse finds what the last frame drew: a row opened or a panel scrolled must be drawn first
+            await NextFrameAsync();
+            await LetInputSettleAsync();
+        }
 
         switch (control)
         {

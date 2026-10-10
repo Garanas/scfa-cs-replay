@@ -56,16 +56,17 @@ reads again when it changes; and nothing that generates runs by itself.
       window, for the active mode's kind, with search, biome or faction, category and for units
       tech, thumbnails (props and units their mesh), the arrows, Enter and Escape; what it
       chooses shows in the inspector; a command that picks takes the key from automation.
-      Dragging a tile onto the top or 3D view hands the asset and its place to the active tool.
-      Missing: slots that open the picker (S-2 and others), placing what is dropped (P-1, U-2,
-      D-1), stars and recents.
+      Dragging a tile onto the top or 3D view hands the asset and its place to the active tool,
+      which places it (P-1, U-2, D-1); the panels' texture fields open the picker (S-2). Missing:
+      stars and recents.
 - [ ] **F-10 Presets.** Save a set of things and place or apply it again: a civilian base (units in
       a group), a brush, a prop palette, a set of markers, a lighting and water setup. Presets are
       files in the workspace, shared like the rest of it. Today: `presets/<kind>/*.json` in the
       workspace, read again when they change; brush presets in the Terrain and Paint panels (save,
-      apply, delete). Missing: presets of lighting, water, units, markers and prop palettes, and of
-      a selection. Markers presets: the Markers panel's Marker presets (the selected markers, with
-      their links and chains), placed with the Preset tool (`markers.placePreset`).
+      apply, delete); lighting and water presets (L-2, W-1); units presets of the selected units or
+      a group (U-4); prop palettes (P-2); markers presets: the Markers panel's Marker presets (the
+      selected markers, with their links and chains), placed with the Preset tool
+      (`markers.placePreset`). Missing: a preset of a selection of several kinds at once.
 - [ ] **F-11 Selection.** Select anything that lies on the map (marker, prop, decal, unit, area) in
       the top and 3D views, one or many; an inspector shows and edits what is selected; move,
       rotate and scale with handles; copy, paste, duplicate and delete.
@@ -78,7 +79,7 @@ reads again when it changes; and nothing that generates runs by itself.
       about the selection's centre or each thing's own, scale; shift snaps, X or Z holds an axis),
       F focuses the 3D camera on the selection, the status bar shows its count and size, the thing
       under the mouse in 3D lights up; a box in the 3D view is a rectangle on screen that selects
-      what shows inside it. Select similar (blueprint or family), invert, select inside an area,
+      what shows inside it, leaving out what a hill hides from the camera. Select similar (blueprint or family), invert, select inside an area,
       the selection filter in the select tools' options (lock a kind), hide a kind (decals too),
       isolate the selection, R and a drag to turn, a Select anything tool in the Map mode; a box
       and Select all leave areas alone outside the Map mode.
@@ -160,8 +161,8 @@ reads again when it changes; and nothing that generates runs by itself.
       Teams are kept in the project and written after the team FFA, the only one the game's lobby
       reads; the lobby does not use them yet.
 - [x] **M-5 Areas.** Draw, name, move and resize areas (rectangles) in the views: the areas tool
-      (handles in the top view), the Map panel's list, the inspector's fields; one is the playable
-      area (M-3). Missing: handles in the 3D view.
+      (handles in the top and 3D views), the Map panel's list, the inspector's fields; one is the
+      playable area (M-3).
 - [x] **M-6 Script.** Open the map's script in the user's editor; see the files of the map folder.
 - [x] **M-7 Import and export.** Import a map folder of the game or the vault; export into the
       vault's `maps` folder.
@@ -212,9 +213,9 @@ reads again when it changes; and nothing that generates runs by itself.
       heightmap layers (slope); mark where it should be blocked or open; after generating again,
       see what changed: a new passage through a cliff, a closed path (see F-14). Today: generated
       when asked (the game's navigational mesh, per layer: land, hover, amphibious, naval), drawn in
-      the top view with the ogrids blocked and opened since the time before, the counts in the
-      status line, new passages and closed paths as problems. Missing: marking by hand where it
-      must be blocked or open; drawing it in the 3D view.
+      the top view and on the terrain in 3D with the ogrids blocked and opened since the time
+      before, the counts in the status line, new passages and closed paths as problems. Missing:
+      marking by hand where it must be blocked or open.
 
 ## S: Strata (terrain textures)
 
@@ -222,8 +223,9 @@ reads again when it changes; and nothing that generates runs by itself.
       of the workspace's brushes (T-2), turned; only where the slope (degrees) and height are within
       limits, each pair on or off; with symmetry (F-12) in every part of the map.
 - [x] **S-2 Layers.** Choose each layer's albedo and normal texture (picker, F-9) and their scales;
-      add, remove and reorder layers; the lower and upper layer. The Paint panel's layer textures
-      and the inspector; the strata the version holds (4 or 8), masks moving with them.
+      add, remove and reorder layers; the lower and upper layer. The Paint panel's one list of the
+      layers (a stratum chosen there is the one the strata tool paints) and the inspector; the
+      strata the version holds (4 or 8), masks moving with them.
 - [x] **S-3 Masks from other tools.** The masks are PNGs in the project, read again when they change.
 - [ ] **S-4 Shader and derived images.** The terrain shader; generate the normal map and the preview.
       Today: the normal map (as the game reads it) and the 256 by 256 preview (the top view's
@@ -267,7 +269,7 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **R-1 Place markers.** Spawns, mass and hydrocarbon deposits, AI markers, path nodes and
       weather by kind; move and delete them; snap to the grid. Weather: the Weather and Clouds tools
       (the game's weather definition and generator) and their fields in the inspector
-      (`markers.setWeather`). Missing: placing mirrored by the symmetry.
+      (`markers.setWeather`); with symmetry (F-12) a marker's images are placed with it.
 - [x] **R-2 Marker properties.** The selected markers in the inspector.
 - [x] **R-3 Path networks.** Connect path nodes per layer (land, water, amphibious, air), by hand
       or generated from walkability (T-7). By hand with the path tool; generated with the Markers
@@ -291,14 +293,14 @@ reads again when it changes; and nothing that generates runs by itself.
       with the terrain), random turn, tilt and scale, a sink; on the selection: align to the
       terrain, upright, drop to the ground, pitch, roll and scale in the inspector, turn and scale
       at random, replace the blueprint, a random variant of each family; props follow the terrain
-      a height brush moves, in the same step. Missing: handles in the views.
+      a height brush moves, in the same step; the selection's handles in both views (F-11).
 - [x] **P-2 Paint props.** A palette of props with weights; density, random scale and rotation;
       an eraser. Today: the paint tool (radius, density, spacing; the Placing settings), the
       palette in the Props panel (from the picker, or the shelf while painting) saved as presets
       (Palettes), the eraser (all props, or only the palette's).
-- [ ] **P-3 Paint where a layer is.** Paint only where a stratum or mask covers the terrain (trees
-      only on grass), and not where another one does. Today: only on and not on a stratum, with
-      a threshold. Missing: the mask layers of K-1 as choices.
+- [x] **P-3 Paint where a layer is.** Paint only where a stratum or mask covers the terrain (trees
+      only on grass), and not where another one does: the paint tool's Only on and Not on offer
+      the strata and the masks for tools of K-1 (`Mask: forest`), with a threshold.
 - [x] **P-4 Props from rules.** Rules that place props from layers: where a stratum or mask allows
       (tree groups), where others forbid, with density, clustering and spacing; generated when
       asked (F-7), into their own layer, so they are generated again after the terrain moves
@@ -313,13 +315,14 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## D: Decals
 
-- [ ] **D-1 Place decals.** Place from the picker, move, rotate and scale on the terrain; the
+- [x] **D-1 Place decals.** Place from the picker, move, rotate and scale on the terrain; the
       distances at which they show; their order. Today: the Place tool (the decal from the picker,
       Ctrl+P or the shelf; a click places it, a drag spans it from the press to the mouse and turns it; a tile dropped on a view);
       the Select tool selects, moves, turns and scales them (a drag mode for both sides, the width
       or the length; plus and minus); the inspector edits width, length and the distances of many
-      at once; bring forward, send back, to front, to back; drawn in 3D, the selection highlighted.
-      Missing: handles in the views, mirroring with symmetry.
+      at once; bring forward, send back, to front, to back; drawn in 3D, the selection highlighted;
+      the selection's handles in both views (F-11); with symmetry, mirrored when placed, moved,
+      turned and scaled (F-12).
 - [x] **D-2 Decal groups.** Group decals, show and hide groups. Today: the Decals panel's groups,
       made from the selection, renamed, filled and emptied, selected, deleted; hidden groups are not
       drawn in 3D or picked (an editor setting, not saved).
@@ -334,7 +337,7 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **U-2 Place units.** Place units for an army, rotate and move them. The Units mode's Place
       tool: the unit from the picker, the shelf or a dropped tile, the army and group in its
       options; structures snap to the build grid and turn in quarter turns; the selection's army in
-      the inspector. Missing: mirroring with symmetry (wave 2).
+      the inspector; with symmetry, a placed unit's images are placed too (F-12).
 - [ ] **U-3 Unit groups.** Per army a tree of groups: create, rename, nest, move units between groups.
       Today: the Units mode's tree with the units per group; nesting and moving between groups by command
       (`units.moveGroup`, Move here); missing: dragging in the tree.
@@ -349,20 +352,29 @@ reads again when it changes; and nothing that generates runs by itself.
 ## V: Views
 
 - [x] **V-1 Top view.** The terrain from above with the brush, markers and the 3D camera; props as
-      dots, sparse when zoomed out. Frame the selection (or any things) in both views.
+      dots on a dark rim, sparse when zoomed out. Frame the selection (or any things) in both views.
+      While nobody zoomed or moved it, it shows the whole map at every size (side by side and back,
+      a panel shown or hidden).
 - [x] **V-2 3D view.** On the graphics card, with strata, decals and water; the FAF editor's camera;
-      the props and units with their models, the markers as symbols, the object under the mouse
-      found by picking and drawn highlighted.
+      the props and units with their models (props the game shows as an effect, such as steam over
+      lava, as small diamonds), the markers as symbols, the object under the mouse found by picking
+      and drawn highlighted.
 - [ ] **V-3 Overlays.** Choose what the views show over the terrain: a mask, walkability, grid,
-      symmetry guides, areas, markers by kind, props, decals, units. Today: markers, path nodes and
-      the 3D camera; props and units on or off in 3D; the chosen mask for tools (K-1) and, while
-      their tools are active, a layer's or the water's mask and the terrain types in the top view;
-      in 3D on the terrain too: the areas (the playable one marked), walkability, the mask or grid
-      being painted, the symmetry's guides, and the handles of the area and sun tools.
+      symmetry guides, areas, markers by kind, props, decals, units. Today: a chip per overlay in
+      the views' row (what does not fit behind its More), each saying whether it shows, those that
+      tint the terrain with a swatch of their colour (walkability red, a mask violet, the playable
+      area's shade); markers, path nodes and the 3D camera; props and units on or off in 3D; the
+      chosen mask for tools (K-1) and, while their tools are active, a layer's or the water's mask
+      and the terrain types in the top view, one grid at a time and owned by the active mode and
+      tool (the rules preview only in the Paint mode); walkability and a mask take turns; in 3D on
+      the terrain too: the areas (the playable one marked), walkability, the mask or grid being
+      painted, the symmetry's guides, and the handles of the area and sun tools; the links between
+      path nodes, hidden behind hills. Missing: the grid, decals on or off.
 - [ ] **V-4 Layouts.** Top and 3D side by side; panels that can be moved, closed and opened again.
       Today: the views side by side (sharing the camera, each with its own mouse), the mode panel,
       inspector, dock and toolbar hidden and shown, the panels and views resized with splitters,
-      all remembered in the user's settings; Reset layout. Missing: moving a panel to another side
-      or out of the window.
+      all remembered in the user's settings; Reset layout; the tool's options and the views' bar
+      one row each, so at 1280 by 800 the top view keeps 464 pixels of height. Missing: moving a
+      panel to another side or out of the window.
 - [x] **V-5 Ruler.** Measure distances and heights: the ruler tool (Terrain mode), the distance in
       ogrids and km, the rise and slope, drawn in the top view and in the status line.

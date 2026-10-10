@@ -56,16 +56,6 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
-            <DataTemplate DataType="vm:StrataSection">
-              <Border Classes="group">
-                <StackPanel Classes="stack">
-                  <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-                  <ListBox ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StrataTool.Strata}"
-                           SelectedItem="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StrataTool.Painted}"
-                           AutomationProperties.Name="Strata" />
-                </StackPanel>
-              </Border>
-            </DataTemplate>
             <!-- the masks for tools (K-1): the list chooses the one the masks tool paints and the overlay shows;
                  the field names a new mask or gives the chosen one a new name -->
             <DataTemplate DataType="vm:MasksSection">
@@ -97,7 +87,7 @@
                   <CheckBox Content="Half the map's size" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.Half}"
                             AutomationProperties.HelpText="A new mask of one pixel per two by two ogrids, as most stratum masks are" />
                   <StackPanel Classes="inline">
-                    <Button Content="Add" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.addMask"
+                    <Button Content="Add a mask" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.addMask"
                             AutomationProperties.Name="Add a mask" />
                     <Button Content="Rename" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.renameMask"
                             IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.HasChosen}"
@@ -357,6 +347,7 @@
                   <DockPanel>
                     <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Stand" Width="{StaticResource FactLabelWidth}" VerticalAlignment="Center" />
                     <ComboBox ItemsSource="{Binding Alignments}" SelectedItem="{Binding ChosenAlignment}" HorizontalAlignment="Stretch" AutomationProperties.Name="How placed props stand"
+                              ToolTip.Tip="By kind: rocks, crystals, logs and clutter tilt with the ground, trees and the rest stand upright; or all upright; or all with the terrain"
                               AutomationProperties.HelpText="By kind: rocks, crystals, logs and clutter tilt with the ground, trees and the rest stand upright; or all upright; or all with the terrain" />
                   </DockPanel>
                   <CheckBox Content="Turn at random" IsChecked="{Binding RandomTurn}" AutomationProperties.Name="Turn each placed prop at random" />

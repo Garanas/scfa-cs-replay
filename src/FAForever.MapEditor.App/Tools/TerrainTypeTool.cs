@@ -44,6 +44,12 @@ public sealed partial class TerrainTypeTool : GridPaintTool
     /// </summary>
     public const int LegendSize = 6;
 
+    /// <summary>
+    /// Code 0, which the game has no type for: an ogrid no one gave a type, which the game takes
+    /// as Default. Maps made without painting types hold it everywhere.
+    /// </summary>
+    public static TerrainType NoType { get; } = new TerrainType(0, "None", null, "No type set: the game takes it as Default", false);
+
     private TiledBuffer<byte>? _counted;
 
     public TerrainTypeTool(MainViewModel model) : base(model)
@@ -131,7 +137,7 @@ public sealed partial class TerrainTypeTool : GridPaintTool
             .OrderByDescending(code => counts[code])
             .Take(LegendSize)
             .Select(code => new TerrainTypeChoice(
-                TerrainTypes.All.FirstOrDefault(type => type.TypeCode == code) ?? new TerrainType(code, $"Code {code}", null, "Not a terrain type of the game", false),
+                TerrainTypes.All.FirstOrDefault(type => type.TypeCode == code) ?? (code == 0 ? NoType : new TerrainType(code, $"Code {code}", null, "Not a terrain type of the game", false)),
                 TerrainTypeColours.Of(code), counts[code]))];
     }
 }

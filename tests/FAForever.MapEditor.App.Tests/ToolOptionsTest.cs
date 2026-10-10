@@ -65,6 +65,34 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task EveryToolsSettingsLieInsideTheBarAt1280() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Border bar = window.GetVisualDescendants().OfType<Border>().Single(border => border.Classes.Contains("toolbar") && border.Classes.Contains("options"));
+            ContentControl options = bar.GetVisualDescendants().OfType<ContentControl>().First();
+            foreach (ToolDefinition tool in EditorModes.All.SelectMany(mode => mode.Tools).Where(tool => !tool.IsIncomplete))
+            {
+                model.SelectTool(tool.Id);
+                Frame();
+                double right = bar.TranslatePoint(new Point(bar.Bounds.Width, 0), window)!.Value.X;
+                // every setting a person sees in the row: what does not fit lies behind More, never past the bar's end
+                IEnumerable<Control> shown = bar.GetVisualDescendants().OfType<Control>()
+                    .Where(control => control.IsEffectivelyVisible && control.Bounds.Width > 0
+                        && control is TextBlock or Button or ComboBox or Slider or TextBox or CheckBox or ItemsControl
+                        && !ToolRow.IsInOverflow(control)
+                        && !control.GetVisualAncestors().OfType<Border>().Any(border => border.Classes.Contains("tooloverflow")));
+                foreach (Control control in shown)
+                {
+                    double end = control.TranslatePoint(new Point(control.Bounds.Width, 0), window)!.Value.X;
+                    Assert.IsTrue(end <= right + 0.5, $"{tool.Id}: {control.GetType().Name} '{Avalonia.Automation.AutomationProperties.GetName(control)}{(control as TextBlock)?.Text}' ends at {end:0}, past the bar's end at {right:0}");
+                }
+                Control? root = options.Presenter?.Child;
+                Assert.IsTrue(root is ToolRow or TextBlock, $"{tool.Id}: its settings are a controls:ToolRow (what does not fit goes behind More), not a {root?.GetType().Name}");
+            }
+            window.Close();
+        });
+
+        [TestMethod]
         public Task WhatDoesNotFitShowsBehindMoreOverTheViews() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();

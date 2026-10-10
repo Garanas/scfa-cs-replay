@@ -44,16 +44,44 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// The preview the map was opened with is its preview: generated for that version, so the
-    /// status tells when the terrain changed since and an export renders it again.
+    /// The preview and the normal map the map was opened with are its own: generated for that
+    /// version, so the status tells when the terrain changed since and an export renders the
+    /// preview again. A normal map of one colour everywhere (a new map's or the sandbox's
+    /// placeholder) was never generated and stays missing.
     /// </summary>
     private void KeepMapPreview(EditedMap map)
     {
         if (Generation.Results.Find(MapPreview.GeneratorId) is IGenerator preview)
         {
             Generation.Results.Keep(GeneratedResult.Of(preview, map.Document, map.Document.Terrain.Preview));
-            Generation.Refresh(map.Document);
         }
+        if (Generation.Results.Find(NormalMapGenerator.GeneratorId) is IGenerator normalMap && !IsOneColour(map.Document.Terrain.NormalMap))
+        {
+            Generation.Results.Keep(GeneratedResult.Of(normalMap, map.Document, map.Document.Terrain.NormalMap));
+        }
+        Generation.Refresh(map.Document);
+    }
+
+    /// <summary>
+    /// Whether every pixel of a picture is the same; it stops at the first that differs.
+    /// </summary>
+    public static bool IsOneColour(TiledBuffer<Color32> picture)
+    {
+        Color32 first = picture.Tile(0, 0)[0];
+        for (int y = 0; y < picture.TilesY; y++)
+        {
+            for (int x = 0; x < picture.TilesX; x++)
+            {
+                foreach (Color32 pixel in picture.Tile(x, y))
+                {
+                    if (!pixel.Equals(first))
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     /// <summary>

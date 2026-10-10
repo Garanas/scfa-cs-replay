@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.Project.Files.InMemory;
 
@@ -11,10 +10,17 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 /// <param name="heightmap">The heights shown now; null without a map.</param>
 public sealed class CameraGround(Func<Heightmap?> heightmap)
 {
-    private readonly Stopwatch _clock = Stopwatch.StartNew();
+    /// <summary>
+    /// From this many samples on (a map of 20 km and more) the ground of another map is made on a
+    /// thread of the pool.
+    /// </summary>
+    private const long LargeMap = 1025L * 1025;
+
     private SmoothGround? _smooth;
     private Heightmap? _smoothOf;
-    private TimeSpan _smoothMade;
+    private Task<(Heightmap Of, SmoothGround Ground)>? _making;
+    private Heightmap? _makingFor;
+    private (Heightmap Of, SmoothGround Ground)? _waiting;
 
     /// <summary>
     /// The blurred height over about <paramref name="radius"/> ogrids around a place.
@@ -45,8 +51,10 @@ public sealed class CameraGround(Func<Heightmap?> heightmap)
     }
 
     /// <summary>
-    /// The blurred terrain, made again when the heights change; while they keep changing (a brush
-    /// stroke) at most twice a second, as making it reads every sample.
+    /// The blurred terrain, following the heights as they change: only the squares over the tiles
+    /// that changed are averaged again (<see cref="SmoothGround.Update"/>), so it keeps up with every
+    /// dab of a brush. Another map makes it anew: a large one on a thread of the pool (an 81 km
+    /// map's takes about 100 ms), the camera resting on the height of its middle meanwhile.
     /// </summary>
     private SmoothGround Blurred()
     {
@@ -55,14 +63,40 @@ public sealed class CameraGround(Func<Heightmap?> heightmap)
         {
             return _smooth ??= SmoothGround.Flat(0);
         }
-        if (!ReferenceEquals(heights, _smoothOf) && (_smooth is null || _smoothOf?.Width != heights.Width
-            || _smoothOf.Height != heights.Height || _clock.Elapsed - _smoothMade > TimeSpan.FromSeconds(0.5)))
+        if (_making is { IsCompleted: true } made)
         {
-            using Performance.Span measure = Performance.Measure("camera.smooth-ground");
-            _smooth = SmoothGround.From(heights);
-            _smoothOf = heights;
-            _smoothMade = _clock.Elapsed;
+            _making = null;
+            if (made.IsCompletedSuccessfully)
+            {
+                (_smoothOf, _smooth) = made.Result;
+            }
         }
-        return _smooth!;
+        if (ReferenceEquals(heights, _smoothOf))
+        {
+            return _smooth!;
+        }
+        bool anew = _smooth is null || _smoothOf is null || SmoothGround.MustRemake(_smoothOf, heights);
+        if (anew && (long)heights.Samples.Width * heights.Samples.Height >= LargeMap)
+        {
+            if (_making is null || _makingFor is null || SmoothGround.MustRemake(_makingFor, heights))
+            {
+                Heightmap of = heights;
+                _makingFor = of;
+                _making = Task.Run(() =>
+                {
+                    using Performance.Span measure = Performance.Measure("camera.smooth-ground");
+                    return (of, SmoothGround.From(of));
+                });
+            }
+            return _waiting is { } waiting && ReferenceEquals(waiting.Of, heights)
+                ? waiting.Ground
+                : (_waiting = (heights, SmoothGround.Flat(heights.GetHeight(heights.Width / 2, heights.Height / 2)))).Value.Ground;
+        }
+        using (Performance.Measure("camera.smooth-ground"))
+        {
+            _smooth = anew ? SmoothGround.From(heights) : _smooth!.Update(_smoothOf!, heights);
+            _smoothOf = heights;
+        }
+        return _smooth;
     }
 }

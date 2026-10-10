@@ -92,7 +92,9 @@
       <!-- things on the map in the top view: props as dots, units as squares, areas as dashed rectangles; what is selected, and the box being drawn -->
       <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
       <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
-      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#998FD18A" />
+      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#E69BE095" />
+      <!-- a dark rim under each prop's dot, so it shows on bright and on green ground alike -->
+      <SolidColorBrush x:Key="MapPropRimBrush" Color="#99000000" />
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
       <!-- units placed as wrecks (U-5): an ashen cross in the top view -->
       <SolidColorBrush x:Key="MapWreckBrush" Color="#FFA89A94" />
@@ -106,7 +108,11 @@
       <SolidColorBrush x:Key="MapHandleAxisXBrush" Color="#FFFF6B5A" />
       <SolidColorBrush x:Key="MapHandleAxisZBrush" Color="#FF5AAEF5" />
       <SolidColorBrush x:Key="MapOutsidePlayableBrush" Color="#66000000" />
-      <SolidColorBrush x:Key="MapMaskBrush" Color="#FFFF8C00" />
+      <!-- a mask over the terrain (K-1, S-1, W-2, the rules preview): violet, apart from walkability's red,
+           the playable area's dark shade and the selection's yellow -->
+      <SolidColorBrush x:Key="MapMaskBrush" Color="#FFB86BFF" />
+      <!-- props the game draws as an effect (steam, blowing sand): a small diamond in 3D -->
+      <SolidColorBrush x:Key="MapEffectPropBrush" Color="#FF9FB4C7" />
       <!-- lines between parts of the window, and between the groups of a panel -->
       <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource Gray690}" />
       <SolidColorBrush x:Key="GroupDividerBrush" Color="{StaticResource Gray700}" />
@@ -152,7 +158,9 @@
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
       <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
       <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
-      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#998FD18A" />
+      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#E69BE095" />
+      <!-- a dark rim under each prop's dot, so it shows on bright and on green ground alike -->
+      <SolidColorBrush x:Key="MapPropRimBrush" Color="#99000000" />
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
       <!-- units placed as wrecks (U-5): an ashen cross in the top view -->
       <SolidColorBrush x:Key="MapWreckBrush" Color="#FFA89A94" />
@@ -165,7 +173,11 @@
       <SolidColorBrush x:Key="MapHandleAxisXBrush" Color="#FFFF6B5A" />
       <SolidColorBrush x:Key="MapHandleAxisZBrush" Color="#FF5AAEF5" />
       <SolidColorBrush x:Key="MapOutsidePlayableBrush" Color="#66000000" />
-      <SolidColorBrush x:Key="MapMaskBrush" Color="#FFFF8C00" />
+      <!-- a mask over the terrain (K-1, S-1, W-2, the rules preview): violet, apart from walkability's red,
+           the playable area's dark shade and the selection's yellow -->
+      <SolidColorBrush x:Key="MapMaskBrush" Color="#FFB86BFF" />
+      <!-- props the game draws as an effect (steam, blowing sand): a small diamond in 3D -->
+      <SolidColorBrush x:Key="MapEffectPropBrush" Color="#FF9FB4C7" />
       <SolidColorBrush x:Key="DividerBrush" Color="#FFD6D6D6" />
       <SolidColorBrush x:Key="GroupDividerBrush" Color="#FFE0E0E0" />
       <SolidColorBrush x:Key="SelectedBrush" Color="{StaticResource Blue100}" />
@@ -222,6 +234,7 @@
   <x:Double x:Key="DockTallHeight">290</x:Double>
   <x:Double x:Key="AssetFacetsWidth">180</x:Double>
   <x:Double x:Key="AssetSearchWidth">320</x:Double>
+  <x:Double x:Key="AssetSearchMinWidth">180</x:Double>
   <x:Double x:Key="AssetPreviewHeight">200</x:Double>
   <x:Double x:Key="AssetNormalPreviewSize">72</x:Double>
   <x:Double x:Key="AssetTooltipPreviewSize">180</x:Double>

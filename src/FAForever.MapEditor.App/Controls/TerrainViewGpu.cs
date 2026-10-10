@@ -457,7 +457,8 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             return null;
         }
         ObjectFrame frame = new ObjectFrame(_model.Assets.Catalog, _model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes,
-            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"), _model.ShownMarkerKinds, _model.Selection.Hovered, _model.Isolated);
+            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"), _model.ShownMarkerKinds, _model.Selection.Hovered, _model.Isolated,
+            ThemeColor("MapEffectPropBrush"));
         return (_objects, frame);
     }
 
@@ -893,18 +894,19 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             return;
         }
         Matrix4x4 viewProjection = _model.Camera.ViewProjection(width / height);
-        Vector2? OnScreen(Vector3 place)
+        (Vector2 Pixel, float Depth)? OnScreen(Vector3 place)
         {
             Vector4 clip = Vector4.Transform(new Vector4(place, 1), viewProjection);
-            return clip.W <= 1e-6f ? null : new Vector2((clip.X / clip.W + 1) / 2 * width, (1 - clip.Y / clip.W) / 2 * height);
+            return clip.W <= 1e-6f ? null : (new Vector2((clip.X / clip.W + 1) / 2 * width, (1 - clip.Y / clip.W) / 2 * height), clip.Z / clip.W);
         }
         bool Outside(Vector2 a, Vector2 b) =>
             (a.X < 0 && b.X < 0) || (a.Y < 0 && b.Y < 0) || (a.X > width && b.X > width) || (a.Y > height && b.Y > height);
         foreach ((PathLayer layer, Vector3 from, Vector3 to, Vector4 color) in _links)
         {
-            if ((shown & MarkerEdits.KindOf(layer)) != 0 && OnScreen(from) is Vector2 a && OnScreen(to) is Vector2 b && !Outside(a, b))
+            if ((shown & MarkerEdits.KindOf(layer)) != 0 && OnScreen(from) is (Vector2 a, float da) && OnScreen(to) is (Vector2 b, float db) && !Outside(a, b))
             {
-                shapes.Add(new ToolMapLine(a, b, 2, color));
+                // in the scene: a hill or a model in front of the link hides it
+                shapes.Add(new ToolMapLine(a, b, 2, color) { Depth = (da, db) });
             }
         }
     }

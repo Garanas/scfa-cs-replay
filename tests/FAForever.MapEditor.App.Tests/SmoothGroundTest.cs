@@ -26,6 +26,64 @@ namespace FAForever.MapEditor.App.Tests
             return SmoothGround.FromHeights(Size, Size, heights);
         }
 
+        /// <summary>
+        /// A map of <paramref name="size"/> ogrids whose height rises along x: one game unit an ogrid.
+        /// </summary>
+        private static FAForever.MapEditor.Project.Files.InMemory.Heightmap Ramp(int size)
+        {
+            var samples = FAForever.MapEditor.Project.Files.InMemory.TiledBuffer<ushort>.Create(size + 1, size + 1).ToBuilder();
+            for (int z = 0; z <= size; z++)
+            {
+                for (int x = 0; x <= size; x++)
+                {
+                    samples[x, z] = (ushort)(x * 128);
+                }
+            }
+            return new FAForever.MapEditor.Project.Files.InMemory.Heightmap { Scale = 1 / 128f, Samples = samples.ToBuffer() };
+        }
+
+        [TestMethod]
+        public void ReadsAMapsHeightsRowByRow()
+        {
+            SmoothGround ground = SmoothGround.From(Ramp(256));
+
+            // every row alike: the height along x, wherever z is
+            foreach (float z in new[] { 20f, 128f, 240f })
+            {
+                Assert.AreEqual(100, ground.Height(100, z, 8), 1, $"at z {z}");
+            }
+        }
+
+        [TestMethod]
+        public void FollowsAChangeOfTheHeightsTileByTileAsIfMadeAnew()
+        {
+            var before = Ramp(512);
+            var samples = before.Samples.ToBuilder();
+            for (int z = 300; z < 340; z++)
+            {
+                for (int x = 70; x < 130; x++)
+                {
+                    samples[x, z] = 200 * 128;
+                }
+            }
+            var after = before with { Samples = samples.ToBuffer() };
+            SmoothGround made = SmoothGround.From(after);
+
+            SmoothGround followed = SmoothGround.From(before).Update(before, after);
+
+            for (float x = 0; x <= 512; x += 9.5f)
+            {
+                for (float z = 0; z <= 512; z += 13.25f)
+                {
+                    foreach (float radius in new[] { 8f, 40f, 300f })
+                    {
+                        Assert.AreEqual(made.Height(x, z, radius), followed.Height(x, z, radius), 0.0001, $"at {x}, {z} over {radius}");
+                    }
+                }
+            }
+            Assert.AreNotEqual(SmoothGround.From(before).Height(100, 320, 8), followed.Height(100, 320, 8), "the change shows");
+        }
+
         [TestMethod]
         public void KeepsAFlatGroundAsItIs()
         {

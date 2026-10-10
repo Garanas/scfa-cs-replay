@@ -230,7 +230,15 @@ public sealed record ToolSquare(Vector2 Centre, float Half, ToolInk Fill, ToolIn
 /// A line in a colour of the map's own rather than an ink of the theme, such as the links between
 /// path nodes in their layer's colour; red, green, blue and opacity from 0 to 1.
 /// </summary>
-public sealed record ToolMapLine(Vector2 From, Vector2 To, float Width, Vector4 Color) : ToolShape;
+public sealed record ToolMapLine(Vector2 From, Vector2 To, float Width, Vector4 Color) : ToolShape
+{
+    /// <summary>
+    /// The depths of its ends in the 3D view (normalized device coordinates, -1 near to 1 far):
+    /// given, the line lies in the scene and what stands in front of it (a hill, a model) hides it;
+    /// null, it is drawn over everything as the other shapes are.
+    /// </summary>
+    public (float From, float To)? Depth { get; init; }
+}
 
 /// <summary>
 /// A filled triangle, such as an arrow's head.

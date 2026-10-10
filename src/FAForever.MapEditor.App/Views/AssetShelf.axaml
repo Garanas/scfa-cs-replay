@@ -14,12 +14,13 @@
              x:DataType="vm:AssetsViewModel">
   <DockPanel>
     <Border DockPanel.Dock="Top" Classes="shelfbar">
-      <!-- the search takes (nearly) all the room up to its width; what is left lies before the look of the tiles -->
+      <!-- the search takes (nearly) all the room up to its width, and at least its least width: the kinds show their
+           names only (how many each has is in their tool tips and the summary); what is left lies before the look of the tiles -->
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="1000*" MaxWidth="{StaticResource AssetSearchWidth}" />
+          <ColumnDefinition Width="1000*" MinWidth="{StaticResource AssetSearchMinWidth}" MaxWidth="{StaticResource AssetSearchWidth}" />
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
@@ -31,7 +32,7 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:AssetChoice">
-              <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Text}"
+              <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Title}" ToolTip.Tip="{Binding Text}" AutomationProperties.HelpText="{Binding Text}"
                       Command="{Binding $parent[UserControl].((vm:AssetsViewModel)DataContext).ChooseKindCommand}" CommandParameter="{Binding}" />
             </DataTemplate>
           </ItemsControl.ItemTemplate>
@@ -195,7 +196,7 @@
                           </Border>
                         </Panel>
                       </Border>
-                      <TextBlock Text="{Binding Title}" />
+                      <TextBlock Classes="tiletitle" Text="{Binding Title}" />
                       <TextBlock Classes="caption" Text="{Binding Detail}" TextWrapping="NoWrap" />
                     </StackPanel>
                   </Button>

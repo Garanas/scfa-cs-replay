@@ -25,18 +25,30 @@ public sealed partial class MainViewModel
     public partial bool ShowMask { get; set; }
 
     /// <summary>
-    /// What the top view lays over the terrain: the preview of the mask rules being edited (K-2),
-    /// else the grid the active painting tool paints (a
-    /// layer's or the water's mask, a mask for tools, the terrain's types), else the chosen mask
-    /// for tools while the overlay <c>mask</c> is on, else nothing.
+    /// What the top and 3D views lay over the terrain, one grid at a time and owned by the active
+    /// mode and tool: the preview of the mask rules being edited (K-2) while the rule editor shows
+    /// in the Paint mode and the strata tool is not painting, else the grid the active painting
+    /// tool paints (a layer's or the water's mask, a mask for tools, the terrain's types), else the
+    /// chosen mask for tools while the overlay <c>mask</c> is on, else nothing.
     /// </summary>
     public GridOverlay? ShownGrid =>
-        MaskRules?.PreviewOverlay
+        (ShowsRulesPreview ? MaskRules?.PreviewOverlay : null)
         ?? (ActiveTool?.Tool as GridPaintTool)?.Shown
         ?? (ShowMask && Masks.Chosen is string name ? GridOverlay.Mask(PaintTarget.Mask(name)) : null);
 
+    /// <summary>
+    /// Whether the preview of the mask rules being edited may show: only in the Paint mode, whose
+    /// inspector holds the rule editor, and not while the strata tool shows the layer it paints.
+    /// </summary>
+    private bool ShowsRulesPreview => SelectedMode?.Definition.Id == "paint" && ActiveTool?.Tool is not FAForever.MapEditor.App.Tools.StrataTool;
+
     partial void OnShowMaskChanged(bool value)
     {
+        // one tint over the terrain at a time: a mask's violet or walkability's red
+        if (value)
+        {
+            ShowWalkability = false;
+        }
         RefreshOverlays();
         OnPropertyChanged(nameof(ShownGrid));
     }
@@ -51,7 +63,7 @@ public sealed partial class MainViewModel
         };
         PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(ActiveTool))
+            if (e.PropertyName is nameof(ActiveTool) or nameof(SelectedMode))
             {
                 OnPropertyChanged(nameof(ShownGrid));
             }

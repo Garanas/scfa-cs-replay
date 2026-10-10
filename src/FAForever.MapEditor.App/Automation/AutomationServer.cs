@@ -583,7 +583,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 ["yaw"] = model.Camera.Now.Yaw,
                 ["pitch"] = model.Camera.Now.Pitch,
             },
-            ["show"] = new JsonObject { ["markers"] = model.ShowMarkers, ["pathNodes"] = model.ShowPathNodes, ["camera"] = model.ShowCamera, ["props"] = model.ShowProps, ["units"] = model.ShowUnits, ["areas"] = model.ShowAreas },
+            ["show"] = new JsonObject([.. model.Overlays.Select(overlay => KeyValuePair.Create(overlay.Id, (JsonNode?)JsonValue.Create(overlay.IsOn)))]),
             ["selection"] = new JsonObject
             {
                 ["count"] = model.Selection.Count,

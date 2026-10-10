@@ -108,6 +108,32 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task ThePreviewBelongsToThePaintModeAndLeavesOtherToolsTheirGrid()
+        {
+            MainViewModel model = await Open();
+            model.SelectTool("paint.strata");
+            await Run(model, "paint.addMask", new JsonObject { ["name"] = "high" });
+            await Run(model, "paint.addMaskRule", new JsonObject { ["mask"] = "high", ["kind"] = "Height", ["min"] = 0, ["max"] = 1000 });
+            Assert.AreEqual("paint.masks", model.ActiveTool?.Definition.Id, "opening the rules chooses the masks tool, which lets the preview show");
+            for (int i = 0; i < 200 && model.MaskRules.PreviewOverlay is null; i++)
+            {
+                await Task.Delay(20);
+            }
+            Rendering.GridOverlay preview = model.MaskRules.PreviewOverlay!;
+            Assert.AreSame(preview, model.ShownGrid);
+
+            model.SelectTool("water.paint");
+            Assert.AreEqual(model.Tool<Tools.WaterPaintTool>().Shown?.Key, model.ShownGrid?.Key, "painting foam shows the foam, not the preview");
+            model.SelectMode("props");
+            Assert.AreNotEqual(preview.Key, model.ShownGrid?.Key, "no other mode shows the preview");
+            model.SelectTool("paint.strata");
+            Assert.AreEqual(model.StrataTool.Shown?.Key, model.ShownGrid?.Key, "the strata tool shows the layer it paints");
+            model.SelectTool("paint.masks");
+            Assert.AreSame(preview, model.ShownGrid, "back in the Paint mode with the rules open, the preview shows again");
+            model.MaskRules.Editing = null;
+        }
+
+        [TestMethod]
         public async Task AddsEditsAndGeneratesPropRulesKeepingThePropsPlacedByHand()
         {
             MainViewModel model = await Open();

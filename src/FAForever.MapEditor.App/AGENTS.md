@@ -120,6 +120,15 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
 - **Overlays** are data too (`EditorOverlays`): each is a chip above the views and a command in
   the View menu (`view.overlay.<id>`). One with `Panel` is also a check box in that mode's panel
   (`OverlaySection`: the Markers panel's "Shown in the views"), which runs the same command.
+- **The views' bar** is one row of `ToolbarHeight`, as the tool's options are: the view tabs, then
+  a `controls:ToolRow` (`ViewOptions`) holding the symmetry and a chip per overlay, which
+  `MainWindow.BuildOverlayChips` makes from `MainViewModel.Overlays`: a `ToggleButton.chip` that runs
+  the overlay's command and is checked while it shows (`ui` reads it; `state.show` lists every
+  overlay), with a swatch of the colour it tints the terrain in when its definition names one
+  (`OverlayDefinition.Swatch`: walkability, mask, areas). What does not fit at the window's width
+  lies behind the row's More, over the views (the bar has `ZIndex` 1, the tool's options 2, so their
+  More lies over this bar). At 1280 by 800 the top view is 464 pixels high (`TheViewsBarIsOneRow...`).
+  Walkability and a mask tint the terrain in turn: turning one on turns the other off.
 - **What the views draw again, by event**: `DocumentChanged` when the shown document changes
   (an edit, undo, reload, a dab, a stroke thrown away): the top view updates the tiles that
   changed, the 3D view uploads them. `OverlaysChanged` (an overlay turned on or off),
@@ -157,7 +166,8 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   - `SculptTool` (T-1): mode, falloff, radius, strength, the height to flatten to, set or scale
     around, the factor and noise size, limits on the heights. The painting tools derive from
     `GridPaintTool` (section "Painting the terrain's grids" below); `StrataTool` (S-1) paints the
-    layer chosen in the Paint panel's list (`Strata`/`Painted`), within its limits of slope and
+    layer chosen in the Paint panel's one list of layers (`LayerTextures.Selected`, kept in step with
+    `Painted`), within its limits of slope and
     height; the top view shows that layer's mask while it is active (`MainViewModel.ShownMask`,
     and `ShownGrid` for every painting tool). Each tool has its own radius.
   - **Brush shapes** (`Tools/BrushShapeSettings`, both tools' `Shape`, `IShapedBrushTool`): round,
@@ -346,8 +356,14 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   save; reloads wait until a save or stroke ends. Keep the user interface's thread free of work
   that grows with the map: a full redraw of the view runs its rows in parallel.
 - `Controls/HeightmapView`: the terrain from above, one pixel per sample, shaded and coloured by
-  height and water (`Rendering/TerrainPicture`), with the mask of the layer the strata tool
-  paints in orange (`ShownMask`); it draws again only the tiles a change touched. The markers lie
+  height and water (`Rendering/TerrainPicture`), with the grid being painted over it (`ShownGrid`,
+  a mask in the theme's `MapMaskBrush`, violet); it draws again only the tiles a change touched. A
+  picture coloured anew for a map of 20 km and more (another map, size, water or overlay) is
+  coloured on a thread of the pool (span `top.colour-all`, 135 ms on an 81 km map; `IsColouring`,
+  which a settled screenshot waits for); a change meanwhile follows when it is done. While nobody
+  zoomed or moved it (`_wholeMap`), every new size of the view fits the whole map again (side by
+  side and back, a panel shown); after a zoom a new size keeps the middle. Props are dots on a dark
+  rim (`MapPropRimBrush`), at most one per 4 pixels zoomed out. The markers lie
   over it at a fixed size on screen in the colour of their kind (spawns circles with their
   number, deposits squares, AI markers diamonds, weather triangles, path nodes dots with their
   links; View menu). The left mouse is the active tool's, right or middle mouse moves, the
@@ -375,8 +391,11 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
     8, 16, 32, ... ogrids, read between their centres and between sizes), over about 15 % of the
     camera's distance (8 to 2048 ogrids): spikes and cliffs do not throw the camera up and down,
     and from close by it still follows hills. Only the eye keeps 2 ogrids clear of the terrain
-    itself. The view makes it again when the heights change, at most twice a second
-    (`Rendering/Gpu/CameraGround`, which the camera reads its heights from).
+    itself. It follows the heights as they change (`Rendering/Gpu/CameraGround`, which the camera
+    reads its heights from): `SmoothGround.Update` averages again only the squares over the tiles
+    that changed and the larger ones holding them (4 ms after a stroke on an 81 km map); another map
+    makes it anew, on a thread of the pool for 20 km and more (31 ms for 81 km), the camera resting
+    on the middle's height meanwhile.
   `Rendering/Gpu/TerrainRenderer` draws the terrain, then the albedo decals, the normal decals
   and the water; `TerrainShaders` follows the FAF map editor's port of the game's
   `TTerrainXP` (`Assets/GFX/Shaders/FaTerrainShader.shader` in `D:\faf-development\FAForeverMapEditor`):
@@ -428,7 +447,9 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
     their metal with its environment), Seraphim units take their silver from the albedo's blue.
     There is no team colour, normal map or specular yet. A blueprint the workspace has no model
     of (or whose model cannot be read, logged once) is a box of one ogrid in the theme's
-    `WarningBrush`.
+    `WarningBrush`. A prop the game shows as an effect (its blueprint names the marker mesh
+    `marker01_lod0`: steam over lava, blowing sand, mist; `Rendering/EffectProps`) is a small
+    upright diamond in `MapEffectPropBrush`, picked by that diamond.
   - Markers are upright diamonds in their kind's colour (`Marker.Color`) standing on the terrain
     at their place: spawns 5 ogrids high, path nodes 1.2, the rest 2; from `ObjectPlacement.MarkerNear`
     (80 ogrids) on they grow with the distance so they keep their size on screen. They are drawn
@@ -481,9 +502,12 @@ the tools hold their settings and make one stroke (`BrushStroke`) a step of undo
   `MaskPaintTool` (`paint.masks`: the mask chosen in the panel) and `TerrainTypeTool`
   (`terrain.types`: the game's types, set where the brush works at least half, sharp by default).
   A new grid to paint is a `PaintTarget` in the library and a small subclass here.
-- **What the top view lays over the terrain** is `MainViewModel.ShownGrid`: the active painting
-  tool's `Shown`, else the chosen mask for tools while the overlay `mask` is on. `TerrainPicture`
-  colours a mask in the overlay's orange, a grid with a `Palette` in a colour per code, and colours
+- **What the top and 3D views lay over the terrain** is `MainViewModel.ShownGrid`, one grid owned
+  by the active mode and tool: the mask rules preview only in the Paint mode while its rule editor
+  is open and the strata tool is not active (opening a mask's rules chooses the masks tool), else
+  the active painting tool's `Shown`, else the chosen mask for tools while the overlay `mask` is
+  on. `TerrainPicture` colours a mask in `MapMaskBrush` (`MaskColour`, read from the theme by the
+  top view), a grid with a `Palette` in a colour per code, and colours
   everything again only when the overlay's `Key` changes. The terrain types' colours are
   `Rendering/TerrainTypeColours` (the game has none: by kind, dirt brown to lava red, a shade per
   type); the tool options show the chosen type and a legend of the types the map uses
@@ -1196,7 +1220,11 @@ User stories F-11, L-1 and V-3. The maths of the handles is the library's (`Sele
   the map's own (the 3D view's links between path nodes). The top view draws them with
   Avalonia (`HeightmapView.DrawShapes`), the 3D view over everything without the depth test
   (`Rendering/Gpu/ShapeRenderer`, triangles made every frame, span `3d.draw-shapes`), with the
-  tool's `Marks` at the terrain's height.
+  tool's `Marks` at the terrain's height. A `ToolMapLine` with a `Depth` (the links between path
+  nodes) is drawn first with the depth test and without writing depth, so a hill or model in front
+  hides it. The 3D box selection (`SelectOnScreen` with the eye) leaves out what the terrain hides
+  from the camera (`ObjectPlacement.IsHiddenByTerrain`, the line of sight in at most 256 steps, the
+  things in parallel: 54 ms for Archsimkats Valley's props).
 - **The handles** (`SelectTool`, which `DecalSelectTool` wraps, so every mode's select tool has
   them): the move square in the middle, the arrows along x and z, the ring, the scale squares on
   the selection's box (corners for props, sides too for decals and areas); the one under the mouse
@@ -1317,8 +1345,10 @@ library's (`MapResize`, `MapScript`; its guide).
   list marks it.
 - **Export** (`file.export {folder?, version?, raise?}`): `raise` raises the map's own version first
   (a step of undo: the project keeps it); a preview out of date is rendered before the export; the
-  status names the version written and the next. The map's own preview counts as generated for the
-  map as opened (a result kept on `MapOpened`), so the status bar tells when it is out of date.
+  status names the version written and the next. The map's own preview and normal map count as
+  generated for the map as opened (results kept on `MapOpened`), so the status bar tells when they
+  are out of date; a normal map of one colour everywhere (a new map's or the sandbox's
+  placeholder) stays missing.
 - Automation: `state.mapSize` (size, playable area and whether it is named, version, next version,
   folder, the tool's settings and summary).
 - Not built yet: the rectangle and handles in the 3D view.

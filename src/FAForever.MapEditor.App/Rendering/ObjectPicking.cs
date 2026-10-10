@@ -106,6 +106,32 @@ public static class ObjectPlacement
         new Vector3(marker.Position.X, GroundAt(heights, marker.Position.X, marker.Position.Z), marker.Position.Z);
 
     /// <summary>
+    /// Whether the terrain hides a thing standing at <paramref name="place"/> from an eye: the line of
+    /// sight from the eye to a point <paramref name="lift"/> above the place (or above the ground there,
+    /// for a thing kept below it, such as a marker of height 0), walked in steps of an
+    /// ogrid (at most 256 steps, longer ones from afar), passes under the ground somewhere. The
+    /// first two ogrids from the thing do not count, so the slope it stands on does not hide it.
+    /// </summary>
+    public static bool IsHiddenByTerrain(Heightmap heights, Vector3 eye, Vector3 place, float lift = 1)
+    {
+        Vector3 target = new Vector3(place.X, Math.Max(place.Y, GroundAt(heights, place.X, place.Z)) + lift, place.Z);
+        Vector3 toEye = eye - target;
+        float flat = new Vector2(toEye.X, toEye.Z).Length();
+        int steps = Math.Min(256, (int)flat);
+        float first = 2 / Math.Max(flat, 1);
+        for (int i = 1; i < steps; i++)
+        {
+            float along = Math.Max(first, (float)i / steps);
+            Vector3 at = target + toEye * along;
+            if (GroundAt(heights, at.X, at.Z) > at.Y + 0.25f)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
     /// The height of the terrain at a place, between its samples; outside the map that of its edge.
     /// </summary>
     public static float GroundAt(Heightmap heights, float x, float z)

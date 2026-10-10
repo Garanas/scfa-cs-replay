@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.App.Rendering.Gpu;
 using FAForever.MapEditor.App.Tools;
@@ -15,6 +16,7 @@ using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
 using FAForever.FileFormats.Map;
+using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.Controls;
 
@@ -36,7 +38,7 @@ public sealed class HeightmapView : Control
     /// tokens (<c>Styles/Tokens.axaml</c>).
     /// </summary>
     internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, Typeface LabelFont, double LabelSize,
-        IBrush Prop, IBrush PropSparse, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box,
+        IBrush Prop, IBrush PropSparse, IBrush PropRim, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box,
         IBrush Blocked, IBrush NewlyBlocked, IBrush Opened, IPen Wreck, IPen WreckShadow);
 
     public HeightmapView()
@@ -66,6 +68,8 @@ public sealed class HeightmapView : Control
     {
         _overlay = null;
         _inks = null;
+        // a mask over the terrain takes the variant's colour
+        OnDocumentChanged(this, EventArgs.Empty);
         InvalidateVisual();
     }
 
@@ -81,6 +85,7 @@ public sealed class HeightmapView : Control
         Token<double>("FontSizeMapLabel"),
         Token<IBrush>("MapPropBrush"),
         Token<IBrush>("MapPropSparseBrush"),
+        Token<IBrush>("MapPropRimBrush"),
         Token<IBrush>("MapUnitBrush"),
         new Pen(Token<IBrush>("MapAreaBrush"), 1.5, new DashStyle([4, 3], 0)),
         Token<IBrush>("MapAreaBrush"),
@@ -106,6 +111,8 @@ public sealed class HeightmapView : Control
     private double _zoom = 1;
     private Vector _offset;
     private bool _fitted;
+    // the view shows the whole map as Fit left it (nobody zoomed or moved it since): a new size fits it again
+    private bool _wholeMap;
     private Point? _panFrom;
     // the tool the left mouse was pressed with, until it is released
     private IMapTool? _pressed;
@@ -147,6 +154,7 @@ public sealed class HeightmapView : Control
         _zoom = Math.Min(Bounds.Width / size.Width, Bounds.Height / size.Height) * 0.95;
         _offset = new Vector((Bounds.Width - size.Width * _zoom) / 2, (Bounds.Height - size.Height * _zoom) / 2);
         _fitted = true;
+        _wholeMap = true;
         InvalidateVisual();
     }
 
@@ -158,6 +166,7 @@ public sealed class HeightmapView : Control
         _zoom = Math.Clamp(zoom, 0.05, 64);
         _offset = new Vector(Bounds.Width / 2 - x * _zoom, Bounds.Height / 2 - z * _zoom);
         _fitted = true;
+        _wholeMap = false;
         InvalidateVisual();
     }
 
@@ -226,13 +235,14 @@ public sealed class HeightmapView : Control
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
-        if (!_fitted)
+        if (!_fitted || _wholeMap)
         {
+            // laid out for the first time, or showing the whole map (side by side and back, a panel shown): the whole map again
             Fit();
         }
         else
         {
-            // a panel or splitter moved (user story V-4): the place in the middle stays in the middle
+            // a panel or splitter moved (user story V-4) after one zoomed in: the place in the middle stays in the middle
             _offset += new Vector(e.NewSize.Width - e.PreviousSize.Width, e.NewSize.Height - e.PreviousSize.Height) / 2;
             InvalidateVisual();
         }
@@ -407,6 +417,7 @@ public sealed class HeightmapView : Control
         Point map = ControlToMap(at);
         _zoom = Math.Clamp(_zoom * Math.Pow(1.2, e.Delta.Y), 0.05, 64);
         _offset = new Vector(at.X - map.X * _zoom, at.Y - map.Y * _zoom);
+        _wholeMap = false;
         InvalidateVisual();
         e.Handled = true;
     }
@@ -447,6 +458,7 @@ public sealed class HeightmapView : Control
         if (_panFrom is Point from)
         {
             _offset += at - from;
+            _wholeMap = false;
             _panFrom = at;
         }
         else if (_pressed is IMapTool tool)
@@ -725,13 +737,14 @@ public sealed class HeightmapView : Control
     }
 
     /// <summary>
-    /// Below this zoom (pixels an ogrid) the props are drawn sparse: smaller, fainter, at most one
-    /// dot per <see cref="PropCell"/> pixels square, so a forest of thousands of props does not
-    /// hide the terrain. Picking takes every prop whatever is drawn.
+    /// Below this zoom (pixels an ogrid) the props are drawn sparse: smaller, at most one dot per
+    /// <see cref="PropCell"/> pixels square, so a forest of thousands of props does not hide the
+    /// terrain. Each dot lies on a dark rim, so it shows on bright and green ground alike. Picking
+    /// takes every prop whatever is drawn.
     /// </summary>
     public const double PropSparseZoom = 2;
 
-    private const int PropCell = 3;
+    private const int PropCell = 4;
 
     /// <summary>
     /// The props as dots, sparse when zoomed out (<see cref="PropSparseZoom"/>); the number drawn is
@@ -742,6 +755,7 @@ public sealed class HeightmapView : Control
         bool sparse = _zoom < PropSparseZoom;
         HashSet<long>? taken = sparse ? [] : null;
         double size = sparse ? 2 : 3;
+        double rim = size + 1.5;
         IBrush brush = sparse ? overlay.PropSparse : overlay.Prop;
         int drawn = 0;
         foreach (Prop prop in document.Props)
@@ -753,6 +767,7 @@ public sealed class HeightmapView : Control
             {
                 continue;
             }
+            context.FillRectangle(overlay.PropRim, new Rect(at.X - rim / 2, at.Y - rim / 2, rim, rim));
             context.FillRectangle(brush, new Rect(at.X - size / 2, at.Y - size / 2, size, size));
             drawn++;
         }
@@ -919,7 +934,73 @@ public sealed class HeightmapView : Control
             return;
         }
 
-        IReadOnlyList<SampleRect> changed = _picture.Update(document, _model!.ShownGrid);
+        if (_colouring)
+        {
+            // the whole picture is being coloured on the pool: this version follows when it is done
+            _colourAgain = true;
+            return;
+        }
+        GridOverlay? grid = _model!.ShownGrid;
+        _picture.MaskColour = Token<ISolidColorBrush>("MapMaskBrush").Color.ToUInt32();
+        if ((long)document.Terrain.Heightmap.Samples.Width * document.Terrain.Heightmap.Samples.Height >= ColourOnPool
+            && _picture.ColoursAll(document, grid))
+        {
+            ColourOnThePool(document, grid);
+            return;
+        }
+        Show(_picture.Update(document, grid));
+    }
+
+    /// <summary>
+    /// From this many samples on (a map of 20 km and more) a picture coloured anew is coloured on a
+    /// thread of the pool: an 81 km map's takes a few hundred milliseconds.
+    /// </summary>
+    private const long ColourOnPool = 1025L * 1025;
+
+    private bool _colouring;
+    private bool _colourAgain;
+
+    /// <summary>
+    /// Whether the whole picture is being coloured on a thread of the pool (a large map opened):
+    /// automation's settled screenshot waits for it.
+    /// </summary>
+    public bool IsColouring => _colouring;
+
+    /// <summary>
+    /// Colours the whole picture on a thread of the pool, shows it, then the version of the map
+    /// shown by then (a change made meanwhile only colours its tiles).
+    /// </summary>
+    private void ColourOnThePool(MapDocument document, GridOverlay? grid)
+    {
+        _colouring = true;
+        _ = Task.Run(() =>
+        {
+            using Performance.Span measure = Performance.Measure("top.colour-all");
+            return _picture.Update(document, grid);
+        }).ContinueWith(task => Dispatcher.UIThread.Post(() =>
+        {
+            _colouring = false;
+            if (task.IsCompletedSuccessfully)
+            {
+                Show(task.Result);
+            }
+            else if (task.Exception is not null)
+            {
+                _model?.Logger("Views").LogError(task.Exception, "Colouring the top view's picture failed: {Reason}", task.Exception.Message);
+            }
+            if (_colourAgain || !ReferenceEquals(_model?.ShownDocument, document))
+            {
+                _colourAgain = false;
+                OnDocumentChanged(this, EventArgs.Empty);
+            }
+        }), TaskScheduler.Default);
+    }
+
+    /// <summary>
+    /// Puts the rectangles of the picture that were coloured into the bitmap and draws again.
+    /// </summary>
+    private void Show(IReadOnlyList<SampleRect> changed)
+    {
         if (_bitmap is null || _bitmap.PixelSize.Width != _picture.Width || _bitmap.PixelSize.Height != _picture.Height)
         {
             _bitmap?.Dispose();

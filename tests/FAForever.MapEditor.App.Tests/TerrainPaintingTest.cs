@@ -149,6 +149,20 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task TheLegendNamesCodeZeroAsNoTypeInAQuietColour()
+        {
+            MainViewModel model = new MainViewModel(new MainViewModelTest.Answers());
+            await model.OpenAsync(TestAssets.SandboxProject());
+            model.SelectTool("terrain.types");
+
+            TerrainTypeChoice none = model.Tool<TerrainTypeTool>().Legend.Single(entry => entry.Code == 0);
+            Assert.AreEqual("None", none.Type.Name, "the sandbox's ogrids have no type");
+            StringAssert.Contains(none.Type.Description, "Default");
+            Assert.AreNotEqual(0xFFFF00FFu, none.Colour, "not the magenta of a code the game does not know");
+            Assert.AreEqual(0xFFFF00FFu, TerrainTypeColours.Of(255), "an unknown code stays magenta");
+        }
+
+        [TestMethod]
         public async Task PaintsTheWatersMasks()
         {
             MainViewModel model = await Open();

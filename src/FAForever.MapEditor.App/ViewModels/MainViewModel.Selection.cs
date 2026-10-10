@@ -169,7 +169,10 @@ public sealed partial class MainViewModel
     /// </summary>
     /// <param name="from">A corner, in the view's pixels; <paramref name="to"/> the other, in any order.</param>
     /// <param name="toScreen">Where a place shows in the view; null behind the camera.</param>
-    public void SelectOnScreen(System.Numerics.Vector2 from, System.Numerics.Vector2 to, Func<System.Numerics.Vector3, System.Numerics.Vector2?> toScreen, SelectionChange change, ObjectKinds? kinds = null)
+    /// <param name="eye">Where the camera is: what the terrain hides from it is left out
+    /// (<see cref="Rendering.ObjectPlacement.IsHiddenByTerrain"/>); null to take everything inside.</param>
+    public void SelectOnScreen(System.Numerics.Vector2 from, System.Numerics.Vector2 to, Func<System.Numerics.Vector3, System.Numerics.Vector2?> toScreen, SelectionChange change, ObjectKinds? kinds = null,
+        System.Numerics.Vector3? eye = null)
     {
         if (ShownDocument is not MapDocument document)
         {
@@ -187,6 +190,13 @@ public sealed partial class MainViewModel
                 {
                     inside.Add(thing);
                 }
+            }
+            if (eye is System.Numerics.Vector3 seenFrom)
+            {
+                // what a hill hides from the camera is left out; each line of sight on its own, in parallel
+                Heightmap heights = document.Terrain.Heightmap;
+                inside = [.. inside.AsParallel().AsOrdered()
+                    .Where(thing => !Rendering.ObjectPlacement.IsHiddenByTerrain(heights, seenFrom, document.PlaceOf(thing)!.Value))];
             }
         }
         Selection.Apply(inside, change);
