@@ -93,6 +93,13 @@ What the Viewer's map page shows beyond the files themselves:
   contested within 15%, expansion spots within 25 ogrids) were checked with the owner on Theta Passage
   (4 safe, 0 expandable, 7 raidable, 1 contestable per player) and Glacier Valley.
 - `MapSymmetry`: rotational or mirrored, from the start positions and resource markers (2 ogrids of tolerance).
+  It also mirrors (the map editor's symmetry, user story F-12): `Transforms(kind, count, width, height)`
+  gives one `MapSymmetryTransform` per part of the map, the identity first (rotational: 2 to 8 parts,
+  turned clockwise in the top view around the middle; a mirror: two), which maps a point, a position
+  (its height kept), a direction, a yaw and a rotation matrix; `Images` the points, `Guides` the
+  lines between the parts. Orientations follow `Matrix4x4.CreateRotationY`: a yaw faces
+  `(sin, cos)` on (x, z), a matrix's rows are an object's own axes, its z axis where it faces; a
+  mirror keeps a rotation a rotation (it turns the object's own x axis around).
 - `MapArchive`: reads the vault's zip piece by piece: the directory from the end, then only the
   entries asked for, so the browser fetches the three map files with range requests and skips the
   textures. No ZIP64.
