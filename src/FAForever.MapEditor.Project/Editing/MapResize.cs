@@ -179,7 +179,17 @@ namespace FAForever.MapEditor.Project.Editing
                     DepthBiasMask = Resized(water.DepthBiasMask),
                 },
                 Masks = document.Masks.ToImmutableSortedDictionary(entry => entry.Key, entry => Resized(entry.Value, (byte)0), StringComparer.Ordinal),
+                // the height layers (T-5) at the heightmap's corners: an absolute layer continues its
+                // edge, an adding one adds nothing where the map gains; a curve's points move along
+                HeightLayers = [.. document.HeightLayers.Select(layer => layer with
+                {
+                    Values = Shift(layer.Values, newWidth + 1, newDepth + 1, dx, dz, layer.Combine == HeightCombine.Add ? 0f : null),
+                    Coverage = layer.Coverage is TiledBuffer<byte> coverage ? Shift(coverage, newWidth + 1, newDepth + 1, dx, dz, (byte)0) : null,
+                    Curve = layer.Curve is HeightCurve curve ? curve with { Points = [.. curve.Points.Select(point => point with { X = point.X + dx, Z = point.Z + dz })] } : null,
+                })],
             };
+            // with layers, the heightmap is their sum again
+            resized = HeightLayers.Recomposite(resized);
 
             return MoveThings(resized, document, dx, dz, settings.FitPlayableArea);
         }

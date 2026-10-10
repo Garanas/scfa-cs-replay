@@ -66,6 +66,25 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void TheHeightLayersGrowWithTheMapAndStillAddUp()
+        {
+            MapDocument document = EditedMap.ImportMap(ProjectFolders.HardFfa).Document;
+            HeightLayer raised = HeightLayerEdits.NewSculpt(document, "Raised");
+            int side = raised.Values.Width;
+            TiledBuffer<float>.Builder values = raised.Values.ToBuilder();
+            values[10, 10] = 5;
+            document = HeightLayers.Recomposite(HeightLayerEdits.Add(document, raised with { Values = values.ToBuffer() }));
+
+            MapDocument grown = MapResize.Resize(document, new MapResizeSettings { Width = 512, Height = 512, Anchor = MapAnchor.TopLeft }).Document;
+
+            Assert.IsTrue(grown.HeightLayers.All(layer => layer.Values.Width == 513 && layer.Values.Height == 513), "every layer at the new corners");
+            Assert.AreEqual(5f, HeightLayers.Find(grown, "Raised")!.Values[10, 10], "the old values at their place");
+            Assert.AreEqual(0f, HeightLayers.Find(grown, "Raised")!.Values[400, 400], "an adding layer adds nothing where the map gained");
+            CollectionAssert.AreEqual(HeightLayers.Recomposite(grown).Terrain.Heightmap.Samples.ToArray(), grown.Terrain.Heightmap.Samples.ToArray(), "the heightmap is the layers' sum");
+            Assert.AreEqual(257, side);
+        }
+
+        [TestMethod]
         public void GrowsEveryPartAroundTheOldMap()
         {
             MapDocument original = Map();
