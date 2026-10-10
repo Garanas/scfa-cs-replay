@@ -92,7 +92,9 @@
       <!-- things on the map in the top view: props as dots, units as squares, areas as dashed rectangles; what is selected, and the box being drawn -->
       <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
       <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
-      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#998FD18A" />
+      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#E69BE095" />
+      <!-- a dark rim under each prop's dot, so it shows on bright and on green ground alike -->
+      <SolidColorBrush x:Key="MapPropRimBrush" Color="#99000000" />
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
       <!-- units placed as wrecks (U-5): an ashen cross in the top view -->
       <SolidColorBrush x:Key="MapWreckBrush" Color="#FFA89A94" />
@@ -156,7 +158,9 @@
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
       <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
       <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
-      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#998FD18A" />
+      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#E69BE095" />
+      <!-- a dark rim under each prop's dot, so it shows on bright and on green ground alike -->
+      <SolidColorBrush x:Key="MapPropRimBrush" Color="#99000000" />
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
       <!-- units placed as wrecks (U-5): an ashen cross in the top view -->
       <SolidColorBrush x:Key="MapWreckBrush" Color="#FFA89A94" />
@@ -230,6 +234,7 @@
   <x:Double x:Key="DockTallHeight">290</x:Double>
   <x:Double x:Key="AssetFacetsWidth">180</x:Double>
   <x:Double x:Key="AssetSearchWidth">320</x:Double>
+  <x:Double x:Key="AssetSearchMinWidth">180</x:Double>
   <x:Double x:Key="AssetPreviewHeight">200</x:Double>
   <x:Double x:Key="AssetNormalPreviewSize">72</x:Double>
   <x:Double x:Key="AssetTooltipPreviewSize">180</x:Double>

@@ -609,6 +609,11 @@
   <Style Selector="Button.tile TextBlock">
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
+  <!-- a tile's name on up to two lines, so names that differ only at their end (evgrass004a, evgrass004b) tell apart -->
+  <Style Selector="Button.tile TextBlock.tiletitle">
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxLines" Value="2" />
+  </Style>
   <!-- the place of a picture, where the glyph of its kind shows when it has none -->
   <Style Selector="Border.thumbnail">
     <Setter Property="Background" Value="{DynamicResource ControlBrush}" />

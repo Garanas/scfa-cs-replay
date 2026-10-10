@@ -38,7 +38,7 @@ public sealed class HeightmapView : Control
     /// tokens (<c>Styles/Tokens.axaml</c>).
     /// </summary>
     internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, Typeface LabelFont, double LabelSize,
-        IBrush Prop, IBrush PropSparse, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box,
+        IBrush Prop, IBrush PropSparse, IBrush PropRim, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box,
         IBrush Blocked, IBrush NewlyBlocked, IBrush Opened, IPen Wreck, IPen WreckShadow);
 
     public HeightmapView()
@@ -85,6 +85,7 @@ public sealed class HeightmapView : Control
         Token<double>("FontSizeMapLabel"),
         Token<IBrush>("MapPropBrush"),
         Token<IBrush>("MapPropSparseBrush"),
+        Token<IBrush>("MapPropRimBrush"),
         Token<IBrush>("MapUnitBrush"),
         new Pen(Token<IBrush>("MapAreaBrush"), 1.5, new DashStyle([4, 3], 0)),
         Token<IBrush>("MapAreaBrush"),
@@ -724,13 +725,14 @@ public sealed class HeightmapView : Control
     }
 
     /// <summary>
-    /// Below this zoom (pixels an ogrid) the props are drawn sparse: smaller, fainter, at most one
-    /// dot per <see cref="PropCell"/> pixels square, so a forest of thousands of props does not
-    /// hide the terrain. Picking takes every prop whatever is drawn.
+    /// Below this zoom (pixels an ogrid) the props are drawn sparse: smaller, at most one dot per
+    /// <see cref="PropCell"/> pixels square, so a forest of thousands of props does not hide the
+    /// terrain. Each dot lies on a dark rim, so it shows on bright and green ground alike. Picking
+    /// takes every prop whatever is drawn.
     /// </summary>
     public const double PropSparseZoom = 2;
 
-    private const int PropCell = 3;
+    private const int PropCell = 4;
 
     /// <summary>
     /// The props as dots, sparse when zoomed out (<see cref="PropSparseZoom"/>); the number drawn is
@@ -741,6 +743,7 @@ public sealed class HeightmapView : Control
         bool sparse = _zoom < PropSparseZoom;
         HashSet<long>? taken = sparse ? [] : null;
         double size = sparse ? 2 : 3;
+        double rim = size + 1.5;
         IBrush brush = sparse ? overlay.PropSparse : overlay.Prop;
         int drawn = 0;
         foreach (Prop prop in document.Props)
@@ -751,6 +754,7 @@ public sealed class HeightmapView : Control
             {
                 continue;
             }
+            context.FillRectangle(overlay.PropRim, new Rect(at.X - rim / 2, at.Y - rim / 2, rim, rim));
             context.FillRectangle(brush, new Rect(at.X - size / 2, at.Y - size / 2, size, size));
             drawn++;
         }

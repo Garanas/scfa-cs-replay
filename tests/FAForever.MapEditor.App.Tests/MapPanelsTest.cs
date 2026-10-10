@@ -279,6 +279,20 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task ThePaintPanelsOneListOfLayersChoosesTheStratumThatIsPainted()
+        {
+            MainViewModel model = await Open();
+            Assert.IsFalse(EditorModes.All.Single(mode => mode.Id == "paint").Sections.Any(section => section.Title == "Strata"), "one list of the layers, not two");
+
+            model.LayerTextures.Choose(3);
+            Assert.AreEqual(3, model.StrataTool.Layer, "a stratum chosen in the list is the one the strata tool paints");
+            model.StrataTool.Choose(2);
+            Assert.AreEqual(2, model.LayerTextures.SelectedIndex, "and the list follows the tool (brush.set layer)");
+            model.LayerTextures.Choose(0);
+            Assert.AreEqual(2, model.StrataTool.Layer, "the lower layer has no mask: the tool keeps its stratum");
+        }
+
+        [TestMethod]
         public async Task LayersGetTexturesFromThePickerAndMoveWithTheirMasks()
         {
             MainViewModelTest.Answers answers = new MainViewModelTest.Answers();

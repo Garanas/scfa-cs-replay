@@ -1,4 +1,5 @@
-<!-- The Paint panel's layer textures (S-2): the layers as they lie on each other, the upper first; add, remove and reorder strata. -->
+<!-- The Paint panel's layers (S-1, S-2): the layers as they lie on each other, the upper first; a stratum chosen here is the one the
+     strata tool paints, and the inspector shows the chosen layer's textures; add, remove and reorder strata. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -7,9 +8,9 @@
              x:DataType="vm:MainViewModel">
   <Border Classes="group">
     <StackPanel Classes="stack">
-      <TextBlock Classes="overline" Text="{Binding Source='Layer textures', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <TextBlock Classes="overline" Text="{Binding Source='Layers', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
       <ListBox ItemsSource="{Binding LayerTextures.Items}" SelectedItem="{Binding LayerTextures.Selected}" AutomationProperties.Name="Layer textures"
-               AutomationProperties.HelpText="The chosen layer's textures and scales are in the inspector">
+               AutomationProperties.HelpText="The chosen stratum is the one the strata tool paints; the chosen layer's textures and scales are in the inspector">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:LayerItem">
             <StackPanel>

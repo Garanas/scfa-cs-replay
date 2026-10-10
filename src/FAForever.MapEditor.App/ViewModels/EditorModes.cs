@@ -36,11 +36,6 @@ public abstract record PanelSection(string Title);
 public sealed record PlannedSection(string Title, string Story, string Missing) : PanelSection(Title);
 
 /// <summary>
-/// The terrain layers whose masks the strata tool paints (user story S-1).
-/// </summary>
-public sealed record StrataSection() : PanelSection("Strata");
-
-/// <summary>
 /// The masks for tools of the map (user story K-1): add, rename, delete, choose the one to paint
 /// and show.
 /// </summary>
@@ -119,10 +114,9 @@ public static class EditorModes
                 new ToolDefinition("paint.masks", "Masks", "K-1") { Make = model => new MaskPaintTool(model) },
             ],
             [
-                new StrataSection(),
+                new LayerTexturesSection(),
                 new MasksSection(),
                 new PresetSection("brush", "Brush presets"),
-                new LayerTexturesSection(),
             ],
             [new MaskRulesSection(), new LayerSection()]),
 
