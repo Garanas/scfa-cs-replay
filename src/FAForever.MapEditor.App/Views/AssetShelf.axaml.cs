@@ -1,10 +1,13 @@
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using FAForever.MapEditor.App.Controls;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.Views;
 
@@ -27,7 +30,18 @@ public sealed partial class AssetShelf : UserControl
         Grid.SizeChanged += (_, _) => MeasureColumns();
         Grid.AddHandler(KeyDownEvent, OnGridKeyDown, RoutingStrategies.Tunnel);
         Grid.AddHandler(PointerWheelChangedEvent, OnGridWheel, RoutingStrategies.Tunnel);
+        Grid.AddHandler(PointerPressedEvent, OnTilePressed, RoutingStrategies.Tunnel);
+        Grid.AddHandler(PointerMovedEvent, OnTileDragged, RoutingStrategies.Tunnel);
+        Grid.AddHandler(PointerReleasedEvent, (_, _) => _press = null, RoutingStrategies.Tunnel);
     }
+
+    /// <summary>
+    /// How far the mouse moves with the button down before a tile is dragged, in pixels.
+    /// </summary>
+    private const double DragDistance = 6;
+
+    // the left button pressed on a tile, until it is released or the drag starts
+    private (PointerPressedEventArgs Args, Point At, AssetTile Tile)? _press;
 
     protected override void OnDataContextChanged(EventArgs e)
     {
@@ -78,6 +92,32 @@ public sealed partial class AssetShelf : UserControl
             _model.TileSize = Math.Clamp(_model.TileSize + Math.Sign(e.Delta.Y), 0, 2);
             e.Handled = true;
         }
+    }
+
+    private void OnTilePressed(object? sender, PointerPressedEventArgs e)
+    {
+        _press = e.GetCurrentPoint(Grid).Properties.IsLeftButtonPressed
+            && (e.Source as Visual)?.FindAncestorOfType<Button>(includeSelf: true)?.DataContext is AssetTile tile
+            ? (e, e.GetPosition(Grid), tile)
+            : null;
+    }
+
+    // a tile dragged far enough goes onto a view of the map (AssetDrag), which places it
+    private async void OnTileDragged(object? sender, PointerEventArgs e)
+    {
+        if (_press is not (PointerPressedEventArgs args, Point at, AssetTile tile))
+        {
+            return;
+        }
+        Vector moved = e.GetPosition(Grid) - at;
+        if (Math.Abs(moved.X) < DragDistance && Math.Abs(moved.Y) < DragDistance)
+        {
+            return;
+        }
+        _press = null;
+        // of the selected family, the variant the inspector shows
+        AssetEntry entry = _model?.Selected == tile && _model.SelectedMember is AssetEntry member ? member : tile.Entry;
+        await DragDrop.DoDragDropAsync(args, AssetDrag.Of(entry), DragDropEffects.Copy);
     }
 
     private void OnGridKeyDown(object? sender, KeyEventArgs e)

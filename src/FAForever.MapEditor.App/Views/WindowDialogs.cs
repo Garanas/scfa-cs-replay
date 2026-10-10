@@ -2,11 +2,13 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.Views;
 
 /// <summary>
-/// The editor's questions, answered with the dialogs of the operating system and the editor's own.
+/// The editor's questions, answered with the dialogs of the operating system and the editor's own,
+/// and the picker of an asset.
 /// </summary>
 public sealed class WindowDialogs(Window window) : IEditorDialogs
 {
@@ -56,4 +58,12 @@ public sealed class WindowDialogs(Window window) : IEditorDialogs
         };
         return await dialog.ShowDialog<SaveChoice?>(window) ?? SaveChoice.Cancel;
     }
+
+    /// <summary>
+    /// Shows the picker over the window (<c>AssetPicker</c>), which the window's view model holds.
+    /// </summary>
+    public Task<string?> PickAssetAsync(AssetKind kind, string? title = null, string? current = null) =>
+        window.DataContext is MainViewModel model
+            ? model.Picker.PickAsync(kind, title, current)
+            : Task.FromResult<string?>(null);
 }

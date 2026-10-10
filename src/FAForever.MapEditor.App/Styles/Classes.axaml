@@ -419,6 +419,17 @@
   <Style Selector="Border.dialogpart">
     <Setter Property="Padding" Value="{StaticResource DialogPadding}" />
   </Style>
+  <!-- the picker of an asset: wider, its tiles a fixed height, its buttons under a line -->
+  <Style Selector="Border.dialog.picker">
+    <Setter Property="Width" Value="{StaticResource PickerWidth}" />
+  </Style>
+  <Style Selector="Panel.pickertiles">
+    <Setter Property="Height" Value="{StaticResource PickerListHeight}" />
+  </Style>
+  <Style Selector="Border.pickerfoot">
+    <Setter Property="BorderBrush" Value="{DynamicResource GroupDividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerTop}" />
+  </Style>
 
   <!-- a line between groups -->
   <Style Selector="Border.divider">

@@ -95,6 +95,9 @@
     <views:UpdateAssetsPage IsVisible="{Binding Setup.IsAskingToUpdate}" />
     <views:ConvertingPage IsVisible="{Binding Setup.IsConverting}" />
     <views:CommandPalette x:Name="Palette" IsVisible="{Binding Palette.IsOpen}" />
+    <Panel IsVisible="{Binding Picker.IsOpen}">
+      <views:AssetPicker x:Name="Picker" DataContext="{Binding Picker}" />
+    </Panel>
     <views:DiagnosticsPage IsVisible="{Binding Diagnostics.IsOpen}" />
     <views:VersionControlPage IsVisible="{Binding VersionControl.IsOpen}" />
   </Grid>

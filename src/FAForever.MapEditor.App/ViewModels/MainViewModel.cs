@@ -28,6 +28,15 @@ public interface IEditorDialogs
     /// What to do with the unsaved changes of a map before it is closed.
     /// </summary>
     Task<SaveChoice> AskToSaveChangesAsync(string mapName);
+
+    /// <summary>
+    /// An asset of <paramref name="kind"/> the person chooses in the picker (user stories F-9,
+    /// U-1), or null when they cancel. Without a picker of its own (a test's answers), it cancels.
+    /// </summary>
+    /// <param name="title">What the picker asks; <c>Choose a unit</c> and the like when null.</param>
+    /// <param name="current">The key of the asset the picker starts on, such as the one a slot holds.</param>
+    /// <returns>The chosen asset's key (<see cref="FAForever.MapEditor.Project.Workspaces.AssetEntry.Key"/>).</returns>
+    Task<string?> PickAssetAsync(AssetKind kind, string? title = null, string? current = null) => Task.FromResult<string?>(null);
 }
 
 /// <summary>
@@ -90,6 +99,7 @@ public sealed partial class MainViewModel : ObservableObject
         Setup.WorkspaceReady += OnWorkspaceReady;
         VersionControl = new VersionControlViewModel(this);
         Assets = new AssetsViewModel(Logger("Assets"));
+        Picker = new AssetPickerViewModel(() => Assets.Catalog);
         Commands = CommandServices.Create(this, _dialogs, typeof(MainViewModel).Assembly);
         Palette = new PaletteViewModel(Commands, RunAsync);
         InitializeShell();
@@ -124,6 +134,12 @@ public sealed partial class MainViewModel : ObservableObject
     /// The asset shelf in the dock, and the asset the inspector shows (user stories F-8, F-9).
     /// </summary>
     public AssetsViewModel Assets { get; }
+
+    /// <summary>
+    /// The picker of one asset that a slot, tool or command opens (user stories F-9, U-1); the
+    /// window's dialogs show it (<see cref="IEditorDialogs.PickAssetAsync"/>).
+    /// </summary>
+    public AssetPickerViewModel Picker { get; }
 
     /// <summary>
     /// A logger of the editor, by what it is about: <c>Commands</c>, <c>Files</c>, <c>Workspace</c>,

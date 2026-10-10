@@ -280,6 +280,106 @@ namespace FAForever.MapEditor.App.Tests
             window.Close();
         });
 
+        /// <summary>
+        /// The window with the test assets, answering its questions with its own dialogs: the
+        /// picker shows over it.
+        /// </summary>
+        private static async Task<(MainWindow Window, MainViewModel Model)> OpenWithItsDialogs()
+        {
+            MainWindow window = new MainWindow { Width = 1280, Height = 800 };
+            MainViewModel model = new MainViewModel(new WindowDialogs(window));
+            await model.OpenAsync(HardFfa);
+            model.Assets.Use(TestAssets.Catalog());
+            window.DataContext = model;
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            return (window, model);
+        }
+
+        private static T Labelled<T>(MainWindow window, string label) where T : Control => window.GetVisualDescendants().OfType<T>()
+            .Single(control => Avalonia.Automation.AutomationProperties.GetName(control) == label);
+
+        [TestMethod]
+        public Task ControlPOpensThePickerTypingFiltersAndEnterChooses() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await OpenWithItsDialogs();
+            model.SelectMode("units");
+
+            window.KeyPress(Key.P, RawInputModifiers.Control, PhysicalKey.P, "p");
+            Dispatcher.UIThread.RunJobs();
+            Assert.IsTrue(model.Picker.IsOpen);
+            Assert.AreEqual("Choose a unit", model.Picker.Title, "the Units mode asks for a unit");
+            TextBox search = Labelled<TextBox>(window, "Search the picker");
+            Assert.IsTrue(search.IsEffectivelyVisible);
+            Assert.IsTrue(search.IsFocused, "the search has the keyboard");
+
+            window.KeyTextInput("snoop");
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual("Snoop", model.Picker.Tiles.Single().Title);
+            Assert.IsTrue(window.GetVisualDescendants().OfType<Button>()
+                .Any(button => Avalonia.Automation.AutomationProperties.GetName(button)?.StartsWith("Snoop,", StringComparison.Ordinal) == true && button.IsEffectivelyVisible),
+                "its tile shows");
+            window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.IsFalse(model.Picker.IsOpen);
+            Assert.AreEqual("Snoop", model.Assets.Shown?.Name);
+            TextBlock name = Labelled<TextBlock>(window, "Asset name");
+            Assert.IsTrue(name.IsEffectivelyVisible, "the inspector shows the chosen unit");
+            Assert.AreEqual("Snoop", name.Text);
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task ThePickersArrowsMoveAndEscapeCancels() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await OpenWithItsDialogs();
+            model.SelectMode("props");
+            window.KeyPress(Key.P, RawInputModifiers.Control, PhysicalKey.P, "p");
+            Dispatcher.UIThread.RunJobs();
+            AssetTile first = model.Picker.Selected!;
+
+            window.KeyPress(Key.Down, RawInputModifiers.None, PhysicalKey.ArrowDown, null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreNotEqual(first, model.Picker.Selected, "down from the search moves through the tiles");
+            window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.IsFalse(model.Picker.IsOpen);
+            Assert.IsFalse(model.Assets.HasSelection, "nothing chosen");
+            StringAssert.Contains(model.Status, "Chose nothing");
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task AnAssetDraggedOntoTheTopViewDropsWhereTheMouseIs() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            model.Assets.Use(TestAssets.Catalog());
+            Show(window, MapViewTab.Top);
+            List<AssetDropEventArgs> drops = [];
+            model.AssetDropped += (_, drop) =>
+            {
+                drops.Add(drop);
+                drop.Handled = true;
+            };
+            Project.Workspaces.AssetEntry rock = model.Assets.Catalog.Find("env/evergreen/props/rocks/rock01_prop.bp")!;
+            Point at = Middle(window.MapView, window);
+            Point place = window.MapView.ControlToMap(window.TranslatePoint(at, window.MapView)!.Value);
+
+            window.DragDrop(at, Avalonia.Input.Raw.RawDragEventType.DragEnter, AssetDrag.Of(rock), DragDropEffects.Copy, RawInputModifiers.None);
+            window.DragDrop(at, Avalonia.Input.Raw.RawDragEventType.DragOver, AssetDrag.Of(rock), DragDropEffects.Copy, RawInputModifiers.None);
+            StringAssert.StartsWith(window.FindControl<TextBlock>("CursorText")!.Text, "Drop rock01 at", "the status bar shows where it lands");
+            window.DragDrop(at, Avalonia.Input.Raw.RawDragEventType.Drop, AssetDrag.Of(rock), DragDropEffects.Copy, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+
+            AssetDropEventArgs drop = drops.Single();
+            Assert.AreEqual(rock, drop.Entry);
+            Assert.AreEqual(place.X, drop.X, 0.01);
+            Assert.AreEqual(place.Y, drop.Z, 0.01);
+            window.Close();
+        });
+
         [TestMethod]
         public Task TheMenusAndShortcutsComeFromTheLayout() => Run(async () =>
         {

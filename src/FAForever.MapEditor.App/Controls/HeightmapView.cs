@@ -83,6 +83,17 @@ public sealed class HeightmapView : Control
     /// </summary>
     public event Action<string>? CursorMoved;
 
+    public HeightmapView()
+    {
+        // an asset dragged from the shelf lands on the place under the mouse
+        AssetDrag.Attach(this, () => _model, at =>
+            _model?.ShownDocument is MapDocument document && ControlToMap(at) is { X: >= 0, Y: >= 0 } map
+                && map.X <= document.Width && map.Y <= document.Height
+                ? map
+                : null,
+            text => CursorMoved?.Invoke(text));
+    }
+
     public double Zoom => _zoom;
 
     /// <summary>

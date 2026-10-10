@@ -1,0 +1,142 @@
+<!--
+  The picker over the window (concept C2, user stories F-9 and U-1): one asset of a kind to
+  choose for a slot, a tool or a command. The search above, which has the keyboard; on the left
+  the biomes, factions or folders, the categories (for units their kind) and the units' tech
+  levels; the tiles in rows, of which the list makes only those in sight. The arrow keys move,
+  Enter or a double click chooses, Escape or a click beside it cancels.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.AssetPicker"
+             x:DataType="vm:AssetPickerViewModel">
+  <Border Classes="scrim" PointerPressed="OnScrimPressed">
+    <Border Classes="dialog picker" PointerPressed="OnDialogPressed" AutomationProperties.Name="Picker">
+      <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Right" Classes="caption" Text="{Binding Summary}" VerticalAlignment="Center"
+                         AutomationProperties.Name="Assets in the picker" />
+              <TextBlock Classes="heading" Text="{Binding Title}" AutomationProperties.Name="Picker title" />
+            </DockPanel>
+            <TextBox x:Name="Search" Text="{Binding Query}" PlaceholderText="{Binding SearchHint}" KeyDown="OnSearchKeyDown"
+                     AutomationProperties.Name="Search the picker"
+                     AutomationProperties.HelpText="Type to filter; the arrow keys up and down move a row, Enter chooses, Escape cancels" />
+          </StackPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom" Classes="dialogpart pickerfoot">
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Right" Classes="inline">
+              <Button Content="Cancel" Command="{Binding CancelCommand}" />
+              <Button Classes="accent" Content="Choose" Command="{Binding ChooseCommand}" IsEnabled="{Binding HasSelection}" />
+            </StackPanel>
+            <TextBlock Classes="caption" Text="{Binding SelectionText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                       AutomationProperties.Name="Asset to choose" />
+          </DockPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Left" Classes="facets">
+          <ScrollViewer>
+            <StackPanel Classes="stack">
+              <TextBlock Classes="overline" Text="{Binding GroupsTitle, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <ItemsControl ItemsSource="{Binding Groups}" AutomationProperties.Name="{Binding GroupsTitle}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:AssetChoice">
+                    <Button Classes="facet" Classes.on="{Binding IsOn}"
+                            Command="{Binding $parent[UserControl].((vm:AssetPickerViewModel)DataContext).ChooseGroupCommand}" CommandParameter="{Binding}"
+                            AutomationProperties.Name="{Binding Text}">
+                      <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Classes="shortcut" Text="{Binding Count}" />
+                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                      </DockPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="overline section" Text="{Binding CategoriesTitle, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <ItemsControl ItemsSource="{Binding Categories}" AutomationProperties.Name="{Binding CategoriesTitle}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel Classes="chips" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:AssetChoice">
+                    <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Text}"
+                            Command="{Binding $parent[UserControl].((vm:AssetPickerViewModel)DataContext).ChooseCategoryCommand}" CommandParameter="{Binding}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="overline section" IsVisible="{Binding IsUnits}"
+                         Text="{Binding Source=Tech, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <ItemsControl ItemsSource="{Binding Techs}" IsVisible="{Binding IsUnits}" AutomationProperties.Name="Tech level">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel Classes="chips" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:AssetChoice">
+                    <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Text}"
+                            Command="{Binding $parent[UserControl].((vm:AssetPickerViewModel)DataContext).ChooseTechCommand}" CommandParameter="{Binding}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+
+        <Panel Classes="pickertiles">
+          <TextBlock Classes="caption" Text="{Binding EmptyText}" IsVisible="{Binding IsEmpty}" Margin="{StaticResource ShelfPadding}"
+                     AutomationProperties.Name="No assets in the picker" />
+          <ListBox x:Name="Grid" Classes="shelf" ItemsSource="{Binding Rows}" AutomationProperties.Name="Assets to choose from"
+                   AutomationProperties.HelpText="Arrow keys move through the assets; Enter or a double click chooses; Escape cancels">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:AssetRow">
+                <ItemsControl ItemsSource="{Binding Tiles}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:AssetTile">
+                      <Button Classes="tile" Classes.selected="{Binding IsSelected}"
+                              Width="{Binding $parent[UserControl].((vm:AssetPickerViewModel)DataContext).TileWidth}"
+                              Command="{Binding $parent[UserControl].((vm:AssetPickerViewModel)DataContext).ChooseTileCommand}" CommandParameter="{Binding}"
+                              DoubleTapped="OnTileDoubleTapped" AutomationProperties.Name="{Binding Label}">
+                        <ToolTip.Tip>
+                          <StackPanel Classes="stack" x:DataType="vm:AssetTile">
+                            <Border Classes="thumbnail tooltippreview" IsVisible="{Binding HasImage}">
+                              <controls:AssetThumbnail Source="{Binding Image}" Model="{Binding Model}" DecodeWidth="256" />
+                            </Border>
+                            <TextBlock Classes="heading" Text="{Binding Title}" />
+                            <TextBlock Classes="caption" Text="{Binding Label}" />
+                          </StackPanel>
+                        </ToolTip.Tip>
+                        <StackPanel Spacing="{StaticResource SpaceTiny}">
+                          <Border Classes="thumbnail" Height="{Binding $parent[UserControl].((vm:AssetPickerViewModel)DataContext).ThumbnailSize}">
+                            <Panel>
+                              <controls:AssetThumbnail Source="{Binding Image}" Model="{Binding Model}" IsVisible="{Binding HasImage}" />
+                              <Path Classes="icon" Data="{Binding Glyph, Converter={x:Static controls:IconConverter.Instance}}" IsVisible="{Binding !HasImage}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Panel>
+                          </Border>
+                          <TextBlock Text="{Binding Title}" />
+                          <TextBlock Classes="caption" Text="{Binding Detail}" TextWrapping="NoWrap" />
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Panel>
+      </DockPanel>
+    </Border>
+  </Border>
+</UserControl>

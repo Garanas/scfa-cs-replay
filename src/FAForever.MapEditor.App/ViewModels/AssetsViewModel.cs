@@ -53,7 +53,7 @@ public sealed partial class AssetTile(AssetEntry entry, IReadOnlyList<AssetEntry
     /// What it is beside its name: the number of variants, a unit's id, a texture's category.
     /// </summary>
     public string Detail => IsFamily ? $"{members.Count} variants"
-        : entry.Kind == AssetKind.Unit ? entry.Code
+        : entry.Kind == AssetKind.Unit ? (entry.TechLevel is null ? entry.Code : $"{AssetSearch.TechTitle(entry.TechLevel)} · {entry.Code}")
         : entry.Category;
 
     /// <summary>
@@ -393,20 +393,25 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// </summary>
     public void FollowMode(string mode)
     {
-        AssetKind? kind = mode switch
+        if (KindOfMode(mode) is AssetKind kind)
         {
-            "terrain" => AssetKind.Brush,
-            "paint" => AssetKind.Texture,
-            "props" => AssetKind.Prop,
-            "decals" => AssetKind.Decal,
-            "units" => AssetKind.Unit,
-            _ => null,
-        };
-        if (kind is AssetKind k)
-        {
-            Kind = k;
+            Kind = kind;
         }
     }
+
+    /// <summary>
+    /// The kind of asset a mode works with: brushes in Terrain, textures in Paint, props, decals,
+    /// units; null for the other modes.
+    /// </summary>
+    public static AssetKind? KindOfMode(string? mode) => mode switch
+    {
+        "terrain" => AssetKind.Brush,
+        "paint" => AssetKind.Texture,
+        "props" => AssetKind.Prop,
+        "decals" => AssetKind.Decal,
+        "units" => AssetKind.Unit,
+        _ => null,
+    };
 
     /// <summary>
     /// Selects the asset a map names by <paramref name="key"/> (a game path, a unit's id): its kind
@@ -542,9 +547,9 @@ public sealed partial class AssetsViewModel : ObservableObject
             return;
         }
         using Performance.Span measure = Performance.Measure("assets.filter");
-        string[] words = Query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        string[] words = AssetSearch.Words(Query);
         IEnumerable<AssetEntry> InScope(AssetKind kind) =>
-            Catalog.Entries.Where(entry => entry.Kind == kind && IsInScope(entry) && Matches(entry, words));
+            Catalog.Entries.Where(entry => entry.Kind == kind && IsInScope(entry) && AssetSearch.Matches(entry, words));
 
         Kinds = [.. Enum.GetValues<AssetKind>().Select(kind => new AssetChoice(kind.ToString(), KindTitle(kind), InScope(kind).Count(), kind == Kind))];
 
@@ -611,12 +616,6 @@ public sealed partial class AssetsViewModel : ObservableObject
         },
         _ => true,
     };
-
-    private static bool Matches(AssetEntry entry, string[] words) => words.All(word =>
-        entry.Name.Contains(word, StringComparison.OrdinalIgnoreCase)
-        || entry.Code.Contains(word, StringComparison.OrdinalIgnoreCase)
-        || entry.Group.Contains(word, StringComparison.OrdinalIgnoreCase)
-        || entry.Category.Contains(word, StringComparison.OrdinalIgnoreCase));
 
     private int UsesOf(IReadOnlyList<AssetEntry> members) =>
         members.Sum(member => member.Keys.Sum(key => _uses.GetValueOrDefault(key)));

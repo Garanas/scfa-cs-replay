@@ -49,6 +49,22 @@ namespace FAForever.MapEditor.App.Tests
                 SaveQuestions++;
                 return Task.FromResult(SaveChoice);
             }
+
+            /// <summary>
+            /// The keys the picker answers with, in turn; null cancels.
+            /// </summary>
+            public Queue<string?> Assets { get; } = new Queue<string?>();
+
+            /// <summary>
+            /// What the picker was asked for: the kind, its question and the asset it started on.
+            /// </summary>
+            public List<(AssetKind Kind, string? Title, string? Current)> AssetQuestions { get; } = [];
+
+            public Task<string?> PickAssetAsync(AssetKind kind, string? title = null, string? current = null)
+            {
+                AssetQuestions.Add((kind, title, current));
+                return Task.FromResult(Assets.Count > 0 ? Assets.Dequeue() : null);
+            }
         }
 
         [TestMethod]
@@ -412,6 +428,138 @@ namespace FAForever.MapEditor.App.Tests
 
             await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
                 model.Commands.RunAsync("assets.browse", new System.Text.Json.Nodes.JsonObject { ["kind"] = "tree" }, interactive: false));
+        }
+
+        [TestMethod]
+        public async Task PickingAnAssetAsksForTheModesKindAndShowsItInTheInspector()
+        {
+            Answers answers = new Answers();
+            MainViewModel model = new MainViewModel(answers);
+            model.Assets.Use(TestAssets.Catalog());
+            model.SelectMode("props");
+
+            answers.Assets.Enqueue("env/evergreen/props/rocks/rock01_prop.bp");
+            CommandRun picked = await model.Commands.RunAsync("assets.pick", null, interactive: true);
+            Assert.AreEqual("env/evergreen/props/rocks/rock01_prop.bp", picked.Result);
+            Assert.AreEqual(AssetKind.Prop, answers.AssetQuestions.Single().Kind, "the Props mode asks for a prop");
+            Assert.AreEqual("rock01", model.Assets.Shown?.Name, "the inspector shows it");
+
+            // the unit picker asks for a unit, starting on none; cancelled, the inspector stays
+            CommandRun cancelled = await model.Commands.RunAsync("units.pick", null, interactive: true);
+            Assert.IsTrue(cancelled.Ran);
+            Assert.IsNull(cancelled.Result);
+            Assert.AreEqual((AssetKind.Unit, "Choose a unit", (string?)null), answers.AssetQuestions[1]);
+            Assert.AreEqual("rock01", model.Assets.Shown?.Name);
+
+            answers.Assets.Enqueue("uec1101");
+            await model.Commands.RunAsync("units.pick", null, interactive: true);
+            Assert.AreEqual("UEF Residential Building", model.Assets.Shown?.Name);
+            await model.Commands.RunAsync("units.pick", null, interactive: true);
+            Assert.AreEqual("uec1101", answers.AssetQuestions[3].Current, "the picker starts on the unit the inspector shows");
+
+            answers.Assets.Enqueue("env/evergreen/decals/e_mud001_albedo.dds");
+            await model.Commands.RunAsync("assets.pick", new System.Text.Json.Nodes.JsonObject { ["kind"] = "decal" }, interactive: true);
+            Assert.AreEqual(AssetKind.Decal, answers.AssetQuestions[4].Kind, "the kind given");
+            Assert.AreEqual("e_mud001", model.Assets.Shown?.Name);
+        }
+
+        [TestMethod]
+        public async Task PickingWithoutAPersonTakesTheKey()
+        {
+            Answers answers = new Answers();
+            MainViewModel model = new MainViewModel(answers);
+            model.Assets.Use(TestAssets.Catalog());
+
+            InvalidOperationException refused = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
+                model.Commands.RunAsync("units.pick", null, interactive: false));
+            StringAssert.Contains(refused.Message, "argument key");
+            StringAssert.Contains(refused.Message, "a unit's id");
+            Assert.AreEqual(0, answers.AssetQuestions.Count, "nobody is asked");
+
+            CommandRun picked = await model.Commands.RunAsync("units.pick", new System.Text.Json.Nodes.JsonObject { ["key"] = "UEL0101" }, interactive: false);
+            Assert.AreEqual("uel0101", picked.Result);
+            Assert.AreEqual("Snoop", model.Assets.Shown?.Name);
+
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+                model.Commands.RunAsync("units.pick", new System.Text.Json.Nodes.JsonObject { ["key"] = "env/evergreen/props/rocks/rock01_prop.bp" }, interactive: false));
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+                model.Commands.RunAsync("assets.pick", new System.Text.Json.Nodes.JsonObject { ["key"] = "nothing" }, interactive: false));
+            CommandRun anyKind = await model.Commands.RunAsync("assets.pick", new System.Text.Json.Nodes.JsonObject { ["key"] = "env/evergreen/props/rocks/rock01_prop.bp" }, interactive: false);
+            Assert.AreEqual("env/evergreen/props/rocks/rock01_prop.bp", anyKind.Result, "a key without a kind chooses what it names");
+        }
+
+        [TestMethod]
+        public async Task ThePickerFiltersOnItsOwnAndAnswersWithTheChosenKey()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            model.Assets.Use(TestAssets.Catalog());
+            model.Assets.Query = "residential";
+            AssetPickerViewModel picker = model.Picker;
+
+            Task<string?> unit = picker.PickAsync(AssetKind.Unit);
+            Assert.IsTrue(picker.IsOpen);
+            Assert.AreEqual("Choose a unit", picker.Title);
+            Assert.AreEqual(3, picker.Tiles.Count, "every unit, whatever the shelf shows");
+            Assert.AreEqual(picker.Tiles[0], picker.Selected, "Enter chooses the first at once");
+            CollectionAssert.AreEquivalent(new[] { "Aeon", "UEF" }, picker.Groups.Select(choice => choice.Value).ToArray());
+            CollectionAssert.AreEquivalent(new[] { "land", "structure", AssetPickerViewModel.Civilian }, picker.Categories.Select(choice => choice.Value).ToArray());
+            CollectionAssert.AreEquivalent(new[] { "T1", "No tech level" }, picker.Techs.Select(choice => choice.Title).ToArray());
+
+            picker.Category = AssetPickerViewModel.Civilian;
+            Assert.AreEqual("UEF Residential Building", picker.Tiles.Single().Title);
+            picker.Category = "land";
+            Assert.AreEqual(2, picker.Tiles.Count);
+            Assert.AreEqual(1, picker.Techs.Single(choice => choice.Value == "none").Count, "counted with the other filters");
+            picker.Tech = "1";
+            Assert.AreEqual("Snoop", picker.Tiles.Single().Title);
+            picker.Tech = null;
+            picker.Query = "command";
+            Assert.AreEqual("ual0001", picker.Tiles.Single().Entry.Key);
+            Assert.AreEqual("residential", model.Assets.Query, "the shelf keeps its own filters");
+
+            picker.Choose();
+            Assert.IsFalse(picker.IsOpen);
+            Assert.AreEqual("ual0001", await unit);
+
+            // it opens with its filters cleared, on the asset given; a second question cancels the first
+            Task<string?> first = picker.PickAsync(AssetKind.Prop, current: "env/evergreen/props/trees/oak01_prop.bp");
+            Assert.AreEqual("", picker.Query);
+            Assert.AreEqual("oak01", picker.Selected?.Title);
+            Assert.AreEqual(6, picker.Tiles.Count, "each variant of a prop on its own");
+            Task<string?> second = picker.PickAsync(AssetKind.Texture, "Choose the texture of a stratum");
+            Assert.IsNull(await first);
+            Assert.AreEqual("Choose the texture of a stratum", picker.Title);
+            picker.Move(1, 0);
+            string chosen = picker.Selected!.Entry.Key;
+            picker.Choose(picker.Selected);
+            Assert.AreEqual(chosen, await second);
+
+            Task<string?> cancelled = picker.PickAsync(AssetKind.Decal);
+            picker.Cancel();
+            Assert.IsNull(await cancelled);
+        }
+
+        [TestMethod]
+        public async Task AnAssetDroppedOnTheMapGoesToWhoeverTakesIt()
+        {
+            MainViewModel model = new MainViewModel(new Answers());
+            await model.OpenAsync(HardFfa);
+            model.Assets.Use(TestAssets.Catalog());
+
+            Assert.IsFalse(model.DropAsset("uec1101", 40, 60));
+            StringAssert.Contains(model.Status, "U-2", "nothing takes it yet: what will");
+
+            List<AssetDropEventArgs> drops = [];
+            model.AssetDropped += (_, drop) =>
+            {
+                drops.Add(drop);
+                drop.Handled = true;
+            };
+            CommandRun dropped = await model.Commands.RunAsync("assets.drop",
+                new System.Text.Json.Nodes.JsonObject { ["key"] = "env/evergreen/props/rocks/rock01_prop.bp", ["x"] = 12.5, ["z"] = 30 }, interactive: false);
+            Assert.AreEqual(true, dropped.Result);
+            Assert.AreEqual(("rock01", 12.5f, 30f), (drops.Single().Entry.Name, drops.Single().X, drops.Single().Z));
+            Assert.ThrowsException<ArgumentException>(() => model.DropAsset("nothing", 1, 1));
         }
     }
 }

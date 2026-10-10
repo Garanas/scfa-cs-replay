@@ -64,6 +64,7 @@ namespace FAForever.MapEditor.App.Tests
             Write("env/evergreen/layers/eg_grass001_albedo.png");
             Write("units/uec1101/uec1101_unit.json", """{ "id": "UEC1101", "name": "UEF Residential Building", "faction": "Uef", "techLevel": 1, "categories": ["UEF", "STRUCTURE", "CIVILIAN"] }""");
             Write("units/uel0101/uel0101_unit.json", """{ "id": "UEL0101", "name": "Snoop", "faction": "Uef", "techLevel": 1, "categories": ["UEF", "LAND"] }""");
+            Write("units/ual0001/ual0001_unit.json", """{ "id": "UAL0001", "name": "Aeon Armored Command Unit", "faction": "Aeon", "categories": ["AEON", "LAND", "COMMAND"] }""");
             Write($"../{Path.GetFileName(assets)}-brushes/craters/crater01.png");
             Write($"../{Path.GetFileName(assets)}-brushes/ridge.png");
             return assets;
