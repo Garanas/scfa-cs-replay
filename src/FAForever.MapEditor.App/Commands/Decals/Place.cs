@@ -38,16 +38,18 @@ public sealed class PlaceDecalHandler(MainViewModel model, SelectionViewModel se
         }
         ObjectRef added = default;
         System.Collections.Immutable.ImmutableArray<ObjectRef> all = [];
+        bool set = false;
         edit.Transaction.Apply(document =>
         {
             Decal decal = tool.Make(document, key, request.X, request.Z, request.Width, request.Length,
                 request.Heading is float degrees ? degrees * MathF.PI / 180 : null, request.CutOff);
+            set = decal.Set is not null;
             document = document.PlaceDecal(decal, out added);
             // with the symmetry, its image in every part of the map (F-12)
             return model.MirrorPlaced(document, [added], out all);
         });
         selection.Set(all);
-        model.Status = $"Placed {Path.GetFileNameWithoutExtension(key)}{(model.ShownDocument?.Find(added) is Decal { Set: not null } ? " (a decal set)" : "")}{MainViewModel.Mirrored(all.Length)}";
+        model.Status = $"Placed {Path.GetFileNameWithoutExtension(key)}{(set ? " (a decal set)" : "")}{MainViewModel.Mirrored(all.Length)}";
         return Task.FromResult(added.ToString());
     }
 }

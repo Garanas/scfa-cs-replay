@@ -149,21 +149,11 @@ namespace FAForever.MapEditor.Project.Editing
                 return stack;
             }
             StackGrid grid = LayerStacks.GridOf(next, stack);
-            Dictionary<int, Decal> before = previous.Decals.ToDictionary(decal => decal.Id);
-            Dictionary<int, Decal> after = next.Decals.ToDictionary(decal => decal.Id);
-            List<Decal> changed = [];
-            foreach (Decal decal in next.Decals)
-            {
-                if (!before.TryGetValue(decal.Id, out Decal? was) || was != decal)
-                {
-                    changed.Add(decal);
-                    if (was is not null)
-                    {
-                        changed.Add(was);
-                    }
-                }
-            }
-            changed.AddRange(previous.Decals.Where(decal => !after.ContainsKey(decal.Id)));
+            // a changed decal is a new object (versions share what they do not change), and ids need
+            // not be unique in a map: the decals of either version the other lacks are what changed
+            HashSet<Decal> before = new HashSet<Decal>(previous.Decals, ReferenceEqualityComparer.Instance);
+            HashSet<Decal> after = new HashSet<Decal>(next.Decals, ReferenceEqualityComparer.Instance);
+            List<Decal> changed = [.. next.Decals.Where(decal => !before.Contains(decal)), .. previous.Decals.Where(decal => !after.Contains(decal))];
             if (changed.Count == 0)
             {
                 return stack;

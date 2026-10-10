@@ -180,7 +180,7 @@ namespace FAForever.MapEditor.Cli
 
         private static void Pack(PackOptions o)
         {
-            string folder = EditedMap.OpenProject(o.ProjectFolder).Export(o.OutputFolder, o.Version);
+            string folder = EditedMap.OpenProject(o.ProjectFolder).Export(o.OutputFolder, o.Version, wideDecals: true);
             Console.WriteLine($"{DateTime.Now:HH:mm:ss} Packed {folder}");
         }
 
@@ -220,7 +220,7 @@ namespace FAForever.MapEditor.Cli
                         {
                             return;
                         }
-                        string folder = map.Export(o.OutputFolder, o.Version);
+                        string folder = map.Export(o.OutputFolder, o.Version, wideDecals: true);
                         Console.WriteLine($"{DateTime.Now:HH:mm:ss} Packed {folder}");
                     }
                     catch (Exception exception) when (exception is MapProjectException or IOException)
