@@ -223,7 +223,8 @@ namespace FAForever.MapEditor.Project
                 WaterFoamMask = water.FoamMask.ToArray(),
                 WaterFlatnessMask = water.FlatnessMask.ToArray(),
                 WaterDepthBiasMask = water.DepthBiasMask.ToArray(),
-                TerrainTypes = terrain.Types.ToArray(),
+                // with the walkability marked by hand (T-7): blocked ogrids on a blocking type
+                TerrainTypes = Editing.WalkabilityMarks.TerrainTypes(d),
                 Skybox = d.Sky.Skybox is Skybox s ? ToScmapSkybox(s) : null,
                 Props = [.. d.Props.Select(p => new ScmapProp(p.Blueprint, p.Position, p.RotationX, p.RotationY, p.RotationZ, p.Scale))],
             };

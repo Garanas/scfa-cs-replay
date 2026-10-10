@@ -141,6 +141,14 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public ImmutableArray<HeightLayer> HeightLayers { get; init; } = [];
 
         /// <summary>
+        /// Where the map maker marked by hand that land units must be blocked or may pass (user story
+        /// T-7), one value an ogrid (<see cref="Editing.WalkabilityMarks"/>: none, blocked, open); null
+        /// for a map without marks. Walkability takes them over what it generates; the export writes
+        /// the blocked ones as a blocking terrain type. Kept as <c>walkability-marks.png</c>.
+        /// </summary>
+        public TiledBuffer<byte>? WalkabilityMarks { get; init; }
+
+        /// <summary>
         /// Whether the map may be uploaded to the vault. An upload (user story M-8) refuses a map
         /// for which this is false; exporting to the game's maps folder works for every map.
         /// </summary>

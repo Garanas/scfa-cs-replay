@@ -105,7 +105,7 @@ public static class EditorModes
                 new ToolDefinition("terrain.stamp", "Stamp", "T-2") { Make = model => new StampTool(model) },
                 new ToolDefinition("terrain.curve", "Curve", "T-4") { Make = model => new CurveTool(model) },
                 new ToolDefinition("terrain.types", "Terrain types", "T-6") { Make = model => new TerrainTypeTool(model) },
-                new ToolDefinition("terrain.walkability", "Walkability", "T-7", "Mark where land units must be blocked or may pass"),
+                new ToolDefinition("terrain.walkability", "Walkability", "T-7") { Make = model => new WalkabilityMarkTool(model) },
                 new ToolDefinition("terrain.ruler", "Ruler", "V-5") { Make = model => new RulerTool(model) },
             ],
             [

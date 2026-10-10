@@ -223,13 +223,16 @@ reads again when it changes; and nothing that generates runs by itself.
       and effects), from the list of types with their colours. Today: the Terrain types tool sets
       the chosen type where the brush works at least half; the top view shows every ogrid's type in
       its colour while the tool is active, the tool options the legend of the types the map uses.
-- [ ] **T-7 Walkability.** A layer of where land units can and cannot go, generated from the
+- [x] **T-7 Walkability.** A layer of where land units can and cannot go, generated from the
       heightmap layers (slope); mark where it should be blocked or open; after generating again,
       see what changed: a new passage through a cliff, a closed path (see F-14). Today: generated
       when asked (the game's navigational mesh, per layer: land, hover, amphibious, naval), drawn in
       the top view and on the terrain in 3D with the ogrids blocked and opened since the time
-      before, the counts in the status line, new passages and closed paths as problems. Missing:
-      marking by hand where it must be blocked or open.
+      before, the counts in the status line, new passages and closed paths as problems; the
+      Walkability tool marks by hand where land units must be blocked or may pass (a brush, blocked
+      red and open green in the views), which walkability then takes over what it generates; kept
+      as `walkability-marks.png`; the export writes blocked ogrids as a blocking terrain type, so
+      the game agrees, and a check warns of ground marked open that the game still blocks.
 
 ## S: Strata (terrain textures)
 

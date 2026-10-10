@@ -677,6 +677,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["selectionPreset"] = model.Tool<SelectionPresetTool>().Describe(),
             ["stamp"] = model.Tool<StampTool>().Describe(),
             ["favourites"] = model.Assets.DescribeFavourites(),
+            ["walkabilityMarks"] = model.Tool<WalkabilityMarkTool>().Describe(),
         };
     }
 

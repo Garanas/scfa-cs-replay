@@ -21,7 +21,40 @@ namespace FAForever.MapEditor.Project.Checks
             new ProblemCheck("walkability-changes", "Passages opened or closed", WalkabilityChanges),
             new ProblemCheck("wrecks-in-playable-army", "Wrecks only a player's slot creates", WrecksInPlayableArmies),
             new ProblemCheck("steep-deposit", "Deposits on steep ground", SteepDeposits),
+            new ProblemCheck("walkability-marks", "Ground marked open that the game blocks", OpenMarksTheGameBlocks),
         ];
+
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<TiledBuffer<byte>, OpenMarksResult> OpenMarks = [];
+
+        private sealed record OpenMarksResult(Heightmap Heights, float? Water, int Count, (int X, int Z)? First);
+
+        /// <summary>
+        /// Ogrids marked open by hand (user story T-7) where the game will not let land units pass,
+        /// whatever the map's files say: too steep, or under water (<see cref="WalkabilityMarks.OpenWhereTheGameWillNot"/>).
+        /// Walkability and the path networks count them open; units in the game do not. Kept per
+        /// version of the marks, heights and water, so a step that changes none of them costs nothing.
+        /// </summary>
+        public static IEnumerable<Problem> OpenMarksTheGameBlocks(ProblemContext context)
+        {
+            MapDocument document = context.Document;
+            if (document.WalkabilityMarks is not TiledBuffer<byte> marks)
+            {
+                yield break;
+            }
+            float? water = document.Water.HasWater ? document.Water.Elevation : null;
+            if (!OpenMarks.TryGetValue(marks, out OpenMarksResult? result) || !ReferenceEquals(result.Heights, document.Terrain.Heightmap) || result.Water != water)
+            {
+                (int count, (int X, int Z)? first) = WalkabilityMarks.OpenWhereTheGameWillNot(document);
+                result = new OpenMarksResult(document.Terrain.Heightmap, water, count, first);
+                OpenMarks.AddOrUpdate(marks, result);
+            }
+            if (result is { Count: > 0, First: (int x, int z) })
+            {
+                yield return new Problem("walkability-marks", ProblemSeverity.Warning,
+                    $"{result.Count} ogrids are marked open where the ground is too steep or under water: walkability counts them open, the game's units will not pass there",
+                    null, new Vector2(x + 0.5f, z + 0.5f));
+            }
+        }
 
         /// <summary>
         /// A mass or hydrocarbon deposit whose ground rises more than <see cref="MarkerEdits.MaxGroundVariation"/>

@@ -5,6 +5,8 @@ using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.FileFormats.Map;
+using FAForever.MapEditor.Project.Generation;
 using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.Tests
@@ -315,6 +317,48 @@ namespace FAForever.MapEditor.App.Tests
             CollectionAssert.AreEqual(shelf.Favourites.Starred.ToArray(), other.Favourites.Starred.ToArray());
             CollectionAssert.AreEqual(shelf.Favourites.Recent.ToArray(), other.Favourites.Recent.ToArray());
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "assets.star", new JsonObject { ["key"] = "nothing" }));
+        }
+
+        [TestMethod]
+        public async Task WalkabilityIsMarkedByHandAndGeneratedWithTheMarks()
+        {
+            MainViewModel model = await Open("terrain.walkability");
+            WalkabilityMarkTool tool = model.Tool<WalkabilityMarkTool>();
+            Assert.AreEqual("walkability marks", model.ShownGrid?.Key, "the top view shows the marks while the tool is active");
+            await Run(model, "generate.walkability");
+            // a place units can reach, its neighbours too
+            NavGrid grid = model.Walkability.Grid!;
+            (int x, int z) = Enumerable.Range(60, 140).SelectMany(px => Enumerable.Range(60, 140).Select(pz => (px, pz)))
+                .First(p => Enumerable.Range(-6, 13).All(d => Walkability.IsPassable(grid, p.px + d, p.pz) && Walkability.IsPassable(grid, p.px, p.pz + d)));
+
+            tool.Radius = 3;
+            int steps = model.History.Count;
+            model.Stroke([(x + 0.5f, z + 0.5f), (x + 4.5f, z + 0.5f)]);
+            Assert.AreEqual(steps + 1, model.History.Count, "one step");
+            Assert.AreEqual("Mark walkability blocked", model.Map!.Session.UndoDescription);
+            Assert.AreEqual(WalkabilityMarks.Blocked, model.ShownDocument!.WalkabilityMarks![x, z]);
+            Assert.AreEqual(GeneratedStatus.Stale, model.Generation.States.Single(state => state.Generator.Id == "walkability").Status, "walkability is out of date");
+            await Run(model, "generate.walkability");
+            Assert.IsFalse(Walkability.IsPassable(model.Walkability.Grid!, x, z), "generated with the mark");
+            Assert.IsTrue(model.Walkability.Changes!.Blocked > 0);
+
+            // erased, the mark goes
+            tool.Erase = true;
+            model.Stroke([(x + 0.5f, z + 0.5f)]);
+            Assert.AreEqual(WalkabilityMarks.None, model.ShownDocument!.WalkabilityMarks![x, z]);
+            Assert.AreEqual("Erase walkability marks", model.Map!.Session.UndoDescription);
+            tool.Erase = false;
+            tool.Mark = WalkabilityMark.Open;
+            model.Stroke([(x + 0.5f, z + 0.5f)]);
+            Assert.AreEqual(WalkabilityMarks.Open, model.ShownDocument!.WalkabilityMarks![x, z]);
+            Assert.AreEqual(1, tool.Describe()["open"]!.GetValue<int>() > 0 ? 1 : 0);
+
+            // the brush as a preset
+            await Run(model, "terrain.saveBrush", new JsonObject { ["name"] = "Mark" });
+            model.SelectTool("terrain.sculpt");
+            await Run(model, "presets.apply", new JsonObject { ["kind"] = BrushPreset.Kind, ["name"] = "Mark" });
+            Assert.AreEqual("terrain.walkability", model.ActiveTool!.Definition.Id);
+            Assert.IsTrue(model.Undo());
         }
 
         [TestMethod]

@@ -179,6 +179,7 @@ namespace FAForever.MapEditor.Project.Editing
                     DepthBiasMask = Resized(water.DepthBiasMask),
                 },
                 Masks = document.Masks.ToImmutableSortedDictionary(entry => entry.Key, entry => Resized(entry.Value, (byte)0), StringComparer.Ordinal),
+                WalkabilityMarks = document.WalkabilityMarks is TiledBuffer<byte> marks ? Resized(marks, (byte)0) : null,
                 // the height layers (T-5) at the heightmap's corners: an absolute layer continues its
                 // edge, an adding one adds nothing where the map gains; a curve's points move along
                 HeightLayers = [.. document.HeightLayers.Select(layer => layer with

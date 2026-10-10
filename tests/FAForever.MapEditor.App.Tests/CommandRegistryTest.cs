@@ -192,9 +192,8 @@ namespace FAForever.MapEditor.App.Tests
             await model.Commands.RunAsync("tool.terrain.walkability");
 
             Assert.AreEqual("terrain", model.SelectedMode!.Definition.Id);
-            Assert.IsTrue(model.IsToolIncomplete);
-            Assert.IsNull(model.ActiveTool!.Tool, "a tool not built yet does nothing in the views");
-            Assert.ThrowsException<InvalidOperationException>(() => model.Stroke([(50, 50)]));
+            Assert.IsFalse(model.IsToolIncomplete);
+            Assert.IsInstanceOfType<WalkabilityMarkTool>(model.ActiveTool!.Tool);
 
             await model.Commands.RunAsync("tool.paint.strata");
             Assert.AreEqual("paint", model.SelectedMode!.Definition.Id);

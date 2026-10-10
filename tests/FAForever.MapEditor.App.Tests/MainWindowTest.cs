@@ -475,7 +475,7 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
-        public Task AToolNotBuiltYetDoesNotPaint() => Run(async () =>
+        public Task TheWalkabilityToolMarksWhereTheMouseDragsAsOneStep() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
             Show(window, MapViewTab.Top);
@@ -487,7 +487,8 @@ namespace FAForever.MapEditor.App.Tests
             window.MouseMove(middle + new Vector(60, 0));
             window.MouseUp(middle + new Vector(60, 0), MouseButton.Left);
 
-            Assert.IsFalse(model.CanUndo);
+            Assert.AreEqual("Mark walkability blocked", model.Map!.Session.UndoDescription);
+            Assert.IsTrue(FAForever.MapEditor.Project.Editing.WalkabilityMarks.Count(model.ShownDocument!.WalkabilityMarks).Blocked > 0);
             window.Close();
         });
 

@@ -88,6 +88,21 @@
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </controls:ToolRow>
             </DataTemplate>
+            <!-- marking walkability by hand (T-7): blocked or open, or erasing the marks -->
+            <DataTemplate DataType="tools:WalkabilityMarkTool">
+              <controls:ToolRow Classes="toolrow">
+                <ComboBox ItemsSource="{Binding Marks}" SelectedItem="{Binding Mark}" IsEnabled="{Binding !Erase}" AutomationProperties.Name="Walkability mark"
+                          AutomationProperties.HelpText="Blocked: land units must not pass; open: they may" />
+                <CheckBox Content="Erase" IsChecked="{Binding Erase}" AutomationProperties.Name="Erase the walkability marks" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
+                  <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
+                </StackPanel>
+                <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
+                          ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </controls:ToolRow>
+            </DataTemplate>
             <!-- painting a stratum's mask (S-1), where the slope and height allow -->
             <DataTemplate DataType="tools:StrataTool">
               <controls:ToolRow Classes="toolrow">
