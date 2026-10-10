@@ -9,7 +9,8 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// projects/              the map projects (MapProjectLayout)
     /// brushes/               the map maker's brush shapes: greyscale PNGs, in folders as they like
     /// presets/               saved settings to apply again: a folder per kind, a JSON file each (PresetLibrary)
-    /// templates/, plugins/   the user's own, for later
+    /// plugins/               the Lua plugins: a folder each with its plugin.lua (and plugin.json)
+    /// templates/             the user's own, for later
     /// assets/                converted from the game's archives; made again whenever they change
     ///   manifest.json        what they were converted from, and by which editor (AssetManifestDto)
     ///   env/..., units/...   the game's paths in lower case: textures as PNG, blueprints as JSON

@@ -10,14 +10,15 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## F: Foundation
 
-- [ ] **F-1 One controller.** Every operation is a command with a name, arguments and a
+- [x] **F-1 One controller.** Every operation is a command with a name, arguments and a
       description, in one registry (the controller of model, view, controller). Menus, toolbars,
       shortcuts, the command palette, automation, the CLI and Lua plugins all run the same commands.
       Today: every command is a request with its arguments and a handler, sent through MediatR
       by the registry; the menus, shortcuts and palette come from it, and automation and the CLI
       run it (`faf-map editor run id=...`); a toolbar in the menu bar is made from the registry
       too (undo, redo, save, the palette, symmetry by default; its commands kept in the user's
-      settings, `view.setToolbar`). Missing: Lua.
+      settings, `view.setToolbar`); Lua plugins run any command (`editor.run`) and add their own
+      (F-15).
 - [x] **F-2 Command palette.** Find and run any command by typing (`Ctrl+K`), with its shortcut shown.
 - [x] **F-3 Undo and redo.** Every change is a step; a brush stroke or a plugin run is one step.
 - [x] **F-4 History.** The steps in a panel; choosing one goes back or forward to it.
@@ -82,19 +83,29 @@ reads again when it changes; and nothing that generates runs by itself.
       along; "Mirror edits" off keeps the guides only; Select the mirror partners, Mirror the
       selection, and the check "not symmetric". Missing: guides and the brush's images in the 3D
       view, decal scaling with partners.
-- [ ] **F-13 Events.** C# and Lua react to what happens (workspace opened, map opened or saved,
+- [x] **F-13 Events.** C# and Lua react to what happens (workspace opened, map opened or saved,
       document changed) and may check things before a save or export. Today: C# handlers of
       workspace opened, map opened, saved or exported, document changed, and checks that stop a
-      save or export with a reason. Missing: Lua.
-- [ ] **F-14 Problems.** One list of what is wrong or doubtful (a missing texture, a spawn without
+      save or export with a reason; Lua plugins' handlers (`editor.on`) of map opened, saved or
+      exported and document changed, and before a save or export, which may stop it (F-15).
+- [x] **F-14 Problems.** One list of what is wrong or doubtful (a missing texture, a spawn without
       mass, a new passage through a cliff, a check of a plugin), each leading to the place. Today:
       the Problems tab, checked a moment after each step and before a save or export (never
       stopping it), with checks for armies without a spawn, spawns without mass nearby, textures
       and blueprints or models the map and workspace lack, and passages opened or closed since
       walkability was generated last; a double click or Enter goes to a problem (selects it, the
-      top view and 3D camera look at it). Missing: Lua plugins' checks (F-15).
+      top view and 3D camera look at it); Lua plugins add checks of their own (F-15).
 - [ ] **F-15 Lua plugins.** Plugins with commands, tools and panels, through the controller and
-      the events; a run is one step of undo.
+      the events; a run is one step of undo. Today: the workspace's `plugins/` (a folder each with
+      its `plugin.lua` and `plugin.json`), loaded when the workspace is ready and read again when a
+      file changes; the Plugins page (Plugins, Plugins...) with each plugin on or off (remembered),
+      its errors, its commands and its panel's fields; plugins register commands (the Plugins menu,
+      the palette, automation; a run is one step of undo, a failing run changes nothing), problem
+      checks, a panel of fields and handlers of events; Lua reads the map as plain tables, edits it
+      (props, moving, turning, removing, heights, masks), runs any command and logs, without files
+      or the system beyond its own folder and with a time limit per call; two examples (reclaim
+      per army, scatter rocks on steep slopes) written into every workspace. Missing: tools (the
+      left mouse in the views).
 - [x] **F-16 Driven by agents and tests.** Automation over HTTP for every operation, labels for
       screen readers, headless tests of the window, performance spans (see the App's guide).
 - [x] **F-17 Diagnostics.** See what goes well and wrong, as a service's logs and metrics: the

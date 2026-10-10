@@ -124,6 +124,7 @@ faf-map editor grid target=stratum:1 x=100 z=60 --port 5372             # height
 faf-map editor screenshot part=options path=<scratch>/o.png --port 5372 # options, inspector, panel, dock, rail, top, 3d
 faf-map editor undo --port 5372                                         # ran: false comes with why ("nothing to undo")
 faf-map editor view zoom=4 --port 5372                                  # the top view zooms about its middle
+faf-map editor run id=plugin.scatter-rocks.scatter count=10 --port 5372  # a Lua plugin's command (state.plugins: errors, commands)
 ```
 
 `faf-map editor start` detaches the editor (its output in `editor-<port>.log` beside the settings

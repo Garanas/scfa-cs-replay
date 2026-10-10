@@ -98,7 +98,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     only (span `window.commands`). The core raises it wherever what `Needs` asks for changes:
     `Refresh` (a map opened, busy, a step done or undone, the workspace ready), `StartStroke` and
     `EndStroke`. A new kind of `Needs` raises it where its answer changes.
-  - Run without a person (automation, later Lua: `RunAsync(id, arguments, interactive: false)`),
+  - Run without a person (automation, Lua plugins: `RunAsync(id, arguments, interactive: false)`),
     a command asks nothing: `DialogGuard` refuses the question with what argument to give. The
     menus, shortcuts, palette and buttons run `MainViewModel.RunAsync(id)` (`RunCommand` in XAML),
     which shows what went wrong in the status line. A command made at run time (a plugin's)
@@ -650,8 +650,8 @@ Four small parts that later features build on:
   (`VetoableEventArgs.Veto`): the operation then throws `OperationVetoedException` before it
   writes anything, and a command shows the reasons in the status line. `MainViewModel` raises
   them from its operations, on the window's thread; a handler that throws is logged (`Editor`)
-  and stops neither the operation nor the other handlers. Lua plugins (F-15) will listen through
-  the same part.
+  and stops neither the operation nor the other handlers. Lua plugins (F-15) listen through
+  the same part (section "Lua plugins").
 - **Presets** (user stories F-10, T-2, `model.Presets`, `ViewModels/PresetsViewModel`): the
   workspace's `presets/<kind>/*.json` (the library's `PresetLibrary`), read again when a file there
   changes (`ProjectWatcher`; opening writes nothing, so a workspace without the folder is watched
@@ -1270,6 +1270,80 @@ User stories T-5 and T-4; the library does the work (its guide, "Height layers a
 - Not built yet: the curve in 3D, a height per point by hand in the views, exporting a layer for
   World Machine or Gaea, merging layers.
 
+## Lua plugins
+
+User stories F-15 and the Lua part of F-1, F-13 and F-14 (`ViewModels/PluginsViewModel` as
+`model.Plugins`, `Plugins/`, `Views/PluginsPage`, `Commands/Plugins/ManagePlugins.cs`). The runtime
+is [Lua-CSharp](https://github.com/nuskey8/Lua-CSharp) (`LuaCSharp`, Lua 5.2 in C#, MIT): pure
+managed code, its calls cancellable in the middle of a loop.
+
+- **Where they live**: a folder each in the workspace's `plugins/` with its `plugin.lua` and an
+  optional `plugin.json` (`name`, `version`, `description`; the folder's name otherwise). The
+  folder's name is the plugin's id (letters, digits, dashes, underscores). They are loaded when the
+  workspace is ready (`Events.WorkspaceOpened`) and a plugin is read again when a file of its folder
+  changes (`ProjectWatcher`); `plugins.reload` reads them all. The first time a workspace opens,
+  the examples (`Plugins/Examples`, embedded) are written into its `plugins/`; `.examples` names
+  the ones written, so one the user deletes stays deleted.
+- **Loading** runs `plugin.lua` once, in a Lua state of its own (one per plugin, made again on each
+  load); at its top level it registers what it has. A script that fails registers nothing.
+  Then its commands go into the registry (`EditorCommand.Owner` is the plugin, `Menu` the Plugins
+  menu: `Menus.WithPlugins` puts them at its end, by title; the window makes the menus again on
+  `CommandRegistry.CommandsChanged`), its checks into `Problems.Checks`, its fields into a panel on
+  the page (a `SettingGroup` of `Setting`s that run `plugins.setField`).
+- **On or off** per plugin (`plugins.enable {plugin, on?}`, the page's check box), remembered in
+  the user's settings (`UserSettingsDto.Plugins`: the folders turned off, and the fields' values per
+  plugin); off, its commands and checks are gone.
+- **A run of a plugin's command** (`plugin.<folder>.<id>`, needs a map and no stroke) is one step of
+  undo named `<plugin's name>: <command's title>` (`Plugins/PluginRun`): a group of the session
+  (`EditSession.BeginGroup`, the library's `EditGroup`) holds the plugin's own edits, collected in
+  one transaction, and the steps of the commands it runs (the transaction ends before each, so the
+  command reads them). It is committed when the function returns and thrown away whole when it
+  fails or runs out of time: a failing plugin changes nothing. Undo waits until the group ends.
+  The function's first result is the command's result (JSON). Span `plugins.run`.
+- **Safety**: the Lua has the base, string, table, math, bit32 and coroutine libraries, without
+  `dofile` and `loadfile`, and no `io`, `os`, `debug` or `package`; `require` and `plugin.read`
+  read only files of the plugin's own folder. A call has a time limit (`RunLimit`, 10 s, for a
+  command, without the time of the commands it runs; `CallLimit`, 2 s, for loading, a check or an
+  event): the script is cancelled where it is, and its error says so. Lua runs on the window's
+  thread; an error is logged (`Plugins`), shown in the status line for a command, and listed under
+  the plugin on the page (the last five), and never stops the editor. Memory is not limited.
+- **Checks and events only read**: a check (span `plugins.check`) and a handler of an event (span
+  `plugins.event`) get the map but no edits, no `editor.run` and nothing that waits. A plugin whose
+  command is running (waiting for a command it runs) skips its checks and events meanwhile, since a
+  Lua state runs one thing at a time. The steps inside a plugin's run raise no `changed` for the
+  plugins; the run raises one when it ends. A plugin cannot run a plugin's command.
+- **The page** (`plugins.manage`, Plugins menu): the folder (Show, Reload), each plugin with its
+  check box, description and what it registered, its errors, a button per command and its panel's
+  fields; `state.plugins` has the same (on, loaded, running, errors, commands, checks, events,
+  fields' values).
+- **Performance**: a check runs a moment after every step, so it must be cheap; one that reads many
+  things keeps its result while `map.revision(part)` stays the same (the example's check: 60 ms to
+  count Archsimkats Valley's 8304 props, nothing when they did not change).
+
+The Lua API (`Plugins/PluginApi.cs`; places in ogrids, heights in game units, headings in degrees,
+things named by reference as in automation: `prop:5`, `marker:3`, `unit:UNIT_1`, `decal:2`, `area:AREA_1`):
+
+| Call | What it does |
+|---|---|
+| `plugin.command{ id, title, description?, run = function(args) ... end }` | A command `plugin.<folder>.<id>`; `args` is the table of its arguments (automation's, or empty). Returns its id. Only at the top level of `plugin.lua`, as the next two. |
+| `plugin.check{ id, title, run = function() return problems end }` | A check of the Problems tab; a problem is a text (a warning) or `{ message, severity = "error"/"warning"/"info", thing = ref?, x?, z? }`. |
+| `plugin.field{ key, label, type = "number"/"text"/"bool"/"choice", default?, min?, max?, choices?, help? }` | A field of the plugin's panel; a number with `min` and `max` has a slider. |
+| `editor.on(event, function(...) end)` | `mapOpened`, `mapSaved`, `mapExported (folder)`, `changed (description, reason)`, `beforeSave (folder)`, `beforeExport (folder)`; a `before...` handler that returns a text stops the save or export with it as the reason. |
+| `plugin.value(key)`, `plugin.read(file)`, `require(name)`, `plugin.id`, `plugin.name` | A field's value; a text file of the plugin's folder; `name.lua` of its folder (dots are folders), run once. |
+| `editor.log(...)`, `editor.warn(...)`, `editor.error(...)`, `print(...)`, `editor.status(text)` | The Console (category `Plugins`), the status line. |
+| `editor.run(id, args?)` | Runs any command of the registry without a person and answers its result as a table (commands only); an error when it does not run. |
+| `editor.selection()`, `editor.select(refs)` | The selected references; selecting (commands only). |
+| `editor.assets{ kind?, search?, limit? }` | The workspace's assets: `{ key, path, name, kind, category, reclaimMass, reclaimEnergy }`. |
+| `map.name()`, `map.size()`, `map.height(x, z)`, `map.slope(x, z)`, `map.water()` | Name; width and height; the height between samples; the slope in degrees; the water's elevation or nil. |
+| `map.markers(kind?)`, `map.props()`, `map.units()`, `map.decals()`, `map.areas()`, `map.armies()`, `map.get(ref)` | Plain tables: `ref`, `x`, `y`, `z`, `heading` and what the thing is (a marker's `kind`: spawn, mass, hydrocarbon, path, ai, weather). |
+| `map.masks()`, `map.mask(name, x, z)`, `map.reclaim(blueprint)`, `map.revision(part?)` | The masks' names; a mask's value 0 to 1; a prop's mass and energy; a number that stays while a part (`map`, `props`, `markers`, `units`, `decals`, `heights`, `masks`) is the same. |
+| `map.addProp{ blueprint, x, z, heading?, scale? }` | Adds a prop standing on the terrain (by its kind, as the place tool does); answers its reference. Edits are for commands only. |
+| `map.move(refs, dx, dz)`, `map.place(refs, x, z)`, `map.rotate(refs, degrees)`, `map.remove(refs)` | `ObjectEdits` on one reference or a list. |
+| `map.setHeight(x0, z0, x1, z1, height or function(x, z, height) return height end)` | Sets the samples of a rectangle (into the sculpting layer while the map has height layers); a function returning nil leaves a sample. |
+| `map.paintMask(name, x, z, radius, value)` | Sets a mask's pixels within a circle to a value 0 to 1; answers how many. |
+
+Anything else the editor does is a command: `editor.run("markers.place", { kind = "mass", x = 10, z = 20 })`.
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session
@@ -1277,7 +1351,7 @@ User story F-17. The editor keeps what a service keeps for Loki and Prometheus, 
 
 - **Logs**: every `ILogger` of the editor (`Microsoft.Extensions.Logging.Abstractions`; get one
   with `MainViewModel.Logger(category)`, categories `Commands`, `Files`, `Workspace`,
-  `Rendering`, `Performance`, `Automation`, `VersionControl`, `Assets`, `Editor`). The Console of the dock shows them, with
+  `Rendering`, `Performance`, `Automation`, `VersionControl`, `Assets`, `Editor`, `Plugins`). The Console of the dock shows them, with
   their level, newest last; its tab counts the warnings and errors, and it can show only those.
   Logged now: commands run and asked for while not built; opening, importing, saving, exporting
   with their duration, or why they failed; files read again; the workspace and the conversion of
