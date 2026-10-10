@@ -281,7 +281,10 @@
                     <TextBlock Classes="heading" Text="{Binding Title}" />
                     <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected areas" />
                     <!-- one area alone: its name and corners to type (M-5) -->
-                    <TextBlock Classes="caption" Text="The playable area: the first area of the map" IsVisible="{Binding IsPlayable}" />
+                    <!-- the playable area at the start (M-3) -->
+                    <CheckBox Content="Playable area" IsChecked="{Binding Playable}" IsVisible="{Binding IsSingle}"
+                              AutomationProperties.HelpText="Make this area the playable area at the start; the export makes the map's script set it" />
+                    <TextBlock Classes="caption" Text="The first area is the playable area unless another is chosen" IsVisible="{Binding IsPlayableByConvention}" />
                     <Panel IsVisible="{Binding IsSingle}">
                       <controls:SettingList DataContext="{Binding Fields}" ShowsTitle="False" />
                     </Panel>

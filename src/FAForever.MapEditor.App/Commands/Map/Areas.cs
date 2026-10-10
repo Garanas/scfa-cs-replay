@@ -8,7 +8,8 @@ namespace FAForever.MapEditor.App.Commands;
 /// <summary>
 /// Adds an area (user story M-5), one step of undo, selects it and chooses the areas tool, whose
 /// handles resize it. Its corners in ogrids, in any order; left out, a square in the middle of the
-/// map, a quarter of its size. The first area is the playable area.
+/// map, a quarter of its size. The first area is the playable area unless another is chosen
+/// (<c>map.setPlayableArea</c>).
 /// </summary>
 /// <param name="Name">Left out, <c>AREA_</c> with the next free number.</param>
 /// <returns>The area's name.</returns>
@@ -107,8 +108,8 @@ public sealed class RemoveAreaHandler(MainViewModel model) : IRequestHandler<Rem
             throw new ArgumentException($"The map has no area {request.Name}");
         }
         model.EditMap($"Remove the area {request.Name}", d => d.RemoveArea(request.Name));
-        model.Status = document.Markers.Areas[0].Name == request.Name
-            ? $"Removed the area {request.Name}, the playable area: the next area is the playable one now"
+        model.Status = document.PlayableArea?.Name == request.Name
+            ? $"Removed the area {request.Name}, the playable area: {(model.ShownDocument?.PlayableArea is Area next ? $"the first area, {next.Name}, is the playable one now" : "the whole map is playable now")}"
             : $"Removed the area {request.Name}";
         return Task.CompletedTask;
     }

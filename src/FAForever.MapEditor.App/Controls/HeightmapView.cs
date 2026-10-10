@@ -526,13 +526,14 @@ public sealed class HeightmapView : Control
         Rect shown = new Rect(Bounds.Size).Inflate(8);
         if (model.ShowAreas)
         {
+            string? playable = document.PlayableArea?.Name;
             for (int i = 0; i < document.Markers.Areas.Length; i++)
             {
                 Area area = document.Markers.Areas[i];
                 Rect rect = new Rect(MapToControl(area.X0, area.Z0), MapToControl(area.X1, area.Z1)).Normalize();
                 context.DrawRectangle(null, overlay.Area, rect);
-                // the first area is the playable area, by convention (user story M-5)
-                FormattedText name = new FormattedText(i == 0 ? $"{area.Name} (playable area)" : area.Name, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, overlay.LabelFont, overlay.LabelSize, overlay.AreaLabel);
+                // the playable area: the one the scenario names, else the first (user stories M-3, M-5)
+                FormattedText name = new FormattedText(area.Name == playable ? $"{area.Name} (playable area)" : area.Name, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, overlay.LabelFont, overlay.LabelSize, overlay.AreaLabel);
                 context.DrawText(name, rect.TopLeft + new Vector(4, 2));
             }
         }

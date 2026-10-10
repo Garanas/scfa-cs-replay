@@ -121,7 +121,7 @@ namespace FAForever.MapEditor.App.Tests
                     "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look", "decals.addToGroup", "decals.deleteGroup",
                     "decals.lod", "decals.place", "decals.removeFromGroup", "decals.renameGroup", "decals.scale", "decals.selectGroup", "decals.showGroup", "decals.size",
                     "diagnostics.flush", "diagnostics.set", "diagnostics.upload", "edit.goTo", "edit.nudge", "edit.place", "file.enableVersionControl",
-                    "file.showMapFiles", "lighting.set", "map.removeArea", "map.removeArmy", "map.renameArmy", "map.setAlliance", "map.setArea", "map.setArmy",
+                    "file.showMapFiles", "lighting.set", "map.removeArea", "map.removeArmy", "map.renameArmy", "map.setAlliance", "map.setArea", "map.setArmy", "map.setPlayableArea",
                     "markers.deleteChain", "markers.link", "markers.place", "markers.renameChain", "markers.set", "markers.setChain", "markers.showKind",
                     "paint.chooseMask", "paint.moveStratum", "paint.removeStratum", "paint.setLayer", "presets.apply", "presets.delete", "problems.show", "props.place",
                     "props.removeFromPalette", "props.scale", "props.set", "props.tilt", "select.set", "units.add", "units.moveGroup", "units.moveToArmy",

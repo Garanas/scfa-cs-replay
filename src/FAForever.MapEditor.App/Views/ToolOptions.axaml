@@ -320,6 +320,25 @@
             <DataTemplate DataType="tools:AreaTool">
               <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
             </DataTemplate>
+            <!-- growing or cropping the map (M-3) -->
+            <DataTemplate DataType="tools:MapSizeTool">
+              <StackPanel Classes="toolrow">
+                <ComboBox ItemsSource="{Binding Sizes}" SelectedItem="{Binding NewWidth}" AutomationProperties.Name="New width in ogrids"
+                          AutomationProperties.HelpText="256 is 5 km, 512 10 km, 1024 20 km, 2048 40 km, 4096 81 km" />
+                <TextBlock Classes="label" Text="by" />
+                <ComboBox ItemsSource="{Binding Sizes}" SelectedItem="{Binding NewHeight}" AutomationProperties.Name="New height in ogrids" />
+                <ComboBox ItemsSource="{Binding Anchors}" SelectedItem="{Binding Anchor}" AutomationProperties.Name="Where the old map lies in the new one" />
+                <TextBlock Classes="label" Text="at" />
+                <TextBox Classes="toolfield" Text="{Binding OffsetX, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Old map's left edge in the new map, in ogrids" />
+                <TextBox Classes="toolfield" Text="{Binding OffsetZ, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Old map's top edge in the new map, in ogrids" />
+                <CheckBox Content="Fill at" IsChecked="{Binding FillWithHeight}" AutomationProperties.Name="Fill what the map gains at a height"
+                          AutomationProperties.HelpText="Off, the heights at the old map's edges continue outwards" />
+                <TextBox Classes="toolfield" Text="{Binding FillHeight, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding FillWithHeight}" AutomationProperties.Name="Height of the terrain the map gains" />
+                <CheckBox Content="Playable area fills the map" IsChecked="{Binding FitPlayableArea}" AutomationProperties.Name="Make the playable area the whole new map" />
+                <Button Content="Apply" Command="{Binding ApplyCommand}" AutomationProperties.HelpText="Resize the map: one step of undo" />
+                <TextBlock Classes="caption mono" TextWrapping="NoWrap" Text="{Binding Summary}" AutomationProperties.Name="New map size" />
+              </StackPanel>
+            </DataTemplate>
             <!-- measuring distances and heights (V-5) -->
             <DataTemplate DataType="tools:RulerTool">
               <TextBlock Classes="mono" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Text}" ToolTip.Tip="{Binding Text}"

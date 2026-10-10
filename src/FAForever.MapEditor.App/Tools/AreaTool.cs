@@ -68,7 +68,7 @@ public sealed partial class AreaTool(MainViewModel model) : ObservableObject, IM
     /// <summary>
     /// What the options bar says about using it.
     /// </summary>
-    public string Help => "Drag on empty ground to draw an area; drag a corner or edge of the selected area to resize it, inside it to move it; Delete removes it. The first area is the playable area";
+    public string Help => "Drag on empty ground to draw an area; drag a corner or edge of the selected area to resize it, inside it to move it; Delete removes it. The inspector's check box makes the selected area the playable area";
 
     public void Press(float x, float z) => Press(x, z, ToolInput.Default);
 

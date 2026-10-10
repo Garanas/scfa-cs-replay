@@ -627,15 +627,17 @@ public sealed partial class UnitSelection(Func<string, JsonObject, Task> run) : 
 public sealed partial class AreaSelection : SelectionSection
 {
     private string _name = "";
+    private readonly Func<string, JsonObject, Task> _run;
 
     public AreaSelection(Func<string, JsonObject, Task> run)
     {
+        _run = run;
         const string command = "map.setArea";
         JsonObject Fixed() => new JsonObject { ["name"] = _name };
         Area Of(MapDocument d) => d.Markers.Areas.FirstOrDefault(area => area.Name == _name) ?? new Area { Name = _name };
         Fields = new SettingGroup("Area",
         [
-            new TextSetting("Name", command, "rename", d => Of(d).Name, run, Fixed) { Help = "The first area is the playable area; scripts and the lobby name areas" },
+            new TextSetting("Name", command, "rename", d => Of(d).Name, run, Fixed) { Help = "Scripts name areas; the map's script makes the playable area playable by its name" },
             new NumberSetting("Left", command, "x0", d => Of(d).X0, run, Fixed) { Help = "In ogrids" },
             new NumberSetting("Top", command, "z0", d => Of(d).Z0, run, Fixed) { Help = "In ogrids" },
             new NumberSetting("Right", command, "x1", d => Of(d).X1, run, Fixed) { Help = "In ogrids" },
@@ -657,10 +659,34 @@ public sealed partial class AreaSelection : SelectionSection
     public partial bool IsSingle { get; private set; }
 
     /// <summary>
-    /// Whether the selected area is the playable area (the first).
+    /// Whether the selected area is the playable area (user story M-3): the one the scenario
+    /// names, else the first.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Playable))]
     public partial bool IsPlayable { get; private set; }
+
+    /// <summary>
+    /// Whether the selected area is the playable area; checking it makes it so
+    /// (<c>map.setPlayableArea</c>), unchecking makes the first area the playable one again.
+    /// </summary>
+    public bool Playable
+    {
+        get => IsPlayable;
+        set
+        {
+            if (value != IsPlayable)
+            {
+                _ = _run("map.setPlayableArea", value ? new JsonObject { ["name"] = _name } : []);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether the selected area is the playable area by convention: the first, none named.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsPlayableByConvention { get; private set; }
 
     public override void Refresh(MapDocument document, IReadOnlyList<ObjectRef> things)
     {
@@ -669,7 +695,8 @@ public sealed partial class AreaSelection : SelectionSection
         if (IsSingle && document.Find(things[0]) is Area area)
         {
             _name = area.Name;
-            IsPlayable = document.Markers.Areas.Length > 0 && document.Markers.Areas[0].Name == area.Name;
+            IsPlayable = document.PlayableArea?.Name == area.Name;
+            IsPlayableByConvention = IsPlayable && document.Scenario.PlayableArea is null;
             Fields.Refresh(document);
         }
     }
