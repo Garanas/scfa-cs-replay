@@ -50,7 +50,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <summary>
         /// The kinds of preset the editor knows today; a feature may use another.
         /// </summary>
-        public static IReadOnlyList<string> KnownKinds { get; } = ["brush", "lighting", "water", "units", "markers", "props-palette"];
+        public static IReadOnlyList<string> KnownKinds { get; } = ["brush", "lighting", "water", "units", "markers", "props-palette", "selection"];
 
         public string Folder { get; } = Path.GetFullPath(folder);
 

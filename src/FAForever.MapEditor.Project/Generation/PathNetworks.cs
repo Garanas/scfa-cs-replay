@@ -1012,7 +1012,7 @@ namespace FAForever.MapEditor.Project.Generation
         public string Story => "R-3";
 
         public IReadOnlyList<GeneratedInput> Inputs { get; } =
-            [GeneratedInput.Heightmap, GeneratedInput.TerrainTypes, GeneratedInput.WaterLevel, GeneratedInput.DepositsAndAreas, GeneratedInput.MapType];
+            [GeneratedInput.Heightmap, GeneratedInput.TerrainTypes, GeneratedInput.WaterLevel, GeneratedInput.DepositsAndAreas, GeneratedInput.MapType, GeneratedInput.WalkabilityMarks];
 
         /// <summary>
         /// What the next generation makes: the layers, spacing, and whether the layers' nodes go.

@@ -45,7 +45,11 @@ public sealed record BrushPresetSettings(
     double? MinSlope = null,
     double? MaxSlope = null,
     WaterMask? WaterMask = null,
-    string? TerrainType = null);
+    string? TerrainType = null,
+    HeightStampMode? StampMode = null,
+    double? Base = null,
+    bool? BaseFromGround = null,
+    double? Edge = null);
 
 /// <summary>
 /// Brush presets: the active brush tool's settings, saved and applied again.
@@ -69,11 +73,14 @@ public static class BrushPreset
                 Factor: sculpt.Factor, NoiseScale: sculpt.NoiseScale,
                 MinHeight: sculpt.Limited ? sculpt.MinHeight : null, MaxHeight: sculpt.Limited ? sculpt.MaxHeight : null),
                 $"{sculpt.Mode} {Number(sculpt.Radius)}"),
+            StampTool stamp => (new BrushPresetSettings("stamp", stamp.Radius, stamp.Height, stamp.Shape.Chosen.Key ?? "round",
+                stamp.Shape.Rotation, stamp.Shape.RandomRotation, StampMode: stamp.Mode, Base: stamp.Base, BaseFromGround: stamp.BaseFromGround, Edge: stamp.Edge),
+                $"Stamp {stamp.Mode} {Number(stamp.Radius * 2)}"),
             TerrainTypeTool types => (new BrushPresetSettings(types.PresetName, types.Radius, types.Strength, types.Shape.Chosen.Key ?? "round",
                 types.Shape.Rotation, types.Shape.RandomRotation, Falloff: types.Falloff, TerrainType: types.Chosen.Type.Name),
                 $"{types.Chosen.Type.Name} {Number(types.Radius)}"),
             GridPaintTool grid => (Paint(grid), $"{(grid.Erase ? "Erase" : "Paint")} {Painted(grid)}{Number(grid.Radius)}"),
-            _ => throw new InvalidOperationException($"The active tool ({model.ActiveTool?.Definition.Title}) has no brush to save: choose a sculpt or painting tool"),
+            _ => throw new InvalidOperationException($"The active tool ({model.ActiveTool?.Definition.Title}) has no brush to save: choose a sculpt, stamp or painting tool"),
         };
         string shape = settings.Shape == "round" ? "" : $", {Path.GetFileNameWithoutExtension(settings.Shape)}";
         return ($"{name}{shape}", Preset.Of(Kind, name, settings).Settings);
@@ -122,6 +129,18 @@ public static class BrushPreset
             sculpt.MaxHeight = settings.MaxHeight ?? sculpt.MaxHeight;
             tool = sculpt;
         }
+        else if (settings.Tool == "stamp")
+        {
+            StampTool stamp = model.Tool<StampTool>();
+            model.SelectTool("terrain.stamp");
+            stamp.Mode = settings.StampMode ?? stamp.Mode;
+            stamp.Radius = settings.Radius;
+            stamp.Height = settings.Strength;
+            stamp.Base = settings.Base ?? stamp.Base;
+            stamp.BaseFromGround = settings.BaseFromGround ?? stamp.BaseFromGround;
+            stamp.Edge = settings.Edge ?? stamp.Edge;
+            tool = stamp;
+        }
         else
         {
             (string id, GridPaintTool grid) = settings.Tool switch
@@ -130,6 +149,7 @@ public static class BrushPreset
                 "water" => ("water.paint", model.Tool<WaterPaintTool>()),
                 "masks" => ("paint.masks", model.Tool<MaskPaintTool>()),
                 "types" => ("terrain.types", model.Tool<TerrainTypeTool>()),
+                "walkability" => ("terrain.walkability", model.Tool<WalkabilityMarkTool>()),
                 _ => throw new ArgumentException($"The preset {preset.Name} is for a tool the editor has not: {settings.Tool}"),
             };
             model.SelectTool(id);

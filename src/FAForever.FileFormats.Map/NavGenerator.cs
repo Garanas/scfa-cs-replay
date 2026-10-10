@@ -86,7 +86,11 @@ namespace FAForever.FileFormats.Map
         /// <param name="waterElevation">The height of the water surface; null for a map without water.</param>
         /// <param name="terrainTypes">The terrain type code of every ogrid, row by row.</param>
         /// <param name="markers">The markers; the mass and hydrocarbon ones are assigned to labels.</param>
-        public static MapNavigation Generate(ScmapHeightmap heightmap, float? waterElevation, byte[] terrainTypes, IReadOnlyList<MapMarker> markers, MapArea? playableArea = null)
+        /// <param name="forcedOpen">Per ogrid, row by row, whether it counts as flat and on a terrain
+        /// type that does not block, whatever the heights and types say: a map editor's marks of
+        /// where units must be able to pass; null for none. The game itself has no such thing.</param>
+        public static MapNavigation Generate(ScmapHeightmap heightmap, float? waterElevation, byte[] terrainTypes, IReadOnlyList<MapMarker> markers, MapArea? playableArea = null,
+            bool[]? forcedOpen = null)
         {
             int width = heightmap.Width;
             int height = heightmap.Height;
@@ -99,7 +103,11 @@ namespace FAForever.FileFormats.Map
             int threshold = GetCompressionThreshold(mapSize);
             int treeSize = mapSize / LabelCompressionTreesPerAxis;
 
-            Caches caches = PopulateCaches(heightmap, waterElevation, terrainTypes, playableArea);
+            if (forcedOpen is not null && forcedOpen.Length != width * height)
+            {
+                throw new ArgumentException($"Expected {width * height} ogrids forced open or not, got {forcedOpen.Length}", nameof(forcedOpen));
+            }
+            Caches caches = PopulateCaches(heightmap, waterElevation, terrainTypes, playableArea, forcedOpen);
             bool hasWater = Array.Exists(caches.Depth, depth => depth > 0);
 
             LayerBuilder land = new LayerBuilder(NavLayer.Land, width, height, Pathable(caches, LandRule));
@@ -155,7 +163,7 @@ namespace FAForever.FileFormats.Map
         /// </summary>
         private sealed record Caches(bool[] Flat, float[] Depth, bool[] Open);
 
-        private static Caches PopulateCaches(ScmapHeightmap heightmap, float? waterElevation, byte[] terrainTypes, MapArea? playableArea)
+        private static Caches PopulateCaches(ScmapHeightmap heightmap, float? waterElevation, byte[] terrainTypes, MapArea? playableArea, bool[]? forcedOpen = null)
         {
             int width = heightmap.Width;
             int height = heightmap.Height;
@@ -207,6 +215,11 @@ namespace FAForever.FileFormats.Map
                     bool playable = tlx <= ax && brx >= ax && tlz <= az && brz >= az;
                     bool blocking = ax < width && az < height && TerrainTypes.Get(terrainTypes[az * width + ax]).Blocking;
                     open[cell] = playable && !blocking;
+                    if (forcedOpen is not null && forcedOpen[cell])
+                    {
+                        flat[cell] = true;
+                        open[cell] = playable;
+                    }
                 }
             }
 

@@ -49,6 +49,8 @@ public sealed class PickAssetHandler(MainViewModel model, AssetsViewModel assets
             throw new ArgumentException($"'{chosen}' is a {AssetsViewModel.Noun(entry.Kind, 1).ToLowerInvariant()}, not a {AssetsViewModel.Noun(kind, 1).ToLowerInvariant()}");
         }
         assets.Select(entry.Key);
+        // the newest of the recents (F-9)
+        assets.NoteUsed(entry.Key);
         model.Status = $"Chose {entry.Name} ({AssetsViewModel.Noun(entry.Kind, 1).ToLowerInvariant()})";
         return entry.Key;
     }

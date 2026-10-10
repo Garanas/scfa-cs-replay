@@ -49,6 +49,22 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         public static PaintTarget Mask(string name) => new MaskTarget(name);
 
+        /// <summary>
+        /// The marks of where land units must be blocked or may pass (user story T-7): a grid of the
+        /// map's size made when it is first painted (<see cref="WalkabilityMarks"/>).
+        /// </summary>
+        public static PaintTarget WalkabilityMarks { get; } = new WalkabilityMarksTarget();
+
+        private sealed record WalkabilityMarksTarget : PaintTarget
+        {
+            public override string Title => "walkability marks";
+
+            public override TiledBuffer<byte> Read(MapDocument document) =>
+                document.WalkabilityMarks ?? TiledBuffer<byte>.Create(document.Width, document.Height);
+
+            public override MapDocument Write(MapDocument document, TiledBuffer<byte> grid) => document with { WalkabilityMarks = grid };
+        }
+
         private sealed record StratumTarget(int Layer) : PaintTarget
         {
             public override string Title => $"layer {Layer}";

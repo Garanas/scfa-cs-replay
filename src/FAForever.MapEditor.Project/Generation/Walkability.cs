@@ -23,9 +23,10 @@ namespace FAForever.MapEditor.Project.Generation
         public static MapNavigation Generate(MapDocument document) => NavGenerator.Generate(
             HeightmapOf(document.Terrain.Heightmap),
             WaterLevel(document),
-            document.Terrain.Types.ToArray(),
+            Editing.WalkabilityMarks.TerrainTypes(document),
             ResourceMarkers(document.Markers),
-            PlayableArea(document));
+            PlayableArea(document),
+            Editing.WalkabilityMarks.ForcedOpen(document));
 
         /// <summary>
         /// The heightmap as the game's file holds it.

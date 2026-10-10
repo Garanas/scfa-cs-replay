@@ -23,7 +23,8 @@ public sealed record ArmiesSection() : PanelSection("Armies and teams");
 /// groups in it).
 /// </summary>
 /// <param name="Path">Below the army's root group; empty for the army itself (its root group).</param>
-public sealed partial class GroupNode(string army, ImmutableArray<string> path, int count, IReadOnlyList<GroupNode> children) : ObservableObject
+/// <param name="Units">The units directly in it, shown in the tree after its groups (user story U-3).</param>
+public sealed partial class GroupNode(string army, ImmutableArray<string> path, int count, IReadOnlyList<GroupNode> children, IReadOnlyList<UnitNode>? units = null) : ObservableObject
 {
     public string Army => army;
 
@@ -39,6 +40,16 @@ public sealed partial class GroupNode(string army, ImmutableArray<string> path, 
     public int Count => count;
 
     public IReadOnlyList<GroupNode> Children => children;
+
+    /// <summary>
+    /// The units directly in it.
+    /// </summary>
+    public IReadOnlyList<UnitNode> Units => units ?? [];
+
+    /// <summary>
+    /// What the tree shows under it: its groups, then its units.
+    /// </summary>
+    public IReadOnlyList<object> Items => Units.Count == 0 ? children : [.. children, .. Units];
 
     /// <summary>
     /// What the tree shows: <c>INITIAL (12)</c>, or the army's name with its units.
@@ -314,12 +325,13 @@ public sealed partial class ArmiesViewModel : ObservableObject
             }
         }
         GroupNode Node(string army, ImmutableArray<string> path, UnitGroup group) => new GroupNode(army, path, UnitGroupEdits.CountUnits(group),
-            [.. group.Groups.Select(child => Node(army, path.Add(child.Name), child))])
+            [.. group.Groups.Select(child => Node(army, path.Add(child.Name), child))],
+            [.. group.Units.Select(unit => new UnitNode(army, path, unit.Name, unit.Blueprint))])
         {
             IsExpanded = _expanded.Contains($"{army}:{UnitGroupEdits.PathText(path)}"),
         };
         GroupNode[] tree = [.. armies.Select(army => Node(army.Name, [], army.Units))];
-        string key = string.Join("|", tree.SelectMany(node => node.SelfAndBelow()).Select(node => $"{node.Key}={node.Count}"));
+        string key = string.Join("|", tree.SelectMany(node => node.SelfAndBelow()).Select(node => $"{node.Key}={node.Count}:{string.Join(",", node.Units.Select(unit => unit.Name))}"));
         if (key == _treeKey)
         {
             return;
@@ -373,6 +385,7 @@ public sealed partial class ArmiesViewModel : ObservableObject
 
     partial void OnChosenGroupChanged(GroupNode? value)
     {
+        FollowChosenGroup(value);
         if (value is not null && !value.IsArmy)
         {
             GroupName = value.Path[^1];

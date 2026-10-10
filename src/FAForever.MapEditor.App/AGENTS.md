@@ -683,7 +683,8 @@ ready and again with Modes, Assets, Read the assets again (`assets.reload`):
   it knows).
 - The cube maps a map names (the sky's, those units reflect, the water's) are missing too when the
   workspace has cube maps and lacks one; a change of them alone finds the missing again.
-- Not built yet: stars and recents; a mark of the drop place drawn in the views.
+- **Stars and recents** (F-9): section "Content to use again" below.
+- Not built yet: a mark of the drop place drawn in the views.
 
 ## The map's look: shader, sky, grid and decals
 
@@ -738,7 +739,8 @@ Four small parts that later features build on:
   them from its operations, on the window's thread; a handler that throws is logged (`Editor`)
   and stops neither the operation nor the other handlers. Lua plugins (F-15) listen through
   the same part (section "Lua plugins").
-- **Presets** (user stories F-10, T-2, `model.Presets`, `ViewModels/PresetsViewModel`): the
+- **Presets** (user stories F-10, T-2, `model.Presets`, `ViewModels/PresetsViewModel`; selection presets
+  and stamps in the section "Content to use again"): the
   workspace's `presets/<kind>/*.json` (the library's `PresetLibrary`), read again when a file there
   changes (`ProjectWatcher`; opening writes nothing, so a workspace without the folder is watched
   once the first preset makes it). A feature registers what it can save and apply as a
@@ -861,8 +863,8 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   layer or theme): where units cannot go tinted (`MapBlockedBrush`), and while the changes show
   the ogrids blocked (`MapNewlyBlockedBrush`) and opened (`MapOpenedBrush`) since the time before.
   `view.walkability {layer?, changes?}` chooses for automation. On a map of 81 km generating takes
-  about 3 s. Not built yet: marking by hand where it must be blocked or open (the tool
-  `terrain.walkability`, which needs a layer of its own in the project).
+  about 3 s. Marking by hand where it must be blocked or open: the Walkability tool (section
+  "Content to use again" below).
 - **The normal map and the preview** (`generate.normalMap`, `file.renderPreview`): the normal map
   at the size of the map's own, its format kept (`TerrainImages.NormalMap`); the preview
   (`Rendering/MapPreview`, S-4), the one the `.scmap` ships with, is drawn with the strata's
@@ -1080,7 +1082,8 @@ change, span `model.armies`), the place tool and the commands.
 - Automation: `state.units` (`place`: unit, preset, army, group, heading, structure, footprint,
   asWrecks; `tree`: the chosen group and the first 200 groups with their units) and `state.armies` (name,
   playable, team, factions, spawn, units, alliances, chosen).
-- Not built yet: dragging units or groups in the tree, team colours in the views.
+- **Dragging in the tree** (U-3): section "Content to use again" below.
+- Not built yet: team colours in the views.
 
 ## Markers: placing, linking, chains
 
@@ -1378,7 +1381,8 @@ mode panel's and inspector's templates only name it).
   areas, script and files, water, lighting angles, layers, the ruler's measurement and whether
   the page of a new map is open.
 - The sky's cube maps are in the Lighting mode's inspector (section "The map's look").
-- Not built yet: placing wave generators with the mouse, templates for a new map.
+- **Templates for a new map** (M-2): section "Content to use again" below.
+- Not built yet: placing wave generators with the mouse.
 
 ## Map size, playable area and versions
 
@@ -1575,6 +1579,70 @@ things named by reference as in automation: `prop:5`, `marker:3`, `unit:UNIT_1`,
 | `map.paintMask(name, x, z, radius, value)` | Sets a mask's pixels within a circle to a value 0 to 1; answers how many. |
 
 Anything else the editor does is a command: `editor.run("markers.place", { kind = "mass", x = 10, z = 20 })`.
+
+## Content to use again: presets, stamps, templates, stars, the tree, walkability, adaptive maps
+
+User stories F-10, T-2, M-2, U-3, F-9, T-7 and R-5. The core's side is `ViewModels/MainViewModel.Content.cs`
+(one `InitializeContent` line in the constructor); the library does the work (its guide, "Content to use again").
+
+- **Selection presets** (F-10, kind `selection`, `Tools/SelectionPresetTool`): `edit.saveSelectionPreset
+  {name?}` (Edit menu; also the Map panel's Selection presets, `edit.saveAsPreset kind=selection`) saves the
+  selected things of every kind but areas around their middle (a whole ogrid), named after the first
+  unit's group (else `Selection (n)`); applying one chooses the Map mode's Preset tool (`map.preset`),
+  whose click runs `edit.placePreset {name?, x?, z?, heading?, army?}` (Edit menu, `[UndoStep]`): the
+  library's `SelectionPresets.Place` (props and decals as high above the terrain as saved, markers with
+  their links and chains, units as a new group named after the preset in the tool's army's `INITIAL`),
+  turned about the place (Q and E a quarter turn, shift 15 degrees), then `MirrorPlaced`, and selects
+  it all. The tool's options: the preset with what it holds, the army of its units (the civilians
+  unless chosen), the turn. `state.selectionPreset`.
+- **Stamps** (T-2, `Tools/StampTool`, `terrain.stamp`, an `IShapedBrushTool`, so the shelf's brushes
+  are its pictures and both views draw it under the mouse): a click is one `BrushStroke` of one dab
+  (one step, every image with the symmetry, props follow the terrain, into the sculpting layer): the
+  library's `HeightStamp` with the tool's mode (raise, lower, set), radius (half the side, to 512;
+  `[` and `]`, shift with them the height), height, base (the ground under the click, or typed) and
+  edge; Q and E turn it 15 degrees (shift 90). Shift and a drag draw a box (`Box`) that becomes
+  `terrain.captureStamp {x0, z0, x1, z1, name?}` (in no menu): a 16-bit PNG in the workspace's
+  `brushes/stamps` (`HeightStampCapture`), chosen at once (`BrushShapeSettings.ChooseFile`, kept when
+  the catalogue reads it) with mode Set, a pixel an ogrid, its height and lowest ground, so a click
+  puts that part back as it was. `terrain.saveBrush {name?}` saves the active brush (a stamp too:
+  `BrushPresetSettings.StampMode`, `Base`, `BaseFromGround`, `Edge`) as a brush preset.
+  `state.stamp`. A brush shape's combo box that lets go of its item (its list replaced) leaves the
+  shape as it was (`BrushShapeSettings.OnChosenChanged`).
+- **Map templates** (M-2): the New map page's Template (first; `NewMapPageViewModel.Templates`, read
+  again each time it opens: none, the workspace's, the sandbox) fills the fields from a template of
+  settings (its own strata until another biome is chosen: `StrataFromTemplate`, the page then sends
+  no biome) or, for a whole map, leaves only the name. `file.new {template?}` takes it; `file.saveAsTemplate
+  {name?, whole?}` (File menu) saves the open map's settings, or with `whole` the map, into the
+  workspace's `templates`. `WorkspaceSetupViewModel.Use(workspace)` works in a workspace without
+  checking its assets (tests of what keeps files in the workspace).
+- **Dragging in the units tree** (U-3): the tree shows each group's units after its groups
+  (`GroupNode.Items`, `UnitNode`; a unit never opens), its choice is `ArmiesViewModel.ChosenNode` (a
+  unit chosen selects it with `select.set` and chooses its group). `Controls/UnitTreeDrag` (the
+  attached `IsEnabled` on the tree): a unit or group pressed and moved six pixels captures the pointer,
+  lights up the group or army under it (`TreeViewItem.unitdroptarget`) and says in the status line what
+  a drop does or why it cannot (`ArmiesViewModel.DropProblem`); letting go runs `units.drop {army,
+  group, units?, fromArmy?, fromGroup?}` (in no menu, `[UndoStep]`): units into the group (a selected
+  unit takes the selected units along, `ArmiesViewModel.SelectedUnits`), a group into it. It stays
+  inside the window's own input, so automation's `mouse action=down/move/up` drives it.
+- **Stars and recents** (F-9, `ViewModels/AssetsViewModel.Favourites.cs`): `AssetsViewModel.Favourites`
+  (the library's `AssetFavourites`, opened on `Setup.WorkspaceReady`): the shelf's scopes Starred and
+  Recent (`AssetScope.Starred`, `Recent`, the newest first), a star on starred tiles (`AssetTile.IsStarred`,
+  `Border.badge.starred`, `Icon.Star`), the inspector's star button; the picker's Starred and Recent
+  chips (`AssetPickerViewModel.Show`, `Shows`), its Star button, and a choice noted as recent (`Close`).
+  A tile clicked on the shelf and `assets.pick` note recents too. `assets.star {key?, on?}` (Assets
+  menu): the picker's selected asset, else the inspector's. What cannot be written is logged
+  (`Assets`). `state.favourites`.
+- **Walkability marked by hand** (T-7, `Tools/WalkabilityMarkTool`, `terrain.walkability`, a
+  `GridPaintTool` setting codes, sharp, radius 4): Blocked or Open (`Mark`), or Erase; the views show
+  the marks while it is active (`Palette`: blocked red, open green); a stroke makes walkability and
+  the path networks out of date (their input `walkability marks`). Brush presets keep it
+  (`walkability`). `state.walkabilityMarks` (mark, erase, radius, counts).
+- **Adaptive maps' files** (R-5): the Markers panel's Adaptive map says what the export writes
+  (`MarkersViewModel.AdaptiveFilesText`, `WritesAdaptiveFiles`); an optional group `Optional_Players_<n>`
+  reads "when n or more players are in the game". `state.adaptiveFiles`.
+- Tests: `ContentTest` (the operations), `ContentWindowTest` (dragging in the tree with the mouse),
+  `MainWindowTest.TheWalkabilityToolMarksWhereTheMouseDragsAsOneStep`, `AdaptiveScriptRunTest` (the
+  exported script run in Lua with the game's functions stood in for).
 
 ## Diagnostics: what goes well and wrong
 

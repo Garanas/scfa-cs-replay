@@ -55,6 +55,54 @@
                 <ContentControl Content="{Binding Shape}" />
               </controls:ToolRow>
             </DataTemplate>
+            <!-- pressing a height stamp (T-2): its picture, mode, size, height, base and edge -->
+            <DataTemplate DataType="tools:StampTool">
+              <controls:ToolRow Classes="toolrow">
+                <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
+                          ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Stamp picture"
+                          AutomationProperties.HelpText="A picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here, and shift and a drag take one from the map" />
+                <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" AutomationProperties.Name="Stamp mode"
+                          AutomationProperties.HelpText="Raise or lower by the picture, or set the heights to the base plus the picture" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0}'}" />
+                  <Slider Minimum="1" Maximum="512" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Stamp radius, half its side in ogrids" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="Height" />
+                  <TextBox Classes="toolfield" Text="{Binding Height, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                           AutomationProperties.Name="Stamp height" AutomationProperties.HelpText="The height the picture's white stands for, in game units" />
+                </StackPanel>
+                <CheckBox Content="Base on the ground" IsChecked="{Binding BaseFromGround}" IsVisible="{Binding IsSetting}" AutomationProperties.Name="Stamp base on the ground"
+                          AutomationProperties.HelpText="The picture's black is the height of the ground under the click; else the base typed beside it" />
+                <StackPanel Classes="inline" IsVisible="{Binding IsSetting}">
+                  <TextBlock Classes="label" Text="Base" />
+                  <TextBox Classes="toolfield" Text="{Binding Base, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}" IsEnabled="{Binding !BaseFromGround}"
+                           AutomationProperties.Name="Stamp base height" />
+                </StackPanel>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Edge, StringFormat='Edge: {0:0.00}'}" />
+                  <Slider Minimum="0" Maximum="0.5" Value="{Binding Edge}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Stamp edge"
+                          AutomationProperties.HelpText="How much of the picture fades out towards its sides, so it merges with the terrain" />
+                </StackPanel>
+                <ContentControl Content="{Binding Shape}" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </controls:ToolRow>
+            </DataTemplate>
+            <!-- marking walkability by hand (T-7): blocked or open, or erasing the marks -->
+            <DataTemplate DataType="tools:WalkabilityMarkTool">
+              <controls:ToolRow Classes="toolrow">
+                <ComboBox ItemsSource="{Binding Marks}" SelectedItem="{Binding Mark}" IsEnabled="{Binding !Erase}" AutomationProperties.Name="Walkability mark"
+                          AutomationProperties.HelpText="Blocked: land units must not pass; open: they may" />
+                <CheckBox Content="Erase" IsChecked="{Binding Erase}" AutomationProperties.Name="Erase the walkability marks" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
+                  <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
+                </StackPanel>
+                <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
+                          ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </controls:ToolRow>
+            </DataTemplate>
             <!-- painting a stratum's mask (S-1), where the slope and height allow -->
             <DataTemplate DataType="tools:StrataTool">
               <controls:ToolRow Classes="toolrow">
@@ -303,6 +351,19 @@
             <DataTemplate DataType="tools:MarkerPresetTool">
               <controls:ToolRow Classes="toolrow">
                 <TextBlock Classes="label" Text="{Binding Title}" AutomationProperties.Name="Markers preset to place" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              </controls:ToolRow>
+            </DataTemplate>
+            <!-- placing a selection preset of several kinds (F-10) -->
+            <DataTemplate DataType="tools:SelectionPresetTool">
+              <controls:ToolRow Classes="toolrow">
+                <TextBlock Classes="label" Text="{Binding Title}" ToolTip.Tip="{Binding Title}" AutomationProperties.Name="Selection preset to place" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="Units for" />
+                  <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" AutomationProperties.Name="Army of the preset's units"
+                            AutomationProperties.HelpText="The preset's units go into a new group named after it, in this army's INITIAL" />
+                </StackPanel>
+                <TextBlock Classes="label" Text="{Binding Heading, StringFormat='Turned: {0:0}°'}" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </controls:ToolRow>
             </DataTemplate>

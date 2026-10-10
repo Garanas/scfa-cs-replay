@@ -49,7 +49,7 @@ reads again when it changes; and nothing that generates runs by itself.
       that the workspace and the map's own files lack (its cube maps too), each leading to its
       problem; the inspector's Read again (`assets.reload {key}`) reads one asset again, the rest
       of the catalogue kept.
-- [ ] **F-9 Pickers.** One way to choose an asset everywhere: a searchable picker with thumbnails
+- [x] **F-9 Pickers.** One way to choose an asset everywhere: a searchable picker with thumbnails
       and filters, for textures, decals, props and units (see UNT-1). Today: the asset shelf in the
       dock (Ctrl+Shift+A): the kind follows the mode; what the map uses, its biomes or everything;
       biome or faction, category, search; a prop's variants as one tile; pictures of decals and
@@ -58,16 +58,22 @@ reads again when it changes; and nothing that generates runs by itself.
       tech, thumbnails (props and units their mesh), the arrows, Enter and Escape; what it
       chooses shows in the inspector; a command that picks takes the key from automation.
       Dragging a tile onto the top or 3D view hands the asset and its place to the active tool,
-      which places it (P-1, U-2, D-1); the panels' texture fields open the picker (S-2). Missing:
-      stars and recents.
-- [ ] **F-10 Presets.** Save a set of things and place or apply it again: a civilian base (units in
+      which places it (P-1, U-2, D-1); the panels' texture fields open the picker (S-2). Stars and
+      recents: an asset starred in the inspector, the picker or with `assets.star` shows a star on
+      its tile and under Starred, and the assets chosen last (a tile clicked, a picker's choice)
+      under Recent, the newest first, on the shelf and in the picker; kept per workspace in its
+      `favourites.json`.
+- [x] **F-10 Presets.** Save a set of things and place or apply it again: a civilian base (units in
       a group), a brush, a prop palette, a set of markers, a lighting and water setup. Presets are
       files in the workspace, shared like the rest of it. Today: `presets/<kind>/*.json` in the
       workspace, read again when they change; brush presets in the Terrain and Paint panels (save,
       apply, delete); lighting and water presets (L-2, W-1); units presets of the selected units or
       a group (U-4); prop palettes (P-2); markers presets: the Markers panel's Marker presets (the
       selected markers, with their links and chains), placed with the Preset tool
-      (`markers.placePreset`). Missing: a preset of a selection of several kinds at once.
+      (`markers.placePreset`); selection presets: the selected things of several kinds at once (a
+      civilian base's units, props, decals and markers; Edit, Save the selection as a preset, or the
+      Map panel's Selection presets), placed with the Map mode's Preset tool (`edit.placePreset`),
+      turned in quarter turns, the units in a new group of an army, with the symmetry's images.
 - [x] **F-11 Selection.** Select anything that lies on the map (marker, prop, decal, unit, area) in
       the top and 3D views, one or many; an inspector shows and edits what is selected; move,
       rotate and scale with handles; copy, paste, duplicate and delete.
@@ -149,9 +155,13 @@ reads again when it changes; and nothing that generates runs by itself.
       preview image, no-rush radius, adaptive map, reclaim: the Map panel's fields
       (`map.information`), one step of undo per field; the inspector shows the size, armies and
       the `.scmap`'s preview.
-- [ ] **M-2 New map.** Size, starting height, water, biome or template; from scratch. Today:
+- [x] **M-2 New map.** Size, starting height, water, biome or template; from scratch. Today:
       File, New map (`file.new`): one of the game's sizes, the height, water and its elevation,
-      the strata of one of six biomes, spawns and the playable area. Missing: templates.
+      the strata of one of six biomes, spawns and the playable area; templates in the workspace's
+      `templates` folder, offered first on the page: a small JSON of settings (size, height, water,
+      strata, players, extra armies, lighting) fills the fields, a map project in a folder is copied
+      under the new name, the sandbox is the editor's own; File, Save as a template
+      (`file.saveAsTemplate {name?, whole?}`) makes either from the open map.
 - [x] **M-3 Size and playable area.** Grow or crop the map; set the playable area. The Map mode's
       Map size tool (`map.resize`): another of the game's sizes per side, an anchor or an offset,
       the edges' heights or a height for what the map gains, every grid and thing along, what lies
@@ -185,11 +195,15 @@ reads again when it changes; and nothing that generates runs by itself.
       or sharp) or the shape of one of the workspace's brushes (T-2), turned by hand or at random per
       dab; limits on the lowest and highest height it makes. Every brush's radius by `[` and `]`
       or control and the wheel over a view, its strength with shift. Missing: hydraulic erosion.
-- [ ] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace. Today: the
+- [x] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace. Today: the
       brush shapes, greyscale PNGs of the workspace's `brushes` folder, in the asset shelf of the
       Terrain mode, read again when they change; they are the shapes of the sculpt and strata
       brushes (T-1, S-1); presets of the brush tools' settings (F-10) in the Terrain and Paint
-      panels. Missing: stamps.
+      panels. Stamps: the Terrain mode's Stamp tool presses a picture of the brushes folder at a
+      click (one step, with the symmetry), turned (Q and E) and sized (`[` and `]`), raising,
+      lowering or setting the heights to a base plus the picture, its edge fading; shift and a drag
+      take a part of the map as a 16-bit stamp in `brushes/stamps` (`terrain.captureStamp`), set up
+      to put it back as it was; Save the brush as a preset (`terrain.saveBrush`) keeps a stamp too.
 - [x] **T-3 Heightmap from other tools.** `heightmap.png` or `.r16` in the project is read again
       when World Machine or Gaea writes it; one of any size is imported, resampled
       (`terrain.importHeightmap`), and the heightmap exported as PNG or `.r16` (`terrain.exportHeightmap`).
@@ -212,13 +226,16 @@ reads again when it changes; and nothing that generates runs by itself.
       and effects), from the list of types with their colours. Today: the Terrain types tool sets
       the chosen type where the brush works at least half; the top view shows every ogrid's type in
       its colour while the tool is active, the tool options the legend of the types the map uses.
-- [ ] **T-7 Walkability.** A layer of where land units can and cannot go, generated from the
+- [x] **T-7 Walkability.** A layer of where land units can and cannot go, generated from the
       heightmap layers (slope); mark where it should be blocked or open; after generating again,
       see what changed: a new passage through a cliff, a closed path (see F-14). Today: generated
       when asked (the game's navigational mesh, per layer: land, hover, amphibious, naval), drawn in
       the top view and on the terrain in 3D with the ogrids blocked and opened since the time
-      before, the counts in the status line, new passages and closed paths as problems. Missing:
-      marking by hand where it must be blocked or open.
+      before, the counts in the status line, new passages and closed paths as problems; the
+      Walkability tool marks by hand where land units must be blocked or may pass (a brush, blocked
+      red and open green in the views), which walkability then takes over what it generates; kept
+      as `walkability-marks.png`; the export writes blocked ogrids as a blocking terrain type, so
+      the game agrees, and a check warns of ground marked open that the game still blocks.
 
 ## S: Strata (terrain textures)
 
@@ -284,12 +301,15 @@ reads again when it changes; and nothing that generates runs by itself.
       panel's Path networks (`markers.connectPaths`: spacing, replace or add where none are), out
       of date when walkability's inputs change (F-7).
 - [x] **R-4 Chains.** Create a chain and put markers in order.
-- [ ] **R-5 Adaptive maps.** Which markers (deposits, civilians) exist for which number of players
+- [x] **R-5 Adaptive maps.** Which markers (deposits, civilians) exist for which number of players
       and options. Today: whether the map adapts, the army each deposit waits for, and the groups of
       civilians and wrecks FAF's adaptive script creates by lobby option (`Optional_<option>_<n>`,
-      `markers.addOptionalGroup`). Missing: civilians by the number of players (the adaptive
-      convention has none: its script decides by option), and writing the map's `_options.lua`
-      and script.
+      `markers.addOptionalGroup`); the export writes the convention's `_options.lua` (an option per
+      group's option, and `dynamic_spawn`), `_tables.lua` (the deposits per army) and a script that
+      creates the groups by option and leaves out the deposits of armies no one plays, for a map
+      whose script is none, the new map's or the editor's own (a map maker's own script is kept);
+      civilians by the number of players: groups `Optional_Players_<n>`, created by that script
+      when n or more players are in the game.
 - [x] **R-6 Show markers.** Markers and path nodes on or off in the top view and in 3D, per kind.
 
 ## P: Props
@@ -346,9 +366,11 @@ reads again when it changes; and nothing that generates runs by itself.
       tool: the unit from the picker, the shelf or a dropped tile, the army and group in its
       options; structures snap to the build grid and turn in quarter turns; the selection's army in
       the inspector; with symmetry, a placed unit's images are placed too (F-12).
-- [ ] **U-3 Unit groups.** Per army a tree of groups: create, rename, nest, move units between groups.
-      Today: the Units mode's tree with the units per group; nesting and moving between groups by command
-      (`units.moveGroup`, Move here); missing: dragging in the tree.
+- [x] **U-3 Unit groups.** Per army a tree of groups: create, rename, nest, move units between groups.
+      Today: the Units mode's tree with the units per group (each unit under its group; choosing one
+      selects it); nesting and moving between groups by command (`units.moveGroup`, Move here) and by
+      dragging units (a selected one takes the selection along) and groups onto a group or army in
+      the tree, which lights up, one step of undo (`units.drop`).
 - [x] **U-4 Unit presets.** A civilian base, a defence line: a group saved as a preset and placed
       again, for any army (F-10). The Units mode's Presets: the selected units or the chosen group,
       placed with the Place tool at the mouse as a new group, turned in quarter turns.

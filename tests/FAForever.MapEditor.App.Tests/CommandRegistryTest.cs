@@ -129,8 +129,8 @@ namespace FAForever.MapEditor.App.Tests
                     "plugins.setField", "presets.apply",
                     "presets.delete", "problems.show", "props.addRuleCondition", "props.chooseRule", "props.place", "props.removeFromPalette", "props.removeRule",
                     "props.removeRuleCondition", "props.scale", "props.set", "props.setRule", "props.setRuleCondition", "props.setRulePalette", "props.tilt",
-                    "select.hideKind", "select.lockKind", "select.set", "terrain.addCurve", "terrain.chooseLayer", "terrain.moveLayer", "terrain.reloadLayer", "terrain.removeLayer", "terrain.setCurve",
-                    "terrain.setLayer", "units.add", "units.moveGroup", "units.moveToArmy", "units.moveToGroup", "units.removeGroup", "units.renameGroup",
+                    "select.hideKind", "select.lockKind", "select.set", "terrain.addCurve", "terrain.captureStamp", "terrain.chooseLayer", "terrain.moveLayer", "terrain.reloadLayer", "terrain.removeLayer", "terrain.setCurve",
+                    "terrain.setLayer", "units.add", "units.drop", "units.moveGroup", "units.moveToArmy", "units.moveToGroup", "units.removeGroup", "units.renameGroup",
                     "view.addToToolbar", "view.gpuDebug", "view.removeFromToolbar", "view.resizePanel", "view.setToolbar", "view.togglePanel", "view.walkability",
                     "view.zoomTo", "water.removeWaveGenerator",
                     "water.set", "water.setWaveGenerator", "water.setWaveTexture", "workspace.convert", "workspace.setUp",
@@ -158,12 +158,12 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = NewModel();
 
-            bool ran = await model.Commands.RunAsync("terrain.saveBrush");
+            bool ran = await model.Commands.RunAsync("paint.shader");
 
             Assert.IsFalse(ran);
-            StringAssert.Contains(model.Status, "Not built yet: Terrain: Save the brush as a preset");
-            StringAssert.Contains(model.Status, "user story T-2");
-            StringAssert.Contains(model.Diagnostics.Console.Last().Message, "terrain.saveBrush: not built yet, user story T-2");
+            StringAssert.Contains(model.Status, "Not built yet: Paint: Terrain shader");
+            StringAssert.Contains(model.Status, "user story S-4");
+            StringAssert.Contains(model.Diagnostics.Console.Last().Message, "paint.shader: not built yet, user story S-4");
         }
 
         [TestMethod]
@@ -192,9 +192,8 @@ namespace FAForever.MapEditor.App.Tests
             await model.Commands.RunAsync("tool.terrain.walkability");
 
             Assert.AreEqual("terrain", model.SelectedMode!.Definition.Id);
-            Assert.IsTrue(model.IsToolIncomplete);
-            Assert.IsNull(model.ActiveTool!.Tool, "a tool not built yet does nothing in the views");
-            Assert.ThrowsException<InvalidOperationException>(() => model.Stroke([(50, 50)]));
+            Assert.IsFalse(model.IsToolIncomplete);
+            Assert.IsInstanceOfType<WalkabilityMarkTool>(model.ActiveTool!.Tool);
 
             await model.Commands.RunAsync("tool.paint.strata");
             Assert.AreEqual("paint", model.SelectedMode!.Definition.Id);

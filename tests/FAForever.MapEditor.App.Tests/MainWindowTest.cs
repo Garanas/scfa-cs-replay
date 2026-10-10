@@ -396,7 +396,8 @@ namespace FAForever.MapEditor.App.Tests
             CollectionAssert.AreEqual(new[] { "_File", "_Edit", "_Select", "_View", "_Map", "_Modes", "_Generate", "_Plugins", "_Help" },
                 bar.Select(item => (string?)item.Header).ToArray());
             MenuItem terrain = Item(bar[5], "Terrain");
-            Assert.IsTrue(Item(terrain, "Save the brush as a preset...").Classes.Contains("planned"), "a command not built yet shows as planned");
+            Assert.IsTrue(Item(Item(bar[5], "Paint"), "Terrain shader...").Classes.Contains("planned"), "a command not built yet shows as planned");
+            Assert.IsFalse(Item(terrain, "Save the brush as a preset").Classes.Contains("planned"));
             Assert.IsNotNull(Item(terrain, "Curve"), "the tools of the mode follow");
             Assert.AreEqual(KeyGesture.Parse("F2"), Item(terrain, "Terrain mode").InputGesture);
             Assert.IsInstanceOfType<Separator>(bar[0].Items[3], "the separators of the layout");
@@ -475,7 +476,7 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
-        public Task AToolNotBuiltYetDoesNotPaint() => Run(async () =>
+        public Task TheWalkabilityToolMarksWhereTheMouseDragsAsOneStep() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
             Show(window, MapViewTab.Top);
@@ -487,7 +488,8 @@ namespace FAForever.MapEditor.App.Tests
             window.MouseMove(middle + new Vector(60, 0));
             window.MouseUp(middle + new Vector(60, 0), MouseButton.Left);
 
-            Assert.IsFalse(model.CanUndo);
+            Assert.AreEqual("Mark walkability blocked", model.Map!.Session.UndoDescription);
+            Assert.IsTrue(FAForever.MapEditor.Project.Editing.WalkabilityMarks.Count(model.ShownDocument!.WalkabilityMarks).Blocked > 0);
             window.Close();
         });
 

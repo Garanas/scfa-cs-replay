@@ -25,8 +25,10 @@ namespace FAForever.MapEditor.Project.Editing
     /// <c>optional_wreckage</c>, ...) and calls <c>ScenarioUtils.CreateArmyGroup(army, group, wreck)</c>
     /// for the groups of that value and the values below it (<c>Optional_Wreckage_2</c> up to the
     /// chosen value; a value can also ask for the group as wrecks). Deposits per army are the map's
-    /// markers (<see cref="ResourceMarker.SpawnWithArmy"/>); which civilians exist for which number
-    /// of players is not part of that convention: the script decides by option, not by player count.
+    /// markers (<see cref="ResourceMarker.SpawnWithArmy"/>). The export writes the options, tables and
+    /// script of that convention for a map whose script is the editor's (<see cref="AdaptiveScript"/>),
+    /// which also creates the groups <c>Optional_Players_&lt;n&gt;</c> when n or more players are in
+    /// the game: civilians by the number of players, which the convention's own script has not.
     /// </summary>
     public static partial class AdaptiveGroups
     {

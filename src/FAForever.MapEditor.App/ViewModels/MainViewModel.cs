@@ -155,6 +155,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeAssetDiscovery();
         InitializeHeightLayers();
         InitializeUndoSelection();
+        InitializeContent();
         Plugins = new PluginsViewModel(this);
     }
 

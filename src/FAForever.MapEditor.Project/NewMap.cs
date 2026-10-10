@@ -54,6 +54,21 @@ namespace FAForever.MapEditor.Project
         /// The author, written into the scenario.
         /// </summary>
         public string Author { get; init; } = "";
+
+        /// <summary>
+        /// The terrain's layers (lower, strata, upper) in place of the biome's: a template's own.
+        /// </summary>
+        public ImmutableArray<TerrainLayer>? Layers { get; init; }
+
+        /// <summary>
+        /// The armies besides the players' in place of <c>ARMY_17</c> and <c>NEUTRAL_CIVILIAN</c>: a template's own.
+        /// </summary>
+        public ImmutableArray<string>? ExtraArmies { get; init; }
+
+        /// <summary>
+        /// The lighting in place of <see cref="NewMap.DefaultLighting"/>: a template's own.
+        /// </summary>
+        public Lighting? Lighting { get; init; }
     }
 
     /// <summary>
@@ -208,7 +223,7 @@ namespace FAForever.MapEditor.Project
             bool underWater = settings.Water && settings.Height <= settings.WaterElevation;
 
             string[] players = [.. Enumerable.Range(1, settings.Players).Select(i => $"ARMY_{i}")];
-            string[] extra = ["ARMY_17", "NEUTRAL_CIVILIAN"];
+            string[] extra = settings.ExtraArmies is ImmutableArray<string> own ? [.. own.Where(name => !players.Contains(name)).Distinct()] : ["ARMY_17", "NEUTRAL_CIVILIAN"];
             // the first spawn above the middle on an ogrid's centre, the others its images under the
             // rotational symmetry of as many players, so that a new map is exactly symmetric
             float radius = size * 0.3f;
@@ -238,14 +253,14 @@ namespace FAForever.MapEditor.Project
                     Heightmap = new Heightmap { Scale = scale, Samples = TiledBuffer<ushort>.Create(size + 1, size + 1, sample) },
                     Types = TiledBuffer<byte>.Create(size, size, 1),
                     Shader = "TTerrainXP",
-                    Layers = biome.Layers,
+                    Layers = settings.Layers is ImmutableArray<TerrainLayer> layers ? Layers(layers) : biome.Layers,
                     StratumMasks = new StratumMasks { Layers = [.. Enumerable.Range(0, 8).Select(_ => TiledBuffer<byte>.Create(size / 2, size / 2))] },
                     // flat: x and y of the normal at the middle (DXT5nm, x in alpha, y in green)
                     NormalMap = TiledBuffer<Color32>.Create(size, size, new Color32(128, 0, 128, 0)),
                     NormalMapFormat = TextureFormat.Dxt5,
                     Preview = TiledBuffer<Color32>.Create(256, 256, underWater ? new Color32(255, 71, 140, 181) : new Color32(255, 117, 99, 107)),
                 },
-                Lighting = DefaultLighting,
+                Lighting = settings.Lighting ?? DefaultLighting,
                 Water = new Water
                 {
                     HasWater = settings.Water,
@@ -309,6 +324,26 @@ namespace FAForever.MapEditor.Project
                 })],
                 Script = [.. Encoding.UTF8.GetBytes(DefaultScript.ReplaceLineEndings("\n"))],
             };
+        }
+
+        /// <summary>
+        /// A template's layers as many as a version 56 map holds (6: lower, four strata, upper):
+        /// the lower first and the upper last, the strata between filled or cut.
+        /// </summary>
+        private static ImmutableArray<TerrainLayer> Layers(ImmutableArray<TerrainLayer> layers)
+        {
+            const int count = 6;
+            if (layers.Length == count)
+            {
+                return layers;
+            }
+            TerrainLayer empty = new TerrainLayer { AlbedoPath = "", NormalPath = "", AlbedoScale = 4, NormalScale = 4 };
+            if (layers.IsEmpty)
+            {
+                return [.. Enumerable.Repeat(empty, count)];
+            }
+            TerrainLayer[] strata = [.. layers.Skip(1).Take(Math.Max(0, layers.Length - 2))];
+            return [layers[0], .. Enumerable.Range(0, count - 2).Select(i => i < strata.Length ? strata[i] : empty), layers.Length > 1 ? layers[^1] : empty];
         }
 
         private static NewMapBiome Biome(string id, string title, string upper, params (string Albedo, string Normal, float Scale)[] strata)

@@ -74,9 +74,37 @@ namespace FAForever.MapEditor.Project
                     Armies = [.. document.Armies.Select(ToMapArmy)],
                 },
                 Scenario = ToMapScenario(document, root),
-                Script = ScriptOf(document),
-                Files = document.Files.ToDictionary(entry => entry.Key, entry => ImmutableCollectionsMarshal.AsArray(entry.Value)!),
+                Script = AdaptiveScript.Writes(document) ? AdaptiveScriptOf(document, root) : ScriptOf(document),
+                Files = FilesOf(document),
             };
+        }
+
+        /// <summary>
+        /// The map's own files; for a map whose adaptive files the export writes (user story R-5,
+        /// <see cref="AdaptiveScript.Writes"/>) with its <c>_options.lua</c> and <c>_tables.lua</c>.
+        /// </summary>
+        private static Dictionary<string, byte[]> FilesOf(MapDocument document)
+        {
+            Dictionary<string, byte[]> files = document.Files.ToDictionary(entry => entry.Key, entry => ImmutableCollectionsMarshal.AsArray(entry.Value)!);
+            if (AdaptiveScript.Writes(document))
+            {
+                files[$"{document.FileName}_options.lua"] = MapImporter.LuaEncoding.GetBytes(AdaptiveScript.Options(document));
+                files[$"{document.FileName}_tables.lua"] = MapImporter.LuaEncoding.GetBytes(AdaptiveScript.Tables(document));
+            }
+            return files;
+        }
+
+        /// <summary>
+        /// The adaptive script of a map (user story R-5), which sets the playable area the scenario names.
+        /// </summary>
+        private static byte[] AdaptiveScriptOf(MapDocument document, string root)
+        {
+            string text = AdaptiveScript.Script(document, $"{root}_tables.lua");
+            if (document.Scenario.PlayableArea is string area && document.Markers.Areas.Any(a => a.Name == area) && MapScript.WithPlayableArea(text, area) is string changed)
+            {
+                text = changed;
+            }
+            return MapImporter.LuaEncoding.GetBytes(text);
         }
 
         /// <summary>
@@ -223,7 +251,8 @@ namespace FAForever.MapEditor.Project
                 WaterFoamMask = water.FoamMask.ToArray(),
                 WaterFlatnessMask = water.FlatnessMask.ToArray(),
                 WaterDepthBiasMask = water.DepthBiasMask.ToArray(),
-                TerrainTypes = terrain.Types.ToArray(),
+                // with the walkability marked by hand (T-7): blocked ogrids on a blocking type
+                TerrainTypes = Editing.WalkabilityMarks.TerrainTypes(d),
                 Skybox = d.Sky.Skybox is Skybox s ? ToScmapSkybox(s) : null,
                 Props = [.. d.Props.Select(p => new ScmapProp(p.Blueprint, p.Position, p.RotationX, p.RotationY, p.RotationZ, p.Scale))],
             };

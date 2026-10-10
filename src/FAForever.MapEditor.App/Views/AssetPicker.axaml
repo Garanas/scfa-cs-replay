@@ -30,6 +30,8 @@
         <Border DockPanel.Dock="Bottom" Classes="dialogpart pickerfoot">
           <DockPanel>
             <StackPanel DockPanel.Dock="Right" Classes="inline">
+              <Button Content="{Binding StarText}" Command="{Binding ToggleStarCommand}" IsEnabled="{Binding HasSelection}"
+                      AutomationProperties.Name="Star the asset to choose" AutomationProperties.HelpText="Starred assets show under Starred here and on the shelf, in every map of the workspace" />
               <Button Content="Cancel" Command="{Binding CancelCommand}" />
               <Button Classes="accent" Content="Choose" Command="{Binding ChooseCommand}" IsEnabled="{Binding HasSelection}" />
             </StackPanel>
@@ -41,7 +43,22 @@
         <Border DockPanel.Dock="Left" Classes="facets">
           <ScrollViewer>
             <StackPanel Classes="stack">
-              <TextBlock Classes="overline" Text="{Binding GroupsTitle, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <!-- the assets starred and chosen last (F-9) -->
+              <ItemsControl ItemsSource="{Binding Shows}" AutomationProperties.Name="Starred or recent">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel Classes="chips" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:AssetChoice">
+                    <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Text}"
+                            Command="{Binding $parent[UserControl].((vm:AssetPickerViewModel)DataContext).ChooseShowCommand}" CommandParameter="{Binding}"
+                            AutomationProperties.Name="{Binding Title, StringFormat='Show only the {0} assets'}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="overline section" Text="{Binding GroupsTitle, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
               <ItemsControl ItemsSource="{Binding Groups}" AutomationProperties.Name="{Binding GroupsTitle}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:AssetChoice">
@@ -125,9 +142,12 @@
                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
                               <Border Classes="uniticon" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding HasIcon}">
                                 <Panel>
-                              <controls:AssetThumbnail Source="{Binding IconBackground}" DecodeWidth="64" Checker="False" />
-                              <controls:AssetThumbnail Source="{Binding Icon}" DecodeWidth="64" Checker="False" AutomationProperties.Name="{Binding Title, StringFormat='Icon of {0}'}" />
-                            </Panel>
+                                  <controls:AssetThumbnail Source="{Binding IconBackground}" DecodeWidth="64" Checker="False" />
+                                  <controls:AssetThumbnail Source="{Binding Icon}" DecodeWidth="64" Checker="False" AutomationProperties.Name="{Binding Title, StringFormat='Icon of {0}'}" />
+                                </Panel>
+                              </Border>
+                              <Border Classes="badge starred" HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding IsStarred}">
+                                <Path Classes="icon small" Data="{StaticResource Icon.Star}" AutomationProperties.Name="Starred" />
                               </Border>
                             </Panel>
                           </Border>

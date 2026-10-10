@@ -29,7 +29,14 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// wait for is left out (another map has its own armies).
         /// </summary>
         /// <exception cref="ArgumentException">None of the ids is a marker of the map.</exception>
-        public static MarkerPresetSettings Capture(MapDocument document, IEnumerable<int> ids)
+        public static MarkerPresetSettings Capture(MapDocument document, IEnumerable<int> ids) => Capture(document, ids, null);
+
+        /// <summary>
+        /// The markers of those ids as a preset around a middle of the caller's (a selection preset's,
+        /// which holds other things too), or around their own middle when it is null.
+        /// </summary>
+        /// <exception cref="ArgumentException">None of the ids is a marker of the map.</exception>
+        public static MarkerPresetSettings Capture(MapDocument document, IEnumerable<int> ids, Vector2? around)
         {
             HashSet<int> chosen = [.. ids];
             Marker[] markers = [.. document.Markers.All.Where(marker => chosen.Contains(marker.Id))];
@@ -37,7 +44,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             {
                 throw new ArgumentException("No marker to save: select markers first");
             }
-            Vector2 middle = new Vector2(markers.Average(marker => marker.Position.X), markers.Average(marker => marker.Position.Z));
+            Vector2 middle = around ?? new Vector2(markers.Average(marker => marker.Position.X), markers.Average(marker => marker.Position.Z));
             Heightmap heights = document.Terrain.Heightmap;
             T Relative<T>(T marker) where T : Marker => marker with
             {

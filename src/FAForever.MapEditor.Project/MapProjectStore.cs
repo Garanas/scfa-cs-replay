@@ -92,6 +92,7 @@ namespace FAForever.MapEditor.Project
             }
 
             SaveMasks(document, folder, previous);
+            SaveWalkabilityMarks(document, folder, previous);
             SaveRules(document, folder);
             SaveHeightLayers(document, folder, previous);
 
@@ -158,7 +159,7 @@ namespace FAForever.MapEditor.Project
             try
             {
                 MapDocument document = MapProjectMapping.ToDocument(map, props, decals, markers, armies, images, script, files);
-                return LoadHeightLayers(WithRules(document, folder), folder);
+                return LoadHeightLayers(WithRules(WithWalkabilityMarks(document, folder), folder), folder);
             }
             catch (ArgumentException exception)
             {
@@ -242,6 +243,9 @@ namespace FAForever.MapEditor.Project
                         break;
                     case MapProjectLayout.PropRules:
                         document = ReloadPropRules(document, Of(changed));
+                        break;
+                    case MapProjectLayout.WalkabilityMarks:
+                        document = ReloadWalkabilityMarks(document, folder);
                         break;
                     case MapProjectLayout.Script:
                     {

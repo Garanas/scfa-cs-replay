@@ -11,10 +11,10 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// 2: the scenario's teams and whether the map may go to the vault, and the project's
         /// <c>masks/</c> for tools. 3: the playable area by name, the rule a prop was placed by,
         /// the rules of masks (<c>masks/NAME.rules.json</c>) and props (<c>prop-rules.json</c>), and the
-        /// height layers (<c>layers/</c>). 4: the map's symmetry and a curve's symmetry. An editor reads
-        /// every version up to its own.
+        /// height layers (<c>layers/</c>). 4: the map's symmetry and a curve's symmetry. 5: the walkability
+        /// marked by hand (<c>walkability-marks.png</c>). An editor reads every version up to its own.
         /// </summary>
-        public const int CurrentFormatVersion = 4;
+        public const int CurrentFormatVersion = 5;
 
         /// <summary>
         /// The layout of the project; <see cref="CurrentFormatVersion"/> for projects this library writes.

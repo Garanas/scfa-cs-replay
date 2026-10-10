@@ -257,7 +257,7 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.IsFalse(answer["ran"]!.GetValue<bool>());
             StringAssert.Contains(answer["why"]!.GetValue<string>(), "nothing to undo");
-            JsonObject notBuilt = await Send(automation, "run", new JsonObject { ["id"] = "terrain.saveBrush" });
+            JsonObject notBuilt = await Send(automation, "run", new JsonObject { ["id"] = "paint.shader" });
             StringAssert.Contains(notBuilt["why"]!.GetValue<string>(), "not built yet");
             window.Close();
         });

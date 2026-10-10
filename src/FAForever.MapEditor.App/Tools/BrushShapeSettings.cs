@@ -79,12 +79,21 @@ public sealed partial class BrushShapeSettings : ObservableObject
     /// </summary>
     public void Refresh(AssetCatalog catalog)
     {
+        BrushChoice wanted = Chosen;
         Choices = [BrushChoice.Round, .. catalog.Entries
             .Where(entry => entry.Kind == AssetKind.Brush)
             .OrderBy(entry => entry.Group, StringComparer.OrdinalIgnoreCase)
             .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
             .Select(entry => new BrushChoice(entry.Key, entry.Name, entry.Group == WorkspaceLayout.Brushes ? entry.Name : $"{entry.Group}/{entry.Name}", entry.File))];
-        Chosen = Choices.FirstOrDefault(choice => choice.Key == Chosen.Key) ?? BrushChoice.Round;
+        // a picture chosen by its file before the catalogue listed it stays chosen
+        Chosen = Choices.FirstOrDefault(choice => choice.Key == wanted.Key)
+            ?? (wanted.File is string file && File.Exists(file) ? AddChoice(wanted) : BrushChoice.Round);
+    }
+
+    private BrushChoice AddChoice(BrushChoice choice)
+    {
+        Choices = [.. Choices, choice];
+        return choice;
     }
 
     /// <summary>
@@ -102,6 +111,20 @@ public sealed partial class BrushShapeSettings : ObservableObject
         string wanted = key.ToLowerInvariant();
         Chosen = Choices.FirstOrDefault(choice => choice.Key == wanted || choice.Key == $"{WorkspaceLayout.Brushes}/{wanted}")
             ?? throw new ArgumentException($"The workspace has no brush '{key}'");
+    }
+
+    /// <summary>
+    /// Gives the brush the shape of a picture the catalogue may not list yet (a stamp just taken
+    /// from the map, before the brushes are read again); it stays chosen when they are, by its key.
+    /// </summary>
+    public void ChooseFile(string key, string title, string file)
+    {
+        BrushChoice choice = Choices.FirstOrDefault(c => c.Key == key) ?? new BrushChoice(key, title, title, file);
+        if (!Choices.Contains(choice))
+        {
+            Choices = [.. Choices, choice];
+        }
+        Chosen = choice;
     }
 
     /// <summary>
@@ -140,8 +163,21 @@ public sealed partial class BrushShapeSettings : ObservableObject
         }
     }
 
+    partial void OnChosenChanged(BrushChoice? oldValue, BrushChoice newValue)
+    {
+        // a combo box whose list is replaced lets go of its item: the brush keeps its shape
+        if (newValue is null)
+        {
+            Chosen = oldValue ?? BrushChoice.Round;
+        }
+    }
+
     partial void OnChosenChanged(BrushChoice value)
     {
+        if (value is null)
+        {
+            return;
+        }
         if (value.File is not string file)
         {
             return;

@@ -38,6 +38,11 @@ namespace FAForever.MapEditor.Project.Generation
         /// </summary>
         public static GeneratedInput MapType { get; } = new GeneratedInput("map type", document => document.Scenario.Type);
 
+        /// <summary>
+        /// Where walkability is marked by hand (user story T-7).
+        /// </summary>
+        public static GeneratedInput WalkabilityMarks { get; } = new GeneratedInput("walkability marks", document => document.WalkabilityMarks);
+
         public static GeneratedInput Lighting { get; } = new GeneratedInput("lighting", document => document.Lighting);
 
         public static GeneratedInput Markers { get; } = new GeneratedInput("markers", document => document.Markers);

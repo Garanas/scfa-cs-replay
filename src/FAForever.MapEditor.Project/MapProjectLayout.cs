@@ -125,6 +125,12 @@ namespace FAForever.MapEditor.Project
         public const string PropRules = "prop-rules.json";
 
         /// <summary>
+        /// Where walkability is marked by hand (user story T-7), an ogrid a pixel: black none, grey
+        /// blocked, white open (<see cref="Editing.WalkabilityMarks"/>). Absent without marks.
+        /// </summary>
+        public const string WalkabilityMarks = "walkability-marks.png";
+
+        /// <summary>
         /// What the file of a mask's rules ends with, after the mask's name.
         /// </summary>
         public const string MaskRulesSuffix = ".rules.json";

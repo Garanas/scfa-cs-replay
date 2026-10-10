@@ -26,7 +26,7 @@ public static class Menus
         new MenuLayout("File",
         [
             "file.new", "file.open", "file.import", Separator,
-            "file.save", "file.saveAs", "file.commit", "file.push", "file.pull", "file.history", Separator,
+            "file.save", "file.saveAs", "file.saveAsTemplate", "file.commit", "file.push", "file.pull", "file.history", Separator,
             "file.export", "file.renderPreview", "file.upload", Separator,
             "file.openScript",
         ]),
@@ -34,7 +34,7 @@ public static class Menus
         [
             "edit.undo", "edit.redo", Separator,
             "edit.copy", "edit.paste", "edit.duplicate", "edit.delete", "edit.rotate", "edit.scale", "edit.mirror", Separator,
-            "edit.saveAsPreset",
+            "edit.saveAsPreset", "edit.saveSelectionPreset", "edit.placePreset",
         ]),
         new MenuLayout("Select", ["select.all", "select.none", "select.similar", "select.invert", "select.insideArea", "select.isolate", Separator, "select.symmetry", "select.mirrorEdits", "select.symmetryPartners", "select.handles"]),
         new MenuLayout("View",
@@ -64,7 +64,7 @@ public static class Menus
             Mode("props", "props.choose", "props.addToPalette", "props.followTerrain", Separator, "props.alignToTerrain", "props.upright", "props.dropToGround", "props.randomize", "props.replace", "props.randomVariant", Separator, "props.reclaim", "props.addRule", "props.keepFromRules"),
             Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack"),
             Mode("units", "units.pick", "units.addGroup", "units.selectGroup", "units.placePreset", "units.asWrecks"),
-            new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.reload", "assets.reloadShown", Separator, "assets.brushesFolder"]),
+            new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.star", "assets.reload", "assets.reloadShown", Separator, "assets.brushesFolder"]),
         ]),
         new MenuLayout("Generate",
         [

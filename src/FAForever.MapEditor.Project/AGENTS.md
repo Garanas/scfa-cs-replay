@@ -324,8 +324,9 @@ army's units beside `INITIAL`, named `Optional_<option>_<n>`, and the map's scri
 `ScenarioUtils.CreateArmyGroup` when the lobby option `optional_<option>` (the map's `_options.lua`)
 has value n or more (or as wrecks, by option). `Find` lists them, `AddOptionalGroup` makes one in
 the civilians' army (`CivilianArmy`: `ARMY_17`, else `NEUTRAL_CIVILIAN`, else the first extra army).
-The editor writes neither the options nor the script; civilians by the number of players are not
-part of the convention.
+The export writes the options, tables and script of that convention for a map whose script is the
+editor's (section "Content to use again", `AdaptiveScript`), with civilians by the number of players
+(`Optional_Players_<n>`) besides.
 
 **Wrecks** (U-5, `Editing/UnitWrecks`): the game has no field for a wreck. A map's `_save.lua`
 holds wrecks as ordinary units (the same five fields) in a group named exactly `WRECKAGE` of an
@@ -503,7 +504,7 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   game's maps folder works for every map. The game's files do not carry it.
 - **Presets** (user story F-10): `presets/<kind>/<name>.json` (`Workspace.Presets`, a
   `PresetLibrary`), a folder per kind (lower-case letters, digits and dashes: `brush`, `lighting`,
-  `water`, `units`, `markers`, `props-palette`) and a file per preset (`PresetDto`: format version,
+  `water`, `units`, `markers`, `props-palette`, `selection`) and a file per preset (`PresetDto`: format version,
   kind, name, settings). The settings are a JSON object whose shape the feature of the kind owns:
   `Preset.Of(kind, name, record)` writes a record of its own as the editor writes JSON, and
   `preset.Read<T>()` reads it back. The file name is the name with the characters a file name
@@ -533,6 +534,66 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
 - `AtmospherePresets` (L-2, W-1): a lighting as a preset (its `LightingDto`), and the look of the
   water (`WaterPresetSettings`; the elevations, whether it has water, the wave generators and the
   masks stay the map's).
+
+## Content to use again
+
+User stories F-10, T-2, M-2, F-9, T-7 and R-5.
+
+- **Selection presets** (F-10, `Workspaces/SelectionPresets`, kind `selection`): `Capture(document,
+  things, name)` keeps props, decals, markers (`MarkerPresets.Capture` around the same middle) and units
+  (`CaptureUnits` around it) as a project writes them (`SelectionPresetSettings`: `PropDto`s, `DecalDto`s,
+  a `MarkerSetDto`, a `UnitGroupDto`), around their middle rounded to a whole ogrid, each height above
+  the terrain; areas are left out (a map's layout, not a piece placed again). `Place(document, settings,
+  name, army, parent, x, z, radians, out added)`: props and decals inside the map, markers by
+  `MarkerPresets.Place` (kept inside it), units by `PlaceUnits` as a new group named after the preset
+  (the groups to it made when missing), then everything turned about the place (`RotateObjectsAbout`;
+  deposits back on ogrid centres). `Summary()` says what it holds.
+- **Height stamps** (T-2, `Editing/HeightStamp`): `HeightStamp.Apply` presses a `BrushShape` at once,
+  turned (and flipped for a mirrored image) as a brush's shape: raise or lower by value × height, or
+  set to base + value × height; the outer `Edge` of the picture fades (`BrushShape.Border`), and the
+  picture keeps its edge's value to its side (`BrushShape.Sample(u, v, clamp: true)`).
+  `HeightStampCapture.Of(heights, x0, z0, x1, z1)` takes a part of the heightmap stretched from its
+  lowest (0) to its highest (65535) sample, `Save` writes it as a 16-bit grey PNG: pressed with mode Set,
+  base the lowest, height the difference and a radius of half its side, it puts the part back sample
+  for sample (`HeightStampTest`).
+- **Map templates** (M-2, `Workspaces/MapTemplates`, the workspace's `templates/`,
+  `Workspace.TemplatesFolder`): a JSON file of a new map's settings (`MapTemplateDto`: size, height,
+  water and its elevations, biome or its own strata, players, extra armies, lighting; each optional),
+  a map project in a folder, and the sandbox (`MapTemplateKind.Sandbox`, built from the catalogue).
+  `List` reads the folder (an unreadable one named, the sandbox last), `Apply(dto, defaults)` gives
+  `NewMapSettings` (with the new optional `Layers`, `ExtraArmies`, `Lighting`: a template's strata are
+  laid out as a version 56 map holds them, the lower first and the upper last), `Copy` makes a new map
+  of a whole-map template (renamed, version 1, publishable), `SaveSettings` (the mean height, the
+  nearest of the game's sizes) and `SaveProject` write them.
+- **Stars and recents** (F-9, `Workspaces/AssetFavourites`, the workspace's `favourites.json`,
+  `AssetFavouritesDto`): the keys starred in the order they were starred and the 24 chosen last, the
+  newest first; every change is written at once, nothing before a workspace opens it.
+- **Walkability marked by hand** (T-7, `Editing/WalkabilityMarks`, `MapDocument.WalkabilityMarks`, an
+  optional grid of the map's size: none 0, blocked 1, open 2; `PaintTarget.WalkabilityMarks` makes it
+  when first painted). The game decides by the heights, the water and the terrain types, reading an
+  ogrid's type at its far corner; so `Walkability.Generate` hands `NavGenerator` the terrain types as
+  the export writes them (`WalkabilityMarks.TerrainTypes`: a blocked mark puts the blocking `Dirt09`
+  there, an open one takes a blocking type away) and the ogrids marked open as `forcedOpen` (FileFormats.Map's
+  `NavGenerator.Generate`, an optional argument: flat and open, the water rules still apply). The
+  export writes those types (`MapExporter`), so the game blocks what is marked blocked; no file makes
+  steep ground walkable, and the check `walkability-marks` warns of ground marked open that the game
+  blocks (kept per version of the marks, heights and water). The walkability and path networks
+  generators take the marks as an input (`GeneratedInput.WalkabilityMarks`). On disk
+  `walkability-marks.png` (black none, grey blocked, white open; absent without marks), read again
+  when another tool changes it; `MapResize` keeps the marks at their place.
+- **Adaptive maps' files** (R-5, `AdaptiveScript`, after `adaptive_archsimkats_valley`'s files): for a
+  map that adapts (`Adapts`: the scenario says so, a deposit waits for an army, or an army has
+  optional groups) whose script is none, the new map's or one the export wrote before (first line
+  `AdaptiveScript.Header`; `Writes`), the export writes `<file>_options.lua` (`dynamic_spawn` as the
+  convention's, and an option `optional_<option>` per option of the groups, 1 none up to its highest
+  value), `<file>_tables.lua` (`maxPlayerOnMap`, `playableArmies`, `spwnMexArmy` and `spwnHydroArmy`: a
+  row per playable army of the numbers after `Mass `/`Hydrocarbon ` in its deposits' names, as text)
+  and the script: the armies, then the groups up to each option's value (as wrecks when the option's
+  name holds `Wreck`), `Optional_Players_<n>` when n or more playable armies are in the game, and
+  `ScenarioUtils.CreateResources` replaced by the convention's dynamic spawn (mirror slots, used slots,
+  or only full pairs), the playable area the scenario names set as `MapScript` sets it. A map maker's
+  own script is kept, with no options or tables. Tested as data (`AdaptiveScriptTest`) and run in Lua
+  in the App's tests.
 
 ## Size, playable area and versions
 
