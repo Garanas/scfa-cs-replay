@@ -439,8 +439,10 @@ the tools hold their settings and make one stroke (`BrushStroke`) a step of undo
 - Automation: `state.painting` (the sculpt tool's falloff, factor, noise size and limits, the
   strata tool's limits, the water, masks and types tools with the legend, the masks for tools, the
   chosen one, `showMask` and the key of `shownGrid`).
-- Not built yet: hydraulic erosion, painting with symmetry, limits for the water and masks tools,
-  the overlays in the 3D view.
+- **With symmetry** every painting tool paints in every part of the map (section "Symmetry applied
+  to edits" below): `BrushStroke` does it, so a new brush tool gets it by passing the brush's
+  `Rotation` and `Mirrored` from the `SymmetricDab` it is called with.
+- Not built yet: hydraulic erosion, limits for the water and masks tools, the overlays in the 3D view.
 
 ## Tests with the real window, and labels for screen readers and agents
 
@@ -594,8 +596,41 @@ Four small parts that later features build on:
   rotational for two. The top view draws the lines between the parts, dashed over a dark line,
   while the overlay `symmetry` is on (`HeightmapView.DrawSymmetry`); the 3D view does not yet.
   `Transforms(document)` gives the library's `MapSymmetryTransform`s (the maths is in
-  FileFormats.Map's `MapSymmetry`): the brushes and placing tools are to mirror their edits with
-  them; none does yet.
+  FileFormats.Map's `MapSymmetry`); the edits mirrored with them are the next section's.
+- **Symmetry applied to edits** (user stories F-12, S-1; `ViewModels/MainViewModel.Symmetry.cs`, the
+  library's `SymmetricDabs`, `SymmetryEdits`, `SymmetryChecks`). While a symmetry is chosen and
+  "Mirror edits" is checked (the check box after the combo box, `SymmetryViewModel.MirrorsEdits`,
+  `select.mirrorEdits {on?}`; off keeps the guides and the check only), `EditTransforms(document)`
+  is every part, else the identity alone:
+  - **Strokes**: `BrushStroke` asks the tool's shape for one rotation per dab and calls the tool's
+    dab once per image (`SymmetricDab`: place, rotation, `Mirrored`, the part's transform), in the
+    stroke's one step. Sculpting reads its noise where the sample came from (`HeightBrush.NoisePlace`),
+    so every part gets the same noise. Images that coincide are painted once (a round dab on an
+    axis or at the middle; a shaped one when its turn and flip coincide too); images that only
+    overlap paint twice, as a stroke crossing an axis is painted by itself and by its image. The
+    props painter passes `mirror: false` and mirrors what it scatters (`PropScatter.Images`): a
+    prop goes only with all its images (none outside the map or within the spacing). The eraser
+    erases at each image.
+  - **Placing**: `markers.place`, `props.place`, `decals.place` (and the place tool's drag),
+    `units.add` and `units.placePreset` add the thing, then `MirrorPlaced` its images in the same
+    step, and select them all. Spawns become the next armies, a path node links to the images (or
+    partners) of the node it goes on from, a structure snaps to the build grid, a unit's image goes
+    into its army and group; areas are never mirrored.
+  - **Moving with partners**: `edit.nudge`, `edit.rotate`, `edit.place`, `edit.delete` and dragging
+    with a select tool take each selected thing's mirror partners (`PartnersOf`: the same kind and
+    blueprint within an ogrid of the image, found once at the press): moved by the image of the
+    offset, turned the other way in a mirrored part, deleted with it. A partner that is selected
+    itself moves as itself. Span `model.symmetry-partners` (13 ms for Archsimkats Valley's 8304 props).
+  - **Commands**: `select.symmetryPartners` (Select menu) adds the partners to the selection;
+    `edit.mirror` (Edit menu, `[UndoStep]`) copies the selection into every other part where it
+    has no partner (span `model.mirror-objects`). Both work with the guides only too.
+  - **The check** `not-symmetric` (registered with the Problems part, run while a symmetry is
+    chosen): a warning per spawn and deposit without a partner, naming where it is missing; a
+    warning per blueprint for units and AI markers; a note per blueprint, texture or layer for props,
+    decals and path nodes. About 30 ms of `model.problems` on Archsimkats Valley.
+  - `state.symmetry` has `mirrorsEdits` and `mirroring`.
+  - Not built yet: the brush's images drawn under the mouse, guides in 3D, decal scaling with the
+    partners; a decal's image is turned, not mirrored (the game draws no mirrored decal).
 - **Generated results** (user story F-7, `model.Generation`, `ViewModels/GenerationViewModel`):
   the library's `GeneratedResults`, where a feature registers its `IGenerator` (its inputs: parts
   of the document). Nothing generates by itself: after every step (not every dab) the part
@@ -808,8 +843,7 @@ change, span `model.armies`), the place tool and the commands.
 - Automation: `state.units` (`place`: unit, preset, army, group, heading, structure, footprint;
   `tree`: the chosen group and the first 200 groups with their units) and `state.armies` (name,
   playable, team, factions, spawn, units, alliances, chosen).
-- Not built yet: dragging units or groups in the tree, mirroring placed units with symmetry,
-  team colours in the views.
+- Not built yet: dragging units or groups in the tree, team colours in the views.
 
 ## Markers: placing, linking, chains
 
@@ -860,7 +894,7 @@ inspector's `MarkerSelection`.
 - Automation: `state.markers` (the kinds shown, what can be picked, the chains with their
   markers, the chosen chain, adaptive, the last warning, the active marker tool's settings).
 - Not built yet: weather markers, a line drawn while a link is dragged, the slope under the
-  mouse before a click, mirroring by the symmetry (wave 2), marker presets (`markers.placePreset`).
+  mouse before a click, marker presets (`markers.placePreset`).
 
 ## Props: placing, painting, reclaim
 
@@ -903,7 +937,7 @@ follow the terrain, and the reclaim. The maths is the library's (`PropOrientatio
   the selection's reclaim and the buttons of the commands above.
 - Automation: `state.props` (the place tool's prop, Placing, palette, paint and erase settings,
   reclaim with areas).
-- Not built yet: symmetry for placed and painted props (wave 2), handles, the K-1 masks as layers.
+- Not built yet: handles, the K-1 masks as layers.
 
 ## The map and its atmosphere: panels of settings
 
