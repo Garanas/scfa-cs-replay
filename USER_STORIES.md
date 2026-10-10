@@ -105,21 +105,27 @@ reads again when it changes; and nothing that generates runs by itself.
 - [ ] **M-2 New map.** Size, starting height, water, biome or template; from scratch. Today:
       File, New map (`file.new`): one of the game's sizes, the height, water and its elevation,
       the strata of one of six biomes, spawns and the playable area. Missing: templates.
-- [ ] **M-3 Size and playable area.** Grow or crop the map; set the playable area.
+- [x] **M-3 Size and playable area.** Grow or crop the map; set the playable area. The Map mode's
+      Map size tool (`map.resize`): another of the game's sizes per side, an anchor or an offset,
+      the edges' heights or a height for what the map gains, every grid and thing along, what lies
+      outside removed (spawns kept at the edge), one step of undo. The playable area is the area
+      the scenario names (the inspector's check box, `map.setPlayableArea`), else the first; the
+      export writes it into the script's `SetPlayableArea`.
 - [x] **M-4 Armies.** Add, remove and rename armies; playable or extra (civilians); factions an army
       is limited to; alliances; teams for the lobby. The Map mode's Armies and teams: a renamed army
       renames its spawn, a removed one takes its units and spawn along, a playable one gets a spawn.
       Teams are kept in the project and written after the team FFA, the only one the game's lobby
       reads; the lobby does not use them yet.
 - [x] **M-5 Areas.** Draw, name, move and resize areas (rectangles) in the views: the areas tool
-      (handles in the top view), the Map panel's list, the inspector's fields; the first is the
-      playable area. Missing: handles in the 3D view.
+      (handles in the top view), the Map panel's list, the inspector's fields; one is the playable
+      area (M-3). Missing: handles in the 3D view.
 - [x] **M-6 Script.** Open the map's script in the user's editor; see the files of the map folder.
 - [x] **M-7 Import and export.** Import a map folder of the game or the vault; export into the
       vault's `maps` folder.
 - [ ] **M-8 Versions and upload.** Raise the version on export; render the preview; upload to the
       FAF vault, refusing a map that is not publishable (`MapDocument.IsPublishable`: the sandbox).
-      Today: File, Render the preview (S-4). Missing: raising the version, the upload.
+      Today: File, Render the preview (S-4); `file.export {raise}` raises the version (folder and
+      `map_version`) and renders a preview out of date first. Missing: the upload.
 
 ## T: Terrain
 

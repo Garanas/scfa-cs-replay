@@ -61,5 +61,11 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// for every other map.
         /// </summary>
         public bool? Publishable { get; init; }
+
+        /// <summary>
+        /// The name of the area that is the playable area at the start; left out for the first
+        /// area, the map editors' convention.
+        /// </summary>
+        public string? PlayableArea { get; init; }
     }
 }

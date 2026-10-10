@@ -40,6 +40,12 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public MapFolderName Folder => new MapFolderName(Name, Version);
 
         /// <summary>
+        /// The version an export that raises it gives the map (user story M-8): one more than its
+        /// own, or 1 for a map without one.
+        /// </summary>
+        public int NextVersion => (Version ?? 0) + 1;
+
+        /// <summary>
         /// The width of the map in ogrids, from the heightmap.
         /// </summary>
         public int Width => Terrain.Heightmap.Width;
@@ -99,14 +105,23 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             ImmutableSortedDictionary.Create<string, TiledBuffer<byte>>(StringComparer.Ordinal);
 
         /// <summary>
-        /// An id for a new prop: one more than the highest in use.
+        /// The playable area at the start (user story M-3): the area <see cref="ScenarioInfo.PlayableArea"/>
+        /// names, else the first area (the map editors' convention: their script makes <c>AREA_1</c>
+        /// playable); null for a map without areas, which is playable as a whole.
         /// </summary>
+        public Area? PlayableArea => Scenario.PlayableArea is string name && Markers.Areas.FirstOrDefault(area => area.Name == name) is Area named
+            ? named
+            : Markers.Areas.FirstOrDefault();
+
         /// <summary>
         /// Whether the map may be uploaded to the vault. An upload (user story M-8) refuses a map
         /// for which this is false; exporting to the game's maps folder works for every map.
         /// </summary>
         public bool IsPublishable => Scenario.Publishable;
 
+        /// <summary>
+        /// An id for a new prop: one more than the highest in use.
+        /// </summary>
         public int NextPropId() => Props.IsEmpty ? 1 : Props.Max(prop => prop.Id) + 1;
     }
 }

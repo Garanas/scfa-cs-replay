@@ -610,6 +610,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 })]),
             },
             ["mapPanels"] = model.DescribeMapPanels(),
+            ["mapSize"] = model.DescribeMapSize(),
             ["presets"] = new JsonObject
             {
                 ["folder"] = model.Presets.Library?.Folder,

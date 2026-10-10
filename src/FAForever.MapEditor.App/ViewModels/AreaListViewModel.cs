@@ -9,8 +9,8 @@ namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
 /// An area in the Map panel's list (user story M-5): its name to type over, its rectangle, and
-/// whether it is the playable area (the first, by convention: the game's <c>ScenarioInfo</c> has no
-/// field for it, and the lobby's options and scripts take <c>AREA_1</c>).
+/// whether it is the playable area (<see cref="MapDocument.PlayableArea"/>: the one the scenario
+/// names, else the first, which the map editors' scripts make playable as <c>AREA_1</c>).
 /// </summary>
 public sealed partial class AreaItem(Area area, bool isPlayable, Func<string, JsonObject, Task> run) : ObservableObject
 {
@@ -63,12 +63,13 @@ public sealed partial class AreaItem(Area area, bool isPlayable, Func<string, Js
 }
 
 /// <summary>
-/// The areas of the map in the Map panel (user story M-5), in their order; the first is the
-/// playable area. Drawing, moving and resizing them is the areas tool's (<c>Tools/AreaTool</c>).
+/// The areas of the map in the Map panel (user story M-5), in their order, with the playable area
+/// marked (user story M-3). Drawing, moving and resizing them is the areas tool's (<c>Tools/AreaTool</c>).
 /// </summary>
 public sealed partial class AreaListViewModel(Func<string, JsonObject, Task> run) : ObservableObject
 {
     private System.Collections.Immutable.ImmutableArray<Area> _shown;
+    private string? _shownPlayable;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -82,11 +83,13 @@ public sealed partial class AreaListViewModel(Func<string, JsonObject, Task> run
     public void Refresh(MapDocument? document)
     {
         System.Collections.Immutable.ImmutableArray<Area> areas = document?.Markers.Areas ?? [];
-        if (areas == _shown && !areas.IsDefault)
+        string? playable = document?.PlayableArea?.Name;
+        if (areas == _shown && !areas.IsDefault && playable == _shownPlayable)
         {
             return;
         }
         _shown = areas;
-        Items = [.. areas.Select((area, index) => new AreaItem(area, index == 0, run))];
+        _shownPlayable = playable;
+        Items = [.. areas.Select(area => new AreaItem(area, area.Name == playable, run))];
     }
 }

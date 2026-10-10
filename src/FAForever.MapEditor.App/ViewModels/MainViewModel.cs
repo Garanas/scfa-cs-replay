@@ -131,6 +131,7 @@ public sealed partial class MainViewModel : ObservableObject
         Props = new PropsViewModel(this);
         InitializePainting();
         InitializeMapPanels();
+        InitializeMapSize();
     }
 
     /// <summary>
@@ -454,15 +455,23 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <returns>The map folder that was written.</returns>
     /// <exception cref="OperationVetoedException">A handler of <see cref="EditorEvents.BeforeExport"/> stopped it.</exception>
-    public async Task<string> ExportAsync(string outputFolder, int? version = null)
+    public async Task<string> ExportAsync(string outputFolder, int? version = null, bool raise = false)
     {
         EditedMap map = RequireMap();
         Events.CheckExport(map, outputFolder);
+        if (raise)
+        {
+            // the map keeps its new version: the next export and the project go on from it (M-8)
+            int next = map.Document.NextVersion;
+            EditMap($"Raise the version to {next}", document => document with { Version = next });
+        }
+        await RenderPreviewWhenStaleAsync();
         string folder = "";
+        int? exported = version ?? map.Document.Version;
         await BusyAsync("export", "Exporting...", async () =>
         {
             folder = await map.ExportAsync(outputFolder, version);
-            Status = $"Exported {folder}";
+            Status = $"Exported {folder} (version {exported?.ToString() ?? "none"}); exporting with raise makes version {(exported ?? 0) + 1}";
         });
         if (!map.Document.IsPublishable)
         {

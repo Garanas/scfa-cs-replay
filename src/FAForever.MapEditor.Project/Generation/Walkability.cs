@@ -51,15 +51,21 @@ namespace FAForever.MapEditor.Project.Generation
                 NoFields))];
 
         /// <summary>
-        /// The playable area the game generates the mesh for (<see cref="NavGenerator.FindPlayableArea"/>):
-        /// the first area of a skirmish map when it is larger than 32 by 32 ogrids; null for the whole map.
+        /// The playable area the game generates the mesh for, on a skirmish map: the one the scenario
+        /// names (<see cref="ScenarioInfo.PlayableArea"/>), else the first area when it is larger than
+        /// 32 by 32 ogrids (<see cref="NavGenerator.FindPlayableArea"/>); null for the whole map.
         /// </summary>
-        public static MapArea? PlayableArea(MapDocument document) =>
-            document.Scenario.Type == ScenarioType.Skirmish
-                && document.Markers.Areas.FirstOrDefault() is { } area
-                && area.X1 - area.X0 > 32 && area.Z1 - area.Z0 > 32
+        public static MapArea? PlayableArea(MapDocument document)
+        {
+            if (document.Scenario.Type != ScenarioType.Skirmish || document.PlayableArea is not { } area)
+            {
+                return null;
+            }
+            bool named = document.Scenario.PlayableArea == area.Name;
+            return named || (area.X1 - area.X0 > 32 && area.Z1 - area.Z0 > 32)
                 ? new MapArea(area.Name, area.X0, area.Z0, area.X1, area.Z1)
                 : null;
+        }
 
         /// <summary>
         /// Whether units of a layer can path over an ogrid: it has a label. An ogrid of a region the

@@ -323,13 +323,46 @@ namespace FAForever.MapEditor.Project.Editing
             return document with { Markers = document.Markers with { Areas = areas.Add(added) } };
         }
 
+        /// <summary>
+        /// Changes an area. Renaming the playable area names it in the scenario
+        /// (<see cref="ScenarioInfo.PlayableArea"/>), also when it was the first area by convention,
+        /// so the export points the script at the new name.
+        /// </summary>
         /// <exception cref="KeyNotFoundException">No area has the name.</exception>
-        public static MapDocument UpdateArea(this MapDocument document, string name, Func<Area, Area> update) =>
-            document with { Markers = document.Markers with { Areas = document.Markers.Areas.Update(area => area.Name == name, update, $"area {name}") } };
+        public static MapDocument UpdateArea(this MapDocument document, string name, Func<Area, Area> update)
+        {
+            bool playable = document.PlayableArea?.Name == name;
+            MapDocument updated = document with { Markers = document.Markers with { Areas = document.Markers.Areas.Update(area => area.Name == name, update, $"area {name}") } };
+            string? renamed = updated.Markers.Areas.FirstOrDefault(area => !document.Markers.Areas.Any(before => before.Name == area.Name))?.Name;
+            return playable && renamed is not null
+                ? updated with { Scenario = updated.Scenario with { PlayableArea = renamed } }
+                : updated;
+        }
 
+        /// <summary>
+        /// Removes an area; removing the playable area named in the scenario makes the first area
+        /// the playable one again.
+        /// </summary>
         /// <exception cref="KeyNotFoundException">No area has the name.</exception>
-        public static MapDocument RemoveArea(this MapDocument document, string name) =>
-            document with { Markers = document.Markers with { Areas = document.Markers.Areas.RemoveAt(document.Markers.Areas.Find(area => area.Name == name, $"area {name}")) } };
+        public static MapDocument RemoveArea(this MapDocument document, string name)
+        {
+            MapDocument removed = document with { Markers = document.Markers with { Areas = document.Markers.Areas.RemoveAt(document.Markers.Areas.Find(area => area.Name == name, $"area {name}")) } };
+            return removed.Scenario.PlayableArea == name ? removed with { Scenario = removed.Scenario with { PlayableArea = null } } : removed;
+        }
+
+        /// <summary>
+        /// Makes an area the playable area at the start (user story M-3), or the first area again
+        /// (the convention) with null.
+        /// </summary>
+        /// <exception cref="KeyNotFoundException">No area has the name.</exception>
+        public static MapDocument SetPlayableArea(this MapDocument document, string? name)
+        {
+            if (name is not null && !document.Markers.Areas.Any(area => area.Name == name))
+            {
+                throw new KeyNotFoundException($"The map has no area {name}");
+            }
+            return document.Scenario.PlayableArea == name ? document : document with { Scenario = document.Scenario with { PlayableArea = name } };
+        }
 
         #endregion
 

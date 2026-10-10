@@ -87,6 +87,7 @@ public static class EditorModes
         new ModeDefinition("map", "Map", "Icon.Map", "Information, armies, areas, script", 0, "F1", "M-1",
             [
                 new ToolDefinition("map.areas", "Areas", "M-5") { Make = model => new AreaTool(model) },
+                new ToolDefinition("map.size", "Map size", "M-3") { Make = model => new MapSizeTool(model) },
             ],
             [
                 new MapInformationSection(),

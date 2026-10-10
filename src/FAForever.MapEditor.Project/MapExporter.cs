@@ -74,9 +74,29 @@ namespace FAForever.MapEditor.Project
                     Armies = [.. document.Armies.Select(ToMapArmy)],
                 },
                 Scenario = ToMapScenario(document, root),
-                Script = document.Script is { } script ? ImmutableCollectionsMarshal.AsArray(script) : null,
+                Script = ScriptOf(document),
                 Files = document.Files.ToDictionary(entry => entry.Key, entry => ImmutableCollectionsMarshal.AsArray(entry.Value)!),
             };
+        }
+
+        /// <summary>
+        /// The script, which sets the playable area the scenario names (<see cref="ScenarioInfo.PlayableArea"/>):
+        /// its call changed or added (<see cref="MapScript.WithPlayableArea"/>). A map that keeps the
+        /// convention, or whose script has no place for the call, keeps its script as it is.
+        /// </summary>
+        private static byte[]? ScriptOf(MapDocument document)
+        {
+            if (document.Script is not { } script)
+            {
+                return null;
+            }
+            byte[] bytes = ImmutableCollectionsMarshal.AsArray(script)!;
+            if (document.Scenario.PlayableArea is not string area || !document.Markers.Areas.Any(a => a.Name == area))
+            {
+                return bytes;
+            }
+            string text = MapImporter.LuaEncoding.GetString(bytes);
+            return MapScript.WithPlayableArea(text, area) is string changed && changed != text ? MapImporter.LuaEncoding.GetBytes(changed) : bytes;
         }
 
         /// <summary>

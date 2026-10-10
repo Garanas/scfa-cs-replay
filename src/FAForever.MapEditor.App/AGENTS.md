@@ -954,11 +954,39 @@ mode panel's and inspector's templates only name it).
 - **Presets**: the kinds `lighting` (all of it) and `water` (its look; the elevations, wave
   generators and masks stay the map's), the library's `AtmospherePresets`; the Lighting and Water
   panels list them.
-- The top view labels the first area "(playable area)". `state.mapPanels` has the information,
+- The top view labels the playable area (the one the scenario names, else the first, M-3). `state.mapPanels` has the information,
   areas, script and files, water, lighting angles, layers, the ruler's measurement and whether
   the page of a new map is open.
 - Not built yet: the sky and cube maps (L-1), a sun handle and area handles drawn in 3D,
   placing wave generators with the mouse, templates for a new map.
+
+## Map size, playable area and versions
+
+User stories M-3 and M-8; the core's side is `ViewModels/MainViewModel.MapSize.cs`, the maths the
+library's (`MapResize`, `MapScript`; its guide).
+
+- **The Map size tool** (`map.size`, `Tools/MapSizeTool`): its options row is the dialog: Apply
+  first (so a narrow window does not scroll it away), the width and height (the game's sizes), the
+  anchor, the offset (where the old map's corner lands; typed or dragged it stops following the
+  anchor), Fill at a height, Fit the playable area, and the summary. The views draw the new map's
+  rectangle as the tool's `Box` with its size on the top edge (`Marks`); dragging it moves it by 4
+  ogrids. Apply runs `map.resize` with the tool's `Arguments()`.
+- **`map.resize {width?, height?, anchor?, offsetX?, offsetZ?, fillHeight?, fitPlayableArea?}`**:
+  without a size it chooses the tool; with one it resizes on a pool thread (`ResizeMapAsync`, span
+  `model.resize-map`, operation `resize`) and puts the result in as one step of undo. The status line
+  says what was removed (decision: things outside are removed, spawns kept at the edge, areas cut)
+  and that the normal map and preview are out of date. A document of another size (a resize, its
+  undo) raises `MapChanged` and resets the camera, so both views start over; the tool takes the size.
+- **The playable area**: `map.setPlayableArea {name?}` (none: the first area again); the inspector of
+  one selected area has a check box "Playable area"; the top view labels it and the Map panel's
+  list marks it.
+- **Export** (`file.export {folder?, version?, raise?}`): `raise` raises the map's own version first
+  (a step of undo: the project keeps it); a preview out of date is rendered before the export; the
+  status names the version written and the next. The map's own preview counts as generated for the
+  map as opened (a result kept on `MapOpened`), so the status bar tells when it is out of date.
+- Automation: `state.mapSize` (size, playable area and whether it is named, version, next version,
+  folder, the tool's settings and summary).
+- Not built yet: the upload to the vault (M-8, wave 3), the rectangle and handles in the 3D view.
 
 ## Diagnostics: what goes well and wrong
 

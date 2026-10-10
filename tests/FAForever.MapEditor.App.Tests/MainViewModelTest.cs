@@ -752,6 +752,8 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = new MainViewModel(new Answers());
             HighGround generator = new HighGround();
             model.Generation.Results.Register(generator);
+            // the map's own preview counts as generated for the map as opened (MapSizeTest): out of the way here
+            model.Generation.Results.Unregister("preview");
             await model.OpenAsync(HardFfa);
             Assert.AreEqual(GeneratedStatus.Missing, model.Generation.States.Single(state => state.Generator.Id == "high-ground").Status);
             CommandRun nothing = await model.Commands.RunAsync("generate.stale", [], interactive: false);

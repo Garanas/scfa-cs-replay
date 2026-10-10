@@ -28,10 +28,10 @@ namespace FAForever.MapEditor.Project.Generation
         public static GeneratedInput WaterLevel { get; } = new GeneratedInput("water level", document => document.Water.HasWater ? document.Water.Elevation : null);
 
         /// <summary>
-        /// The deposits and the areas (the first is the playable area of a skirmish map), without the
-        /// other markers: what walkability reads of them.
+        /// The deposits, the areas and which of them is the playable area of a skirmish map, without
+        /// the other markers: what walkability reads of them.
         /// </summary>
-        public static GeneratedInput DepositsAndAreas { get; } = new GeneratedInput("deposits and areas", document => (document.Markers.Resources, document.Markers.Areas));
+        public static GeneratedInput DepositsAndAreas { get; } = new GeneratedInput("deposits and areas", document => (document.Markers.Resources, document.Markers.Areas, document.Scenario.PlayableArea));
 
         /// <summary>
         /// The map's type (skirmish, co-op): whether its first area is the playable area.
