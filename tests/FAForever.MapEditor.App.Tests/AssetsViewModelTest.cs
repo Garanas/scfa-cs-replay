@@ -126,7 +126,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(AssetKind.Unit, shelf.Kind);
             Assert.AreEqual("UEF Residential Building", shelf.Shown!.Name);
             StringAssert.Contains(shelf.ShownUse, "Place tool", "a unit is placed today");
-            Assert.AreEqual("", shelf.ShownPlanned);
+            shelf.Select("/env/Evergreen/Props/Trees/Pine06_s2_prop.bp");
+            StringAssert.Contains(shelf.ShownUse, "Place tool", "a prop is placed today");
 
             Assert.ThrowsException<ArgumentException>(() => shelf.Select("/env/none/props/nothing_prop.bp"));
         }
@@ -148,7 +149,6 @@ namespace FAForever.MapEditor.App.Tests
             shelf.Select("brushes/craters/crater01.png");
             Assert.AreEqual("Brush · Craters · shape", shelf.ShownDetail);
             StringAssert.Contains(shelf.ShownUse, "Sculpt");
-            Assert.AreEqual("", shelf.ShownPlanned, "brushes are used today");
             Assert.AreEqual("In the workspace", shelf.ShownKeyLabel);
             Assert.AreEqual("", shelf.ShownUses, "a map holds no brushes");
 

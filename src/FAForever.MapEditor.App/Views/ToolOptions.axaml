@@ -1,23 +1,22 @@
-<!-- The active tool's settings, in one row of a fixed height whatever the tool, so the views never move:
-     a template per tool class; a tool not built yet says what it will do. -->
+<!-- The active tool's settings, in one row of a fixed height whatever the tool and the window's width, so the views
+     never move (what does not fit shows behind More): a template per tool class; a tool not built yet says what it will do. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:tools="using:FAForever.MapEditor.App.Tools"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              x:Class="FAForever.MapEditor.App.Views.ToolOptions"
-             x:DataType="vm:MainViewModel">
+             x:DataType="vm:MainViewModel" ClipToBounds="False">
   <Border Classes="toolbar options">
-    <!-- a window too narrow scrolls the row; Fluent's scroll bar lies over it, so the height stays -->
-    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-      <StackPanel Classes="toolrow" IsEnabled="{Binding HasMap}">
-        <TextBlock Classes="heading" Text="{Binding ActiveTool.Definition.Title}" />
-
-        <ContentControl Content="{Binding ActiveTool.Tool}" IsVisible="{Binding ActiveTool.Tool, Converter={x:Static ObjectConverters.IsNotNull}}">
+    <!-- what does not fit goes behind the row's More button (controls:ToolRow), so the height stays -->
+    <DockPanel IsEnabled="{Binding HasMap}">
+      <TextBlock DockPanel.Dock="Left" Classes="heading toolname" Text="{Binding ActiveTool.Definition.Title}" />
+      <Panel>
+        <ContentControl ClipToBounds="False" Content="{Binding ActiveTool.Tool}" IsVisible="{Binding ActiveTool.Tool, Converter={x:Static ObjectConverters.IsNotNull}}">
           <ContentControl.DataTemplates>
             <!-- sculpting the heights (T-1) -->
             <DataTemplate DataType="tools:SculptTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
                           ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
                           AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
@@ -54,11 +53,11 @@
                   <TextBox Classes="toolfield" Text="{Binding MaxHeight, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Highest height the brush makes" />
                 </StackPanel>
                 <ContentControl Content="{Binding Shape}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- painting a stratum's mask (S-1), where the slope and height allow -->
             <DataTemplate DataType="tools:StrataTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
                           ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
                           AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
@@ -87,11 +86,11 @@
                   <TextBox Classes="toolfield" Text="{Binding Limiting.MaxHeight, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Highest height to paint" />
                 </StackPanel>
                 <ContentControl Content="{Binding Shape}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- painting the water's foam, flatness or depth bias (W-2) -->
             <DataTemplate DataType="tools:WaterPaintTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <ComboBox ItemsSource="{Binding Masks}" SelectedItem="{Binding Painted}" ToolTip.Tip="{Binding Painted.Help}"
                           AutomationProperties.Name="Water mask to paint" AutomationProperties.HelpText="Foam, flatness or depth bias; the top view shows the chosen one" />
                 <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
@@ -109,11 +108,11 @@
                 </StackPanel>
                 <CheckBox Content="Erase" IsChecked="{Binding Erase}" AutomationProperties.Name="Erase the water mask" />
                 <ContentControl Content="{Binding Shape}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- painting a mask for tools (K-1), chosen in the Paint panel -->
             <DataTemplate DataType="tools:MaskPaintTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <TextBlock Classes="label" Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.Chosen, StringFormat='Mask: {0}', TargetNullValue='No mask: add one in the panel'}" />
                 <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
                           ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
@@ -130,11 +129,11 @@
                 </StackPanel>
                 <CheckBox Content="Erase" IsChecked="{Binding Erase}" AutomationProperties.Name="Erase the mask" />
                 <ContentControl Content="{Binding Shape}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- painting the terrain types (T-6): the type, the legend of the types the map uses, then the brush -->
             <DataTemplate DataType="tools:TerrainTypeTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <ComboBox ItemsSource="{Binding Types}" SelectedItem="{Binding Chosen}" MaxWidth="{StaticResource ToolChoiceWidth}" ToolTip.Tip="{Binding Chosen.Description}"
                           AutomationProperties.Name="Terrain type to paint" AutomationProperties.HelpText="The game's terrain types, each in its colour in the top view">
                   <ComboBox.ItemTemplate>
@@ -172,7 +171,7 @@
                           ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
                           AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
                 <ContentControl Content="{Binding Shape}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- selecting and moving what lies on the map (F-11) -->
             <DataTemplate DataType="tools:SelectTool">
@@ -192,7 +191,7 @@
             </DataTemplate>
             <!-- the Decals mode's select tool (F-11, D-1): what dragging the selection does -->
             <DataTemplate DataType="tools:DecalSelectTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="Drag" />
                   <ComboBox ItemsSource="{Binding DragModes}" SelectedItem="{Binding DragMode}" AutomationProperties.Name="What dragging the selection does"
@@ -209,11 +208,11 @@
                             AutomationProperties.HelpText="Shift snaps a move to this grid, a turn to 15 degrees, a scale to tenths" />
                 </StackPanel>
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- placing decals (D-1): the decal, its size, turn and distance -->
             <DataTemplate DataType="tools:DecalPlaceTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <StackPanel Classes="inline">
                   <controls:AssetThumbnail Source="{Binding Image}" DecodeWidth="64" Width="{StaticResource ChipHeight}" Height="{StaticResource ChipHeight}"
                                            IsVisible="{Binding Image, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.Name="Picture of the decal to place" />
@@ -237,11 +236,11 @@
                           AutomationProperties.Name="Distance a new decal shows within"
                           AutomationProperties.HelpText="The game does not draw the decal when the camera is further away (its cut-off LOD); maps mostly use 200 to 800" />
                 </StackPanel>
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- placing units (U-2) or a units preset (U-4): what, for which army, into which group, facing where -->
             <DataTemplate DataType="tools:UnitPlaceTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <StackPanel Classes="inline">
                   <controls:AssetThumbnail Model="{Binding Unit.Model}" Width="{StaticResource ToolButtonHeight}" Height="{StaticResource ToolButtonHeight}"
                                            IsVisible="{Binding HasUnit}" AutomationProperties.Name="Picture of the unit to place" />
@@ -261,25 +260,25 @@
                 </StackPanel>
                 <TextBlock Classes="label" Text="{Binding Heading, StringFormat='Facing: {0:0}°'}" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- placing markers of a kind (R-1): the grid, an AI marker's type, the last deposit's slope -->
             <DataTemplate DataType="tools:PlaceMarkerTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <ComboBox ItemsSource="{Binding Snaps}" SelectedItem="{Binding Snap}" IsVisible="{Binding CanSnap}" AutomationProperties.Name="Snap markers to a grid" />
                 <ComboBox ItemsSource="{Binding AiTypes}" SelectedItem="{Binding AiType}" IsVisible="{Binding IsAi}" AutomationProperties.Name="Type of AI marker to place" />
                 <TextBlock Classes="warning" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Markers.PlacementWarning}" ToolTip.Tip="{Binding Markers.PlacementWarning}"
                            IsVisible="{Binding !CanSnap}" AutomationProperties.Name="Slope of the last deposit" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- placing and linking path nodes by hand (R-3) -->
             <DataTemplate DataType="tools:PathTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <ComboBox ItemsSource="{Binding Layers}" SelectedItem="{Binding Layer}" AutomationProperties.Name="Layer of the path nodes to place" />
                 <ComboBox ItemsSource="{Binding Snaps}" SelectedItem="{Binding Snap}" AutomationProperties.Name="Snap path nodes to a grid" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- placing a markers preset (F-10) -->
             <DataTemplate DataType="tools:MarkerPresetTool">
@@ -290,14 +289,14 @@
             </DataTemplate>
             <!-- putting markers in a chain (R-4) -->
             <DataTemplate DataType="tools:ChainTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <TextBlock Classes="label" Text="{Binding Markers.SelectedChain.Summary, FallbackValue='A new chain', TargetNullValue='A new chain'}" AutomationProperties.Name="Chain the clicks add to" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- placing props one by one (P-1): the prop a click places, chosen in the picker or on the shelf -->
             <DataTemplate DataType="tools:PropPlaceTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <Border Classes="thumbnail toolthumb">
                   <controls:AssetThumbnail Model="{Binding Prop.Model}" DecodeWidth="64" IsVisible="{Binding HasProp}" AutomationProperties.Name="Picture of the prop to place" />
                 </Border>
@@ -305,11 +304,11 @@
                 <Button Content="Choose..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.choose"
                         AutomationProperties.HelpText="Choose the prop to place in the picker; a prop chosen on the shelf in the Props mode is chosen as well" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- painting props of the palette (P-2), only where a layer covers (P-3) -->
             <DataTemplate DataType="tools:PropPaintTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0}'}" />
                   <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Paint brush radius in ogrids" />
@@ -333,17 +332,17 @@
                   <TextBlock Classes="label" Text="{Binding Threshold, StringFormat='Covered: {0:P0}'}" />
                   <Slider Minimum="0" Maximum="1" Value="{Binding Threshold}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="How much a layer covers to count" />
                 </StackPanel>
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- taking props away with a brush (P-2) -->
             <DataTemplate DataType="tools:PropEraseTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
                   <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Eraser radius in ogrids" />
                 </StackPanel>
                 <CheckBox Content="Only the palette's props" IsChecked="{Binding OnlyPalette}" AutomationProperties.Name="Erase only the props of the palette" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- drawing, moving and resizing areas (M-5) -->
             <DataTemplate DataType="tools:AreaTool">
@@ -375,10 +374,10 @@
             </DataTemplate>
             <!-- turning the sun (L-1) -->
             <DataTemplate DataType="tools:SunTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
                 <TextBlock Classes="mono" Text="{Binding Angles}" AutomationProperties.Name="Sun angles" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- drawing curves that shape the terrain (T-4): what a new curve gets; the chosen curve's own are in the inspector -->
             <DataTemplate DataType="tools:CurveTool">
@@ -422,7 +421,7 @@
                      ToolTip.Tip="{Binding ActiveTool.Definition.Missing}" />
           <TextBlock Classes="story" Text="{Binding ActiveTool.Definition.Story, StringFormat='Not built yet: user story {0}'}" />
         </StackPanel>
-      </StackPanel>
-    </ScrollViewer>
+      </Panel>
+    </DockPanel>
   </Border>
 </UserControl>

@@ -142,6 +142,11 @@ public static class UiTree
         {
             node["visible"] = false;
         }
+        if (Controls.ToolRow.IsInOverflow(control))
+        {
+            // a tool's setting that does not fit in the options row: a person clicks More to reach it
+            node["overflow"] = Controls.ToolRow.IsOverflowHidden(control) ? "hidden" : "shown";
+        }
         return node;
     }
 

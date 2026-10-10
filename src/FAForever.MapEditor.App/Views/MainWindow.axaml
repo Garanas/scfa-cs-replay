@@ -86,7 +86,7 @@
                       AutomationProperties.Name="Resize the mode panel" />
 
         <DockPanel Grid.Column="2">
-          <views:ToolOptions DockPanel.Dock="Top" />
+          <views:ToolOptions DockPanel.Dock="Top" ZIndex="1" />
 
           <!-- which view, and what it shows over the terrain; the tabs only choose: both views stay in the tree,
                so the 3D view keeps its textures on the graphics card -->

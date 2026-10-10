@@ -67,6 +67,7 @@ public sealed partial class MainWindow : Window
             _model.Palette.PropertyChanged -= OnPaletteChanged;
             _model.FitRequested -= OnFitRequested;
             _model.TopViewRequested -= OnTopViewRequested;
+            _model.TopViewFrameRequested -= OnTopViewFrameRequested;
             _model.ShowFolderRequested -= OnShowFolderRequested;
             _model.OpenFileRequested -= OnOpenFileRequested;
             _model.Layout.PropertyChanged -= OnLayoutChanged;
@@ -80,6 +81,7 @@ public sealed partial class MainWindow : Window
             _model.Palette.PropertyChanged += OnPaletteChanged;
             _model.FitRequested += OnFitRequested;
             _model.TopViewRequested += OnTopViewRequested;
+            _model.TopViewFrameRequested += OnTopViewFrameRequested;
             _model.ShowFolderRequested += OnShowFolderRequested;
             _model.OpenFileRequested += OnOpenFileRequested;
             _model.Layout.PropertyChanged += OnLayoutChanged;
@@ -221,7 +223,13 @@ public sealed partial class MainWindow : Window
 
     private void OnFitRequested(object? sender, EventArgs e) => Heightmap.Fit();
 
-    private void OnTopViewRequested(double x, double z, double? zoom) => Heightmap.Show(zoom ?? Heightmap.Zoom, x, z);
+    private void OnTopViewFrameRequested(double x0, double z0, double x1, double z1) => Heightmap.ShowArea(x0, z0, x1, z1);
+
+    private void OnTopViewRequested(double? x, double? z, double? zoom)
+    {
+        Avalonia.Point centre = Heightmap.Centre;
+        Heightmap.Show(zoom ?? Heightmap.Zoom, x ?? centre.X, z ?? centre.Y);
+    }
 
     private async void OnShowFolderRequested(string folder) => await Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(folder));
 

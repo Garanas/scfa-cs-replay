@@ -59,7 +59,9 @@ is an extension in `Avalonia.Input`; `Bitmap.Save` takes encoder options).
   without a handler with `[Incomplete("T-4", "what it is to do")]`, in the menu's `Planned.cs`.
   A tool: a `ToolDefinition` in `ViewModels/EditorModes.cs` (`Missing` until it works, then
   `Make`), a class in `Tools/` implementing `IMapTool` (the left mouse; a brush uses
-  `BrushStroke`), and a `DataTemplate` for its settings in `Views/ToolOptions.axaml`; the views
+  `BrushStroke`), and a `DataTemplate` for its settings in `Views/ToolOptions.axaml`, its root a
+  `controls:ToolRow Classes="toolrow"` with the settings most used first (what does not fit at the
+  window's width goes behind the row's More, over the views; the row never grows); the views
   never name a tool. A part of a panel not built yet: a `PlannedSection`. Every story named must be in `USER_STORIES.md`
   (`CommandRegistryTest`). Its state in automation's `state`.
 - Tests: the operation in `MainViewModelTest`; the mouse, keys and what the window shows in
@@ -112,8 +114,34 @@ faf-map editor drag view=3d from=[10,10] to=[300,200] data=<asset key> --port 53
 faf-map editor state --port 5372                               # handles.points: each handle's pixel in the top and 3D views; hover: what the 3D mouse is over
 ```
 
+Set controls, look at things, read the map:
+
+```sh
+faf-map editor set label="Height brush strength" value=0.3 --port 5372   # slider, text field (typed, Enter), check box, combo, list, tree
+faf-map editor set label="Height brush mode" value=Flatten --port 5372   # opens the options row's More when the control is behind it
+faf-map editor focus ref=unit:UNIT_1 --port 5372                         # frames it in both views (view.frame); selection=true: the selection
+faf-map editor grid target=stratum:1 x=100 z=60 --port 5372             # heightmap, types, stratum:N, water:foam, mask:<name>; or x0 z0 x1 z1 step
+faf-map editor screenshot part=options path=<scratch>/o.png --port 5372 # options, inspector, panel, dock, rail, top, 3d
+faf-map editor undo --port 5372                                         # ran: false comes with why ("nothing to undo")
+faf-map editor view zoom=4 --port 5372                                  # the top view zooms about its middle
+```
+
+`faf-map editor start` detaches the editor (its output in `editor-<port>.log` beside the settings
+file, or `--log`), so the call returns with its JSON even inside a pipe.
+
 Headless: `new AutomationServer(window, model, 0).HandleAsync("mouse", ...)` runs the same commands
-(`AutomationTest`); `HeadlessApp.Capture(control)` draws one control; `TestAssets.Catalog(unitModel: true)`
-and `TestAssets.SandboxProject()` give assets with models and a map with one of every kind of thing.
+(`AutomationTest`), and `EditorDriver.InProcess(automation)` (or `EditorDriver.Http(port)`) wraps them
+typed (`Set`, `Run`, `Click`, `Key`, `PointOf`, `Grid`, `Focus`, `Screenshot`); `HeadlessApp.Capture(control)`
+draws one control; `TestAssets.Catalog(unitModel: true)` and `TestAssets.SandboxProject()` give assets
+with models and a map with one of every kind of thing; `TestMaps.Slope(degrees)` a flat map with a
+clean ramp (slope limits, alignment).
+
+## Editing files from the shell
+
+The files are CRLF and UTF-8: heredocs with apostrophes break, `sed -i` may write LF, Python's
+`open()` is cp1252. Prefer Edit/Write; for a scripted change write the old and new text to files and
+run `faf-map dev replace <file> --old-file old.txt --new-file new.txt [--count n | --all]`: it keeps
+the file's line endings, UTF-8 and byte order mark, and refuses when the old text does not occur as
+often as expected (once by default).
 
 Read `ui` before guessing from a screenshot; look at a screenshot before saying a look is right.

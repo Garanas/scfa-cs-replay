@@ -312,7 +312,8 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## V: Views
 
-- [x] **V-1 Top view.** The terrain from above with the brush, markers and the 3D camera.
+- [x] **V-1 Top view.** The terrain from above with the brush, markers and the 3D camera; props as
+      dots, sparse when zoomed out. Frame the selection (or any things) in both views.
 - [x] **V-2 3D view.** On the graphics card, with strata, decals and water; the FAF editor's camera;
       the props and units with their models, the markers as symbols, the object under the mouse
       found by picking and drawn highlighted.

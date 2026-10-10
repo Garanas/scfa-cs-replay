@@ -59,7 +59,7 @@ public sealed partial class MainViewModel
             Status = entry.Kind switch
             {
                 AssetKind.Prop or AssetKind.Unit or AssetKind.Decal => $"Open a map to place {entry.Name}",
-                AssetKind.Texture => $"Dropping a texture on the map is not built yet; a stratum takes it in the Paint mode (user story S-2)",
+                AssetKind.Texture => $"A texture is a stratum's: choose {entry.Name} for a layer in the Paint mode's layer textures",
                 _ => $"A brush is a shape of the brush tools: choose {entry.Name} on the shelf",
             };
         }

@@ -34,7 +34,7 @@ public static class Menus
         new MenuLayout("Select", ["select.all", "select.none", Separator, "select.symmetry", "select.mirrorEdits", "select.symmetryPartners", "select.handles"]),
         new MenuLayout("View",
         [
-            "view.top", "view.3d", "view.sideBySide", "view.fit", "camera.home", "camera.focusSelection", Separator,
+            "view.top", "view.3d", "view.sideBySide", "view.fit", "camera.home", "camera.focusSelection", "view.frame", Separator,
             "view.palette", Separator,
             "view.problems", "view.history", "view.assets", "view.console", Separator,
             "view.modePanel", "view.inspector", "view.dock", "view.toolbar", "view.resetLayout", Separator,

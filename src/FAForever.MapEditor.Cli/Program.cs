@@ -59,6 +59,9 @@ namespace FAForever.MapEditor.Cli
 
         [Option("force", HelpText = "stop: end the process when it does not exit in time.")]
         public bool Force { get; set; }
+
+        [Option("log", HelpText = "start: the file the editor's own output goes to; by default editor-<port>.log beside the settings file (else in the temporary folder).")]
+        public string? Log { get; set; }
     }
 
     [Verb("workspace", HelpText = "Set up the workspace, convert the game's assets into it, show whether they are current, or make a scratch workspace for tests.")]
@@ -86,10 +89,38 @@ namespace FAForever.MapEditor.Cli
         public string? Settings { get; set; }
     }
 
+    [Verb("dev", HelpText = "Tools for working on the editor's source, e.g. 'dev replace <file> --old-file a.txt --new-file b.txt': replaces text keeping the file's line endings and UTF-8.")]
+    public sealed class DevOptions
+    {
+        [Value(0, MetaName = "action", Required = true, HelpText = "replace.")]
+        public string Action { get; set; } = "";
+
+        [Value(1, MetaName = "file", Required = true, HelpText = "The file to change.")]
+        public string File { get; set; } = "";
+
+        [Option("old", HelpText = "replace: the text to replace, on one line (--old-file for several lines).")]
+        public string? Old { get; set; }
+
+        [Option("new", HelpText = "replace: the text to put in its place.")]
+        public string? New { get; set; }
+
+        [Option("old-file", HelpText = "replace: a UTF-8 file holding the text to replace.")]
+        public string? OldFile { get; set; }
+
+        [Option("new-file", HelpText = "replace: a UTF-8 file holding the text to put in its place.")]
+        public string? NewFile { get; set; }
+
+        [Option("count", Default = 1, HelpText = "replace: how many times the old text must occur.")]
+        public int Count { get; set; }
+
+        [Option("all", HelpText = "replace: every place the old text occurs, however many.")]
+        public bool All { get; set; }
+    }
+
     public static class Program
     {
         public static int Main(string[] args) =>
-            Parser.Default.ParseArguments<UnpackOptions, PackOptions, EditorOptions, WorkspaceOptions>(args).MapResult(
+            Parser.Default.ParseArguments<UnpackOptions, PackOptions, EditorOptions, WorkspaceOptions, DevOptions>(args).MapResult(
                 (UnpackOptions o) => Run(() => Unpack(o)),
                 (PackOptions o) => o.Watch ? Watch(o) : Run(() => Pack(o)),
                 (EditorOptions o) => o.Command switch
@@ -99,7 +130,33 @@ namespace FAForever.MapEditor.Cli
                     _ => EditorClient.Send(o.Port, o.Command, o.Arguments),
                 },
                 (WorkspaceOptions o) => Run(() => WorkspaceCommand.Run(o)),
+                (DevOptions o) => Dev(o),
                 _ => 2);
+
+        /// <summary>
+        /// <c>dev replace</c>: see <see cref="TextEdit"/>.
+        /// </summary>
+        private static int Dev(DevOptions o)
+        {
+            if (o.Action != "replace")
+            {
+                Console.Error.WriteLine($"There is no dev action '{o.Action}': replace");
+                return 2;
+            }
+            try
+            {
+                string old = o.OldFile is string oldFile ? TextEdit.ReadText(oldFile) : o.Old ?? throw new ArgumentException("Give --old or --old-file");
+                string replacement = o.NewFile is string newFile ? TextEdit.ReadText(newFile) : o.New ?? throw new ArgumentException("Give --new or --new-file");
+                int places = TextEdit.ReplaceInFile(o.File, old, replacement, o.All ? null : o.Count);
+                Console.WriteLine($"Replaced {places} {(places == 1 ? "place" : "places")} in {o.File}");
+                return 0;
+            }
+            catch (Exception exception) when (exception is ArgumentException or IOException or System.Text.DecoderFallbackException or UnauthorizedAccessException)
+            {
+                Console.Error.WriteLine($"{o.File}: {exception.Message}");
+                return 1;
+            }
+        }
 
         private static void Unpack(UnpackOptions o)
         {

@@ -91,6 +91,8 @@
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
       <!-- things on the map in the top view: props as dots, units as squares, areas as dashed rectangles; what is selected, and the box being drawn -->
       <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
+      <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
+      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#998FD18A" />
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
@@ -147,6 +149,8 @@
       <SolidColorBrush x:Key="OverlayFillBrush" Color="#28FFFFFF" />
       <SolidColorBrush x:Key="OverlayShadowBrush" Color="#DC000000" />
       <SolidColorBrush x:Key="MapPropBrush" Color="#FF8FD18A" />
+      <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
+      <SolidColorBrush x:Key="MapPropSparseBrush" Color="#998FD18A" />
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
@@ -227,6 +231,9 @@
   <Thickness x:Key="BadgeGap">4</Thickness>
   <x:Double x:Key="MenuBarHeight">36</x:Double>
   <x:Double x:Key="ToolbarHeight">40</x:Double>
+  <!-- the tool's name before its options, and the box of the options that do not fit (under More) -->
+  <Thickness x:Key="ToolNameGap">0,0,14,0</Thickness>
+  <Thickness x:Key="ToolOverflowPadding">8,6,8,6</Thickness>
   <x:Double x:Key="ToolButtonHeight">30</x:Double>
   <Thickness x:Key="ToolButtonPadding">4,0</Thickness>
   <x:Double x:Key="ActionButtonHeight">28</x:Double>

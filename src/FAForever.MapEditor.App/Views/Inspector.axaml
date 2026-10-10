@@ -75,12 +75,6 @@
           <Border Classes="group">
             <StackPanel Classes="stack">
               <TextBlock Classes="caption" Text="{Binding Assets.ShownUse}" IsVisible="{Binding Assets.ShownUse, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-              <Border Classes="planned" IsVisible="{Binding Assets.ShownPlanned, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                <StackPanel Classes="stack">
-                  <TextBlock Classes="caption" Text="{Binding Assets.ShownPlanned}" />
-                  <TextBlock Classes="story" Text="Not built yet" />
-                </StackPanel>
-              </Border>
               <StackPanel Classes="inline">
                 <Button Content="Show the file" Command="{Binding RunCommand}" CommandParameter="assets.showFile" />
                 <Button Content="Clear" Command="{Binding Assets.ClearSelectionCommand}" AutomationProperties.HelpText="The inspector shows the mode again" />
@@ -358,13 +352,7 @@
           <Border Classes="group">
             <StackPanel Classes="stack">
               <TextBlock Classes="heading" Text="Selection" />
-              <TextBlock Classes="caption" TextWrapping="Wrap" Text="Nothing is selected. Choose a mode's Select tool and click a thing in the top view, or drag a box around several; shift adds, control toggles." />
-              <Border Classes="planned">
-                <StackPanel Classes="stack">
-                  <TextBlock Classes="caption" Text="Move, rotate and scale with handles in the views." />
-                  <TextBlock Classes="story" Text="Not built yet: user story F-11" />
-                </StackPanel>
-              </Border>
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="Nothing is selected. Choose a mode's Select tool and click a thing in either view, or drag a box around several in the top view; shift adds, control toggles. The handles then move, turn and scale the selection." />
             </StackPanel>
           </Border>
         </StackPanel>

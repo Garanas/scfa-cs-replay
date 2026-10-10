@@ -348,11 +348,12 @@ public sealed partial class MainViewModel
     public void RequestFit() => FitRequested?.Invoke(this, EventArgs.Empty);
 
     /// <summary>
-    /// Raised when the top view is to centre on a place of the map, in ogrids, at a zoom (null: as it is).
+    /// Raised when the top view is to centre on a place of the map, in ogrids, at a zoom; what is
+    /// null stays as it is (the place it centres on, the zoom).
     /// </summary>
-    public event Action<double, double, double?>? TopViewRequested;
+    public event Action<double?, double?, double?>? TopViewRequested;
 
-    public void RequestTopView(double x, double z, double? zoom) => TopViewRequested?.Invoke(x, z, zoom);
+    public void RequestTopView(double? x, double? z, double? zoom) => TopViewRequested?.Invoke(x, z, zoom);
 
     /// <summary>
     /// What the 3D view's terrain shows: 0 the picture, 1 to 7 a part of it, to find out why it looks wrong.

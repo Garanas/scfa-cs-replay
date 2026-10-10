@@ -151,3 +151,18 @@ OAuth clients (both public, PKCE):
   (e.g. `tools/tailwindcss.exe`) must stay optional in the build.
 - `TODO.md` at the repo root tracks open items that need the project owner (OAuth client
   registration, live-login verification, …). Add to it when blocked instead of guessing.
+
+## Editing files from a shell (agents)
+
+The working copy is Windows: most files have CRLF line endings (git stores LF), and the source is
+UTF-8. Shell tools get this wrong in ways that are hard to see in a diff:
+
+- Bash heredocs whose text holds an apostrophe break unless the delimiter is quoted (`<<'EOF'`),
+  and `\n` inside Python or C# text in a heredoc is easy to get wrong.
+- `sed -i` in Git Bash may write the file back with LF; Python's `open()` reads and writes cp1252
+  unless given `encoding='utf-8', newline=''`.
+- Prefer the editor tools (Edit, Write). For a scripted change, `faf-map dev replace <file>
+  --old-file a.txt --new-file b.txt [--count n | --all]` replaces text keeping the file's line
+  endings (whatever those of the old and new text), its UTF-8 and byte order mark, and refuses when
+  the old text does not occur exactly as often as expected (once by default) or the file is not
+  UTF-8. Write the old and new text to files in a scratch folder first.

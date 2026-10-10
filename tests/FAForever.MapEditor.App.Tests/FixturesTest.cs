@@ -92,5 +92,21 @@ namespace FAForever.MapEditor.App.Tests
             CollectionAssert.AreEqual(new[] { thing }, model.Selection.Items.ToArray());
             window.Close();
         });
+
+        [TestMethod]
+        public void TheSlopeMapHasACleanRamp()
+        {
+            Heightmap heights = FAForever.MapEditor.Project.MapProjectStore.Load(TestMaps.SlopeProject(degrees: 30)).Terrain.Heightmap;
+
+            Assert.AreEqual(TestMaps.Low, heights.GetHeight(10, 10), 0.01, "flat low ground");
+            Assert.AreEqual(TestMaps.High(30), heights.GetHeight(200, 250), 0.01, "flat high ground");
+            for (int x = TestMaps.RampStart; x < TestMaps.RampEnd; x += 7)
+            {
+                float rise = heights.GetHeight(x + 1, 128) - heights.GetHeight(x, 128);
+                Assert.AreEqual(TestMaps.Rise(30), rise, 1e-4, $"the same rise at x = {x}");
+                Assert.AreEqual(30, MathF.Atan(rise) * 180 / MathF.PI, 0.05, "30 degrees");
+            }
+            Assert.AreEqual(heights.GetHeight(120, 3), heights.GetHeight(120, 250), "the same along z");
+        }
     }
 }

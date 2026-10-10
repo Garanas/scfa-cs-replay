@@ -247,5 +247,79 @@ namespace FAForever.MapEditor.App.Tests
         {
             Assert.AreEqual((key, modifiers), WindowInput.ParseKey(text));
         }
+
+        [TestMethod]
+        public Task ACommandThatCannotRunSaysWhy() => Run(async () =>
+        {
+            (MainWindow window, _, AutomationServer automation) = await Open();
+
+            JsonObject answer = await Send(automation, "undo");
+
+            Assert.IsFalse(answer["ran"]!.GetValue<bool>());
+            StringAssert.Contains(answer["why"]!.GetValue<string>(), "nothing to undo");
+            JsonObject notBuilt = await Send(automation, "run", new JsonObject { ["id"] = "terrain.saveBrush" });
+            StringAssert.Contains(notBuilt["why"]!.GetValue<string>(), "not built yet");
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task ZoomingTheTopViewKeepsOrMovesItsCentre() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            model.View = MapViewTab.Top;
+            Dispatcher.UIThread.RunJobs();
+
+            await Send(automation, "view", new JsonObject { ["x"] = 40, ["z"] = 60, ["zoom"] = 4 });
+            Point centre = window.MapView.Centre;
+            Assert.AreEqual(40, centre.X, 0.01);
+            Assert.AreEqual(60, centre.Y, 0.01);
+
+            await Send(automation, "view", new JsonObject { ["zoom"] = 2 });
+            Assert.AreEqual(2, window.MapView.Zoom);
+            Assert.AreEqual(40, window.MapView.Centre.X, 0.01, "the zoom alone keeps the place in the middle");
+            Assert.AreEqual(60, window.MapView.Centre.Y, 0.01);
+
+            window.Height = 700;
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual(60, window.MapView.Centre.Y, 0.01, "a smaller view stays centred on it");
+
+            JsonObject point = (JsonObject)(await Send(automation, "view-point", new JsonObject { ["x"] = 40, ["z"] = 60 }))["point"]!;
+            Assert.IsNull(point["3d"], "the 3D view never shown has no size, so no point (and the answer is valid JSON)");
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task ManyPropsAreDrawnSparseWhenZoomedOutAndStillPicked() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            model.View = MapViewTab.Top;
+            // a forest: 4000 props on 40 by 40 ogrids
+            List<Prop> forest = [.. Enumerable.Range(0, 4000).Select(i => new Prop
+            {
+                Id = 0,
+                Blueprint = "/env/evergreen/props/rocks/rock01_prop.bp",
+                Position = new Vector3(60 + i % 63 * 0.63f, 20, 60 + i / 63 * 0.63f),
+                Scale = Vector3.One,
+            })];
+            model.EditMap("A forest", document => document.AddProps(forest, out _));
+            await Send(automation, "show", new JsonObject { ["props"] = true });
+
+            await Send(automation, "view", new JsonObject { ["x"] = 80, ["z"] = 80, ["zoom"] = 1 });
+            await Send(automation, "state"); // a frame drawn at that zoom
+            int sparse = window.MapView.PropDotsDrawn;
+            int props = model.ShownDocument!.Props.Length;
+            Assert.IsTrue(sparse > 0 && sparse < props / 3, $"zoomed out a dot per few pixels: {sparse} of {props}");
+
+            await Send(automation, "view", new JsonObject { ["x"] = 80, ["z"] = 80, ["zoom"] = 8 });
+            await Send(automation, "state");
+            Assert.IsTrue(window.MapView.PropDotsDrawn > 3000, $"zoomed in every prop in the view has its dot: {window.MapView.PropDotsDrawn}");
+
+            model.SelectTool("props.select");
+            await Send(automation, "view", new JsonObject { ["x"] = 80, ["z"] = 80, ["zoom"] = 1 });
+            JsonObject point = (JsonObject)(await Send(automation, "view-point", new JsonObject { ["x"] = 70, ["z"] = 70 }))["point"]!;
+            await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = point["top"]!["x"]!.DeepClone(), ["y"] = point["top"]!["y"]!.DeepClone() });
+            Assert.AreEqual(1, model.Selection.Count, "a click still picks a prop, whatever dot shows");
+            window.Close();
+        });
     }
 }

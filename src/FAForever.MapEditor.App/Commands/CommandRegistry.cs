@@ -70,7 +70,9 @@ public sealed class EditorCommand
 /// </summary>
 /// <param name="Ran">False when it could not run now or is not built yet.</param>
 /// <param name="Result">What the command answers, such as the folder an export wrote; null for most.</param>
-public sealed record CommandRun(bool Ran, object? Result);
+/// <param name="Why">Why it did not run: what it needs that is missing (<c>nothing to undo</c>), or
+/// that it is not built yet; null when it ran.</param>
+public sealed record CommandRun(bool Ran, object? Result, string? Why = null);
 
 /// <summary>
 /// The controller of model, view and controller (user story F-1): every command of the editor, by
@@ -231,12 +233,12 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
         {
             Count(command, "not_built");
             IncompleteRun?.Invoke(command);
-            return new CommandRun(false, null);
+            return new CommandRun(false, null, $"not built yet (user story {command.Incomplete!.Story}): {command.Incomplete.Missing}");
         }
         if (!meets(command.Needs))
         {
             Count(command, "cannot_run");
-            return new CommandRun(false, null);
+            return new CommandRun(false, null, WhyNot(command.Needs));
         }
 
         object request = command.MakeRequest(arguments ?? []);
@@ -259,6 +261,28 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
         Count(command, "ran");
         Ran?.Invoke(command);
         return new CommandRun(true, result is Unit ? null : result);
+    }
+
+    /// <summary>
+    /// What of <paramref name="needs"/> is missing now, in words: <c>nothing to undo</c>, <c>no map is open</c>.
+    /// </summary>
+    public string WhyNot(Needs needs)
+    {
+        string[] missing = [.. Enum.GetValues<Needs>()
+            .Where(need => need != Needs.None && needs.HasFlag(need) && !meets(need))
+            .Select(need => need switch
+            {
+                Needs.Map => "no map is open",
+                Needs.Idle => "the editor is busy",
+                Needs.Undo => "nothing to undo (or a stroke is going on)",
+                Needs.Redo => "nothing to redo (or a stroke is going on)",
+                Needs.Workspace => "no workspace is set up",
+                Needs.Project => "the map is no project on disk: save it as one first",
+                Needs.NoStroke => "a brush stroke is going on",
+                Needs.Selection => "nothing is selected",
+                _ => need.ToString(),
+            })];
+        return missing.Length == 0 ? "it cannot run now" : string.Join("; ", missing);
     }
 
     /// <summary>
