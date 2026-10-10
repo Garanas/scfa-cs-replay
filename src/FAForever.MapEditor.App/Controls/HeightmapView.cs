@@ -37,7 +37,7 @@ public sealed class HeightmapView : Control
     /// </summary>
     internal sealed record Overlay(IBrush Canvas, IBrush Strong, IPen Brush, IPen Stroke, IBrush Fill, IPen Shadow, IPen Ring, Typeface LabelFont, double LabelSize,
         IBrush Prop, IBrush PropSparse, IBrush Unit, IPen Area, IBrush AreaLabel, IPen Selection, IBrush SelectionFill, IPen Box,
-        IBrush Blocked, IBrush NewlyBlocked, IBrush Opened);
+        IBrush Blocked, IBrush NewlyBlocked, IBrush Opened, IPen Wreck, IPen WreckShadow);
 
     public HeightmapView()
     {
@@ -89,7 +89,9 @@ public sealed class HeightmapView : Control
         new Pen(Token<IBrush>("MapSelectionBrush"), 1, new DashStyle([4, 3], 0)),
         Token<IBrush>("MapBlockedBrush"),
         Token<IBrush>("MapNewlyBlockedBrush"),
-        Token<IBrush>("MapOpenedBrush"));
+        Token<IBrush>("MapOpenedBrush"),
+        new Pen(Token<IBrush>("MapWreckBrush"), 2),
+        new Pen(Token<IBrush>("OverlayShadowBrush"), 4));
 
     private T Token<T>(string key) => this.TryFindResource(key, ActualThemeVariant, out object? value) && value is T token
         ? token
@@ -671,7 +673,20 @@ public sealed class HeightmapView : Control
             foreach (PlacedUnit unit in document.AllUnits())
             {
                 Point at = MapToControl(unit.Unit.Position.X, unit.Unit.Position.Z);
-                if (shown.Contains(at))
+                if (!shown.Contains(at))
+                {
+                    continue;
+                }
+                if (UnitWrecks.IsWreck(unit))
+                {
+                    // a wreck (U-5): an ashen cross where a unit is a square
+                    foreach (IPen pen in (ReadOnlySpan<IPen>)[overlay.WreckShadow, overlay.Wreck])
+                    {
+                        context.DrawLine(pen, at + new Vector(-3.5, -3.5), at + new Vector(3.5, 3.5));
+                        context.DrawLine(pen, at + new Vector(-3.5, 3.5), at + new Vector(3.5, -3.5));
+                    }
+                }
+                else
                 {
                     context.DrawRectangle(overlay.Unit, overlay.Shadow, new Rect(at.X - 3.5, at.Y - 3.5, 7, 7));
                 }

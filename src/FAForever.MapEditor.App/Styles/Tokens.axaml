@@ -94,6 +94,8 @@
       <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
       <SolidColorBrush x:Key="MapPropSparseBrush" Color="#998FD18A" />
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
+      <!-- units placed as wrecks (U-5): an ashen cross in the top view -->
+      <SolidColorBrush x:Key="MapWreckBrush" Color="#FFA89A94" />
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
       <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />
@@ -152,6 +154,8 @@
       <!-- props zoomed out: smaller, fainter dots, at most one per few pixels (8000 props cover a map) -->
       <SolidColorBrush x:Key="MapPropSparseBrush" Color="#998FD18A" />
       <SolidColorBrush x:Key="MapUnitBrush" Color="{StaticResource Coral300}" />
+      <!-- units placed as wrecks (U-5): an ashen cross in the top view -->
+      <SolidColorBrush x:Key="MapWreckBrush" Color="#FFA89A94" />
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
       <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />

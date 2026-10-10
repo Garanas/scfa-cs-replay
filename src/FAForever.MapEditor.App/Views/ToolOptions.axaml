@@ -248,6 +248,8 @@
                   <Button Content="Choose..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.pick"
                           AutomationProperties.Name="Choose a unit to place" AutomationProperties.HelpText="Opens the unit picker; a unit chosen on the asset shelf is placed too" />
                 </StackPanel>
+                <CheckBox Content="As wrecks" IsChecked="{Binding AsWrecks}" AutomationProperties.Name="Place units as wrecks"
+                          AutomationProperties.HelpText="They go into the army's WRECKAGE group, which the game turns into wrecks when it starts" />
                 <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="Army" />
                   <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" AutomationProperties.Name="Army to place units for" />
