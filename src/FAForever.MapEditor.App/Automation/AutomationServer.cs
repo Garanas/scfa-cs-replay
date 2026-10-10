@@ -123,6 +123,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
     [
         ("top", MapViewTab.Top, "view.top"),
         ("3d", MapViewTab.ThreeD, "view.3d"),
+        ("side", MapViewTab.SideBySide, "view.sideBySide"),
     ];
 
     /// <summary>
@@ -156,7 +157,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
     /// </summary>
     private static readonly string[] Own =
     [
-        "state", "commands", "run {id, interactive?, wait?, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d}", "ui {hidden?, under?}", "perf {reset?, gpu?}", "logs {problems?, count?}",
+        "state", "commands", "run {id, interactive?, wait?, ...its arguments}", "mode {id}", "tool {id}", "tab {name: top|3d|side}", "ui {hidden?, under?}", "perf {reset?, gpu?}", "logs {problems?, count?}",
         "diagnostics {record?, send?, endpoint?, flush?, upload?}", "version-control {open?, enable?, name?, email?, lfs?, remote?}",
         "picker {open?, query?, group?, category?, tech?, move?: [across, down], choose?, cancel?}",
         "height {x, z}", "mask {layer, x, z}", "stroke {points: [[x, z], ...]}", "hit {x, y}", "pick {x, y, highlight?}",
@@ -317,6 +318,11 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                     ["branch"] = model.VersionControl.Repository?.Branch,
                     ["lastCommit"] = model.VersionControl.Repository?.LastCommit,
                     ["remote"] = model.VersionControl.Repository?.Remote,
+                    ["ahead"] = model.VersionControl.Repository?.Ahead,
+                    ["behind"] = model.VersionControl.Repository?.Behind,
+                    ["history"] = new JsonArray([.. model.VersionControl.History.Take(20).Select(commit => (JsonNode)JsonValue.Create($"{commit.ShortHash} {commit.Date:yyyy-MM-dd HH:mm} {commit.Author}: {commit.Subject}"))]),
+                    ["chosen"] = model.VersionControl.ChosenCommit?.ShortHash,
+                    ["files"] = new JsonArray([.. model.VersionControl.ChosenFiles.Take(50).Select(file => (JsonNode)JsonValue.Create($"{file.Change} {file.Path}"))]),
                     ["pageOpen"] = model.VersionControl.IsOpen,
                     ["error"] = model.VersionControl.Error,
                 };
@@ -429,7 +435,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                     result["settled"] = await SettleAsync(arguments["gpu"]?.GetValue<bool>() == true);
                 }
                 result["file"] = arguments["gpu"]?.GetValue<bool>() == true
-                    ? model.View == MapViewTab.ThreeD
+                    ? model.Shows3DView
                         ? await window.View3D.CaptureAsync(Text(arguments, "path"), arguments["brush"] is JsonArray brush
                             ? new System.Numerics.Vector2(brush[0]!.GetValue<float>(), brush[1]!.GetValue<float>())
                             : null).WaitAsync(TimeSpan.FromSeconds(10))
@@ -633,6 +639,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["problems"] = CheckMapHandler.Describe(model.Problems),
             ["props"] = model.Props.Describe(),
             ["rules"] = new JsonObject { ["masks"] = model.MaskRules.Describe(model.ShownDocument), ["props"] = model.PropRules.Describe() },
+            ["layout"] = model.Layout.Describe(),
             ["gpu"] = new JsonObject
             {
                 ["renderer"] = window.View3D.Renderer,

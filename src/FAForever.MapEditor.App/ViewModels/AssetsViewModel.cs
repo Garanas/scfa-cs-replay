@@ -28,6 +28,12 @@ public enum AssetScope
     /// Every asset of the kind.
     /// </summary>
     Everything,
+
+    /// <summary>
+    /// What the open map uses that neither the workspace nor the map's own files have (user story
+    /// F-8): no tiles, a list of the paths, each leading to its problem.
+    /// </summary>
+    Missing,
 }
 
 /// <summary>
@@ -117,6 +123,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     private IReadOnlyDictionary<string, int> _uses = new Dictionary<string, int>();
     private IReadOnlyList<string> _biomes = [];
     private bool _rebuilding;
+    private MapDocument? _document;
 
     public AssetsViewModel(ILogger log)
     {
@@ -148,8 +155,50 @@ public sealed partial class AssetsViewModel : ObservableObject
     public string GroupsTitle => Kind switch { AssetKind.Unit => "Faction", AssetKind.Brush => "Folder", _ => "Biome" };
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsInMap), nameof(IsNarrow), nameof(IsEverything))]
+    [NotifyPropertyChangedFor(nameof(IsInMap), nameof(IsNarrow), nameof(IsEverything), nameof(IsMissingScope))]
     public partial AssetScope Scope { get; set; } = AssetScope.Narrow;
+
+    public bool IsMissingScope => Scope == AssetScope.Missing;
+
+    /// <summary>
+    /// Where each asset of the workspace comes from (user story F-8): the game's or FAF's
+    /// archives, or the workspace's own; read after the catalogue.
+    /// </summary>
+    public AssetOrigins Origins { get; private set; } = AssetOrigins.Empty;
+
+    /// <summary>
+    /// The origin the shelf shows only (<see cref="AssetSource.Short"/>: <c>Game</c>, <c>FAF</c>,
+    /// <c>Workspace</c>, <c>Unknown</c>), or null for all.
+    /// </summary>
+    [ObservableProperty]
+    public partial string? Source { get; set; }
+
+    /// <summary>
+    /// The origins of the kind's assets in the scope and search, with their counts.
+    /// </summary>
+    public IReadOnlyList<AssetChoice> Sources { get; private set; } = [];
+
+    /// <summary>
+    /// What the open map uses that the workspace and the map's own files lack, of every kind, most used first.
+    /// </summary>
+    public IReadOnlyList<MissingAsset> AllMissing { get; private set; } = [];
+
+    /// <summary>
+    /// The missing assets of the kind, which the Missing scope lists.
+    /// </summary>
+    public IReadOnlyList<MissingAsset> Missing { get; private set; } = [];
+
+    public int MissingCount => AllMissing.Count;
+
+    /// <summary>
+    /// Where the chosen asset comes from, in words.
+    /// </summary>
+    public string? ShownSource => Shown is AssetEntry shown ? Origins.Of(shown).Title : null;
+
+    /// <summary>
+    /// Raised when the person asks to see a missing asset's problem (the Problems tab).
+    /// </summary>
+    public event Action<MissingAsset>? ShowProblemRequested;
 
     public bool IsInMap => Scope == AssetScope.InMap;
 
@@ -276,7 +325,8 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// <summary>
     /// Why the shelf is empty, or empty when it is not.
     /// </summary>
-    public string EmptyText => Tiles.Count > 0 ? ""
+    public string EmptyText => Tiles.Count > 0 || (Scope == AssetScope.Missing && Missing.Count > 0) ? ""
+        : Scope == AssetScope.Missing ? $"The map uses no {Noun(Kind, 2).ToLowerInvariant()} that the workspace and the map's own files lack."
         : Kind == AssetKind.Brush && !Catalog.Entries.Any(entry => entry.Kind == AssetKind.Brush)
             ? "No brushes yet: put greyscale PNGs in the workspace's brushes folder (Modes, Assets, Show the brushes folder), in folders as you like."
         : Kind == AssetKind.Brush && Scope == AssetScope.InMap ? "A map holds no brushes: choose The workspace's."
@@ -284,7 +334,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         : Scope == AssetScope.InMap ? "The map uses none of these. Choose Map's biomes or Everything."
         : "Nothing matches. Search in Everything, or clear the biome and category.";
 
-    public bool IsEmpty => Tiles.Count == 0;
+    public bool IsEmpty => EmptyText.Length > 0;
 
     public IReadOnlyList<AssetChoice> Kinds { get; private set; } = [];
 
@@ -353,7 +403,35 @@ public sealed partial class AssetsViewModel : ObservableObject
         Catalog = catalog;
         IsLoaded = true;
         _log.LogInformation("Read {Assets} assets of the workspace in {Milliseconds} ms", catalog.Entries.Count, Math.Round(Stopwatch.GetElapsedTime(start).TotalMilliseconds));
+        FindMissing();
         Rebuild();
+
+        // where each comes from: the archives' lists of files, after the tiles show
+        long origins = Stopwatch.GetTimestamp();
+        AssetOrigins read = await Task.Run(() =>
+        {
+            using Performance.Span measure = Performance.Measure("assets.origins");
+            return AssetOrigins.Read(workspace);
+        });
+        if (read.Count == 0)
+        {
+            _log.LogWarning("Cannot tell where the assets come from: the archives of {Folder}'s manifest are missing or unreadable", workspace.AssetsFolder);
+        }
+        else
+        {
+            _log.LogInformation("Read where the assets come from: {Files} files of the archives in {Milliseconds} ms", read.Count, Math.Round(Stopwatch.GetElapsedTime(origins).TotalMilliseconds));
+        }
+        UseOrigins(read);
+    }
+
+    /// <summary>
+    /// Where the assets come from; for tests and the reading above.
+    /// </summary>
+    public void UseOrigins(AssetOrigins origins)
+    {
+        Origins = origins;
+        Rebuild();
+        OnPropertyChanged(nameof(ShownSource));
     }
 
     /// <summary>
@@ -363,7 +441,19 @@ public sealed partial class AssetsViewModel : ObservableObject
     {
         Catalog = catalog;
         IsLoaded = true;
+        FindMissing();
         Rebuild();
+    }
+
+    /// <summary>
+    /// Finds what the map uses and the workspace lacks again (span <c>assets.missing</c>).
+    /// </summary>
+    private void FindMissing()
+    {
+        using Performance.Span measure = Performance.Measure("assets.missing");
+        AllMissing = _document is null ? [] : MissingAssets.Find(_document, Catalog);
+        OnPropertyChanged(nameof(AllMissing));
+        OnPropertyChanged(nameof(MissingCount));
     }
 
     /// <summary>
@@ -373,14 +463,17 @@ public sealed partial class AssetsViewModel : ObservableObject
     {
         using Performance.Span measure = Performance.Measure("assets.uses");
         IReadOnlyDictionary<string, int> uses = document is null ? new Dictionary<string, int>() : AssetUse.Count(document);
-        if (uses.Count == _uses.Count && uses.All(use => _uses.TryGetValue(use.Key, out int count) && count == use.Value))
+        bool sameMap = ReferenceEquals(document, _document) || (document is not null && _document is not null && document.Files == _document.Files);
+        _document = document;
+        if (sameMap && uses.Count == _uses.Count && uses.All(use => _uses.TryGetValue(use.Key, out int count) && count == use.Value))
         {
             return;
         }
         IReadOnlyList<string> biomes = AssetUse.Biomes(uses);
-        bool scopeChanged = Scope == AssetScope.InMap || !biomes.SequenceEqual(_biomes);
+        bool scopeChanged = Scope is AssetScope.InMap or AssetScope.Missing || !biomes.SequenceEqual(_biomes);
         _uses = uses;
         _biomes = biomes;
+        FindMissing();
         if (scopeChanged)
         {
             Rebuild();
@@ -504,6 +597,12 @@ public sealed partial class AssetsViewModel : ObservableObject
     private void ChooseCategory(AssetChoice choice) => Category = choice.IsOn ? null : choice.Value;
 
     [RelayCommand]
+    private void ChooseSource(AssetChoice choice) => Source = choice.IsOn ? null : choice.Value;
+
+    [RelayCommand]
+    private void ShowMissingProblem(MissingAsset missing) => ShowProblemRequested?.Invoke(missing);
+
+    [RelayCommand]
     private void ChooseTile(AssetTile tile) => Select(tile);
 
     [RelayCommand]
@@ -537,13 +636,23 @@ public sealed partial class AssetsViewModel : ObservableObject
 
     partial void OnCategoryChanged(string? value) => Rebuild();
 
+    partial void OnSourceChanged(string? value) => Rebuild();
+
     partial void OnFamiliesChanged(bool value) => Rebuild();
 
     partial void OnColumnsChanged(int value) => MakeRows();
 
-    partial void OnSelectedChanged(AssetTile? value) => OnPropertyChanged(nameof(ShownUse));
+    partial void OnSelectedChanged(AssetTile? value)
+    {
+        OnPropertyChanged(nameof(ShownUse));
+        OnPropertyChanged(nameof(ShownSource));
+    }
 
-    partial void OnSelectedMemberChanged(AssetEntry? value) => OnPropertyChanged(nameof(ShownUse));
+    partial void OnSelectedMemberChanged(AssetEntry? value)
+    {
+        OnPropertyChanged(nameof(ShownUse));
+        OnPropertyChanged(nameof(ShownSource));
+    }
 
     /// <summary>
     /// Filters the catalogue again: the kinds and their counts in the scope and search, the groups
@@ -560,7 +669,10 @@ public sealed partial class AssetsViewModel : ObservableObject
         IEnumerable<AssetEntry> InScope(AssetKind kind) =>
             Catalog.Entries.Where(entry => entry.Kind == kind && IsInScope(entry) && AssetSearch.Matches(entry, words));
 
-        Kinds = [.. Enum.GetValues<AssetKind>().Select(kind => new AssetChoice(kind.ToString(), KindTitle(kind), InScope(kind).Count(), kind == Kind))];
+        Kinds = Scope == AssetScope.Missing
+            ? [.. Enum.GetValues<AssetKind>().Select(kind => new AssetChoice(kind.ToString(), KindTitle(kind), AllMissing.Count(missing => missing.Kind == kind), kind == Kind))]
+            : [.. Enum.GetValues<AssetKind>().Select(kind => new AssetChoice(kind.ToString(), KindTitle(kind), InScope(kind).Count(), kind == Kind))];
+        Missing = [.. AllMissing.Where(missing => missing.Kind == Kind && AssetSearch.Words(Query).All(word => missing.Path.Contains(word, StringComparison.OrdinalIgnoreCase)))];
 
         List<AssetEntry> ofKind = [.. InScope(Kind)];
         Groups = [.. ofKind
@@ -574,7 +686,13 @@ public sealed partial class AssetsViewModel : ObservableObject
             .OrderByDescending(category => category.Count())
             .Select(category => new AssetChoice(category.Key, category.Key, category.Count(), category.Key == Category))];
 
-        IEnumerable<AssetEntry> shown = ofKind.Where(entry => (Group is null || entry.Group == Group) && (Category is null || entry.Category == Category));
+        Sources = Origins.Count == 0 && Kind != AssetKind.Brush ? [] : [.. ofKind
+            .Where(entry => (Group is null || entry.Group == Group) && (Category is null || entry.Category == Category))
+            .GroupBy(entry => Origins.Of(entry).Short)
+            .OrderByDescending(source => source.Count())
+            .Select(source => new AssetChoice(source.Key, source.Key, source.Count(), source.Key == Source))];
+        IEnumerable<AssetEntry> shown = ofKind.Where(entry => (Group is null || entry.Group == Group) && (Category is null || entry.Category == Category)
+            && (Source is null || Origins.Of(entry).Short == Source));
         AssetEntry? selected = Shown;
         List<AssetTile> tiles = Kind == AssetKind.Prop && Families
             ? [.. shown.GroupBy(entry => (entry.Group, entry.Category, entry.Family)).Select(family => new AssetTile(family.First(), [.. family]))]
@@ -589,6 +707,8 @@ public sealed partial class AssetsViewModel : ObservableObject
         OnPropertyChanged(nameof(Kinds));
         OnPropertyChanged(nameof(Groups));
         OnPropertyChanged(nameof(Categories));
+        OnPropertyChanged(nameof(Sources));
+        OnPropertyChanged(nameof(Missing));
         OnPropertyChanged(nameof(Tiles));
         OnPropertyChanged(nameof(Summary));
         OnPropertyChanged(nameof(EmptyText));
@@ -617,6 +737,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     private bool IsInScope(AssetEntry entry) => Scope switch
     {
         AssetScope.InMap => entry.Keys.Any(_uses.ContainsKey),
+        AssetScope.Missing => false,
         AssetScope.Narrow => entry.Kind switch
         {
             AssetKind.Unit => entry.IsCivilian,

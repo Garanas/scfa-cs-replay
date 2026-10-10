@@ -210,6 +210,12 @@ public sealed class HeightmapView : Control
         {
             Fit();
         }
+        else
+        {
+            // a panel or splitter moved (user story V-4): the place in the middle stays in the middle
+            _offset += new Vector(e.NewSize.Width - e.PreviousSize.Width, e.NewSize.Height - e.PreviousSize.Height) / 2;
+            InvalidateVisual();
+        }
     }
 
     private WriteableBitmap? _brushPicture;

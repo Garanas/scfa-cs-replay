@@ -422,7 +422,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(DockTab.Problems, model.Dock, "a click on a tab chooses it in the view model");
 
             TabControl views = Tabs(window, "View");
-            Click(window, views.GetVisualDescendants().OfType<TabItem>().Last());
+            Click(window, views.GetVisualDescendants().OfType<TabItem>().ElementAt((int)MapViewTab.ThreeD));
             Assert.AreEqual(MapViewTab.ThreeD, model.View);
             Assert.IsTrue(window.View3D.IsVisible);
             Assert.IsFalse(window.MapView.IsVisible);

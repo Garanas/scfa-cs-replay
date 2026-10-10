@@ -85,7 +85,8 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`, `paint.chooseMask`, `presets.apply`,
     `presets.delete`, `view.walkability`, `problems.show`, `markers.showKind`, `markers.set`,
     `markers.setChain`, `markers.renameChain`, `markers.deleteChain`, `markers.setWeather`,
-    `markers.addOptionalGroup`), it selects what one
+    `markers.addOptionalGroup`, `file.showCommit`, `file.restoreCommit`, `view.togglePanel`,
+    `view.resizePanel`, `view.setToolbar`, `view.addToToolbar`, `view.removeFromToolbar`), it selects what one
     clicks (`assets.select`) or drops what one drags (`assets.drop`), it is what a tool's click does
     (`markers.place`, `markers.link`), it is the mouse's or a view's own key in
     the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
@@ -123,7 +124,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   changed, the 3D view uploads them. `OverlaysChanged` (an overlay turned on or off),
   `CameraMoved` and `CursorChanged`: only what lies over the terrain. `ShownMask`, a property:
   the top view's picture with that layer's mask. `MapChanged`: everything, for another map.
-- **Tabs are enums**: `MapViewTab` (the top and 3D views) and `DockTab` (the dock), declared in
+- **Tabs are enums**: `MapViewTab` (the top view, the 3D view, both side by side) and `DockTab` (the dock), declared in
   the order of their `TabItem`s and bound through `Controls/EnumIndexConverter`. A new tab is a
   value there, its `TabItem` in that place and its command; `TheTabsAreInTheOrderOfTheirEnums`
   checks the order.
@@ -170,6 +171,40 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     `limits: false` turns them off first.
 - Shortcuts are never a single letter (`IdsAndShortcutsAreUnique`): it would fire while typing.
 
+## Layouts and the toolbar
+
+User stories V-4 and F-1. `MainViewModel.Layout` (`LayoutViewModel`) holds which panels show,
+their sizes, how the views share the width side by side, the view that shows and the toolbar's
+commands; every change is written into the user's settings at once (`UserSettings.Layout`, the
+library's `LayoutSettingsDto`) and read back when the editor starts (`MainViewModel.LoadLayout`).
+
+- **Side by side** (`view.sideBySide`, Ctrl+3, the views' third tab): the top view left, the 3D
+  view right, a splitter between them (its share is `SideBySideSplit`). They share the camera (the
+  top view draws its footprint) and each takes its own mouse. Both views stay in the tree: only
+  their visibility and column change (`MainWindow.ShowChosenView`). Going into or out of side by
+  side fits the top view to the map; a panel or splitter that moves keeps the place in the top
+  view's middle in the middle.
+- **Panels**: the window's middle is a grid (`Shell`: mode panel, splitter, the views with the
+  dock under them, splitter, inspector). `view.modePanel`, `view.inspector`, `view.dock` and
+  `view.toolbar` (View menu, `{on?}`), and `view.togglePanel {panel, on?}`, show and hide them;
+  dragging a splitter (`GridSplitter.layoutsplitter`) or `view.resizePanel {panel, size}` sizes
+  them (120 to 1200; a click that moves nothing keeps the editor's own size, so the dock still
+  grows while the shelf shows). `MainWindow.ApplyLayout` sets the columns and rows: a size the user
+  gave, else the tokens (`ModePanelWidth`, `InspectorWidth`, `DockHeight`, `DockTallHeight`); the
+  panels' styles hold no width. `view.resetLayout` shows every panel at its own size again and
+  splits the views in half; the toolbar's commands and the view stay.
+- **The toolbar** (F-1) lies in the menu bar left of the palette's field: a button per id of
+  `ToolbarCommands`, made from the registry like the menus (`ToolbarItem`: an icon of
+  `LayoutViewModel.Icons` from `Styles/Icons.axaml`, else the title; the tool tip with the
+  shortcut; enabled as the registry answers on `CanRunChanged`). The default is undo, redo, save,
+  the palette and the symmetry; `view.setToolbar {commands?}`, `view.addToToolbar {id}` and
+  `view.removeFromToolbar {id}` (also a button's context menu) change it, and the settings file's
+  `layout.toolbarCommands` can be edited by hand (an unknown id is left out with a warning).
+- Automation: `tab {name: side}`, `state.layout` (the panels, sizes, split, the toolbar's commands
+  with `canRun`, the settings file).
+- Not built yet: moving a panel to another side or out of the window, choosing toolbar commands
+  in the window (only the context menu's Remove).
+
 ## UI rules: one look, kept in one place
 
 The look is concept A's (its colours, IBM Plex, the spacing). Fluent (Avalonia's theme, dark,
@@ -213,8 +248,8 @@ compact density) draws the standard controls; `Styles/` holds the look of everyt
   used twice becomes one.
 - The views are split by what they are: `MainWindow` (menu, status bar, the two map views, the
   pages by stage), `ModeRail`, `ModePanel`, `ToolOptions`, `Inspector`, `Dock`, `AssetShelf`,
-  `CommandPalette`, `AssetPicker`, `DiagnosticsPage`, `VersionControlPage`, `SetupPage`, `UpdateAssetsPage`,
-  `ConvertingPage`.
+  `CommandPalette`, `AssetPicker`, `DiagnosticsPage`, `VersionControlPage`, `ReportProblemPage`, `SetupPage`,
+  `UpdateAssetsPage`, `ConvertingPage`.
 - Code that draws (the overlays of the top view, the 3D view's sky) reads the tokens with
   `TryFindResource` and reads them again when the theme variant changes. Only colours that come
   from the map (a marker's) are made in code.
@@ -502,6 +537,19 @@ the commit, with how the repository stands (branch, changed files, unsaved chang
 commit) and a message (`CommitAsync`: saves first when the map has changes). What fails shows on
 the page.
 
+- **Sharing**: Push and Pull on the page (`file.push`, `file.pull`, File menu), with how many
+  commits are to push or pull. Pull is refused while the map has unsaved changes (and, the
+  library's, while the project has uncommitted ones), and only fast-forwards; the files it
+  changed are read again as other tools' changes are (`MainViewModel.ReadAgainFromDisk`). Signing
+  in is git's credential helper's; the editor keeps no secret.
+- **History** (`file.history {count?}`, File menu: opens the page): the commits with hash,
+  subject, author and date; choosing one (`file.showCommit {commit}`) lists its files. "Go back to
+  this commit" (`file.restoreCommit {commit}`) makes the map the project as that commit holds it,
+  as one step of undo named after the commit, unsaved: the files on disk and the history stay, so
+  nothing is lost; saving and committing makes it a new commit. The editor never checks a commit
+  out over the project.
+- Automation's `version-control` adds `ahead`, `behind`, `history` (20), `chosen` and `files`.
+
 ## Assets: the shelf in the dock
 
 User stories F-8 and F-9, concept C1 of the canvas "Map editor UI concepts" (row C, with the
@@ -563,7 +611,19 @@ ready and again with Modes, Assets, Read the assets again (`assets.reload`):
   what is dropped. What nobody takes says in the status line which user story will (P-1, U-2,
   D-1). `assets.drop {key, x, z}` does the same for automation. The views only attach
   `AssetDrag.Attach` with how a point of the view becomes a place of the map.
-- Not built yet: stars and recents; a mark of the drop place drawn in the views.
+- **Where each comes from** (F-8): after the catalogue, the shelf reads the archives' lists of
+  files (`AssetOrigins`, the library's; span `assets.origins`, about 60 ms for the game's and
+  FAF's four archives). The inspector says it ("Comes from": the game's `env.scd`, FAF's `env.nx2` and whether it
+  replaces the game's, the workspace's own); the shelf's Source chips filter by it
+  (`assets.browse {source}`; the answer's tiles carry `source`).
+- **Missing** (F-8): the scope Missing lists, per kind, what the map uses that the workspace and
+  the map's own files lack (`MissingAssets`, counted again when the map's uses change; span
+  `assets.missing`), with how often, "Read the assets again" (`assets.reload`) and a Problem button
+  that shows the `missing-texture` or `missing-model` problem of that path
+  (`MainViewModel.ShowMissingAsset`). `assets.browse {scope: missing}` answers `missing` and
+  `missingCount`.
+- Not built yet: stars and recents; a mark of the drop place drawn in the views; reading one asset
+  again (the whole catalogue is read again).
 
 ## Events, presets, symmetry and generated results
 
@@ -1197,8 +1257,15 @@ User story F-17. The editor keeps what a service keeps for Loki and Prometheus, 
 - `tools/telemetry` runs a collector, Loki, Prometheus and Grafana with a dashboard on this
   computer (`docker compose up -d`): it reads the sessions' files and takes what an editor
   sends. Its README says what to look at.
-- Not built yet: a report of a problem that bundles the recent sessions (`help.reportProblem`),
-  and a collector on a server for everyone's sessions.
+- **Report a problem** (`help.reportProblem {folder?, description?, includeMap?, sessions?}`, Help
+  menu; `ReportProblemViewModel` as `model.Report`, `Views/ReportProblemPage`, the zip by
+  `Diagnostics/ProblemReport`): a page to say what went wrong and whether the open map's project
+  goes along (off unless chosen), then a folder; it writes `faf-map-editor-report-<time>.zip` with
+  `report.json` (the editor's version, the system, the runtime, the description, the sessions, the
+  map), the newest five sessions' logs and metrics (this one flushed first) and the project without
+  `.git` and `procedural/temp`, and shows the folder. Nothing is sent. Given a folder, the command
+  writes at once and answers the path.
+- Not built yet: a collector on a server for everyone's sessions, sending a report.
 
 ## Automation: driving the running editor
 
@@ -1250,7 +1317,7 @@ faf-map editor close                                      # closes without askin
   `view {x, z, zoom?}` (`view.zoomTo`: the top view), `gpu-debug {mode}` (`view.gpuDebug`: what
   the 3D view's terrain shows: 0 the picture, 1 the albedo, 2 the light, 3 the normals, 4 the
   heights, 5 the lower layer, 6 the first four masks after the remap, 7 as stored), `mode {id}`,
-  `tool {id}`, `tab {name: top|3d}`, `show {markers?, pathNodes?, camera?, props?, units?, areas?}` (each overlay's
+  `tool {id}`, `tab {name: top|3d|side}`, `show {markers?, pathNodes?, camera?, props?, units?, areas?}` (each overlay's
   command with `on`).
 - `state` has `symmetry` (kind, count, title), `presets` (folder, the panel's kind, the names it
   lists), `generated` (per generator its status, `Missing`, `Stale` or `Current`, and the

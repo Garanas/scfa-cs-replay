@@ -16,6 +16,11 @@ public enum MapViewTab
 {
     Top,
     ThreeD,
+
+    /// <summary>
+    /// The top and 3D views side by side, sharing the camera (user story V-4).
+    /// </summary>
+    SideBySide,
 }
 
 /// <summary>

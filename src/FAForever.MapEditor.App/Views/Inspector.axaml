@@ -65,6 +65,8 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+              <TextBlock Classes="label" Text="Comes from" />
+              <TextBlock Text="{Binding Assets.ShownSource}" TextWrapping="Wrap" AutomationProperties.Name="Where the asset comes from" />
               <TextBlock Classes="label" Text="{Binding Assets.ShownKeyLabel}" />
               <TextBox Classes="mono" Text="{Binding Assets.Shown.Key, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
                        AutomationProperties.Name="Path of the asset" AutomationProperties.HelpText="How a map or the workspace names it; select it to copy" />

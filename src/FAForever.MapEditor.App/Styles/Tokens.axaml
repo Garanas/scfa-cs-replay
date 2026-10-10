@@ -281,4 +281,16 @@
   <x:Double x:Key="SettingTextHeight">64</x:Double>
   <Thickness x:Key="SwatchGap">0,0,8,0</Thickness>
   <x:Double x:Key="SettingListHeight">160</x:Double>
+  <!-- the window's layout (V-4): the splitters between the panels and views, the least a view or panel keeps -->
+  <x:Double x:Key="LayoutSplitterSize">5</x:Double>
+  <x:Double x:Key="LayoutPanelMinWidth">120</x:Double>
+  <x:Double x:Key="LayoutViewMinWidth">200</x:Double>
+  <x:Double x:Key="LayoutDockMinHeight">120</x:Double>
+  <!-- the toolbar's buttons (F-1) -->
+  <x:Double x:Key="ToolbarButtonSize">26</x:Double>
+  <Thickness x:Key="ToolbarButtonPadding">6,0</Thickness>
+  <!-- version control (F-18): the history of commits and the files of the chosen one -->
+  <x:Double x:Key="VersionHistoryHeight">180</x:Double>
+  <x:Double x:Key="VersionFilesHeight">110</x:Double>
+  <x:Double x:Key="VersionDialogWidth">760</x:Double>
 </ResourceDictionary>

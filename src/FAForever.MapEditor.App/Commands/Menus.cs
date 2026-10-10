@@ -21,7 +21,7 @@ public static class Menus
         new MenuLayout("File",
         [
             "file.new", "file.open", "file.import", Separator,
-            "file.save", "file.saveAs", "file.commit", Separator,
+            "file.save", "file.saveAs", "file.commit", "file.push", "file.pull", "file.history", Separator,
             "file.export", "file.renderPreview", "file.upload", Separator,
             "file.openScript",
         ]),
@@ -37,6 +37,7 @@ public static class Menus
             "view.top", "view.3d", "view.sideBySide", "view.fit", "camera.home", "camera.focusSelection", Separator,
             "view.palette", Separator,
             "view.problems", "view.history", "view.assets", "view.console", Separator,
+            "view.modePanel", "view.inspector", "view.dock", "view.toolbar", "view.resetLayout", Separator,
             .. EditorOverlays.All.Select(overlay => overlay.CommandId),
         ]),
         new MenuLayout("Map",

@@ -89,6 +89,8 @@ faf-map editor ui under=MainMenu --port 5372          # one part of the window
 faf-map editor state --port 5372                      # views (bounds, pixels, scaling), loading, selection
 faf-map editor screenshot path=<scratch>/shot.png settle=true --port 5372   # then look at it
 faf-map editor tab name=3d --port 5372 && faf-map editor screenshot path=<scratch>/3d.png gpu=true settle=true --port 5372
+faf-map editor tab name=side --port 5372              # both views side by side (gpu=true captures the 3D half)
+faf-map editor run id=view.togglePanel panel=inspector on=false --port 5372   # more room for the views; view.resetLayout
 faf-map editor perf gpu=true --port 5372              # where the time goes, with the card's (3d.gpu-frame)
 faf-map editor stop --port 5372                       # only an editor you started; waits until it exited
 ```

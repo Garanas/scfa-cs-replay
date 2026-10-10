@@ -102,5 +102,90 @@ namespace FAForever.MapEditor.Project.Tests
             StringAssert.StartsWith(Git(project, "show", "HEAD:heightmap.png"), "version https://git-lfs.github.com/spec/v1");
             StringAssert.StartsWith(Git(project, "show", "HEAD:map.json"), "{");
         }
+
+        private static string Rename(string project, string name, string message)
+        {
+            MapDocument document = MapProjectStore.Load(project);
+            MapProjectStore.Save(document with { Scenario = document.Scenario with { Name = name } }, project, document);
+            return ProjectRepository.Commit(project, message)!;
+        }
+
+        [TestMethod]
+        public void TheHistoryListsTheCommitsWithTheirFiles()
+        {
+            string project = Project();
+            ProjectRepository.Enable(project, Author);
+            string rename = Rename(project, "Harder FFA", "Rename the map");
+
+            IReadOnlyList<CommitInfo> history = ProjectRepository.History(project);
+
+            CollectionAssert.AreEqual(new[] { "Rename the map", ProjectRepository.FirstCommit }, history.Select(commit => commit.Subject).ToArray(), "newest first");
+            Assert.AreEqual(rename, history[0].ShortHash);
+            Assert.AreEqual("Map maker", history[0].Author);
+            Assert.IsTrue(DateTimeOffset.Now - history[0].Date < TimeSpan.FromMinutes(5));
+            CollectionAssert.AreEqual(new[] { "changed map.json" }, ProjectRepository.FilesOf(project, rename).Select(file => $"{file.Change} {file.Path}").ToArray());
+            IReadOnlyList<CommitFile> first = ProjectRepository.FilesOf(project, history[1].Hash);
+            Assert.IsTrue(first.All(file => file.Change == "added") && first.Any(file => file.Path == "map.json"), "the first commit adds every file");
+            Assert.ThrowsException<MapProjectException>(() => ProjectRepository.FilesOf(project, "--all"));
+            Assert.ThrowsException<MapProjectException>(() => ProjectRepository.FilesOf(project, "0000000"));
+        }
+
+        [TestMethod]
+        public void ReadsTheProjectAsACommitHoldsItWithoutTouchingItsFiles()
+        {
+            string project = Project();
+            ProjectRepository.Enable(project, Author);
+            string first = ProjectRepository.History(project)[0].Hash;
+            Rename(project, "Harder FFA", "Rename the map");
+
+            MapDocument old = ProjectRepository.ReadAt(project, first);
+
+            Assert.AreNotEqual("Harder FFA", old.Scenario.Name);
+            Assert.AreEqual("Harder FFA", MapProjectStore.Load(project).Scenario.Name, "the project's own files stay");
+            Assert.AreEqual(0, ProjectRepository.Status(project).Changes);
+            Assert.AreEqual("", Git(project, "worktree", "list", "--porcelain").Split('\n').Count(line => line.StartsWith("worktree ")) == 1 ? "" : "a worktree is left behind");
+        }
+
+        [TestMethod]
+        public void PushesToAndPullsFromTheSharedRepository()
+        {
+            string shared = ProjectFolders.New("shared");
+            Directory.CreateDirectory(shared);
+            Git(shared, "init", "--bare", "--initial-branch=main");
+            string mine = Project();
+            ProjectRepository.Enable(mine, Author with { Remote = shared });
+            Assert.IsNull(ProjectRepository.Status(mine).Ahead, "nothing pushed: no branch to follow yet");
+
+            ProjectRepository.Push(mine);
+            Assert.AreEqual(0, ProjectRepository.Status(mine).Ahead);
+
+            // a second computer clones it, and commits a change
+            string theirs = ProjectFolders.New("clone");
+            Git(Path.GetDirectoryName(theirs)!, "clone", shared, theirs);
+            Git(theirs, "config", "user.name", "Other maker");
+            Git(theirs, "config", "user.email", "other@example.org");
+            Rename(theirs, "Their FFA", "Their name");
+            ProjectRepository.Push(theirs);
+
+            File.AppendAllText(Path.Combine(mine, "map.json"), " ");
+            Assert.ThrowsException<MapProjectException>(() => ProjectRepository.Pull(mine), "changes that are not committed stop a pull");
+            Git(mine, "checkout", "--", ".");
+
+            IReadOnlyList<string> changed = ProjectRepository.Pull(mine);
+
+            CollectionAssert.AreEqual(new[] { "map.json" }, changed.ToArray());
+            Assert.AreEqual("Their FFA", MapProjectStore.Load(mine).Scenario.Name);
+            Assert.AreEqual(0, ProjectRepository.Status(mine).Behind);
+        }
+
+        [TestMethod]
+        public void PushingAndPullingNeedASharedRepository()
+        {
+            string project = Project();
+            ProjectRepository.Enable(project, Author);
+
+            Assert.ThrowsException<MapProjectException>(() => ProjectRepository.Push(project));
+            Assert.ThrowsException<MapProjectException>(() => ProjectRepository.Pull(project));
+        }
     }
 }
