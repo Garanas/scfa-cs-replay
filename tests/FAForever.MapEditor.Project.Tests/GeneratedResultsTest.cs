@@ -98,5 +98,60 @@ namespace FAForever.MapEditor.Project.Tests
 
             CollectionAssert.AreEqual(new[] { "water" }, results.Stale(now).Single().ChangedInputs.ToArray());
         }
+
+        /// <summary>
+        /// A generator that reads and writes what it is told, and remembers the results handed to it.
+        /// </summary>
+        private sealed class Step(string id, GeneratedInput[] inputs, GeneratedInput[]? outputs = null, string[]? reads = null) : IGenerator
+        {
+            public List<string> Handed { get; } = [];
+
+            public string Id => id;
+
+            public string Title => id;
+
+            public string Story => "F-7";
+
+            public IReadOnlyList<GeneratedInput> Inputs => inputs;
+
+            public IReadOnlyList<GeneratedInput> Outputs => outputs ?? [];
+
+            public IReadOnlyList<string> Reads => reads ?? [];
+
+            public void Read(GeneratedResult result) => Handed.Add(result.Generator.Id);
+
+            public object Generate(MapDocument document) => id;
+        }
+
+        [TestMethod]
+        public void GeneratorsComeAfterThoseThatFeedThem()
+        {
+            GeneratedResults results = new GeneratedResults();
+            Step props = new Step("props", [GeneratedInput.Heightmap, GeneratedInput.Props]);
+            Step network = new Step("network", [GeneratedInput.Heightmap], reads: ["walk"]);
+            Step masks = new Step("masks", [GeneratedInput.Heightmap], outputs: [GeneratedInput.Props]);
+            Step walk = new Step("walk", [GeneratedInput.Heightmap]);
+            foreach (Step step in new[] { props, network, masks, walk })
+            {
+                results.Register(step);
+            }
+
+            CollectionAssert.AreEqual(new[] { "masks", "props", "walk", "network" }, results.InOrder().Select(generator => generator.Id).ToArray());
+            Assert.IsTrue(GeneratedResults.Feeds(masks, props));
+            Assert.IsFalse(GeneratedResults.Feeds(props, masks));
+
+            foreach (IGenerator generator in results.InOrder())
+            {
+                results.Generate(generator.Id, original);
+            }
+            CollectionAssert.AreEqual(new[] { "walk" }, network.Handed, "the result it reads, handed to it");
+            EditSession session = new EditSession(original);
+            using (EditTransaction edit = session.Begin("Raise terrain"))
+            {
+                edit.Heightmap[10, 10] = (ushort)(edit.Heightmap[10, 10] + 100);
+                edit.Commit();
+            }
+            CollectionAssert.AreEqual(new[] { "masks", "props", "walk", "network" }, results.Stale(session.Document).Select(state => state.Generator.Id).ToArray(), "out of date in that order");
+        }
     }
 }

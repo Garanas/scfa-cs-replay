@@ -1025,6 +1025,21 @@ namespace FAForever.MapEditor.Project.Generation
         /// </summary>
         public GeneratedResult? Walkability { get; set; }
 
+        public IReadOnlyList<GeneratedInput> Outputs { get; } = [GeneratedInput.Markers];
+
+        /// <summary>
+        /// Walkability, whose current result it uses rather than making the mesh again.
+        /// </summary>
+        public IReadOnlyList<string> Reads { get; } = [WalkabilityGenerator.GeneratorId];
+
+        public void Read(GeneratedResult result)
+        {
+            if (result.Generator.Id == WalkabilityGenerator.GeneratorId)
+            {
+                Walkability = result;
+            }
+        }
+
         public object Generate(MapDocument document)
         {
             GeneratedResult? walkability = Walkability;

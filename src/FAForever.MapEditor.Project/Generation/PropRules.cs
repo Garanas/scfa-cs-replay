@@ -269,6 +269,8 @@ namespace FAForever.MapEditor.Project.Generation
         public IReadOnlyList<GeneratedInput> Inputs { get; } =
             [GeneratedInput.Heightmap, GeneratedInput.WaterLevel, GeneratedInput.StratumMasks, RuleInputs.PropRules, RuleInputs.PropRuleMasks];
 
+        public IReadOnlyList<GeneratedInput> Outputs { get; } = [GeneratedInput.Props];
+
         public object Generate(MapDocument document) => PropRules.Generate(document);
 
         /// <summary>

@@ -506,6 +506,11 @@ namespace FAForever.MapEditor.Project.Generation
         public IReadOnlyList<GeneratedInput> Inputs { get; } =
             [GeneratedInput.Heightmap, GeneratedInput.WaterLevel, GeneratedInput.StratumMasks, RuleInputs.MaskRules, RuleInputs.MaskRuleSources];
 
+        /// <summary>
+        /// The masks it puts in place may be ones the prop rules read.
+        /// </summary>
+        public IReadOnlyList<GeneratedInput> Outputs { get; } = [RuleInputs.PropRuleMasks];
+
         public object Generate(MapDocument document) => MaskRules.GenerateAll(document);
 
         /// <summary>

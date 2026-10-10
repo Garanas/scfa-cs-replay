@@ -155,6 +155,7 @@ public sealed partial class MainViewModel
         ILogger log = Logger("Editor");
         MapDocument document = map.Document;
         long start = Stopwatch.GetTimestamp();
+        Generation.Results.HandResults(generator);
         try
         {
             object value = await Task.Run(() =>
@@ -199,14 +200,19 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// Generates every result that is out of date (<c>generate.stale</c>); a result that is part of
-    /// the map goes into it, each one step of undo.
+    /// Generates every result that is out of date (<c>generate.stale</c>) in the order in which one
+    /// feeds the next (masks from rules before props from rules, walkability before path networks);
+    /// a result that is part of the map goes into it, each one step of undo, and what it makes out of
+    /// date is generated after it.
     /// </summary>
     public IReadOnlyList<GeneratedState> GenerateStale()
     {
         EditedMap map = RequireMap();
         return Generation.GenerateStale(map.Document, (generator, value) =>
-            map.Session.Edit($"Generate the {generator.Title.ToLowerInvariant()}", now => generator.Apply(now, value)));
+        {
+            map.Session.Edit($"Generate the {generator.Title.ToLowerInvariant()}", now => generator.Apply(now, value));
+            return map.Document;
+        });
     }
 
     /// <summary>

@@ -156,6 +156,38 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task GeneratingWhatIsOutOfDateMakesTheMasksBeforeThePropsThatReadThem()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "paint.addMask", new JsonObject { ["name"] = "flat" });
+            await Run(model, "paint.maskRules", new JsonObject { ["name"] = "flat" });
+            await Run(model, "paint.addMaskRule", new JsonObject { ["kind"] = "Slope", ["max"] = 8 });
+            await Run(model, "props.addRule", new JsonObject { ["name"] = "Forest", ["density"] = 1 });
+            await Run(model, "props.setRulePalette", new JsonObject { ["props"] = new JsonArray(Pine) });
+            await Run(model, "props.addRuleCondition", new JsonObject { ["layer"] = "flat", ["threshold"] = 0.5 });
+            await Run(model, "generate.masks");
+            await Run(model, "generate.props");
+            Assert.AreEqual(GeneratedStatus.Current, StateOf(model, PropRulesGenerator.GeneratorId).Status);
+
+            // the mask's rule changes: the mask is out of date, the props not yet
+            await Run(model, "paint.setMaskRule", new JsonObject { ["index"] = 0, ["max"] = 20 });
+            Assert.AreEqual(GeneratedStatus.Stale, StateOf(model, MaskRulesGenerator.GeneratorId).Status);
+            Assert.AreEqual(GeneratedStatus.Current, StateOf(model, PropRulesGenerator.GeneratorId).Status);
+            int forest = model.Map!.Document.CountRuleProps("Forest");
+
+            CommandRun run = await Run(model, "generate.stale");
+            CollectionAssert.AreEqual(new[] { MaskRulesGenerator.GeneratorId, PropRulesGenerator.GeneratorId },
+                ((JsonArray)run.Result!).Select(item => (string)item!["id"]!).ToArray(), "the props after the masks they read");
+            Assert.AreEqual(0, model.Generation.Results.Stale(model.Map!.Document).Count, "nothing left out of date");
+            Assert.IsTrue(model.Map.Document.CountRuleProps("Forest") > forest, "more flat ground, more trees");
+
+            IReadOnlyList<IGenerator> order = model.Generation.Results.InOrder();
+            int Index(string id) => order.ToList().FindIndex(generator => generator.Id == id);
+            Assert.IsTrue(Index(MaskRulesGenerator.GeneratorId) < Index(PropRulesGenerator.GeneratorId));
+            Assert.IsTrue(Index(WalkabilityGenerator.GeneratorId) < Index(PathNetworkGenerator.GeneratorId));
+        }
+
+        [TestMethod]
         public async Task RefusesWhatCannotBe()
         {
             MainViewModel model = await Open();

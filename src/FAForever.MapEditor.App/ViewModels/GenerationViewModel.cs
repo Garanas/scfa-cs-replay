@@ -126,24 +126,31 @@ public sealed partial class GenerationViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Generates every result that is out of date from <paramref name="document"/>.
+    /// Generates every result that is out of date from <paramref name="document"/>, one at a time
+    /// in the order in which one feeds the next (<see cref="GeneratedResults.InOrder"/>): each from
+    /// the document as the ones before left it, and a result made out of date by one put in place
+    /// before it (props from rules after their masks) is generated too. Each generator runs at most
+    /// once, so one run leaves nothing out of date unless generators feed each other in a cycle.
     /// </summary>
     /// <param name="apply">Puts a result that is part of the map (<see cref="IDocumentGenerator"/>)
-    /// into it; without it such a result is only kept.</param>
-    /// <returns>What was out of date, and why.</returns>
-    public IReadOnlyList<GeneratedState> GenerateStale(MapDocument document, Action<IDocumentGenerator, object>? apply = null)
+    /// into it and gives the document it then is; without it such a result is only kept.</param>
+    /// <returns>What was out of date, and why, in the order generated.</returns>
+    public IReadOnlyList<GeneratedState> GenerateStale(MapDocument document, Func<IDocumentGenerator, object, MapDocument>? apply = null)
     {
-        IReadOnlyList<GeneratedState> stale = Results.Stale(document);
-        foreach (GeneratedState state in stale)
+        List<GeneratedState> generated = [];
+        HashSet<string> done = new HashSet<string>(StringComparer.Ordinal);
+        while (Results.Stale(document).FirstOrDefault(state => !done.Contains(state.Generator.Id)) is GeneratedState state)
         {
             using Performance.Span measure = Performance.Measure("model.generate");
+            done.Add(state.Generator.Id);
+            generated.Add(state);
             GeneratedResult result = Results.Generate(state.Generator.Id, document);
-            if (state.Generator is IDocumentGenerator generator)
+            if (state.Generator is IDocumentGenerator generator && apply is not null)
             {
-                apply?.Invoke(generator, result.Value);
+                document = apply(generator, result.Value);
             }
         }
         Refresh(document);
-        return stale;
+        return generated;
     }
 }
