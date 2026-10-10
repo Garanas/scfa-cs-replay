@@ -78,7 +78,7 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual("/env/evergreen/layers/eg_grass001_albedo.dds", document.Terrain.Layers[0].AlbedoPath, "the biome's textures, by their game paths");
             Assert.AreEqual("/env/evergreen/layers/eg_grass001_normal.dds", document.Terrain.Layers[0].NormalPath);
             Assert.AreEqual(2, document.Props.Length);
-            Assert.AreEqual("/env/evergreen/props/rocks/rock01_prop.bp", document.Props[0].Blueprint);
+            Assert.AreEqual("/env/evergreen/props/trees/pine06_prop.bp", document.Props[0].Blueprint, "trees first");
             Assert.AreEqual("/env/evergreen/decals/e_mud001_albedo.dds", document.Decals.Single().Textures[0]);
             Assert.AreEqual(document.Decals[0].Id, document.DecalGroups.Single().DecalIds.Single());
             PlacedUnit unit = document.AllUnits().Single();

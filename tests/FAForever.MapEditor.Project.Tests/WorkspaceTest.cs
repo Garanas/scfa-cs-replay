@@ -23,6 +23,33 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void AScratchWorkspaceLinksTheAssetsAndKeepsItsOwnFolders()
+        {
+            Workspace source = Workspace.Create(ProjectFolders.New("workspace"), "C:/game", null, "D:/faf-vault");
+            string texture = Path.Combine(source.AssetsFolder, "env", "evergreen", "layers", "eg_grass001_albedo.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(texture)!);
+            File.WriteAllBytes(texture, [1, 2, 3]);
+            Directory.CreateDirectory(source.BrushesFolder);
+            File.WriteAllBytes(Path.Combine(source.BrushesFolder, "ridge.png"), [4]);
+
+            (Workspace scratch, ScratchWorkspace.AssetLink link) = ScratchWorkspace.Create(ProjectFolders.New("scratch"), source);
+
+            Assert.AreEqual(OperatingSystem.IsWindows() ? ScratchWorkspace.AssetLink.Junction : ScratchWorkspace.AssetLink.SymbolicLink, link);
+            Assert.IsTrue(File.Exists(Path.Combine(scratch.AssetsFolder, "env", "evergreen", "layers", "eg_grass001_albedo.png")), "the assets show through the link");
+            Assert.IsTrue(File.Exists(Path.Combine(scratch.BrushesFolder, "ridge.png")), "the brushes are copied");
+            Assert.AreEqual(Path.Combine(scratch.Folder, "vault"), scratch.VaultFolder, "exports stay inside");
+            Assert.AreEqual(source.GameFolder, scratch.GameFolder);
+            Assert.AreEqual("/env/evergreen/layers/eg_grass001_albedo.dds", EditedMap.OpenProject(SandboxMap.FolderOf(scratch)).Document.Terrain.Layers[0].AlbedoPath,
+                "its sandbox is made of the linked assets");
+
+            File.WriteAllBytes(Path.Combine(scratch.BrushesFolder, "mine.png"), [5]);
+            Assert.IsFalse(File.Exists(Path.Combine(source.BrushesFolder, "mine.png")), "a brush saved there stays there");
+            ScratchWorkspace.Delete(scratch.Folder);
+            Assert.IsFalse(Directory.Exists(scratch.Folder));
+            Assert.IsTrue(File.Exists(texture), "deleting the scratch workspace leaves the assets alone");
+        }
+
+        [TestMethod]
         public void RefusesAFolderWithOtherFiles()
         {
             string folder = ProjectFolders.New("workspace");

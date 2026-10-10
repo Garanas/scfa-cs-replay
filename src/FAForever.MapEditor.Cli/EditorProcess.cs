@@ -1,0 +1,204 @@
+using System.Diagnostics;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json.Nodes;
+
+namespace FAForever.MapEditor.Cli
+{
+    /// <summary>
+    /// <c>faf-map editor start</c> and <c>stop</c>: a test editor with automation on a port, started
+    /// with its own settings file and waited for until it is ready to be driven, and stopped until its
+    /// process has exited (so its build output is no longer locked).
+    /// </summary>
+    public static class EditorProcess
+    {
+        /// <returns>0 when the editor is ready, 1 when it failed or did not get ready in time.</returns>
+        public static int Start(EditorOptions o)
+        {
+            if (State(o.Port) is not null)
+            {
+                Console.Error.WriteLine($"An editor already answers on port {o.Port}: stop it first (faf-map editor stop --port {o.Port})");
+                return 1;
+            }
+            string? exe = FindEditor(o.Exe);
+            if (exe is null)
+            {
+                Console.Error.WriteLine("Cannot find faf-map-editor: pass --exe or set FAF_MAP_EDITOR_EXE");
+                return 1;
+            }
+
+            ProcessStartInfo start = new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true };
+            if (o.Map is string map)
+            {
+                start.ArgumentList.Add(Path.GetFullPath(map));
+            }
+            start.ArgumentList.Add("--automation");
+            start.ArgumentList.Add(o.Port.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            if (o.Settings is string settings)
+            {
+                start.Environment["FAF_MAP_EDITOR_SETTINGS"] = Path.GetFullPath(settings);
+            }
+            using Process process = Process.Start(start) ?? throw new InvalidOperationException($"Could not start {exe}");
+            Console.Error.WriteLine($"Started {exe} (process {process.Id}) on port {o.Port}");
+            if (o.NoWait)
+            {
+                return 0;
+            }
+
+            Stopwatch clock = Stopwatch.StartNew();
+            string waiting = "the editor to answer";
+            while (clock.Elapsed < TimeSpan.FromSeconds(o.Timeout))
+            {
+                if (process.HasExited)
+                {
+                    Console.Error.WriteLine($"The editor exited with code {process.ExitCode} before it was ready");
+                    return 1;
+                }
+                JsonObject? state = State(o.Port);
+                waiting = state is null ? "the editor to answer" : Waiting(state);
+                if (waiting.Length == 0)
+                {
+                    Console.WriteLine(new JsonObject
+                    {
+                        ["pid"] = process.Id,
+                        ["port"] = o.Port,
+                        ["map"] = state!["map"]?["name"]?.DeepClone(),
+                        ["projectFolder"] = state["projectFolder"]?.DeepClone(),
+                        ["workspace"] = state["workspace"]?.DeepClone(),
+                        ["seconds"] = Math.Round(clock.Elapsed.TotalSeconds, 1),
+                    }.ToJsonString());
+                    return 0;
+                }
+                Thread.Sleep(250);
+            }
+            Console.Error.WriteLine($"The editor was not ready after {o.Timeout} s: waiting for {waiting}");
+            return 1;
+        }
+
+        /// <returns>0 when no editor runs on the port any more, 1 when it is still running.</returns>
+        public static int Stop(EditorOptions o)
+        {
+            JsonObject? state = State(o.Port);
+            if (state is null)
+            {
+                Console.Error.WriteLine($"No editor answers on port {o.Port}");
+                return 0;
+            }
+            Process? process = null;
+            if (state["pid"]?.GetValue<int>() is int pid)
+            {
+                try
+                {
+                    process = Process.GetProcessById(pid);
+                }
+                catch (ArgumentException)
+                {
+                    // gone already
+                }
+            }
+            Send(o.Port, "close");
+            using (process)
+            {
+                if (process is null)
+                {
+                    return 0;
+                }
+                if (!process.WaitForExit(TimeSpan.FromSeconds(o.Timeout)))
+                {
+                    if (!o.Force)
+                    {
+                        Console.Error.WriteLine($"The editor (process {process.Id}) did not exit within {o.Timeout} s; --force ends it");
+                        return 1;
+                    }
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(TimeSpan.FromSeconds(10));
+                    Console.Error.WriteLine($"Ended the editor (process {process.Id})");
+                }
+                else
+                {
+                    Console.Error.WriteLine($"The editor (process {process.Id}) exited");
+                }
+                return process.HasExited ? 0 : 1;
+            }
+        }
+
+        /// <summary>
+        /// What a starting editor still waits for, empty when it is ready: the workspace, the map
+        /// open, the assets read, nothing busy.
+        /// </summary>
+        public static string Waiting(JsonObject state)
+        {
+            string stage = state["stage"]?.GetValue<string>() ?? "";
+            if (stage != "Ready")
+            {
+                return stage == "SetUp" ? "the workspace's setup (the settings file names no workspace)" : $"the stage Ready (now {stage})";
+            }
+            if (state["busy"]?.GetValue<bool>() == true)
+            {
+                return "a busy operation";
+            }
+            if (state["map"] is null)
+            {
+                return "a map to open";
+            }
+            if (state["loading"]?["assetsLoaded"]?.GetValue<bool>() != true)
+            {
+                return "the assets";
+            }
+            return "";
+        }
+
+        /// <summary>
+        /// The editor's state, or null when none answers on the port.
+        /// </summary>
+        private static JsonObject? State(int port) => Send(port, "state");
+
+        private static JsonObject? Send(int port, string command)
+        {
+            using HttpClient client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            try
+            {
+                using StringContent content = new StringContent("{}", Encoding.UTF8, "application/json");
+                using HttpResponseMessage response = client.PostAsync($"http://localhost:{port}/{command}", content).GetAwaiter().GetResult();
+                return JsonNode.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult()) as JsonObject;
+            }
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The editor's executable: the one given, the one <c>FAF_MAP_EDITOR_EXE</c> names, else the
+        /// one built next to this tool (the App's output beside the CLI's, in either build layout).
+        /// </summary>
+        public static string? FindEditor(string? given)
+        {
+            string name = OperatingSystem.IsWindows() ? "faf-map-editor.exe" : "faf-map-editor";
+            foreach (string? candidate in Candidates())
+            {
+                if (candidate is not null && File.Exists(candidate))
+                {
+                    return Path.GetFullPath(candidate);
+                }
+            }
+            return null;
+
+            IEnumerable<string?> Candidates()
+            {
+                yield return given;
+                yield return Environment.GetEnvironmentVariable("FAF_MAP_EDITOR_EXE");
+                string here = AppContext.BaseDirectory;
+                yield return Path.Combine(here, name);
+                // bin/FAForever.MapEditor.Cli/debug/ beside bin/FAForever.MapEditor.App/debug/, or
+                // src/FAForever.MapEditor.Cli/bin/Debug/net10.0/ beside src/FAForever.MapEditor.App/bin/...
+                const string cli = "FAForever.MapEditor.Cli";
+                int at = here.LastIndexOf(cli, StringComparison.Ordinal);
+                if (at >= 0)
+                {
+                    yield return Path.Combine(here[..at] + "FAForever.MapEditor.App" + here[(at + cli.Length)..], name);
+                }
+            }
+        }
+    }
+}

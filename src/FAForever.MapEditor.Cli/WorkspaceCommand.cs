@@ -22,8 +22,15 @@ namespace FAForever.MapEditor.Cli
                 case "status":
                     Status(Open(o.Folder));
                     break;
+                case "scratch":
+                    Scratch(o);
+                    break;
+                case "remove-scratch":
+                    ScratchWorkspace.Delete(o.Folder ?? throw new MapProjectException("Name the folder of the scratch workspace"));
+                    Console.WriteLine($"Removed {o.Folder}; the assets it linked to stay");
+                    break;
                 default:
-                    throw new MapProjectException($"There is no workspace action '{o.Action}': init, convert or status");
+                    throw new MapProjectException($"There is no workspace action '{o.Action}': init, convert, status, scratch or remove-scratch");
             }
         }
 
@@ -43,6 +50,32 @@ namespace FAForever.MapEditor.Cli
             Console.WriteLine($"  FAF   {workspace.FafDataFolder ?? "(none)"}");
             Console.WriteLine($"  vault {workspace.VaultFolder}");
             Console.WriteLine("Convert the game's assets with: faf-map workspace convert");
+        }
+
+        /// <summary>
+        /// A workspace for a test editor that may write (projects, presets, brushes, exports), with
+        /// the assets of another one linked in.
+        /// </summary>
+        private static void Scratch(WorkspaceOptions o)
+        {
+            string folder = o.Folder ?? throw new MapProjectException("Name the folder of the scratch workspace");
+            Workspace source = Open(o.From);
+            (Workspace workspace, ScratchWorkspace.AssetLink link) = ScratchWorkspace.Create(folder, source);
+            Console.WriteLine($"Made the scratch workspace {workspace.Folder}");
+            Console.WriteLine($"  assets  {link switch
+            {
+                ScratchWorkspace.AssetLink.Junction => "a junction to",
+                ScratchWorkspace.AssetLink.SymbolicLink => "a link to",
+                ScratchWorkspace.AssetLink.Copy => "copied from",
+                _ => "none: there are none in",
+            }} {source.AssetsFolder}");
+            Console.WriteLine($"  vault   {workspace.VaultFolder} (exports go here)");
+            Console.WriteLine($"  sandbox {SandboxMap.FolderOf(workspace)}");
+            if (o.Settings is string settings)
+            {
+                new UserSettings(Path.GetFullPath(settings)).SetWorkspace(workspace.Folder);
+                Console.WriteLine($"  settings {Path.GetFullPath(settings)}: FAF_MAP_EDITOR_SETTINGS={Path.GetFullPath(settings)}");
+            }
         }
 
         private static Workspace Open(string? folder)

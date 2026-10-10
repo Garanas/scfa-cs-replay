@@ -33,7 +33,7 @@ namespace FAForever.MapEditor.Cli
     [Verb("editor", HelpText = "Send a command to a running editor started with --automation, e.g. 'editor stroke points=[[10,10],[50,50]]'.")]
     public sealed class EditorOptions
     {
-        [Value(0, MetaName = "command", Required = true, HelpText = "state, open, import, save, save-as, export, undo, redo, brush, stroke, height, fit, view, screenshot, close (help lists them).")]
+        [Value(0, MetaName = "command", Required = true, HelpText = "start or stop a test editor; or a command for a running one: state, mouse, key, open, save, export, undo, stroke, screenshot, close (help lists them).")]
         public string Command { get; set; } = "";
 
         [Value(1, MetaName = "arguments", HelpText = "name=value pairs; a value that reads as JSON (a number, [..], true) is sent as JSON, any other as text.")]
@@ -41,12 +41,30 @@ namespace FAForever.MapEditor.Cli
 
         [Option('p', "port", Default = 5371, HelpText = "The port the editor listens on.")]
         public int Port { get; set; }
+
+        [Option("settings", HelpText = "start: the editor's settings file (FAF_MAP_EDITOR_SETTINGS), which names its workspace.")]
+        public string? Settings { get; set; }
+
+        [Option("map", HelpText = "start: the project or map folder to open; without one the editor opens the workspace's sandbox.")]
+        public string? Map { get; set; }
+
+        [Option("exe", HelpText = "start: the editor's executable; by default the one built beside this tool, or FAF_MAP_EDITOR_EXE.")]
+        public string? Exe { get; set; }
+
+        [Option("no-wait", HelpText = "start: answer once the process runs, without waiting until it is ready.")]
+        public bool NoWait { get; set; }
+
+        [Option("timeout", Default = 120, HelpText = "start: seconds to wait until it is ready; stop: until it exits.")]
+        public int Timeout { get; set; }
+
+        [Option("force", HelpText = "stop: end the process when it does not exit in time.")]
+        public bool Force { get; set; }
     }
 
-    [Verb("workspace", HelpText = "Set up the workspace, convert the game's assets into it, or show whether they are current.")]
+    [Verb("workspace", HelpText = "Set up the workspace, convert the game's assets into it, show whether they are current, or make a scratch workspace for tests.")]
     public sealed class WorkspaceOptions
     {
-        [Value(0, MetaName = "action", Required = true, HelpText = "init, convert or status.")]
+        [Value(0, MetaName = "action", Required = true, HelpText = "init, convert, status, scratch or remove-scratch.")]
         public string Action { get; set; } = "";
 
         [Value(1, MetaName = "folder", HelpText = "The workspace; by default the one the editor remembers.")]
@@ -60,6 +78,12 @@ namespace FAForever.MapEditor.Cli
 
         [Option("vault", HelpText = "init: the vault on disk, where maps are exported to; by default the one fa_path.lua names.")]
         public string? VaultFolder { get; set; }
+
+        [Option("from", HelpText = "scratch: the workspace whose converted assets it links to; by default the one the editor remembers.")]
+        public string? From { get; set; }
+
+        [Option("settings", HelpText = "scratch: a settings file to write that names the scratch workspace, for FAF_MAP_EDITOR_SETTINGS.")]
+        public string? Settings { get; set; }
     }
 
     public static class Program
@@ -68,7 +92,12 @@ namespace FAForever.MapEditor.Cli
             Parser.Default.ParseArguments<UnpackOptions, PackOptions, EditorOptions, WorkspaceOptions>(args).MapResult(
                 (UnpackOptions o) => Run(() => Unpack(o)),
                 (PackOptions o) => o.Watch ? Watch(o) : Run(() => Pack(o)),
-                (EditorOptions o) => EditorClient.Send(o.Port, o.Command, o.Arguments),
+                (EditorOptions o) => o.Command switch
+                {
+                    "start" => EditorProcess.Start(o),
+                    "stop" => EditorProcess.Stop(o),
+                    _ => EditorClient.Send(o.Port, o.Command, o.Arguments),
+                },
                 (WorkspaceOptions o) => Run(() => WorkspaceCommand.Run(o)),
                 _ => 2);
 
