@@ -966,5 +966,62 @@ namespace FAForever.MapEditor.App.Tests
             CollectionAssert.AreEqual(Array.Empty<string>(), unlabelled, "a screen reader and an agent need a name for each");
             window.Close();
         });
+
+        [TestMethod]
+        public Task TheHandlesTurnAndMoveAlongOneAxisInTheTopView() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Show(window, MapViewTab.Top);
+            model.SelectTool("markers.select");
+            MarkerSet markers = model.ShownDocument!.Markers;
+            ObjectRef a = ObjectRef.Marker(markers.Resources[0].Id);
+            ObjectRef b = ObjectRef.Marker(markers.Resources[1].Id);
+            model.Selection.Set([a, b]);
+            Dispatcher.UIThread.RunJobs();
+            SelectTool tool = (SelectTool)model.ActiveTool!.Tool!;
+            SelectionFrame frame = tool.Frame!;
+            HandleLayout layout = HandleLayout.Of(frame, (float)(1 / window.MapView.Zoom));
+            Point Window(System.Numerics.Vector3 place) => window.MapView.TranslatePoint(window.MapView.MapToControl(place.X, place.Z), window)!.Value;
+            Vector3 before = model.ShownDocument.PlaceOf(a)!.Value;
+
+            // the ring, dragged a quarter round with shift: a quarter turn about the selection's centre
+            Point ring = Window(layout.Centre + new System.Numerics.Vector3(layout.RingRadius, 0, 0));
+            Point centre = Window(layout.Centre);
+            window.MouseMove(ring);
+            window.MouseDown(ring, MouseButton.Left, RawInputModifiers.Shift);
+            Vector radius = ring - centre;
+            for (int i = 1; i <= 6; i++)
+            {
+                double angle = i / 6.0 * 1.45;
+                window.MouseMove(centre + new Vector(radius.X * Math.Cos(angle), radius.X * Math.Sin(angle)), RawInputModifiers.Shift);
+            }
+            window.MouseUp(centre + new Vector(radius.X * Math.Cos(1.45), radius.X * Math.Sin(1.45)), MouseButton.Left, RawInputModifiers.Shift);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.AreEqual("Turn the selection", model.Map!.Session.UndoDescription);
+            Assert.AreEqual(90, SelectionInspector.Degrees(model.ShownDocument!.HeadingOf(a)!.Value), 0.01, "shift snaps to 15 degrees");
+            Assert.AreEqual(frame.Middle.X - (before.Z - frame.Middle.Y), model.ShownDocument!.PlaceOf(a)!.Value.X, 0.05);
+            Assert.AreEqual(2, model.History.Count, "one step");
+
+            // X held while the middle square is dragged: along x only
+            Vector3 turned = model.ShownDocument!.PlaceOf(a)!.Value;
+            Point middle = Window(tool.Frame!.Centre);
+            window.KeyPress(Key.X, RawInputModifiers.None, PhysicalKey.X, "x");
+            window.MouseMove(middle);
+            window.MouseDown(middle, MouseButton.Left);
+            for (int i = 1; i <= 5; i++)
+            {
+                window.MouseMove(middle + new Vector(i * 8, i * 6));
+            }
+            window.MouseUp(middle + new Vector(40, 30), MouseButton.Left);
+            window.KeyRelease(Key.X, RawInputModifiers.None, PhysicalKey.X, "x");
+            Dispatcher.UIThread.RunJobs();
+
+            Vector3 moved = model.ShownDocument!.PlaceOf(a)!.Value;
+            Assert.AreEqual(turned.X + 40 / window.MapView.Zoom, moved.X, 0.05, "the mouse's way along x");
+            Assert.AreEqual(turned.Z, moved.Z, 1e-3, "x held: z stays");
+            Assert.AreEqual(3, model.History.Count);
+            window.Close();
+        });
     }
 }
