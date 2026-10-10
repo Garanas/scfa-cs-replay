@@ -118,9 +118,9 @@ public static class EditorModes
             ],
             [
                 new StrataSection(),
+                new MasksSection(),
                 new PresetSection("brush", "Brush presets"),
                 new PlannedSection("Layer textures", "S-2", "Each layer's albedo and normal texture and their scales; add, remove, reorder"),
-                new MasksSection(),
             ],
             [new PlannedSection("Layer", "S-2", "The selected layer's textures and scales, or the selected mask")]),
 

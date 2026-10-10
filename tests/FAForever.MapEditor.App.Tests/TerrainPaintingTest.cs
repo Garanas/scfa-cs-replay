@@ -7,6 +7,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FAForever.FileFormats.Map;
+using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
@@ -127,7 +128,7 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.AreEqual("terrain.types", model.ActiveTool?.Definition.Id);
             Assert.IsTrue(properties.Contains(nameof(MainViewModel.ShownGrid)), "the top view lays the types over the terrain");
-            Assert.AreEqual("terrain types", model.ShownGrid?.Key);
+            Assert.AreEqual(GridOverlay.TerrainTypes.Key, model.ShownGrid?.Key);
             Assert.IsNotNull(model.ShownGrid?.Palette, "a colour per type");
             Assert.AreEqual(0, model.ShownMask, "no stratum's mask");
             Assert.IsTrue(types.Legend.Count > 0, "the legend lists the types the map uses");

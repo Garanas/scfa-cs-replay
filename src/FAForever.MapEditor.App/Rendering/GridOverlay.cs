@@ -18,7 +18,7 @@ public sealed record GridOverlay(string Key, Func<MapDocument, TiledBuffer<byte>
     /// <summary>
     /// The grid a brush paints, as a mask.
     /// </summary>
-    public static GridOverlay Mask(PaintTarget target) => new GridOverlay(target.ToString(), document =>
+    public static GridOverlay Mask(PaintTarget target) => new GridOverlay(target.Title, document =>
     {
         try
         {
@@ -34,7 +34,7 @@ public sealed record GridOverlay(string Key, Func<MapDocument, TiledBuffer<byte>
     /// <summary>
     /// The terrain's types, each in its colour (<see cref="TerrainTypeColours"/>).
     /// </summary>
-    public static GridOverlay TerrainTypes { get; } = new GridOverlay("terrain types", document => document.Terrain.Types, TerrainTypeColours.Palette);
+    public static GridOverlay TerrainTypes { get; } = new GridOverlay("terrain types in their colours", document => document.Terrain.Types, TerrainTypeColours.Palette);
 }
 
 /// <summary>

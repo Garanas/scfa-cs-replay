@@ -82,7 +82,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     submenus (the mode, its commands, its tools). A request says what a command is, the layout
     where it shows. A command in no menu is for automation and plugins, and the palette leaves
     it out: its control is on a page or panel (`workspace.setUp`, `workspace.convert`,
-    `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`, `presets.apply`,
+    `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`, `paint.chooseMask`, `presets.apply`,
     `presets.delete`), it selects what one
     clicks (`assets.select`) or drops what one drags (`assets.drop`), it is the mouse's or a view's own key in
     the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
@@ -135,10 +135,12 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     release (`MainViewModel.StartStroke`, `EndStroke`): one undo step, shown while it is painted,
     dabs a quarter of the radius apart. A stroke is input, not a command, so it opens its own
     transaction; the commands that edit wait until it ends (`Needs.NoStroke`).
-  - `SculptTool` (T-1): mode, radius, strength, the height to flatten to. `StrataTool` (S-1):
-    the layer it paints (chosen in the Paint panel's list, `Strata`/`Painted`), radius, strength,
-    erase; the top view shows that layer's mask while it is active (`MainViewModel.ShownMask`).
-    Each tool has its own radius.
+  - `SculptTool` (T-1): mode, falloff, radius, strength, the height to flatten to, set or scale
+    around, the factor and noise size, limits on the heights. The painting tools derive from
+    `GridPaintTool` (section "Painting the terrain's grids" below); `StrataTool` (S-1) paints the
+    layer chosen in the Paint panel's list (`Strata`/`Painted`), within its limits of slope and
+    height; the top view shows that layer's mask while it is active (`MainViewModel.ShownMask`,
+    and `ShownGrid` for every painting tool). Each tool has its own radius.
   - **Brush shapes** (`Tools/BrushShapeSettings`, both tools' `Shape`, `IShapedBrushTool`): round,
     or one of the workspace's brushes (the shelf's, below), the first choice of the options row;
     a brush chosen on the shelf becomes the active tool's shape. A picture fills the square
@@ -157,9 +159,12 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     unit 14, uploaded before the heights are bound, since an upload binds to the active unit).
     `MainViewModel.CursorChanged` (a tool's radius, shape or rotation, another tool) draws them again.
   - `brush.set {layer?, mode?, radius?, strength?, target?, erase?, shape?, rotation?,
-    randomRotation?}` sets them up for automation: a layer chooses its tool (0 sculpting, 1 to 8
-    the strata tool with that layer); radius, strength and the shape (`round`, a brush's key or
-    its path in the brushes folder) go to the active tool's brush.
+    randomRotation?, falloff?, factor?, noiseScale?, minHeight?, maxHeight?, minSlope?, maxSlope?,
+    limits?, waterMask?, mask?, terrainType?}` sets them up for automation: a layer chooses its tool
+    (0 sculpting, 1 to 8 the strata tool with that layer), `waterMask`, `mask` and `terrainType` the
+    painting tool of each; radius, strength, falloff and the shape (`round`, a brush's key or its
+    path in the brushes folder) go to the active tool's brush; a limit given turns its limit on,
+    `limits: false` turns them off first.
 - Shortcuts are never a single letter (`IdsAndShortcutsAreUnique`): it would fire while typing.
 
 ## UI rules: one look, kept in one place
@@ -389,6 +394,44 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
   save-changes dialog.
 - The window watches the project folder (`ProjectWatcher`) and reads back what other tools change;
   during a stroke the changes wait until it ends.
+
+## Painting the terrain's grids
+
+User stories T-1, S-1, T-6, W-2, K-1. The library's brushes do the work (its guide, "Brushes");
+the tools hold their settings and make one stroke (`BrushStroke`) a step of undo.
+
+- **`Tools/GridPaintTool`** is the core of every tool that paints a byte grid: radius, strength,
+  erase, falloff, shape (`IShapedBrushTool`), and per tool what it paints (`Target`, a library
+  `PaintTarget`), how the top view shows it (`Shown`, a `Rendering/GridOverlay`), whether it sets
+  codes (`SetsCodes`, `Code`: a `CodeBrush`) or blends a mask (`MaskBrush`), its `Limits` and the
+  history's text (`Describe`). A stroke paints `EditTransaction.Grid(target)`. The tools:
+  `StrataTool` (`paint.strata`, its `Limiting`: slope and height, each pair on or off),
+  `WaterPaintTool` (`water.paint`: foam, flatness or depth bias, half the map's size),
+  `MaskPaintTool` (`paint.masks`: the mask chosen in the panel) and `TerrainTypeTool`
+  (`terrain.types`: the game's types, set where the brush works at least half, sharp by default).
+  A new grid to paint is a `PaintTarget` in the library and a small subclass here.
+- **What the top view lays over the terrain** is `MainViewModel.ShownGrid`: the active painting
+  tool's `Shown`, else the chosen mask for tools while the overlay `mask` is on. `TerrainPicture`
+  colours a mask in the overlay's orange, a grid with a `Palette` in a colour per code, and colours
+  everything again only when the overlay's `Key` changes. The terrain types' colours are
+  `Rendering/TerrainTypeColours` (the game has none: by kind, dirt brown to lava red, a shade per
+  type); the tool options show the chosen type and a legend of the types the map uses
+  (`TerrainTypeTool.Legend`, counted only while the tool is active and no stroke runs; span
+  `tool.count-types`), their swatches through `Controls/ArgbBrushConverter`.
+- **Masks for tools** (K-1, `model.Masks`, `ViewModels/MasksViewModel`): the document's masks by
+  name and the chosen one; the Paint panel's `MasksSection` lists them (with their size), names a
+  new one or a new name in its field, and runs `paint.addMask {name?, half?}`,
+  `paint.renameMask {name?, newName?}` and `paint.deleteMask {name?}` (each `[UndoStep]`; left out,
+  the field's name or the chosen mask); `paint.chooseMask {name}` chooses as the list does. Later
+  features read the masks from the document (`MapDocument.Masks`) by name.
+- Brush presets keep the painting tools too (`BrushPresetSettings.Tool` is `strata`, `water`,
+  `masks` or `types`; the water's mask and the terrain type are kept, the stratum and the mask for
+  tools are the map's and left out).
+- Automation: `state.painting` (the sculpt tool's falloff, factor, noise size and limits, the
+  strata tool's limits, the water, masks and types tools with the legend, the masks for tools, the
+  chosen one, `showMask` and the key of `shownGrid`).
+- Not built yet: hydraulic erosion, painting with symmetry, limits for the water and masks tools,
+  the overlays in the 3D view.
 
 ## Tests with the real window, and labels for screen readers and agents
 

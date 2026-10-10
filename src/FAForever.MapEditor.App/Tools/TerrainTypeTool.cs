@@ -26,7 +26,7 @@ public sealed record TerrainTypeChoice(TerrainType Type, uint Colour, int Count 
     /// <summary>
     /// How many ogrids have it, for the legend.
     /// </summary>
-    public string CountText => $"{Type.Name} {Count}";
+    public string CountText => $"{Type.Name}: {Count} ogrids";
 
     public override string ToString() => Title;
 }
@@ -42,7 +42,7 @@ public sealed partial class TerrainTypeTool : GridPaintTool
     /// <summary>
     /// The most types the legend lists, the most used first.
     /// </summary>
-    public const int LegendSize = 8;
+    public const int LegendSize = 6;
 
     private TiledBuffer<byte>? _counted;
 

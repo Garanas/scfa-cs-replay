@@ -132,7 +132,7 @@
                 <ContentControl Content="{Binding Shape}" />
               </StackPanel>
             </DataTemplate>
-            <!-- painting the terrain types (T-6): the type, the brush, and the legend of the types the map uses -->
+            <!-- painting the terrain types (T-6): the type, the legend of the types the map uses, then the brush -->
             <DataTemplate DataType="tools:TerrainTypeTool">
               <StackPanel Classes="toolrow">
                 <ComboBox ItemsSource="{Binding Types}" SelectedItem="{Binding Chosen}" MaxWidth="{StaticResource ToolChoiceWidth}" ToolTip.Tip="{Binding Chosen.Description}"
@@ -146,15 +146,6 @@
                     </DataTemplate>
                   </ComboBox.ItemTemplate>
                 </ComboBox>
-                <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
-                          ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
-                          AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
-                <ComboBox ItemsSource="{Binding Falloffs}" SelectedItem="{Binding Falloff}" IsVisible="{Binding !Shape.IsShaped}"
-                          AutomationProperties.Name="Brush falloff" AutomationProperties.HelpText="How a round brush fades from its centre to its edge: smooth, linear, or sharp (the same everywhere)" />
-                <StackPanel Classes="inline">
-                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
-                  <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
-                </StackPanel>
                 <TextBlock Classes="overline" Text="{Binding Source='In the map', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
                 <ItemsControl ItemsSource="{Binding Legend}" AutomationProperties.Name="Terrain types in the map">
                   <ItemsControl.ItemsPanel>
@@ -164,13 +155,22 @@
                   </ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="tools:TerrainTypeChoice">
-                      <StackPanel Classes="inline" ToolTip.Tip="{Binding Description}">
+                      <StackPanel Classes="inline" ToolTip.Tip="{Binding CountText}">
                         <Border Classes="swatch" Background="{Binding Colour, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
-                        <TextBlock Classes="caption" TextWrapping="NoWrap" Text="{Binding CountText}" />
+                        <TextBlock Classes="caption" TextWrapping="NoWrap" Text="{Binding Type.Name}" />
                       </StackPanel>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                <ComboBox ItemsSource="{Binding Falloffs}" SelectedItem="{Binding Falloff}" IsVisible="{Binding !Shape.IsShaped}"
+                          AutomationProperties.Name="Brush falloff" AutomationProperties.HelpText="How a round brush fades from its centre to its edge: smooth, linear, or sharp (the same everywhere)" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
+                  <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Brush radius in ogrids" />
+                </StackPanel>
+                <ComboBox ItemsSource="{Binding Shape.Choices}" SelectedItem="{Binding Shape.Chosen}" MaxWidth="{StaticResource ToolSliderWidth}"
+                          ToolTip.Tip="{Binding Shape.Chosen.Path}" AutomationProperties.Name="Brush shape"
+                          AutomationProperties.HelpText="Round, or a picture of the workspace's brushes folder; choosing a brush on the asset shelf chooses it here" />
                 <ContentControl Content="{Binding Shape}" />
               </StackPanel>
             </DataTemplate>
