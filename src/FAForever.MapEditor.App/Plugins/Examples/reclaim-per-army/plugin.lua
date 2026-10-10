@@ -1,11 +1,17 @@
 -- Reclaim per army: the mass and energy of the props each player is likely to reclaim first.
 -- Every prop counts for the spawn nearest to it. A command reports the totals, a check warns when
--- an army has much more or less than the average, and the panel sets how much is too much.
+-- an army has much more or less than the average (in per cent and in mass), and the panel sets how
+-- much is too much.
 -- An example of the editor's Lua API (see the map editor's guide, "Lua plugins").
 
 plugin.field{
   key = "tolerance", label = "Tolerance (%)", type = "number", default = 25, min = 0, max = 100,
   help = "How far an army's reclaim may be from the average before the check warns",
+}
+
+plugin.field{
+  key = "least", label = "Least difference (mass)", type = "number", default = 50, min = 0, max = 10000,
+  help = "A difference from the average of less mass than this is not worth a warning, however large in per cent",
 }
 
 -- The reclaim nearest to each spawn: a list of { name, ref, mass, energy, props }.
@@ -71,7 +77,7 @@ plugin.check{
   id = "uneven",
   title = "Uneven reclaim between armies",
   run = function()
-    local key = map.revision("props") .. "/" .. map.revision("markers") .. "/" .. plugin.value("tolerance")
+    local key = map.revision("props") .. "/" .. map.revision("markers") .. "/" .. plugin.value("tolerance") .. "/" .. plugin.value("least")
     if key == checked then
       return found
     end
@@ -89,10 +95,12 @@ plugin.check{
       return {}
     end
     local tolerance = plugin.value("tolerance") / 100
+    local least = plugin.value("least")
     local problems = found
     for _, total in ipairs(totals) do
       local off = (total.mass - average) / average
-      if math.abs(off) > tolerance then
+      -- a few rocks more or less are no matter: the difference must be large in mass too
+      if math.abs(off) > tolerance and math.abs(total.mass - average) >= least then
         problems[#problems + 1] = {
           severity = "warning",
           thing = total.ref,

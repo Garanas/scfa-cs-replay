@@ -425,7 +425,8 @@ public sealed partial class PropsViewModel : ObservableObject
 
     /// <summary>
     /// A prop chosen on the shelf or in the picker while the Props mode is on: with the paint tool
-    /// it goes into the palette, else it becomes the prop the place tool places.
+    /// it goes into the palette, else it becomes the prop the place tool places (the status line says
+    /// so, and that the tool is to be chosen when another is active).
     /// </summary>
     /// <param name="tile">The shelf's tile it was chosen on: another variant of the tile chosen
     /// just before takes the place of the one that added in the palette.</param>
@@ -448,7 +449,10 @@ public sealed partial class PropsViewModel : ObservableObject
         else
         {
             _model.Tool<PropPlaceTool>().Prop = prop;
-            _model.Status = $"Placing {prop.Name}: click on the map";
+            // another tool (Select) stays: say what the choice is for
+            _model.Status = _model.ActiveTool?.Tool is PropPlaceTool
+                ? $"Placing {prop.Name}: click on the map"
+                : $"{prop.Name} is the prop the Place tool places: choose the Place tool to put it on the map";
         }
     }
 

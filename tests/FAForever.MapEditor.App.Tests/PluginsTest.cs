@@ -405,6 +405,31 @@ namespace FAForever.MapEditor.App.Tests
             double expected = PropReclaim.Of(document.Props, model.Assets.Catalog).Mass;
             Assert.AreEqual(expected, totals.Sum(total => total!["mass"]!.GetValue<double>()), 1e-6, "every prop counts for one army");
             StringAssert.StartsWith(model.Status, "Mass of reclaim per army:");
+            Assert.IsFalse(model.Problems.Run().Any(problem => problem.Message.Contains("mass of reclaim nearest", StringComparison.Ordinal)),
+                "a few rocks more or less make no warning");
+        }
+
+        [TestMethod]
+        public void AnUntouchedCopyOfAnEarlierExampleIsBroughtUpToDateAndAnEditedOneKept()
+        {
+            string folder = NewFolder();
+            ExamplePlugins.Ensure(folder);
+            string reclaim = Path.Combine(folder, "reclaim-per-army");
+            string current = File.ReadAllText(Path.Combine(reclaim, "plugin.lua"));
+            string earlier = Path.Combine(AppContext.BaseDirectory, "assets", "plugins", "reclaim-per-army-1.0");
+            foreach (string file in new[] { "plugin.lua", "plugin.json" })
+            {
+                // with the line ends a Windows checkout gives
+                File.WriteAllText(Path.Combine(reclaim, file), File.ReadAllText(Path.Combine(earlier, file)).Replace("\r\n", "\n").Replace("\n", "\r\n"));
+            }
+
+            CollectionAssert.AreEqual(new[] { "reclaim-per-army" }, ExamplePlugins.Ensure(folder).ToArray(), "version 1.0, untouched: brought up to date");
+            Assert.AreEqual(current, File.ReadAllText(Path.Combine(reclaim, "plugin.lua")));
+            StringAssert.Contains(current, "least");
+
+            File.WriteAllText(Path.Combine(reclaim, "plugin.lua"), File.ReadAllText(Path.Combine(earlier, "plugin.lua")) + "-- mine\n");
+            Assert.AreEqual(0, ExamplePlugins.Ensure(folder).Count, "a copy the user changed is theirs");
+            StringAssert.EndsWith(File.ReadAllText(Path.Combine(reclaim, "plugin.lua")), "-- mine\n");
         }
 
         [TestMethod]

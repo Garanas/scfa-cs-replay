@@ -16,7 +16,10 @@ namespace FAForever.MapEditor.App.Commands;
 /// </summary>
 /// <param name="Option">E.g. <c>Civilian_Defenses</c> (the option <c>optional_civilian_defenses</c>).</param>
 /// <param name="Level">The option's value from which on the script creates it, 2 or more; left out, a name without one.</param>
-/// <param name="Army">Left out, the civilians: <c>ARMY_17</c>, else <c>NEUTRAL_CIVILIAN</c>, else the first extra army.</param>
+/// <param name="Army">Left out, the army of the selected units when they are all of one extra army
+/// (the script creates a group of any army), else the civilians: <c>ARMY_17</c>, else
+/// <c>NEUTRAL_CIVILIAN</c>, else the first extra army. Units of another army change army, and the
+/// status line says so.</param>
 /// <param name="FromSelection">Move the selected units into it.</param>
 /// <returns>The army, the group and how many units moved into it.</returns>
 [UndoStep]
@@ -28,7 +31,12 @@ public sealed class AddOptionalGroupHandler(MainViewModel model, SelectionViewMo
     public Task<JsonObject> Handle(AddOptionalGroup request, CancellationToken cancellationToken)
     {
         MapDocument document = edit.Transaction.Document;
-        string army = request.Army ?? AdaptiveGroups.CivilianArmy(document)
+        string[] units = request.FromSelection ? [.. selection.Items.Where(thing => thing.Kind == ObjectKind.Unit).Select(thing => thing.Name!)] : [];
+        // the selected units' own army when they are all of one extra army: the script creates a group of any army,
+        // so civilians of NEUTRAL_CIVILIAN stay theirs
+        string[] armies = [.. units.Select(unit => document.FindUnit(unit)?.Army).OfType<string>().Distinct()];
+        string? own = armies.Length == 1 && !document.Scenario.PlayableArmies.Contains(armies[0]) ? armies[0] : null;
+        string army = request.Army ?? own ?? AdaptiveGroups.CivilianArmy(document)
             ?? throw new InvalidOperationException("The map has no extra army for civilians: add one in the Map mode");
         if (document.Armies.All(a => a.Name != army))
         {
@@ -36,13 +44,15 @@ public sealed class AddOptionalGroupHandler(MainViewModel model, SelectionViewMo
         }
         document = document.AddOptionalGroup(army, request.Option, request.Level, out string name);
         int moved = 0;
-        if (request.FromSelection)
+        if (units.Length > 0)
         {
-            string[] units = [.. selection.Items.Where(thing => thing.Kind == ObjectKind.Unit).Select(thing => thing.Name!)];
             document = document.MoveUnits(units, army, ImmutableArray.Create(name), out moved);
         }
         edit.Transaction.Apply(_ => document);
-        model.Status = moved > 0 ? $"Added {name} to {army} with {moved} units" : $"Added {name} to {army}";
+        string[] others = [.. armies.Where(other => other != army)];
+        model.Status = moved == 0 ? $"Added {name} to {army}"
+            : others.Length > 0 ? $"Added {name} to {army} with {moved} units, moved from {string.Join(", ", others)} into {army}"
+            : $"Added {name} to {army} with {moved} units";
         return Task.FromResult(new JsonObject { ["army"] = army, ["group"] = name, ["moved"] = moved });
     }
 }

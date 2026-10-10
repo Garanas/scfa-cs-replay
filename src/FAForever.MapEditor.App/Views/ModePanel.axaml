@@ -542,7 +542,7 @@
                              AutomationProperties.HelpText="E.g. Civilian_Defenses or Wreckage: the group is called Optional_ with it and the value" />
                   </DockPanel>
                   <Button Content="Add group with the selected units" Command="{Binding AddOptionalGroupCommand}"
-                          AutomationProperties.HelpText="Adds Optional_option_value to the civilian army, beside INITIAL, with the selected units in it" />
+                          AutomationProperties.HelpText="Adds Optional_option_value beside INITIAL with the selected units in it: to their own army when they are all of one extra army, else to ARMY_17 or NEUTRAL_CIVILIAN" />
                   <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding AdaptiveFilesText}" AutomationProperties.Name="What the export writes of the adaptive map" />
                 </StackPanel>
               </Border>
