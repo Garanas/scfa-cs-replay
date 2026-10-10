@@ -168,6 +168,25 @@ public sealed partial class AutomationServer
                 }
                 break;
             }
+            case Button chip:
+            {
+                // an overlay's chip: clicked when it is not as wanted
+                bool wanted = value.GetValueKind() switch
+                {
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    _ => bool.Parse(value.ToString()),
+                };
+                if (chip.Classes.Contains("on") != wanted)
+                {
+                    await ClickAsync(chip);
+                }
+                if (chip.Classes.Contains("on") != wanted)
+                {
+                    throw new InvalidOperationException($"'{label}' did not turn {(wanted ? "on" : "off")} when clicked");
+                }
+                break;
+            }
             case ComboBox combo:
                 combo.SelectedIndex = IndexOf(combo.Items.Cast<object?>().ToList(), value, label);
                 await LetInputSettleAsync();
@@ -202,6 +221,7 @@ public sealed partial class AutomationServer
                 RangeBase range => Math.Round(range.Value, 3),
                 TextBox box => box.Text,
                 ToggleButton toggle => toggle.IsChecked,
+                Button chip => chip.Classes.Contains("on"),
                 ComboBox combo => UiTree.DisplayText(combo.SelectedItem),
                 ListBox list => list.SelectedItem?.ToString(),
                 TreeView tree => tree.SelectedItem?.ToString(),
@@ -220,7 +240,8 @@ public sealed partial class AutomationServer
     /// </summary>
     private static Control? FindSettable(Visual root, string label)
     {
-        static bool Settable(Control control) => control is RangeBase or TextBox or ToggleButton or ComboBox or ListBox or TreeView or ListBoxItem or TreeViewItem;
+        static bool Settable(Control control) => control is RangeBase or TextBox or ToggleButton or ComboBox or ListBox or TreeView or ListBoxItem or TreeViewItem
+            || control is Button chip && chip.Classes.Contains("chip");
         List<Control> controls = [.. root.GetVisualDescendants().OfType<Control>().Where(control => control.IsEffectivelyVisible && control.IsEffectivelyEnabled)];
         bool Matches(Control control) =>
             string.Equals(control.Name, label, StringComparison.OrdinalIgnoreCase)

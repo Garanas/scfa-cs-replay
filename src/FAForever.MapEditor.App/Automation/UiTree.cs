@@ -146,6 +146,10 @@ public static class UiTree
             case ToggleButton toggle:
                 node["checked"] = toggle.IsChecked;
                 break;
+            case Button chip when chip.Classes.Contains("chip"):
+                // an overlay's chip above the views: on or off
+                node["checked"] = chip.Classes.Contains("on");
+                break;
             case MenuItem { ToggleType: not MenuItemToggleType.None } item:
                 node["checked"] = item.IsChecked;
                 break;
@@ -183,8 +187,12 @@ public static class UiTree
     /// <summary>
     /// Controls whose insides are their own template: their text says what they are.
     /// </summary>
+    /// <remarks>
+    /// An item of a list is one unless it holds controls of its own (a layer's check boxes).
+    /// </remarks>
     private static bool IsLeaf(Control control) =>
-        control is Button or ToggleButton or TabItem or TextBox or Slider or ComboBox or ListBoxItem or ProgressBar or TextBlock
+        control is Button or ToggleButton or TabItem or TextBox or Slider or ComboBox or ProgressBar or TextBlock
+        || control is ListBoxItem item && !item.GetVisualDescendants().Any(inner => inner is Button or ToggleButton or TextBox or Slider or ComboBox)
         || control is MenuItem { ItemCount: 0 };
 
     private static string? TextOf(Control control)

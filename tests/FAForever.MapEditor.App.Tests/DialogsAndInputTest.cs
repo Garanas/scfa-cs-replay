@@ -10,6 +10,7 @@ using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
 using FAForever.MapEditor.Project.Editing;
+using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.Tests
 {
@@ -328,6 +329,48 @@ namespace FAForever.MapEditor.App.Tests
             other.Close();
             window.Close();
         });
+
+        [TestMethod]
+        public Task TheChipsSayWhetherTheyAreOnAndSetTurnsThem() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            Dispatcher.UIThread.RunJobs();
+            Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            JsonObject ui = (JsonObject)await automation.HandleAsync("ui", new JsonObject { ["under"] = "Show Markers" });
+            Assert.IsTrue(ui["ui"]![0]!["checked"]!.GetValue<bool>());
+
+            JsonObject answer = (JsonObject)await automation.HandleAsync("set", new JsonObject { ["label"] = "Show Markers", ["value"] = false });
+
+            Assert.IsFalse(model.ShowMarkers);
+            Assert.IsFalse(answer["overlays"]!["markers"]!.GetValue<bool>());
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task ADragOnASplitterMovesIt() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            Control splitter = (Control)UiTree.Find(window, "Resize the inspector")!;
+            Point at = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, 300), window)!.Value;
+            Dispatcher.UIThread.RunJobs();
+            Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+
+            await automation.HandleAsync("mouse", new JsonObject { ["x"] = at.X, ["y"] = at.Y, ["action"] = "drag", ["to"] = new JsonArray(at.X - 60, at.Y), ["steps"] = 4 });
+
+            Assert.IsNotNull(model.Layout.InspectorWidth);
+            Assert.IsTrue(model.Layout.InspectorWidth > 330, $"{model.Layout.InspectorWidth}");
+            window.Close();
+        });
+
+        [TestMethod]
+        public void TheTundraWeatherHasTheCloudsOfItsTemplate()
+        {
+            WeatherDefinition definition = WeatherStyles.NewDefinition("Weather", default);
+            foreach (WeatherChance chance in definition.Types)
+            {
+                CollectionAssert.Contains(WeatherStyles.TypesOf(definition.MapStyle).ToArray(), chance.Type);
+            }
+        }
 
         private sealed record Choice(string Title);
 

@@ -40,7 +40,7 @@ namespace FAForever.MapEditor.Project.Editing
             ["Lava"] = [.. Cirrus],
             ["RedRock"] = ["LightStratus", .. Cirrus],
             ["Tropical"] = ["LightStratus", .. Cirrus],
-            ["Tundra"] = ["SnowClouds", "WhitePatchyClouds", .. Cirrus],
+            ["Tundra"] = ["SnowClouds", "WhiteThickClouds", "WhitePatchyClouds", .. Cirrus],
         };
 
         /// <summary>
