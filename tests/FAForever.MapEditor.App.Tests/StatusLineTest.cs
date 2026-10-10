@@ -47,6 +47,19 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task TheSkysBackgroundIsChosenFromTheGamesInAQuestion()
+        {
+            MainViewModel model = await Open();
+            TextureSetting background = model.LightingSettings.Sky.Settings.OfType<TextureSetting>().Single(setting => setting.Label == "Background");
+            Assert.IsTrue(background.CanChoose, "a Choose button beside the field");
+            Task choosing = background.ChooseCommand.ExecuteAsync(null);
+            Assert.IsTrue(model.Question.IsOpen);
+            Assert.IsTrue(model.Question.Answer("Black"));
+            await choosing;
+            Assert.AreEqual("/textures/environment/blackbackground.dds", model.Map!.Document.Sky.Background);
+        }
+
+        [TestMethod]
         public async Task PlacingWithTheSymmetrySaysHowManyImagesItMade()
         {
             MainViewModel model = await Open();
