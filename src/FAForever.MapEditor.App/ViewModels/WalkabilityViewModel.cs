@@ -67,7 +67,7 @@ public sealed partial class WalkabilityViewModel : ObservableObject
     public string ChangesText => Navigation is null
         ? "Not generated yet: generate it to see where units can go."
         : Changes is not { } changes
-            ? $"{Layer}: {Passable(Grid!):N0} of {Grid!.Cells.Length:N0} ogrids passable. Generate again after a change to see what changed."
+            ? $"{Layer}: {Passable:N0} of {Grid!.Cells.Length:N0} ogrids passable. Generate again after a change to see what changed."
             : Describe(changes);
 
     /// <summary>
@@ -84,7 +84,16 @@ public sealed partial class WalkabilityViewModel : ObservableObject
         {
             return $"{changes.Layer}: nothing changed since the last time.";
         }
-        List<string> parts = [$"{changes.Layer}: {changes.Blocked:N0} ogrids newly blocked, {changes.Opened:N0} opened"];
+        List<string> counts = [];
+        if (changes.Blocked > 0)
+        {
+            counts.Add($"{changes.Blocked:N0} ogrids newly blocked");
+        }
+        if (changes.Opened > 0)
+        {
+            counts.Add($"{changes.Opened:N0} {(changes.Blocked > 0 ? "" : "ogrids ")}opened");
+        }
+        List<string> parts = [$"{changes.Layer}: {string.Join(", ", counts)}"];
         if (changes.Passages.Count > 0)
         {
             parts.Add(changes.Passages.Count == 1 ? "1 new passage" : $"{changes.Passages.Count} new passages");
@@ -96,7 +105,10 @@ public sealed partial class WalkabilityViewModel : ObservableObject
         return string.Join("; ", parts);
     }
 
-    private static int Passable(NavGrid grid) => grid.Cells.Count(cell => cell > 0);
+    /// <summary>
+    /// How many ogrids of the shown layer units can go over; counted once per result and layer.
+    /// </summary>
+    public int Passable { get; private set; }
 
     partial void OnLayerChanged(NavLayer value) => Compare();
 
@@ -125,11 +137,13 @@ public sealed partial class WalkabilityViewModel : ObservableObject
         MapNavigation? before = _previous?.Value as MapNavigation;
         MapNavigation? after = Navigation;
         Changes = before is null || after is null ? null : WalkabilityChanges.Compare(before, after, Layer);
+        Passable = after?[Layer].Cells.Count(cell => cell > 0) ?? 0;
         LandChanges = before is null || after is null ? null : Layer == NavLayer.Land ? Changes : WalkabilityChanges.Compare(before, after, NavLayer.Land);
         OnPropertyChanged(nameof(Navigation));
         OnPropertyChanged(nameof(Grid));
         OnPropertyChanged(nameof(Changes));
         OnPropertyChanged(nameof(LandChanges));
+        OnPropertyChanged(nameof(Passable));
         OnPropertyChanged(nameof(ChangesText));
         Changed?.Invoke(this, EventArgs.Empty);
     }

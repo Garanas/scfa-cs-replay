@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using FAForever.MapEditor.App.ViewModels;
 
@@ -18,6 +19,8 @@ public sealed partial class Dock : UserControl
     public Dock()
     {
         InitializeComponent();
+        // before the list box, which takes Enter itself
+        ProblemList.AddHandler(KeyDownEvent, OnProblemKeyDown, RoutingStrategies.Tunnel);
     }
 
     protected override void OnDataContextChanged(EventArgs e)

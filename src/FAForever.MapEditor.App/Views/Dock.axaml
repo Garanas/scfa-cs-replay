@@ -17,7 +17,7 @@
           </StackPanel>
           <ListBox x:Name="ProblemList" ItemsSource="{Binding Problems.Items}" AutomationProperties.Name="Problems"
                    AutomationProperties.HelpText="Double-click a problem or press Enter to go to its place"
-                   DoubleTapped="OnProblemDoubleTapped" KeyDown="OnProblemKeyDown">
+                   DoubleTapped="OnProblemDoubleTapped">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:ProblemItem">
                 <DockPanel>

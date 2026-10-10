@@ -36,7 +36,7 @@ public sealed class GenerateWalkabilityHandler(MainViewModel model, WalkabilityV
             ["generated"] = walkability.Navigation is not null,
             ["layer"] = walkability.Layer.ToString(),
             ["showChanges"] = walkability.ShowChanges,
-            ["passable"] = walkability.Grid?.Cells.Count(cell => cell > 0),
+            ["passable"] = walkability.Grid is null ? null : walkability.Passable,
             ["cells"] = walkability.Grid?.Cells.Length,
             ["text"] = walkability.ChangesText,
             ["changes"] = changes is null ? null : new JsonObject
