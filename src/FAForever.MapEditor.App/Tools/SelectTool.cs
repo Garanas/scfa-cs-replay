@@ -17,7 +17,8 @@ namespace FAForever.MapEditor.App.Tools;
 /// inside the rectangle is selected. Dragging a selected thing moves the whole selection, one step of undo,
 /// keeping each thing on the terrain. Its keys in a view: Escape selects nothing, Q and E turn the
 /// selection by 15 degrees (with shift, or when only structures are selected, 90), the arrows move
-/// it an ogrid (with shift 8).
+/// it an ogrid (with shift 8). Holding R while dragging turns the selection as the mouse goes round
+/// its middle.
 /// </summary>
 /// <remarks>
 /// The selection has handles in both views (<see cref="Shapes"/>, laid out by the library's
@@ -43,6 +44,11 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
         Move,
         Box,
         Handle,
+
+        /// <summary>
+        /// R held and the mouse dragged: the selection turns as the mouse goes round its middle.
+        /// </summary>
+        Turn,
     }
 
     private Gesture _gesture;
@@ -83,10 +89,29 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
 
     public double CursorRadius => 0;
 
+    private IReadOnlyList<SelectionFilterItem>? _filters;
+
+    /// <summary>
+    /// The kinds it picks as check boxes of its options (the selection filter): unchecked, a kind
+    /// is locked. Empty for a tool of one kind.
+    /// </summary>
+    public IReadOnlyList<SelectionFilterItem> Filters => _filters ??= Commands.SelectionKinds.All.Count(kind => Kinds.HasFlag(kind)) > 1
+        ? [.. Commands.SelectionKinds.All.Where(kind => Kinds.HasFlag(kind)).Select(kind => new SelectionFilterItem(model, kind))]
+        : [];
+
+    public bool HasFilters => Filters.Count > 0;
+
+    partial void OnKindsChanged(ObjectKinds value)
+    {
+        _filters = null;
+        OnPropertyChanged(nameof(Filters));
+        OnPropertyChanged(nameof(HasFilters));
+    }
+
     /// <summary>
     /// What the options bar says about using it.
     /// </summary>
-    public string Help => "Click to select, shift adds, control toggles; drag a box on empty ground; drag the selection or its handles to move, turn or scale it (shift snaps, hold X or Z for one axis); Q and E turn it, the arrows move it, Delete removes it";
+    public string Help => "Click to select, shift adds, control toggles; drag a box on empty ground; drag the selection or its handles to move, turn or scale it (shift snaps, hold X or Z for one axis, R to turn); Q and E turn it, the arrows move it, Delete removes it";
 
     /// <summary>
     /// The handle under the mouse when a view last drew, or the one being dragged.
@@ -231,6 +256,15 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             : model.PickAt(x, z, input.OgridsPerPixel, model.SelectableKinds);
         // the handles before anything under them; a click on a handle without a drag clicks what lies there
         _clickUnder = under;
+        if (input.Modifiers.HasFlag(ToolModifiers.Turn) && Frame is SelectionFrame turned)
+        {
+            // R held: dragging turns the selection about its middle (or each thing about its own)
+            _view = input.ViewAt(x, z);
+            _frame = turned;
+            _pressPlane = _view.PlaneAt(turned.Centre.Y, new Vector2(x, z)) ?? new Vector2(x, z);
+            _gesture = Gesture.Turn;
+            return;
+        }
         if (HandleAt(x, z, input) is { IsNone: false } part && Frame is SelectionFrame frame)
         {
             _view = input.ViewAt(x, z);
@@ -283,6 +317,9 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             case Gesture.Handle:
                 DragHandle(x, z, input);
                 break;
+            case Gesture.Turn:
+                TurnTo(x, z, input);
+                break;
             case Gesture.Box when _screenFrom is Vector2 from:
                 if (input.View is { Mouse: Vector2 mouse } view)
                 {
@@ -300,7 +337,7 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
     {
         switch (_gesture)
         {
-            case Gesture.Move or Gesture.Handle when _move is not null:
+            case Gesture.Move or Gesture.Handle or Gesture.Turn when _move is not null:
                 model.EndStroke(_move);
                 break;
             case Gesture.Handle when !_dragging:
@@ -434,6 +471,26 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
     }
 
     /// <summary>
+    /// Turns the selection by the angle the mouse went round its middle since the press (R held):
+    /// shift snaps to 15 degrees, structures alone turn in quarter turns.
+    /// </summary>
+    private void TurnTo(float x, float z, ToolInput input)
+    {
+        using Performance.Span measure = Performance.Measure("tool.turn-selection");
+        SelectionFrame frame = _frame!;
+        ToolView view = input.View ?? _view ?? input.ViewAt(x, z);
+        if (view.PlaneAt(frame.Centre.Y, new Vector2(x, z)) is not Vector2 place || !Begin("Turn the selection"))
+        {
+            return;
+        }
+        float step = model.SelectionTurnsInQuarters ? MathF.PI / 2
+            : input.Modifiers.HasFlag(ToolModifiers.Shift) ? HandleSettings.SnapDegrees * MathF.PI / 180 : 0;
+        float angle = HandleMaths.TurnAngle(frame.Middle, _pressPlane, place, step);
+        Vector2? pivot = model.Handles.Pivot == HandlePivot.Selection ? frame.Middle : null;
+        Apply(before => pivot is Vector2 p ? before.RotateObjectsAbout(_moving, _partners, angle, p) : before.RotateObjects(_moving, _partners, angle));
+    }
+
+    /// <summary>
     /// Starts the drag's step of undo the first time it changes something; false when it cannot
     /// (nothing selected, another stroke) or the editor ended it (another map was opened).
     /// </summary>
@@ -447,6 +504,11 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
                 return false;
             }
             _moving = model.Selection.Items;
+            if (_gesture == Gesture.Move && _clickUnder is ObjectRef grabbed && _moving.Contains(grabbed))
+            {
+                // the thing under the mouse leads: with the symmetry its selected partners follow it mirrored
+                _moving = [grabbed, .. _moving.Where(thing => thing != grabbed)];
+            }
             _frame ??= Frame;
             _move = model.StartStroke(description);
             _before = _move.Document;

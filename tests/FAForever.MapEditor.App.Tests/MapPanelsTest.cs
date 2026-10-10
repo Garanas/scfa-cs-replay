@@ -89,6 +89,15 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task TheStepOfASecondAreaNamesIt()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "map.addArea");
+            Assert.AreEqual("AREA_2", (string)(await Run(model, "map.addArea")).Result!);
+            Assert.AreEqual("Add the area AREA_2", model.Map!.Session.UndoDescription, "the step names the area added");
+        }
+
+        [TestMethod]
         public async Task AreasAreAddedRenamedResizedAndRemoved()
         {
             MainViewModel model = await Open();

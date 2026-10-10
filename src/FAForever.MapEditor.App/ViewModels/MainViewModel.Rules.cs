@@ -25,6 +25,8 @@ public sealed partial class MainViewModel
         Generation.Register(new PropRulesGenerator(), "generate.props");
         MaskRules = new MaskRulesViewModel(RunWithAsync, () => StrataTool.Strata, Logger("Editor"), _ui);
         PropRules = new PropRulesViewModel(RunWithAsync, () => StrataTool.Strata);
+        // a rule chosen takes the inspector from the selection (P-4)
+        PropRules.ChosenInList += (_, _) => Selection.Clear();
         DocumentChanged += (_, _) => RefreshRules();
         MapChanged += (_, _) =>
         {

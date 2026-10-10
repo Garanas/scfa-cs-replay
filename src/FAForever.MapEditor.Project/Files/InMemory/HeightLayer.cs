@@ -182,9 +182,16 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// </summary>
         public bool Closed { get; init; }
 
+        /// <summary>
+        /// The symmetry the curve is drawn by (user story F-12): its layer shapes the terrain along
+        /// the curve's images in the other parts of the map too, so one curve makes a symmetric
+        /// map's every river or ridge. Null for the curve alone.
+        /// </summary>
+        public SymmetrySetting? Symmetry { get; init; }
+
         public bool Equals(HeightCurve? other) =>
             other is not null && Profile == other.Profile && Width == other.Width && Falloff == other.Falloff && Closed == other.Closed
-            && Points.AsSpan().SequenceEqual(other.Points.AsSpan());
+            && Equals(Symmetry, other.Symmetry) && Points.AsSpan().SequenceEqual(other.Points.AsSpan());
 
         public override int GetHashCode() => HashCode.Combine(Profile, Width, Falloff, Closed, Points.Length);
     }

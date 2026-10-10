@@ -104,6 +104,7 @@ namespace FAForever.MapEditor.Project
                     Width = curve.Width,
                     Falloff = curve.Falloff,
                     Closed = curve.Closed ? true : null,
+                    Symmetry = Files.MapProjectMapping.ToDto(curve.Symmetry),
                     Points = [.. curve.Points.Select(point => new[] { point.X, point.Z, point.Height })],
                 } : null,
             })],
@@ -148,6 +149,7 @@ namespace FAForever.MapEditor.Project
                     Width = c.Width,
                     Falloff = c.Falloff,
                     Closed = c.Closed == true,
+                    Symmetry = Files.MapProjectMapping.ToModel(c.Symmetry),
                     Points = [.. c.Points.Where(point => point.Length >= 2).Select(point => new CurvePoint(point[0], point[1], point.Length > 2 ? point[2] : 0))],
                 } : null;
 

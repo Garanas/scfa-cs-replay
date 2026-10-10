@@ -26,7 +26,7 @@ namespace FAForever.MapEditor.Project.Editing
             return document.Change(things,
                 prop => prop with { Position = Move(prop.Position) },
                 decal => decal with { Position = Move(decal.Position) },
-                marker => marker with { Position = Move(marker.Position) },
+                marker => marker with { Position = Deposited(document, marker, Move(marker.Position)) },
                 unit => unit with { Position = Move(unit.Position) },
                 area => area with { X0 = area.X0 + dx, X1 = area.X1 + dx, Z0 = area.Z0 + dz, Z1 = area.Z1 + dz });
         }
@@ -47,7 +47,7 @@ namespace FAForever.MapEditor.Project.Editing
                     float cz = z ?? centre.Z;
                     return decal with { Position = Ground(heights, decal.Position, decal.Position.X + cx - centre.X, decal.Position.Z + cz - centre.Z) };
                 },
-                marker => marker with { Position = Place(marker.Position) },
+                marker => marker with { Position = Deposited(document, marker, Place(marker.Position)) },
                 unit => unit with { Position = Place(unit.Position) },
                 area =>
                 {
@@ -101,7 +101,7 @@ namespace FAForever.MapEditor.Project.Editing
                     Vector2 to = Orbit(new Vector2(centre.X, centre.Z));
                     return turned with { Position = Ground(heights, turned.Position, turned.Position.X + to.X - centre.X, turned.Position.Z + to.Y - centre.Z) };
                 },
-                marker => marker with { Position = Around(marker.Position), Orientation = marker.Orientation with { Y = Wrap(marker.Orientation.Y + radians) } },
+                marker => marker with { Position = Deposited(document, marker, Around(marker.Position)), Orientation = marker.Orientation with { Y = Wrap(marker.Orientation.Y + radians) } },
                 unit => unit with { Position = Around(unit.Position), Orientation = unit.Orientation with { Y = Wrap(unit.Orientation.Y + radians) } },
                 area =>
                 {
@@ -153,7 +153,7 @@ namespace FAForever.MapEditor.Project.Editing
                     Vector2 to = Spread(new Vector2(centre.X, centre.Z));
                     return resized with { Position = Ground(heights, resized.Position, resized.Position.X + to.X - centre.X, resized.Position.Z + to.Y - centre.Z) };
                 },
-                marker => pivot is null ? marker : marker with { Position = Moved(marker.Position) },
+                marker => pivot is null ? marker : marker with { Position = Deposited(document, marker, Moved(marker.Position)) },
                 unit => pivot is null ? unit : unit with { Position = Moved(unit.Position) },
                 area =>
                 {
@@ -366,6 +366,34 @@ namespace FAForever.MapEditor.Project.Editing
         /// <summary>
         /// A place at (x, z) as high above the terrain as <paramref name="from"/> was above it at its own place.
         /// </summary>
+        /// <summary>
+        /// Where a marker goes: a deposit (mass or hydrocarbon) on the centre of the ogrid nearest to
+        /// the place, where the game puts deposits and where placing one puts it, as high above the
+        /// terrain; any other marker at the place.
+        /// </summary>
+        private static Vector3 Deposited(MapDocument document, Marker marker, Vector3 place)
+        {
+            if (marker is not ResourceMarker)
+            {
+                return place;
+            }
+            // halfway between two centres it goes to the one nearer the map's middle, so that a deposit
+            // and its mirror partner moved by images of one offset stay each other's images
+            float x = OgridCentre(place.X, document.Width / 2f);
+            float z = OgridCentre(place.Z, document.Height / 2f);
+            return Ground(document.Terrain.Heightmap, place, x, z);
+        }
+
+        private static float OgridCentre(float value, float middle)
+        {
+            float below = MathF.Floor(value - 0.5f) + 0.5f;
+            float above = below + 1;
+            float toBelow = value - below;
+            return toBelow < 0.5f - 1e-4f ? below
+                : toBelow > 0.5f + 1e-4f ? above
+                : MathF.Abs(below - middle) < MathF.Abs(above - middle) ? below : above;
+        }
+
         private static Vector3 Ground(Heightmap heights, Vector3 from, float x, float z) =>
             new Vector3(x, heights.HeightAt(x, z) + from.Y - heights.HeightAt(from.X, from.Z), z);
 

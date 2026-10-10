@@ -162,9 +162,10 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.ShowUnits && chosen.HasFlag(ObjectKinds.Units),
             _model.ShowMarkers && chosen.HasFlag(ObjectKinds.Markers),
             _model.ShowPathNodes && chosen.HasFlag(ObjectKinds.PathNodes),
-            chosen.HasFlag(ObjectKinds.Decals),
-            _model.Decals.HiddenDecals,
-            _model.ShownMarkerKinds);
+            _model.ShowDecals && chosen.HasFlag(ObjectKinds.Decals),
+            _model.HiddenDecalIds,
+            _model.ShownMarkerKinds,
+            _model.Isolated is null ? null : _model.IsPickable);
         return ObjectPicking.Pick(document, origin, direction, shown, _models.BoundsOf, terrain);
     }
 
@@ -434,7 +435,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _highlightedDecalsOf = _highlighted;
             _highlightedDecals = _highlighted?.Where(thing => thing.Kind == ObjectKind.Decal).Select(thing => thing.Id).ToHashSet() is { Count: > 0 } ids ? ids : null;
         }
-        return (_model.Decals.HiddenDecals, _highlightedDecals, ThemeColor("SelectedStrokeBrush"));
+        return (_model.HiddenDecalIds, _highlightedDecals, ThemeColor("SelectedStrokeBrush"));
     }
 
     private IReadOnlySet<ObjectRef>? _highlightedDecalsOf;
@@ -456,7 +457,7 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             return null;
         }
         ObjectFrame frame = new ObjectFrame(_model.Assets.Catalog, _model.ShowProps, _model.ShowUnits, _model.ShowMarkers, _model.ShowPathNodes,
-            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"), _model.ShownMarkerKinds, _model.Selection.Hovered);
+            _highlighted, camera.Eye, ThemeColor("SelectedStrokeBrush"), ThemeColor("WarningBrush"), _model.ShownMarkerKinds, _model.Selection.Hovered, _model.Isolated);
         return (_objects, frame);
     }
 
@@ -783,6 +784,15 @@ public sealed class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             Heightmap heights = document.Terrain.Heightmap;
             Vector2? At(float x, float z) => view.ToScreen(new Vector3(x, heights.HeightAt(x, z), z));
+            foreach (IReadOnlyList<(float X, float Z)> image in marks.Images ?? [])
+            {
+                // the images of a mirrored curve (F-12), thinner
+                if (image.Count >= 2 && TerrainLine(heights, view, image) is Vector2[] imageLine)
+                {
+                    shapes.Add(new ToolLine(imageLine, false, 3, ToolInk.Shadow));
+                    shapes.Add(new ToolLine(imageLine, false, 1, ToolInk.Selection));
+                }
+            }
             if (marks.Path is { Count: >= 2 } path && TerrainLine(heights, view, path) is Vector2[] line)
             {
                 // a curve on the terrain (T-4)

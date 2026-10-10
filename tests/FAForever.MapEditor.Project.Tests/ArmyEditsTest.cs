@@ -38,6 +38,13 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsFalse(document.Markers.Spawns.Any(s => s.Name == extra), "an extra army needs no spawn");
 
             Assert.ThrowsException<ArgumentException>(() => document.AddArmy("ARMY_1", true, null, out _), "taken");
+
+            // a new map: players ARMY_1 and ARMY_2, the extra ARMY_17 and the civilians
+            MapDocument fresh = NewMap.Create(new NewMapSettings { Players = 2 });
+            fresh.AddArmy(null, playable: true, null, out string third);
+            Assert.AreEqual("ARMY_3", third, "the next player, not the one after the extra ARMY_17");
+            fresh.AddArmy(null, playable: false, null, out string extraArmy);
+            Assert.AreEqual("ARMY_18", extraArmy, "an extra army after ARMY_17");
             Assert.ThrowsException<ArgumentException>(() => document.AddArmy("two words", true, null, out _), "no army's name");
             Assert.ThrowsException<ArgumentException>(() => original.AddArmy("Mass 01", false, null, out _), "not an army's name");
         }

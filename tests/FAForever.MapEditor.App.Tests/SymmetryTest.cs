@@ -62,7 +62,7 @@ namespace FAForever.MapEditor.App.Tests
                 float before = opened.Terrain.Heightmap.HeightAt(place.X, place.Y);
                 Assert.IsTrue(Height(model, place.X, place.Y) > before + 2, $"raised at {place}");
             }
-            Assert.AreEqual(2, model.History.Count, "opened, and one stroke");
+            Assert.AreEqual(3, model.History.Count, "opened, the symmetry chosen, and one stroke");
 
             // guides only: the stroke paints where it is
             model.Undo();
@@ -236,6 +236,111 @@ namespace FAForever.MapEditor.App.Tests
             Vector2 image = Flat(model.ShownDocument!.PlaceOf(model.Selection.Items[1])!.Value);
             Assert.AreEqual(256 - copy.X, image.X, 1e-3f);
             Assert.AreEqual(copy.Y, image.Y, 1e-3f);
+        }
+
+        [TestMethod]
+        [DataRow("rotational", 2)]
+        [DataRow("rotational", 4)]
+        [DataRow("leftRight", 2)]
+        [DataRow("diagonal", 2)]
+        public async Task ASelectionHoldingThingsAndTheirPartnersStaysSymmetric(string kind, int count)
+        {
+            MainViewModel model = await Open(kind, count, tool: "markers.select");
+            await Run(model, "markers.place", new JsonObject { ["kind"] = "mass", ["x"] = 90, ["z"] = 70 });
+            ObjectRef[] all = [.. model.Selection.Items];
+            Assert.AreEqual(count, all.Length, "placed with its images, all selected");
+            IReadOnlyList<MapSymmetryTransform> transforms = model.Symmetry.Transforms(model.ShownDocument!);
+
+            void AssertSymmetric(string what)
+            {
+                MapDocument document = model.ShownDocument!;
+                Vector3 first = document.PlaceOf(all[0])!.Value;
+                foreach (MapSymmetryTransform transform in transforms.Skip(1))
+                {
+                    Vector3 image = transform.Apply(first);
+                    Assert.IsTrue(all.Skip(1).Any(thing => Vector2.Distance(Flat(document.PlaceOf(thing)!.Value), new Vector2(image.X, image.Z)) < 0.01f),
+                        $"{what}: a deposit at the image ({image.X}, {image.Z}) of ({first.X}, {first.Z})");
+                }
+                Assert.IsFalse(SymmetryChecks.NotSymmetric(document, transforms).Any(problem => problem.Thing is ObjectRef thing && all.Contains(thing)), $"{what}: no deposit without a partner");
+            }
+
+            await Run(model, "edit.nudge", new JsonObject { ["dx"] = 3, ["dz"] = 1 });
+            AssertSymmetric("nudged");
+            await Run(model, "edit.rotate", new JsonObject { ["degrees"] = 90, ["about"] = "each" });
+            AssertSymmetric("turned each");
+            await Run(model, "edit.rotate", new JsonObject { ["degrees"] = 180, ["about"] = "selection" });
+            AssertSymmetric("turned about the centre");
+            await Run(model, "edit.scale", new JsonObject { ["factor"] = 1.2f, ["about"] = "selection" });
+            AssertSymmetric("scaled");
+
+            // dragging one of the images: it follows the mouse, the others its images
+            SelectTool tool = (SelectTool)model.ActiveTool!.Tool!;
+            Vector3 grabbed = model.ShownDocument!.PlaceOf(all[^1])!.Value;
+            Drag(tool, grabbed, new Vector2(grabbed.X + 6, grabbed.Z + 4));
+            Assert.AreEqual(new Vector2(MathF.Round(grabbed.X + 6 - 0.5f) + 0.5f, MathF.Round(grabbed.Z + 4 - 0.5f) + 0.5f), Flat(model.ShownDocument!.PlaceOf(all[^1])!.Value), "the grabbed deposit goes with the mouse, onto an ogrid's centre");
+            AssertSymmetric("dragged");
+
+            await Run(model, "edit.delete");
+            Assert.IsFalse(all.Any(model.ShownDocument!.Exists), "deleted, all of them");
+        }
+
+        [TestMethod]
+        public async Task ACurveDrawnWithTheSymmetryIsMirrored()
+        {
+            MainViewModel model = await Open("leftRight", tool: "terrain.curve");
+            CommandRun run = await Run(model, "terrain.addCurve", new JsonObject { ["points"] = new JsonArray(new JsonArray(60, 60), new JsonArray(70, 140)), ["profile"] = "ridge", ["height"] = 12 });
+            string name = (string)run.Result!;
+            HeightCurve curve = HeightLayers.Find(model.ShownDocument!, name)!.Curve!;
+            Assert.AreEqual(new SymmetrySetting(MapSymmetryKind.MirroredLeftRight, 2), curve.Symmetry, "drawn while the symmetry mirrors edits");
+            HeightLayer layer = HeightLayers.Find(model.ShownDocument!, name)!;
+            Assert.IsTrue(layer.Values[65, 100] > 1, "the ridge rises");
+            Assert.AreEqual(layer.Values[65, 100], layer.Values[256 - 65, 100], 0.05, "the image rises as much");
+            CurveTool tool = (CurveTool)model.ActiveTool!.Tool!;
+            Assert.AreEqual(1, tool.Marks!.Images!.Count, "the views draw the image");
+            Assert.IsTrue(tool.Marks.Images[0].All(point => point.X > 128), "on the other side");
+
+            await Run(model, "terrain.setCurve", new JsonObject { ["mirrored"] = false });
+            Assert.IsNull(HeightLayers.Find(model.ShownDocument!, name)!.Curve!.Symmetry);
+            Assert.AreEqual(0, HeightLayers.Find(model.ShownDocument!, name)!.Values[256 - 65, 100], "the curve alone");
+        }
+
+        [TestMethod]
+        public async Task EachMapKeepsItsOwnSymmetry()
+        {
+            MainViewModel model = await Open("diagonal");
+            Assert.AreEqual(new SymmetrySetting(MapSymmetryKind.MirroredDiagonal, 2), model.Map!.Document.Symmetry, "the map keeps the choice");
+            Assert.AreEqual("Choose the symmetry mirrored on the diagonal", model.Map.Session.UndoDescription);
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "rotational", ["count"] = 3 });
+            Assert.AreEqual(1, model.Map.Session.History.Count(step => step.Description.Contains("symmetry")), "choices that follow each other are one step");
+            await Run(model, "edit.undo");
+            Assert.IsFalse(model.Symmetry.IsOn, "undone: the map had none");
+            await Run(model, "edit.redo");
+            Assert.AreEqual(3, model.Symmetry.Chosen.Count);
+
+            string folder = Path.Combine(Path.GetTempPath(), "faf-symmetry-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                model.Map.SaveAs(folder);
+                await model.OpenAsync(HardFfa);
+                Assert.IsFalse(model.Symmetry.IsOn, "another map: its own symmetry, none");
+                await Run(model, "select.symmetry");
+                Assert.AreEqual(SymmetryViewModel.Detect(model.Map.Document) ?? MapSymmetryKind.Rotational, model.Symmetry.Chosen.Kind, "turned on: the map's own, not the last map's");
+
+                await model.OpenAsync(folder);
+                Assert.AreEqual(new SymmetryChoice(MapSymmetryKind.Rotational, 3, "Rotational, 3 players"), model.Symmetry.Chosen, "opened with the symmetry it was saved with");
+                Assert.IsFalse(model.Map.Session.IsModified);
+
+                await Run(model, "file.new", new JsonObject { ["name"] = "Fresh", ["size"] = 256, ["players"] = 2 });
+                Assert.AreEqual(new SymmetryChoice(MapSymmetryKind.Rotational, 2, "Rotational, 2 players"), model.Symmetry.Chosen, "a new map: the symmetry of its spawns");
+                Assert.IsFalse(model.Problems.Run().Any(problem => problem.Check == SymmetryChecks.Id), "a new map is exactly symmetric");
+            }
+            finally
+            {
+                if (Directory.Exists(folder))
+                {
+                    Directory.Delete(folder, recursive: true);
+                }
+            }
         }
 
         [TestMethod]

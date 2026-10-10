@@ -332,5 +332,42 @@ namespace FAForever.MapEditor.Project.Tests
             IReadOnlyList<CurvePoint> spline = HeightCurves.Spline(new HeightCurve { Points = [new CurvePoint(0, 0, 0), new CurvePoint(10, 5, 0), new CurvePoint(20, 0, 0)] });
             Assert.IsTrue(spline.Any(point => MathF.Abs(point.X - 10) < 1e-3 && MathF.Abs(point.Z - 5) < 1e-3), "the spline passes through its points");
         }
+
+        [TestMethod]
+        public void ACurveMirroredByTheSymmetryShapesItsImagesAndIsKept()
+        {
+            EditSession session = new EditSession(Flat(35));
+            HeightCurve ridge = new HeightCurve
+            {
+                Profile = CurveProfile.Ridge, Width = 4, Falloff = 6,
+                Points = [new CurvePoint(40, 60, 10), new CurvePoint(90, 70, 10)],
+                Symmetry = new SymmetrySetting(MapSymmetryKind.Rotational, 4),
+            };
+            session.Edit("Curve", d => HeightLayerEdits.Add(d, HeightLayerEdits.NewCurve(d, "ridge", ridge)));
+            foreach (MapSymmetryTransform transform in MapSymmetry.Transforms(MapSymmetryKind.Rotational, 4, 256, 256))
+            {
+                System.Numerics.Vector2 image = transform.Apply(new System.Numerics.Vector2(60, 64));
+                Assert.AreEqual(HeightAt(session.Document, 60, 64), HeightAt(session.Document, (int)MathF.Round(image.X), (int)MathF.Round(image.Y)), 0.05, $"the image at {image}");
+            }
+            Assert.AreEqual(4, HeightCurves.Parts(ridge, 256, 256).Count);
+
+            // a cliff mirrored: its high side is the image of the curve's
+            HeightCurve cliff = new HeightCurve
+            {
+                Profile = CurveProfile.Cliff, Width = 8, Falloff = 10,
+                Points = [new CurvePoint(60, 50, 20), new CurvePoint(60, 200, 20)],
+                Symmetry = new SymmetrySetting(MapSymmetryKind.MirroredLeftRight, 2),
+            };
+            session.Edit("Cliff", d => HeightLayerEdits.SetCurve(d, "ridge", cliff));
+            Assert.AreEqual(55, HeightAt(session.Document, 64, 120), 0.1, "high on the curve's left");
+            Assert.AreEqual(55, HeightAt(session.Document, 192, 120), 0.1, "and on the image of that side");
+            Assert.AreEqual(35, HeightAt(session.Document, 200, 120), 0.1);
+
+            EditedMap map = EditedMap.New(session.Document);
+            map.SaveAs(ProjectFolders.New("mirrored-curve"));
+            HeightCurve kept = EditedMap.OpenProject(map.ProjectFolder!).Document.HeightLayers[1].Curve!;
+            Assert.AreEqual(cliff.Symmetry, kept.Symmetry, "the project keeps the curve's symmetry");
+            Assert.AreEqual(55, HeightAt(EditedMap.OpenProject(map.ProjectFolder!).Document, 192, 120), 0.1);
+        }
     }
 }

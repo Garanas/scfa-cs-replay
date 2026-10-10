@@ -49,5 +49,10 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// The colours of the minimap; absent in version 53.
         /// </summary>
         public MinimapDto? Minimap { get; init; }
+
+        /// <summary>
+        /// The symmetry the editor mirrors edits by; absent when none was chosen.
+        /// </summary>
+        public SymmetryDto? Symmetry { get; init; }
     }
 }

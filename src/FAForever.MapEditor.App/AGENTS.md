@@ -680,7 +680,11 @@ Four small parts that later features build on:
   the overlay chips or with `select.symmetry {kind?, count?}` (Ctrl+Shift+Y; `off`, `rotational`,
   `leftRight`, `topBottom`, `diagonal`, `otherDiagonal`). Without arguments it turns it on or off:
   on, the one used last, else the map's own (`MapSymmetry.Find` on its spawns and deposits), else
-  rotational for two. The top view draws the lines between the parts, dashed over a dark line,
+  rotational for two. Each map keeps its own (`MapDocument.Symmetry`, saved in `map.json`): a
+  choice is a step of undo (`Choose the symmetry ...`, choices that follow each other one step), an
+  undo or another map chooses what the map keeps (`MainViewModel.FollowMapSymmetry`), and another
+  map forgets the one used last, so turning it on takes that map's own. A new map comes with
+  rotational for its players. The top view draws the lines between the parts, dashed over a dark line,
   while the overlay `symmetry` is on (`HeightmapView.DrawSymmetry`), and so does the 3D view on the terrain.
   `Transforms(document)` gives the library's `MapSymmetryTransform`s (the maths is in
   FileFormats.Map's `MapSymmetry`); the edits mirrored with them are the next section's.
@@ -702,7 +706,8 @@ Four small parts that later features build on:
     `units.add` and `units.placePreset` add the thing, then `MirrorPlaced` its images in the same
     step, and select them all. Spawns become the next armies, a path node links to the images (or
     partners) of the node it goes on from, a structure snaps to the build grid, a unit's image goes
-    into its army and group; areas are never mirrored.
+    into the army of the partner spawn (the civilians keep theirs), in a group of the same
+    name; areas are never mirrored.
   - **Moving with partners**: `edit.nudge`, `edit.rotate`, `edit.scale`, `edit.place`, `edit.delete`,
     dragging with a select tool and its handles (move, turn, scale), `decals.scale`, `decals.size`
     and the Decals tool's scaling drag take each selected thing's mirror partners (`PartnersOf`: the
@@ -711,8 +716,15 @@ Four small parts that later features build on:
     selection's centre with the pivot `Selection`: the library's `RotateObjectsAbout` with
     partners), scaled by the same factors along the images of the axes about the image of the
     centre (`ScaleObjects` with partners; a decal's partner gets the same width and length),
-    deleted with it. A partner that is selected itself moves as itself. Span
+    deleted with it. A selection that holds a thing and its partners (what placing selects) stays
+    symmetric: the thing selected first leads and the others follow as its images (the library's
+    `Partners`), and a drag of the select tool puts the thing under the mouse first, so it follows
+    the mouse and its images go their own ways. Span
     `model.symmetry-partners` (13 ms for Archsimkats Valley's 8304 props).
+  - **Curves**: a curve added while the symmetry mirrors edits (the curve tool, `terrain.addCurve
+    {mirrored?}`, `terrain.addLayer kind=curve`) keeps that symmetry (`HeightCurve.Symmetry`): its
+    layer shapes its images too, the views draw them (`ToolMarks.Images`: dashed in the top view,
+    thin in 3D), and the inspector's Mirrored (`terrain.setCurve {mirrored}`) turns it on or off.
   - **Copies**: `edit.paste` and `edit.duplicate` give the copies their images (`MirrorPlaced`) and
     select them all; `edit.duplicate` copies the selection without the partners of things selected
     before them (the library's `WithoutPartners`), so a partner's copy is the image of its thing's.
@@ -859,6 +871,27 @@ that moves stays selected. Another map clears it. The core's side is
   `model.select-on-screen`, 6 ms for Archsimkats Valley's 8304 props), with shift and control as
   a click. The view comes with the input
   (`ToolInput.View`, not top-down, with its mouse).
+- **A box leaves areas alone**: a box (either view) and Select all take `BoxKinds`, the kinds that
+  can be picked without areas, unless areas are all a tool picks (the Map mode's Areas tool); a
+  click still picks an area by its edge. So a box over markers never copies the playable area.
+- **Selecting more easily** (`ViewModels/MainViewModel.SelectionTools.cs`, `Commands/Select/SelectMore.cs`,
+  `KindsAndIsolation.cs`): `select.similar {family?}` (Ctrl+Shift+G: the same blueprint, texture or
+  marker kind; `family` the same family of the catalogue, span `model.select-similar`),
+  `select.invert` (Ctrl+Shift+I), `select.insideArea {area?, add?}` (the selected area, else the
+  one named, else the playable area; the mode's kinds, every kind shown in the Map mode),
+  `select.isolate {on?}` (Ctrl+Shift+H: only the selection shows in both views and can be picked,
+  `MainViewModel.Isolated`; the top view through `IsDrawn` and `DrawnMarkers`, the 3D view through
+  `ObjectFrame.Isolated` and `HiddenDecalIds`, picking through `IsPickable`; another map ends it),
+  `select.lockKind {kind, locked?}` (a locked kind shows but is not picked, `LockedKinds`, which
+  `SelectableKinds` leaves out; locking takes it out of the selection) and `select.hideKind {kind,
+  hidden?}` (the overlays of markers, path nodes, props, units and areas; decals in the 3D view,
+  `ShowDecals`). The select tools' options show the lock as the selection filter: "Picks" and a
+  check box per kind the tool picks (`SelectTool.Filters`, `SelectionFilterItem`; for a tool of
+  more than one kind). The Map mode's "Select anything" (`map.select`) is a select tool of every
+  kind. `state.selectionTools`: locked, isolated, decalsShown, boxKinds.
+- **R and a drag turn**: while R is held (the views track it as `ToolModifiers.Turn`, as X and Z),
+  dragging with a select tool turns the selection as the mouse goes round its middle (about the
+  handles' pivot; shift snaps to 15 degrees, structures in quarter turns), one step of undo.
 
 ## Decals: placing, scaling, order and groups
 
@@ -871,8 +904,8 @@ User stories D-1 and D-2, the Decals mode (F8); the edits are the library's `Dec
   mode the place tool becomes active. A click places it centred on the mouse, `Width` wide (the
   options; its length from the shape of the texture's picture, read once from the PNG's header
   when chosen), turned by `Heading`, with the cut-off of the options (500 at first: what maps use
-  most); dragging from the click sets its width to twice the distance and turns its width along
-  the drag. One step of undo held from press to release, as a stroke; the new decal is selected.
+  most); dragging from the click spans its width from the press to the mouse (its centre half
+  way) and turns its width along the drag. One step of undo held from press to release, as a stroke; the new decal is selected.
   `decals.place {x, z, key?, width?, length?, heading?, cutOff?}` does the same for automation and
   a drop. A decal tile dropped on a view is placed there: the place tool takes it
   (`IAssetDropTarget`), and while another tool is active `AssetDropped` does
@@ -940,7 +973,8 @@ change, span `model.armies`), the place tool and the commands.
   `units.moveToArmy {army, group?}`) and group. A path is `INITIAL/Town`, empty for the root.
 - **Units presets** (`Tools/UnitPreset`, kind `units`, the Units mode's Presets): Save keeps the
   selected units, else the chosen group's, with places relative to their middle (on a whole
-  ogrid) and heights above the terrain, in their groups below the deepest one holding them all.
+  ogrid) and heights above the terrain, in their groups below the deepest one holding them all
+  (placed, the top one is named after the preset).
   Applying one makes it what the place tool places (`Preset`); a click runs `units.placePreset
   {name?, x?, z?, army?, group?, heading?}`: a new group named after the preset in the tool's
   group, turned in quarter turns. Choosing a unit leaves the preset.
@@ -1084,8 +1118,9 @@ follow the terrain, and the reclaim. The maths is the library's (`PropOrientatio
 - **Commands**: `props.place {x, z, key?, heading?}`, `props.choose {key?}` (picker),
   `props.alignToTerrain`, `props.upright`, `props.dropToGround {sink?}`, `props.tilt {pitch?,
   roll?}` and `props.scale {scale}` (the inspector's fields), `props.randomize {turn?, scaleMin?,
-  scaleMax?}`, `props.replace {key?}` (picker), `props.randomVariant` (same biome, folder and
-  family), `props.addToPalette {key?, weight?}`, `props.removeFromPalette {key}`,
+  scaleMax?}`, `props.replace {key?}` (picker), `props.randomVariant` (another variant of the
+  same biome, folder and family; the status line counts the props that are their family's only
+  variant or unknown to the workspace), `props.addToPalette {key?, weight?}`, `props.removeFromPalette {key}`,
   `props.followTerrain {on?}`, `props.reclaim` and, for automation, `props.set {alignment?,
   randomTurn?, randomTilt?, scaleMin?, scaleMax?, sink?, radius?, density?, spacing?, onlyOn?,
   notOn?, threshold?, eraseRadius?, onlyPalette?}`. The ones on the selection act on its props.

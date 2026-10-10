@@ -39,6 +39,7 @@ internal static class HeightLayersState
                     ["width"] = curve.Width,
                     ["falloff"] = curve.Falloff,
                     ["closed"] = curve.Closed,
+                    ["mirrored"] = curve.Symmetry is null ? null : $"{curve.Symmetry.Kind} {curve.Symmetry.Count}",
                     ["points"] = new JsonArray([.. curve.Points.Select(point => (JsonNode)new JsonArray(point.X, point.Z, point.Height))]),
                 } : null,
             })]),

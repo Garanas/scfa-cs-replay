@@ -91,12 +91,19 @@ public sealed partial class PropRulesViewModel : ObservableObject
         get => Items.FirstOrDefault(item => item.Name == Chosen);
         set
         {
-            if (value is not null)
+            if (value is not null && value.Name != Chosen)
             {
                 Chosen = value.Name;
+                ChosenInList?.Invoke(this, EventArgs.Empty);
             }
         }
     }
+
+    /// <summary>
+    /// Raised when a person chooses another rule in the list: the inspector shows it, in place of
+    /// the selection.
+    /// </summary>
+    public event EventHandler? ChosenInList;
 
     public bool HasChosen => Chosen is not null;
 

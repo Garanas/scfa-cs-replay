@@ -36,7 +36,7 @@ public static class Menus
             "edit.copy", "edit.paste", "edit.duplicate", "edit.delete", "edit.rotate", "edit.scale", "edit.mirror", Separator,
             "edit.saveAsPreset",
         ]),
-        new MenuLayout("Select", ["select.all", "select.none", Separator, "select.symmetry", "select.mirrorEdits", "select.symmetryPartners", "select.handles"]),
+        new MenuLayout("Select", ["select.all", "select.none", "select.similar", "select.invert", "select.insideArea", "select.isolate", Separator, "select.symmetry", "select.mirrorEdits", "select.symmetryPartners", "select.handles"]),
         new MenuLayout("View",
         [
             "view.top", "view.3d", "view.sideBySide", "view.fit", "camera.home", "camera.focusSelection", "view.frame", Separator,

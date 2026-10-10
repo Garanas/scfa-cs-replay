@@ -81,6 +81,23 @@ public sealed partial class SymmetryViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Forgets the symmetry used last: another map turns on its own (or the one it detects).
+    /// </summary>
+    public void Forget() => _last = null;
+
+    /// <summary>
+    /// The choice of a symmetry the map keeps; off for none.
+    /// </summary>
+    public SymmetryChoice ChoiceOf(SymmetrySetting? setting) => setting is null
+        ? SymmetryChoice.Off
+        : Choices.FirstOrDefault(choice => choice.Kind == setting.Kind && (setting.Kind != MapSymmetryKind.Rotational || choice.Count == setting.Count)) ?? SymmetryChoice.Off;
+
+    /// <summary>
+    /// What the map keeps of the chosen symmetry; null while it is off.
+    /// </summary>
+    public SymmetrySetting? Setting => Chosen.Kind is MapSymmetryKind kind ? new SymmetrySetting(kind, kind == MapSymmetryKind.Rotational ? Chosen.Count : 2) : null;
+
+    /// <summary>
     /// Chooses a symmetry; null for none.
     /// </summary>
     /// <param name="count">The players of a rotational symmetry, 2 to 8; a mirror leaves it out.</param>

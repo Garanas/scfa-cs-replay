@@ -234,6 +234,12 @@ namespace FAForever.MapEditor.App.Tests
             await Run(model, "props.randomVariant");
             string[] family = ["/env/evergreen/props/trees/pine06_prop.bp", "/env/evergreen/props/trees/pine06_s2_prop.bp", "/env/evergreen/props/trees/pine06_v1_prop.bp"];
             Assert.IsTrue(family.Contains(Find(0).Blueprint) && family.Contains(Find(1).Blueprint), "a variant of pine06, never oak01");
+            Assert.AreNotEqual("/" + Pine, Find(0).Blueprint, "another variant than it had");
+            Assert.AreEqual("2 props changed", model.Status);
+
+            await Run(model, "props.replace", new JsonObject { ["key"] = Rock });
+            Assert.AreEqual(0, (await Run(model, "props.randomVariant")).Result);
+            StringAssert.Contains(model.Status, "2 are the only variant of their family", "says why nothing changed");
 
             model.Selection.Set([ObjectRef.Marker(model.ShownDocument!.Markers.Spawns[0].Id)]);
             await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => Run(model, "props.upright"), "no props selected");

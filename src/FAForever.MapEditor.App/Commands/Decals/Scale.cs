@@ -99,5 +99,5 @@ internal static class SelectedDecals
     /// what scales about its own centre takes its partners along.
     /// </summary>
     public static ImmutableArray<ObjectRef> WithPartners(MainViewModel model, MapDocument document, ImmutableArray<ObjectRef> decals) =>
-        [.. decals, .. model.PartnersOf(document, decals).Select(partner => partner.Partner)];
+        [.. decals.Concat(model.PartnersOf(document, decals).Select(partner => partner.Partner)).Distinct()];
 }

@@ -32,7 +32,8 @@ public sealed class PlaceUnitPresetHandler(MainViewModel model, PresetsViewModel
         UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
         string name = request.Name ?? tool.Preset ?? throw new ArgumentException("Choose a preset in the Units mode's panel, or give its name as the argument name");
         Preset preset = library.Find(UnitPreset.Kind, name) ?? throw new ArgumentException($"There is no units preset '{name}'");
-        UnitGroup template = UnitPreset.Template(preset);
+        // the new group is named after the preset, not after the group its units were saved from
+        UnitGroup template = UnitPreset.Template(preset) with { Name = preset.Name.Replace('/', '-') };
         MapDocument document = edit.Transaction.Document;
         string army = request.Army ?? tool.Army ?? throw new ArgumentException("The map has no army to place units for: add one in the Map mode");
         UnitCommands.RequireArmy(document, army);

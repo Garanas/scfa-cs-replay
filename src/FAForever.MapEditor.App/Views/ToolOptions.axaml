@@ -175,7 +175,24 @@
             </DataTemplate>
             <!-- selecting and moving what lies on the map (F-11) -->
             <DataTemplate DataType="tools:SelectTool">
-              <StackPanel Classes="toolrow">
+              <controls:ToolRow Classes="toolrow">
+                <!-- the selection filter (F-11): the kinds it picks; an unchecked kind is locked -->
+                <StackPanel Classes="inline" IsVisible="{Binding HasFilters}">
+                  <TextBlock Classes="label" Text="Picks" />
+                  <ItemsControl ItemsSource="{Binding Filters}" AutomationProperties.Name="Kinds the select tool picks">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Classes="inline" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="tools:SelectionFilterItem">
+                        <CheckBox Content="{Binding Title}" IsChecked="{Binding IsOn}" AutomationProperties.Name="{Binding Label}"
+                                  AutomationProperties.HelpText="Unchecked, clicks and boxes leave this kind alone (it is locked)" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
                 <StackPanel Classes="inline" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Handles}">
                   <CheckBox Content="Handles" IsChecked="{Binding Show}" AutomationProperties.Name="Show the handles of the selection"
                             AutomationProperties.HelpText="The square moves, the arrows move along x or z, the ring turns, the squares on the box scale" />
@@ -187,7 +204,7 @@
                             AutomationProperties.HelpText="Shift snaps a move to this grid, a turn to 15 degrees, a scale to tenths" />
                 </StackPanel>
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
-              </StackPanel>
+              </controls:ToolRow>
             </DataTemplate>
             <!-- the Decals mode's select tool (F-11, D-1): what dragging the selection does -->
             <DataTemplate DataType="tools:DecalSelectTool">

@@ -224,7 +224,7 @@ public sealed partial class DecalSelectTool : ObservableObject, IMapTool
             _before = _scale.Document;
             // with the symmetry, the mirror partners as they were at the press scale along (F-12)
             ImmutableArray<ObjectRef> decals = [.. _model.Selection.Items.Where(thing => thing.Kind == ObjectKind.Decal)];
-            _scaled = [.. decals, .. _model.PartnersOf(_before, decals).Select(partner => partner.Partner)];
+            _scaled = [.. decals.Concat(_model.PartnersOf(_before, decals).Select(partner => partner.Partner)).Distinct()];
         }
         if (_model.StrokeInProgress != _scale)
         {

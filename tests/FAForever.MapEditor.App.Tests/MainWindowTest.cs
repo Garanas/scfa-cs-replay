@@ -437,7 +437,9 @@ namespace FAForever.MapEditor.App.Tests
             model.Commands.Ran += command => ran.Add(command.Id);
             model.SelectMode("markers");
             Dispatcher.UIThread.RunJobs();
-            CheckBox Box(string title) => window.GetVisualDescendants().OfType<CheckBox>().Single(box => box.Content as string == title);
+            // the panel's boxes, not the select tool's filter (whose boxes are named "Select markers", ...)
+            CheckBox Box(string title) => window.GetVisualDescendants().OfType<CheckBox>()
+                .Single(box => box.Content as string == title && Avalonia.Automation.AutomationProperties.GetName(box)?.StartsWith("Select ", StringComparison.Ordinal) != true);
             Assert.IsTrue(Box("Markers").IsChecked);
             Assert.IsFalse(Box("Path nodes").IsChecked);
 
@@ -1055,7 +1057,7 @@ namespace FAForever.MapEditor.App.Tests
             Dispatcher.UIThread.RunJobs();
 
             Vector3 moved = model.ShownDocument!.PlaceOf(a)!.Value;
-            Assert.AreEqual(turned.X + 40 / window.MapView.Zoom, moved.X, 0.05, "the mouse's way along x");
+            Assert.AreEqual(turned.X + 40 / window.MapView.Zoom, moved.X, 0.501, "the mouse's way along x (a deposit to the nearest ogrid centre)");
             Assert.AreEqual(turned.Z, moved.Z, 1e-3, "x held: z stays");
             Assert.AreEqual(3, model.History.Count);
             window.Close();

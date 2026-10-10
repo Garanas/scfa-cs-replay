@@ -70,6 +70,11 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// </summary>
         public Minimap? Minimap { get; init; }
 
+        /// <summary>
+        /// The symmetry the editor mirrors edits by, kept with the project; null when none was chosen.
+        /// </summary>
+        public SymmetrySetting? Symmetry { get; init; }
+
         public ImmutableArray<Decal> Decals { get; init; } = [];
 
         public ImmutableArray<DecalGroup> DecalGroups { get; init; } = [];

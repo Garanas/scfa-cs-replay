@@ -65,8 +65,10 @@ public interface IMapTool
 /// <param name="Line">A line from its first point to its second, such as what the ruler measures.</param>
 /// <param name="Label">Text at the line's end, such as the distance.</param>
 /// <param name="Path">A line through many places, such as a curve (user story T-4).</param>
+/// <param name="Images">Lines drawn thinner than the path, such as the images of a curve mirrored by
+/// the symmetry (user story F-12).</param>
 public sealed record ToolMarks(IReadOnlyList<(float X, float Z)> Handles, (float X0, float Z0, float X1, float Z1)? Line = null, string? Label = null,
-    IReadOnlyList<(float X, float Z)>? Path = null);
+    IReadOnlyList<(float X, float Z)>? Path = null, IReadOnlyList<IReadOnlyList<(float X, float Z)>>? Images = null);
 
 /// <summary>
 /// The keys held with the mouse or a key.
@@ -88,6 +90,11 @@ public enum ToolModifiers
     /// Z is held: a move goes along z only.
     /// </summary>
     AxisZ = 16,
+
+    /// <summary>
+    /// R is held: dragging with a select tool turns the selection.
+    /// </summary>
+    Turn = 32,
 }
 
 /// <summary>

@@ -20,7 +20,28 @@ namespace FAForever.MapEditor.Project.Checks
             new ProblemCheck("missing-model", "Props and units without a model", MissingModels),
             new ProblemCheck("walkability-changes", "Passages opened or closed", WalkabilityChanges),
             new ProblemCheck("wrecks-in-playable-army", "Wrecks only a player's slot creates", WrecksInPlayableArmies),
+            new ProblemCheck("steep-deposit", "Deposits on steep ground", SteepDeposits),
         ];
+
+        /// <summary>
+        /// A mass or hydrocarbon deposit whose ground rises more than <see cref="MarkerEdits.MaxGroundVariation"/>
+        /// over the square it needs (<see cref="MarkerEdits.Steepness"/>): the storages around an
+        /// extractor, or a hydrocarbon plant, cannot be built there.
+        /// </summary>
+        public static IEnumerable<Problem> SteepDeposits(ProblemContext context)
+        {
+            Heightmap heights = context.Document.Terrain.Heightmap;
+            foreach (ResourceMarker deposit in context.Document.Markers.Resources)
+            {
+                if (MarkerEdits.Steepness(heights, deposit.Kind, deposit.Position.X, deposit.Position.Z) is float steepness)
+                {
+                    yield return new Problem("steep-deposit", ProblemSeverity.Warning,
+                        string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                            $"{deposit.Name} lies on steep ground: it rises {steepness:0.#} over {MarkerEdits.DepositSize(deposit.Kind)} ogrids, more than the {MarkerEdits.MaxGroundVariation} the buildings around it allow"),
+                        ObjectRef.Marker(deposit.Id), new Vector2(deposit.Position.X, deposit.Position.Z));
+                }
+            }
+        }
 
         /// <summary>
         /// How near a spawn a mass deposit must be, in ogrids: a player's first extractors lie close

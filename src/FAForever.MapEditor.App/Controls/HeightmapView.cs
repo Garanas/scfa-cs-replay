@@ -308,7 +308,7 @@ public sealed class HeightmapView : Control
             using (context.PushClip(new Rect(Bounds.Size)))
             {
                 DrawThings(context, overlay, document, _model);
-                _markers.Render(context, overlay, document.Markers, _model.ShownMarkerKinds, _zoom, _offset);
+                _markers.Render(context, overlay, _model.DrawnMarkers(document), _model.ShownMarkerKinds, _zoom, _offset);
                 DrawSelection(context, overlay, document, _model.Selection.Items);
             }
         }
@@ -515,12 +515,14 @@ public sealed class HeightmapView : Control
     }
 
     /// <summary>
-    /// The axis a key holds a move to: X or Z, else none.
+    /// What a key held changes about a drag: X or Z hold a move to that axis, R turns the
+    /// selection; else none.
     /// </summary>
     internal static ToolModifiers AxisOf(Key key) => key switch
     {
         Key.X => ToolModifiers.AxisX,
         Key.Z => ToolModifiers.AxisZ,
+        Key.R => ToolModifiers.Turn,
         _ => ToolModifiers.None,
     };
 
@@ -681,6 +683,10 @@ public sealed class HeightmapView : Control
             for (int i = 0; i < document.Markers.Areas.Length; i++)
             {
                 Area area = document.Markers.Areas[i];
+                if (!model.IsDrawn(ObjectRef.Area(area.Name)))
+                {
+                    continue;
+                }
                 Rect rect = new Rect(MapToControl(area.X0, area.Z0), MapToControl(area.X1, area.Z1)).Normalize();
                 context.DrawRectangle(null, overlay.Area, rect);
                 // the playable area: the one the scenario names, else the first (user stories M-3, M-5)
@@ -690,14 +696,14 @@ public sealed class HeightmapView : Control
         }
         if (model.ShowProps)
         {
-            DrawProps(context, overlay, document, shown);
+            DrawProps(context, overlay, document, shown, model);
         }
         if (model.ShowUnits)
         {
             foreach (PlacedUnit unit in document.AllUnits())
             {
                 Point at = MapToControl(unit.Unit.Position.X, unit.Unit.Position.Z);
-                if (!shown.Contains(at))
+                if (!shown.Contains(at) || !model.IsDrawn(ObjectRef.Unit(unit.Unit.Name)))
                 {
                     continue;
                 }
@@ -731,7 +737,7 @@ public sealed class HeightmapView : Control
     /// The props as dots, sparse when zoomed out (<see cref="PropSparseZoom"/>); the number drawn is
     /// <see cref="PropDotsDrawn"/>.
     /// </summary>
-    private void DrawProps(DrawingContext context, Overlay overlay, MapDocument document, Rect shown)
+    private void DrawProps(DrawingContext context, Overlay overlay, MapDocument document, Rect shown, MainViewModel model)
     {
         bool sparse = _zoom < PropSparseZoom;
         HashSet<long>? taken = sparse ? [] : null;
@@ -742,6 +748,7 @@ public sealed class HeightmapView : Control
         {
             Point at = MapToControl(prop.Position.X, prop.Position.Z);
             if (!shown.Contains(at)
+                || !model.IsDrawn(ObjectRef.Prop(prop.Id))
                 || (taken is not null && !taken.Add(((long)Math.Floor(at.X / PropCell) << 32) | (uint)(int)Math.Floor(at.Y / PropCell))))
             {
                 continue;
@@ -763,8 +770,12 @@ public sealed class HeightmapView : Control
     /// </summary>
     private void DrawMarks(DrawingContext context, Overlay overlay, ToolMarks marks)
     {
-        if (marks.Path is { Count: >= 2 } path)
+        StreamGeometry? Line(IReadOnlyList<(float X, float Z)> path)
         {
+            if (path.Count < 2)
+            {
+                return null;
+            }
             StreamGeometry line = new StreamGeometry();
             using (StreamGeometryContext figure = line.Open())
             {
@@ -775,11 +786,24 @@ public sealed class HeightmapView : Control
                 }
                 figure.EndFigure(false);
             }
-            using (context.PushTransform(Matrix.CreateTranslation(1, 1)))
+            return line;
+        }
+        foreach (IReadOnlyList<(float X, float Z)> image in marks.Images ?? [])
+        {
+            // the images of a mirrored curve: the guide's dashes over a shadow
+            if (Line(image) is StreamGeometry line)
             {
                 context.DrawGeometry(null, overlay.Shadow, line);
+                context.DrawGeometry(null, new Pen(overlay.Selection.Brush, overlay.Selection.Thickness, DashStyle.Dash), line);
             }
-            context.DrawGeometry(null, overlay.Selection, line);
+        }
+        if (marks.Path is { Count: >= 2 } path && Line(path) is StreamGeometry pathLine)
+        {
+            using (context.PushTransform(Matrix.CreateTranslation(1, 1)))
+            {
+                context.DrawGeometry(null, overlay.Shadow, pathLine);
+            }
+            context.DrawGeometry(null, overlay.Selection, pathLine);
         }
         if (marks.Line is (float x0, float z0, float x1, float z1))
         {

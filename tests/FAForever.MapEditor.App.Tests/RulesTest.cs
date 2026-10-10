@@ -113,9 +113,16 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = await Open();
             int byHand = model.Map!.Document.Props.Length;
             Prop first = model.Map.Document.Props[0];
+            model.Selection.Set([ObjectRef.Prop(first.Id)]);
 
             CommandRun added = await Run(model, "props.addRule", new JsonObject { ["name"] = "Forest", ["density"] = 1 });
             Assert.AreEqual("Forest", added.Result);
+            Assert.IsFalse(model.Selection.HasAny, "the inspector shows the new rule, not the selection");
+            await Run(model, "props.addRule", new JsonObject { ["name"] = "Rocks" });
+            model.Selection.Set([ObjectRef.Prop(first.Id)]);
+            model.PropRules.ChosenItem = model.PropRules.Items.Single(item => item.Name == "Forest");
+            Assert.IsFalse(model.Selection.HasAny, "a rule chosen in the list takes the inspector");
+            await Run(model, "edit.undo");
             Assert.AreEqual("Forest", model.PropRules.Chosen);
             Assert.AreEqual("props", model.SelectedMode!.Definition.Id);
             await Run(model, "props.setRulePalette", new JsonObject { ["props"] = new JsonArray(Pine) });

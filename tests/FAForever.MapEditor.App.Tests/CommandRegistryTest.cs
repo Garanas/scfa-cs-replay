@@ -129,7 +129,7 @@ namespace FAForever.MapEditor.App.Tests
                     "plugins.setField", "presets.apply",
                     "presets.delete", "problems.show", "props.addRuleCondition", "props.chooseRule", "props.place", "props.removeFromPalette", "props.removeRule",
                     "props.removeRuleCondition", "props.scale", "props.set", "props.setRule", "props.setRuleCondition", "props.setRulePalette", "props.tilt",
-                    "select.set", "terrain.addCurve", "terrain.chooseLayer", "terrain.moveLayer", "terrain.reloadLayer", "terrain.removeLayer", "terrain.setCurve",
+                    "select.hideKind", "select.lockKind", "select.set", "terrain.addCurve", "terrain.chooseLayer", "terrain.moveLayer", "terrain.reloadLayer", "terrain.removeLayer", "terrain.setCurve",
                     "terrain.setLayer", "units.add", "units.moveGroup", "units.moveToArmy", "units.moveToGroup", "units.removeGroup", "units.renameGroup",
                     "view.addToToolbar", "view.gpuDebug", "view.removeFromToolbar", "view.resizePanel", "view.setToolbar", "view.togglePanel", "view.walkability",
                     "view.zoomTo", "water.removeWaveGenerator",

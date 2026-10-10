@@ -92,6 +92,7 @@ public static class EditorModes
             [
                 new ToolDefinition("map.areas", "Areas", "M-5") { Make = model => new AreaTool(model) },
                 new ToolDefinition("map.size", "Map size", "M-3") { Make = model => new MapSizeTool(model) },
+                new ToolDefinition("map.select", "Select anything", "F-11") { Make = model => new SelectTool(model, ObjectKinds.All) },
             ],
             [
                 new MapInformationSection(),
