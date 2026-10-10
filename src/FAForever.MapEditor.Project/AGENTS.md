@@ -210,6 +210,20 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   one of the workspace's assets. Its `Key` is the same for every spelling of the path and its
   `Version` changes with the file, so a view can keep one copy per texture and reload it.
 - `faf-map workspace init|convert|status` does the same without the editor.
+- **The sandbox** (`Workspaces/SandboxMap`, user story F-5): `projects/Sandbox`, a map of 256
+  ogrids with two armies and one of every kind of thing (spawns, mass, hydrocarbon, three land path
+  nodes with links, an AI marker, an area, a chain, a decal in a decal group, props, civilian units
+  in the group `INITIAL` of `NEUTRAL_CIVILIAN`), for trying the editor out. `SandboxMap.Build(catalog)`
+  takes the stratum textures of one biome (evergreen first), a few of its props and decals and a few
+  units from the workspace's converted assets, by their game paths; nothing of the game is copied.
+  An empty catalogue gives the plain sandbox (terrain, water, markers, area, chain). `SandboxMap.Ensure`
+  writes it when it is missing: `Workspace.Create` and the end of `AssetConverter.Convert` call it,
+  and the editor before it opens it. A plain sandbox nobody changed is written again once there are
+  assets (the hidden `.sandbox` holds a hash of the project's files); a saved one is kept.
+- **Publishable**: `ScenarioInfo.Publishable` (in `map.json`'s scenario as `publishable: false`,
+  left out while true, so older projects read as publishable) and `MapDocument.IsPublishable`. The
+  sandbox is not; the upload to the vault (M-8, not built) is to refuse such a map, while the
+  export to the game's maps folder works for every map. The game's files do not carry it.
 - **Presets** (user story F-10): `presets/<kind>/<name>.json` (`Workspace.Presets`, a
   `PresetLibrary`), a folder per kind (lower-case letters, digits and dashes: `brush`, `lighting`,
   `water`, `units`, `markers`, `props-palette`) and a file per preset (`PresetDto`: format version,

@@ -50,5 +50,11 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// The factions a playable army may play, for the armies that may not play every faction.
         /// </summary>
         public Dictionary<string, IReadOnlyList<string>>? ArmyFactions { get; init; }
+
+        /// <summary>
+        /// False for a map that may not go to the vault (the workspace's sandbox); left out (true)
+        /// for every other map.
+        /// </summary>
+        public bool? Publishable { get; init; }
     }
 }

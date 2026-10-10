@@ -92,6 +92,12 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// <summary>
         /// An id for a new prop: one more than the highest in use.
         /// </summary>
+        /// <summary>
+        /// Whether the map may be uploaded to the vault. An upload (user story M-8) refuses a map
+        /// for which this is false; exporting to the game's maps folder works for every map.
+        /// </summary>
+        public bool IsPublishable => Scenario.Publishable;
+
         public int NextPropId() => Props.IsEmpty ? 1 : Props.Max(prop => prop.Id) + 1;
     }
 }

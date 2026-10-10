@@ -21,7 +21,10 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **F-4 History.** The steps in a panel; choosing one goes back or forward to it.
 - [x] **F-5 Workspace.** One folder per computer with the projects and the game's assets converted
       from `env` and `units` (`.scd` with FAF's `.nx2` over them), set up at the first start and
-      converted again when FAF or the editor changes.
+      converted again when FAF or the editor changes. Every workspace has a sandbox
+      (`projects/Sandbox`: a small map with one of each kind of thing, made of its own assets),
+      written again when missing and opened when the editor starts without a folder; it is not
+      publishable (exported to play with a warning, never uploaded).
 - [x] **F-6 Assets on disk, read again when they change.** The project's files (JSON, PNG) and the
       workspace's assets: a tool that saves one, the editor shows it.
 - [ ] **F-7 Generation only when asked.** A layer or result that is generated (walkability, props
@@ -100,7 +103,7 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **M-7 Import and export.** Import a map folder of the game or the vault; export into the
       vault's `maps` folder.
 - [ ] **M-8 Versions and upload.** Raise the version on export; render the preview; upload to the
-      FAF vault.
+      FAF vault, refusing a map that is not publishable (`MapDocument.IsPublishable`: the sandbox).
 
 ## T: Terrain
 

@@ -59,5 +59,12 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// </summary>
         public ImmutableSortedDictionary<string, ImmutableArray<string>> ArmyFactions { get; init; } =
             ImmutableSortedDictionary.Create<string, ImmutableArray<string>>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Whether the map may go to the vault: false for the workspace's sandbox
+        /// (<see cref="Workspaces.SandboxMap"/>), which is for trying the editor out. It stays in the
+        /// project only; the game's files do not carry it.
+        /// </summary>
+        public bool Publishable { get; init; } = true;
     }
 }

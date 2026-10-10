@@ -205,6 +205,39 @@ public sealed partial class MainViewModel : ObservableObject
             _openWhenReady = null;
             _ = OpenOnStartAsync(folder);
         }
+        else if (Map is null && OpenSandboxWhenReady)
+        {
+            _ = OpenSandboxAsync(workspace);
+        }
+    }
+
+    /// <summary>
+    /// Whether the editor opens the workspace's sandbox when it starts without a folder (the
+    /// application does; tests of the start leave it off).
+    /// </summary>
+    public bool OpenSandboxWhenReady { get; set; }
+
+    /// <summary>
+    /// Opens the workspace's sandbox (<see cref="SandboxMap"/>), writing it first when it is missing:
+    /// the map a new user or an agent has to work on.
+    /// </summary>
+    public async Task OpenSandboxAsync(Workspace workspace)
+    {
+        string folder;
+        try
+        {
+            folder = await Task.Run(() => SandboxMap.Ensure(workspace));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or MapProjectException)
+        {
+            Logger("Workspace").LogWarning(exception, "Could not write the sandbox into {Folder}: {Reason}", workspace.ProjectsFolder, exception.Message);
+            Status = $"Could not write the sandbox: {exception.Message}";
+            return;
+        }
+        if (Map is null)
+        {
+            await OpenOnStartAsync(folder);
+        }
     }
 
     /// <summary>
@@ -286,7 +319,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string Title => Map is null
         ? "FAF map editor"
-        : $"{(Map.Session.IsModified ? "* " : "")}{Map.Document.Scenario.Name} - {Map.ProjectFolder ?? "not saved as a project"} - FAF map editor";
+        : $"{(Map.Session.IsModified ? "* " : "")}{Map.Document.Scenario.Name}{(Map.Document.IsPublishable ? "" : " (sandbox, not for the vault)")} - {Map.ProjectFolder ?? "not saved as a project"} - FAF map editor";
 
     /// <summary>
     /// The open map's name, for the menu bar; empty without a map.
@@ -403,6 +436,12 @@ public sealed partial class MainViewModel : ObservableObject
             folder = await map.ExportAsync(outputFolder, version);
             Status = $"Exported {folder}";
         });
+        if (!map.Document.IsPublishable)
+        {
+            // to play it, which is fine; it may never go to the vault
+            Logger("Files").LogWarning("Exported {Map}, which is the sandbox: it is for trying the editor and is not to be uploaded", map.Document.Scenario.Name);
+            Status = $"Exported {folder}. This is the sandbox: play it, but it cannot be uploaded to the vault";
+        }
         Events.OnMapExported(map, folder);
         return folder;
     }
@@ -557,7 +596,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
         ResetCamera();
         MapChanged?.Invoke(this, EventArgs.Empty);
-        Refresh(status);
+        Refresh(map.Document.IsPublishable ? status : $"{status}. This is the sandbox: try anything here; it can be exported to play, not uploaded to the vault");
         Events.OnMapOpened(map);
     }
 

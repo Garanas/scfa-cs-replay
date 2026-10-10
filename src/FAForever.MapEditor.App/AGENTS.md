@@ -236,6 +236,13 @@ was started with:
 - `Ready`: the editor. Open and Save As start in the workspace's `projects`, Import in the vault's
   `maps`, and Export writes into the vault's `maps` without asking.
 
+Started without a folder, the editor opens the workspace's sandbox once it is ready
+(`MainViewModel.OpenSandboxWhenReady`, set by the application; `OpenSandboxAsync` writes it first
+when it is missing; the library's guide describes it), so a new user and an agent's test editor
+always have a map. A map that is not publishable says so in the title ("sandbox, not for the
+vault") and the status line when it opens; exporting it works, with a warning in the status line
+and the log.
+
 Help, Show the workspace folder (`help.workspaceFolder`) opens the workspace in the system's file
 manager. The menu and the editor are hidden until `Ready`. To try the start without touching your own
 workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
