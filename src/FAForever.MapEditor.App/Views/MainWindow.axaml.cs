@@ -64,6 +64,7 @@ public sealed partial class MainWindow : Window
         {
             _model.PropertyChanged -= OnModelChanged;
             _model.Commands.CanRunChanged -= OnCanRunChanged;
+            _model.Commands.CommandsChanged -= OnCommandsChanged;
             _model.Palette.PropertyChanged -= OnPaletteChanged;
             _model.FitRequested -= OnFitRequested;
             _model.TopViewRequested -= OnTopViewRequested;
@@ -78,6 +79,7 @@ public sealed partial class MainWindow : Window
         {
             _model.PropertyChanged += OnModelChanged;
             _model.Commands.CanRunChanged += OnCanRunChanged;
+            _model.Commands.CommandsChanged += OnCommandsChanged;
             _model.Palette.PropertyChanged += OnPaletteChanged;
             _model.FitRequested += OnFitRequested;
             _model.TopViewRequested += OnTopViewRequested;
@@ -129,7 +131,17 @@ public sealed partial class MainWindow : Window
             return menu;
         }
 
-        MainMenu.ItemsSource = Menus.Bar.Select(layout => Menu(layout, top: true)).ToList();
+        MainMenu.ItemsSource = Menus.WithPlugins(model.Commands.All).Select(layout => Menu(layout, top: true)).ToList();
+        OnCanRunChanged(this, EventArgs.Empty);
+    }
+
+    // a plugin registered or took away its commands: the menus and shortcuts are made again
+    private void OnCommandsChanged(object? sender, EventArgs e)
+    {
+        if (_model is not null)
+        {
+            BuildMenusAndShortcuts(_model);
+        }
     }
 
     private static MenuItem Item(CommandAdapter adapter)

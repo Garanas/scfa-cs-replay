@@ -667,6 +667,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["loading"] = LoadingState(),
             ["handles"] = DescribeHandles(),
             ["hover"] = model.Selection.Hovered?.ToString(),
+            ["plugins"] = model.Plugins.Describe(),
         };
     }
 

@@ -1,0 +1,78 @@
+<!-- Plugins (F-15): the workspace's Lua plugins, each on or off, what it registered, its errors, its commands and its panel. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:plugins="using:FAForever.MapEditor.App.Plugins"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.PluginsPage"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="scrim">
+    <Border Classes="dialog plugins">
+      <StackPanel>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <TextBlock Classes="heading" Text="Plugins" />
+            <TextBlock Classes="caption"
+                       Text="Lua plugins of the workspace: a folder each with its plugin.lua, read again when its files change. Their commands are in the Plugins menu and the palette, each run one step of undo; their checks are in the Problems tab." />
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="{StaticResource SpaceRow}">
+                <Button Classes="beside" Content="Reload" Command="{Binding RunCommand}" CommandParameter="plugins.reload"
+                        AutomationProperties.Name="Reload the plugins" />
+                <Button Classes="beside" Content="Show" Command="{Binding RunCommand}" CommandParameter="plugins.showFolder"
+                        AutomationProperties.Name="Show the plugins folder" />
+              </StackPanel>
+              <TextBlock Classes="secondary" Text="{Binding Plugins.Folder}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                         AutomationProperties.Name="Plugins folder" />
+            </DockPanel>
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart">
+          <ScrollViewer Classes="pluginslist">
+            <ItemsControl ItemsSource="{Binding Plugins.Items}" AutomationProperties.Name="Plugins">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Classes="stack" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="plugins:LuaPlugin">
+                  <Border Classes="panel">
+                    <StackPanel Classes="stack">
+                      <CheckBox Content="{Binding Title}" IsChecked="{Binding IsOn, Mode=OneWay}"
+                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Plugins.ToggleCommand}" CommandParameter="{Binding Id}"
+                                AutomationProperties.HelpText="On or off; the settings remember it" />
+                      <TextBlock Classes="caption" Text="{Binding Caption}" IsVisible="{Binding Caption, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      <SelectableTextBlock Classes="error caption" Text="{Binding ErrorText}" IsVisible="{Binding HasErrors}"
+                                           AutomationProperties.Name="{Binding Id, StringFormat='Errors of {0}'}" />
+                      <ItemsControl ItemsSource="{Binding CommandItems}" IsVisible="{Binding HasCommands}" AutomationProperties.Name="{Binding Id, StringFormat='Commands of {0}'}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <WrapPanel />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate DataType="plugins:PluginCommandItem">
+                            <Button Classes="beside" Content="{Binding Title}" ToolTip.Tip="{Binding Description}"
+                                    Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding CommandId}"
+                                    AutomationProperties.HelpText="{Binding Description}" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <controls:SettingList DataContext="{Binding Panel}" ShowsTitle="False" IsVisible="{Binding $parent[Border].((plugins:LuaPlugin)DataContext).Panel, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Border>
+        <Border Classes="dialogpart">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="accent" Content="Close" Command="{Binding Plugins.CloseCommand}" />
+            <TextBlock Classes="caption" Text="{Binding Plugins.Summary}" VerticalAlignment="Center" AutomationProperties.Name="Plugins summary" />
+          </DockPanel>
+        </Border>
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

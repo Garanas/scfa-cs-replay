@@ -52,6 +52,12 @@ public sealed class EditorCommand
     /// </summary>
     public string Menu { get; internal set; } = "";
 
+    /// <summary>
+    /// The plugin that registered it at run time (user story F-15), or null for the editor's own;
+    /// such a command may be taken away while it is in a menu.
+    /// </summary>
+    public string? Owner { get; init; }
+
     public bool IsIncomplete => Incomplete is not null;
 
     /// <summary>
@@ -113,6 +119,12 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
     public event EventHandler? CanRunChanged;
 
     /// <summary>
+    /// Raised when a command was added or taken away after the start (a plugin's): the menus and
+    /// shortcuts are made again.
+    /// </summary>
+    public event EventHandler? CommandsChanged;
+
+    /// <summary>
     /// Says that <see cref="CanRun"/> may answer otherwise now; the editor calls it wherever what
     /// <see cref="Needs"/> asks for changes.
     /// </summary>
@@ -159,6 +171,7 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
             throw new InvalidOperationException($"There are two commands {command.Id}");
         }
         _commands.Add(command);
+        CommandsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -189,19 +202,21 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
     /// Takes a command made at run time away again, as a plugin that is turned off does with its own.
     /// </summary>
     /// <returns>Whether there was such a command.</returns>
-    /// <exception cref="InvalidOperationException">The command is in a menu: the menu bar would name a command that is gone.</exception>
+    /// <exception cref="InvalidOperationException">The command is in the menu bar's layout
+    /// (<see cref="Menus.Bar"/>): the menu bar would name a command that is gone.</exception>
     public bool Unregister(string id)
     {
         if (Find(id) is not EditorCommand command)
         {
             return false;
         }
-        if (command.Menu.Length > 0)
+        if (command.Menu.Length > 0 && command.Owner is null)
         {
             throw new InvalidOperationException($"The command {id} is in the menu {command.Menu}");
         }
         _byId.Remove(id);
         _commands.Remove(command);
+        CommandsChanged?.Invoke(this, EventArgs.Empty);
         return true;
     }
 

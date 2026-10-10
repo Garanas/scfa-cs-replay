@@ -25,6 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- the example plugins, written into a workspace's plugins folder once (Plugins/ExamplePlugins.cs) -->
+    <EmbeddedResource Include="Plugins\Examples\**\*.lua;Plugins\Examples\**\*.json" LogicalName="Examples/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\FAForever.MapEditor.Project\FAForever.MapEditor.Project.csproj" />
   </ItemGroup>
 

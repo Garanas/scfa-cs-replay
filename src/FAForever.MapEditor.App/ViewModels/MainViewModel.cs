@@ -139,6 +139,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeLayout();
         InitializeAssetDiscovery();
         InitializeHeightLayers();
+        Plugins = new PluginsViewModel(this);
     }
 
     /// <summary>
@@ -186,6 +187,11 @@ public sealed partial class MainViewModel : ObservableObject
     /// What happens in the editor, for C# and later Lua plugins to react to (user story F-13).
     /// </summary>
     public EditorEvents Events { get; }
+
+    /// <summary>
+    /// The workspace's Lua plugins and the Plugins page (user story F-15).
+    /// </summary>
+    public PluginsViewModel Plugins { get; }
 
     /// <summary>
     /// The workspace's presets, and those the mode's panel lists (user story F-10).

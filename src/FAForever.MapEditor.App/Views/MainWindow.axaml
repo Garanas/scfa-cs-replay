@@ -154,6 +154,7 @@
       <views:AssetPicker x:Name="Picker" DataContext="{Binding Picker}" />
     </Panel>
     <views:DiagnosticsPage IsVisible="{Binding Diagnostics.IsOpen}" />
+    <views:PluginsPage IsVisible="{Binding Plugins.IsOpen}" />
     <views:VersionControlPage IsVisible="{Binding VersionControl.IsOpen}" />
     <views:ReportProblemPage IsVisible="{Binding Report.IsOpen}" />
     <views:NewMapPage IsVisible="{Binding NewMapPage.IsOpen}" />
