@@ -82,6 +82,40 @@ namespace FAForever.MapEditor.Project.Workspaces.Serialized
         /// The ids of the commands on the toolbar, in order.
         /// </summary>
         public List<string>? ToolbarCommands { get; init; }
+
+        /// <summary>
+        /// Where the panels lie that do not lie in their own place, by panel (<c>modePanel</c>,
+        /// <c>inspector</c>, <c>dock</c>, and the dock's tabs <c>problems</c>, <c>history</c>,
+        /// <c>assets</c>, <c>console</c>): <c>left</c>, <c>right</c>, <c>bottom</c>, <c>float</c>
+        /// (a window of its own) or, for a tab, <c>dock</c>.
+        /// </summary>
+        public Dictionary<string, string>? Places { get; init; }
+
+        /// <summary>
+        /// The windows of the panels that float, by panel, and of those that floated before: their
+        /// place on the screen and size, and where the panel goes back to when its window closes.
+        /// </summary>
+        public Dictionary<string, FloatingPanelDto>? Floating { get; init; }
+    }
+
+    /// <summary>
+    /// The window of a panel that floats: its place on the screen (pixels), its size
+    /// (device-independent pixels) and where the panel goes back to when it closes.
+    /// </summary>
+    public sealed record FloatingPanelDto
+    {
+        public int? X { get; init; }
+
+        public int? Y { get; init; }
+
+        public double? Width { get; init; }
+
+        public double? Height { get; init; }
+
+        /// <summary>
+        /// <c>left</c>, <c>right</c>, <c>bottom</c> or <c>dock</c>; absent, the panel's own place.
+        /// </summary>
+        public string? Returns { get; init; }
     }
 
     /// <summary>

@@ -29,10 +29,10 @@ public sealed partial class MainWindow : Window
         AddHandler(KeyDownEvent, OnKeyLeftOver, Avalonia.Interactivity.RoutingStrategies.Bubble);
         Heightmap.CursorMoved += text => CursorText.Text = text;
         Terrain3D.CursorMoved += text => CursorText.Text = text;
-        // a splitter let go: the layout remembers the size it left (user story V-4)
-        ModePanelSplitter.DragCompleted += (_, _) => _model?.Layout.Resize(LayoutPanel.ModePanel, Shell.ColumnDefinitions[0].ActualWidth);
-        InspectorSplitter.DragCompleted += (_, _) => _model?.Layout.Resize(LayoutPanel.Inspector, Shell.ColumnDefinitions[4].ActualWidth);
-        DockSplitter.DragCompleted += (_, _) => _model?.Layout.Resize(LayoutPanel.Dock, Middle.RowDefinitions[2].ActualHeight);
+        // a splitter let go: the layout remembers the size it left its side (user story V-4)
+        ModePanelSplitter.DragCompleted += (_, _) => _model?.Layout.ResizeSide(PanelPlace.Left, Shell.ColumnDefinitions[0].ActualWidth);
+        InspectorSplitter.DragCompleted += (_, _) => _model?.Layout.ResizeSide(PanelPlace.Right, Shell.ColumnDefinitions[4].ActualWidth);
+        DockSplitter.DragCompleted += (_, _) => _model?.Layout.ResizeSide(PanelPlace.Bottom, Middle.RowDefinitions[2].ActualHeight);
         ViewsSplitter.DragCompleted += (_, _) =>
         {
             double top = Maps.ColumnDefinitions[0].ActualWidth;
@@ -79,6 +79,7 @@ public sealed partial class MainWindow : Window
             _model.OpenFileRequested -= OnOpenFileRequested;
             _model.Layout.PropertyChanged -= OnLayoutChanged;
             _model.Layout.Changed -= OnLayoutResized;
+            _model.Layout.PlacesChanged -= OnPlacesChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
@@ -94,10 +95,11 @@ public sealed partial class MainWindow : Window
             _model.OpenFileRequested += OnOpenFileRequested;
             _model.Layout.PropertyChanged += OnLayoutChanged;
             _model.Layout.Changed += OnLayoutResized;
+            _model.Layout.PlacesChanged += OnPlacesChanged;
             BuildMenusAndShortcuts(_model);
             BuildOverlayChips(_model);
             ShowChosenView();
-            ApplyLayout();
+            ArrangePanels();
         }
     }
 
@@ -246,10 +248,29 @@ public sealed partial class MainWindow : Window
             case nameof(MainViewModel.IsDockTall):
                 ApplyLayout();
                 break;
+            case nameof(MainViewModel.Dock):
+                // a tab chosen that lies outside the dock: its window comes to the front instead
+                if (_model!.Layout.PlaceOf(LayoutViewModel.PanelOf(_model.Dock)) != PanelPlace.Dock)
+                {
+                    ActivateFloating(LayoutViewModel.PanelOf(_model.Dock));
+                    Dispatcher.UIThread.Post(ArrangePanels);
+                }
+                break;
         }
     }
 
-    private void OnLayoutChanged(object? sender, PropertyChangedEventArgs e) => ApplyLayout();
+    // a panel shown or hidden puts the panels in their places again; a size only lays out again
+    private void OnLayoutChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(LayoutViewModel.ShowModePanel) or nameof(LayoutViewModel.ShowInspector) or nameof(LayoutViewModel.ShowDock))
+        {
+            ArrangePanels();
+        }
+        else
+        {
+            ApplyLayout();
+        }
+    }
 
     private void OnLayoutResized(object? sender, EventArgs e)
     {
@@ -258,10 +279,10 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Lays the panels out as the layout says (user story V-4): a shown panel's column or row at
-    /// its size (the editor's own from the tokens when the user gave none), a hidden one's
-    /// collapsed with its splitter. The dock is higher while the asset shelf shows, unless the
-    /// user gave it a height.
+    /// Lays the sides out as the layout says (user story V-4): a side that holds a panel that shows
+    /// at its size (the editor's own from the tokens when the user gave none), an empty one
+    /// collapsed with its splitter (<see cref="ArrangePanels"/> put the panels there). The bottom is
+    /// higher while the dock lies there showing the asset shelf, unless the user gave it a height.
     /// </summary>
     private void ApplyLayout()
     {
@@ -270,16 +291,18 @@ public sealed partial class MainWindow : Window
             return;
         }
         LayoutViewModel layout = _model.Layout;
+        bool left = LeftSide.IsVisible, right = RightSide.IsVisible, bottom = BottomSide.IsVisible;
         ColumnDefinition modePanel = Shell.ColumnDefinitions[0];
-        modePanel.Width = layout.ShowModePanel ? new GridLength(layout.ModePanelWidth ?? Token("ModePanelWidth")) : GridLength.Auto;
-        modePanel.MinWidth = layout.ShowModePanel ? Token("LayoutPanelMinWidth") : 0;
+        modePanel.Width = left ? new GridLength(layout.ModePanelWidth ?? Token("ModePanelWidth")) : GridLength.Auto;
+        modePanel.MinWidth = left ? Token("LayoutPanelMinWidth") : 0;
         ColumnDefinition inspector = Shell.ColumnDefinitions[4];
-        inspector.Width = layout.ShowInspector ? new GridLength(layout.InspectorWidth ?? Token("InspectorWidth")) : GridLength.Auto;
-        inspector.MinWidth = layout.ShowInspector ? Token("LayoutPanelMinWidth") : 0;
+        inspector.Width = right ? new GridLength(layout.InspectorWidth ?? Token("InspectorWidth")) : GridLength.Auto;
+        inspector.MinWidth = right ? Token("LayoutPanelMinWidth") : 0;
         Shell.ColumnDefinitions[2].MinWidth = Token("LayoutViewMinWidth");
         RowDefinition dock = Middle.RowDefinitions[2];
-        dock.Height = layout.ShowDock ? new GridLength(layout.DockHeight ?? Token(_model.IsDockTall ? "DockTallHeight" : "DockHeight")) : GridLength.Auto;
-        dock.MinHeight = layout.ShowDock ? Token("LayoutDockMinHeight") : 0;
+        bool tall = _model.IsDockTall && layout.PlaceOf(MovablePanel.Dock) == PanelPlace.Bottom;
+        dock.Height = bottom ? new GridLength(layout.DockHeight ?? Token(tall ? "DockTallHeight" : "DockHeight")) : GridLength.Auto;
+        dock.MinHeight = bottom ? Token("LayoutDockMinHeight") : 0;
         Middle.RowDefinitions[0].MinHeight = Token("LayoutDockMinHeight");
     }
 
@@ -411,6 +434,8 @@ public sealed partial class MainWindow : Window
         }
         if (_mayClose || DataContext is not MainViewModel model || model.Map?.Session.IsModified != true)
         {
+            // the floating panels' windows close with the editor's, and float again at the next start
+            CloseFloatingWindows();
             return;
         }
 

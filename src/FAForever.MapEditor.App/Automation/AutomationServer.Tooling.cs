@@ -106,10 +106,11 @@ public sealed partial class AutomationServer
     {
         string label = Text(arguments, "label");
         JsonNode value = arguments["value"] ?? throw new ArgumentException("value is missing");
-        Visual root = arguments["under"]?.GetValue<string>() is { Length: > 0 } under
-            ? UiTree.Find(window, under) ?? throw new ArgumentException($"No control is named, labelled or reads '{under}'")
-            : window;
-        Control control = FindSettable(root, label) ?? throw new ArgumentException($"No control one can set is named, labelled or reads '{label}'");
+        // in the editor's window or a floating panel's (user story V-4)
+        Visual? under = UnderOf(arguments);
+        Control control = (under is not null ? FindSettable(under, label) : Windows.Select(each => FindSettable(each, label)).FirstOrDefault(found => found is not null))
+            ?? throw new ArgumentException($"No control one can set is named, labelled or reads '{label}'");
+        WindowInput Input = InputOf(WindowOf(control));
         bool revealed = ToolRow.Reveal(control);
         Avalonia.Point? before = control.TranslatePoint(default, window);
         control.BringIntoView();
@@ -268,12 +269,14 @@ public sealed partial class AutomationServer
 
     private async Task ClickAsync(Control control)
     {
-        Point centre = control.TranslatePoint(new Point(Math.Min(control.Bounds.Width / 2, 10), control.Bounds.Height / 2), window)
+        TopLevel top = WindowOf(control);
+        Point centre = control.TranslatePoint(new Point(Math.Min(control.Bounds.Width / 2, 10), control.Bounds.Height / 2), top)
             ?? throw new InvalidOperationException("The control is not in the window");
         await NextFrameAsync();
-        Input.Move(centre);
-        Input.Down(centre);
-        Input.Up(centre);
+        WindowInput input = InputOf(top);
+        input.Move(centre);
+        input.Down(centre);
+        input.Up(centre);
         await LetInputSettleAsync();
     }
 
@@ -409,7 +412,7 @@ public sealed partial class AutomationServer
     };
 
     private T Descendant<T>() where T : Control =>
-        window.GetVisualDescendants().OfType<T>().FirstOrDefault(control => control.IsEffectivelyVisible)
+        Windows.SelectMany(each => each.GetVisualDescendants().OfType<T>()).FirstOrDefault(control => control.IsEffectivelyVisible)
         ?? throw new InvalidOperationException($"The window shows no {typeof(T).Name} now");
 
     /// <summary>
@@ -419,6 +422,8 @@ public sealed partial class AutomationServer
     private string ScreenshotPart(string path, string part)
     {
         Control control = PartOf(part);
+        // a part floating in a window of its own is cut from that window (user story V-4)
+        TopLevel window = WindowOf(control);
         Rect place = new Rect(control.TranslatePoint(default, window) ?? default, control.Bounds.Size);
         if (control is ToolOptions && control.GetVisualDescendants().OfType<ToolRow>().FirstOrDefault(row => row.IsExpanded) is ToolRow open)
         {

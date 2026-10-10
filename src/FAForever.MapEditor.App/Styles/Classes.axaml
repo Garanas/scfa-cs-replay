@@ -334,6 +334,12 @@
     <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
     <Setter Property="BorderThickness" Value="{StaticResource DividerTop}" />
   </Style>
+  <!-- a tab of the dock moved out of it (V-4): its name over its content, on a side or in a window of its own -->
+  <Style Selector="Border.layouttab">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource DividerTop}" />
+  </Style>
 
   <!-- a row of controls that wraps -->
   <Style Selector="WrapPanel.row">

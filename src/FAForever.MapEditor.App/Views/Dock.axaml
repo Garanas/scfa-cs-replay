@@ -7,7 +7,7 @@
              x:Class="FAForever.MapEditor.App.Views.Dock"
              x:DataType="vm:MainViewModel">
   <Border Classes="dock">
-    <TabControl Classes="compact" SelectedIndex="{Binding Dock, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="Dock">
+    <TabControl x:Name="Tabs" Classes="compact" SelectedIndex="{Binding Dock, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="Dock">
       <!-- what the checks find, worst first; a double click or Enter goes to a problem's place -->
       <TabItem Header="{Binding Problems.Header}">
         <DockPanel>

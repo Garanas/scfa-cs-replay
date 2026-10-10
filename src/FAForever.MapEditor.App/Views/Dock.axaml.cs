@@ -83,6 +83,51 @@ public sealed partial class Dock : UserControl
         return true;
     }
 
+    /// <summary>
+    /// Takes a tab's content out of the dock, to lie elsewhere (user story V-4): its header hides,
+    /// and another tab shows when it was the one showing.
+    /// </summary>
+    public Control TakeTab(DockTab tab)
+    {
+        TabItem item = TabItemOf(tab);
+        if (!_contents.TryGetValue(tab, out Control? content))
+        {
+            content = (Control)item.Content!;
+            _contents[tab] = content;
+        }
+        if (ReferenceEquals(item.Content, content))
+        {
+            item.Content = null;
+        }
+        item.IsVisible = false;
+        return content;
+    }
+
+    /// <summary>
+    /// Puts a tab's content back into the dock (user story V-4); the caller has taken it from where it lay.
+    /// </summary>
+    public void ReturnTab(DockTab tab)
+    {
+        TabItem item = TabItemOf(tab);
+        if (_contents.TryGetValue(tab, out Control? content) && !ReferenceEquals(item.Content, content))
+        {
+            item.Content = content;
+        }
+        item.IsVisible = true;
+    }
+
+    /// <summary>
+    /// The content of a tab, wherever it lies.
+    /// </summary>
+    public Control ContentOf(DockTab tab) => _contents.TryGetValue(tab, out Control? content) ? content : (Control)TabItemOf(tab).Content!;
+
+    /// <summary>
+    /// The header of a tab, in the order of <see cref="DockTab"/>.
+    /// </summary>
+    public TabItem TabItemOf(DockTab tab) => (TabItem)Tabs.Items[(int)tab]!;
+
+    private readonly Dictionary<DockTab, Control> _contents = [];
+
     private void ShowNewest()
     {
         if (_model?.Diagnostics.ShownConsole is { Count: > 0 } lines)

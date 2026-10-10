@@ -278,12 +278,17 @@ public sealed partial class AutomationServer
         if (arguments["under"]?.GetValue<string>() is not { Length: > 0 } under)
         {
             tree = UiTree.Describe(window, hidden);
+            // the panels floating in windows of their own (user story V-4)
+            foreach (JsonNode floating in DescribeFloatingWindows(hidden))
+            {
+                tree.Add(floating);
+            }
         }
         else
         {
-            Control control = UiTree.Find(window, under, hidden)
+            Control control = FindInWindows(under, hidden)
                 ?? throw new ArgumentException($"No control is named, labelled or reads '{under}'");
-            tree = UiTree.Describe(control, window, hidden);
+            tree = UiTree.Describe(control, WindowOf(control), hidden);
         }
         string? type = arguments["type"]?.GetValue<string>() is { Length: > 0 } t ? t : null;
         string? text = arguments["text"]?.GetValue<string>() is { Length: > 0 } x ? x : null;
