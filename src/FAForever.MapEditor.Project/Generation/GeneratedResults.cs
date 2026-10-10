@@ -21,6 +21,23 @@ namespace FAForever.MapEditor.Project.Generation
 
         public static GeneratedInput Water { get; } = new GeneratedInput("water", document => document.Water);
 
+        /// <summary>
+        /// The height of the water surface, null without water: what walkability reads of the water,
+        /// so a change of its colours leaves the result current.
+        /// </summary>
+        public static GeneratedInput WaterLevel { get; } = new GeneratedInput("water level", document => document.Water.HasWater ? document.Water.Elevation : null);
+
+        /// <summary>
+        /// The deposits and the areas (the first is the playable area of a skirmish map), without the
+        /// other markers: what walkability reads of them.
+        /// </summary>
+        public static GeneratedInput DepositsAndAreas { get; } = new GeneratedInput("deposits and areas", document => (document.Markers.Resources, document.Markers.Areas));
+
+        /// <summary>
+        /// The map's type (skirmish, co-op): whether its first area is the playable area.
+        /// </summary>
+        public static GeneratedInput MapType { get; } = new GeneratedInput("map type", document => document.Scenario.Type);
+
         public static GeneratedInput Lighting { get; } = new GeneratedInput("lighting", document => document.Lighting);
 
         public static GeneratedInput Markers { get; } = new GeneratedInput("markers", document => document.Markers);
@@ -64,6 +81,18 @@ namespace FAForever.MapEditor.Project.Generation
         /// run on a thread of the pool: the document never changes.
         /// </summary>
         object Generate(MapDocument document);
+    }
+
+    /// <summary>
+    /// A generator whose result is a part of the map itself (the normal map, the preview): generating
+    /// it is an edit, one step of undo, that puts the result into the document.
+    /// </summary>
+    public interface IDocumentGenerator : IGenerator
+    {
+        /// <summary>
+        /// The document with <paramref name="value"/>, a result of <see cref="IGenerator.Generate"/>, in its place.
+        /// </summary>
+        MapDocument Apply(MapDocument document, object value);
     }
 
     /// <summary>
