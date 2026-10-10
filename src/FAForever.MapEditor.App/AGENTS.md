@@ -83,8 +83,10 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     where it shows. A command in no menu is for automation and plugins, and the palette leaves
     it out: its control is on a page or panel (`workspace.setUp`, `workspace.convert`,
     `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`, `presets.apply`,
-    `presets.delete`), it selects what one
-    clicks (`assets.select`) or drops what one drags (`assets.drop`), it is the mouse's or a view's own key in
+    `presets.delete`, `markers.showKind`, `markers.set`, `markers.setChain`, `markers.renameChain`,
+    `markers.deleteChain`), it selects what one
+    clicks (`assets.select`) or drops what one drags (`assets.drop`), it is what a tool's click does
+    (`markers.place`, `markers.link`), it is the mouse's or a view's own key in
     the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
     for finding faults (`view.gpuDebug`, `diagnostics.flush`, `diagnostics.upload`). The window makes the menus and the
     shortcuts from it (`MainWindow.BuildMenusAndShortcuts`); the palette searches the commands in
@@ -603,6 +605,57 @@ that moves stays selected. Another map clears it. The core's side is
   keys held and two pixels an ogrid.
 - Not built yet: picking and a box in the 3D view (its `Pick(ray)` will call `SelectAt` and the
   like), handles, scaling, snapping, moving along one axis, turning about the selection's centre.
+
+## Markers: placing, linking, chains
+
+User stories R-1 to R-6, the Markers mode (F6). The library does the editing (`MarkerEdits`, its
+guide); the App holds the tools, the panel's part `MarkersViewModel` (`model.Markers`) and the
+inspector's `MarkerSelection`.
+
+- **Placing** (`Tools/MarkerTools.cs`, R-1): `PlaceMarkerTool` with its `MarkerPlacement` for the
+  tools Spawn, Mass, Hydrocarbon and AI marker; a click runs `markers.place {kind, x, z, type?,
+  layer?, linkTo?}` (one step of undo), which puts the marker on the terrain, names it one more
+  than the highest of its kind (`Mass 12`, `Rally Point 03`, `LandPN7`) and selects it, so the
+  inspector shows it. Deposits always go to an ogrid's centre (`x.5`, as the game puts them);
+  spawns and AI markers to the tool's grid (`SnapChoice`: none, half an ogrid, ogrid centres).
+  A deposit on ground that rises more than 1 over its footprint (`MarkerEdits.Steepness`: 3
+  ogrids for mass, the extractor with its storages; 4 for hydrocarbon) says so in the status
+  line, the tool's options (`Markers.PlacementWarning`) and the inspector.
+- **Spawns** are the playable armies `ARMY_1` to `ARMY_n`: a new one is the next number, skipping
+  an army's name such as the civilians' `ARMY_9`, and its army is added to the playable armies
+  and to the armies; deleting one removes its army (kept as an extra army when it has units)
+  and numbers the spawns after it down, armies and adaptive deposits with them. The library's
+  `AddMarker` and `RemoveMarker` do it, so paste, duplicate and delete keep it too.
+- **Path nodes by hand** (`PathTool`, R-3): a click on empty ground places a node of the tool's
+  layer linked to the one selected node of that layer and selects the new one, so clicks lay a
+  path (shift starts a new one); a click on a node goes on from it; dragging from a node to
+  another runs `markers.link {a, b, unlink?}` (control unlinks). Nodes of different layers never
+  link. Choosing the tool shows the path nodes and its layer. Generating them from walkability is
+  `markers.connectPaths` (not built yet).
+- **Chains** (R-4): the panel's section lists them (`ChainsSection`); "From the selection" runs
+  `markers.addChain {name?, markers?}` (the selected markers in the order they were selected,
+  `Chain_1` or the next free name) and chooses it; its markers have up, down and take-out
+  buttons (`markers.setChain {name, markers}`), its name field `markers.renameChain {name, to}`,
+  Delete `markers.deleteChain {name}`. `ChainTool` adds the marker it clicks to the chosen chain
+  (the first click makes one), control takes it out, Escape lets go of the chain.
+- **The inspector** (`MarkerSelection`, R-2, R-5): the name of one marker (a spawn keeps its
+  army's), the resource of deposits, the type of AI markers (`AiMarker.KnownTypes` and the
+  selection's own), the layer of path nodes (their links to the old layer go), the no-rush
+  offset of spawns (empty: around the spawn), and the army deposits wait for on an adaptive map
+  (Always, an army, or Nearest: each the army of its nearest spawn); every field runs
+  `markers.set`, for one or many, and shows nothing or a dash where they differ. A section's
+  fields run commands through `SelectionSection.Run`, which the inspector gives every section.
+- **Adaptive map** (`AdaptiveSection`, R-5): `markers.adaptive {on?}` and per playable army how
+  many deposits wait for it.
+- **Per kind** (`MarkerKindsSection`, R-6): a check box per kind (`MarkerKinds`: spawns, mass,
+  hydrocarbon, AI markers, weather, and path nodes per layer), with how many the map has, runs
+  `markers.showKind {kind, on?}`. `MainViewModel.ShownMarkerKinds` is what both views draw and
+  picking takes (`MapObjects.Nearest`/`Inside`/`All`, `PickOptions`, `ObjectFrame`): the panel's
+  kinds of what the overlays Markers and Path nodes show.
+- Automation: `state.markers` (the kinds shown, what can be picked, the chains with their
+  markers, the chosen chain, adaptive, the last warning, the active marker tool's settings).
+- Not built yet: weather markers, a line drawn while a link is dragged, the slope under the
+  mouse before a click, mirroring by the symmetry (wave 2), marker presets (`markers.placePreset`).
 
 ## Diagnostics: what goes well and wrong
 

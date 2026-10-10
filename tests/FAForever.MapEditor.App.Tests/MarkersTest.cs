@@ -59,8 +59,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(40.5f, placed.Position.X, "deposits sit on an ogrid's centre");
             Assert.AreEqual(60.5f, placed.Position.Z);
             Assert.AreEqual(opened.Terrain.Heightmap.HeightAt(40.5f, 60.5f), placed.Position.Y, 1e-3, "on the terrain");
-            StringAssert.StartsWith(placed.Name, "Mass ");
-            Assert.IsFalse(opened.Markers.All.Any(marker => marker.Name == placed.Name), "a free name");
+            int highest = opened.Markers.All.Select(marker => int.TryParse(marker.Name.StartsWith("Mass ") ? marker.Name[5..] : "", out int number) ? number : 0).Max();
+            Assert.AreEqual($"Mass {highest + 1:00}", placed.Name, "one more than the highest of its kind");
             Assert.AreEqual("Place a marker", model.Map!.Session.UndoDescription);
             Assert.AreEqual(2, model.History.Count, "opened, and the marker");
             Assert.IsNull(model.Markers.PlacementWarning, "flat ground");

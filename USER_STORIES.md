@@ -159,16 +159,16 @@ reads again when it changes; and nothing that generates runs by itself.
 
 ## R: Markers
 
-- [ ] **R-1 Place markers.** Spawns, mass and hydrocarbon deposits, AI markers, path nodes and
-      weather by kind; move and delete them; snap to the grid. Today: shown in the top view.
-- [ ] **R-2 Marker properties.** The selected markers in the inspector.
+- [x] **R-1 Place markers.** Spawns, mass and hydrocarbon deposits, AI markers, path nodes and
+      weather by kind; move and delete them; snap to the grid. Missing: weather markers, and
+      placing mirrored by the symmetry.
+- [x] **R-2 Marker properties.** The selected markers in the inspector.
 - [ ] **R-3 Path networks.** Connect path nodes per layer (land, water, amphibious, air), by hand
-      or generated from walkability (T-7).
-- [ ] **R-4 Chains.** Create a chain and put markers in order.
+      or generated from walkability (T-7). Today: by hand, with the path tool.
+- [x] **R-4 Chains.** Create a chain and put markers in order.
 - [ ] **R-5 Adaptive maps.** Which markers (deposits, civilians) exist for which number of players
-      and options.
-- [x] **R-6 Show markers.** Markers and path nodes on or off in the top view and in 3D. Missing:
-      per kind.
+      and options. Today: whether the map adapts, and the army each deposit waits for.
+- [x] **R-6 Show markers.** Markers and path nodes on or off in the top view and in 3D, per kind.
 
 ## P: Props
 

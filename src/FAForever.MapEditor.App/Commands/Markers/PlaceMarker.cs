@@ -55,7 +55,7 @@ public sealed class PlaceMarkerHandler(MainViewModel model, MarkersViewModel mar
             _ => throw new ArgumentException($"There is no kind of marker '{request.Kind}' to place: spawn, mass, hydrocarbon, ai or path"),
         };
 
-        document = document.AddMarker(marker, out Marker added);
+        document = document.AddMarker(marker with { Name = NextName(document, marker.Name) }, out Marker added);
         if (request.LinkTo is int other)
         {
             if (added is not PathNode)
@@ -86,6 +86,24 @@ public sealed class PlaceMarkerHandler(MainViewModel model, MarkersViewModel mar
             ["z"] = z,
             ["warning"] = warning,
         });
+    }
+
+    /// <summary>
+    /// The name of a new marker of a kind: one more than the highest number the names of that
+    /// kind have (<c>Mass 08</c> and <c>Mass 11</c> make <c>Mass 12</c>), else the first
+    /// (<c>Mass 01</c>). A spawn's name is its army's, made when it is added.
+    /// </summary>
+    private static string NextName(MapDocument document, string first)
+    {
+        if (first.Length == 0)
+        {
+            return first;
+        }
+        string stem = first.TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+        string[] names = [.. document.Markers.All.Select(marker => marker.Name)];
+        return names.Any(name => name.StartsWith(stem, StringComparison.Ordinal) && name.Length > stem.Length && char.IsAsciiDigit(name[stem.Length]))
+            ? DocumentEdits.FreeName([.. names, first], first)
+            : first;
     }
 
     /// <summary>

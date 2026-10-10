@@ -147,6 +147,15 @@ path nodes (by layer, with their links), AI markers (by the game's type name, al
 editor does not know), weather definitions and generators, areas and chains. Weather settings
 that a map leaves out stay absent (`double?`): the game decides what they default to, not us.
 
+`MarkerEdits` (user stories R-1 to R-6) holds the edits beyond one marker: the playable armies of
+spawns (`NextSpawnName`, `RenameArmy` everywhere an army is named, `RenumberSpawns`; `AddMarker`
+and `RemoveMarker` call them for a spawn, so the spawns stay `ARMY_1` to `ARMY_n` and each has its
+playable army), links between path nodes of one layer (`LinkPathNodes`, `UnlinkPathNodes`,
+`SetPathLayer`), chains by name (`AddChain`, `UpdateChain`, `RemoveChain`), the grids a marker
+snaps to (`Snap`, `MarkerSnap`), how steep the ground under a deposit is (`Steepness`), and the
+kinds of markers one by one (`MarkerKinds`, `KindOf`), which `MapObjects.Nearest`, `Inside` and
+`All` take to leave hidden kinds out.
+
 ## Images and textures
 
 - ImageMagick (Magick.NET, Q16) reads and writes the PNGs (`ProjectImages`) and compresses the
