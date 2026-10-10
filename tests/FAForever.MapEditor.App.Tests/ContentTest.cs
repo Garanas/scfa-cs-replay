@@ -228,6 +228,47 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task DroppingInTheUnitTreeMovesUnitsAndGroupsAsOneStep()
+        {
+            MainViewModel model = await Open("units.select");
+            ArmiesViewModel armies = model.Armies;
+            await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1101", ["x"] = 50, ["z"] = 50, ["army"] = "ARMY_1" });
+            await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1101", ["x"] = 60, ["z"] = 50, ["army"] = "ARMY_1" });
+            await Run(model, "units.addGroup", new JsonObject { ["army"] = "ARMY_1", ["parent"] = "INITIAL", ["name"] = "Town" });
+            GroupNode initial = armies.Tree.Single(node => node.Army == "ARMY_1").Children.Single(node => node.PathText == "INITIAL");
+            CollectionAssert.AreEqual(new[] { "UNIT_1", "UNIT_2" }, initial.Units.Select(unit => unit.Name).ToArray(), "the tree shows the units after the groups");
+            Assert.IsInstanceOfType<GroupNode>(initial.Items[0]);
+
+            // a selected unit takes the other selected units along
+            model.Selection.Set([ObjectRef.Unit("UNIT_1"), ObjectRef.Unit("UNIT_2")]);
+            GroupNode town = initial.Children.Single();
+            int steps = model.History.Count;
+            Assert.IsNull(armies.DropProblem(initial.Units[0], town));
+            await armies.Drop(initial.Units[0], town);
+            Assert.IsTrue(model.ShownDocument!.AllUnits().Where(unit => unit.Army == "ARMY_1").All(unit => unit.Group.SequenceEqual(["INITIAL", "Town"])));
+            Assert.AreEqual(steps + 1, model.History.Count, "one step");
+
+            // a group onto another army's group; never into itself
+            town = armies.Tree.Single(node => node.Army == "ARMY_1").SelfAndBelow().Single(node => node.PathText == "INITIAL/Town");
+            GroupNode army2 = armies.Tree.Single(node => node.Army == "ARMY_2");
+            Assert.IsNotNull(armies.DropProblem(town, town));
+            Assert.IsNotNull(armies.DropProblem(town, armies.Tree.Single(node => node.Army == "ARMY_1").Children.Single(node => node.PathText == "INITIAL")), "it is there already");
+            Assert.IsNotNull(armies.DropProblem(armies.Tree[0], army2), "an army stays where it is");
+            await armies.Drop(town, army2);
+            Assert.AreEqual(("ARMY_2", "Town"), (model.ShownDocument!.FindUnit("UNIT_1")!.Army, UnitGroupEdits.PathText(model.ShownDocument.FindUnit("UNIT_1")!.Group)));
+            Assert.IsTrue(model.Undo());
+            Assert.AreEqual("ARMY_1", model.ShownDocument!.FindUnit("UNIT_1")!.Army);
+
+            // choosing a unit in the tree selects it and chooses its group
+            UnitNode unit = armies.Tree.Single(node => node.Army == "ARMY_1").SelfAndBelow().SelectMany(node => node.Units).First();
+            armies.ChosenNode = unit;
+            await Task.Yield();
+            Assert.AreEqual(unit.GroupKey, armies.ChosenGroup!.Key);
+            Assert.AreEqual($"unit:{unit.Name}", model.Selection.Items.Single().ToString());
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.drop", new JsonObject { ["army"] = "ARMY_1", ["group"] = "INITIAL" }));
+        }
+
+        [TestMethod]
         public async Task SavingNeedsASelection()
         {
             MainViewModel model = await Open();

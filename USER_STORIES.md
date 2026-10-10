@@ -349,9 +349,11 @@ reads again when it changes; and nothing that generates runs by itself.
       tool: the unit from the picker, the shelf or a dropped tile, the army and group in its
       options; structures snap to the build grid and turn in quarter turns; the selection's army in
       the inspector; with symmetry, a placed unit's images are placed too (F-12).
-- [ ] **U-3 Unit groups.** Per army a tree of groups: create, rename, nest, move units between groups.
-      Today: the Units mode's tree with the units per group; nesting and moving between groups by command
-      (`units.moveGroup`, Move here); missing: dragging in the tree.
+- [x] **U-3 Unit groups.** Per army a tree of groups: create, rename, nest, move units between groups.
+      Today: the Units mode's tree with the units per group (each unit under its group; choosing one
+      selects it); nesting and moving between groups by command (`units.moveGroup`, Move here) and by
+      dragging units (a selected one takes the selection along) and groups onto a group or army in
+      the tree, which lights up, one step of undo (`units.drop`).
 - [x] **U-4 Unit presets.** A civilian base, a defence line: a group saved as a preset and placed
       again, for any army (F-10). The Units mode's Presets: the selected units or the chosen group,
       placed with the Place tool at the mouse as a new group, turned in quarter turns.

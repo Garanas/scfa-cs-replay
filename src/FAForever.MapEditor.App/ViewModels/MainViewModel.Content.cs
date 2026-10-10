@@ -1,5 +1,6 @@
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.Tools;
+using FAForever.MapEditor.Project.Editing;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
@@ -13,6 +14,8 @@ public sealed partial class MainViewModel
     {
         SelectionPresetTool presetTool = Tool<SelectionPresetTool>();
         Presets.Register(SelectionPresetTool.Kind(this));
+        // a unit dragged in the Units mode's tree while selected takes the selected units along (U-3)
+        Armies.SelectedUnits = () => [.. Selection.Items.Where(thing => thing.Kind == ObjectKind.Unit).Select(thing => thing.Name!)];
         DocumentChanged += (_, _) =>
         {
             using Performance.Span measure = Performance.Measure("model.content");

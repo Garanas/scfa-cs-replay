@@ -799,4 +799,9 @@
   <Style Selector="StackPanel.shelfmissing">
     <Setter Property="Margin" Value="{StaticResource ShelfPadding}" />
   </Style>
+  <!-- the group a unit or group dragged in the Units mode's tree would go into (U-3) -->
+  <Style Selector="TreeViewItem.unitdroptarget /template/ Border#PART_LayoutRoot">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
+  </Style>
 </Styles>
