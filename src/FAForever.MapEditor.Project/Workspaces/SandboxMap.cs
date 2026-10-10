@@ -111,8 +111,8 @@ namespace FAForever.MapEditor.Project.Workspaces
         }
 
         /// <summary>
-        /// Makes the sandbox from the assets a workspace has (props: trees and rocks first, so they
-        /// show): what <paramref name="catalog"/> lacks
+        /// Makes the sandbox from the assets a workspace has (props with a model, trees and rocks
+        /// first, so they show): what <paramref name="catalog"/> lacks
         /// is left out, and an empty catalogue gives the plain sandbox.
         /// </summary>
         public static MapDocument Build(AssetCatalog catalog)
@@ -230,6 +230,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         private static IEnumerable<AssetEntry> Pick(AssetCatalog catalog, AssetKind kind, string biome, int count) =>
             catalog.Entries.Where(entry => entry.Kind == kind)
                 .OrderByDescending(entry => entry.Group == biome)
+                .ThenByDescending(entry => entry.Model is not null || kind == AssetKind.Decal)
                 .ThenBy(entry => entry.Category switch { "trees" => 0, "rocks" => 1, _ => 2 })
                 .ThenBy(entry => entry.Key, StringComparer.Ordinal)
                 .Take(count);

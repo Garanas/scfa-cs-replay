@@ -181,5 +181,24 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsTrue(heard.Task.Wait(TimeSpan.FromSeconds(10)), "the watcher reports the change");
             CollectionAssert.Contains(heard.Task.Result.ToList(), MapProjectLayout.Script);
         }
+
+        [TestMethod]
+        public async Task AWatcherReportsAtOnceWhenFlushedAndATestCanAwaitIt()
+        {
+            EditedMap map = Saved();
+            using ProjectWatcher watcher = new ProjectWatcher(map.ProjectFolder!, TimeSpan.FromHours(1));
+            Task<IReadOnlyCollection<string>> next = watcher.NextChangeAsync(TimeSpan.FromSeconds(10));
+
+            File.WriteAllText(Of(map, MapProjectLayout.Script), "-- script");
+            for (int i = 0; i < 200 && !watcher.HasPending; i++)
+            {
+                // the file system's event arrives on its own thread
+                await Task.Delay(10);
+            }
+
+            Assert.IsTrue(watcher.Flush(), "an hour of quiet time, skipped");
+            CollectionAssert.Contains((await next).ToList(), MapProjectLayout.Script);
+            Assert.IsFalse(watcher.Flush(), "nothing left");
+        }
     }
 }

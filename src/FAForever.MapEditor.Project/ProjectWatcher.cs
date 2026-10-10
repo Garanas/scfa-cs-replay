@@ -52,6 +52,54 @@ namespace FAForever.MapEditor.Project
             _timer.Dispose();
         }
 
+        /// <summary>
+        /// Whether changes wait for the quiet time to pass.
+        /// </summary>
+        public bool HasPending
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _pending.Count > 0;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Reports the changes noted so far at once, without waiting for the quiet time: for tests,
+        /// and for a tool that knows its writes are done.
+        /// </summary>
+        /// <returns>Whether there were any.</returns>
+        public bool Flush()
+        {
+            lock (_gate)
+            {
+                _timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            }
+            bool any = HasPending;
+            Report();
+            return any;
+        }
+
+        /// <summary>
+        /// The next report of <see cref="Changed"/>, for tests that wait for one instead of polling.
+        /// </summary>
+        public async Task<IReadOnlyCollection<string>> NextChangeAsync(TimeSpan timeout)
+        {
+            TaskCompletionSource<IReadOnlyCollection<string>> next = new TaskCompletionSource<IReadOnlyCollection<string>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            void OnChanged(IReadOnlyCollection<string> changed) => next.TrySetResult(changed);
+            Changed += OnChanged;
+            try
+            {
+                return await next.Task.WaitAsync(timeout);
+            }
+            finally
+            {
+                Changed -= OnChanged;
+            }
+        }
+
         private void Note(string path)
         {
             string relative = Path.GetRelativePath(_folder, path).Replace('\\', '/');
