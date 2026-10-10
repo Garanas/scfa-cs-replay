@@ -1008,6 +1008,26 @@ the final starts from their output and is what the game gets.
 
 ## Generated results
 
+- **The sky cube map** (L-1, wave 10A; `Generation/SkyCubeMaps`, `SkyboxSky`, `CubeFaces`, `Editing/Skyboxes`,
+  `ProceduralSettings.SkyCube` as `SkyCubeSettings`, `procedural.skyCube` in `map.json`, `SkyCubeDto`): six faces
+  seen from above the map's middle (`Eye`: the eye height over the terrain or water there). `CubeFaces` has the
+  layout of Direct3D, OpenGL and the game's DDS cube maps (+x, -x, +y, -y, +z, -z; a face's pixel looks along
+  `Direction(face, sc, tc)`), sampled by world direction, so the generated cube and the editor's and game's
+  sampling agree. `SkyboxSky` draws the version 60 sky as the game's `effects/sky.fx` (`effects.scd`) does: the
+  dome a sphere of `Scale` around `Position`, the height where a direction meets it mixing horizon into zenith
+  between `HorizonHeight` and `ZenithHeight` (the engine's own lookup curve is unknown: linear here, through
+  `MidColor` when not black), the horizon's colour below the horizon; sky objects as squares facing the eye
+  (`DecalVS`: the corner turned by `Rotation`, `Uv` with y from the atlas's bottom), alpha-blended in order, the
+  glow brightening them; four cirrus layers, one channel each, at time 0; the sun as a disc. A map without a
+  skybox gets one from its lighting (`Skyboxes.FromLighting`: the horizon the fog warmed by the sun, the sun's
+  colour for a black fog; a deeper blue zenith). `SkyCubeMaps.DrawTerrain` follows each ray over the heightmap
+  (a pyramid of the highest points), coloured by `TexturedPreview` from above, the water adding the reflected sky
+  by FAF's Fresnel term; `Dds` writes DXT1 with mipmaps per face and caps2 0xfe00 (`DdsTexture.WriteCube`; the
+  game's sky cubes are DXT1 of 512, its environment cubes carry mipmaps); `CubeMaps.Decode` reads it back.
+  `Skyboxes.ReadJson` reads the FAF map editor's skybox presets (`Data`, colours as r, g, b), moving texture paths
+  of another map's folder into this one's when it has the file. Tests: `SkyCubeMapsTest` (with
+  `assets/skyboxes/procedural-skybox.json`, 1196 sky objects).
+
 Something made from the map when asked (user story F-7: walkability, the normal map and
 preview, props or masks from rules) is an `IGenerator` (`Generation/GeneratedResults`): its id,
 title, story, its inputs (`GeneratedInput`: a named part of the document, `Heightmap`, `Water`,

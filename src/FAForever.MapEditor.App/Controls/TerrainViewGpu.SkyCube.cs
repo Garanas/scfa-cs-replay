@@ -110,6 +110,7 @@ public sealed partial class TerrainViewGpu : ISkyCubeFaces
             System.Diagnostics.Stopwatch waited = System.Diagnostics.Stopwatch.StartNew();
             while (true)
             {
+                bool loading = false;
                 for (int side = 0; side < 6; side++)
                 {
                     // the sky covers every pixel: the colour cleared is the frame's
@@ -117,6 +118,8 @@ public sealed partial class TerrainViewGpu : ISkyCubeFaces
                     _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                     _renderer.Render(drawn, FaceViewProjection(side, job.Eye, 0.5f, far), path => _model.WideDecals.TextureOf(path) ?? FindTexture(path, job.Document, workspace),
                         objects: _objects is null ? null : (_objects, frame), findCube: _ => sky, eye: job.Eye, showDecals: true, sweep: false);
+                    // a face drawn while a texture or model was still being read, or before the sky was there, is drawn again
+                    loading |= _renderer.TexturesLoading + (_objects?.TexturesLoading ?? 0) + ObjectState.ModelsLoading > 0 || !_renderer.SkyDrawn;
                     fixed (byte* data = face)
                     {
                         _gl.ReadPixels(0, 0, (uint)size, (uint)size, PixelFormat.Rgba, PixelType.UnsignedByte, data);
@@ -130,7 +133,6 @@ public sealed partial class TerrainViewGpu : ISkyCubeFaces
                 job.Frames++;
                 // the faces share their textures (none is let go between them); while some are still being
                 // read, draw the faces again with them, here: a frame of the view would let go of those it does not show
-                bool loading = _renderer.TexturesLoading + (_objects?.TexturesLoading ?? 0) + ObjectState.ModelsLoading > 0 || !_renderer.SkyDrawn;
                 if (!loading || waited.Elapsed > SkyCubeWait)
                 {
                     break;

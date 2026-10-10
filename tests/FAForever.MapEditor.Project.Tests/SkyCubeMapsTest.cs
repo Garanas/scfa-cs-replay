@@ -366,7 +366,7 @@ namespace FAForever.MapEditor.Project.Tests
 
             DecodedTexture strip = SkyCubeMaps.Render(document, new SkyCubeSettings { Resolution = 512 }, path => path.Contains("albedo") ? Atlas() : null);
 
-            Assert.IsTrue(watch.Elapsed < TimeSpan.FromSeconds(30), $"took {watch.Elapsed}");
+            Assert.IsTrue(watch.Elapsed < TimeSpan.FromSeconds(5), $"took {watch.Elapsed}");
             Assert.AreEqual(512, strip.Height);
         }
 

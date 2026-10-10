@@ -326,8 +326,10 @@ namespace FAForever.MapEditor.Project.Generation
                 }
                 if (whole)
                 {
-                    // a planet behind the face's axis altogether is not on it
-                    if (Vector3.Dot(forward, AxisOf(face)) < -0.75f)
+                    // a face sees directions at most 54.74 degrees from its axis (its corners): a planet
+                    // whose cone lies farther from the axis is not on it
+                    float fromAxis = MathF.Acos(Math.Clamp(Vector3.Dot(forward, AxisOf(face)), -1, 1));
+                    if (fromAxis - MathF.Atan(extent / distance) > 0.9554f)
                     {
                         return null;
                     }

@@ -1080,7 +1080,23 @@ every other part).
 - **The map-wide normal and shadow decals** (9C) are generators too (`normalDecal`, `shadowDecal`,
   previews of at most 2048 pixels; may regenerate on their own) and have the panel section Map-wide
   decals with the inspector part of the chosen one (section "Decals: map-wide decals").
-- Not built yet (wave 10): the sky cube map.
+- **The sky cube map** (L-1, wave 10A; `model.SkyCube`, `ViewModels/SkyCubeViewModel.cs`, the core's side
+  `MainViewModel.SkyCube.cs`, the generator `Rendering/SkyCubeGenerator.cs`, id `skyCube`): an entry of the
+  Procedural list under Pictures (`procedural.skyCube`; its details `Views/ProceduralPanels/SkyCubeView`: Use and
+  the settings; the facts say the sky and what uses it; on export `ExportUse.Copied`). The sky is drawn on the
+  processor (the library's `SkyboxSky`), the map below the horizon by the 3D view's renderer when it is shown
+  (`Controls/TerrainViewGpu.SkyCube.cs`, `ISkyCubeFaces`: six views of 90 degrees into a framebuffer of the
+  face's size, `FaceViewProjection`, the generated sky as every cube map, the textures shared between the faces
+  with `Render(sweep: false)` and the faces drawn again in the same frame while textures or models load, at most
+  20 s; span `3d.sky-cube`), else on the processor (`SkyCubeMaps.DrawTerrain`; also when the view does not answer
+  within `FacesTimeout`, and always on the UI thread, where `generate.stale` runs). Spans `model.sky-cube.sky`,
+  `.gpu`, `.terrain`, `.dds`. On Sandbox with the 1196 sky objects of a skybox preset: about 0.8 s for the sky at
+  1024, 80 ms for the faces on the card, 0.2 s for the DDS. Commands: `generate.skyCube {use?}` (Generate menu;
+  one step of undo putting `env/cubemaps/skycube_generated.dds` among the map's files), `generate.setSkyCube
+  {resolution?, eyeHeight?, terrain?, sunDisc?}` and `generate.useSkyCube {sky?, environment?, water?}` (all
+  three when none is given; the water's cube map is no input, so using it keeps the cube current), and
+  `lighting.importSkybox {path?}` (Lighting menu: a skybox preset of the FAF map editor, JSON, into the map's
+  sky). `state.skyCube`. Tests: `SkyCubeTest`.
 
 ## Selection: picking things on the map and changing them
 

@@ -337,7 +337,11 @@ reads again when it changes; and nothing that generates runs by itself.
       picker from the workspace's (`lighting.chooseCubemap`, the water's too); the 3D view draws the
       sky's cube map around the map and the water reflects its own. The panel lists the sun,
       colours and ambience, fog, bloom, sky and cube maps and the shadow decal (to come); the
-      inspector edits the chosen one; sky presets.
+      inspector edits the chosen one; sky presets. A sky cube map made from the map (the Procedural
+      list's Sky cube map, `generate.skyCube`): the version 60 sky (or one from the lighting) above the
+      horizon, the map and its water below, written into the project's `env/` as a DDS cube and chosen with
+      one click for the sky, the units and the water (`generate.useSkyCube`); skybox presets of the FAF map
+      editor read into the sky (`lighting.importSkybox`).
 - [x] **L-2 Lighting presets.** The lighting of a biome as a preset (F-10): the Lighting panel's
       presets, `lighting.preset`.
 
