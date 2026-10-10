@@ -192,7 +192,11 @@ namespace FAForever.MapEditor.Project.Files
             Types = images.TerrainTypes,
             Shader = source.Shader,
             Tileset = source.Tileset,
-            Layers = [.. source.Layers.Select(layer => ToModel(layer))],
+            // a version 56 map holds ten layers; a project made from a settings template by an
+            // earlier editor kept six, which the game's file cannot hold: the strata it lacks are empty
+            Layers = source.ScmapVersion >= NewMap.ScmapVersion && source.Layers.Count < NewMap.LayerCount
+                ? NewMap.FitLayers([.. source.Layers.Select(layer => ToModel(layer))])
+                : [.. source.Layers.Select(layer => ToModel(layer))],
             StratumMasks = images.StratumMasks,
             NormalMap = images.NormalMap,
             NormalMapFormat = source.NormalMapFormat,
