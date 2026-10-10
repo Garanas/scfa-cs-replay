@@ -21,7 +21,7 @@ public sealed partial class AutomationServer
     /// </summary>
     private static readonly string[] DialogCommands =
     [
-        "dialog {button?}: presses a button of the question over the window (state.dialog); without one, the question",
+        "dialog {button?, text?}: presses a button of the question over the window (state.dialog), its text field holding text first; without a button, the question",
         "click {label, under?, button?: left|right, doubleClick?}: scrolls the control into view and clicks its centre",
     ];
 
@@ -38,6 +38,14 @@ public sealed partial class AutomationServer
                 if (!question.IsOpen)
                 {
                     throw new InvalidOperationException("No question is open");
+                }
+                if (arguments["text"]?.GetValue<string>() is string text)
+                {
+                    if (!question.HasField)
+                    {
+                        throw new ArgumentException($"The question '{question.Title}' has no text field");
+                    }
+                    question.FieldText = text;
                 }
                 if (arguments["button"]?.GetValue<string>() is { Length: > 0 } button)
                 {

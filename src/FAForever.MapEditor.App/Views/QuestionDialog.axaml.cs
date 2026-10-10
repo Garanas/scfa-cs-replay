@@ -66,7 +66,12 @@ public sealed partial class QuestionDialog : UserControl
 
     private void FocusChosenButton()
     {
-        if (_question is { IsOpen: true } question
+        if (_question is { IsOpen: true, HasField: true })
+        {
+            Field.Focus(NavigationMethod.Tab);
+            Field.SelectAll();
+        }
+        else if (_question is { IsOpen: true } question
             && Buttons.GetVisualDescendants().OfType<Button>().ElementAtOrDefault(question.FocusIndex) is Button button)
         {
             button.Focus(NavigationMethod.Tab);
@@ -111,7 +116,12 @@ public sealed partial class QuestionDialog : UserControl
     // the keys the buttons leave (Tab goes on to move between them): no shortcut behind the question
     private void OnKeyDownInside(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Tab)
+        if (e.Key == Key.Enter && e.Source == Field && _question is { IsOpen: true } question)
+        {
+            question.Answer(question.AccentIndex);
+            e.Handled = true;
+        }
+        else if (e.Key != Key.Tab)
         {
             e.Handled = true;
         }

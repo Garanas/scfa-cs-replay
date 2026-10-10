@@ -143,11 +143,11 @@
     <Panel IsVisible="{Binding Picker.IsOpen}">
       <views:AssetPicker x:Name="Picker" DataContext="{Binding Picker}" />
     </Panel>
-    <views:DiagnosticsPage IsVisible="{Binding Diagnostics.IsOpen}" />
-    <views:PluginsPage IsVisible="{Binding Plugins.IsOpen}" />
-    <views:VersionControlPage IsVisible="{Binding VersionControl.IsOpen}" />
-    <views:ReportProblemPage IsVisible="{Binding Report.IsOpen}" />
-    <views:NewMapPage IsVisible="{Binding NewMapPage.IsOpen}" />
+    <views:DiagnosticsPage x:Name="DiagnosticsPageView" IsVisible="{Binding Diagnostics.IsOpen}" />
+    <views:PluginsPage x:Name="PluginsPageView" IsVisible="{Binding Plugins.IsOpen}" />
+    <views:VersionControlPage x:Name="VersionControlPageView" IsVisible="{Binding VersionControl.IsOpen}" />
+    <views:ReportProblemPage x:Name="ReportProblemPageView" IsVisible="{Binding Report.IsOpen}" />
+    <views:NewMapPage x:Name="NewMapPageView" IsVisible="{Binding NewMapPage.IsOpen}" />
     <!-- the questions over everything: one may come from a page (New map asks about unsaved changes) -->
     <views:QuestionDialog x:Name="Question" DataContext="{Binding Question}" IsVisible="{Binding IsOpen}" />
   </Grid>

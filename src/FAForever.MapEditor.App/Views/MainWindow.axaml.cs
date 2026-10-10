@@ -19,6 +19,7 @@ public sealed partial class MainWindow : Window
     private MainViewModel? _model;
     private MapViewTab? _shownView;
     private readonly List<CommandAdapter> _adapters = [];
+    private readonly List<(KeyGesture Gesture, CommandAdapter Adapter)> _shortcuts = [];
 
     public MainWindow()
     {
@@ -27,6 +28,20 @@ public sealed partial class MainWindow : Window
         // that takes no typing has the keyboard (user story F-11)
         AddHandler(Button.ClickEvent, OnButtonClicked, Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo: true);
         AddHandler(KeyDownEvent, OnKeyLeftOver, Avalonia.Interactivity.RoutingStrategies.Bubble);
+        // the shortcuts before the focused control, except a text field's own keys and behind a page
+        AddHandler(KeyDownEvent, OnShortcutKey, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        AddHandler(KeyDownEvent, OnPageKeyLeftOver, Avalonia.Interactivity.RoutingStrategies.Bubble);
+        // a page that opens takes the keyboard; one that closes gives it back to the views
+        foreach (Control page in new Control[] { DiagnosticsPageView, PluginsPageView, VersionControlPageView, ReportProblemPageView, NewMapPageView })
+        {
+            page.PropertyChanged += (_, e) =>
+            {
+                if (e.Property == IsVisibleProperty)
+                {
+                    Dispatcher.UIThread.Post(() => OnPageShown(page), DispatcherPriority.Loaded);
+                }
+            };
+        }
         Heightmap.CursorMoved += text => CursorText.Text = text;
         Terrain3D.CursorMoved += text => CursorText.Text = text;
         // a splitter let go: the layout remembers the size it left (user story V-4)
@@ -174,7 +189,7 @@ public sealed partial class MainWindow : Window
     private void BuildMenusAndShortcuts(MainViewModel model)
     {
         _adapters.Clear();
-        KeyBindings.Clear();
+        _shortcuts.Clear();
         Dictionary<string, CommandAdapter> adapters = [];
         foreach (EditorCommand command in model.Commands.All)
         {
@@ -183,10 +198,10 @@ public sealed partial class MainWindow : Window
             _adapters.Add(adapter);
             if (command.Gesture is string gesture)
             {
-                KeyBindings.Add(new KeyBinding { Gesture = KeyGesture.Parse(gesture), Command = adapter });
+                _shortcuts.Add((KeyGesture.Parse(gesture), adapter));
             }
         }
-        KeyBindings.Add(new KeyBinding { Gesture = KeyGesture.Parse("Ctrl+Shift+Z"), Command = adapters["edit.redo"] });
+        _shortcuts.Add((KeyGesture.Parse("Ctrl+Shift+Z"), adapters["edit.redo"]));
 
         MenuItem Menu(MenuLayout layout, bool top)
         {
@@ -341,7 +356,7 @@ public sealed partial class MainWindow : Window
     private void OnKeyLeftOver(object? sender, KeyEventArgs e)
     {
         if (e.Handled || _model is not { HasMap: true } model
-            || model.Question.IsOpen || model.Palette.IsOpen || model.Picker.IsOpen || model.NewMapPage.IsOpen)
+            || model.Question.IsOpen || model.Palette.IsOpen || model.Picker.IsOpen || model.IsPageOpen)
         {
             return;
         }
@@ -354,6 +369,115 @@ public sealed partial class MainWindow : Window
         if (model.ToolKey(e.Key.ToString(), HeightmapView.ModifiersOf(e.KeyModifiers)))
         {
             e.Handled = true;
+        }
+    }
+
+    /// <summary>
+    /// The window's shortcuts (the commands' gestures), before the focused control sees the key:
+    /// not while a question, the palette or the picker shows, nor behind a page (whose keys stay
+    /// in it: a key that reaches the window from behind it gives the page the keyboard, Escape
+    /// closes it), and never a text field's own keys (Ctrl+A selects its text, Ctrl+Z undoes its
+    /// typing, Delete deletes a letter).
+    /// </summary>
+    private void OnShortcutKey(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled || _model is not MainViewModel model || model.Question.IsOpen)
+        {
+            return;
+        }
+        object? focused = FocusManager?.GetFocusedElement();
+        if (model.IsPageOpen)
+        {
+            if (OpenPage is Control page && !(focused is Avalonia.Visual inside && page.IsVisualAncestorOf(inside)))
+            {
+                // the keyboard was behind the page (it opened with a shortcut): the key goes no further
+                if (e.Key == Key.Escape)
+                {
+                    model.ClosePage();
+                    Dispatcher.UIThread.Post(FocusShownView, DispatcherPriority.Input);
+                }
+                else
+                {
+                    FocusFirstIn(page);
+                }
+                e.Handled = true;
+            }
+            return;
+        }
+        if (model.Palette.IsOpen || model.Picker.IsOpen)
+        {
+            return;
+        }
+        if (focused is TextBox && IsTextKey(e.Key, e.KeyModifiers))
+        {
+            return;
+        }
+        foreach ((KeyGesture gesture, CommandAdapter adapter) in _shortcuts)
+        {
+            if (gesture.Matches(e) && adapter.CanExecute(null))
+            {
+                adapter.Execute(null);
+                e.Handled = true;
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether a text field takes the key itself: without control or alt every key types or moves
+    /// the caret, and with control its own editing keys (select all, copy, cut, paste, undo, redo,
+    /// a word left or right or deleted).
+    /// </summary>
+    internal static bool IsTextKey(Key key, KeyModifiers modifiers) =>
+        (modifiers & (KeyModifiers.Control | KeyModifiers.Alt | KeyModifiers.Meta)) == 0 && key is not (>= Key.F1 and <= Key.F24)
+        || (modifiers & (KeyModifiers.Alt | KeyModifiers.Meta)) == 0 && key is Key.A or Key.C or Key.X or Key.V or Key.Z or Key.Y
+            or Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End or Key.Back or Key.Delete or Key.Insert;
+
+    /// <summary>
+    /// Escape that nothing on the page took (a combo box closes its list first) closes the page.
+    /// </summary>
+    private void OnPageKeyLeftOver(object? sender, KeyEventArgs e)
+    {
+        if (!e.Handled && e.Key == Key.Escape && _model is { IsPageOpen: true, Question.IsOpen: false } model && model.ClosePage())
+        {
+            e.Handled = true;
+            Dispatcher.UIThread.Post(FocusShownView, DispatcherPriority.Input);
+        }
+    }
+
+    /// <summary>
+    /// The page that shows over the editor, the one on top when several do.
+    /// </summary>
+    private Control? OpenPage => _model?.OpenPageName switch
+    {
+        "newMap" => NewMapPageView,
+        "report" => ReportProblemPageView,
+        "versionControl" => VersionControlPageView,
+        "plugins" => PluginsPageView,
+        "diagnostics" => DiagnosticsPageView,
+        _ => null,
+    };
+
+    private void OnPageShown(Control page)
+    {
+        object? focused = FocusManager?.GetFocusedElement();
+        bool inside = focused is Avalonia.Visual visual && page.IsVisualAncestorOf(visual);
+        if (page.IsVisible && OpenPage == page && !inside)
+        {
+            FocusFirstIn(page);
+        }
+        else if (!page.IsVisible && (inside || focused is null) && _model?.IsPageOpen == false)
+        {
+            FocusShownView();
+        }
+    }
+
+    private static void FocusFirstIn(Control page)
+    {
+        if (page.GetVisualDescendants().OfType<InputElement>().FirstOrDefault(element => element.Focusable && element.IsEffectivelyVisible && element.IsEffectivelyEnabled
+            && element is TextBox or Button or ComboBox or CheckBox or ListBox or Slider or TreeView) is InputElement first)
+        {
+            first.Focus(NavigationMethod.Tab);
         }
     }
 

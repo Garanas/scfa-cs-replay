@@ -58,6 +58,17 @@ public interface IEditorDialogs
     Task<bool> ConfirmAsync(string title, string message, string action) => Task.FromResult(false);
 
     /// <summary>
+    /// A text the person gives (a name) with one of the buttons, asked over the window; null when
+    /// they cancel (the last button, or Escape). Without a dialog of its own (a test's answers), null.
+    /// </summary>
+    /// <param name="label">The field's label, e.g. <c>Name of the template</c>.</param>
+    /// <param name="text">What the field holds first.</param>
+    /// <param name="buttons">The buttons that answer, the first the accent; Cancel follows them.</param>
+    /// <returns>The index of the button pressed and the text.</returns>
+    Task<(int Button, string Text)?> AskTextAsync(string title, string message, string label, string text, IReadOnlyList<string> buttons) =>
+        Task.FromResult<(int, string)?>(null);
+
+    /// <summary>
     /// Opens a page in the system's browser (user story M-8: signing in to FAForever). Without a
     /// browser of its own (a test's answers), it opens nothing.
     /// </summary>

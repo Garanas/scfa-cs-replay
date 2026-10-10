@@ -12,6 +12,11 @@
           <StackPanel Classes="stack">
             <TextBlock Classes="heading" Text="{Binding Title}" />
             <TextBlock Classes="lead" Text="{Binding Message}" TextWrapping="Wrap" />
+            <StackPanel Classes="stack" IsVisible="{Binding HasField}">
+              <TextBlock Classes="label" Text="{Binding FieldLabel}" />
+              <TextBox x:Name="Field" Text="{Binding FieldText}" AutomationProperties.Name="{Binding FieldLabel}"
+                       AutomationProperties.HelpText="Enter presses the question's first button; Escape cancels" />
+            </StackPanel>
           </StackPanel>
         </Border>
         <Border Classes="dialogpart pickerfoot">
