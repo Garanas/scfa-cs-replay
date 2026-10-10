@@ -30,15 +30,8 @@ public sealed partial class MainViewModel
         MapChanged += (_, _) => Markers.Refresh(ShownDocument);
         PropertyChanged += OnMarkerToolChosen;
 
-        // generated path networks (R-3), markers presets (F-10), the adaptive script's groups (R-5)
+        // generated path networks (R-3; the Procedural mode's PathNodes part), markers presets (F-10), the adaptive script's groups (R-5)
         Generation.Register(new PathNetworkGenerator(), "markers.connectPaths");
-        Generation.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(GenerationViewModel.Rows) or nameof(GenerationViewModel.States))
-            {
-                Markers.Paths.Show(Generation.Rows.FirstOrDefault(row => row.Id == PathNetworkGenerator.GeneratorId));
-            }
-        };
         Presets.Register(MarkerPresetTool.Kind(this));
         DocumentChanged += (_, _) => Markers.RefreshOptionalGroups(ShownDocument);
         MapChanged += (_, _) => Markers.RefreshOptionalGroups(ShownDocument);

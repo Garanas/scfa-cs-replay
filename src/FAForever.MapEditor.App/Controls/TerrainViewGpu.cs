@@ -825,6 +825,10 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             Routes(document, view, shapes);
         }
+        if (_model.ShowGeneratedPathNodes)
+        {
+            GeneratedPaths(document, view, shapes);
+        }
         if (_model.ActiveTool?.Tool is not IMapTool tool)
         {
             return shapes;

@@ -26,7 +26,7 @@ namespace FAForever.MapEditor.Project.Tests
             MapNavigation navigation = Walkability.Generate(document);
             NavGrid grid = navigation[PathNetworks.NavLayerOf(layer)!.Value];
 
-            PathLayerNetwork network = PathNetworks.Generate(document, navigation, new PathNetworkSettings { Layers = [layer], Replace = true })[layer]!;
+            PathLayerNetwork network = PathNetworks.Generate(document, navigation, new PathNodeSettings { Layers = [layer] })[layer]!;
 
             Assert.IsTrue(network.Nodes.Length > 0, "a network");
             foreach (GeneratedPathNode node in network.Nodes)
@@ -60,7 +60,7 @@ namespace FAForever.MapEditor.Project.Tests
             MapDocument document = Walled(MapImporter.ImportFolder(ProjectFolders.HardFfa), z => z >= 40 && z <= 44);
             MapNavigation navigation = Walkability.Generate(document);
 
-            PathLayerNetwork network = PathNetworks.GenerateLayer(navigation.Land, PathLayer.Land, 16, [], replace: true);
+            PathLayerNetwork network = PathNetworks.GenerateLayer(navigation.Land, PathLayer.Land, 16);
 
             Assert.AreEqual(1, Pieces(network).Distinct().Count(), "one network over both halves");
             foreach ((int a, int b) in network.Links)
@@ -80,7 +80,7 @@ namespace FAForever.MapEditor.Project.Tests
             MapDocument document = Walled(MapImporter.ImportFolder(ProjectFolders.HardFfa), _ => false);
             MapNavigation navigation = Walkability.Generate(document);
 
-            PathLayerNetwork network = PathNetworks.GenerateLayer(navigation.Land, PathLayer.Land, 16, [], replace: true);
+            PathLayerNetwork network = PathNetworks.GenerateLayer(navigation.Land, PathLayer.Land, 16);
 
             Assert.AreEqual(2, Pieces(network).Distinct().Count(), "a network per half");
             Assert.IsFalse(network.Links.Any(link => (network.Nodes[link.A].X < 32) != (network.Nodes[link.B].X < 32)));
@@ -92,11 +92,17 @@ namespace FAForever.MapEditor.Project.Tests
             MapDocument document = MapImporter.ImportFolder(ProjectFolders.HardFfa);
             document = document with { Markers = document.Markers with { Areas = [new Area { Name = "AREA_1", X0 = 0, Z0 = 0, X1 = 128, Z1 = 64 }] } };
 
-            PathLayerNetwork air = PathNetworks.GenerateAir(document, 32, [], replace: true);
+            PathLayerNetwork air = PathNetworks.GenerateAir(document, 32);
 
             Assert.AreEqual(4 * 2, air.Nodes.Length);
-            Assert.AreEqual(new GeneratedPathNode(16, 16), air.Nodes[0]);
-            Assert.AreEqual(3 * 2 + 4, air.Links.Length, "each to the four beside it");
+            Assert.AreEqual((16f, 16f), (air.Nodes[0].X, air.Nodes[0].Z));
+            Assert.AreEqual(3 * 2 + 4 + 3 * 2, air.Links.Length, "each to the eight around it");
+
+            // unless told, 16 by 16 as the game's maps have, each linked to the eight around it
+            PathLayerNetwork standard = PathNetworks.GenerateAir(document);
+            Assert.AreEqual(256, standard.Nodes.Length);
+            Assert.AreEqual(8, standard.Neighbours().Max(neighbours => neighbours.Count));
+            Assert.AreEqual((4f, 2f), (standard.Nodes[0].X, standard.Nodes[0].Z));
         }
 
         [TestMethod]
@@ -104,7 +110,7 @@ namespace FAForever.MapEditor.Project.Tests
         {
             MapDocument document = MapImporter.ImportFolder(ProjectFolders.HardFfa) with { Markers = new MarkerSet() };
             MapNavigation navigation = Walkability.Generate(document);
-            PathNetwork network = PathNetworks.Generate(document, navigation, new PathNetworkSettings { Layers = [PathLayer.Land, PathLayer.Air], Spacing = 32 });
+            PathNetwork network = PathNetworks.Generate(document, navigation, new PathNodeSettings { Layers = [PathLayer.Land, PathLayer.Air], Spacing = 32 });
 
             MapDocument applied = PathNetworks.Apply(document, network);
 
@@ -128,7 +134,7 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
-        public void ReplacesTheLayersNodesOrAddsOnlyWhereNoneAre()
+        public void ReplacesTheLayersOwnNodesOrJoinsThemToTheNetwork()
         {
             MapDocument document = MapImporter.ImportFolder(ProjectFolders.HardFfa) with { Markers = new MarkerSet() };
             MapNavigation navigation = Walkability.Generate(document);
@@ -139,16 +145,16 @@ namespace FAForever.MapEditor.Project.Tests
             PathNode mine = new PathNode { Id = 1, Name = "LandPN7", Layer = PathLayer.Land, Position = new Vector3(at.X, 0, at.Y) };
             PathNode water = new PathNode { Id = 2, Name = "WaterPN0", Layer = PathLayer.Water, Position = new Vector3(5, 0, 5) };
             document = document with { Markers = new MarkerSet { PathNodes = [mine, water], Chains = [new Chain { Name = "Chain_1", MarkerIds = [1, 2] }] } };
+            PathNetwork network = PathNetworks.Generate(document, navigation, new PathNodeSettings { Layers = [PathLayer.Land], Spacing = 32 });
 
-            MapDocument added = PathNetworks.Apply(document, PathNetworks.Generate(document, navigation, new PathNetworkSettings { Layers = [PathLayer.Land], Spacing = 32 }));
+            MapDocument added = PathNetworks.Apply(document, network);
             PathNode kept = added.Markers.PathNodes.Single(node => node.Id == 1);
-            Assert.AreEqual(mine.Position, kept.Position, "the map's node stays where it is");
-            Assert.IsTrue(kept.AdjacentTo.Length > 0, "and is linked into the network");
+            Assert.AreEqual(mine.Position, kept.Position, "the map's own node stays where it is");
+            Assert.AreEqual(1, kept.AdjacentTo.Length, "and is joined to the network");
             Assert.AreEqual("LandPN8", added.Markers.PathNodes.First(node => node.Id > 2).Name, "new names go on from the highest");
-            Assert.IsFalse(added.Markers.PathNodes.Any(node => node.Id != 1 && node.Layer == PathLayer.Land
-                && Vector2.Distance(new Vector2(node.Position.X, node.Position.Z), at) < 2), "no new node on the map's own");
+            Assert.AreEqual(network.Nodes + 2, added.Markers.PathNodes.Length);
 
-            MapDocument replaced = PathNetworks.Apply(document, PathNetworks.Generate(document, navigation, new PathNetworkSettings { Layers = [PathLayer.Land], Spacing = 32, Replace = true }));
+            MapDocument replaced = PathNetworks.Apply(document, network, replace: true);
             Assert.IsFalse(replaced.Markers.PathNodes.Any(node => node.Id == 1), "the layer's own node went");
             Assert.IsTrue(replaced.Markers.PathNodes.Any(node => node.Id == 2), "other layers stay");
             CollectionAssert.AreEqual(new[] { 2 }, replaced.Markers.Chains[0].MarkerIds.ToArray(), "and out of its chain");
@@ -156,22 +162,85 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
-        public void IsOutOfDateWhenWalkabilityIsAndUsesTheCurrentMesh()
+        public void IsOutOfDateWhenWalkabilityOrItsSettingsChangeAndNeverTouchesTheDocument()
         {
             MapDocument document = MapImporter.ImportFolder(ProjectFolders.HardFfa);
+            document = document with { Procedural = document.Procedural with { PathNodes = new PathNodeSettings { Layers = [PathLayer.Land] } } };
             GeneratedResults results = new GeneratedResults();
             results.Register(new WalkabilityGenerator());
-            PathNetworkGenerator generator = new PathNetworkGenerator { Settings = new PathNetworkSettings { Layers = [PathLayer.Land], Replace = true } };
+            PathNetworkGenerator generator = new PathNetworkGenerator();
             results.Register(generator);
             generator.Walkability = results.Generate(WalkabilityGenerator.GeneratorId, document);
 
             GeneratedResult result = results.Generate(PathNetworkGenerator.GeneratorId, document);
-            MapDocument applied = generator.Apply(document, result.Value);
 
-            Assert.AreEqual(GeneratedStatus.Current, results.States(applied)[1].Status, "its own nodes do not make it out of date");
+            Assert.IsNotInstanceOfType<IDocumentGenerator>(generator, "previewed only: the export writes it");
+            Assert.IsTrue(((PathNetwork)result.Value).Nodes > 0);
+            Assert.AreEqual(GeneratedStatus.Current, results.States(document)[1].Status);
             MapDocument higher = document with { Water = document.Water with { Elevation = document.Water.Elevation + 1 } };
             Assert.AreEqual(GeneratedStatus.Stale, results.States(higher)[1].Status);
-            Assert.AreEqual(((PathNetwork)result.Value).Nodes, applied.Markers.PathNodes.Count(node => node.Layer == PathLayer.Land));
+            MapDocument spaced = document with { Procedural = document.Procedural with { PathNodes = document.Procedural.PathNodes with { Spacing = 20 } } };
+            Assert.AreEqual(GeneratedStatus.Stale, results.States(spaced)[1].Status, "the spacing");
+            MapDocument edited = document with
+            {
+                Procedural = document.Procedural with { PathNodes = PathNetworkEdits.AddNode(document.Procedural.PathNodes, PathLayer.Land, 10, 10) with { OnExport = true } },
+            };
+            Assert.AreEqual(GeneratedStatus.Current, results.States(edited)[1].Status, "edits and the export's choice leave it current");
+        }
+
+        [TestMethod]
+        public void SmoothingKeepsNodesInTheirRegionAndMovesThem()
+        {
+            MapDocument document = Walled(MapImporter.ImportFolder(ProjectFolders.HardFfa), z => z >= 40 && z <= 44);
+            NavGrid land = Walkability.Generate(document).Land;
+
+            PathLayerNetwork rough = PathNetworks.GenerateLayer(land, PathLayer.Land, 12, smoothing: 0);
+            PathLayerNetwork smooth = PathNetworks.GenerateLayer(land, PathLayer.Land, 12, smoothing: 6);
+
+            foreach (PathLayerNetwork network in new[] { rough, smooth })
+            {
+                Assert.IsTrue(network.Nodes.All(node => land.GetLabel(new Vector3(node.X, 0, node.Z)) is not null), "on walkable ground");
+                Assert.IsTrue(network.Links.All(link => PathNetworks.CanWalk(land, network.Nodes[link.A].Place, network.Nodes[link.B].Place)), "links walkable");
+            }
+            Assert.AreNotEqual(string.Join(";", rough.Nodes.Select(node => node.Place)), string.Join(";", smooth.Nodes.Select(node => node.Place)), "smoothing moves nodes");
+            Assert.IsTrue(smooth.Nodes.Where(node => node.Role == PathNodeRole.End).All(node => rough.Nodes.Any(other => other.Place == node.Place)), "dead ends stay");
+        }
+
+        [TestMethod]
+        public void DropsNodesCloserThanTheMinimum()
+        {
+            MapDocument document = MapImporter.ImportFolder(ProjectFolders.HardFfa);
+            NavGrid land = Walkability.Generate(document).Land;
+
+            PathLayerNetwork network = PathNetworks.GenerateLayer(land, PathLayer.Land, 16, minimum: 8);
+
+            for (int a = 0; a < network.Nodes.Length; a++)
+            {
+                for (int b = a + 1; b < network.Nodes.Length; b++)
+                {
+                    // nodes put along a route around a corner may come closer; the rest keep the minimum
+                    if (network.Nodes[a].Role != PathNodeRole.Along && network.Nodes[b].Role != PathNodeRole.Along)
+                    {
+                        Assert.IsTrue(Vector2.Distance(network.Nodes[a].Place, network.Nodes[b].Place) >= 8 - 1e-3f, $"{network.Nodes[a]} and {network.Nodes[b]}");
+                    }
+                }
+            }
+        }
+
+        [TestMethod]
+        public void GivesTheSameNodesForTheSameMap()
+        {
+            MapDocument document = MapImporter.ImportFolder(ProjectFolders.HardFfa);
+
+            PathNetwork first = PathNetworks.Generate(document, Walkability.Generate(document), PathNodeSettings.Default);
+            PathNetwork second = PathNetworks.Generate(document, Walkability.Generate(document), PathNodeSettings.Default);
+
+            Assert.AreEqual(4, first.Layers.Length);
+            for (int i = 0; i < first.Layers.Length; i++)
+            {
+                CollectionAssert.AreEqual(first.Layers[i].Nodes.ToArray(), second.Layers[i].Nodes.ToArray());
+                CollectionAssert.AreEqual(first.Layers[i].Links.ToArray(), second.Layers[i].Links.ToArray());
+            }
         }
 
         [TestMethod]
@@ -184,31 +253,10 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsFalse(PathNetworks.CanWalk(land, new Vector2(5.5f, 5.5f), new Vector2(50.5f, 5.5f)), "over the wall");
         }
 
-        private static bool Reaches(MapDocument document, PathNode from, PathNode to)
-        {
-            HashSet<int> seen = [from.Id];
-            Queue<int> queue = new Queue<int>([from.Id]);
-            while (queue.TryDequeue(out int id))
-            {
-                if (id == to.Id)
-                {
-                    return true;
-                }
-                foreach (int next in document.Markers.PathNodes.Single(node => node.Id == id).AdjacentTo)
-                {
-                    if (seen.Add(next))
-                    {
-                        queue.Enqueue(next);
-                    }
-                }
-            }
-            return false;
-        }
-
         /// <summary>
         /// The piece of the network each node is in.
         /// </summary>
-        private static int[] Pieces(PathLayerNetwork network)
+        internal static int[] Pieces(PathLayerNetwork network)
         {
             int[] piece = Enumerable.Range(0, network.Nodes.Length).ToArray();
             int Find(int i) => piece[i] == i ? i : piece[i] = Find(piece[i]);
@@ -222,7 +270,7 @@ namespace FAForever.MapEditor.Project.Tests
         /// <summary>
         /// A flat map of 64 by 64 ogrids with a wall across it at x = 32, open at rows <paramref name="gap"/>.
         /// </summary>
-        private static MapDocument Walled(MapDocument template, Func<int, bool> gap)
+        internal static MapDocument Walled(MapDocument template, Func<int, bool> gap)
         {
             const int size = 64;
             ushort[] samples = new ushort[(size + 1) * (size + 1)];

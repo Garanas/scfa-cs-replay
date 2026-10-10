@@ -338,9 +338,13 @@ reads again when it changes; and nothing that generates runs by itself.
       (`markers.setWeather`); with symmetry (F-12) a marker's images are placed with it.
 - [x] **R-2 Marker properties.** The selected markers in the inspector.
 - [x] **R-3 Path networks.** Connect path nodes per layer (land, water, amphibious, air), by hand
-      or generated from walkability (T-7). By hand with the path tool; generated with the Markers
-      panel's Path networks (`markers.connectPaths`: spacing, replace or add where none are), out
-      of date when walkability's inputs change (F-7).
+      or generated from the navigation mesh (T-8). By hand with the Markers mode's path tool (markers
+      in the project); generated in the Procedural mode (`markers.connectPaths`: the skeleton of each
+      region, nodes at a spacing, smoothed, linked where units walk straight; air a grid of 16 by 16),
+      previewed in the views and written as markers only by the export; out of date when
+      walkability's inputs or the settings change (F-7). Edits by hand on top of the generated
+      network with the Path nodes tool (add, move, remove, link, cut; `generate.addPathNode`, ...),
+      kept with the map and applied again after every generation.
 - [x] **R-4 Chains.** Create a chain and put markers in order.
 - [x] **R-5 Adaptive maps.** Which markers (deposits, civilians) exist for which number of players
       and options. Today: whether the map adapts, the army each deposit waits for, and the groups of

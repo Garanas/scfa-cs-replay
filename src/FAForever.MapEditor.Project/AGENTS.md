@@ -305,22 +305,52 @@ snaps to (`Snap`, `MarkerSnap`), how steep the ground under a deposit is (`Steep
 kinds of markers one by one (`MarkerKinds`, `KindOf`), which `MapObjects.Nearest`, `Inside` and
 `All` take to leave hidden kinds out.
 
-**Generated path networks** (user story R-3, `Generation/PathNetworks`, `PathNetworkGenerator`, an
-`IDocumentGenerator` with walkability's inputs): per layer the AI's graph from the navigational
-mesh (land, water, amphibious; air on a grid over the playable area). The map is cut into squares of
-the spacing (`DefaultSpacing`: a sixteenth of the map, 16 to 64 ogrids); each 4-connected part of
-passable ground in a square that covers a sixteenth of it gets a node at its ogrid furthest from
-blocked ground (to a quarter of the spacing), nearest the square's centre; parts that touch across a
-square's edge are linked, with nodes along the way through them where the straight line would cross
-blocked ground (`CanWalk`: every ogrid a line passes, both beside a corner, of the start's region);
-diagonal squares link where walkable and not linked through a neighbour; last every region is made
-one network (pieces joined along `NavPaths.FindRoute`). The map's own nodes of a layer stay unless
-`Replace`: they are nodes from the start with their links, a part that holds one takes it, and two
-that reach each other get no new way, so generating again adds nothing. `Apply` names new nodes as
-the map editors do (`LandPN`, `WaterPN`, `AmphPN`, `AirPN`, going on from the highest number), puts
-them on the terrain and links both ways; replacing takes the layer's nodes out of chains too.
-`PathNetworksTest` checks on the test maps that no link crosses blocked ground and every region is
-one network.
+**Generated path networks** (user story R-3, `Generation/PathNetworks`, `PathSkeleton`,
+`PathNetworkEdits`; `PathNetworkGenerator`, a plain `IGenerator` with walkability's inputs and
+`GeneratedInput.PathNodeSettings`): per layer the AI's graph from the navigational mesh, kept in
+memory (a preview) and written into the markers only by the export (`Apply` on the version it
+writes). The settings and the edits by hand are the map's (`ProceduralSettings.PathNodes`,
+`PathNodeSettings`; `map.json`'s optional `procedural.pathNodes`, `PathNodesDto`/`PathEditDto`).
+- **Ground layers** (`GenerateLayer`): the labels in blocks of about a twelfth of the spacing (a
+  block takes the label most of its passable ogrids have; `DefaultSpacing`: a sixteenth of the map,
+  16 to 64); each region thinned to its skeleton (`PathSkeleton.Thin`: distance-ordered homotopic
+  thinning with Yokoi's connectivity number, ends of lines kept; `Prune` drops spurs shorter than
+  half the spacing; `Trace` gives junctions, dead ends and chains); nodes at junctions and dead
+  ends and along each chain about a spacing apart, linked one to the next (a link that cannot be
+  walked straight gets a node at the chain's middle cell, and at last a route, `Route`: A* in a box
+  that grows); with `Fill` a node on a grid of the spacing wherever open ground lies further than
+  three quarters of a spacing from every node of its region; links between nodes within 1.5
+  spacings that see each other both ways (`CanWalk`) and have no node in the circle over them (a
+  Gabriel graph; the chains' links always stay); `Smoothing` rounds move every node but dead ends
+  halfway to its neighbours' middle when it stays in its region and its links stay walkable; nodes
+  closer than `MinimumDistance` (0.4 spacing) merge (dead ends, then junctions stay); links made
+  again; every region joined into one network. A region under a sixteenth of a spacing squared gets
+  no nodes; one the blocks lost gets a node near its middle. Layers run side by side. Measured: a
+  4096 map (SCMP_haz09fa, spacing 64) 0.7 s for all four layers (the mesh itself 2.3 s); Archsimkats
+  Valley 0.4 s; HardFFA 60 ms.
+- **Air** (`GenerateAir`): a grid over the playable area, 16 by 16 unless `AirSpacing`, each node
+  linked to the eight around it, as the game's maps have (256 air nodes on maps of every size).
+- **Deterministic**: the same map and settings give the same nodes (`GivesTheSameNodesForTheSameMap`).
+- **Edits by hand** (`PathNetworkEdits`, `PathEdit`: `Add`, `Move`, `Remove`, `Link`, `Cut`;
+  `PathNodeRef`): an edit names a generated node by the place it was generated at, a node added by
+  hand by its number. After every generation each remembered place is matched to the nearest
+  generated node of its layer within a third of the spacing (at least 2 ogrids), nearest pairs first,
+  each node once; the matched node then carries the remembered reference. Where the terrain did not
+  change, nodes come back exactly; where it changed a little, they move a little and are still found.
+  An edit whose node is gone: a removal does nothing, a move places a node of its own at its target,
+  a link or cut with a lost end does nothing; such edits stay (they may match again) and are listed
+  as unmatched (`ForgetUnmatched`). Order: removals, moves, added nodes (each linked to up to three
+  of the nearest nodes it sees within 1.5 spacings, at least the nearest it sees), cuts, links.
+  Making edits: `AddNode`, `MoveNode` (one move per node; an added node's own edit changes),
+  `RemoveNode` (drops the edits that refer to it), `Link` (a cut and a link of one pair cancel), `Clear`.
+- **Into the map** (`Apply(document, network, replace)`): names as the map editors do (`LandPN`,
+  `WaterPN`, `AmphPN`, `AirPN`, going on from the highest number), on the terrain, linked both ways.
+  The map's own path nodes of a layer (placed by hand; generated by an editor before wave 9, which
+  stay ordinary markers) stay, and each piece of them is linked to the nearest generated node it
+  sees; with `replace` they go, out of chains too.
+- Tests: `PathNetworksTest` (no link crosses blocked ground and every region is one network on the
+  test maps, the wall's gap, smoothing, the minimum, the air grid, `Apply`), `PathNodeEditsTest`
+  (skeletons of test grids, edits surviving regeneration after the terrain changed, the format).
 
 **Weather** (`Editing/WeatherStyles`, static data of `lua/weatherdefinitions.lua` and
 `lua/MarkerTemplates.lua`): the map styles, each style's cloud types (its own and the cirrus layers)

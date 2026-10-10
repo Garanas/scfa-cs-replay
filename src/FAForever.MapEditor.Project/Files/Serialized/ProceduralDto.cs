@@ -33,5 +33,11 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// absent for no.
         /// </summary>
         public bool? WriteDraft { get; init; }
+
+        /// <summary>
+        /// How the path networks are generated, whether the export writes them, and the edits by hand
+        /// on top of them; absent for the defaults.
+        /// </summary>
+        public PathNodesDto? PathNodes { get; init; }
     }
 }

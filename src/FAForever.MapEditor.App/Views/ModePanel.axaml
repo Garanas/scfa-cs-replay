@@ -406,6 +406,9 @@
             <DataTemplate DataType="vm:NavigationSection">
               <procedural:NavigationPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
             </DataTemplate>
+            <DataTemplate DataType="vm:PathNetworkSection">
+              <procedural:PathNodesPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).PathNodes}" />
+            </DataTemplate>
             <DataTemplate DataType="vm:ExportStepsSection">
               <procedural:ExportStepsPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
             </DataTemplate>
@@ -525,31 +528,6 @@
                   <Button Content="Add group with the selected units" Command="{Binding AddOptionalGroupCommand}"
                           AutomationProperties.HelpText="Adds Optional_option_value beside INITIAL with the selected units in it: to their own army when they are all of one extra army, else to ARMY_17 or NEUTRAL_CIVILIAN" />
                   <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding AdaptiveFilesText}" AutomationProperties.Name="What the export writes of the adaptive map" />
-                </StackPanel>
-              </Border>
-            </DataTemplate>
-            <!-- path networks generated from walkability (R-3) -->
-            <DataTemplate DataType="vm:PathNetworkSection">
-              <Border Classes="group">
-                <StackPanel Classes="stack" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Markers.Paths}" x:DataType="vm:PathNetworkPanel">
-                  <TextBlock Classes="overline" Text="{Binding Source=Path networks, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-                  <UniformGrid Columns="2">
-                    <CheckBox Content="Land" IsChecked="{Binding Land}" AutomationProperties.Name="Generate the land network" />
-                    <CheckBox Content="Water" IsChecked="{Binding Water}" AutomationProperties.Name="Generate the water network" />
-                    <CheckBox Content="Amphibious" IsChecked="{Binding Amphibious}" AutomationProperties.Name="Generate the amphibious network" />
-                    <CheckBox Content="Air" IsChecked="{Binding Air}" AutomationProperties.Name="Generate the air network" />
-                  </UniformGrid>
-                  <DockPanel>
-                    <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Spacing" Width="{StaticResource FactLabelWidth}" />
-                    <TextBox Classes="mono commit" Text="{Binding Spacing}" AutomationProperties.Name="Spacing of the path nodes"
-                             AutomationProperties.HelpText="About how far apart the nodes lie, in ogrids; empty: a sixteenth of the map, 16 to 64; air nodes twice as far" />
-                  </DockPanel>
-                  <CheckBox Content="Replace the layers' own nodes" IsChecked="{Binding Replace}" AutomationProperties.Name="Replace the layers' path nodes"
-                            AutomationProperties.HelpText="On: the chosen layers' nodes are removed first. Off: they stay, and nodes are only added where none are" />
-                  <Button Content="Generate" Command="{Binding GenerateCommand}" AutomationProperties.Name="Generate path networks"
-                          AutomationProperties.HelpText="Nodes on the ground each layer's units can walk, linked where they walk straight to each other; one step of undo" />
-                  <TextBlock Classes="caption" Classes.warning="{Binding IsStale}" TextWrapping="Wrap" Text="{Binding Status}" AutomationProperties.Name="How the path networks stand" />
-                  <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Result}" IsVisible="{Binding Result, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" AutomationProperties.Name="What was generated" />
                 </StackPanel>
               </Border>
             </DataTemplate>

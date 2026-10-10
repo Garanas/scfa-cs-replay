@@ -295,5 +295,6 @@ public static class EditorOverlays
         new OverlayDefinition("units", "Units", "Show units", "V-2"),
         new OverlayDefinition("decals", "Decals", "Show decals", "V-3"),
         new OverlayDefinition("navigation", "Regions", "Show the navigation mesh's regions", "T-8") { Swatch = "MapRegion1Brush" },
+        new OverlayDefinition("generatedPathNodes", "Generated nodes", "Show the generated path nodes", "R-3") { Panel = "procedural" },
     ];
 }

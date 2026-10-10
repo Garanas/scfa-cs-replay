@@ -1004,10 +1004,46 @@ Markers panel) and Export, each a view of its own in `Views/ProceduralPanels/`. 
   (waiting, running, done or not needed with a note, failed with why; a failed step stops the
   export), `state.procedural.export`. The file the export writes names the editor (the library's
   `EditorStamp`).
+- **Path networks** (R-3, wave 9D; `model.PathNodes`, `ViewModels/PathNodesViewModel.cs`, the core's
+  side `MainViewModel.PathNodes.cs`, the view `Views/ProceduralPanels/PathNodesPanel.axaml` on the
+  part's own view model, so it moves into an inspector as it is). Generated from the navigation mesh
+  by the library's `PathNetworks` (its guide says how: skeleton, spacing, smoothing, links) and kept
+  in memory only: the views draw the result faintly (the overlay `generatedPathNodes`, chip
+  "Generated nodes"; the top view the path-node markers' look at half strength,
+  `HeightmapView.PathNetwork.cs`, span `top.generated-paths`; the 3D view faint links and small
+  crosses in the scene, `TerrainViewGpu.PathNetwork.cs`, span `3d.generated-paths`; the layers the
+  Markers panel's kinds show), never into the document. The settings are the map's
+  (`ProceduralSettings.PathNodes`): `generate.setPathNodes {layers?, spacing?, airSpacing?,
+  smoothing?, minimumDistance?, fill?, replace?, onExport?}` (0 for a default distance), each a step
+  of undo, which put the result out of date. `markers.connectPaths {layers?, spacing?, airSpacing?,
+  smoothing?, replace?}` (the row's and the panel's Generate) keeps what it is given in one step,
+  `Generate the path networks`, turns writing on export on the first time, and generates on a pool
+  thread with the current walkability or navigation mesh. It may regenerate on its own
+  (`AutoGeneration.Allow`). The row's export check box is `ExportUse.Written` (the map's
+  `PathNodes.OnExport`, through `ProceduralViewModel.OnExport(id, use, isOn, set)`).
+- **Edits by hand on top** (the owner's decision: generated nodes are the base, edits go on top):
+  the Path nodes tool (`procedural.pathNodes`, `Tools/PathNodeEditTool.cs`, its layer in the options
+  row): a click on empty ground adds a node (`generate.addPathNode {x, z, layer?}`), a click on a
+  node chooses it (a ring in both views), a drag onto empty ground moves it
+  (`generate.movePathNode {x, z, toX, toZ, layer?, within?}`), onto another node links them
+  (`generate.linkPathNodes {x, z, toX, toZ, cut?, layer?, within?}`, control cuts), control and a
+  click or Delete removes (`generate.removePathNode {x, z, layer?, within?}`); a line follows the
+  drag. Commands find the previewed node nearest the place within `within` ogrids (4). Each edit is
+  a step of undo kept in the map (`PathNodeSettings.Edits`) and applied after every generation;
+  the panel counts them and those whose node is gone (`generate.clearPathEdits {layer?, unmatched?}`
+  forgets them). How an edit finds its node again is in the library's guide.
+- **Hand-placed path nodes and the generated network**: path-node markers (placed with the Markers
+  mode's Path tool, or generated into the markers by an editor before wave 9) stay ordinary markers
+  of the project, edited only by the Markers tools; the Path nodes tool edits only the generated
+  network. At export (`ExportStep` `pathNodes` at `PathNodesOrder`, when on): the network with the
+  edits goes into the version the export writes (generated first when out of date), named on from
+  the highest `LandPN` and so on; the map's own nodes stay and each piece of them is linked to the
+  nearest generated node it sees, or with Replace they are left out of the files. The project never
+  holds a generated node.
 - Automation: `state.procedural` (rows, auto, navigation with regions and routes, `showNavigation`,
-  `routesTop`, `routes3d`, export steps).
-- Not built yet (wave 9 and 10): path nodes from the navigation mesh as an export step, the
-  normal and shadow decals, the sky cube map.
+  `routesTop`, `routes3d`, export steps); `state.pathNodes` (settings, status, the preview per layer,
+  the edits in words, `unmatched`, the chosen node).
+- Not built yet (wave 9 and 10): the normal and shadow decals, the sky cube map.
 
 ## Selection: picking things on the map and changing them
 
@@ -1229,8 +1265,8 @@ inspector's `MarkerSelection`.
   layer linked to the one selected node of that layer and selects the new one, so clicks lay a
   path (shift starts a new one); a click on a node goes on from it; dragging from a node to
   another runs `markers.link {a, b, unlink?}` (control unlinks). Nodes of different layers never
-  link. Choosing the tool shows the path nodes and its layer. Generating them from walkability is
-  `markers.connectPaths` (below).
+  link. Choosing the tool shows the path nodes and its layer. The generated networks are the
+  Procedural mode's (`markers.connectPaths`, edited with its Path nodes tool; below).
 - **Chains** (R-4): the panel's section lists them (`ChainsSection`); "From the selection" runs
   `markers.addChain {name?, markers?}` (the selected markers in the order they were selected,
   `Chain_1` or the next free name) and chooses it; its markers have up, down and take-out
@@ -1255,19 +1291,10 @@ inspector's `MarkerSelection`.
   markers, the chosen chain, adaptive, the last warning, `paths`: the panel's layers, spacing,
   replace, status and result; `optionalGroups`; the active marker tool's settings, the Preset
   tool's preset).
-- **Generated path networks** (R-3, F-7; the Procedural panel's `PathNetworkSection`, `MarkersViewModel.Paths`
-  as `PathNetworkPanel`): check boxes per layer, the spacing (empty: the library's default by the
-  map's size), "Replace the layers' own nodes", Generate, and how the result stands (the generated
-  results' line of `pathNetwork`, in the warning colour when out of date). `markers.connectPaths
-  {layers?, spacing?, airSpacing?, replace?}` sets the library's `PathNetworkGenerator.Settings`
-  (what is left out is the panel's), hands it the last walkability so the mesh is not made twice,
-  and runs `MainViewModel.GenerateAsync`: one step of undo, `Generate the path networks`. Without
-  `replace` nothing of the map goes: a part of the ground that holds a node keeps it, two of the
-  map's nodes that reach each other already get no new way, so generating twice adds nothing.
-  The result is out of date when walkability's inputs change (the heightmap, terrain types, water
-  level, deposits, areas), and `generate.stale` makes it again with the same settings, replacing
-  or adding as they say. The Procedural mode's generated results list it too. About 130 ms on
-  Archsimkats Valley, all four layers with walkability.
+- **Generated path networks** (R-3, F-7): the Procedural mode's (section "The Procedural mode",
+  Path networks): previewed, edited by hand on top, written by the export only. The Markers
+  mode's Path tool places and links path-node markers, which the export writes beside the
+  generated network (joined to it) or leaves out (Replace).
 - **Weather** (R-1): the tools Weather and Clouds (`PlaceMarkerTool` with
   `MarkerPlacement.WeatherDefinition`, `WeatherGenerator`) place the game's templates
   (`markers.place kind=weatherDefinition|weatherGenerator`); the inspector's `MarkerSelection.Weather`

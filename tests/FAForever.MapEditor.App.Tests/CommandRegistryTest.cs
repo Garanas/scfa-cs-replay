@@ -122,7 +122,7 @@ namespace FAForever.MapEditor.App.Tests
                     "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look", "decals.addToGroup", "decals.deleteGroup",
                     "decals.lod", "decals.place", "decals.removeFromGroup", "decals.renameGroup", "decals.scale", "decals.selectGroup", "decals.showGroup", "decals.size",
                     "diagnostics.flush", "diagnostics.set", "diagnostics.upload", "edit.goTo", "edit.nudge", "edit.place", "file.enableVersionControl",
-                    "file.restoreCommit", "file.showCommit", "file.showMapFiles", "generate.auto", "generate.onExport", "generate.setNavigation", "lighting.set", "lighting.setSky", "map.removeArea", "map.removeArmy", "map.renameArmy", "map.setAlliance",
+                    "file.restoreCommit", "file.showCommit", "file.showMapFiles", "generate.addPathNode", "generate.auto", "generate.clearPathEdits", "generate.linkPathNodes", "generate.movePathNode", "generate.onExport", "generate.removePathNode", "generate.setNavigation", "generate.setPathNodes", "lighting.set", "lighting.setSky", "map.removeArea", "map.removeArmy", "map.renameArmy", "map.setAlliance",
                     "map.setArea", "map.setArmy", "map.setPlayableArea", "markers.addOptionalGroup", "markers.deleteChain", "markers.link", "markers.place",
                     "markers.renameChain", "markers.set", "markers.setChain", "markers.setWeather", "markers.showKind", "paint.addMaskRule", "paint.chooseMask",
                     "paint.moveMaskRule", "paint.moveStratum", "paint.removeMaskRule", "paint.removeStratum", "paint.setLayer", "paint.setMaskRule", "plugins.enable",
