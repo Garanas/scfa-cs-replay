@@ -247,6 +247,8 @@ namespace FAForever.MapEditor.Project
         /// <summary>
         /// The scenario as the game reads it: one configuration, <c>standard</c>, with one team,
         /// <c>FFA</c>, of the playable armies, and the other armies in <c>customprops.ExtraArmies</c>.
+        /// The map maker's teams follow the team <c>FFA</c> (the lobby reads only the first team),
+        /// each with its playable armies; a team without any is left out.
         /// </summary>
         private static MapScenario ToMapScenario(MapDocument d, string root)
         {
@@ -295,8 +297,26 @@ namespace FAForever.MapEditor.Project
                 NoRushRadius = s.NoRushRadius,
                 Reclaim = s.Reclaim is Reclaim r ? (r.Mass, r.Energy) : null,
                 AdaptiveMap = s.AdaptiveMap ? true : null,
-                Configurations = [new MapConfiguration("standard", [new MapTeam("FFA", [.. s.PlayableArmies])], customProperties, new LuaData.Table(configuration))],
+                Configurations = [new MapConfiguration("standard", Teams(s), customProperties, new LuaData.Table(configuration))],
             };
+        }
+
+        /// <summary>
+        /// The team <c>FFA</c> of the playable armies, which the game reads, then the map maker's teams.
+        /// </summary>
+        private static List<MapTeam> Teams(ScenarioInfo s)
+        {
+            HashSet<string> playable = new HashSet<string>(s.PlayableArmies, StringComparer.Ordinal);
+            List<MapTeam> teams = [new MapTeam("FFA", [.. s.PlayableArmies])];
+            foreach (Team team in s.Teams)
+            {
+                string[] armies = [.. team.Armies.Where(playable.Contains)];
+                if (armies.Length > 0)
+                {
+                    teams.Add(new MapTeam(team.Name, armies));
+                }
+            }
+            return teams;
         }
 
         /// <summary>

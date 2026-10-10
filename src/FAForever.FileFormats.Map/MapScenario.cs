@@ -78,11 +78,16 @@ namespace FAForever.FileFormats.Map
 
         /// <summary>
         /// The armies players can take in the <c>standard</c> configuration (or the first), in order:
-        /// <c>ARMY_1</c>, <c>ARMY_2</c>, ...
+        /// <c>ARMY_1</c>, <c>ARMY_2</c>, ... The game's lobby takes them from the first team, <c>FFA</c>;
+        /// teams after it (which a map editor may write) repeat some of them. A configuration whose
+        /// first team is no <c>FFA</c> has the armies of all its teams.
         /// </summary>
         public IReadOnlyList<string> PlayerArmies =>
-            (Configurations.FirstOrDefault(c => c.Name == "standard") ?? Configurations.FirstOrDefault())?
-                .Teams.SelectMany(team => team.Armies).ToList() ?? [];
+            (Configurations.FirstOrDefault(c => c.Name == "standard") ?? Configurations.FirstOrDefault()) is MapConfiguration configuration
+                ? configuration.Teams.Count > 0 && configuration.Teams[0].Name == "FFA"
+                    ? [.. configuration.Teams[0].Armies]
+                    : [.. configuration.Teams.SelectMany(team => team.Armies).Distinct(StringComparer.Ordinal)]
+                : [];
     }
 
     /// <summary>
