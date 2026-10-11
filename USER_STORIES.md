@@ -166,9 +166,9 @@ reads again when it changes; and nothing that generates runs by itself.
 ## M: The map
 
 - [x] **M-1 Map information.** Name, description, author, version, type (skirmish, campaign),
-      preview image, no-rush radius, adaptive map, reclaim: the Map panel's fields
-      (`map.information`), one step of undo per field; the inspector shows the size, armies and
-      the `.scmap`'s preview.
+      preview image, no-rush radius, adaptive map, reclaim: the Map panel's Information entry, its
+      fields in the inspector in About, Game and Preview (`map.information`), one step of undo per
+      field, with the folder, size, armies and the `.scmap`'s preview.
 - [x] **M-2 New map.** Size, starting height, water, biome or template; from scratch. Today:
       File, New map (`file.new`): one of the game's sizes, the height, water and its elevation,
       the strata of one of six biomes, spawns and the playable area; templates in the workspace's
@@ -183,13 +183,15 @@ reads again when it changes; and nothing that generates runs by itself.
       the scenario names (the inspector's check box, `map.setPlayableArea`), else the first; the
       export writes it into the script's `SetPlayableArea`.
 - [x] **M-4 Armies.** Add, remove and rename armies; playable or extra (civilians); factions an army
-      is limited to; alliances; teams for the lobby. The Map mode's Armies and teams: a renamed army
+      is limited to; alliances; teams for the lobby. The Map panel's entry per army (its fields in
+      the inspector, Add army and Add extra under the heading): a renamed army
       renames its spawn, a removed one takes its units and spawn along, a playable one gets a spawn.
       Teams are kept in the project and written after the team FFA, the only one the game's lobby
       reads; the lobby does not use them yet.
 - [x] **M-5 Areas.** Draw, name, move and resize areas (rectangles) in the views: the areas tool
-      (handles in the top and 3D views), the Map panel's list, the inspector's fields; one is the
-      playable area (M-3).
+      (handles in the top and 3D views), the Map panel's entry per area (chosen, it is selected on
+      the map and its fields are in the inspector), the inspector's fields; one is the playable area
+      (M-3), chosen also in the inspector of the Map panel's Size and playable area.
 - [x] **M-6 Script.** Open the map's script in the user's editor; see the files of the map folder.
 - [x] **M-7 Import and export.** Import a map folder of the game or the vault; export into the
       vault's `maps` folder.

@@ -8,7 +8,7 @@ using FAForever.MapEditor.Project.Files.InMemory;
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
-/// An area in the Map panel's list (user story M-5): its name to type over, its rectangle, and
+/// An area of the map (user story M-5), as <c>state.mapPanels</c> lists it: its name to type over, its rectangle, and
 /// whether it is the playable area (<see cref="MapDocument.PlayableArea"/>: the one the scenario
 /// names, else the first, which the map editors' scripts make playable as <c>AREA_1</c>).
 /// </summary>
@@ -63,8 +63,9 @@ public sealed partial class AreaItem(Area area, bool isPlayable, Func<string, Js
 }
 
 /// <summary>
-/// The areas of the map in the Map panel (user story M-5), in their order, with the playable area
-/// marked (user story M-3). Drawing, moving and resizing them is the areas tool's (<c>Tools/AreaTool</c>).
+/// The areas of the map (user story M-5), in their order, with the playable area marked (user story
+/// M-3); the Map panel lists them as entries of its own (<see cref="MapPartsViewModel"/>).
+/// Drawing, moving and resizing them is the areas tool's (<c>Tools/AreaTool</c>).
 /// </summary>
 public sealed partial class AreaListViewModel(Func<string, JsonObject, Task> run) : ObservableObject
 {

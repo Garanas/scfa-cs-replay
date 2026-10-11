@@ -16,17 +16,17 @@ namespace FAForever.MapEditor.App.ViewModels;
 public sealed partial class MainViewModel
 {
     /// <summary>
-    /// The map's information in the Map panel (user story M-1).
+    /// The map's information, the Map panel's Information entry (user story M-1).
     /// </summary>
     public MapInformationViewModel MapInformation { get; private set; } = null!;
 
     /// <summary>
-    /// The areas in the Map panel (user story M-5).
+    /// The map's areas (user story M-5).
     /// </summary>
     public AreaListViewModel AreaList { get; private set; } = null!;
 
     /// <summary>
-    /// The script and the files of the map's folder in the Map panel (user story M-6).
+    /// The script and the files of the map's folder, the Map panel's Script and files entry (user story M-6).
     /// </summary>
     public ScriptFilesViewModel ScriptFiles { get; } = new ScriptFilesViewModel();
 
