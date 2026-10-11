@@ -31,6 +31,21 @@ public sealed partial class MainViewModel
     /// </summary>
     public bool InspectsMode => !Assets.HasSelection && !InspectsSelection;
 
+    /// <summary>
+    /// Gives the inspector back to the mode: the tile chosen on the shelf is unchosen. The rule of
+    /// who has the inspector: what was chosen last of a shelf tile, things on the map and a part of
+    /// the mode (a mode on the rail, an entry of the panel's lists). Choosing one unchooses the
+    /// others; the tools keep what they took from a tile (the unit, prop or decal they place, the
+    /// brush's shape).
+    /// </summary>
+    public void InspectTheMode()
+    {
+        if (Assets.HasSelection)
+        {
+            Assets.Select((AssetTile?)null);
+        }
+    }
+
     private void InitializeInspectorParts()
     {
         Selection.Changed += (_, _) => NotifyInspected();

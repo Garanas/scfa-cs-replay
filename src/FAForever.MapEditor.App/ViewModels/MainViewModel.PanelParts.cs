@@ -42,6 +42,8 @@ public sealed partial class MainViewModel
                     RefreshPanelSections();
                 }
             };
+            // an entry a person chose has the inspector, also over a tile chosen on the shelf
+            list.Picked += (_, _) => InspectTheMode();
         }
         PropertyChanged += (_, e) =>
         {
@@ -162,6 +164,7 @@ public sealed partial class MainViewModel
             SelectMode(mode);
         }
         parts.Choose(id);
+        InspectTheMode();
     }
 
     /// <summary>

@@ -88,10 +88,29 @@ public sealed partial class PresetsViewModel : ObservableObject
     public bool IsEmpty => Shown.Count == 0;
 
     /// <summary>
-    /// The name the panel's Save button gives a new preset; empty for the one suggested.
+    /// The names typed for a new preset, by kind: a name typed in the Water panel stays there.
     /// </summary>
-    [ObservableProperty]
-    public partial string NewName { get; set; } = "";
+    private readonly Dictionary<string, string> _newNames = new Dictionary<string, string>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The name the panel's Save button gives a new preset of <see cref="Kind"/>; empty for the one
+    /// suggested. Each kind keeps its own: the Paint panel's brush presets do not show what was typed
+    /// for the water presets.
+    /// </summary>
+    public string NewName
+    {
+        get => Kind is string kind && _newNames.TryGetValue(kind, out string? name) ? name : "";
+        set
+        {
+            if (value != NewName && Kind is string kind)
+            {
+                _newNames[kind] = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    partial void OnKindChanged(string? value) => OnPropertyChanged(nameof(NewName));
 
     /// <exception cref="ArgumentException">The kind is registered already, or is no kind.</exception>
     public void Register(PresetKind kind)

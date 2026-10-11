@@ -43,6 +43,7 @@ public sealed partial class MainViewModel
         ProceduralList.Describe(new ProceduralEntry(PathNetworkGenerator.GeneratorId, movement)
         {
             Details = PathNodes,
+            Picture = (document, _) => document is not null && PathNodes.Preview?.Network is PathNetwork network ? new PathNetworkPicture(network, document.Width, document.Height) : null,
             Tool = "procedural.pathNodes",
             OwnGenerate = true,
             Help = "Path nodes along the middle of every region, previewed in the views and written into the markers on export; the Path nodes tool edits them by hand",
@@ -57,11 +58,13 @@ public sealed partial class MainViewModel
         ProceduralList.Describe(WideDecalEntry(WideDecals.Shadow, ShadowDecalGenerator.GeneratorId, surface));
         ProceduralList.Describe(new ProceduralEntry(MaskRulesGenerator.GeneratorId, rules)
         {
+            Picture = (document, _) => document is null ? null : RulesLayerPicture(document),
             Facts = document => document is null ? [] : [RulesLayers(document), "The rules are layers of a mask's or stratum's stack: add and edit them in the Masks and Paint modes"],
             Help = "The rules layers of the masks and strata, made from their rules",
         });
         ProceduralList.Describe(new ProceduralEntry(PropRulesGenerator.GeneratorId, rules)
         {
+            Picture = (document, _) => document is null ? null : RulePropsPictureOf(document),
             Facts = document => document is null ? [] :
             [
                 document.PropRules.IsEmpty ? "The map has no prop rules" : $"{Count(document.PropRules.Length, "prop rule")}; they placed {Count(document.CountRuleProps(), "prop")}",
@@ -91,6 +94,7 @@ public sealed partial class MainViewModel
             };
         }
         Navigation.Changed += (_, _) => ProceduralList.Refresh();
+        PathNodes.PreviewChanged += (_, _) => ProceduralList.Refresh();
         Walkability.Changed += (_, _) => ProceduralList.Refresh();
         DocumentChanged += (_, _) => ProceduralList.Refresh();
 
@@ -144,6 +148,34 @@ public sealed partial class MainViewModel
         Facts = _ => [slot.Status],
         Help = slot.Help,
     };
+
+    /// <summary>
+    /// The picture of the masks from rules: the grid the first rules layer made (of a mask, else a
+    /// stratum); null while none has made one.
+    /// </summary>
+    private static PreviewPicture? RulesLayerPicture(MapDocument document) =>
+        document.CoverageStacks.OrderBy(entry => entry.Key.StartsWith("mask-", StringComparison.Ordinal) ? 0 : 1).ThenBy(entry => entry.Key, StringComparer.Ordinal)
+            .SelectMany(entry => entry.Value.Layers)
+            .FirstOrDefault(layer => layer.Source is RulesSource && layer.Coverage is not null)?.Coverage is TiledBuffer<byte> grid
+            ? new CoveragePicture(grid)
+            : null;
+
+    /// <summary>
+    /// The props the rules placed, as a picture made once per version of the map's props.
+    /// </summary>
+    private RulePropsPicture? RulePropsPictureOf(MapDocument document)
+    {
+        if (_rulePropsPicture is (var props, var picture) && props == document.Props)
+        {
+            return picture;
+        }
+        System.Numerics.Vector2[] places = [.. document.Props.Where(prop => prop.Rule is not null).Select(prop => new System.Numerics.Vector2(prop.Position.X, prop.Position.Z))];
+        RulePropsPicture? made = places.Length == 0 ? null : new RulePropsPicture(new object(), places, document.Width, document.Height);
+        _rulePropsPicture = (document.Props, made);
+        return made;
+    }
+
+    private (System.Collections.Immutable.ImmutableArray<Prop> Props, RulePropsPicture? Picture)? _rulePropsPicture;
 
     private static string RulesLayers(MapDocument document)
     {

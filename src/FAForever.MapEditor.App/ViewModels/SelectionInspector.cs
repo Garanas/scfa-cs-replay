@@ -629,10 +629,19 @@ public sealed partial class UnitSelection(Func<string, JsonObject, Task> run) : 
     [ObservableProperty]
     public partial string Group { get; private set; } = "";
 
+    /// <summary>
+    /// What building the selected units costs together (F-8), as the shelf's inspector shows a
+    /// unit's: mass and energy after their icons, for how many units; null when the catalogue knows
+    /// none of their costs.
+    /// </summary>
+    [ObservableProperty]
+    public partial UnitCostLine? Cost { get; private set; }
+
     public override void Refresh(MapDocument document, IReadOnlyList<ObjectRef> things)
     {
         base.Refresh(document, things);
         PlacedUnit[] units = [.. things.Select(document.Find).OfType<PlacedUnit>()];
+        Cost = UnitCostLine.Of(units, Owner?.Catalog() ?? AssetCatalog.Empty);
         _showing = true;
         try
         {
@@ -657,6 +666,39 @@ public sealed partial class UnitSelection(Func<string, JsonObject, Task> run) : 
 
     protected override IEnumerable<string> LinesOf(MapDocument document, IReadOnlyList<ObjectRef> things) =>
         things.Select(document.Find).OfType<PlacedUnit>().Select(unit => $"{unit.Unit.Name}: {unit.Unit.Blueprint}, {unit.Army}");
+}
+
+/// <summary>
+/// What selected units cost to build together: mass, energy, a suffix naming how many when more
+/// than one, and the whole in words for a screen reader.
+/// </summary>
+public sealed record UnitCostLine(double Mass, double Energy, string? Suffix, string Text)
+{
+    /// <summary>
+    /// The cost of the units whose blueprints the catalogue knows with a cost; null for none.
+    /// </summary>
+    public static UnitCostLine? Of(IReadOnlyList<PlacedUnit> units, AssetCatalog catalog)
+    {
+        double mass = 0;
+        double energy = 0;
+        int known = 0;
+        foreach (PlacedUnit unit in units)
+        {
+            if (catalog.Find(unit.Unit.Blueprint) is { Kind: AssetKind.Unit } entry && (entry.MassCost is not null || entry.EnergyCost is not null))
+            {
+                mass += entry.MassCost ?? 0;
+                energy += entry.EnergyCost ?? 0;
+                known++;
+            }
+        }
+        if (known == 0)
+        {
+            return null;
+        }
+        string? suffix = known == 1 && units.Count == 1 ? null : $"for {MainViewModel.Units(known)}";
+        string text = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{mass:#,0.#} mass, {energy:#,0.#} energy{(suffix is null ? "" : " " + suffix)}");
+        return new UnitCostLine(mass, energy, suffix, text);
+    }
 }
 
 /// <summary>

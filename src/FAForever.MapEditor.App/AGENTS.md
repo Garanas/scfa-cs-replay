@@ -129,7 +129,12 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   (`OverlayDefinition.Swatch`: walkability, mask, areas). What does not fit at the window's width
   lies behind the row's More, over the views (the bar has `ZIndex` 1, the tool's options 2, so their
   More lies over this bar). At 1280 by 800 the top view is 464 pixels high (`TheViewsBarIsOneRow...`).
-  Walkability and a mask tint the terrain in turn: turning one on turns the other off.
+  Walkability and a mask tint the terrain in turn: turning one on turns the other off. The tints
+  (mask, walkability, regions) belong to the mode they were turned on in
+  (`MainViewModel.FollowModeTints`): leaving a mode keeps what it showed, entering one shows what it
+  showed when it was left (none the first time), so the Paint mode's mask never lies over the
+  Lighting mode's views. The 3D camera's footprint in the top view is cut to the map, so beside the
+  map the view's backdrop stays one colour at any width. The other overlays stay as they are in every mode (`ModeTintsTest`).
 - **What the views draw again, by event**: `DocumentChanged` when the shown document changes
   (an edit, undo, reload, a dab, a stroke thrown away): the top view updates the tiles that
   changed, the 3D view uploads them. `OverlaysChanged` (an overlay turned on or off),
@@ -964,7 +969,9 @@ every other part).
   walkability, navigation mesh, path networks; Terrain surface: normal map, normal decal, shadow
   decal; From rules: masks, props; Pictures: preview), each with a picture where one exists
   (`ImagePreview`: walkability and the regions as `NavGridPicture`, the normal map and preview as
-  `ColourGridPicture`, the decals their slot's), its title, how it stands (`Missing`, `Out of date`,
+  `ColourGridPicture`, the decals their slot's, the path networks' nodes and links as
+  `PathNetworkPicture`, the masks from rules as the first rules layer's grid, the props from rules
+  as `RulePropsPicture`, a dot per prop a rule placed; `Rendering/PointPictures.cs`), its title, how it stands (`Missing`, `Out of date`,
   `Current`, `Generating`; a decal taken from a file or none says its source) and Generate (its
   command, the ids kept); Export last (`procedural.export`). The entries are a `PanelParts`
   (`PanelPartLists["procedural"]`, ids `procedural.<generator id>`), so `view.inspectPart` and
@@ -1046,7 +1053,8 @@ every other part).
   "Generated nodes"; the top view the path-node markers' look at half strength,
   `HeightmapView.PathNetwork.cs`, span `top.generated-paths`; the 3D view faint links and small
   crosses in the scene, `TerrainViewGpu.PathNetwork.cs`, span `3d.generated-paths`; the layers the
-  Markers panel's kinds show), never into the document. The settings are the map's
+  Markers panel's kinds show, and while the Path nodes tool is active only the layer it edits, so
+  the air's grid never covers the land's nodes: `MainViewModel.GeneratedPathKinds`), never into the document. The settings are the map's
   (`ProceduralSettings.PathNodes`): `generate.setPathNodes {layers?, spacing?, airSpacing?,
   smoothing?, minimumDistance?, fill?, replace?, onExport?}` (0 for a default distance), each a step
   of undo, which put the result out of date. `markers.connectPaths {layers?, spacing?, airSpacing?,
@@ -2072,6 +2080,18 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   generated results listed, section "The Procedural mode") follow it; the Map
   panel's Information fields and the Props panel's Placing are
   still edited in the panel, for a later wave to move.
+- **Who has the inspector: what was chosen last** of three: a tile of the shelf (or the picker),
+  things on the map (in the modes of things: Map, Markers, Props, Decals, Units), and a part of the
+  mode. Choosing one unchooses the others, so the inspector never shows something older than the
+  person's last choice: a tile chosen clears the map's selection, a selection unchooses the tile, and
+  a part of the mode unchooses the tile (`MainViewModel.InspectTheMode`). A part of the mode is
+  chosen by a mode on the rail, its F-key or the Modes menu (`<mode>.mode`; a command that switches
+  to its own mode, `decals.choose`, is no such choice), an entry of a panel's list (`PanelParts.Picked`,
+  raised by its button also when it was chosen already; `view.inspectPart`), and an item of a list or
+  tree in the mode's panel (a stratum, a height layer, a mask, a group: `ModePanel`'s pointer press).
+  Choosing a tool is not one: a unit tile stays in the inspector while the person picks the place
+  tool. The tools keep what they took from a tile (the unit, prop or decal they place, the brush's
+  shape), so unchoosing it changes nothing on the map. Tests: `InspectorOwnerTest`.
 - **Lists of parts** (`PanelParts`, `PanelPart`): a mode panel's list of entries under headings,
   one always chosen (the first until another is); `Controls/PanelPartList` draws it in the panel
   (`Button.partentry`, filled while chosen, the detail at the right), `Views/MapPanels/PanelPartView`
@@ -2084,10 +2104,11 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   `state.panelParts` has each list's chosen entry, its content's type and every entry's detail.
 - **Water** (`WaterSettings.Parts`): Water on (a check box above the list), Settings (Elevations
   and colour, its detail the surface's elevation; Surface and reflection; Textures and waves, the
-  four wave textures with them), Maps (Foam, Flatness, Depth bias, their size as detail) and Wave
+  four wave textures with them), Maps (Foam, Flatness, Depth bias) and Wave
   generators (how many). A map chosen makes the Paint water tool paint it and chooses that tool;
-  the inspector shows the brush's erase, radius and strength (its shape stays in the options row,
-  which says `Map: Foam`). The Waves entry chooses the Waves tool; and back, choosing a tool or a
+  the inspector shows the map's stack of layers (the brush's shape, radius, strength and erase stay in
+  the options row, which says `Map: Foam`, and are not repeated). Each map's entry has a picture of
+  it and its count of layers (`PanelPart.Preview`, `Detail`; a map without a stack of its own has one). The Waves entry chooses the Waves tool; and back, choosing a tool or a
   map for the brush (`brush.set waterMask`, a preset) shows its entry. Presets below.
 - **Lighting** (`LightingSettings.Parts`): Sun (azimuth, elevation, colour, multiplier; the Sun
   tool's line), Colours and ambience, Fog, Bloom, Sky and cube maps (the sky's cube maps and
@@ -2428,8 +2449,15 @@ last frame drawn.
   command that asks.
 - `click {label, under?, button?, doubleClick?}`: the control named, labelled or reading the label
   (a control one can use before a text of that name), shown first (behind More, scrolled into its
-  scroll viewer), then clicked in its centre; its answer has the type, the place, `checked` and
-  `focused`. `ui {under}` and `set` find a control the same way: `Combine` is the combo box labelled
+  scroll viewer), then clicked in its centre once its place stayed the same over two frames and the
+  window's hit testing (what the mouse reaches: the last frame drawn) finds the control there
+  (`AutomationServer.Aiming.cs`, `AimAsync`); a control the mouse cannot reach (hidden, outside the
+  window, covered by a question or the views) is refused with why (`the mouse would reach ...`),
+  never clicked elsewhere. It then waits (at most 10 s) for the commands the click started
+  (`CommandRegistry.Running`), unless one asks a question or opens the picker; its answer has the
+  type, the place, `checked`, `focused` and `finished`. `set` aims the same way, and chooses a
+  list's item by clicking it where no check box or button of the item lies (`PlainPointOf`), so
+  what a person's click starts runs too (`AutomationAimingTest`). `ui {under}` and `set` find a control the same way: `Combine` is the combo box labelled
   so, not the text beside it. `ui` keeps underscores in texts (only menu headers lose their access
   key's), leaves out what a person cannot see (hidden, transparent, a text without room), reads a
   combo box's chosen item and its first 40 items by what they show (`Title`, `Name`, `Label`,

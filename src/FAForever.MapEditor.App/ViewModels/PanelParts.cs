@@ -46,6 +46,17 @@ public sealed partial class PanelPart(string id, string title, string group, obj
     public string Label => Detail.Length == 0 ? Title : $"{Title}: {Detail}";
 
     partial void OnDetailChanged(string value) => OnPropertyChanged(nameof(Label));
+
+    /// <summary>
+    /// A small picture before its title in the panel (a water map's); null for none.
+    /// </summary>
+    [ObservableProperty]
+    public partial Rendering.PreviewPicture? Preview { get; set; }
+
+    /// <summary>
+    /// What a screen reader says of its picture.
+    /// </summary>
+    public string PreviewLabel => $"Preview of {Title}";
 }
 
 /// <summary>
@@ -160,10 +171,20 @@ public sealed partial class PanelParts : ObservableObject
     }
 
     /// <summary>
+    /// Raised when a person chose an entry (its button in the panel), also the one chosen already:
+    /// the inspector then shows it (<see cref="MainViewModel.InspectTheMode"/>).
+    /// </summary>
+    public event EventHandler? Picked;
+
+    /// <summary>
     /// An entry's button in the panel.
     /// </summary>
     [RelayCommand]
-    private void ChooseItem(PanelPart part) => Choose(part.Id);
+    private void ChooseItem(PanelPart part)
+    {
+        Choose(part.Id);
+        Picked?.Invoke(this, EventArgs.Empty);
+    }
 }
 
 /// <summary>

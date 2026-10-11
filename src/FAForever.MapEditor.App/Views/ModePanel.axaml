@@ -136,9 +136,9 @@
                             Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.SaveNewCommand}"
                             IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.HasLibrary}"
                             AutomationProperties.Name="{Binding SaveLabel}" />
-                    <TextBox Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.NewName}" PlaceholderText="Name (optional)"
+                    <TextBox Classes="presetname" Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.NewName}" PlaceholderText="Name (optional)"
                              AutomationProperties.Name="Name of the new preset"
-                             AutomationProperties.HelpText="Left empty, the preset is named after its settings" />
+                             AutomationProperties.HelpText="Left empty, the preset is named after its settings; Enter saves it" />
                   </DockPanel>
                   <Button Content="Show the folder" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.ShowFolderCommand}"
                           IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.HasLibrary}"

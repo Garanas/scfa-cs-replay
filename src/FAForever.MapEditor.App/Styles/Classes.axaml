@@ -720,8 +720,9 @@
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
   <!-- a tile's name on up to two lines, so names that differ only at their end (evgrass004a, evgrass004b) tell apart -->
+  <!-- a tile's name wraps between words only (its view sets TextWrapping and TextTrimming with TileTitleWrapConverter):
+       a name of one word wider than the tile (des_boulder01) is cut in its middle, never broken in two -->
   <Style Selector="Button.tile TextBlock.tiletitle">
-    <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="MaxLines" Value="2" />
   </Style>
   <!-- the place of a picture, where the glyph of its kind shows when it has none -->
@@ -793,6 +794,10 @@
   </Style>
 
   <!-- an entry of the map-wide decals (D-1): as tall as its preview -->
+  <!-- an entry of a panel's list with a picture (a water map's): as tall as its picture -->
+  <Style Selector="Button.partentry.partwithpreview">
+    <Setter Property="Height" Value="{StaticResource WideDecalEntryHeight}" />
+  </Style>
   <Style Selector="Button.partentry.widedecalentry">
     <Setter Property="Height" Value="{StaticResource WideDecalEntryHeight}" />
   </Style>

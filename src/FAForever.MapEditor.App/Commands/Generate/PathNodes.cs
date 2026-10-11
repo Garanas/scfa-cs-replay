@@ -171,9 +171,15 @@ public sealed class AddGeneratedPathNodeHandler(MainViewModel model) : IRequestH
             throw new ArgumentException("Generate the path networks first (markers.connectPaths)");
         }
         model.AddGeneratedPathNode(layer, request.X, request.Z);
-        model.Status = $"Added a {layer.ToString().ToLowerInvariant()} path node at ({EditorCulture.Format(request.X)}, {EditorCulture.Format(request.Z)})";
+        model.Status = $"Added a {layer.ToString().ToLowerInvariant()} path node at {Place(request.X, request.Z)}";
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// A place for the status line, to a tenth of an ogrid: <c>x 406.3, z 283.2</c>.
+    /// </summary>
+    public static string Place(double x, double z) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"x {x:0.#}, z {z:0.#}");
 }
 
 /// <summary>
@@ -212,7 +218,7 @@ public sealed class RemoveGeneratedPathNodeHandler(MainViewModel model) : IReque
     {
         PreviewPathNode node = model.RequireGeneratedNode(request.X, request.Z, request.Within ?? 4, PathLayerNames.ParseOrNull(request.Layer));
         model.RemoveGeneratedPathNode(node);
-        model.Status = $"Removed a {node.Layer.ToString().ToLowerInvariant()} path node at ({EditorCulture.Format(node.Node.X)}, {EditorCulture.Format(node.Node.Z)})";
+        model.Status = $"Removed a {node.Layer.ToString().ToLowerInvariant()} path node at {AddGeneratedPathNodeHandler.Place(node.Node.X, node.Node.Z)}";
         return Task.CompletedTask;
     }
 }

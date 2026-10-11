@@ -101,6 +101,12 @@ public sealed partial class CoverageStackViewModel : LayerStackViewModel
     /// <summary>
     /// The masks a reference may read: the masks for tools and the strata, but not the grid itself.
     /// </summary>
+    /// <summary>
+    /// The clip's choices: everywhere and every mask but the grid itself.
+    /// </summary>
+    protected override IReadOnlyList<string> ClipChoicesOf(MapDocument document) =>
+        [Everywhere, .. ReferenceChoices(document)];
+
     private IReadOnlyList<string> ReferenceChoices(MapDocument document) =>
         [.. ClipChoices(document).Skip(1).Where(title => LayerStacks.StackKeyOf(LayerStacks.KeyOf(document, title)) != Target?.Key)];
 

@@ -29,7 +29,7 @@ public sealed partial class HeightmapView
             return;
         }
         using Performance.Span measure = Performance.Measure("top.generated-paths");
-        MarkerKinds shown = _model.Markers.ShownKinds & MarkerKinds.PathNodes;
+        MarkerKinds shown = _model.GeneratedPathKinds;
         using (context.PushOpacity(0.5))
         {
             _generatedPaths.Render(context, overlay, preview, shown, _zoom, _offset);

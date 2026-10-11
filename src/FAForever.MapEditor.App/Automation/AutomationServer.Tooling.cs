@@ -111,16 +111,8 @@ public sealed partial class AutomationServer
         Control control = (under is not null ? FindSettable(under, label) : Windows.Select(each => FindSettable(each, label)).FirstOrDefault(found => found is not null))
             ?? throw new ArgumentException($"No control one can set is named, labelled or reads '{label}'");
         WindowInput Input = InputOf(WindowOf(control));
-        bool revealed = ToolRow.Reveal(control);
-        Avalonia.Point? before = control.TranslatePoint(default, window);
-        control.BringIntoView();
-        await LetInputSettleAsync();
-        if (revealed || control.TranslatePoint(default, window) != before)
-        {
-            // the mouse finds what the last frame drew: a row opened or a panel scrolled must be drawn first
-            await NextFrameAsync();
-            await LetInputSettleAsync();
-        }
+        // shown (behind More, scrolled into view), settled and reachable by the mouse, else refused with why
+        (_, _, bool revealed) = await AimAsync(control, label, ClickPoint);
 
         switch (control)
         {
@@ -203,9 +195,26 @@ public sealed partial class AutomationServer
                 await LetInputSettleAsync();
                 break;
             case ListBox list:
-                list.SelectedIndex = IndexOf(list.Items.Cast<object?>().ToList(), value, label);
+            {
+                int index = IndexOf(list.Items.Cast<object?>().ToList(), value, label);
+                list.ScrollIntoView(index);
+                await LetInputSettleAsync();
+                if (list.ContainerFromIndex(index) is ListBoxItem item && item.IsEffectivelyVisible)
+                {
+                    // the item clicked as a person does (where no button or check box of it lies): what a click on it starts runs too
+                    (TopLevel top, Point at, _) = await AimAsync(item, label, PlainPointOf);
+                    WindowInput input = InputOf(top);
+                    input.Move(at);
+                    input.Down(at);
+                    input.Up(at);
+                }
+                else
+                {
+                    list.SelectedIndex = index;
+                }
                 await LetInputSettleAsync();
                 break;
+            }
             case TreeView tree:
             {
                 TreeViewItem item = tree.GetVisualDescendants().OfType<TreeViewItem>()
@@ -267,12 +276,42 @@ public sealed partial class AutomationServer
             && string.Equals(ItemText(control.DataContext, control), label, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>
+    /// Where <c>set</c> clicks a control: a check box's box (near its left end), else its centre.
+    /// </summary>
+    private static Point ClickPoint(Control control) => new Point(Math.Min(control.Bounds.Width / 2, 10), control.Bounds.Height / 2);
+
+    /// <summary>
+    /// A point of a list's item where a click chooses the item: one of a few along its middle where
+    /// the mouse reaches no control of its own (a layer's check boxes, a button); its centre else.
+    /// </summary>
+    private static Point PlainPointOf(Control item)
+    {
+        TopLevel? top = TopLevel.GetTopLevel(item);
+        foreach (double share in new[] { 0.5, 0.7, 0.3, 0.9, 0.1 })
+        {
+            Point local = new Point(item.Bounds.Width * share, item.Bounds.Height / 2);
+            if (top is null || item.TranslatePoint(local, top) is not Point point)
+            {
+                break;
+            }
+            Visual? hit = top.InputHitTest(point) as Visual;
+            bool plain = hit is not null && (hit == item || item.IsVisualAncestorOf(hit));
+            for (Visual? each = hit; plain && each is not null && each != item; each = each.GetVisualParent())
+            {
+                plain = each is not (Button or ToggleButton or TextBox or ComboBox or RangeBase);
+            }
+            if (plain)
+            {
+                return local;
+            }
+        }
+        return new Point(item.Bounds.Width / 2, item.Bounds.Height / 2);
+    }
+
     private async Task ClickAsync(Control control)
     {
-        TopLevel top = WindowOf(control);
-        Point centre = control.TranslatePoint(new Point(Math.Min(control.Bounds.Width / 2, 10), control.Bounds.Height / 2), top)
-            ?? throw new InvalidOperationException("The control is not in the window");
-        await NextFrameAsync();
+        (TopLevel top, Point centre, _) = await AimAsync(control, Avalonia.Automation.AutomationProperties.GetName(control) ?? control.Name ?? control.GetType().Name, ClickPoint);
         WindowInput input = InputOf(top);
         input.Move(centre);
         input.Down(centre);

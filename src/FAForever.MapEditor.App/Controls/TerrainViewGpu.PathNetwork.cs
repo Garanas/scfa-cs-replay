@@ -61,7 +61,7 @@ public sealed partial class TerrainViewGpu
             }
         }
 
-        MarkerKinds shown = _model.Markers.ShownKinds;
+        MarkerKinds shown = _model.GeneratedPathKinds;
         float width = (float)Bounds.Width;
         float height = (float)Bounds.Height;
         if (width <= 0 || height <= 0)

@@ -38,8 +38,8 @@ public static class WaterMaps
 }
 
 /// <summary>
-/// The inspector's part of a water map: what it is, and the water brush that paints it (its erase,
-/// radius and strength; the shape is in the tool's options).
+/// The inspector's part of a water map: what it is, and its stack of layers; the water brush that
+/// paints it keeps its shape, radius, strength and erase in the tool's options, not here.
 /// </summary>
 /// <param name="Brush">The Paint water tool; null until the editor's tools are made.</param>
 /// <param name="Stack">The map's stack of layers (wave 9B): its painted layer is what the brush paints.</param>

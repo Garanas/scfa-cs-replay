@@ -164,6 +164,8 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
             RefreshDetails(null);
             return;
         }
+        // the maps' layers and pictures follow every change of the document (a layer added leaves the water as it was)
+        RefreshDetails(document);
         if (ReferenceEquals(document.Water, _shown))
         {
             return;
@@ -189,20 +191,27 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
         {
             Generator.Refresh(document);
         }
-        RefreshDetails(document.Water);
     }
 
     /// <summary>
-    /// The lines beside the Water panel's entries: the surface's elevation, each map's size, how many
-    /// wave generators there are.
+    /// The lines beside the Water panel's entries: the surface's elevation, each map's layers (its
+    /// size while it has no stack) and picture, how many wave generators there are.
     /// </summary>
-    private void RefreshDetails(Water? water)
+    private void RefreshDetails(MapDocument? document)
     {
+        Water? water = document?.Water;
         Parts.Find(ElevationsPart)!.Detail = water is null ? "" : string.Create(CultureInfo.InvariantCulture, $"Surface {water.Elevation:0.#}");
         foreach (WaterMap map in WaterMaps.All)
         {
             TiledBuffer<byte>? grid = water is null ? null : map.Of(water);
-            Parts.Find(map.PartId)!.Detail = grid is null ? "" : string.Create(CultureInfo.InvariantCulture, $"{grid.Width} × {grid.Height}");
+            PanelPart part = Parts.Find(map.PartId)!;
+            int layers = grid is null ? 0 : Project.Editing.CoverageLayers.StackOf(document!, LayerTarget.Water(map.Mask)).Count;
+            part.Detail = grid is null ? "" : layers == 1 ? "1 layer" : string.Create(CultureInfo.InvariantCulture, $"{layers} layers");
+            // a picture made once per version of the grid (a stroke makes a new one)
+            if (!ReferenceEquals((part.Preview as Rendering.CoveragePicture)?.Grid, grid))
+            {
+                part.Preview = grid is null ? null : new Rendering.CoveragePicture(grid);
+            }
         }
         Parts.Find(WavesPart)!.Detail = water is null ? "" : water.WaveGenerators.Length == 1 ? "1 generator"
             : string.Create(CultureInfo.InvariantCulture, $"{water.WaveGenerators.Length} generators");

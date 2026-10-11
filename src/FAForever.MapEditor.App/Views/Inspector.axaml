@@ -292,6 +292,12 @@
                   <StackPanel Classes="stack">
                     <TextBlock Classes="heading" Text="{Binding Title}" />
                     <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="Selected units" />
+                    <!-- their cost after the mass and energy icons, as the shelf's inspector shows a unit's (F-8) -->
+                    <DockPanel IsVisible="{Binding Cost, Converter={x:Static ObjectConverters.IsNotNull}}">
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Cost" Width="{StaticResource FactLabelWidth}" />
+                      <controls:EconomyAmount Mass="{Binding Cost.Mass, FallbackValue=0}" Energy="{Binding Cost.Energy, FallbackValue=0}" Suffix="{Binding Cost.Suffix, FallbackValue={x:Null}}"
+                                              AutomationProperties.Name="{Binding Cost.Text, StringFormat='Cost of the selected units: {0}'}" />
+                    </DockPanel>
                     <StackPanel Classes="inline">
                       <TextBlock Classes="label" Text="Army" />
                       <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" AutomationProperties.Name="Army of the selected units"

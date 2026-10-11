@@ -229,7 +229,8 @@
                           </Border>
                         </Panel>
                       </Border>
-                      <TextBlock Classes="tiletitle" Text="{Binding Title}" />
+                      <TextBlock Classes="tiletitle" Text="{Binding Title}" TextWrapping="{Binding Title, Converter={x:Static controls:TileTitleWrapConverter.Instance}}"
+                                 TextTrimming="{Binding Title, Converter={x:Static controls:TileTitleWrapConverter.Instance}}" />
                       <TextBlock Classes="caption" Text="{Binding Detail}" TextWrapping="NoWrap" />
                       <controls:EconomyAmount Classes="tileeconomy" Mass="{Binding Mass}" Energy="{Binding Energy}" IsShort="True" EmptyText="{Binding EconomyEmpty}"
                                              IsVisible="{Binding ShowsEconomy}" ToolTip.Tip="{Binding EconomyHelp}" />

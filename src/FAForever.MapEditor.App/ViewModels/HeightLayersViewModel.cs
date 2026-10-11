@@ -50,6 +50,40 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
     public static IReadOnlyList<string> SourceFilters { get; } = ["all", "sculpt", "image", "curve", "mask"];
 
     /// <summary>
+    /// The height layers a filter by use keeps, in words: <c>the height layers shared by the draft and the final</c>.
+    /// </summary>
+    public static string UseWords(string use) => use switch
+    {
+        "shared" => "the height layers shared by the draft and the final",
+        "draft" => "the height layers only in the draft",
+        "final" => "the height layers only in the final",
+        _ => "every height layer",
+    };
+
+    /// <summary>
+    /// The height layers a filter by source keeps, in words: <c>the curves among the height layers</c>.
+    /// </summary>
+    public static string SourceWords(string source) => source switch
+    {
+        "sculpt" => "the sculpted height layers",
+        "image" => "the height layers read from images",
+        "curve" => "the curves among the height layers",
+        "mask" => "the height layers that read a mask",
+        _ => "height layers of every source",
+    };
+
+    /// <summary>
+    /// What both filters keep, for the status line: <c>the height layers only in the draft, and of them the curves</c>.
+    /// </summary>
+    public static string FiltersWords(string use, string source) => (use, source) switch
+    {
+        ("all", "all") => "every height layer",
+        ("all", _) => SourceWords(source),
+        (_, "all") => UseWords(use),
+        _ => $"{UseWords(use)}, and of them {source switch { "sculpt" => "the sculpted ones", "image" => "those read from images", "curve" => "the curves", _ => "those that read a mask" }}",
+    };
+
+    /// <summary>
     /// The "Used in" choices of the inspector.
     /// </summary>
     public static IReadOnlyList<string> Uses { get; } = ["Draft and final", "Draft only", "Final only"];
@@ -68,9 +102,9 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
     {
         _run = run;
         _shownHeights = shown ?? (() => HeightStackKind.Final);
-        UseChips = [.. UseFilters.Select(value => new LayerFilterChip(char.ToUpperInvariant(value[0]) + value[1..], $"Show the height layers used in {value}", value,
+        UseChips = [.. UseFilters.Select(value => new LayerFilterChip(char.ToUpperInvariant(value[0]) + value[1..], $"Show {UseWords(value)}", value,
             new AsyncRelayCommand(() => run("terrain.filterLayers", new JsonObject { ["use"] = value }))))];
-        SourceChips = [.. SourceFilters.Select(value => new LayerFilterChip(char.ToUpperInvariant(value[0]) + value[1..], $"Show the height layers whose source is {value}", value,
+        SourceChips = [.. SourceFilters.Select(value => new LayerFilterChip(char.ToUpperInvariant(value[0]) + value[1..], $"Show {SourceWords(value)}", value,
             new AsyncRelayCommand(() => run("terrain.filterLayers", new JsonObject { ["source"] = value }))))];
         UpdateChips();
         JsonObject Fixed() => new JsonObject { ["layer"] = Chosen };
