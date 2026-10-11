@@ -31,5 +31,26 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(model.Layer.Settings.All(setting => setting.IsEnabled), "the fields can be used");
             Assert.AreEqual("paint", ((TextSetting)model.Layer.Settings[0]).Text, "the name shows");
         }
+
+        [TestMethod]
+        public void AMasksClipOffersEveryMaskButItself()
+        {
+            MapDocument document = MaskLayers.Add(MaskLayers.Add(Project.NewMap.Create(new Project.NewMapSettings { Size = 256 }), "forest"), "rocks");
+            LayerTarget forest = LayerTarget.Mask("forest");
+            CoverageStackViewModel model = new CoverageStackViewModel((_, _) => Task.CompletedTask, () => forest, "mask layer");
+            model.Refresh(document);
+
+            ChoiceSetting clip = (ChoiceSetting)model.Layer.Settings[3];
+            CollectionAssert.Contains(clip.Choices.ToList(), "mask rocks");
+            CollectionAssert.DoesNotContain(clip.Choices.ToList(), "mask forest", "a mask is not clipped by itself (issue 28)");
+            Assert.AreEqual(LayerStackViewModel.Everywhere, clip.Choices[0]);
+
+            // another mask shown: its own clip leaves out that one instead
+            forest = LayerTarget.Mask("rocks");
+            model.Refresh(document);
+            clip = (ChoiceSetting)model.Layer.Settings[3];
+            CollectionAssert.Contains(clip.Choices.ToList(), "mask forest");
+            CollectionAssert.DoesNotContain(clip.Choices.ToList(), "mask rocks");
+        }
     }
 }

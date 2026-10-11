@@ -255,12 +255,13 @@ public partial class LayerStackViewModel : ObservableObject
         _document = document;
         LayerStack? stack = document is null ? null : _read(document);
         ImmutableArray<Layer> layers = stack?.Layers ?? [];
-        string maskNames = document is null ? "" : string.Join("|", ClipChoices(document));
+        IReadOnlyList<string> clips = document is null ? [Everywhere] : ClipChoicesOf(document);
+        string maskNames = document is null ? "" : string.Join("|", clips);
         bool newSettings = maskNames != _maskNames;
         if (newSettings)
         {
             _maskNames = maskNames;
-            Layer = MakeLayerSettings(document is null ? [Everywhere] : ClipChoices(document));
+            Layer = MakeLayerSettings(clips);
         }
         // a dab of a brush changes a layer's values, not what the list shows of it: only the previews follow
         string signature = FilterKey + "#" + string.Join("|", layers.Select(layer => layer.Name + ":" + SummaryOf(layer) + ":" + layer.Path));
@@ -380,6 +381,12 @@ public partial class LayerStackViewModel : ObservableObject
     /// <summary>
     /// The clip choices of a document: everywhere, its masks for tools, the strata.
     /// </summary>
+    /// <summary>
+    /// What this stack's clip offers: <see cref="ClipChoices"/> by default; a stack of coverage
+    /// leaves out its own grid (a mask clipped by itself).
+    /// </summary>
+    protected virtual IReadOnlyList<string> ClipChoicesOf(MapDocument document) => ClipChoices(document);
+
     public static IReadOnlyList<string> ClipChoices(MapDocument document) =>
         [Everywhere,
             .. document.Masks.Keys.Select(name => LayerStacks.MaskTitle(LayerStacks.MaskKey(name))),
