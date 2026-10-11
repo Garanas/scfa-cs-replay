@@ -149,7 +149,7 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 Name = name,
                 Source = new CurveSource(curve),
-                Combine = HeightCurves.CombineOf(curve.Profile),
+                Combine = HeightCurves.CombineOf(curve),
                 Values = values,
                 Coverage = coverage,
             };
@@ -177,11 +177,113 @@ namespace FAForever.MapEditor.Project.Editing
                 return document;
             }
             (TiledBuffer<float> values, TiledBuffer<byte>? coverage) = HeightCurves.Rasterize(curve, document.Width, document.Height, layer.Values, layer.Coverage, before);
-            // a new profile brings its way of combining, unless the map maker chose another
-            LayerCombine combine = before.Profile != curve.Profile && layer.Combine == HeightCurves.CombineOf(before.Profile)
-                ? HeightCurves.CombineOf(curve.Profile)
-                : layer.Combine;
+            // a new profile or road mode brings its way of combining, unless the map maker chose another
+            LayerCombine combine = layer.Combine == HeightCurves.CombineOf(before) ? HeightCurves.CombineOf(curve) : layer.Combine;
             return HeightStacks.WithLayer(document, kind, index, layer with { Source = new CurveSource(curve), Values = values, Coverage = coverage, Combine = combine });
+        }
+
+        /// <summary>
+        /// The curve of a curve layer.
+        /// </summary>
+        /// <exception cref="ArgumentException">There is no such layer, or it is no curve.</exception>
+        public static HeightCurve CurveOf(MapDocument document, string name)
+        {
+            (HeightStackKind kind, int index) = HeightStacks.Locate(document, name);
+            Layer layer = HeightStacks.Of(document, kind).Layers[index];
+            return layer.Curve ?? throw new ArgumentException($"The height layer {layer.Name} is no curve", nameof(name));
+        }
+
+        /// <summary>
+        /// The document with a curve running the other way (<see cref="HeightCurves.Reversed"/>): a
+        /// cliff's high side flips, the other profiles keep their look.
+        /// </summary>
+        /// <exception cref="ArgumentException">There is no such layer, it is no curve, or it is locked.</exception>
+        public static MapDocument ReverseCurve(MapDocument document, string name) =>
+            SetCurve(document, name, HeightCurves.Reversed(CurveOf(document, name)));
+
+        /// <summary>
+        /// The document with one point of a curve set (its place, height and its own values: the
+        /// node table's edit).
+        /// </summary>
+        /// <exception cref="ArgumentException">There is no such layer or point, it is no curve, or it is locked.</exception>
+        public static MapDocument SetCurvePoint(MapDocument document, string name, int index, CurvePoint point)
+        {
+            HeightCurve curve = CurveOf(document, name);
+            if (index < 0 || index >= curve.Points.Length)
+            {
+                throw new ArgumentException($"The curve {name} has points 0 to {curve.Points.Length - 1}, not {index}", nameof(index));
+            }
+            if (point.Strength is < 0 or > 1 || point.Width is < 0 || point.FalloffLeft is < 0 || point.FalloffRight is < 0)
+            {
+                throw new ArgumentException("A point's width and falloffs are 0 or more ogrids, its strength 0 to 1", nameof(point));
+            }
+            return SetCurve(document, name, curve with { Points = curve.Points.SetItem(index, point) });
+        }
+
+        /// <summary>
+        /// The document with the grade between two points of a curve made even
+        /// (<see cref="HeightCurves.EvenGrade"/>): the points between them get heights on a straight
+        /// line by the distance along the spline.
+        /// </summary>
+        /// <exception cref="ArgumentException">There is no such layer or point, it is no curve, or it is locked.</exception>
+        public static MapDocument EvenGrade(MapDocument document, string name, int from, int to) =>
+            SetCurve(document, name, HeightCurves.EvenGrade(CurveOf(document, name), from, to));
+
+        /// <summary>
+        /// The document with points of a road or river put on the ground: each gets the height the
+        /// layers below the curve's layer make at its place (in the stack that holds it, the final's
+        /// first). An explicit snap: the points do not follow the ground afterwards.
+        /// </summary>
+        /// <param name="indices">The points to snap; null for all of them.</param>
+        /// <exception cref="ArgumentException">There is no such layer or point, it is no road or river, or it is locked.</exception>
+        public static MapDocument SnapCurve(MapDocument document, string name, IReadOnlyCollection<int>? indices = null)
+        {
+            (HeightStackKind kind, int index) = HeightStacks.Locate(document, name);
+            LayerStack stack = HeightStacks.Of(document, kind);
+            HeightCurve curve = CurveOf(document, name);
+            if (!HeightCurves.IsAbsolute(curve.Profile))
+            {
+                throw new ArgumentException($"Only a road's or river's points lie on the ground; {stack.Layers[index].Name} is a {curve.Profile.ToString().ToLowerInvariant()}", nameof(name));
+            }
+            if (indices is not null && indices.Any(i => i < 0 || i >= curve.Points.Length))
+            {
+                throw new ArgumentException($"The curve {name} has points 0 to {curve.Points.Length - 1}", nameof(indices));
+            }
+            Func<float, float, float> ground = GroundBelow(document, stack, index);
+            var points = curve.Points.Select((point, i) => indices is null || indices.Contains(i) ? point with { Height = ground(point.X, point.Z) } : point);
+            return SetCurve(document, name, curve with { Points = [.. points] });
+        }
+
+        /// <summary>
+        /// The height the layers below <paramref name="upTo"/> make at a place (between the corners),
+        /// in game units; each tile worked out once.
+        /// </summary>
+        private static Func<float, float, float> GroundBelow(MapDocument document, LayerStack stack, int upTo)
+        {
+            const int size = TiledBuffer<float>.TileSize;
+            Dictionary<(int, int), float[]> tiles = [];
+            int width = document.Width + 1;
+            int height = document.Height + 1;
+            float Corner(int x, int z)
+            {
+                x = Math.Clamp(x, 0, width - 1);
+                z = Math.Clamp(z, 0, height - 1);
+                if (!tiles.TryGetValue((x / size, z / size), out float[]? tile))
+                {
+                    tile = new float[size * size];
+                    LayerStacks.TileOf(document, stack, x / size, z / size, upTo, tile);
+                    tiles[(x / size, z / size)] = tile;
+                }
+                return tile[z % size * size + x % size];
+            }
+            return (x, z) =>
+            {
+                int x0 = (int)MathF.Floor(x), z0 = (int)MathF.Floor(z);
+                float fx = x - x0, fz = z - z0;
+                float top = Corner(x0, z0) + (Corner(x0 + 1, z0) - Corner(x0, z0)) * fx;
+                float bottom = Corner(x0, z0 + 1) + (Corner(x0 + 1, z0 + 1) - Corner(x0, z0 + 1)) * fx;
+                return top + (bottom - top) * fz;
+            };
         }
 
         /// <summary>

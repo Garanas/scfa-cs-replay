@@ -26,10 +26,13 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// skybox as the game reads it: the cumulus clouds' three textures (<c>cumulusLightRamp</c>,
         /// <c>cumulusDispersionRamp</c>, <c>cumulusTexture</c>) where format 7 had <c>midColor</c>, no
         /// <c>clouds7</c>, and always four cirrus layers. A project of format 7 opens: its
-        /// <c>midColor</c> and <c>clouds7</c> are left out and its cirrus layers made four. An editor
+        /// <c>midColor</c> and <c>clouds7</c> are left out and its cirrus layers made four. 9: a height
+        /// curve's own values per point (<c>nodes</c>), its shape, noise, variation and road mode, and
+        /// <c>lineOnly</c> written for every closed curve, which fills its inside unless line only; a
+        /// closed curve of format 8 or older (without <c>lineOnly</c>) opens as line only. An editor
         /// reads every version up to its own.
         /// </summary>
-        public const int CurrentFormatVersion = 8;
+        public const int CurrentFormatVersion = 9;
 
         /// <summary>
         /// The layout of the project; <see cref="CurrentFormatVersion"/> for projects this library writes.

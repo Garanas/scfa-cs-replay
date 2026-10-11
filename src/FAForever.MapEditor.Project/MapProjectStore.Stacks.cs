@@ -211,17 +211,76 @@ namespace FAForever.MapEditor.Project
             Closed = curve.Closed ? true : null,
             Symmetry = MapProjectMapping.ToDto(curve.Symmetry),
             Points = [.. curve.Points.Select(point => new[] { point.X, point.Z, point.Height })],
+            Nodes = curve.Points.Any(point => !point.IsPlain)
+                ? [.. curve.Points.Select((point, index) => (point, index)).Where(node => !node.point.IsPlain).Select(node => new CurveNodeDto
+                {
+                    Index = node.index,
+                    Width = node.point.Width,
+                    FalloffLeft = node.point.FalloffLeft,
+                    FalloffRight = node.point.FalloffRight,
+                    Strength = node.point.Strength,
+                    Sharp = node.point.Sharp ? true : null,
+                })]
+                : null,
+            FalloffRight = curve.FalloffRight,
+            FalloffShape = curve.FalloffShape,
+            TerraceSteps = curve.TerraceSteps == 3 ? null : curve.TerraceSteps,
+            CliffFace = curve.CliffFace == 1 ? null : curve.CliffFace,
+            RoadMode = curve.RoadMode == CurveRoadMode.Both ? null : curve.RoadMode,
+            Camber = curve.Camber == 0 ? null : curve.Camber,
+            NoiseAmplitude = curve.NoiseAmplitude == 0 ? null : curve.NoiseAmplitude,
+            NoiseScale = curve.NoiseScale == 16 ? null : curve.NoiseScale,
+            NoiseSeed = curve.NoiseSeed == 0 ? null : curve.NoiseSeed,
+            HeightVariation = curve.HeightVariation.IsNone ? null : [curve.HeightVariation.Min, curve.HeightVariation.Max],
+            WidthVariation = curve.WidthVariation.IsNone ? null : [curve.WidthVariation.Min, curve.WidthVariation.Max],
+            VariationScale = curve.VariationScale == 32 ? null : curve.VariationScale,
+            // always written for a closed curve: one without it is from before closed curves filled
+            LineOnly = curve.Closed ? curve.LineOnly : curve.LineOnly ? true : null,
         };
 
-        private static HeightCurve ToModel(HeightCurveDto c) => new HeightCurve
+        private static HeightCurve ToModel(HeightCurveDto c)
         {
-            Profile = c.Profile,
-            Width = c.Width,
-            Falloff = c.Falloff,
-            Closed = c.Closed == true,
-            Symmetry = MapProjectMapping.ToModel(c.Symmetry),
-            Points = [.. c.Points.Where(point => point.Length >= 2).Select(point => new CurvePoint(point[0], point[1], point.Length > 2 ? point[2] : 0))],
-        };
+            CurvePoint[] points = [.. c.Points.Where(point => point.Length >= 2).Select(point => new CurvePoint(point[0], point[1], point.Length > 2 ? point[2] : 0))];
+            foreach (CurveNodeDto node in c.Nodes ?? [])
+            {
+                if (node.Index >= 0 && node.Index < points.Length)
+                {
+                    points[node.Index] = points[node.Index] with
+                    {
+                        Width = node.Width,
+                        FalloffLeft = node.FalloffLeft,
+                        FalloffRight = node.FalloffRight,
+                        Strength = node.Strength,
+                        Sharp = node.Sharp == true,
+                    };
+                }
+            }
+            return new HeightCurve
+            {
+                Profile = c.Profile,
+                Width = c.Width,
+                Falloff = c.Falloff,
+                Closed = c.Closed == true,
+                Symmetry = MapProjectMapping.ToModel(c.Symmetry),
+                Points = [.. points],
+                FalloffRight = c.FalloffRight,
+                FalloffShape = c.FalloffShape,
+                TerraceSteps = c.TerraceSteps ?? 3,
+                CliffFace = c.CliffFace ?? 1,
+                RoadMode = c.RoadMode ?? CurveRoadMode.Both,
+                Camber = c.Camber ?? 0,
+                NoiseAmplitude = c.NoiseAmplitude ?? 0,
+                NoiseScale = c.NoiseScale ?? 16,
+                NoiseSeed = c.NoiseSeed ?? 0,
+                HeightVariation = RangeOf(c.HeightVariation),
+                WidthVariation = RangeOf(c.WidthVariation),
+                VariationScale = c.VariationScale ?? 32,
+                // a closed curve saved before closed curves filled (format 8 and older) keeps its look
+                LineOnly = c.LineOnly ?? c.Closed == true,
+            };
+        }
+
+        private static CurveRange RangeOf(float[]? range) => range is [float min, float max] ? new CurveRange(min, max) : CurveRange.None;
 
         /// <summary>
         /// The document with the project's heightmap stack (or the layers of an older project), and
