@@ -175,6 +175,42 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// Puts units into a new group (user story U-11): one per army the units belong to, named
+        /// <paramref name="name"/> (<c>GROUP_1</c> when null or empty; a name a sibling has gets the
+        /// next free number), under the deepest group of that army that holds all of its selected
+        /// units. A name that is no unit is left out.
+        /// </summary>
+        /// <param name="groups">The new groups: the army and the group's path, in the order of the units' armies.</param>
+        /// <exception cref="ArgumentException">None of the names is a unit, or the name holds a <c>/</c>.</exception>
+        public static MapDocument GroupUnits(this MapDocument document, IEnumerable<string> names, string? name, out ImmutableArray<(string Army, ImmutableArray<string> Path)> groups)
+        {
+            PlacedUnit[] units = [.. names.Distinct(StringComparer.Ordinal).Select(document.FindUnit).OfType<PlacedUnit>()];
+            if (units.Length == 0)
+            {
+                throw new ArgumentException("Select units to group: none of them is on the map");
+            }
+            ImmutableArray<(string Army, ImmutableArray<string> Path)>.Builder made = ImmutableArray.CreateBuilder<(string, ImmutableArray<string>)>();
+            foreach (IGrouping<string, PlacedUnit> byArmy in units.GroupBy(unit => unit.Army))
+            {
+                ImmutableArray<string> common = byArmy.First().Group;
+                foreach (PlacedUnit unit in byArmy.Skip(1))
+                {
+                    int same = 0;
+                    while (same < common.Length && same < unit.Group.Length && common[same] == unit.Group[same])
+                    {
+                        same++;
+                    }
+                    common = [.. common.Take(same)];
+                }
+                document = document.AddGroup(byArmy.Key, common, name, out ImmutableArray<string> added);
+                document = document.MoveUnits(byArmy.Select(unit => unit.Unit.Name), byArmy.Key, added, out _);
+                made.Add((byArmy.Key, added));
+            }
+            groups = made.ToImmutable();
+            return document;
+        }
+
+        /// <summary>
         /// A template of units to place again (a preset, user story U-4): a group named
         /// <paramref name="name"/> with the units, their places relative to the middle of them (x
         /// and z, the middle rounded to a whole ogrid) and their heights above the terrain (y), in the groups they are in below the
@@ -395,6 +431,62 @@ namespace FAForever.MapEditor.Project.Editing
         /// A heading in whole quarter turns, the nearest to the one given.
         /// </summary>
         public static float SnapHeading(float radians) => MathF.Round(radians / (MathF.PI / 2)) * (MathF.PI / 2);
+
+        /// <summary>
+        /// The offset of a move rounded so that the first structure among the things lands on the build
+        /// grid (its centre where <see cref="Snap"/> puts it); everything else moves by the same amount.
+        /// The offset given when none of the things is a structure.
+        /// </summary>
+        /// <param name="structureFootprint">A blueprint's footprint in ogrids when it is a structure; null for any other unit.</param>
+        public static (float Dx, float Dz) KeepOnGrid(MapDocument document, IEnumerable<ObjectRef> things, float dx, float dz, Func<string, (double SizeX, double SizeZ)?> structureFootprint)
+        {
+            if (FirstStructure(document, things, structureFootprint) is not (PlacedUnit placed, double sizeX, double sizeZ))
+            {
+                return (dx, dz);
+            }
+            Vector3 p = placed.Unit.Position;
+            (float x, float z) = Snap(p.X + dx, p.Z + dz, sizeX, sizeZ, placed.Unit.Orientation.Y);
+            return (x - p.X, z - p.Z);
+        }
+
+        /// <summary>
+        /// The place things are put at (<see cref="ObjectEdits.PlaceObjects"/>: <c>x</c> and <c>z</c>,
+        /// either left out to stay) rounded so that the first structure among them stands on the build
+        /// grid; the place given when none is a structure. An axis left out stays left out.
+        /// </summary>
+        public static (float? X, float? Z) KeepPlaceOnGrid(MapDocument document, IEnumerable<ObjectRef> things, float? x, float? z, Func<string, (double SizeX, double SizeZ)?> structureFootprint)
+        {
+            if ((x is null && z is null) || FirstStructure(document, things, structureFootprint) is not (PlacedUnit placed, double sizeX, double sizeZ))
+            {
+                return (x, z);
+            }
+            Vector3 p = placed.Unit.Position;
+            (float sx, float sz) = Snap(x ?? p.X, z ?? p.Z, sizeX, sizeZ, placed.Unit.Orientation.Y);
+            return (x is null ? null : sx, z is null ? null : sz);
+        }
+
+        /// <summary>
+        /// The first of the things that is a structure, with its footprint; null for none.
+        /// </summary>
+        private static (PlacedUnit Unit, double SizeX, double SizeZ)? FirstStructure(MapDocument document, IEnumerable<ObjectRef> things, Func<string, (double SizeX, double SizeZ)?> structureFootprint)
+        {
+            ObjectRef[] units = [.. things.Where(thing => thing.Kind == ObjectKind.Unit && thing.Name is not null)];
+            if (units.Length == 0)
+            {
+                return null;
+            }
+            // one pass over the map's units, not one per thing
+            HashSet<string> names = [.. units.Select(thing => thing.Name!)];
+            Dictionary<string, PlacedUnit> found = document.AllUnits().Where(unit => names.Contains(unit.Unit.Name)).GroupBy(unit => unit.Unit.Name).ToDictionary(group => group.Key, group => group.First());
+            foreach (ObjectRef thing in units)
+            {
+                if (found.TryGetValue(thing.Name!, out PlacedUnit? placed) && structureFootprint(placed.Unit.Blueprint) is (double sizeX, double sizeZ))
+                {
+                    return (placed, sizeX, sizeZ);
+                }
+            }
+            return null;
+        }
 
         private static float Axis(float value, int size) => size % 2 == 1 ? MathF.Floor(value) + 0.5f : MathF.Round(value);
     }

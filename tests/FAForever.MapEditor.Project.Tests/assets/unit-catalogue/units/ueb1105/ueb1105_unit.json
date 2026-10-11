@@ -1,0 +1,55 @@
+{
+  "id": "ueb1105",
+  "name": "Energy Storage",
+  "faction": "Uef",
+  "techLevel": 1,
+  "categories": [
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2COMMANDER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3ENGINEER",
+    "DRAGBUILD",
+    "ECONOMIC",
+    "ENERGYSTORAGE",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SIZE4",
+    "SORTECONOMY",
+    "STRUCTURE",
+    "TECH1",
+    "UEF",
+    "VISIBLETORECON",
+    "VOLATILE"
+  ],
+  "strategicIcon": "icon_structure_energy_storage",
+  "buildIcon": "land",
+  "size": {
+    "x": 1,
+    "y": 1.25,
+    "z": 1
+  },
+  "uniformScale": 0.145,
+  "health": 500,
+  "massCost": 250,
+  "energyCost": 1200,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 120,
+      "mesh": "/units/ueb1105/ueb1105_lod0.glb",
+      "shader": "Unit",
+      "albedo": "/units/ueb1105/ueb1105_albedo.png",
+      "normals": "/units/ueb1105/ueb1105_normalsts.png",
+      "specular": "/units/ueb1105/ueb1105_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/ueb1105/ueb1105_lod1.glb",
+      "shader": "Unit",
+      "albedo": "/units/ueb1105/ueb1105_lod1_albedo.png",
+      "normals": "/units/ueb1105/ueb1105_normalsts.png",
+      "specular": "/units/ueb1105/ueb1105_lod1_specteam.png"
+    }
+  ]
+}

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -630,6 +631,69 @@ public sealed partial class UnitSelection(Func<string, JsonObject, Task> run) : 
     public partial string Group { get; private set; } = "";
 
     /// <summary>
+    /// The groups of the army the selected units belong to, to choose one from (user story U-11);
+    /// none while they belong to several armies.
+    /// </summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<UnitGroupChoice> Groups { get; private set; } = [];
+
+    private UnitGroupChoice? _groupChoice;
+
+    /// <summary>
+    /// The group all the selected units are in; null when they are in different ones. Choosing one
+    /// moves them all into it (<c>units.moveToGroup</c>).
+    /// </summary>
+    public UnitGroupChoice? GroupChoice
+    {
+        get => _groupChoice;
+        set
+        {
+            if (value is null || value == _groupChoice)
+            {
+                return;
+            }
+            _groupChoice = value;
+            OnPropertyChanged();
+            if (!_showing)
+            {
+                _ = run("units.moveToGroup", new JsonObject { ["group"] = value.Path });
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether the group can be chosen: the selected units belong to one army.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool CanChooseGroup { get; private set; }
+
+    /// <summary>
+    /// Whether the selected units are in a group that Ungroup can dissolve: they share one group
+    /// that is not the game's own (<c>INITIAL</c>, <c>WRECKAGE</c>) nor the root.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool CanUngroup { get; private set; }
+
+    /// <summary>
+    /// Whether Distribute has enough to work with: three units or more.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool CanDistribute { get; private set; }
+
+    /// <summary>
+    /// The blueprint of the selected units: its id and name, or how many kinds they are.
+    /// </summary>
+    [ObservableProperty]
+    public partial string Blueprint { get; private set; } = "";
+
+    /// <summary>
+    /// Makes the selected units the same kind of unit of a faction (<c>units.toFaction</c>); the
+    /// parameter is <c>uef</c>, <c>cybran</c>, <c>aeon</c> or <c>seraphim</c>.
+    /// </summary>
+    [RelayCommand]
+    private void ToFaction(string faction) => _ = run("units.toFaction", new JsonObject { ["faction"] = faction });
+
+    /// <summary>
     /// What building the selected units costs together (F-8), as the shelf's inspector shows a
     /// unit's: mass and energy after their icons, for how many units; null when the catalogue knows
     /// none of their costs.
@@ -654,6 +718,20 @@ public sealed partial class UnitSelection(Func<string, JsonObject, Task> run) : 
             OnPropertyChanged(nameof(Army));
             string[] groups = [.. units.Select(unit => UnitGroupEdits.PathText(unit.Group)).Distinct()];
             Group = groups.Length == 1 ? (groups[0].Length == 0 ? "(the root group)" : groups[0]) : SelectionInspector.Mixed;
+            CanChooseGroup = armies.Length == 1;
+            UnitGroupChoice[] choices = armies.Length == 1 && document.Armies.FirstOrDefault(a => a.Name == armies[0]) is Army own ? [.. GroupChoices(own.Units, "")] : [];
+            if (!Groups.SequenceEqual(choices))
+            {
+                Groups = choices;
+            }
+            _groupChoice = groups.Length == 1 && armies.Length == 1 ? new UnitGroupChoice(groups[0]) : null;
+            OnPropertyChanged(nameof(GroupChoice));
+            CanUngroup = _groupChoice is { Path: { Length: > 0 } path } && !(path is UnitGroupEdits.InitialGroup or UnitWrecks.GroupName);
+            CanDistribute = units.Length >= 3;
+            string[] blueprints = [.. units.Select(unit => unit.Unit.Blueprint.ToLowerInvariant()).Distinct()];
+            Blueprint = blueprints.Length == 1
+                ? (Owner?.Catalog().Find(blueprints[0]) is { Kind: AssetKind.Unit } known ? $"{blueprints[0]} {known.Name}" : blueprints[0])
+                : blueprints.Length == 0 ? "" : $"{blueprints.Length} kinds";
             int wrecks = units.Count(UnitWrecks.IsWreck);
             _wrecks = wrecks == 0 ? false : wrecks == units.Length ? true : null;
             OnPropertyChanged(nameof(Wrecks));
@@ -666,6 +744,31 @@ public sealed partial class UnitSelection(Func<string, JsonObject, Task> run) : 
 
     protected override IEnumerable<string> LinesOf(MapDocument document, IReadOnlyList<ObjectRef> things) =>
         things.Select(document.Find).OfType<PlacedUnit>().Select(unit => $"{unit.Unit.Name}: {unit.Unit.Blueprint}, {unit.Army}");
+
+    /// <summary>
+    /// The paths of a group and of the groups below it, the group first.
+    /// </summary>
+    private static IEnumerable<UnitGroupChoice> GroupChoices(UnitGroup group, string path)
+    {
+        yield return new UnitGroupChoice(path);
+        foreach (UnitGroup child in group.Groups)
+        {
+            foreach (UnitGroupChoice choice in GroupChoices(child, path.Length == 0 ? child.Name : $"{path}/{child.Name}"))
+            {
+                yield return choice;
+            }
+        }
+    }
+}
+
+/// <summary>
+/// A group of an army to choose in the inspector: its path (<c>INITIAL/Town</c>; empty for the root group).
+/// </summary>
+public sealed record UnitGroupChoice(string Path)
+{
+    public string Title => Path.Length == 0 ? "(the root group)" : Path;
+
+    public override string ToString() => Title;
 }
 
 /// <summary>

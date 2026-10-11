@@ -1,0 +1,57 @@
+{
+  "id": "ueb1103",
+  "name": "Mass Extractor",
+  "faction": "Uef",
+  "techLevel": 1,
+  "categories": [
+    "BUILTBYCOMMANDER",
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3ENGINEER",
+    "CQUEMOV",
+    "DRAGBUILD",
+    "ECONOMIC",
+    "MASSEXTRACTION",
+    "MASSPRODUCTION",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SHOWQUEUE",
+    "SIZE4",
+    "SORTECONOMY",
+    "STRUCTURE",
+    "TECH1",
+    "UEF",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_structure1_mass",
+  "buildIcon": "amph",
+  "size": {
+    "x": 0.75,
+    "y": 1.4,
+    "z": 0.75
+  },
+  "uniformScale": 0.06,
+  "health": 400,
+  "massCost": 36,
+  "energyCost": 360,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 120,
+      "mesh": "/units/ueb1103/ueb1103_lod0.glb",
+      "shader": "Unit",
+      "albedo": "/units/ueb1103/ueb1103_albedo.png",
+      "normals": "/units/ueb1103/ueb1103_normalsts.png",
+      "specular": "/units/ueb1103/ueb1103_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/ueb1103/ueb1103_lod1.glb",
+      "shader": "Unit",
+      "albedo": "/units/ueb1103/ueb1103_lod1_albedo.png",
+      "normals": "/units/ueb1103/ueb1103_normalsts.png",
+      "specular": "/units/ueb1103/ueb1103_lod1_specteam.png"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "id": "xsb1105",
+  "name": "Energy Storage",
+  "faction": "Seraphim",
+  "techLevel": 1,
+  "categories": [
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2COMMANDER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3COMMANDER",
+    "BUILTBYTIER3ENGINEER",
+    "DRAGBUILD",
+    "ECONOMIC",
+    "ENERGYSTORAGE",
+    "PRODUCTFA",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SERAPHIM",
+    "SIZE4",
+    "SORTECONOMY",
+    "STRUCTURE",
+    "TECH1",
+    "VISIBLETORECON",
+    "VOLATILE"
+  ],
+  "strategicIcon": "icon_structure_energy_storage",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.6,
+    "y": 0.6,
+    "z": 0.6
+  },
+  "uniformScale": 0.065,
+  "health": 500,
+  "massCost": 250,
+  "energyCost": 1200,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/xsb1105/xsb1105_lod0.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsb1105/xsb1105_albedo.png",
+      "normals": "/units/xsb1105/xsb1105_normalsts.png",
+      "specular": "/units/xsb1105/xsb1105_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/xsb1105/xsb1105_lod1.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsb1105/xsb1105_lod1_albedo.png",
+      "normals": "/units/xsb1105/xsb1105_normalsts.png",
+      "specular": "/units/xsb1105/xsb1105_lod1_specteam.png"
+    }
+  ]
+}

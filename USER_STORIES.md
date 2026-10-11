@@ -550,10 +550,17 @@ reads again when it changes; and nothing that generates runs by itself.
       as the game's control groups, kept with the project and shown along the view; a click inside
       a structure's footprint picks it; the top view draws units as their footprint in the army's
       colour.
-- [ ] **U-11 Editing many units.** Group the selection into a new group (Ctrl+G) and ungroup; the
+- [x] **U-11 Editing many units.** Group the selection into a new group (Ctrl+G) and ungroup; the
       group as a choice in the inspector; replace the blueprint of the selected units, or convert
       them to another faction's unit of the same kind and tech; a move keeps structures on the
-      build grid; distribute the selection evenly.
+      build grid; distribute the selection evenly. Today: `units.group` (Ctrl+G, a group per army
+      under the deepest group holding the selected units) and `units.ungroup`; the inspector's
+      Group is a combo of the army's groups, with Blueprint, Replace..., the faction chips UEF,
+      Cybran, Aeon and Seraphim (the same id under the other faction's letters, else the unit with
+      the same layer and tech that shares most categories; a unit without a counterpart stays and
+      is counted), Group, Ungroup and Distribute (`units.distribute`, three units or more); a
+      handle drag, the arrows and `edit.place` round the move so the first structure lands on the
+      build grid (the select tool's check box "Keep structures on the build grid").
 - [ ] **U-12 Placement checks.** Problems lists structures whose footprints overlap and structures
       where the ground does not allow them (too steep, the wrong layer: water or land), from the
       blueprint's skirt, build layers and slope limit, which the workspace's converted assets carry;

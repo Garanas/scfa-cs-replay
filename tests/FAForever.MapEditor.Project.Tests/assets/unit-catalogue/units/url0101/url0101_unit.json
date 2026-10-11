@@ -1,0 +1,54 @@
+{
+  "id": "url0101",
+  "name": "Land Scout",
+  "faction": "Cybran",
+  "techLevel": 1,
+  "categories": [
+    "BOT",
+    "BUILTBYTIER1FACTORY",
+    "BUILTBYTIER2FACTORY",
+    "BUILTBYTIER3FACTORY",
+    "CYBRAN",
+    "INTELLIGENCE",
+    "LAND",
+    "MOBILE",
+    "OVERLAYRADAR",
+    "PRODUCTSC1",
+    "RADAR",
+    "RECLAIMABLE",
+    "SCOUT",
+    "SELECTABLE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_land1_intel",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.7,
+    "y": 0.6,
+    "z": 1
+  },
+  "uniformScale": 0.027,
+  "health": 15,
+  "massCost": 8,
+  "energyCost": 60,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/url0101/url0101_lod0.glb",
+      "shader": "Insect",
+      "albedo": "/units/url0101/url0101_albedo.png",
+      "normals": "/units/url0101/url0101_normalsts.png",
+      "specular": "/units/url0101/url0101_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/url0101/url0101_lod1.glb",
+      "shader": "Insect",
+      "albedo": "/units/url0101/url0101_lod1_albedo.png",
+      "normals": "/units/url0101/url0101_normalsts.png",
+      "specular": "/units/url0101/url0101_lod1_specteam.png"
+    }
+  ]
+}

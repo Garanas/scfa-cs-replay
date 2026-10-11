@@ -1,0 +1,50 @@
+{
+  "id": "uea0101",
+  "name": "Air Scout",
+  "faction": "Uef",
+  "techLevel": 1,
+  "categories": [
+    "AIR",
+    "BUILTBYTIER1FACTORY",
+    "BUILTBYTIER2FACTORY",
+    "BUILTBYTIER3FACTORY",
+    "HIGHALTAIR",
+    "INTELLIGENCE",
+    "MOBILE",
+    "OVERLAYRADAR",
+    "OVERLAYSONAR",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SCOUT",
+    "SELECTABLE",
+    "TECH1",
+    "UEF",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_fighter1_intel",
+  "buildIcon": "air",
+  "size": {
+    "x": 0.8,
+    "y": 0.4,
+    "z": 1
+  },
+  "footprint": {
+    "sizeX": 1,
+    "sizeZ": 1
+  },
+  "uniformScale": 0.08,
+  "health": 35,
+  "massCost": 40,
+  "energyCost": 580,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 215,
+      "mesh": "/units/uea0101/uea0101_lod0.glb",
+      "shader": "Unit",
+      "albedo": "/units/uea0101/uea0101_albedo.png",
+      "normals": "/units/uea0101/uea0101_normalsts.png",
+      "specular": "/units/uea0101/uea0101_specteam.png"
+    }
+  ]
+}

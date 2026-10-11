@@ -431,8 +431,18 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
         }
         Vector2 delta = HandleMaths.MoveDelta(_frame?.Middle ?? new Vector2(_from.X, _from.Z), new Vector2(x - _from.X, z - _from.Z), AxisOf(modifiers), SnapOf(modifiers));
         // with the symmetry, the mirror partners as they were at the press move along (F-12)
-        Apply(before => before.MoveObjects(_moving, _partners, delta.X, delta.Y));
+        Apply(MoveBy(delta));
     }
+
+    /// <summary>
+    /// The edit that moves the selection by an offset, rounded onto the build grid when the settings
+    /// say so (user story U-11); its mirror partners follow.
+    /// </summary>
+    private Func<MapDocument, MapDocument> MoveBy(Vector2 delta) => before =>
+    {
+        Vector2 kept = model.KeepOnGrid(before, _moving, delta);
+        return before.MoveObjects(_moving, _partners, kept.X, kept.Y);
+    };
 
     /// <summary>
     /// Moves, turns or scales the selection by how far the mouse went on the level of its handles
@@ -478,7 +488,7 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
                     _ => AxisOf(input.Modifiers),
                 };
                 Vector2 delta = HandleMaths.MoveDelta(frame.Middle, place - _pressPlane, axis, SnapOf(input.Modifiers));
-                Apply(before => before.MoveObjects(_moving, _partners, delta.X, delta.Y));
+                Apply(MoveBy(delta));
                 break;
         }
     }

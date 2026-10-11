@@ -22,7 +22,11 @@ public sealed class NudgeHandler(MainViewModel model, SelectionViewModel selecti
     public Task Handle(Nudge request, CancellationToken cancellationToken)
     {
         ImmutableArray<ObjectRef> things = selection.Items;
-        edit.Transaction.Apply(document => document.MoveObjects(things, model.PartnersOf(document, things), request.Dx, request.Dz));
+        edit.Transaction.Apply(document =>
+        {
+            Vector2 offset = model.KeepOnGrid(document, things, new Vector2(request.Dx, request.Dz));
+            return document.MoveObjects(things, model.PartnersOf(document, things), offset.X, offset.Y);
+        });
         return Task.CompletedTask;
     }
 }
@@ -108,8 +112,11 @@ public sealed class PlaceSelectionHandler(MainViewModel model, SelectionViewMode
     public Task Handle(PlaceSelection request, CancellationToken cancellationToken)
     {
         ImmutableArray<ObjectRef> things = selection.Items;
-        edit.Transaction.Apply(document => document.PlaceObjects(things, model.PartnersOf(document, things), request.X, request.Z,
-            request.Heading is float heading ? heading * MathF.PI / 180 : null));
+        edit.Transaction.Apply(document =>
+        {
+            (float? x, float? z) = model.KeepPlaceOnGrid(document, things, request.X, request.Z);
+            return document.PlaceObjects(things, model.PartnersOf(document, things), x, z, request.Heading is float heading ? heading * MathF.PI / 180 : null);
+        });
         // named after the fields given: what the inspector's field changed
         string[] given = [.. new[] { request.X is null ? null : "X", request.Z is null ? null : "Z", request.Heading is null ? null : "heading" }.OfType<string>()];
         if (given.Length > 0)

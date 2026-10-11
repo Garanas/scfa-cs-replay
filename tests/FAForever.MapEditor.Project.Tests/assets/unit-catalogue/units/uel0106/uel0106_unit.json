@@ -1,0 +1,53 @@
+{
+  "id": "uel0106",
+  "name": "Light Assault Bot",
+  "faction": "Uef",
+  "techLevel": 1,
+  "categories": [
+    "BOT",
+    "BUILTBYTIER1FACTORY",
+    "BUILTBYTIER2FACTORY",
+    "BUILTBYTIER3FACTORY",
+    "DIRECTFIRE",
+    "LAND",
+    "MOBILE",
+    "OVERLAYDIRECTFIRE",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SNIPEMODE",
+    "TECH1",
+    "UEF",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_bot1_directfire",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.7,
+    "y": 0.7,
+    "z": 0.9
+  },
+  "uniformScale": 0.0625,
+  "health": 60,
+  "massCost": 30,
+  "energyCost": 120,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/uel0106/uel0106_lod0.glb",
+      "shader": "Unit",
+      "albedo": "/units/uel0106/uel0106_albedo.png",
+      "normals": "/units/uel0106/uel0106_normalsts.png",
+      "specular": "/units/uel0106/uel0106_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/uel0106/uel0106_lod1.glb",
+      "shader": "Unit",
+      "albedo": "/units/uel0106/uel0106_lod1_albedo.png",
+      "normals": "/units/uel0106/uel0106_normalsts.png",
+      "specular": "/units/uel0106/uel0106_lod1_specteam.png"
+    }
+  ]
+}

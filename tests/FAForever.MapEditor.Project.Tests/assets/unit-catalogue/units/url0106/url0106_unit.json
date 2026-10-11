@@ -1,0 +1,45 @@
+{
+  "id": "url0106",
+  "name": "Light Assault Bot",
+  "faction": "Cybran",
+  "techLevel": 1,
+  "categories": [
+    "BOT",
+    "BUILTBYTIER1FACTORY",
+    "BUILTBYTIER2FACTORY",
+    "BUILTBYTIER3FACTORY",
+    "CYBRAN",
+    "DIRECTFIRE",
+    "LAND",
+    "MOBILE",
+    "OVERLAYDIRECTFIRE",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SNIPEMODE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_bot1_directfire",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.7,
+    "y": 0.7,
+    "z": 0.9
+  },
+  "uniformScale": 0.015,
+  "health": 90,
+  "massCost": 35,
+  "energyCost": 140,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 215,
+      "mesh": "/units/url0106/url0106_lod0.glb",
+      "shader": "Insect",
+      "albedo": "/units/url0106/url0106_albedo.png",
+      "normals": "/units/url0106/url0106_normalsts.png",
+      "specular": "/units/url0106/url0106_specteam.png"
+    }
+  ]
+}

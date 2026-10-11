@@ -1,0 +1,53 @@
+{
+  "id": "ual0106",
+  "name": "Light Assault Bot",
+  "faction": "Aeon",
+  "techLevel": 1,
+  "categories": [
+    "AEON",
+    "BOT",
+    "BUILTBYTIER1FACTORY",
+    "BUILTBYTIER2FACTORY",
+    "BUILTBYTIER3FACTORY",
+    "DIRECTFIRE",
+    "LAND",
+    "MOBILE",
+    "OVERLAYDIRECTFIRE",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SNIPEMODE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_bot1_directfire",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.7,
+    "y": 0.7,
+    "z": 0.9
+  },
+  "uniformScale": 0.08,
+  "health": 115,
+  "massCost": 42,
+  "energyCost": 165,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/ual0106/ual0106_lod0.glb",
+      "shader": "Aeon",
+      "albedo": "/units/ual0106/ual0106_albedo.png",
+      "normals": "/units/ual0106/ual0106_normalsts.png",
+      "specular": "/units/ual0106/ual0106_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/ual0106/ual0106_lod1.glb",
+      "shader": "Aeon",
+      "albedo": "/units/ual0106/ual0106_lod1_albedo.png",
+      "normals": "/units/ual0106/ual0106_normalsts.png",
+      "specular": "/units/ual0106/ual0106_lod1_specteam.png"
+    }
+  ]
+}
