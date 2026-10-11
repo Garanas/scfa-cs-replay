@@ -241,8 +241,35 @@ public sealed partial class ProceduralPart : ObservableObject
     [RelayCommand]
     private Task ToggleOnExport() => _run("generate.onExport", new JsonObject { ["id"] = GeneratorId });
 
+    /// <summary>
+    /// What new maps of the workspace do with this result, e.g. <c>New maps of this workspace
+    /// regenerate the walkability on their own</c>; empty without a workspace.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasWorkspaceDefault))]
+    public partial string WorkspaceDefaultText { get; internal set; } = "";
+
+    public bool HasWorkspaceDefault => WorkspaceDefaultText.Length > 0;
+
+    /// <summary>
+    /// Whether the open map makes the workspace's choices for this result: Use as workspace default
+    /// would change nothing.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanUseAsWorkspaceDefault))]
+    public partial bool IsWorkspaceDefault { get; internal set; }
+
+    public bool CanUseAsWorkspaceDefault => HasWorkspaceDefault && !IsWorkspaceDefault;
+
+    public string UseAsWorkspaceDefaultLabel => $"Use the {Title.ToLowerInvariant()} choices of this map as the workspace default";
+
+    public string UseAsWorkspaceDefaultHelp => $"New and imported maps of the workspace then regenerate the {Title.ToLowerInvariant()} on their own, or not, as this map does"
+        + (HasExportToggle ? ", and make it on export, or not" : "") + "; the other results keep their defaults and projects keep their own";
+
+    public string WorkspaceDefaultLabel => $"The workspace's default for the {Title.ToLowerInvariant()}";
+
     [RelayCommand]
-    private Task UseAsWorkspaceDefault() => _run("generate.useAsWorkspaceDefault", new JsonObject());
+    private Task UseAsWorkspaceDefault() => _run("generate.useAsWorkspaceDefault", new JsonObject { ["id"] = GeneratorId });
 
     private static string Words(IReadOnlyList<string> words) => words.Count == 1 ? words[0] : $"{string.Join(", ", words.Take(words.Count - 1))} and {words[^1]}";
 }
@@ -326,6 +353,12 @@ public sealed partial class ProceduralListViewModel : ObservableObject
     /// The entries; <c>view.inspectPart</c> chooses one by id (<c>procedural.walkability</c>).
     /// </summary>
     public PanelParts Parts { get; }
+
+    /// <summary>
+    /// What new maps of the workspace do with a result and whether the open map does the same (each
+    /// entry's line above Use as workspace default); null without a workspace.
+    /// </summary>
+    public Func<string, (string Text, bool Same)?>? WorkspaceDefault { get; set; }
 
     /// <summary>
     /// The panel's entries under their headings.
@@ -432,6 +465,9 @@ public sealed partial class ProceduralListViewModel : ObservableObject
         result.Row = _procedural.Rows.FirstOrDefault(row => row.Id == result.GeneratorId);
         result.Picture = result.Entry.Picture?.Invoke(document, document is null ? null : _generation.Results.ResultOf(result.GeneratorId));
         result.Facts = result.Entry.Facts?.Invoke(document) ?? [];
+        (string Text, bool Same)? workspaceDefault = WorkspaceDefault?.Invoke(result.GeneratorId);
+        result.WorkspaceDefaultText = workspaceDefault?.Text ?? "";
+        result.IsWorkspaceDefault = workspaceDefault?.Same ?? false;
         result.MadeText = _generation.TimingOf(result.GeneratorId)?.Text
             ?? (result.Row?.Row.State == GeneratedStatus.Missing || result.Row is null ? "Not made in this session" : "Taken from the map as it was opened");
         if (Parts.Find(result.PartId) is PanelPart part)

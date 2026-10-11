@@ -55,6 +55,46 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task ClickChoosesAmongControlsOfOneLabelByTypeAndIndexAndSaysTheOthers() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            model.SelectMode("procedural");
+            Dispatcher.UIThread.RunJobs();
+
+            // the Connected regions tool's tile and the list's entry share the label
+            JsonObject first = (JsonObject)(await Send(automation, "click", new JsonObject { ["label"] = "Connected regions", ["type"] = "Button" }))["clicked"]!;
+            Assert.IsTrue(first["matches"]!.GetValue<int>() >= 2, $"{first}");
+            Assert.IsTrue(first["others"]!.AsArray().Count >= 1);
+            await Send(automation, "click", new JsonObject { ["label"] = "Walkability", ["type"] = "Button" });
+            Assert.AreEqual("procedural.walkability", model.ProceduralList.Parts.Chosen.Id);
+            await Send(automation, "click", new JsonObject { ["label"] = "Connected regions", ["type"] = "Button", ["index"] = 1 });
+            Assert.AreEqual("procedural.navigationMesh", model.ProceduralList.Parts.Chosen.Id);
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Send(automation, "click", new JsonObject { ["label"] = "Connected regions", ["index"] = 9 }));
+
+            // a check box answers its state after the click
+            JsonObject toggled = (JsonObject)(await Send(automation, "click", new JsonObject { ["label"] = "Regenerate results on their own" }))["clicked"]!;
+            Assert.IsFalse(toggled["checked"]!.GetValue<bool>(), $"{toggled}");
+            Assert.IsFalse(model.RegenerateOnTheirOwn);
+
+            // an open list shows in the state, which screenshots do not
+            ComboBox combo = window.GetVisualDescendants().OfType<ComboBox>().First(box => box.IsEffectivelyVisible);
+            combo.IsDropDownOpen = true;
+            Dispatcher.UIThread.RunJobs();
+            JsonObject state = await Send(automation, "state");
+            Assert.IsTrue(state["popups"]!.AsArray().Count >= 1, $"{state["popups"]}");
+            combo.IsDropDownOpen = false;
+            Dispatcher.UIThread.RunJobs();
+            Assert.IsNull((await Send(automation, "state"))["popups"]);
+
+            // a command whose own argument is called id takes its arguments in args
+            await Send(automation, "run", new JsonObject { ["id"] = "generate.auto", ["args"] = new JsonObject { ["id"] = "navigationMesh", ["on"] = false } });
+            Assert.IsFalse(model.Map!.Document.Procedural.RegeneratesOnItsOwn("navigationMesh"));
+            await Send(automation, "run", new JsonObject { ["id"] = "generate.auto", ["args"] = new JsonObject { ["id"] = "navigationMesh", ["on"] = true } });
+            Assert.IsTrue(model.Map!.Document.Procedural.RegeneratesOnItsOwn("navigationMesh"));
+            window.Close();
+        });
+
+        [TestMethod]
         public Task AControlBelowThePanelsFoldIsScrolledToAndReachedInOneCall() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model, AutomationServer automation) = await Open(TestAssets.SandboxProject());

@@ -69,17 +69,30 @@ public sealed partial class AutomationServer
     }
 
     /// <summary>
-    /// <c>click {label}</c>: the control named, labelled or reading the label (one can use rather
-    /// than its label's text), shown first when it lies behind the options row's More or outside a
-    /// scroll viewer, then clicked in its centre as the mouse does.
+    /// <c>click {label, type?, index?}</c>: the control named, labelled or reading the label (one can
+    /// use rather than its label's text; of that type, the index-th from 0 when several are), shown
+    /// first when it lies behind the options row's More or outside a scroll viewer, then clicked in
+    /// its centre as the mouse does. The answer says how many controls matched and what the others are.
     /// </summary>
     private async Task<JsonObject> ClickLabelAsync(JsonObject arguments)
     {
         string label = Text(arguments, "label");
+        string? type = arguments["type"]?.GetValue<string>();
+        int index = arguments["index"]?.GetValue<int>() ?? 0;
         // in the editor's window or a floating panel's (user story V-4)
         Visual? under = UnderOf(arguments);
-        Control control = (under is not null ? UiTree.Find(under, label) : FindInWindows(label))
-            ?? throw new ArgumentException($"No control is named, labelled or reads '{label}'");
+        List<Control> matches = [.. (under is not null ? [under] : Windows.Cast<Visual>())
+            .SelectMany(root => UiTree.FindAll(root, label))
+            .Where(each => type is null || UiTree.IsOfType(each, type))];
+        if (matches.Count == 0)
+        {
+            throw new ArgumentException(type is null ? $"No control is named, labelled or reads '{label}'" : $"No {type} is named, labelled or reads '{label}'");
+        }
+        if (index < 0 || index >= matches.Count)
+        {
+            throw new ArgumentException($"'{label}' matches {matches.Count} control{(matches.Count == 1 ? "" : "s")}: index {index} is none of them (from 0)");
+        }
+        Control control = matches[index];
         // shown, settled and reachable by the mouse, else refused with why (never a click elsewhere)
         (TopLevel top, Point centre, _) = await AimAsync(control, label, HeaderCentre);
         Avalonia.Input.MouseButton button = WindowInput.ParseButton(arguments["button"]?.GetValue<string>());
@@ -94,8 +107,12 @@ public sealed partial class AutomationServer
         }
         await LetInputSettleAsync();
         bool finished = await CommandsDoneAsync(running);
+        // what the command changed reaches a check box bound to it (its state after the click)
+        await LetInputSettleAsync();
         return new JsonObject
         {
+            ["matches"] = matches.Count,
+            ["others"] = matches.Count == 1 ? null : new JsonArray([.. matches.Where(each => each != control).Take(5).Select(each => (JsonNode)JsonValue.Create(Describe(each)))]),
             ["type"] = control.GetType().Name,
             ["label"] = Avalonia.Automation.AutomationProperties.GetName(control) is { Length: > 0 } name ? name : label,
             ["at"] = new JsonArray(Math.Round(centre.X), Math.Round(centre.Y)),

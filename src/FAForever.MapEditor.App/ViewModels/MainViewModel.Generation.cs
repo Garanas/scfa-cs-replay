@@ -142,50 +142,16 @@ public sealed partial class MainViewModel
         }
     }
 
-    // the last results of each generator whose result is part of the map: an undo or redo to a version
-    // one of them was made for keeps it again
-    private readonly Dictionary<string, List<GeneratedResult>> _recentResults = new Dictionary<string, List<GeneratedResult>>(StringComparer.Ordinal);
-
-    /// <summary>
-    /// How many results of a generator whose result is part of the map are remembered for undo and redo.
-    /// </summary>
-    private const int RecentResults = 8;
-
-    private void RememberResult(GeneratedResult? result)
-    {
-        if (result?.Generator is not IDocumentGenerator)
-        {
-            return;
-        }
-        if (!_recentResults.TryGetValue(result.Generator.Id, out List<GeneratedResult>? recent))
-        {
-            _recentResults[result.Generator.Id] = recent = [];
-        }
-        if (recent.Any(kept => ReferenceEquals(kept, result)))
-        {
-            return;
-        }
-        recent.Add(result);
-        if (recent.Count > RecentResults)
-        {
-            recent.RemoveAt(0);
-        }
-    }
-
     /// <summary>
     /// After a derived change: its result as the result of the version it made (<see cref="DeriveResult"/>).
-    /// After an undo or redo: a result remembered for the version gone back or forth to is kept again,
-    /// so the results the version holds read as current at once (each version keeps the results
-    /// derived for it).
+    /// After an undo or redo: for every generator, a result remembered for the version gone back or
+    /// forth to (<see cref="GeneratedResults.Recall"/>: the last 8 of each, by the versions of their
+    /// inputs) is kept again, so the views show the result made for that version at once and nothing
+    /// regenerates: walkability, the connected regions and the path networks beside the map as much as
+    /// the results the version holds (the owner's decision Q4).
     /// </summary>
     private void KeepDerived(DocumentChange change)
     {
-        // every step remembers the results as they are: one kept since is put in place by the step after it
-        IDocumentGenerator[] parts = [.. Generation.Results.Generators.OfType<IDocumentGenerator>()];
-        foreach (IDocumentGenerator part in parts)
-        {
-            RememberResult(Generation.Results.ResultOf(part.Id));
-        }
         if (change.Reason == ChangeReason.Edit)
         {
             return;
@@ -195,26 +161,12 @@ public sealed partial class MainViewModel
             if (_deriving is (IGenerator generator, object value))
             {
                 _deriving = null;
-                GeneratedResult result = GeneratedResult.Of(generator, change.Current, value);
-                Generation.Results.Keep(result);
-                RememberResult(result);
+                Generation.Results.Keep(GeneratedResult.Of(generator, change.Current, value));
             }
             return;
         }
-        bool kept = false;
-        foreach (IDocumentGenerator part in parts)
-        {
-            if (Generation.Results.ResultOf(part.Id) is GeneratedResult now && !now.IsStale(change.Current))
-            {
-                continue;
-            }
-            if (_recentResults.GetValueOrDefault(part.Id)?.LastOrDefault(result => !result.IsStale(change.Current)) is GeneratedResult earlier)
-            {
-                Generation.Results.Keep(earlier);
-                kept = true;
-            }
-        }
-        if (kept)
+        using Performance.Span measure = Performance.Measure("model.generate-recall");
+        if (Generation.Results.Recall(change.Current).Count > 0)
         {
             Generation.Refresh(change.Current);
         }

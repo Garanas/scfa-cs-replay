@@ -28,9 +28,10 @@ public sealed partial class PluginsViewModel
     /// </summary>
     public static string PartOf(string plugin) => $"plugins.plugin.{plugin}";
 
-    // the mode the tools of a plugin joined when it was last loaded, by its folder: a plugin turned
-    // off keeps its heading
+    // the mode the tools of a plugin joined when it was last loaded, by its folder, remembered in the
+    // user's settings: a plugin turned off keeps its heading, also after a restart
     private readonly Dictionary<string, string> _toolModes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private bool _toolModesChanged;
 
     // the headings of plugins the list holds now, in its order
     private readonly List<string> _headings = [];
@@ -47,13 +48,25 @@ public sealed partial class PluginsViewModel
     /// </summary>
     public string HeadingOf(LuaPlugin plugin)
     {
+        if (plugin.IsOn && plugin.IsLoaded)
+        {
+            // what it registered now is what it gives; a plugin that lost its tools forgets the mode
+            if (plugin.Tools.Count > 0)
+            {
+                if (!_toolModes.TryGetValue(plugin.Id, out string? known) || known != plugin.Tools[0].Mode)
+                {
+                    _toolModes[plugin.Id] = plugin.Tools[0].Mode;
+                    _toolModesChanged = true;
+                }
+            }
+            else
+            {
+                _toolModesChanged |= _toolModes.Remove(plugin.Id);
+            }
+        }
         if (plugin.Manifest.Category is string category)
         {
             return category;
-        }
-        if (plugin.Tools.Count > 0)
-        {
-            _toolModes[plugin.Id] = plugin.Tools[0].Mode;
         }
         return _toolModes.TryGetValue(plugin.Id, out string? mode) && EditorModes.All.FirstOrDefault(m => m.Id == mode) is ModeDefinition definition
             ? definition.Title
@@ -61,8 +74,8 @@ public sealed partial class PluginsViewModel
     }
 
     /// <summary>
-    /// What a plugin's entry says beside its title: its errors, <c>off</c>, or <c>on</c> with the
-    /// first of its tools, checks and commands (<c>on · 1 tool</c>).
+    /// What a plugin's entry says beside its title: its errors, <c>off</c>, its warnings
+    /// (<c>on · 1 warning</c>), or <c>on</c> with the first of its tools, checks and commands (<c>on · 1 tool</c>).
     /// </summary>
     public static string DetailOf(LuaPlugin plugin)
     {
@@ -73,6 +86,10 @@ public sealed partial class PluginsViewModel
         if (!plugin.IsOn)
         {
             return "off";
+        }
+        if (plugin.HasWarnings)
+        {
+            return plugin.Warnings.Count == 1 ? "on · 1 warning" : $"on · {plugin.Warnings.Count} warnings";
         }
         static string Count(int count, string what) => $"on · {count} {what}{(count == 1 ? "" : "s")}";
         return plugin.Tools.Count > 0 ? Count(plugin.Tools.Count, "tool")
@@ -129,6 +146,11 @@ public sealed partial class PluginsViewModel
         }
         _headings.Clear();
         _headings.AddRange(headings);
+        if (_toolModesChanged)
+        {
+            _toolModesChanged = false;
+            SaveSettings();
+        }
 
         foreach (PanelPart part in Parts.Items)
         {

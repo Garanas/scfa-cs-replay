@@ -76,14 +76,15 @@ namespace FAForever.MapEditor.App.Tests
         {
             (MainWindow window, MainViewModel model) = await Open();
 
-            Click(window, Named<Button>(window, "Generate the navigation mesh"));
+            Click(window, Named<Button>(window, "Generate the connected regions"));
             await Until(() => model.Navigation.Mesh is not null && !model.Generation.IsRunning("navigationMesh"));
             Dispatcher.UIThread.RunJobs();
             // its entry shows it in the inspector, with its regions
-            Click(window, Named<Button>(window, "Navigation mesh"));
+            Click(window, window.GetVisualDescendants().OfType<Button>().Single(button => !button.Classes.Contains("tool")
+                && Avalonia.Automation.AutomationProperties.GetName(button) == "Connected regions"));
 
             Assert.IsTrue(model.ShowNavigation);
-            Assert.IsTrue(Named<CheckBox>(window, "Preview the navigation mesh in the views").IsChecked);
+            Assert.IsTrue(Named<CheckBox>(window, "Preview the connected regions in the views").IsChecked);
             NavRegionRow first = model.Navigation.Regions[0];
             Click(window, Named<Button>(window, first.Label));
             Assert.AreEqual(first.Region.Id, model.Navigation.ChosenRegion, "the list chooses a region");
@@ -102,11 +103,16 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
-        public Task TheAutoSwitchInTheViewsBarTurnsRegeneratingOnTheirOwnOffAndSaysWhatWaits() => HeadlessApp.Run(async () =>
+        public Task TheAutoSwitchInTheStatusBarTurnsRegeneratingOnTheirOwnOffAndSaysWhatWaits() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
             Avalonia.Controls.Primitives.ToggleButton chip = Named<Avalonia.Controls.Primitives.ToggleButton>(window, "Regenerate results on their own");
             Assert.IsTrue(chip.IsChecked);
+            // in the status bar, so the overlays' chips above the views keep their room at 1280 pixels
+            FAForever.MapEditor.App.Controls.ToolRow views = window.GetVisualDescendants().OfType<FAForever.MapEditor.App.Controls.ToolRow>().Single(row => row.Name == "ViewOptions");
+            Assert.IsFalse(chip.GetVisualAncestors().Contains(views));
+            Control camera = Named<Avalonia.Controls.Primitives.ToggleButton>(window, "Show 3D camera");
+            Assert.IsFalse(FAForever.MapEditor.App.Controls.ToolRow.IsInOverflow(camera), "the 3D camera's chip shows in the row");
             TextBlock text = Named<TextBlock>(window, "What regenerates on its own now");
             Assert.AreEqual("Auto", text.Text);
 

@@ -94,6 +94,42 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task QAndETurnTheBrushWhateverControlHasTheKeyboardButATextField() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            model.SelectTool("terrain.sculpt");
+            SculptTool sculpt = model.Tool<SculptTool>();
+            sculpt.Shape.Choose("ridge.png");
+            Dispatcher.UIThread.RunJobs();
+
+            // the QA's repro: the shape was just chosen in the options row, whose combo box has the keyboard
+            ComboBox shape = window.GetVisualDescendants().OfType<ComboBox>()
+                .First(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Brush shape" && box.IsEffectivelyVisible);
+            object? chosen = shape.SelectedItem;
+            shape.Focus();
+            Dispatcher.UIThread.RunJobs();
+            Press(window, Key.E, physical: PhysicalKey.E, symbol: "e");
+            Assert.AreEqual(15, sculpt.Shape.Rotation, "no click in the view first");
+            Assert.AreSame(chosen, shape.SelectedItem, "the combo box did not take the letter");
+            Assert.IsTrue(shape.IsFocused);
+
+            // a button has it
+            Button tile = window.GetVisualDescendants().OfType<Button>().First(button => button.Classes.Contains("tool") && button.IsEffectivelyVisible);
+            tile.Focus();
+            Dispatcher.UIThread.RunJobs();
+            Press(window, Key.Q, physical: PhysicalKey.Q, symbol: "q");
+            Assert.AreEqual(0, sculpt.Shape.Rotation);
+
+            // a text field types the letter
+            TextBox field = window.GetVisualDescendants().OfType<TextBox>().First(box => box.IsEffectivelyVisible && box.IsEnabled && !box.IsReadOnly);
+            field.Focus();
+            Dispatcher.UIThread.RunJobs();
+            Press(window, Key.E, physical: PhysicalKey.E, symbol: "e");
+            Assert.AreEqual(0, sculpt.Shape.Rotation, "a text field keeps its letters");
+            window.Close();
+        });
+
+        [TestMethod]
         public Task ARoundBrushTheSelectToolAndTheStampKeepTheirKeys() => Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();

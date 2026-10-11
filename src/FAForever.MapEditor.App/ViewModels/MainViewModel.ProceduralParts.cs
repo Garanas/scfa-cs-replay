@@ -203,6 +203,7 @@ public sealed partial class MainViewModel
             ["picture"] = (part.Content as ProceduralPart)?.HasPicture,
             ["tool"] = (part.Content as ProceduralPart)?.Entry.Tool,
             ["made"] = (part.Content as ProceduralPart)?.MadeText,
+            ["madeForShown"] = (part.Content as ProceduralPart)?.Row?.Row.State == GeneratedStatus.Current,
         })]),
     };
 }

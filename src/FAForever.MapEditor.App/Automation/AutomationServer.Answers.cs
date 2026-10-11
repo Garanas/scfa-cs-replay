@@ -108,6 +108,7 @@ public sealed partial class AutomationServer
         ["redo"] = model.Map?.Session.RedoDescription,
         ["selection"] = new JsonObject { ["count"] = model.Selection.Count, ["kinds"] = model.Selection.Summary },
         ["dialog"] = model.Question.Describe(),
+        ["popups"] = PopupsState(),
     };
 
     /// <summary>

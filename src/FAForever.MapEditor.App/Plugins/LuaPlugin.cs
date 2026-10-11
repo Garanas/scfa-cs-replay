@@ -256,6 +256,29 @@ public sealed partial class LuaPlugin : ObservableObject
 
     public bool HasErrors => _errors.Count > 0;
 
+    /// <summary>
+    /// What is doubtful about it but does not stop it (a kind the editor does not know): its entry
+    /// says them as warnings, not errors.
+    /// </summary>
+    public IReadOnlyList<string> Warnings => _warnings;
+
+    private readonly List<string> _warnings = [];
+
+    /// <summary>
+    /// The warnings as the inspector shows them, one per line; empty without.
+    /// </summary>
+    public string WarningText => string.Join(Environment.NewLine, _warnings);
+
+    public bool HasWarnings => _warnings.Count > 0;
+
+    internal void AddWarning(string warning)
+    {
+        _warnings.Add(warning);
+        OnPropertyChanged(nameof(Warnings));
+        OnPropertyChanged(nameof(WarningText));
+        OnPropertyChanged(nameof(HasWarnings));
+    }
+
     public List<PluginCommand> Commands { get; } = [];
 
     public List<PluginCheck> Checks { get; } = [];
@@ -321,6 +344,10 @@ public sealed partial class LuaPlugin : ObservableObject
     internal void ClearErrors()
     {
         _errors.Clear();
+        _warnings.Clear();
+        OnPropertyChanged(nameof(Warnings));
+        OnPropertyChanged(nameof(WarningText));
+        OnPropertyChanged(nameof(HasWarnings));
         OnPropertyChanged(nameof(Errors));
         OnPropertyChanged(nameof(ErrorText));
         OnPropertyChanged(nameof(HasErrors));

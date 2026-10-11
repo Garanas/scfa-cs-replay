@@ -125,7 +125,7 @@ namespace FAForever.MapEditor.Project.Generation
 
         public string Id => GeneratorId;
 
-        public string Title => "Navigation mesh";
+        public string Title => "Connected regions";
 
         public string Story => "T-8";
 
@@ -158,5 +158,9 @@ namespace FAForever.MapEditor.Project.Generation
                 : Generation.Walkability.Generate(document, cancel);
             return NavigationMesh.Of(document, navigation, cancel);
         }
+
+        // the mesh holds walkability's grids when it was made from a current walkability: they count once
+        public IEnumerable<(object Buffer, long Bytes)> MemoryOf(object value) =>
+            value is NavigationMesh mesh ? WalkabilityGenerator.Memory(mesh.Navigation) : [];
     }
 }

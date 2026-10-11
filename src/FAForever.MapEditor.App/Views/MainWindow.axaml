@@ -63,6 +63,17 @@
       <Border DockPanel.Dock="Bottom" Classes="bar">
         <DockPanel>
           <TextBlock x:Name="CursorText" DockPanel.Dock="Left" Classes="mono" AutomationProperties.Name="Place under the mouse" />
+          <!-- regenerating on their own (Q5): the editor's switch, with what waits or runs (MainViewModel.AutoRegenerate), at the
+               status bar's end beside what is out of date, so the overlays' chips above the views keep their room -->
+          <ToggleButton DockPanel.Dock="Right" Classes="chip autoregenerate" IsChecked="{Binding RegenerateOnTheirOwn, Mode=OneWay}"
+                        Command="{Binding RunCommand}" CommandParameter="generate.automatic"
+                        ToolTip.Tip="{Binding AutoRegenerateTip}"
+                        AutomationProperties.Name="Regenerate results on their own" AutomationProperties.HelpText="{Binding AutoRegenerateTip}">
+            <StackPanel Classes="inline">
+              <Path Classes="icon small" Data="{StaticResource Icon.Procedural}" />
+              <TextBlock Text="{Binding AutoRegenerateText}" AutomationProperties.Name="What regenerates on its own now" />
+            </StackPanel>
+          </ToggleButton>
           <TextBlock DockPanel.Dock="Right" Classes="warning" Margin="{StaticResource InlineGap}" Text="{Binding Generation.Summary}"
                      IsVisible="{Binding Generation.HasStale}" AutomationProperties.Name="Generated results out of date"
                      ToolTip.Tip="Generate, Everything out of date makes them again" />
@@ -122,15 +133,6 @@
                 <ToggleButton Classes="chip" Content="Mirror" IsVisible="{Binding Symmetry.IsOn}" IsChecked="{Binding Symmetry.MirrorsEdits}"
                               AutomationProperties.Name="Mirror edits" ToolTip.Tip="Mirror edits by the symmetry"
                               AutomationProperties.HelpText="On, brush strokes, placing, moving, turning and deleting work in every part of the map; off, the symmetry shows its guides only" />
-                <!-- regenerating on their own (Q5): the editor's switch, with what waits or runs (MainViewModel.AutoRegenerate) -->
-                <ToggleButton Classes="chip" IsChecked="{Binding RegenerateOnTheirOwn, Mode=OneWay}" Command="{Binding RunCommand}" CommandParameter="generate.automatic"
-                              ToolTip.Tip="{Binding AutoRegenerateTip}"
-                              AutomationProperties.Name="Regenerate results on their own" AutomationProperties.HelpText="{Binding AutoRegenerateTip}">
-                  <StackPanel Classes="inline">
-                    <Path Classes="icon small" Data="{StaticResource Icon.Procedural}" />
-                    <TextBlock Text="{Binding AutoRegenerateText}" AutomationProperties.Name="What regenerates on its own now" />
-                  </StackPanel>
-                </ToggleButton>
               </controls:ToolRow>
             </DockPanel>
           </Border>

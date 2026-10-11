@@ -48,6 +48,36 @@ public static class UiTree
     }
 
     /// <summary>
+    /// Every control <see cref="Find"/> could take for a text, the one it takes first: those named or
+    /// labelled so, then those reading it that one can use, then texts reading it (<c>click</c>'s
+    /// <c>type</c> and <c>index</c> choose among them).
+    /// </summary>
+    public static IReadOnlyList<Control> FindAll(Visual root, string text, bool hidden = false)
+    {
+        List<Control> controls = [.. root.GetVisualDescendants().OfType<Control>().Where(control => hidden || control.IsEffectivelyVisible)];
+        IEnumerable<Control> named = controls.Where(control => string.Equals(control.Name, text, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(AutomationProperties.GetName(control), text, StringComparison.OrdinalIgnoreCase));
+        IEnumerable<Control> reading = controls.Where(control => string.Equals(TextOf(control), text, StringComparison.OrdinalIgnoreCase));
+        return [.. named.Concat(reading.Where(control => control is not TextBlock)).Concat(reading).Distinct()];
+    }
+
+    /// <summary>
+    /// Whether a control is of a type by its name, ignoring case, or derives from one so named
+    /// (<c>Button</c> takes a toggle button too).
+    /// </summary>
+    public static bool IsOfType(Control control, string type)
+    {
+        for (Type? each = control.GetType(); each is not null && each != typeof(object); each = each.BaseType)
+        {
+            if (string.Equals(each.Name, type, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
     /// The part of the window <c>under</c> names: a control as <see cref="Find"/> finds it, or, for a
     /// heading (a text: <c>Presets</c>, <c>Inspector</c>, <c>Markers</c>), the part it heads: its
     /// <c>Section</c>, else the nearest panel around it that holds a control one can use.

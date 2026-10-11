@@ -136,6 +136,14 @@ namespace FAForever.MapEditor.Project.Generation
             cancel.ThrowIfCancellationRequested();
             return Generate(document);
         }
+
+        /// <summary>
+        /// The large buffers a result holds, each with its size in bytes, so the results remembered
+        /// for undo and redo stay within <see cref="GeneratedResults.RecentBudget"/>. Results that
+        /// share a buffer (the navigation mesh holds walkability's grids) name the same object, and
+        /// it counts once. A result of small values, or one held by the map itself, names none.
+        /// </summary>
+        IEnumerable<(object Buffer, long Bytes)> MemoryOf(object value) => [];
     }
 
     /// <summary>
@@ -217,6 +225,10 @@ namespace FAForever.MapEditor.Project.Generation
         public bool Unregister(string id)
         {
             _results.Remove(id);
+            if (_recent.Remove(id, out List<GeneratedResult>? recent))
+            {
+                recent.ForEach(result => _rememberedAt.Remove(result));
+            }
             return _generators.RemoveAll(generator => generator.Id == id) > 0;
         }
 
@@ -282,14 +294,136 @@ namespace FAForever.MapEditor.Project.Generation
         }
 
         /// <summary>
-        /// Keeps a result made elsewhere (<see cref="GeneratedResult.Of"/>), replacing the last one.
+        /// Keeps a result made elsewhere (<see cref="GeneratedResult.Of"/>), replacing the last one,
+        /// and remembers it for the version of its inputs (<see cref="Recall"/>).
         /// </summary>
-        public void Keep(GeneratedResult result) => _results[result.Generator.Id] = result;
+        public void Keep(GeneratedResult result)
+        {
+            _results[result.Generator.Id] = result;
+            Remember(result);
+        }
 
         /// <summary>
         /// Forgets every result: another map is open.
         /// </summary>
-        public void Forget() => _results.Clear();
+        public void Forget()
+        {
+            _results.Clear();
+            _recent.Clear();
+            _rememberedAt.Clear();
+        }
+
+        // the last results of each generator, the newest last, and when each was remembered
+        private readonly Dictionary<string, List<GeneratedResult>> _recent = new Dictionary<string, List<GeneratedResult>>(StringComparer.Ordinal);
+        private readonly Dictionary<GeneratedResult, long> _rememberedAt = new Dictionary<GeneratedResult, long>(ReferenceEqualityComparer.Instance);
+        private long _remembered;
+
+        /// <summary>
+        /// How many results of each generator are remembered for undo and redo: 8.
+        /// </summary>
+        public const int RecentPerGenerator = 8;
+
+        /// <summary>
+        /// How many bytes of large buffers (<see cref="IGenerator.MemoryOf"/>) the remembered results
+        /// may hold together; the ones remembered first go first, and a generator's newest stays.
+        /// 1 GiB keeps about four versions of walkability with its connected regions on a map of 81 km.
+        /// </summary>
+        public long RecentBudget { get; set; } = 1L << 30;
+
+        /// <summary>
+        /// The results remembered for a generator, the oldest first (automation and tests).
+        /// </summary>
+        public IReadOnlyList<GeneratedResult> RecentOf(string id) => _recent.GetValueOrDefault(id) ?? [];
+
+        /// <summary>
+        /// Remembers a result for the version of its inputs, so an undo or redo back to that version
+        /// keeps it again (<see cref="Recall"/>) and nothing regenerates. <see cref="Keep"/> does this.
+        /// </summary>
+        public void Remember(GeneratedResult result)
+        {
+            if (Find(result.Generator.Id) is null)
+            {
+                return;
+            }
+            if (!_recent.TryGetValue(result.Generator.Id, out List<GeneratedResult>? recent))
+            {
+                _recent[result.Generator.Id] = recent = [];
+            }
+            if (recent.Any(kept => ReferenceEquals(kept, result)))
+            {
+                return;
+            }
+            recent.Add(result);
+            _rememberedAt[result] = ++_remembered;
+            if (recent.Count > RecentPerGenerator)
+            {
+                _rememberedAt.Remove(recent[0]);
+                recent.RemoveAt(0);
+            }
+            KeepWithinBudget();
+        }
+
+        // drops the results remembered first until their distinct buffers fit the budget
+        private void KeepWithinBudget()
+        {
+            while (MemoryOfRecent() > RecentBudget)
+            {
+                GeneratedResult? oldest = _recent.Values
+                    .Where(list => list.Count > 1)
+                    .Select(list => list[0])
+                    .MinBy(result => _rememberedAt[result]);
+                if (oldest is null)
+                {
+                    return;
+                }
+                _recent[oldest.Generator.Id].RemoveAt(0);
+                _rememberedAt.Remove(oldest);
+            }
+        }
+
+        /// <summary>
+        /// The bytes of the distinct large buffers the remembered results hold.
+        /// </summary>
+        public long MemoryOfRecent()
+        {
+            HashSet<object> counted = new HashSet<object>(ReferenceEqualityComparer.Instance);
+            long bytes = 0;
+            foreach (GeneratedResult result in _recent.Values.SelectMany(list => list))
+            {
+                foreach ((object buffer, long size) in result.Generator.MemoryOf(result.Value))
+                {
+                    if (counted.Add(buffer))
+                    {
+                        bytes += size;
+                    }
+                }
+            }
+            return bytes;
+        }
+
+        /// <summary>
+        /// After an undo or redo: keeps again, for each generator whose last result is missing or out
+        /// of date in <paramref name="document"/>, the newest remembered result made from its inputs as
+        /// they are there (each version keeps the results made for it).
+        /// </summary>
+        /// <returns>The generators whose result was kept again.</returns>
+        public IReadOnlyList<IGenerator> Recall(MapDocument document)
+        {
+            List<IGenerator> recalled = [];
+            foreach (IGenerator generator in _generators)
+            {
+                if (ResultOf(generator.Id) is GeneratedResult now && !now.IsStale(document))
+                {
+                    continue;
+                }
+                if (_recent.GetValueOrDefault(generator.Id)?.LastOrDefault(result => !result.IsStale(document)) is GeneratedResult earlier)
+                {
+                    _results[generator.Id] = earlier;
+                    recalled.Add(generator);
+                }
+            }
+            return recalled;
+        }
 
         /// <summary>
         /// How every generator's result stands against <paramref name="document"/>, in the order they

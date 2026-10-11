@@ -48,6 +48,15 @@
       </StackPanel>
     </Border>
 
+    <!-- its warnings: what is doubtful but does not stop it (a kind the editor does not know) -->
+    <Border Classes="group" IsVisible="{Binding Plugin.HasWarnings}">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="overline" Text="{Binding Source=Warnings, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <TextBlock Classes="caption warning" TextWrapping="Wrap" Text="{Binding Plugin.WarningText}"
+                   AutomationProperties.Name="{Binding Plugin.Id, StringFormat='Warnings of {0}'}" />
+      </StackPanel>
+    </Border>
+
     <!-- a button per command: a run is one step of undo -->
     <Border Classes="group" IsVisible="{Binding Plugin.HasCommands}">
       <StackPanel Classes="stack">

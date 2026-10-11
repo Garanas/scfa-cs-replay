@@ -57,7 +57,7 @@ public sealed class GenerateOnExportHandler(MainViewModel model) : IRequestHandl
 /// </summary>
 /// <param name="Layer"><c>Land</c>, <c>Hover</c>, <c>Amphibious</c> or <c>Water</c> (naval units).</param>
 /// <param name="Region">The connected region of the shown layer to choose, by its number; 0 chooses none.</param>
-[EditorCommand("generate.setNavigation", "Navigation mesh settings", Story = "T-8", Needs = Needs.Map | Needs.NoStroke)]
+[EditorCommand("generate.setNavigation", "Connected regions settings", Story = "T-8", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record SetNavigation(string? Layer = null, int? Region = null) : IRequest;
 
 public sealed class SetNavigationHandler(MainViewModel model, NavigationViewModel navigation) : IRequestHandler<SetNavigation>

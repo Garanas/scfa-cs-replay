@@ -21,7 +21,7 @@
           </StackPanel>
         </Border>
 
-        <Border Classes="group">
+        <Border Classes="group" IsVisible="{Binding ShowsToolTiles}">
           <StackPanel Classes="stack">
             <TextBlock Classes="overline" Text="{Binding Source=Tools, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
             <ItemsControl ItemsSource="{Binding Tools}" AutomationProperties.Name="Tools">
@@ -32,12 +32,14 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ToolItem">
+                  <!-- a title too long for a third of the row wraps onto a second line, never cut short -->
                   <Button Classes="tool" Classes.active="{Binding IsActive}" Classes.planned="{Binding Definition.IsIncomplete}"
-                          Content="{Binding Definition.Title}"
                           Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}"
                           CommandParameter="{Binding Definition.CommandId}"
                           ToolTip.Tip="{Binding Definition.Missing}"
-                          AutomationProperties.Name="{Binding Definition.Title}" />
+                          AutomationProperties.Name="{Binding Definition.Title}">
+                    <TextBlock Classes="tooltitle" Text="{Binding Definition.Title}" />
+                  </Button>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

@@ -107,6 +107,49 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task UndoAndRedoShowTheResultsBesideTheMapMadeForThatVersionAtOnce()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "generate.auto", new JsonObject { ["id"] = NavigationMeshGenerator.GeneratorId, ["on"] = true });
+            await Run(model, "view.overlay.navigation");
+            await model.AutoGeneration.WhenIdleAsync();
+            NavigationMesh first = model.Navigation.Mesh!;
+            object walkabilityBefore = model.Generation.Results.ResultOf(WalkabilityGenerator.GeneratorId)?.Value!;
+
+            Raise(model, 100, 102);
+            await model.AutoGeneration.WhenIdleAsync();
+            NavigationMesh second = model.Navigation.Mesh!;
+            Assert.AreNotSame(first, second);
+            int kept = model.AutoGeneration.Kept;
+
+            // undo: the mesh made for the version before shows at once, and nothing regenerates
+            model.Undo();
+            Assert.AreSame(first, model.Navigation.Mesh);
+            Assert.AreEqual(GeneratedStatus.Current, StateOf(model, NavigationMeshGenerator.GeneratorId));
+            Assert.IsFalse(model.AutoGeneration.IsPending(NavigationMeshGenerator.GeneratorId));
+            if (walkabilityBefore is not null)
+            {
+                Assert.AreSame(walkabilityBefore, model.Generation.Results.ResultOf(WalkabilityGenerator.GeneratorId)!.Value);
+            }
+
+            // redo: the one made after the ridge
+            model.Redo();
+            Assert.AreSame(second, model.Navigation.Mesh);
+            Assert.AreEqual(GeneratedStatus.Current, StateOf(model, NavigationMeshGenerator.GeneratorId));
+            await model.AutoGeneration.WhenIdleAsync();
+            Assert.AreEqual(kept, model.AutoGeneration.Kept, "nothing regenerated");
+            Assert.AreEqual(2, model.Generation.Results.RecentOf(NavigationMeshGenerator.GeneratorId).Count);
+
+            // a change waits to regenerate; undone at once, the version before has its result and the wait stops
+            model.AutoGeneration.Delay = TimeSpan.FromSeconds(5);
+            Raise(model, 50, 52);
+            Assert.IsTrue(model.AutoGeneration.IsPending(NavigationMeshGenerator.GeneratorId));
+            model.Undo();
+            Assert.AreSame(second, model.Navigation.Mesh);
+            Assert.IsFalse(model.AutoGeneration.IsPending(NavigationMeshGenerator.GeneratorId), "the remembered result is current: nothing waits");
+        }
+
+        [TestMethod]
         public async Task MasksFromRulesRegenerateOnTheirOwnWhileTheMaskShows()
         {
             MainViewModel model = await Open();
@@ -194,6 +237,54 @@ namespace FAForever.MapEditor.App.Tests
             Project.MapProjectStore.Save(Project.MapImporter.ImportFolder(HardFfa), project);
             await model.OpenAsync(project);
             Assert.IsTrue(model.Map!.Document.Procedural.AutoGenerate.IsEmpty, "a project keeps its own settings");
+        }
+
+        [TestMethod]
+        public async Task AnEntrysUseAsWorkspaceDefaultTakesOnlyItsResultAndThePageSavesOneWay()
+        {
+            string root = Path.Combine(AppContext.BaseDirectory, "workspaces", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(root, "game"));
+            Workspace workspace = Workspace.Create(Path.Combine(root, "workspace"), Path.Combine(root, "game"), null, Path.Combine(root, "vault"));
+            MainViewModel model = new MainViewModel(new MainViewModelTest.Answers());
+            model.Setup.Use(workspace);
+            model.OpenNewMap(Project.NewMap.Create(new Project.NewMapSettings { Size = 256 }));
+
+            // the map lets two results differ from the workspace; the entry of one takes only that one
+            await Run(model, "generate.auto", new JsonObject { ["id"] = "navigationMesh", ["on"] = false });
+            await Run(model, "generate.auto", new JsonObject { ["id"] = "pathNetwork", ["on"] = true });
+            ProceduralPart regions = model.ProceduralList.PartOf("navigationMesh")!;
+            Assert.IsTrue(regions.CanUseAsWorkspaceDefault);
+            StringAssert.Contains(regions.WorkspaceDefaultText, "regenerate the connected regions on their own");
+            regions.UseAsWorkspaceDefaultCommand.Execute(null);
+            await Task.Delay(50);
+            CollectionAssert.AreEquivalent(new[] { "walkability", "masksFromRules" }, model.Setup.Workspace!.Procedural.AutoGenerate.ToArray(),
+                "the path networks keep the workspace's default");
+            Assert.IsFalse(regions.CanUseAsWorkspaceDefault, "the map and the workspace agree now");
+            Assert.IsTrue(model.ProceduralList.PartOf("pathNetwork")!.CanUseAsWorkspaceDefault);
+
+            // the page's check boxes change the page only; Save writes them with the folders, Revert puts them back
+            await Run(model, "file.workspaceSettings");
+            WorkspaceSettingsViewModel page = model.WorkspaceSettings;
+            Assert.IsFalse(page.HasChanges);
+            model.ToggleWorkspaceAutoCommand.Execute("preview");
+            Assert.IsTrue(page.HasChanges);
+            Assert.IsTrue(model.WorkspaceProceduralRows.Single(row => row.Id == "preview").Auto, "the page shows its change");
+            Assert.IsFalse(Workspace.Open(workspace.Folder).Procedural.RegeneratesOnItsOwn("preview"), "not written yet");
+            page.RevertCommand.Execute(null);
+            Assert.IsFalse(page.HasChanges);
+            Assert.IsFalse(model.WorkspaceProceduralRows.Single(row => row.Id == "preview").Auto);
+
+            model.ToggleWorkspaceAutoCommand.Execute("preview");
+            model.ToggleWorkspaceOnExportCommand.Execute("pathNetwork");
+            await page.SaveCommand.ExecuteAsync(null);
+            Assert.IsFalse(page.HasChanges);
+            Project.Workspaces.ProceduralDefaults saved = Workspace.Open(workspace.Folder).Procedural;
+            Assert.IsTrue(saved.RegeneratesOnItsOwn("preview"));
+            Assert.IsTrue(saved.OnExport.Contains("pathNetwork"));
+
+            // the rows follow the Procedural list's order
+            CollectionAssert.AreEqual(model.ProceduralList.Results.Select(part => part.GeneratorId).ToArray(),
+                model.WorkspaceProceduralRows.Select(row => row.Id).Take(model.ProceduralList.Results.Count()).ToArray());
         }
     }
 }

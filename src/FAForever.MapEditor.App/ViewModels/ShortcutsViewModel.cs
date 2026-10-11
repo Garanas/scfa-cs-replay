@@ -38,7 +38,7 @@ public sealed partial class ShortcutsViewModel(CommandRegistry commands) : Obser
         new ShortcutItem("[ and ]", "The brush's radius smaller or larger", "Brushes, stamps"),
         new ShortcutItem("Shift+[ and Shift+]", "The brush's strength lower or higher (a stamp's height)", "Brushes, stamps"),
         new ShortcutItem("Ctrl+wheel", "The brush's radius over a view; with Shift its strength", "Brushes, stamps"),
-        new ShortcutItem("Q and E", "Turn the brush's picture 15 degrees left or right (Shift: 90); a round brush stays", "Brushes with a picture"),
+        new ShortcutItem("Q and E", "Turn the brush's picture 15 degrees left or right (Shift: 90), wherever the keyboard is but a text field; a round brush stays", "Brushes with a picture"),
         new ShortcutItem("Alt+wheel", "Turn the brush's picture 5 degrees a notch over a view", "Brushes with a picture, stamps"),
         new ShortcutItem("Q and E", "Turn the selection 15 degrees left or right (Shift: 90)", "Select tools"),
         new ShortcutItem("Q and E", "Turn what is placed: a preset, a unit, a stamp", "Place tools, presets, stamps"),

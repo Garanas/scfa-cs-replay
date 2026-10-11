@@ -967,9 +967,25 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   again for the version it makes (`KeepDerived`), so putting it in place never makes it out of date
   nor starts it again on its own; the last results of each such generator are remembered
   (`RecentResults`, 8), and an undo or redo keeps the one made for the version it goes to, so the
-  list reads current at once. The selection of a version follows its derived change. The status
+  list reads current at once (the next item: every generator's results are remembered so). The selection of a version follows its derived change. The status
   line says what was generated (the command's text, or `Regenerated the ... on its own`). A rule
   edit still makes its masks in its own step (`WithRulesMade`): that is the edit itself.
+- **Each version keeps its results** (the owner's decision Q4; the library's `GeneratedResults.Remember`,
+  `Recall`, `RecentOf`): every result kept (`Keep`, by any command, on its own or with everything out
+  of date) is remembered by the versions of its inputs, the last `RecentPerGenerator` (8) of each
+  generator, within `RecentBudget` (1 GiB of the large buffers results name through
+  `IGenerator.MemoryOf`: walkability's grids, which the connected regions share and count once; the
+  ones remembered first go first, each generator's newest stays). After an undo or redo
+  (`MainViewModel.KeepDerived`, before the views and regenerating on its own look at the change;
+  span `model.generate-recall`), each generator whose last result is missing or out of date keeps
+  the newest remembered one made for that version again: the views show walkability, the connected
+  regions and the path networks made for it at once, the Procedural list reads Current, and
+  nothing regenerates (a wait for a newer version stops: `AutoGeneration.Follow` schedules only a
+  result out of date). A version never generated for regenerates as before. Another map forgets
+  them. `state.procedural.rows[]` and `list.entries[]` have `madeForShown` (the result was made for
+  the version the map shows) and rows `remembered` (how many); `state.procedural.auto.idle` is true
+  while nothing waits or runs (`wait path=procedural.auto.idle value=true`). Tests:
+  `GeneratedResultsTest`, `AutoRegenerateTest.UndoAndRedoShowTheResultsBesideTheMapMadeForThatVersionAtOnce`.
 - **The list of generated results** is the Procedural mode's (section "The Procedural mode"
   below): an entry per registered generator (`GenerationViewModel.Rows`, through
   `ProceduralViewModel.Rows` and `ProceduralListViewModel`), walkability's choices (the layer of
@@ -1079,8 +1095,10 @@ every other part).
   the map holds a generated one. A person's Generate takes over (`GenerateAsync` stops it), another map stops
   everything. `state.procedural.auto` (`on`, `pending`, `waiting`, `running`, `hidden`: out of date but not shown,
   `shown` per generator, `text`, `tip`, `kept`, `cancelled`); tests set `Delay` small and await `WhenIdleAsync`.
-- **The switch in the views' bar** (`generate.automatic {on?}`, Generate menu): a chip after Mirror
-  (`MainWindow.axaml`, `Regenerate results on their own`) turns regenerating on their own on and off for the
+- **The switch in the status bar** (`generate.automatic {on?}`, Generate menu): a chip at the status
+  bar's end beside what is out of date (`MainWindow.axaml`, `ToggleButton.chip.autoregenerate`,
+  `Regenerate results on their own`; there so the overlays' chips above the views keep their room:
+  the 3D camera's shows at 1280 pixels) turns regenerating on their own on and off for the
   editor, every map (`AutoGeneration.IsOn`; remembered in the user's settings, `UserSettings.RegenerateOnTheirOwn`,
   on by default; the maps keep their settings). Its text says what waits or runs (`Auto`, `Auto: 1 waiting`,
   `Auto: 1 running`, `Auto off`), its tool tip which results regenerate on their own, which wait, run, or wait to
@@ -1090,12 +1108,21 @@ every other part).
   mesh, masks from rules; not the path networks) and what its export makes or writes (the normal map, the path
   networks: `ProceduralDefaults.ExportChoices`). Applied by `OpenNewMap` (`file.new`, a template), the sandbox
   when it is written (`SandboxMap.Ensure`) and the editor's import (`EditedMap.ImportMap(folder, defaults)`); a
-  project opened keeps its own. `generate.useAsWorkspaceDefault` (Generate menu, and each Procedural entry's
-  inspector: Use as workspace default) takes the open map's; `workspace.setProcedural {id, auto?, onExport?}` is
-  the Workspace settings page's list (a check box per result, On export where the export has a choice;
-  `MainViewModel.WorkspaceProceduralRows`); `state.workspaceSettings.procedural`.
-- **The navigation mesh** (`generate.navigation`, Generate menu; `model.Navigation`,
-  `NavigationViewModel`; the library's `NavigationMeshGenerator`): per layer the connected regions
+  project opened keeps its own. `generate.useAsWorkspaceDefault {id?}` (Generate menu: every result) takes the
+  open map's settings; with an id only that result's (`ProceduralDefaults.WithChoicesOf`): each Procedural
+  entry's inspector says what new maps of the workspace do with its result and whether this map does the
+  same (`ProceduralPart.WorkspaceDefaultText`), and its Use as workspace default takes that result only
+  (disabled while they agree). The Workspace settings page lists the defaults in the Procedural list's order,
+  a check box per result and On export where the export has a choice (`MainViewModel.WorkspaceProceduralRows`);
+  the page saves one way: its check boxes and folders change the page (`WorkspaceSettingsViewModel.ProceduralDraft`,
+  `HasChanges`, a footer line saying whether all is saved) and its Save writes both (`file.workspaceSettings
+  {gameFolder?, fafDataFolder?, vaultFolder?, autoGenerate?, onExport?}`), Revert puts both back.
+  `workspace.setProcedural {id, auto?, onExport?}` writes one result's default at once, for automation;
+  `state.workspaceSettings.procedural`.
+- **The connected regions** (`generate.navigation`, Generate menu; `model.Navigation`,
+  `NavigationViewModel`; the library's `NavigationMeshGenerator`, its title `Connected regions`, so the
+  entry, its inspector, the mode's subtitle, the Workspace settings page, the Auto chip's tool tip and
+  the status line say so): per layer the connected regions
   (largest first, the first 12 listed: size, starts, deposits; a start within 8 ogrids of a region
   belongs to it, starts in none are named; `generate.setNavigation {layer?, region?}`: the layer and
   the chosen region are the view's). Every text a person reads says "Connected regions" (the chip,
@@ -2165,13 +2192,15 @@ managed code, its calls cancellable in the middle of a loop.
   has Show the folder and Reload at its top, then `PluginsViewModel.Parts`: a fixed first entry
   `plugins.overview` ("All plugins" under Workspace: the folder, the summary, how `plugin.json` names
   a plugin) and an entry `plugins.plugin.<folder>` per plugin under its heading, with its kind as a
-  tag (`Border.badge.pluginkind`) and its state as the detail (`1 error`, `off`, `on · 1 tool`, the
-  first of tools, checks and commands). The heading (`PluginsViewModel.HeadingOf`, `LuaPlugin.ListedUnder`)
-  is `plugin.json`'s `category` (free text), else the title of the mode its first tool joins (kept
-  by folder while the plugin is off, within the session), else Other; headings alphabetical, Other
-  last. `kind` is one of `PluginKinds.All` (brush, check, command, generator, export, other); left
-  out it reads as other, and one the editor does not know reads as other with a warning in the
-  plugin's errors. The list follows every load, reload, failure and on or off (`SyncParts` from
+  tag (`Border.badge.pluginkind`) and its state as the detail (`1 error`, `off`, `on · 1 warning`,
+  `on · 1 tool`, the first of tools, checks and commands). The heading (`PluginsViewModel.HeadingOf`,
+  `LuaPlugin.ListedUnder`) is `plugin.json`'s `category` (free text), else the title of the mode its
+  first tool joins (remembered by folder in the user's settings, `PluginSettingsDto.ToolModes`, so a
+  plugin turned off keeps its heading also after a restart, when its script does not run), else
+  Other; headings alphabetical, Other last. `kind` is one of `PluginKinds.All` (brush, check,
+  command, generator, export, other); left out it reads as other, and one the editor does not know
+  reads as other with a warning (`LuaPlugin.Warnings`: the entry says `on · 1 warning`, the inspector
+  has a Warnings group, the summary counts plugins `with warnings`; never an error). The list follows every load, reload, failure and on or off (`SyncParts` from
   `Changed`, span `plugins.list`): two passes of `PanelParts.SyncGroup`, first taking out what left
   each heading, then each heading in order after the one before it, so a plugin added, removed,
   renamed or moved to another category is in step and the chosen entry stays chosen; an entry's
@@ -2181,9 +2210,11 @@ managed code, its calls cancellable in the middle of a loop.
   (None without), a button per command, its fields (`SettingList`) and what it registered
   (`LuaPlugin.Facts`: each command, each tool with its mode, each check, the fields, the events).
   The mode's own tool is Select (`plugins.select`, every kind of thing), for what a plugin's
-  command acts on; a plugin's tool with `mode = "plugins"` joins it. `state.plugins` has the folder,
+  command acts on; a plugin's tool with `mode = "plugins"` joins it. A mode whose only tool is
+  Select shows no TOOLS group (`MainViewModel.ShowsToolTiles`): Select stays the active tool, so the
+  views select with it all the same, and the group shows once a plugin adds a tool. `state.plugins` has the folder,
   `open` (the mode shows), the summary, `chosen` (the plugin's folder, or null) and each plugin (on,
-  loaded, running, category, kind, errors, commands, checks, tools, events, fields' values);
+  loaded, running, category, kind, errors, warnings, commands, checks, tools, events, fields' values);
   `state.panelParts.plugins` the list. Tests: `PluginsModeTest`, `PluginsWindowTest`.
 - **Performance**: a check runs a moment after every step, so it must be cheap; one that reads many
   things keeps its result while `map.revision(part)` stays the same (the example's check: 60 ms to
@@ -2778,15 +2809,23 @@ last frame drawn.
   `dialog {button}` presses one by its text (ignoring case), `ui`, `screenshot` and `key` reach it
   like any control. `run {id, interactive: true, wait: false}` or a shortcut (`key Ctrl+N`) starts a
   command that asks.
-- `click {label, under?, button?, doubleClick?}`: the control named, labelled or reading the label
-  (a control one can use before a text of that name), shown first (behind More, scrolled into its
+- `click {label, under?, type?, index?, button?, doubleClick?}`: the control named, labelled or reading the label
+  (a control one can use before a text of that name; `type` keeps those of a type or deriving from
+  it, `Button` takes a toggle button too, and `index` takes the index-th from 0 when several match),
+  shown first (behind More, scrolled into its
   scroll viewer), then clicked in its centre once its place stayed the same over two frames and the
   window's hit testing (what the mouse reaches: the last frame drawn) finds the control there
   (`AutomationServer.Aiming.cs`, `AimAsync`); a control the mouse cannot reach (hidden, outside the
   window, covered by a question or the views) is refused with why (`the mouse would reach ...`),
-  never clicked elsewhere. It then waits (at most 10 s) for the commands the click started
+  never clicked elsewhere; a text inside a tree's or list's item or a button (a tree item's header)
+  counts as reached when the mouse reaches that item. It then waits (at most 10 s) for the commands the click started
   (`CommandRegistry.Running`), unless one asks a question or opens the picker; its answer has the
-  type, the place, `checked`, `focused` and `finished`. `set` aims the same way, and chooses a
+  type, the place, `checked` (after the click and what it ran), `focused`, `finished`, `matches`
+  (how many controls the label fits) and `others` (up to five of the rest). `state.popups` (also in
+  every answer's short state) lists what is open over the windows and screenshots do not show: a
+  combo box's list, a menu, an options row's More, a popup (null when none; `key key=Escape` closes
+  one). `run {id, args}` takes the command's arguments in `args` when one of them is called `id`
+  (`run id=generate.auto args={"id":"navigationMesh","on":true}`). `set` aims the same way, and chooses a
   list's item by clicking it where no check box or button of the item lies (`PlainPointOf`), so
   what a person's click starts runs too (`AutomationAimingTest`). `ui {under}` and `set` find a control the same way: `Combine` is the combo box labelled
   so, not the text beside it. `ui` keeps underscores in texts (only menu headers lose their access
@@ -2817,7 +2856,11 @@ last frame drawn.
   types, walkability marks, stamp). A round brush ignores them (the key goes on to the tool, the
   wheel zooms as without alt); with Random rotation on they set the angle the dabs start from. The
   outline under the mouse turns at once (a change of the shape redraws the cursor), the status line
-  says `Brush rotation: 30°` and the options row's Rotation follows. The stamp keeps its own Q and E
+  says `Brush rotation: 30°` and the options row's Rotation follows. Q and E turn a shaped brush
+  wherever the keyboard is but a text field, an open list or a menu (`MainWindow.OnShortcutKey`,
+  before the focused control: a combo box of the options row would otherwise pick an item by the
+  letter), so a shape just chosen turns without a click in the view, which would paint a dab
+  (`MainViewModel.BrushTurnKey`). The stamp keeps its own Q and E
   (`StampTool.Key`, `The stamp turned 15°`) and takes alt with the wheel; the select and place tools
   keep Q and E for what they turn (no shaped brush). Tests: `BrushTurnTest`.
 - **Undo brings back the selection** (`MainViewModel.UndoSelection`): each version of the document

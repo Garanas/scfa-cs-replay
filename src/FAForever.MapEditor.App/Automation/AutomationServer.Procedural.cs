@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using FAForever.MapEditor.App.Commands;
+using FAForever.MapEditor.Project.Generation;
 
 namespace FAForever.MapEditor.App.Automation;
 
@@ -24,6 +25,9 @@ public sealed partial class AutomationServer
             ["autoWhen"] = row.AutoWhen,
             ["export"] = row.Export.ToString(),
             ["onExport"] = row.OnExport,
+            // made for the version the map shows (an undo or redo keeps the one remembered for it)
+            ["madeForShown"] = row.Row.State == GeneratedStatus.Current,
+            ["remembered"] = model.Generation.Results.RecentOf(row.Id).Count,
         })]),
         ["auto"] = model.DescribeAutoRegenerate(),
         ["list"] = model.DescribeProceduralList(),

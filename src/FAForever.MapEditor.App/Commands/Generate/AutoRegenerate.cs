@@ -32,18 +32,22 @@ public sealed class GenerateAutomaticHandler(MainViewModel model) : IRequestHand
 /// <summary>
 /// Makes the open map's Procedural settings the workspace's defaults (Q5): what regenerates on its
 /// own and what the export makes or writes, written into <c>workspace.json</c>. Maps made or imported
-/// in the workspace from then on start with them; projects keep their own.
+/// in the workspace from then on start with them; projects keep their own. With an id only that
+/// result's choices (a Procedural entry's Use as workspace default); the others keep their defaults.
 /// </summary>
+/// <param name="Id">One generated result, e.g. <c>walkability</c>; left out, every one.</param>
 /// <returns>The workspace's defaults now.</returns>
 [EditorCommand("generate.useAsWorkspaceDefault", "Use this map's settings as the workspace default", Story = "F-7", Needs = Needs.Map | Needs.Workspace)]
-public sealed record UseAsWorkspaceDefault : IRequest<JsonObject>;
+public sealed record UseAsWorkspaceDefault(string? Id = null) : IRequest<JsonObject>;
 
 public sealed class UseAsWorkspaceDefaultHandler(MainViewModel model) : IRequestHandler<UseAsWorkspaceDefault, JsonObject>
 {
     public Task<JsonObject> Handle(UseAsWorkspaceDefault request, CancellationToken cancellationToken)
     {
-        ProceduralDefaults defaults = model.UseAsWorkspaceDefault();
-        model.Status = $"New and imported maps of the workspace start with this map's settings: {model.DescribeDefaults(defaults)}";
+        ProceduralDefaults defaults = model.UseAsWorkspaceDefault(request.Id);
+        model.Status = request.Id is string id
+            ? $"New and imported maps of the workspace {model.WorkspaceDefaultOf(id, defaults)}"
+            : $"New and imported maps of the workspace start with this map's settings: {model.DescribeDefaults(defaults)}";
         return Task.FromResult(WorkspaceProceduralHandler.Describe(defaults));
     }
 }

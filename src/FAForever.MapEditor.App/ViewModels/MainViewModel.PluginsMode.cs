@@ -7,5 +7,21 @@ namespace FAForever.MapEditor.App.ViewModels;
 /// </summary>
 public sealed partial class MainViewModel
 {
-    private void InitializePluginsMode() => AddPanelPartList(PluginsMode.Id, Plugins.Parts);
+    private void InitializePluginsMode()
+    {
+        AddPanelPartList(PluginsMode.Id, Plugins.Parts);
+        PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(Tools))
+            {
+                OnPropertyChanged(nameof(ShowsToolTiles));
+            }
+        };
+    }
+
+    /// <summary>
+    /// Whether the mode's panel shows its TOOLS: not when its only tool is Select (the Plugins mode
+    /// without a plugin's tool), which stays the active tool, so the views select with it all the same.
+    /// </summary>
+    public bool ShowsToolTiles => !(Tools.Count == 1 && Tools[0].Definition.Id.EndsWith(".select", StringComparison.Ordinal));
 }
