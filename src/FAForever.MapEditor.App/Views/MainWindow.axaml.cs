@@ -107,6 +107,7 @@ public sealed partial class MainWindow : Window
             _model.Palette.PropertyChanged += OnPaletteChanged;
             _model.FitRequested += OnFitRequested;
             _model.TopViewRequested += OnTopViewRequested;
+            _model.Tool<Tools.UnitPlaceTool>().ViewMiddle = () => new System.Numerics.Vector2((float)Heightmap.Centre.X, (float)Heightmap.Centre.Y);
             _model.TopViewFrameRequested += OnTopViewFrameRequested;
             _model.ShowFolderRequested += OnShowFolderRequested;
             _model.OpenFileRequested += OnOpenFileRequested;

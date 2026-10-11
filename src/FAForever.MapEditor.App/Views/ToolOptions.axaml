@@ -7,6 +7,12 @@
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              x:Class="FAForever.MapEditor.App.Views.ToolOptions"
              x:DataType="vm:MainViewModel" ClipToBounds="False">
+  <UserControl.Styles>
+    <!-- what overflows starts below the views' own bar (symmetry, overlay chips), which stays reachable -->
+    <Style Selector="controls|ToolRow">
+      <Setter Property="OverflowOffset" Value="{StaticResource ToolbarHeight}" />
+    </Style>
+  </UserControl.Styles>
   <Border Classes="toolbar options">
     <!-- what does not fit goes behind the row's More button (controls:ToolRow), so the height stays -->
     <DockPanel IsEnabled="{Binding HasMap}">
@@ -270,7 +276,7 @@
                   <TextBlock Classes="label" Text="Shift snaps to" />
                   <ComboBox ItemsSource="{Binding Snaps}" SelectedItem="{Binding Snap}" AutomationProperties.Name="Grid a move snaps to with shift"
                             AutomationProperties.HelpText="Shift snaps a move to this grid, a turn to 15 degrees, a scale to tenths" />
-                  <CheckBox Content="Keep structures on the build grid" IsChecked="{Binding KeepOnGrid}" AutomationProperties.Name="Keep structures on the build grid"
+                  <CheckBox Content="Keep on grid" IsChecked="{Binding KeepOnGrid}" AutomationProperties.Name="Keep structures on the build grid"
                             AutomationProperties.HelpText="A move of a selection with structures is rounded so that the first structure lands on the build grid; everything else moves by the same amount" />
                 </StackPanel>
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
@@ -346,10 +352,12 @@
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <StackPanel Classes="inline" IsVisible="{Binding UsesSpacing}">
-                  <TextBlock Classes="label" Text="Spacing" />
-                  <TextBox Classes="toolfield" Text="{Binding Spacing, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
-                           AutomationProperties.Name="Spacing of mobile units in ogrids" AutomationProperties.HelpText="Between the centres of mobile units in a line, rectangle or ring; structures butt together at their footprint" />
+                <StackPanel Classes="inline">
+                  <controls:AssetThumbnail Model="{Binding Unit.Model}" Width="{StaticResource ToolButtonHeight}" Height="{StaticResource ToolButtonHeight}"
+                                           IsVisible="{Binding HasUnit}" AutomationProperties.Name="Picture of the unit to place" />
+                  <TextBlock Classes="label" Text="{Binding UnitTitle}" ToolTip.Tip="{Binding UnitTitle}" MaxWidth="{StaticResource ToolSliderWidth}" TextTrimming="CharacterEllipsis" />
+                  <Button Content="Choose..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.pick"
+                          AutomationProperties.Name="Choose a unit to place" AutomationProperties.HelpText="Opens the unit picker; a unit chosen on the asset shelf is placed too" />
                 </StackPanel>
                 <CheckBox Content="Face along" IsChecked="{Binding FaceAlong}" IsVisible="{Binding IsLine}" AutomationProperties.Name="Face along the line"
                           AutomationProperties.HelpText="Each unit faces the way the line goes (a structure in the nearest quarter turn); unchecked, the facing below" />
@@ -371,15 +379,6 @@
                   <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Scatter brush radius in ogrids" />
                 </StackPanel>
                 <StackPanel Classes="inline">
-                  <controls:AssetThumbnail Model="{Binding Unit.Model}" Width="{StaticResource ToolButtonHeight}" Height="{StaticResource ToolButtonHeight}"
-                                           IsVisible="{Binding HasUnit}" AutomationProperties.Name="Picture of the unit to place" />
-                  <TextBlock Classes="label" Text="{Binding UnitTitle}" ToolTip.Tip="{Binding UnitTitle}" />
-                  <Button Content="Choose..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.pick"
-                          AutomationProperties.Name="Choose a unit to place" AutomationProperties.HelpText="Opens the unit picker; a unit chosen on the asset shelf is placed too" />
-                </StackPanel>
-                <CheckBox Content="As wrecks" IsChecked="{Binding AsWrecks}" AutomationProperties.Name="Place units as wrecks"
-                          AutomationProperties.HelpText="They go into the army's WRECKAGE group, which the game turns into wrecks when it starts" />
-                <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="Army" />
                   <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" AutomationProperties.Name="Army to place units for" />
                 </StackPanel>
@@ -394,6 +393,13 @@
                   <TextBox Classes="toolfield" Text="{Binding Heading, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
                            AutomationProperties.Name="Facing of placed units in degrees" AutomationProperties.HelpText="Clockwise from +x in the top view; Q and E turn it (a structure a quarter turn)" />
                 </StackPanel>
+                <StackPanel Classes="inline" IsVisible="{Binding UsesSpacing}">
+                  <TextBlock Classes="label" Text="Spacing" />
+                  <TextBox Classes="toolfield" Text="{Binding Spacing, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                           AutomationProperties.Name="Spacing of mobile units in ogrids" AutomationProperties.HelpText="Between the centres of mobile units in a line, rectangle or ring; structures butt together at their footprint" />
+                </StackPanel>
+                <CheckBox Content="As wrecks" IsChecked="{Binding AsWrecks}" AutomationProperties.Name="Place units as wrecks"
+                          AutomationProperties.HelpText="They go into the army's WRECKAGE group, which the game turns into wrecks when it starts" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </controls:ToolRow>
             </DataTemplate>

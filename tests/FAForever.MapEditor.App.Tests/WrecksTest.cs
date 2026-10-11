@@ -50,9 +50,9 @@ namespace FAForever.MapEditor.App.Tests
             tool.Press(40, 60);
 
             PlacedUnit wreck = Placed(model, "UNIT_1");
-            Assert.AreEqual(("NEUTRAL_CIVILIAN", "WRECKAGE"), (wreck.Army, UnitGroupEdits.PathText(wreck.Group)));
+            Assert.AreEqual(("ARMY_5", "WRECKAGE"), (wreck.Army, UnitGroupEdits.PathText(wreck.Group)));
             Assert.IsTrue(UnitWrecks.IsWreck(wreck));
-            StringAssert.EndsWith(model.Status, "as a wreck");
+            StringAssert.Contains(model.Status, "into ARMY_5's WRECKAGE: a wreck");
             Assert.IsTrue(tool.Describe()["asWrecks"]!.GetValue<bool>());
 
             CommandRun unit = await Run(model, "units.add", new JsonObject { ["x"] = 50, ["z"] = 50, ["wreck"] = false });

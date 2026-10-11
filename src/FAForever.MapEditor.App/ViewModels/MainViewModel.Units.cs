@@ -74,6 +74,14 @@ public sealed partial class MainViewModel
                 place.PlaceInto(node.Army, node.PathText);
             }
         };
+        // and the row's Group combo chooses the group in the tree: one choice, shown twice
+        place.GroupPicked += (army, path) =>
+        {
+            if (Armies.ChosenGroup?.Key != $"{army}:{path}")
+            {
+                Armies.Choose(army, UnitGroupEdits.ParsePath(path));
+            }
+        };
     }
 
     /// <summary>

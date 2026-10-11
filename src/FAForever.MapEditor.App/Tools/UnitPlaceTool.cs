@@ -353,7 +353,58 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         }
     }
 
-    partial void OnArmyChanged(string? value) => RefreshGroups(model.ShownDocument);
+    partial void OnArmyChanged(string? value)
+    {
+        ArmyChosen |= !_defaulting;
+        RefreshGroups(model.ShownDocument);
+    }
+
+    private bool _defaulting;
+
+    /// <summary>
+    /// Whether the army was chosen (in the row, in the tree or by a command) rather than defaulted;
+    /// a chosen army stays until the map has no such army.
+    /// </summary>
+    public bool ArmyChosen { get; private set; }
+
+    /// <summary>
+    /// The view's middle in ogrids, for the army it places for by default; null (the map's middle)
+    /// until the window sets it.
+    /// </summary>
+    public Func<Vector2?>? ViewMiddle { get; set; }
+
+    /// <summary>
+    /// The army a new place tool places for: the playable army whose spawn lies nearest the view's
+    /// middle, else the civilians (<c>NEUTRAL_CIVILIAN</c>), the first extra army, the first army.
+    /// </summary>
+    public string? DefaultArmy(MapDocument document)
+    {
+        Vector2 middle = ViewMiddle?.Invoke() ?? new Vector2(document.Width / 2f, document.Height / 2f);
+        string? nearest = document.Markers.Spawns
+            .Where(spawn => document.Scenario.PlayableArmies.Contains(spawn.Army) && document.FindArmy(spawn.Army) is not null)
+            .OrderBy(spawn => Vector2.DistanceSquared(new Vector2(spawn.Position.X, spawn.Position.Z), middle))
+            .FirstOrDefault()?.Army;
+        return nearest
+            ?? document.FindArmy("NEUTRAL_CIVILIAN")?.Name
+            ?? document.Scenario.ExtraArmies.FirstOrDefault(name => document.FindArmy(name) is not null)
+            ?? document.Armies.FirstOrDefault()?.Name;
+    }
+
+    private bool _following;
+
+    /// <summary>
+    /// Raised with the army and group's path when the user chooses a group in the row's combo box,
+    /// so the Units mode's tree shows the same group (the tree's choice reaches <see cref="PlaceInto"/>).
+    /// </summary>
+    public event Action<string, string>? GroupPicked;
+
+    partial void OnChosenGroupChanged(GroupChoice? value)
+    {
+        if (!_following && value is not null && Army is string army)
+        {
+            GroupPicked?.Invoke(army, value.Path);
+        }
+    }
 
     public void Press(float x, float z) => Press(x, z, ToolInput.Default);
 
@@ -628,9 +679,15 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         }
         if (document is not null && (Army is null || document.FindArmy(Army) is null))
         {
-            Army = document.FindArmy("NEUTRAL_CIVILIAN")?.Name
-                ?? document.Scenario.ExtraArmies.FirstOrDefault(name => document.FindArmy(name) is not null)
-                ?? armies.FirstOrDefault()?.Name;
+            _defaulting = true;
+            try
+            {
+                Army = DefaultArmy(document);
+            }
+            finally
+            {
+                _defaulting = false;
+            }
         }
         RefreshGroups(document);
     }
@@ -640,15 +697,37 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// </summary>
     public void PlaceInto(string army, string group)
     {
-        Army = army;
-        if (Groups.All(choice => choice.Path != group))
+        _following = true;
+        try
         {
-            RefreshGroups(model.ShownDocument);
+            Army = army;
+            if (Groups.All(choice => choice.Path != group))
+            {
+                RefreshGroups(model.ShownDocument);
+            }
+            ChosenGroup = Groups.FirstOrDefault(choice => choice.Path == group) ?? ChosenGroup;
         }
-        ChosenGroup = Groups.FirstOrDefault(choice => choice.Path == group) ?? ChosenGroup;
+        finally
+        {
+            _following = false;
+        }
     }
 
     private void RefreshGroups(MapDocument? document)
+    {
+        bool following = _following;
+        _following = true;
+        try
+        {
+            RefreshGroupsCore(document);
+        }
+        finally
+        {
+            _following = following;
+        }
+    }
+
+    private void RefreshGroupsCore(MapDocument? document)
     {
         UnitGroup? root = Army is null ? null : document?.FindArmy(Army)?.Units;
         List<GroupChoice> choices = [];
