@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.Rendering;
@@ -6,6 +7,7 @@ using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
+using FAForever.MapEditor.Project.Workspaces;
 using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.ViewModels;
@@ -44,22 +46,54 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// The preview and the normal map the map was opened with are its own: generated for that
-    /// version, so the status tells when the terrain changed since and an export renders the
-    /// preview again. A normal map of one colour everywhere (a new map's or the sandbox's
-    /// placeholder) was never generated and stays missing.
+    /// The results the map was opened with in its own files are its own, made for that version: the
+    /// preview, the normal map, the rules layers of its masks and strata, the props its rules placed
+    /// and the generated sky cube map count as current, so the status tells when what they are made
+    /// from changed since. A normal map of one colour everywhere (a new map's or the sandbox's
+    /// placeholder) was never generated and stays missing, as do rules the map has not.
     /// </summary>
     private void KeepMapPreview(EditedMap map)
     {
-        if (Generation.Results.Find(MapPreview.GeneratorId) is IGenerator preview)
+        MapDocument document = map.Document;
+        void Keep(string id, object value)
         {
-            Generation.Results.Keep(GeneratedResult.Of(preview, map.Document, map.Document.Terrain.Preview));
+            if (Generation.Results.Find(id) is IGenerator generator)
+            {
+                Generation.Results.Keep(GeneratedResult.Of(generator, document, value));
+            }
         }
-        if (Generation.Results.Find(NormalMapGenerator.GeneratorId) is IGenerator normalMap && !IsOneColour(map.Document.Terrain.NormalMap))
+        Keep(MapPreview.GeneratorId, document.Terrain.Preview);
+        if (!IsOneColour(document.Terrain.NormalMap))
         {
-            Generation.Results.Keep(GeneratedResult.Of(normalMap, map.Document, map.Document.Terrain.NormalMap));
+            Keep(NormalMapGenerator.GeneratorId, document.Terrain.NormalMap);
         }
-        Generation.Refresh(map.Document);
+        // the rules layers hold what their rules made last
+        (string Target, string Layer, TiledBuffer<byte> Grid)[] rulesLayers = [.. document.CoverageStacks
+            .SelectMany(entry => entry.Value.Layers
+                .Where(layer => layer.Source is RulesSource && layer.Coverage is not null)
+                .Select(layer => (entry.Key, layer.Name, layer.Coverage!)))];
+        if (rulesLayers.Length > 0)
+        {
+            Keep(MaskRulesGenerator.GeneratorId, (IReadOnlyList<(string Target, string Layer, TiledBuffer<byte> Grid)>)rulesLayers);
+        }
+        if (!document.PropRules.IsEmpty)
+        {
+            Keep(PropRulesGenerator.GeneratorId, (ImmutableArray<Prop>)[.. document.Props.Where(prop => prop.Rule is not null)]);
+        }
+        if (document.Files.TryGetValue(SkyCubeMaps.FilePath, out ImmutableArray<byte> cube))
+        {
+            try
+            {
+                DecodedTexture strip = CubeMaps.Decode([.. cube]);
+                Keep(SkyCubeGenerator.GeneratorId, new SkyCubeResult([.. cube], SkyCubeGenerator.Small(strip, SkyCubeGenerator.PreviewFace), strip.Height,
+                    "kept with the map", document.Sky.Skybox is null ? "made from the lighting" : "the map's skybox"));
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                FilesLog.LogWarning(exception, "The map's sky cube map {File} does not read; it counts as never made: {Reason}", SkyCubeMaps.FilePath, exception.Message);
+            }
+        }
+        Generation.Refresh(document);
     }
 
     /// <summary>

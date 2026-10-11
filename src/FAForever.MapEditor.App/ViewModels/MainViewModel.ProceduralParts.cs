@@ -49,7 +49,8 @@ public sealed partial class MainViewModel
         });
         ProceduralList.Describe(new ProceduralEntry(NormalMapGenerator.GeneratorId, surface)
         {
-            Picture = (document, _) => document is null ? null : new ColourGridPicture(document.Terrain.NormalMap),
+            // a new map's normal map is a placeholder of one colour: no picture until it is made
+            Picture = (document, result) => document is null || result is null ? null : new ColourGridPicture(document.Terrain.NormalMap),
             Facts = document => document is null ? [] : [$"{document.Terrain.NormalMap.Width} by {document.Terrain.NormalMap.Height} pixels, {document.Terrain.NormalMapFormat}"],
             Help = "The terrain's normal map, made from the final heightmap at the size of the map's own",
         });

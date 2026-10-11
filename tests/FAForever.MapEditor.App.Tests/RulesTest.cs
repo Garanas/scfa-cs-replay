@@ -4,6 +4,7 @@ using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.Tests
 {
@@ -227,6 +228,42 @@ namespace FAForever.MapEditor.App.Tests
             int Index(string id) => order.ToList().FindIndex(generator => generator.Id == id);
             Assert.IsTrue(Index(MaskRulesGenerator.GeneratorId) < Index(PropRulesGenerator.GeneratorId));
             Assert.IsTrue(Index(WalkabilityGenerator.GeneratorId) < Index(PathNetworkGenerator.GeneratorId));
+        }
+
+        [TestMethod]
+        public async Task ResultsKeptInTheProjectAreCurrentWhenItOpensAgain()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "paint.addMask", new JsonObject { ["name"] = "flat" });
+            await Run(model, "paint.addMaskRule", new JsonObject { ["mask"] = "flat", ["kind"] = "Slope", ["max"] = 8 });
+            await Run(model, "props.addRule", new JsonObject { ["name"] = "Forest", ["density"] = 1 });
+            await Run(model, "props.setRulePalette", new JsonObject { ["props"] = new JsonArray(Pine) });
+            await Run(model, "generate.props");
+            // a sky cube map among the map's files, as Generate leaves it
+            byte[] rgba = new byte[6 * 16 * 16 * 4];
+            Array.Fill(rgba, (byte)200);
+            byte[] cube = SkyCubeMaps.Dds(new DecodedTexture(6 * 16, 16, rgba));
+            model.Map!.Session.Edit("Generate the sky cube map", document => document with
+            {
+                Files = document.Files.SetItem(SkyCubeMaps.FilePath, [.. cube]),
+            });
+            string project = Path.Combine(AppContext.BaseDirectory, "rules-kept", Guid.NewGuid().ToString("N"));
+            await model.SaveAsAsync(project);
+
+            MainViewModel reopened = new MainViewModel(new MainViewModelTest.Answers());
+            await reopened.OpenAsync(project);
+            GeneratedStatus StatusOf(string id) => reopened.Generation.States.Single(state => state.Generator.Id == id).Status;
+            Assert.AreEqual(GeneratedStatus.Current, StatusOf(MaskRulesGenerator.GeneratorId), "the rules layers hold what their rules made");
+            Assert.AreEqual(GeneratedStatus.Current, StatusOf(PropRulesGenerator.GeneratorId), "the props of the rules are in the project");
+            Assert.AreEqual(GeneratedStatus.Current, StatusOf("skyCube"), "the sky cube map is among the map's files");
+            StringAssert.Contains(reopened.SkyCube.Status, "Up to date");
+            Assert.AreEqual(16, reopened.SkyCube.Describe()["size"]!.GetValue<int>());
+
+            // and out of date once what they are made from changes
+            reopened.Map!.Session.Edit("Raise the water", document => document with { Water = document.Water with { Elevation = document.Water.Elevation + 2 } });
+            reopened.Generation.Refresh(reopened.Map.Document);
+            Assert.AreEqual(GeneratedStatus.Stale, StatusOf(MaskRulesGenerator.GeneratorId));
+            Assert.AreEqual(GeneratedStatus.Stale, StatusOf(PropRulesGenerator.GeneratorId));
         }
 
         [TestMethod]
