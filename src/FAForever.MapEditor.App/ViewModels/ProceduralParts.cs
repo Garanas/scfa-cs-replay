@@ -67,7 +67,7 @@ public sealed record ProceduralEntry(string GeneratorId, string Group)
 public sealed record ProceduralWalkabilityDetails(MainViewModel Model);
 
 /// <summary>
-/// The navigation mesh's choices in a Procedural inspector: the layer shown, the routes, its regions.
+/// The navigation mesh's choices in a Procedural inspector: the layer shown, its connected regions.
 /// </summary>
 public sealed record ProceduralNavigationDetails(MainViewModel Model);
 

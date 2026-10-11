@@ -34,8 +34,6 @@ public sealed partial class AutomationServer
         ["list"] = model.DescribeProceduralList(),
         ["navigation"] = GenerateNavigationHandler.Describe(model.Navigation),
         ["showNavigation"] = model.ShowNavigation,
-        ["routesTop"] = window.MapView.RoutesDrawn,
-        ["routes3d"] = window.View3D.RoutesDrawn,
         ["export"] = new JsonObject
         {
             ["running"] = model.Export.IsRunning,

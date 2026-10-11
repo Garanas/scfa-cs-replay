@@ -8,7 +8,7 @@ using FAForever.MapEditor.Project.Generation;
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
-/// A line of the Procedural mode's list of regions of the navigation mesh.
+/// A line of the Procedural mode's list of connected regions of the navigation mesh.
 /// </summary>
 /// <param name="Swatch">The index of its colour in the overlay's palette (<see cref="NavigationViewModel.PaletteSize"/>), from 0.</param>
 public sealed record NavRegionRow(NavRegion Region, int Swatch, bool IsChosen)
@@ -25,20 +25,10 @@ public sealed record NavRegionRow(NavRegion Region, int Swatch, bool IsChosen)
 }
 
 /// <summary>
-/// A line of the Procedural mode's list of routes between starts.
-/// </summary>
-public sealed record NavRouteRow(NavStartRoute Route)
-{
-    public string Text => Route.Route is null
-        ? $"{Route.From} to {Route.To}: no way over this layer"
-        : $"{Route.From} to {Route.To}: {Route.Route.Length.ToString("0", CultureInfo.InvariantCulture)} ogrids, {((Route.Detour ?? 1) * 100 - 100).ToString("0", CultureInfo.InvariantCulture)} % longer than straight";
-}
-
-/// <summary>
 /// The navigation mesh in the Procedural mode: the last generated mesh of the open map, the layer
-/// shown (its regions coloured in the views, the overlay <c>navigation</c>), the list of that layer's
-/// regions with their starts and deposits, the routes between starts, and the region chosen (a click
-/// with the Regions tool, or the list).
+/// shown (its connected regions coloured in the views, the overlay <c>navigation</c>), the list of that
+/// layer's regions with their starts and deposits, and the region chosen (a click with the Connected
+/// regions tool, or the list).
 /// </summary>
 public sealed partial class NavigationViewModel : ObservableObject
 {
@@ -74,11 +64,6 @@ public sealed partial class NavigationViewModel : ObservableObject
     public partial NavLayer Layer { get; set; } = NavLayer.Land;
 
     /// <summary>
-    /// The choices of routes, for the panel.
-    /// </summary>
-    public IReadOnlyList<RoutePairs> RouteChoices { get; } = [RoutePairs.Nearest, RoutePairs.All, RoutePairs.None];
-
-    /// <summary>
     /// The last generated mesh, or null.
     /// </summary>
     public NavigationMesh? Mesh { get; private set; }
@@ -96,17 +81,10 @@ public sealed partial class NavigationViewModel : ObservableObject
 
     public IReadOnlyList<NavRegionRow> Regions { get; private set; } = [];
 
-    public IReadOnlyList<NavRouteRow> Routes { get; private set; } = [];
-
     /// <summary>
     /// For the panel, e.g. <c>Land: 3 regions; 12 smaller ones not listed. Starts on no region: ARMY_2</c>.
     /// </summary>
-    public string Summary { get; private set; } = "Not generated yet: generate it to see the regions and routes.";
-
-    /// <summary>
-    /// The routes of the shown layer that have a way, for the views.
-    /// </summary>
-    public IReadOnlyList<NavRoute> RouteLines => [.. (Mesh?.RoutesOf(Layer) ?? []).Select(route => route.Route).OfType<NavRoute>()];
+    public string Summary { get; private set; } = "Not generated yet: generate it to see the connected regions.";
 
     /// <summary>
     /// Raised when the views draw the mesh again: another result, layer or chosen region.
@@ -157,14 +135,12 @@ public sealed partial class NavigationViewModel : ObservableObject
         if (Mesh is not NavigationMesh mesh)
         {
             Regions = [];
-            Routes = [];
-            Summary = "Not generated yet: generate it to see the regions and routes.";
+            Summary = "Not generated yet: generate it to see the connected regions.";
         }
         else
         {
             IReadOnlyList<NavRegion> all = mesh.RegionsOf(Layer);
             Regions = [.. all.Take(ListedRegions).Select(region => new NavRegionRow(region, SwatchOf(region.Id), region.Id == ChosenRegion))];
-            Routes = [.. mesh.RoutesOf(Layer).Select(route => new NavRouteRow(route))];
             List<string> parts = [all.Count == 1 ? $"{Layer}: 1 region" : $"{Layer}: {all.Count} regions"];
             if (all.Count > ListedRegions)
             {
@@ -181,9 +157,7 @@ public sealed partial class NavigationViewModel : ObservableObject
         OnPropertyChanged(nameof(Mesh));
         OnPropertyChanged(nameof(Grid));
         OnPropertyChanged(nameof(Regions));
-        OnPropertyChanged(nameof(Routes));
         OnPropertyChanged(nameof(Summary));
-        OnPropertyChanged(nameof(RouteLines));
         Changed?.Invoke(this, EventArgs.Empty);
     }
 }

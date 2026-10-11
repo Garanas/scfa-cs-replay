@@ -4,8 +4,7 @@ namespace FAForever.MapEditor.Project.Files.InMemory
 {
     /// <summary>
     /// How the map's generated results are made (the Procedural mode): which regenerate on their own
-    /// after a change to their inputs, which the export leaves alone, and the navigation mesh's
-    /// settings. Kept in <c>map.json</c> (<c>procedural</c>); the results themselves live in memory.
+    /// after a change to their inputs, which the export leaves alone, and the settings of some. Kept in <c>map.json</c> (<c>procedural</c>); the results themselves live in memory.
     /// </summary>
     public sealed record ProceduralSettings
     {
@@ -22,8 +21,6 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// normal map, when the map maker keeps one of their own); every other is made.
         /// </summary>
         public ImmutableSortedSet<string> NotOnExport { get; init; } = ImmutableSortedSet.Create<string>(StringComparer.Ordinal);
-
-        public NavigationSettings Navigation { get; init; } = NavigationSettings.Default;
 
         /// <summary>
         /// The masks for tools written beside the draft heightmap for World Machine or Gaea
@@ -48,7 +45,7 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// </summary>
         public SkyCubeSettings SkyCube { get; init; } = SkyCubeSettings.Default;
 
-        public bool IsDefault => AutoGenerate.IsEmpty && NotOnExport.IsEmpty && Navigation == NavigationSettings.Default && DraftMasks.IsEmpty && !WriteDraftOnChange && PathNodes.IsDefault && SkyCube.IsDefault;
+        public bool IsDefault => AutoGenerate.IsEmpty && NotOnExport.IsEmpty && DraftMasks.IsEmpty && !WriteDraftOnChange && PathNodes.IsDefault && SkyCube.IsDefault;
 
         public bool RegeneratesOnItsOwn(string id) => AutoGenerate.Contains(id);
 
@@ -61,34 +58,9 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             this with { NotOnExport = on ? NotOnExport.Remove(id) : NotOnExport.Add(id) };
 
         public bool Equals(ProceduralSettings? other) =>
-            other is not null && AutoGenerate.SetEquals(other.AutoGenerate) && NotOnExport.SetEquals(other.NotOnExport) && Navigation == other.Navigation
+            other is not null && AutoGenerate.SetEquals(other.AutoGenerate) && NotOnExport.SetEquals(other.NotOnExport)
             && DraftMasks.SetEquals(other.DraftMasks) && WriteDraftOnChange == other.WriteDraftOnChange && PathNodes == other.PathNodes && SkyCube == other.SkyCube;
 
-        public override int GetHashCode() => HashCode.Combine(AutoGenerate.Count, NotOnExport.Count, Navigation, PathNodes);
-    }
-
-    /// <summary>
-    /// Which starts the navigation mesh measures routes between.
-    /// </summary>
-    public enum RoutePairs
-    {
-        /// <summary>No routes.</summary>
-        None,
-
-        /// <summary>Each start to the start nearest to it in a straight line.</summary>
-        Nearest,
-
-        /// <summary>Every pair of starts.</summary>
-        All,
-    }
-
-    /// <summary>
-    /// The navigation mesh's settings (the Procedural mode): the routes it measures.
-    /// </summary>
-    public sealed record NavigationSettings
-    {
-        public static NavigationSettings Default { get; } = new NavigationSettings();
-
-        public RoutePairs Routes { get; init; } = RoutePairs.Nearest;
+        public override int GetHashCode() => HashCode.Combine(AutoGenerate.Count, NotOnExport.Count, PathNodes);
     }
 }

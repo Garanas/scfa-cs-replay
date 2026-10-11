@@ -17,12 +17,6 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         public List<string>? NotOnExport { get; init; }
 
         /// <summary>
-        /// The starts the navigation mesh measures routes between: <c>None</c>, <c>Nearest</c> or
-        /// <c>All</c>; absent for <c>Nearest</c>.
-        /// </summary>
-        public string? Routes { get; init; }
-
-        /// <summary>
         /// The masks for tools written beside the draft heightmap for World Machine or Gaea
         /// (<c>procedural/temp/draft-mask-&lt;name&gt;.png</c>); absent for none.
         /// </summary>

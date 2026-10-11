@@ -238,7 +238,7 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public async Task TheNavigationMeshShowsRegionsStartsAndRoutes()
+        public async Task TheNavigationMeshShowsConnectedRegionsAndStarts()
         {
             MainViewModel model = await Open();
 
@@ -266,12 +266,10 @@ namespace FAForever.MapEditor.App.Tests
             model.Stroke([(5, 5)]);
             Assert.AreEqual(model.Navigation.Mesh!.RegionAt(NavLayer.Land, 5, 5)?.Id, model.Navigation.ChosenRegion);
 
-            // the layer is the view's; the routes the map's, which makes the mesh out of date
-            Assert.IsTrue((await Run(model, "generate.setNavigation", new JsonObject { ["layer"] = "water", ["routes"] = "all" })).Ran);
+            // the layer is the view's: the mesh stays current
+            Assert.IsTrue((await Run(model, "generate.setNavigation", new JsonObject { ["layer"] = "water" })).Ran);
             Assert.AreEqual(NavLayer.Water, model.Navigation.Layer);
-            Assert.AreEqual(RoutePairs.All, model.Map!.Document.Procedural.Navigation.Routes);
-            Assert.AreEqual(RoutePairs.All, model.NavigationRoutes);
-            CollectionAssert.Contains(model.Generation.Results.States(model.Map.Document).Single(state => state.Generator.Id == "navigationMesh").ChangedInputs.ToArray(), "navigation settings");
+            Assert.AreEqual(GeneratedStatus.Current, model.Generation.Results.States(model.Map!.Document).Single(state => state.Generator.Id == "navigationMesh").Status);
             Assert.IsFalse((await Run(model, "generate.setNavigation", new JsonObject { ["layer"] = "air" })).Ran, "air units go anywhere: no layer");
         }
 

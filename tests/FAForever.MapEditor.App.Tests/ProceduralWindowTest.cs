@@ -10,7 +10,7 @@ using FAForever.MapEditor.App.Views;
 namespace FAForever.MapEditor.App.Tests
 {
     /// <summary>
-    /// The Procedural mode's panel and its Regions tool in the real window (headless).
+    /// The Procedural mode's panel and its Connected regions tool in the real window (headless).
     /// </summary>
     [TestClass]
     public sealed class ProceduralWindowTest
@@ -83,7 +83,7 @@ namespace FAForever.MapEditor.App.Tests
             Click(window, Named<Button>(window, first.Label));
             Assert.AreEqual(first.Region.Id, model.Navigation.ChosenRegion, "the list chooses a region");
 
-            // the Regions tool: a click in the top view chooses the region under the mouse
+            // the Connected regions tool: a click in the top view chooses the region under the mouse
             model.SelectTool("procedural.regions");
             model.View = MapViewTab.Top;
             Dispatcher.UIThread.RunJobs();

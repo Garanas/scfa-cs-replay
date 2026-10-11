@@ -13,8 +13,7 @@ namespace FAForever.MapEditor.Project.Tests
             MapDocument document = MapImporter.ImportFolder(ProjectFolders.HardFfa);
             ProceduralSettings settings = document.Procedural
                 .WithAutoGenerate(WalkabilityGenerator.GeneratorId, true)
-                .WithOnExport(NormalMapGenerator.GeneratorId, false)
-                with { Navigation = new NavigationSettings { Routes = RoutePairs.All } };
+                .WithOnExport(NormalMapGenerator.GeneratorId, false);
             string project = ProjectFolders.New("procedural");
 
             MapProjectStore.Save(document with { Procedural = settings }, project);
@@ -35,6 +34,21 @@ namespace FAForever.MapEditor.Project.Tests
 
             Assert.IsFalse(File.ReadAllText(Path.Combine(project, MapProjectLayout.Map)).Contains("procedural", StringComparison.OrdinalIgnoreCase));
             Assert.AreEqual(ProceduralSettings.Default, MapProjectStore.Load(project).Procedural);
+        }
+
+        [TestMethod]
+        public void AnOlderProjectWithRoutesStillOpens()
+        {
+            string project = ProjectFolders.New("procedural-routes");
+            MapProjectStore.Save(MapImporter.ImportFolder(ProjectFolders.HardFfa) with { Procedural = ProceduralSettings.Default.WithAutoGenerate("walkability", true) }, project);
+            string file = Path.Combine(project, MapProjectLayout.Map);
+            string json = File.ReadAllText(file);
+            File.WriteAllText(file, json.Replace("\"autoGenerate\"", "\"routes\": \"All\", \"autoGenerate\"", StringComparison.Ordinal));
+            StringAssert.Contains(File.ReadAllText(file), "\"routes\"");
+
+            MapDocument loaded = MapProjectStore.Load(project);
+
+            Assert.IsTrue(loaded.Procedural.RegeneratesOnItsOwn("walkability"));
         }
 
         [TestMethod]

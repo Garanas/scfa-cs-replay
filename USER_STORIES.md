@@ -267,14 +267,12 @@ reads again when it changes; and nothing that generates runs by itself.
       red and open green in the views), which walkability then takes over what it generates; kept
       as `walkability-marks.png`; the export writes blocked ogrids as a blocking terrain type, so
       the game agrees, and a check warns of ground marked open that the game still blocks.
-- [x] **T-8 Navigation mesh.** See where each kind of unit can move: the regions of the game's
-      navigational mesh per layer (land, hover, amphibious, naval), how large each is, which starts
-      and deposits lie in it, and the routes between starts. Today: the Procedural mode's
-      Navigation mesh (Generate, the layer, the routes between the nearest starts or every pair,
-      kept with the map), the regions coloured in both views with the routes as lines, a list of the
-      largest regions (a click or the Regions tool chooses one), the starts that lie in no region,
-      and the routes with how much longer they are than the straight line. Walkability can
-      regenerate on its own a second after a change to what it is made from (T-7).
+- [x] **T-8 Navigation mesh.** See where each kind of unit can move: the connected regions of the
+      game's navigational mesh per layer (land, hover, amphibious, naval), how large each is, and
+      which starts and deposits lie in it. Today: the Procedural mode's Navigation mesh (Generate,
+      the layer), the connected regions coloured in both views (the Connected regions chip), a list
+      of the largest (a click or the Connected regions tool chooses one) and the starts that lie in
+      none. It regenerates on its own while its overlay shows, as walkability does (T-7).
 - [x] **T-9 Draft and final heightmap.** Block out the rough shape in a draft, send it to World
       Machine or Gaea, and build the final on their output with layers of one's own, some of them
       shared with the draft so the procedural tool can never erode them away; the game gets the

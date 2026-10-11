@@ -199,7 +199,7 @@ namespace FAForever.MapEditor.App.Tests
 
             Click(window, Named<Button>(window, "Navigation mesh").Single());
             Assert.AreEqual("Navigation mesh", Inspected(window));
-            Assert.AreEqual(1, Named<ComboBox>(window, "Regions of the units of a layer").Count(), "the navigation mesh's choices and regions");
+            Assert.AreEqual(1, Named<ComboBox>(window, "Connected regions of the units of a layer").Count(), "the navigation mesh's choices and regions");
             Assert.AreEqual("procedural.regions", model.ActiveTool!.Definition.Id);
 
             Click(window, Named<Button>(window, "Path networks").Single());
