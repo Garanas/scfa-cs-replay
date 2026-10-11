@@ -413,7 +413,7 @@ public sealed partial class MapWideDecalsViewModel : ObservableObject
     /// A slot's file as a full path: relative ones lie in the project folder.
     /// </summary>
     public string FullPath(string file) =>
-        Path.IsPathRooted(file) || _projectFolder() is not string folder ? file : Path.GetFullPath(Path.Combine(folder, file));
+        Path.IsPathRooted(file) || _projectFolder() is not string folder ? file : FilePaths.InFolder(folder, file);
 
     /// <summary>
     /// Reads a slot's file for the export; null when it cannot be read.
