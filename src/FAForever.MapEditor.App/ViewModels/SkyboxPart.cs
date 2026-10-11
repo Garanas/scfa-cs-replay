@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -49,12 +50,78 @@ public sealed partial class SkyboxPart : ObservableObject
             new NumberSetting("Cirrus strength", set, "cirrusMultiplier", d => Of(d).CirrusMultiplier, run) { Minimum = 0, Maximum = 2, HasSlider = true, Help = "How strongly the cirrus covers the sky; 0 for none" },
         ]);
         CirrusLayers = [.. Enumerable.Range(0, Skyboxes.DefaultCirrusLayers.Length).Select(Layer)];
+        InView = new SettingGroup("In the 3D view",
+        [
+            new BoolSetting("Regenerate on its own", "generate.auto", "on", d => d.Procedural.RegeneratesOnItsOwn(SkyCubeGenerator.GeneratorId), run,
+                () => new JsonObject { ["id"] = SkyCubeGenerator.GeneratorId })
+            {
+                Help = "The sky cube map is made again a moment after the skybox changes, while the 3D view shows and the map holds one (switched on with Generate and use)",
+            },
+        ]);
     }
 
     private static Skybox Of(MapDocument document) => document.Sky.Skybox ?? Empty;
 
     // what the fields read while the map has no skybox (they are hidden then)
     private static readonly Skybox Empty = new() { Albedo = "", Glow = "", CirrusTexture = "" };
+
+    /// <summary>
+    /// Whether the sky cube map regenerates on its own (<c>generate.auto</c>).
+    /// </summary>
+    public SettingGroup InView { get; }
+
+    /// <summary>
+    /// The sky cube map the 3D view shows the skybox through; the editor's, set once it is made.
+    /// </summary>
+    public SkyCubeViewModel? SkyCube
+    {
+        get;
+        set
+        {
+            if (field is not null)
+            {
+                field.PropertyChanged -= OnSkyCubeChanged;
+            }
+            field = value;
+            if (value is not null)
+            {
+                value.PropertyChanged += OnSkyCubeChanged;
+            }
+            ShowInView();
+        }
+    }
+
+    private void OnSkyCubeChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => ShowInView();
+
+    /// <summary>
+    /// What the 3D view shows of the skybox: the sky cube map made from it, current, out of date or
+    /// not made or used yet, so a person knows a change shows only after Generate.
+    /// </summary>
+    [ObservableProperty]
+    public partial string InViewLine { get; private set; } = "";
+
+    /// <summary>
+    /// Whether the line says something is to be done (out of date, not made, not used).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool InViewNeedsGenerate { get; private set; }
+
+    private void ShowInView()
+    {
+        SkyCubeViewModel? cube = SkyCube;
+        (InViewLine, InViewNeedsGenerate) = cube switch
+        {
+            null => ("", false),
+            { IsGenerating: true } => ("Generating the sky cube map from the skybox...", false),
+            { HasFile: false } => ("The 3D view shows the sky's cube map, not this skybox: Generate and use makes the sky cube map from it.", true),
+            { IsSky: false } => ("The sky cube map made from this skybox is not the sky's: Generate and use makes it so.", true),
+            { IsStale: true } => ("Out of date: the 3D view shows the skybox as it was. Generate and use to see the changes.", true),
+            _ => ("The 3D view shows this skybox through the sky cube map made from it; a change shows after Generate (or on its own when switched on).", false),
+        };
+    }
+
+    [RelayCommand]
+    private Task GenerateAndUse() => _run("generate.skyCube", new JsonObject { ["use"] = true });
 
     /// <summary>
     /// The dome: its colours, heights, place and how the game builds it.
@@ -113,6 +180,7 @@ public sealed partial class SkyboxPart : ObservableObject
     {
         Skybox? skybox = document?.Sky.Skybox;
         int version = document?.Terrain.ScmapVersion ?? -1;
+        InView.Refresh(document);
         if (document is not null && ReferenceEquals(skybox, _shown) && version == _version)
         {
             return;
@@ -130,7 +198,7 @@ public sealed partial class SkyboxPart : ObservableObject
         }
         Summary = skybox is null
             ? "The map has no skybox: the sky cube map is made from the lighting. Add one made from the lighting, or read a preset of the FAF map editor."
-            : $"{Count(skybox.Planets.Length, "sky object")} cut from the atlas, {Count(skybox.CirrusLayers.Length, "cirrus layer")}. The editor shows the skybox through the sky cube map (Procedural mode), made from it.";
+            : $"{Count(skybox.Planets.Length, "sky object")} cut from the atlas, {Count(skybox.CirrusLayers.Length, "cirrus layer")}.";
         VersionNote = skybox is not null && version is > 0 and < 60
             ? $"The map is a version {version} map, which stores no skybox: the game draws its own default dome (made from the map's size), and the export leaves this one out. It stays in the project and the sky cube map is made from it."
             : "";

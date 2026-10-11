@@ -42,6 +42,7 @@ public sealed partial class MainViewModel
             }
         };
         SkyCube.Refresh();
+        LightingSettings.Skybox.SkyCube = SkyCube;
 
         // its entry in the Procedural list, after the preview; the list's common part has its picture and Generate
         ProceduralList.Describe(new ProceduralEntry(SkyCubeGenerator.GeneratorId, "Pictures")

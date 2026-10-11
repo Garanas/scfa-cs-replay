@@ -130,6 +130,30 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task ItSaysWhatThe3DViewShowsAndAChangeAsksForGenerate()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "generate.setSkyCube", new JsonObject { ["resolution"] = 512, ["terrain"] = false });
+            await Run(model, "lighting.addSkybox");
+            Assert.IsTrue(Part(model).InViewNeedsGenerate);
+            StringAssert.Contains(Part(model).InViewLine, "not this skybox");
+
+            await Part(model).GenerateAndUseCommand.ExecuteAsync(null);
+
+            Assert.IsTrue(model.SkyCube.IsSky, "made and used for the sky");
+            Assert.IsFalse(Part(model).InViewNeedsGenerate);
+            StringAssert.Contains(Part(model).InViewLine, "shows this skybox");
+
+            Setting<ColorSetting>(Part(model).Dome, "Horizon colour").Text = "0.9, 0.2, 0.1";
+
+            Assert.IsTrue(Part(model).InViewNeedsGenerate, "the change shows only after Generate");
+            StringAssert.Contains(Part(model).InViewLine, "Out of date");
+            BoolSetting auto = Part(model).InView.Settings.OfType<BoolSetting>().Single();
+            auto.IsOn = true;
+            Assert.IsTrue(model.Map!.Document.Procedural.RegeneratesOnItsOwn("skyCube"), "the switch is the Procedural mode's");
+        }
+
+        [TestMethod]
         public async Task WithoutASkyboxItsCommandsSayWhy()
         {
             MainViewModel model = await Open();

@@ -1,4 +1,5 @@
-<!-- The Lighting panel's Skybox entry (L-1): what the skybox holds, then its dome, sky objects, cirrus and cirrus layers
+<!-- The Lighting panel's Skybox entry (L-1): what the skybox holds, what the 3D view shows of it (the sky cube map made
+     from it, with Generate and use and Regenerate on its own), then its dome, sky objects, cirrus and cirrus layers
      (lighting.setSkybox, lighting.setCirrusLayer; always four layers); without one, Add (made from the lighting) and Read a preset. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -26,6 +27,18 @@
       </StackPanel>
     </Border>
     <StackPanel IsVisible="{Binding HasSkybox}">
+      <!-- what the 3D view shows of it: the sky cube map made from it, made again on Generate -->
+      <Border Classes="group">
+        <StackPanel Classes="stack">
+          <TextBlock Classes="heading" Text="In the 3D view" />
+          <TextBlock Classes="caption" Classes.warning="{Binding InViewNeedsGenerate}" Text="{Binding InViewLine}"
+                     AutomationProperties.Name="What the 3D view shows of the skybox" />
+          <Button Content="Generate and use" Command="{Binding GenerateAndUseCommand}"
+                  AutomationProperties.Name="Generate the sky cube map from the skybox and use it"
+                  AutomationProperties.HelpText="Makes the sky cube map from the skybox and the map, and makes it the sky's, the units' and the water's cube map, so the 3D view shows it" />
+          <controls:SettingList DataContext="{Binding InView}" ShowsTitle="False" />
+        </StackPanel>
+      </Border>
       <Border Classes="group">
         <controls:SettingList DataContext="{Binding Dome}" ShowsTitle="True" />
       </Border>

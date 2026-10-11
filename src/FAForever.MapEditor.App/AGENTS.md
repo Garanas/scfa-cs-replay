@@ -788,8 +788,13 @@ User stories S-4, L-1 and V-3. What the views draw follows the map's settings as
   directionY?}`, and in the Lighting menu `lighting.addSkybox` (made from the lighting,
   `Skyboxes.FromLighting`), `lighting.removeSkybox` and `lighting.importSkybox` (`.scmskybox` or
   `.json`); adding or reading one shows the entry. Each a step of undo; a field typed again merges. The
-  3D view shows the skybox only through the sky cube map made from it (Procedural mode). Tests:
-  `SkyboxTest`.
+  3D view shows the skybox only through the sky cube map made from it (Procedural mode), so the entry
+  starts with "In the 3D view" (`SkyboxPart.InViewLine`, `InViewNeedsGenerate`, from the sky cube's
+  `SkyCubeViewModel.HasFile`, `IsSky`, `IsStale`, `IsGenerating`): whether the 3D view shows this skybox
+  as it is now, or a change waits for Generate (in the warning colour); Generate and use
+  (`generate.skyCube use=true`) and Regenerate on its own (`generate.auto id=skyCube`, the Procedural
+  mode's switch: made again a moment after a change while the 3D view shows and the map holds one).
+  Tests: `SkyboxTest`.
 - **The sky** (L-1): the Lighting panel's Sky and cube maps, edited in the inspector (`LightingSettings.Sky`): the
   sky's cube map, the one units reflect (the map's `<default>` environment cube map, added when
   it has none), the background; `lighting.setSky {cubemap?, environmentCubemap?, background?}`

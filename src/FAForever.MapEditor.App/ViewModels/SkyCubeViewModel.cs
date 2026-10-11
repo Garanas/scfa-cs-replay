@@ -97,6 +97,18 @@ public sealed partial class SkyCubeViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsGenerating { get; private set; }
 
+    /// <summary>
+    /// Whether the map changed since it was made (the skybox, the lighting, the terrain: its inputs).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsStale { get; private set; }
+
+    /// <summary>
+    /// Whether it is the sky's cube map, so the 3D view shows it around the map.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsSky { get; private set; }
+
     public bool CanUse => HasFile && !IsUsed;
 
     [RelayCommand]
@@ -122,7 +134,7 @@ public sealed partial class SkyCubeViewModel : ObservableObject
         IsGenerating = _generation.IsRunning(SkyCubeGenerator.GeneratorId);
         if (document is null)
         {
-            (Status, SkyLine, UseLine, HasFile, IsUsed, Preview) = ("", "", "", false, false, null);
+            (Status, SkyLine, UseLine, HasFile, IsUsed, Preview, IsStale, IsSky) = ("", "", "", false, false, null, false, false);
             return;
         }
         HasFile = document.Files.ContainsKey(SkyCubeMaps.FilePath);
@@ -132,6 +144,7 @@ public sealed partial class SkyCubeViewModel : ObservableObject
             Preview = new TexturePicture(result.Preview, TexturePicture.Colour);
         }
         GeneratedState? state = _generation.States.FirstOrDefault(s => s.Generator.Id == SkyCubeGenerator.GeneratorId);
+        IsStale = state?.Status == GeneratedStatus.Stale;
         Status = IsGenerating ? "Generating..."
             : state?.Status switch
             {
@@ -146,6 +159,7 @@ public sealed partial class SkyCubeViewModel : ObservableObject
             : $"Sky: the map's skybox, {Count(skybox.Planets.Length, "sky object")}, {Count(skybox.CirrusLayers.Length, "cirrus layer")}";
         (bool sky, bool environment, bool water) = UsesOf(document);
         IsUsed = sky && environment && water;
+        IsSky = HasFile && sky;
         string[] users = [.. new[] { (sky, "the sky"), (environment, "the units"), (water, "the water") }.Where(use => use.Item1).Select(use => use.Item2)];
         UseLine = !HasFile ? "Generate it, then use it for the sky, the units and the water"
             : users.Length == 0 ? "Not used yet: Use makes it the sky's, the units' and the water's cube map"
