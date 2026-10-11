@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FAForever.MapEditor.App.Commands;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.ViewModels;
@@ -26,16 +26,12 @@ public sealed partial class SkyboxPart : ObservableObject
         Dome = new SettingGroup("Dome",
         [
             new ColorSetting("Horizon colour", set, "horizonColor", d => Of(d).HorizonColor, run) { Help = "The sky's colour at the horizon" },
-            new NumberSetting("Horizon height", set, "horizonHeight", d => Of(d).HorizonHeight, run) { Help = "The height on the dome where the horizon's colour starts to give way to the zenith's" },
-            new ColorSetting("Middle colour", set, "midColor", d => SkyboxCommands.FromColor32(Of(d).MidColor), run)
-            {
-                Help = "The colour between horizon and zenith; black for none (horizon straight into zenith)",
-            },
+            new NumberSetting("Horizon height", set, "horizonHeight", d => Of(d).HorizonHeight, run) { Help = "How far the dome's bottom ring lies above its position; there the horizon's colour starts to give way to the zenith's" },
             new ColorSetting("Zenith colour", set, "zenithColor", d => Of(d).ZenithColor, run) { Help = "The sky's colour overhead" },
-            new NumberSetting("Zenith height", set, "zenithHeight", d => Of(d).ZenithHeight, run) { Help = "The height on the dome where the sky has the zenith's colour" },
-            new ColorSetting("Position", set, "position", d => Of(d).Position, run) { ShowsSwatch = false, Help = "x, y and z of the dome's middle, in the map's units" },
-            new NumberSetting("Scale", set, "scale", d => Of(d).Scale, run) { Help = "The dome's radius, in the map's units" },
-            new NumberSetting("Subtract height", set, "subtractHeight", d => Of(d).SubtractHeight, run) { Help = "How far the game flattens the dome (the editor's sky cube map draws a sphere)" },
+            new NumberSetting("Zenith height", set, "zenithHeight", d => Of(d).ZenithHeight, run) { Help = "How far above the horizon height the sky has the zenith's colour" },
+            new ColorSetting("Position", set, "position", d => Of(d).Position, run) { ShowsSwatch = false, Help = "x, y and z of the middle of the dome's bottom ring, in the map's units" },
+            new NumberSetting("Scale", set, "scale", d => Of(d).Scale, run) { Help = "The radius of the dome's bottom ring, in the map's units" },
+            new NumberSetting("Subtract height", set, "subtractHeight", d => Of(d).SubtractHeight, run) { Help = "The angle in radians where the dome starts on its sphere (1.2566, 72°, in the game's maps); larger is flatter" },
             new NumberSetting("Subdivisions around", set, "subdivisionsAxis", d => Of(d).SubdivisionsAxis, run) { Help = "How many pieces the game builds the dome of around its axis" },
             new NumberSetting("Subdivisions up", set, "subdivisionsHeight", d => Of(d).SubdivisionsHeight, run) { Help = "How many rings the game builds the dome of from horizon to top" },
         ]);
@@ -51,6 +47,7 @@ public sealed partial class SkyboxPart : ObservableObject
             new ColorSetting("Cirrus colour", set, "cirrusColor", d => Of(d).CirrusColor, run),
             new NumberSetting("Cirrus strength", set, "cirrusMultiplier", d => Of(d).CirrusMultiplier, run) { Minimum = 0, Maximum = 2, HasSlider = true, Help = "How strongly the cirrus covers the sky; 0 for none" },
         ]);
+        CirrusLayers = [.. Enumerable.Range(0, Skyboxes.DefaultCirrusLayers.Length).Select(Layer)];
     }
 
     private static Skybox Of(MapDocument document) => document.Sky.Skybox ?? Empty;
@@ -74,17 +71,16 @@ public sealed partial class SkyboxPart : ObservableObject
     public SettingGroup Cirrus { get; }
 
     /// <summary>
-    /// A group of fields per cirrus layer, made again when their number changes.
+    /// A group of fields per cirrus layer: four, as the game always has.
     /// </summary>
-    [ObservableProperty]
-    public partial IReadOnlyList<SettingGroup> CirrusLayers { get; private set; } = [];
+    public IReadOnlyList<SettingGroup> CirrusLayers { get; }
 
     /// <summary>
     /// Whether the map has a skybox: its fields show, else Add and Read a preset.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasNoSkybox))]
-    [NotifyCanExecuteChangedFor(nameof(RemoveCommand), nameof(AddCirrusLayerCommand), nameof(RemoveCirrusLayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RemoveCommand))]
     public partial bool HasSkybox { get; private set; }
 
     public bool HasNoSkybox => !HasSkybox;
@@ -96,7 +92,7 @@ public sealed partial class SkyboxPart : ObservableObject
     public partial string Summary { get; private set; } = "";
 
     /// <summary>
-    /// Whether the map is written in a version that stores no skybox (53, 56): the game then draws none.
+    /// Whether the map is written in a version that stores no skybox (53, 56): the game then draws its default dome.
     /// </summary>
     [ObservableProperty]
     public partial string VersionNote { get; private set; } = "";
@@ -121,10 +117,6 @@ public sealed partial class SkyboxPart : ObservableObject
         Dome.Refresh(shown);
         SkyObjects.Refresh(shown);
         Cirrus.Refresh(shown);
-        if (CirrusLayers.Count != (skybox?.CirrusLayers.Length ?? 0))
-        {
-            CirrusLayers = [.. Enumerable.Range(0, skybox?.CirrusLayers.Length ?? 0).Select(Layer)];
-        }
         foreach (SettingGroup layer in CirrusLayers)
         {
             layer.Refresh(shown);
@@ -133,7 +125,7 @@ public sealed partial class SkyboxPart : ObservableObject
             ? "The map has no skybox: the sky cube map is made from the lighting. Add one made from the lighting, or read a preset of the FAF map editor."
             : $"{Count(skybox.Planets.Length, "sky object")} cut from the atlas, {Count(skybox.CirrusLayers.Length, "cirrus layer")}. The editor shows the skybox through the sky cube map (Procedural mode), made from it.";
         VersionNote = skybox is not null && version is > 0 and < 60
-            ? $"The map is a version {version} map, which stores no skybox: the game draws none, and the export leaves it out. It stays in the project and the sky cube map is made from it."
+            ? $"The map is a version {version} map, which stores no skybox: the game draws its own default dome (made from the map's size), and the export leaves this one out. It stays in the project and the sky cube map is made from it."
             : "";
         Detail = document is null ? "" : skybox is null ? "none" : Count(skybox.Planets.Length, "object");
     }
@@ -168,19 +160,4 @@ public sealed partial class SkyboxPart : ObservableObject
     [RelayCommand(CanExecute = nameof(HasSkybox))]
     private Task Remove() => _run("lighting.removeSkybox", []);
 
-    [RelayCommand(CanExecute = nameof(CanAddCirrusLayer))]
-    private Task AddCirrusLayer() => _run("lighting.addCirrusLayer", []);
-
-    private bool CanAddCirrusLayer() => HasSkybox && CirrusLayers.Count < SkyboxCommands.MaxCirrusLayers;
-
-    [RelayCommand(CanExecute = nameof(CanRemoveCirrusLayer))]
-    private Task RemoveCirrusLayer() => _run("lighting.removeCirrusLayer", []);
-
-    private bool CanRemoveCirrusLayer() => HasSkybox && CirrusLayers.Count > 0;
-
-    partial void OnCirrusLayersChanged(IReadOnlyList<SettingGroup> value)
-    {
-        AddCirrusLayerCommand.NotifyCanExecuteChanged();
-        RemoveCirrusLayerCommand.NotifyCanExecuteChanged();
-    }
 }

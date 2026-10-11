@@ -845,7 +845,7 @@ of the model above, keyed by its target's key (`stratum-2`, `mask-forest`, `wate
 
 ## Who writes a file: `.gen`
 
-Format 7 (`MapProjectDto.CurrentFormatVersion`). The owner asked that a map maker can see on disk
+Format 7 (format 8 changed only the skybox: `MapProjectDto.CurrentFormatVersion`). The owner asked that a map maker can see on disk
 which files the editor controls and which belong to other tools: a file the editor makes from other
 things has `.gen` before its extension (`MapProjectLayout.Generated`, `IsGenerated`,
 `WithoutGenerated`).
@@ -1103,8 +1103,9 @@ the final starts from their output and is what the game gets.
   `Direction(face, sc, tc)`), sampled by world direction, so the generated cube and the editor's and game's
   sampling agree. `SkyboxSky` draws the version 60 sky as the game's `effects/sky.fx` (`effects.scd`) does: the
   dome a sphere of `Scale` around `Position`, the height where a direction meets it mixing horizon into zenith
-  between `HorizonHeight` and `ZenithHeight` (the engine's own lookup curve is unknown: linear here, through
-  `MidColor` when not black), the horizon's colour below the horizon; sky objects as squares facing the eye
+  between `HorizonHeight` and `ZenithHeight` (linear here; the engine shapes it with the game's
+  `/textures/environment/horizonLookup.dds` and builds the dome as a flatter cap of a sphere, which this does
+  not follow yet), the horizon's colour below the horizon; sky objects as squares facing the eye
   (`DecalVS`: the corner turned by `Rotation`, `Uv` with y from the atlas's bottom), alpha-blended in order, the
   glow brightening them; four cirrus layers, one channel each, at time 0; the sun as a disc. A map without a
   skybox gets one from its lighting (`Skyboxes.FromLighting`: the horizon the fog warmed by the sun, the sun's
@@ -1112,6 +1113,10 @@ the final starts from their output and is what the game gets.
   (a pyramid of the highest points), coloured by `TexturedPreview` from above, the water adding the reflected sky
   by FAF's Fresnel term; `Dds` writes DXT1 with mipmaps per face and caps2 0xfe00 (`DdsTexture.WriteCube`; the
   game's sky cubes are DXT1 of 512, its environment cubes carry mipmaps); `CubeMaps.Decode` reads it back.
+  The skybox follows the engine's reader (the Map library's guide, "The binary format"): three cumulus
+  texture paths where the FAF map editor reads a `MidRgbColor` (empty in every map), no `Clouds7` (the
+  count of cartographic decals that follows the block), and always four cirrus layers
+  (`Skyboxes.WithFourCirrusLayers`, filling from `DefaultCirrusLayers`, the engine's own table; format 8).
   `Skyboxes.ReadJson` reads the FAF map editor's skybox presets (`Data`, colours as r, g, b), moving texture paths
   of another map's folder into this one's when it has the file. Tests: `SkyCubeMapsTest` (with
   `assets/skyboxes/procedural-skybox.json`, 1196 sky objects).

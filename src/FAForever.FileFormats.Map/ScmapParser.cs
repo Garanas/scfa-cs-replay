@@ -242,7 +242,18 @@ namespace FAForever.FileFormats.Map
             byte[] depthBias = r.Bytes(halfSize);
             byte[] terrainTypes = r.Bytes(checked(textureWidth * textureHeight));
 
-            ScmapSkybox? skybox = version >= 60 ? ReadSkybox(ref r) : null;
+            ScmapSkybox? skybox = null;
+            if (version >= 60)
+            {
+                skybox = ReadSkybox(ref r);
+                // the cartographic decals (Moho::Cartographic::ReadDecals): a count of batches, 0 in every map known
+                int start = r.Position;
+                int batches = r.Int32();
+                if (batches != 0)
+                {
+                    throw new ScmapFormatException($"The map has {batches} batches of cartographic decals, which this parser does not read", start);
+                }
+            }
 
             ScmapProp[] props = new ScmapProp[r.Count()];
             for (int i = 0; i < props.Length; i++)
@@ -367,12 +378,16 @@ namespace FAForever.FileFormats.Map
                 planets[i] = new ScmapPlanet(r.Vector3(), r.Single(), r.Vector2(), r.Vector4());
             }
 
-            (byte, byte, byte) midColor = (r.Byte(), r.Byte(), r.Byte());
+            string cumulusLightRamp = r.String();
+            string cumulusDispersionRamp = r.String();
+            string cumulusTexture = r.String();
             float cirrusMultiplier = r.Single();
             Vector3 cirrusColor = r.Vector3();
             string cirrusTexture = r.String();
 
-            ScmapCirrusLayer[] cirrusLayers = new ScmapCirrusLayer[r.Count()];
+            // a count the engine ignores: it always reads four layers
+            r.Skip(4);
+            ScmapCirrusLayer[] cirrusLayers = new ScmapCirrusLayer[ScmapSkybox.CirrusLayerCount];
             for (int i = 0; i < cirrusLayers.Length; i++)
             {
                 cirrusLayers[i] = new ScmapCirrusLayer(r.Vector2(), r.Single(), r.Vector2());
@@ -393,12 +408,13 @@ namespace FAForever.FileFormats.Map
                 Albedo = albedo,
                 Glow = glow,
                 Planets = planets,
-                MidColor = midColor,
+                CumulusLightRamp = cumulusLightRamp,
+                CumulusDispersionRamp = cumulusDispersionRamp,
+                CumulusTexture = cumulusTexture,
                 CirrusMultiplier = cirrusMultiplier,
                 CirrusColor = cirrusColor,
                 CirrusTexture = cirrusTexture,
                 CirrusLayers = cirrusLayers,
-                Clouds7 = r.Single(),
             };
         }
 

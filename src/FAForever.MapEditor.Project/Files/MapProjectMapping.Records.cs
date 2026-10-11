@@ -159,12 +159,13 @@ namespace FAForever.MapEditor.Project.Files
             Albedo = source.Albedo,
             Glow = source.Glow,
             Planets = [.. source.Planets.Select(item => ToDto(item))],
-            MidColor = Rgb(source.MidColor),
+            CumulusLightRamp = source.CumulusLightRamp,
+            CumulusDispersionRamp = source.CumulusDispersionRamp,
+            CumulusTexture = source.CumulusTexture,
             CirrusMultiplier = source.CirrusMultiplier,
             CirrusColor = Dto(source.CirrusColor),
             CirrusTexture = source.CirrusTexture,
             CirrusLayers = [.. source.CirrusLayers.Select(item => ToDto(item))],
-            Clouds7 = source.Clouds7,
         };
 
         public static Skybox ToModel(SkyboxDto source) => new Skybox
@@ -182,12 +183,13 @@ namespace FAForever.MapEditor.Project.Files
             Albedo = source.Albedo,
             Glow = source.Glow,
             Planets = [.. source.Planets.Select(item => ToModel(item))],
-            MidColor = ParseRgb(source.MidColor, "Skybox.MidColor"),
+            CumulusLightRamp = source.CumulusLightRamp,
+            CumulusDispersionRamp = source.CumulusDispersionRamp,
+            CumulusTexture = source.CumulusTexture,
             CirrusMultiplier = source.CirrusMultiplier,
             CirrusColor = Model(source.CirrusColor),
             CirrusTexture = source.CirrusTexture,
-            CirrusLayers = [.. source.CirrusLayers.Select(item => ToModel(item))],
-            Clouds7 = source.Clouds7,
+            CirrusLayers = Editing.Skyboxes.WithFourCirrusLayers([.. source.CirrusLayers.Select(item => ToModel(item))]),
         };
 
         public static PlanetDto ToDto(Planet source) => new PlanetDto

@@ -213,6 +213,7 @@ namespace FAForever.FileFormats.Map
             if (version >= 60)
             {
                 WriteSkybox(ref w, scmap.Skybox!);
+                w.Int32(0); // no batches of cartographic decals
             }
 
             w.Int32(scmap.Props.Count);
@@ -264,6 +265,7 @@ namespace FAForever.FileFormats.Map
             if (version >= 60)
             {
                 Require(scmap.Skybox is not null, $"A version {version} map has a skybox");
+                Require(scmap.Skybox!.CirrusLayers.Count == ScmapSkybox.CirrusLayerCount, $"A skybox has {ScmapSkybox.CirrusLayerCount} cirrus layers");
             }
         }
 
@@ -333,22 +335,20 @@ namespace FAForever.FileFormats.Map
                 w.Vector4(planet.Uv);
             }
 
-            w.Byte(skybox.MidColor.Red);
-            w.Byte(skybox.MidColor.Green);
-            w.Byte(skybox.MidColor.Blue);
+            w.String(skybox.CumulusLightRamp);
+            w.String(skybox.CumulusDispersionRamp);
+            w.String(skybox.CumulusTexture);
             w.Single(skybox.CirrusMultiplier);
             w.Vector3(skybox.CirrusColor);
             w.String(skybox.CirrusTexture);
 
-            w.Int32(skybox.CirrusLayers.Count);
+            w.Int32(ScmapSkybox.CirrusLayerCount);
             foreach (ScmapCirrusLayer layer in skybox.CirrusLayers)
             {
                 w.Vector2(layer.Frequency);
                 w.Single(layer.Speed);
                 w.Vector2(layer.Direction);
             }
-
-            w.Single(skybox.Clouds7);
         }
 
         /// <summary>

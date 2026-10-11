@@ -14,12 +14,22 @@ The files of a map folder in the vault (`/maps/<name>.v<version>/`). The reposit
 ## The binary format
 
 - The layout follows the FAF map editor's loader (`Assets/Scripts/HazardX SCMAP Code/Map.cs` in
-  FAForever/FAForeverMapEditor). Versions 53 (Supreme Commander), 56 (Forged Alliance) and 60 (FAF
-  map editor) exist; they differ in the cubemaps (53 stores one), the layers (53 stores a tileset
-  and its own count of albedo/normal pairs, 56+ ten albedos then nine normal maps), the minimap
+  FAForever/FAForeverMapEditor). Versions 53 (Supreme Commander), 56 and 60 (Forged Alliance: the
+  game's own maps are 60, as are maps of the FAF map editor) exist; they differ in the cubemaps (53
+  stores one), the layers (53 stores a tileset and its own count of albedo/normal pairs, 56+ ten
+  albedos then nine normal maps), the minimap
   colours (56+), the stratum masks (one or two) and the skybox (60).
 - The parser rejects trailing bytes: a field it skips or misreads shows up as an error, not as
   garbage further on. Every map in a local vault copy of 100 maps (all three versions) parses.
+- **The skybox** (60) follows the engine's reader, `Moho::SkyDome::Load` as reconstructed in
+  [Draiget/faf-re](https://github.com/Draiget/faf-re) (`src/sdk/moho/render/SkyDome.cpp`): after the
+  sky objects come three strings, the cumulus clouds' textures (empty in every map known; the FAF map
+  editor reads them as three bytes it calls `MidRgbColor`), and the cirrus layers are always four (the
+  count before them is ignored by the engine and written as 4). After the skybox comes the count of
+  cartographic decal batches (`Moho::Cartographic::ReadDecals`, the FAF map editor's `Clouds7`); it is
+  0 in every map known, and the parser refuses another count, whose batches it cannot read. The
+  engine reads the skybox from version 58 on and the cartographic decals from 59 on; an earlier map
+  gets a default dome from its size (`SkyDome::SetupHorizonAndCirrus`).
 - A prop starts with its blueprint path, then position, three rotation axes and scale. A decal's
   far cut-off comes before the near one.
 - `ScmapWriter.Write(scmap)` is the reverse of the parser: a parsed map writes back to the same

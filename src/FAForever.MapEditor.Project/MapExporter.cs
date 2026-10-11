@@ -291,12 +291,13 @@ namespace FAForever.MapEditor.Project
             Albedo = s.Albedo,
             Glow = s.Glow,
             Planets = [.. s.Planets.Select(p => new ScmapPlanet(p.Position, p.Rotation, p.Scale, p.Uv))],
-            MidColor = (s.MidColor.Red, s.MidColor.Green, s.MidColor.Blue),
+            CumulusLightRamp = s.CumulusLightRamp,
+            CumulusDispersionRamp = s.CumulusDispersionRamp,
+            CumulusTexture = s.CumulusTexture,
             CirrusMultiplier = s.CirrusMultiplier,
             CirrusColor = s.CirrusColor,
             CirrusTexture = s.CirrusTexture,
-            CirrusLayers = [.. s.CirrusLayers.Select(c => new ScmapCirrusLayer(c.Frequency, c.Speed, c.Direction))],
-            Clouds7 = s.Clouds7,
+            CirrusLayers = [.. Editing.Skyboxes.WithFourCirrusLayers(s.CirrusLayers).Select(c => new ScmapCirrusLayer(c.Frequency, c.Speed, c.Direction))],
         };
 
         /// <summary>

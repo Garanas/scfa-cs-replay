@@ -257,9 +257,9 @@ namespace FAForever.MapEditor.App.Tests
             Skybox sky = model.Map!.Document.Sky.Skybox!;
             Assert.AreEqual(1, sky.Planets.Length);
             Assert.AreEqual(new Vector3(0.6f, 0.4f, 0.3f), sky.HorizonColor);
-            Assert.AreEqual(1, sky.CirrusLayers.Length);
+            Assert.AreEqual(4, sky.CirrusLayers.Length, "the preset's one layer and three of the game's");
             Assert.AreEqual($"Read the skybox {Path.GetFileName(file)}", model.Map.Session.UndoDescription);
-            StringAssert.Contains(model.SkyCube.SkyLine, "the map's skybox, 1 sky object, 1 cirrus layer");
+            StringAssert.Contains(model.SkyCube.SkyLine, "the map's skybox, 1 sky object, 4 cirrus layers");
         }
 
         [TestMethod]

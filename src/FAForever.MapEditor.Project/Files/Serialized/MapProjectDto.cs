@@ -22,10 +22,14 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// (<c>heightmap.gen.png</c>, <c>stratum-masks/stratum-2.gen.png</c>, <c>masks/forest.gen.png</c>),
         /// a rules or decal-masks layer's file, the draft for World Machine and Gaea; an image layer of a
         /// stack of coverage reads its file in the project and keeps no copy. A project of format 6
-        /// opens unchanged (each file is read under either name) and its next save renames them. An
-        /// editor reads every version up to its own.
+        /// opens unchanged (each file is read under either name) and its next save renames them. 8: the
+        /// skybox as the game reads it: the cumulus clouds' three textures (<c>cumulusLightRamp</c>,
+        /// <c>cumulusDispersionRamp</c>, <c>cumulusTexture</c>) where format 7 had <c>midColor</c>, no
+        /// <c>clouds7</c>, and always four cirrus layers. A project of format 7 opens: its
+        /// <c>midColor</c> and <c>clouds7</c> are left out and its cirrus layers made four. An editor
+        /// reads every version up to its own.
         /// </summary>
-        public const int CurrentFormatVersion = 7;
+        public const int CurrentFormatVersion = 8;
 
         /// <summary>
         /// The layout of the project; <see cref="CurrentFormatVersion"/> for projects this library writes.

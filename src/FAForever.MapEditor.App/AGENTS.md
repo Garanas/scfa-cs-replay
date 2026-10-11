@@ -86,8 +86,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`, `paint.chooseMask`, `presets.apply`,
     `presets.delete`, `view.walkability`, `problems.show`, `markers.showKind`, `markers.select`, `markers.clear`, `markers.set`,
     `markers.setChain`, `markers.renameChain`, `markers.deleteChain`, `markers.setWeather`,
-    `markers.addOptionalGroup`, `lighting.setSkybox`, `lighting.setCirrusLayer`, `lighting.addCirrusLayer`,
-    `lighting.removeCirrusLayer`, `file.showCommit`, `file.restoreCommit`, `view.togglePanel`,
+    `markers.addOptionalGroup`, `lighting.setSkybox`, `lighting.setCirrusLayer`, `file.showCommit`, `file.restoreCommit`, `view.togglePanel`,
     `view.resizePanel`, `view.movePanel`, `view.returnPanel`, `view.setToolbar`, `view.addToToolbar`, `view.removeFromToolbar`,
     `view.inspectPart`, `presets.showFolder`), it selects what one
     clicks (`assets.select`) or drops what one drags (`assets.drop`), it is what a tool's click does
@@ -774,20 +773,21 @@ User stories S-4, L-1 and V-3. What the views draw follows the map's settings as
 - **The skybox** (L-1; `ViewModels/SkyboxPart.cs`, `Views/MapPanels/SkyboxPartView`, `Commands/Lighting/Skybox.cs`):
   the Lighting panel's Skybox entry under Sky (`lighting.skybox`, its detail the count of sky objects or `none`),
   the version 60 sky dome the game draws itself. The inspector says what it holds and, for a map of version 53
-  or 56 (new maps and the sandbox are 56), that the game draws none and the export leaves it out; then the
-  dome (horizon, middle and zenith colours, horizon and zenith heights, position, scale, subtract height,
-  subdivisions), the sky objects' atlas, glow atlas and glow, the cirrus texture, colour and strength, and a
-  group per cirrus layer (frequency, speed, direction; at most four, one per channel of the cirrus texture).
-  The sky objects are counted, not edited one by one. Commands: `lighting.setSkybox {horizonColor?,
-  zenithColor?, midColor?, horizonHeight?, zenithHeight?, position?, scale?, subtractHeight?,
-  subdivisionsAxis?, subdivisionsHeight?, albedo?, glow?, glowMultiplier?, cirrusTexture?, cirrusColor?,
-  cirrusMultiplier?}` (without arguments: shows the entry), `lighting.setCirrusLayer {index, frequencyX?,
-  frequencyY?, speed?, directionX?, directionY?}`, `lighting.addCirrusLayer`, `lighting.removeCirrusLayer
-  {index?}`, and in the Lighting menu `lighting.addSkybox` (made from the lighting, `Skyboxes.FromLighting`),
-  `lighting.removeSkybox` and `lighting.importSkybox` (`.scmskybox` or `.json`); adding or reading one
-  shows the entry. Each a step of undo; a field typed again merges. The middle colour keeps the alpha the
-  map had (its use is unknown). The 3D view shows the skybox only through the sky cube map made from it
-  (Procedural mode). Tests: `SkyboxTest`.
+  or 56 (new maps and the sandbox are 56), that the game draws its own default dome there and the export
+  leaves this one out; then the dome (horizon and zenith colours, horizon and zenith heights, position,
+  scale, subtract height, subdivisions; the help says what the engine does with each, the Map library's
+  guide has the details), the sky objects' atlas, glow atlas and glow, the cirrus texture, colour and
+  strength, and the four cirrus layers (frequency, speed, direction), one per channel of the cirrus
+  texture: the game always has four, so they are neither added nor removed. The sky objects are counted,
+  not edited one by one. Commands: `lighting.setSkybox {horizonColor?, zenithColor?, horizonHeight?,
+  zenithHeight?, position?, scale?, subtractHeight?, subdivisionsAxis?, subdivisionsHeight?, albedo?,
+  glow?, glowMultiplier?, cirrusTexture?, cirrusColor?, cirrusMultiplier?}` (without arguments: shows the
+  entry), `lighting.setCirrusLayer {index: 0 to 3, frequencyX?, frequencyY?, speed?, directionX?,
+  directionY?}`, and in the Lighting menu `lighting.addSkybox` (made from the lighting,
+  `Skyboxes.FromLighting`), `lighting.removeSkybox` and `lighting.importSkybox` (`.scmskybox` or
+  `.json`); adding or reading one shows the entry. Each a step of undo; a field typed again merges. The
+  3D view shows the skybox only through the sky cube map made from it (Procedural mode). Tests:
+  `SkyboxTest`.
 - **The sky** (L-1): the Lighting panel's Sky and cube maps, edited in the inspector (`LightingSettings.Sky`): the
   sky's cube map, the one units reflect (the map's `<default>` environment cube map, added when
   it has none), the background; `lighting.setSky {cubemap?, environmentCubemap?, background?}`

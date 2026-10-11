@@ -35,9 +35,19 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public ImmutableArray<Planet> Planets { get; init; } = [];
 
         /// <summary>
-        /// The colour between horizon and zenith.
+        /// The light ramp of the cumulus clouds; empty in every map known.
         /// </summary>
-        public Color32 MidColor { get; init; }
+        public string CumulusLightRamp { get; init; } = "";
+
+        /// <summary>
+        /// The dispersion ramp of the cumulus clouds; empty in every map known.
+        /// </summary>
+        public string CumulusDispersionRamp { get; init; } = "";
+
+        /// <summary>
+        /// The texture of the cumulus clouds; empty in every map known.
+        /// </summary>
+        public string CumulusTexture { get; init; } = "";
 
         public float CirrusMultiplier { get; init; }
 
@@ -45,11 +55,10 @@ namespace FAForever.MapEditor.Project.Files.InMemory
 
         public required string CirrusTexture { get; init; }
 
-        public ImmutableArray<CirrusLayer> CirrusLayers { get; init; } = [];
-
         /// <summary>
-        /// The last number of the skybox, named after the map editor's field.
+        /// The four cirrus layers, one per channel of the cirrus texture (the game always has four:
+        /// <see cref="Editing.Skyboxes.WithFourCirrusLayers"/>).
         /// </summary>
-        public float Clouds7 { get; init; }
+        public ImmutableArray<CirrusLayer> CirrusLayers { get; init; } = [];
     }
 }

@@ -32,9 +32,13 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         public required IReadOnlyList<PlanetDto> Planets { get; init; }
 
         /// <summary>
-        /// The colour between horizon and zenith.
+        /// The cumulus clouds' light ramp, dispersion ramp and texture (format 8; empty before).
         /// </summary>
-        public required string MidColor { get; init; }
+        public string CumulusLightRamp { get; init; } = "";
+
+        public string CumulusDispersionRamp { get; init; } = "";
+
+        public string CumulusTexture { get; init; } = "";
 
         public required float CirrusMultiplier { get; init; }
 
@@ -42,11 +46,9 @@ namespace FAForever.MapEditor.Project.Files.Serialized
 
         public required string CirrusTexture { get; init; }
 
-        public required IReadOnlyList<CirrusLayerDto> CirrusLayers { get; init; }
-
         /// <summary>
-        /// The last number of the skybox, named after the map editor's field.
+        /// Four layers; a project of format 7 or earlier may hold another number, made four when read.
         /// </summary>
-        public required float Clouds7 { get; init; }
+        public required IReadOnlyList<CirrusLayerDto> CirrusLayers { get; init; }
     }
 }

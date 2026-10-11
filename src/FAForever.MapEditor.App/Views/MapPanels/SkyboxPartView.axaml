@@ -1,5 +1,5 @@
 <!-- The Lighting panel's Skybox entry (L-1): what the skybox holds, then its dome, sky objects, cirrus and cirrus layers
-     (lighting.setSkybox, lighting.setCirrusLayer); without one, Add (made from the lighting) and Read a preset. -->
+     (lighting.setSkybox, lighting.setCirrusLayer; always four layers); without one, Add (made from the lighting) and Read a preset. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -41,14 +41,6 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-      <Border Classes="group">
-        <WrapPanel Classes="chips">
-          <Button Content="Add a cirrus layer" Command="{Binding AddCirrusLayerCommand}"
-                  AutomationProperties.HelpText="Up to four, one per channel of the cirrus texture" />
-          <Button Content="Remove the last layer" Command="{Binding RemoveCirrusLayerCommand}"
-                  AutomationProperties.Name="Remove the last cirrus layer" />
-        </WrapPanel>
-      </Border>
     </StackPanel>
   </StackPanel>
 </UserControl>

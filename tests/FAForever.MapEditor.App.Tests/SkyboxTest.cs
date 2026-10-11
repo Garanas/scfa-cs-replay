@@ -95,14 +95,12 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(steps + 1, model.History.Count, "typing in one field again is one step");
 
             Setting<NumberSetting>(Part(model).Dome, "Zenith height").Text = "300";
-            Setting<ColorSetting>(Part(model).Dome, "Middle colour").Text = "1, 0.5, 0";
             Setting<ColorSetting>(Part(model).Dome, "Position").Text = "-10, 5, 256";
             Setting<TextureSetting>(Part(model).SkyObjects, "Atlas").Text = "/maps/x/env/decals/sky_albedo.dds";
             Setting<NumberSetting>(Part(model).Cirrus, "Cirrus strength").Value = 0.5;
 
             Skybox skybox = model.Map.Document.Sky.Skybox!;
             Assert.AreEqual(300, skybox.ZenithHeight);
-            Assert.AreEqual(new Color32(0, 255, 128, 0), skybox.MidColor, "the middle colour keeps its alpha");
             Assert.AreEqual(new Vector3(-10, 5, 256), skybox.Position, "a place may be negative");
             Assert.AreEqual("/maps/x/env/decals/sky_albedo.dds", skybox.Albedo);
             Assert.AreEqual(0.5f, skybox.CirrusMultiplier);
@@ -112,36 +110,23 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public async Task CirrusLayersAreAddedUpToFourEditedAndRemoved()
+        public async Task ItAlwaysHasFourCirrusLayersEditedOneByOne()
         {
             MainViewModel model = await Open();
             await Run(model, "lighting.addSkybox");
-            Assert.AreEqual(0, Part(model).CirrusLayers.Count);
-            Assert.IsFalse(Part(model).RemoveCirrusLayerCommand.CanExecute(null));
-
-            for (int i = 0; i < 4; i++)
-            {
-                await Run(model, "lighting.addCirrusLayer");
-            }
-            Assert.AreEqual(4, model.Map!.Document.Sky.Skybox!.CirrusLayers.Length);
+            Assert.AreEqual(4, model.Map!.Document.Sky.Skybox!.CirrusLayers.Length, "the game always reads four");
             Assert.AreEqual(4, Part(model).CirrusLayers.Count);
             Assert.AreEqual("Cirrus layer 4 (alpha)", Part(model).CirrusLayers[3].Title);
-            Assert.IsFalse(Part(model).AddCirrusLayerCommand.CanExecute(null), "one per channel of the texture");
-            Assert.IsFalse((await TryRun(model, "lighting.addCirrusLayer")).Ran);
+            Assert.IsNull(model.Commands.Find("lighting.addCirrusLayer"), "layers are not added or removed");
 
             Setting<NumberSetting>(Part(model).CirrusLayers[1], "Layer 2 speed").Text = "0.3";
             await Run(model, "lighting.setCirrusLayer", new JsonObject { ["index"] = 1, ["directionX"] = -1, ["frequencyY"] = 2 });
             CirrusLayer layer = model.Map.Document.Sky.Skybox!.CirrusLayers[1];
             Assert.AreEqual(0.3f, layer.Speed);
-            Assert.AreEqual(new Vector2(-1, 0), layer.Direction);
-            Assert.AreEqual(new Vector2(1, 2), layer.Frequency);
+            Assert.AreEqual(-1, layer.Direction.X);
+            Assert.AreEqual(2, layer.Frequency.Y);
             Assert.AreEqual("0.3", Setting<NumberSetting>(Part(model).CirrusLayers[1], "Layer 2 speed").Text, "the field shows the map's value");
             Assert.IsFalse((await TryRun(model, "lighting.setCirrusLayer", new JsonObject { ["index"] = 4, ["speed"] = 1 })).Ran);
-
-            await Run(model, "lighting.removeCirrusLayer", new JsonObject { ["index"] = 0 });
-            Assert.AreEqual(3, model.Map.Document.Sky.Skybox!.CirrusLayers.Length);
-            Assert.AreEqual(0.3f, model.Map.Document.Sky.Skybox!.CirrusLayers[0].Speed, "the layers after it move up");
-            Assert.AreEqual(3, Part(model).CirrusLayers.Count);
         }
 
         [TestMethod]
@@ -153,7 +138,6 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(run.Ran);
             StringAssert.Contains(run.Why, "no skybox");
             Assert.IsFalse((await TryRun(model, "lighting.removeSkybox")).Ran);
-            Assert.IsFalse((await TryRun(model, "lighting.addCirrusLayer")).Ran);
 
             await Run(model, "lighting.setSkybox");
             Assert.AreEqual(LightingSettingsViewModel.SkyboxPart, model.LightingSettings.Parts.Chosen.Id, "without arguments it shows the entry");
@@ -181,6 +165,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("2 objects", model.LightingSettings.Parts.Chosen.Detail);
             StringAssert.Contains(Part(model).Summary, "2 sky objects");
             Assert.AreEqual("-50", Setting<NumberSetting>(Part(model).Dome, "Horizon height").Text);
+            Assert.AreEqual(4, model.Map!.Document.Sky.Skybox!.CirrusLayers.Length, "a preset without layers gets the game's four");
 
             await Run(model, "lighting.removeSkybox");
             Assert.IsNull(model.Map!.Document.Sky.Skybox);
@@ -198,6 +183,7 @@ namespace FAForever.MapEditor.App.Tests
             if (version < 60)
             {
                 StringAssert.Contains(Part(model).VersionNote, $"version {version} map");
+                StringAssert.Contains(Part(model).VersionNote, "default dome", "the game draws its own dome for such a map");
             }
             model.EditMap("Make it version 60", d => d with { Terrain = d.Terrain with { ScmapVersion = 60 } });
             Assert.AreEqual("", Part(model).VersionNote);

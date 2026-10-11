@@ -285,53 +285,109 @@ namespace FAForever.FileFormats.Map
     public sealed record ScmapDecalGroup(int Id, string Name, IReadOnlyList<int> DecalIds);
 
     /// <summary>
-    /// The skybox of a version 60 map: the sky dome, its planets and its clouds.
+    /// The skybox of a version 60 map: the sky dome the game draws, its sky objects and its clouds.
+    /// The engine reads it in <c>Moho::SkyDome::Load</c> and draws it with <c>effects/sky.fx</c>
+    /// (reconstructed in Draiget/faf-re, <c>src/sdk/moho/render/SkyDome.cpp</c>); the names are the
+    /// FAF map editor's, the remarks say what the engine does with each.
     /// </summary>
     public sealed record ScmapSkybox
     {
+        /// <summary>
+        /// The middle of the dome's bottom ring.
+        /// </summary>
         public required Vector3 Position { get; init; }
 
+        /// <summary>
+        /// How far the dome's bottom ring lies above <see cref="Position"/>; also the height where the
+        /// horizon's colour starts to give way (the shader's <c>horizonBegin</c>).
+        /// </summary>
         public required float HorizonHeight { get; init; }
 
+        /// <summary>
+        /// The radius of the dome's bottom ring.
+        /// </summary>
         public required float Scale { get; init; }
 
+        /// <summary>
+        /// The angle in radians where the dome starts on its sphere (1.2566, 72°, in the game's maps):
+        /// the dome is the cap of a sphere of radius <c>Scale / cos(angle)</c> above that angle, so a
+        /// larger angle makes it flatter.
+        /// </summary>
         public required float SubtractHeight { get; init; }
 
+        /// <summary>
+        /// How many pieces the dome is built of around its axis.
+        /// </summary>
         public required int SubdivisionsAxis { get; init; }
 
+        /// <summary>
+        /// How many rings the dome is built of from its bottom to its top.
+        /// </summary>
         public required int SubdivisionsHeight { get; init; }
 
+        /// <summary>
+        /// How far above <see cref="HorizonHeight"/> the sky has the zenith's colour (the shader's
+        /// <c>horizonEnd</c> is their sum).
+        /// </summary>
         public required float ZenithHeight { get; init; }
 
         public required Vector3 HorizonColor { get; init; }
 
         public required Vector3 ZenithColor { get; init; }
 
+        /// <summary>
+        /// How strongly the glow atlas's alpha brightens the sky objects (written into the frame's
+        /// alpha for the bloom).
+        /// </summary>
         public required float DecalGlowMultiplier { get; init; }
 
+        /// <summary>
+        /// The atlas the sky objects are cut from (alpha-blended); none are drawn unless it and
+        /// <see cref="Glow"/> load.
+        /// </summary>
         public required string Albedo { get; init; }
 
+        /// <summary>
+        /// The glow atlas, in the layout of <see cref="Albedo"/>; only its alpha is read.
+        /// </summary>
         public required string Glow { get; init; }
 
         public required IReadOnlyList<ScmapPlanet> Planets { get; init; }
 
         /// <summary>
-        /// The colour between horizon and zenith, as red, green and blue bytes.
+        /// The light ramp of the cumulus clouds (<c>cumulusLightRamp</c>); empty in every map known.
         /// </summary>
-        public required (byte Red, byte Green, byte Blue) MidColor { get; init; }
+        public required string CumulusLightRamp { get; init; }
+
+        /// <summary>
+        /// The dispersion ramp of the cumulus clouds (<c>cumulusDispersionRamp</c>); empty in every map known.
+        /// </summary>
+        public required string CumulusDispersionRamp { get; init; }
+
+        /// <summary>
+        /// The texture of the cumulus clouds (<c>cumulusTexture</c>); empty in every map known.
+        /// </summary>
+        public required string CumulusTexture { get; init; }
 
         public required float CirrusMultiplier { get; init; }
 
         public required Vector3 CirrusColor { get; init; }
 
+        /// <summary>
+        /// The cirrus texture: a layer in each of its channels (red, green, blue, alpha), tiled over the dome.
+        /// </summary>
         public required string CirrusTexture { get; init; }
 
+        /// <summary>
+        /// The four cirrus layers. The file stores a count before them, which the engine ignores
+        /// (it always reads four and writes 4), so there are always <see cref="CirrusLayerCount"/>.
+        /// </summary>
         public required IReadOnlyList<ScmapCirrusLayer> CirrusLayers { get; init; }
 
         /// <summary>
-        /// The last number of the skybox; the map editor calls it <c>Clouds7</c>.
+        /// How many cirrus layers a skybox has.
         /// </summary>
-        public required float Clouds7 { get; init; }
+        public const int CirrusLayerCount = 4;
     }
 
     public sealed record ScmapPlanet(Vector3 Position, float Rotation, Vector2 Scale, Vector4 Uv);

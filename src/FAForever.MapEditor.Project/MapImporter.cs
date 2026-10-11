@@ -347,12 +347,13 @@ namespace FAForever.MapEditor.Project
             Albedo = s.Albedo,
             Glow = s.Glow,
             Planets = [.. s.Planets.Select(p => new Planet { Position = p.Position, Rotation = p.Rotation, Scale = p.Scale, Uv = p.Uv })],
-            MidColor = new Color32(255, s.MidColor.Red, s.MidColor.Green, s.MidColor.Blue),
+            CumulusLightRamp = s.CumulusLightRamp,
+            CumulusDispersionRamp = s.CumulusDispersionRamp,
+            CumulusTexture = s.CumulusTexture,
             CirrusMultiplier = s.CirrusMultiplier,
             CirrusColor = s.CirrusColor,
             CirrusTexture = s.CirrusTexture,
             CirrusLayers = [.. s.CirrusLayers.Select(c => new CirrusLayer { Frequency = c.Frequency, Speed = c.Speed, Direction = c.Direction })],
-            Clouds7 = s.Clouds7,
         };
 
         private static Army ToArmy(MapArmy a) => new Army

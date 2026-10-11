@@ -315,7 +315,9 @@ namespace FAForever.MapEditor.Project.Tests
             Skybox sky = SkyCubeMaps.SkyOf(document);
 
             Assert.AreEqual(new Vector3(128, 0, 128), sky.Position);
-            Assert.IsTrue(sky.Planets.IsEmpty && sky.CirrusLayers.IsEmpty);
+            Assert.IsTrue(sky.Planets.IsEmpty);
+            Assert.AreEqual(0, sky.CirrusMultiplier, "no cirrus shows");
+            CollectionAssert.AreEqual(Skyboxes.DefaultCirrusLayers, sky.CirrusLayers, "the game's four layers stand ready");
             Assert.IsTrue(sky.HorizonColor.X > sky.HorizonColor.Z, $"a warm horizon from the fog and sun: {sky.HorizonColor}");
             Assert.IsTrue(sky.ZenithColor.Z > sky.ZenithColor.X, $"a blue zenith: {sky.ZenithColor}");
             Assert.IsTrue(sky.ZenithHeight > sky.HorizonHeight);

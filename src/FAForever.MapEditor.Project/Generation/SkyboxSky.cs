@@ -15,8 +15,8 @@ namespace FAForever.MapEditor.Project.Generation
     /// <see cref="Skybox.Scale"/> around its <see cref="Skybox.Position"/>; a direction meets it at a
     /// height, and <c>tv = (height - HorizonHeight) / (ZenithHeight - HorizonHeight)</c>, clamped,
     /// mixes the horizon's colour into the zenith's. The engine shapes <c>tv</c> through a lookup
-    /// texture it makes itself; this takes it as it is (and through <see cref="Skybox.MidColor"/>
-    /// halfway when that colour is not black). Below the horizon the dome shows the horizon's colour.
+    /// texture (<c>/textures/environment/horizonLookup.dds</c>); this takes it as it is. Below the
+    /// horizon the dome shows the horizon's colour.
     /// </para>
     /// <para>
     /// <b>The sky objects</b> (<c>DecalVS</c>, <c>DecalAlbedoPS</c>, <c>DecalGlowPS</c>): each planet
@@ -156,15 +156,7 @@ namespace FAForever.MapEditor.Project.Generation
             float height = OnDome(direction).Y;
             float span = _skybox.ZenithHeight - _skybox.HorizonHeight;
             float tv = span == 0 ? (height >= _skybox.ZenithHeight ? 1 : 0) : Math.Clamp((height - _skybox.HorizonHeight) / span, 0, 1);
-            Color32 mid = _skybox.MidColor;
-            if (mid.Red == 0 && mid.Green == 0 && mid.Blue == 0)
-            {
-                return Vector3.Lerp(_skybox.HorizonColor, _skybox.ZenithColor, tv);
-            }
-            Vector3 middle = new Vector3(mid.Red, mid.Green, mid.Blue) / 255f;
-            return tv < 0.5f
-                ? Vector3.Lerp(_skybox.HorizonColor, middle, tv * 2)
-                : Vector3.Lerp(middle, _skybox.ZenithColor, tv * 2 - 1);
+            return Vector3.Lerp(_skybox.HorizonColor, _skybox.ZenithColor, tv);
         }
 
         /// <summary>

@@ -15,7 +15,8 @@ namespace FAForever.MapEditor.Project.Editing
         /// A plain sky for a map that has no skybox (versions 53 and 56, or a version 60 map without
         /// one): around the map's middle, as large as the FAF map editor makes it (about 2.3 times
         /// the map's larger side), the horizon in the fog's colour warmed by the sun, the zenith a
-        /// deeper blue of the same brightness; no sky objects and no cirrus.
+        /// deeper blue of the same brightness; no sky objects, and no cirrus (its strength 0, the game's
+        /// four layers in place).
         /// </summary>
         public static Skybox FromLighting(MapDocument document)
         {
@@ -45,24 +46,46 @@ namespace FAForever.MapEditor.Project.Editing
                 Albedo = "",
                 Glow = "",
                 Planets = [],
-                MidColor = default,
                 CirrusMultiplier = 0,
                 CirrusColor = Vector3.One,
-                CirrusTexture = "",
-                CirrusLayers = [],
-                Clouds7 = 0,
+                CirrusTexture = "/textures/environment/cirrus000.dds",
+                CirrusLayers = DefaultCirrusLayers,
             };
         }
+
+        /// <summary>
+        /// The cirrus layers the game gives a map whose file stores no skybox (versions before 58):
+        /// <c>Moho::SkyDome::SetupHorizonAndCirrus</c> copies them from a table in the executable
+        /// (0x00F5AE00, as Draiget/faf-re reads it).
+        /// </summary>
+        public static ImmutableArray<CirrusLayer> DefaultCirrusLayers { get; } =
+        [
+            new CirrusLayer { Frequency = new Vector2(0.00428f, 0.00301f), Speed = 0.55f, Direction = new Vector2(0.53288f, -0.84619f) },
+            new CirrusLayer { Frequency = new Vector2(0.00191f, 0.00164f), Speed = 0.09f, Direction = new Vector2(0.96638f, 0.25713f) },
+            new CirrusLayer { Frequency = new Vector2(0.00119f, 0.006f), Speed = 0.15f, Direction = new Vector2(0.15816f, 0.98741f) },
+            new CirrusLayer { Frequency = new Vector2(0.00264f, 0.0011f), Speed = 0.3f, Direction = new Vector2(-0.59482f, -0.80386f) },
+        ];
+
+        /// <summary>
+        /// Four cirrus layers, as the game always has (it reads four whatever count the file stores):
+        /// the first four of these, a missing one taken from <see cref="DefaultCirrusLayers"/>.
+        /// </summary>
+        public static ImmutableArray<CirrusLayer> WithFourCirrusLayers(ImmutableArray<CirrusLayer> layers) =>
+            layers.Length == DefaultCirrusLayers.Length
+                ? layers
+                : [.. Enumerable.Range(0, DefaultCirrusLayers.Length).Select(i => i < layers.Length ? layers[i] : DefaultCirrusLayers[i])];
 
         private static float Max(Vector3 value) => Math.Max(value.X, Math.Max(value.Y, value.Z));
 
         /// <summary>
         /// A skybox from the JSON the FAF map editor saves its skybox presets as: an object
         /// <c>Data</c> with <c>Position</c> (x, y, z), <c>Scale</c>, <c>HorizonColor</c> and the other
-        /// colours as r, g, b (0 to 1), <c>MidRgbColor</c> as r, g, b, a (0 to 255), <c>Planets</c>
-        /// (<c>Position</c>, <c>Rotation</c>, <c>Scale</c> x and y, <c>Uv</c> x, y, z, w) and
-        /// <c>CirrusLayers</c> (<c>frequency</c> x and y, <c>Speed</c>, <c>Direction</c> x and y).
-        /// A missing number is 0, a missing text empty.
+        /// colours as r, g, b (0 to 1), <c>Planets</c> (<c>Position</c>, <c>Rotation</c>, <c>Scale</c>
+        /// x and y, <c>Uv</c> x, y, z, w) and <c>CirrusLayers</c> (<c>frequency</c> x and y,
+        /// <c>Speed</c>, <c>Direction</c> x and y; made four as the game has). A missing number is 0, a
+        /// missing text empty. Its <c>MidRgbColor</c> and <c>Clouds7</c> are left out: they stand where
+        /// the map's file holds the cumulus textures and the count of cartographic decals, which the
+        /// editor writes as empty and 0.
         /// </summary>
         /// <param name="folder">The map's folder: a texture path into another map's folder
         /// (<c>/maps/blackstar.v0004/env/decals/aurora.dds</c>) is moved into this one when
@@ -92,13 +115,6 @@ namespace FAForever.MapEditor.Project.Editing
                 return inFolder.Length > 0 && hasFile(inFolder) ? $"/maps/{folder}/{inFolder}" : path;
             }
 
-            Color32 mid = default;
-            if (Get(data, "MidRgbColor") is { ValueKind: JsonValueKind.Object } midColor)
-            {
-                static byte Byte(JsonElement element, string name) => (byte)Math.Clamp((int)MathF.Round(Number(element, name)), 0, 255);
-                mid = new Color32(Byte(midColor, "a"), Byte(midColor, "r"), Byte(midColor, "g"), Byte(midColor, "b"));
-            }
-
             return new Skybox
             {
                 Position = Vector(data, "Position"),
@@ -120,17 +136,15 @@ namespace FAForever.MapEditor.Project.Editing
                     Scale = Get(planet, "Scale") is { ValueKind: JsonValueKind.Object } scale ? new Vector2(Number(scale, "x"), Number(scale, "y")) : Vector2.Zero,
                     Uv = Get(planet, "Uv") is { ValueKind: JsonValueKind.Object } uv ? new Vector4(Number(uv, "x"), Number(uv, "y"), Number(uv, "z"), Number(uv, "w")) : Vector4.Zero,
                 }).ToImmutableArray(),
-                MidColor = mid,
                 CirrusMultiplier = Number(data, "CirrusMultiplier"),
                 CirrusColor = Color(data, "CirrusColor"),
                 CirrusTexture = Texture("CirrusTexture"),
-                CirrusLayers = Items(data, "CirrusLayers").Select(layer => new CirrusLayer
+                CirrusLayers = WithFourCirrusLayers([.. Items(data, "CirrusLayers").Select(layer => new CirrusLayer
                 {
                     Frequency = Get(layer, "frequency") is { ValueKind: JsonValueKind.Object } frequency ? new Vector2(Number(frequency, "x"), Number(frequency, "y")) : Vector2.Zero,
                     Speed = Number(layer, "Speed"),
                     Direction = Get(layer, "Direction") is { ValueKind: JsonValueKind.Object } direction ? new Vector2(Number(direction, "x"), Number(direction, "y")) : Vector2.Zero,
-                }).ToImmutableArray(),
-                Clouds7 = Number(data, "Clouds7"),
+                })]),
             };
         }
 

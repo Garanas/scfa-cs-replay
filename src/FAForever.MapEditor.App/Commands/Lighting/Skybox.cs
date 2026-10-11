@@ -14,7 +14,6 @@ namespace FAForever.MapEditor.App.Commands;
 /// </summary>
 /// <param name="HorizonColor">Red, green and blue of the sky at the horizon.</param>
 /// <param name="ZenithColor">Red, green and blue of the sky overhead.</param>
-/// <param name="MidColor">Red, green and blue (0 to 1) between them; black for none.</param>
 /// <param name="HorizonHeight">The height on the dome where the horizon's colour starts to give way.</param>
 /// <param name="ZenithHeight">The height on the dome where the zenith's colour is reached.</param>
 /// <param name="Position">x, y and z of the dome's middle, in the map's units.</param>
@@ -29,7 +28,6 @@ namespace FAForever.MapEditor.App.Commands;
 public sealed record SetSkybox(
     float[]? HorizonColor = null,
     float[]? ZenithColor = null,
-    float[]? MidColor = null,
     float? HorizonHeight = null,
     float? ZenithHeight = null,
     float[]? Position = null,
@@ -48,7 +46,7 @@ public sealed class SetSkyboxHandler(MainViewModel model) : IRequestHandler<SetS
 {
     public Task Handle(SetSkybox r, CancellationToken cancellationToken)
     {
-        string given = WaterArguments.Given(("horizonColor", r.HorizonColor), ("zenithColor", r.ZenithColor), ("midColor", r.MidColor),
+        string given = WaterArguments.Given(("horizonColor", r.HorizonColor), ("zenithColor", r.ZenithColor),
             ("horizonHeight", r.HorizonHeight), ("zenithHeight", r.ZenithHeight), ("position", r.Position), ("scale", r.Scale),
             ("subtractHeight", r.SubtractHeight), ("subdivisionsAxis", r.SubdivisionsAxis), ("subdivisionsHeight", r.SubdivisionsHeight),
             ("albedo", r.Albedo), ("glow", r.Glow), ("glowMultiplier", r.GlowMultiplier),
@@ -70,14 +68,12 @@ public sealed class SetSkyboxHandler(MainViewModel model) : IRequestHandler<SetS
         }
         Vector3? horizon = WaterArguments.Vector(r.HorizonColor, "horizonColor");
         Vector3? zenith = WaterArguments.Vector(r.ZenithColor, "zenithColor");
-        Vector3? mid = WaterArguments.Vector(r.MidColor, "midColor");
         Vector3? position = WaterArguments.Vector(r.Position, "position");
         Vector3? cirrus = WaterArguments.Vector(r.CirrusColor, "cirrusColor");
         model.EditMap($"Skybox: {given.Replace(",", ", ")}", document => SkyboxCommands.With(document, s => s with
         {
             HorizonColor = horizon ?? s.HorizonColor,
             ZenithColor = zenith ?? s.ZenithColor,
-            MidColor = mid is { } m ? SkyboxCommands.ToColor32(m, s.MidColor.Alpha) : s.MidColor,
             HorizonHeight = r.HorizonHeight ?? s.HorizonHeight,
             ZenithHeight = r.ZenithHeight ?? s.ZenithHeight,
             Position = position ?? s.Position,
@@ -140,9 +136,10 @@ public sealed class RemoveSkyboxHandler(MainViewModel model) : IRequestHandler<R
 
 /// <summary>
 /// Changes a cirrus layer of the skybox (user story L-1): how often its channel of the cirrus
-/// texture repeats over the dome, its speed and the direction it drifts; one step of undo.
+/// texture repeats over the dome, its speed and the direction it drifts; one step of undo. A skybox
+/// always has four, as the game does.
 /// </summary>
-/// <param name="Index">The layer, from 0 (the texture's red channel; green, blue and alpha follow).</param>
+/// <param name="Index">The layer, 0 to 3: the texture's red, green, blue and alpha channel.</param>
 [EditorCommand("lighting.setCirrusLayer", "Change a cirrus layer", Story = "L-1", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record SetCirrusLayer(int Index, float? FrequencyX = null, float? FrequencyY = null, float? Speed = null, float? DirectionX = null, float? DirectionY = null) : IRequest;
 
@@ -179,64 +176,10 @@ public sealed class SetCirrusLayerHandler(MainViewModel model) : IRequestHandler
 }
 
 /// <summary>
-/// Adds a cirrus layer to the skybox (user story L-1), up to four (one per channel of the cirrus
-/// texture); one step of undo.
-/// </summary>
-[EditorCommand("lighting.addCirrusLayer", "Add a cirrus layer", Story = "L-1", Needs = Needs.Map | Needs.NoStroke)]
-public sealed record AddCirrusLayer : IRequest;
-
-public sealed class AddCirrusLayerHandler(MainViewModel model) : IRequestHandler<AddCirrusLayer>
-{
-    public Task Handle(AddCirrusLayer request, CancellationToken cancellationToken)
-    {
-        Skybox skybox = SkyboxCommands.Require(model);
-        if (skybox.CirrusLayers.Length >= SkyboxCommands.MaxCirrusLayers)
-        {
-            throw new InvalidOperationException($"The skybox has {SkyboxCommands.MaxCirrusLayers} cirrus layers, one per channel of the cirrus texture");
-        }
-        model.EditMap("Add a cirrus layer", document => SkyboxCommands.With(document, s => s with
-        {
-            CirrusLayers = s.CirrusLayers.Add(new CirrusLayer { Frequency = Vector2.One, Speed = 0, Direction = new Vector2(1, 0) }),
-        }));
-        model.Status = $"Added cirrus layer {skybox.CirrusLayers.Length + 1}";
-        return Task.CompletedTask;
-    }
-}
-
-/// <summary>
-/// Takes a cirrus layer out of the skybox (user story L-1), one step of undo; the layers after it
-/// move up a channel.
-/// </summary>
-/// <param name="Index">The layer, from 0; left out, the last.</param>
-[EditorCommand("lighting.removeCirrusLayer", "Remove a cirrus layer", Story = "L-1", Needs = Needs.Map | Needs.NoStroke)]
-public sealed record RemoveCirrusLayer(int? Index = null) : IRequest;
-
-public sealed class RemoveCirrusLayerHandler(MainViewModel model) : IRequestHandler<RemoveCirrusLayer>
-{
-    public Task Handle(RemoveCirrusLayer request, CancellationToken cancellationToken)
-    {
-        Skybox skybox = SkyboxCommands.Require(model);
-        int index = request.Index ?? skybox.CirrusLayers.Length - 1;
-        if (index < 0 || index >= skybox.CirrusLayers.Length)
-        {
-            throw new ArgumentException(skybox.CirrusLayers.IsEmpty ? "The skybox has no cirrus layers" : $"The skybox has {skybox.CirrusLayers.Length} cirrus layers, numbered from 0");
-        }
-        model.EditMap($"Remove cirrus layer {index + 1}", document => SkyboxCommands.With(document, s => s with { CirrusLayers = s.CirrusLayers.RemoveAt(index) }));
-        model.Status = $"Removed cirrus layer {index + 1}";
-        return Task.CompletedTask;
-    }
-}
-
-/// <summary>
 /// What the skybox's commands share.
 /// </summary>
 internal static class SkyboxCommands
 {
-    /// <summary>
-    /// The cirrus texture's channels, one per layer (<c>effects/sky.fx</c>, <c>CirrusPS</c>).
-    /// </summary>
-    public const int MaxCirrusLayers = 4;
-
     /// <exception cref="InvalidOperationException">No map is open, or it has no skybox.</exception>
     public static Skybox Require(MainViewModel model) =>
         (model.ShownDocument ?? throw new InvalidOperationException("No map is open")).Sky.Skybox
@@ -247,18 +190,4 @@ internal static class SkyboxCommands
     /// </summary>
     public static MapDocument With(MapDocument document, Func<Skybox, Skybox> change) =>
         document.Sky.Skybox is Skybox skybox ? document with { Sky = document.Sky with { Skybox = change(skybox) } } : document;
-
-    /// <summary>
-    /// A colour of 0 to 1 as the skybox keeps its middle colour, with the alpha it had (its use is unknown).
-    /// </summary>
-    public static Color32 ToColor32(Vector3 color, byte alpha)
-    {
-        static byte Byte(float value) => (byte)Math.Round(Math.Clamp(value, 0, 1) * 255);
-        return new Color32(alpha, Byte(color.X), Byte(color.Y), Byte(color.Z));
-    }
-
-    /// <summary>
-    /// The skybox's middle colour as 0 to 1.
-    /// </summary>
-    public static Vector3 FromColor32(Color32 color) => new Vector3(color.Red, color.Green, color.Blue) / 255f;
 }
