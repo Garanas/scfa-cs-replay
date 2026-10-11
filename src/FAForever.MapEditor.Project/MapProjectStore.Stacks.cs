@@ -236,6 +236,7 @@ namespace FAForever.MapEditor.Project
             VariationScale = curve.VariationScale == 32 ? null : curve.VariationScale,
             // always written for a closed curve: one without it is from before closed curves filled
             LineOnly = curve.Closed ? curve.LineOnly : curve.LineOnly ? true : null,
+            BlocksWalkability = curve.BlocksWalkability ? true : null,
         };
 
         private static HeightCurve ToModel(HeightCurveDto c)
@@ -277,6 +278,8 @@ namespace FAForever.MapEditor.Project
                 VariationScale = c.VariationScale ?? 32,
                 // a closed curve saved before closed curves filled (format 8 and older) keeps its look
                 LineOnly = c.LineOnly ?? c.Closed == true,
+                // a curve saved without it (before cliff faces could block) does not block
+                BlocksWalkability = c.BlocksWalkability == true,
             };
         }
 

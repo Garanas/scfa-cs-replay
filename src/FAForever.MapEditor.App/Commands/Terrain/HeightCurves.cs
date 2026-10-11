@@ -149,6 +149,9 @@ public interface ICurveFields
     float? VariationScale { get; }
 
     bool? LineOnly { get; }
+
+    /// <summary>For a cliff: whether its face blocks walkability (wave 18, D3).</summary>
+    bool? BlocksWalkability { get; }
 }
 
 /// <summary>
@@ -181,6 +184,7 @@ public static class HeightCurveArguments
             WidthVariation = fields.WidthVariation is float[] width ? RangeOf(width) : curve.WidthVariation,
             VariationScale = fields.VariationScale ?? curve.VariationScale,
             LineOnly = fields.LineOnly ?? curve.LineOnly,
+            BlocksWalkability = fields.BlocksWalkability ?? curve.BlocksWalkability,
         };
     }
 
@@ -193,6 +197,7 @@ public static class HeightCurveArguments
         ("roadMode", fields.RoadMode), ("camber", fields.Camber), ("noiseAmplitude", fields.NoiseAmplitude), ("noiseScale", fields.NoiseScale),
         ("noiseSeed", fields.NoiseSeed), ("heightVariation", fields.HeightVariation), ("widthVariation", fields.WidthVariation),
         ("variationScale", fields.VariationScale), ("lineOnly", fields.LineOnly),
+        ("blocksWalkability", fields.BlocksWalkability),
     ];
 
     public static CurveFalloffShape? ParseShape(string text) =>
