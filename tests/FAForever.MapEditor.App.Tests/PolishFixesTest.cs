@@ -91,6 +91,18 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public void ATilesNameBreaksBetweenWordsOnlyAndAWordIsCutInItsMiddle()
+        {
+            Controls.TileTitleWrapConverter converter = Controls.TileTitleWrapConverter.Instance;
+            System.Globalization.CultureInfo culture = System.Globalization.CultureInfo.InvariantCulture;
+            Assert.AreEqual(Avalonia.Media.TextWrapping.NoWrap, converter.Convert("des_boulder01", typeof(Avalonia.Media.TextWrapping), null, culture));
+            Assert.AreEqual(Avalonia.Media.TextTrimming.PrefixCharacterEllipsis, converter.Convert("des_boulder01", typeof(Avalonia.Media.TextTrimming), null, culture),
+                "des_bou…lder01: the end that tells the variants apart shows");
+            Assert.AreEqual(Avalonia.Media.TextWrapping.Wrap, converter.Convert("Aeon Administrative Structure", typeof(Avalonia.Media.TextWrapping), null, culture));
+            Assert.AreEqual(Avalonia.Media.TextTrimming.CharacterEllipsis, converter.Convert("Aeon Administrative Structure", typeof(Avalonia.Media.TextTrimming), null, culture));
+        }
+
+        [TestMethod]
         public void APathNodesPlaceIsSaidToATenth()
         {
             Assert.AreEqual("x 406.3, z 283.2", Commands.AddGeneratedPathNodeHandler.Place(406.3352, 283.2033));
