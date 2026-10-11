@@ -34,27 +34,39 @@
                     <StackPanel Classes="partentries" />
                   </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:MarkerListRow">
+                <ItemsControl.DataTemplates>
+                  <!-- a kind or layer: its show check box (markers.showKind), its colour and count -->
+                  <DataTemplate DataType="vm:MarkerKindRow">
                     <DockPanel>
-                      <!-- a kind's or layer's show check box (markers.showKind) -->
-                      <CheckBox DockPanel.Dock="Left" Classes="boxonly" IsVisible="{Binding IsKind}"
-                                IsChecked="{Binding Kind.IsOn, Mode=OneWay, FallbackValue=False}" Command="{Binding Kind.ToggleShownCommand, FallbackValue={x:Null}}"
-                                AutomationProperties.Name="{Binding Kind.ShowLabel, FallbackValue=''}" />
+                      <CheckBox DockPanel.Dock="Left" Classes="boxonly"
+                                IsChecked="{Binding Kind.IsOn, Mode=OneWay}" Command="{Binding Kind.ToggleShownCommand}"
+                                AutomationProperties.Name="{Binding Kind.ShowLabel}" />
                       <Button Classes="partentry" Classes.selected="{Binding Part.IsChosen}"
                               Command="{Binding Parts.ChooseItemCommand}" CommandParameter="{Binding Part}"
                               ToolTip.Tip="{Binding Part.Help}"
                               AutomationProperties.Name="{Binding Part.Title}" AutomationProperties.HelpText="{Binding Part.Label}">
                         <DockPanel>
-                          <Border DockPanel.Dock="Left" Classes="swatch markersswatch" IsVisible="{Binding IsKind}"
-                                  Background="{Binding Kind.Swatch, Converter={x:Static controls:ArgbBrushConverter.Instance}, FallbackValue={x:Null}}" />
+                          <Border DockPanel.Dock="Left" Classes="swatch markersswatch"
+                                  Background="{Binding Kind.Swatch, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
                           <TextBlock DockPanel.Dock="Right" Classes="partdetail" Text="{Binding Part.Detail}" />
                           <TextBlock Text="{Binding Part.Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         </DockPanel>
                       </Button>
                     </DockPanel>
                   </DataTemplate>
-                </ItemsControl.ItemTemplate>
+                  <!-- a chain, the adaptive map -->
+                  <DataTemplate DataType="vm:MarkerListRow">
+                    <Button Classes="partentry" Classes.selected="{Binding Part.IsChosen}"
+                            Command="{Binding Parts.ChooseItemCommand}" CommandParameter="{Binding Part}"
+                            ToolTip.Tip="{Binding Part.Help}"
+                            AutomationProperties.Name="{Binding Part.Title}" AutomationProperties.HelpText="{Binding Part.Label}">
+                      <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Classes="partdetail" Text="{Binding Part.Detail}" />
+                        <TextBlock Text="{Binding Part.Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                      </DockPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.DataTemplates>
               </ItemsControl>
             </StackPanel>
           </DataTemplate>

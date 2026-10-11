@@ -377,6 +377,11 @@ reads again when it changes; and nothing that generates runs by itself.
       civilians by the number of players: groups `Optional_Players_<n>`, created by that script
       when n or more players are in the game.
 - [x] **R-6 Show markers.** Markers and path nodes on or off in the top view and in 3D, per kind.
+      The Markers panel lists the kinds and the layers of path nodes with their colours, counts and
+      show check boxes, the chains and the adaptive map; the chosen entry's inspector selects or
+      clears every marker of its kind (`markers.select`, `markers.clear {kind, layer?}`: one step of
+      undo, links, chains and spawns' armies kept right) and says how the export treats the generated
+      networks beside a layer's own nodes.
 
 ## P: Props
 

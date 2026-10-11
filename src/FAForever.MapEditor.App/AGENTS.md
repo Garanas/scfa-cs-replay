@@ -84,7 +84,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     where it shows. A command in no menu is for automation and plugins, and the palette leaves
     it out: its control is on a page or panel (`workspace.setUp`, `workspace.convert`,
     `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`, `paint.chooseMask`, `presets.apply`,
-    `presets.delete`, `view.walkability`, `problems.show`, `markers.showKind`, `markers.set`,
+    `presets.delete`, `view.walkability`, `problems.show`, `markers.showKind`, `markers.select`, `markers.clear`, `markers.set`,
     `markers.setChain`, `markers.renameChain`, `markers.deleteChain`, `markers.setWeather`,
     `markers.addOptionalGroup`, `file.showCommit`, `file.restoreCommit`, `view.togglePanel`,
     `view.resizePanel`, `view.movePanel`, `view.returnPanel`, `view.setToolbar`, `view.addToToolbar`, `view.removeFromToolbar`,
@@ -120,7 +120,8 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   tools, panel sections and inspector sections. A mode remembers its last tool.
 - **Overlays** are data too (`EditorOverlays`): each is a chip above the views and a command in
   the View menu (`view.overlay.<id>`). One with `Panel` is also a check box in that mode's panel
-  (`OverlaySection`: the Markers panel's "Shown in the views"), which runs the same command.
+  (`OverlaySection`), which runs the same command; the Markers panel's overlays are the check boxes
+  of the headings of their titles in its list (Markers, Path nodes).
 - **The views' bar** is one row of `ToolbarHeight`, as the tool's options are: the view tabs, then
   a `controls:ToolRow` (`ViewOptions`) holding the symmetry and a chip per overlay, which
   `MainWindow.BuildOverlayChips` makes from `MainViewModel.Overlays`: a `ToggleButton.chip` that runs
@@ -1451,12 +1452,43 @@ inspector's `MarkerSelection`.
   another runs `markers.link {a, b, unlink?}` (control unlinks). Nodes of different layers never
   link. Choosing the tool shows the path nodes and its layer. The generated networks are the
   Procedural mode's (`markers.connectPaths`, edited with its Path nodes tool; below).
-- **Chains** (R-4): the panel's section lists them (`ChainsSection`); "From the selection" runs
-  `markers.addChain {name?, markers?}` (the selected markers in the order they were selected,
-  `Chain_1` or the next free name) and chooses it; its markers have up, down and take-out
-  buttons (`markers.setChain {name, markers}`), its name field `markers.renameChain {name, to}`,
-  Delete `markers.deleteChain {name}`. `ChainTool` adds the marker it clicks to the chosen chain
-  (the first click makes one), control takes it out, Escape lets go of the chain.
+- **The panel lists, the inspector edits** (wave 14B; `MarkersViewModel.Parts`, partial
+  `MarkersViewModel.Parts.cs`; panel `Views/MapPanels/MarkersPanel` for `MarkerListSection`, inspector
+  `PanelPartView` for `MarkerDetailsSection`, registered as `PanelPartLists["markers"]`). Headings and
+  entries (`view.inspectPart` ids): **Markers**, a kind each (`markers.kind.spawns`, `.mass`,
+  `.hydrocarbon`, `.ai`, `.weather`); **Path nodes**, a layer each (`markers.paths.land`,
+  `.amphibious`, `.water`, `.air`); **Chains and options**, a chain each (`markers.chain.<name>`, kept
+  in step with the map by `SyncGroup` on every refresh) and the adaptive map (`markers.adaptive`,
+  always last). A kind's or layer's row (`MarkerKindRow`; a chain's `MarkerListRow`) has its show check box at its left
+  (`markers.showKind`, R-6) and its colour (the library's `Marker.Color`, `MarkerKindChoice.Colour`)
+  and count in its entry; the headings Markers and Path nodes carry the check boxes of the overlays
+  of their titles (`MarkerListGroup.Overlay`, `view.overlay.markers|pathNodes`). Under the list,
+  "Chain from the selection" (`markers.addChain`). Presets stay the section below.
+- **A kind or layer in the inspector** (`MarkerKindItem`, `Views/MapPanels/MarkerKindPartView`):
+  its count, links (path nodes; a link both ways once, `MarkerEdits.CountLinks`), whether it shows,
+  Select them (`markers.select {kind, layer?}`: every marker of the kind, which then shows with its
+  overlay; the selection takes the inspector), Clear them / Clear the layer and, for path nodes,
+  Clear every path node (`markers.clear {kind, layer?}`), and how the export treats the Procedural
+  mode's generated network of the layer (`MarkersViewModel.Export` from `PathNodeSettings`: not
+  written, no network of that layer, joined at export, replace at export).
+- **Clear** (`Commands/Markers/Clear.cs`, owner decision Q3): `markers.clear {kind, layer?}` takes
+  `spawns`, `mass`, `hydrocarbon`, `ai`, `weather` or `path` (with `land`, `water`, `amphibious`,
+  `air`, or none for every layer; `markers.showKind`'s names such as `landPaths` work too,
+  `MarkersViewModel.KindsOf`), one step of undo through `MarkerEdits.RemoveKind` (spawns the highest
+  number first, so each takes its playable army and none is renamed; links and chain entries go,
+  an emptied chain stays). The step and the status line say how many went (`Remove 412 land path
+  nodes`, `Removed 412 land path nodes`; `MarkersViewModel.Noun`); with none of the kind it says so
+  and makes no step. Only the map's own markers go: the generated networks are never markers of the
+  project, so clearing a layer makes the generated network its only one. Span `model.markers-clear`
+  (3 ms for the 829 path nodes of Archsimkats Valley).
+- **A chain in the inspector** (`ChainPart`, `Views/MapPanels/ChainPartView`, R-4): its name field
+  (`markers.renameChain {name, to}`; the renamed chain's entry is chosen), its markers with up, down
+  and take-out buttons (`markers.setChain {name, markers}`), Select its markers and Delete the chain
+  (`markers.deleteChain {name}`). A chain chosen in the list is the chain tool's
+  (`MarkersViewModel.SelectedChain`), and a chain made or renamed (`markers.addChain {name?,
+  markers?}`: the selected markers in the order they were selected, `Chain_1` or the next free name)
+  is chosen in the list. `ChainTool` adds the marker it clicks to the chosen chain (the first click
+  makes one), control takes it out, Escape lets go of the chain.
 - **The inspector** (`MarkerSelection`, R-2, R-5): the name of one marker (a spawn keeps its
   army's), the resource of deposits, the type of AI markers (`AiMarker.KnownTypes` and the
   selection's own), the layer of path nodes (their links to the old layer go), the no-rush
@@ -1464,17 +1496,18 @@ inspector's `MarkerSelection`.
   (Always, an army, or Nearest: each the army of its nearest spawn); every field runs
   `markers.set`, for one or many, and shows nothing or a dash where they differ. A section's
   fields run commands through `SelectionSection.Run`, which the inspector gives every section.
-- **Adaptive map** (`AdaptiveSection`, R-5): `markers.adaptive {on?}` and per playable army how
+- **Adaptive map** (`AdaptivePart`, `Views/MapPanels/AdaptivePartView`, R-5; its entry's detail
+  `on · 2 groups` or `off`): `markers.adaptive {on?}` and per playable army how
   many deposits wait for it.
-- **Per kind** (`MarkerKindsSection`, R-6): a check box per kind (`MarkerKinds`: spawns, mass,
-  hydrocarbon, AI markers, weather, and path nodes per layer), with how many the map has, runs
-  `markers.showKind {kind, on?}`. `MainViewModel.ShownMarkerKinds` is what both views draw and
-  picking takes (`MapObjects.Nearest`/`Inside`/`All`, `PickOptions`, `ObjectFrame`): the panel's
+- **Per kind** (R-6): the check boxes of the list's kinds and layers (`MarkerKinds`: spawns, mass,
+  hydrocarbon, AI markers, weather, and path nodes per layer) run `markers.showKind {kind, on?}`.
+  `MainViewModel.ShownMarkerKinds` is what both views draw and picking takes (`MapObjects.Nearest`/`Inside`/`All`, `PickOptions`, `ObjectFrame`): the panel's
   kinds of what the overlays Markers and Path nodes show.
 - Automation: `state.markers` (the kinds shown, what can be picked, the chains with their
   markers, the chosen chain, adaptive, the last warning, `paths`: the panel's layers, spacing,
   replace, status and result; `optionalGroups`; the active marker tool's settings, the Preset
-  tool's preset).
+  tool's preset); `state.panelParts.markers` the list's entries with their counts and the chosen one.
+  Tests: `MarkersModeListTest`, `MarkersTest`.
 - **Generated path networks** (R-3, F-7): the Procedural mode's (section "The Procedural mode",
   Path networks): previewed, edited by hand on top, written by the export only. The Markers
   mode's Path tool places and links path-node markers, which the export writes beside the
@@ -2182,7 +2215,8 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   the inspector. Checked against it (October 2026): Terrain (height layers listed, the chosen one
   in the inspector), Paint (strata listed, the chosen stratum in the inspector), Units (the tree of
   armies and groups listed, the chosen army or group in the inspector, a unit chosen selected),
-  Decals (groups listed, the selection in the inspector), Water and Lighting (below) and Procedural (the
+  Markers (kinds, layers of path nodes, chains and the adaptive map listed, the chosen one in the
+  inspector; section "Markers"), Decals (groups listed, the selection in the inspector), Water and Lighting (below) and Procedural (the
   generated results listed, section "The Procedural mode") follow it; the Map
   panel's Information fields and the Props panel's Placing are
   still edited in the panel, for a later wave to move.
@@ -2199,9 +2233,10 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   undo that selects again), takes the inspector back, and so does a click on a thing selected
   already (the select tools call `InspectTheSelection`, since such a click keeps the selection to
   drag it); a selection that only lost what an undo took away (`SelectionViewModel.Prune`,
-  `IsPruning`) leaves the owner as it is. A mode with no part of its own in the inspector (the
-  Markers mode, `HasNoInspectorParts`) leaves the selection there whoever chose last, and only there
-  the inspector says how to select things ("Nothing is selected ..."). A part of the mode is chosen
+  `IsPruning`) leaves the owner as it is. A mode with no part of its own in the inspector
+  (`HasNoInspectorParts`; no mode of things since the Markers mode got its list) leaves the selection
+  there whoever chose last, and only there the inspector says how to select things ("Nothing is
+  selected ..."). A part of the mode is chosen
   by a mode on the rail, its F-key or the Modes menu (`<mode>.mode`; a command that switches to its
   own mode, `decals.choose`, is no such choice), an entry of a panel's list (`PanelParts.Picked`,
   raised by its button also when it was chosen already; `view.inspectPart`), and an item of a list

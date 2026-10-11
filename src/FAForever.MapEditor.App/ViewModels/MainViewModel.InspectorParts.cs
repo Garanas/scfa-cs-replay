@@ -45,7 +45,7 @@ public sealed partial class MainViewModel
     public IReadOnlyList<PanelSection> InspectorParts { get; private set; } = [];
 
     /// <summary>
-    /// Whether the mode has no part of its own to show in the inspector (the Markers mode): the
+    /// Whether the mode has no part of its own to show in the inspector (a Paint tool other than the strata tool): the
     /// inspector then says how to select things, and the selection keeps it.
     /// </summary>
     public bool HasNoInspectorParts => InspectorParts.Count == 0;

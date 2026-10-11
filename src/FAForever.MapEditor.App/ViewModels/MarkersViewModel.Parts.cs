@@ -64,13 +64,14 @@ public sealed partial class ChainPart(MarkersViewModel owner, string name) : Obs
 public sealed record AdaptivePart(MarkersViewModel Markers);
 
 /// <summary>
-/// An entry of the Markers panel's list with what its row shows beside it: the kind's show check box
-/// and colour, for a kind or layer.
+/// An entry of the Markers panel's list (a chain, the adaptive map), with the list that chooses it.
 /// </summary>
-public sealed record MarkerListRow(PanelPart Part, MarkerKindItem? Kind, PanelParts Parts)
-{
-    public bool IsKind => Kind is not null;
-}
+public record MarkerListRow(PanelPart Part, PanelParts Parts);
+
+/// <summary>
+/// The entry of a kind or a layer of path nodes, whose row shows its show check box and colour.
+/// </summary>
+public sealed record MarkerKindRow(PanelPart Part, MarkerKindItem Kind, PanelParts Parts) : MarkerListRow(Part, Parts);
 
 /// <summary>
 /// A heading of the Markers panel's list with its entries, and the overlay its check box turns on
@@ -166,7 +167,7 @@ public sealed partial class MarkersViewModel
     {
         ListGroups = [.. Parts.Groups.Select(group => new MarkerListGroup(group.Title,
             _overlays.FirstOrDefault(overlay => overlay.Definition.Panel == "markers" && overlay.Title == group.Title),
-            [.. group.Parts.Select(part => new MarkerListRow(part, part.Content as MarkerKindItem, Parts))]))];
+            [.. group.Parts.Select(part => part.Content is MarkerKindItem kind ? new MarkerKindRow(part, kind, Parts) : new MarkerListRow(part, Parts))]))];
     }
 
     /// <summary>
