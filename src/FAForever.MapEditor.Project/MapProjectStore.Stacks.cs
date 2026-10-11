@@ -29,6 +29,16 @@ namespace FAForever.MapEditor.Project
         private static bool HasFile(Layer layer) => layer.Source is not (CurveSource or MaskRefSource);
 
         /// <summary>
+        /// Whether a height layer is read from an image in the project folder that is there (the final's
+        /// base from a procedural tool's output in <c>procedural/temp</c>, an imported heightmap kept in
+        /// the project): the project then keeps no copy of its heights, as opening reads the image again.
+        /// An image outside the project keeps its copy, for when the file moves or the project is opened
+        /// on another computer.
+        /// </summary>
+        private static bool ReadsOwnImage(string folder, Layer layer) =>
+            layer.Source is ImageSource { Path: string path } && !Path.IsPathRooted(path) && File.Exists(Path.Combine(folder, path));
+
+        /// <summary>
         /// Writes the heightmap's stack and removes the files of a project of format 5 or older.
         /// </summary>
         private static void SaveHeightStack(MapDocument document, string folder, MapDocument? previous)
@@ -62,7 +72,10 @@ namespace FAForever.MapEditor.Project
             HashSet<string> files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Layer layer in stack.Layers.Where(HasFile))
             {
-                files.Add(Path.GetFileName(MapProjectLayout.StackLayer(key, layer.Name)));
+                if (!(heights && ReadsOwnImage(folder, layer)))
+                {
+                    files.Add(Path.GetFileName(MapProjectLayout.StackLayer(key, layer.Name)));
+                }
                 if ((heights && layer.Coverage is not null) || (!heights && layer.Alpha is not null))
                 {
                     files.Add(Path.GetFileName(MapProjectLayout.StackLayerCoverage(key, layer.Name)));
@@ -104,7 +117,8 @@ namespace FAForever.MapEditor.Project
                 if (heights)
                 {
                     bool sameEncoding = before is not null && before.Name == layer.Name && OffsetOf(before, scale) == OffsetOf(layer, scale) && previousScale == scale;
-                    if (layer.Values is TiledBuffer<float> heightValues && (!sameEncoding || !ReferenceEquals(before!.Values, heightValues) || !File.Exists(values)))
+                    if (layer.Values is TiledBuffer<float> heightValues && !ReadsOwnImage(folder, layer)
+                        && (!sameEncoding || !ReferenceEquals(before!.Values, heightValues) || !File.Exists(values)))
                     {
                         float offset = OffsetOf(layer, scale);
                         float[] array = heightValues.ToArray();
@@ -371,10 +385,14 @@ namespace FAForever.MapEditor.Project
                 // while the editor was closed); the layer's own PNG holds what it read last
                 string? image = layer.Path is string path ? Path.GetFullPath(Path.Combine(folder, path)) : null;
                 bool fromImage = image is not null && File.Exists(image);
-                ushort[] samples = fromImage
-                    ? HeightmapFiles.ReadResampled(document, image!, out _)
-                    : ProjectImages.ReadGray16(Path.Combine(folder, valuesFile), grid.Width, grid.Height);
-                offset = fromImage ? 0 : offset;
+                bool copied = File.Exists(Path.Combine(folder, valuesFile));
+                // an image of the project keeps no copy (ReadsOwnImage): when it is gone, a base starts
+                // from the map's saved heights and another layer from nothing
+                ushort[] samples = fromImage ? HeightmapFiles.ReadResampled(document, image!, out _)
+                    : copied || layer.Source is not ImageSource ? ProjectImages.ReadGray16(Path.Combine(folder, valuesFile), grid.Width, grid.Height)
+                    : layer.IsBase ? document.Terrain.Heightmap.Samples.ToArray()
+                    : new ushort[grid.Width * grid.Height];
+                offset = fromImage || !copied ? 0 : offset;
                 TiledBuffer<float> values = HeightLayerEdits.FromSamples(TiledBuffer<ushort>.FromArray(grid.Width, grid.Height, samples), scale, held?.Values, offset);
                 TiledBuffer<byte>? coverage = null;
                 string file = Path.Combine(folder, coverageFile);
