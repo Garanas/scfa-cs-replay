@@ -69,6 +69,36 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void AddsManyUnitsIntoOneGroupAsOneVersionWithFreeNames()
+        {
+            string army = original.Armies[0].Name;
+            MapDocument document = original.AddUnit(army, ["INITIAL"], new Unit { Name = "UNIT_3", Blueprint = "uec1101" });
+            Unit[] units =
+            [
+                new Unit { Name = "", Blueprint = "ueb5101", Position = new Vector3(5, 0, 6) },
+                new Unit { Name = "UNIT_3", Blueprint = "ueb5101", Position = new Vector3(6, 0, 6) },
+                new Unit { Name = "UNIT_9", Blueprint = "ueb5101", Position = new Vector3(7, 0, 6) },
+                new Unit { Name = "", Blueprint = "ueb5101", Position = new Vector3(8, 0, 6) },
+            ];
+            MapDocument added = document.AddUnits(army, ["INITIAL", "Walls"], units, out System.Collections.Immutable.ImmutableArray<string> names);
+            CollectionAssert.AreEqual(new[] { "UNIT_4", "UNIT_5", "UNIT_9", "UNIT_6" }, names.ToArray(), "empty and taken names get the next free ones, a free name is kept");
+            foreach (string name in names)
+            {
+                PlacedUnit placed = added.FindUnit(name)!;
+                Assert.AreEqual(army, placed.Army);
+                CollectionAssert.AreEqual(new[] { "INITIAL", "Walls" }, placed.Group.ToArray(), "the group is made");
+            }
+            Assert.AreEqual(4, added.FindGroup(army, ["INITIAL", "Walls"])!.Units.Length);
+            Assert.AreEqual("UNIT_10", added.NextUnitName());
+
+            MapDocument none = document.AddUnits(army, ["INITIAL"], [], out System.Collections.Immutable.ImmutableArray<string> noNames);
+            Assert.AreSame(document, none, "nothing to add changes nothing");
+            Assert.IsTrue(noNames.IsEmpty);
+            Assert.ThrowsException<KeyNotFoundException>(() => original.AddUnits("NOBODY", [], units, out _));
+            Assert.ThrowsException<KeyNotFoundException>(() => original.AddUnits("NOBODY", [], [], out _));
+        }
+
+        [TestMethod]
         public void AddsMarkersOfEveryKindUnderANewIdAndAFreeName()
         {
             ResourceMarker mass = original.Markers.Resources.First(r => r.Kind == ResourceKind.Mass);
