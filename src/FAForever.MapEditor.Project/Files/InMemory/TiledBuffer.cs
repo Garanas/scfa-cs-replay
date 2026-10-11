@@ -141,6 +141,12 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             && ReferenceEquals(_tiles[CheckTile(tileX, tileY, TilesX, TilesY)], other._tiles[tileY * TilesX + tileX]);
 
         /// <summary>
+        /// What identifies a tile's values: tiles with the same key are one shared tile, so what is
+        /// worked out from one holds for the others.
+        /// </summary>
+        internal object TileKey(int tileX, int tileY) => _tiles[CheckTile(tileX, tileY, TilesX, TilesY)];
+
+        /// <summary>
         /// A builder that starts from this buffer's values.
         /// </summary>
         public Builder ToBuilder() => new Builder(this);
