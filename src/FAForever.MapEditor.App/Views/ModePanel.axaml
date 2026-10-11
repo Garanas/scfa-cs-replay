@@ -123,9 +123,12 @@
                           <Button DockPanel.Dock="Right" Classes="beside" Content="×"
                                   Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.DeleteShownCommand}" CommandParameter="{Binding}"
                                   AutomationProperties.Name="{Binding Name, StringFormat='Delete the preset {0}'}" />
-                          <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="{Binding Name}"
+                          <!-- its name, and what it places as the detail (units, markers), as the list modes' entries -->
+                          <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                   Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.ApplyShownCommand}" CommandParameter="{Binding}"
-                                  AutomationProperties.Name="{Binding Name, StringFormat='Apply the preset {0}'}" />
+                                  AutomationProperties.Name="{Binding Name, StringFormat='Apply the preset {0}'}">
+                            <controls:PartEntryText IsAlike="False" Title="{Binding Name}" Detail="{Binding Converter={x:Static controls:PresetDetailConverter.Instance}}" />
+                          </Button>
                         </DockPanel>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>

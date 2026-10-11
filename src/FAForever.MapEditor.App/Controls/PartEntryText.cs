@@ -35,6 +35,19 @@ public sealed class PartEntryText : Panel
     public static readonly StyledProperty<bool> IsWarningProperty =
         AvaloniaProperty.Register<PartEntryText, bool>(nameof(IsWarning));
 
+    /// <summary>
+    /// Whether it goes alike with the other entries of its list (true); false puts its detail under
+    /// its title only when it itself does not fit (a long list of presets).
+    /// </summary>
+    public static readonly StyledProperty<bool> IsAlikeProperty =
+        AvaloniaProperty.Register<PartEntryText, bool>(nameof(IsAlike), true);
+
+    public bool IsAlike
+    {
+        get => GetValue(IsAlikeProperty);
+        set => SetValue(IsAlikeProperty, value);
+    }
+
     private readonly TextBlock _title = new();
     private readonly TextBlock _detail = new();
 
@@ -83,7 +96,7 @@ public sealed class PartEntryText : Panel
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        _scope = this.FindAncestorOfType<ItemsControl>() is ItemsControl list ? PartEntryScope.Of(list) : null;
+        _scope = IsAlike && this.FindAncestorOfType<ItemsControl>() is ItemsControl list ? PartEntryScope.Of(list) : null;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
