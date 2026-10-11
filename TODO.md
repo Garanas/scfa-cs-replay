@@ -15,6 +15,12 @@
   [gitops-stack#333](https://github.com/FAForever/gitops-stack/pull/333). The Viewer's production
   client (`54576b8e-...`) has only `openid,offline,public_profile`, so an upload from the web would
   need `upload_map` added there.
+- [ ] **Compare the map editor's skybox with the game's** (user story L-1): `SkyboxSky` follows
+  `effects/sky.fx`, but the engine's lookup curve from horizon to zenith, the dome's shape
+  (`SubtractHeight`, the subdivisions; the editor draws a sphere), `Clouds7` and how the glow
+  feeds the bloom are guesses. Screenshots from the game of a version 60 map with a skybox
+  (e.g. Blackstar) at known camera positions are needed before the 3D view draws the skybox
+  itself.
 - [x] ~~Host https://vault.jipwijnia.nl~~: live since 2026-10-03, with automated deploys from
   `deploy/production`; the server is configured in
   [Garanas/jipwijnia-vps](https://github.com/Garanas/jipwijnia-vps). Signing in (and so Search)

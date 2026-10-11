@@ -181,8 +181,8 @@ public static class EditorModes
                 },
                 new PresetSection(PresetKinds.Sky, "Sky presets")
                 {
-                    EmptyText = "None yet: save the sky's cube maps and background to use them on another map.", SaveLabel = "Save the sky as a preset",
-                    ForParts = [LightingSettingsViewModel.SkyPart],
+                    EmptyText = "None yet: save the sky's cube maps, background and skybox to use them on another map.", SaveLabel = "Save the sky as a preset",
+                    ForParts = [LightingSettingsViewModel.SkyPart, LightingSettingsViewModel.SkyboxPart],
                 },
             ],
             [new LightingDetailsSection()]),

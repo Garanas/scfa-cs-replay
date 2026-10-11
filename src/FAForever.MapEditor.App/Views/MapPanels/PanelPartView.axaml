@@ -48,6 +48,10 @@
         <DataTemplate DataType="vm:ProceduralExportPart">
           <procedural:ExportStepsPanel DataContext="{Binding Model}" />
         </DataTemplate>
+        <!-- the skybox (L-1): the version 60 sky dome, the Lighting panel's -->
+        <DataTemplate DataType="vm:SkyboxPart">
+          <panels:SkyboxPartView />
+        </DataTemplate>
         <DataTemplate DataType="vm:PlannedPart">
           <Border Classes="group">
             <Border Classes="planned">

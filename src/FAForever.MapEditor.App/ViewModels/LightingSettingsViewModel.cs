@@ -122,6 +122,7 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
             new NumberSetting("Fog start", set, "fogStart", d => d.Lighting.FogStart, run) { Minimum = 0, Maximum = 2000, HasSlider = true },
             new NumberSetting("Fog end", set, "fogEnd", d => d.Lighting.FogEnd, run) { Minimum = 0, Maximum = 4000, HasSlider = true },
         ]);
+        Skybox = new SkyboxPart(run);
         Parts = new PanelParts(
         [
             new PanelPart(SunPart, "Sun", "Settings", new SettingsPart([Sun], "The Sun tool turns the sun: drag in a view to where it is to stand."), "Where the sun stands, its colour and strength"),
@@ -129,6 +130,7 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
             new PanelPart(FogPart, "Fog", "Settings", new SettingsPart([Fog]), "The haze far from the camera"),
             new PanelPart(BloomPart, "Bloom", "Settings", new SettingsPart([Bloom]), "How bright parts glow"),
             new PanelPart(SkyPart, "Sky and cube maps", "Sky", new SettingsPart([Sky], "The 3D view shows the sky's cube map around the map, and the water reflects it."), "The sky around the map, what units reflect, the background"),
+            new PanelPart(SkyboxPart, "Skybox", "Sky", Skybox, "The sky dome the game draws around the map (version 60): its colours, sky objects and clouds"),
             new PanelPart(ShadowDecalPart, "Shadow decal", "Map-wide decals",
                 new PlannedPart("L-1", "A decal over the whole map that darkens the crevices: generated from the final heightmap (ambient occlusion, and the sun's shadows as an option) or a file of your own, generated again from here."),
                 "The map-wide shadow decal"),
@@ -141,11 +143,12 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
     public const string FogPart = "lighting.fog";
     public const string BloomPart = "lighting.bloom";
     public const string SkyPart = "lighting.sky";
+    public const string SkyboxPart = "lighting.skybox";
     public const string ShadowDecalPart = "lighting.shadowDecal";
 
     /// <summary>
-    /// What the Lighting panel lists: the sun, the colours, fog, bloom, the sky and the map-wide
-    /// shadow decal; the inspector edits the chosen one.
+    /// What the Lighting panel lists: the sun, the colours, fog, bloom, the sky, the skybox and the
+    /// map-wide shadow decal; the inspector edits the chosen one.
     /// </summary>
     public PanelParts Parts { get; }
 
@@ -168,6 +171,11 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
     /// </summary>
     public SettingGroup Sky { get; }
 
+    /// <summary>
+    /// The skybox (user story L-1), the version 60 sky dome, in the Lighting mode's inspector.
+    /// </summary>
+    public SkyboxPart Skybox { get; }
+
     public void Refresh(MapDocument? document)
     {
         if (document is null || !ReferenceEquals(document.Sky, _shownSky))
@@ -176,6 +184,8 @@ public sealed partial class LightingSettingsViewModel : ObservableObject
             Sky.Refresh(document);
             Parts.Find(SkyPart)!.Detail = document is null ? "" : Path.GetFileNameWithoutExtension(document.Sky.Cubemap);
         }
+        Skybox.Refresh(document);
+        Parts.Find(SkyboxPart)!.Detail = Skybox.Detail;
         if (document is not null && ReferenceEquals(document.Lighting, _shown))
         {
             return;

@@ -86,7 +86,8 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`, `paint.chooseMask`, `presets.apply`,
     `presets.delete`, `view.walkability`, `problems.show`, `markers.showKind`, `markers.select`, `markers.clear`, `markers.set`,
     `markers.setChain`, `markers.renameChain`, `markers.deleteChain`, `markers.setWeather`,
-    `markers.addOptionalGroup`, `file.showCommit`, `file.restoreCommit`, `view.togglePanel`,
+    `markers.addOptionalGroup`, `lighting.setSkybox`, `lighting.setCirrusLayer`, `lighting.addCirrusLayer`,
+    `lighting.removeCirrusLayer`, `file.showCommit`, `file.restoreCommit`, `view.togglePanel`,
     `view.resizePanel`, `view.movePanel`, `view.returnPanel`, `view.setToolbar`, `view.addToToolbar`, `view.removeFromToolbar`,
     `view.inspectPart`, `presets.showFolder`), it selects what one
     clicks (`assets.select`) or drops what one drags (`assets.drop`), it is what a tool's click does
@@ -770,6 +771,23 @@ User stories S-4, L-1 and V-3. What the views draw follows the map's settings as
   ImageMagick mixes the faces with their smaller levels when the pixel format has no alpha
   (`skycube_desert01`). A workspace converted before keeps the broken strip until its assets are
   converted again (`faf-map workspace convert`).
+- **The skybox** (L-1; `ViewModels/SkyboxPart.cs`, `Views/MapPanels/SkyboxPartView`, `Commands/Lighting/Skybox.cs`):
+  the Lighting panel's Skybox entry under Sky (`lighting.skybox`, its detail the count of sky objects or `none`),
+  the version 60 sky dome the game draws itself. The inspector says what it holds and, for a map of version 53
+  or 56 (new maps and the sandbox are 56), that the game draws none and the export leaves it out; then the
+  dome (horizon, middle and zenith colours, horizon and zenith heights, position, scale, subtract height,
+  subdivisions), the sky objects' atlas, glow atlas and glow, the cirrus texture, colour and strength, and a
+  group per cirrus layer (frequency, speed, direction; at most four, one per channel of the cirrus texture).
+  The sky objects are counted, not edited one by one. Commands: `lighting.setSkybox {horizonColor?,
+  zenithColor?, midColor?, horizonHeight?, zenithHeight?, position?, scale?, subtractHeight?,
+  subdivisionsAxis?, subdivisionsHeight?, albedo?, glow?, glowMultiplier?, cirrusTexture?, cirrusColor?,
+  cirrusMultiplier?}` (without arguments: shows the entry), `lighting.setCirrusLayer {index, frequencyX?,
+  frequencyY?, speed?, directionX?, directionY?}`, `lighting.addCirrusLayer`, `lighting.removeCirrusLayer
+  {index?}`, and in the Lighting menu `lighting.addSkybox` (made from the lighting, `Skyboxes.FromLighting`),
+  `lighting.removeSkybox` and `lighting.importSkybox` (`.scmskybox` or `.json`); adding or reading one
+  shows the entry. Each a step of undo; a field typed again merges. The middle colour keeps the alpha the
+  map had (its use is unknown). The 3D view shows the skybox only through the sky cube map made from it
+  (Procedural mode). Tests: `SkyboxTest`.
 - **The sky** (L-1): the Lighting panel's Sky and cube maps, edited in the inspector (`LightingSettings.Sky`): the
   sky's cube map, the one units reflect (the map's `<default>` environment cube map, added when
   it has none), the background; `lighting.setSky {cubemap?, environmentCubemap?, background?}`
@@ -2391,9 +2409,9 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   Tests: `MapModeTest`, `MapModeWindowTest`.
 - **Lighting** (`LightingSettings.Parts`): Sun (azimuth, elevation, colour, multiplier; the Sun
   tool's line), Colours and ambience, Fog, Bloom, Sky and cube maps (the sky's cube maps and
-  background), and Shadow decal under Map-wide decals (the map-wide shadow decal's slot itself,
+  background), Skybox (the version 60 sky dome, section "The map's look"), and Shadow decal under Map-wide decals (the map-wide shadow decal's slot itself,
   `MapWideSlotViewModel`, its detail the slot's source).
-  Presets below: lighting presets, and sky presets while the sky is chosen (`ForParts`).
+  Presets below: lighting presets, and sky presets while the sky or the skybox is chosen (`ForParts`).
 - **The rail** (`Views/ModeRail`): the modes of groups 0 and 1 at the top (`RailModes`), the bottom
   group (`EditorModes.BottomGroup`, `BottomRailModes`: Procedural and Plugins, F12) at the bottom
   below a divider. Masks (Shift+F3, after Paint, which it took the masks from; filled in by
