@@ -65,10 +65,11 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// Units along a line from one place to another: structures butting together at their
-        /// footprint along the line (each on the build grid; two that land on the same place are one),
-        /// mobile units a spacing apart from the first place on; the first at the start, the last
-        /// within the line. Each faces along the line (structures in the nearest quarter turn) or the
-        /// heading given.
+        /// footprint along the line (one per footprint along the axis the line follows most, each on
+        /// the build grid, so a line of walls is one wall and a diagonal one a staircase; two that
+        /// land on the same place are one), mobile units a spacing apart from the first place on; the
+        /// first at the start, the last within the line. Each faces along the line (structures in the
+        /// nearest quarter turn) or the heading given.
         /// </summary>
         /// <param name="spacing">Between the centres of mobile units, in ogrids (at least <see cref="MinimumSpacing"/>).</param>
         /// <param name="heading">The heading of every unit when it does not face along the line, in radians.</param>
@@ -83,8 +84,11 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 float turn = BuildGrid.SnapHeading(faceAlong ? along : heading);
                 (float extentX, float extentZ) = Extent(footprint, turn);
-                // how far the footprint reaches along the line: its whole side along an axis, more between
-                float step = MathF.Abs(direction.X) * extentX + MathF.Abs(direction.Y) * extentZ;
+                // the way along the line to the next footprint along the axis the line follows most:
+                // along an axis its whole side, so a wall is one wall; on a diagonal a step of both
+                float step = MathF.Min(
+                    MathF.Abs(direction.X) > 1e-4f ? extentX / MathF.Abs(direction.X) : float.MaxValue,
+                    MathF.Abs(direction.Y) > 1e-4f ? extentZ / MathF.Abs(direction.Y) : float.MaxValue);
                 int count = 1 + (int)MathF.Floor(length / step + 1e-3f);
                 (float sizeX, float sizeZ) = ((float)(footprint?.SizeX ?? 1), (float)(footprint?.SizeZ ?? 1));
                 UnitPlace? last = null;

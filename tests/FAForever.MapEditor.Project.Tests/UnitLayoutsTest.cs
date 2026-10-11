@@ -34,6 +34,16 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(5, diagonal.Length, "a diagonal wall: one per ogrid along both axes, touching at the corners");
             CollectionAssert.AreEqual(new[] { 10.5f, 11.5f, 12.5f, 13.5f, 14.5f }, diagonal.Select(wall => wall.X).ToArray());
             CollectionAssert.AreEqual(new[] { 10.5f, 11.5f, 12.5f, 13.5f, 14.5f }, diagonal.Select(wall => wall.Z).ToArray());
+
+            ImmutableArray<UnitPlace> slanted = UnitLayouts.Line(new Vector2(100, 100), new Vector2(130, 102), Wall, 1, true, 0, true);
+            Assert.AreEqual(31, slanted.Length, "a line nearly along x: one wall per ogrid of x, none skipped");
+            for (int i = 1; i < slanted.Length; i++)
+            {
+                Assert.AreEqual(1, slanted[i].X - slanted[i - 1].X, 1e-5, "no gap");
+            }
+            ImmutableArray<UnitPlace> steep = UnitLayouts.Line(new Vector2(10, 10), new Vector2(15, 20), Wall, 1, true, 0, true);
+            Assert.AreEqual(11, steep.Length, "a line mostly along z: one wall per ogrid of z");
+            Assert.AreEqual(MathF.PI / 2, steep[0].Heading, 1e-5);
         }
 
         [TestMethod]
