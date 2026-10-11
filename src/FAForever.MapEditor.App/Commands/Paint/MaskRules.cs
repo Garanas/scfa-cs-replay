@@ -51,7 +51,7 @@ public sealed class EditMaskRulesHandler(MainViewModel model) : IRequestHandler<
         int count = model.Map!.Document.MaskRulesOf(model.MaskRules.Editing!).Length;
         model.Status = count == 0
             ? $"The mask {model.MaskRules.Editing} has no rules yet: add one in the inspector"
-            : $"The mask {model.MaskRules.Editing} has {count} rules: Generate makes it from them";
+            : $"The mask {model.MaskRules.Editing} has {count} {(count == 1 ? "rule" : "rules")}, made again whenever they change; Generate after a change of what they read";
         return Task.CompletedTask;
     }
 }

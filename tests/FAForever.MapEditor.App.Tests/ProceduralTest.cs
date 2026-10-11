@@ -116,6 +116,24 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public void AFlatMapsNormalMapIsCurrentAndAHillyMapsPlaceholderMissing()
+        {
+            MainViewModel model = new MainViewModel(new MainViewModelTest.Answers());
+            model.OpenNewMap(Project.NewMap.Create(new Project.NewMapSettings { Size = 256 }));
+            GeneratedStatus NormalMap() => model.Generation.Results.States(model.Map!.Document).Single(state => state.Generator.Id == NormalMapGenerator.GeneratorId).Status;
+            Assert.AreEqual(GeneratedStatus.Current, NormalMap(), "flat terrain: the one colour is what generating makes");
+            Raise(model, 100, 102);
+            Assert.AreEqual(GeneratedStatus.Stale, NormalMap());
+
+            // a placeholder of one colour under hills was never generated
+            MapDocument hilly = Project.NewMap.Create(new Project.NewMapSettings { Size = 256 });
+            TiledBuffer<ushort>.Builder samples = hilly.Terrain.Heightmap.Samples.ToBuilder();
+            samples[10, 10] = 9000;
+            model.OpenNewMap(hilly with { Terrain = hilly.Terrain with { Heightmap = hilly.Terrain.Heightmap with { Samples = samples.ToBuffer() } } });
+            Assert.AreEqual(GeneratedStatus.Missing, NormalMap());
+        }
+
+        [TestMethod]
         public async Task WalkabilityRegeneratesASecondAfterAChange()
         {
             MainViewModel model = await Open();

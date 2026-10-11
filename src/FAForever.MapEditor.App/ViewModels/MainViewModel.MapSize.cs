@@ -50,7 +50,8 @@ public sealed partial class MainViewModel
     /// preview, the normal map, the rules layers of its masks and strata, the props its rules placed
     /// and the generated sky cube map count as current, so the status tells when what they are made
     /// from changed since. A normal map of one colour everywhere (a new map's or the sandbox's
-    /// placeholder) was never generated and stays missing, as do rules the map has not.
+    /// placeholder) on terrain that is not flat was never generated and stays missing, as do rules
+    /// the map has not; on flat terrain that one colour is what generating makes.
     /// </summary>
     private void KeepMapPreview(EditedMap map)
     {
@@ -63,7 +64,7 @@ public sealed partial class MainViewModel
             }
         }
         Keep(MapPreview.GeneratorId, document.Terrain.Preview);
-        if (!IsOneColour(document.Terrain.NormalMap))
+        if (!IsOneColour(document.Terrain.NormalMap) || IsOneValue(document.Terrain.Heightmap.Samples))
         {
             Keep(NormalMapGenerator.GeneratorId, document.Terrain.NormalMap);
         }
@@ -99,16 +100,26 @@ public sealed partial class MainViewModel
     /// <summary>
     /// Whether every pixel of a picture is the same; it stops at the first that differs.
     /// </summary>
-    public static bool IsOneColour(TiledBuffer<Color32> picture)
+    public static bool IsOneColour(TiledBuffer<Color32> picture) => IsOneValue(picture);
+
+    /// <summary>
+    /// Whether every value of a grid is the same (a flat heightmap); it stops at the first that differs.
+    /// </summary>
+    public static bool IsOneValue<T>(TiledBuffer<T> picture) where T : unmanaged, IEquatable<T>
     {
-        Color32 first = picture.Tile(0, 0)[0];
+        const int Size = TiledBuffer<T>.TileSize;
+        T first = picture.Tile(0, 0)[0];
         for (int y = 0; y < picture.TilesY; y++)
         {
             for (int x = 0; x < picture.TilesX; x++)
             {
-                foreach (Color32 pixel in picture.Tile(x, y))
+                // the part of an edge tile outside the grid does not count
+                ReadOnlySpan<T> tile = picture.Tile(x, y);
+                int columns = Math.Min(Size, picture.Width - x * Size);
+                int rows = Math.Min(Size, picture.Height - y * Size);
+                for (int row = 0; row < rows; row++)
                 {
-                    if (!pixel.Equals(first))
+                    if (tile.Slice(row * Size, columns).ContainsAnyExcept(first))
                     {
                         return false;
                     }
