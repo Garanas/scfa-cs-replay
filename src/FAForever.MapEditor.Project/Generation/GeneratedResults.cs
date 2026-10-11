@@ -49,6 +49,11 @@ namespace FAForever.MapEditor.Project.Generation
 
         public static GeneratedInput Props { get; } = new GeneratedInput("props", document => document.Props);
 
+        /// <summary>
+        /// The map's symmetry, which the props of rules follow.
+        /// </summary>
+        public static GeneratedInput Symmetry { get; } = new GeneratedInput("symmetry", document => document.Symmetry);
+
         public static GeneratedInput Decals { get; } = new GeneratedInput("decals", document => document.Decals);
 
         /// <summary>

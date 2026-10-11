@@ -46,6 +46,11 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         public float ScaleMax { get; init; } = 1;
 
         public float Sink { get; init; }
+
+        /// <summary>
+        /// Whether its props follow the map's symmetry; left out, they do.
+        /// </summary>
+        public bool? Mirror { get; init; }
     }
 
     /// <summary>

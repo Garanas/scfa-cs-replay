@@ -80,6 +80,7 @@ namespace FAForever.MapEditor.Project.Files
             ScaleMin = source.Placement.ScaleMin,
             ScaleMax = source.Placement.ScaleMax,
             Sink = source.Placement.Sink,
+            Mirror = source.Mirror ? null : false,
         };
 
         public static PropRule ToModel(PropRuleDto source) => new PropRule
@@ -106,6 +107,7 @@ namespace FAForever.MapEditor.Project.Files
                 ScaleMax = source.ScaleMax,
                 Sink = source.Sink,
             },
+            Mirror = source.Mirror ?? true,
         };
     }
 }

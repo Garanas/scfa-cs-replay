@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Numerics;
+using FAForever.FileFormats.Map;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
@@ -10,7 +12,11 @@ namespace FAForever.MapEditor.Project.Generation
     /// the water let it, the clustering keeps it and no prop of the rules lies closer than the
     /// rule's spacing; the rules place in order, so a later rule fills around an earlier one's props.
     /// Each place is drawn from the rule's seed and its number, so a change of a layer in one corner
-    /// leaves the props elsewhere where they were.
+    /// leaves the props elsewhere where they were. On a map with a symmetry (user story F-12) a rule
+    /// that mirrors (<see cref="PropRule.Mirror"/>, the default) places each prop with its image in
+    /// every other part, as the props brush does: a prop goes only with all its images, each inside
+    /// the map, allowed by the layers, the slope and the water where it lies and as far from every
+    /// other prop as the spacing asks; a place whose image is itself (on an axis) has none.
     /// </summary>
     public static class PropRules
     {
@@ -34,6 +40,15 @@ namespace FAForever.MapEditor.Project.Generation
             }
             return made.ToImmutable();
         }
+
+        /// <summary>
+        /// The other parts of the map a rule's props are mirrored into (the identity left out): none
+        /// without a symmetry or for a rule that does not mirror.
+        /// </summary>
+        public static IReadOnlyList<MapSymmetryTransform> ImagesOf(MapDocument document, PropRule rule) =>
+            rule.Mirror && document.Symmetry is SymmetrySetting symmetry
+                ? [.. MapSymmetry.Transforms(symmetry.Kind, symmetry.Count, document.Width, document.Height).Skip(1)]
+                : [];
 
         /// <summary>
         /// The props of one rule, away from the props <paramref name="grid"/> holds (which it adds its own to).
@@ -61,8 +76,72 @@ namespace FAForever.MapEditor.Project.Generation
             int height = document.Height;
             float? water = document.Water.HasWater && rule.AboveWater ? document.Water.Elevation : null;
             bool slopes = rule.MinSlope > 0 || rule.MaxSlope < 90;
-            long wanted = (long)Math.Round(rule.Density * (double)width * height / 100);
+            IReadOnlyList<MapSymmetryTransform> images = ImagesOf(document, rule);
+            // each place brings its images: as many places as one part of the map asks
+            long wanted = (long)Math.Round(rule.Density * (double)width * height / 100 / (images.Count + 1));
             int tries = (int)Math.Min(MaxTries, wanted);
+            List<Vector2> imagePlaces = new List<Vector2>(images.Count);
+            List<MapSymmetryTransform> imageTransforms = new List<MapSymmetryTransform>(images.Count);
+
+            // whether the layers, the water and the slope let a prop stand at a place; the chance the allowing layers give
+            bool Allows(float x, float z, out double chance)
+            {
+                chance = 1;
+                foreach ((TiledBuffer<byte> mask, float threshold, bool forbid) in layers)
+                {
+                    float value = ValueAt(mask, width, height, x, z);
+                    bool covers = value > 0 && value >= threshold;
+                    if (forbid ? covers : !covers)
+                    {
+                        return false;
+                    }
+                    if (!forbid && rule.Fade)
+                    {
+                        chance = Math.Min(chance, value);
+                    }
+                }
+                if (water is float level && heights.HeightAt(x, z) < level)
+                {
+                    return false;
+                }
+                if (slopes)
+                {
+                    float slope = PaintLimits.SlopeAt(heights, x, z);
+                    if (slope < rule.MinSlope || slope > rule.MaxSlope)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            // the images of a place in the other parts, each where a prop may stand; false when one may not
+            bool ImagesFit(float x, float z)
+            {
+                imagePlaces.Clear();
+                imageTransforms.Clear();
+                Vector2 place = new Vector2(x, z);
+                foreach (MapSymmetryTransform transform in images)
+                {
+                    Vector2 image = transform.Apply(place);
+                    float apart = Vector2.Distance(image, place);
+                    if (apart < 1e-3f)
+                    {
+                        // on an axis: the prop is its own image
+                        continue;
+                    }
+                    if (apart < rule.Spacing || image.X < 0 || image.Y < 0 || image.X >= width || image.Y >= height
+                        || !Allows(image.X, image.Y, out _) || grid.AnyWithin(image.X, image.Y, rule.Spacing)
+                        || imagePlaces.Any(other => Vector2.Distance(other, image) < Math.Max(rule.Spacing, 1e-3f)))
+                    {
+                        return false;
+                    }
+                    imagePlaces.Add(image);
+                    imageTransforms.Add(transform);
+                }
+                return true;
+            }
+
             ulong seed = Mix((ulong)(uint)rule.Seed ^ ((ulong)Hash(rule.Name) << 32));
             HashRandom random = new HashRandom();
             Clusters clusters = new Clusters(rule, seed);
@@ -72,23 +151,7 @@ namespace FAForever.MapEditor.Project.Generation
                 random.Reset(seed ^ Mix((ulong)i + 1));
                 float x = (float)(random.NextDouble() * width);
                 float z = (float)(random.NextDouble() * height);
-                double chance = 1;
-                bool allowed = true;
-                foreach ((TiledBuffer<byte> mask, float threshold, bool forbid) in layers)
-                {
-                    float value = ValueAt(mask, width, height, x, z);
-                    bool covers = value > 0 && value >= threshold;
-                    if (forbid ? covers : !covers)
-                    {
-                        allowed = false;
-                        break;
-                    }
-                    if (!forbid && rule.Fade)
-                    {
-                        chance = Math.Min(chance, value);
-                    }
-                }
-                if (!allowed)
+                if (!Allows(x, z, out double chance))
                 {
                     continue;
                 }
@@ -97,25 +160,23 @@ namespace FAForever.MapEditor.Project.Generation
                 {
                     continue;
                 }
-                if (water is float level && heights.HeightAt(x, z) < level)
+                if (grid.AnyWithin(x, z, rule.Spacing))
                 {
                     continue;
                 }
-                if (slopes)
-                {
-                    float slope = PaintLimits.SlopeAt(heights, x, z);
-                    if (slope < rule.MinSlope || slope > rule.MaxSlope)
-                    {
-                        continue;
-                    }
-                }
-                if (grid.AnyWithin(x, z, rule.Spacing))
+                if (images.Count > 0 && !ImagesFit(x, z))
                 {
                     continue;
                 }
                 Prop prop = rule.Placement.Make(Choose(palette, totalWeight, random.NextDouble()), x, z, heights, random) with { Rule = rule.Name };
                 placed.Add(prop);
                 grid.Add(prop);
+                for (int image = 0; images.Count > 0 && image < imageTransforms.Count; image++)
+                {
+                    Prop mirrored = SymmetryEdits.ImageOf(prop, imageTransforms[image], heights);
+                    placed.Add(mirrored);
+                    grid.Add(mirrored);
+                }
             }
             return placed;
         }
@@ -267,7 +328,7 @@ namespace FAForever.MapEditor.Project.Generation
         public string Story => "P-4";
 
         public IReadOnlyList<GeneratedInput> Inputs { get; } =
-            [GeneratedInput.Heightmap, GeneratedInput.WaterLevel, GeneratedInput.StratumMasks, RuleInputs.PropRules, RuleInputs.PropRuleMasks];
+            [GeneratedInput.Heightmap, GeneratedInput.WaterLevel, GeneratedInput.StratumMasks, RuleInputs.PropRules, RuleInputs.PropRuleMasks, GeneratedInput.Symmetry];
 
         public IReadOnlyList<GeneratedInput> Outputs { get; } = [GeneratedInput.Props];
 

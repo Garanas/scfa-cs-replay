@@ -265,6 +265,10 @@ public sealed partial class PropRulesViewModel : ObservableObject
                 new NumberSetting("Most slope", set, "maxSlope", d => Read(d).MaxSlope, _run, Fixed) { Minimum = 0, Maximum = 90, HasSlider = true, Help = "In degrees" },
                 new BoolSetting("Out of the water", set, "aboveWater", d => Read(d).AboveWater, _run, Fixed),
                 new NumberSetting("Seed", set, "seed", d => Read(d).Seed, _run, Fixed) { Help = "Another seed, other places" },
+                new BoolSetting("Mirror with the map's symmetry", set, "mirror", d => Read(d).Mirror, _run, Fixed)
+                {
+                    Help = "On a symmetric map each prop comes with its image in every other part",
+                },
             ]),
             new SettingGroup("Clustering",
             [

@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Numerics;
+using FAForever.FileFormats.Map;
+using FAForever.MapEditor.Project.Checks;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
@@ -30,7 +32,8 @@ namespace FAForever.MapEditor.Project.Tests
             AboveWater = false,
         };
 
-        private static MapDocument Flat() => NewMap.Create(new NewMapSettings { Size = 256, Water = false });
+        // without a symmetry: the rules place over the whole map (SymmetricRulesMirrorTheirProps has one)
+        private static MapDocument Flat() => NewMap.Create(new NewMapSettings { Size = 256, Water = false }) with { Symmetry = null };
 
         private static ImmutableArray<Prop> Generate(MapDocument document) => PropRules.Generate(document);
 
@@ -69,6 +72,38 @@ namespace FAForever.MapEditor.Project.Tests
 
             CollectionAssert.AreEqual(props.ToArray(), Generate(document).ToArray(), "the same rule on the same map, the same props");
             Assert.AreNotEqual(props[0].Position, Generate(Flat().AddPropRule(Forest() with { Spacing = 0, Seed = 2 }))[0].Position, "another seed");
+        }
+
+        [TestMethod]
+        public void OnASymmetricMapEachPropComesWithItsImages()
+        {
+            MapDocument document = Flat() with { Symmetry = new SymmetrySetting(MapSymmetryKind.Rotational, 4) };
+            document = document.AddPropRule(Forest() with { Spacing = 3 });
+            ImmutableArray<Prop> props = Numbered(Generate(document));
+            Assert.AreEqual(0, props.Length % 4, "four of each: a prop and its images");
+            Assert.AreEqual(4 * 256 * 256 / 100, props.Length, props.Length * 0.6, "about the density over the whole map");
+            Assert.IsTrue(NearestDistance(props) >= 3, "the images keep the spacing too");
+
+            // every prop has its image in each other part, of the same blueprint
+            IReadOnlyList<MapSymmetryTransform> parts = MapSymmetry.Transforms(MapSymmetryKind.Rotational, 4, 256, 256);
+            PropGrid grid = new PropGrid(props);
+            foreach (Prop prop in props)
+            {
+                foreach (MapSymmetryTransform part in parts.Skip(1))
+                {
+                    Vector2 image = part.Apply(new Vector2(prop.Position.X, prop.Position.Z));
+                    Assert.IsTrue(grid.Near(image.X, image.Y, 0.01f).Any(near => near.Blueprint == prop.Blueprint), $"the image of {prop.Position} at {image}");
+                }
+            }
+            Assert.IsFalse(SymmetryChecks.NotSymmetric(document with { Props = props }, parts).Any(problem => problem.Message.Contains(" prop")), "the check finds no prop without its partner");
+
+            // a rule that does not mirror places as on a map without a symmetry, and the symmetry is an input
+            MapDocument plain = document.UpdatePropRule("Forest", rule => rule with { Mirror = false });
+            ImmutableArray<Prop> lone = Numbered(Generate(plain));
+            Assert.IsTrue(SymmetryChecks.NotSymmetric(plain with { Props = lone }, parts).Any(problem => problem.Message.Contains(" prop")), "placed without images");
+            PropRulesGenerator generator = new PropRulesGenerator();
+            GeneratedResult result = GeneratedResult.Of(generator, document, props);
+            Assert.IsTrue(result.IsStale(document with { Symmetry = new SymmetrySetting(MapSymmetryKind.MirroredLeftRight, 2) }), "another symmetry, other props");
         }
 
         [TestMethod]
@@ -206,6 +241,7 @@ namespace FAForever.MapEditor.Project.Tests
                 Conditions = [new PropRuleCondition("stratum:1", 0.3f), new PropRuleCondition("stratum:2", 0.5f, Forbid: true)],
                 Clustering = PropClustering.Clusters,
                 MinSlope = 2,
+                Mirror = false,
                 Placement = new PropPlacement { Alignment = PropAlignment.Terrain, RandomTilt = 5, ScaleMin = 0.8f, ScaleMax = 1.2f, Sink = 0.5f },
             });
             document = document with { Props = [new Prop { Id = 1, Blueprint = Pine, Rule = "Forest", Scale = Vector3.One }, new Prop { Id = 2, Blueprint = Rock, Scale = Vector3.One }] };

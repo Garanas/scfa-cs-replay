@@ -101,6 +101,13 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public PropPlacement Placement { get; init; } = new PropPlacement();
 
         /// <summary>
+        /// Whether its props follow the map's symmetry (user story F-12): on a map with a symmetry each
+        /// prop comes with its image in every other part (<see cref="PropRules"/>); off, the rule
+        /// places over the whole map as if it had none.
+        /// </summary>
+        public bool Mirror { get; init; } = true;
+
+        /// <summary>
         /// The layers the rule reads.
         /// </summary>
         public IEnumerable<string> Layers => Conditions.Select(condition => condition.Layer);
