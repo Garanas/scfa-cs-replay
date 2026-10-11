@@ -51,7 +51,11 @@ namespace FAForever.MapEditor.Project.Editing
             byte[] bytes;
             try
             {
-                bytes = File.ReadAllBytes(path);
+                // shared for writing and deleting: the brushes folder is the map maker's, and a brush
+                // replaced or deleted while it is read must not fail (the watcher reads it again)
+                using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                bytes = new byte[stream.Length];
+                stream.ReadExactly(bytes);
             }
             catch (IOException exception)
             {
