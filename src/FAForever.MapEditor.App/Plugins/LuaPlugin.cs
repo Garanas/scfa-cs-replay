@@ -10,13 +10,19 @@ namespace FAForever.MapEditor.App.Plugins;
 /// What a plugin says about itself in <c>plugin.json</c> next to its <c>plugin.lua</c>; each part
 /// may be left out (the name is then the folder's).
 /// </summary>
-public sealed record PluginManifest(string Name, string Version, string Description)
+/// <param name="Category">The heading the Plugins mode lists it under (free text, <c>category</c>);
+/// null when left out: it is then listed under the mode its tools join, else under Other.</param>
+/// <param name="Kind">What sort of plugin it is, one of <see cref="PluginKinds.All"/> (<c>kind</c>),
+/// shown as a tag; <c>other</c> when left out or not one of them.</param>
+/// <param name="UnknownKind">The kind <c>plugin.json</c> gave when it is none of
+/// <see cref="PluginKinds.All"/>, for the warning in the plugin's errors; null otherwise.</param>
+public sealed record PluginManifest(string Name, string Version, string Description, string? Category = null, string Kind = PluginKinds.Other, string? UnknownKind = null)
 {
     public const string File = "plugin.json";
 
     public const string Script = "plugin.lua";
 
-    private sealed record Dto(string? Name, string? Version, string? Description);
+    private sealed record Dto(string? Name, string? Version, string? Description, string? Category, string? Kind);
 
     /// <exception cref="InvalidDataException">The manifest is no JSON of that shape.</exception>
     public static PluginManifest Read(string folder)
@@ -29,14 +35,33 @@ public sealed record PluginManifest(string Name, string Version, string Descript
         }
         try
         {
-            Dto dto = JsonSerializer.Deserialize<Dto>(System.IO.File.ReadAllText(path), JsonSerializerOptions.Web) ?? new Dto(null, null, null);
-            return new PluginManifest(string.IsNullOrWhiteSpace(dto.Name) ? name : dto.Name.Trim(), dto.Version?.Trim() ?? "", dto.Description?.Trim() ?? "");
+            Dto dto = JsonSerializer.Deserialize<Dto>(System.IO.File.ReadAllText(path), JsonSerializerOptions.Web) ?? new Dto(null, null, null, null, null);
+            string? kind = dto.Kind?.Trim().ToLowerInvariant();
+            bool known = string.IsNullOrEmpty(kind) || PluginKinds.All.Contains(kind);
+            return new PluginManifest(string.IsNullOrWhiteSpace(dto.Name) ? name : dto.Name.Trim(), dto.Version?.Trim() ?? "", dto.Description?.Trim() ?? "",
+                string.IsNullOrWhiteSpace(dto.Category) ? null : dto.Category.Trim(),
+                known && !string.IsNullOrEmpty(kind) ? kind : PluginKinds.Other,
+                known ? null : dto.Kind!.Trim());
         }
         catch (JsonException exception)
         {
             throw new InvalidDataException($"{File} is not valid: {exception.Message}", exception);
         }
     }
+}
+
+/// <summary>
+/// The kinds of plugin <c>plugin.json</c> may name (<c>kind</c>), shown as a tag in the Plugins mode.
+/// </summary>
+public static class PluginKinds
+{
+    public const string Other = "other";
+
+    /// <summary>
+    /// A tool that edits where it is dragged; a check of the Problems tab; a command that does one
+    /// thing; a command that makes things (props, markers, masks); something done at export; else other.
+    /// </summary>
+    public static IReadOnlyList<string> All { get; } = ["brush", "check", "command", "generator", "export", Other];
 }
 
 /// <summary>
@@ -67,7 +92,7 @@ public sealed record PluginToolSpec(string Id, string Title, string Mode, string
     IReadOnlyList<string> Fields, LuaFunction? Press, LuaFunction? Drag, LuaFunction? Release, bool Symmetry = true);
 
 /// <summary>
-/// A field of a plugin's panel (<c>plugin.field{...}</c>), shown on the Plugins page; its value is
+/// A field of a plugin's panel (<c>plugin.field{...}</c>), shown in the Plugins mode's inspector; its value is
 /// the user's, remembered in the settings.
 /// </summary>
 /// <param name="Type"><c>number</c>, <c>text</c>, <c>bool</c> or <c>choice</c>.</param>
@@ -75,7 +100,7 @@ public sealed record PluginField(string Key, string Label, string Type, string D
 
 /// <summary>
 /// A plugin of the workspace (user story F-15): a folder of <c>plugins/</c> with its <c>plugin.lua</c>,
-/// on or off, what it registered when it was loaded, and its errors. A line of the Plugins page.
+/// on or off, what it registered when it was loaded, and its errors. An entry of the Plugins mode's list.
 /// </summary>
 public sealed partial class LuaPlugin : ObservableObject
 {
@@ -99,13 +124,64 @@ public sealed partial class LuaPlugin : ObservableObject
     public string Id { get; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Title), nameof(Caption))]
+    [NotifyPropertyChangedFor(nameof(Title), nameof(Caption), nameof(Kind), nameof(Facts))]
     public partial PluginManifest Manifest { get; internal set; }
 
     public string Title => Manifest.Version.Length > 0 ? $"{Manifest.Name} {Manifest.Version}" : Manifest.Name;
 
     /// <summary>
-    /// The description and what it registered, as the page shows it under the title.
+    /// What sort of plugin it is (<see cref="PluginKinds"/>), its tag in the Plugins mode.
+    /// </summary>
+    public string Kind => Manifest.Kind;
+
+    /// <summary>
+    /// The heading the Plugins mode lists it under: its category, else the mode its tools join,
+    /// else Other (<see cref="ViewModels.PluginsViewModel"/> works it out).
+    /// </summary>
+    [ObservableProperty]
+    public partial string ListedUnder { get; internal set; } = "Other";
+
+    /// <summary>
+    /// What its version, kind, category and registrations are, as the inspector lists them: a
+    /// label and a value each (<c>Tool</c>, <c>Plateau, Terrain mode</c>).
+    /// </summary>
+    public IReadOnlyList<PluginFact> Facts
+    {
+        get
+        {
+            List<PluginFact> facts = [];
+            foreach (PluginCommand command in Commands)
+            {
+                facts.Add(new PluginFact("Command", command.Title));
+            }
+            foreach (PluginToolSpec tool in Tools)
+            {
+                string mode = EditorModes.All.FirstOrDefault(m => m.Id == tool.Mode)?.Title ?? tool.Mode;
+                facts.Add(new PluginFact("Tool", $"{tool.Title}, {mode} mode"));
+            }
+            foreach (PluginCheck check in Checks)
+            {
+                facts.Add(new PluginFact("Check", check.Title));
+            }
+            if (Fields.Count > 0)
+            {
+                facts.Add(new PluginFact("Fields", string.Join(", ", Fields.Select(f => f.Label))));
+            }
+            if (Handlers.Count > 0)
+            {
+                facts.Add(new PluginFact("Events", string.Join(", ", Handlers.Keys.Order(StringComparer.Ordinal))));
+            }
+            return facts;
+        }
+    }
+
+    /// <summary>
+    /// Whether it registered anything (while it is on and loaded).
+    /// </summary>
+    public bool HasFacts => Commands.Count + Tools.Count + Checks.Count + Fields.Count + Handlers.Count > 0;
+
+    /// <summary>
+    /// The description and what it registered, in a line.
     /// </summary>
     public string Caption
     {
@@ -174,7 +250,7 @@ public sealed partial class LuaPlugin : ObservableObject
     public const int MaxErrors = 5;
 
     /// <summary>
-    /// The errors as the page shows them, one per line; empty without.
+    /// The errors as the inspector shows them, one per line; empty without.
     /// </summary>
     public string ErrorText => string.Join(Environment.NewLine, _errors);
 
@@ -202,13 +278,13 @@ public sealed partial class LuaPlugin : ObservableObject
     public Dictionary<string, List<LuaFunction>> Handlers { get; } = new Dictionary<string, List<LuaFunction>>(StringComparer.Ordinal);
 
     /// <summary>
-    /// The panel's fields as a group of settings, for the page; null without fields.
+    /// The panel's fields as a group of settings, for the inspector; null without fields.
     /// </summary>
     [ObservableProperty]
     public partial SettingGroup? Panel { get; internal set; }
 
     /// <summary>
-    /// The commands as buttons for the page.
+    /// The commands as buttons for the inspector.
     /// </summary>
     public ObservableCollection<PluginCommandItem> CommandItems { get; } = [];
 
@@ -268,6 +344,8 @@ public sealed partial class LuaPlugin : ObservableObject
         IsLoaded = false;
         OnPropertyChanged(nameof(HasCommands));
         OnPropertyChanged(nameof(Registered));
+        OnPropertyChanged(nameof(Facts));
+        OnPropertyChanged(nameof(HasFacts));
     }
 
     /// <summary>
@@ -280,11 +358,20 @@ public sealed partial class LuaPlugin : ObservableObject
         OnPropertyChanged(nameof(HasCommands));
         OnPropertyChanged(nameof(Registered));
         OnPropertyChanged(nameof(Caption));
+        OnPropertyChanged(nameof(Facts));
+        OnPropertyChanged(nameof(HasFacts));
     }
 }
 
 /// <summary>
-/// A button of the Plugins page that runs a plugin's command.
+/// A line of what a plugin is or registered, as the Plugins mode's inspector lists it.
+/// </summary>
+/// <param name="Label">E.g. <c>Tool</c>, <c>Check</c>, <c>Events</c>.</param>
+/// <param name="Value">E.g. <c>Plateau, Terrain mode</c>.</param>
+public sealed record PluginFact(string Label, string Value);
+
+/// <summary>
+/// A button of the Plugins mode's inspector that runs a plugin's command.
 /// </summary>
 /// <param name="CommandId">The registry's id, <c>plugin.&lt;folder&gt;.&lt;id&gt;</c>.</param>
 public sealed record PluginCommandItem(string CommandId, string Title, string? Description);

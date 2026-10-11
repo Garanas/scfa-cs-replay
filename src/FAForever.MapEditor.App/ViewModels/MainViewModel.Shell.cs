@@ -144,7 +144,7 @@ public sealed partial class MainViewModel
     public IReadOnlyList<ModeItem> RailModes => [.. Modes.Where(mode => mode.Definition.Group < EditorModes.BottomGroup)];
 
     /// <summary>
-    /// The modes at the rail's bottom, above the Plugins entry: the Procedural mode.
+    /// The modes at the rail's bottom, below a divider: the Procedural and Plugins modes.
     /// </summary>
     public IReadOnlyList<ModeItem> BottomRailModes => [.. Modes.Where(mode => mode.Definition.Group >= EditorModes.BottomGroup)];
 

@@ -1,5 +1,7 @@
 {
   "name": "Plateau brush",
   "version": "1.0",
-  "description": "A tool of the Terrain mode: press at a height, drag to spread it; a stroke is one step of undo."
+  "description": "A tool of the Terrain mode: press at a height, drag to spread it; a stroke is one step of undo.",
+  "category": "Terrain",
+  "kind": "brush"
 }

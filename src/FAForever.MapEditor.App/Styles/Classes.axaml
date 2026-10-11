@@ -761,6 +761,10 @@
   <Style Selector="Border.badge.uses TextBlock">
     <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
   </Style>
+  <!-- a plugin's kind as a tag (F-15): in its entry of the Plugins mode's list and in the inspector -->
+  <Style Selector="Border.badge.pluginkind">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
   <!-- a unit's icon as the game's build menu shows it, in the corner of its tile (U-1) -->
   <Style Selector="Border.uniticon">
     <Setter Property="Width" Value="{StaticResource UnitIconBadgeSize}" />
@@ -926,14 +930,7 @@
   <Style Selector="ListBox.versionfiles">
     <Setter Property="MaxHeight" Value="{StaticResource VersionFilesHeight}" />
   </Style>
-  <!-- the Plugins page (F-15): a wider page, its list of plugins scrolls -->
-  <Style Selector="Border.dialog.plugins">
-    <Setter Property="Width" Value="{StaticResource PluginsDialogWidth}" />
-  </Style>
-  <Style Selector="ScrollViewer.pluginslist">
-    <Setter Property="MaxHeight" Value="{StaticResource PluginsListHeight}" />
-  </Style>
-  <!-- the keyboard shortcuts page (F-1) and the workspace settings page (F-5): as wide as the Plugins page, their lists scroll -->
+  <!-- the keyboard shortcuts page (F-1) and the workspace settings page (F-5): wider pages, their lists scroll -->
   <Style Selector="Border.dialog.shortcuts, Border.dialog.workspacesettings">
     <Setter Property="Width" Value="{StaticResource PluginsDialogWidth}" />
   </Style>

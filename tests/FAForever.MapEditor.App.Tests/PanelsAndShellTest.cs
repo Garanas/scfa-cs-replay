@@ -143,7 +143,7 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public void TheRailHasTheMasksAndProceduralModesAndThePluginsBelow()
+        public void TheRailHasTheMasksModeAndTheProceduralAndPluginsModesAtItsBottom()
         {
             MainViewModel model = new MainViewModel(new NoDialogs());
             ModeDefinition masks = EditorModes.All.Single(mode => mode.Id == "masks");
@@ -152,7 +152,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("Shift+F3", masks.Gesture, "beside the Paint mode (F3) the masks came from");
             Assert.IsInstanceOfType<MasksSection>(masks.Sections[0], "the masks, filled in by wave 9B");
             Assert.AreEqual(EditorModes.BottomGroup, procedural.Group);
-            CollectionAssert.AreEqual(new[] { "procedural" }, model.BottomRailModes.Select(mode => mode.Definition.Id).ToArray());
+            CollectionAssert.AreEqual(new[] { "procedural", "plugins" }, model.BottomRailModes.Select(mode => mode.Definition.Id).ToArray(), "the Plugins mode next to Procedural");
             Assert.AreEqual("paint", model.RailModes[model.RailModes.ToList().FindIndex(mode => mode.Definition.Id == "masks") - 1].Definition.Id);
             Assert.IsFalse(model.RailModes.Any(mode => mode.Definition.Id == "procedural"));
             StringAssert.Contains(model.Modes.Single(mode => mode.Definition.Id == "masks").Tip, "Shift+F3");
@@ -161,6 +161,9 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("masks.paint", model.ActiveTool!.Definition.Id, "the mask brush moved here from the Paint mode");
             model.SelectMode("procedural");
             Assert.AreEqual("procedural.regions", model.ActiveTool!.Definition.Id);
+            model.SelectMode("plugins");
+            Assert.AreEqual("plugins.select", model.ActiveTool!.Definition.Id, "the things a plugin's command acts on");
+            StringAssert.Contains(model.Modes.Single(mode => mode.Definition.Id == "plugins").Tip, "F12");
         }
 
         [TestMethod]

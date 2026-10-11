@@ -1,5 +1,5 @@
-<!-- The rail of modes: one button per mode, the map's and its things' at the top; at the bottom the Procedural mode
-     and the Plugins entry, which opens the Lua plugins page (F-15). -->
+<!-- The rail of modes: one button per mode, the map's and its things' at the top; at the bottom, below a divider, the
+     Procedural and Plugins modes. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -21,6 +21,7 @@
   <Border Classes="rail">
     <DockPanel>
       <StackPanel Classes="rail" DockPanel.Dock="Bottom">
+        <Border Classes="raildivider" />
         <ItemsControl ItemsSource="{Binding BottomRailModes}" AutomationProperties.Name="Modes at the bottom">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
@@ -28,12 +29,6 @@
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
         </ItemsControl>
-        <Border Classes="raildivider" />
-        <Button Classes="rail" Command="{Binding RunCommand}" CommandParameter="plugins.manage"
-                ToolTip.Tip="Plugins: the workspace's Lua plugins" AutomationProperties.Name="Plugins"
-                AutomationProperties.HelpText="Opens the page of the workspace's Lua plugins: each on or off, its commands, fields and errors">
-          <Path Classes="icon" Data="{StaticResource Icon.Plugins}" />
-        </Button>
       </StackPanel>
       <ItemsControl ItemsSource="{Binding RailModes}" AutomationProperties.Name="Modes">
         <ItemsControl.ItemsPanel>

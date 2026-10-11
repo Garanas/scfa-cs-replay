@@ -1,0 +1,68 @@
+<!-- The Plugins mode's panel (F-15): Show the folder and Reload, then the plugins under their headings (a category, the mode
+     their tools join, else Other), each an entry with its kind as a tag and a short state (on, off, errors). Choosing one shows
+     it in the inspector (PluginPartView through PanelPartView). -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.PluginPanels.PluginsList"
+             x:DataType="vm:PluginsViewModel"
+             x:Name="Root">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <StackPanel Classes="inline">
+        <Button Content="Show the folder" Command="{Binding RunButtonCommand}" CommandParameter="plugins.showFolder"
+                AutomationProperties.Name="Show the plugins folder" ToolTip.Tip="{Binding Folder}" />
+        <Button Content="Reload" Command="{Binding RunButtonCommand}" CommandParameter="plugins.reload"
+                AutomationProperties.Name="Reload the plugins" AutomationProperties.HelpText="Reads every plugin of the folder again" />
+      </StackPanel>
+      <ItemsControl ItemsSource="{Binding Parts.Groups}" AutomationProperties.Name="Plugins">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Classes="stack" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:PanelPartGroup">
+            <StackPanel Classes="partgroup">
+              <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <ItemsControl ItemsSource="{Binding Parts}" AutomationProperties.Name="{Binding Title}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Classes="partentries" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:PanelPart">
+                    <Button Classes="partentry" Classes.selected="{Binding IsChosen}"
+                            Command="{Binding #Root.((vm:PluginsViewModel)DataContext).Parts.ChooseItemCommand}" CommandParameter="{Binding}"
+                            ToolTip.Tip="{Binding Help}"
+                            AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding Label}">
+                      <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Classes="partdetail" Text="{Binding Detail}" />
+                        <ContentControl DockPanel.Dock="Right" Content="{Binding Content}">
+                          <ContentControl.DataTemplates>
+                            <!-- a plugin's kind as a tag; the first entry has none -->
+                            <DataTemplate DataType="vm:PluginPart">
+                              <Border Classes="badge pluginkind">
+                                <TextBlock Text="{Binding Plugin.Kind}" />
+                              </Border>
+                            </DataTemplate>
+                            <DataTemplate DataType="vm:PluginsOverviewPart">
+                              <Panel />
+                            </DataTemplate>
+                          </ContentControl.DataTemplates>
+                        </ContentControl>
+                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                      </DockPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </Border>
+</UserControl>

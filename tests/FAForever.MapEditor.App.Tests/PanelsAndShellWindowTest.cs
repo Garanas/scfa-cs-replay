@@ -107,7 +107,7 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
-        public Task ThePluginsEntryAtTheRailsBottomOpensTheirPage() => HeadlessApp.Run(async () =>
+        public Task ThePluginsModeIsAtTheRailsBottomUnderProcedural() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
             Button plugins = Labelled<Button>(window, "Plugins");
@@ -117,8 +117,8 @@ namespace FAForever.MapEditor.App.Tests
                 "at the rail's bottom");
 
             Click(window, plugins);
-            Assert.IsTrue(model.Plugins.IsOpen);
-            model.ClosePage();
+            Assert.AreEqual("plugins", model.SelectedMode!.Definition.Id, "a mode, no page over the window");
+            Assert.IsFalse(model.IsPageOpen);
             Click(window, procedural);
             Assert.AreEqual("procedural", model.SelectedMode!.Definition.Id);
             window.Close();

@@ -91,7 +91,6 @@ namespace FAForever.MapEditor.App.Tests
         [TestMethod]
         [DataRow("versionControl")]
         [DataRow("diagnostics")]
-        [DataRow("plugins")]
         [DataRow("report")]
         [DataRow("newMap")]
         public Task APageTakesNoShortcutsAndEscapeClosesIt(string page) => Run(async () =>
@@ -106,7 +105,6 @@ namespace FAForever.MapEditor.App.Tests
             {
                 case "versionControl": model.VersionControl.IsOpen = true; break;
                 case "diagnostics": model.Diagnostics.IsOpen = true; break;
-                case "plugins": model.Plugins.IsOpen = true; break;
                 case "report": model.Report.IsOpen = true; break;
                 default: model.NewMapPage.Open(); break;
             }

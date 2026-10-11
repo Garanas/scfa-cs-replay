@@ -187,6 +187,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeHelp();
         InitializeDdsTextures();
         Plugins = new PluginsViewModel(this);
+        InitializePluginsMode();
     }
 
     /// <summary>

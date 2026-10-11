@@ -1,7 +1,7 @@
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
-/// The pages over the editor (diagnostics, plugins, version control, report a problem, new map):
+/// The pages over the editor (diagnostics, version control, report a problem, new map):
 /// while one shows, the window's shortcuts and the tools' keys wait, and Escape closes it.
 /// </summary>
 public sealed partial class MainViewModel
@@ -20,7 +20,6 @@ public sealed partial class MainViewModel
         : NewMapPage?.IsOpen == true ? "newMap"
         : Report?.IsOpen == true ? "report"
         : VersionControl?.IsOpen == true ? "versionControl"
-        : Plugins?.IsOpen == true ? "plugins"
         : Diagnostics?.IsOpen == true ? "diagnostics"
         : null;
 
@@ -45,9 +44,6 @@ public sealed partial class MainViewModel
                 break;
             case "versionControl":
                 VersionControl.IsOpen = false;
-                break;
-            case "plugins":
-                Plugins.IsOpen = false;
                 break;
             case "diagnostics":
                 Diagnostics.IsOpen = false;

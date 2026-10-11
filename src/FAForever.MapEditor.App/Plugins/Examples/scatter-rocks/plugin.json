@@ -1,5 +1,7 @@
 {
   "name": "Scatter rocks",
   "version": "1.0",
-  "description": "Scatters rocks where the terrain is steep, as one step of undo."
+  "description": "Scatters rocks where the terrain is steep, as one step of undo.",
+  "category": "Props",
+  "kind": "generator"
 }

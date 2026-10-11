@@ -6,6 +6,7 @@
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              xmlns:decalpanels="using:FAForever.MapEditor.App.Views.DecalPanels"
              xmlns:procedural="using:FAForever.MapEditor.App.Views.ProceduralPanels"
+             xmlns:pluginpanels="using:FAForever.MapEditor.App.Views.PluginPanels"
              x:Class="FAForever.MapEditor.App.Views.MapPanels.PanelPartView"
              x:DataType="vm:PanelParts">
   <StackPanel>
@@ -100,6 +101,13 @@
               </Panel>
             </StackPanel>
           </Border>
+        </DataTemplate>
+        <!-- a plugin of the Plugins mode, and the overview of all of them (F-15, wave 14C) -->
+        <DataTemplate DataType="vm:PluginPart">
+          <pluginpanels:PluginPartView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:PluginsOverviewPart">
+          <pluginpanels:PluginsOverviewView />
         </DataTemplate>
       </ContentControl.DataTemplates>
     </ContentControl>
