@@ -333,7 +333,10 @@ public sealed partial class CurveTool(MainViewModel model) : ObservableObject, I
             points = points.SetItem(index, points[index] with { Height = MathF.Round(points[index].Height + step, 2) });
         }
         model.Status = $"Point {chosen[^1]} of {layer}: height {points[chosen[^1]].Height.ToString("0.0#", System.Globalization.CultureInfo.InvariantCulture)}";
-        _ = SetPoints(layer, points);
+        // one point: its own command, whose steps merge while + is pressed again
+        _ = chosen.Length == 1
+            ? model.RunWithAsync("terrain.setCurvePoint", new JsonObject { ["layer"] = layer, ["index"] = chosen[0], ["height"] = points[chosen[0]].Height })
+            : SetPoints(layer, points);
         return true;
     }
 

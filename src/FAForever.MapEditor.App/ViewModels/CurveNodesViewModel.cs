@@ -345,7 +345,8 @@ public sealed partial class CurveNodeRow(CurveNodesViewModel owner, int index) :
     internal void Show(HeightCurve curve, int point, CurveGrade? grade)
     {
         CurvePoint p = curve.Points[point];
-        static string F(float? value) => value is float v ? Setting.Format(v) : "";
+        // two decimals: the fields are narrow, and a point's place is hardly typed finer
+        static string F(float? value) => value is float v ? Setting.Format(Math.Round(v, 2)) : "";
         string[] texts = [F(p.X), F(p.Z), F(p.Height), F(p.Width), F(p.FalloffLeft), F(p.FalloffRight), F(p.Strength)];
         string[] names = [nameof(X), nameof(Z), nameof(Height), nameof(Width), nameof(FalloffLeft), nameof(FalloffRight), nameof(Strength)];
         for (int i = 0; i < texts.Length; i++)

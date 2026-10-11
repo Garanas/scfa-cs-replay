@@ -615,8 +615,8 @@ public sealed partial class HeightmapView : Control
                     }
                     context.DrawGeometry(null, new Pen(InkOf(line.Ink), line.Width, line.Dash switch
                     {
-                        ToolDash.Dashed => DashStyle.Dash,
-                        ToolDash.Dotted => DashStyle.Dot,
+                        ToolDash.Dashed => ReachDashes(false, line.Width),
+                        ToolDash.Dotted => ReachDashes(true, line.Width),
                         _ => null,
                     }), path);
                     break;
@@ -954,6 +954,13 @@ public sealed partial class HeightmapView : Control
     public int PropDotsDrawn { get; private set; }
 
     /// <summary>
+    /// The dashes of a curve's width line (long) and fade line (dots), in lengths of a pen that is
+    /// <paramref name="thickness"/> wide, so a shadow under a line breaks where it does.
+    /// </summary>
+    private static DashStyle ReachDashes(bool dotted, double thickness) =>
+        dotted ? new DashStyle([1.5 / thickness, 3.5 / thickness], 0) : new DashStyle([6 / thickness, 4 / thickness], 0);
+
+    /// <summary>
     /// What the active tool shows (<see cref="IMapTool.Marks"/>): its line with the label at its
     /// end, such as the ruler's measurement, and its handles, such as a selected area's corners.
     /// </summary>
@@ -992,8 +999,8 @@ public sealed partial class HeightmapView : Control
             if (Line(outline.Points) is StreamGeometry line)
             {
                 double thickness = outline.Thin ? 1 : 1.5;
-                context.DrawGeometry(null, new Pen(overlay.Shadow.Brush, thickness + 1.5, outline.Dotted ? DashStyle.Dot : DashStyle.Dash), line);
-                context.DrawGeometry(null, new Pen(overlay.Selection.Brush, thickness, outline.Dotted ? DashStyle.Dot : DashStyle.Dash), line);
+                context.DrawGeometry(null, new Pen(overlay.Shadow.Brush, thickness + 1.5, ReachDashes(outline.Dotted, thickness + 1.5)), line);
+                context.DrawGeometry(null, new Pen(overlay.Selection.Brush, thickness, ReachDashes(outline.Dotted, thickness)), line);
             }
         }
         if (marks.Path is { Count: >= 2 } path && Line(path) is StreamGeometry pathLine)
