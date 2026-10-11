@@ -439,6 +439,15 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        // Q and E turn a shaped brush whatever control has the keyboard but a text field or an open
+        // list or menu: a combo box would take the letter to pick an item, and the view need not be
+        // clicked first (which paints a dab)
+        if (focused is not (TextBox or MenuItem) && focused is not ComboBox { IsDropDownOpen: true }
+            && model.BrushTurnKey(e.Key.ToString(), HeightmapView.ModifiersOf(e.KeyModifiers)))
+        {
+            e.Handled = true;
+            return;
+        }
         if (focused is TextBox && IsTextKey(e.Key, e.KeyModifiers))
         {
             return;

@@ -27,6 +27,21 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
+    /// Q or E (shift with them) wherever the keyboard is but a text field: turns the picture of the
+    /// active brush (<see cref="BrushKeys.TurnKey"/>); false for any other key or tool, which go on
+    /// as before (the select tools keep Q and E for what they turn, in the views).
+    /// </summary>
+    public bool BrushTurnKey(string key, ToolModifiers modifiers)
+    {
+        if (!HasMap || !BrushKeys.TurnKey(ActiveTool?.Tool, key, modifiers, out string? status))
+        {
+            return false;
+        }
+        Status = status!;
+        return true;
+    }
+
+    /// <summary>
     /// The wheel turned with control held over a view: the active brush's radius, or with shift its
     /// strength; false when the tool has no brush (the view zooms then).
     /// </summary>
