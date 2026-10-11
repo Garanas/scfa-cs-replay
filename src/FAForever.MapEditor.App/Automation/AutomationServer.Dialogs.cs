@@ -22,7 +22,7 @@ public sealed partial class AutomationServer
     private static readonly string[] DialogCommands =
     [
         "dialog {button?, text?}: presses a button of the question over the window (state.dialog), its text field holding text first; without a button, the question",
-        "click {label, under?, button?: left|right, doubleClick?}: scrolls the control into view and clicks its centre",
+        "click {label, under?, button?: left|right, doubleClick?}: shows the control (behind More, scrolled into view), clicks its centre once the mouse reaches it there (else refuses with why), and waits for the commands the click started (finished)",
     ];
 
     /// <summary>
@@ -80,34 +80,12 @@ public sealed partial class AutomationServer
         Visual? under = UnderOf(arguments);
         Control control = (under is not null ? UiTree.Find(under, label) : FindInWindows(label))
             ?? throw new ArgumentException($"No control is named, labelled or reads '{label}'");
-        if (ToolRow.Reveal(control))
-        {
-            await LetInputSettleAsync();
-        }
-        control.BringIntoView();
-        TopLevel top = WindowOf(control);
-        // measured once it stays where it is: a scroll and the layout after it may take frames
-        Point? last = null;
-        Point centre = default;
-        for (int frame = 0; frame < 20; frame++)
-        {
-            await LetInputSettleAsync();
-            await NextFrameAsync();
-            centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), top)
-                ?? throw new InvalidOperationException($"'{label}' is not in the window");
-            if (last == centre)
-            {
-                break;
-            }
-            last = centre;
-        }
-        if (!new Rect(top.Bounds.Size).Contains(centre))
-        {
-            throw new InvalidOperationException($"'{label}' lies outside the window at {centre.X:0}, {centre.Y:0}");
-        }
+        // shown, settled and reachable by the mouse, else refused with why (never a click elsewhere)
+        (TopLevel top, Point centre, _) = await AimAsync(control, label);
         Avalonia.Input.MouseButton button = WindowInput.ParseButton(arguments["button"]?.GetValue<string>());
         int clicks = arguments["doubleClick"]?.GetValue<bool>() == true ? 2 : 1;
         WindowInput input = InputOf(top);
+        int running = model.Commands.Running;
         input.Move(centre);
         for (int i = 0; i < clicks; i++)
         {
@@ -115,6 +93,7 @@ public sealed partial class AutomationServer
             input.Up(centre, button);
         }
         await LetInputSettleAsync();
+        bool finished = await CommandsDoneAsync(running);
         return new JsonObject
         {
             ["type"] = control.GetType().Name,
@@ -123,8 +102,35 @@ public sealed partial class AutomationServer
             ["window"] = top == window ? null : top is Views.FloatingPanelWindow floating ? ViewModels.LayoutViewModel.Name(floating.Panel) : "other",
             ["checked"] = control is ToggleButton toggle ? toggle.IsChecked : null,
             ["focused"] = Focused(),
+            ["finished"] = finished,
         };
     }
+
+    /// <summary>
+    /// Waits (at most <see cref="ClickWaitSeconds"/>) until the commands a click started are done,
+    /// so the answer's status says what the click did (writing files takes a moment); false when one
+    /// still runs: it asks a question, opened the picker or a system's dialog, or takes longer.
+    /// </summary>
+    /// <param name="before">How many commands ran before the click.</param>
+    private async Task<bool> CommandsDoneAsync(int before)
+    {
+        System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+        while (model.Commands.Running > before)
+        {
+            if (model.Question.IsOpen || model.Picker.IsOpen || watch.Elapsed.TotalSeconds > ClickWaitSeconds)
+            {
+                return false;
+            }
+            await Task.Delay(20);
+            await LetInputSettleAsync();
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// How long <c>click</c> waits at most for the commands its click started.
+    /// </summary>
+    private const double ClickWaitSeconds = 10;
 
     /// <summary>
     /// The overlays' chips above the views, by id, with whether each is on.

@@ -108,6 +108,12 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
     public event Action<EditorCommand>? IncompleteRun;
 
     /// <summary>
+    /// How many commands are running now (a command that writes files or asks a question runs a
+    /// while): automation's <c>click</c> waits for the commands its click started.
+    /// </summary>
+    public int Running { get; private set; }
+
+    /// <summary>
     /// Raised after a command ran.
     /// </summary>
     public event Action<EditorCommand>? Ran;
@@ -261,6 +267,7 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
         bool wasQuiet = dialogs.Quiet;
         dialogs.Quiet = !interactive;
         object? result;
+        Running++;
         try
         {
             result = await sender.Send(request);
@@ -272,6 +279,7 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
         }
         finally
         {
+            Running--;
             dialogs.Quiet = wasQuiet;
         }
         Count(command, "ran");

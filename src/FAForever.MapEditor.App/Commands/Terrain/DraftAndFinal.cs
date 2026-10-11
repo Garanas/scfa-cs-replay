@@ -72,6 +72,8 @@ public sealed class WriteDraftHandler(MainViewModel model) : IRequestHandler<Wri
 {
     public async Task<IReadOnlyList<string>> Handle(WriteDraft request, CancellationToken cancellationToken)
     {
+        // a person sees at once that the click was taken: the files take a moment
+        model.Status = "Writing the draft for procedural tools...";
         IReadOnlyList<string> written = await model.WriteDraftAsync();
         model.Status = string.Create(CultureInfo.InvariantCulture,
             $"Wrote the draft for procedural tools: {string.Join(", ", written)}");

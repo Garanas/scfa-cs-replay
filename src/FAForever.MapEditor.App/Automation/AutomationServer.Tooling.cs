@@ -111,16 +111,8 @@ public sealed partial class AutomationServer
         Control control = (under is not null ? FindSettable(under, label) : Windows.Select(each => FindSettable(each, label)).FirstOrDefault(found => found is not null))
             ?? throw new ArgumentException($"No control one can set is named, labelled or reads '{label}'");
         WindowInput Input = InputOf(WindowOf(control));
-        bool revealed = ToolRow.Reveal(control);
-        Avalonia.Point? before = control.TranslatePoint(default, window);
-        control.BringIntoView();
-        await LetInputSettleAsync();
-        if (revealed || control.TranslatePoint(default, window) != before)
-        {
-            // the mouse finds what the last frame drew: a row opened or a panel scrolled must be drawn first
-            await NextFrameAsync();
-            await LetInputSettleAsync();
-        }
+        // shown (behind More, scrolled into view), settled and reachable by the mouse, else refused with why
+        (_, _, bool revealed) = await AimAsync(control, label, ClickPoint);
 
         switch (control)
         {
@@ -267,12 +259,14 @@ public sealed partial class AutomationServer
             && string.Equals(ItemText(control.DataContext, control), label, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>
+    /// Where <c>set</c> clicks a control: a check box's box (near its left end), else its centre.
+    /// </summary>
+    private static Point ClickPoint(Control control) => new Point(Math.Min(control.Bounds.Width / 2, 10), control.Bounds.Height / 2);
+
     private async Task ClickAsync(Control control)
     {
-        TopLevel top = WindowOf(control);
-        Point centre = control.TranslatePoint(new Point(Math.Min(control.Bounds.Width / 2, 10), control.Bounds.Height / 2), top)
-            ?? throw new InvalidOperationException("The control is not in the window");
-        await NextFrameAsync();
+        (TopLevel top, Point centre, _) = await AimAsync(control, Avalonia.Automation.AutomationProperties.GetName(control) ?? control.Name ?? control.GetType().Name, ClickPoint);
         WindowInput input = InputOf(top);
         input.Move(centre);
         input.Down(centre);
