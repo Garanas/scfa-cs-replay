@@ -2449,8 +2449,15 @@ last frame drawn.
   command that asks.
 - `click {label, under?, button?, doubleClick?}`: the control named, labelled or reading the label
   (a control one can use before a text of that name), shown first (behind More, scrolled into its
-  scroll viewer), then clicked in its centre; its answer has the type, the place, `checked` and
-  `focused`. `ui {under}` and `set` find a control the same way: `Combine` is the combo box labelled
+  scroll viewer), then clicked in its centre once its place stayed the same over two frames and the
+  window's hit testing (what the mouse reaches: the last frame drawn) finds the control there
+  (`AutomationServer.Aiming.cs`, `AimAsync`); a control the mouse cannot reach (hidden, outside the
+  window, covered by a question or the views) is refused with why (`the mouse would reach ...`),
+  never clicked elsewhere. It then waits (at most 10 s) for the commands the click started
+  (`CommandRegistry.Running`), unless one asks a question or opens the picker; its answer has the
+  type, the place, `checked`, `focused` and `finished`. `set` aims the same way, and chooses a
+  list's item by clicking it where no check box or button of the item lies (`PlainPointOf`), so
+  what a person's click starts runs too (`AutomationAimingTest`). `ui {under}` and `set` find a control the same way: `Combine` is the combo box labelled
   so, not the text beside it. `ui` keeps underscores in texts (only menu headers lose their access
   key's), leaves out what a person cannot see (hidden, transparent, a text without room), reads a
   combo box's chosen item and its first 40 items by what they show (`Title`, `Name`, `Label`,
