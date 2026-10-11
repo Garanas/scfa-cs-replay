@@ -1041,7 +1041,8 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   (`Editor`) and finds nothing. The tab's header counts the errors and warnings; a double click or
   Enter on a line runs `problems.show {index}` (`MainViewModel.ShowProblem`): it selects the
   problem's thing, the top view centres on its place at 4 pixels an ogrid and the 3D camera
-  focuses on it (30 ogrids around). `plugins.check` runs the checks now and shows the tab.
+  focuses on it (30 ogrids around); a problem with `Related` things (the second structure of an
+  overlap) selects them too. `plugins.check` runs the checks now and shows the tab.
 
 ## The Procedural mode: generated results, the navigation mesh, export steps
 
@@ -1505,6 +1506,17 @@ change, span `model.armies`), the place tool and the commands.
   mouse. The shortcuts page lists Shift, Escape and the brackets. Tests: `UnitsTest` (the
   commands, one step, images, the group, the tool's drag and Escape), `MainWindowTest` (the mouse),
   `AutomationTest` (the state, the chips).
+- **Placement checks** (U-12): the Place tool's footprints under the mouse (single, a drag's
+  line or rectangle, the ring) are drawn in `ToolInk.Danger` (`DangerBrush`, 2 pixels) where a
+  click would overlap a structure or break the ground rules of the blueprint
+  (`UnitPlaceTool.VerdictOf`, the library's `PlacementChecks`, span `tool.place-checks`);
+  placing is still allowed. The status line says why (`Overlaps the Land Factory UNIT_12`, `Naval
+  Factory: it cannot be built on land`), set when the mouse moves (`MainViewModel.Pointer` calls
+  `UnitPlaceTool.PointerMoved`: a status set while drawing throws, Avalonia forbids invalidating
+  in the render pass) and for a drag in the planning status. Wrecks and mobile units are never
+  red; presets are not checked. `state.units.place` has `blocked`, `blockedCount` and `why`;
+  `plugins.check` and `state.problems.items` give a problem's `related` things; choosing an
+  overlap in Problems selects both units. Tests: `PlacementChecksTest`, `AutomationTest`.
 - **The tree** (`UnitGroupsSection`, a `TreeView` of `GroupNode`s with their units counted
   with the groups in them; expanded nodes stay expanded when it is made again) is the Units panel's
   list; the inspector edits what is chosen in it (`UnitGroupDetailsSection`,

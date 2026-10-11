@@ -278,7 +278,7 @@ public sealed partial class MainViewModel
         Vector2? place = problem.Place;
         if (problem.Thing is ObjectRef thing && document.Exists(thing))
         {
-            Selection.Set([thing]);
+            Selection.Set([thing, .. problem.Related?.Where(document.Exists) ?? []]);
             if (place is null && document.PlaceOf(thing) is Vector3 at)
             {
                 place = new Vector2(at.X, at.Z);

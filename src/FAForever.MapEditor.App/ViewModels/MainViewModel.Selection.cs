@@ -23,7 +23,17 @@ public sealed partial class MainViewModel
     /// The place under the mouse in a view, in ogrids; null while the mouse is outside the views.
     /// Paste puts what was copied here.
     /// </summary>
-    public (float X, float Z)? Pointer { get; set; }
+    public (float X, float Z)? Pointer
+    {
+        get => _pointer;
+        set
+        {
+            _pointer = value;
+            (ActiveTool?.Tool as UnitPlaceTool)?.PointerMoved();
+        }
+    }
+
+    private (float X, float Z)? _pointer;
 
     /// <summary>
     /// Whether the views show the props: as dots in the top view, as their models in 3D.

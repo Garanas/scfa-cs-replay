@@ -561,10 +561,10 @@ reads again when it changes; and nothing that generates runs by itself.
       is counted), Group, Ungroup and Distribute (`units.distribute`, three units or more); a
       handle drag, the arrows and `edit.place` round the move so the first structure lands on the
       build grid (the select tool's check box "Keep structures on the build grid").
-- [ ] **U-12 Placement checks.** Problems lists structures whose footprints overlap and structures
+- [x] **U-12 Placement checks.** Problems lists structures whose footprints overlap and structures
       where the ground does not allow them (too steep, the wrong layer: water or land), from the
       blueprint's skirt, build layers and slope limit, which the workspace's converted assets carry;
-      the footprint under the mouse turns red there.
+      the footprint under the mouse turns red there. Today: the converted assets carry each unit's skirt, build layers, slope limit and least water depth (asset format 6); the checks `units-overlap` and `units-ground` warn in Problems (choosing an overlap selects both units), and the Place tool's footprints (single, line, rectangle, ring) turn red with the reason in the status line; placing stays allowed.
 
 ## V: Views
 

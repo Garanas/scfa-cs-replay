@@ -277,6 +277,9 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(2.5, place["spacing"]!.GetValue<double>());
             Assert.AreEqual(9, place["count"]!.GetValue<int>());
             Assert.IsFalse(place["dragging"]!.GetValue<bool>());
+            Assert.IsFalse(place["blocked"]!.GetValue<bool>(), "nothing to place, nothing red (user story U-12)");
+            Assert.AreEqual(0, place["blockedCount"]!.GetValue<int>());
+            Assert.IsNull(place["why"]);
             Assert.AreEqual("units.place", model.ActiveTool!.Definition.Id);
 
             // the segmented control's chips say which way is on

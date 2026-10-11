@@ -41,6 +41,7 @@ public sealed class CheckMapHandler(MainViewModel model, ProblemsViewModel probl
         ["check"] = problem.Check,
         ["message"] = problem.Message,
         ["thing"] = problem.Thing?.ToString(),
+        ["related"] = problem.Related is { Count: > 0 } related ? new JsonArray([.. related.Select(thing => (JsonNode)thing.ToString()!)]) : null,
         ["place"] = problem.Place is { } place ? new JsonArray(place.X, place.Y) : null,
     };
 }

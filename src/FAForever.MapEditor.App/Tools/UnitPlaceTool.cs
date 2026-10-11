@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Checks;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
@@ -315,7 +316,9 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// <summary>
     /// Its settings for automation's <c>state</c>.
     /// </summary>
-    public JsonObject Describe() => new JsonObject
+    public JsonObject Describe() => Describe(CurrentVerdict());
+
+    private JsonObject Describe(PlaceVerdict? verdict) => new JsonObject
     {
         ["unit"] = Unit?.Key,
         ["preset"] = Preset,
@@ -337,6 +340,9 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         ["radius"] = Radius,
         ["dragging"] = _dragging,
         ["planned"] = _planned.Length,
+        ["blocked"] = verdict is { Count: > 0 },
+        ["blockedCount"] = verdict?.Count ?? 0,
+        ["why"] = verdict?.Why,
     };
 
     partial void OnUnitChanged(AssetEntry? value)
@@ -480,25 +486,101 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         {
             return [];
         }
+        ImmutableArray<UnitPlace> places = PreviewPlaces(document, unit);
+        if (places.IsEmpty)
+        {
+            return [];
+        }
+        return PresetPreview.ShapesAt(model, view, Outlines(unit, places), "tool.place-preview", VerdictOf(document, unit, places).Blocked);
+    }
+
+    private string? _toldWhy;
+
+    /// <summary>
+    /// The mouse moved over a view: the status line says why the preview is red when that changed
+    /// (not while drawing, which must not change what the window shows).
+    /// </summary>
+    public void PointerMoved()
+    {
+        if (_dragging || CurrentVerdict() is not PlaceVerdict verdict || verdict.Why == _toldWhy)
+        {
+            return;
+        }
+        _toldWhy = verdict.Why;
+        if (verdict.Why is not null)
+        {
+            model.Status = verdict.Why;
+        }
+    }
+
+    /// <summary>
+    /// The places a click or release would put the unit at now: the drag's, the ring's, or the one
+    /// under the mouse; none for the scatter.
+    /// </summary>
+    private ImmutableArray<UnitPlace> PreviewPlaces(MapDocument document, AssetEntry unit)
+    {
         if (_dragging)
         {
-            return PresetPreview.ShapesAt(model, view, Outlines(unit, _planned), "tool.place-preview");
+            return _planned;
         }
         switch (Mode)
         {
             case PlaceMode.Scatter:
                 return [];
             case PlaceMode.Ring:
-                return PresetPreview.ShapesAt(model, view, Outlines(unit, RingPlan(document, unit)), "tool.place-preview");
+                return RingPlan(document, unit);
             default:
-                if (model.Pointer is not (float px, float pz))
-                {
-                    return [];
-                }
-                UnitPlace single = UnitPlans.Single(unit, px, pz, (float)(Heading * Math.PI / 180));
-                return PresetPreview.ShapesAt(model, view, [PresetPreview.Footprint(unit.Footprint, single.X, single.Z, single.Heading)], "tool.place-preview");
+                return model.Pointer is (float px, float pz) ? [UnitPlans.Single(unit, px, pz, (float)(Heading * Math.PI / 180))] : [];
         }
     }
+
+    /// <summary>
+    /// Which of the places the unit would break a rule at (user story U-12): overlap an existing
+    /// structure or stand on ground its blueprint rules out (<see cref="PlacementChecks"/>, the
+    /// Problems tab's functions). Placing is allowed anyway. Wrecks and mobile units break none.
+    /// </summary>
+    /// <param name="Blocked">One flag per place, as many as outlines are drawn.</param>
+    /// <param name="Why">What is wrong at the first place that breaks a rule, e.g. <c>Overlaps the Land Factory UNIT_12</c>.</param>
+    public sealed record PlaceVerdict(bool[] Blocked, string? Why)
+    {
+        public int Count => Blocked.Count(blocked => blocked);
+    }
+
+    /// <summary>
+    /// The verdict for places of the unit now.
+    /// </summary>
+    public PlaceVerdict VerdictOf(MapDocument document, AssetEntry unit, ImmutableArray<UnitPlace> places)
+    {
+        bool[] blocked = new bool[Math.Min(places.Length, PresetPreview.MaxOutlines)];
+        if (!unit.IsStructure || AsWrecks || model.Assets.Catalog is not AssetCatalog catalog)
+        {
+            return new PlaceVerdict(blocked, null);
+        }
+        using Performance.Span measure = Performance.Measure("tool.place-checks");
+        PlacementIndex index = PlacementIndex.Of(document, catalog);
+        Heightmap heights = document.Terrain.Heightmap;
+        float? water = document.Water.HasWater ? document.Water.Elevation : null;
+        string? why = null;
+        for (int i = 0; i < blocked.Length; i++)
+        {
+            UnitPlace place = places[i];
+            string? reason = PlacementChecks.OverlapAt(index, unit, place.X, place.Z, place.Heading) is PlacedStructure other
+                ? $"Overlaps the {other.Title}"
+                : PlacementChecks.GroundIssue(heights, water, unit, place.X, place.Z, place.Heading) is string ground ? $"{unit.Name}: {ground}" : null;
+            if (reason is not null)
+            {
+                blocked[i] = true;
+                why ??= reason;
+            }
+        }
+        return new PlaceVerdict(blocked, why);
+    }
+
+    /// <summary>
+    /// The verdict for what a click or release would place now, for automation.
+    /// </summary>
+    private PlaceVerdict? CurrentVerdict() =>
+        Unit is AssetEntry unit && Preset is null && model.ShownDocument is MapDocument document ? VerdictOf(document, unit, PreviewPlaces(document, unit)) : null;
 
     /// <summary>
     /// The palette's keys (user story U-8): 1 to 9 and 0 pick a slot of the chosen palette (its
@@ -618,7 +700,9 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         string size = Mode == PlaceMode.Line
             ? $"{length:0.#} ogrids"
             : $"{MathF.Abs(_to.X - from.X):0.#} × {MathF.Abs(_to.Y - from.Y):0.#} ogrids";
-        model.Status = $"{_planned.Length} × {unit.Name}, {size}; release to place, Escape to cancel";
+        PlaceVerdict? verdict = model.ShownDocument is MapDocument shown ? VerdictOf(shown, unit, _planned) : null;
+        string breaks = verdict is { Count: > 0 } ? $"; {verdict.Count} break{(verdict.Count == 1 ? "s" : "")} a rule: {verdict.Why}" : "";
+        model.Status = $"{_planned.Length} × {unit.Name}, {size}{breaks}; release to place, Escape to cancel";
     }
 
     private void CancelDrag()
