@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
@@ -11,7 +12,7 @@ namespace FAForever.MapEditor.App.Automation;
 /// stack, lowest first, with each layer's settings, the chosen one, what the sculpt tool would say
 /// about it, and the curve tool's settings.
 /// </summary>
-internal static class HeightLayersState
+public static class HeightLayersState
 {
     public static JsonObject Describe(MainViewModel model)
     {
@@ -45,6 +46,25 @@ internal static class HeightLayersState
                     ["closed"] = curve.Closed,
                     ["mirrored"] = curve.Symmetry is null ? null : $"{curve.Symmetry.Kind} {curve.Symmetry.Count}",
                     ["points"] = new JsonArray([.. curve.Points.Select(point => (JsonNode)new JsonArray(point.X, point.Z, point.Height))]),
+                    // wave 17: the points' own values, the curve's other settings and its grades
+                    ["nodes"] = new JsonArray([.. curve.Points.Select((point, index) => (point, index)).Where(node => !node.point.IsPlain)
+                        .Select(node => { JsonObject json = (JsonObject)CurvePointArgument.ToJson(node.point); json["index"] = node.index; return (JsonNode)json; })]),
+                    ["falloffRight"] = curve.FalloffRight ?? curve.Falloff,
+                    ["shape"] = HeightCurves.ShapeOf(curve).ToString(),
+                    ["shapeSet"] = curve.FalloffShape is not null,
+                    ["terraceSteps"] = curve.TerraceSteps,
+                    ["cliffFace"] = curve.CliffFace,
+                    ["roadMode"] = curve.RoadMode.ToString(),
+                    ["camber"] = curve.Camber,
+                    ["noiseAmplitude"] = curve.NoiseAmplitude,
+                    ["noiseScale"] = curve.NoiseScale,
+                    ["noiseSeed"] = curve.NoiseSeed,
+                    ["heightVariation"] = new JsonArray(curve.HeightVariation.Min, curve.HeightVariation.Max),
+                    ["widthVariation"] = new JsonArray(curve.WidthVariation.Min, curve.WidthVariation.Max),
+                    ["variationScale"] = curve.VariationScale,
+                    ["lineOnly"] = curve.LineOnly,
+                    ["fills"] = curve.Fills,
+                    ["grades"] = HeightCurveArguments.GradesOf(curve),
                 } : null,
             })]),
             ["curveTool"] = new JsonObject

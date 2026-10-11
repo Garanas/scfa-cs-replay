@@ -140,16 +140,21 @@ public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs di
 
 /// <summary>
 /// Adds a curve layer through points (user story T-4), one step of undo, and chooses it: a ridge,
-/// valley, road or cliff edge along a Catmull-Rom spline. What the curve tool's first click does.
+/// valley, road, cliff edge or river along a Catmull-Rom spline. What the curve tool's first click does.
 /// </summary>
-/// <param name="Points">The points in ogrids, each <c>[x, z]</c> or <c>[x, z, height]</c>.</param>
+/// <param name="Points">The points in ogrids, each <c>[x, z]</c>, <c>[x, z, height]</c> or an object
+/// <c>{x, z, height?, width?, falloffLeft?, falloffRight?, strength?, sharp?}</c> with the point's own values.</param>
 /// <param name="Height">The height of points without one: what a ridge, valley or cliff rises or
-/// sinks; a road's points without one lie on the terrain.</param>
+/// sinks; a road's points without one lie on the terrain; a river's bed lies this far below the
+/// water's elevation (0 on a map without water).</param>
 /// <param name="Mirrored">Whether the layer draws the curve's images by the chosen symmetry too
 /// (F-12); left out, while the symmetry mirrors edits.</param>
+/// <param name="LineOnly">For a closed curve: shape its line only; left out, it fills its inside.</param>
 [EditorCommand("terrain.addCurve", "Add a curve", Story = "T-4", Needs = Needs.Map | Needs.NoStroke)]
-public sealed record AddHeightCurve(float[][] Points, string? Profile = null, float? Width = null, float? Falloff = null, float? Height = null,
-    bool Closed = false, string? Name = null, bool? Mirrored = null) : IRequest<string>;
+public sealed record AddHeightCurve(CurvePointArgument[] Points, string? Profile = null, float? Width = null, float? Falloff = null, float? Height = null,
+    bool Closed = false, string? Name = null, bool? Mirrored = null, float? FalloffRight = null, string? Shape = null, int? TerraceSteps = null,
+    float? CliffFace = null, string? RoadMode = null, float? Camber = null, float? NoiseAmplitude = null, float? NoiseScale = null, int? NoiseSeed = null,
+    float[]? HeightVariation = null, float[]? WidthVariation = null, float? VariationScale = null, bool? LineOnly = null) : IRequest<string>, ICurveFields;
 
 public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler<AddHeightCurve, string>
 {
@@ -158,22 +163,33 @@ public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler
         MapDocument document = model.ShownDocument ?? throw new InvalidOperationException("No map is open");
         CurveTool tool = model.Tool<CurveTool>();
         CurveProfile profile = request.Profile is null ? tool.Profile : HeightLayerSettings.ParseProfile(request.Profile);
-        HeightCurve curve = new HeightCurve
+        if (request.Width is < 0 || request.Falloff is < 0)
+        {
+            throw new ArgumentException("A curve's width and falloff are 0 or more ogrids");
+        }
+        float height = request.Height ?? (float)tool.Height;
+        HeightCurve curve = HeightCurveArguments.Apply(new HeightCurve
         {
             Profile = profile,
             Width = request.Width ?? (float)tool.CurveWidth,
             Falloff = request.Falloff ?? (float)tool.Falloff,
             Closed = request.Closed,
             Symmetry = HeightLayerSettings.SymmetryOf(model, request.Mirrored),
-            Points = [.. request.Points.Select(point => HeightLayerSettings.PointOf(document, point, profile, request.Height ?? (float)tool.Height))],
-        };
+            Points = [.. HeightCurveArguments.PointsOf(document, request.Points, profile, height)],
+        }, request);
         string name = request.Name?.Trim() ?? HeightLayerEdits.FreeName(document, profile.ToString());
         string? above = model.HeightStack.Chosen is string chosen && HeightLayers.Find(document, chosen) is not null ? chosen : null;
         using Performance.Span span = Performance.Measure("model.height-layers");
         model.EditMap($"Add the curve {name}", d => HeightLayerEdits.Add(d, HeightLayerEdits.NewCurve(d, name, curve), above, model.ShownHeights));
         model.HeightStack.Refresh(model.ShownDocument);
         model.HeightStack.Choose(name);
-        model.Status = string.Create(CultureInfo.InvariantCulture, $"Added the curve {name}: a {profile.ToString().ToLowerInvariant()} through {curve.Points.Length} point{(curve.Points.Length == 1 ? "" : "s")}{(curve.Symmetry is null ? "" : ", mirrored by the symmetry")}");
+        // a river's bed without heights given lies below the water: say where
+        string bed = profile == CurveProfile.River && request.Points.Any(point => point.Height is null)
+            ? document.Water.HasWater
+                ? string.Create(CultureInfo.InvariantCulture, $"; its bed lies {height:0.##} below the water's elevation {document.Water.Elevation:0.##}, at {HeightCurveArguments.RiverBase(document) - height:0.##}")
+                : string.Create(CultureInfo.InvariantCulture, $"; the map has no water: its bed lies {height:0.##} below 0, at {-height:0.##}")
+            : "";
+        model.Status = string.Create(CultureInfo.InvariantCulture, $"Added the curve {name}: a {profile.ToString().ToLowerInvariant()} through {curve.Points.Length} point{(curve.Points.Length == 1 ? "" : "s")}{(curve.Symmetry is null ? "" : ", mirrored by the symmetry")}{(curve.Fills ? ", filling its inside" : "")}{bed}");
         return Task.FromResult(name);
     }
 }
@@ -185,12 +201,15 @@ public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler
 /// follows, the tiles near the curve only.
 /// </summary>
 /// <param name="Height">Every point's height.</param>
-/// <param name="Points">All points anew, each <c>[x, z]</c> or <c>[x, z, height]</c>.</param>
+/// <param name="Points">All points anew, each <c>[x, z]</c>, <c>[x, z, height]</c> or an object
+/// <c>{x, z, height?, width?, falloffLeft?, falloffRight?, strength?, sharp?}</c>.</param>
 /// <param name="Mirrored">True: the layer draws the curve's images by the chosen symmetry too
 /// (F-12); false: the curve alone.</param>
 [EditorCommand("terrain.setCurve", "Change a curve", Story = "T-4", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record SetHeightCurve(string? Layer = null, string? Profile = null, float? Width = null, float? Falloff = null, float? Height = null,
-    bool? Closed = null, float[][]? Points = null, bool? Mirrored = null) : IRequest;
+    bool? Closed = null, CurvePointArgument[]? Points = null, bool? Mirrored = null, float? FalloffRight = null, string? Shape = null, int? TerraceSteps = null,
+    float? CliffFace = null, string? RoadMode = null, float? Camber = null, float? NoiseAmplitude = null, float? NoiseScale = null, int? NoiseSeed = null,
+    float[]? HeightVariation = null, float[]? WidthVariation = null, float? VariationScale = null, bool? LineOnly = null) : IRequest, ICurveFields;
 
 public sealed class SetHeightCurveHandler(MainViewModel model) : IRequestHandler<SetHeightCurve>
 {
@@ -204,19 +223,19 @@ public sealed class SetHeightCurveHandler(MainViewModel model) : IRequestHandler
         }
         MapDocument document = model.ShownDocument!;
         CurveProfile profile = request.Profile is null ? curve.Profile : HeightLayerSettings.ParseProfile(request.Profile);
-        HeightCurve changed = curve with
+        HeightCurve changed = HeightCurveArguments.Apply(curve with
         {
             Profile = profile,
             Width = request.Width ?? curve.Width,
             Falloff = request.Falloff ?? curve.Falloff,
             Closed = request.Closed ?? curve.Closed,
             Symmetry = request.Mirrored is bool mirrored ? HeightLayerSettings.SymmetryOf(model, mirrored) : curve.Symmetry,
-            Points = request.Points is float[][] points
-                ? [.. points.Select(point => HeightLayerSettings.PointOf(document, point, profile, request.Height ?? curve.Points.FirstOrDefault()?.Height ?? 10))]
+            Points = request.Points is CurvePointArgument[] points
+                ? [.. HeightCurveArguments.PointsOf(document, points, profile, request.Height ?? curve.Points.FirstOrDefault()?.Height ?? 10)]
                 : request.Height is float height ? [.. curve.Points.Select(point => point with { Height = height })] : curve.Points,
-        };
-        string fields = HeightLayerSettings.Fields(("profile", request.Profile), ("width", request.Width), ("falloff", request.Falloff), ("height", request.Height),
-            ("closed", request.Closed), ("points", request.Points), ("mirrored", request.Mirrored));
+        }, request);
+        string fields = HeightLayerSettings.Fields([("profile", request.Profile), ("width", request.Width), ("falloff", request.Falloff), ("height", request.Height),
+            ("closed", request.Closed), ("points", request.Points), ("mirrored", request.Mirrored), .. HeightCurveArguments.Given(request)]);
         // a point added, moved or removed is a step of its own; a field typed in again or a slider dragged is one
         int added = changed.Points.Length - curve.Points.Length;
         string description = request.Points is null ? $"Curve {layer.Name}: {fields}"
@@ -449,20 +468,6 @@ internal static class HeightLayerSettings
         true => model.Symmetry.Setting ?? throw new ArgumentException("Choose a symmetry first (select.symmetry) to mirror a curve by it"),
         false => null,
     };
-
-    /// <summary>
-    /// A point from <c>[x, z]</c> or <c>[x, z, height]</c>: without a height, a road's lies on the
-    /// terrain and the others' rise by <paramref name="height"/>.
-    /// </summary>
-    public static CurvePoint PointOf(MapDocument document, float[] point, CurveProfile profile, float height)
-    {
-        if (point.Length < 2)
-        {
-            throw new ArgumentException("A curve's point is [x, z] or [x, z, height]");
-        }
-        float h = point.Length > 2 ? point[2] : profile == CurveProfile.Road ? document.Terrain.Heightmap.HeightAt(point[0], point[1]) : height;
-        return new CurvePoint(point[0], point[1], h);
-    }
 
     /// <summary>
     /// The names of the arguments given, for the history and merging steps.
