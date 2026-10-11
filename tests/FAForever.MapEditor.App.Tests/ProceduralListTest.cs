@@ -197,8 +197,9 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("Walkability", Inspected(window));
             Assert.AreEqual(1, Named<ComboBox>(window, "Walkability of the units of a layer").Count(), "walkability's choices");
 
-            Click(window, Named<Button>(window, "Navigation mesh").Single());
-            Assert.AreEqual("Navigation mesh", Inspected(window));
+            // the entry, not the tool's tile of the same name (either picks the other)
+            Click(window, Named<Button>(window, "Connected regions").Single(button => !button.Classes.Contains("tool")));
+            Assert.AreEqual("Connected regions", Inspected(window));
             Assert.AreEqual(1, Named<ComboBox>(window, "Connected regions of the units of a layer").Count(), "the navigation mesh's choices and regions");
             Assert.AreEqual("procedural.regions", model.ActiveTool!.Definition.Id);
 

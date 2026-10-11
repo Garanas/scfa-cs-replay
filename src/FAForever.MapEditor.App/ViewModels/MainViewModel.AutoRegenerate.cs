@@ -153,11 +153,7 @@ public sealed partial class MainViewModel
             }
         };
         DocumentChanged += (_, _) => RefreshAutoRegenerate();
-        MapChanged += (_, _) =>
-        {
-            _recentResults.Clear();
-            RefreshAutoRegenerate();
-        };
+        MapChanged += (_, _) => RefreshAutoRegenerate();
         RefreshAutoRegenerate();
     }
 
@@ -322,6 +318,8 @@ public sealed partial class MainViewModel
     internal JsonObject DescribeAutoRegenerate() => new JsonObject
     {
         ["on"] = AutoGeneration.IsOn,
+        // nothing waits or runs: wait path=procedural.auto.idle value=true
+        ["idle"] = AutoGeneration.Waiting.Count + AutoGeneration.Running.Count == 0,
         ["delay"] = AutoGeneration.Delay.TotalMilliseconds,
         ["pending"] = new JsonArray([.. AutoGeneration.Allowed.Where(AutoGeneration.IsPending).Select(id => (JsonNode)JsonValue.Create(id))]),
         ["waiting"] = new JsonArray([.. AutoGeneration.Waiting.Select(id => (JsonNode)JsonValue.Create(id))]),

@@ -24,7 +24,7 @@ public sealed partial class RegionTool(MainViewModel model) : ObservableObject, 
     {
         if (model.Navigation.Mesh is null)
         {
-            Text = "Generate the navigation mesh first (Generate in the panel)";
+            Text = "Generate the connected regions first (Generate in the panel)";
             model.Status = Text;
             return;
         }

@@ -11,7 +11,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// the regions (the overlay turns on).
 /// </summary>
 /// <returns>The shown layer and its connected regions.</returns>
-[EditorCommand("generate.navigation", "Navigation mesh", Story = "T-8", Needs = Needs.Map)]
+[EditorCommand("generate.navigation", "Connected regions", Story = "T-8", Needs = Needs.Map)]
 public sealed record GenerateNavigation : IRequest<JsonObject>;
 
 public sealed class GenerateNavigationHandler(MainViewModel model, NavigationViewModel navigation) : IRequestHandler<GenerateNavigation, JsonObject>
@@ -20,7 +20,7 @@ public sealed class GenerateNavigationHandler(MainViewModel model, NavigationVie
     {
         await model.GenerateAsync(NavigationMeshGenerator.GeneratorId);
         model.ShowNavigation = true;
-        model.Status = $"Generated the navigation mesh. {navigation.Summary}";
+        model.Status = $"Generated the connected regions. {navigation.Summary}";
         return Describe(navigation);
     }
 

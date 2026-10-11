@@ -107,6 +107,41 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task UndoAndRedoShowTheResultsBesideTheMapMadeForThatVersionAtOnce()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "generate.auto", new JsonObject { ["id"] = NavigationMeshGenerator.GeneratorId, ["on"] = true });
+            await Run(model, "view.overlay.navigation");
+            await model.AutoGeneration.WhenIdleAsync();
+            NavigationMesh first = model.Navigation.Mesh!;
+            object walkabilityBefore = model.Generation.Results.ResultOf(WalkabilityGenerator.GeneratorId)?.Value!;
+
+            Raise(model, 100, 102);
+            await model.AutoGeneration.WhenIdleAsync();
+            NavigationMesh second = model.Navigation.Mesh!;
+            Assert.AreNotSame(first, second);
+            int kept = model.AutoGeneration.Kept;
+
+            // undo: the mesh made for the version before shows at once, and nothing regenerates
+            model.Undo();
+            Assert.AreSame(first, model.Navigation.Mesh);
+            Assert.AreEqual(GeneratedStatus.Current, StateOf(model, NavigationMeshGenerator.GeneratorId));
+            Assert.IsFalse(model.AutoGeneration.IsPending(NavigationMeshGenerator.GeneratorId));
+            if (walkabilityBefore is not null)
+            {
+                Assert.AreSame(walkabilityBefore, model.Generation.Results.ResultOf(WalkabilityGenerator.GeneratorId)!.Value);
+            }
+
+            // redo: the one made after the ridge
+            model.Redo();
+            Assert.AreSame(second, model.Navigation.Mesh);
+            Assert.AreEqual(GeneratedStatus.Current, StateOf(model, NavigationMeshGenerator.GeneratorId));
+            await model.AutoGeneration.WhenIdleAsync();
+            Assert.AreEqual(kept, model.AutoGeneration.Kept, "nothing regenerated");
+            Assert.AreEqual(2, model.Generation.Results.RecentOf(NavigationMeshGenerator.GeneratorId).Count);
+        }
+
+        [TestMethod]
         public async Task MasksFromRulesRegenerateOnTheirOwnWhileTheMaskShows()
         {
             MainViewModel model = await Open();

@@ -23,6 +23,18 @@ namespace FAForever.MapEditor.Project.Generation
         public object Generate(MapDocument document) => Walkability.Generate(document);
 
         public object Generate(MapDocument document, CancellationToken cancel) => Walkability.Generate(document, cancel);
+
+        public IEnumerable<(object Buffer, long Bytes)> MemoryOf(object value) => value is MapNavigation navigation ? Memory(navigation) : [];
+
+        /// <summary>
+        /// The grids of a navigational mesh as buffers with their sizes (<see cref="IGenerator.MemoryOf"/>):
+        /// layers that share a grid name it once.
+        /// </summary>
+        public static IEnumerable<(object Buffer, long Bytes)> Memory(MapNavigation navigation) =>
+            new[] { navigation.Land, navigation.Water, navigation.Hover, navigation.Amphibious }
+                .Select(grid => grid.Cells)
+                .Distinct(ReferenceEqualityComparer.Instance)
+                .Select(cells => ((object)cells!, (long)((int[])cells!).Length * sizeof(int)));
     }
 
     /// <summary>

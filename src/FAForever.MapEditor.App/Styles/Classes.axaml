@@ -365,7 +365,9 @@
   </Style>
   <!-- a tool of a mode -->
   <Style Selector="Button.tool">
-    <Setter Property="Height" Value="{StaticResource ToolButtonHeight}" />
+    <Setter Property="MinHeight" Value="{StaticResource ToolButtonHeight}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Padding" Value="{StaticResource ToolButtonPadding}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
@@ -373,6 +375,11 @@
     <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeBrush}" />
     <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <!-- its title: wraps onto a second line when the tile is too narrow (the row's tiles grow alike) -->
+  <Style Selector="Button.tool TextBlock.tooltitle">
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="TextAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.tool.active">
     <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />

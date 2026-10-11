@@ -65,7 +65,7 @@ namespace FAForever.MapEditor.App.Tests
             model.SelectMode("procedural");
             await ChooseTile(model);
 
-            await Send(automation, "click", new JsonObject { ["label"] = "Navigation mesh" });
+            await Send(automation, "click", new JsonObject { ["label"] = "Connected regions", ["under"] = "Movement" });
 
             Assert.AreEqual("procedural.navigationMesh", model.ProceduralList.Parts.Chosen.Id);
             Assert.IsFalse(model.Assets.HasSelection, "the entry has the inspector");
@@ -73,7 +73,7 @@ namespace FAForever.MapEditor.App.Tests
 
             // the entry chosen already, clicked again after a tile was chosen, has it too
             await ChooseTile(model);
-            await Send(automation, "click", new JsonObject { ["label"] = "Navigation mesh" });
+            await Send(automation, "click", new JsonObject { ["label"] = "Connected regions", ["under"] = "Movement" });
             Assert.IsFalse(model.Assets.HasSelection);
             window.Close();
         });

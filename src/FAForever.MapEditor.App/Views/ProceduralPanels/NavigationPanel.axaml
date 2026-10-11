@@ -15,8 +15,8 @@
                   AutomationProperties.Name="Connected regions of the units of a layer"
                   AutomationProperties.HelpText="Land, hover, amphibious or naval (water) units: the views colour the connected regions they can move in" />
       </DockPanel>
-      <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Navigation.Summary}" AutomationProperties.Name="The navigation mesh in short" />
-      <ItemsControl ItemsSource="{Binding Navigation.Regions}" AutomationProperties.Name="Connected regions of the navigation mesh">
+      <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Navigation.Summary}" AutomationProperties.Name="The connected regions in short" />
+      <ItemsControl ItemsSource="{Binding Navigation.Regions}" AutomationProperties.Name="Connected regions of the layer">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:NavRegionRow">
             <Button Classes="regionrow" Classes.chosen="{Binding IsChosen}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"

@@ -81,9 +81,11 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(changes.Closures.Count > 0, "the wall splits the land");
             Assert.IsTrue(Enumerable.Range(0, changes.Height).Any(z => changes.Cells[z * changes.Width + 128] == WalkabilityChange.Blocked));
 
-            // the wall goes again: a new passage, which the Problems tab lists with its place
+            // the wall goes again: the undo brings back the walkability made for the map without it at
+            // once, compared with the one before: a new passage, which the Problems tab lists with its place
             model.Undo();
-            await Run(model, "generate.walkability");
+            Assert.AreEqual(GeneratedStatus.Current, model.Generation.States.Single(state => state.Generator.Id == "walkability").Status);
+            model.Problems.Run();
             Assert.IsTrue(model.Walkability.Changes!.Passages.Count > 0);
             Problem passage = model.Problems.Items.Select(item => item.Problem).First(problem => problem.Check == "walkability-changes");
             Assert.AreEqual(ProblemSeverity.Warning, passage.Severity);

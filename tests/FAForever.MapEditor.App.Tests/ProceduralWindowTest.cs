@@ -76,14 +76,15 @@ namespace FAForever.MapEditor.App.Tests
         {
             (MainWindow window, MainViewModel model) = await Open();
 
-            Click(window, Named<Button>(window, "Generate the navigation mesh"));
+            Click(window, Named<Button>(window, "Generate the connected regions"));
             await Until(() => model.Navigation.Mesh is not null && !model.Generation.IsRunning("navigationMesh"));
             Dispatcher.UIThread.RunJobs();
             // its entry shows it in the inspector, with its regions
-            Click(window, Named<Button>(window, "Navigation mesh"));
+            Click(window, window.GetVisualDescendants().OfType<Button>().Single(button => !button.Classes.Contains("tool")
+                && Avalonia.Automation.AutomationProperties.GetName(button) == "Connected regions"));
 
             Assert.IsTrue(model.ShowNavigation);
-            Assert.IsTrue(Named<CheckBox>(window, "Preview the navigation mesh in the views").IsChecked);
+            Assert.IsTrue(Named<CheckBox>(window, "Preview the connected regions in the views").IsChecked);
             NavRegionRow first = model.Navigation.Regions[0];
             Click(window, Named<Button>(window, first.Label));
             Assert.AreEqual(first.Region.Id, model.Navigation.ChosenRegion, "the list chooses a region");

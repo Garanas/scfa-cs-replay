@@ -246,7 +246,7 @@ public static class EditorModes
             [new UnitGroupDetailsSection()]),
 
         // the Procedural mode (wave 8C): its tools and sections are ProceduralMode's
-        new ModeDefinition(ProceduralMode.Id, "Procedural", "Icon.Procedural", "Generated results, navigation mesh, export steps", BottomGroup, "F11", "F-7",
+        new ModeDefinition(ProceduralMode.Id, "Procedural", "Icon.Procedural", "Generated results, connected regions, export steps", BottomGroup, "F11", "F-7",
             ProceduralMode.Tools,
             ProceduralMode.Sections,
             ProceduralMode.Inspector),
@@ -304,7 +304,7 @@ public static class EditorOverlays
         new OverlayDefinition("props", "Props", "Show props", "V-2"),
         new OverlayDefinition("units", "Units", "Show units", "V-2"),
         new OverlayDefinition("decals", "Decals", "Show decals", "V-3"),
-        new OverlayDefinition("navigation", "Connected regions", "Show the navigation mesh's connected regions", "T-8") { Swatch = "MapRegion1Brush" },
+        new OverlayDefinition("navigation", "Connected regions", "Show the connected regions: where units of a layer can path between", "T-8") { Swatch = "MapRegion1Brush" },
         new OverlayDefinition("generatedPathNodes", "Generated nodes", "Show the generated path nodes", "R-3") { Panel = "procedural" },
     ];
 }

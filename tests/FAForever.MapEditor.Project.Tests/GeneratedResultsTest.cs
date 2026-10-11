@@ -153,5 +153,75 @@ namespace FAForever.MapEditor.Project.Tests
             }
             CollectionAssert.AreEqual(new[] { "masks", "props", "walk", "network" }, results.Stale(session.Document).Select(state => state.Generator.Id).ToArray(), "out of date in that order");
         }
+
+        /// <summary>
+        /// A generator whose result holds a buffer of a given size.
+        /// </summary>
+        private sealed class Sized(string id, long bytes) : IGenerator
+        {
+            public string Id => id;
+
+            public string Title => id;
+
+            public string Story => "F-7";
+
+            public IReadOnlyList<GeneratedInput> Inputs { get; } = [GeneratedInput.Water];
+
+            public object Generate(MapDocument document) => new object();
+
+            public IEnumerable<(object Buffer, long Bytes)> MemoryOf(object value) => [(value, bytes)];
+        }
+
+        private static MapDocument WithWater(float elevation) => original with { Water = original.Water with { Elevation = elevation } };
+
+        [TestMethod]
+        public void RecallsTheResultRememberedForTheVersionGoneBackTo()
+        {
+            GeneratedResults results = new GeneratedResults();
+            HighGround generator = new HighGround();
+            results.Register(generator);
+            GeneratedResult first = results.Generate("high-ground", WithWater(1));
+            GeneratedResult second = results.Generate("high-ground", WithWater(2));
+
+            Assert.AreEqual(0, results.Recall(WithWater(2)).Count, "the last result is current");
+            CollectionAssert.AreEqual(new[] { generator }, results.Recall(WithWater(1)).ToArray());
+            Assert.AreSame(first, results.ResultOf("high-ground"));
+            Assert.AreEqual(0, results.Recall(WithWater(5)).Count, "none was made for that version");
+            Assert.AreSame(first, results.ResultOf("high-ground"));
+            results.Recall(WithWater(2));
+            Assert.AreSame(second, results.ResultOf("high-ground"));
+            Assert.AreEqual(2, generator.Runs, "nothing generated again");
+
+            for (int i = 0; i < GeneratedResults.RecentPerGenerator + 2; i++)
+            {
+                results.Generate("high-ground", WithWater(10 + i));
+            }
+            Assert.AreEqual(GeneratedResults.RecentPerGenerator, results.RecentOf("high-ground").Count);
+            Assert.AreEqual(0, results.Recall(WithWater(1)).Count, "the oldest are forgotten");
+
+            results.Forget();
+            Assert.AreEqual(0, results.RecentOf("high-ground").Count);
+        }
+
+        [TestMethod]
+        public void KeepsTheRememberedResultsWithinTheirBudget()
+        {
+            GeneratedResults results = new GeneratedResults { RecentBudget = 250 };
+            Sized big = new Sized("big", 100);
+            Sized small = new Sized("small", 10);
+            results.Register(big);
+            results.Register(small);
+
+            results.Generate("big", WithWater(1));
+            results.Generate("small", WithWater(1));
+            results.Generate("big", WithWater(2));
+            Assert.AreEqual(210, results.MemoryOfRecent());
+            results.Generate("big", WithWater(3));
+
+            Assert.AreEqual(2, results.RecentOf("big").Count, "the one remembered first went");
+            Assert.AreEqual(1, results.RecentOf("small").Count);
+            Assert.IsTrue(results.MemoryOfRecent() <= 250);
+            Assert.AreEqual(0, results.Recall(WithWater(1)).Count(generator => generator == big));
+        }
     }
 }
