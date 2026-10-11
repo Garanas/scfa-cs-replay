@@ -168,5 +168,72 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// The points as <c>[x, z, height]</c>.
         /// </summary>
         public required IReadOnlyList<float[]> Points { get; init; }
+
+        /// <summary>
+        /// The points that override the curve's values or are sharp, by index (format 9); absent
+        /// when none does.
+        /// </summary>
+        public IReadOnlyList<CurveNodeDto>? Nodes { get; init; }
+
+        /// <summary>
+        /// The right falloff; absent: the same as <see cref="Falloff"/>.
+        /// </summary>
+        public float? FalloffRight { get; init; }
+
+        /// <summary>
+        /// The fade's shape; absent: the profile's.
+        /// </summary>
+        public CurveFalloffShape? FalloffShape { get; init; }
+
+        public int? TerraceSteps { get; init; }
+
+        public float? CliffFace { get; init; }
+
+        public CurveRoadMode? RoadMode { get; init; }
+
+        public float? Camber { get; init; }
+
+        public float? NoiseAmplitude { get; init; }
+
+        public float? NoiseScale { get; init; }
+
+        public int? NoiseSeed { get; init; }
+
+        /// <summary>
+        /// The height variation along the curve as <c>[min, max]</c>.
+        /// </summary>
+        public float[]? HeightVariation { get; init; }
+
+        /// <summary>
+        /// The width variation along the curve as <c>[min, max]</c>.
+        /// </summary>
+        public float[]? WidthVariation { get; init; }
+
+        public float? VariationScale { get; init; }
+
+        /// <summary>
+        /// Written for every closed curve (format 9): true when it shapes its line only, false when it
+        /// fills its inside. A closed curve without it (written before format 9) is read as line
+        /// only, so it keeps its look.
+        /// </summary>
+        public bool? LineOnly { get; init; }
+    }
+
+    /// <summary>
+    /// One point's own values (<see cref="CurvePoint"/>): absent ones are the curve's.
+    /// </summary>
+    public sealed record CurveNodeDto
+    {
+        public required int Index { get; init; }
+
+        public float? Width { get; init; }
+
+        public float? FalloffLeft { get; init; }
+
+        public float? FalloffRight { get; init; }
+
+        public float? Strength { get; init; }
+
+        public bool? Sharp { get; init; }
     }
 }

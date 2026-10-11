@@ -208,7 +208,8 @@ public sealed partial class CurveTool(MainViewModel model) : ObservableObject, I
         model.RunWithAsync("terrain.setCurve", new JsonObject
         {
             ["layer"] = layer,
-            ["points"] = new JsonArray([.. points.Select(point => (JsonNode)new JsonArray(point.X, point.Z, point.Height))]),
+            // a point with values of its own keeps them
+            ["points"] = new JsonArray([.. points.Select(Commands.CurvePointArgument.ToJson)]),
         });
 
     /// <summary>
