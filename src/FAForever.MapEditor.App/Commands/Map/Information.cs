@@ -16,7 +16,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// <param name="Type"><c>skirmish</c> or <c>campaign_coop</c>.</param>
 /// <param name="Preview">The path of a preview image the scenario names.</param>
 /// <param name="NoRushRadius">In game units.</param>
-/// <param name="ReclaimMass">The mass in the props, as the scenario says it.</param>
+/// <remarks>The reclaim the scenario names is not typed: the export writes the props' totals (its step <c>reclaim</c>).</remarks>
 [EditorCommand("map.information", "Information...", Story = "M-1", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record EditMapInformation(
     string? Name = null,
@@ -26,9 +26,7 @@ public sealed record EditMapInformation(
     string? Type = null,
     string? Preview = null,
     double? NoRushRadius = null,
-    bool? AdaptiveMap = null,
-    double? ReclaimMass = null,
-    double? ReclaimEnergy = null) : IRequest
+    bool? AdaptiveMap = null) : IRequest
 {
     /// <summary>
     /// The arguments given, by name, for the step's merge key and description.
@@ -38,7 +36,7 @@ public sealed record EditMapInformation(
         new (string Name, object? Value)[]
         {
             ("name", Name), ("description", Description), ("author", Author), ("version", Version), ("type", Type), ("preview", Preview),
-            ("no-rush radius", NoRushRadius), ("adaptive", AdaptiveMap), ("reclaim mass", ReclaimMass), ("reclaim energy", ReclaimEnergy),
+            ("no-rush radius", NoRushRadius), ("adaptive", AdaptiveMap),
         }.Where(argument => argument.Value is not null).Select(argument => argument.Name);
 }
 
@@ -71,9 +69,6 @@ public sealed class EditMapInformationHandler(MainViewModel model) : IRequestHan
         model.EditMap($"Map {string.Join(", ", given)}", document =>
         {
             ScenarioInfo scenario = document.Scenario;
-            Reclaim? reclaim = request.ReclaimMass is null && request.ReclaimEnergy is null
-                ? scenario.Reclaim
-                : new Reclaim { Mass = request.ReclaimMass ?? scenario.Reclaim?.Mass ?? 0, Energy = request.ReclaimEnergy ?? scenario.Reclaim?.Energy ?? 0 };
             return document with
             {
                 Version = request.Version is int version ? version > 0 ? version : null : document.Version,
@@ -86,7 +81,6 @@ public sealed class EditMapInformationHandler(MainViewModel model) : IRequestHan
                     PreviewPath = request.Preview ?? scenario.PreviewPath,
                     NoRushRadius = request.NoRushRadius ?? scenario.NoRushRadius,
                     AdaptiveMap = request.AdaptiveMap ?? scenario.AdaptiveMap,
-                    Reclaim = reclaim,
                 },
             };
         }, $"map.information:{string.Join(",", given)}");

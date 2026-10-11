@@ -166,9 +166,9 @@ reads again when it changes; and nothing that generates runs by itself.
 ## M: The map
 
 - [x] **M-1 Map information.** Name, description, author, version, type (skirmish, campaign),
-      preview image, no-rush radius, adaptive map, reclaim: the Map panel's fields
-      (`map.information`), one step of undo per field; the inspector shows the size, armies and
-      the `.scmap`'s preview.
+      preview image, no-rush radius, adaptive map: the Map panel's fields (`map.information`), one
+      step of undo per field, and the reclaim the export writes, read only; the inspector shows
+      the size, armies and the `.scmap`'s preview.
 - [x] **M-2 New map.** Size, starting height, water, biome or template; from scratch. Today:
       File, New map (`file.new`): one of the game's sizes, the height, water and its elevation,
       the strata of one of six biomes, spawns and the playable area; templates in the workspace's
@@ -407,7 +407,8 @@ reads again when it changes; and nothing that generates runs by itself.
       Mirror, on by default). Kept as `prop-rules.json`; exported as ordinary props.
 - [x] **P-5 Reclaim.** The mass and energy of the props, for the map and per area. Today: the
       Props panel's Reclaim (the map, per area), the selected props' in the inspector, from the
-      blueprints' values (`props.reclaim`).
+      blueprints' values (`props.reclaim`); the export writes the props' totals into the scenario
+      for the lobby (its step `reclaim`; units and wrecks not counted).
 
 ## D: Decals
 

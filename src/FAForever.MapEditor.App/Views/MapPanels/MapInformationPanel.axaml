@@ -9,6 +9,9 @@
     <StackPanel Classes="stack">
       <TextBlock Classes="overline" Text="{Binding Source=Information, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
       <controls:SettingList DataContext="{Binding MapInformation.Settings}" ShowsTitle="False" />
+      <TextBlock Classes="caption" Text="{Binding MapInformation.ReclaimAtExport}"
+                 AutomationProperties.Name="Reclaim written at export"
+                 ToolTip.Tip="The lobby's reclaim: the export adds up the props' reclaim (units and wrecks are not counted)" />
     </StackPanel>
   </Border>
 </UserControl>

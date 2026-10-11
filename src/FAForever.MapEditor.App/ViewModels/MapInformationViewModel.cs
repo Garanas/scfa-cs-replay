@@ -3,14 +3,16 @@ using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
 /// What players see of the map (user story M-1): its name, description, author, version, type,
-/// preview, no-rush radius, whether it adapts to the number of players, and its reclaim; each
-/// field changes the map through <c>map.information</c>, one step of undo per field. The
-/// inspector shows its size, players and the preview the <c>.scmap</c> starts with.
+/// preview, no-rush radius and whether it adapts to the number of players; each field changes the
+/// map through <c>map.information</c>, one step of undo per field. The reclaim the lobby shows is
+/// read only (<see cref="ReclaimAtExport"/>): the export writes the props' totals. The inspector
+/// shows its size, players and the preview the <c>.scmap</c> starts with.
 /// </summary>
 public sealed partial class MapInformationViewModel : ObservableObject
 {
@@ -43,15 +45,25 @@ public sealed partial class MapInformationViewModel : ObservableObject
             {
                 Help = "The map adapts its resources to the number of players and the lobby's options",
             },
-            new NumberSetting("Reclaim: mass", command, "reclaimMass", d => d.Scenario.Reclaim?.Mass ?? 0, run)
-            {
-                Help = "The mass in the map's props, as the lobby shows it",
-            },
-            new NumberSetting("Reclaim: energy", command, "reclaimEnergy", d => d.Scenario.Reclaim?.Energy ?? 0, run),
         ]);
     }
 
     public SettingGroup Settings { get; }
+
+    /// <summary>
+    /// The reclaim the export writes into the scenario for the lobby, from the props: e.g.
+    /// <c>Reclaim: 52,400 mass · 410,000 energy, written at export</c>; empty without a map.
+    /// </summary>
+    [ObservableProperty]
+    public partial string ReclaimAtExport { get; private set; } = "";
+
+    /// <summary>
+    /// Shows the props' reclaim as the export will write it; null without a map.
+    /// </summary>
+    public void ShowReclaim(ReclaimTotal? total) =>
+        ReclaimAtExport = total is null ? "" : total.Props == 0
+            ? "Reclaim: none, the map has no props"
+            : string.Create(CultureInfo.InvariantCulture, $"Reclaim: {Math.Round(total.Mass):#,0} mass · {Math.Round(total.Energy):#,0} energy, written at export");
 
     /// <summary>
     /// E.g. <c>20 km, 1024 by 1024 ogrids</c>; empty without a map.

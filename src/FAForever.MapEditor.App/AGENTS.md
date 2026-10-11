@@ -1067,6 +1067,13 @@ every other part).
   (waiting, running, done or not needed with a note, failed with why; a failed step stops the
   export), `state.procedural.export`. The file the export writes names the editor (the library's
   `EditorStamp`).
+- **Reclaim** (P-5, M-1; `MainViewModel.ReclaimExport.cs`): the step `reclaim` at `GameFilesOrder`
+  sets `ScenarioInfo.Reclaim` (the totals the lobby shows) in the version the export writes from
+  the props only (the library's `PropReclaim.IntoScenario`, rounded; none without props), the owner's
+  decision: units and wrecks are not counted. Its note says the totals and names the first three
+  blueprints the workspace does not know, which count as 0 (`ReclaimNote`; logged as a warning).
+  Without converted assets it is not needed and the map's own totals stay. An imported map's
+  reclaim stays in the project and is written over by the next export.
 - **Textures as DDS** (M-10, wave 10E; `MainViewModel.DdsTextures.cs`): the step `ddsTextures` at
   `TexturesOrder` 600, after every step that may add a texture, runs the library's `TextureExport`
   on the version the export writes (performance span `model.dds-textures`), with its shared cache;
@@ -1539,7 +1546,8 @@ follow the terrain, and the reclaim. The maths is the library's (`PropOrientatio
 - **Panel**: Placing, Palette (thumbnail, weight, cross; Add a prop, Clear, `props.clearPalette`, and Restore), Palettes (presets of kind
   `props`: the props with weights, the paint brush, the Placing settings), Rules (P-4,
   planned), Reclaim (map and per area, counted again only when the props, areas or catalogue
-  change; span `model.props-reclaim`). The inspector's `PropSelection` adds pitch, roll, scale,
+  change; span `model.props-reclaim`; the export writes the map's totals into the scenario, section
+  "The Procedural mode", Reclaim). The inspector's `PropSelection` adds pitch, roll, scale,
   the selection's reclaim and the buttons of the commands above.
 - Automation: `state.props` (the place tool's prop, Placing, palette, paint and erase settings,
   reclaim with areas).
@@ -1687,7 +1695,9 @@ mode panel's and inspector's templates only name it).
   the person touches (focus or pointer over it) gives its value: a slider coerces its value by
   itself when its range arrives after the value, which once rewrote every area to 1 by 1.
 - **Commands**: `map.information {name?, description?, author?, version?, type?, preview?,
-  noRushRadius?, adaptiveMap?, reclaimMass?, reclaimEnergy?}` (without arguments: the Map panel),
+  noRushRadius?, adaptiveMap?}` (without arguments: the Map panel; the reclaim is not typed: a
+  read-only line under the fields, `MapInformationViewModel.ReclaimAtExport`, `state.mapPanels`'s
+  `information.reclaimAtExport`, says what the export step `reclaim` writes),
   `map.addArea {name?, x0?, z0?, x1?, z1?}` (selects it and chooses the areas tool),
   `map.setArea {name, rename?, x0?, ...}`, `map.removeArea {name}`; `file.openScript` (the
   project's `script.lua` in the system's application for `.lua`, written with a skirmish map's

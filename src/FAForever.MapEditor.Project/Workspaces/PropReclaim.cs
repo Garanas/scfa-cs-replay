@@ -54,6 +54,26 @@ namespace FAForever.MapEditor.Project.Workspaces
         }
 
         /// <summary>
+        /// The blueprints of props the catalogue has no prop for (they count as 0), each once, sorted.
+        /// </summary>
+        public static IReadOnlyList<string> UnknownBlueprints(IEnumerable<Prop> props, AssetCatalog catalog) =>
+            [.. props.Select(prop => prop.Blueprint).Distinct(StringComparer.Ordinal)
+                .Where(blueprint => catalog.Find(blueprint) is not { Kind: AssetKind.Prop })
+                .Order(StringComparer.Ordinal)];
+
+        /// <summary>
+        /// The map with its scenario's reclaim (<c>ScenarioInfo.Reclaim</c>, the totals the lobby shows)
+        /// set from its props, as the export writes it: the props' totals rounded to whole numbers, or
+        /// none on a map without props. Units and wrecks are not counted.
+        /// </summary>
+        public static MapDocument IntoScenario(MapDocument document, AssetCatalog catalog, out ReclaimTotal total)
+        {
+            total = Of(document.Props, catalog);
+            Reclaim? reclaim = total.Props == 0 ? null : new Reclaim { Mass = Math.Round(total.Mass), Energy = Math.Round(total.Energy) };
+            return document with { Scenario = document.Scenario with { Reclaim = reclaim } };
+        }
+
+        /// <summary>
         /// The reclaim of the props in each of the map's areas, in the order of the areas.
         /// </summary>
         public static IReadOnlyList<AreaReclaim> PerArea(MapDocument document, AssetCatalog catalog) =>
