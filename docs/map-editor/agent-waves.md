@@ -29,6 +29,9 @@ every inspector section was planned. At the end, all 66 stories are done.
 | 13 | 3 | The refinements: who owns the inspector and Units, Procedural derived and automatic, civilian presets and smaller changes | 608 / 556 |
 | 14 | 3 | The Map, Markers and Plugins modes as lists, Clear, blank markers | 636 / 559 |
 | 16 | 3 | Fixing the fourth walkthrough (wave 15) and Linux | 666 / 579 |
+| 19 | 3 | Units: placing many at once, palettes, preset instances | 722 / 650 |
+| 20 | 3 | Units: select by and stored selections, editing many, placement checks | 750 / 701 |
+| 22 | 3 | Fixing the units walkthrough (wave 21 was the walkthrough) and automation of drags, popups and the theme | 768 / 710 |
 
 ## How a wave ran
 
@@ -373,6 +376,50 @@ variation along a curve as ranges. Height per node mattered most, for ramps.
   `AssetConverter.FormatVersion` to 5: no agent's test editor got past the update page until the main
   session converted them (`faf-map workspace convert D:/wt/scratch-5c/wsconv`, 32 s). Check the
   assets' format when setting up a wave.
+
+## Waves 19 to 22: working with units
+
+The owner asked how the editor works with units and what would make building a base quicker. The
+analysis and a mock of the Units mode are the artifact "Units Mode Enriched" (memory note
+`units-enrichment-plan`; a copy for agents in `D:\wt\ref\units-plan.html`), which became stories U-7
+to U-12. Decisions: a placed preset's instance is its group; plain digits pick a palette slot in the
+Place tool and recall a stored selection in the Select tool, Alt and a digit store one; the link to a
+preset never changes the map (no update from the preset); scatter is a brush of the Place tool; the
+game's own build templates (`Game.prefs`) are not imported. The waves ran beside the curve waves of
+another session, so they were numbered 19 and on, and were merged on a branch of their own
+(`merge/wave19` ...) and tested there before `feature/map-editor` moved.
+
+- **Wave 19**: 19A the Place tool's Single, Line, Rectangle, Ring and Scatter (`UnitLayouts`,
+  `AddUnits`, `units.addMany`); 19B palettes of ten slots, keys 1 to 0 and Tab, twenty example
+  palettes, the units placed last; 19C preset instances (the fingerprint of a preset's content, badges
+  and counts, select, save back, detach; an optional field, so no new project format). All three were
+  cut off by the usage limit; 19A was resumed, 19B and 19C were restarted on Sonnet from what was on
+  disk.
+- **Wave 20**: 20A `select.where` and its popover, stored selections kept per project in the user's
+  settings, picking a structure inside its footprint, army colours in the top view, `mouse clicks=`
+  (it found that a double click on a selected unit took the move handle); 20B Group and Ungroup, the
+  group as a choice, Replace, faction chips, Distribute, moves that keep the build grid; 20C the
+  `units-overlap` and `units-ground` checks and the red preview (asset format 6).
+- **Wave 21**, the walkthrough: 20 issues, 4 major. Lines and rectangles spaced structures by the
+  footprint while the check uses the skirt, so a rectangle of power generators overlapped itself; a
+  blueprint without a footprint had its skirt half an ogrid off (121 warnings on Liberation, a map
+  of 1,400 units); the slope check read a field only aircraft carry; the Place tool's Group said
+  `INITIAL` while a click went into the group chosen in the tree.
+- **Wave 22**: 22A structures spaced by the skirt, the engine's footprint default (the hitbox rounded
+  up, faf-re `REntityBlueprint::OnInitBlueprint`) and its flatness rule (`OCCUPY_CheckAreaFlatness`,
+  `Physics.MaxGroundVariation`, default 1; asset format 7): Liberation's overlaps went from 121 to 5,
+  all real (units placed twice, a lab 0.03 off the grid); 22B the palettes', instances' and stored
+  selections' issues, a double click selecting a unit's group (Alt: its army), filters and stars in the
+  presets list; 22C one source of truth for the Place tool's army and group, its row at 1280 by 800,
+  the default army (the spawn nearest the view), `drag` that refuses rather than hangs and
+  `data=preset:`, popups in `state.popups` and `ui`, `view.theme`.
+- **Merging**: every conflict was two waves adding to one place (the Units menu, the list of commands
+  in no menu in `CommandRegistryTest`, the stories' "Today:" lines, the Place tool's keys). One test
+  broke only on the merged tree: a drag test aimed at a preset that another branch's taller palette
+  had pushed below the panel. `RulesTest.ThePreviewBelongsToTheMasksModeAndLeavesOtherToolsTheirGrid`
+  failed once in a full run and passed alone and in the next full runs: it depends on test order.
+- **Not proven in the game**: the flatness rule follows faf-re's reconstruction, not a check in the
+  game; the 10 structures of Liberation it flags (1.04 to 1.52 against 1) are worth a look in the game.
 
 ## The agents' tooling
 

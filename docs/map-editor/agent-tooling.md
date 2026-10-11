@@ -134,6 +134,25 @@ commands that exist.
 | 72 | 15 | Popups in screenshots; combo items in `ui`; `checked` after the click; a flag per result made for the shown version; brush and rules fixtures in the sandbox | Partly: `checked`, `state.popups`, `madeForShown`, `auto.idle` (16A) |
 | 73 | 16C | `workspace scratch --assets-as-current` for containers; Avalonia's warnings in the editor's log | Open |
 
+## Waves 19 to 22
+
+| # | From | Wish | Status |
+|---|---|---|---|
+| 74 | 19C, 20A | A double click from automation | Built: `mouse clicks=1..3` (20A) |
+| 75 | 19C, 21 | A command that chooses a tree node by army and group, rather than its pixel | Open |
+| 76 | 19B, 21, 22C | `drag` carrying a units preset; `drag` without `data` hung the editor in the OS drag loop | Built: refused with a hint, `data=preset:<name>` (22C) |
+| 77 | 19B, 20B, 21 | Context menus and flyouts in `ui`, `state` and screenshots, and a click on their items | Built (22C); combo lists' items still missing |
+| 78 | 20C | The editor's unhandled exceptions in its log (a crash left an empty `editor-<port>.log`; the stack was only in Windows' event log); a headless test that renders through the real view (setting the status during render crashed only the real editor) | Open |
+| 79 | 20C, 22A | `dotnet build A B` builds nothing; `--convert-into` leaves its folder empty and the workspace's `assets` a real folder | Open |
+| 80 | 20C, 22A | Zoom the top view to a scale; a hint that `mouse` takes the view's coordinates | Open |
+| 81 | 20B | `picker choose=<key>`; a helper that puts a few units into a fresh sandbox in one call; the turn and scale handles in `handles.points` | Open |
+| 82 | 20A | Digits as key names (`D1`) in the guide; a crop or zoom of a screenshot; strict case in `UiTree.Find` for tests; a headless catalogue with real footprints | Partly: the guide names `D1` (22) |
+| 83 | 21 | Switch the theme at run time to look at the light theme | Built: `view.theme` (22C) |
+| 84 | 21 | A click on a Problems line selects its things | Built (22C) |
+| 85 | 22A | A command that runs the problem checks; a `mouse up` that opens a dialog blocks until it is answered | Open |
+| 86 | 22B | Reset the click count between `mouse` calls; a check that a control lies inside its scroll viewer's view | Open |
+| 87 | 22C | `click` on combo list items; the shelf's virtualised tiles by label; `state.units.place.armyChosen` | Open |
+
 ## Still open, by theme
 
 - **Camera and views**: a `camera` command (51), a screenshot framing a thing in 3D (46), the 3D
