@@ -94,6 +94,24 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task WithoutFafTheSetupTakesSteamsGameFolderAndAFullWorkspaceFolder()
+        {
+            Machine machine = NewMachine();
+            WorkspaceSetupViewModel setup = new WorkspaceSetupViewModel(new NoDialogs(), NullLogger.Instance, _ => { })
+            {
+                FindFaf = () => null,
+                FindGame = () => machine.Game,
+            };
+
+            await setup.StartAsync(machine.Settings);
+
+            Assert.AreEqual(machine.Game, setup.GameFolder, "Steam's library, also under Proton on Linux");
+            Assert.AreEqual("", setup.VaultFolder);
+            Assert.IsTrue(Path.IsPathRooted(setup.Folder), $"in Documents or the home folder, never relative: {setup.Folder}");
+            StringAssert.EndsWith(setup.Folder, "FAF Map Editor");
+        }
+
+        [TestMethod]
         public async Task StartsWithTheSetupFilledInFromFaf()
         {
             Machine machine = NewMachine();
