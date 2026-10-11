@@ -491,15 +491,23 @@ workspace, point `FAF_MAP_EDITOR_SETTINGS` at another settings file.
     read again when the catalog is (`assets.reload`). Props and units are instanced: their
     placements are made again only when the objects or the highlighted set change; per frame
     (only when the camera moved) the ones inside the view are sorted into runs of blueprint and
-    level by their distance to the eye, one draw a run (`3d.arrange-objects`). The game hides a
-    prop beyond its last cutoff; the editor keeps drawing its last level. Archsimkats Valley
-    (8304 props, 98 units): 5.2 million triangles at the first level, 65 000 to 160 000 with the
-    levels, about 1 ms a frame for the objects.
+    level, one draw a run (`3d.arrange-objects`). The level is chosen as the engine chooses it
+    (`Rendering/ObjectLods`, tested in `ObjectModelsTest`; the rules and their sources in faf-re are
+    in [the mesh library's guide](../FAForever.FileFormats.Mesh/AGENTS.md)): by the placement's
+    depth in the view (its position along the camera's line of sight, not its distance to the
+    eye), the first level whose cutoff reaches it, a cutoff of 0 or less at every depth, a level
+    without a cutoff up to 1000 ogrids. The game fades the last level out past its cutoff
+    (`ren_MeshDissolve`, its default unknown) and hides it beyond; the editor keeps drawing its
+    last level. Archsimkats Valley (8304 props, 98 units): 5.2 million triangles at the first
+    level, 65 000 to 160 000 with the levels, about 1 ms a frame for the objects
+    (`3d.arrange-objects` 0.5 ms on average when the camera moves).
   - Placement and shading: a prop's model is turned by its three axes (`RotationX/Y/Z` as the rows
     of its rotation, so it can lean) and scaled by `Scale` (zero counts as 1); a unit's by its
     `Orientation` (yaw, pitch, roll in radians). Both are lit by the map's sun as the terrain is,
     from both sides; the albedo's alpha is cut out at the shader's reference (`MeshPreview.ShaderOf`:
-    0x80 for the `...Alpha` shaders); UEF, Aeon and Cybran units are brightened (the game lights
+    0x80 for the `...Alpha` shaders; a blueprint without a shader is `Unit`, and the legacy names
+    are renamed as the engine does, `TMeshAlpha` to `NormalMappedAlpha`, `Simple` and `Team` to
+    `Unit`); UEF, Aeon and Cybran units are brightened (the game lights
     their metal with its environment), Seraphim units take their silver from the albedo's blue.
     There is no team colour, normal map or specular yet. A blueprint the workspace has no model
     of (or whose model cannot be read, logged once) is a box of one ogrid in the theme's
