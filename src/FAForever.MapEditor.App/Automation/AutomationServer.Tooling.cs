@@ -195,9 +195,26 @@ public sealed partial class AutomationServer
                 await LetInputSettleAsync();
                 break;
             case ListBox list:
-                list.SelectedIndex = IndexOf(list.Items.Cast<object?>().ToList(), value, label);
+            {
+                int index = IndexOf(list.Items.Cast<object?>().ToList(), value, label);
+                list.ScrollIntoView(index);
+                await LetInputSettleAsync();
+                if (list.ContainerFromIndex(index) is ListBoxItem item && item.IsEffectivelyVisible)
+                {
+                    // the item clicked as a person does (where no button or check box of it lies): what a click on it starts runs too
+                    (TopLevel top, Point at, _) = await AimAsync(item, label, PlainPointOf);
+                    WindowInput input = InputOf(top);
+                    input.Move(at);
+                    input.Down(at);
+                    input.Up(at);
+                }
+                else
+                {
+                    list.SelectedIndex = index;
+                }
                 await LetInputSettleAsync();
                 break;
+            }
             case TreeView tree:
             {
                 TreeViewItem item = tree.GetVisualDescendants().OfType<TreeViewItem>()
@@ -263,6 +280,34 @@ public sealed partial class AutomationServer
     /// Where <c>set</c> clicks a control: a check box's box (near its left end), else its centre.
     /// </summary>
     private static Point ClickPoint(Control control) => new Point(Math.Min(control.Bounds.Width / 2, 10), control.Bounds.Height / 2);
+
+    /// <summary>
+    /// A point of a list's item where a click chooses the item: one of a few along its middle where
+    /// the mouse reaches no control of its own (a layer's check boxes, a button); its centre else.
+    /// </summary>
+    private static Point PlainPointOf(Control item)
+    {
+        TopLevel? top = TopLevel.GetTopLevel(item);
+        foreach (double share in new[] { 0.5, 0.7, 0.3, 0.9, 0.1 })
+        {
+            Point local = new Point(item.Bounds.Width * share, item.Bounds.Height / 2);
+            if (top is null || item.TranslatePoint(local, top) is not Point point)
+            {
+                break;
+            }
+            Visual? hit = top.InputHitTest(point) as Visual;
+            bool plain = hit is not null && (hit == item || item.IsVisualAncestorOf(hit));
+            for (Visual? each = hit; plain && each is not null && each != item; each = each.GetVisualParent())
+            {
+                plain = each is not (Button or ToggleButton or TextBox or ComboBox or RangeBase);
+            }
+            if (plain)
+            {
+                return local;
+            }
+        }
+        return new Point(item.Bounds.Width / 2, item.Bounds.Height / 2);
+    }
 
     private async Task ClickAsync(Control control)
     {

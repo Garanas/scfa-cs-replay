@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 
 namespace FAForever.MapEditor.App.Views;
 
@@ -12,6 +13,22 @@ public sealed partial class ModePanel : UserControl
         InitializeComponent();
         // a field of class "commit" gives its value when it loses the keyboard, and on Enter
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+        // an entry of the panel's lists chosen gives the inspector back to the mode
+        AddHandler(PointerPressedEvent, OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+    }
+
+    /// <summary>
+    /// A press on an item of a list or tree of the panel (a stratum, a height layer, a mask, a
+    /// group): the inspector shows the mode again, over a tile chosen on the shelf
+    /// (<see cref="ViewModels.MainViewModel.InspectTheMode"/>).
+    /// </summary>
+    private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_model is not null && e.Source is Avalonia.Visual source
+            && (source.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not null || source.FindAncestorOfType<TreeViewItem>(includeSelf: true) is not null))
+        {
+            _model.InspectTheMode();
+        }
     }
 
     private ViewModels.MainViewModel? _model;

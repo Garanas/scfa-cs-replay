@@ -14,6 +14,8 @@ public sealed class ChooseModeHandler(MainViewModel model) : IRequestHandler<Cho
     public Task Handle(ChooseMode request, CancellationToken cancellationToken)
     {
         model.SelectMode(request.Id);
+        // a mode chosen has the inspector, also over a tile chosen on the shelf
+        model.InspectTheMode();
         model.Status = $"{model.SelectedMode!.Definition.Title} mode: {model.ActiveTool?.Definition.Title ?? "no tool"}";
         return Task.CompletedTask;
     }

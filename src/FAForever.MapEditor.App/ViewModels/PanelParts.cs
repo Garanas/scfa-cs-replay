@@ -160,10 +160,20 @@ public sealed partial class PanelParts : ObservableObject
     }
 
     /// <summary>
+    /// Raised when a person chose an entry (its button in the panel), also the one chosen already:
+    /// the inspector then shows it (<see cref="MainViewModel.InspectTheMode"/>).
+    /// </summary>
+    public event EventHandler? Picked;
+
+    /// <summary>
     /// An entry's button in the panel.
     /// </summary>
     [RelayCommand]
-    private void ChooseItem(PanelPart part) => Choose(part.Id);
+    private void ChooseItem(PanelPart part)
+    {
+        Choose(part.Id);
+        Picked?.Invoke(this, EventArgs.Empty);
+    }
 }
 
 /// <summary>

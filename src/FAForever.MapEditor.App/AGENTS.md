@@ -2072,6 +2072,18 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   generated results listed, section "The Procedural mode") follow it; the Map
   panel's Information fields and the Props panel's Placing are
   still edited in the panel, for a later wave to move.
+- **Who has the inspector: what was chosen last** of three: a tile of the shelf (or the picker),
+  things on the map (in the modes of things: Map, Markers, Props, Decals, Units), and a part of the
+  mode. Choosing one unchooses the others, so the inspector never shows something older than the
+  person's last choice: a tile chosen clears the map's selection, a selection unchooses the tile, and
+  a part of the mode unchooses the tile (`MainViewModel.InspectTheMode`). A part of the mode is
+  chosen by a mode on the rail, its F-key or the Modes menu (`<mode>.mode`; a command that switches
+  to its own mode, `decals.choose`, is no such choice), an entry of a panel's list (`PanelParts.Picked`,
+  raised by its button also when it was chosen already; `view.inspectPart`), and an item of a list or
+  tree in the mode's panel (a stratum, a height layer, a mask, a group: `ModePanel`'s pointer press).
+  Choosing a tool is not one: a unit tile stays in the inspector while the person picks the place
+  tool. The tools keep what they took from a tile (the unit, prop or decal they place, the brush's
+  shape), so unchoosing it changes nothing on the map. Tests: `InspectorOwnerTest`.
 - **Lists of parts** (`PanelParts`, `PanelPart`): a mode panel's list of entries under headings,
   one always chosen (the first until another is); `Controls/PanelPartList` draws it in the panel
   (`Button.partentry`, filled while chosen, the detail at the right), `Views/MapPanels/PanelPartView`
