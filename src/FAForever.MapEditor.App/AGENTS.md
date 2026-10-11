@@ -747,7 +747,8 @@ User stories S-4, L-1 and V-3. What the views draw follows the map's settings as
 - **The sky's lower half**: the game shows a cube map's upper half (below the horizon lie the map
   and its skirt), so `SkyFragment` draws below the horizon the horizon's colour fading within a few
   degrees into a haze of the sky low above it; the default cube map's photo landscape never wraps
-  the map. Uncompressed DDS cube maps are decoded by their own masks (`CubeMaps.Uncompressed`):
+  the map. A cube map of the map's own files (one generated from the map, whose lower half is the
+  map itself) shows whole (`uWhole`), so a planet across its horizon is not cut off. Uncompressed DDS cube maps are decoded by their own masks (`CubeMaps.Uncompressed`):
   ImageMagick mixes the faces with their smaller levels when the pixel format has no alpha
   (`skycube_desert01`). A workspace converted before keeps the broken strip until its assets are
   converted again (`faf-map workspace convert`).
@@ -1268,9 +1269,41 @@ User stories D-1 and D-2, the Decals mode (F8); the edits are the library's `Dec
 - **Decal-masks layers**: the add choice `LayerStackViewModel.DecalMasksChoice` in the heightmap's
   stack (`terrain.addLayer kind=decals {mask?, height?}`, then `terrain.setDecalMasks {layer?, mask?,
   sets?, height?}`, the inspector's Decal masks fields) and in every stack of coverage (`layers.add
-  source=decals {target, mask?}`, `layers.setDecalMasks {target?, layer?, mask?, sets?}`; no inspector
-  fields yet). The session reads the masks through `model.DecalPictures` (`GameMaskPictures`).
+  source=decals {target, mask?}`, `layers.setDecalMasks {target?, layer?, mask?, sets?}`, the
+  inspector's Decal masks fields under the stack). The session reads the masks through `model.DecalPictures` (`GameMaskPictures`).
 - Tests: `WideDecalsAndSetsTest`, `WideDecalsWindowTest`.
+
+### A map maker's own decals (wave 12B)
+
+- **The map's own files on the shelf and in the picker**: `AssetsViewModel.MapEntries` are the
+  decals among the open map's files (the library's `MapOwnAssets`: pictures in a `decals` folder,
+  and pictures a decal names), listed again when the files change, in the group `this map` and from
+  the source `Map`, whose chip reads This map; they belong to the map's biomes (Narrow). Their keys
+  are game paths with the file's own extension (`maps/<folder>/env/decals/rock01_albedo.png`).
+  `AssetsViewModel.Find` and `AllEntries` cover both, and every place that resolves a decal's key
+  uses them (the place tool, `decals.place`, drops, stars, the picker). The tiles read pictures from
+  files, so `MapOwnPictures` writes each file's bytes once into the temporary folder
+  (`faf-map-editor/map-files/<process>`): a PNG as it is, any other picture made small on the pool
+  (span `assets.map-picture`), after which the list is made again.
+- **Sets in the picker**: for decals the picker shows a set's tile first (the albedo's picture,
+  `set of 4`) and its textures after it; choosing the set's tile answers the set's name, which
+  `PickAssetHandler.PickAsync` turns into the shelf showing the whole set (`AssetsViewModel.SelectSet`)
+  and the status `Chose the decal set rock01 (...)`.
+- **Add files to the map** (`map.addFiles {files?, folder?}`, the Map menu and the shelf's button
+  while it shows decals): copies files into the map's own files, one step of undo; pictures go to
+  `env/decals` unless `folder` says otherwise, anything else to the map's folder. The dialog takes
+  several files (`IEditorDialogs.PickFilesAsync`). The argument is `files`: `paths` is automation's.
+- **A decal-masks layer's fields** in a stratum's, mask's and water map's stack:
+  `CoverageStackViewModel.DecalMasks` (Mask: `main` and the names the placed sets have; Decal sets:
+  Every set and each placed set by its short name), shown under the stack while such a layer is
+  chosen; `layers.setDecalMasks` and `terrain.setDecalMasks` take a placed set's short name and
+  `Every set`.
+- **On the map only**: a click of the place tool beside the map places nothing (the status says
+  why) and a drag keeps the decal's middle on the map; `decals.place` refuses a place outside it.
+- **Map-wide files**: a file chosen for a slot (or the albedo's specular) outside the project is
+  copied into the map's own files as `env/decals/map_albedo.png` (`map_specular`, `map_normals`,
+  `map_lighting`, as Kaali names them; `MapWideFiles.Keep`), in the same step; the slot names the copy.
+- Tests: `MapOwnDecalsShelfTest` (the shelf, the picker, adding files, the fields, the window).
 
 ## Units and armies
 

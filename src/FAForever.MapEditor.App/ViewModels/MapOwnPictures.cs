@@ -21,6 +21,12 @@ public sealed class MapOwnPictures
     /// </summary>
     private const int Largest = 256;
 
+    /// <summary>
+    /// The largest file made into a picture: a map-wide decal of 8192 pixels (90 MB as DDS) would take
+    /// hundreds of megabytes to decode, so its tile shows the kind's icon.
+    /// </summary>
+    private const int LargestFile = 24 * 1024 * 1024;
+
     private readonly string _folder;
     private readonly ILogger _log;
     private readonly Dictionary<string, (ImmutableArray<byte> Bytes, string? Png)> _known = new Dictionary<string, (ImmutableArray<byte>, string?)>(StringComparer.Ordinal);
@@ -88,6 +94,10 @@ public sealed class MapOwnPictures
             }
         }
         _known[path] = (bytes, null);
+        if (content.Length > LargestFile)
+        {
+            return null;
+        }
         SynchronizationContext? asked = SynchronizationContext.Current;
         Pending++;
         _ = Task.Run(() =>
