@@ -1,5 +1,6 @@
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.Project
 {
@@ -143,7 +144,7 @@ namespace FAForever.MapEditor.Project
             {
                 document = MapWideDecalsExport.Apply(document, file =>
                 {
-                    string path = Path.IsPathRooted(file) || ProjectFolder is null ? file : Path.Combine(ProjectFolder, file);
+                    string path = Path.IsPathRooted(file) || ProjectFolder is null ? file : FilePaths.InFolder(ProjectFolder, file);
                     return File.Exists(path) ? File.ReadAllBytes(path) : null;
                 }, out _);
             }

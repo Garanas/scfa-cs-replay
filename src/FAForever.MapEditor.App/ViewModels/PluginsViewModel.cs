@@ -210,7 +210,7 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
     }
 
     private static bool IsPluginFolder(string folder) =>
-        File.Exists(Path.Combine(folder, PluginManifest.Script)) && !Path.GetFileName(folder).StartsWith('.');
+        FilePaths.FindFile(folder, PluginManifest.Script) is not null && !Path.GetFileName(folder).StartsWith('.');
 
     /// <summary>
     /// Runs the plugin's script, which registers its commands, checks, fields and handlers; then
@@ -245,7 +245,7 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
         string script;
         try
         {
-            script = File.ReadAllText(Path.Combine(plugin.Folder, PluginManifest.Script));
+            script = File.ReadAllText(FilePaths.Existing(Path.Combine(plugin.Folder, PluginManifest.Script)));
         }
         catch (IOException exception)
         {

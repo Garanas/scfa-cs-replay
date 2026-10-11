@@ -17,7 +17,7 @@ namespace FAForever.MapEditor.Project.Tests
         public static void Cleanup() => ProjectFolders.Clean();
 
         /// <summary>Vault maps with wrecks in an extra army and the default script (read only).</summary>
-        private const string Vault = "D:/faf-vault/maps";
+        private static string Vault => ProjectFolders.VaultMaps;
 
         private static MapDocument WithUnits()
         {

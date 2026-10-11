@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Workspaces;
 using Lua;
 
 namespace FAForever.MapEditor.App.Plugins;
@@ -27,7 +28,7 @@ public sealed record PluginManifest(string Name, string Version, string Descript
     /// <exception cref="InvalidDataException">The manifest is no JSON of that shape.</exception>
     public static PluginManifest Read(string folder)
     {
-        string path = Path.Combine(folder, File);
+        string path = FilePaths.Existing(Path.Combine(folder, File));
         string name = Path.GetFileName(folder);
         if (!System.IO.File.Exists(path))
         {

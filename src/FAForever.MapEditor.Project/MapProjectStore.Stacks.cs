@@ -3,6 +3,7 @@ using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Files.Serialized;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.Project
 {
@@ -36,7 +37,7 @@ namespace FAForever.MapEditor.Project
         /// on another computer.
         /// </summary>
         private static bool ReadsOwnImage(string folder, Layer layer) =>
-            layer.Source is ImageSource { Path: string path } && !Path.IsPathRooted(path) && File.Exists(Path.Combine(folder, path));
+            layer.Source is ImageSource { Path: string path } && !Path.IsPathRooted(path) && File.Exists(FilePaths.InFolder(folder, path));
 
         /// <summary>
         /// Writes the heightmap's stack and removes the files of a project of format 5 or older.
@@ -400,7 +401,7 @@ namespace FAForever.MapEditor.Project
             {
                 // an image layer is read from its file when it is there (another tool may have changed it
                 // while the editor was closed); the layer's own PNG holds what it read last
-                string? image = layer.Path is string path ? Path.GetFullPath(Path.Combine(folder, path)) : null;
+                string? image = layer.Path is string path ? FilePaths.InFolder(folder, path) : null;
                 bool fromImage = image is not null && File.Exists(image);
                 bool copied = File.Exists(Path.Combine(folder, valuesFile));
                 // an image of the project keeps no copy (ReadsOwnImage): when it is gone, a layer that
@@ -422,7 +423,7 @@ namespace FAForever.MapEditor.Project
             string alphaFile = Path.Combine(folder, coverageFile);
             // an image layer reads its file when it is there (the tool that writes it may have changed it
             // while the editor was closed); its copy in the stack's folder holds what it read last
-            string? source = layer.Path is string imagePath ? Path.GetFullPath(Path.Combine(folder, imagePath)) : null;
+            string? source = layer.Path is string imagePath ? FilePaths.InFolder(folder, imagePath) : null;
             TiledBuffer<byte> read = source is not null && File.Exists(source)
                 ? TiledBuffer<byte>.FromArray(grid.Width, grid.Height, CoverageLayerEdits.ReadImage(document, target, source))
                 : ReadGray8(Path.Combine(folder, valuesFile), grid.Width, grid.Height);

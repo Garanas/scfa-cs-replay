@@ -18,5 +18,6 @@ public static class EffectProps
     /// <summary>
     /// Whether a mesh's file is the game's marker, which effects stand on: <c>marker01_lod0.glb</c>.
     /// </summary>
-    public static bool IsEffectMesh(string file) => Path.GetFileName(file).StartsWith("marker", StringComparison.OrdinalIgnoreCase);
+    /// <remarks>Either separator ends a folder, on every system.</remarks>
+    public static bool IsEffectMesh(string file) => file[(file.LastIndexOfAny(['/', '\\']) + 1)..].StartsWith("marker", StringComparison.OrdinalIgnoreCase);
 }

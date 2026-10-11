@@ -108,7 +108,7 @@ public sealed class Telemetry : ILoggerProvider
     /// </summary>
     public static string DefaultFolder => Environment.GetEnvironmentVariable(UserSettings.FileVariable) is { Length: > 0 } settings
         ? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settings))!, "telemetry")
-        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FAF Map Editor", "telemetry");
+        : Path.Combine(UserFolders.LocalData, "FAF Map Editor", "telemetry");
 
     public string? Folder { get; }
 
