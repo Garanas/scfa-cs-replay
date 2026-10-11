@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -91,13 +92,54 @@ public sealed partial class AutomationServer
         {
             return null;
         }
-        if (!control.IsHitTestVisible && hit is Visual under && under.IsVisualAncestorOf(control))
+        if (hit is Visual under && under.IsVisualAncestorOf(control)
+            && (!control.IsHitTestVisible || ItemAround(control) is Control item && (item == under || item.IsVisualAncestorOf(under))))
         {
-            // a control the mouse passes through (a text): reached when nothing else lies over it
+            // a control the mouse passes through (a text, a tree item's header text): reached when
+            // nothing else lies over it, the item or button around it taking the click
             return null;
         }
         return hit is Visual other ? $"the mouse would reach {Describe(other)} there" : "the mouse would reach nothing there";
     }
+
+    /// <summary>
+    /// The popups open over the editor's windows (a combo box's list, a menu, the options row's More,
+    /// a context menu): screenshots do not show them, yet a click elsewhere first closes them. Null
+    /// when none is open (<c>key key=Escape</c> closes one).
+    /// </summary>
+    private JsonArray? PopupsState()
+    {
+        JsonArray open = [];
+        foreach (Window each in Windows)
+        {
+            foreach (Control control in each.GetVisualDescendants().OfType<Control>())
+            {
+                string? what = control switch
+                {
+                    ComboBox { IsDropDownOpen: true } box => $"the list of {Describe(box)}",
+                    MenuItem { IsSubMenuOpen: true } item => $"the menu {Describe(item)}",
+                    ToolRow { IsExpanded: true } row => $"More of {Describe(row)}",
+                    Avalonia.Controls.Primitives.Popup { IsOpen: true } popup when popup.TemplatedParent is not (ComboBox or MenuItem) => $"a popup in {Describe(popup.Parent as Visual ?? popup)}",
+                    _ => null,
+                };
+                if (what is not null)
+                {
+                    open.Add(what);
+                }
+            }
+            if (each.ContextMenu is { IsOpen: true })
+            {
+                open.Add("a context menu");
+            }
+        }
+        return open.Count == 0 ? null : open;
+    }
+
+    /// <summary>
+    /// The item of a tree or list, or the button, a control lies in: what a click on it reaches.
+    /// </summary>
+    private static Control? ItemAround(Control control) =>
+        control.GetVisualAncestors().OfType<Control>().FirstOrDefault(each => each is TreeViewItem or ListBoxItem or Button);
 
     /// <summary>
     /// A control as a reason names it: its type and label or name, and the control it lies in.

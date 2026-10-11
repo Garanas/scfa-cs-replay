@@ -666,6 +666,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["hover"] = model.Selection.Hovered?.ToString(),
             ["plugins"] = model.Plugins.Describe(),
             ["dialog"] = model.Question.Describe(),
+            ["popups"] = PopupsState(),
             ["overlays"] = OverlaysState(),
             ["paletteResults"] = PaletteState(),
             ["looks"] = LooksState(),
