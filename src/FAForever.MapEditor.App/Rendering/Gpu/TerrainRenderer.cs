@@ -227,7 +227,8 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         {
             using (Performance.Measure("3d.draw-sky"))
             {
-                DrawSky(viewProjection, skyCube);
+                // a cube map of the map's own (one generated from it) shows whole, the game's their upper half
+                DrawSky(viewProjection, skyCube, MapOwnAssets.InFolder(document.Sky.Cubemap) is not null);
             }
         }
 
@@ -354,7 +355,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// The sky's cube map behind everything (user story L-1): a rectangle over the whole view at the
     /// far plane, no depth written, each pixel the cube map in its direction.
     /// </summary>
-    private void DrawSky(Matrix4x4 viewProjection, uint cube)
+    private void DrawSky(Matrix4x4 viewProjection, uint cube, bool whole)
     {
         if (!Matrix4x4.Invert(viewProjection, out Matrix4x4 inverse))
         {
@@ -367,6 +368,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         program.Set("uInverseViewProjection", inverse);
         BindCube(CubeUnit, cube);
         program.Set("uSky", CubeUnit);
+        program.Set("uWhole", whole ? 1 : 0);
         _waterQuad.Draw();
         _gl.DepthMask(true);
     }

@@ -256,16 +256,19 @@ internal static class TerrainShaders
         """;
 
     /// <summary>
-    /// The sky's cube map in the direction of each pixel, its upper half only, as the game shows
-    /// it: below the horizon (where the game has the map and its skirt) the horizon's colour
-    /// fading within a few degrees into a haze of the sky low above the horizon, so the lower half
-    /// of a cube map (the default's photo landscape) never wraps the map.
+    /// The sky's cube map in the direction of each pixel. A cube map of the game shows its upper half
+    /// only, as the game shows it: below the horizon (where the game has the map and its skirt) the
+    /// horizon's colour fading within a few degrees into a haze of the sky low above the horizon, so
+    /// the lower half of a cube map (the default's photo landscape) never wraps the map. A cube map of
+    /// the map's own (<c>uWhole</c>: one generated from the map, whose lower half is the map itself)
+    /// shows whole, so what lies across its horizon (a planet low in the sky) is not cut off.
     /// </summary>
     public static string SkyFragment(bool es) => Header(es) + """
         in vec2 vNdc;
         out vec4 outColor;
         uniform mat4 uInverseViewProjection;
         uniform samplerCube uSky;
+        uniform int uWhole;
 
         void main()
         {
@@ -273,7 +276,7 @@ internal static class TerrainShaders
             vec4 far = uInverseViewProjection * vec4(vNdc, 1.0, 1.0);
             vec3 direction = normalize(far.xyz / far.w - near.xyz / near.w);
             vec3 sky;
-            if (direction.y >= 0.0)
+            if (direction.y >= 0.0 || uWhole == 1)
             {
                 sky = texture(uSky, direction).rgb;
             }

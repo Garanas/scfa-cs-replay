@@ -419,6 +419,11 @@ reads again when it changes; and nothing that generates runs by itself.
       Kaali's (`decals.setWide`, `decals.setShadow`, `decals.chooseWideFile`, `decals.generateNormal`,
       `decals.generateShadow`). Decal-masks layers draw the sets' masks into height, stratum, mask
       and water stacks and follow the decals (`terrain.addLayer kind=decals`, `layers.add source=decals`).
+      A map maker's own decals and sets: Add files to the map (`map.addFiles`, the shelf's button)
+      copies pictures into the map's `env/decals`; the shelf and the picker list them under the
+      source This map (a set one tile, chosen whole); a decal-masks layer chooses its mask and sets in
+      the inspector; a set's masks are never exported; a decal's middle lies on the map. Importing
+      a map takes Kaali's layout as the map-wide slots and an albedo with its set's normals as one set.
 - [x] **D-2 Decal groups.** Group decals, show and hide groups. Today: the Decals panel's groups,
       made from the selection, renamed, filled and emptied, selected, deleted; hidden groups are not
       drawn in 3D or picked (an editor setting, not saved).

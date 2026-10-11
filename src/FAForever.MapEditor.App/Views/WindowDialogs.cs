@@ -92,6 +92,18 @@ public sealed class WindowDialogs(Window window) : IEditorDialogs
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     }
 
+    public async Task<IReadOnlyList<string>> PickFilesAsync(string title, IReadOnlyList<string> extensions, string? startIn = null)
+    {
+        IReadOnlyList<IStorageFile> files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = true,
+            FileTypeFilter = [Filter(extensions)],
+            SuggestedStartLocation = await StartIn(startIn),
+        });
+        return [.. files.Select(file => file.TryGetLocalPath()).OfType<string>()];
+    }
+
     public async Task<string?> PickSaveFileAsync(string title, string suggestedName, IReadOnlyList<string> extensions, string? startIn = null)
     {
         IStorageFile? file = await window.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions

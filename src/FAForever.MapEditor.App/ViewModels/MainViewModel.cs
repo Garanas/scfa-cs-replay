@@ -46,6 +46,14 @@ public interface IEditorDialogs
     Task<string?> PickFileAsync(string title, IReadOnlyList<string> extensions, string? startIn = null) => Task.FromResult<string?>(null);
 
     /// <summary>
+    /// Files to open that the person picks, one or more; none when they cancel (user story D-1: a
+    /// decal set's pictures added to the map). Without a dialog of its own, the one file of
+    /// <see cref="PickFileAsync"/>.
+    /// </summary>
+    async Task<IReadOnlyList<string>> PickFilesAsync(string title, IReadOnlyList<string> extensions, string? startIn = null) =>
+        await PickFileAsync(title, extensions, startIn) is string file ? [file] : [];
+
+    /// <summary>
     /// A file to write that the person picks, or null when they cancel (user story T-3).
     /// </summary>
     /// <param name="suggestedName">The name the dialog starts with, e.g. <c>heightmap.png</c>.</param>

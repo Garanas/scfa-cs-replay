@@ -123,6 +123,10 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
+          <!-- a map maker's own decals and decal sets go into the map's files (D-1), listed then under This map -->
+          <Button Classes="chip" Content="Add files to the map..." IsVisible="{Binding IsDecals}"
+                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="map.addFiles"
+                  AutomationProperties.HelpText="Copies pictures into the map's own files (env/decals): your own decals and decal sets with their _mask files, then listed under This map" />
           <TextBlock Classes="overline section" Text="{Binding GroupsTitle, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
           <ItemsControl ItemsSource="{Binding Groups}" AutomationProperties.Name="{Binding GroupsTitle}">
             <ItemsControl.ItemTemplate>

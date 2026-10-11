@@ -199,11 +199,82 @@ public sealed partial class AssetsViewModel : ObservableObject
     private bool _rebuilding;
     private MapDocument? _document;
     private string _cubemaps = "";
+    private MapOwnPictures? _mapPictures;
+    private (System.Collections.Immutable.ImmutableSortedDictionary<string, System.Collections.Immutable.ImmutableArray<byte>>? Files, string Folder) _mapFilesRead;
 
     public AssetsViewModel(ILogger log)
     {
         _log = log;
         Favourites.Changed += OnFavouritesChanged;
+    }
+
+    /// <summary>
+    /// The decals among the open map's own files (user story D-1, <see cref="MapOwnAssets"/>): a map
+    /// maker's own decals and decal sets, listed on the shelf and in the picker beside the workspace's,
+    /// from the source <c>Map</c> ("This map") and the group <see cref="MapOwnAssets.Group"/>.
+    /// </summary>
+    public IReadOnlyList<AssetEntry> MapEntries { get; private set; } = [];
+
+    /// <summary>
+    /// The workspace's assets and the open map's own (<see cref="MapEntries"/>).
+    /// </summary>
+    public IEnumerable<AssetEntry> AllEntries => MapEntries.Count == 0 ? Catalog.Entries : Catalog.Entries.Concat(MapEntries);
+
+    /// <summary>
+    /// The asset a map names by <paramref name="key"/>: among the workspace's assets, else among the
+    /// map's own files; null for none.
+    /// </summary>
+    public AssetEntry? Find(string key) => Catalog.Find(key) ?? (MapEntries.Count == 0 ? null : MapOwnAssets.Find(MapEntries, key));
+
+    /// <summary>
+    /// How many pictures of the map's own files are being made (a DDS made small); automation waits for them.
+    /// </summary>
+    public int PendingMapPictures => _mapPictures?.Pending ?? 0;
+
+    /// <summary>
+    /// Whether an asset is one of the map's own files.
+    /// </summary>
+    public static bool IsMapOwn(AssetEntry entry) => entry.Group == MapOwnAssets.Group && entry.Key.StartsWith("maps/", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Lists the map's own decals again when its files (or its folder's name) changed; whether the
+    /// list changed.
+    /// </summary>
+    private bool ReadMapEntries(MapDocument? document, bool force = false)
+    {
+        string folder = document?.Folder.ToString() ?? "";
+        if (!force && ReferenceEquals(_mapFilesRead.Files, document?.Files) && _mapFilesRead.Folder == folder)
+        {
+            return false;
+        }
+        _mapFilesRead = (document?.Files, folder);
+        IReadOnlyList<AssetEntry> before = MapEntries;
+        if (document is null || document.Files.IsEmpty)
+        {
+            MapEntries = [];
+        }
+        else
+        {
+            using Performance.Span measure = Performance.Measure("assets.map-files");
+            if (_mapPictures is null)
+            {
+                _mapPictures = new MapOwnPictures(MapOwnPictures.DefaultFolder, _log);
+                _mapPictures.Ready += () =>
+                {
+                    if (ReadMapEntries(_document, force: true))
+                    {
+                        Rebuild();
+                    }
+                };
+            }
+            MapEntries = MapOwnAssets.Decals(document, _mapPictures.PictureOf);
+        }
+        bool changed = before.Count != MapEntries.Count || before.Zip(MapEntries).Any(pair => pair.First != pair.Second);
+        if (changed)
+        {
+            OnPropertyChanged(nameof(MapEntries));
+        }
+        return changed;
     }
 
     /// <summary>
@@ -217,7 +288,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     public bool IsLoaded { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsProps), nameof(HasFamilies), nameof(FamiliesHelp), nameof(GroupsTitle), nameof(CanSort))]
+    [NotifyPropertyChangedFor(nameof(IsProps), nameof(IsDecals), nameof(HasFamilies), nameof(FamiliesHelp), nameof(GroupsTitle), nameof(CanSort))]
     public partial AssetKind Kind { get; set; } = AssetKind.Prop;
 
     /// <summary>
@@ -469,7 +540,12 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// <summary>
     /// Where the shown asset's name points: the game's files, or the workspace's for a brush.
     /// </summary>
-    public string ShownKeyLabel => Shown?.Kind == AssetKind.Brush ? "In the workspace" : "In the game";
+    public string ShownKeyLabel => Shown?.Kind == AssetKind.Brush ? "In the workspace" : Shown is AssetEntry shown && IsMapOwn(shown) ? "In the map's folder" : "In the game";
+
+    /// <summary>
+    /// Whether the shelf shows decals: it offers to add pictures to the map's own files.
+    /// </summary>
+    public bool IsDecals => Kind == AssetKind.Decal;
 
     public string? ShownImage => Shown?.Image;
 
@@ -542,7 +618,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// <summary>
     /// How many assets of the kind the open map uses.
     /// </summary>
-    public int InMapCount => _uses.Keys.Select(Catalog.Find).Where(entry => entry?.Kind == Kind).Distinct().Count();
+    public int InMapCount => _uses.Keys.Select(Find).Where(entry => entry?.Kind == Kind).Distinct().Count();
 
     public string NarrowTitle => Kind switch { AssetKind.Unit => "Civilian", AssetKind.Brush => "The workspace's", AssetKind.Cubemap => "Sky and reflections", _ => "Map's biomes" };
 
@@ -684,10 +760,20 @@ public sealed partial class AssetsViewModel : ObservableObject
         IReadOnlyDictionary<string, int> uses = document is null ? new Dictionary<string, int>() : AssetUse.Count(document);
         bool sameMap = ReferenceEquals(document, _document) || (document is not null && _document is not null && document.Files == _document.Files);
         _document = document;
+        // the map's own decals (D-1): listed again when its files change
+        bool ownChanged = ReadMapEntries(document);
         // the cube maps the map names (L-1) count as uses; whether they are missing is checked when they change
         string cubemaps = document is null ? "" : string.Join('|', MissingAssets.CubemapsOf(document));
         bool cubemapsChanged = cubemaps != _cubemaps;
         _cubemaps = cubemaps;
+        if (ownChanged)
+        {
+            _uses = uses;
+            _biomes = AssetUse.Biomes(uses);
+            FindMissing();
+            Rebuild();
+            return;
+        }
         if (sameMap && uses.Count == _uses.Count && uses.All(use => _uses.TryGetValue(use.Key, out int count) && count == use.Value))
         {
             if (cubemapsChanged)
@@ -754,7 +840,7 @@ public sealed partial class AssetsViewModel : ObservableObject
     /// <exception cref="ArgumentException">The workspace has no such asset.</exception>
     public void Select(string key)
     {
-        AssetEntry entry = Catalog.Find(key) ?? throw new ArgumentException($"The workspace has no asset '{key}'");
+        AssetEntry entry = Find(key) ?? throw new ArgumentException($"The workspace has no asset '{key}'");
         _rebuilding = true;
         Kind = entry.Kind;
         _rebuilding = false;
@@ -772,6 +858,24 @@ public sealed partial class AssetsViewModel : ObservableObject
         AssetTile tile = TileOf(entry)!;
         Select(tile);
         SelectedMember = entry;
+    }
+
+    /// <summary>
+    /// Selects a decal set's tile and chooses the whole set (user story D-1): what the picker's set
+    /// tile and <c>decals.choose</c> with a set's name do. The shelf shows sets as tiles for it.
+    /// </summary>
+    /// <exception cref="ArgumentException">The set has no texture the shelf knows.</exception>
+    public void SelectSet(DecalSetAssets set)
+    {
+        string first = set.First ?? throw new ArgumentException($"The decal set {set.Name} has no textures");
+        if (!Families)
+        {
+            _rebuilding = true;
+            Families = true;
+            _rebuilding = false;
+        }
+        Select(first);
+        ChooseWholeSet();
     }
 
     /// <summary>
@@ -913,7 +1017,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         using Performance.Span measure = Performance.Measure("assets.filter");
         string[] words = AssetSearch.Words(Query);
         IEnumerable<AssetEntry> InScope(AssetKind kind) =>
-            Catalog.Entries.Where(entry => entry.Kind == kind && IsInScope(entry) && AssetSearch.Matches(entry, words));
+            AllEntries.Where(entry => entry.Kind == kind && IsInScope(entry) && AssetSearch.Matches(entry, words));
 
         Kinds = Scope == AssetScope.Missing
             ? [.. Enum.GetValues<AssetKind>().Select(kind => new AssetChoice(kind.ToString(), KindTitle(kind), AllMissing.Count(missing => missing.Kind == kind), kind == Kind))]
@@ -932,11 +1036,11 @@ public sealed partial class AssetsViewModel : ObservableObject
             .OrderByDescending(category => category.Count())
             .Select(category => new AssetChoice(category.Key, category.Key, category.Count(), category.Key == Category))];
 
-        Sources = Origins.Count == 0 && Kind != AssetKind.Brush ? [] : [.. ofKind
+        Sources = Origins.Count == 0 && Kind != AssetKind.Brush && !ofKind.Any(IsMapOwn) ? [] : [.. ofKind
             .Where(entry => (Group is null || entry.Group == Group) && (Category is null || entry.Category == Category))
             .GroupBy(entry => Origins.Of(entry).Short)
             .OrderByDescending(source => source.Count())
-            .Select(source => new AssetChoice(source.Key, source.Key, source.Count(), source.Key == Source))];
+            .Select(source => new AssetChoice(source.Key, SourceTitle(source.Key), source.Count(), source.Key == Source))];
         IEnumerable<AssetEntry> shown = AssetSearch.Sorted(InFavouritesOrder(ofKind).Where(entry => (Group is null || entry.Group == Group) && (Category is null || entry.Category == Category)
             && (Source is null || Origins.Of(entry).Short == Source)), CanSort ? Sort : AssetSort.Listed);
         AssetEntry? selected = Shown;
@@ -948,7 +1052,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         else if (Kind == AssetKind.Decal && Families)
         {
             // a decal set's textures share a tile, its albedo first (D-1)
-            Dictionary<string, DecalSetAssets> sets = DecalSets.Of(Catalog.Entries).ToDictionary(set => set.Name, StringComparer.Ordinal);
+            Dictionary<string, DecalSetAssets> sets = DecalSets.Of(AllEntries).ToDictionary(set => set.Name, StringComparer.Ordinal);
             tiles = [.. shown.GroupBy(entry => DecalSets.PartOf(entry.Key).Name, StringComparer.Ordinal).Select(family =>
             {
                 AssetEntry[] members = [.. family.OrderBy(entry => PartOrder(DecalSets.PartOf(entry.Key).Part))];
@@ -983,7 +1087,7 @@ public sealed partial class AssetsViewModel : ObservableObject
         OnPropertyChanged(nameof(RecentCount));
 
         // by its key: read again, the catalogue holds other objects for the same assets
-        AssetEntry? current = selected is null ? null : Catalog.Find(selected.Key);
+        AssetEntry? current = selected is null ? null : Find(selected.Key);
         AssetTile? again = current is null ? null : TileOf(current);
         bool whole = WholeSet;
         Select(again);
@@ -1020,6 +1124,8 @@ public sealed partial class AssetsViewModel : ObservableObject
         AssetScope.InMap => entry.Keys.Any(_uses.ContainsKey),
         AssetScope.Missing => false,
         AssetScope.Starred or AssetScope.Recent => IsInFavourites(entry),
+        // the map's own files belong to its biomes, whatever they are
+        AssetScope.Narrow when IsMapOwn(entry) => true,
         AssetScope.Narrow => entry.Kind switch
         {
             AssetKind.Unit => entry.IsCivilian,
@@ -1046,6 +1152,11 @@ public sealed partial class AssetsViewModel : ObservableObject
         }
         return -1;
     }
+
+    /// <summary>
+    /// A source's title on its chip: <c>This map</c> for the map's own files, else its short name.
+    /// </summary>
+    public static string SourceTitle(string source) => source == nameof(AssetOrigin.Map) ? "This map" : source;
 
     /// <summary>
     /// A biome's folder as a title: <c>red barrens</c> is <c>Red barrens</c>.

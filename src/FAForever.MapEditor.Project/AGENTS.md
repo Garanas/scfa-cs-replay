@@ -582,7 +582,8 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   textures of a biome (`NewMap.Biomes`, static data: lower layer, four strata, the macro texture
   as upper layer), spawns on a circle, `AREA_1` over the whole map, the extra armies
   `ARMY_17` and `NEUTRAL_CIVILIAN`, the skirmish script (`NewMap.DefaultScript`), the FAF editor's
-  default lighting and water. Masks and the water's images are half the map's size, as in the
+  default lighting and water, the water reflecting the sky cube map of its biome
+  (`NewMapBiome.WaterCubemap`: `skycube_desert01a` for the desert). Masks and the water's images are half the map's size, as in the
   vault. It exports and imports again unchanged (`NewMapTest`). `EditedMap.New` opens it as a
   map that is no project yet and counts as changed.
 - `HeightmapFiles` (T-3): reads a heightmap of any size (PNG and what ImageMagick reads, as 16-bit
@@ -712,7 +713,9 @@ for tools and the water's masks theirs in the same shape (the plan "Map Editor R
 - **Sources** (`LayerSource` records): `PaintedSource` (`LayerSource.Painted`: a brush writes its
   grid), `ImageSource(Path)` (a file, relative to the project when inside it, read again when it
   changes and when the project opens; the layer's PNG keeps the last reading for when the file is
-  gone), `MaskRefSource(Key, Threshold, Invert, Height)` (another mask read while compositing; in a
+  gone, except for a height layer whose file lies in the project folder and is there, such as the
+  final's base from `procedural/temp`: the project owns that file, so it keeps no copy, and a base
+  whose file is gone opens with the map's saved heights, as a replacing layer does), `MaskRefSource(Key, Threshold, Invert, Height)` (another mask read while compositing; in a
   stack of heights its value is the mask times `Height` game units), `RulesSource(MaskRuleSet)` (the
   grid holds the rules' last result; coverage only), `CurveSource(HeightCurve)` (heights only).
   `LayerSources` names them (`painted`, `image`, `mask`, `rules`, `curve`), says which fit which
@@ -825,7 +828,10 @@ Wave 9C, user story D-1.
   masks by name) carries the textures beyond its own (its albedo with the specular in slot 2, or its
   normals when it has no albedo): one selection, one inspector, one undo step, moved by every edit
   of decals. The export writes it as one decal per texture (`DecalSets.Expand` in `MapExporter`:
-  the normals decal right after, the next free id, the same groups); masks are never exported.
+  the normals decal right after, the next free id, the same groups); masks are never exported:
+  `DecalSets.UnexportedMasks` (pictures named `_mask` or `_mask_<name>` that no decal's texture,
+  stratum or Lua file of the map names) are left out of `MapExporter`'s files and of
+  `TextureExport.Pending`.
   The catalogue gives a set's textures the set's name as `Family` and masks the category `masks`.
   `decals.json` keeps `set` on such a decal (`DecalSetDto`, optional).
 - **Map-wide decals** (`MapDocument.WideDecals`, `MapWideDecals`; `decals.json`'s optional
@@ -869,6 +875,27 @@ Wave 9C, user story D-1.
   every stack of coverage. The pictures come from `EditSession.DecalPictures`
   (`IDecalMaskPictures`; `GameMaskPictures`: the map's own files, else the workspace's assets, read
   once per version); without them the layers keep their grids, which the project saves.
+
+### A map maker's own decals, and importing them (wave 12B)
+
+- **`MapOwnAssets`**: the decals among the map's own files as `AssetEntry`s for the shelf and the
+  picker: pictures in a folder named `decals`, and pictures a decal of the map names; key the game
+  path without the leading slash and with the file's own extension (`AssetCatalog.KeyOf` would turn
+  a `.png` into `.dds`, which the map's files are not), group `this map`, category by the set's
+  part, a set's name as family. `DecalSets.Of` finds their sets as it finds the catalogue's.
+- **Map-wide files from elsewhere**: the editor copies a slot's file from outside the project into
+  the map's own files (`env/decals/map_albedo.png`, `map_specular`, `map_normals`, `map_lighting`)
+  and the slot names the copy, so a project does not depend on a path of one computer.
+- **Import** (`ImportedDecals.Recognise`, run by `EditedMap.ImportMap` and so by the window's import
+  and `faf-map unpack`): decals over the whole map (at the corner, unturned, as large as the map,
+  cut-off at least 5000, a texture of the map's own files) fill the slots as Kaali has them: the
+  normals decal the normal slot, an albedo named for lighting or shadow the shadow slot, the other
+  albedo the albedo slot with its second texture as the specular; they leave the list and their
+  groups. An albedo decal of a set (`rock01_albedo`) directly followed by its normals decal
+  (`rock01_normals`) with the same place, turn, size, distances and army is one decal carrying the
+  set (with the masks the map's files have for it), as `DecalSets.Expand` wrote it. Kaali
+  (kaali.v0004) imports with its three decals in the slots; HardFFA and Archsimkats Valley have no
+  such pairs.
 
 ## Textures as DDS on export
 

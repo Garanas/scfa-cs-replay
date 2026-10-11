@@ -342,7 +342,9 @@ namespace FAForever.MapEditor.Project.Tests
             ProjectImages.WriteGray16(source, 129, 129, Enumerable.Repeat((ushort)(42 * 128), 129 * 129).ToArray());
             Assert.AreEqual(42, MapProjectStore.Load(project).Terrain.Heightmap.GetHeight(10, 10), 1e-2, "the file, not the layer's last reading");
 
-            // without the file the layer's own PNG holds what it read last
+            // the project keeps no copy of a file in its folder: without the file the replacing layer
+            // opens with the heights the project saved
+            Assert.IsFalse(File.Exists(Path.Combine(project, MapProjectLayout.StackLayer("heightmap", "gaea"))));
             File.Delete(source);
             Assert.AreEqual(50, MapProjectStore.Load(project).Terrain.Heightmap.GetHeight(10, 10), 1e-2);
         }

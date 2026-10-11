@@ -24,7 +24,7 @@ public sealed class StarAssetHandler(MainViewModel model, AssetsViewModel assets
             ?? (model.Picker.IsOpen ? model.Picker.Selected?.Entry.Key : null)
             ?? assets.Shown?.Key
             ?? throw new ArgumentException("Choose an asset on the shelf or in the picker, or give its key");
-        AssetEntry entry = assets.Catalog.Find(key) ?? throw new ArgumentException($"The workspace has no asset '{key}'");
+        AssetEntry entry = assets.Find(key) ?? throw new ArgumentException($"The workspace has no asset '{key}'");
         bool starred = assets.SetStar(entry.Key, request.On ?? !assets.Favourites.IsStarred(entry.Key));
         model.Status = starred ? $"Starred {entry.Name}: it shows under Starred" : $"Took the star of {entry.Name} away";
         return Task.FromResult(new JsonObject { ["key"] = entry.Key, ["starred"] = starred });

@@ -24,6 +24,7 @@
                                  EmptyText="The stratum has no mask."
                                  RemoveHelp="The stratum's mask becomes what the other layers make" />
         <controls:SettingList DataContext="{Binding StratumStack.Reference}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StratumStack.IsReference}" />
+        <controls:SettingList DataContext="{Binding StratumStack.DecalMasks}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StratumStack.IsDecalMasks}" />
       </StackPanel>
     </Border>
     <rules:MaskRulesPanel IsVisible="{Binding StratumStack.IsRules}" />

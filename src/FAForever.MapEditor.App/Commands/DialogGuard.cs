@@ -31,6 +31,10 @@ public sealed class DialogGuard(IEditorDialogs dialogs) : IEditorDialogs
         ? throw new InvalidOperationException($"The command would ask: \"{title}\". Give the file as the argument path")
         : dialogs.PickFileAsync(title, extensions, startIn);
 
+    public Task<IReadOnlyList<string>> PickFilesAsync(string title, IReadOnlyList<string> extensions, string? startIn = null) => Quiet
+        ? throw new InvalidOperationException($"The command would ask: \"{title}\". Give the files as the argument files")
+        : dialogs.PickFilesAsync(title, extensions, startIn);
+
     public Task<string?> PickSaveFileAsync(string title, string suggestedName, IReadOnlyList<string> extensions, string? startIn = null) => Quiet
         ? throw new InvalidOperationException($"The command would ask: \"{title}\". Give the file as the argument path")
         : dialogs.PickSaveFileAsync(title, suggestedName, extensions, startIn);

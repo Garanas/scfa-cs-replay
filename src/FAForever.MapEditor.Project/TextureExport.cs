@@ -134,9 +134,11 @@ namespace FAForever.MapEditor.Project
         {
             Dictionary<string, TextureRole> roles = new Dictionary<string, TextureRole>(StringComparer.Ordinal);
             Dictionary<string, string> byLowerCase = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            // a decal set's masks are never exported, so never converted
+            IReadOnlySet<string> masks = Editing.DecalSets.UnexportedMasks(document);
             foreach (string file in document.Files.Keys)
             {
-                if (IsPicture(file))
+                if (IsPicture(file) && !masks.Contains(file))
                 {
                     byLowerCase.TryAdd(file, file);
                 }
