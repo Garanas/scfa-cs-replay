@@ -117,5 +117,23 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(SelectionInspector.Mixed, inspector.X);
             CollectionAssert.Contains(changed, nameof(SelectionInspector.X), "the field is told to show it again: the text typed would stay");
         }
+
+        [TestMethod]
+        public async Task AnArmyChosenInTheRowSurvivesAPlacementAndTheTreeShowsIt()
+        {
+            MainViewModel model = await Open();
+            UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
+            await Run(model, "units.pick", new JsonObject { ["key"] = "uel0101" });
+            Assert.IsTrue(model.Armies.Choose("ARMY_1", []));
+            Assert.AreEqual("ARMY_1", tool.Army);
+
+            tool.Army = "ARMY_2";
+            Assert.AreEqual("ARMY_2", model.Armies.ChosenGroup!.Army, "the tree follows the row");
+            tool.Press(60, 60);
+            tool.Press(70, 60);
+
+            Assert.AreEqual("ARMY_2", tool.Army, "the tree made again after a placement is no new choice of its group");
+            Assert.AreEqual("ARMY_2", model.ShownDocument!.FindUnit("UNIT_2")!.Army);
+        }
     }
 }

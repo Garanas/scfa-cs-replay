@@ -118,9 +118,14 @@ faf-map editor key key=Ctrl+K --port 5372 && faf-map editor type text=undo --por
 faf-map editor run id=units.pick interactive=true wait=false --port 5372   # opens the picker, answers at once
 faf-map editor key key=Down --port 5372 && faf-map editor key key=Enter --port 5372
 faf-map editor drag view=3d from=[10,10] to=[300,200] data=<asset key> --port 5372   # a shelf tile dropped
+faf-map editor drag view=window from=[100,600] to=[90,270] data=preset:"Cybran farm" --port 5372   # a units preset dropped on a palette slot; a drag without data from a tile or preset is refused (it would hang the editor)
 faf-map editor state --port 5372                               # handles.points: each handle's pixel in the top and 3D views; hover: what the 3D mouse is over
 faf-map editor click label="Sculpt layer" --port 5372                  # scrolls the control into view, clicks its centre
-faf-map editor click label="Connected regions" type=Button index=1 --port 5372   # several match: the answer's matches and others say which; state.popups: open lists and menus
+faf-map editor click label="Connected regions" type=Button index=1 --port 5372   # several match: the answer's matches and others say which
+faf-map editor mouse x=90 y=270 button=right --port 5372       # a context menu: state.popups lists its items (kind, what, items with label), ui has it as a Popup node
+faf-map editor click label="Clear slot 3" --port 5372          # an item of an open menu or flyout; key=Escape closes it; screenshots draw it
+faf-map editor run id=view.theme variant=light --port 5372     # look at the light tokens (dark, light, system); not saved
+faf-map editor click label="Warning ..." --port 5372           # a Problems line: selects its things (a double click also frames them)
 faf-map editor state --port 5372                               # dialog: the question over the window (unsaved changes, confirm)
 faf-map editor dialog button="Don't save" --port 5372                 # presses its button; Escape or key Tab/Enter work too
 faf-map editor key key=OemCloseBrackets --port 5372            # [ and ] the brush's radius, shift: strength; Ctrl+wheel over a view

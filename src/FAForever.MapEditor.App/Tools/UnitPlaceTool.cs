@@ -129,7 +129,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// The unit it places, from the picker or the shelf; null until one is chosen.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(HasUnit), nameof(UsesSpacing))]
+    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(UnitButtonText), nameof(HasUnit), nameof(UsesSpacing))]
     public partial AssetEntry? Unit { get; set; }
 
     public bool HasUnit => Unit is not null;
@@ -138,7 +138,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// The units preset it places instead of a unit; null for none.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(HasPreset))]
+    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(UnitButtonText), nameof(HasPreset))]
     public partial string? Preset { get; set; }
 
     public bool HasPreset => Preset is not null;
@@ -161,6 +161,11 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         PresetRole = role;
         Preset = name;
     }
+
+    /// <summary>
+    /// What the unit button of the options row reads: the preset or unit's name.
+    /// </summary>
+    public string UnitButtonText => Preset is string preset ? preset : Unit is AssetEntry unit ? unit.Name : "Choose a unit";
 
     /// <summary>
     /// What a click places, as the options bar says it.
@@ -195,6 +200,21 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// The ways to place, for the options row's segmented control.
     /// </summary>
     public IReadOnlyList<PlaceModeChoice> Modes { get; }
+
+    /// <summary>
+    /// The way chosen, for the options row's combo box.
+    /// </summary>
+    public PlaceModeChoice ModeChoice
+    {
+        get => Modes.First(choice => choice.Mode == Mode);
+        set
+        {
+            if (value is not null)
+            {
+                Mode = value.Mode;
+            }
+        }
+    }
 
     public bool IsLine => Mode == PlaceMode.Line;
 
@@ -261,6 +281,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     partial void OnModeChanged(PlaceMode value)
     {
         CancelDrag();
+        OnPropertyChanged(nameof(ModeChoice));
         foreach (PlaceModeChoice choice in Modes)
         {
             choice.Refresh();
@@ -357,6 +378,11 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     {
         ArmyChosen |= !_defaulting;
         RefreshGroups(model.ShownDocument);
+        // another army chosen in the row: the tree shows it too
+        if (!_defaulting && !_following && value is not null)
+        {
+            GroupPicked?.Invoke(value, Group);
+        }
     }
 
     private bool _defaulting;

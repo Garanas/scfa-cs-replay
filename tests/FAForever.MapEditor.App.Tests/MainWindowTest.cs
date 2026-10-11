@@ -930,7 +930,7 @@ namespace FAForever.MapEditor.App.Tests
             model.SelectTool("units.place");
             await model.Commands.RunAsync("units.pick", new JsonObject { ["key"] = "uel0101" }, interactive: false);
             Dispatcher.UIThread.RunJobs();
-            TextBlock title = window.GetVisualDescendants().OfType<TextBlock>().First(block => block.Text == "Snoop (uel0101)");
+            TextBlock title = window.GetVisualDescendants().OfType<TextBlock>().First(block => block.Text == "Snoop");
             Assert.IsTrue(title.IsEffectivelyVisible, "the options bar says what a click places");
 
             Point at = Middle(window.MapView, window);

@@ -135,8 +135,8 @@ reads again when it changes; and nothing that generates runs by itself.
       the Problems tab, checked a moment after each step and before a save or export (never
       stopping it), with checks for armies without a spawn, spawns without mass nearby, textures
       and blueprints or models the map and workspace lack, and passages opened or closed since
-      walkability was generated last; a double click or Enter goes to a problem (selects it, the
-      top view and 3D camera look at it); Lua plugins add checks of their own (F-15).
+      walkability was generated last; a click selects a problem's things, a double click or Enter
+      goes to it too (the top view and 3D camera look at it); Lua plugins add checks of their own (F-15).
 - [x] **F-15 Lua plugins.** Plugins with commands, tools and panels, through the controller and
       the events; a run is one step of undo. Today: the workspace's `plugins/` (a folder each with
       its `plugin.lua` and `plugin.json`), loaded when the workspace is ready and read again when a
@@ -510,8 +510,10 @@ reads again when it changes; and nothing that generates runs by itself.
       selection, and a scatter brush for mobile units and wrecks (a count per stroke, random
       headings, a least distance); each one step of undo, with its symmetry images, its footprints
       shown under the mouse before the mouse is released, and a single unit's footprint shown too.
-      Today: the options row's Single, Line, Rectangle, Ring and Scatter with each way's settings
-      (`units.placeMode`); a line or rectangle is dragged out with every footprint under the mouse
+      Today: the options row's How to place (Single, Line, Rectangle, Ring, Scatter), the unit, Army
+      and Group first, the way's settings behind More (`units.placeMode`); the army is that of the
+      spawn nearest the view's middle on a map with armies to play on, else the civilians, and the
+      group the tree's chosen one; the status line says where units went; a line or rectangle is dragged out with every footprint under the mouse
       and the count in the status line (Shift keeps a line to 45°, Escape cancels) and placed on
       release as one step (`units.addMany`); a ring goes around the selected units' footprints or
       the structure under the mouse at a distance; the scatter brush (`[` and `]` its radius) puts
@@ -567,7 +569,7 @@ reads again when it changes; and nothing that generates runs by itself.
       the same layer and tech that shares most categories; a unit without a counterpart stays and
       is counted), Group, Ungroup and Distribute (`units.distribute`, three units or more); a
       handle drag, the arrows and `edit.place` round the move so the first structure lands on the
-      build grid (the select tool's check box "Keep structures on the build grid").
+      build grid (the select tool's check box "Keep on grid").
 - [x] **U-12 Placement checks.** Problems lists structures whose footprints overlap and structures
       where the ground does not allow them (too steep, the wrong layer: water or land), from the
       blueprint's skirt, build layers and slope limit, which the workspace's converted assets carry;

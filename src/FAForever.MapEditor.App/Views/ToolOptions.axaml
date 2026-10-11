@@ -339,26 +339,28 @@
                  the settings of that way first, then what, for which army, into which group, facing where -->
             <DataTemplate DataType="tools:UnitPlaceTool">
               <controls:ToolRow Classes="toolrow">
-                <ItemsControl ItemsSource="{Binding Modes}" AutomationProperties.Name="How to place" AutomationProperties.HelpText="One unit a click, a line or rectangle dragged out, a ring around the selection, or a scatter brush">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                      <StackPanel Classes="inline" />
-                    </ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
+                <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding ModeChoice}" AutomationProperties.Name="How to place"
+                          AutomationProperties.HelpText="One unit a click, a line or rectangle dragged out, a ring around the selection, or a scatter brush">
+                  <ComboBox.ItemTemplate>
                     <DataTemplate DataType="tools:PlaceModeChoice">
-                      <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Title}" Command="{Binding ChooseCommand}"
-                              AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+                      <TextBlock Text="{Binding Title}" AutomationProperties.Name="{Binding Label}" ToolTip.Tip="{Binding Help}" />
                     </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <StackPanel Classes="inline">
-                  <controls:AssetThumbnail Model="{Binding Unit.Model}" Width="{StaticResource ToolButtonHeight}" Height="{StaticResource ToolButtonHeight}"
-                                           IsVisible="{Binding HasUnit}" AutomationProperties.Name="Picture of the unit to place" />
-                  <TextBlock Classes="label" Text="{Binding UnitTitle}" ToolTip.Tip="{Binding UnitTitle}" MaxWidth="{StaticResource ToolSliderWidth}" TextTrimming="CharacterEllipsis" />
-                  <Button Content="Choose..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.pick"
-                          AutomationProperties.Name="Choose a unit to place" AutomationProperties.HelpText="Opens the unit picker; a unit chosen on the asset shelf is placed too" />
-                </StackPanel>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.pick" ToolTip.Tip="{Binding UnitTitle}"
+                        AutomationProperties.Name="Choose a unit to place" AutomationProperties.HelpText="Opens the unit picker; a unit chosen on the asset shelf is placed too">
+                  <StackPanel Classes="inline">
+                    <controls:AssetThumbnail Model="{Binding Unit.Model}" Width="{StaticResource ToolButtonHeight}" Height="{StaticResource ToolButtonHeight}"
+                                             IsVisible="{Binding HasUnit}" AutomationProperties.Name="Picture of the unit to place" />
+                    <TextBlock Text="{Binding UnitButtonText}" MaxWidth="{StaticResource ToolSliderWidth}" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                </Button>
+                <!-- the army and the group have no label of their own: the names say what they are, and the row is short at 1280 pixels -->
+                <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" MaxWidth="{StaticResource ToolSliderWidth}" ToolTip.Tip="Army: the units are placed for it"
+                          AutomationProperties.Name="Army to place units for" />
+                <ComboBox ItemsSource="{Binding Groups}" SelectedItem="{Binding ChosenGroup}" MaxWidth="{StaticResource ToolSliderWidth}" ToolTip.Tip="Group: the units are placed into it"
+                          AutomationProperties.Name="Group to place units into"
+                          AutomationProperties.HelpText="The group chosen in the Units mode's tree is this one; the game creates the units of INITIAL, with its groups, when the game starts" />
                 <CheckBox Content="Face along" IsChecked="{Binding FaceAlong}" IsVisible="{Binding IsLine}" AutomationProperties.Name="Face along the line"
                           AutomationProperties.HelpText="Each unit faces the way the line goes (a structure in the nearest quarter turn); unchecked, the facing below" />
                 <CheckBox Content="Hollow" IsChecked="{Binding Hollow}" IsVisible="{Binding IsRectangle}" AutomationProperties.Name="Only the rectangle's border"
@@ -377,16 +379,6 @@
                            AutomationProperties.Name="Least distance between scattered units in ogrids" />
                   <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0}'}" />
                   <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Scatter brush radius in ogrids" />
-                </StackPanel>
-                <StackPanel Classes="inline">
-                  <TextBlock Classes="label" Text="Army" />
-                  <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" AutomationProperties.Name="Army to place units for" />
-                </StackPanel>
-                <StackPanel Classes="inline">
-                  <TextBlock Classes="label" Text="Group" />
-                  <ComboBox ItemsSource="{Binding Groups}" SelectedItem="{Binding ChosenGroup}" MaxWidth="{StaticResource ToolSliderWidth}"
-                            AutomationProperties.Name="Group to place units into"
-                            AutomationProperties.HelpText="The game creates the units of INITIAL, with its groups, when the game starts" />
                 </StackPanel>
                 <StackPanel Classes="inline">
                   <TextBlock Classes="label" Text="Facing" />

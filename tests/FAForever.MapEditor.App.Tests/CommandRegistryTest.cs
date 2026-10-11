@@ -131,7 +131,7 @@ namespace FAForever.MapEditor.App.Tests
                     "props.removeRuleCondition", "props.scale", "props.set", "props.setRule", "props.setRuleCondition", "props.setRulePalette", "props.tilt",
                     "select.hideKind", "select.lockKind", "select.recall", "select.set", "select.store", "select.where", "terrain.addCurve", "terrain.captureStamp", "terrain.chooseCurvePoints", "terrain.chooseLayer", "terrain.evenGrade", "terrain.filterLayers", "terrain.moveLayer", "terrain.reloadLayer", "terrain.removeLayer", "terrain.reverseCurve", "terrain.setCurve", "terrain.setCurvePoint", "terrain.setCurveTool", "terrain.setDecalMasks", "terrain.setDraftOut",
                     "terrain.setLayer", "terrain.shareDraftBase", "terrain.snapCurve", "units.add", "units.drop", "units.moveGroup", "units.moveToArmy", "units.moveToGroup", "units.palette", "units.removeGroup", "units.renameGroup", "units.saveGroupAsPreset", "units.setSlot", "units.slot",
-                    "view.addToToolbar", "view.gpuDebug", "view.inspectPart", "view.movePanel", "view.removeFromToolbar", "view.resizePanel", "view.returnPanel", "view.setToolbar", "view.togglePanel", "view.walkability",
+                    "view.addToToolbar", "view.gpuDebug", "view.inspectPart", "view.movePanel", "view.removeFromToolbar", "view.resizePanel", "view.returnPanel", "view.setToolbar", "view.theme", "view.togglePanel", "view.walkability",
                     "view.zoomTo", "water.removeWaveGenerator",
                     "water.set", "water.setWaveGenerator", "water.setWaveTexture", "workspace.convert", "workspace.setProcedural", "workspace.setUp",
                 }, outside,

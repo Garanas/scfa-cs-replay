@@ -263,7 +263,7 @@ public sealed partial class MainViewModel
     /// </summary>
     /// <returns>Whether it led anywhere.</returns>
     /// <exception cref="ArgumentException">The list has no such line.</exception>
-    public bool ShowProblem(int index)
+    public bool ShowProblem(int index, bool frame = true)
     {
         if (index < 0 || index >= Problems.Items.Count)
         {
@@ -288,8 +288,11 @@ public sealed partial class MainViewModel
         {
             return problem.Thing is not null;
         }
-        RequestTopView(shown.X, shown.Y, ProblemZoom);
-        FocusCamera(shown.X, shown.Y, ProblemRadius);
+        if (frame)
+        {
+            RequestTopView(shown.X, shown.Y, ProblemZoom);
+            FocusCamera(shown.X, shown.Y, ProblemRadius);
+        }
         return true;
     }
 

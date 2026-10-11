@@ -822,6 +822,10 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             new PixelSize(Math.Max(1, (int)(size.Width * scale)), Math.Max(1, (int)(size.Height * scale))),
             new Vector(96 * scale, 96 * scale));
         bitmap.Render(visual);
+        if (!mapOnly)
+        {
+            DrawPopups(bitmap, scale);
+        }
         string full = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(full)!);
         bitmap.Save(full, new PngBitmapEncoderOptions());

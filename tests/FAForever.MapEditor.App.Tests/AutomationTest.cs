@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using FAForever.MapEditor.App.Automation;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
+using FAForever.MapEditor.Project.Checks;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using Point = Avalonia.Point;
@@ -327,30 +328,12 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsNull(place["why"]);
             Assert.AreEqual("units.place", model.ActiveTool!.Definition.Id);
 
-            // the segmented control's chips say which way is on
-            JsonArray ui = (JsonArray)(await Send(automation, "ui", new JsonObject { ["under"] = "How to place" }))["ui"]!;
-            Dictionary<string, bool> chips = [];
-            void Collect(JsonArray nodes)
-            {
-                foreach (JsonObject node in nodes.Cast<JsonObject>())
-                {
-                    if (node["text"] is JsonNode text && node["checked"] is JsonNode on)
-                    {
-                        chips[text.GetValue<string>()] = on.GetValue<bool>();
-                    }
-                    if (node["children"] is JsonArray children)
-                    {
-                        Collect(children);
-                    }
-                }
-            }
-            Collect(ui);
-            Assert.IsTrue(chips.GetValueOrDefault("Rectangle"), ui.ToJsonString());
-            Assert.IsFalse(chips.GetValueOrDefault("Line", true));
-            Assert.AreEqual(5, chips.Count, "Single, Line, Rectangle, Ring, Scatter");
-            JsonObject clicked = await Send(automation, "click", new JsonObject { ["label"] = "Scatter with a brush" });
-            Assert.AreEqual("Scatter", model.Tool<FAForever.MapEditor.App.Tools.UnitPlaceTool>().Mode.ToString(), clicked.ToJsonString());
-            window.Close();
+            // the combo box of the ways says which one is on, and set chooses another
+            JsonObject way = (JsonObject)(await Send(automation, "ui", new JsonObject { ["under"] = "How to place" }))["ui"]!.AsArray()[0]!;
+            Assert.AreEqual("Rectangle", way["selected"]!.GetValue<string>(), way.ToJsonString());
+            CollectionAssert.AreEqual(new[] { "Single", "Line", "Rectangle", "Ring", "Scatter" }, way["items"]!.AsArray().Select(item => item!.GetValue<string>()).ToArray());
+            JsonObject chosen = await Send(automation, "set", new JsonObject { ["label"] = "How to place", ["value"] = "Scatter" });
+            Assert.AreEqual("Scatter", model.Tool<FAForever.MapEditor.App.Tools.UnitPlaceTool>().Mode.ToString(), chosen.ToJsonString());            window.Close();
         });
 
         [TestMethod]
@@ -547,5 +530,158 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(((JsonArray)again["slots"]!)[0]!["chosen"]!.GetValue<bool>());
             window.Close();
         });
-    }
+
+        /// <summary>
+        /// The Units mode with the palettes of <see cref="UnitPalettesTest.Library"/> in a window.
+        /// </summary>
+        private static async Task<(MainWindow Window, MainViewModel Model, AutomationServer Automation)> OpenUnits()
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            model.Assets.Use(UnitsTest.Catalog());
+            model.Presets.Use(UnitPalettesTest.Library());
+            model.SelectMode("units");
+            model.SelectTool("units.place");
+            Dispatcher.UIThread.RunJobs();
+            return (window, model, automation);
+        }
+
+        private static Point Middle(Control control, MainWindow window) =>
+            control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
+
+        [TestMethod]
+        public Task ADragWithoutDataFromAUnitPresetIsRefusedAndAPresetDataDropsOnASlot() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await OpenUnits();
+            Control preset = UiTree.Find(window, "Apply the preset Village")!;
+            Point from = Middle(preset, window);
+            Point to = Middle(UiTree.Find(window, "Palette slot 3: empty")!, window);
+            await Send(automation, "state");
+
+            // the mouse drag from a preset of the list would start the system's drag loop: refused, never hung
+            ArgumentException refused = await Assert.ThrowsExceptionAsync<ArgumentException>(() => Send(automation, "drag", new JsonObject
+            {
+                ["view"] = "window",
+                ["from"] = new JsonArray(from.X, from.Y),
+                ["to"] = new JsonArray(to.X, to.Y),
+            }));
+            StringAssert.Contains(refused.Message, "data=preset:");
+
+            // with data, as the list's drag carries it
+            JsonObject dropped = await Send(automation, "drag", new JsonObject
+            {
+                ["view"] = "window",
+                ["from"] = new JsonArray(from.X, from.Y),
+                ["to"] = new JsonArray(to.X, to.Y),
+                ["data"] = "preset:Village",
+            });
+            Assert.AreEqual("Copy", dropped["dropped"]!.GetValue<string>());
+            for (int i = 0; i < 100 && !model.UnitPalettes.Slots[2].IsPreset; i++)
+            {
+                Dispatcher.UIThread.RunJobs();
+                await Task.Delay(10);
+            }
+            Assert.AreEqual("Village", model.UnitPalettes.Slots[2].Slot.Preset, "the slot holds the preset");
+
+            // a mouse drag that starts elsewhere is as before
+            JsonObject onTheMap = await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = 100, ["y"] = 100, ["action"] = "drag", ["to"] = new JsonArray(120, 120) });
+            Assert.IsTrue(onTheMap["ok"]!.GetValue<bool>());
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task AnOpenContextMenuAndFlyoutAreInTheStateAndTheUiAndAnItemIsClicked() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await OpenUnits();
+            await Send(automation, "state");
+            Point slot = Middle(UiTree.Find(window, "Palette slot 1: UEF Farm (uec1201)")!, window);
+
+            await Send(automation, "mouse", new JsonObject { ["x"] = slot.X, ["y"] = slot.Y, ["button"] = "right" });
+            JsonObject state = await Send(automation, "state");
+            JsonObject menu = (JsonObject)state["popups"]!.AsArray().Single(popup => popup!["kind"]!.GetValue<string>() == "context menu")!;
+            StringAssert.Contains(menu["what"]!.GetValue<string>(), "Palette slot 1");
+            string[] items = [.. menu["items"]!.AsArray().Select(item => item!["label"]!.GetValue<string>())];
+            CollectionAssert.AreEqual(new[] { "Choose a unit for slot 1", "Clear slot 1" }, items);
+            JsonArray ui = (JsonArray)(await Send(automation, "ui"))["ui"]!;
+            JsonObject node = ui.OfType<JsonObject>().Single(each => each["type"]?.GetValue<string>() == "Popup");
+            Assert.IsTrue(node.ToJsonString().Contains("\"label\":\"Clear slot 1\""), "ui lists the items by label");
+
+            JsonObject clicked = await Send(automation, "click", new JsonObject { ["label"] = "Clear slot 1" });
+            Assert.AreEqual("MenuItem", clicked["clicked"]!["type"]!.GetValue<string>());
+            for (int i = 0; i < 100 && !model.UnitPalettes.Slots[0].IsEmpty; i++)
+            {
+                Dispatcher.UIThread.RunJobs();
+                await Task.Delay(10);
+            }
+            Assert.IsTrue(model.UnitPalettes.Slots[0].IsEmpty, "the click on the menu's item cleared the slot");
+            Assert.IsNull((await Send(automation, "state"))["popups"], "and the menu closed");
+
+            // a flyout of a button
+            await Send(automation, "click", new JsonObject { ["label"] = "Palette menu" });
+            JsonObject flyout = (JsonObject)(await Send(automation, "state"))["popups"]!.AsArray().Single(popup => popup!["kind"]!.GetValue<string>() == "flyout")!;
+            CollectionAssert.AreEqual(new[] { "Rename the palette", "Delete the palette", "Show the folder of the palettes" },
+                flyout["items"]!.AsArray().Select(item => item!["label"]!.GetValue<string>()).ToArray());
+            await Send(automation, "key", new JsonObject { ["key"] = "Escape" });
+            Assert.IsNull((await Send(automation, "state"))["popups"]);
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task TheThemeSwitchesAtRunTime() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            Application application = Application.Current!;
+            try
+            {
+                JsonObject answer = await Send(automation, "run", new JsonObject { ["id"] = "view.theme", ["variant"] = "light" });
+                Assert.AreEqual("Light", answer["result"]!["actual"]!.GetValue<string>());
+                Assert.AreEqual(Avalonia.Styling.ThemeVariant.Light, application.RequestedThemeVariant);
+                JsonObject refused = await Send(automation, "run", new JsonObject { ["id"] = "view.theme", ["variant"] = "mauve" });
+                Assert.IsFalse(refused["ran"]!.GetValue<bool>(), "a variant that does not exist is refused");
+            }
+            finally
+            {
+                await Send(automation, "run", new JsonObject { ["id"] = "view.theme", ["variant"] = "dark" });
+            }
+            Assert.AreEqual(Avalonia.Styling.ThemeVariant.Dark, application.RequestedThemeVariant);
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task AClickOnAProblemSelectsItsThingsAndADoubleClickGoesThereToo() => Run(async () =>
+        {
+            // no catalogue: the textures' warnings of the test assets would fill the list
+            MainWindow window = new MainWindow { Width = 1280, Height = 800 };
+            MainViewModel model = new MainViewModel(new WindowDialogs(window));
+            await model.OpenAsync(HardFfa);
+            window.DataContext = model;
+            window.Show();
+            AutomationServer automation = new AutomationServer(window, model, port: 0);
+            Spawn spawn = model.Map!.Document.Markers.Spawns[0];
+            Vector2 at = new Vector2(spawn.Position.X, spawn.Position.Z);
+            model.Map.Session.Edit("Take the mass away", document => document with
+            {
+                Markers = document.Markers with
+                {
+                    Resources = [.. document.Markers.Resources.Where(resource => Vector2.Distance(new Vector2(resource.Position.X, resource.Position.Z), at) > MapChecks.MassNearSpawn)],
+                },
+            });
+            model.Dock = DockTab.Problems;
+            model.Problems.Run();
+            Dispatcher.UIThread.RunJobs();
+            ProblemItem item = model.Problems.Items.First(each => each.Problem.Thing == ObjectRef.Marker(spawn.Id));
+            int framed = 0;
+            model.TopViewRequested += (_, _, _) => framed++;
+            model.Selection.Clear();
+            string label = $"{item.SeverityText} {item.Message}";
+
+            await Send(automation, "click", new JsonObject { ["label"] = label, ["type"] = "ListBoxItem" });
+            CollectionAssert.AreEqual(new[] { ObjectRef.Marker(spawn.Id) }, model.Selection.Items.ToArray(), "one click selects the problem's thing");
+            Assert.AreEqual(0, framed, "and leaves the views where they are");
+
+            model.Selection.Clear();
+            await Send(automation, "click", new JsonObject { ["label"] = label, ["type"] = "ListBoxItem", ["doubleClick"] = true });
+            CollectionAssert.AreEqual(new[] { ObjectRef.Marker(spawn.Id) }, model.Selection.Items.ToArray());
+            Assert.IsTrue(framed > 0, "a double click frames its place too");
+            window.Close();
+        });    }
 }
