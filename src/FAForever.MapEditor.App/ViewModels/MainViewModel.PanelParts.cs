@@ -122,17 +122,14 @@ public sealed partial class MainViewModel
         {
             return;
         }
-        string? tool = ActiveTool?.Definition.Id;
-        string? part = PanelPartLists.GetValueOrDefault(mode.Definition.Id)?.Chosen.Id;
-        PanelSection[] shown = [.. mode.Definition.Sections.Where(section =>
-            (section.ForTools is null || tool is not null && section.ForTools.Contains(tool))
-            && (section.ForParts is null || part is not null && section.ForParts.Contains(part)))];
+        PanelSection[] shown = [.. mode.Definition.Sections.Where(section => Shows(section, mode.Definition.Id))];
         if (!shown.SequenceEqual(PanelSections))
         {
             PanelSections = shown;
             OnPropertyChanged(nameof(PanelSections));
         }
         Presets.FollowSections(PanelSections);
+        RefreshInspectorParts();
     }
 
     private (string Name, JsonObject Settings) CaptureSky()

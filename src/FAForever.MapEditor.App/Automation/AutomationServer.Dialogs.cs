@@ -81,7 +81,7 @@ public sealed partial class AutomationServer
         Control control = (under is not null ? UiTree.Find(under, label) : FindInWindows(label))
             ?? throw new ArgumentException($"No control is named, labelled or reads '{label}'");
         // shown, settled and reachable by the mouse, else refused with why (never a click elsewhere)
-        (TopLevel top, Point centre, _) = await AimAsync(control, label);
+        (TopLevel top, Point centre, _) = await AimAsync(control, label, HeaderCentre);
         Avalonia.Input.MouseButton button = WindowInput.ParseButton(arguments["button"]?.GetValue<string>());
         int clicks = arguments["doubleClick"]?.GetValue<bool>() == true ? 2 : 1;
         WindowInput input = InputOf(top);
@@ -104,6 +104,22 @@ public sealed partial class AutomationServer
             ["focused"] = Focused(),
             ["finished"] = finished,
         };
+    }
+
+    /// <summary>
+    /// Where a click on a control lands: its centre, but an item of a tree on its own line (the
+    /// header's text), not in the middle of the items open below it.
+    /// </summary>
+    private static Point HeaderCentre(Control control)
+    {
+        if (control is TreeViewItem item
+            && (item.GetVisualDescendants().OfType<Control>().FirstOrDefault(part => part.Name == "PART_HeaderPresenter")
+                ?? item.GetVisualDescendants().OfType<Control>().FirstOrDefault(part => part.Name == "PART_Header")) is Control header
+            && header.TranslatePoint(new Point(header.Bounds.Width / 2, header.Bounds.Height / 2), item) is Point inItem)
+        {
+            return inItem;
+        }
+        return new Point(control.Bounds.Width / 2, control.Bounds.Height / 2);
     }
 
     /// <summary>

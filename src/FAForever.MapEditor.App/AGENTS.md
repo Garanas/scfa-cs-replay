@@ -1364,14 +1364,24 @@ change, span `model.armies`), the place tool and the commands.
   degrees, a mobile unit 15, shift 90); the select tool turns a selection of structures 90.
   A blueprint the workspace lacks is placed as it is, with a warning.
 - **The tree** (`UnitGroupsSection`, a `TreeView` of `GroupNode`s with their units counted
-  with the groups in them; expanded nodes stay expanded when it is made again): choosing a node is
-  where the place tool places and the buttons work: Add (`units.addGroup {army?, parent?, name?}`,
-  the chosen group when left out; the new group is chosen), Rename (`units.renameGroup`), Remove
-  (`units.removeGroup {keepUnits}`: the panel keeps the units, which go to the group above),
-  Select units (`units.selectGroup`), Move here (`units.moveToGroup {group, army?}`: without an
-  army each unit stays in its own). `units.moveGroup {army, group, toParent, toArmy?}` nests a
-  group. The inspector's unit section shows the selection's army (choosing another runs
-  `units.moveToArmy {army, group?}`) and group. A path is `INITIAL/Town`, empty for the root.
+  with the groups in them; expanded nodes stay expanded when it is made again) is the Units panel's
+  list; the inspector edits what is chosen in it (`UnitGroupDetailsSection`,
+  `Views/MapPanels/UnitGroupPanel`, on `ArmiesViewModel`). Choosing a node is where the place tool
+  places, and the inspector shows it: a group its army, path and units (`ChosenGroupKind`,
+  `ChosenGroupTitle`, `ChosenGroupUnits`), its name with Rename (`units.renameGroup`) and Remove the
+  group (`units.removeGroup {keepUnits}`: the inspector keeps the units, which go to the group
+  above); an army the same fields as the Map mode's army (`Views/MapPanels/ArmyPanel`, one view in
+  both modes: choosing an army or group in the tree makes its army `ChosenArmy`); both Add a group
+  with the new group's name (`NewGroupName`; `units.addGroup {army?, parent?, name?}`, the chosen
+  group when left out; the new group is chosen), Select its units (`units.selectGroup`; the
+  selection then has the inspector), Move the selection here (`units.moveToGroup {group, army?}`:
+  without an army each unit stays in its own) and Save as a preset (`units.saveGroupAsPreset {army?,
+  group?, name?}`: the group's units whatever is selected; the panel's Save in Presets keeps saving
+  the selection). A unit chosen in the tree is selected, and the selection's inspector shows it.
+  The place tool's unit, army and group stay in the options row. `units.moveGroup {army, group,
+  toParent, toArmy?}` nests a group. The inspector's unit section shows the selection's army
+  (choosing another runs `units.moveToArmy {army, group?}`) and group. A path is `INITIAL/Town`,
+  empty for the root.
 - **Units presets** (`Tools/UnitPreset`, kind `units`, the Units mode's Presets): Save keeps the
   selected units, else the chosen group's, with places relative to their middle (on a whole
   ogrid) and heights above the terrain, in their groups below the deepest one holding them all
@@ -1393,12 +1403,12 @@ change, span `model.armies`), the place tool and the commands.
   The tool keeps the role (`PresetRole`, `state` `presetRole`); applying says the army in the status line.
 - **Armies** (`ArmiesSection` in the Map mode, `map.armies {army?}` shows it): the list with each
   army's summary, Add army and Add extra (`map.addArmy {name?, extra?, x?, z?}`), and the chosen
-  army's name (`map.renameArmy`), playable, team and factions (`map.setArmy {army, playable?,
+  army's fields (`Views/MapPanels/ArmyPanel`, also the Units mode's inspector for an army): name (`map.renameArmy`), playable, team and factions (`map.setArmy {army, playable?,
   factions?, team?}`, one step), alliances (`map.setAlliance {army, other, stance?, mutual?}`)
   and Remove (`map.removeArmy`). The spawn follows its army (renamed, removed, added for a
   playable army); the library's guide says why teams are written after the team FFA.
 - The panel's and inspector's commands are in no menu (`units.add`, `units.renameGroup`,
-  `units.removeGroup`, `units.moveGroup`, `units.moveToArmy`, `units.moveToGroup`,
+  `units.removeGroup`, `units.saveGroupAsPreset`, `units.moveGroup`, `units.moveToArmy`, `units.moveToGroup`,
   `map.renameArmy`, `map.setArmy`, `map.setAlliance`, `map.removeArmy`).
 - **Wrecks** (U-5; the library's `UnitWrecks`, its guide says why a group): the place tool's
   As wrecks (`AsWrecks`, the check box after Choose...) places into the army's `WRECKAGE` group in
@@ -2170,23 +2180,39 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   settings groups, maps, generators, presets) with a short detail each, and choosing one shows its
   fields in the inspector. A new part follows it: an entry of a list in the panel, its editing in
   the inspector. Checked against it (October 2026): Terrain (height layers listed, the chosen one
-  in the inspector), Paint (strata listed, the chosen stratum in the inspector), Decals and Units
-  (groups listed, the selection in the inspector), Water and Lighting (below) and Procedural (the
+  in the inspector), Paint (strata listed, the chosen stratum in the inspector), Units (the tree of
+  armies and groups listed, the chosen army or group in the inspector, a unit chosen selected),
+  Decals (groups listed, the selection in the inspector), Water and Lighting (below) and Procedural (the
   generated results listed, section "The Procedural mode") follow it; the Map
   panel's Information fields and the Props panel's Placing are
   still edited in the panel, for a later wave to move.
-- **Who has the inspector: what was chosen last** of three: a tile of the shelf (or the picker),
-  things on the map (in the modes of things: Map, Markers, Props, Decals, Units), and a part of the
-  mode. Choosing one unchooses the others, so the inspector never shows something older than the
-  person's last choice: a tile chosen clears the map's selection, a selection unchooses the tile, and
-  a part of the mode unchooses the tile (`MainViewModel.InspectTheMode`). A part of the mode is
-  chosen by a mode on the rail, its F-key or the Modes menu (`<mode>.mode`; a command that switches
-  to its own mode, `decals.choose`, is no such choice), an entry of a panel's list (`PanelParts.Picked`,
-  raised by its button also when it was chosen already; `view.inspectPart`), and an item of a list or
-  tree in the mode's panel (a stratum, a height layer, a mask, a group: `ModePanel`'s pointer press).
-  Choosing a tool is not one: a unit tile stays in the inspector while the person picks the place
-  tool. The tools keep what they took from a tile (the unit, prop or decal they place, the brush's
-  shape), so unchoosing it changes nothing on the map. Tests: `InspectorOwnerTest`.
+- **Who has the inspector: what was chosen last** of three (`MainViewModel.InspectorOwner`, an
+  `InspectorOwner`: `Tile`, `Selection`, `Part`; `state.inspector` has `owner`, what it `shows`
+  (`asset`, `selection`, `mode`) and the mode's inspector `parts`): a tile of the shelf (or the
+  picker), things on the map (in the modes of things, `ModesOfThings`: Map, Markers, Props, Decals,
+  Units), and a part of the mode. A tile chosen clears the map's selection and takes the inspector;
+  a selection unchooses the tile. A part of the mode chosen (`MainViewModel.InspectTheMode`)
+  unchooses the tile and **keeps the selection**: still highlighted on the map, still counted in the
+  status bar, and still what Delete, Move here, "From the selection", "Add group with the selected
+  units" and the panel's save as a preset act on; only the inspector shows the part. A selection
+  changed afterwards, by a click on the map or by a command (`select.set`, Select its units, an
+  undo that selects again), takes the inspector back, and so does a click on a thing selected
+  already (the select tools call `InspectTheSelection`, since such a click keeps the selection to
+  drag it); a selection that only lost what an undo took away (`SelectionViewModel.Prune`,
+  `IsPruning`) leaves the owner as it is. A mode with no part of its own in the inspector (the
+  Markers mode, `HasNoInspectorParts`) leaves the selection there whoever chose last, and only there
+  the inspector says how to select things ("Nothing is selected ..."). A part of the mode is chosen
+  by a mode on the rail, its F-key or the Modes menu (`<mode>.mode`; a command that switches to its
+  own mode, `decals.choose`, is no such choice), an entry of a panel's list (`PanelParts.Picked`,
+  raised by its button also when it was chosen already; `view.inspectPart`), and an item of a list
+  or tree in the mode's panel (a stratum, a height layer, a mask, a group: `ModePanel`'s pointer
+  press). A unit of the Units mode's tree is selected instead (`MainViewModel.InspectUnit`), and
+  the selection has the inspector. Choosing a tool is not one: a unit tile stays in the inspector
+  while the person picks the place tool. The tools keep what they took from a tile (the unit, prop
+  or decal they place, the brush's shape), so unchoosing it changes nothing on the map. The
+  inspector's parts follow `PanelSection.ForTools` and `ForParts` as the panel's sections do
+  (`MainViewModel.Shows`, `InspectorParts` made again only when they change). Tests:
+  `InspectorOwnerTest`.
 - **Lists of parts** (`PanelParts`, `PanelPart`): a mode panel's list of entries under headings,
   one always chosen (the first until another is); `Controls/PanelPartList` draws it in the panel
   (`Button.partentry`, filled while chosen, the detail at the right), `Views/MapPanels/PanelPartView`
@@ -2195,7 +2221,15 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   built yet with its story; `WaterMapPart`; `WaveGeneratorsPart`). A new kind of content adds its
   template to `PanelPartView`; `PanelParts.Replace(id, content)` gives an entry another (a water
   map's layer stack), `Insert(index, part)` and `Remove(id)` change the list after it was made (the
-  Procedural mode's, as generators register). `view.inspectPart {part}` (in no menu) chooses an entry and its mode;
+  Procedural mode's, as generators register). **Entries that come and go with the map** (armies,
+  areas, chains: one entry each under a heading, after a fixed first entry): the mode calls
+  `PanelParts.SyncGroup(heading, entries, afterGroup?)` on `DocumentChanged` with every entry the
+  heading holds now (`PanelPartEntry`: id, title, a function that makes its content, detail, help).
+  New ids are added in the order given (a heading without entries goes after `afterGroup`), gone
+  ones taken out, the others keep their content and get the new title (`PanelPart.Title` is
+  observable) and detail; the chosen entry stays chosen when it stays, else the heading's first,
+  else the list's first. When nothing changed it makes nothing and raises nothing, so it is cheap
+  to call on every change. Tests: `PanelPartsSyncTest`. `view.inspectPart {part}` (in no menu) chooses an entry and its mode;
   `state.panelParts` has each list's chosen entry, its content's type and every entry's detail.
 - **Water** (`WaterSettings.Parts`): Water on (a check box above the list), Settings (Elevations
   and colour, its detail the surface's elevation; Surface and reflection; Textures and waves, the

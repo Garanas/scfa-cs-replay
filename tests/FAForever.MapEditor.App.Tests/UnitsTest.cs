@@ -132,7 +132,7 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.IsTrue(armies.Choose("ARMY_1", ["INITIAL"]));
             Assert.AreEqual(("ARMY_1", "INITIAL"), (model.Tool<UnitPlaceTool>().Army, model.Tool<UnitPlaceTool>().Group), "the place tool places into the chosen group");
-            armies.GroupName = "Town";
+            armies.NewGroupName = "Town";
             await armies.AddGroupCommand.ExecuteAsync(null);
             Assert.AreEqual("INITIAL/Town", armies.ChosenGroup?.PathText, "the new group is chosen");
             Assert.AreEqual("INITIAL/Town", model.Tool<UnitPlaceTool>().Group, "and the place tool places into it");

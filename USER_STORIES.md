@@ -449,7 +449,9 @@ reads again when it changes; and nothing that generates runs by itself.
       the inspector; with symmetry, a placed unit's images are placed too (F-12).
 - [x] **U-3 Unit groups.** Per army a tree of groups: create, rename, nest, move units between groups.
       Today: the Units mode's tree with the units per group (each unit under its group; choosing one
-      selects it); nesting and moving between groups by command (`units.moveGroup`, Move here) and by
+      selects it), the chosen army or group edited in the inspector (a group's name, Remove, Add a
+      group, Select its units, Move the selection here, Save as a preset; an army's fields as in the
+      Map mode); nesting and moving between groups by command (`units.moveGroup`, Move here) and by
       dragging units (a selected one takes the selection along) and groups onto a group or army in
       the tree, which lights up, one step of undo (`units.drop`).
 - [x] **U-4 Unit presets.** A civilian base, a defence line: a group saved as a preset and placed

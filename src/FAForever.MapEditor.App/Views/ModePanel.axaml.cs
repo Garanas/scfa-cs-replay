@@ -19,13 +19,22 @@ public sealed partial class ModePanel : UserControl
 
     /// <summary>
     /// A press on an item of a list or tree of the panel (a stratum, a height layer, a mask, a
-    /// group): the inspector shows the mode again, over a tile chosen on the shelf
-    /// (<see cref="ViewModels.MainViewModel.InspectTheMode"/>).
+    /// group): the inspector shows that part of the mode, over a tile chosen on the shelf and over
+    /// the selection, which stays (<see cref="ViewModels.MainViewModel.InspectTheMode"/>). A unit of
+    /// the Units mode's tree is selected instead, and the selection has the inspector.
     /// </summary>
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_model is not null && e.Source is Avalonia.Visual source
-            && (source.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not null || source.FindAncestorOfType<TreeViewItem>(includeSelf: true) is not null))
+        if (_model is null || e.Source is not Avalonia.Visual source)
+        {
+            return;
+        }
+        TreeViewItem? node = source.FindAncestorOfType<TreeViewItem>(includeSelf: true);
+        if (node?.DataContext is ViewModels.UnitNode unit)
+        {
+            _model.InspectUnit(unit);
+        }
+        else if (node is not null || source.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not null)
         {
             _model.InspectTheMode();
         }

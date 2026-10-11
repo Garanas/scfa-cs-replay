@@ -27,25 +27,42 @@ public static class UnitPreset
     {
         MapDocument document = model.ShownDocument ?? throw new InvalidOperationException("No map is open");
         string[] names = [.. model.Selection.Items.Where(thing => thing.Kind == ObjectKind.Unit).Select(thing => thing.Name!)];
-        string name;
         if (names.Length > 0)
         {
             PlacedUnit first = document.FindUnit(names[0])!;
-            name = first.Group.IsEmpty ? first.Army : first.Group[^1];
+            return Capture(document, names, first.Group.IsEmpty ? first.Army : first.Group[^1]);
         }
-        else if (model.Armies.Chosen is (string army, ImmutableArray<string> path))
+        if (model.Armies.Chosen is (string army, ImmutableArray<string> path))
         {
-            names = [.. document.UnitsIn(army, path).Select(unit => unit.Unit.Name)];
-            name = path.IsEmpty ? army : path[^1];
+            return CaptureGroup(model, army, path);
         }
-        else
+        throw new InvalidOperationException("Select units, or choose a group with units in the Units mode's tree, to save them as a preset");
+    }
+
+    /// <summary>
+    /// The units of a group and of the groups in it as a preset, named after the group, whatever is
+    /// selected (the group's inspector's Save as a preset).
+    /// </summary>
+    /// <param name="path">Below the army's root group; empty for all the army's units.</param>
+    /// <exception cref="InvalidOperationException">No map, or the group holds no units.</exception>
+    /// <exception cref="ArgumentException">The map has no such army or group.</exception>
+    public static (string Name, JsonObject Settings) CaptureGroup(MainViewModel model, string army, ImmutableArray<string> path)
+    {
+        MapDocument document = model.ShownDocument ?? throw new InvalidOperationException("No map is open");
+        if (document.FindGroup(army, path) is null)
         {
-            name = "";
+            throw new ArgumentException($"The army {army} has no group {UnitGroupEdits.PathText(path)}");
         }
+        string[] names = [.. document.UnitsIn(army, path).Select(unit => unit.Unit.Name)];
         if (names.Length == 0)
         {
-            throw new InvalidOperationException("Select units, or choose a group with units in the Units mode's tree, to save them as a preset");
+            throw new InvalidOperationException($"The group {(path.IsEmpty ? army : UnitGroupEdits.PathText(path))} holds no units to save as a preset");
         }
+        return Capture(document, names, path.IsEmpty ? army : path[^1]);
+    }
+
+    private static (string Name, JsonObject Settings) Capture(MapDocument document, string[] names, string name)
+    {
         UnitGroup template = document.CaptureUnits(names, name);
         UnitPresetSettings settings = new UnitPresetSettings(UnitPresets.ToPreset(template), names.Length);
         return ($"{name} ({names.Length})", Preset.Of(Kind, name, settings).Settings);

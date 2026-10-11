@@ -287,6 +287,8 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
                 {
                     model.Selection.Apply([picked], change);
                 }
+                // a click on a thing selected already gives the inspector back to the selection
+                model.InspectTheSelection();
                 _gesture = Gesture.Move;
             }
         }

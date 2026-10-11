@@ -115,6 +115,7 @@ public sealed partial class DecalSelectTool : ObservableObject, IMapTool
                 {
                     _model.Selection.Apply([picked], input.Modifiers.HasFlag(ToolModifiers.Shift) ? SelectionChange.Add : SelectionChange.Replace);
                 }
+                _model.InspectTheSelection();
                 _scaling = true;
                 _from = (x, z);
                 Vector3[] centres = [.. _model.Selection.Items.Where(thing => thing.Kind == ObjectKind.Decal).Select(document.PlaceOf).OfType<Vector3>()];

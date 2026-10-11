@@ -14,6 +14,12 @@ namespace FAForever.MapEditor.App.ViewModels;
 public sealed record UnitGroupsSection() : PanelSection("Armies and groups");
 
 /// <summary>
+/// The Units mode's inspector: the army or group chosen in the tree (user stories U-3, U-4, M-4),
+/// <c>Views/MapPanels/UnitGroupPanel</c>.
+/// </summary>
+public sealed record UnitGroupDetailsSection() : PanelSection("Army or group");
+
+/// <summary>
 /// The Map mode's armies and teams (user story M-4).
 /// </summary>
 public sealed record ArmiesSection() : PanelSection("Armies and teams");
@@ -162,7 +168,7 @@ public sealed partial class ArmiesViewModel : ObservableObject
     /// tool places.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasChosenGroup), nameof(CanChangeChosenGroup))]
+    [NotifyPropertyChangedFor(nameof(HasChosenGroup), nameof(CanChangeChosenGroup), nameof(ChosenGroupTitle), nameof(ChosenGroupUnits), nameof(IsArmyChosen), nameof(ChosenGroupKind))]
     public partial GroupNode? ChosenGroup { get; set; }
 
     public bool HasChosenGroup => ChosenGroup is not null;
@@ -173,10 +179,36 @@ public sealed partial class ArmiesViewModel : ObservableObject
     public bool CanChangeChosenGroup => ChosenGroup is { IsArmy: false };
 
     /// <summary>
-    /// The name a new group gets, or the chosen group's new name.
+    /// Whether an army (its root group) is chosen in the tree: the inspector shows its fields.
+    /// </summary>
+    public bool IsArmyChosen => ChosenGroup is { IsArmy: true };
+
+    /// <summary>
+    /// The chosen group's new name (Rename).
     /// </summary>
     [ObservableProperty]
     public partial string GroupName { get; set; } = "";
+
+    /// <summary>
+    /// The name the next group added to the chosen army or group gets; left empty, <c>GROUP_1</c>.
+    /// </summary>
+    [ObservableProperty]
+    public partial string NewGroupName { get; set; } = "";
+
+    /// <summary>
+    /// The inspector's heading for the chosen army or group: the group's name, or the army's.
+    /// </summary>
+    public string ChosenGroupTitle => ChosenGroup is not GroupNode node ? "" : node.IsArmy ? node.Army : node.Path[^1];
+
+    /// <summary>
+    /// What is chosen in the tree, over the inspector's heading: <c>Army</c> or <c>Group</c>.
+    /// </summary>
+    public string ChosenGroupKind => ChosenGroup is not GroupNode node ? "" : node.IsArmy ? "Army" : "Group";
+
+    /// <summary>
+    /// How many units the chosen army or group holds, with the groups in it.
+    /// </summary>
+    public string ChosenGroupUnits => ChosenGroup is GroupNode node ? MainViewModel.Units(node.Count) : "";
 
     /// <summary>
     /// The Map mode's list of armies.
@@ -390,6 +422,12 @@ public sealed partial class ArmiesViewModel : ObservableObject
         {
             GroupName = value.Path[^1];
         }
+        // the chosen army or group's army is the army whose fields the inspector shows (one view
+        // for the Units mode's tree and the Map mode's list)
+        if (value is not null && ChosenArmy?.Name != value.Army && Rows.FirstOrDefault(row => row.Name == value.Army) is ArmyRow row)
+        {
+            ChosenArmy = row;
+        }
     }
 
     /// <summary>
@@ -416,12 +454,21 @@ public sealed partial class ArmiesViewModel : ObservableObject
     #region The buttons of the panels
 
     [RelayCommand]
-    private Task AddGroup() => _run("units.addGroup", new JsonObject
+    private async Task AddGroup()
     {
-        ["army"] = ChosenGroup?.Army,
-        ["parent"] = ChosenGroup?.PathText,
-        ["name"] = GroupName.Trim().Length == 0 ? null : GroupName.Trim(),
-    });
+        await _run("units.addGroup", new JsonObject
+        {
+            ["army"] = ChosenGroup?.Army,
+            ["parent"] = ChosenGroup?.PathText,
+            ["name"] = NewGroupName.Trim().Length == 0 ? null : NewGroupName.Trim(),
+        });
+        NewGroupName = "";
+    }
+
+    [RelayCommand]
+    private Task SaveGroupAsPreset() => ChosenGroup is GroupNode node
+        ? _run("units.saveGroupAsPreset", new JsonObject { ["army"] = node.Army, ["group"] = node.PathText })
+        : Task.CompletedTask;
 
     [RelayCommand]
     private Task RenameGroup() => ChosenGroup is { IsArmy: false } node
