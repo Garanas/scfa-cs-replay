@@ -17,6 +17,38 @@
       <Button Content="Read the file again" Command="{Binding HeightStack.ReloadCommand}" IsVisible="{Binding HeightStack.IsImported}"
               AutomationProperties.HelpText="Reads the imported layer's file again, as the editor does when it changes in the project folder" />
       <controls:SettingList DataContext="{Binding HeightStack.Curve}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HeightStack.IsCurve}" />
+      <!-- Decals along the curve (T-4, D2): placed once as ordinary decals by decals.alongCurve; the editor's settings, not the curve's -->
+      <StackPanel Classes="stack section" x:DataType="vm:DecalsAlongCurveViewModel"
+                  DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DecalsAlong}"
+                  IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HeightStack.IsCurve}">
+        <TextBlock Classes="heading" Text="Decals along the curve" />
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Classes="beside" Content="Choose..." Command="{Binding ChooseCommand}"
+                  AutomationProperties.Name="Choose the decal to place along the curve" AutomationProperties.HelpText="Opens the picker of decals; a decal set's tile places the whole set" />
+          <controls:AssetThumbnail DockPanel.Dock="Left" Source="{Binding Image}" DecodeWidth="64" Width="{StaticResource ChipHeight}" Height="{StaticResource ChipHeight}"
+                                   IsVisible="{Binding Image, Converter={x:Static ObjectConverters.IsNotNull}}" AutomationProperties.Name="Picture of the decal to place along the curve" />
+          <TextBlock Classes="label" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Decal to place along the curve" />
+        </DockPanel>
+        <DockPanel ToolTip.Tip="Between two decals' middles along the curve, in ogrids; 0 lays them end to end">
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Spacing" />
+          <TextBox Classes="mono commit" Text="{Binding Spacing, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                   AutomationProperties.Name="Spacing of decals along the curve" AutomationProperties.HelpText="Between two decals' middles along the curve, in ogrids; 0 lays them end to end" />
+        </DockPanel>
+        <DockPanel ToolTip.Tip="Each decal's width across the curve, in ogrids; its length follows the texture's shape">
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Width" />
+          <TextBox Classes="mono commit" Text="{Binding Width, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                   AutomationProperties.Name="Width of decals along the curve" AutomationProperties.HelpText="Each decal's width across the curve, in ogrids; its length follows the texture's shape" />
+        </DockPanel>
+        <DockPanel ToolTip.Tip="How far beside the curve, in ogrids: positive on its left walking from the first point, negative on its right">
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Offset" />
+          <TextBox Classes="mono commit" Text="{Binding Offset, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                   AutomationProperties.Name="Offset of decals beside the curve" AutomationProperties.HelpText="How far beside the curve, in ogrids: positive on its left walking from the first point, negative on its right" />
+        </DockPanel>
+        <CheckBox Content="Alternate sides" IsChecked="{Binding Alternate}" AutomationProperties.Name="Decals along the curve alternate sides"
+                  AutomationProperties.HelpText="Every other decal lies on the other side of the curve" ToolTip.Tip="Every other decal lies on the other side of the curve" />
+        <Button Content="Place" Command="{Binding PlaceCommand}" AutomationProperties.Name="Place decals along the curve"
+                AutomationProperties.HelpText="Places the decals once, as ordinary decals (one step of undo), with the images of a mirrored curve; they become the selection" />
+      </StackPanel>
       <controls:SettingList DataContext="{Binding HeightStack.DecalMasks}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HeightStack.IsDecalMasks}" />
       <!-- who writes the layer's file: the editor's own (.gen), the map's own, or a tool's -->
       <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding HeightStack.FileNote}" IsVisible="{Binding HeightStack.HasLayers}"

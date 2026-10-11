@@ -42,7 +42,7 @@ namespace FAForever.MapEditor.Project.Editing
     /// A decal's <see cref="Decal.Scale"/> holds its width (x, along its own x axis) and its length
     /// (z); maps keep y the same as x, as the FAF map editor writes it, and these edits do too.
     /// </remarks>
-    public static class DecalEdits
+    public static partial class DecalEdits
     {
         /// <summary>
         /// The distance beyond which a new decal is not drawn: the one maps use most (Adaptive

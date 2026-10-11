@@ -301,6 +301,10 @@
                           AutomationProperties.Name="Distance a new decal shows within"
                           AutomationProperties.HelpText="The game does not draw the decal when the camera is further away (its cut-off LOD); maps mostly use 200 to 800" />
                 </StackPanel>
+                <!-- decals along a curve (T-4, D2): this decal, width and cut-off, with the curve inspector's spacing, offset and sides -->
+                <Button Content="Along a curve..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DecalsAlong.PlaceToolCommand}"
+                        AutomationProperties.Name="Place the decal along a curve"
+                        AutomationProperties.HelpText="Places this decal along the chosen curve layer (else the topmost curve), with the spacing, offset and sides of the curve's Decals along the curve" />
               </controls:ToolRow>
             </DataTemplate>
             <!-- placing units (U-2) or a units preset (U-4): what, for which army, into which group, facing where -->

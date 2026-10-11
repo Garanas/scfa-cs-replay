@@ -271,7 +271,7 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
     /// <summary>
     /// The height over the width of a PNG, from its header; 1 when it cannot be read.
     /// </summary>
-    private static float AspectOf(string png, ILogger log)
+    internal static float AspectOf(string png, ILogger log)
     {
         try
         {
