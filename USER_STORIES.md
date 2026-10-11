@@ -488,6 +488,37 @@ reads again when it changes; and nothing that generates runs by itself.
       selection (the inspector's Wrecks check box) put them into their army's `WRECKAGE` group, which
       the game turns into wrecks when it starts, as the vault's maps keep them; grey and dark in 3D, a
       cross in the top view; a warning for wrecks of a playable army.
+- [ ] **U-7 Place many at once.** The Place tool's ways to place: a line (structures butt together
+      at their footprint, walls above all; mobile units at a chosen spacing; each facing along the
+      line or the chosen heading), a rectangle (filled, or hollow for walls), a ring around the
+      selection, and a scatter brush for mobile units and wrecks (a count per stroke, random
+      headings, a least distance); each one step of undo, with its symmetry images, its footprints
+      shown under the mouse before the mouse is released, and a single unit's footprint shown too.
+- [ ] **U-8 Palettes.** A named set of ten slots, each a unit or a unit preset, saved in the
+      workspace beside the presets; the Units mode shows the chosen palette, keys 1 to 0 pick a slot
+      while the view has the keyboard and Tab goes to the next palette; a unit from the shelf or the
+      picker and a preset from the list are dropped into a slot; example palettes per faction (a T1
+      base, T2, defences, naval, civilian); the units placed last are offered again.
+- [ ] **U-9 Preset instances.** The group a unit preset is placed as knows the preset: its name, a
+      fingerprint of the preset's content, and where and how it was placed; the tree and the
+      inspector say so, the presets list counts how often each is placed and whether the preset
+      changed since; select the instance, save the instance's layout back into the preset, or
+      detach it. The link lives in the project and is never used to change the map; the export
+      leaves it out.
+- [ ] **U-10 Select by and stored selections.** Select units by army, faction, kind, tech,
+      blueprint and wrecks, within the map, the selection or an area, replacing the selection or
+      adding to it; store the selection under 1 to 9 (Alt and the digit) and recall it (the digit),
+      as the game's control groups, kept with the project and shown along the view; a click inside
+      a structure's footprint picks it; the top view draws units as their footprint in the army's
+      colour.
+- [ ] **U-11 Editing many units.** Group the selection into a new group (Ctrl+G) and ungroup; the
+      group as a choice in the inspector; replace the blueprint of the selected units, or convert
+      them to another faction's unit of the same kind and tech; a move keeps structures on the
+      build grid; distribute the selection evenly.
+- [ ] **U-12 Placement checks.** Problems lists structures whose footprints overlap and structures
+      where the ground does not allow them (too steep, the wrong layer: water or land), from the
+      blueprint's skirt, build layers and slope limit, which the workspace's converted assets carry;
+      the footprint under the mouse turns red there.
 
 ## V: Views
 
