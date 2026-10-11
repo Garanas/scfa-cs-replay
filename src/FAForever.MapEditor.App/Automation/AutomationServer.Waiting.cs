@@ -195,6 +195,12 @@ public sealed partial class AutomationServer
         {
             ["version"] = version,
             ["built"] = built?.ToString("O", CultureInfo.InvariantCulture),
+            // what the assets' manifest names (a workspace for a start check, tools/editor-smoke-3d.sh)
+            ["assets"] = new JsonObject
+            {
+                ["format"] = FAForever.MapEditor.Project.Workspaces.AssetConverter.FormatVersion,
+                ["editor"] = FAForever.MapEditor.Project.Workspaces.AssetConverter.EditorVersion,
+            },
         };
     }
 }
