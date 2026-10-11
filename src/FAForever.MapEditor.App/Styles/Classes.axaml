@@ -973,6 +973,9 @@
   <Style Selector="ScrollViewer.workspacesettingslist">
     <Setter Property="MaxHeight" Value="{StaticResource WorkspaceSettingsListHeight}" />
   </Style>
+  <Style Selector="ScrollViewer.workspacesettingslist > StackPanel">
+    <Setter Property="Margin" Value="{StaticResource WorkspaceSettingsListInset}" />
+  </Style>
   <Style Selector="TextBlock.shortcutkeys">
     <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
