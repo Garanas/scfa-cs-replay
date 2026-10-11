@@ -85,6 +85,12 @@ namespace FAForever.MapEditor.App.Tests
             combo.IsDropDownOpen = false;
             Dispatcher.UIThread.RunJobs();
             Assert.IsNull((await Send(automation, "state"))["popups"]);
+
+            // a command whose own argument is called id takes its arguments in args
+            await Send(automation, "run", new JsonObject { ["id"] = "generate.auto", ["args"] = new JsonObject { ["id"] = "navigationMesh", ["on"] = false } });
+            Assert.IsFalse(model.Map!.Document.Procedural.RegeneratesOnItsOwn("navigationMesh"));
+            await Send(automation, "run", new JsonObject { ["id"] = "generate.auto", ["args"] = new JsonObject { ["id"] = "navigationMesh", ["on"] = true } });
+            Assert.IsTrue(model.Map!.Document.Procedural.RegeneratesOnItsOwn("navigationMesh"));
             window.Close();
         });
 

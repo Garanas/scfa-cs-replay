@@ -206,8 +206,20 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 };
             case "run":
             {
-                // a command of the registry with its arguments; it asks nothing, a missing argument fails
+                // a command of the registry with its arguments; it asks nothing, a missing argument fails.
+                // A command whose own argument is called id takes its arguments in args: run id=generate.auto
+                // args={"id":"navigationMesh","on":true}
                 string id = Take(arguments, "id");
+                if (arguments["args"] is JsonObject args)
+                {
+                    arguments.Remove("args");
+                    foreach (string key in args.Select(pair => pair.Key).ToList())
+                    {
+                        JsonNode? value = args[key];
+                        args.Remove(key);
+                        arguments[key] = value;
+                    }
+                }
                 if (!await StartCommandAsync(id, arguments, result))
                 {
                     await RunCommandAsync(id, arguments, result, "result");
