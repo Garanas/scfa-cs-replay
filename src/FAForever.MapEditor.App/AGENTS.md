@@ -2588,6 +2588,17 @@ last frame drawn.
   (`MainViewModel.BrushWheel`). The sculpt, strata, mask, water, terrain types, props paint and
   erase brushes take them; the status line says the new value and the options row's sliders follow,
   also behind More. Control with `[` and `]` stays the decals' order.
+- **Turning a brush** (T-1, the owner's decision of October 2026; `BrushKeys.TurnKey`, `Turn`,
+  `TurnWheel`): Q and E turn the picture of the active brush 15 degrees anticlockwise or clockwise
+  (shift: 90), alt and the wheel over a view 5 degrees a notch (`MainViewModel.BrushTurnWheel`,
+  a notch away from the person clockwise; the delta's x when a system gives alt's wheel sideways),
+  for every tool with a shape (`IShapedBrushTool`: sculpt, strata, masks, water maps, terrain
+  types, walkability marks, stamp). A round brush ignores them (the key goes on to the tool, the
+  wheel zooms as without alt); with Random rotation on they set the angle the dabs start from. The
+  outline under the mouse turns at once (a change of the shape redraws the cursor), the status line
+  says `Brush rotation: 30°` and the options row's Rotation follows. The stamp keeps its own Q and E
+  (`StampTool.Key`, `The stamp turned 15°`) and takes alt with the wheel; the select and place tools
+  keep Q and E for what they turn (no shaped brush). Tests: `BrushTurnTest`.
 - **Undo brings back the selection** (`MainViewModel.UndoSelection`): each version of the document
   remembers what was selected while it was the current one (not while an edit runs: a command that
   deletes clears the selection inside its step); undo and redo select that again, as far as the

@@ -224,7 +224,9 @@ reads again when it changes; and nothing that generates runs by itself.
       stroke), erode (thermal) and scale around a base with a brush, round (falloff smooth, linear
       or sharp) or the shape of one of the workspace's brushes (T-2), turned by hand or at random per
       dab; limits on the lowest and highest height it makes. Every brush's radius by `[` and `]`
-      or control and the wheel over a view, its strength with shift. Missing: hydraulic erosion.
+      or control and the wheel over a view, its strength with shift; a brush's picture turned with
+      Q and E (15 degrees, shift 90) or alt and the wheel (5 degrees a notch). Missing: hydraulic
+      erosion.
 - [x] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace. Today: the
       brush shapes, greyscale PNGs of the workspace's `brushes` folder, in the asset shelf of the
       Terrain mode, read again when they change; they are the shapes of the sculpt and strata

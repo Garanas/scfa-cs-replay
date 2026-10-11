@@ -6,8 +6,11 @@ namespace FAForever.MapEditor.App.Tools;
 /// The brushes' radius and strength by keys and the wheel (user story T-1), for every tool with a
 /// brush: <c>[</c> and <c>]</c> make the radius smaller and larger by a fifth, shift with them the
 /// strength by a twentieth of its range (the props brush: its density); control and the wheel
-/// over a view the radius, control, shift and the wheel the strength. The options row's sliders
-/// show the new values, also behind More.
+/// over a view the radius, control, shift and the wheel the strength. Q and E turn the picture of
+/// a brush with one (<see cref="IShapedBrushTool"/>, user story T-1) 15 degrees anticlockwise or
+/// clockwise, shift with them 90, alt and the wheel over a view 5 degrees a notch; a round brush
+/// ignores them, and the select and place tools keep Q and E for what they turn. The options row's
+/// sliders and its Rotation show the new values, also behind More.
 /// </summary>
 public static class BrushKeys
 {
@@ -17,6 +20,11 @@ public static class BrushKeys
     public const double MinimumRadius = 1, MaximumRadius = 128;
 
     /// <summary>
+    /// The degrees Q and E turn a brush's picture, with shift, and a notch of the wheel with alt.
+    /// </summary>
+    public const double TurnStep = 15, TurnStepLarge = 90, WheelTurnStep = 5;
+
+    /// <summary>
     /// A key of a view or the window for the active tool: <c>OemOpenBrackets</c> or
     /// <c>OemCloseBrackets</c> without control (control with them orders the decals).
     /// </summary>
@@ -24,6 +32,10 @@ public static class BrushKeys
     /// <returns>Whether the key changed the brush.</returns>
     public static bool Key(IMapTool? tool, string key, ToolModifiers modifiers, out string? status)
     {
+        if (TurnKey(tool, key, modifiers, out status))
+        {
+            return true;
+        }
         status = null;
         // by the key's value: a key's name may be its other name (Oem4 for OemOpenBrackets)
         int steps = !Enum.TryParse(key, out Avalonia.Input.Key pressed) ? 0 : pressed switch
@@ -37,6 +49,46 @@ public static class BrushKeys
             return false;
         }
         return Step(tool, steps, strength: modifiers.HasFlag(ToolModifiers.Shift), out status);
+    }
+
+    /// <summary>
+    /// Q or E (shift with them) for a tool with a brush's picture: turns it. The stamp tool turns its
+    /// picture with its own keys (<see cref="StampTool.Key"/>), so they are left to it.
+    /// </summary>
+    /// <returns>Whether the key turned the brush.</returns>
+    public static bool TurnKey(IMapTool? tool, string key, ToolModifiers modifiers, out string? status)
+    {
+        status = null;
+        if (key is not ("Q" or "E") || modifiers.HasFlag(ToolModifiers.Control) || modifiers.HasFlag(ToolModifiers.Alt) || tool is StampTool)
+        {
+            return false;
+        }
+        double step = modifiers.HasFlag(ToolModifiers.Shift) ? TurnStepLarge : TurnStep;
+        return Turn(tool, key == "E" ? step : -step, out status);
+    }
+
+    /// <summary>
+    /// Notches of the wheel with alt held over a view: turns the brush's picture 5 degrees a notch,
+    /// clockwise for a notch away from the person.
+    /// </summary>
+    public static bool TurnWheel(IMapTool? tool, int notches, out string? status) => Turn(tool, notches * WheelTurnStep, out status);
+
+    /// <summary>
+    /// Turns the picture of the tool's brush by some degrees, clockwise in the top view, within
+    /// -180 to 180. With random rotation on it is the angle the dabs start from.
+    /// </summary>
+    /// <returns>Whether the tool has a brush with a picture; a round one is not turned.</returns>
+    public static bool Turn(IMapTool? tool, double degrees, out string? status)
+    {
+        status = null;
+        if (degrees == 0 || tool is not IShapedBrushTool { Shape: { IsShaped: true } shape })
+        {
+            return false;
+        }
+        double rotation = Math.Round(shape.Rotation + degrees, 3) % 360;
+        shape.Rotation = rotation > 180 ? rotation - 360 : rotation <= -180 ? rotation + 360 : rotation;
+        status = Say("Rotation", shape.Rotation, "0.#", "°") + (shape.RandomRotation ? ", where each dab's random turn starts" : "");
+        return true;
     }
 
     /// <summary>
@@ -101,6 +153,11 @@ public static class BrushKeys
                 return false;
         }
     }
+
+    /// <summary>
+    /// A wheel's delta as whole notches, at least one in its direction.
+    /// </summary>
+    public static int Notches(double delta) => Math.Sign(delta) * Math.Max(1, (int)Math.Round(Math.Abs(delta)));
 
     /// <summary>
     /// A fifth larger or smaller per step, at least one ogrid a step, within the sliders' range.
