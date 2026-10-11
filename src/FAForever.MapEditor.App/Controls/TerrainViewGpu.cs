@@ -835,10 +835,6 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         {
             PathLinks(document, view, shapes);
         }
-        if (_model.ShowNavigation)
-        {
-            Routes(document, view, shapes);
-        }
         if (_model.ShowGeneratedPathNodes)
         {
             GeneratedPaths(document, view, shapes);

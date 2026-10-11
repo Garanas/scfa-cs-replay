@@ -11,18 +11,13 @@ using FAForever.MapEditor.App.ViewModels;
 namespace FAForever.MapEditor.App.Controls;
 
 /// <summary>
-/// The navigation mesh in the top view (user story T-8): the regions of the shown layer, a colour
-/// each, one pixel an ogrid, and the routes between starts as lines.
+/// The navigation mesh in the top view (user story T-8): the connected regions of the shown layer, a
+/// colour each, one pixel an ogrid.
 /// </summary>
 public sealed partial class HeightmapView
 {
     private WriteableBitmap? _regions;
     private (NavGrid Grid, int? Chosen, Overlay Overlay)? _regionsOf;
-
-    /// <summary>
-    /// How many routes the top view drew the last time (automation).
-    /// </summary>
-    public int RoutesDrawn { get; private set; }
 
     private Vector4 TokenColor(string key) => Token<IBrush>(key) is ISolidColorBrush brush
         ? new Vector4(brush.Color.R / 255f, brush.Color.G / 255f, brush.Color.B / 255f, brush.Color.A / 255f * (float)brush.Opacity)
@@ -30,7 +25,6 @@ public sealed partial class HeightmapView
 
     private unsafe void DrawNavigation(DrawingContext context, Overlay overlay, NavigationViewModel navigation)
     {
-        RoutesDrawn = 0;
         if (navigation.Grid is not NavGrid grid)
         {
             return;
@@ -58,28 +52,6 @@ public sealed partial class HeightmapView
         using (context.PushRenderOptions(new RenderOptions { BitmapInterpolationMode = _zoom >= 2 ? BitmapInterpolationMode.None : BitmapInterpolationMode.HighQuality }))
         {
             context.DrawImage(_regions!, new Rect(0, 0, grid.Width, grid.Height), destination);
-        }
-
-        IPen route = new Pen(Token<IBrush>("MapRouteBrush"), 2);
-        foreach (NavRoute line in navigation.RouteLines)
-        {
-            if (line.Points.Count < 2)
-            {
-                continue;
-            }
-            StreamGeometry geometry = new StreamGeometry();
-            using (StreamGeometryContext path = geometry.Open())
-            {
-                path.BeginFigure(MapToControl(line.Points[0].X, line.Points[0].Y), false);
-                for (int i = 1; i < line.Points.Count; i++)
-                {
-                    path.LineTo(MapToControl(line.Points[i].X, line.Points[i].Y));
-                }
-                path.EndFigure(false);
-            }
-            context.DrawGeometry(null, overlay.Shadow, geometry);
-            context.DrawGeometry(null, route, geometry);
-            RoutesDrawn++;
         }
     }
 }

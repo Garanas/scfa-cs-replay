@@ -6,11 +6,11 @@ using MediatR;
 namespace FAForever.MapEditor.App.Commands;
 
 /// <summary>
-/// Generates the navigation mesh (user story T-8): the game's navigational mesh with its regions per
-/// layer, the starts and deposits in each, and the routes between starts, on a thread of the pool.
-/// The views colour the regions (the overlay turns on).
+/// Generates the navigation mesh (user story T-8): the game's navigational mesh with its connected
+/// regions per layer and the starts and deposits in each, on a thread of the pool. The views colour
+/// the regions (the overlay turns on).
 /// </summary>
-/// <returns>The shown layer, its regions and routes.</returns>
+/// <returns>The shown layer and its connected regions.</returns>
 [EditorCommand("generate.navigation", "Navigation mesh", Story = "T-8", Needs = Needs.Map)]
 public sealed record GenerateNavigation : IRequest<JsonObject>;
 
@@ -41,14 +41,6 @@ public sealed class GenerateNavigationHandler(MainViewModel model, NavigationVie
             ["starts"] = new JsonArray([.. row.Region.Starts.Select(start => (JsonNode)JsonValue.Create(start))]),
             ["mass"] = row.Region.Mass,
             ["hydrocarbons"] = row.Region.Hydrocarbons,
-        })]),
-        ["routes"] = new JsonArray([.. navigation.Routes.Select(row => (JsonNode)new JsonObject
-        {
-            ["from"] = row.Route.From,
-            ["to"] = row.Route.To,
-            ["straight"] = Math.Round(row.Route.Straight, 1),
-            ["length"] = row.Route.Route is null ? null : Math.Round(row.Route.Route.Length, 1),
-            ["text"] = row.Text,
         })]),
     };
 }

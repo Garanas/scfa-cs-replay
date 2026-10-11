@@ -38,7 +38,7 @@ public sealed partial class MainViewModel
             Details = new ProceduralNavigationDetails(this),
             Picture = (_, result) => result?.Value is NavigationMesh mesh ? new NavGridPicture(mesh.Navigation[Navigation.Layer], Regions: true) : null,
             Tool = "procedural.regions",
-            Help = "The regions units of a layer can move in, with their starts and deposits, and routes between the starts; the Regions tool chooses one",
+            Help = "The connected regions units of a layer can move in, with their starts and deposits; the Connected regions tool chooses one",
         });
         ProceduralList.Describe(new ProceduralEntry(PathNetworkGenerator.GeneratorId, movement)
         {

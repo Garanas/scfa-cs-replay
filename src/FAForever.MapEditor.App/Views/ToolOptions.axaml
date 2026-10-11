@@ -458,10 +458,10 @@
               <TextBlock Classes="mono" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Text}" ToolTip.Tip="{Binding Text}" VerticalAlignment="Center"
                          AutomationProperties.Name="Measurement" />
             </DataTemplate>
-            <!-- choosing a region of the navigation mesh (T-8) -->
+            <!-- choosing a connected region of the navigation mesh (T-8) -->
             <DataTemplate DataType="tools:RegionTool">
               <TextBlock TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Text}" ToolTip.Tip="{Binding Text}" VerticalAlignment="Center"
-                         AutomationProperties.Name="Chosen region" />
+                         AutomationProperties.Name="Chosen connected region" />
             </DataTemplate>
             <!-- edits by hand on top of the generated path networks (R-3) -->
             <DataTemplate DataType="tools:PathNodeEditTool">

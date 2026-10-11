@@ -70,8 +70,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("markers.connectPaths", model.Procedural.Rows.Single(row => row.Id == "pathNetwork").Row.CommandId);
             Assert.AreEqual("walkability", walkability.Overlay);
             Assert.AreEqual("navigation", navigation.Overlay);
-            Assert.IsTrue(walkability.CanAuto);
-            Assert.IsFalse(normalMap.CanAuto);
+            Assert.IsTrue(model.Procedural.Rows.All(row => row.CanAuto), "every result may regenerate on its own");
+            Assert.AreEqual("while the Walkability chip is on", walkability.AutoWhen);
             Assert.AreEqual(ExportUse.WhenOutOfDate, normalMap.Export);
             Assert.IsTrue(normalMap.OnExport);
             Assert.AreEqual(ExportUse.Always, preview.Export);
@@ -84,7 +84,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(model.Procedural.Rows.Single(row => row.Id == "normalMap").OnExport);
             Assert.AreEqual("Keep the normal map on export", model.Map!.Session.UndoDescription);
             Assert.IsFalse((await Run(model, "generate.onExport", new JsonObject { ["id"] = "preview" })).Ran, "the preview is always rendered");
-            Assert.IsFalse((await Run(model, "generate.auto", new JsonObject { ["id"] = "normalMap" })).Ran, "the normal map has not opted in");
+            Assert.IsTrue((await Run(model, "generate.auto", new JsonObject { ["id"] = "normalMap" })).Ran, "the normal map may regenerate on its own too");
+            Assert.IsFalse((await Run(model, "generate.auto", new JsonObject { ["id"] = "noSuchResult" })).Ran);
         }
 
         [TestMethod]
@@ -137,6 +138,8 @@ namespace FAForever.MapEditor.App.Tests
         public async Task WalkabilityRegeneratesASecondAfterAChange()
         {
             MainViewModel model = await Open();
+            // only while the views show it
+            model.ShowWalkability = true;
             Assert.IsTrue((await Run(model, "generate.auto", new JsonObject { ["on"] = true })).Ran);
             Assert.IsTrue(model.Map!.Document.Procedural.RegeneratesOnItsOwn("walkability"));
             Assert.AreEqual("Regenerate the walkability on its own", model.Map.Session.UndoDescription);
@@ -219,7 +222,6 @@ namespace FAForever.MapEditor.App.Tests
             generation.Register(slow, "generate.slow");
             MapDocument current = document;
             AutoGeneration auto = new AutoGeneration(generation, () => current, null, NullLogger.Instance) { Delay = TimeSpan.FromMilliseconds(10) };
-            auto.Allow("slow");
 
             auto.Follow();
             Assert.IsTrue(await slow.Started.WaitAsync(TimeSpan.FromSeconds(5)), "it runs a moment after");
@@ -238,7 +240,7 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public async Task TheNavigationMeshShowsRegionsStartsAndRoutes()
+        public async Task TheNavigationMeshShowsConnectedRegionsAndStarts()
         {
             MainViewModel model = await Open();
 
@@ -266,12 +268,10 @@ namespace FAForever.MapEditor.App.Tests
             model.Stroke([(5, 5)]);
             Assert.AreEqual(model.Navigation.Mesh!.RegionAt(NavLayer.Land, 5, 5)?.Id, model.Navigation.ChosenRegion);
 
-            // the layer is the view's; the routes the map's, which makes the mesh out of date
-            Assert.IsTrue((await Run(model, "generate.setNavigation", new JsonObject { ["layer"] = "water", ["routes"] = "all" })).Ran);
+            // the layer is the view's: the mesh stays current
+            Assert.IsTrue((await Run(model, "generate.setNavigation", new JsonObject { ["layer"] = "water" })).Ran);
             Assert.AreEqual(NavLayer.Water, model.Navigation.Layer);
-            Assert.AreEqual(RoutePairs.All, model.Map!.Document.Procedural.Navigation.Routes);
-            Assert.AreEqual(RoutePairs.All, model.NavigationRoutes);
-            CollectionAssert.Contains(model.Generation.Results.States(model.Map.Document).Single(state => state.Generator.Id == "navigationMesh").ChangedInputs.ToArray(), "navigation settings");
+            Assert.AreEqual(GeneratedStatus.Current, model.Generation.Results.States(model.Map!.Document).Single(state => state.Generator.Id == "navigationMesh").Status);
             Assert.IsFalse((await Run(model, "generate.setNavigation", new JsonObject { ["layer"] = "air" })).Ran, "air units go anywhere: no layer");
         }
 

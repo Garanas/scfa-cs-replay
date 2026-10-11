@@ -133,7 +133,7 @@ namespace FAForever.MapEditor.App.Tests
                     "terrain.setLayer", "terrain.shareDraftBase", "units.add", "units.drop", "units.moveGroup", "units.moveToArmy", "units.moveToGroup", "units.removeGroup", "units.renameGroup", "units.saveGroupAsPreset",
                     "view.addToToolbar", "view.gpuDebug", "view.inspectPart", "view.movePanel", "view.removeFromToolbar", "view.resizePanel", "view.returnPanel", "view.setToolbar", "view.togglePanel", "view.walkability",
                     "view.zoomTo", "water.removeWaveGenerator",
-                    "water.set", "water.setWaveGenerator", "water.setWaveTexture", "workspace.convert", "workspace.setUp",
+                    "water.set", "water.setWaveGenerator", "water.setWaveTexture", "workspace.convert", "workspace.setProcedural", "workspace.setUp",
                 }, outside,
                 "the commands outside the menus are for automation and plugins: their buttons are on a page or panel");
             Assert.AreEqual("Terrain", model.Commands.Find("tool.terrain.curve")!.Menu, "a tool is in its mode's menu");

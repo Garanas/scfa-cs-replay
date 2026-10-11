@@ -68,7 +68,6 @@ namespace FAForever.MapEditor.Project.Files
             {
                 AutoGenerate = settings.AutoGenerate.IsEmpty ? null : [.. settings.AutoGenerate],
                 NotOnExport = settings.NotOnExport.IsEmpty ? null : [.. settings.NotOnExport],
-                Routes = settings.Navigation.Routes == RoutePairs.Nearest ? null : settings.Navigation.Routes.ToString(),
                 DraftMasks = settings.DraftMasks.IsEmpty ? null : [.. settings.DraftMasks],
                 WriteDraft = settings.WriteDraftOnChange ? true : null,
                 PathNodes = ToDto(settings.PathNodes),
@@ -82,7 +81,8 @@ namespace FAForever.MapEditor.Project.Files
             };
 
         /// <summary>
-        /// The Procedural mode's settings of <c>map.json</c>; a route choice this editor does not know is the default.
+        /// The Procedural mode's settings of <c>map.json</c>; what this editor does not know (the routes
+        /// of older editors) is left out.
         /// </summary>
         internal static ProceduralSettings ToModel(ProceduralDto? settings) => settings is null
             ? ProceduralSettings.Default
@@ -90,10 +90,6 @@ namespace FAForever.MapEditor.Project.Files
             {
                 AutoGenerate = ImmutableSortedSet.CreateRange(StringComparer.Ordinal, settings.AutoGenerate ?? []),
                 NotOnExport = ImmutableSortedSet.CreateRange(StringComparer.Ordinal, settings.NotOnExport ?? []),
-                Navigation = new NavigationSettings
-                {
-                    Routes = Enum.TryParse(settings.Routes, ignoreCase: true, out RoutePairs routes) && Enum.IsDefined(routes) ? routes : RoutePairs.Nearest,
-                },
                 DraftMasks = ImmutableSortedSet.CreateRange(StringComparer.Ordinal, settings.DraftMasks ?? []),
                 WriteDraftOnChange = settings.WriteDraft == true,
                 PathNodes = ToModel(settings.PathNodes),

@@ -21,21 +21,14 @@ public sealed partial class AutomationServer
             ["preview"] = row.PreviewOn,
             ["canAuto"] = row.CanAuto,
             ["auto"] = row.AutoOn,
+            ["autoWhen"] = row.AutoWhen,
             ["export"] = row.Export.ToString(),
             ["onExport"] = row.OnExport,
         })]),
-        ["auto"] = new JsonObject
-        {
-            ["delay"] = model.AutoGeneration.Delay.TotalMilliseconds,
-            ["pending"] = new JsonArray([.. model.AutoGeneration.Allowed.Where(model.AutoGeneration.IsPending).Select(id => (JsonNode)JsonValue.Create(id))]),
-            ["kept"] = model.AutoGeneration.Kept,
-            ["cancelled"] = model.AutoGeneration.Cancelled,
-        },
+        ["auto"] = model.DescribeAutoRegenerate(),
         ["list"] = model.DescribeProceduralList(),
         ["navigation"] = GenerateNavigationHandler.Describe(model.Navigation),
         ["showNavigation"] = model.ShowNavigation,
-        ["routesTop"] = window.MapView.RoutesDrawn,
-        ["routes3d"] = window.View3D.RoutesDrawn,
         ["export"] = new JsonObject
         {
             ["running"] = model.Export.IsRunning,

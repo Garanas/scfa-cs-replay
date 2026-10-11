@@ -27,6 +27,12 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// </summary>
         public required string VaultFolder { get; init; }
 
+        /// <summary>
+        /// The Procedural settings a map made or imported in the workspace starts with: what regenerates
+        /// on its own and what the export makes (<c>workspace.json</c>'s <c>procedural</c>).
+        /// </summary>
+        public ProceduralDefaults Procedural { get; init; } = ProceduralDefaults.Default;
+
         public string ProjectsFolder => Path.Combine(Folder, WorkspaceLayout.Projects);
 
         public string AssetsFolder => Path.Combine(Folder, WorkspaceLayout.Assets);
@@ -82,8 +88,29 @@ namespace FAForever.MapEditor.Project.Workspaces
                 GameFolder = dto.GameFolder,
                 FafDataFolder = dto.FafDataFolder,
                 VaultFolder = dto.VaultFolder,
+                Procedural = ToModel(dto.Procedural),
             };
         }
+
+        private static ProceduralDefaults ToModel(WorkspaceProceduralDto? dto) => dto is null
+            ? ProceduralDefaults.Default
+            : new ProceduralDefaults
+            {
+                AutoGenerate = dto.AutoGenerate is List<string> auto
+                    ? System.Collections.Immutable.ImmutableSortedSet.CreateRange(StringComparer.Ordinal, auto)
+                    : ProceduralDefaults.Default.AutoGenerate,
+                OnExport = dto.OnExport is List<string> export
+                    ? System.Collections.Immutable.ImmutableSortedSet.CreateRange(StringComparer.Ordinal, export)
+                    : ProceduralDefaults.Default.OnExport,
+            };
+
+        private static WorkspaceProceduralDto? ToDto(ProceduralDefaults defaults) => defaults.IsDefault
+            ? null
+            : new WorkspaceProceduralDto
+            {
+                AutoGenerate = defaults.AutoGenerate.SetEquals(ProceduralDefaults.Default.AutoGenerate) ? null : [.. defaults.AutoGenerate],
+                OnExport = defaults.OnExport.SetEquals(ProceduralDefaults.Default.OnExport) ? null : [.. defaults.OnExport],
+            };
 
         /// <summary>
         /// Sets up a workspace in <paramref name="folder"/>, which must be absent, empty or a
@@ -135,6 +162,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                 GameFolder = GameFolder,
                 FafDataFolder = FafDataFolder,
                 VaultFolder = VaultFolder,
+                Procedural = ToDto(Procedural),
             });
         }
 

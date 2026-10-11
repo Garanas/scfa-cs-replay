@@ -358,6 +358,22 @@ public sealed partial class WorkspaceSetupViewModel(IEditorDialogs dialogs, ILog
         return changed;
     }
 
+    /// <summary>
+    /// Writes the Procedural settings maps made or imported in the workspace start with into
+    /// <c>workspace.json</c>.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">No workspace is set up.</exception>
+    public Workspace ChangeProcedural(ProceduralDefaults defaults)
+    {
+        Workspace workspace = Workspace ?? throw new InvalidOperationException("No workspace is set up");
+        Workspace changed = workspace with { Procedural = defaults };
+        changed.Save();
+        Workspace = changed;
+        log.LogInformation("The workspace {Folder} gives new and imported maps: regenerating on their own {Auto}; on export {Export}",
+            changed.Folder, string.Join(", ", defaults.AutoGenerate), string.Join(", ", defaults.OnExport));
+        return changed;
+    }
+
     private static string? NullIfEmpty(string text) => string.IsNullOrWhiteSpace(text) ? null : text;
 
     [RelayCommand]

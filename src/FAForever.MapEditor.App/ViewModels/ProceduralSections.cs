@@ -24,12 +24,12 @@ public static class ProceduralMode
     public const string Id = "procedural";
 
     /// <summary>
-    /// The mode's tools: Regions, which chooses a region of the navigation mesh; Path nodes, which
+    /// The mode's tools: Connected regions, which chooses a region of the navigation mesh; Path nodes, which
     /// edits the generated path networks by hand.
     /// </summary>
     public static IReadOnlyList<ToolDefinition> Tools { get; } =
     [
-        new ToolDefinition("procedural.regions", "Regions", "T-8") { Make = model => new RegionTool(model) },
+        new ToolDefinition("procedural.regions", "Connected regions", "T-8") { Make = model => new RegionTool(model) },
         new ToolDefinition("procedural.pathNodes", "Path nodes", "R-3") { Make = model => new PathNodeEditTool(model) },
     ];
 

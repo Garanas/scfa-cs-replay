@@ -49,7 +49,14 @@ reads again when it changes; and nothing that generates runs by itself.
       out of date or missing (`generate.all`) also makes what was never made and says why it leaves
       the rest (the sky cube map only when asked); results kept in the project (rules layers, props
       of rules, the sky cube map, the preview and normal map) count as current when it opens; the
-      export generates into its copy only and leaves the history alone.
+      export generates into its copy only and leaves the history alone. A generated result that
+      goes into the map is derived: no step of undo; undoing its source takes it back with it, and
+      each version keeps the results made for it. Every result may regenerate on its own (each
+      entry's check box, the map's), only while the views show it; the Auto switch in the views'
+      bar turns that on and off for the editor and says what waits or runs; the workspace says
+      what new and imported maps regenerate on their own and make on export (by default
+      walkability, connected regions and masks from rules), edited on the Workspace settings page
+      or taken from a map (Use as workspace default).
 - [x] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
       missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map
@@ -269,14 +276,12 @@ reads again when it changes; and nothing that generates runs by itself.
       red and open green in the views), which walkability then takes over what it generates; kept
       as `walkability-marks.png`; the export writes blocked ogrids as a blocking terrain type, so
       the game agrees, and a check warns of ground marked open that the game still blocks.
-- [x] **T-8 Navigation mesh.** See where each kind of unit can move: the regions of the game's
-      navigational mesh per layer (land, hover, amphibious, naval), how large each is, which starts
-      and deposits lie in it, and the routes between starts. Today: the Procedural mode's
-      Navigation mesh (Generate, the layer, the routes between the nearest starts or every pair,
-      kept with the map), the regions coloured in both views with the routes as lines, a list of the
-      largest regions (a click or the Regions tool chooses one), the starts that lie in no region,
-      and the routes with how much longer they are than the straight line. Walkability can
-      regenerate on its own a second after a change to what it is made from (T-7).
+- [x] **T-8 Navigation mesh.** See where each kind of unit can move: the connected regions of the
+      game's navigational mesh per layer (land, hover, amphibious, naval), how large each is, and
+      which starts and deposits lie in it. Today: the Procedural mode's Navigation mesh (Generate,
+      the layer), the connected regions coloured in both views (the Connected regions chip), a list
+      of the largest (a click or the Connected regions tool chooses one) and the starts that lie in
+      none. It regenerates on its own while its overlay shows, as walkability does (T-7).
 - [x] **T-9 Draft and final heightmap.** Block out the rough shape in a draft, send it to World
       Machine or Gaea, and build the final on their output with layers of one's own, some of them
       shared with the draft so the procedural tool can never erode them away; the game gets the

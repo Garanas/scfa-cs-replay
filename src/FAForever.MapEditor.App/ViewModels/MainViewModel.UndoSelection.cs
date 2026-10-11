@@ -45,6 +45,13 @@ public sealed partial class MainViewModel
                 // the step's own selection: what its command left selected
                 _selectionOf.AddOrUpdate(change.Current, [.. Selection.Items]);
                 break;
+            case ChangeReason.Derive:
+                // the same version with a generated result in it: the same selection
+                if (_selectionOf.TryGetValue(change.Previous, out ObjectRef[]? kept))
+                {
+                    _selectionOf.AddOrUpdate(change.Current, kept);
+                }
+                break;
             case ChangeReason.Undo or ChangeReason.Redo:
             {
                 _selectionOf.AddOrUpdate(change.Previous, [.. Selection.Items]);

@@ -22,7 +22,6 @@ namespace FAForever.MapEditor.App.ViewModels;
 /// </summary>
 public sealed partial class MainViewModel
 {
-    private readonly List<Action> _afterStroke = [];
     private readonly ConcurrentDictionary<string, bool> _hasAsset = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
     private AssetCatalog? _checkedCatalog;
 
@@ -118,43 +117,118 @@ public sealed partial class MainViewModel
         }
     }
 
+    // the result a derived change is putting into the map, kept again for the version it makes
+    private (IGenerator Generator, object Value)? _deriving;
+
     /// <summary>
-    /// Runs <paramref name="action"/> now, or when the brush stroke in progress ends: an edit may
-    /// not open while the stroke holds its transaction.
+    /// Puts a generated result that is part of the map (<see cref="IDocumentGenerator"/>) into the
+    /// open map's current version without a step of undo (the owner's decision: generated results
+    /// are derived, the sources they are made from have the steps): the library's
+    /// <see cref="EditSession.Derive"/>, which waits while a stroke holds its transaction. A result
+    /// that was current for the version it goes into is kept again for the version it makes, so
+    /// putting it in place never makes it out of date nor starts it again on its own.
     /// </summary>
-    private void WhenNoStroke(Action action)
+    internal void DeriveResult(EditedMap map, IDocumentGenerator generator, object value)
     {
-        if (_stroke is null)
+        map.Session.Derive($"Generate the {generator.Title.ToLowerInvariant()}", now =>
         {
-            action();
-        }
-        else
+            GeneratedResult? kept = Generation.Results.ResultOf(generator.Id);
+            _deriving = kept is not null && ReferenceEquals(kept.Value, value) && !kept.IsStale(now) ? (generator, value) : null;
+            return generator.Apply(now, value);
+        });
+        if (!map.Session.InTransaction)
         {
-            _afterStroke.Add(action);
+            _deriving = null;
         }
     }
 
-    private void RunAfterStroke()
+    // the last results of each generator whose result is part of the map: an undo or redo to a version
+    // one of them was made for keeps it again
+    private readonly Dictionary<string, List<GeneratedResult>> _recentResults = new Dictionary<string, List<GeneratedResult>>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// How many results of a generator whose result is part of the map are remembered for undo and redo.
+    /// </summary>
+    private const int RecentResults = 8;
+
+    private void RememberResult(GeneratedResult? result)
     {
-        Action[] waiting = [.. _afterStroke];
-        _afterStroke.Clear();
-        foreach (Action action in waiting)
+        if (result?.Generator is not IDocumentGenerator)
         {
-            action();
+            return;
+        }
+        if (!_recentResults.TryGetValue(result.Generator.Id, out List<GeneratedResult>? recent))
+        {
+            _recentResults[result.Generator.Id] = recent = [];
+        }
+        if (recent.Any(kept => ReferenceEquals(kept, result)))
+        {
+            return;
+        }
+        recent.Add(result);
+        if (recent.Count > RecentResults)
+        {
+            recent.RemoveAt(0);
+        }
+    }
+
+    /// <summary>
+    /// After a derived change: its result as the result of the version it made (<see cref="DeriveResult"/>).
+    /// After an undo or redo: a result remembered for the version gone back or forth to is kept again,
+    /// so the results the version holds read as current at once (each version keeps the results
+    /// derived for it).
+    /// </summary>
+    private void KeepDerived(DocumentChange change)
+    {
+        // every step remembers the results as they are: one kept since is put in place by the step after it
+        IDocumentGenerator[] parts = [.. Generation.Results.Generators.OfType<IDocumentGenerator>()];
+        foreach (IDocumentGenerator part in parts)
+        {
+            RememberResult(Generation.Results.ResultOf(part.Id));
+        }
+        if (change.Reason == ChangeReason.Edit)
+        {
+            return;
+        }
+        if (change.Reason == ChangeReason.Derive)
+        {
+            if (_deriving is (IGenerator generator, object value))
+            {
+                _deriving = null;
+                GeneratedResult result = GeneratedResult.Of(generator, change.Current, value);
+                Generation.Results.Keep(result);
+                RememberResult(result);
+            }
+            return;
+        }
+        bool kept = false;
+        foreach (IDocumentGenerator part in parts)
+        {
+            if (Generation.Results.ResultOf(part.Id) is GeneratedResult now && !now.IsStale(change.Current))
+            {
+                continue;
+            }
+            if (_recentResults.GetValueOrDefault(part.Id)?.LastOrDefault(result => !result.IsStale(change.Current)) is GeneratedResult earlier)
+            {
+                Generation.Results.Keep(earlier);
+                kept = true;
+            }
+        }
+        if (kept)
+        {
+            Generation.Refresh(change.Current);
         }
     }
 
     /// <summary>
     /// Generates one result from the map as it is, on a thread of the pool (the editing goes on
     /// meanwhile, and a result of a version edited since shows as out of date). A result that is
-    /// part of the map (<see cref="IDocumentGenerator"/>: the normal map, the preview) goes into it
-    /// as one step of undo.
+    /// part of the map (<see cref="IDocumentGenerator"/>: the normal map, the preview) goes into its
+    /// current version without a step of undo (<see cref="DeriveResult"/>).
     /// </summary>
     /// <exception cref="ArgumentException">There is no such generator.</exception>
     /// <exception cref="InvalidOperationException">No map is open, or it is being generated already.</exception>
-    /// <param name="changesMap">Whether putting a result that is part of the map in place changes the
-    /// map as it is (the export's preview, the same as before, makes no step of undo); null: always.</param>
-    public async Task<GeneratedResult> GenerateAsync(string id, Func<MapDocument, object, bool>? changesMap = null)
+    public async Task<GeneratedResult> GenerateAsync(string id)
     {
         EditedMap map = RequireMap();
         IGenerator generator = Generation.Results.Find(id) ?? throw new ArgumentException($"There is no generator '{id}'");
@@ -188,13 +262,7 @@ public sealed partial class MainViewModel
             Generation.NoteMade(id, Stopwatch.GetElapsedTime(start), GenerationWay.Asked);
             if (generator is IDocumentGenerator part)
             {
-                WhenNoStroke(() =>
-                {
-                    if (Map == map && (changesMap?.Invoke(map.Document, value) ?? true))
-                    {
-                        map.Session.Edit($"Generate the {generator.Title.ToLowerInvariant()}", now => part.Apply(now, value));
-                    }
-                });
+                DeriveResult(map, part, value);
             }
             return result;
         }
@@ -215,14 +283,14 @@ public sealed partial class MainViewModel
     /// <summary>
     /// Generates every result that is out of date (<c>generate.stale</c>) in the order in which one
     /// feeds the next (masks from rules before props from rules, walkability before path networks);
-    /// a result that is part of the map goes into it, each one step of undo, and what it makes out of
+    /// a result that is part of the map goes into it without a step of undo, and what it makes out of
     /// date is generated after it.
     /// </summary>
     public IReadOnlyList<GeneratedState> GenerateStale() => GenerateStale(missing: false, out _);
 
     /// <summary>
     /// Generates what is out of date and, with <paramref name="missing"/>, what was never made for
-    /// the map (<c>generate.all</c>), each a step of undo when it is part of the map.
+    /// the map (<c>generate.all</c>), each put into the map without a step of undo when it is part of it.
     /// </summary>
     /// <param name="left">The results never made that were left out, with why.</param>
     public IReadOnlyList<GeneratedState> GenerateStale(bool missing, out IReadOnlyList<(IGenerator Generator, string Reason)> left)
@@ -230,7 +298,7 @@ public sealed partial class MainViewModel
         EditedMap map = RequireMap();
         return Generation.GenerateStale(map.Document, (generator, value) =>
         {
-            map.Session.Edit($"Generate the {generator.Title.ToLowerInvariant()}", now => generator.Apply(now, value));
+            DeriveResult(map, generator, value);
             return map.Document;
         }, missing, out left);
     }

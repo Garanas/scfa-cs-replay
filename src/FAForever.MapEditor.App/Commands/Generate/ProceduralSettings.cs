@@ -52,15 +52,13 @@ public sealed class GenerateOnExportHandler(MainViewModel model) : IRequestHandl
 }
 
 /// <summary>
-/// The navigation mesh's choices (the Procedural mode): the layer the views and the list show, the
-/// region chosen, and which starts it routes between (kept with the map, a step of undo; the mesh
-/// is then out of date).
+/// The navigation mesh's choices (the Procedural mode): the layer the views and the list show, and
+/// the connected region chosen. Both are the view's, no step of undo.
 /// </summary>
 /// <param name="Layer"><c>Land</c>, <c>Hover</c>, <c>Amphibious</c> or <c>Water</c> (naval units).</param>
-/// <param name="Routes"><c>Nearest</c> (each start to its nearest), <c>All</c> or <c>None</c>.</param>
-/// <param name="Region">The region of the shown layer to choose, by its number; 0 chooses none.</param>
+/// <param name="Region">The connected region of the shown layer to choose, by its number; 0 chooses none.</param>
 [EditorCommand("generate.setNavigation", "Navigation mesh settings", Story = "T-8", Needs = Needs.Map | Needs.NoStroke)]
-public sealed record SetNavigation(string? Layer = null, string? Routes = null, int? Region = null) : IRequest;
+public sealed record SetNavigation(string? Layer = null, int? Region = null) : IRequest;
 
 public sealed class SetNavigationHandler(MainViewModel model, NavigationViewModel navigation) : IRequestHandler<SetNavigation>
 {
@@ -72,21 +70,11 @@ public sealed class SetNavigationHandler(MainViewModel model, NavigationViewMode
                 ? layer
                 : throw new ArgumentException($"There is no layer '{layerName}': {string.Join(", ", navigation.Layers)}");
         }
-        if (request.Routes is string routesName)
-        {
-            RoutePairs routes = Enum.TryParse(routesName, ignoreCase: true, out RoutePairs pairs) && Enum.IsDefined(pairs)
-                ? pairs
-                : throw new ArgumentException($"There is no choice of routes '{routesName}': {string.Join(", ", navigation.RouteChoices)}");
-            if (routes != model.Map!.Document.Procedural.Navigation.Routes)
-            {
-                model.SetNavigationRoutes(routes);
-            }
-        }
         if (request.Region is int region)
         {
             if (region != 0 && !(navigation.Mesh?.RegionsOf(navigation.Layer).Any(r => r.Id == region) ?? false))
             {
-                throw new ArgumentException($"The {navigation.Layer} layer has no region {region}");
+                throw new ArgumentException($"The {navigation.Layer} layer has no connected region {region}");
             }
             navigation.ChosenRegion = region == 0 ? null : region;
         }

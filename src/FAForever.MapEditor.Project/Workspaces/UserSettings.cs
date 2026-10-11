@@ -82,6 +82,18 @@ namespace FAForever.MapEditor.Project.Workspaces
         public void SetPlugins(PluginSettingsDto plugins) => Update(settings => settings with { Plugins = plugins });
 
         /// <summary>
+        /// Whether generated results regenerate on their own (the switch in the views' bar): yes until
+        /// the user turns it off.
+        /// </summary>
+        public bool RegenerateOnTheirOwn => Read().Generation?.OnTheirOwn ?? true;
+
+        /// <summary>
+        /// Remembers whether generated results regenerate on their own.
+        /// </summary>
+        /// <exception cref="IOException">The file cannot be written.</exception>
+        public void SetRegenerateOnTheirOwn(bool on) => Update(settings => settings with { Generation = on ? null : new GenerationSettingsDto { OnTheirOwn = false } });
+
+        /// <summary>
         /// Remembers <paramref name="folder"/> as the workspace.
         /// </summary>
         public void SetWorkspace(string folder) => Update(settings => settings with { Workspace = Path.GetFullPath(folder) });
@@ -161,6 +173,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                 Telemetry = Part<TelemetrySettingsDto>("telemetry"),
                 Layout = Part<LayoutSettingsDto>("layout"),
                 Plugins = Part<PluginSettingsDto>("plugins"),
+                Generation = Part<GenerationSettingsDto>("generation"),
             };
             Problem = problems.Count == 0 ? null : $"{File}: {string.Join("; ", problems)}";
             return settings;

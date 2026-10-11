@@ -66,7 +66,9 @@ namespace FAForever.MapEditor.Project.Workspaces
                 // still no assets: the plain sandbox stays
                 return folder;
             }
-            Write(Build(catalog), folder, plain);
+            MapDocument sandbox = Build(catalog);
+            // the workspace's Procedural settings, as every map made in it starts with
+            Write(sandbox with { Procedural = workspace.Procedural.ApplyTo(sandbox.Procedural) }, folder, plain);
             return folder;
         }
 

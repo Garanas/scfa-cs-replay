@@ -79,7 +79,7 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public async Task GeneratesTheCubeMapIntoTheProjectsEnvFolderAsOneStepOfUndo()
+        public async Task GeneratesTheCubeMapIntoTheProjectsEnvFolderWithoutAStepOfUndo()
         {
             MainViewModel model = await Open();
             await Run(model, "generate.setSkyCube", new JsonObject { ["resolution"] = 512 });
@@ -93,7 +93,7 @@ namespace FAForever.MapEditor.App.Tests
             DecodedTexture strip = CubeMaps.Decode([.. bytes]);
             Assert.AreEqual(512, strip.Height, "a cube map of 512 a face that reads back");
             Assert.AreEqual(6 * 512, strip.Width);
-            Assert.AreEqual("Generate the sky cube map", model.Map.Session.UndoDescription);
+            Assert.AreEqual("Sky cube map: resolution", model.Map.Session.UndoDescription, "a derived result is no step: the setting is the last");
             StringAssert.StartsWith(model.Status, "Generated the sky cube map: 512 pixels a face, the map drawn with the processor");
             StringAssert.StartsWith(model.SkyCube.Status, "Up to date: 512 pixels a face");
             Assert.IsInstanceOfType<TexturePicture>(model.SkyCube.Preview);
@@ -104,8 +104,11 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(SkyCubeMaps.GamePath(document), (string?)state["file"]);
             StringAssert.Contains(model.SkyCube.SkyLine, "made from the lighting", "HardFFA has no skybox");
 
+            // undoing the setting goes back to the version before, which never had a cube map
             model.Undo();
             Assert.IsFalse(model.Map.Document.Files.ContainsKey(SkyCubeMaps.FilePath));
+            model.Redo();
+            Assert.IsTrue(model.Map.Document.Files.ContainsKey(SkyCubeMaps.FilePath), "the version keeps the cube map made for it");
         }
 
         [TestMethod]

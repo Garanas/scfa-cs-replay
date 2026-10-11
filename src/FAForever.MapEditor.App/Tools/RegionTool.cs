@@ -5,8 +5,9 @@ using FAForever.MapEditor.Project.Generation;
 namespace FAForever.MapEditor.App.Tools;
 
 /// <summary>
-/// The Procedural mode's Regions tool: a click chooses the region of the navigation mesh under the
-/// mouse in the shown layer (it is drawn stronger and marked in the list), and shows the regions.
+/// The Procedural mode's Connected regions tool: a click chooses the connected region of the
+/// navigation mesh under the mouse in the shown layer (it is drawn stronger and marked in the list),
+/// and shows the connected regions.
 /// It changes nothing on the map.
 /// </summary>
 public sealed partial class RegionTool(MainViewModel model) : ObservableObject, IMapTool
@@ -14,10 +15,10 @@ public sealed partial class RegionTool(MainViewModel model) : ObservableObject, 
     public double CursorRadius => 0;
 
     /// <summary>
-    /// What the options row shows: the chosen region, or how to choose one.
+    /// What the options row shows: the chosen connected region, or how to choose one.
     /// </summary>
     [ObservableProperty]
-    public partial string Text { get; private set; } = "Click the map to choose a region of the navigation mesh";
+    public partial string Text { get; private set; } = "Click the map to choose a connected region";
 
     public void Press(float x, float z)
     {

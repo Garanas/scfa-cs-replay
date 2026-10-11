@@ -10,6 +10,12 @@ namespace FAForever.MapEditor.Project.Editing
         Edit,
         Undo,
         Redo,
+
+        /// <summary>
+        /// A result derived from the document (a generated normal map, masks from rules) went into the
+        /// current version without a step of undo (<see cref="EditSession.Derive"/>).
+        /// </summary>
+        Derive,
     }
 
     /// <summary>
@@ -17,7 +23,7 @@ namespace FAForever.MapEditor.Project.Editing
     /// both, so a view finds what to redraw by comparing references, and the tiles of a grid with
     /// <see cref="TiledBuffer{T}.ChangedTiles"/>.
     /// </summary>
-    /// <param name="Description">The edit that was made, undone or redone, e.g. <c>Raise terrain</c>.</param>
+    /// <param name="Description">The edit that was made, undone, redone or derived, e.g. <c>Raise terrain</c>.</param>
     public sealed record DocumentChange(MapDocument Previous, MapDocument Current, string Description, ChangeReason Reason);
 
     /// <summary>
@@ -43,6 +49,11 @@ namespace FAForever.MapEditor.Project.Editing
     /// an undo, a save) starts a new step.
     /// </para>
     /// <para>
+    /// What is derived from the document (generated results that are part of the map) goes into the
+    /// current version without a step of its own (<see cref="Derive"/>): undo returns the version
+    /// before with the results derived for it.
+    /// </para>
+    /// <para>
     /// A session is not thread safe: use it from one thread, the user interface's.
     /// </para>
     /// </remarks>
@@ -54,6 +65,7 @@ namespace FAForever.MapEditor.Project.Editing
         private EditGroup? _group;
         private string? _mergeKey;
         private MapDocument _saved;
+        private readonly List<(string Description, Func<MapDocument, MapDocument> Edit)> _derived = [];
 
         /// <param name="historyLimit">How many edits can be undone; older ones are forgotten.</param>
         public EditSession(MapDocument document, int historyLimit = 200)
@@ -109,7 +121,7 @@ namespace FAForever.MapEditor.Project.Editing
         public bool InTransaction => _open is not null;
 
         /// <summary>
-        /// Raised after every edit, undo and redo.
+        /// Raised after every edit, undo, redo and derived change.
         /// </summary>
         public event EventHandler<DocumentChange>? Changed;
 
@@ -165,6 +177,32 @@ namespace FAForever.MapEditor.Project.Editing
             EnsureNoTransaction();
             return Record(description, edit(Document), mergeKey);
         }
+
+        /// <summary>
+        /// Puts what is derived from the document into the current version without a step of undo: a
+        /// generated result that is part of the map (the normal map, the preview, masks or props from
+        /// rules), whether asked for or made on its own. The version keeps it, so an undo returns the
+        /// version before with the results derived for that one, and a redo this one with its own.
+        /// The map counts as modified; <see cref="Changed"/> is raised with
+        /// <see cref="ChangeReason.Derive"/>. The history's steps, and the steps that can be redone,
+        /// stay as they were. While a transaction is open (a brush stroke) it waits until the
+        /// transaction ends, and is then made on the document the transaction left.
+        /// </summary>
+        /// <returns>Whether the document changed now; false also when it waits for the transaction.</returns>
+        public bool Derive(string description, Func<MapDocument, MapDocument> edit)
+        {
+            if (_open is not null)
+            {
+                _derived.Add((description, edit));
+                return false;
+            }
+            return Replace(description, edit(Document));
+        }
+
+        /// <summary>
+        /// How many derived changes wait for the open transaction to end (<see cref="Derive"/>).
+        /// </summary>
+        public int DerivedWaiting => _derived.Count;
 
         /// <summary>
         /// Starts a transaction: changes that are undone as one step, and that are thrown away
@@ -284,7 +322,20 @@ namespace FAForever.MapEditor.Project.Editing
                 throw new InvalidOperationException("The transaction is not the open one");
             }
             _open = null;
-            return result is not null && Record(transaction.Description, result, mergeKey: null);
+            bool changed = result is not null && Record(transaction.Description, result, mergeKey: null);
+            DeriveWaiting();
+            return changed;
+        }
+
+        // the derived changes that waited for a transaction, on the document it left
+        private void DeriveWaiting()
+        {
+            (string Description, Func<MapDocument, MapDocument> Edit)[] waiting = [.. _derived];
+            _derived.Clear();
+            foreach ((string description, Func<MapDocument, MapDocument> edit) in waiting)
+            {
+                Replace(description, edit(Document));
+            }
         }
 
         /// <summary>
@@ -358,6 +409,21 @@ namespace FAForever.MapEditor.Project.Editing
             _mergeKey = mergeKey;
 
             Raise(new DocumentChange(previous, result, description, ChangeReason.Edit));
+            return true;
+        }
+
+        private bool Replace(string description, MapDocument result)
+        {
+            MapDocument previous = Document;
+            result = DecalMaskLayers.Follow(previous, result, DecalPictures);
+            result = CoverageLayers.Follow(previous, result, PaintLayerOf);
+            result = HeightLayers.Follow(previous, result, SculptLayer);
+            if (result.Equals(previous))
+            {
+                return false;
+            }
+            _versions[_current] = _versions[_current] with { Document = result };
+            Raise(new DocumentChange(previous, result, description, ChangeReason.Derive));
             return true;
         }
 

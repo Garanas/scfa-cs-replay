@@ -9,12 +9,15 @@ namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
 /// Results that regenerate on their own (the Procedural mode): for a generator the map turns this
-/// on for (<see cref="ProceduralSettings.AutoGenerate"/>), a change to one of its inputs
-/// (<see cref="IGenerator.Inputs"/>) starts a timer of <see cref="Delay"/> again; when it runs out
-/// the generator runs on a thread of the pool from the map as it is then, and a newer change to its
-/// inputs stops that run (<see cref="IGenerator.Generate(MapDocument, CancellationToken)"/>) and
-/// starts the timer again. The result is kept as any other (<see cref="GeneratedResults.Keep"/>).
-/// A generator opts in with <see cref="Allow"/>; walkability does.
+/// on for (<see cref="ProceduralSettings.AutoGenerate"/>), while the views show its result
+/// (<see cref="ShowsWhen"/>) and the editor lets results regenerate on their own
+/// (<see cref="IsOn"/>), a change to one of its inputs (<see cref="IGenerator.Inputs"/>) starts a
+/// timer of <see cref="Delay"/> again; when it runs out the generator runs on a thread of the pool
+/// from the map as it is then, and a newer change to its inputs stops that run
+/// (<see cref="IGenerator.Generate(MapDocument, CancellationToken)"/>) and starts the timer again.
+/// The result is kept as any other (<see cref="GeneratedResults.Keep"/>); one that is part of the
+/// map (<see cref="IDocumentGenerator"/>) goes into it through <see cref="Apply"/>, without a step
+/// of undo. Every registered generator may regenerate on its own.
 /// </summary>
 public sealed class AutoGeneration
 {
@@ -22,8 +25,9 @@ public sealed class AutoGeneration
     private readonly Func<MapDocument?> _document;
     private readonly SynchronizationContext? _ui;
     private readonly ILogger _log;
-    private readonly HashSet<string> _allowed = new HashSet<string>(StringComparer.Ordinal);
     private readonly Dictionary<string, Pending> _pending = new Dictionary<string, Pending>(StringComparer.Ordinal);
+    private readonly Dictionary<string, (Func<MapDocument, bool> Shown, string When)> _shown = new Dictionary<string, (Func<MapDocument, bool>, string)>(StringComparer.Ordinal);
+    private bool _isOn = true;
 
     // what one generator waits for or runs: the inputs it was scheduled for, and how to stop it
     private sealed class Pending(ImmutableArray<object?> inputs, CancellationTokenSource cancel)
@@ -53,19 +57,97 @@ public sealed class AutoGeneration
     public TimeSpan Delay { get; set; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// The generators that may regenerate on their own.
+    /// The generators that may regenerate on their own: every one registered.
     /// </summary>
-    public IReadOnlySet<string> Allowed => _allowed;
+    public IReadOnlyList<string> Allowed => [.. _generation.Results.Generators.Select(generator => generator.Id)];
 
     /// <summary>
-    /// Lets a generator regenerate on its own when the map turns it on.
+    /// Whether the editor lets results regenerate on their own (the switch in the views' bar, the
+    /// user's setting); off, nothing waits or runs, and turning it on again looks at the map.
     /// </summary>
-    public void Allow(string id) => _allowed.Add(id);
+    public bool IsOn
+    {
+        get => _isOn;
+        set
+        {
+            if (_isOn == value)
+            {
+                return;
+            }
+            _isOn = value;
+            if (value)
+            {
+                Follow();
+            }
+            else
+            {
+                StopAll();
+            }
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Says when the views show a generator's result: only then does it regenerate on its own.
+    /// Without one it always does.
+    /// </summary>
+    /// <param name="when">The condition in words, for the Procedural inspector: <c>while the Walkability chip is on</c>.</param>
+    public void ShowsWhen(string id, Func<MapDocument, bool> shown, string when) => _shown[id] = (shown, when);
+
+    /// <summary>
+    /// Whether the views show a generator's result in a version of the map.
+    /// </summary>
+    public bool IsShown(string id, MapDocument document) => !_shown.TryGetValue(id, out var shown) || shown.Shown(document);
+
+    /// <summary>
+    /// When a generator's result shows (<see cref="ShowsWhen"/>), in words; null when always.
+    /// </summary>
+    public string? ShownWhen(string id) => _shown.TryGetValue(id, out var shown) ? shown.When : null;
+
+    /// <summary>
+    /// Puts a result that is part of the map (<see cref="IDocumentGenerator"/>) into it, on the
+    /// window's thread, after it was kept; without it such a result is only kept.
+    /// </summary>
+    public Action<IDocumentGenerator, object>? Apply { get; set; }
 
     /// <summary>
     /// Whether a generator waits for its timer or runs.
     /// </summary>
     public bool IsPending(string id) => _pending.ContainsKey(id);
+
+    /// <summary>
+    /// The generators whose timer runs, in the order they were scheduled.
+    /// </summary>
+    public IReadOnlyList<string> Waiting => [.. _pending.Where(pair => !pair.Value.Running).Select(pair => pair.Key)];
+
+    /// <summary>
+    /// The generators running on their own now.
+    /// </summary>
+    public IReadOnlyList<string> Running => [.. _pending.Where(pair => pair.Value.Running).Select(pair => pair.Key)];
+
+    /// <summary>
+    /// The generators the map lets regenerate on their own whose result is out of date or missing
+    /// while the views do not show it: they wait until it shows.
+    /// </summary>
+    public IReadOnlyList<string> Hidden
+    {
+        get
+        {
+            if (_document() is not MapDocument document)
+            {
+                return [];
+            }
+            return [.. document.Procedural.AutoGenerate.Where(id => _generation.Results.Find(id) is not null && !IsShown(id, document)
+                && (_generation.Results.ResultOf(id) is GeneratedResult result ? result.IsStale(document) : !LeftWhenMissing(id, document)))];
+        }
+    }
+
+    /// <summary>
+    /// Whether a result never made for the map is left alone, as Everything out of date or missing
+    /// leaves it (<see cref="GenerationViewModel.LeaveWhenMissing"/>: masks from rules on a map without
+    /// rules, the sky cube map made only when asked, a map-wide decal taken from a file).
+    /// </summary>
+    private bool LeftWhenMissing(string id, MapDocument document) => _generation.WhyLeftWhenMissing(id, document) is not null;
 
     /// <summary>
     /// How many runs finished and were kept, and how many a newer change stopped (for automation and tests).
@@ -80,6 +162,11 @@ public sealed class AutoGeneration
     public event Action<string>? Generated;
 
     /// <summary>
+    /// Raised when what waits or runs changed, or the switch (<see cref="IsOn"/>).
+    /// </summary>
+    public event Action? Changed;
+
+    /// <summary>
     /// Finishes when nothing waits or runs any more (tests).
     /// </summary>
     public async Task WhenIdleAsync()
@@ -91,45 +178,51 @@ public sealed class AutoGeneration
     }
 
     /// <summary>
-    /// Looks at the map after a change (every step, not every dab): starts or restarts the timer of
-    /// each generator that regenerates on its own and whose inputs changed, and stops what no longer
-    /// regenerates on its own.
+    /// Looks at the map after a change (every step, not every dab) or a change of what the views
+    /// show: starts or restarts the timer of each generator that regenerates on its own, whose
+    /// result shows and whose inputs changed, and stops what no longer regenerates on its own (a
+    /// timer of a result no longer shown stops too; a run goes on to its end).
     /// </summary>
     public void Follow()
     {
+        using Performance.Span measure = Performance.Measure("model.generate-auto-follow");
+        int before = _pending.Count;
         MapDocument? document = _document();
-        foreach (string id in _pending.Keys.ToArray())
+        foreach ((string id, Pending pending) in _pending.ToArray())
         {
-            if (document is null || !document.Procedural.RegeneratesOnItsOwn(id))
+            if (document is null || !_isOn || !document.Procedural.RegeneratesOnItsOwn(id) || (!pending.Running && !IsShown(id, document)))
             {
                 Stop(id);
             }
         }
-        if (document is null)
+        if (document is not null && _isOn)
         {
-            return;
-        }
-        foreach (string id in document.Procedural.AutoGenerate)
-        {
-            if (!_allowed.Contains(id) || _generation.Results.Find(id) is not IGenerator generator)
+            foreach (string id in document.Procedural.AutoGenerate)
             {
-                continue;
-            }
-            ImmutableArray<object?> inputs = [.. generator.Inputs.Select(input => input.Read(document))];
-            if (_pending.TryGetValue(id, out Pending? pending))
-            {
-                if (SameInputs(pending.Inputs, inputs))
+                if (_generation.Results.Find(id) is not IGenerator generator || !IsShown(id, document))
                 {
                     continue;
                 }
-                // a newer change: the run stops, the timer starts again
-                Stop(id);
+                ImmutableArray<object?> inputs = [.. generator.Inputs.Select(input => input.Read(document))];
+                if (_pending.TryGetValue(id, out Pending? pending))
+                {
+                    if (SameInputs(pending.Inputs, inputs))
+                    {
+                        continue;
+                    }
+                    // a newer change: the run stops, the timer starts again
+                    Stop(id);
+                }
+                else if (_generation.Results.ResultOf(id) is GeneratedResult result ? !result.IsStale(document) : LeftWhenMissing(id, document))
+                {
+                    continue;
+                }
+                Schedule(generator, inputs);
             }
-            else if (_generation.Results.ResultOf(id) is GeneratedResult result && !result.IsStale(document))
-            {
-                continue;
-            }
-            Schedule(generator, inputs);
+        }
+        if (before != 0 || _pending.Count != 0)
+        {
+            Changed?.Invoke();
         }
     }
 
@@ -149,6 +242,7 @@ public sealed class AutoGeneration
             {
                 _generation.SetRunning(id, false);
             }
+            Changed?.Invoke();
         }
     }
 
@@ -192,6 +286,7 @@ public sealed class AutoGeneration
                 pending.Running = true;
                 _generation.SetRunning(generator.Id, true);
                 _generation.Results.HandResults(generator);
+                Changed?.Invoke();
                 start.SetResult(_document());
             });
             if (await start.Task.ConfigureAwait(false) is not MapDocument document)
@@ -236,6 +331,11 @@ public sealed class AutoGeneration
             _generation.Results.Keep(GeneratedResult.Of(generator, document, value));
             _generation.NoteMade(id, took, GenerationWay.OnItsOwn);
             Kept++;
+            if (generator is IDocumentGenerator part && Apply is not null)
+            {
+                // into the map as it is now, without a step of undo
+                Apply(part, value);
+            }
             _generation.Refresh(_document());
             Generated?.Invoke(id);
         }
@@ -243,6 +343,7 @@ public sealed class AutoGeneration
         {
             _generation.Refresh(_document());
         }
+        Changed?.Invoke();
         // a change while it ran that left the inputs as they were is current; one that did not starts again
         Follow();
     });

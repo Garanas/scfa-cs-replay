@@ -300,6 +300,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Diagnostics.Settings = settings;
         LoadLayout(settings);
+        LoadAutoRegenerate(settings);
         if (settings.Problem is string problem)
         {
             // a part of the settings that cannot be read is left out, never silently
@@ -520,7 +521,7 @@ public sealed partial class MainViewModel : ObservableObject
         Attach(await EditedMap.OpenProjectAsync(folder), $"Opened the project {folder}"));
 
     public Task ImportMapFolderAsync(string folder) => BusyAsync("import", $"Importing {folder}...", async () =>
-        Attach(await EditedMap.ImportMapAsync(folder), $"Imported {folder}; save it as a project to keep it"));
+        Attach(await EditedMap.ImportMapAsync(folder, Setup.Workspace?.Procedural), $"Imported {folder}; save it as a project to keep it"));
 
     /// <exception cref="OperationVetoedException">A handler of <see cref="EditorEvents.BeforeSave"/> stopped it.</exception>
     public async Task SaveAsync()
@@ -621,7 +622,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         Commands.NotifyCanRunChanged();
         ReloadPending();
-        RunAfterStroke();
     }
 
     /// <summary>
@@ -710,7 +710,6 @@ public sealed partial class MainViewModel : ObservableObject
         map.Session.StateChanged += OnSessionChanged;
         map.Session.Changed += OnDocumentChange;
         Generation.Forget();
-        _afterStroke.Clear();
         _pendingReload.Clear();
         if (map.ProjectFolder is string folder)
         {
@@ -819,6 +818,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void OnDocumentChange(object? sender, DocumentChange change)
     {
+        KeepDerived(change);
         SayDone(change);
         Events.OnDocumentChanged(change);
     }

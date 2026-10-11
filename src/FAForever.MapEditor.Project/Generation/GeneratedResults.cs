@@ -62,11 +62,6 @@ namespace FAForever.MapEditor.Project.Generation
         public static GeneratedInput Spawns { get; } = new GeneratedInput("spawns", document => document.Markers.Spawns);
 
         /// <summary>
-        /// The navigation mesh's settings (<see cref="ProceduralSettings.Navigation"/>).
-        /// </summary>
-        public static GeneratedInput NavigationSettings { get; } = new GeneratedInput("navigation settings", document => document.Procedural.Navigation);
-
-        /// <summary>
         /// How the path networks are generated (<see cref="PathNodeSettings.Generation"/>), without the
         /// edits by hand and the export's choices.
         /// </summary>

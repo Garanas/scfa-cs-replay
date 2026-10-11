@@ -143,6 +143,14 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
   step) holds a group (`EditSession.BeginGroup`, `EditGroup`): the steps made while it is open
   become one step when it is committed, and are undone and forgotten when it is disposed; undo
   waits until it ends, and the history keeps all of the group's steps whatever its limit.
+- **Derived changes** (`EditSession.Derive(description, edit)`, the owner's decision Q4): what is derived
+  from the document (a generated result that is part of the map: the normal map, the preview, masks or
+  props from rules, the sky cube map) replaces the current version's document in place, through the same
+  following of layers as an edit, without a step: the map counts as modified, `Changed` is raised with
+  `ChangeReason.Derive`, the history's steps and those that can be redone stay, a merge key goes on. While
+  a transaction is open it waits (`DerivedWaiting`) and is made on the document the transaction left, also
+  when it is thrown away. Each version keeps the results derived for it, so an undo returns the older
+  results with their sources. Tests: `EditSessionTest`.
 
 ## Brushes
 
@@ -450,8 +458,10 @@ User story M-8 (`Vault/`). How FAForever takes a map, from the source of the
 
 One workspace per computer (`Workspaces/`): a folder with the map projects and the assets converted
 from the game's archives (`WorkspaceLayout` lists its files). `workspace.json` (`WorkspaceDto`) says
-where the game, FAF's data and the vault are; maps are exported to the vault's `maps` folder.
+where the game, FAF's data and the vault are (maps are exported to the vault's `maps` folder), and
+the Procedural defaults of new and imported maps (`procedural`, section "Generated results").
 `UserSettings` remembers where the workspace is, outside it (`%APPDATA%\FAF Map Editor\settings.json`;
+also the layout, the plugins turned off and whether results regenerate on their own, `generation`;
 the environment variable `FAF_MAP_EDITOR_SETTINGS` names another file, which tests and automation
 use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.lua` for the defaults.
 
@@ -1111,7 +1121,8 @@ versions share what they do not change, `ChangedInputs(document)` is a few refer
 its result with `GeneratedResult.Of(generator, document, value)` from the version it started
 with and hands it to `Keep`. Results live in memory only; keeping them in the project is for the
 generators that need it. A generator whose result is a part of the map (`IDocumentGenerator`)
-also puts it in its place (`Apply`); the editor makes that a step of undo. Inputs read only what
+also puts it in its place (`Apply`); the editor puts it into the current version without a step of
+undo (`EditSession.Derive`: a derived result). Inputs read only what
 a generator needs (`WaterLevel`, `DepositsAndAreas`, `MapType`), so a change of the water's colour
 or a path node leaves walkability current.
 
@@ -1158,19 +1169,27 @@ other from the document each leaves (the editor's `generate.stale`) leaves nothi
   cancelled, then runs to the end) lets the editor stop a run regenerating on its own; walkability
   passes the token into `NavGenerator.Generate`, which checks it between its steps.
 - **The navigation mesh** (user story T-8, `Generation/NavigationMesh.cs`, `NavigationMeshGenerator`,
-  id `navigationMesh`): walkability's `MapNavigation` (its current result when there is one, `Reads`
-  walkability) with, per layer, the regions largest first (`NavRegion`: cells, area, the starts in it,
-  mass and hydrocarbon counts as the game assigns them) and the routes between starts
-  (`NavStartRoute`: straight distance, `NavRoute` or null, `Detour`) that `NavigationSettings.Routes`
-  asks for (`Nearest`: each start with the one nearest in a straight line; `All`; `None`). A start on
-  ground no unit of the layer can leave belongs to the region within `StartReach` (8) ogrids, else to
-  none (`StrandedOf`; HardFFA's eight starts crowd steep ground). Routes are searched on the grid
-  coarsened to the game's compression threshold (`NavGrid.Coarsen`): on a 4096 map the regions and
-  routes take well under a second after walkability (`NavigationMeshTest.IsQuickEnoughOnTheLargestMaps`).
-  Its inputs add `Spawns` and `NavigationSettings` to walkability's.
+  id `navigationMesh`; the editor calls its regions "connected regions"): walkability's `MapNavigation`
+  (its current result when there is one, `Reads` walkability) with, per layer, the regions largest first
+  (`NavRegion`: cells, area, the starts in it, mass and hydrocarbon counts as the game assigns them). A
+  start on ground no unit of the layer can leave belongs to the region within `StartReach` (8) ogrids,
+  else to none (`StrandedOf`; HardFFA's eight starts crowd steep ground). On a 4096 map the regions take
+  well under a second after walkability (`NavigationMeshTest.IsQuickEnoughOnTheLargestMaps`). Its inputs
+  add `Spawns` to walkability's. FileFormats.Map's `NavPaths.FindRoute` (a route over a grid) is the
+  Viewer's; the editor measures no routes.
 - **The Procedural mode's settings** (`Files/InMemory/ProceduralSettings.cs`, `MapDocument.Procedural`,
   `map.json`'s optional `procedural`, `ProceduralDto`; absent for the defaults): `AutoGenerate` (ids that
-  regenerate on their own), `NotOnExport` (ids the export leaves as they are), `Navigation.Routes`.
+  regenerate on their own), `NotOnExport` (ids the export leaves as they are), the draft's files, the
+  path networks and the sky cube map. A `routes` written by an older editor is read and left out.
+- **The workspace's defaults** (`Workspaces/ProceduralDefaults`, `workspace.json`'s optional `procedural`,
+  `WorkspaceProceduralDto`: `autoGenerate`, `onExport`, each absent for the default and empty for none):
+  what a map made or imported in the workspace regenerates on its own (`Default`: walkability, the
+  navigation mesh, masks from rules) and which of `ExportChoices` (the normal map, the path networks) its
+  export makes or writes (`Default`: the normal map). `ApplyTo(settings)` sets them on a map's settings (the
+  path networks' choice only when on, so a map that never chose keeps "the first Generate turns it on"),
+  `Of(settings)` takes a map's. `Workspace.Procedural`; `SandboxMap.Ensure` and `EditedMap.ImportMap(folder,
+  defaults)` apply them, the editor's new maps too; a project opened keeps its own. Tests:
+  `ProceduralDefaultsTest`.
 
 ## Rules: masks and props from the layers
 

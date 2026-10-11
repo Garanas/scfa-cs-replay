@@ -73,7 +73,8 @@ public static class Menus
         [
             "generate.walkability", "generate.navigation", "markers.connectPaths", "generate.props", "generate.masks", Separator,
             "generate.normalMap", "decals.generateNormal", "decals.generateShadow", "file.renderPreview", "generate.skyCube", Separator,
-            "generate.stale", "generate.all",
+            "generate.stale", "generate.all", Separator,
+            "generate.automatic", "generate.useAsWorkspaceDefault",
         ]),
         new MenuLayout(PluginsMenu, ["plugins.manage", "plugins.reload", Separator, "plugins.check"]),
         new MenuLayout("Help",

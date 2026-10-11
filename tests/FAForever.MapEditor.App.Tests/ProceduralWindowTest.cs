@@ -10,7 +10,7 @@ using FAForever.MapEditor.App.Views;
 namespace FAForever.MapEditor.App.Tests
 {
     /// <summary>
-    /// The Procedural mode's panel and its Regions tool in the real window (headless).
+    /// The Procedural mode's panel and its Connected regions tool in the real window (headless).
     /// </summary>
     [TestClass]
     public sealed class ProceduralWindowTest
@@ -61,8 +61,13 @@ namespace FAForever.MapEditor.App.Tests
             Click(window, Named<CheckBox>(window, "Regenerate the walkability on its own"));
 
             Assert.IsTrue(model.Map!.Document.Procedural.RegeneratesOnItsOwn("walkability"));
-            await Until(() => model.Walkability.Navigation is not null && !model.AutoGeneration.IsPending("walkability"));
             Assert.IsTrue(Named<CheckBox>(window, "Regenerate the walkability on its own").IsChecked);
+            // only while the views show it: it waits until its overlay is on
+            Assert.IsFalse(model.AutoGeneration.IsPending("walkability"));
+            CollectionAssert.Contains(model.AutoGeneration.Hidden.ToArray(), "walkability");
+            StringAssert.Contains(model.AutoRegenerateTip, "waiting until the views show them: walkability");
+            Click(window, Named<CheckBox>(window, "Preview the walkability in the views"));
+            await Until(() => model.Walkability.Navigation is not null && !model.AutoGeneration.IsPending("walkability"));
             window.Close();
         });
 
@@ -83,7 +88,7 @@ namespace FAForever.MapEditor.App.Tests
             Click(window, Named<Button>(window, first.Label));
             Assert.AreEqual(first.Region.Id, model.Navigation.ChosenRegion, "the list chooses a region");
 
-            // the Regions tool: a click in the top view chooses the region under the mouse
+            // the Connected regions tool: a click in the top view chooses the region under the mouse
             model.SelectTool("procedural.regions");
             model.View = MapViewTab.Top;
             Dispatcher.UIThread.RunJobs();
@@ -93,6 +98,33 @@ namespace FAForever.MapEditor.App.Tests
             window.MouseUp(at, MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
             Assert.AreEqual(model.Navigation.Mesh!.RegionAt(model.Navigation.Layer, 20.5f, 20.5f)?.Id, model.Navigation.ChosenRegion);
+            window.Close();
+        });
+
+        [TestMethod]
+        public Task TheAutoSwitchInTheViewsBarTurnsRegeneratingOnTheirOwnOffAndSaysWhatWaits() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Avalonia.Controls.Primitives.ToggleButton chip = Named<Avalonia.Controls.Primitives.ToggleButton>(window, "Regenerate results on their own");
+            Assert.IsTrue(chip.IsChecked);
+            TextBlock text = Named<TextBlock>(window, "What regenerates on its own now");
+            Assert.AreEqual("Auto", text.Text);
+
+            Click(window, chip);
+
+            Assert.IsFalse(model.RegenerateOnTheirOwn);
+            Assert.IsFalse(chip.IsChecked);
+            Assert.AreEqual("Auto off", text.Text);
+            StringAssert.Contains(Avalonia.Controls.ToolTip.GetTip(chip) as string, "only when asked");
+
+            // on again, with a result shown and out of date: it says one waits
+            Click(window, chip);
+            model.ShowNavigation = true;
+            await model.Commands.TryRunAsync("generate.auto", new System.Text.Json.Nodes.JsonObject { ["id"] = "navigationMesh", ["on"] = true }, interactive: false);
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual("Auto: 1 waiting", text.Text);
+            await Until(() => !model.AutoGeneration.IsPending("navigationMesh"));
+            Assert.AreEqual("Auto", text.Text);
             window.Close();
         });
     }

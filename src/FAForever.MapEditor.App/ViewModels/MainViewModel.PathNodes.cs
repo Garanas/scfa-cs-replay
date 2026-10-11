@@ -49,7 +49,6 @@ public sealed partial class MainViewModel
         Procedural.OnExport(PathNetworkGenerator.GeneratorId, ExportUse.Written,
             settings => settings.PathNodes.WritesOnExport,
             (settings, on) => settings with { PathNodes = settings.PathNodes with { OnExport = on } });
-        AutoGeneration.Allow(PathNetworkGenerator.GeneratorId);
         PropertyChanged += (_, e) =>
         {
             // the tool works on what it shows

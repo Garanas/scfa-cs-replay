@@ -22,26 +22,10 @@ namespace FAForever.MapEditor.Project.Generation
     }
 
     /// <summary>
-    /// A route between two starts over one layer.
-    /// </summary>
-    /// <param name="From">The army of the first start.</param>
-    /// <param name="Straight">The straight distance between the starts, in ogrids.</param>
-    /// <param name="Route">The shortest route, its points in ogrids; null when units of this layer
-    /// cannot get from one start to the other.</param>
-    public sealed record NavStartRoute(string From, string To, NavLayer Layer, float Straight, NavRoute? Route)
-    {
-        /// <summary>
-        /// How much longer the route is than the straight line (1.3: 30 % longer); null without a route.
-        /// </summary>
-        public float? Detour => Route is null || Straight <= 0 ? null : Route.Length / Straight;
-    }
-
-    /// <summary>
     /// The navigation mesh of a map as the Procedural mode shows it: the game's navigational mesh
-    /// (<see cref="MapNavigation"/>), per layer its regions with their starts and deposits, and the
-    /// routes between starts that the settings ask for (<see cref="NavigationSettings.Routes"/>).
+    /// (<see cref="MapNavigation"/>) and, per layer, its connected regions with their starts and deposits.
     /// </summary>
-    public sealed record NavigationMesh(MapNavigation Navigation, IReadOnlyDictionary<NavLayer, IReadOnlyList<NavRegion>> Regions, IReadOnlyDictionary<NavLayer, IReadOnlyList<NavStartRoute>> Routes)
+    public sealed record NavigationMesh(MapNavigation Navigation, IReadOnlyDictionary<NavLayer, IReadOnlyList<NavRegion>> Regions)
     {
         /// <summary>
         /// The layers, in the order the Procedural mode lists them.
@@ -52,8 +36,6 @@ namespace FAForever.MapEditor.Project.Generation
         /// The regions of a layer, the largest first.
         /// </summary>
         public IReadOnlyList<NavRegion> RegionsOf(NavLayer layer) => Regions.GetValueOrDefault(layer) ?? [];
-
-        public IReadOnlyList<NavStartRoute> RoutesOf(NavLayer layer) => Routes.GetValueOrDefault(layer) ?? [];
 
         /// <summary>
         /// The armies whose start lies in no region of a layer, nor within <see cref="StartReach"/>
@@ -72,18 +54,16 @@ namespace FAForever.MapEditor.Project.Generation
             Navigation[layer].GetLabel(new Vector3(x, 0, z)) is NavLabel label ? RegionsOf(layer).FirstOrDefault(region => region.Id == label.Id) : null;
 
         /// <summary>
-        /// Makes the regions and routes of a generated mesh.
+        /// Makes the connected regions of a generated mesh.
         /// </summary>
-        /// <param name="cancel">Stops it between routes.</param>
+        /// <param name="cancel">Stops it between layers.</param>
         public static NavigationMesh Of(MapDocument document, MapNavigation navigation, CancellationToken cancel = default)
         {
             IReadOnlyList<Spawn> spawns = document.Markers.Spawns;
             Dictionary<NavLayer, IReadOnlyList<NavRegion>> regions = [];
-            Dictionary<NavLayer, IReadOnlyList<NavStartRoute>> routes = [];
-            Dictionary<NavGrid, IReadOnlyList<NavStartRoute>> routed = [];
-            (int A, int B)[] pairs = Pairs(spawns, document.Procedural.Navigation.Routes);
             foreach (NavLayer layer in Layers)
             {
+                cancel.ThrowIfCancellationRequested();
                 NavGrid grid = navigation[layer];
                 regions[layer] = [.. grid.Labels
                     .Select(label => new NavRegion(label.Id, layer, label.Cells,
@@ -91,52 +71,8 @@ namespace FAForever.MapEditor.Project.Generation
                         label.Extractors.Count, label.Hydrocarbons.Count))
                     .OrderByDescending(region => region.Cells)
                     .ThenBy(region => region.Id)];
-                // without water the hover and amphibious layers are the land layer: routed once
-                if (!routed.TryGetValue(grid, out IReadOnlyList<NavStartRoute>? found))
-                {
-                    found = Route(grid, navigation.CompressionThreshold, spawns, pairs, cancel);
-                    routed[grid] = found;
-                }
-                routes[layer] = [.. found.Select(route => route with { Layer = layer })];
             }
-            return new NavigationMesh(navigation, regions, routes);
-        }
-
-        /// <summary>
-        /// The pairs of starts to route between: each start with the one nearest to it in a straight
-        /// line (each pair once), or every pair.
-        /// </summary>
-        public static (int A, int B)[] Pairs(IReadOnlyList<Spawn> spawns, RoutePairs choice)
-        {
-            if (choice == RoutePairs.None || spawns.Count < 2)
-            {
-                return [];
-            }
-            HashSet<(int, int)> pairs = [];
-            for (int a = 0; a < spawns.Count; a++)
-            {
-                if (choice == RoutePairs.All)
-                {
-                    for (int b = a + 1; b < spawns.Count; b++)
-                    {
-                        pairs.Add((a, b));
-                    }
-                    continue;
-                }
-                int nearest = -1;
-                float best = float.MaxValue;
-                for (int b = 0; b < spawns.Count; b++)
-                {
-                    float distance = Flat(spawns[a].Position, spawns[b].Position);
-                    if (b != a && distance < best)
-                    {
-                        best = distance;
-                        nearest = b;
-                    }
-                }
-                pairs.Add((Math.Min(a, nearest), Math.Max(a, nearest)));
-            }
-            return [.. pairs.Order()];
+            return new NavigationMesh(navigation, regions);
         }
 
         /// <summary>
@@ -175,72 +111,13 @@ namespace FAForever.MapEditor.Project.Generation
             }
             return best;
         }
-
-        private static float Flat(Vector3 a, Vector3 b) => Vector2.Distance(new Vector2(a.X, a.Z), new Vector2(b.X, b.Z));
-
-        /// <summary>
-        /// The routes over a layer, searched in blocks of the game's compression threshold (as its
-        /// quadtrees treat the map: a 4096 map in blocks of 4 ogrids), so a route over the largest
-        /// maps takes a moment.
-        /// </summary>
-        private static IReadOnlyList<NavStartRoute> Route(NavGrid grid, int block, IReadOnlyList<Spawn> spawns, (int A, int B)[] pairs, CancellationToken cancel)
-        {
-            if (pairs.Length == 0)
-            {
-                return [];
-            }
-            NavGrid coarse = grid.Coarsen(block);
-            List<NavStartRoute> routes = [];
-            foreach ((int a, int b) in pairs)
-            {
-                cancel.ThrowIfCancellationRequested();
-                Vector3 from = spawns[a].Position;
-                Vector3 to = spawns[b].Position;
-                NavRoute? route = null;
-                if (LabelNear(grid, from) is NavLabel label && LabelNear(grid, to) == label
-                    && CellOf(coarse, label, from, block) is Vector3 start && CellOf(coarse, label, to, block) is Vector3 end
-                    && NavPaths.FindRoute(coarse, start, end) is NavRoute found)
-                {
-                    route = new NavRoute(found.Length * block, [.. found.Points.Select(point => point * block)]);
-                }
-                routes.Add(new NavStartRoute(spawns[a].Army, spawns[b].Army, grid.Layer, Flat(from, to), route));
-            }
-            return routes;
-        }
-
-        /// <summary>
-        /// The place on the coarse grid of a position, moved to the nearest block of its region when
-        /// its own block mixes regions or blocked ogrids.
-        /// </summary>
-        private static Vector3? CellOf(NavGrid coarse, NavLabel label, Vector3 position, int block)
-        {
-            int cx = (int)MathF.Floor(position.X / block);
-            int cz = (int)MathF.Floor(position.Z / block);
-            for (int radius = 0; radius <= 4; radius++)
-            {
-                for (int dz = -radius; dz <= radius; dz++)
-                {
-                    for (int dx = -radius; dx <= radius; dx++)
-                    {
-                        int x = cx + dx;
-                        int z = cz + dz;
-                        if (Math.Max(Math.Abs(dx), Math.Abs(dz)) == radius && (uint)x < (uint)coarse.Width && (uint)z < (uint)coarse.Height
-                            && coarse.Cells[z * coarse.Width + x] == label.Id)
-                        {
-                            return new Vector3(x + 0.5f, 0, z + 0.5f);
-                        }
-                    }
-                }
-            }
-            return null;
-        }
     }
 
     /// <summary>
-    /// The navigation mesh (the Procedural mode): the game's navigational mesh with its regions and
-    /// the routes between starts, made from the heightmap, the terrain types, the water and the
+    /// The navigation mesh (the Procedural mode): the game's navigational mesh with its connected
+    /// regions, made from the heightmap, the terrain types, the water and the
     /// walkability marks as walkability is; it uses walkability's result while that is current.
-    /// The result stays in memory; the project keeps only its settings.
+    /// The result stays in memory.
     /// </summary>
     public sealed class NavigationMeshGenerator : IGenerator
     {
@@ -254,7 +131,7 @@ namespace FAForever.MapEditor.Project.Generation
 
         public IReadOnlyList<GeneratedInput> Inputs { get; } =
             [GeneratedInput.Heightmap, GeneratedInput.TerrainTypes, GeneratedInput.WaterLevel, GeneratedInput.DepositsAndAreas, GeneratedInput.MapType, GeneratedInput.WalkabilityMarks,
-             GeneratedInput.Spawns, GeneratedInput.NavigationSettings];
+             GeneratedInput.Spawns];
 
         public IReadOnlyList<string> Reads { get; } = [WalkabilityGenerator.GeneratorId];
 
