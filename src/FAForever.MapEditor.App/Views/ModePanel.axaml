@@ -164,13 +164,19 @@
                         <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}" />
                         <Setter Property="AutomationProperties.Name" Value="{ReflectionBinding Description}" />
                       </Style>
+                      <!-- the entry's detail at the right, as in the other list modes -->
+                      <Style Selector="TreeViewItem /template/ ContentPresenter#PART_HeaderPresenter">
+                        <Setter Property="HorizontalAlignment" Value="Stretch" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                      </Style>
                     </TreeView.Styles>
+                    <!-- an army, group or unit as the other list modes' entries: its name, its count or blueprint as the detail -->
                     <TreeView.DataTemplates>
                       <TreeDataTemplate DataType="vm:GroupNode" ItemsSource="{Binding Items}">
-                        <TextBlock Text="{Binding Label}" />
+                        <controls:PartEntryText Title="{Binding Title}" Detail="{Binding Detail}" />
                       </TreeDataTemplate>
                       <DataTemplate DataType="vm:UnitNode">
-                        <TextBlock Classes="secondary" Text="{Binding Label}" />
+                        <controls:PartEntryText Classes="unitentry" Title="{Binding Name}" Detail="{Binding Blueprint}" />
                       </DataTemplate>
                     </TreeView.DataTemplates>
                   </TreeView>

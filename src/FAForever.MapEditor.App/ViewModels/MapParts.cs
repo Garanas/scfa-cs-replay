@@ -250,6 +250,26 @@ public sealed class MapPartsViewModel
         army.Playable ? army.Team is null ? "playable" : $"team {army.Team}" : $"extra · {MainViewModel.Units(army.Units)}";
 
     /// <summary>
+    /// The armies as the list shows them: the playable ones first by their number (<c>ARMY_2</c>
+    /// before <c>ARMY_10</c>; one without a number after them), then the extra armies, each in the
+    /// map's order otherwise.
+    /// </summary>
+    public static IEnumerable<ArmyRow> InListOrder(IEnumerable<ArmyRow> armies) => armies
+        .OrderBy(army => army.Playable ? 0 : 1)
+        .ThenBy(army => army.Playable ? NumberOf(army.Name) ?? int.MaxValue : 0);
+
+    // the number an army's name ends with: ARMY_12 is 12
+    private static int? NumberOf(string name)
+    {
+        int start = name.Length;
+        while (start > 0 && char.IsAsciiDigit(name[start - 1]))
+        {
+            start--;
+        }
+        return start < name.Length && int.TryParse(name.AsSpan(start), NumberStyles.None, CultureInfo.InvariantCulture, out int number) ? number : null;
+    }
+
+    /// <summary>
     /// The short line beside an area: <c>playable</c>, or its size (<c>96 × 64</c>).
     /// </summary>
     public static string DetailOf(Area area, bool playable) =>
@@ -273,7 +293,7 @@ public sealed class MapPartsViewModel
         if (!ReferenceEquals(Armies.Rows, _shownArmies))
         {
             _shownArmies = Armies.Rows;
-            changed |= Parts.SyncGroup(ArmiesGroup, [.. Armies.Rows.Select(row => new PanelPartEntry(ArmyPart(row.Name), row.Name,
+            changed |= Parts.SyncGroup(ArmiesGroup, [.. InListOrder(Armies.Rows).Select(row => new PanelPartEntry(ArmyPart(row.Name), row.Name,
                 () => new MapArmyPart(row.Name, Armies), DetailOf(row), "An army: whether players take it, its team, factions and alliances"))], MapGroup);
         }
         System.Collections.Immutable.ImmutableArray<Area> areas = document?.Markers.Areas ?? [];

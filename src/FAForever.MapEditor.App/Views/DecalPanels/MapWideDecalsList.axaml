@@ -22,7 +22,7 @@
               <Button DockPanel.Dock="Right" Content="Generate" Command="{Binding Slot.GenerateNowCommand}"
                       IsVisible="{Binding Slot.CanGenerate}" IsEnabled="{Binding !Slot.IsGenerating}"
                       AutomationProperties.Name="{Binding Slot.GenerateLabel}" AutomationProperties.HelpText="Previews it in the views from the final heightmap; the export makes it at full size" />
-              <Button Classes="partentry widedecalentry" Classes.selected="{Binding Part.IsChosen}"
+              <Button Classes="partentry partwithpreview" Classes.selected="{Binding Part.LooksChosen}"
                       Command="{Binding Parts.ChooseItemCommand}" CommandParameter="{Binding Part}"
                       ToolTip.Tip="{Binding Part.Help}"
                       AutomationProperties.Name="{Binding Part.Title}" AutomationProperties.HelpText="{Binding Part.Label}">
@@ -30,10 +30,7 @@
                   <Border DockPanel.Dock="Left" Classes="thumbnail imagepreview">
                     <controls:ImagePreview Picture="{Binding Slot.Preview}" AutomationProperties.Name="{Binding PreviewLabel}" />
                   </Border>
-                  <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Part.Title}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Classes="partdetail widedecaldetail" Text="{Binding Part.Detail}" TextTrimming="CharacterEllipsis" />
-                  </StackPanel>
+                  <controls:PartEntryText Title="{Binding Part.Title}" Detail="{Binding Part.Detail}" />
                 </DockPanel>
               </Button>
             </DockPanel>

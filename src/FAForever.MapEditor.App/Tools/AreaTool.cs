@@ -66,7 +66,13 @@ public sealed partial class AreaTool(MainViewModel model) : ObservableObject, IM
     }
 
     /// <summary>
-    /// What the options bar says about using it.
+    /// What the options bar says about using it, short enough for its row at 1280 pixels; the
+    /// rest is in <see cref="Help"/>, its tool tip.
+    /// </summary>
+    public string Hint => "Drag to draw an area; drag its corners or edges to resize it, inside it to move it";
+
+    /// <summary>
+    /// All there is to say about using it: the tool tip of the options bar's hint.
     /// </summary>
     public string Help => "Drag on empty ground to draw an area; drag a corner or edge of the selected area to resize it, inside it to move it; Delete removes it. The inspector's check box makes the selected area the playable area";
 

@@ -1272,7 +1272,7 @@ public sealed partial class HeightmapView : Control
                     g.LineTo(new Point(at.X - 5, at.Y));
                     g.EndFigure(true);
                 }
-                context.DrawGeometry(Fill(marker.Color), overlay.Shadow, diamond);
+                context.DrawGeometry(Fill(MarkersViewModel.ShownColour(marker)), overlay.Shadow, diamond);
             }
             foreach (ResourceMarker resource in markers.Resources.Where(Shows))
             {

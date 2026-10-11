@@ -426,7 +426,7 @@
             </DataTemplate>
             <!-- drawing, moving and resizing areas (M-5) -->
             <DataTemplate DataType="tools:AreaTool">
-              <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+              <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Hint}" ToolTip.Tip="{Binding Help}" />
             </DataTemplate>
             <!-- growing or cropping the map (M-3) -->
             <DataTemplate DataType="tools:MapSizeTool">

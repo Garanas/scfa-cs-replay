@@ -92,7 +92,10 @@ public sealed partial class MarkerKindItem(MarkerKindChoice choice, MarkersViewM
     [ObservableProperty]
     public partial string ExportFact { get; private set; } = "";
 
-    public bool IsOn => owner.Shows(choice.Kind);
+    /// <summary>
+    /// Whether the views show it: its kind on and the overlay of its heading (Markers, Path nodes) on.
+    /// </summary>
+    public bool IsOn => owner.ShowsInViews(choice.Kind);
 
     public string ShownText => IsOn ? "yes" : "no";
 
@@ -231,17 +234,29 @@ public sealed partial class MarkersViewModel : ObservableObject
     internal Task Run(string id, JsonObject arguments) => _run(id, arguments);
 
     /// <summary>
+    /// The colour the views and the list give blank markers: the game writes them in a spawn's purple
+    /// (and the export keeps it), which the editor shows in orange to tell the two kinds apart.
+    /// </summary>
+    public const uint BlankColour = 0xffff9933;
+
+    /// <summary>
+    /// The colour the views draw a marker in: its own (<see cref="Marker.Color"/>), a blank marker's
+    /// <see cref="BlankColour"/>.
+    /// </summary>
+    public static Color32 ShownColour(Marker marker) => marker is AiMarker { IsBlank: true } ? Color32.FromArgb(BlankColour) : marker.Color;
+
+    /// <summary>
     /// The kinds one by one, in the order of the panel.
     /// </summary>
     public static IReadOnlyList<MarkerKindChoice> Choices { get; } =
     [
         // the colours of the library's Marker.Color: a spawn's, a deposit's, an expansion area's (the
-        // most common AI marker), a blank marker's, a weather marker's, and each layer's path nodes
+        // most common AI marker), a weather marker's, and each layer's path nodes; a blank marker's as the views show it
         new MarkerKindChoice(MarkerKinds.Spawns, "spawns", "Spawns", "Spawns", 0xff800080),
         new MarkerKindChoice(MarkerKinds.Mass, "mass", "Mass", "Mass", 0xff808080),
         new MarkerKindChoice(MarkerKinds.Hydrocarbon, "hydrocarbon", "Hydrocarbon", "Hydrocarbon", 0xff008000),
         new MarkerKindChoice(MarkerKinds.AiMarkers, "ai", "AI markers", "AI markers", 0xff008080),
-        new MarkerKindChoice(MarkerKinds.Blank, "blank", "Blank markers", "Blank markers", 0xff800080),
+        new MarkerKindChoice(MarkerKinds.Blank, "blank", "Blank markers", "Blank markers", BlankColour),
         new MarkerKindChoice(MarkerKinds.Weather, "weather", "Weather", "Weather", 0xff808000),
         new MarkerKindChoice(MarkerKinds.LandPaths, "landPaths", "Land path nodes", "Land", 0xff00ff00, PathLayer.Land),
         new MarkerKindChoice(MarkerKinds.AmphibiousPaths, "amphibiousPaths", "Amphibious path nodes", "Amphibious", 0xff00ffff, PathLayer.Amphibious),
@@ -328,6 +343,32 @@ public sealed partial class MarkersViewModel : ObservableObject
     public bool Shows(MarkerKinds kind) => (ShownKinds & kind) == kind;
 
     /// <summary>
+    /// The kinds the overlays Markers and Path nodes show now (<see cref="UseOverlayKinds"/>).
+    /// </summary>
+    public MarkerKinds OverlayKinds { get; private set; } = MarkerKinds.All;
+
+    /// <summary>
+    /// Whether the views show a kind: shown by the list and by the overlay of its heading.
+    /// </summary>
+    public bool ShowsInViews(MarkerKinds kind) => Shows(kind) && (OverlayKinds & kind) == kind;
+
+    /// <summary>
+    /// The overlays Markers and Path nodes turned on or off: the check boxes of the kinds follow them.
+    /// </summary>
+    public void UseOverlayKinds(MarkerKinds kinds)
+    {
+        if (kinds == OverlayKinds)
+        {
+            return;
+        }
+        OverlayKinds = kinds;
+        foreach (MarkerKindItem item in Kinds)
+        {
+            item.RefreshShown();
+        }
+    }
+
+    /// <summary>
     /// Shows or hides kinds of markers in both views.
     /// </summary>
     public void Show(MarkerKinds kinds, bool on)
@@ -349,7 +390,7 @@ public sealed partial class MarkersViewModel : ObservableObject
     /// A check box of the panel: shows or hides its kind (<c>markers.showKind</c>).
     /// </summary>
     [RelayCommand]
-    private Task ToggleKind(MarkerKindItem item) => _run("markers.showKind", new JsonObject { ["kind"] = item.Id, ["on"] = !Shows(item.Kind) });
+    private Task ToggleKind(MarkerKindItem item) => _run("markers.showKind", new JsonObject { ["kind"] = item.Id, ["on"] = !item.IsOn });
 
     #region Chains
 

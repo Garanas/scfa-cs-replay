@@ -199,6 +199,12 @@ public sealed partial class MainViewModel
     {
         OnPropertyChanged(nameof(InspectsSelection));
         OnPropertyChanged(nameof(InspectsMode));
+        // one place looks chosen: the lists' chosen entries only while the inspector shows them
+        bool mode = InspectsMode;
+        foreach (PanelParts list in PanelPartLists.Values)
+        {
+            list.HasInspector = mode;
+        }
     }
 
     /// <summary>

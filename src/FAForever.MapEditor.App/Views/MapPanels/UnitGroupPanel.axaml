@@ -19,8 +19,9 @@
     <StackPanel IsVisible="{Binding HasChosenGroup}">
       <Border Classes="group">
         <StackPanel Classes="stack">
-          <TextBlock Classes="overline" Text="{Binding ChosenGroupKind, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+          <!-- its name and what it is, as the other modes' entries in the inspector (PanelPartView) -->
           <TextBlock Classes="heading" Text="{Binding ChosenGroupTitle}" TextWrapping="Wrap" AutomationProperties.Name="Chosen army or group" />
+          <TextBlock Classes="caption" Text="{Binding ChosenGroupCaption}" />
           <DockPanel IsVisible="{Binding CanChangeChosenGroup}">
             <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Army" />
             <TextBlock Text="{Binding ChosenGroup.Army, FallbackValue=''}" AutomationProperties.Name="Army of the chosen group" />
@@ -73,7 +74,7 @@
                   AutomationProperties.HelpText="The units selected on the map, which stay selected" />
           <Button HorizontalAlignment="Stretch" Content="Save as a preset" Command="{Binding SaveGroupAsPresetCommand}"
                   AutomationProperties.Name="Save the units of the chosen army or group as a preset"
-                  AutomationProperties.HelpText="Whatever is selected; the preset is named after the group and listed in the panel's Presets" />
+                  AutomationProperties.HelpText="Whatever is selected; the preset is named after the group and listed in the panel's Unit presets" />
         </StackPanel>
       </Border>
     </StackPanel>

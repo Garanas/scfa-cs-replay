@@ -60,7 +60,12 @@ public sealed partial class MainViewModel
             else if (MapPartsViewModel.AreaOf(chosen) is string area && SelectedMode?.Definition.Id == "map")
             {
                 // the area chosen is selected, so its handles show; the entry keeps the inspector
-                // (InspectTheMode follows the choice)
+                // (InspectTheMode follows the choice). The Map size tool draws no area's handles: the
+                // Areas tool takes over from it
+                if (ActiveTool?.Definition.Id == "map.size")
+                {
+                    SelectToolOfEntry("map.areas");
+                }
                 if (Selection.Items.Length != 1 || !Selection.Contains(ObjectRef.Area(area)))
                 {
                     Selection.Set([ObjectRef.Area(area)]);
@@ -68,7 +73,7 @@ public sealed partial class MainViewModel
             }
             else if (chosen.Id == MapPartsViewModel.SizePart && SelectedMode?.Definition.Id == "map" && ActiveTool?.Definition.Id != "map.size")
             {
-                SelectTool("map.size");
+                SelectToolOfEntry("map.size");
             }
         };
 
@@ -112,6 +117,13 @@ public sealed partial class MainViewModel
         {
             _followingMapParts = false;
         }
+    }
+
+    // a tool an entry of the list chose: the status line says so, as choosing it on the panel does
+    private void SelectToolOfEntry(string tool)
+    {
+        SelectTool(tool);
+        Status = $"{SelectedMode!.Definition.Title} mode: {ActiveTool?.Definition.Title ?? "no tool"}";
     }
 
     // an army chosen elsewhere is the army entry the list shows, while it shows an army

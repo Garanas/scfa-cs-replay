@@ -31,7 +31,7 @@
                             Command="{Binding Result.GenerateCommand, FallbackValue={x:Null}}" IsEnabled="{Binding Result.CanGenerate, FallbackValue=False}"
                             AutomationProperties.Name="{Binding Result.GenerateLabel, FallbackValue=''}"
                             AutomationProperties.HelpText="{Binding Result.StatusText, FallbackValue=''}" />
-                    <Button Classes="partentry proceduralentry" Classes.selected="{Binding Part.IsChosen}"
+                    <Button Classes="partentry" Classes.selected="{Binding Part.LooksChosen}" Classes.partwithpreview="{Binding IsResult}"
                             Command="{Binding Parts.ChooseItemCommand}" CommandParameter="{Binding Part}"
                             ToolTip.Tip="{Binding Part.Help}"
                             AutomationProperties.Name="{Binding Part.Title}" AutomationProperties.HelpText="{Binding Part.Label}">
@@ -40,11 +40,8 @@
                           <controls:ImagePreview Picture="{Binding Result.Picture, FallbackValue={x:Null}}"
                                                  AutomationProperties.Name="{Binding Result.PictureLabel, FallbackValue=''}" />
                         </Border>
-                        <StackPanel VerticalAlignment="Center">
-                          <TextBlock Text="{Binding Part.Title}" TextTrimming="CharacterEllipsis" />
-                          <TextBlock Classes="partdetail proceduralstate" Classes.warning="{Binding Result.IsStale, FallbackValue=False}"
-                                     Text="{Binding Part.Detail}" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                        <controls:PartEntryText Title="{Binding Part.Title}" Detail="{Binding Part.Detail}"
+                                                IsWarning="{Binding Result.IsStale, FallbackValue=False}" />
                       </DockPanel>
                     </Button>
                   </DockPanel>

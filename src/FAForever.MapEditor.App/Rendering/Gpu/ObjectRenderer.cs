@@ -317,7 +317,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
         foreach (Marker marker in ObjectPlacement.Markers(document, frame.Markers, frame.PathNodes, frame.MarkerKinds).Where(marker => frame.Shows(ObjectRef.Marker(marker.Id))))
         {
             Vector3 place = ObjectPlacement.MarkerPlace(marker, document.Terrain.Heightmap);
-            Color32 color = marker.Color;
+            Color32 color = ViewModels.MarkersViewModel.ShownColour(marker);
             data.AddRange([place.X, place.Y, place.Z, ObjectPlacement.MarkerBase(marker),
                 color.Red / 255f, color.Green / 255f, color.Blue / 255f, frame.HighlightOf(ObjectRef.Marker(marker.Id))]);
         }

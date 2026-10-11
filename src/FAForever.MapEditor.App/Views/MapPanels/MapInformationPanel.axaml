@@ -21,9 +21,10 @@
     <Border Classes="group">
       <StackPanel Classes="stack">
         <controls:SettingList DataContext="{Binding MapInformation.PreviewSettings}" />
+        <TextBlock Classes="label" Text="The .scmap's picture" />
         <Border Classes="thumbnail" HorizontalAlignment="Left">
           <Image Classes="mappreview" Source="{Binding MapInformation.Preview, Converter={x:Static controls:MapPreviewConverter.Instance}}"
-                 AutomationProperties.Name="Preview of the map" ToolTip.Tip="The preview the .scmap starts with, which the lobby shows" />
+                 AutomationProperties.Name="Preview of the map" ToolTip.Tip="The preview the .scmap starts with, which the lobby shows; the Procedural mode's Preview makes it again" />
         </Border>
         <DockPanel>
           <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Folder" />

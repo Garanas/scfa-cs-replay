@@ -240,7 +240,7 @@ public static class EditorModes
             ],
             [
                 new UnitGroupsSection(),
-                new PresetSection(UnitPreset.Kind, "Presets") { EmptyText = "None yet: select units, or choose a group in the tree, and save them to place them again.", SaveLabel = "Save the selected units as a preset" },
+                new PresetSection(UnitPreset.Kind, "Unit presets") { EmptyText = "None yet: select units, or choose a group in the tree, and save them to place them again.", SaveLabel = "Save the selected units as a preset" },
             ],
             // the army or group chosen in the tree: its fields and buttons
             [new UnitGroupDetailsSection()]),
