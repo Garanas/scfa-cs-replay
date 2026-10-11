@@ -715,7 +715,7 @@ for tools and the water's masks theirs in the same shape (the plan "Map Editor R
   changes and when the project opens; the layer's PNG keeps the last reading for when the file is
   gone, except for a height layer whose file lies in the project folder and is there, such as the
   final's base from `procedural/temp`: the project owns that file, so it keeps no copy, and a base
-  whose file is gone opens with the map's saved heights), `MaskRefSource(Key, Threshold, Invert, Height)` (another mask read while compositing; in a
+  whose file is gone opens with the map's saved heights, as a replacing layer does), `MaskRefSource(Key, Threshold, Invert, Height)` (another mask read while compositing; in a
   stack of heights its value is the mask times `Height` game units), `RulesSource(MaskRuleSet)` (the
   grid holds the rules' last result; coverage only), `CurveSource(HeightCurve)` (heights only).
   `LayerSources` names them (`painted`, `image`, `mask`, `rules`, `curve`), says which fit which

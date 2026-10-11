@@ -386,11 +386,11 @@ namespace FAForever.MapEditor.Project
                 string? image = layer.Path is string path ? Path.GetFullPath(Path.Combine(folder, path)) : null;
                 bool fromImage = image is not null && File.Exists(image);
                 bool copied = File.Exists(Path.Combine(folder, valuesFile));
-                // an image of the project keeps no copy (ReadsOwnImage): when it is gone, a base starts
-                // from the map's saved heights and another layer from nothing
+                // an image of the project keeps no copy (ReadsOwnImage): when it is gone, a layer that
+                // replaces (a base) starts from the map's saved heights, one that adds from nothing
                 ushort[] samples = fromImage ? HeightmapFiles.ReadResampled(document, image!, out _)
                     : copied || layer.Source is not ImageSource ? ProjectImages.ReadGray16(Path.Combine(folder, valuesFile), grid.Width, grid.Height)
-                    : layer.IsBase ? document.Terrain.Heightmap.Samples.ToArray()
+                    : layer.IsBase || layer.Combine == LayerCombine.Replace ? document.Terrain.Heightmap.Samples.ToArray()
                     : new ushort[grid.Width * grid.Height];
                 offset = fromImage || !copied ? 0 : offset;
                 TiledBuffer<float> values = HeightLayerEdits.FromSamples(TiledBuffer<ushort>.FromArray(grid.Width, grid.Height, samples), scale, held?.Values, offset);
