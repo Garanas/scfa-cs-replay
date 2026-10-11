@@ -256,7 +256,8 @@ public partial class LayerStackViewModel : ObservableObject
         LayerStack? stack = document is null ? null : _read(document);
         ImmutableArray<Layer> layers = stack?.Layers ?? [];
         string maskNames = document is null ? "" : string.Join("|", ClipChoices(document));
-        if (maskNames != _maskNames)
+        bool newSettings = maskNames != _maskNames;
+        if (newSettings)
         {
             _maskNames = maskNames;
             Layer = MakeLayerSettings(document is null ? [Everywhere] : ClipChoices(document));
@@ -270,6 +271,11 @@ public partial class LayerStackViewModel : ObservableObject
                 FollowPreviews(document, stack);
             }
             _shown = stack;
+            if (newSettings)
+            {
+                // the fields made again for other clip choices show the chosen layer at once
+                RefreshSettings();
+            }
             return;
         }
         _shown = stack;
