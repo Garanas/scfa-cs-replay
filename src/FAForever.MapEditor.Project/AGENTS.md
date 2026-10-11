@@ -53,8 +53,9 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
   the files hold, on disk and in the game. A link to a name no marker has is dropped on import
   (glacier_valley has a few). A spawn holds its army's no-rush offset, whole or not at all.
 - Left to the export, as every map of the vault has them: an army's economy (0, 0) and
-  personality (empty), `starts = true`, and the two numbers before the decals, which the FAF map
-  editor keeps as counters (`Unknown7`, `Unknown8`): one more than the highest decal and group id.
+  personality (empty), `starts = true`, and the decal counters before the decals
+  (`Scmap.NextDecalId`, `NextDecalGroupId`; the FAF map editor's `Unknown7`, `Unknown8`): one more
+  than the highest decal and group id.
 
 ## Versions, undo and plugins
 
@@ -296,6 +297,64 @@ exception's message. Hidden folders (`.git`) are no files of the project: `Proje
 
 A `-0` in a marker's orientation becomes `0` on import: they turn a marker the same, and the
 project leaves an orientation of zero out.
+
+## What the game ignores and what it derives
+
+How the engine treats what the export writes, from Draiget/faf-re at commit 2ba55b2 (the Map
+library's guide, "What the game does with the data", has each source; the main one is
+`src/sdk/moho/sim/CWldMap.cpp`, `CWldTerrainRes::Load` and `Finalize`). What it means for the editor:
+
+- **The normal map is not read by the game.** The engine skips the stored tiles and makes the normal
+  map from the heightmap in tiles of at most 2048 (`InitNormalMap`, `UpdateNormalMap`). The editor's
+  normal map and its generator (`NormalMapGenerator`, "Generated results") serve the editor's
+  pictures and other tools (the FAF map editor reads it); keep them, but do not sell them as changing
+  the game.
+- **A map stored in tiles** (larger than 2048: the game's 4096 maps store four tiles of 2048) is
+  imported as one image, the tiles put in place row by row (`NormalMapTiles.Stitch`). Keeping the
+  pixels is the simplest faithful choice: no data is lost, the tools that read the normal map see what
+  the map had, and nothing about it matters to the game. Tiles that do not cover the map (their count
+  against the tile size and the map's size) are refused with a message. The tile size is kept
+  (`Terrain.NormalMapTileWidth`/`Height`, `map.json`'s optional `terrain.normalMapTileWidth`/`Height`)
+  only when it is not the engine's (`min(size, 2048)`): one vault map of version 53 and 4096 ogrids,
+  `SCMP_haz09fa`, stores one tile of 4096. The export splits the image into the kept tiles, else into
+  the engine's (`NormalMapTiles.Split`), each tile the image's share of the grid (a normal map smaller
+  than the map gives smaller tiles; one that does not divide into the grid is written whole). A
+  generated normal map, a resize and a normal map PNG changed outside the editor drop the kept size.
+  Checked on the game's three 4096 maps and `SCMP_haz09fa`: import and export give the same tiles and
+  sizes (mean error under 0.07 per channel from the DXT5).
+- **The water map texture is rewritten by the game** from the heightmap, the water's elevations and
+  the foam and flatness masks (`RebuildWaterMapRect`): the project's water map PNG has no effect in the
+  game. The foam and flatness masks (the Water mode's `foam` and `flatness` stacks) matter; the depth
+  bias mask is read and saved by the engine but nothing in faf-re uses it (INFERRED unused).
+- **Props' scale is ignored by the game** (`CWldProps::Load` reads it into nothing), and its rotation
+  becomes a normalised quaternion: skew or scale in the axes is lost too. The editor's prop scaling
+  (`PropEdits`, `PropPlacement`, `ObjectEdits.ScaleObjects` on props, the Props mode's random scale)
+  is written and shown in the editor, not in the game.
+- **Decals**: the position is a corner, the footprint running from it along the scale's x and z, turned
+  only by the rotation around y (`ProjectDecalBoundsXZ`). The cut-offs: with a near cut-off above 0 the
+  decal fades in from 0.75 of it and is unseen closer (the far cut-off then fades nothing); otherwise it
+  fades out from 0.75 of the far cut-off. The engine's own default for a new decal is the diagonal of
+  its footprint's bounds (`ComputeCutoffLOD`); the editor's new decals take 500 (`DecalEdits.DefaultCutOffLod`),
+  a candidate to change. A decal has exactly two texture slots in the engine: the export writes a
+  missing second slot as empty, and the writer refuses more than two.
+- **Decal counters** (`Scmap.NextDecalId`, `NextDecalGroupId`): the ids the engine gives decals and
+  groups made at run time; the export writes one more than the highest id in use.
+- **The strategic view** (`Minimap`): `ContourInterval` is the number of contour bands (1 to 100, 0
+  counts as 1), `ImagerElevationOffset` lifts the map imager's borders (stored under the key `unknown`
+  in `map.json`, the name it had before its meaning was known; renaming the key would change every
+  project). The meaning of `ContourColor` is uncertain (the Map library's guide).
+- **The scenario** (`WLD_LoadScenarioInfo` in `src/sdk/moho/sim/CWldSession.cpp`, `CLobby::LaunchGame`
+  in `src/sdk/moho/net/CLobby.cpp`, `src/sdk/moho/sim/CArmyImpl.cpp`): the file runs after
+  `/lua/dataInit.lua` and only its global `ScenarioInfo` is kept; the launch needs
+  `Configurations.standard.teams` and uses only the team named `FFA` (any case), whose `armies` are the
+  start slots in order (more players than armies fails); `customprops.ExtraArmies` (space-separated) adds
+  civilian armies unless the `CivilianAlliance` option is `none`; `ScenarioInfo.map` is the `.scmap` the
+  session loads. The sim reads `norushradius` (default 100 when absent), `norushoffsetX_<army>` and
+  `norushoffsetY_<army>` (both or the offset is 0, 0) and `pathcap_land`, `pathcap_sea`, `pathcap_both`
+  (default by the larger side: under 512 ogrids 500, under 1024 1000, under 2048 2000, under 4096 10000,
+  else 20000). The editor's export writes the `FFA` team and `ExtraArmies` as the engine needs them.
+  Open: a scenario without `norushradius` imports as 0 (`ScenarioInfo.NoRushRadius` is not nullable)
+  and exports `norushradius = 0`, where the game would have used 100.
 
 ## Markers
 
@@ -1193,7 +1252,9 @@ other from the document each leaves (the editor's `generate.stale`) leaves nothi
   then the surface colour by the depth clamped to the colour's near and far (FAF's `water2.fx`).
   A texture that cannot be read is grey (an upper layer covers nothing). The editor's preview
   generator uses it with the workspace's textures.
-- **The normal map** (user story S-4, `Generation/TerrainImages.NormalMap`, `NormalMapGenerator`):
+- **The normal map** (user story S-4, `Generation/TerrainImages.NormalMap`, `NormalMapGenerator`;
+  the game makes its own from the heightmap and never reads this one, section "What the game ignores
+  and what it derives"; a generated one is written in the engine's tiles):
   per pixel the terrain's normal at its centre (the four corners' normals blended), written as the
   FAF map editor writes it and the game reads it: x in alpha and z in green as 0.5 + n / 2, red and
   blue 0. Theta Passage's own normal map differs from the generated one by less than one step per
@@ -1337,4 +1398,5 @@ not copied). `GameContent` writes what the game reads from a save or scenario as
 decoration the export derives; an imported and exported map must give the same text. A project
 that is saved and loaded must export to the same bytes. Over the local vault copy, all 98 maps the
 importer accepts (one folder holds two `.scmap` files) give the same game content after import and
-export.
+export. `NormalMapTilesTest` makes a map stored in tiles from HardFFA (four tiles of 128) instead of
+the game's 4096 maps, which are too large for assets.

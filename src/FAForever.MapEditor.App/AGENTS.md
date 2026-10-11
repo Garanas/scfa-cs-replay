@@ -1010,7 +1010,9 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   about 3 s. Marking by hand where it must be blocked or open: the Walkability tool (section
   "Content to use again" below).
 - **The normal map and the preview** (`generate.normalMap`, `file.renderPreview`): the normal map
-  at the size of the map's own, its format kept (`TerrainImages.NormalMap`); the preview
+  at the size of the map's own, its format kept (`TerrainImages.NormalMap`; the game makes its own from
+  the heightmap and never reads it: it is for the editor's pictures and other tools, the library's
+  guide, "What the game ignores and what it derives"); the preview
   (`Rendering/MapPreview`, S-4), the one the `.scmap` ships with, is drawn with the strata's
   textures by `TexturedPreview` (the library's): the layers blended as the terrain shader
   blends them, lit by the map's sun, the water's ramp and surface colour over the ground, 256 by
@@ -1659,7 +1661,8 @@ User stories P-1, P-2, P-3, P-5. `MainViewModel.Props` (`PropsViewModel`) holds 
 mode shares between its tools: how placed props stand (the panel's Placing: `Alignment` by kind,
 upright or with the terrain; random turn, tilt and scale; a sink), the palette, whether props
 follow the terrain, and the reclaim. The maths is the library's (`PropOrientation`, `PropEdits`,
-`PropPlacement`, `PropScatter`, `PropReclaim`; its guide).
+`PropPlacement`, `PropScatter`, `PropReclaim`; its guide). The game ignores a prop's scale (the
+library's guide, "What the game ignores and what it derives"): scaling props shows in the editor only.
 
 - **Tools** (Props mode, F7): `props.select` (a `SelectTool` of props), `props.place`
   (`Tools/PropPlaceTool`: a click runs `props.place`, one step, and selects the new prop, so Q, E
@@ -2052,7 +2055,9 @@ coverage"). Files: `ViewModels/CoverageStackViewModel.cs`, `MainViewModel.Covera
   again; the lower and upper layers have none); the inspector's
   `LayerSection` shows the chosen stratum's textures, then "Mask layers" (the stack) and the rule
   editor for a rules layer.
-- **The Water mode**: each map's entry shows its stack above the brush's settings.
+- **The Water mode**: each map's entry shows its stack above the brush's settings. The game uses the
+  foam and flatness masks; the depth bias mask is likely unused, and the water map texture is rewritten
+  by the game from the heights (the library's guide, "What the game ignores and what it derives").
 - **The rule editor** (`MaskRulesViewModel`) edits a rules layer: `Editing` the owner (a mask's name
   or `stratum:N`), `Layer` the rules layer (null: the lowest). Choosing a rules layer in a stack
   shows it (`EditLayer`); choosing another layer of that grid closes it; while it edits a grid of the
