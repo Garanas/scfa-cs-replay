@@ -44,7 +44,7 @@
                       <Button Classes="partentry" Classes.selected="{Binding Part.IsChosen}"
                               Command="{Binding Parts.ChooseItemCommand}" CommandParameter="{Binding Part}"
                               ToolTip.Tip="{Binding Part.Help}"
-                              AutomationProperties.Name="{Binding Part.Title}" AutomationProperties.HelpText="{Binding Part.Label}">
+                              AutomationProperties.Name="{Binding Kind.EntryLabel}" AutomationProperties.HelpText="{Binding Part.Label}">
                         <DockPanel>
                           <Border DockPanel.Dock="Left" Classes="swatch markersswatch"
                                   Background="{Binding Kind.Swatch, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />

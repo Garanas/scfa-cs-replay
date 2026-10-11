@@ -1461,7 +1461,7 @@ inspector's `MarkerSelection`.
   in step with the map by `SyncGroup` on every refresh) and the adaptive map (`markers.adaptive`,
   always last). A kind's or layer's row (`MarkerKindRow`; a chain's `MarkerListRow`) has its show check box at its left
   (`markers.showKind`, R-6) and its colour (the library's `Marker.Color`, `MarkerKindChoice.Colour`)
-  and count in its entry; the headings Markers and Path nodes carry the check boxes of the overlays
+  and count in its entry (named `Mass deposits`, `Land path nodes`, apart from the tools Mass, ...: `MarkerKindItem.EntryLabel`); the headings Markers and Path nodes carry the check boxes of the overlays
   of their titles (`MarkerListGroup.Overlay`, `view.overlay.markers|pathNodes`). Under the list,
   "Chain from the selection" (`markers.addChain`). Presets stay the section below.
 - **A kind or layer in the inspector** (`MarkerKindItem`, `Views/MapPanels/MarkerKindPartView`):

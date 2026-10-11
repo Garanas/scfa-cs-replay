@@ -230,7 +230,7 @@ namespace FAForever.MapEditor.App.Tests
             model.Selection.Set([ObjectRef.Marker(model.ShownDocument!.Markers.Spawns[0].Id)]);
             Dispatcher.UIThread.RunJobs();
 
-            await Send(automation, "click", new JsonObject { ["label"] = "Land" });
+            await Send(automation, "click", new JsonObject { ["label"] = "Land path nodes" });
 
             Assert.AreEqual("markers.paths.land", model.Markers.Parts.Chosen.Id);
             Assert.IsFalse(model.InspectsSelection, "the chosen entry has the inspector");
@@ -254,6 +254,11 @@ namespace FAForever.MapEditor.App.Tests
             await Send(automation, "click", new JsonObject { ["label"] = "Show mass" });
             Assert.IsFalse(model.Markers.Shows(MarkerKinds.Mass), "a kind's check box hides it");
             Assert.AreEqual("markers.kind.spawns", model.Markers.Parts.Chosen.Id, "and chooses no entry");
+
+            // an entry is named apart from the tool of the same title
+            await Send(automation, "click", new JsonObject { ["label"] = "Mass deposits" });
+            Assert.AreEqual("markers.kind.mass", model.Markers.Parts.Chosen.Id);
+            Assert.AreEqual("markers.select", model.ActiveTool?.Definition.Id, "the Mass tool stays unchosen");
 
             bool paths = model.ShowPathNodes;
             await Send(automation, "click", new JsonObject { ["label"] = "Show path nodes" });

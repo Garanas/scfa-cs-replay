@@ -46,6 +46,12 @@ public sealed partial class MarkerKindItem(MarkerKindChoice choice, MarkersViewM
     public string Title => choice.Entry;
 
     /// <summary>
+    /// What its entry is called for a screen reader and automation, apart from the tools of the same
+    /// name: <c>Mass deposits</c>, <c>Land path nodes</c>, <c>Spawns</c>.
+    /// </summary>
+    public string EntryLabel => char.ToUpperInvariant(MarkersViewModel.Noun(choice.Kind, 1)[0]) + MarkersViewModel.Noun(choice.Kind, 1)[1..] + "s";
+
+    /// <summary>
     /// Whether it is the path nodes of a layer.
     /// </summary>
     public bool IsPathLayer => choice.Layer is not null;
