@@ -515,6 +515,16 @@
                   <Slider Minimum="0" Maximum="100" Value="{Binding Height}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Height of a new ridge, valley or cliff"
                           AutomationProperties.HelpText="How much it rises or sinks in game units; a road's points lie on the terrain" />
                 </StackPanel>
+                <!-- where a new point's height comes from (T-4): a ramp's points follow the ground -->
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="New point's height" />
+                  <ComboBox ItemsSource="{x:Static tools:CurveTool.PointHeightChoices}" SelectedItem="{Binding PointHeightChoice}" AutomationProperties.Name="Height of a new point"
+                            AutomationProperties.HelpText="Automatic: the ground for a road, else the last point's height. Last point's, the ground under the click, or a height you type" />
+                  <TextBox Classes="toolfield mono commit" IsVisible="{Binding IsTypedHeight}" Text="{Binding TypedHeight, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                           AutomationProperties.Name="Typed height of a new point" />
+                </StackPanel>
+                <CheckBox Content="Show width and fade" IsChecked="{Binding ShowReach}" AutomationProperties.Name="Show the curve's width and fade lines"
+                          AutomationProperties.HelpText="Dashed lines where the curve's full width ends, dotted lines where its fade ends, in both views" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </controls:ToolRow>
             </DataTemplate>

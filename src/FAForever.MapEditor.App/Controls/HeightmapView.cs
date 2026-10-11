@@ -613,7 +613,15 @@ public sealed partial class HeightmapView : Control
                         }
                         figure.EndFigure(line.Closed);
                     }
-                    context.DrawGeometry(null, new Pen(InkOf(line.Ink), line.Width), path);
+                    context.DrawGeometry(null, new Pen(InkOf(line.Ink), line.Width, line.Dash switch
+                    {
+                        ToolDash.Dashed => DashStyle.Dash,
+                        ToolDash.Dotted => DashStyle.Dot,
+                        _ => null,
+                    }), path);
+                    break;
+                case ToolDisc disc:
+                    context.DrawEllipse(InkOf(disc.Fill), new Pen(InkOf(disc.Stroke), 1.5), P(disc.Centre), disc.Radius, disc.Radius);
                     break;
                 case ToolSquare square:
                     context.DrawRectangle(InkOf(square.Fill), new Pen(InkOf(square.Stroke), 1.5),
@@ -978,6 +986,16 @@ public sealed partial class HeightmapView : Control
                 context.DrawGeometry(null, new Pen(overlay.Selection.Brush, overlay.Selection.Thickness, DashStyle.Dash), line);
             }
         }
+        foreach (MarkOutline outline in marks.Outlines ?? [])
+        {
+            // how far a curve reaches (T-4): the width's edge dashed, the fade's end dotted, an image thinner
+            if (Line(outline.Points) is StreamGeometry line)
+            {
+                double thickness = outline.Thin ? 1 : 1.5;
+                context.DrawGeometry(null, new Pen(overlay.Shadow.Brush, thickness + 1.5, outline.Dotted ? DashStyle.Dot : DashStyle.Dash), line);
+                context.DrawGeometry(null, new Pen(overlay.Selection.Brush, thickness, outline.Dotted ? DashStyle.Dot : DashStyle.Dash), line);
+            }
+        }
         if (marks.Path is { Count: >= 2 } path && Line(path) is StreamGeometry pathLine)
         {
             using (context.PushTransform(Matrix.CreateTranslation(1, 1)))
@@ -1004,10 +1022,26 @@ public sealed partial class HeightmapView : Control
                 context.DrawText(text, back.TopLeft + new Vector(3, 1));
             }
         }
-        foreach ((float x, float z) in marks.Handles)
+        for (int i = 0; i < marks.Handles.Count; i++)
         {
-            Point at = MapToControl(x, z);
-            context.DrawRectangle(overlay.Canvas, overlay.Selection, new Rect(at.X - 4, at.Y - 4, 8, 8));
+            Point at = MapToControl(marks.Handles[i].X, marks.Handles[i].Z);
+            if (marks.ChosenHandles is null)
+            {
+                context.DrawRectangle(overlay.Canvas, overlay.Selection, new Rect(at.X - 4, at.Y - 4, 8, 8));
+                continue;
+            }
+            // a curve's points: round, a sharp corner square, a chosen point larger and filled
+            bool chosen = marks.ChosenHandles.Contains(i);
+            double half = chosen ? 6 : 4;
+            IBrush fill = chosen ? overlay.Selection.Brush! : overlay.Canvas;
+            if (marks.CornerHandles?.Contains(i) == true)
+            {
+                context.DrawRectangle(fill, overlay.Selection, new Rect(at.X - half, at.Y - half, 2 * half, 2 * half));
+            }
+            else
+            {
+                context.DrawEllipse(fill, overlay.Selection, at, half, half);
+            }
         }
     }
 

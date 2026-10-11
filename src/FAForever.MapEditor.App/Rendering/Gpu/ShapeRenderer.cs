@@ -68,9 +68,50 @@ internal sealed unsafe class ShapeRenderer : IDisposable
                 case ToolLine { Points.Length: >= 2 } line:
                     Vector4 color = ink(line.Ink);
                     int count = line.Closed ? line.Points.Length : line.Points.Length - 1;
+                    // dashes and dots run on along the whole line, in pixels of the line's width
+                    (float on, float off) = line.Dash switch
+                    {
+                        ToolDash.Dashed => (Math.Max(5, 4 * line.Width), Math.Max(4, 3 * line.Width)),
+                        ToolDash.Dotted => (Math.Max(1.5f, line.Width), Math.Max(4, 3 * line.Width)),
+                        _ => (0f, 0f),
+                    };
+                    float phase = 0;
                     for (int i = 0; i < count; i++)
                     {
-                        Segment(line.Points[i], line.Points[(i + 1) % line.Points.Length], line.Width, color);
+                        Vector2 from = line.Points[i];
+                        Vector2 to = line.Points[(i + 1) % line.Points.Length];
+                        if (on == 0)
+                        {
+                            Segment(from, to, line.Width, color);
+                            continue;
+                        }
+                        float length = Vector2.Distance(from, to);
+                        float at = 0;
+                        while (at < length)
+                        {
+                            // the position in the pattern: lit while under the dash's length
+                            float inPattern = phase % (on + off);
+                            float step = Math.Min(length - at, inPattern < on ? on - inPattern : on + off - inPattern);
+                            if (inPattern < on)
+                            {
+                                Segment(Vector2.Lerp(from, to, at / length), Vector2.Lerp(from, to, (at + step) / length), line.Width, color);
+                            }
+                            at += step;
+                            phase += step;
+                        }
+                    }
+                    break;
+                case ToolDisc disc:
+                    const int Sides = 14;
+                    Vector4 discFill = ink(disc.Fill);
+                    Vector4 discStroke = ink(disc.Stroke);
+                    Vector2 DiscAt(int k, float radius) => disc.Centre + radius * new Vector2(MathF.Cos(k * MathF.Tau / Sides), MathF.Sin(k * MathF.Tau / Sides));
+                    for (int k = 0; k < Sides; k++)
+                    {
+                        Add(disc.Centre, discFill);
+                        Add(DiscAt(k, disc.Radius), discFill);
+                        Add(DiscAt(k + 1, disc.Radius), discFill);
+                        Segment(DiscAt(k, disc.Radius), DiscAt(k + 1, disc.Radius), 1.5f, discStroke);
                     }
                     break;
                 case ToolSquare square:

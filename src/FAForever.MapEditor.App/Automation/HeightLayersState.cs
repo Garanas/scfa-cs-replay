@@ -74,6 +74,12 @@ public static class HeightLayersState
                 ["falloff"] = curveTool.Falloff,
                 ["height"] = curveTool.Height,
                 ["editing"] = curveTool.Curve?.Name,
+                // wave 18: where a new point's height comes from, the lines of reach, the chosen points, the table's grade limit
+                ["pointHeight"] = curveTool.PointHeightChoice,
+                ["typedHeight"] = curveTool.TypedHeight,
+                ["showReach"] = curveTool.ShowReach,
+                ["chosenPoints"] = new JsonArray([.. model.HeightStack.Nodes.Chosen.Select(index => (JsonNode)index)]),
+                ["gradeLimit"] = model.HeightStack.Nodes.GradeLimit,
             },
         };
     }
