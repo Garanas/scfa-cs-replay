@@ -22,11 +22,15 @@
                   Command="{Binding TogglePreviewCommand}" AutomationProperties.Name="{Binding PreviewLabel}" />
         <CheckBox Content="Regenerate on its own" IsVisible="{Binding CanAuto}" IsChecked="{Binding AutoOn, Mode=OneWay}"
                   Command="{Binding ToggleAutoCommand}" AutomationProperties.Name="{Binding AutoLabel}"
-                  AutomationProperties.HelpText="A second after the last change to what it is made from, it is generated in the background; a newer change starts again" />
+                  AutomationProperties.HelpText="A second after the last change to what it is made from, while the views show it, it is generated in the background without a step of undo; a newer change starts again" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding AutoOn}" Text="{Binding AutoWhenText}" AutomationProperties.Name="{Binding AutoWhenLabel}" />
         <CheckBox Content="{Binding OnExportText}" IsVisible="{Binding ShowsExportToggle}" IsChecked="{Binding OnExport, Mode=OneWay}"
                   Command="{Binding ToggleOnExportCommand}" AutomationProperties.Name="{Binding OnExportLabel}"
                   AutomationProperties.HelpText="Off: the export keeps it as it is, such as a normal map made in another tool" />
         <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding HasExportText}" Text="{Binding ExportText}" />
+        <Button Content="Use as workspace default" Command="{Binding UseAsWorkspaceDefaultCommand}"
+                AutomationProperties.Name="Use this map's settings as the workspace default"
+                AutomationProperties.HelpText="New and imported maps of the workspace then regenerate on their own and make on export what this map does; projects keep their own" />
       </StackPanel>
     </Border>
     <Border Classes="group">

@@ -42,6 +42,25 @@
               <Button Content="Convert again" Command="{Binding WorkspaceSettings.ConvertAgainCommand}" AutomationProperties.Name="Convert the assets again"
                       AutomationProperties.HelpText="Converts the game's and FAF's environment and units into the workspace again: about a minute; the editor waits until it is done" />
 
+              <TextBlock Classes="heading section" Text="Procedural defaults for new and imported maps" />
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="What a map made or imported in this workspace regenerates on its own (while the views show it) and makes on export. A project opened keeps its own; the Procedural mode's Use as workspace default takes a map's."
+                         AutomationProperties.Name="What the Procedural defaults are" />
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding WorkspaceProceduralText}" AutomationProperties.Name="The workspace's Procedural defaults" />
+              <ItemsControl ItemsSource="{Binding WorkspaceProceduralRows}" AutomationProperties.Name="Procedural defaults of the workspace">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WorkspaceProceduralRow">
+                    <DockPanel>
+                      <CheckBox DockPanel.Dock="Right" Content="On export" IsVisible="{Binding HasExport}" IsChecked="{Binding OnExport, Mode=OneWay}"
+                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ToggleWorkspaceOnExportCommand}" CommandParameter="{Binding Id}"
+                                AutomationProperties.Name="{Binding OnExportLabel}" />
+                      <CheckBox Content="{Binding Title}" IsChecked="{Binding Auto, Mode=OneWay}"
+                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ToggleWorkspaceAutoCommand}" CommandParameter="{Binding Id}"
+                                AutomationProperties.Name="{Binding AutoLabel}" />
+                    </DockPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
               <TextBlock Classes="heading section" Text="More about the workspace" />
               <StackPanel Classes="inline">
                 <Button Content="Plugins..." Command="{Binding WorkspaceSettings.OpenPluginsCommand}" AutomationProperties.Name="Open the plugins page" />

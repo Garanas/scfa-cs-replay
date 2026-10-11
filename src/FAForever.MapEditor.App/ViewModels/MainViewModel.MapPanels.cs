@@ -130,13 +130,18 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// Opens a map made in the editor (user story M-2): it is no project until it is saved.
+    /// Opens a map made in the editor (user story M-2): it is no project until it is saved. It starts
+    /// with the workspace's Procedural settings (what regenerates on its own, what the export makes).
     /// </summary>
     public void OpenNewMap(MapDocument document)
     {
         if (IsBusy)
         {
             throw new InvalidOperationException("The editor is still busy with the previous operation");
+        }
+        if (Setup.Workspace is Project.Workspaces.Workspace workspace)
+        {
+            document = document with { Procedural = workspace.Procedural.ApplyTo(document.Procedural) };
         }
         Attach(EditedMap.New(document), $"Made the new map {document.Scenario.Name} ({document.Width} by {document.Height} ogrids); save it as a project to keep it");
         Logger("Files").LogInformation("Made a new map {Name} of {Width} by {Height} ogrids", document.Scenario.Name, document.Width, document.Height);

@@ -247,6 +247,7 @@ public sealed partial class WorkspaceSettingsViewModel(WorkspaceSetupViewModel s
         ["gameFolder"] = setup.Workspace?.GameFolder,
         ["fafDataFolder"] = setup.Workspace?.FafDataFolder,
         ["vaultFolder"] = setup.Workspace?.VaultFolder,
+        ["procedural"] = setup.Workspace is Workspace workspace ? Commands.WorkspaceProceduralHandler.Describe(workspace.Procedural) : null,
         ["exportFolder"] = setup.Workspace?.MapsFolder,
         ["error"] = Error,
         ["assets"] = AssetsText,

@@ -70,8 +70,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("markers.connectPaths", model.Procedural.Rows.Single(row => row.Id == "pathNetwork").Row.CommandId);
             Assert.AreEqual("walkability", walkability.Overlay);
             Assert.AreEqual("navigation", navigation.Overlay);
-            Assert.IsTrue(walkability.CanAuto);
-            Assert.IsFalse(normalMap.CanAuto);
+            Assert.IsTrue(model.Procedural.Rows.All(row => row.CanAuto), "every result may regenerate on its own");
+            Assert.AreEqual("while the Walkability chip is on", walkability.AutoWhen);
             Assert.AreEqual(ExportUse.WhenOutOfDate, normalMap.Export);
             Assert.IsTrue(normalMap.OnExport);
             Assert.AreEqual(ExportUse.Always, preview.Export);
@@ -84,7 +84,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(model.Procedural.Rows.Single(row => row.Id == "normalMap").OnExport);
             Assert.AreEqual("Keep the normal map on export", model.Map!.Session.UndoDescription);
             Assert.IsFalse((await Run(model, "generate.onExport", new JsonObject { ["id"] = "preview" })).Ran, "the preview is always rendered");
-            Assert.IsFalse((await Run(model, "generate.auto", new JsonObject { ["id"] = "normalMap" })).Ran, "the normal map has not opted in");
+            Assert.IsTrue((await Run(model, "generate.auto", new JsonObject { ["id"] = "normalMap" })).Ran, "the normal map may regenerate on its own too");
+            Assert.IsFalse((await Run(model, "generate.auto", new JsonObject { ["id"] = "noSuchResult" })).Ran);
         }
 
         [TestMethod]
@@ -137,6 +138,8 @@ namespace FAForever.MapEditor.App.Tests
         public async Task WalkabilityRegeneratesASecondAfterAChange()
         {
             MainViewModel model = await Open();
+            // only while the views show it
+            model.ShowWalkability = true;
             Assert.IsTrue((await Run(model, "generate.auto", new JsonObject { ["on"] = true })).Ran);
             Assert.IsTrue(model.Map!.Document.Procedural.RegeneratesOnItsOwn("walkability"));
             Assert.AreEqual("Regenerate the walkability on its own", model.Map.Session.UndoDescription);
@@ -219,7 +222,6 @@ namespace FAForever.MapEditor.App.Tests
             generation.Register(slow, "generate.slow");
             MapDocument current = document;
             AutoGeneration auto = new AutoGeneration(generation, () => current, null, NullLogger.Instance) { Delay = TimeSpan.FromMilliseconds(10) };
-            auto.Allow("slow");
 
             auto.Follow();
             Assert.IsTrue(await slow.Started.WaitAsync(TimeSpan.FromSeconds(5)), "it runs a moment after");

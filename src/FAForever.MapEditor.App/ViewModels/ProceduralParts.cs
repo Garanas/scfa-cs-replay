@@ -126,7 +126,7 @@ public sealed partial class ProceduralPart : ObservableObject
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StateText), nameof(StatusText), nameof(IsStale), nameof(CanGenerate), nameof(GenerateText),
-        nameof(HasOverlay), nameof(PreviewOn), nameof(CanAuto), nameof(AutoOn), nameof(HasExportToggle), nameof(OnExport),
+        nameof(HasOverlay), nameof(PreviewOn), nameof(CanAuto), nameof(AutoOn), nameof(AutoWhenText), nameof(HasExportToggle), nameof(OnExport),
         nameof(OnExportText), nameof(ExportText), nameof(HasExportText), nameof(ShowsExportToggle))]
     public partial ProceduralRow? Row { get; internal set; }
 
@@ -202,6 +202,13 @@ public sealed partial class ProceduralPart : ObservableObject
 
     public string AutoLabel => $"Regenerate the {Title.ToLowerInvariant()} on its own";
 
+    /// <summary>
+    /// When it regenerates on its own: only while the views show it.
+    /// </summary>
+    public string AutoWhenText => Row?.AutoWhenText ?? "";
+
+    public string AutoWhenLabel => $"When the {Title.ToLowerInvariant()} regenerates on its own";
+
     public bool HasExportToggle => Row?.HasExportToggle == true;
 
     public bool ShowsExportToggle => HasExportToggle && !Entry.OwnGenerate;
@@ -233,6 +240,9 @@ public sealed partial class ProceduralPart : ObservableObject
 
     [RelayCommand]
     private Task ToggleOnExport() => _run("generate.onExport", new JsonObject { ["id"] = GeneratorId });
+
+    [RelayCommand]
+    private Task UseAsWorkspaceDefault() => _run("generate.useAsWorkspaceDefault", new JsonObject());
 
     private static string Words(IReadOnlyList<string> words) => words.Count == 1 ? words[0] : $"{string.Join(", ", words.Take(words.Count - 1))} and {words[^1]}";
 }

@@ -61,8 +61,13 @@ namespace FAForever.MapEditor.App.Tests
             Click(window, Named<CheckBox>(window, "Regenerate the walkability on its own"));
 
             Assert.IsTrue(model.Map!.Document.Procedural.RegeneratesOnItsOwn("walkability"));
-            await Until(() => model.Walkability.Navigation is not null && !model.AutoGeneration.IsPending("walkability"));
             Assert.IsTrue(Named<CheckBox>(window, "Regenerate the walkability on its own").IsChecked);
+            // only while the views show it: it waits until its overlay is on
+            Assert.IsFalse(model.AutoGeneration.IsPending("walkability"));
+            CollectionAssert.Contains(model.AutoGeneration.Hidden.ToArray(), "walkability");
+            StringAssert.Contains(model.AutoRegenerateTip, "waiting until the views show them: walkability");
+            Click(window, Named<CheckBox>(window, "Preview the walkability in the views"));
+            await Until(() => model.Walkability.Navigation is not null && !model.AutoGeneration.IsPending("walkability"));
             window.Close();
         });
 

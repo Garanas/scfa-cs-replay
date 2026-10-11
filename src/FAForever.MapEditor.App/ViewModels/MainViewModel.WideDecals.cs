@@ -29,8 +29,6 @@ public sealed partial class MainViewModel
         Generation.LeaveWhenMissing(ShadowDecalGenerator.GeneratorId, document => Unless(document.WideDecals.Shadow));
         Procedural.OnExport(NormalDecalGenerator.GeneratorId, ExportUse.Always);
         Procedural.OnExport(ShadowDecalGenerator.GeneratorId, ExportUse.Always);
-        AutoGeneration.Allow(NormalDecalGenerator.GeneratorId);
-        AutoGeneration.Allow(ShadowDecalGenerator.GeneratorId);
 
         // the Lighting panel's shadow decal is the slot itself
         LightingSettings.Parts.Replace(LightingSettingsViewModel.ShadowDecalPart, WideDecals.Shadow);

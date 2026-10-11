@@ -33,8 +33,9 @@ public enum ExportUse
 /// own, and what the export does with it.
 /// </summary>
 /// <param name="Overlay">The overlay that shows it in the views, e.g. <c>walkability</c>; null for none.</param>
-/// <param name="CanAuto">Whether it may regenerate on its own (<see cref="AutoGeneration.Allow"/>).</param>
-public sealed record ProceduralRow(GeneratedRow Row, string? Overlay, bool PreviewOn, bool CanAuto, bool AutoOn, ExportUse Export, bool OnExport)
+/// <param name="CanAuto">Whether it may regenerate on its own: every generator may.</param>
+/// <param name="AutoWhen">When the views show it, so that it regenerates on its own (<see cref="AutoGeneration.ShowsWhen"/>); null for always.</param>
+public sealed record ProceduralRow(GeneratedRow Row, string? Overlay, bool PreviewOn, bool CanAuto, bool AutoOn, ExportUse Export, bool OnExport, string? AutoWhen = null)
 {
     public string Id => Row.Id;
 
@@ -47,6 +48,11 @@ public sealed record ProceduralRow(GeneratedRow Row, string? Overlay, bool Previ
     public string PreviewLabel => $"Preview the {Title.ToLowerInvariant()} in the views";
 
     public string AutoLabel => $"Regenerate the {Title.ToLowerInvariant()} on its own";
+
+    /// <summary>
+    /// When it regenerates on its own, e.g. <c>Regenerates on its own while the Walkability chip is on</c>.
+    /// </summary>
+    public string AutoWhenText => AutoWhen is null ? "Regenerates on its own a moment after a change" : $"Regenerates on its own {AutoWhen}";
 
     public bool HasExportToggle => Export is ExportUse.WhenOutOfDate or ExportUse.Written;
 
@@ -145,10 +151,11 @@ public sealed partial class ProceduralViewModel : ObservableObject
             row,
             _overlays.GetValueOrDefault(row.Id),
             _overlays.TryGetValue(row.Id, out string? overlay) && _overlayOn(overlay),
-            _auto.Allowed.Contains(row.Id),
+            true,
             settings.RegeneratesOnItsOwn(row.Id),
             _exports.GetValueOrDefault(row.Id),
-            IsOnExport(settings, row.Id)))];
+            IsOnExport(settings, row.Id),
+            _auto.ShownWhen(row.Id)))];
         OnPropertyChanged(nameof(Rows));
     }
 

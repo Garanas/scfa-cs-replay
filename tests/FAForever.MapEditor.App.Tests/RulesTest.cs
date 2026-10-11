@@ -67,14 +67,14 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(model.Map.Document.Masks["flat"].ToArray().SequenceEqual(mask), "the mask follows the rule changed");
             Assert.AreEqual(GeneratedStatus.Current, StateOf(model, MaskRulesGenerator.GeneratorId).Status);
 
-            // what the rules read changes: out of date until generated, one step of undo
+            // what the rules read changes: out of date until generated, which is no step of undo (a derived result)
             model.Map.Session.Edit("Raise the water", document => document with { Water = document.Water with { Elevation = document.Water.Elevation + 4 } });
             Assert.AreEqual(GeneratedStatus.Stale, StateOf(model, MaskRulesGenerator.GeneratorId).Status, "the water level changed");
             StringAssert.Contains(model.Generation.Summary, "Masks from rules");
             int steps = model.History.Count;
             CommandRun generated = await Run(model, "generate.masks");
             Assert.AreEqual(1, generated.Result);
-            Assert.AreEqual(steps + 1, model.History.Count, "one step of undo");
+            Assert.AreEqual(steps, model.History.Count, "no step of undo");
             Assert.AreEqual(GeneratedStatus.Current, StateOf(model, MaskRulesGenerator.GeneratorId).Status);
 
             await Run(model, "paint.moveMaskRule", new JsonObject { ["index"] = 1, ["to"] = 0 });

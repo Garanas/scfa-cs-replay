@@ -232,7 +232,8 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.AreEqual("Current", model.ProceduralList.Parts.Find("procedural.normalMap")!.Detail);
             Assert.AreEqual("procedural.walkability", model.ProceduralList.Parts.Chosen.Id, "Generate does not choose the entry");
-            Assert.AreEqual("Generate the normal map", model.Map!.Session.UndoDescription);
+            Assert.IsNull(model.Map!.Session.UndoDescription, "a derived result: no step of undo");
+            Assert.IsTrue(model.Map.Session.IsModified);
             window.Close();
         });
 

@@ -101,7 +101,7 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public async Task GeneratesTheNormalMapAndPreviewIntoTheMapAsOneStepEach()
+        public async Task GeneratesTheNormalMapAndPreviewIntoTheMapWithoutAStep()
         {
             MainViewModel model = await Open();
             MapDocument before = model.Map!.Document;
@@ -115,7 +115,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(MapPreview.Size, after.Terrain.Preview.Width);
             Assert.AreEqual(MapPreview.Size, after.Terrain.Preview.Height);
             Assert.IsTrue(after.Terrain.Preview.ToArray().All(pixel => pixel.Alpha == 255));
-            CollectionAssert.AreEqual(new[] { "Generate the normal map", "Generate the preview" }, model.History.Skip(1).Select(entry => entry.Description).ToArray());
+            Assert.AreEqual(1, model.History.Count, "derived results: no step of undo (only Opened)");
+            Assert.IsTrue(model.Map.Session.IsModified, "but the map has changed");
             Assert.IsTrue(model.Generation.Rows.Where(row => row.Id is "normalMap" or "preview").All(row => row.State == GeneratedStatus.Current));
 
             // a change of the heightmap leaves both out of date, and generating what is out of date puts them in the map again
@@ -126,11 +127,17 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreNotSame(walled.Terrain.NormalMap, model.Map.Document.Terrain.NormalMap);
             Assert.AreNotSame(walled.Terrain.Preview, model.Map.Document.Terrain.Preview);
             Assert.IsFalse(model.Generation.HasStale);
+            Assert.AreEqual(2, model.History.Count, "only the wall is a step");
+            MapDocument regenerated = model.Map.Document;
 
+            // undo takes the wall back with the results made for it, and the older results read as current at once
             model.Undo();
-            model.Undo();
-            model.Undo();
-            Assert.AreSame(after.Terrain.NormalMap, model.Map.Document.Terrain.NormalMap, "each is a step of undo");
+            Assert.AreSame(after.Terrain.NormalMap, model.Map.Document.Terrain.NormalMap, "the version before keeps the results made for it");
+            Assert.AreSame(after.Terrain.Preview, model.Map.Document.Terrain.Preview);
+            Assert.IsFalse(model.Generation.HasStale, "the results match their sources");
+            model.Redo();
+            Assert.AreSame(regenerated.Terrain.NormalMap, model.Map.Document.Terrain.NormalMap);
+            Assert.IsFalse(model.Generation.HasStale);
         }
 
         [TestMethod]

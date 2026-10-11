@@ -58,7 +58,6 @@ public sealed partial class MainViewModel
     private void InitializeProcedural()
     {
         AutoGeneration = new AutoGeneration(Generation, () => Map?.Document, _ui, Logger("Editor"));
-        AutoGeneration.Allow(WalkabilityGenerator.GeneratorId);
         AutoGeneration.Generated += id => Status = $"Regenerated the {Generation.Results.Find(id)?.Title.ToLowerInvariant() ?? id} on its own";
         Procedural = new ProceduralViewModel(Generation, AutoGeneration, () => Map?.Document,
             id => Overlays.FirstOrDefault(overlay => overlay.Id == id)?.IsOn == true);
@@ -96,6 +95,7 @@ public sealed partial class MainViewModel
 
         RegisterExportSteps();
         InitializePathNodes();
+        InitializeAutoRegenerate();
     }
 
     /// <summary>
@@ -113,14 +113,10 @@ public sealed partial class MainViewModel
     /// <summary>
     /// Turns a result's regenerating on its own on or off for the open map (a step of undo).
     /// </summary>
-    /// <exception cref="ArgumentException">The result cannot regenerate on its own.</exception>
+    /// <exception cref="ArgumentException">There is no such generator.</exception>
     public void SetAutoGenerate(string id, bool on)
     {
-        IGenerator generator = Generation.Results.Find(id) ?? throw new ArgumentException($"There is no generator '{id}'");
-        if (!AutoGeneration.Allowed.Contains(id))
-        {
-            throw new ArgumentException($"The {generator.Title.ToLowerInvariant()} cannot regenerate on its own; these can: {string.Join(", ", AutoGeneration.Allowed)}");
-        }
+        IGenerator generator = Generation.Results.Find(id) ?? throw new ArgumentException($"There is no generator '{id}'; these are: {string.Join(", ", AutoGeneration.Allowed)}");
         string title = generator.Title.ToLowerInvariant();
         EditMap(on ? $"Regenerate the {title} on its own" : $"Generate the {title} only when asked",
             document => document with { Procedural = document.Procedural.WithAutoGenerate(id, on) });
