@@ -33,27 +33,19 @@ internal sealed class ObjectModels(Action loaded)
         /// </summary>
         public bool IsEffect { get; init; }
 
+        private readonly float[] _cutoffs = [.. Lods.Select(lod => lod.Cutoff)];
+
         /// <summary>
-        /// The level that shows at a distance from the camera: the first whose cutoff reaches it,
-        /// and the last beyond them all (the game hides a prop there; the editor keeps it in sight).
+        /// The level that shows at a depth in the view, as the engine chooses it
+        /// (<see cref="ObjectLods.LevelAt"/>).
         /// </summary>
-        public int LodAt(float distance)
-        {
-            for (int i = 0; i < Lods.Length - 1; i++)
-            {
-                if (distance <= Lods[i].Cutoff)
-                {
-                    return i;
-                }
-            }
-            return Lods.Length - 1;
-        }
+        public int LodAt(float depth) => ObjectLods.LevelAt(_cutoffs, depth);
     }
 
     /// <summary>
     /// A level of detail of a model.
     /// </summary>
-    /// <param name="Cutoff">Up to how far from the camera it shows, in ogrids.</param>
+    /// <param name="Cutoff">Up to what depth in the view it shows, in ogrids; 0 or less: at every depth.</param>
     /// <param name="Vertices">Eight floats a vertex: position (in ogrids), normal, texture coordinates.</param>
     /// <param name="Indices">Three a triangle.</param>
     /// <param name="Albedo">Its albedo texture; null for none.</param>
@@ -179,13 +171,12 @@ internal sealed class ObjectModels(Action loaded)
                 {
                     break;
                 }
-                float cutoff = lod.TryGetProperty("cutoff", out JsonElement c) && c.ValueKind == JsonValueKind.Number ? c.GetSingle() : float.PositiveInfinity;
-                levels.Add((cutoff, InAssets(root, mesh), Text(lod, "albedo") is string albedo ? InAssets(root, albedo) : null, Text(lod, "shader")));
+                levels.Add((ObjectLods.CutoffOf(lod), InAssets(root, mesh), Text(lod, "albedo") is string albedo ? InAssets(root, albedo) : null, Text(lod, "shader")));
             }
         }
         if (levels.Count == 0)
         {
-            levels.Add((float.PositiveInfinity, first.Mesh, first.Albedo, first.Shader));
+            levels.Add((ObjectLods.DefaultCutoff, first.Mesh, first.Albedo, first.Shader));
         }
 
         List<Lod> read = [];

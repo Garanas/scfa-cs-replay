@@ -527,8 +527,9 @@ internal sealed unsafe class ObjectRenderer : IDisposable
 
         /// <summary>
         /// Puts on the card the instances inside the view, each with the level of detail its
-        /// distance to the eye asks for; again only when the camera, the instances or the models
-        /// read changed.
+        /// depth in the view asks for (the engine's: the placement's position along the line of
+        /// sight, <see cref="ObjectLods.ViewDepth"/>); again only when the camera, the instances or
+        /// the models read changed.
         /// </summary>
         /// <param name="modelOf">A blueprint's model, or null while there is none (a box, or nothing yet).</param>
         /// <param name="modelsRead">How many models are read: another number arranges them again.</param>
@@ -542,6 +543,7 @@ internal sealed unsafe class ObjectRenderer : IDisposable
             _arrangedFor = key;
             using Performance.Span measure = Performance.Measure("3d.arrange-objects");
             Vector4[] planes = FrustumOf(viewProjection);
+            Vector3 forward = ObjectLods.ForwardOf(viewProjection);
             Runs.Clear();
             int total = _groups.Sum(group => group.Count);
             if (_data.Length < total * 16)
@@ -571,7 +573,9 @@ internal sealed unsafe class ObjectRenderer : IDisposable
                 {
                     if (Inside(planes, centers[i], radii[i]))
                     {
-                        byLod[model?.LodAt(Vector3.Distance(eye, centers[i])) ?? 0].Add(i * 16);
+                        int r = i * 16;
+                        Vector3 position = new Vector3(rows[r + 12], rows[r + 13], rows[r + 14]);
+                        byLod[model?.LodAt(ObjectLods.ViewDepth(forward, eye, position)) ?? 0].Add(r);
                     }
                 }
                 for (int level = 0; level < levels; level++)
