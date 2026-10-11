@@ -11,7 +11,11 @@
               AutomationProperties.Name="Rename the chosen army" />
       <TextBox Text="{Binding ArmyName}"
                AutomationProperties.Name="Name of the chosen army"
-               AutomationProperties.HelpText="Its spawn marker takes the new name too" />
+               AutomationProperties.HelpText="Its spawn marker takes the new name too; Enter renames it">
+        <TextBox.KeyBindings>
+          <KeyBinding Gesture="Enter" Command="{Binding RenameArmyCommand}" />
+        </TextBox.KeyBindings>
+      </TextBox>
     </DockPanel>
     <CheckBox Content="Playable" IsChecked="{Binding Playable}"
               AutomationProperties.Name="Players take the chosen army"
@@ -21,7 +25,11 @@
               AutomationProperties.Name="Put the chosen army in the team" />
       <TextBox Text="{Binding Team}" PlaceholderText="Team (none)"
                AutomationProperties.Name="Team of the chosen army"
-               AutomationProperties.HelpText="Empty for no team. The game's lobby reads only the team FFA of every playable army, which the export writes first" />
+               AutomationProperties.HelpText="Empty for no team; Enter sets it. The game's lobby reads only the team FFA of every playable army, which the export writes first">
+        <TextBox.KeyBindings>
+          <KeyBinding Gesture="Enter" Command="{Binding SetTeamCommand}" />
+        </TextBox.KeyBindings>
+      </TextBox>
     </DockPanel>
     <TextBlock Classes="label" Text="Limited to the factions (none: any)" />
     <UniformGrid Columns="2">

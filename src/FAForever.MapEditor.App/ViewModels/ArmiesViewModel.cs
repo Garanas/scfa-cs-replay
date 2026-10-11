@@ -53,9 +53,19 @@ public sealed partial class GroupNode(string army, ImmutableArray<string> path, 
     public IReadOnlyList<object> Items => Units.Count == 0 ? children : [.. children, .. Units];
 
     /// <summary>
-    /// What the tree shows: <c>INITIAL (12)</c>, or the army's name with its units.
+    /// <c>INITIAL (12)</c>, or the army's name with its units: the name of a preset saved of it.
     /// </summary>
-    public string Label => $"{(path.IsEmpty ? army : path[^1])} ({count})";
+    public string Label => $"{Title} ({count})";
+
+    /// <summary>
+    /// What the tree shows as the entry's title: the army's name, or the group's.
+    /// </summary>
+    public string Title => path.IsEmpty ? army : path[^1];
+
+    /// <summary>
+    /// What the tree shows as the entry's detail, as the other list modes do: <c>12 units</c>.
+    /// </summary>
+    public string Detail => MainViewModel.Units(count);
 
     /// <summary>
     /// What a screen reader says: the army and the group.
@@ -163,7 +173,7 @@ public sealed partial class ArmiesViewModel : ObservableObject
     /// tool places.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasChosenGroup), nameof(CanChangeChosenGroup), nameof(ChosenGroupTitle), nameof(ChosenGroupUnits), nameof(IsArmyChosen), nameof(ChosenGroupKind))]
+    [NotifyPropertyChangedFor(nameof(HasChosenGroup), nameof(CanChangeChosenGroup), nameof(ChosenGroupTitle), nameof(ChosenGroupUnits), nameof(IsArmyChosen), nameof(ChosenGroupCaption))]
     public partial GroupNode? ChosenGroup { get; set; }
 
     public bool HasChosenGroup => ChosenGroup is not null;
@@ -196,9 +206,12 @@ public sealed partial class ArmiesViewModel : ObservableObject
     public string ChosenGroupTitle => ChosenGroup is not GroupNode node ? "" : node.IsArmy ? node.Army : node.Path[^1];
 
     /// <summary>
-    /// What is chosen in the tree, over the inspector's heading: <c>Army</c> or <c>Group</c>.
+    /// What is chosen in the tree, under the inspector's heading as the other modes' entries say
+    /// what they are: an army, or a group of which army.
     /// </summary>
-    public string ChosenGroupKind => ChosenGroup is not GroupNode node ? "" : node.IsArmy ? "Army" : "Group";
+    public string ChosenGroupCaption => ChosenGroup is not GroupNode node ? ""
+        : node.IsArmy ? "An army: who takes it, its team and alliances, and its unit groups. The place tool places into it."
+        : $"A unit group of {node.Army}. The place tool places into it.";
 
     /// <summary>
     /// How many units the chosen army or group holds, with the groups in it.
@@ -305,7 +318,7 @@ public sealed partial class ArmiesViewModel : ObservableObject
             {
                 Names = [.. armies.Select(army => army.Name)];
             }
-            RefreshTree(armies);
+            RefreshTree(armies, document?.Scenario.PlayableArmies ?? []);
             RefreshRows(document);
         }
         finally
@@ -338,7 +351,8 @@ public sealed partial class ArmiesViewModel : ObservableObject
     /// </summary>
     public void ChooseArmyWhenShown(string army) => _chooseArmy = army;
 
-    private void RefreshTree(ImmutableArray<Army> armies)
+    // the tree lists the armies as the Map mode's list does: the playable ones by number, then the extra ones
+    private void RefreshTree(ImmutableArray<Army> armies, ImmutableArray<string> playable)
     {
         foreach (GroupNode node in Tree.SelectMany(node => node.SelfAndBelow()))
         {
@@ -357,7 +371,10 @@ public sealed partial class ArmiesViewModel : ObservableObject
         {
             IsExpanded = _expanded.Contains($"{army}:{UnitGroupEdits.PathText(path)}"),
         };
-        GroupNode[] tree = [.. armies.Select(army => Node(army.Name, [], army.Units))];
+        GroupNode[] tree = [.. armies
+            .OrderBy(army => playable.Contains(army.Name) ? 0 : 1)
+            .ThenBy(army => playable.Contains(army.Name) ? MapPartsViewModel.NumberOf(army.Name) ?? int.MaxValue : 0)
+            .Select(army => Node(army.Name, [], army.Units))];
         string key = string.Join("|", tree.SelectMany(node => node.SelfAndBelow()).Select(node => $"{node.Key}={node.Count}:{string.Join(",", node.Units.Select(unit => unit.Name))}"));
         if (key == _treeKey)
         {

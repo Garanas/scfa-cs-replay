@@ -452,7 +452,7 @@
     <Setter Property="Spacing" Value="{StaticResource SpaceTiny}" />
   </Style>
   <Style Selector="Button.partentry">
-    <Setter Property="Height" Value="{StaticResource PartEntryHeight}" />
+    <Setter Property="MinHeight" Value="{StaticResource PartEntryHeight}" />
     <Setter Property="Padding" Value="{StaticResource PartEntryPadding}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -460,12 +460,30 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
   </Style>
-  <Style Selector="Button.partentry TextBlock.partdetail">
+  <Style Selector="TextBlock.partdetail">
     <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
     <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
-    <Setter Property="Margin" Value="{StaticResource PartEntryPadding}" />
+  </Style>
+  <!-- the entry's text (Controls/PartEntryText): the title, the detail beside it or under it; one look in every list mode -->
+  <Style Selector="controls|PartEntryText">
+    <Setter Property="Gap" Value="{StaticResource PartEntryDetailGap}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.partentrytitle">
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <!-- a unit in the Units mode's tree: quieter than the groups it is in -->
+  <Style Selector="controls|PartEntryText.unitentry TextBlock.partentrytitle">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="TextBlock.partdetail.partentrydetail">
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="Button.partentry:not(.selected) TextBlock.partdetail.partentrydetail.warning">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
   </Style>
   <Style Selector="Button.partentry.selected">
     <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
@@ -765,13 +783,6 @@
   <Style Selector="Border.badge.pluginkind">
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
-  <!-- an entry of the Plugins mode's list (F-15): its title and tag, its state under them -->
-  <Style Selector="Button.partentry.pluginentry">
-    <Setter Property="Height" Value="{StaticResource PluginEntryHeight}" />
-  </Style>
-  <Style Selector="Button.partentry TextBlock.partdetail.pluginstate">
-    <Setter Property="Margin" Value="0" />
-  </Style>
   <!-- a plugin's errors in the inspector (F-15): selectable, to copy them -->
   <Style Selector="SelectableTextBlock.pluginerrors">
     <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
@@ -810,27 +821,9 @@
     <Setter Property="Margin" Value="{StaticResource ImagePreviewGap}" />
   </Style>
 
-  <!-- an entry of the map-wide decals (D-1): as tall as its preview -->
-  <!-- an entry of a panel's list with a picture (a water map's): as tall as its picture -->
+  <!-- an entry of a panel's list with a picture (a water map's, a map-wide decal's, a generated result's): at least as tall as its picture -->
   <Style Selector="Button.partentry.partwithpreview">
-    <Setter Property="Height" Value="{StaticResource WideDecalEntryHeight}" />
-  </Style>
-  <Style Selector="Button.partentry.widedecalentry">
-    <Setter Property="Height" Value="{StaticResource WideDecalEntryHeight}" />
-  </Style>
-  <Style Selector="Button.partentry TextBlock.partdetail.widedecaldetail">
-    <Setter Property="Margin" Value="0" />
-  </Style>
-
-  <!-- an entry of the Procedural mode's list (wave 10D): as tall as its picture; its state under its title, a warning when out of date -->
-  <Style Selector="Button.partentry.proceduralentry">
-    <Setter Property="Height" Value="{StaticResource ProceduralEntryHeight}" />
-  </Style>
-  <Style Selector="Button.partentry TextBlock.partdetail.proceduralstate">
-    <Setter Property="Margin" Value="0" />
-  </Style>
-  <Style Selector="Button.partentry:not(.selected) TextBlock.partdetail.proceduralstate.warning">
-    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    <Setter Property="MinHeight" Value="{StaticResource PartEntryPreviewHeight}" />
   </Style>
   <!-- the chosen generated result's picture in the inspector -->
   <Style Selector="Border.proceduralpicture">

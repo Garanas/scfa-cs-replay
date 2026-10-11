@@ -1,5 +1,6 @@
-<!-- A mode panel's list of what there is to edit (the Water and Lighting panels): its entries under their headings,
-     each a button with its title and a short detail; the chosen one is filled and the inspector edits it. -->
+<!-- A mode panel's list of what there is to edit (the Map, Water and Lighting panels): its entries under their headings,
+     each a button with its title and a short detail (PartEntryText, as every list mode's entries); the chosen one is
+     filled and the inspector edits it. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -25,7 +26,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:PanelPart">
-                <Button Classes="partentry" Classes.selected="{Binding IsChosen}" Classes.partwithpreview="{Binding Preview, Converter={x:Static ObjectConverters.IsNotNull}}"
+                <Button Classes="partentry" Classes.selected="{Binding LooksChosen}" Classes.partwithpreview="{Binding Preview, Converter={x:Static ObjectConverters.IsNotNull}}"
                         Command="{Binding #Root.((vm:PanelParts)DataContext).ChooseItemCommand}" CommandParameter="{Binding}"
                         ToolTip.Tip="{Binding Help}"
                         AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding Label}">
@@ -34,8 +35,7 @@
                     <Border DockPanel.Dock="Left" Classes="thumbnail imagepreview" IsVisible="{Binding Preview, Converter={x:Static ObjectConverters.IsNotNull}}">
                       <controls:ImagePreview Picture="{Binding Preview}" AutomationProperties.Name="{Binding PreviewLabel}" />
                     </Border>
-                    <TextBlock DockPanel.Dock="Right" Classes="partdetail" Text="{Binding Detail}" />
-                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                    <controls:PartEntryText Title="{Binding Title}" Detail="{Binding Detail}" />
                   </DockPanel>
                 </Button>
               </DataTemplate>

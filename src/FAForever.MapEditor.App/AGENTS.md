@@ -1431,8 +1431,8 @@ change, span `model.armies`), the place tool and the commands.
   with the groups in them; expanded nodes stay expanded when it is made again) is the Units panel's
   list; the inspector edits what is chosen in it (`UnitGroupDetailsSection`,
   `Views/MapPanels/UnitGroupPanel`, on `ArmiesViewModel`). Choosing a node is where the place tool
-  places, and the inspector shows it: a group its army, path and units (`ChosenGroupKind`,
-  `ChosenGroupTitle`, `ChosenGroupUnits`), its name with Rename (`units.renameGroup`) and Remove the
+  places, and the inspector shows it under its name and what it is, as the other modes' entries
+  (`ChosenGroupTitle`, `ChosenGroupCaption`): a group its army, path and units (`ChosenGroupUnits`), its name with Rename (`units.renameGroup`) and Remove the
   group (`units.removeGroup {keepUnits}`: the inspector keeps the units, which go to the group
   above); an army the same fields as the Map mode's army (`Views/MapPanels/ArmyPanel`, one view in
   both modes: choosing an army or group in the tree makes its army `ChosenArmy`); both Add a group
@@ -1446,7 +1446,8 @@ change, span `model.armies`), the place tool and the commands.
   toParent, toArmy?}` nests a group. The inspector's unit section shows the selection's army
   (choosing another runs `units.moveToArmy {army, group?}`) and group. A path is `INITIAL/Town`,
   empty for the root.
-- **Units presets** (`Tools/UnitPreset`, kind `units`, the Units mode's Presets): Save keeps the
+- **Units presets** (`Tools/UnitPreset`, kind `units`, the Units mode's Unit presets, each with how many
+  units it places, `Controls/PresetDetailConverter`): Save keeps the
   selected units, else the chosen group's, with places relative to their middle (on a whole
   ogrid) and heights above the terrain, in their groups below the deepest one holding them all
   (placed, the top one is named after the preset).
@@ -1525,7 +1526,9 @@ inspector's `MarkerSelection`.
   `.amphibious`, `.water`, `.air`); **Chains and options**, a chain each (`markers.chain.<name>`, kept
   in step with the map by `SyncGroup` on every refresh) and the adaptive map (`markers.adaptive`,
   always last). A kind's or layer's row (`MarkerKindRow`; a chain's `MarkerListRow`) has its show check box at its left
-  (`markers.showKind`, R-6) and its colour (the library's `Marker.Color`, `MarkerKindChoice.Colour`)
+  (`markers.showKind`, R-6; ticked while the views show the kind: the kind on and the overlay of its
+  heading on, `MarkerKindItem.IsOn`, `MarkersViewModel.ShowsInViews`; ticking it turns that overlay on)
+  and its colour (the library's `Marker.Color`, `MarkerKindChoice.Colour`; a blank marker's as the views show it)
   and count in its entry (named `Mass deposits`, `Land path nodes`, apart from the tools Mass, ...: `MarkerKindItem.EntryLabel`); the headings Markers and Path nodes carry the check boxes of the overlays
   of their titles (`MarkerListGroup.Overlay`, `view.overlay.markers|pathNodes`). Under the list,
   "Chain from the selection" (`markers.addChain`). Presets stay the section below.
@@ -1540,11 +1543,14 @@ inspector's `MarkerSelection`.
   and points of chains. In the model an `AiMarker` of type `Blank Marker` (`AiMarker.BlankType`,
   `IsBlank`), so the files keep them as they were (a blank marker named like an army is a spawn, as
   `MarkerTranslation` reads it); `KindOf` counts it as `Blank`, not `AiMarkers`. The Blank tool
-  (`markers.blank`, `MarkerPlacement.Blank`) runs `markers.place kind=blank` (`Blank Marker 01`, the
+  (`markers.blank`, `MarkerPlacement.Blank`) runs `markers.place kind=blank` (`Blank Marker 00`, numbered
+  from 00 as every new marker but path nodes, as the game's editors number them; the
   half-ogrid grid as AI markers); the AI types (`AiMarker.KnownTypes`, the AI marker tool's and the
   inspector's) leave it out, and `markers.set type=` changes no blank marker. The chain tool and
-  "Chain from the selection" take them as any marker.
-- **Clear** (`Commands/Markers/Clear.cs`, owner decision Q3): `markers.clear {kind, layer?}` takes
+  "Chain from the selection" take them as any marker. The game writes them in a spawn's purple and
+  the export keeps it; the views and the list's swatch show them in orange
+  (`MarkersViewModel.BlankColour`, `ShownColour`, read by `HeightmapView` and `ObjectRenderer`).
+- **Clear** (`Commands/Markers/Clear.cs`, owner decision Q3): `markers.clear {kind, layer?, confirm?}` takes
   `spawns`, `mass`, `hydrocarbon`, `ai`, `blank`, `weather` or `path` (with `land`, `water`, `amphibious`,
   `air`, or none for every layer; `markers.showKind`'s names such as `landPaths` work too,
   `MarkersViewModel.KindsOf`), one step of undo through `MarkerEdits.RemoveKind` (spawns the highest
@@ -1553,7 +1559,10 @@ inspector's `MarkerSelection`.
   nodes`, `Removed 412 land path nodes`; `MarkersViewModel.Noun`); with none of the kind it says so
   and makes no step. Only the map's own markers go: the generated networks are never markers of the
   project, so clearing a layer makes the generated network its only one. Span `model.markers-clear`
-  (3 ms for the 829 path nodes of Archsimkats Valley).
+  (3 ms for the 829 path nodes of Archsimkats Valley). Clearing spawns that take armies asks first
+  ("Clear the spawns", Remove them or Cancel; without a person it needs `confirm: true`), and the
+  status line names the armies that went, by number (`Removed 2 spawns and the armies ARMY_1 and
+  ARMY_2`); the other kinds clear without a question.
 - **A chain in the inspector** (`ChainPart`, `Views/MapPanels/ChainPartView`, R-4): its name field
   (`markers.renameChain {name, to}`; the renamed chain's entry is chosen), its markers with up, down
   and take-out buttons (`markers.setChain {name, markers}`), Select its markers and Delete the chain
@@ -2353,7 +2362,8 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   `InspectorOwnerTest`.
 - **Lists of parts** (`PanelParts`, `PanelPart`): a mode panel's list of entries under headings,
   one always chosen (the first until another is); `Controls/PanelPartList` draws it in the panel
-  (`Button.partentry`, filled while chosen, the detail at the right), `Views/MapPanels/PanelPartView`
+  (`Button.partentry`, filled while chosen and shown, `PanelPart.LooksChosen`; its text a `PartEntryText`,
+  below), `Views/MapPanels/PanelPartView`
   the chosen entry in the inspector: its title and help, then its `Content` by type
   (`SettingsPart`: groups of settings, their titles when there are several; `PlannedPart`: not
   built yet with its story; `WaterMapPart`; `WaveGeneratorsPart`). A new kind of content adds its
@@ -2375,6 +2385,27 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   choosing does besides showing, such as the Map panel's area selected on the map; `Chosen`'s change
   is raised only when another entry is chosen). `view.inspectPart {part}` (in no menu) chooses an entry and its mode;
   `state.panelParts` has each list's chosen entry, its content's type and every entry's detail.
+- **One look for entries** (wave 16B): every list mode (Map, Markers, Units, Water, Lighting,
+  Procedural, Plugins, the map-wide decals) draws an entry alike: a `Button.partentry` (at least
+  `PartEntryHeight`, `partwithpreview` at least `PartEntryPreviewHeight`), a picture or swatch at its
+  left, its text a `Controls/PartEntryText` (`Title`, `Detail`, `IsWarning` for a result out of date)
+  and a tag at its right (a plugin's kind). `PartEntryText` puts the detail beside the title when both
+  fit, else under it, wrapping; the title is never cut short by its detail. The entries of one list
+  (the nearest `ItemsControl`: a heading's entries, a level of the Units tree) go alike
+  (`PartEntryScope`): one that does not fit puts every detail of the list under its title
+  (`IsAlike="False"` for the presets' long lists). The Units tree's rows are `PartEntryText`s too
+  (`GroupNode.Title` and `Detail`, `2 units`; a unit's name and blueprint), and a preset's button has
+  what it places as its detail (`14 units`, `3 markers`). Headings are `overline`; preset sections
+  are named `<Kind> presets` (`ListModesConsistencyTest.EveryListModesPresetsAreNamedAfterTheirKind`);
+  the inspector heads a chosen entry with its title (`heading`) and a `caption`. **One place looks
+  chosen**: `PanelParts.HasInspector` follows `MainViewModel.InspectsMode` (`NotifyInspected`), and an
+  entry is filled only while `LooksChosen` (chosen and its list has the inspector): when the
+  selection or a tile takes the inspector, the chosen entry stays chosen but is drawn as the others.
+  The Map mode lists armies (and the Units tree its armies) playable first by number, then the
+  extra ones (`MapPartsViewModel.InListOrder`, `NumberOf`); an area chosen while the Map size tool is
+  active chooses the Areas tool, so its handles show; an entry that chooses a tool says it on the
+  status line; Enter in an army's Name or Team field renames it or sets the team. Tests:
+  `ListModesConsistencyTest`.
 - **Water** (`WaterSettings.Parts`): Water on (a check box above the list), Settings (Elevations
   and colour, its detail the surface's elevation; Surface and reflection; Textures and waves, the
   four wave textures with them), Maps (Foam, Flatness, Depth bias) and Wave

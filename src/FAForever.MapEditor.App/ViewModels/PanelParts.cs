@@ -44,7 +44,21 @@ public sealed partial class PanelPart(string id, string title, string group, obj
     public partial string Detail { get; set; } = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LooksChosen))]
     public partial bool IsChosen { get; internal set; }
+
+    /// <summary>
+    /// Whether its list has the inspector (<see cref="PanelParts.HasInspector"/>).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LooksChosen))]
+    public partial bool ListHasInspector { get; internal set; } = true;
+
+    /// <summary>
+    /// Whether its entry is drawn filled: it is chosen and the inspector shows it. While the
+    /// selection or a tile has the inspector, no entry looks chosen, so one place looks chosen.
+    /// </summary>
+    public bool LooksChosen => IsChosen && ListHasInspector;
 
     /// <summary>
     /// What a screen reader says of its entry: its title, and its detail when it has one.
@@ -136,8 +150,35 @@ public sealed partial class PanelParts : ObservableObject
 
     private readonly Dictionary<string, PanelPartFooter> _footers = new Dictionary<string, PanelPartFooter>(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Whether the inspector shows the chosen entry; false while the selection or a tile of the shelf
+    /// has it (<see cref="MainViewModel.InspectsMode"/>): the chosen entry then does not look chosen.
+    /// </summary>
+    public bool HasInspector
+    {
+        get => _hasInspector;
+        set
+        {
+            if (_hasInspector != value)
+            {
+                _hasInspector = value;
+                foreach (PanelPart item in _items)
+                {
+                    item.ListHasInspector = value;
+                }
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private bool _hasInspector = true;
+
     private IReadOnlyList<PanelPartGroup> GroupsOf()
     {
+        foreach (PanelPart item in _items)
+        {
+            item.ListHasInspector = _hasInspector;
+        }
         List<PanelPartGroup> groups = [.. _items.GroupBy(part => part.Group).Select(group => new PanelPartGroup(group.Key, [.. group], _footers.GetValueOrDefault(group.Key)))];
         // a heading with a footer and no entries: after the heading its footer names
         foreach ((string title, PanelPartFooter footer) in _footers)

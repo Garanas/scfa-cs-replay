@@ -35,7 +35,8 @@ namespace FAForever.MapEditor.App.Tests
             PanelParts parts = model.MapParts.Parts;
 
             CollectionAssert.AreEqual(new[] { "map.information", "map.size", "map.script" }, Ids(model, "Map"));
-            CollectionAssert.AreEqual(model.Map!.Document.Armies.Select(army => $"map.army.{army.Name}").ToArray(), Ids(model, "Armies"));
+            CollectionAssert.AreEquivalent(model.Map!.Document.Armies.Select(army => $"map.army.{army.Name}").ToArray(), Ids(model, "Armies"));
+            CollectionAssert.AreEqual(MapPartsViewModel.InListOrder(model.Armies.Rows).Select(army => $"map.army.{army.Name}").ToArray(), Ids(model, "Armies"), "playable first by number, then the extra armies");
             CollectionAssert.AreEqual(Array.Empty<string>(), Ids(model, "Areas"), "HardFFA has no areas");
             CollectionAssert.AreEqual(new[] { "Map", "Armies", "Areas" }, parts.Groups.Select(group => group.Title).ToArray(), "the Areas heading shows without entries");
             Assert.IsTrue(parts.Groups[2].ShowsEmptyText);

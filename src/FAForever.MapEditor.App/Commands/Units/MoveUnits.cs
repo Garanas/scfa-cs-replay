@@ -52,6 +52,7 @@ public sealed class MoveUnitsToGroupHandler(MainViewModel model, SelectionViewMo
             UnitCommands.RequireArmy(document, request.Army);
         }
         int count = 0;
+        List<string> armies = [];
         UnitCommands.Apply(edit, d =>
         {
             foreach (IGrouping<string, string> byArmy in names.GroupBy(name => request.Army ?? d.FindUnit(name)?.Army ?? ""))
@@ -60,11 +61,28 @@ public sealed class MoveUnitsToGroupHandler(MainViewModel model, SelectionViewMo
                 {
                     d = d.MoveUnits(byArmy, byArmy.Key, group, out int moved);
                     count += moved;
+                    armies.Add(byArmy.Key);
                 }
             }
             return d;
         });
-        model.Status = $"Moved {MainViewModel.Units(count)} to the group {(group.IsEmpty ? "at the root" : request.Group)}";
+        model.Status = Moved(count, group, armies);
         return Task.FromResult(count);
+    }
+
+    /// <summary>
+    /// The status line: how many units went where, naming the army (or armies) of the group:
+    /// <c>Moved 2 units to INITIAL/Town of ARMY_1</c>, <c>Moved 1 unit to the root group of ARMY_2</c>.
+    /// </summary>
+    public static string Moved(int count, ImmutableArray<string> group, IReadOnlyList<string> armies)
+    {
+        string where = group.IsEmpty ? "the root group" : UnitGroupEdits.PathText(group);
+        string of = armies.Count switch
+        {
+            0 => "",
+            1 => $" of {armies[0]}",
+            _ => $" of {string.Join(", ", armies.Take(armies.Count - 1))} and {armies[^1]}",
+        };
+        return $"Moved {MainViewModel.Units(count)} to {where}{of}";
     }
 }

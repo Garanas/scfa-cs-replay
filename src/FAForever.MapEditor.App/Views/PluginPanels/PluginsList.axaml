@@ -34,7 +34,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:PanelPart">
-                    <Button Classes="partentry pluginentry" Classes.selected="{Binding IsChosen}"
+                    <Button Classes="partentry" Classes.selected="{Binding LooksChosen}"
                             Command="{Binding #Root.((vm:PluginsViewModel)DataContext).Parts.ChooseItemCommand}" CommandParameter="{Binding}"
                             ToolTip.Tip="{Binding Help}"
                             AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding Label}">
@@ -52,10 +52,7 @@
                             </DataTemplate>
                           </ContentControl.DataTemplates>
                         </ContentControl>
-                        <StackPanel VerticalAlignment="Center">
-                          <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                          <TextBlock Classes="partdetail pluginstate" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                        <controls:PartEntryText Title="{Binding Title}" Detail="{Binding Detail}" />
                       </DockPanel>
                     </Button>
                   </DataTemplate>

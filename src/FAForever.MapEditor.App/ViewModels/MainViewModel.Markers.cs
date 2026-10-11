@@ -20,12 +20,26 @@ public sealed partial class MainViewModel
     /// The kinds of markers the views draw and a click may pick: those the panel shows
     /// (<see cref="MarkersViewModel.ShownKinds"/>) of what the overlays Markers and Path nodes show.
     /// </summary>
-    public MarkerKinds ShownMarkerKinds => Markers.ShownKinds
-        & ((ShowMarkers ? MarkerKinds.All & ~MarkerKinds.PathNodes : MarkerKinds.None) | (ShowPathNodes ? MarkerKinds.PathNodes : MarkerKinds.None));
+    public MarkerKinds ShownMarkerKinds => Markers.ShownKinds & OverlayMarkerKinds;
+
+    /// <summary>
+    /// The kinds of markers the overlays Markers and Path nodes show.
+    /// </summary>
+    private MarkerKinds OverlayMarkerKinds =>
+        (ShowMarkers ? MarkerKinds.All & ~MarkerKinds.PathNodes : MarkerKinds.None) | (ShowPathNodes ? MarkerKinds.PathNodes : MarkerKinds.None);
 
     private void InitializeMarkers()
     {
         Markers.Changed += (_, _) => RefreshOverlays();
+        // a kind's check box and its Shown follow the overlay of its heading
+        Markers.UseOverlayKinds(OverlayMarkerKinds);
+        PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(ShowMarkers) or nameof(ShowPathNodes))
+            {
+                Markers.UseOverlayKinds(OverlayMarkerKinds);
+            }
+        };
         // the list's headings Markers and Path nodes carry the check boxes of their overlays
         Markers.UseOverlays(Overlays);
         DocumentChanged += (_, _) => Markers.Refresh(ShownDocument);

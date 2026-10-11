@@ -34,9 +34,9 @@ public sealed partial class MapInformationViewModel : ObservableObject
                 Help = "The map's version in the vault; the folder is named after it (.v0004)",
             },
             new ChoiceSetting("Type", command, "type", ["skirmish", "campaign_coop"], d => TypeName(d.Scenario.Type), run),
-            new TextSetting("Preview", command, "preview", d => d.Scenario.PreviewPath, run)
+            new TextSetting("Image file", command, "preview", d => d.Scenario.PreviewPath, run)
             {
-                Help = "The path of a preview image the scenario names, usually empty: the lobby shows the preview of the .scmap",
+                Help = "The path of a preview image the scenario names, usually empty: the lobby then shows the .scmap's picture below",
             },
             new NumberSetting("No-rush radius", command, "noRushRadius", d => d.Scenario.NoRushRadius, run)
             {
@@ -111,6 +111,12 @@ public sealed partial class MapInformationViewModel : ObservableObject
     public partial string Players { get; private set; } = "";
 
     /// <summary>
+    /// <c>2 players, 1 other army</c>, <c>1 player, 3 other armies</c>.
+    /// </summary>
+    public static string PlayersText(int players, int others) => string.Create(CultureInfo.InvariantCulture,
+        $"{players} {(players == 1 ? "player" : "players")}, {others} other {(others == 1 ? "army" : "armies")}");
+
+    /// <summary>
     /// The map's folder, e.g. <c>theta_passage.v0004</c>.
     /// </summary>
     [ObservableProperty]
@@ -162,8 +168,7 @@ public sealed partial class MapInformationViewModel : ObservableObject
         {
             _shown = document.Scenario;
             Settings.Refresh(document);
-            Players = string.Create(CultureInfo.InvariantCulture,
-                $"{document.Scenario.PlayableArmies.Length} players, {document.Scenario.ExtraArmies.Length} other armies");
+            Players = PlayersText(document.Scenario.PlayableArmies.Length, document.Scenario.ExtraArmies.Length);
             Folder = document.Folder.ToString();
             int players = document.Scenario.PlayableArmies.Length;
             string playing = string.Create(CultureInfo.InvariantCulture, $"{players} {(players == 1 ? "player" : "players")}");
