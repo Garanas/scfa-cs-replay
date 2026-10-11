@@ -17,9 +17,12 @@ namespace FAForever.MapEditor.Project.Editing
     /// <remarks>
     /// A structure stands on the build grid (<see cref="BuildGrid.Snap"/>) and turns in quarter turns
     /// (<see cref="BuildGrid.SnapHeading"/>): in a line and a rectangle structures butt together at
-    /// their footprint (a wall becomes one wall), whatever spacing is given; mobile units stand the
-    /// spacing apart and face any way. A footprint is a unit's size along x and z when it is not
-    /// turned (<see cref="Extent"/> gives it turned); a unit without one counts as 1 by 1.
+    /// their skirt, the ground the game reserves, which is the larger of footprint and skirt (<see cref="Pitch"/>):
+    /// factories, power generators and extractors butt skirt to skirt, as the game's build templates
+    /// do, and a wall (skirt equal to footprint) becomes one wall, whatever spacing is given; mobile
+    /// units stand the spacing apart and face any way. A footprint is a unit's size along x and z
+    /// when it is not turned (<see cref="Extent"/> gives it turned); a unit without one counts as 1
+    /// by 1. Every method that takes a footprint takes the skirt's size too (null for none).
     /// </remarks>
     public static class UnitLayouts
     {
@@ -47,6 +50,21 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// The room a structure takes in a layout when turned by a heading: the larger of its footprint
+        /// and its skirt along each axis (<see cref="Extent"/> of each).
+        /// </summary>
+        public static (float X, float Z) Pitch((double SizeX, double SizeZ)? footprint, (double SizeX, double SizeZ)? skirt, float radians)
+        {
+            (float x, float z) = Extent(footprint, radians);
+            if (skirt is null)
+            {
+                return (x, z);
+            }
+            (float skirtX, float skirtZ) = Extent(skirt, radians);
+            return (MathF.Max(x, skirtX), MathF.Max(z, skirtZ));
+        }
+
+        /// <summary>
         /// The end of a line from a place, moved so the line's angle is a whole number of steps (an
         /// eighth of a turn with shift), its length kept.
         /// </summary>
@@ -65,7 +83,7 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// Units along a line from one place to another: structures butting together at their
-        /// footprint along the line (one per footprint along the axis the line follows most, each on
+        /// skirt along the line (one per skirt along the axis the line follows most, each on
         /// the build grid, so a line of walls is one wall and a diagonal one a staircase; two that
         /// land on the same place are one), mobile units a spacing apart from the first place on; the
         /// first at the start, the last within the line. Each faces along the line (structures in the
@@ -73,7 +91,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         /// <param name="spacing">Between the centres of mobile units, in ogrids (at least <see cref="MinimumSpacing"/>).</param>
         /// <param name="heading">The heading of every unit when it does not face along the line, in radians.</param>
-        public static ImmutableArray<UnitPlace> Line(Vector2 from, Vector2 to, (double SizeX, double SizeZ)? footprint, float spacing, bool faceAlong, float heading, bool isStructure)
+        public static ImmutableArray<UnitPlace> Line(Vector2 from, Vector2 to, (double SizeX, double SizeZ)? footprint, float spacing, bool faceAlong, float heading, bool isStructure, (double SizeX, double SizeZ)? skirt = null)
         {
             Vector2 d = to - from;
             float length = d.Length();
@@ -83,9 +101,9 @@ namespace FAForever.MapEditor.Project.Editing
             if (isStructure)
             {
                 float turn = BuildGrid.SnapHeading(faceAlong ? along : heading);
-                (float extentX, float extentZ) = Extent(footprint, turn);
+                (float extentX, float extentZ) = Pitch(footprint, skirt, turn);
                 // the way along the line to the next footprint along the axis the line follows most:
-                // along an axis its whole side, so a wall is one wall; on a diagonal a step of both
+                // along an axis its whole skirt, so a wall is one wall; on a diagonal a step of both
                 float step = MathF.Min(
                     MathF.Abs(direction.X) > 1e-4f ? extentX / MathF.Abs(direction.X) : float.MaxValue,
                     MathF.Abs(direction.Y) > 1e-4f ? extentZ / MathF.Abs(direction.Y) : float.MaxValue);
@@ -121,11 +139,11 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// Units filling the rectangle between two corners (any order), all facing the heading given:
-        /// structures in rows of their footprint from the corner nearest the map's origin (the
+        /// structures in rows of their skirt from the corner nearest the map's origin (the
         /// rectangle rounded to whole ogrids, at least one unit each way), mobile units on a grid of
         /// the spacing from that corner. Hollow, only the border stays: a wall around a yard.
         /// </summary>
-        public static ImmutableArray<UnitPlace> Rectangle(Vector2 cornerA, Vector2 cornerB, (double SizeX, double SizeZ)? footprint, bool hollow, float spacing, float heading, bool isStructure)
+        public static ImmutableArray<UnitPlace> Rectangle(Vector2 cornerA, Vector2 cornerB, (double SizeX, double SizeZ)? footprint, bool hollow, float spacing, float heading, bool isStructure, (double SizeX, double SizeZ)? skirt = null)
         {
             float xMin = MathF.Min(cornerA.X, cornerB.X);
             float xMax = MathF.Max(cornerA.X, cornerB.X);
@@ -134,12 +152,17 @@ namespace FAForever.MapEditor.Project.Editing
             if (isStructure)
             {
                 float turn = BuildGrid.SnapHeading(heading);
-                (float extentX, float extentZ) = Extent(footprint, turn);
+                (float extentX, float extentZ) = Pitch(footprint, skirt, turn);
+                (double footX, double footZ) = footprint ?? (1, 1);
                 float x0 = MathF.Round(xMin);
                 float z0 = MathF.Round(zMin);
                 int columns = Math.Max(1, (int)MathF.Round((MathF.Round(xMax) - x0) / extentX));
                 int rows = Math.Max(1, (int)MathF.Round((MathF.Round(zMax) - z0) / extentZ));
-                return Grid(columns, rows, hollow, (i, j) => new UnitPlace(x0 + extentX / 2 + i * extentX, z0 + extentZ / 2 + j * extentZ, turn));
+                return Grid(columns, rows, hollow, (i, j) =>
+                {
+                    (float x, float z) = BuildGrid.Snap(x0 + extentX / 2 + i * extentX, z0 + extentZ / 2 + j * extentZ, footX, footZ, turn);
+                    return new UnitPlace(x, z, turn);
+                });
             }
             else
             {
@@ -151,14 +174,14 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
-        /// Units around a rectangle (the footprint bounds of what they go around), a distance from
+        /// Units around a rectangle (the bounds of what they go around: the skirts), a distance from
         /// it: structures as a hollow rectangle whose inner edge lies that far out (each on the build
         /// grid), mobile units spread evenly along the rectangle that far out, about the spacing apart.
         /// All face the heading given.
         /// </summary>
         /// <param name="bounds">The left, top, right and bottom of what the ring goes around, in ogrids.</param>
         /// <param name="distance">Between the bounds and the ring's units, in ogrids (0 or more).</param>
-        public static ImmutableArray<UnitPlace> Ring((float X0, float Z0, float X1, float Z1) bounds, (double SizeX, double SizeZ)? footprint, float distance, float spacing, float heading, bool isStructure)
+        public static ImmutableArray<UnitPlace> Ring((float X0, float Z0, float X1, float Z1) bounds, (double SizeX, double SizeZ)? footprint, float distance, float spacing, float heading, bool isStructure, (double SizeX, double SizeZ)? skirt = null)
         {
             float gap = MathF.Max(0, distance);
             float x0 = MathF.Min(bounds.X0, bounds.X1) - gap;
@@ -168,8 +191,14 @@ namespace FAForever.MapEditor.Project.Editing
             if (isStructure)
             {
                 float turn = BuildGrid.SnapHeading(heading);
-                (float extentX, float extentZ) = Extent(footprint, turn);
-                return Rectangle(new Vector2(x0 - extentX, z0 - extentZ), new Vector2(x1 + extentX, z1 + extentZ), footprint, hollow: true, spacing, turn, isStructure: true);
+                (float extentX, float extentZ) = Pitch(footprint, skirt, turn);
+                // the inner edge on whole ogrids, outside the bounds, so the ring never reaches into them
+                float outerX = MathF.Floor(x0) - extentX;
+                float outerZ = MathF.Floor(z0) - extentZ;
+                // whole units a side, the far edge pushed out when the width is not a multiple of them
+                float farX = outerX + MathF.Ceiling((MathF.Ceiling(x1) + extentX - outerX) / extentX - 1e-3f) * extentX;
+                float farZ = outerZ + MathF.Ceiling((MathF.Ceiling(z1) + extentZ - outerZ) / extentZ - 1e-3f) * extentZ;
+                return Rectangle(new Vector2(outerX, outerZ), new Vector2(farX, farZ), footprint, hollow: true, spacing, turn, isStructure: true, skirt);
             }
             float step = MathF.Max(MinimumSpacing, spacing);
             int columns = Math.Max(2, 1 + (int)MathF.Round((x1 - x0) / step));

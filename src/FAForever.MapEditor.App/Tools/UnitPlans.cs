@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Numerics;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Checks;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
@@ -63,14 +64,25 @@ public static class UnitPlans
     public static ImmutableArray<UnitPlace> Of(PlaceMode mode, AssetEntry? entry, Vector2 a, Vector2 b, (float X0, float Z0, float X1, float Z1)? bounds, UnitLayoutSettings settings)
     {
         (double SizeX, double SizeZ)? footprint = entry?.Footprint;
+        (double SizeX, double SizeZ)? skirt = entry is { IsStructure: true } ? SkirtSize(entry) : null;
         bool structure = entry?.IsStructure == true;
         return mode switch
         {
-            PlaceMode.Line => UnitLayouts.Line(a, b, footprint, settings.Spacing, settings.FaceAlong, settings.Heading, structure),
-            PlaceMode.Rectangle => UnitLayouts.Rectangle(a, b, footprint, settings.Hollow, settings.Spacing, settings.Heading, structure),
-            PlaceMode.Ring when bounds is { } around => UnitLayouts.Ring(around, footprint, settings.Distance, settings.Spacing, settings.Heading, structure),
+            PlaceMode.Line => UnitLayouts.Line(a, b, footprint, settings.Spacing, settings.FaceAlong, settings.Heading, structure, skirt),
+            PlaceMode.Rectangle => UnitLayouts.Rectangle(a, b, footprint, settings.Hollow, settings.Spacing, settings.Heading, structure, skirt),
+            PlaceMode.Ring when bounds is { } around => UnitLayouts.Ring(around, footprint, settings.Distance, settings.Spacing, settings.Heading, structure, skirt),
             _ => [],
         };
+    }
+
+    /// <summary>
+    /// The size of the ground a structure reserves (<see cref="PlacementChecks.SkirtOf"/>), turned
+    /// not at all: the larger of its skirt and footprint.
+    /// </summary>
+    public static (double SizeX, double SizeZ) SkirtSize(AssetEntry entry)
+    {
+        PlacementRect rect = PlacementChecks.SkirtOf(entry, 0, 0, 0);
+        return (rect.MaxX - rect.MinX, rect.MaxZ - rect.MinZ);
     }
 
     /// <summary>
@@ -90,8 +102,9 @@ public static class UnitPlans
     }
 
     /// <summary>
-    /// The rectangle the footprints of the selected units cover, else that of the structure whose
-    /// footprint holds <paramref name="at"/> (the nearest centre when several do); null without either.
+    /// The rectangle the selected units cover (a structure by its skirt, the ground the game reserves
+    /// for it, another unit by its footprint), else that of the structure whose footprint holds
+    /// <paramref name="at"/> (the nearest centre when several do); null without either.
     /// </summary>
     public static (float X0, float Z0, float X1, float Z1)? RingBounds(MapDocument document, AssetCatalog catalog, IReadOnlyList<ObjectRef> selection, Vector2? at)
     {
@@ -100,7 +113,7 @@ public static class UnitPlans
         {
             if (thing.Kind == ObjectKind.Unit && document.Find(thing) is PlacedUnit placed)
             {
-                bounds = Join(bounds, FootprintBounds(catalog, placed.Unit));
+                bounds = Join(bounds, Bounds(catalog, placed.Unit));
             }
         }
         if (bounds is not null || at is not Vector2 point)
@@ -114,11 +127,12 @@ public static class UnitPlans
             {
                 continue;
             }
-            (float x0, float z0, float x1, float z1) = FootprintBounds(catalog, placed.Unit);
-            if (point.X < x0 || point.X > x1 || point.Y < z0 || point.Y > z1)
+            (float fx0, float fz0, float fx1, float fz1) = FootprintBounds(catalog, placed.Unit);
+            if (point.X < fx0 || point.X > fx1 || point.Y < fz0 || point.Y > fz1)
             {
                 continue;
             }
+            (float x0, float z0, float x1, float z1) = Bounds(catalog, placed.Unit);
             float distance = Vector2.DistanceSquared(point, new Vector2(placed.Unit.Position.X, placed.Unit.Position.Z));
             if (distance < best)
             {
@@ -127,6 +141,19 @@ public static class UnitPlans
             }
         }
         return bounds;
+    }
+
+    /// <summary>
+    /// The rectangle a unit takes: a structure's skirt, else its footprint.
+    /// </summary>
+    public static (float X0, float Z0, float X1, float Z1) Bounds(AssetCatalog catalog, Unit unit)
+    {
+        if (catalog.Find(unit.Blueprint) is { IsStructure: true } entry)
+        {
+            PlacementRect rect = PlacementChecks.SkirtOf(entry, unit.Position.X, unit.Position.Z, unit.Orientation.Y);
+            return (rect.MinX, rect.MinZ, rect.MaxX, rect.MaxZ);
+        }
+        return FootprintBounds(catalog, unit);
     }
 
     /// <summary>

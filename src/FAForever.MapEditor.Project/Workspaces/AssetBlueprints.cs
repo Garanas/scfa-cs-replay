@@ -48,6 +48,8 @@ namespace FAForever.MapEditor.Project.Workspaces
             BuildOnLayers = unit.Physics.BuildOnLayerCaps.Count > 0
                 ? [.. unit.Physics.BuildOnLayerCaps.Select(layer => layer.StartsWith("LAYER_", StringComparison.Ordinal) ? layer["LAYER_".Length..] : layer).Order(StringComparer.Ordinal)]
                 : null,
+            MaxGroundVariation = unit.Physics.MaxGroundVariation,
+            FlattenSkirt = unit.Physics.FlattenSkirt == true,
             UniformScale = unit.Display.UniformScale,
             Health = unit.Defense.MaxHealth ?? unit.Defense.Health,
             MassCost = unit.Economy.BuildCostMass,

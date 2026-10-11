@@ -551,12 +551,15 @@ namespace FAForever.MapEditor.Project.Workspaces
                     TechLevel = unit.TechLevel,
                     Footprint = unit.Footprint is { } size ? (size.SizeX, size.SizeZ) : null,
                     Limits = unit.Skirt is null && unit.BuildOnLayers is null && unit.Footprint?.MaxSlope is null && unit.Footprint?.MinWaterDepth is null
+                        && unit.MaxGroundVariation is null && !unit.FlattenSkirt
                         ? null
                         : new PlacementLimits(
                             unit.Skirt is { } skirt ? new Skirt(skirt.SizeX, skirt.SizeZ, skirt.OffsetX, skirt.OffsetZ) : null,
                             unit.BuildOnLayers is { } layers ? [.. layers] : null,
                             unit.Footprint?.MaxSlope,
-                            unit.Footprint?.MinWaterDepth),
+                            unit.Footprint?.MinWaterDepth,
+                            unit.MaxGroundVariation ?? PlacementLimits.DefaultGroundVariation,
+                            unit.FlattenSkirt),
                     Model = ModelOf(assets, unit.Lods),
                     Icon = File.Exists(Path.Combine(assets, UnitIconFolder, id + "_icon.png")) ? Path.Combine(assets, UnitIconFolder, id + "_icon.png") : null,
                     IconBackground = IconBackgroundOf(assets, unit.BuildIcon),

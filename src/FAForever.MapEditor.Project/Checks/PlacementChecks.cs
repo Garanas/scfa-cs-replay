@@ -66,10 +66,11 @@ namespace FAForever.MapEditor.Project.Checks
             foreach (PlacedUnit placed in document.AllUnits())
             {
                 if (UnitWrecks.IsWreck(placed) || catalog.Find(placed.Unit.Blueprint) is not { IsStructure: true } entry
-                    || PlacementChecks.SkirtOf(entry, placed.Unit.Position.X, placed.Unit.Position.Z, placed.Unit.Orientation.Y) is not PlacementRect rect)
+                    )
                 {
                     continue;
                 }
+                PlacementRect rect = PlacementChecks.SkirtOf(entry, placed.Unit.Position.X, placed.Unit.Position.Z, placed.Unit.Orientation.Y);
                 structures.Add(new PlacedStructure(placed, entry, rect));
             }
             Structures = structures;
@@ -142,7 +143,7 @@ namespace FAForever.MapEditor.Project.Checks
     /// Where a structure may stand (user story U-12): its ground against the others', against the
     /// layers its blueprint allows and its slope limit. The Problems tab's checks
     /// <c>units-overlap</c> and <c>units-ground</c> and the place tool's red preview use these
-    /// functions, so they agree. Anything a blueprint does not say is not checked.
+    /// functions, so they agree. What a blueprint does not say has the engine's default.
     /// </summary>
     public static class PlacementChecks
     {
@@ -183,42 +184,54 @@ namespace FAForever.MapEditor.Project.Checks
         }
 
         /// <summary>
-        /// The ground a structure reserves at a place: its skirt, else its footprint; null for a
-        /// unit whose blueprint names neither.
+        /// The footprint of a unit in ogrids: its blueprint's, else the engine's default of 1 by 1.
+        /// </summary>
+        public static (double SizeX, double SizeZ) FootprintSize(AssetEntry entry) => entry.Footprint ?? (1, 1);
+
+        /// <summary>
+        /// The ground a structure reserves at a place, as the engine computes it
+        /// (<c>RUnitBlueprint::GetSkirtRect</c>): the skirt starts at the footprint's corner plus
+        /// the skirt offset (never positive) and is at least as large as the footprint; a blueprint
+        /// without a skirt reserves its footprint, and one without a footprint has the default 1 by 1.
         /// </summary>
         /// <param name="x">Its centre, in ogrids.</param>
         /// <param name="radians">Its heading.</param>
-        public static PlacementRect? SkirtOf(AssetEntry entry, float x, float z, float radians)
+        public static PlacementRect SkirtOf(AssetEntry entry, float x, float z, float radians)
         {
-            if (entry.Limits?.Skirt is Skirt skirt)
-            {
-                (double fx, double fz) = entry.Footprint ?? (skirt.SizeX, skirt.SizeZ);
-                return Turned(-fx / 2 + skirt.OffsetX, -fz / 2 + skirt.OffsetZ, skirt.SizeX, skirt.SizeZ, x, z, radians);
-            }
-            return FootprintOf(entry, x, z, radians);
+            (double fx, double fz) = FootprintSize(entry);
+            Skirt? skirt = entry.Limits?.Skirt;
+            double offsetX = Math.Min(0, skirt?.OffsetX ?? 0);
+            double offsetZ = Math.Min(0, skirt?.OffsetZ ?? 0);
+            return Turned(-fx / 2 + offsetX, -fz / 2 + offsetZ, Math.Max(skirt?.SizeX ?? 0, fx), Math.Max(skirt?.SizeZ ?? 0, fz), x, z, radians);
         }
 
         /// <summary>
-        /// The footprint at a place; null for a unit whose blueprint names none.
+        /// The footprint at a place.
         /// </summary>
-        public static PlacementRect? FootprintOf(AssetEntry entry, float x, float z, float radians) =>
-            entry.Footprint is (double sizeX, double sizeZ) ? Turned(-sizeX / 2, -sizeZ / 2, sizeX, sizeZ, x, z, radians) : null;
+        public static PlacementRect FootprintOf(AssetEntry entry, float x, float z, float radians)
+        {
+            (double sizeX, double sizeZ) = FootprintSize(entry);
+            return Turned(-sizeX / 2, -sizeZ / 2, sizeX, sizeZ, x, z, radians);
+        }
 
         #endregion
 
         #region Overlap
 
         /// <summary>
-        /// The structure a new one of <paramref name="entry"/> at a place would overlap, if any.
+        /// The structure a new one of <paramref name="entry"/> at a place would overlap, if any. It judges
+        /// by the skirt, the ground the game reserves (the game refuses to build a structure whose
+        /// skirt touches another's).
         /// </summary>
         /// <param name="index">The map's structures (<see cref="PlacementIndex.Of"/>).</param>
         /// <param name="ignore">Names of units that do not count (the ones being moved).</param>
         public static PlacedStructure? OverlapAt(PlacementIndex index, AssetEntry entry, float x, float z, float radians, ISet<string>? ignore = null)
         {
-            if (!entry.IsStructure || SkirtOf(entry, x, z, radians) is not PlacementRect rect)
+            if (!entry.IsStructure )
             {
                 return null;
             }
+            PlacementRect rect = SkirtOf(entry, x, z, radians);
             foreach (int i in index.Overlapping(rect))
             {
                 PlacedStructure other = index.Structures[i];
@@ -228,6 +241,40 @@ namespace FAForever.MapEditor.Project.Checks
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// Which of the rectangles overlap another of them (<see cref="PlacementRect.Overlaps"/>): the
+        /// planned units of one drag against each other.
+        /// </summary>
+        public static bool[] OverlapAmong(IReadOnlyList<PlacementRect> rects)
+        {
+            bool[] overlapping = new bool[rects.Count];
+            Dictionary<(int, int), List<int>> cells = [];
+            for (int i = 0; i < rects.Count; i++)
+            {
+                PlacementRect rect = rects[i];
+                HashSet<int> seen = [];
+                for (int x = (int)MathF.Floor(rect.MinX / 16); x <= (int)MathF.Floor(rect.MaxX / 16); x++)
+                {
+                    for (int z = (int)MathF.Floor(rect.MinZ / 16); z <= (int)MathF.Floor(rect.MaxZ / 16); z++)
+                    {
+                        if (!cells.TryGetValue((x, z), out List<int>? list))
+                        {
+                            cells[(x, z)] = list = [];
+                        }
+                        foreach (int j in list)
+                        {
+                            if (seen.Add(j) && rects[j].Overlaps(rect))
+                            {
+                                overlapping[i] = overlapping[j] = true;
+                            }
+                        }
+                        list.Add(i);
+                    }
+                }
+            }
+            return overlapping;
         }
 
         /// <summary>
@@ -273,22 +320,23 @@ namespace FAForever.MapEditor.Project.Checks
         #region Ground
 
         /// <summary>
-        /// Why a structure may not stand where it does, or null when it may (or the blueprint says
-        /// too little to tell): the layer under its centre against its <c>BuildOnLayerCaps</c>
-        /// (land, or water and seabed under the water's height), the depth of the water against its
-        /// least depth, and the slope across its footprint against its limit.
+        /// Why a structure may not stand where it does, or null when it may: the layer under its
+        /// centre against its <c>BuildOnLayerCaps</c> (land, or water and seabed under the water's
+        /// height), the depth of the water against its least depth, and the ground under it against
+        /// its <c>MaxGroundVariation</c> (<see cref="GroundVariation"/>). Only structures are checked.
         /// </summary>
         /// <param name="water">The water's height, null for a map without water.</param>
         public static string? GroundIssue(Heightmap heights, float? water, AssetEntry entry, float x, float z, float radians)
         {
-            if (entry.Limits is not PlacementLimits limits)
+            if (!entry.IsStructure)
             {
                 return null;
             }
+            PlacementLimits? limits = entry.Limits;
             List<string> reasons = [];
             float height = heights.HeightAt(x, z);
             float depth = water is float level ? level - height : 0;
-            if (limits.Layers is { } layers)
+            if (limits?.Layers is { } layers)
             {
                 if (depth <= 0 && !layers.Contains("Land"))
                 {
@@ -299,39 +347,84 @@ namespace FAForever.MapEditor.Project.Checks
                     reasons.Add("it cannot be built under water");
                 }
             }
-            if (depth > 0 && limits.MinWaterDepth is double least && depth < least)
+            if (depth > 0 && limits?.MinWaterDepth is double least && depth < least)
             {
                 reasons.Add(string.Create(CultureInfo.InvariantCulture, $"the water is {depth:0.#} deep, it needs {least:0.#}"));
             }
-            if (limits.MaxSlope is double maxSlope && SlopeOf(heights, entry, x, z, radians) is float slope && slope > maxSlope)
+            double allowed = limits?.MaxGroundVariation ?? PlacementLimits.DefaultGroundVariation;
+            if (GroundVariation(heights, entry, x, z, radians) is float variation && variation > allowed)
             {
-                reasons.Add(string.Create(CultureInfo.InvariantCulture, $"the ground rises {slope:0.##} an ogrid, it allows {maxSlope:0.##}"));
+                reasons.Add(limits?.FlattenSkirt == true
+                    ? string.Create(CultureInfo.InvariantCulture, $"the ground around it is {variation:0.##} from the level it is built at, it allows {allowed:0.##}")
+                    : string.Create(CultureInfo.InvariantCulture, $"the ground under it rises and falls {variation:0.##}, it allows {allowed:0.##}"));
             }
             return reasons.Count == 0 ? null : string.Join("; ", reasons);
         }
 
         /// <summary>
-        /// The steepest rise per ogrid from the centre of the footprint to one of its corners
-        /// (the heightmap's height at the five points); null for a unit without a footprint.
+        /// How uneven the ground is for a structure at a place, in game units, as the engine
+        /// measures it (<c>OCCUPY_Check</c> in <c>STIMap.cpp</c> of Draiget/faf-re): the structure
+        /// stands on the grid (its footprint's corner is the nearest cell corner), and the heightmap
+        /// samples are those inside its skirt, both edges included. For a structure that flattens
+        /// its skirt (<c>FlattenSkirt</c>) they are the samples on the ring just outside the skirt,
+        /// and the figure is their greatest distance from the whole height (<c>ceil</c>) of the
+        /// last one on the ring, the height the skirt is levelled to; else the highest sample
+        /// less the lowest. The structure may stand when the figure does not exceed its
+        /// <c>MaxGroundVariation</c>. Null for a unit that is not a structure.
         /// </summary>
-        public static float? SlopeOf(Heightmap heights, AssetEntry entry, float x, float z, float radians)
+        public static float? GroundVariation(Heightmap heights, AssetEntry entry, float x, float z, float radians)
         {
-            if (FootprintOf(entry, x, z, radians) is not PlacementRect rect)
+            if (!entry.IsStructure)
             {
                 return null;
             }
-            float centre = heights.HeightAt(x, z);
-            float reach = MathF.Max(0.5f, MathF.Sqrt((rect.MaxX - rect.MinX) * (rect.MaxX - rect.MinX) + (rect.MaxZ - rect.MinZ) * (rect.MaxZ - rect.MinZ)) / 2);
-            float steepest = 0;
-            foreach ((float cx, float cz) in new[] { (rect.MinX, rect.MinZ), (rect.MaxX, rect.MinZ), (rect.MinX, rect.MaxZ), (rect.MaxX, rect.MaxZ) })
+            (double fx, double fz) = FootprintSize(entry);
+            float cx = MathF.Round(x - (float)fx / 2, MidpointRounding.ToEven) + (float)fx / 2;
+            float cz = MathF.Round(z - (float)fz / 2, MidpointRounding.ToEven) + (float)fz / 2;
+            PlacementRect rect = SkirtOf(entry, cx, cz, radians);
+            int x0 = (int)(rect.MinX + 0.001f);
+            int x1 = (int)(rect.MaxX + 0.001f);
+            int z0 = (int)(rect.MinZ + 0.001f);
+            int z1 = (int)(rect.MaxZ + 0.001f);
+            float Sample(int column, int row) => heights.GetHeight(Math.Clamp(column, 0, heights.Width), Math.Clamp(row, 0, heights.Height));
+
+            float lowest = float.MaxValue;
+            float highest = float.MinValue;
+            void Take(float height)
             {
-                steepest = MathF.Max(steepest, MathF.Abs(heights.HeightAt(cx, cz) - centre) / reach);
+                lowest = MathF.Min(lowest, height);
+                highest = MathF.Max(highest, height);
             }
-            return steepest;
+            if (entry.Limits?.FlattenSkirt != true)
+            {
+                for (int column = x0; column <= x1; column++)
+                {
+                    for (int row = z0; row <= z1; row++)
+                    {
+                        Take(Sample(column, row));
+                    }
+                }
+                return highest - lowest;
+            }
+            float last = 0;
+            for (int column = x0 - 1; column <= x1 + 1; column++)
+            {
+                Take(Sample(column, z0 - 1));
+                last = Sample(column, z1 + 1);
+                Take(last);
+            }
+            for (int row = z0; row <= z1; row++)
+            {
+                Take(Sample(x0 - 1, row));
+                last = Sample(x1 + 1, row);
+                Take(last);
+            }
+            float level = MathF.Ceiling(last);
+            return MathF.Max(highest - level, level - lowest);
         }
 
         /// <summary>
-        /// Structures on the wrong layer or too steep ground (<see cref="GroundIssue"/>): one
+        /// Structures on the wrong layer or uneven ground (<see cref="GroundIssue"/>): one
         /// warning per structure. Wrecks and mobile units are never checked.
         /// </summary>
         public static IEnumerable<Problem> Ground(ProblemContext context)
