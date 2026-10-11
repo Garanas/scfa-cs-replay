@@ -23,6 +23,10 @@ public sealed partial class MainViewModel
         WideDecals = new MapWideDecalsViewModel(RunWithAsync, Generation, () => Map?.Document, () => Map?.ProjectFolder, () => Setup.Workspace);
         Generation.Register(new NormalDecalGenerator(), "decals.generateNormal");
         Generation.Register(new ShadowDecalGenerator(), "decals.generateShadow");
+        static string? Unless(MapWideSlot slot) => slot.Source == MapWideSource.Generated ? null
+            : slot.Source == MapWideSource.File ? "taken from a file" : "the slot is empty";
+        Generation.LeaveWhenMissing(NormalDecalGenerator.GeneratorId, document => Unless(document.WideDecals.Normal));
+        Generation.LeaveWhenMissing(ShadowDecalGenerator.GeneratorId, document => Unless(document.WideDecals.Shadow));
         Procedural.OnExport(NormalDecalGenerator.GeneratorId, ExportUse.Always);
         Procedural.OnExport(ShadowDecalGenerator.GeneratorId, ExportUse.Always);
         AutoGeneration.Allow(NormalDecalGenerator.GeneratorId);

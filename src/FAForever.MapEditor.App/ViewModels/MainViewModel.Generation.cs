@@ -218,14 +218,21 @@ public sealed partial class MainViewModel
     /// a result that is part of the map goes into it, each one step of undo, and what it makes out of
     /// date is generated after it.
     /// </summary>
-    public IReadOnlyList<GeneratedState> GenerateStale()
+    public IReadOnlyList<GeneratedState> GenerateStale() => GenerateStale(missing: false, out _);
+
+    /// <summary>
+    /// Generates what is out of date and, with <paramref name="missing"/>, what was never made for
+    /// the map (<c>generate.all</c>), each a step of undo when it is part of the map.
+    /// </summary>
+    /// <param name="left">The results never made that were left out, with why.</param>
+    public IReadOnlyList<GeneratedState> GenerateStale(bool missing, out IReadOnlyList<(IGenerator Generator, string Reason)> left)
     {
         EditedMap map = RequireMap();
         return Generation.GenerateStale(map.Document, (generator, value) =>
         {
             map.Session.Edit($"Generate the {generator.Title.ToLowerInvariant()}", now => generator.Apply(now, value));
             return map.Document;
-        });
+        }, missing, out left);
     }
 
     /// <summary>

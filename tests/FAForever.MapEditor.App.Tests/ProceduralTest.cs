@@ -88,6 +88,34 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task EverythingMakesWhatIsMissingAndSaysWhyItLeavesTheRest()
+        {
+            MainViewModel model = await Open();
+            Raise(model, 100, 102);
+            CommandRun listed = await Run(model, "generate.all", new JsonObject { ["list"] = true });
+            JsonObject list = (JsonObject)listed.Result!;
+            string[] toMake = [.. list["made"]!.AsArray().Select(item => (string)item!["id"]!)];
+            CollectionAssert.IsSubsetOf(new[] { "walkability", "navigationMesh" }, toMake, "never made: made");
+            Assert.IsTrue(model.Generation.Results.InOrder().Select(generator => generator.Id).Where(toMake.Contains).SequenceEqual(toMake), "in the order one feeds the next");
+            Assert.IsFalse(model.Generation.Results.States(model.Map!.Document).All(state => state.Status != GeneratedStatus.Missing), "listing makes nothing");
+
+            CommandRun run = await Run(model, "generate.all");
+            JsonObject result = (JsonObject)run.Result!;
+            CollectionAssert.AreEqual(toMake, result["made"]!.AsArray().Select(item => (string)item!["id"]!).ToArray());
+            Dictionary<string, string> left = result["left"]!.AsArray().ToDictionary(item => (string)item!["id"]!, item => (string)item!["why"]!);
+            StringAssert.Contains(left["skyCube"], "only when asked");
+            Assert.AreEqual("the map has no rules layer", left[MaskRulesGenerator.GeneratorId]);
+            Assert.AreEqual("the map has no prop rules", left[PropRulesGenerator.GeneratorId]);
+            StringAssert.Contains(model.Status, "left out: ");
+            StringAssert.Contains(model.Status, "(never made)");
+
+            IReadOnlyList<GeneratedState> states = model.Generation.Results.States(model.Map!.Document);
+            Assert.IsFalse(states.Any(state => state.Status == GeneratedStatus.Stale), "nothing out of date");
+            CollectionAssert.AreEquivalent(left.Keys.ToArray(), states.Where(state => state.Status == GeneratedStatus.Missing && model.Generation.CommandOf(state.Generator.Id) is not null)
+                .Select(state => state.Generator.Id).ToArray(), "missing are only those left out, with why");
+        }
+
+        [TestMethod]
         public async Task WalkabilityRegeneratesASecondAfterAChange()
         {
             MainViewModel model = await Open();

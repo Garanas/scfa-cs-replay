@@ -25,6 +25,9 @@ public sealed partial class MainViewModel
     {
         Generation.Register(new MaskRulesGenerator(), "generate.masks");
         Generation.Register(new PropRulesGenerator(), "generate.props");
+        Generation.LeaveWhenMissing(MaskRulesGenerator.GeneratorId, document =>
+            document.CoverageStacks.Values.Any(stack => stack.Layers.Any(layer => layer.Source is Project.Files.InMemory.RulesSource)) ? null : "the map has no rules layer");
+        Generation.LeaveWhenMissing(PropRulesGenerator.GeneratorId, document => document.PropRules.IsEmpty ? "the map has no prop rules" : null);
         MaskRules = new MaskRulesViewModel(RunWithAsync, () => StrataTool.Strata, Logger("Editor"), _ui);
         PropRules = new PropRulesViewModel(RunWithAsync, () => StrataTool.Strata);
         // a rule chosen takes the inspector from the selection (P-4)
