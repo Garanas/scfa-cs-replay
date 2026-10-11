@@ -22,16 +22,28 @@ namespace FAForever.FileFormats.Mesh
     /// <remarks>
     /// <para>
     /// A header of twelve 32-bit numbers (<c>MODL</c>, the version, then the offset or size of each
-    /// section) and the sections it points to: the bone names (<c>NAME</c>, right after the header),
-    /// the bones (<c>SKEL</c>), the vertices (<c>VTXL</c>), the triangles (<c>TRIS</c>), extra vertex
-    /// data (<c>VEXT</c>, which no exporter writes) and the exporter's notes (<c>INFO</c>). Each
-    /// section is preceded by its four-letter name, which ends the padding of the section before it.
+    /// section) and the sections it points to: the bone names (<c>NAME</c>, right after the header,
+    /// at byte 0x40), the bones (<c>SKEL</c>), the vertices (<c>VTXL</c>), the triangles
+    /// (<c>TRIS</c>), extra vertex data (<c>VEXT</c>, which no exporter writes) and the exporter's
+    /// notes (<c>INFO</c>). Each section is preceded by a four-letter name, which ends the padding of
+    /// the section before it.
+    /// </para>
+    /// <para>
+    /// The parser reads the file as the engine does: it ignores the sections' names (four of FAF's
+    /// meshes name the vertices <c>VRTX</c>), reads the bone names one after the other from byte
+    /// 0x40 (the engine ignores the name offset of each bone) and keeps the header's skinned bone
+    /// count (<see cref="Scm.SkinnedBoneCount"/>). It checks more than the engine, which only
+    /// rejects a file shorter than its header: the magic number, the version and that every offset,
+    /// index and parent points inside the file.
     /// </para>
     /// <para>
     /// The layout follows the header files GPG released with the game's tools
-    /// (https://ftp.zx.net.nz/pub/Game-Files/SupCom/util/) and the Blender exporter
-    /// (Solstice245/scstudio). A vertex stores its normal before its tangent: the normals point along
-    /// the faces of the triangles.
+    /// (https://ftp.zx.net.nz/pub/Game-Files/SupCom/util/), the Blender exporter
+    /// (Solstice245/scstudio) and the engine's reconstruction faf-re (Draiget/faf-re, commit 2ba55b2:
+    /// <c>src/sdk/moho/resource/SScmFile.h</c>, <c>ResourceFactory.cpp</c>,
+    /// <c>moho/animation/CAniSkel.cpp</c>). The library's guide (<c>AGENTS.md</c> next to this file)
+    /// describes every field and how the engine uses it. A vertex stores its normal before its
+    /// tangent: the normals point along the faces of the triangles.
     /// </para>
     /// </remarks>
     public static class ScmParser
@@ -45,6 +57,12 @@ namespace FAForever.FileFormats.Mesh
         /// The version of the format the game reads and this parser reads.
         /// </summary>
         public const int Version = 5;
+
+        /// <summary>
+        /// Where the bone names start: right after the header and the name <c>NAME</c>. The engine
+        /// reads them from here, so every mesh must have them here.
+        /// </summary>
+        internal const int NamesOffset = 0x40;
 
         /// <summary>
         /// The size of a bone in the <c>SKEL</c> section.
@@ -89,7 +107,7 @@ namespace FAForever.FileFormats.Mesh
             }
 
             int boneOffset = header.Int32();
-            header.Int32(); // the number of bones that vertices use: ScmWriter derives it
+            int skinnedBoneCount = header.Count();
             int vertexOffset = header.Int32();
             header.Int32(); // the extra vertex data, which no exporter writes
             int vertexCount = header.Count();
@@ -104,6 +122,8 @@ namespace FAForever.FileFormats.Mesh
                 throw new ScmFormatException($"The number of indices ({indexCount}) is not a multiple of three", 32);
             }
 
+            // the engine reads the names one after the other from byte 0x40, whatever a bone's offset says
+            Reader names = new Reader(bytes, NamesOffset);
             Reader r = Section(bytes, boneOffset, "SKEL");
             ScmBone[] bones = new ScmBone[boneCount];
             for (int i = 0; i < bones.Length; i++)
@@ -112,13 +132,13 @@ namespace FAForever.FileFormats.Mesh
                 Vector3 position = r.Vector3();
                 float w = r.Single();
                 Quaternion rotation = new Quaternion(r.Single(), r.Single(), r.Single(), w);
-                int nameOffset = r.Int32();
+                r.Int32(); // the name's offset
                 int parent = r.Int32();
                 if (parent < -1 || parent >= boneCount)
                 {
                     throw new ScmFormatException($"Bone {i} has parent {parent}, which is not a bone", r.Position - 4);
                 }
-                string name = new Reader(bytes, nameOffset).String();
+                string name = names.String();
                 bones[i] = new ScmBone(name, restPoseInverse, position, rotation, parent, r.Int32(), r.Int32());
             }
 
@@ -171,21 +191,20 @@ namespace FAForever.FileFormats.Mesh
                 Vertices = vertices,
                 Indices = indices,
                 Information = information,
+                SkinnedBoneCount = skinnedBoneCount,
             };
         }
 
         /// <summary>
-        /// A reader at the start of a section, after checking the name in the four bytes before it.
+        /// A reader at the start of a section. The four bytes before it usually hold the section's
+        /// name (<paramref name="name"/>), but the engine never reads them and some exporters write
+        /// another (<c>VRTX</c> for <c>VTXL</c>), so neither does the parser.
         /// </summary>
         private static Reader Section(ReadOnlySpan<byte> bytes, int offset, string name)
         {
-            if (offset < 4 || offset > bytes.Length)
+            if (offset < 0 || offset > bytes.Length)
             {
                 throw new ScmFormatException($"The section {name} starts outside the file", offset);
-            }
-            if (Encoding.ASCII.GetString(bytes.Slice(offset - 4, 4)) != name)
-            {
-                throw new ScmFormatException($"Expected the section {name}", offset - 4);
             }
             return new Reader(bytes, offset);
         }

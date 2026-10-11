@@ -200,21 +200,57 @@ namespace FAForever.FileFormats.Mesh
         }
 
         /// <summary>
-        /// How the game shades a blueprint's level of detail by its shader's name, and the alpha its
-        /// albedo must exceed (the techniques of <c>effects/mesh.fx</c>: <c>AlphaRef = 0x80</c> for the
-        /// <c>...NormalMappedAlpha</c> ones, <c>0x23</c> for <c>VertexNormal</c>, <c>0x03</c> for
-        /// clutter). <c>TMeshAlpha</c> and <c>TMeshNoNormals</c>, which bushes and a few props name, are
-        /// not in FAF's file; they are drawn as <c>VertexNormal</c>, the first cut out as the other
-        /// alpha shaders.
+        /// The legacy shader names the engine renames before it looks the technique up in
+        /// <c>effects/mesh.fx</c> (faf-re, Draiget/faf-re commit 2ba55b2,
+        /// <c>src/sdk/moho/mesh/ShaderDictionary.cpp</c>, the constructor).
         /// </summary>
-        public static (PreviewShader Shader, float? AlphaTest) ShaderOf(string? name) => name?.ToLowerInvariant() switch
+        private static readonly Dictionary<string, string> LegacyShaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["TMeshNoLighting"] = "Flat",
+            ["TMeshNoNormals"] = "VertexNormal",
+            ["TMeshAlpha"] = "NormalMappedAlpha",
+            ["TMeshGlow"] = "NormalMappedGlow",
+            ["TMeshTerrain"] = "NormalMappedTerrain",
+            ["Simple"] = "Unit",
+            ["Team"] = "Unit",
+            ["TMeshAlphaGlowFade"] = "UnitBuild",
+            ["TMeshMetalBuild"] = "AeonBuild",
+            ["TMeshShield"] = "Shield",
+            ["TMeshZFill"] = "ShieldFill",
+            ["TMeshAdd"] = "Effect",
+            ["TMeshExplosion"] = "Explosion",
+            ["TMeshCloud"] = "Cloud",
+            ["TMeshOuterCloud"] = "OuterCloud",
+            ["TMeshEMPNuke"] = "NukeEMP",
+            ["TMeshQuantumNuke"] = "NukeQuantum",
+            ["TMeshTemporalBubble"] = "TemporalBubble",
+        };
+
+        /// <summary>
+        /// The technique of <c>effects/mesh.fx</c> the engine draws a level of detail with, from the
+        /// <c>ShaderName</c> its blueprint gives: no name (or an empty one) is <c>Unit</c>, a legacy
+        /// name is renamed (<c>TMeshAlpha</c> is <c>NormalMappedAlpha</c>, <c>Simple</c> and <c>Team</c>
+        /// are <c>Unit</c>, ...), any other name stays as it is (<c>ResolveShaderAnnotationName</c> in
+        /// faf-re's <c>ShaderDictionary.cpp</c>). The engine's lookup is case-sensitive; this one
+        /// ignores case.
+        /// </summary>
+        public static string ShaderName(string? name) =>
+            string.IsNullOrEmpty(name) ? "Unit" : LegacyShaders.TryGetValue(name, out string? renamed) ? renamed : name;
+
+        /// <summary>
+        /// How the game shades a blueprint's level of detail by its shader's name (resolved as the
+        /// engine does by <see cref="ShaderName"/>), and the alpha its albedo must exceed (the
+        /// techniques of <c>effects/mesh.fx</c>: <c>AlphaRef = 0x80</c> for the
+        /// <c>...NormalMappedAlpha</c> ones, <c>0x23</c> for <c>VertexNormal</c>, <c>0x03</c> for
+        /// clutter).
+        /// </summary>
+        public static (PreviewShader Shader, float? AlphaTest) ShaderOf(string? name) => ShaderName(name).ToLowerInvariant() switch
         {
             "unit" or "uefnavy" or "wreckage" => (PreviewShader.Uef, null),
             "aeon" or "aeonnavy" or "aeonczar" => (PreviewShader.Aeon, null),
             "insect" or "cybrannavy" => (PreviewShader.Cybran, null),
             "seraphim" or "seraphimnavy" => (PreviewShader.Seraphim, null),
             "vertexnormal" => (PreviewShader.VertexNormal, 0x23 / 255f),
-            "tmeshalpha" => (PreviewShader.VertexNormal, 0x80 / 255f),
             "clutter" or "undulatingclutter" or "underwaterclutter" => (PreviewShader.VertexNormal, 0x03 / 255f),
             string other when other.EndsWith("normalmappedalpha", StringComparison.Ordinal) => (PreviewShader.NormalMapped, 0x80 / 255f),
             string other when other.Contains("normalmapped", StringComparison.Ordinal) => (PreviewShader.NormalMapped, null),

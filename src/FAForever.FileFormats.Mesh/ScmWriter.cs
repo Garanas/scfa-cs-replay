@@ -9,17 +9,38 @@ namespace FAForever.FileFormats.Mesh
     /// <see cref="ScmParser"/>. A mesh exported by the game's own tools writes back to the same bytes.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// The sections are written in the order of the game's exporter (names, bones, vertices,
     /// triangles, notes), each starting on a multiple of 32 bytes. The padding is the byte 0xC5,
-    /// at least one of it, followed by the name of the next section.
+    /// at least one of it, followed by the name of the next section. The bone names start at byte
+    /// 0x40, where the engine reads them.
+    /// </para>
+    /// <para>
+    /// The writer refuses what the engine cannot draw (faf-re, Draiget/faf-re commit 2ba55b2): a bone
+    /// before its parent (<c>CAniPose.cpp</c> updates the pose in one forward pass), more than
+    /// 65,535 vertices (a prop's batch holds <c>0xFFFF / vertices</c> instances, <c>MeshBatch.cpp</c>)
+    /// and more skinned bones than the 80 palette slots of a draw (<c>Mesh.h</c>,
+    /// <c>MeshBatch.cpp</c>).
+    /// </para>
     /// </remarks>
     public static class ScmWriter
     {
+        /// <summary>
+        /// The most bones a mesh can skin its vertices with: the engine shares 80 bone matrices
+        /// (<c>kPaletteCapacity = 0x50</c>) between the instances of a draw, and a unit with more
+        /// skinned bones gets none. The game's largest is 58 (<c>UEL0401_lod0</c>), FAF's 64.
+        /// </summary>
+        public const int MaxSkinnedBones = 80;
+
+        /// <summary>
+        /// The most vertices a mesh can have. The indices are 16 bits, and the engine draws a prop
+        /// in batches of <c>0xFFFF / vertices</c> instances, none at 65,536.
+        /// </summary>
+        public const int MaxVertices = ushort.MaxValue;
+
         private const int Alignment = 32;
 
         private const byte Padding = 0xc5;
-
-        private const int HeaderSize = 12 * 4;
 
         /// <summary>
         /// Writes a mesh to a new array.
@@ -35,15 +56,16 @@ namespace FAForever.FileFormats.Mesh
         /// Writes a mesh to a stream. The offsets in the header are relative to the stream's current
         /// position.
         /// </summary>
-        /// <exception cref="ArgumentException">The mesh cannot be stored: more than 65,536 vertices, a
-        /// number of indices that is not a multiple of three, or an index, bone or parent that points
-        /// at nothing.</exception>
+        /// <exception cref="ArgumentException">The mesh cannot be stored or drawn: more than 65,535
+        /// vertices, a number of indices that is not a multiple of three, an index, bone or parent
+        /// that points at nothing, a bone before its parent, or a skinned bone count below the bones
+        /// the vertices use, above the bones there are or above <see cref="MaxSkinnedBones"/>.</exception>
         public static void Write(Scm scm, Stream stream)
         {
             Validate(scm);
 
             // the sections are laid out first: the header points at all of them
-            int namesOffset = Align(HeaderSize);
+            int namesOffset = ScmParser.NamesOffset;
             int[] nameOffsets = new int[scm.Bones.Count];
             int position = namesOffset;
             for (int i = 0; i < scm.Bones.Count; i++)
@@ -62,7 +84,7 @@ namespace FAForever.FileFormats.Mesh
             w.Int32(ScmParser.Magic);
             w.Int32(ScmParser.Version);
             w.Int32(boneOffset);
-            w.Int32(WeightedBoneCount(scm));
+            w.Int32(scm.SkinnedBoneCount ?? WeightedBoneCount(scm));
             w.Int32(vertexOffset);
             w.Int32(0);
             w.Int32(scm.Vertices.Count);
@@ -90,8 +112,8 @@ namespace FAForever.FileFormats.Mesh
                 w.Single(bone.Rotation.Z);
                 w.Int32(nameOffsets[i]);
                 w.Int32(bone.Parent);
-                w.Int32(bone.Reserved1);
-                w.Int32(bone.Reserved2);
+                w.Int32(bone.FirstVertex);
+                w.Int32(bone.TriangleCount);
             }
 
             w.Section(vertexOffset, "VTXL");
@@ -126,8 +148,8 @@ namespace FAForever.FileFormats.Mesh
         }
 
         /// <summary>
-        /// The number of bones that vertices move with, as the header stores it: one more than the
-        /// highest bone a vertex uses. The game's exporter puts those bones first.
+        /// The number of bones that vertices move with, as the game's exporter stores it in the
+        /// header: one more than the highest bone a vertex uses. The exporter puts those bones first.
         /// </summary>
         public static int WeightedBoneCount(Scm scm)
         {
@@ -147,9 +169,9 @@ namespace FAForever.FileFormats.Mesh
 
         private static void Validate(Scm scm)
         {
-            if (scm.Vertices.Count > ushort.MaxValue + 1)
+            if (scm.Vertices.Count > MaxVertices)
             {
-                throw new ArgumentException($"A mesh has at most 65,536 vertices, this one has {scm.Vertices.Count}", nameof(scm));
+                throw new ArgumentException($"A mesh has at most {MaxVertices:N0} vertices, this one has {scm.Vertices.Count}", nameof(scm));
             }
             if (scm.Indices.Length % 3 != 0)
             {
@@ -159,13 +181,30 @@ namespace FAForever.FileFormats.Mesh
             {
                 throw new ArgumentException("An index is past the last vertex", nameof(scm));
             }
-            if (WeightedBoneCount(scm) > scm.Bones.Count)
+            int weighted = WeightedBoneCount(scm);
+            if (weighted > scm.Bones.Count)
             {
                 throw new ArgumentException("A vertex moves with a bone the mesh does not have", nameof(scm));
             }
-            if (scm.Bones.Any(bone => bone.Parent < -1 || bone.Parent >= scm.Bones.Count))
+            if (scm.SkinnedBoneCount is int skinned && (skinned < weighted || skinned > scm.Bones.Count))
             {
-                throw new ArgumentException("A bone's parent is not a bone", nameof(scm));
+                throw new ArgumentException($"The skinned bone count {skinned} must lie between the bones the vertices use ({weighted}) and the bones there are ({scm.Bones.Count}); leave it null to derive it", nameof(scm));
+            }
+            if ((scm.SkinnedBoneCount ?? weighted) > MaxSkinnedBones)
+            {
+                throw new ArgumentException($"The vertices move with {scm.SkinnedBoneCount ?? weighted} bones, the engine skins with at most {MaxSkinnedBones}", nameof(scm));
+            }
+            for (int i = 0; i < scm.Bones.Count; i++)
+            {
+                int parent = scm.Bones[i].Parent;
+                if (parent < -1 || parent >= scm.Bones.Count)
+                {
+                    throw new ArgumentException($"The parent of bone {i} is not a bone", nameof(scm));
+                }
+                if (parent >= i)
+                {
+                    throw new ArgumentException($"Bone {i} comes before its parent {parent}; the engine needs every parent first", nameof(scm));
+                }
             }
             if (scm.Bones.Any(bone => bone.Name.Contains('\0')) || scm.Information.Any(text => text.Contains('\0')))
             {

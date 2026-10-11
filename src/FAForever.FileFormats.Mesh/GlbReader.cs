@@ -14,10 +14,19 @@ namespace FAForever.FileFormats.Mesh
     /// writes it: the first primitive of the first mesh, and the skin's joints as the bones.
     /// </summary>
     /// <remarks>
-    /// The normals and tangents come back at length 1 (as the writer wrote them), the binormal as
-    /// <c>cross(normal, tangent)</c> on the side the tangent's fourth component gives. A file
-    /// without tangents, a second set of texture coordinates or a skin reads with zeros there and
-    /// no bones. The indices must be 16-bit, as the game's are.
+    /// <para>
+    /// The normals and tangents come back at length 1 (as the writer wrote them), the tangent turned
+    /// round into the game's convention (against the texture's u) and the binormal as glTF's
+    /// bitangent, <c>cross(normal, tangent) * w</c>. A file without tangents, a second set of texture
+    /// coordinates or a skin reads with zeros there and no bones. The indices must be 16-bit, as the
+    /// game's are.
+    /// </para>
+    /// <para>
+    /// The engine moves a vertex with one bone (<see cref="ScmVertex.Bone0"/>), so the joint with the
+    /// largest weight becomes <c>Bone0</c> (the first of them on a tie, the first joint without
+    /// weights) and the other three follow in the file's order. Joints may be 8 or 16 bits, weights
+    /// floats or normalised 8 or 16 bits; a joint past 255 cannot be stored.
+    /// </para>
     /// </remarks>
     public static class GlbReader
     {
@@ -98,7 +107,8 @@ namespace FAForever.FileFormats.Mesh
             float[]? tangents = Optional(gltf, attributes, "TANGENT", "VEC4");
             float[]? uv0 = Optional(gltf, attributes, "TEXCOORD_0", "VEC2");
             float[]? uv1 = Optional(gltf, attributes, "TEXCOORD_1", "VEC2");
-            byte[]? joints = attributes.TryGetProperty("JOINTS_0", out JsonElement jointsAccessor) ? gltf.Bytes(jointsAccessor.GetInt32()) : null;
+            int[]? joints = attributes.TryGetProperty("JOINTS_0", out JsonElement jointsAccessor) ? gltf.Joints(jointsAccessor.GetInt32()) : null;
+            float[]? weights = attributes.TryGetProperty("WEIGHTS_0", out JsonElement weightsAccessor) ? gltf.Weights(weightsAccessor.GetInt32()) : null;
 
             ScmVertex[] vertices = new ScmVertex[count];
             for (int i = 0; i < count; i++)
@@ -106,17 +116,18 @@ namespace FAForever.FileFormats.Mesh
                 Vector3 normal = normals is null ? Vector3.Zero : new Vector3(normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]);
                 Vector3 tangent = tangents is null ? Vector3.Zero : new Vector3(tangents[i * 4], tangents[i * 4 + 1], tangents[i * 4 + 2]);
                 float side = tangents is null ? 1 : tangents[i * 4 + 3];
+                (byte bone0, byte bone1, byte bone2, byte bone3) = joints is null ? default : BonesOf(joints, weights, i);
                 vertices[i] = new ScmVertex(
                     new Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]),
                     normal,
-                    tangent,
+                    -tangent,
                     Vector3.Cross(normal, tangent) * side,
                     uv0 is null ? Vector2.Zero : new Vector2(uv0[i * 2], uv0[i * 2 + 1]),
                     uv1 is null ? Vector2.Zero : new Vector2(uv1[i * 2], uv1[i * 2 + 1]),
-                    joints is null ? (byte)0 : joints[i * 4],
-                    joints is null ? (byte)0 : joints[i * 4 + 1],
-                    joints is null ? (byte)0 : joints[i * 4 + 2],
-                    joints is null ? (byte)0 : joints[i * 4 + 3]);
+                    bone0,
+                    bone1,
+                    bone2,
+                    bone3);
             }
 
             ushort[] indices = gltf.Indices(primitive.GetProperty("indices").GetInt32());
@@ -144,6 +155,39 @@ namespace FAForever.FileFormats.Mesh
                 Information = information,
             };
         }
+
+        /// <summary>
+        /// The four bones of a vertex: the joint with the largest weight first, then the other three in
+        /// the file's order.
+        /// </summary>
+        private static (byte, byte, byte, byte) BonesOf(int[] joints, float[]? weights, int vertex)
+        {
+            int heaviest = 0;
+            if (weights is not null)
+            {
+                for (int k = 1; k < 4; k++)
+                {
+                    if (weights[vertex * 4 + k] > weights[vertex * 4 + heaviest])
+                    {
+                        heaviest = k;
+                    }
+                }
+            }
+            Span<byte> bones = stackalloc byte[4];
+            bones[0] = Bone(joints[vertex * 4 + heaviest]);
+            for (int k = 0, next = 1; k < 4; k++)
+            {
+                if (k != heaviest)
+                {
+                    bones[next++] = Bone(joints[vertex * 4 + k]);
+                }
+            }
+            return (bones[0], bones[1], bones[2], bones[3]);
+        }
+
+        private static byte Bone(int joint) => joint <= byte.MaxValue
+            ? (byte)joint
+            : throw new GlbFormatException($"Joint {joint} is past the 256 bones a mesh of the game can name");
 
         private static float[]? Optional(Gltf gltf, JsonElement attributes, string name, string type) =>
             attributes.TryGetProperty(name, out JsonElement accessor) ? gltf.Floats(accessor.GetInt32(), type) : null;
@@ -229,7 +273,41 @@ namespace FAForever.FileFormats.Mesh
                 return values;
             }
 
-            public byte[] Bytes(int accessor) => Data(accessor, UnsignedByte, "VEC4", out int count)[..(count * 4)].ToArray();
+            /// <summary>
+            /// The joints of the vertices, four each, stored as 8 or 16 bits.
+            /// </summary>
+            public int[] Joints(int accessor)
+            {
+                int componentType = ComponentType(accessor);
+                ReadOnlySpan<byte> data = Data(accessor, componentType == UnsignedShort ? UnsignedShort : UnsignedByte, "VEC4", out int count);
+                int[] values = new int[count * 4];
+                for (int i = 0; i < values.Length; i++)
+                {
+                    values[i] = componentType == UnsignedShort ? BinaryPrimitives.ReadUInt16LittleEndian(data[(i * 2)..]) : data[i];
+                }
+                return values;
+            }
+
+            /// <summary>
+            /// The weights of the vertices, four each, stored as floats or as normalised 8 or 16 bits.
+            /// </summary>
+            public float[] Weights(int accessor)
+            {
+                int componentType = ComponentType(accessor);
+                if (componentType == Float)
+                {
+                    return Floats(accessor, "VEC4");
+                }
+                ReadOnlySpan<byte> data = Data(accessor, componentType == UnsignedShort ? UnsignedShort : UnsignedByte, "VEC4", out int count);
+                float[] values = new float[count * 4];
+                for (int i = 0; i < values.Length; i++)
+                {
+                    values[i] = componentType == UnsignedShort ? BinaryPrimitives.ReadUInt16LittleEndian(data[(i * 2)..]) / 65535f : data[i] / 255f;
+                }
+                return values;
+            }
+
+            private int ComponentType(int accessor) => Root.GetProperty("accessors")[accessor].GetProperty("componentType").GetInt32();
 
             public ushort[] Indices(int accessor)
             {

@@ -24,8 +24,18 @@ namespace FAForever.FileFormats.Mesh
     /// </para>
     /// <para>
     /// glTF wants normals and tangents of length 1: they are normalised, and a tangent of length 0
-    /// or not a number (which some exporters write) is replaced by a direction across the normal. The binormal
-    /// becomes the sign in the tangent's fourth component.
+    /// or not a number (which some exporters write) is replaced by a direction across the normal.
+    /// glTF's tangent points along the texture's u and its bitangent (<c>cross(normal, tangent) * w</c>)
+    /// up the image; the game's tangent points against u and its binormal against v, which is up the
+    /// image too. So the tangent is written turned round, and the binormal becomes the sign in the
+    /// tangent's fourth component; <see cref="GlbReader"/> turns it back.
+    /// </para>
+    /// <para>
+    /// A rest-pose inverse that is not a rotation and a translation (28 of FAF's meshes from the
+    /// Blender "SupCom-Exporter 4.0" have numbers in its fourth column, 17 a scaled 3x3) is
+    /// written as it is, so the mesh reads back the same; the engine keeps only the rotation and
+    /// the translation of it, and a glTF viewer that skins such a mesh distorts it (see the
+    /// library's guide).
     /// </para>
     /// </remarks>
     public static class GlbWriter
@@ -269,13 +279,16 @@ namespace FAForever.FileFormats.Mesh
             Usable(vertex.Normal) ? Vector3.Normalize(vertex.Normal) : Vector3.UnitY;
 
         /// <summary>
-        /// The tangent at length 1 and across the normal, with the binormal's side as its fourth
-        /// component (1 or -1): glTF's binormal is <c>cross(normal, tangent) * w</c>.
+        /// The tangent in glTF's convention: the game's tangent turned round (glTF's points along the
+        /// texture's u, the game's against it), at length 1 and across the normal, with the
+        /// binormal's side as its fourth component (1 or -1): glTF's bitangent is
+        /// <c>cross(normal, tangent) * w</c>, which then points along the game's binormal.
         /// </summary>
         public static Vector4 Tangent(ScmVertex vertex)
         {
             Vector3 normal = Normal(vertex);
-            Vector3 tangent = vertex.Tangent - Vector3.Dot(vertex.Tangent, normal) * normal;
+            Vector3 along = -vertex.Tangent;
+            Vector3 tangent = along - Vector3.Dot(along, normal) * normal;
             if (!Usable(tangent))
             {
                 tangent = Vector3.Cross(normal, MathF.Abs(normal.Y) < 0.9f ? Vector3.UnitY : Vector3.UnitX);

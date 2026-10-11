@@ -143,12 +143,33 @@ namespace FAForever.FileFormats.Mesh.Tests
         [DataRow("SeraphimNavy", PreviewShader.Seraphim, null)]
         [DataRow("NormalMappedTerrain", PreviewShader.NormalMapped, null)]
         [DataRow("UndulatingNormalMappedAlpha", PreviewShader.NormalMapped, 0x80)]
-        [DataRow("TMeshAlpha", PreviewShader.VertexNormal, 0x80)]
+        [DataRow("TMeshAlpha", PreviewShader.NormalMapped, 0x80)]
+        [DataRow("TMeshNoNormals", PreviewShader.VertexNormal, 0x23)]
         [DataRow("VertexNormal", PreviewShader.VertexNormal, 0x23)]
-        [DataRow(null, PreviewShader.VertexNormal, null)]
+        [DataRow("Simple", PreviewShader.Uef, null)]
+        [DataRow("Team", PreviewShader.Uef, null)]
+        [DataRow("", PreviewShader.Uef, null)]
+        [DataRow(null, PreviewShader.Uef, null)]
         public void ShadesAsTheGamesShader(string? name, PreviewShader shader, int? alphaRef)
         {
             Assert.AreEqual((shader, alphaRef / 255f), MeshPreview.ShaderOf(name));
+        }
+
+        [TestMethod]
+        [DataRow(null, "Unit")]
+        [DataRow("", "Unit")]
+        [DataRow("TMeshAlpha", "NormalMappedAlpha")]
+        [DataRow("TMeshNoNormals", "VertexNormal")]
+        [DataRow("TMeshNoLighting", "Flat")]
+        [DataRow("TMeshGlow", "NormalMappedGlow")]
+        [DataRow("Simple", "Unit")]
+        [DataRow("Team", "Unit")]
+        [DataRow("Aeon", "Aeon")]
+        [DataRow("NormalMappedTerrain", "NormalMappedTerrain")]
+        public void NamesTheShaderAsTheEngine(string? name, string resolved)
+        {
+            // faf-re, src/sdk/moho/mesh/ShaderDictionary.cpp
+            Assert.AreEqual(resolved, MeshPreview.ShaderName(name));
         }
     }
 }
