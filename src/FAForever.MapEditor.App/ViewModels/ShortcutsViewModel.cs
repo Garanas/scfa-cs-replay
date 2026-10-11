@@ -42,6 +42,8 @@ public sealed partial class ShortcutsViewModel(CommandRegistry commands) : Obser
         new ShortcutItem("Alt+wheel", "Turn the brush's picture 5 degrees a notch over a view", "Brushes with a picture, stamps"),
         new ShortcutItem("Q and E", "Turn the selection 15 degrees left or right (Shift: 90)", "Select tools"),
         new ShortcutItem("Q and E", "Turn what is placed: a preset, a unit, a stamp", "Place tools, presets, stamps"),
+        new ShortcutItem("1 to 9, 0", "Pick a slot of the chosen palette: its unit or preset is placed next", "Units place tool"),
+        new ShortcutItem("Tab and Shift+Tab", "The next or previous palette", "Units place tool"),
         new ShortcutItem("Arrow keys", "Move the selection an ogrid (Shift: 8)", "Select tools"),
         new ShortcutItem("R and a drag", "Turn the selection about its middle with the mouse", "Select tools"),
         new ShortcutItem("X and a drag", "Move the selection along x only", "Select tools"),

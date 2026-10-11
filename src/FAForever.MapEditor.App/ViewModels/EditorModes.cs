@@ -68,6 +68,12 @@ public sealed record MaskStackSection() : PanelSection("Mask");
 public sealed record OverlaySection() : PanelSection("Shown in the views");
 
 /// <summary>
+/// The Units mode's palettes (user story U-8): the chosen palette's ten slots, each a unit or a
+/// units preset the keys 1 to 0 pick for the place tool, and the units placed last.
+/// </summary>
+public sealed record UnitPaletteSection() : PanelSection("Palette");
+
+/// <summary>
 /// A mode: one button on the rail, its tools and its panel; its parts of the inspector.
 /// </summary>
 /// <param name="Icon">The key of its icon in <c>Styles/Icons.axaml</c>, e.g. <c>Icon.Terrain</c>.</param>
@@ -239,6 +245,8 @@ public static class EditorModes
                 new ToolDefinition("units.select", "Select", "F-11") { Make = model => new SelectTool(model, ObjectKinds.Units) },
             ],
             [
+                // the palette's slots before the tree (U-8): what the keys 1 to 0 place, then where it goes
+                new UnitPaletteSection(),
                 new UnitGroupsSection(),
                 new PresetSection(UnitPreset.Kind, "Unit presets") { EmptyText = "None yet: select units, or choose a group in the tree, and save them to place them again.", SaveLabel = "Save the selected units as a preset" },
             ],

@@ -181,7 +181,15 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
 
     public bool Key(string key, ToolModifiers modifiers)
     {
-        if (modifiers.HasFlag(ToolModifiers.Control) || modifiers.HasFlag(ToolModifiers.Alt) || key is not ("Q" or "E"))
+        if (modifiers.HasFlag(ToolModifiers.Control) || modifiers.HasFlag(ToolModifiers.Alt))
+        {
+            return false;
+        }
+        if (PaletteKey(key, modifiers))
+        {
+            return true;
+        }
+        if (key is not ("Q" or "E"))
         {
             return false;
         }
@@ -189,6 +197,31 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
         double heading = (Heading + (key == "E" ? step : -step)) % 360;
         Heading = heading < 0 ? heading + 360 : heading;
         model.Status = $"Places facing {Heading:0}°";
+        return true;
+    }
+
+    /// <summary>
+    /// The palette's keys (user story U-8): 1 to 9 and 0 pick a slot of the chosen palette (its
+    /// unit or preset is what a click places), Tab goes to the next palette and Shift+Tab to the
+    /// one before. A digit with shift is left alone.
+    /// </summary>
+    /// <param name="key">The key's name: <c>D1</c>, <c>NumPad0</c>, <c>Tab</c>.</param>
+    private bool PaletteKey(string key, ToolModifiers modifiers)
+    {
+        UnitPalettesViewModel palettes = model.UnitPalettes;
+        if (key == "Tab")
+        {
+            model.Status = palettes.Next(modifiers.HasFlag(ToolModifiers.Shift) ? -1 : 1) is string palette
+                ? $"Palette {palette}: 1 to 9 and 0 pick a slot"
+                : "The workspace has no palettes yet: Units, New palette makes one";
+            return true;
+        }
+        string digit = key.Length == 2 && key[0] == 'D' ? key[1..] : key.StartsWith("NumPad", StringComparison.Ordinal) && key.Length == 7 ? key[6..] : "";
+        if (modifiers.HasFlag(ToolModifiers.Shift) || UnitPalettes.SlotOfKey(digit) is not int index)
+        {
+            return false;
+        }
+        _ = model.RunWithAsync("units.slot", new JsonObject { ["n"] = index + 1 });
         return true;
     }
 

@@ -15,8 +15,86 @@ public sealed partial class ModePanel : UserControl
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
         // an entry of the panel's lists chosen gives the inspector back to the mode
         AddHandler(PointerPressedEvent, OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+        // a units preset's context menu: put it in a slot of the chosen palette (U-8)
+        AddHandler(ContextRequestedEvent, OnContextRequested, RoutingStrategies.Bubble);
+        AddHandler(PointerPressedEvent, OnPresetPressed, RoutingStrategies.Tunnel);
+        AddHandler(PointerMovedEvent, OnPresetDragged, RoutingStrategies.Tunnel);
+        AddHandler(PointerReleasedEvent, (_, _) => _press = null, RoutingStrategies.Tunnel);
     }
 
+    /// <summary>
+    /// A right-click on a units preset of the panel's list opens a menu that puts the preset into
+    /// one of the chosen palette's ten slots (<c>units.setSlot</c>); the other kinds of preset have no menu.
+    /// </summary>
+    private void OnContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (_model is not ViewModels.MainViewModel model || e.Source is not Avalonia.Visual source
+            || source.FindAncestorOfType<Button>(includeSelf: true) is not Button button
+            || button.DataContext is not FAForever.MapEditor.Project.Workspaces.Preset { Kind: FAForever.MapEditor.Project.Workspaces.PresetKinds.Units } preset
+            || button.ContextMenu is not null)
+        {
+            return;
+        }
+        // the button keeps the menu and opens it itself from now on; its items are made again each time it opens
+        ContextMenu menu = new ContextMenu();
+        menu.Opening += (_, _) => menu.ItemsSource = PaletteSlotItems(model, preset);
+        menu.ItemsSource = PaletteSlotItems(model, preset);
+        button.ContextMenu = menu;
+        menu.Open(button);
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// The items of a units preset's context menu: one entry, with a slot of the chosen palette
+    /// under it for each of the ten (<c>units.setSlot {slot, preset}</c>).
+    /// </summary>
+    private static List<object> PaletteSlotItems(ViewModels.MainViewModel model, FAForever.MapEditor.Project.Workspaces.Preset preset)
+    {
+        ViewModels.UnitPalettesViewModel palettes = model.UnitPalettes;
+        MenuItem into = new MenuItem { Header = palettes.Chosen is string chosen ? $"Put in a slot of {chosen}" : "Put in a palette slot", IsEnabled = palettes.HasChosen };
+        Avalonia.Automation.AutomationProperties.SetName(into, $"Put the preset {preset.Name} in a palette slot");
+        List<object> slots = [];
+        foreach (ViewModels.PaletteSlotItem slot in palettes.Slots)
+        {
+            MenuItem item = new MenuItem { Header = slot.IsEmpty ? $"Slot {slot.Key} (empty)" : $"Slot {slot.Key}: {slot.Title}" };
+            Avalonia.Automation.AutomationProperties.SetName(item, $"Put the preset {preset.Name} in palette slot {slot.Key}");
+            int number = slot.Index + 1;
+            item.Click += (_, _) => _ = model.RunWithAsync("units.setSlot", new System.Text.Json.Nodes.JsonObject { ["slot"] = number, ["preset"] = preset.Name });
+            slots.Add(item);
+        }
+        into.ItemsSource = slots;
+        return [into];
+    }
+
+
+    // the left button pressed on a units preset of the list, until it is released or the drag starts
+    private (PointerPressedEventArgs Args, Avalonia.Point At, string Preset)? _press;
+
+    private void OnPresetPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _press = e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && e.Source is Avalonia.Visual source
+            && source.FindAncestorOfType<Button>(includeSelf: true)?.DataContext is FAForever.MapEditor.Project.Workspaces.Preset { Kind: FAForever.MapEditor.Project.Workspaces.PresetKinds.Units } preset
+            ? (e, e.GetPosition(this), preset.Name)
+            : null;
+    }
+
+    /// <summary>
+    /// A units preset of the list dragged far enough goes onto a slot of the palette (U-8), which holds it.
+    /// </summary>
+    private async void OnPresetDragged(object? sender, PointerEventArgs e)
+    {
+        if (_press is not (PointerPressedEventArgs args, Avalonia.Point at, string preset))
+        {
+            return;
+        }
+        Avalonia.Vector moved = e.GetPosition(this) - at;
+        if (Math.Abs(moved.X) < 6 && Math.Abs(moved.Y) < 6)
+        {
+            return;
+        }
+        _press = null;
+        await DragDrop.DoDragDropAsync(args, MapPanels.UnitPalettePanel.PresetDrag(preset), DragDropEffects.Copy);
+    }
     /// <summary>
     /// A press on an item of a list or tree of the panel (a stratum, a height layer, a mask, a
     /// group): the inspector shows that part of the mode, over a tile chosen on the shelf and over

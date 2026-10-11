@@ -388,5 +388,32 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(2, never["value"]!.GetValue<int>(), "with the value last read");
             window.Close();
         });
+
+        [TestMethod]
+        public Task TheStateHasTheUnitPalettesAndASlotIsPickedByCommand() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            model.Assets.Use(UnitsTest.Catalog());
+            model.Presets.Use(UnitPalettesTest.Library());
+            model.SelectTool("units.place");
+
+            JsonObject palette = (JsonObject)((JsonObject)(await Send(automation, "state"))["units"]!)["palette"]!;
+            CollectionAssert.AreEqual(new[] { "Base", "Other" }, ((JsonArray)palette["names"]!).Select(name => name!.GetValue<string>()).ToArray());
+            Assert.AreEqual("Base", palette["chosen"]!.GetValue<string>());
+            Assert.IsNull(palette["chosenSlot"]);
+            JsonArray slots = (JsonArray)palette["slots"]!;
+            Assert.AreEqual(10, slots.Count);
+            Assert.AreEqual("uec1201", slots[0]!["unit"]!.GetValue<string>());
+            Assert.AreEqual("Village", slots[1]!["preset"]!.GetValue<string>());
+            Assert.AreEqual("0", slots[9]!["key"]!.GetValue<string>());
+
+            JsonObject picked = (JsonObject)(await Send(automation, "run", new JsonObject { ["id"] = "units.slot", ["n"] = 1 }))["result"]!;
+            Assert.IsTrue(picked["picked"]!.GetValue<bool>());
+            Assert.AreEqual("uec1201", model.Tool<FAForever.MapEditor.App.Tools.UnitPlaceTool>().Unit?.Key);
+            JsonObject again = (JsonObject)((JsonObject)(await Send(automation, "state"))["units"]!)["palette"]!;
+            Assert.AreEqual(0, again["chosenSlot"]!.GetValue<int>());
+            Assert.IsTrue(((JsonArray)again["slots"]!)[0]!["chosen"]!.GetValue<bool>());
+            window.Close();
+        });
     }
 }
