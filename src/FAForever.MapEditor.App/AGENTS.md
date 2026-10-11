@@ -2109,6 +2109,21 @@ User stories T-5 and T-4; the library does the work (its guide, "Height layers a
 - On an 81 km map: adding the first layer 0.2 s, a stroke's move about 30 ms, a curve edit 0.3 to
   0.7 s with the views' own reaction to the new heights (debug build).
 - Not built yet: a height per point by hand in the views, merging layers.
+- **Decals along a curve** (D2, `Commands/Decals/AlongCurve.cs`, `DecalsAlongCurveViewModel` as
+  `model.DecalsAlong`): `decals.alongCurve {layer?, key?, spacing?, width?, length?, offset?,
+  alternate?, randomTurn?, jitter?, seed?, cutOff?}` (Decals menu) places the decals once through the
+  library's `DecalEdits.AlongCurve`: one step of undo, the decals and the images of a mirrored curve
+  selected after. `layer` left out: the chosen height layer when it is a curve, else the topmost
+  curve. `key` left out: the picker (refused without a person, as every picker). Spacing, width,
+  offset and sides left out come from the section, the length from the texture's shape (as the
+  place tool), the cut-off from the place tool. `decals.chooseAlongCurve {key?}` (no menu) chooses
+  the section's decal; unlike `decals.choose` it leaves the shelf and the inspector as they are, so
+  the curve stays in view. The window: the curve inspector's section "Decals along the curve"
+  (`HeightLayerPanel`, shown for a curve layer: the decal with Choose..., Spacing (0: end to end),
+  Width, Offset, Alternate sides, Place) and the place tool's "Along a curve..." (its decal, width
+  and cut-off with the section's spacing, offset and sides; behind More at narrow widths). Span
+  `model.decals-along-curve`; `state.decalsAlongCurve` (decal, spacing, width, offset, alternate).
+  Tests: `DecalsAlongCurveTest` (library and App).
 
 ## Draft and final heightmaps
 

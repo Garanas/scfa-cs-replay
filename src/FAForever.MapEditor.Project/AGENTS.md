@@ -1056,6 +1056,19 @@ User stories T-5 and T-4 (`MapDocument.HeightStack`, `Editing/HeightLayers`, `He
   stack in memory), and their first save writes `stacks/` and removes `layers/`. An image layer's
   file is read again whenever it changes, also for a layer added since the last save
   (`EditedMap.Reload` takes such a file as another tool's, `MapProjectStore.IsImageLayerFile`).
+- **Decals along a curve** (D2, `DecalEdits.AlongCurve(document, curve, pattern, DecalsAlongCurve, out
+  added)`, `Editing/DecalEdits.AlongCurve.cs`): places decals once, as ordinary decals on top of the
+  others; nothing ties them to the curve afterwards. `PlacesAlong(line, settings)` cuts the spline
+  (`HeightCurves.Spline`) into equal pieces as close to `Spacing` as fits (left out: the decals'
+  length, end to end; at least one) and puts a decal in the middle of each, its length (`Scale.Z`)
+  along the direction of travel (heading `atan2(-dx, dz)`), moved by `Offset` (positive on the left
+  in the top view, the side a cliff raises; `Alternate` flips every other), and by `Jitter` and
+  `RandomTurn` drawn from `Random(Seed)`, three draws per decal whatever is used. The pattern (a
+  `NewDecal` or `NewDecalSet`) gives the textures, type, set and distances, its size where the
+  settings leave it out. A middle beside the map is left out. A curve with a `Symmetry` gets the
+  images of its decals by `SymmetryEdits.MirrorObjects` (the exact image of each, its width along
+  the image of its width; an image where one lies already, or beside the map, is left out), so they
+  follow the same rules as mirrored placing; `added` lists the decals along the curve, then the images.
 
 ## Draft and final heightmaps
 

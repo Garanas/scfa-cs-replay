@@ -257,6 +257,10 @@ reads again when it changes; and nothing that generates runs by itself.
       its profile, width, falloff, height and whether it is closed; the 3D view draws the curve and
       its points on the terrain, where the tool works as in the top view. Missing: a height per
       point by hand in the views.
+      Decals along a curve (D2): `decals.alongCurve` (Decals menu, the curve inspector's "Decals
+      along the curve", the place tool's "Along a curve...") places a decal or decal set along the
+      curve once, as ordinary decals with spacing, width, offset, alternating sides, random turn and
+      jitter, and the images of a mirrored curve; one step of undo.
 - [x] **T-5 Heightmap layers.** A stack of layers that add up to the heightmap: the base, sculpting,
       curves, imported results of World Machine or Gaea; per layer a way of combining (add, maximum,
       minimum, replace), strength, a mask, visible or hidden, locked. Shape the general form in the
