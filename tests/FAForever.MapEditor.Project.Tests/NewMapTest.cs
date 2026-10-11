@@ -49,7 +49,8 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(GameContent.Save(MapExporter.Export(document).Save), GameContent.Save(MapExporter.Export(imported).Save));
             Assert.AreEqual(GameContent.Scenario(MapExporter.Export(document).Scenario), GameContent.Scenario(MapExporter.Export(imported).Scenario));
             Scmap scmap = ScmapParser.Parse(File.ReadAllBytes(Path.Combine(folder, "my_new_map.scmap")));
-            Assert.AreEqual(56, scmap.Version);
+            Assert.AreEqual(60, scmap.Version);
+            Assert.IsNotNull(scmap.Skybox, "with the skybox the game would give it");
         }
 
         [TestMethod]

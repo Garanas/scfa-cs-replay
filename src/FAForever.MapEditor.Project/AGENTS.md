@@ -559,7 +559,7 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   as empty and is never written over (`MapProjectException`), so a typo does not lose the user's
   workspace.
 - **The sandbox** (`Workspaces/SandboxMap`, user story F-5): `projects/Sandbox`, a map of 256
-  ogrids with two armies and one of every kind of thing (spawns, mass, hydrocarbon, three land path
+  ogrids of version 60 with the game's default skybox, two armies and one of every kind of thing (spawns, mass, hydrocarbon, three land path
   nodes with links, an AI marker, an area, a chain, a decal in a decal group, props, civilian units
   in the group `INITIAL` of `NEUTRAL_CIVILIAN`), for trying the editor out. `SandboxMap.Build(catalog)`
   takes the stratum textures of one biome (evergreen first), a few of its props and decals and a few
@@ -592,8 +592,9 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
 
 ## New maps, heightmaps, strata and areas
 
-- `NewMap.Create(NewMapSettings)` (user story M-2) makes a version 56 map from scratch, as the
-  FAF map editor's new map: one of the game's sizes (`NewMap.Sizes`, 256 to 4096 ogrids), flat at
+- `NewMap.Create(NewMapSettings)` (user story M-2) makes a version 60 map from scratch
+  (`NewMap.ScmapVersion`; `TenLayersFrom`, 56, is the first version with ten terrain layers) with the
+  skybox the game gives a map without one (`Skyboxes.GameDefault`, below), as the FAF map editor's new map: one of the game's sizes (`NewMap.Sizes`, 256 to 4096 ogrids), flat at
   a height, water with its deep and abyss elevations (5 and 15 below unless given), the strata
   textures of a biome (`NewMap.Biomes`, static data: lower layer, four strata, the macro texture
   as upper layer), spawns on a circle, `AREA_1` over the whole map, the extra armies
@@ -1117,6 +1118,13 @@ the final starts from their output and is what the game gets.
   texture paths where the FAF map editor reads a `MidRgbColor` (empty in every map), no `Clouds7` (the
   count of cartographic decals that follows the block), and always four cirrus layers
   (`Skyboxes.WithFourCirrusLayers`, filling from `DefaultCirrusLayers`, the engine's own table; format 8).
+  **The version** (`Editing/ScmapVersions`): a map is written as 60 or 56 (`Set`; 53 keeps its version,
+  its layers differ). `Skyboxes.GameDefault(document)` is the skybox the game gives a map whose file
+  stores none (`CWldTerrainRes::Load` and `SkyDome::SetupHorizonAndCirrus` in Draiget/faf-re): over the
+  middle, the radius the half diagonal over cos 72° (1171.58 for 512 ogrids, as the game's own maps
+  store it), the bottom at the water or the lowest ground, the engine's colours, `cirrus001_512.dds`
+  and its cirrus table; new maps, the sandbox and a map switched to 60 get it, so they look as before.
+  The import keeps a map's version (an import wizard is to ask to switch to 60).
   `Skyboxes.ReadJson` reads the FAF map editor's skybox presets (`Data`, colours as r, g, b), moving texture paths
   of another map's folder into this one's when it has the file. Tests: `SkyCubeMapsTest` (with
   `assets/skyboxes/procedural-skybox.json`, 1196 sky objects).

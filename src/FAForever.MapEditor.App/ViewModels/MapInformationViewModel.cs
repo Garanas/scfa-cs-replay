@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
@@ -20,6 +21,7 @@ public sealed partial class MapInformationViewModel : ObservableObject
 {
     private ScenarioInfo? _shown;
     private TiledBuffer<Color32>? _shownPreview;
+    private int _shownScmapVersion;
 
     public MapInformationViewModel(Func<string, JsonObject, Task> run)
     {
@@ -51,7 +53,21 @@ public sealed partial class MapInformationViewModel : ObservableObject
         About = Pick("About", "name", "description", "author", "version");
         Game = Pick("Game", "type", "noRushRadius", "adaptiveMap");
         PreviewSettings = Pick("Preview", "preview");
+        FileSettings = new SettingGroup("File",
+        [
+            new ChoiceSetting("File version", "map.setScmapVersion", "version", [.. ScmapVersions.Choices.Select(choice => choice.ToString(CultureInfo.InvariantCulture))],
+                d => d.Terrain.ScmapVersion.ToString(CultureInfo.InvariantCulture), run)
+            {
+                Value = text => int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int version) ? version : text,
+                Help = "The version of the .scmap the export writes: 60 stores the skybox the game draws (Lighting mode, Skybox); 56 gets the game's default dome",
+            },
+        ]);
     }
+
+    /// <summary>
+    /// The version of the <c>.scmap</c> the map is written as (<c>map.setScmapVersion</c>).
+    /// </summary>
+    public SettingGroup FileSettings { get; }
 
     /// <summary>
     /// Every field, refreshed together; the inspector shows them in <see cref="About"/>,
@@ -156,7 +172,9 @@ public sealed partial class MapInformationViewModel : ObservableObject
         {
             _shown = null;
             _shownPreview = null;
+            _shownScmapVersion = 0;
             Settings.Refresh(null);
+            FileSettings.Refresh(null);
             Size = "";
             Players = "";
             Summary = "";
@@ -177,6 +195,11 @@ public sealed partial class MapInformationViewModel : ObservableObject
         Size = document.Width == document.Height
             ? string.Create(CultureInfo.InvariantCulture, $"{Kilometres(document.Width)}, {document.Width} by {document.Height} ogrids")
             : string.Create(CultureInfo.InvariantCulture, $"{Kilometres(document.Width)} by {Kilometres(document.Height)}, {document.Width} by {document.Height} ogrids");
+        if (document.Terrain.ScmapVersion != _shownScmapVersion)
+        {
+            _shownScmapVersion = document.Terrain.ScmapVersion;
+            FileSettings.Refresh(document);
+        }
         if (!ReferenceEquals(document.Terrain.Preview, _shownPreview))
         {
             _shownPreview = document.Terrain.Preview;

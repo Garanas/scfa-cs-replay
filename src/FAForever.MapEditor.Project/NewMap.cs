@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Numerics;
 using System.Text;
 using FAForever.FileFormats.Map;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 
@@ -94,13 +95,20 @@ namespace FAForever.MapEditor.Project
         public static IReadOnlyList<int> Sizes { get; } = [256, 512, 1024, 2048, 4096];
 
         /// <summary>
-        /// The version of the <c>.scmap</c> a new map is, made from a biome or a settings template alike.
+        /// The version of the <c>.scmap</c> a new map is, made from a biome or a settings template alike:
+        /// 60, which stores the skybox (the game's own maps are 60); a new map gets the skybox the game
+        /// would give it (<see cref="Editing.Skyboxes.GameDefault"/>).
         /// </summary>
-        public const int ScmapVersion = 56;
+        public const int ScmapVersion = 60;
 
         /// <summary>
-        /// The terrain layers a map of <see cref="ScmapVersion"/> holds: the lower layer, eight
-        /// strata and the upper layer.
+        /// The first version whose maps hold <see cref="LayerCount"/> terrain layers (53 holds six).
+        /// </summary>
+        public const int TenLayersFrom = 56;
+
+        /// <summary>
+        /// The terrain layers a map of <see cref="TenLayersFrom"/> or later holds: the lower layer,
+        /// eight strata and the upper layer.
         /// </summary>
         public const int LayerCount = 10;
 
@@ -251,7 +259,7 @@ namespace FAForever.MapEditor.Project
                 return new Spawn { Id = i + 1, Name = army, Position = place with { Y = settings.Height } };
             })];
 
-            return new MapDocument
+            return Skyboxes.WithGameDefault(new MapDocument
             {
                 Name = folder,
                 FileName = folder,
@@ -342,7 +350,7 @@ namespace FAForever.MapEditor.Project
                     Units = new UnitGroup { Name = "Units", Groups = [new UnitGroup { Name = "INITIAL" }] },
                 })],
                 Script = [.. Encoding.UTF8.GetBytes(DefaultScript.ReplaceLineEndings("\n"))],
-            };
+            });
         }
 
         /// <summary>

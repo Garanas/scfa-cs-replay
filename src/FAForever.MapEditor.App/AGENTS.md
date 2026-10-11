@@ -86,7 +86,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     `file.enableVersionControl`, `diagnostics.set`, `assets.showFile`, `paint.chooseMask`, `presets.apply`,
     `presets.delete`, `view.walkability`, `problems.show`, `markers.showKind`, `markers.select`, `markers.clear`, `markers.set`,
     `markers.setChain`, `markers.renameChain`, `markers.deleteChain`, `markers.setWeather`,
-    `markers.addOptionalGroup`, `lighting.setSkybox`, `lighting.setCirrusLayer`, `file.showCommit`, `file.restoreCommit`, `view.togglePanel`,
+    `markers.addOptionalGroup`, `lighting.setSkybox`, `lighting.setCirrusLayer`, `map.setScmapVersion`, `file.showCommit`, `file.restoreCommit`, `view.togglePanel`,
     `view.resizePanel`, `view.movePanel`, `view.returnPanel`, `view.setToolbar`, `view.addToToolbar`, `view.removeFromToolbar`,
     `view.inspectPart`, `presets.showFolder`), it selects what one
     clicks (`assets.select`) or drops what one drags (`assets.drop`), it is what a tool's click does
@@ -773,8 +773,8 @@ User stories S-4, L-1 and V-3. What the views draw follows the map's settings as
 - **The skybox** (L-1; `ViewModels/SkyboxPart.cs`, `Views/MapPanels/SkyboxPartView`, `Commands/Lighting/Skybox.cs`):
   the Lighting panel's Skybox entry under Sky (`lighting.skybox`, its detail the count of sky objects or `none`),
   the version 60 sky dome the game draws itself. The inspector says what it holds and, for a map of version 53
-  or 56 (new maps and the sandbox are 56), that the game draws its own default dome there and the export
-  leaves this one out; then the dome (horizon and zenith colours, horizon and zenith heights, position,
+  or 56 (imported ones; new maps and the sandbox are 60), that the game draws its own default dome there and
+  the export leaves this one out, with Write as version 60 for a map of 56 (`map.setScmapVersion`); then the dome (horizon and zenith colours, horizon and zenith heights, position,
   scale, subtract height, subdivisions; the help says what the engine does with each, the Map library's
   guide has the details), the sky objects' atlas, glow atlas and glow, the cirrus texture, colour and
   strength, and the four cirrus layers (frequency, speed, direction), one per channel of the cirrus
@@ -2417,8 +2417,11 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
 - **Map** (`MapParts`, `ViewModels/MapParts.cs` and `MainViewModel.MapParts.cs`, wave 14A): under Map
   Information (`map.information`; the inspector's About: name, description, author, version; Game:
   type, no-rush radius, adaptive; Preview: the preview's path, the `.scmap`'s picture, the folder,
-  size and armies; `MapInformationPart`, `Views/MapPanels/MapInformationPanel`; its detail `v3 · 4
-  players`), Size and playable area (`map.size`; it chooses the Map size tool and the tool chooses it,
+  size and armies; File: the file version, `MapInformationViewModel.FileSettings`, a choice of 60 and 56
+  that runs `map.setScmapVersion {version}` (the library's `ScmapVersions.Set`: to 60 a map without a
+  skybox gets the one the game gave it, `Skyboxes.GameDefault`, so it looks as before; to 56 the skybox
+  stays in the project; a map of 53 keeps its version; one step of undo); `MapInformationPart`,
+  `Views/MapPanels/MapInformationPanel`; its detail `v3 · 4 players`), Size and playable area (`map.size`; it chooses the Map size tool and the tool chooses it,
   as the Waves entry does; the inspector says the size now, what the tool would make and which area
   is playable, with a combo box to choose another, `map.setPlayableArea`; `MapSizePart`,
   `MapSizeDetails`, `Views/MapPanels/MapSizePanel`) and Script and files (`map.script`; Open the

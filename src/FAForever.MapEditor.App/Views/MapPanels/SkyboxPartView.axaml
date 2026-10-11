@@ -11,6 +11,9 @@
       <StackPanel Classes="stack">
         <TextBlock Classes="caption" Text="{Binding Summary}" AutomationProperties.Name="What the skybox holds" />
         <TextBlock Classes="caption warning" Text="{Binding VersionNote}" IsVisible="{Binding VersionNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <Button Content="Write as version 60" Command="{Binding WriteAsVersion60Command}"
+                IsVisible="{Binding CanWriteAsVersion60}"
+                AutomationProperties.HelpText="The map's .scmap then stores this skybox and the game draws it (the Map mode's Information, File version)" />
         <WrapPanel Classes="chips">
           <Button Content="Add a skybox" Command="{Binding AddCommand}" IsVisible="{Binding HasNoSkybox}"
                   AutomationProperties.HelpText="A plain dome made from the lighting: the horizon in the fog's colour, a deeper blue overhead" />

@@ -1,4 +1,4 @@
-<!-- The Map panel's Information in the inspector (M-1): About, Game and Preview, each field one step of undo, with the map's
+<!-- The Map panel's Information in the inspector (M-1): About, Game, File (the .scmap's version) and Preview, each field one step of undo, with the map's
      folder, size and armies and the preview the .scmap starts with. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -17,6 +17,9 @@
                    AutomationProperties.Name="Reclaim written at export"
                    ToolTip.Tip="The lobby's reclaim: the export adds up the props' reclaim (units and wrecks are not counted)" />
       </StackPanel>
+    </Border>
+    <Border Classes="group">
+      <controls:SettingList DataContext="{Binding MapInformation.FileSettings}" />
     </Border>
     <Border Classes="group">
       <StackPanel Classes="stack">

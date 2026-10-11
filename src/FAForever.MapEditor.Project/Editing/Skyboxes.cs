@@ -54,6 +54,67 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// The angle in radians where the game's default dome starts on its sphere (72°).
+        /// </summary>
+        public const float DefaultStartAngle = 1.2566371f;
+
+        /// <summary>
+        /// The skybox the game gives a map whose file stores none (versions before 58), so a map
+        /// written as version 60 with it looks as it did: <c>CWldTerrainRes::Load</c> places the dome
+        /// over the map's middle with the radius of the half diagonal divided by the cosine of the
+        /// start angle, its bottom at the water or else the lowest ground, and
+        /// <c>Moho::SkyDome::SetupHorizonAndCirrus</c> gives the colours, the horizon's size (0.1536
+        /// of the radius), the cirrus texture, colour and strength and <see cref="DefaultCirrusLayers"/>
+        /// (Draiget/faf-re, <c>CWldMap.cpp</c> and <c>SkyDome.cpp</c>). The radius agrees with the
+        /// game's own maps (1171.58 for 512 ogrids, 2343.16 for 1024). No sky objects.
+        /// </summary>
+        public static Skybox GameDefault(MapDocument document)
+        {
+            float halfWidth = document.Width / 2f;
+            float halfHeight = document.Height / 2f;
+            float radius = MathF.Sqrt(halfWidth * halfWidth + halfHeight * halfHeight) / MathF.Cos(DefaultStartAngle);
+            return new Skybox
+            {
+                Position = new Vector3(halfWidth, 0, halfHeight),
+                HorizonHeight = document.Water.HasWater ? document.Water.Elevation : LowestGround(document.Terrain.Heightmap),
+                Scale = radius,
+                SubtractHeight = DefaultStartAngle,
+                SubdivisionsAxis = 16,
+                SubdivisionsHeight = 6,
+                ZenithHeight = radius * 0.1536f,
+                HorizonColor = new Vector3(0.81f, 0.74f, 0.64f),
+                ZenithColor = new Vector3(0.26f, 0.46f, 0.59f),
+                DecalGlowMultiplier = 0.1f,
+                Albedo = "",
+                Glow = "",
+                Planets = [],
+                CirrusMultiplier = 1.8f,
+                CirrusColor = new Vector3(1.39f, 0.76f, 0.49f),
+                CirrusTexture = "/textures/environment/cirrus001_512.dds",
+                CirrusLayers = DefaultCirrusLayers,
+            };
+        }
+
+        /// <summary>
+        /// The document with <see cref="GameDefault"/> as its skybox when it has none.
+        /// </summary>
+        public static MapDocument WithGameDefault(MapDocument document) =>
+            document.Sky.Skybox is null ? document with { Sky = document.Sky with { Skybox = GameDefault(document) } } : document;
+
+        private static float LowestGround(Heightmap heightmap)
+        {
+            float lowest = float.MaxValue;
+            for (int z = 0; z <= heightmap.Height; z++)
+            {
+                for (int x = 0; x <= heightmap.Width; x++)
+                {
+                    lowest = Math.Min(lowest, heightmap.GetHeight(x, z));
+                }
+            }
+            return lowest;
+        }
+
+        /// <summary>
         /// The cirrus layers the game gives a map whose file stores no skybox (versions before 58):
         /// <c>Moho::SkyDome::SetupHorizonAndCirrus</c> copies them from a table in the executable
         /// (0x00F5AE00, as Draiget/faf-re reads it).
