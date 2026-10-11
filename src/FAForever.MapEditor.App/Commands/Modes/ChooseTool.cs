@@ -13,7 +13,13 @@ public sealed class ChooseToolHandler(MainViewModel model) : IRequestHandler<Cho
 {
     public Task Handle(ChooseTool request, CancellationToken cancellationToken)
     {
+        string status = model.Status;
         model.SelectTool(request.Id);
+        // the status line says the tool, as choosing a mode does; unless choosing it said something of its own
+        if (model.Status == status)
+        {
+            model.Status = $"{model.SelectedMode!.Definition.Title} mode: {model.ActiveTool?.Definition.Title ?? "no tool"}";
+        }
         return Task.CompletedTask;
     }
 }

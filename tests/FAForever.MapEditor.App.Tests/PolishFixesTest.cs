@@ -78,6 +78,19 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public Task ChoosingAToolSaysItInTheStatusLine() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            Assert.IsTrue((await model.Commands.RunAsync("units.mode", null, interactive: false)).Ran);
+
+            await Send(automation, "click", new JsonObject { ["label"] = "Select", ["under"] = "Tools" });
+
+            Assert.AreEqual("units.select", model.ActiveTool?.Definition.Id);
+            Assert.AreEqual("Units mode: Select", model.Status, "not the tool chosen before");
+            window.Close();
+        });
+
+        [TestMethod]
         public void APathNodesPlaceIsSaidToATenth()
         {
             Assert.AreEqual("x 406.3, z 283.2", Commands.AddGeneratedPathNodeHandler.Place(406.3352, 283.2033));
