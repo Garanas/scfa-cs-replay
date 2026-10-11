@@ -134,9 +134,9 @@ public static class EditorModes
                 new ToolDefinition("terrain.ruler", "Ruler", "V-5") { Make = model => new RulerTool(model) },
             ],
             [
+                new HeightLayersSection(),
                 new PresetSection(BrushPreset.Kind, "Brush presets") { EmptyText = BrushPresetsEmpty, SaveLabel = "Save the brush's settings as a preset", ForTools = ["terrain.sculpt", "terrain.curve", "terrain.types", "terrain.walkability", "terrain.ruler"] },
                 new PresetSection(BrushPreset.StampKind, "Stamp presets") { EmptyText = "None yet: save the stamp's picture, size, height, mode, base and edge to press it again.", SaveLabel = "Save the stamp's settings as a preset", ForTools = ["terrain.stamp"] },
-                new HeightLayersSection(),
             ],
             [new HeightLayerSection()]),
 
@@ -221,9 +221,9 @@ public static class EditorModes
             [
                 new PropPlacementSection(),
                 new PropPaletteSection(),
-                new PresetSection(PropsViewModel.PaletteKind, "Palettes") { EmptyText = "None yet: save the painting palette to paint with the same props again.", SaveLabel = "Save the palette as a preset" },
                 new PropRulesSection(),
                 new PropReclaimSection(),
+                new PresetSection(PropsViewModel.PaletteKind, "Palettes") { EmptyText = "None yet: save the painting palette to paint with the same props again.", SaveLabel = "Save the palette as a preset" },
             ],
             [new PropRuleSection()]),
 

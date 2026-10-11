@@ -2246,6 +2246,9 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   checked as the setup checks them) and keeps the assets: other archives make them out of date, and
   the page says so. `state.workspaceSettings`. Never press Convert again in a scratch workspace whose
   `assets` is a link to another's.
+- **Presets at the bottom**: every mode's preset sections are the last of its panel (the Terrain
+  mode's brush and stamp presets after the height layers, the Props mode's palettes after the rules
+  and reclaim); a new section goes before them (`PanelsAndShellTest.EveryModesPresetsAreAtTheBottomOfItsPanel`).
 - **Presets in one folder**: `presets/` with plural kinds (`brushes`, `stamps`, `lighting`, `water`,
   `sky`, `props`, `units`, `markers`, `selections`, `maps`: the map templates). `PresetsViewModel.Open`
   moves a workspace's old folders once (`PresetFolders.Move`: `brush`, `props-palette`, `selection`,
