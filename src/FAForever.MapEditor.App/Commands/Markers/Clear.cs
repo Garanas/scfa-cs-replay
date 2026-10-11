@@ -61,15 +61,16 @@ public sealed class ClearMarkersHandler(MainViewModel model, CurrentEdit edit, I
     }
 
     /// <summary>
-    /// The armies the map had before and has no longer, in the map's order.
+    /// The armies the map had before and has no longer, by number (as the Map mode lists them).
     /// </summary>
-    internal static string[] RemovedArmies(MapDocument before, MapDocument after) =>
-        before.Armies == after.Armies ? [] : [.. before.Armies.Select(army => army.Name).Where(name => after.FindArmy(name) is null)];
+    public static string[] RemovedArmies(MapDocument before, MapDocument after) =>
+        before.Armies == after.Armies ? []
+        : [.. before.Armies.Select(army => army.Name).Where(name => after.FindArmy(name) is null).OrderBy(name => MapPartsViewModel.NumberOf(name) ?? int.MaxValue)];
 
     /// <summary>
     /// <c>the army ARMY_1</c>, <c>the armies ARMY_1 and ARMY_2</c>.
     /// </summary>
-    internal static string Armies(IReadOnlyList<string> names) => names.Count == 1
+    public static string Armies(IReadOnlyList<string> names) => names.Count == 1
         ? $"the army {names[0]}"
         : $"the armies {string.Join(", ", names.Take(names.Count - 1))} and {names[^1]}";
 }

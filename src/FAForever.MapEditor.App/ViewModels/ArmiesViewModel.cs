@@ -318,7 +318,7 @@ public sealed partial class ArmiesViewModel : ObservableObject
             {
                 Names = [.. armies.Select(army => army.Name)];
             }
-            RefreshTree(armies);
+            RefreshTree(armies, document?.Scenario.PlayableArmies ?? []);
             RefreshRows(document);
         }
         finally
@@ -351,7 +351,8 @@ public sealed partial class ArmiesViewModel : ObservableObject
     /// </summary>
     public void ChooseArmyWhenShown(string army) => _chooseArmy = army;
 
-    private void RefreshTree(ImmutableArray<Army> armies)
+    // the tree lists the armies as the Map mode's list does: the playable ones by number, then the extra ones
+    private void RefreshTree(ImmutableArray<Army> armies, ImmutableArray<string> playable)
     {
         foreach (GroupNode node in Tree.SelectMany(node => node.SelfAndBelow()))
         {
@@ -370,7 +371,10 @@ public sealed partial class ArmiesViewModel : ObservableObject
         {
             IsExpanded = _expanded.Contains($"{army}:{UnitGroupEdits.PathText(path)}"),
         };
-        GroupNode[] tree = [.. armies.Select(army => Node(army.Name, [], army.Units))];
+        GroupNode[] tree = [.. armies
+            .OrderBy(army => playable.Contains(army.Name) ? 0 : 1)
+            .ThenBy(army => playable.Contains(army.Name) ? MapPartsViewModel.NumberOf(army.Name) ?? int.MaxValue : 0)
+            .Select(army => Node(army.Name, [], army.Units))];
         string key = string.Join("|", tree.SelectMany(node => node.SelfAndBelow()).Select(node => $"{node.Key}={node.Count}:{string.Join(",", node.Units.Select(unit => unit.Name))}"));
         if (key == _treeKey)
         {

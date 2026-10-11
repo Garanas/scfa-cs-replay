@@ -142,9 +142,9 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(land + 1, (await Run(model, "markers.clear", new JsonObject { ["kind"] = "path" })).Result);
             Assert.AreEqual(0, model.ShownDocument!.Markers.PathNodes.Length);
             int spawns = model.ShownDocument.Markers.Spawns.Length;
-            Assert.AreEqual(spawns, (await Run(model, "markers.clear", new JsonObject { ["kind"] = "spawns" })).Result);
+            Assert.AreEqual(spawns, (await Run(model, "markers.clear", new JsonObject { ["kind"] = "spawns", ["confirm"] = true })).Result);
             Assert.AreEqual(0, model.ShownDocument!.Scenario.PlayableArmies.Length);
-            Assert.AreEqual($"Removed {spawns} spawns", model.Status);
+            StringAssert.StartsWith(model.Status, $"Removed {spawns} spawns and the armies ARMY_1, ARMY_2");
         }
 
         [TestMethod]
@@ -281,11 +281,11 @@ namespace FAForever.MapEditor.App.Tests
             await Task.Yield();
             AiMarker first = (AiMarker)model.ShownDocument!.Find(model.Selection.Items.Single())!;
             Assert.IsTrue(first.IsBlank);
-            Assert.AreEqual("Blank Marker 01", first.Name);
+            Assert.AreEqual("Blank Marker 00", first.Name);
             Assert.AreEqual(30f, first.Position.X);
             Assert.AreEqual(41f, first.Position.Z);
             CommandRun second = await Run(model, "markers.place", new JsonObject { ["kind"] = "blank", ["x"] = 50, ["z"] = 50 });
-            Assert.AreEqual("Blank Marker 02", ((JsonObject)second.Result!)["name"]!.GetValue<string>());
+            Assert.AreEqual("Blank Marker 01", ((JsonObject)second.Result!)["name"]!.GetValue<string>());
             Assert.AreEqual(ais, model.ShownDocument!.CountKind(MarkerKinds.AiMarkers), "not counted as AI markers");
             Assert.AreEqual("2", model.Markers.Parts.Find("markers.kind.blank")!.Detail);
 

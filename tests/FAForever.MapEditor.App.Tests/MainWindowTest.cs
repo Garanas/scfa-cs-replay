@@ -909,7 +909,9 @@ namespace FAForever.MapEditor.App.Tests
 
             TreeView tree = window.GetVisualDescendants().OfType<TreeView>().Single(view => Avalonia.Automation.AutomationProperties.GetName(view) == "Armies and their unit groups");
             Assert.IsTrue(tree.IsEffectivelyVisible, "the Units mode's panel shows the armies");
-            CollectionAssert.Contains(tree.GetVisualDescendants().OfType<TextBlock>().Select(block => block.Text).ToList(), "NEUTRAL_CIVILIAN (1)");
+            List<string?> texts = [.. tree.GetVisualDescendants().OfType<TextBlock>().Select(block => block.Text)];
+            CollectionAssert.Contains(texts, "NEUTRAL_CIVILIAN");
+            CollectionAssert.Contains(texts, "1 unit", "the count as the entry's detail");
             window.Close();
         });
 

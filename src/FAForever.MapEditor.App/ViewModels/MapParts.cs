@@ -258,8 +258,10 @@ public sealed class MapPartsViewModel
         .OrderBy(army => army.Playable ? 0 : 1)
         .ThenBy(army => army.Playable ? NumberOf(army.Name) ?? int.MaxValue : 0);
 
-    // the number an army's name ends with: ARMY_12 is 12
-    private static int? NumberOf(string name)
+    /// <summary>
+    /// The number an army's name ends with: <c>ARMY_12</c> is 12; null for none.
+    /// </summary>
+    public static int? NumberOf(string name)
     {
         int start = name.Length;
         while (start > 0 && char.IsAsciiDigit(name[start - 1]))
