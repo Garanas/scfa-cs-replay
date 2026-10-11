@@ -7,7 +7,7 @@ namespace FAForever.FileFormats.Replay.Tests
     public class ReplayInputFormatterTest
     {
         private static CommandData Command(CommandType type, CommandTarget target, string blueprintId = "", bool queued = false)
-            => new(1, type, target, new CommandFormation.NoFormation(), blueprintId, new LuaData.Nil(), ClearQueue: !queued, 0, 0, 0, 0, 0, 0);
+            => new(1, type, target, new CommandFormation.NoFormation(), blueprintId, new LuaData.Nil(), ClearQueue: !queued, -1, -1, new CommandTarget.None(), [], 1, 1);
 
         [TestMethod]
         public void DescribesMoveCommand()
@@ -91,6 +91,21 @@ namespace FAForever.FileFormats.Replay.Tests
         public void VerbTest(CommandType type, string expected)
         {
             Assert.AreEqual(expected, ReplayInputFormatter.Verb(type));
+        }
+
+        [TestMethod]
+        public void DescribesTheCheatAndDebugMessages()
+        {
+            Assert.AreEqual("Warp entity #1048576 to (125, 191)", ReplayInputFormatter.Describe(
+                new ReplayInput.WarpEntity(0, 0, 0x00100000, new ReplayOrientation(0.88f, 0f, 0.47f, 0f), 125.07f, 17.89f, 190.54f)));
+            Assert.AreEqual("Set 2 cells of command #5 → (100, 300)", ReplayInputFormatter.Describe(
+                new ReplayInput.SetCommandCells(0, 0, 5, [new CommandCell(1, 2), new CommandCell(3, 4)], 100f, 20f, 300f)));
+            Assert.AreEqual("Lua: SetArmyStats", ReplayInputFormatter.Describe(
+                new ReplayInput.ExecuteLuaInSim(0, 0, "SetArmyStats", new LuaData.Nil())));
+            Assert.AreEqual("Unknown message 42 (3 bytes)", ReplayInputFormatter.Describe(
+                new ReplayInput.Unknown(0, 0, (ReplayInputType)42, [1, 2, 3])));
+            Assert.AreEqual("Unreadable WarpEntity message: too short", ReplayInputFormatter.Describe(
+                new ReplayInput.Error(0, 0, ReplayInputType.WarpEntity, new InvalidDataException("too short"), [])));
         }
     }
 }

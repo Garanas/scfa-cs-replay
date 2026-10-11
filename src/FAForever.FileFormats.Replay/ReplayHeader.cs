@@ -8,9 +8,10 @@ namespace FAForever.FileFormats.Replay
     /// </summary>
     /// <param name="GameVersion">The game version, e.g. "Supreme Commander v1.50.3701".</param>
     /// <param name="ReplayVersion">The replay format version, e.g. "Replay v1.9".</param>
-    /// <param name="PathToScenario">The path to the scenario file of the map that was played.</param>
+    /// <param name="MapPath">The path of the map file (<c>.scmap</c>) that was played, e.g.
+    /// "/maps/SCMP_009/SCMP_009.scmap" (the engine's <c>mMapName</c>). Its folder names the map.</param>
     /// <param name="Scenario">The scenario: map information and lobby options.</param>
-    /// <param name="Clients">The clients (players and observers) connected to the game. The index in this array is the source id of replay inputs.</param>
+    /// <param name="Clients">The command sources: the players in army order, then the observers. The index in this array is the source id of replay inputs; AI and civilian armies have no source.</param>
     /// <param name="Mods">The mods that were active, as raw Lua tables (name, uid, version, ...).</param>
     /// <param name="Armies">The armies of the game with their lobby options (faction, team, rating, ...). Linked to <paramref name="Clients"/> via <see cref="ReplayPlayerOptions.SourceId"/>.</param>
     /// <param name="CheatsEnabled">Whether cheats were enabled.</param>
@@ -18,7 +19,7 @@ namespace FAForever.FileFormats.Replay
     public record ReplayHeader(
         string GameVersion,
         string ReplayVersion,
-        string PathToScenario,
+        string MapPath,
         ReplayScenario Scenario,
         ReplaySource[] Clients,
         LuaData[] Mods,

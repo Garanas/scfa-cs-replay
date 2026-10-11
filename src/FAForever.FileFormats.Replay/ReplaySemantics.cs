@@ -137,8 +137,8 @@ namespace FAForever.FileFormats.Replay
                         key = "Unknown";
                         break;
 
-                    case ReplayInput.UpdateCommandLuaParameters:
-                        key = "UpdateCommandLuaParameters";
+                    case ReplayInput.SetCommandCells:
+                        key = "SetCommandCells";
                         break;
 
                     case ReplayInput.UpdateCommandTarget:

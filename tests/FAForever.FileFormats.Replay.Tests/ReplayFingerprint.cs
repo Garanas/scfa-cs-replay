@@ -52,7 +52,7 @@ internal static class ReplayFingerprint
     {
         builder.Append(header.GameVersion).Append('|')
             .Append(header.ReplayVersion).Append('|')
-            .Append(header.PathToScenario).Append('|')
+            .Append(header.MapPath).Append('|')
             .Append(header.CheatsEnabled).Append('|')
             .Append(header.Seed).Append('\n');
 
@@ -70,7 +70,7 @@ internal static class ReplayFingerprint
 
         foreach (ReplaySource client in header.Clients)
         {
-            builder.Append("Client ").Append(client.PlayerName).Append('|').Append(client.PlayerId).Append('\n');
+            builder.Append("Client ").Append(client.PlayerName).Append('|').Append(client.PauseAllowance).Append('\n');
         }
 
         foreach (LuaData mod in header.Mods)
@@ -91,14 +91,53 @@ internal static class ReplayFingerprint
     private static void AppendInput(StringBuilder builder, ReplayInput input)
     {
         // Inputs are plain data records: their generated ToString covers every field,
-        // except the contents of Lua tables, which are appended separately.
-        builder.Append(input);
+        // except the contents of Lua tables, cell lists and byte arrays, which are appended
+        // separately. An error is rendered without the exception's stack trace.
+        if (input is ReplayInput.Error error)
+        {
+            builder.Append("Error { Tick = ").Append(error.Tick).Append(", SourceId = ").Append(error.SourceId)
+                .Append(", Type = ").Append((int)error.Type).Append(", Exception = ").Append(error.Exception.GetType().Name)
+                .Append(": ").Append(error.Exception.Message).Append(" }");
+        }
+        else
+        {
+            builder.Append(input);
+        }
+
+        byte[]? data = input switch
+        {
+            ReplayInput.Unknown unknown => unknown.Data,
+            ReplayInput.Error failed => failed.Data,
+            _ => null,
+        };
+
+        if (data is not null)
+        {
+            builder.Append(" Data=").Append(Convert.ToHexString(data));
+        }
+
+        IReadOnlyList<CommandCell>? cells = input switch
+        {
+            ReplayInput.IssueCommand command => command.Data.Cells,
+            ReplayInput.IssueFactoryCommand command => command.Data.Cells,
+            ReplayInput.SetCommandCells setCells => setCells.Cells,
+            _ => null,
+        };
+
+        if (cells is { Count: > 0 })
+        {
+            builder.Append(" Cells=");
+            foreach (CommandCell cell in cells)
+            {
+                builder.Append(cell.X).Append(';').Append(cell.Z).Append(',');
+            }
+        }
 
         LuaData? lua = input switch
         {
             ReplayInput.IssueCommand command => command.Data.LuaParameters,
             ReplayInput.IssueFactoryCommand command => command.Data.LuaParameters,
-            ReplayInput.UpdateCommandLuaParameters update => update.LuaParameters,
+            ReplayInput.ExecuteLuaInSim execute => execute.Arguments,
             ReplayInput.SimCallback callback => callback.LuaParameters,
             _ => null,
         };

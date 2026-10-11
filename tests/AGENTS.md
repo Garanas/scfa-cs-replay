@@ -41,6 +41,8 @@ path must match the file name exactly (`balthazar-01.SCFAReplay`, not `.scfarepl
 - Prefer real data over hand-made fixtures: `[DataRow]` over the files in `assets/`, read by their
   relative path (`"assets/faforever/23225104.fafreplay"`), since the assets sit next to the dll.
 - Tests never touch the network or the user's machine; everything they read is in `assets/`.
+- A replay message no asset holds (or a broken one) is written by hand with
+  `ReplayStreamBuilder` (replay tests): a header in the engine's layout, then framed messages.
 - New asset: drop the file under `assets/` (it is copied automatically), keep it small, and say in
   the commit where it came from (vault replay id, or FA repo path for blueprints). The benchmarks
   keep their own copies; they do not read these.
