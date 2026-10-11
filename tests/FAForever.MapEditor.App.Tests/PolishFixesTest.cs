@@ -122,6 +122,37 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public Task TheTopViewsBackdropIsOneColourBesideTheMapAtAWideWindow() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, _) = await Open();
+            window.Width = 2560;
+            window.Height = 1369;
+            Assert.IsTrue(model.ShowCamera, "the 3D camera's footprint is drawn");
+            // a camera low over the middle sees far beyond the map's edges
+            Assert.IsTrue((await model.Commands.RunAsync("camera.look", new JsonObject { ["x"] = 128, ["z"] = 128, ["distance"] = 300, ["pitch"] = 15, ["yaw"] = 0 }, interactive: false)).Ran);
+            Dispatcher.UIThread.RunJobs();
+            Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Dispatcher.UIThread.RunJobs();
+
+            using MemoryStream png = new MemoryStream(HeadlessApp.Capture(window.MapView));
+            using Avalonia.Media.Imaging.Bitmap picture = new Avalonia.Media.Imaging.Bitmap(png);
+            int width = picture.PixelSize.Width;
+            int height = picture.PixelSize.Height;
+            uint[] pixels = new uint[width * height];
+            unsafe
+            {
+                fixed (uint* start = pixels)
+                {
+                    picture.CopyPixels(new Avalonia.PixelRect(0, 0, width, height), (nint)start, pixels.Length * 4, width * 4);
+                }
+            }
+            uint corner = pixels[2 * width + 2];
+            Assert.AreEqual(corner, pixels[height / 2 * width + 2], "left of the map: the backdrop, no footprint of the camera over it (issue 31)");
+            Assert.AreEqual(corner, pixels[height / 2 * width + width - 3], "and right of it");
+            window.Close();
+        });
+
+        [TestMethod]
         public void APathNodesPlaceIsSaidToATenth()
         {
             Assert.AreEqual("x 406.3, z 283.2", Commands.AddGeneratedPathNodeHandler.Place(406.3352, 283.2033));

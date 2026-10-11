@@ -1355,8 +1355,9 @@ public sealed partial class HeightmapView : Control
 
 
     /// <summary>
-    /// What the 3D view's camera sees of the ground, the camera itself as a dot, and a line to the
-    /// place it looks at.
+    /// What the 3D view's camera sees of the map's ground (cut to the map: beyond its edge the
+    /// footprint would lie over the view's backdrop like a grey slab), the camera itself as a dot,
+    /// and a line to the place it looks at.
     /// </summary>
     private void DrawCamera(DrawingContext context, Overlay overlay, EditorCamera camera)
     {
@@ -1371,9 +1372,15 @@ public sealed partial class HeightmapView : Control
             }
             figure.EndFigure(true);
         }
-        using (context.PushClip(new Rect(Bounds.Size)))
+        Rect map = _model?.ShownDocument is MapDocument document
+            ? new Rect(MapToControl(0, 0), MapToControl(document.Width, document.Height)).Intersect(new Rect(Bounds.Size))
+            : new Rect(Bounds.Size);
+        using (context.PushClip(map))
         {
             context.DrawGeometry(overlay.Fill, overlay.Stroke, footprint);
+        }
+        using (context.PushClip(new Rect(Bounds.Size)))
+        {
             System.Numerics.Vector3 eye = camera.Eye;
             (float x, float z, _, _, _) = camera.Now;
             Point at = MapToControl(eye.X, eye.Z);

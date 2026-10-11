@@ -133,7 +133,8 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   (mask, walkability, regions) belong to the mode they were turned on in
   (`MainViewModel.FollowModeTints`): leaving a mode keeps what it showed, entering one shows what it
   showed when it was left (none the first time), so the Paint mode's mask never lies over the
-  Lighting mode's views. The other overlays stay as they are in every mode (`ModeTintsTest`).
+  Lighting mode's views. The 3D camera's footprint in the top view is cut to the map, so beside the
+  map the view's backdrop stays one colour at any width. The other overlays stay as they are in every mode (`ModeTintsTest`).
 - **What the views draw again, by event**: `DocumentChanged` when the shown document changes
   (an edit, undo, reload, a dab, a stroke thrown away): the top view updates the tiles that
   changed, the 3D view uploads them. `OverlaysChanged` (an overlay turned on or off),
