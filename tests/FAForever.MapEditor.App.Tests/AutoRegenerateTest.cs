@@ -167,6 +167,8 @@ namespace FAForever.MapEditor.App.Tests
             // without a block: walkability, connected regions and masks from rules
             model.OpenNewMap(Project.NewMap.Create(new Project.NewMapSettings { Size = 256 }));
             CollectionAssert.AreEquivalent(new[] { "walkability", "navigationMesh", "masksFromRules" }, model.Map!.Document.Procedural.AutoGenerate.ToArray());
+            CollectionAssert.AreEquivalent(new[] { "walkability", "navigationMesh" }, model.AutoGeneration.Hidden.ToArray(),
+                "masks from rules on a map without rules wait for their own command, as Everything leaves them");
 
             // this map's settings become the workspace's
             await Run(model, "generate.auto", new JsonObject { ["id"] = "navigationMesh", ["on"] = false });

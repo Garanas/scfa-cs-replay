@@ -100,5 +100,32 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(model.Navigation.Mesh!.RegionAt(model.Navigation.Layer, 20.5f, 20.5f)?.Id, model.Navigation.ChosenRegion);
             window.Close();
         });
+
+        [TestMethod]
+        public Task TheAutoSwitchInTheViewsBarTurnsRegeneratingOnTheirOwnOffAndSaysWhatWaits() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            Avalonia.Controls.Primitives.ToggleButton chip = Named<Avalonia.Controls.Primitives.ToggleButton>(window, "Regenerate results on their own");
+            Assert.IsTrue(chip.IsChecked);
+            TextBlock text = Named<TextBlock>(window, "What regenerates on its own now");
+            Assert.AreEqual("Auto", text.Text);
+
+            Click(window, chip);
+
+            Assert.IsFalse(model.RegenerateOnTheirOwn);
+            Assert.IsFalse(chip.IsChecked);
+            Assert.AreEqual("Auto off", text.Text);
+            StringAssert.Contains(Avalonia.Controls.ToolTip.GetTip(chip) as string, "only when asked");
+
+            // on again, with a result shown and out of date: it says one waits
+            Click(window, chip);
+            model.ShowNavigation = true;
+            await model.Commands.TryRunAsync("generate.auto", new System.Text.Json.Nodes.JsonObject { ["id"] = "navigationMesh", ["on"] = true }, interactive: false);
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual("Auto: 1 waiting", text.Text);
+            await Until(() => !model.AutoGeneration.IsPending("navigationMesh"));
+            Assert.AreEqual("Auto", text.Text);
+            window.Close();
+        });
     }
 }
