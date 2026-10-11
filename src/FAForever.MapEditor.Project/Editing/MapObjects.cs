@@ -130,7 +130,9 @@ namespace FAForever.MapEditor.Project.Editing
         /// screen become distances on the map with it.</param>
         /// <param name="include">Whether a thing may be picked at all (the editor leaves out what it
         /// hides, such as the decals of a hidden group); null for every thing.</param>
-        public static ObjectRef? Nearest(this MapDocument document, float x, float z, float ogridsPerPixel, ObjectKinds kinds, Func<ObjectRef, bool>? include = null, MarkerKinds markers = MarkerKinds.All)
+        /// <param name="footprints">What a structure takes up (<see cref="UnitFootprints"/>): a click inside
+        /// its rectangle, turned by its heading, picks it; null picks every unit by its centre.</param>
+        public static ObjectRef? Nearest(this MapDocument document, float x, float z, float ogridsPerPixel, ObjectKinds kinds, Func<ObjectRef, bool>? include = null, MarkerKinds markers = MarkerKinds.All, UnitFootprints? footprints = null)
         {
             ObjectRef? best = null;
             float bestScore = float.MaxValue;
@@ -170,7 +172,21 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 foreach (PlacedUnit unit in document.AllUnits())
                 {
-                    Consider(ObjectRef.Unit(unit.Unit.Name), Distance(unit.Unit.Position), 7);
+                    float centre = Distance(unit.Unit.Position);
+                    if (footprints?.Invoke(unit.Unit.Blueprint) is (double sizeX, double sizeZ) && InsideFootprint(unit.Unit, sizeX, sizeZ, x, z))
+                    {
+                        // inside a structure's footprint: it wins over what the pixels reach, the nearer centre first
+                        (float halfX, float halfZ) = FootprintHalves(sizeX, sizeZ);
+                        ObjectRef thing = ObjectRef.Unit(unit.Unit.Name);
+                        float score = 0.25f * centre / MathF.Max(0.001f, MathF.Sqrt(halfX * halfX + halfZ * halfZ));
+                        if (score < bestScore && (include is null || include(thing)))
+                        {
+                            best = thing;
+                            bestScore = score;
+                        }
+                        continue;
+                    }
+                    Consider(ObjectRef.Unit(unit.Unit.Name), centre, 7);
                 }
             }
             if (kinds.HasFlag(ObjectKinds.Areas))
@@ -202,17 +218,78 @@ namespace FAForever.MapEditor.Project.Editing
         /// mouse selects them; the corners may come in any order.
         /// </summary>
         /// <param name="markers">The kinds of markers among them (those the views show, user story R-6).</param>
-        public static IEnumerable<ObjectRef> Inside(this MapDocument document, float x0, float z0, float x1, float z1, ObjectKinds kinds, MarkerKinds markers = MarkerKinds.All)
+        /// <param name="footprints">What a structure takes up (<see cref="UnitFootprints"/>): a box that
+        /// touches its rectangle takes it in; null takes a unit by its centre.</param>
+        public static IEnumerable<ObjectRef> Inside(this MapDocument document, float x0, float z0, float x1, float z1, ObjectKinds kinds, MarkerKinds markers = MarkerKinds.All, UnitFootprints? footprints = null)
         {
             (float left, float right) = (MathF.Min(x0, x1), MathF.Max(x0, x1));
             (float top, float bottom) = (MathF.Min(z0, z1), MathF.Max(z0, z1));
             foreach (ObjectRef thing in document.All(kinds, markers))
             {
-                if (document.PlaceOf(thing) is Vector3 place && place.X >= left && place.X <= right && place.Z >= top && place.Z <= bottom)
+                if (document.PlaceOf(thing) is not Vector3 place)
+                {
+                    continue;
+                }
+                if (place.X >= left && place.X <= right && place.Z >= top && place.Z <= bottom)
+                {
+                    yield return thing;
+                }
+                else if (footprints is not null && thing.Kind == ObjectKind.Unit && document.Find(thing) is PlacedUnit unit
+                    && footprints(unit.Unit.Blueprint) is (double sizeX, double sizeZ) && FootprintReaches(unit.Unit, sizeX, sizeZ, left, top, right, bottom))
                 {
                     yield return thing;
                 }
             }
+        }
+
+        /// <summary>
+        /// What a structure takes up in ogrids, along x and z when it is not turned; null for a unit
+        /// that is picked by its centre (the mobile ones, and any whose blueprint is unknown).
+        /// </summary>
+        public delegate (double SizeX, double SizeZ)? UnitFootprints(string blueprint);
+
+        /// <summary>
+        /// The corners of a unit's footprint (x, z), in order around it, turned by its heading
+        /// (clockwise in the top view) about its centre; sides under 1 ogrid count as 1.
+        /// </summary>
+        public static Vector2[] FootprintCorners(Unit unit, double sizeX, double sizeZ)
+        {
+            (float hx, float hz) = FootprintHalves(sizeX, sizeZ);
+            (float sin, float cos) = MathF.SinCos(unit.Orientation.Y);
+            Vector2 centre = new Vector2(unit.Position.X, unit.Position.Z);
+            Vector2 u = new Vector2(hx * cos, hx * sin);
+            Vector2 v = new Vector2(-hz * sin, hz * cos);
+            return [centre - u - v, centre + u - v, centre + u + v, centre - u + v];
+        }
+
+        private static (float X, float Z) FootprintHalves(double sizeX, double sizeZ) => (MathF.Max(1, (float)sizeX) / 2, MathF.Max(1, (float)sizeZ) / 2);
+
+        private static bool InsideFootprint(Unit unit, double sizeX, double sizeZ, float x, float z) =>
+            Contains(FootprintCorners(unit, sizeX, sizeZ), new Vector2(x, z));
+
+        // whether a footprint and a box (axes parallel to the map's) share a point: the corners' span against the box, then the box's corners against the footprint
+        private static bool FootprintReaches(Unit unit, double sizeX, double sizeZ, float left, float top, float right, float bottom)
+        {
+            Vector2[] corners = FootprintCorners(unit, sizeX, sizeZ);
+            float minX = corners.Min(c => c.X), maxX = corners.Max(c => c.X), minZ = corners.Min(c => c.Y), maxZ = corners.Max(c => c.Y);
+            if (maxX < left || minX > right || maxZ < top || minZ > bottom)
+            {
+                return false;
+            }
+            // a turned footprint's span can overlap the box where the footprint itself does not: separate on the footprint's own axes
+            Vector2 u = Vector2.Normalize(corners[1] - corners[0]);
+            Vector2 v = Vector2.Normalize(corners[3] - corners[0]);
+            Vector2[] box = [new Vector2(left, top), new Vector2(right, top), new Vector2(right, bottom), new Vector2(left, bottom)];
+            foreach (Vector2 axis in (ReadOnlySpan<Vector2>)[u, v])
+            {
+                float a0 = corners.Min(c => Vector2.Dot(c, axis)), a1 = corners.Max(c => Vector2.Dot(c, axis));
+                float b0 = box.Min(c => Vector2.Dot(c, axis)), b1 = box.Max(c => Vector2.Dot(c, axis));
+                if (a1 < b0 || b1 < a0)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         /// <summary>
