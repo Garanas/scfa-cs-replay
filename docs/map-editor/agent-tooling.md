@@ -2,7 +2,7 @@
 
 Every agent of the waves ([agent-waves.md](agent-waves.md)) ended its report with a Tooling
 section: did it have enough to test its work through tests and by running the editor, and what was
-missing, awkward or slow. This is that list, in the order the wishes came in (66 items by wave 12),
+missing, awkward or slow. This is that list, in the order the wishes came in (73 items by wave 16),
 with what came of each.
 
 **Status**: **built** (and by which agent), **partly** (what is left), **open**, or **not checked**
@@ -121,6 +121,18 @@ commands that exist.
 | 64 | 12A | `ui` describes what lies in a button (pictures); `screenshot part=menu` | Open |
 | 65 | 12B | Warn when a command's argument has a name automation keeps for itself (`paths`) | Open |
 | 66 | 12C | `perf` says whether the window has focus (Windows slows an editor without focus 8 to 15 times); time a library operation in-process; `perf trace=` for nested spans, or `dotnet-trace` installed | Open |
+
+## Waves 13 to 16
+
+| # | From | Wish | Status |
+|---|---|---|---|
+| 67 | 13A, 14B | `click` that refuses or reports an ambiguous label; a `tree` command listing a tree's items | Partly: `click type= index=`, `matches` (16A) |
+| 68 | 13B, 16A | `stroke tool=` and strokes in map coordinates; a `history` read; a fresh-sandbox start | Open |
+| 69 | 13C | `dev scan-units --positions` or `dev unit-clusters`; a contact sheet of presets (place, capture, undo) | Open |
+| 70 | 14A, 16B | A shared `HeadlessApp.Settle()` and `UiTree.Unlabelled(window)` for headless tests; usage hints in argument errors | Open |
+| 71 | 14C | `screenshot part=` for one panel entry; a style rule against `TextBlock` classes on `SelectableTextBlock` | Open |
+| 72 | 15 | Popups in screenshots; combo items in `ui`; `checked` after the click; a flag per result made for the shown version; brush and rules fixtures in the sandbox | Partly: `checked`, `state.popups`, `madeForShown`, `auto.idle` (16A) |
+| 73 | 16C | `workspace scratch --assets-as-current` for containers; Avalonia's warnings in the editor's log | Open |
 
 ## Still open, by theme
 

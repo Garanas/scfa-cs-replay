@@ -26,6 +26,9 @@ every inspector section was planned. At the end, all 66 stories are done.
 | 9 | 4 | Draft and final heightmaps, masks and stratum stacks, decals, path nodes | 521 / 489 |
 | 10 | 5 + QA | Sky cube map, unit templates, the Procedural list, DDS export, mass and energy icons; a third QA walkthrough | 545 / 519 |
 | 12 | 3 | Fixing the 31 issues of the third walkthrough (wave 11 was the walkthrough) | 583 / 542 |
+| 13 | 3 | The refinements: who owns the inspector and Units, Procedural derived and automatic, civilian presets and smaller changes | 608 / 556 |
+| 14 | 3 | The Map, Markers and Plugins modes as lists, Clear, blank markers | 636 / 559 |
+| 16 | 3 | Fixing the fourth walkthrough (wave 15) and Linux | 666 / 579 |
 
 ## How a wave ran
 
@@ -317,6 +320,34 @@ artifact ("Map Editor Rework"); its decisions are in the memory note `editor-rew
   slots; 12C enemy presets get an army, Clear the palette can be taken back, props from rules and path
   node edits mirror, exports leave the history alone, kept results current on reopen, and a strata
   stroke on Archsimkats Valley from 13.8 to 1.8 ms per move.
+
+## Waves 13 to 16: the refinements
+
+After the rework the owner sent thirteen refinements; the analysis with the owner's decisions is the
+artifact "Map Editor Refinements" (memory note `editor-refinements-plan`). The decisions that shaped
+the work: Map, Markers, Units and Plugins became "pick on the left, edit in the inspector"; choosing
+an entry keeps the map's selection; generated results are derived and never a step of undo;
+results regenerate on their own only while the views show them; unit presets are civilian bases.
+
+- **Wave 13**: 13A who owns the inspector (the last choice of a tile, the selection or a part) and the
+  Units mode; 13B routes removed, connected regions, results derived into the current version without
+  steps, every generator able to regenerate on its own while visible, the Auto switch, procedural
+  defaults in `workspace.json`; 13C 38 civilian presets from a new scan of 266 maps (26 settlements, 12
+  small wreck fields), reclaim computed at export, presets at the bottom, Q, E and alt with the wheel
+  turning a brush. Wave 14 started as soon as 13A was merged, alongside 13B and 13C.
+- **Wave 14**: 14A the Map mode (an entry per army and area), 14B the Markers mode with `markers.clear`
+  for every kind and blank markers as a kind of their own (the owner's request during the wave), 14C
+  the Plugins mode with a category and a kind.
+- **Wave 15**: a QA walkthrough of the fourteen points: 0 blockers, 1 major (kept results not per
+  version), 10 minor, 16 polish.
+- **Wave 16**: 16A results kept per version of their inputs (undo shows them at once), "Connected
+  regions" as the result's name, the Auto chip in the status bar, Q and E from anywhere; 16B one look
+  for entries in every list mode; 16C Linux: the test suites pass on Ubuntu, file names and paths
+  found whatever their case where the game's files are, Linux folders and Steam's game folder, software
+  OpenGL on request, a 3D start check in CI. The asset lookups proved case-proof already
+  (`faf-map dev resolve`: 311 assets of four maps, 85 in mixed case, all found on Linux before and after).
+- Beside the waves: a workflow publishing standalone editors for Windows, Linux and macOS on every push
+  to `main`, with a start check of the Linux build on a virtual display.
 
 ## The agents' tooling
 
