@@ -1,8 +1,9 @@
 # Building the map editor in agent waves
 
 The map editor's user stories (`USER_STORIES.md`) were built by agents working in parallel, in
-eight waves, between the brushes work and 2026-10-10. This page describes how the waves were run,
-what each one built, what the two QA walkthroughs found, and what is still open. The commits are on
+eight waves, between the brushes work and 2026-10-10; then the owner looked the editor over and
+asked for a rework, built in five more waves (8 to 12) up to 2026-10-11. This page describes how the
+waves were run, what each one built, what the three QA walkthroughs found, and what is still open. The commits are on
 `feature/map-editor`; each wave's branches were merged with `--no-ff`, so
 `git log --merges --first-parent` lists them.
 
@@ -21,6 +22,10 @@ every inspector section was planned. At the end, all 66 stories are done.
 | 5 | 3 | The stories' remaining parts, and the agents' tooling wishes | 416 / 386 |
 | 6 | 2 | The last story (V-4 layouts) and a second QA walkthrough | 428 / 394 |
 | 7 | 2 | Fixing the 32 issues of the second walkthrough | 465 / 397 |
+| 8 | 3 | The rework's foundations: layer stacks, panels and shell, the Procedural mode and export steps | 495 / 425 |
+| 9 | 4 | Draft and final heightmaps, masks and stratum stacks, decals, path nodes | 521 / 489 |
+| 10 | 5 + QA | Sky cube map, unit templates, the Procedural list, DDS export, mass and energy icons; a third QA walkthrough | 545 / 519 |
+| 12 | 3 | Fixing the 31 issues of the third walkthrough (wave 11 was the walkthrough) | 583 / 542 |
 
 ## How a wave ran
 
@@ -272,6 +277,47 @@ owner's own assets stayed untouched.
 
 Project format 5: the walkability marked by hand (`walkability-marks.png`).
 
+## Waves 8 to 12: the rework
+
+After wave 7 the owner used the editor and sent feedback: masks serve another purpose than stratum
+masks and need their own tab; stratum masks, masks and the water's maps should be stacks of layers
+like the heightmap; the heightmap should have a draft (for World Machine and Gaea) and a final; water
+and lighting had settings on both sides; map-wide decals, decal sets with `_mask` files, unit
+templates from real maps, a keyboard shortcuts page, workspace settings, mass and energy on tiles,
+hover previews, a Procedural tab, the navigation mesh with path nodes generated at export, the editor
+named in `_scenario.lua`, presets in one folder. The plan, with the owner's decisions, was an
+artifact ("Map Editor Rework"); its decisions are in the memory note `editor-rework-plan`.
+
+- **Wave 8, foundations**: 8A one layer-stack model and compositor for heights and coverage (the
+  height layers moved onto it, a reusable stack control, `ImagePreview`, project format 6); 8B "the
+  panel lists, the inspector edits" for Water and Lighting, the Masks and Procedural modes and a
+  Plugins entry on the rail, Help's shortcuts and folders, File › Workspace settings, one `presets/`
+  folder, clearing the palette, mass and energy on tiles; 8C the Procedural mode, walkability
+  regenerating after a second, export as steps (the preview always rendered), the editor named in
+  `_scenario.lua` (checked against the game, the FAF client and the vault's upload), the navigation
+  mesh with regions and routes. The merge broke 147 tests at once: two branches defined the same
+  icon key.
+- **Wave 9, on the foundations**: 9A draft and final heightmaps (shared layers at a place of their
+  own in each, the switch, files for World Machine and Gaea in `procedural/temp`, a watched final
+  base); 9B every stratum mask, mask and water map a stack, rules as layers, the Masks mode filled
+  in; 9C map-wide decals written as Kaali (`kaali.v0004`) has them (the normal decal's red channel
+  found in the game's `terrain.fx` to be its blend weight), decal sets, decal-mask layers, DDS with
+  mipmaps; 9D path networks from the navigation mesh (skeleton, smoothing, links), previewed only,
+  edited by hand on top, written at export.
+- **Wave 10**: 10A a sky cube map generated from the map and its version 60 sky; 10B a scan of
+  15,374 unit groups of 266 campaign, coop and vault maps and 36 example unit presets placed by army
+  role; 10D the Procedural mode as a clickable list (the owner's request during the wave); 10E every
+  exported texture as DDS (the owner's request); 10F mass and energy icons (the owner's request).
+  The hover previews were cut to a strip by Fluent's tool-tip width: fixed by the main session.
+- **Wave 11**: a QA walkthrough of the rework, point by point against the feedback: 31 issues, none
+  a blocker; 21 of 32 points worked, 11 partly.
+- **Wave 12, the fixes**: 12A the inspector shows what was chosen last, layer fields filled on open,
+  `click` and `set` aim and refuse rather than miss; 12B the map's own decals and sets on the shelf,
+  adding files to the map, decal-mask fields, masks never exported, Kaali's layout imported into the
+  slots; 12C enemy presets get an army, Clear the palette can be taken back, props from rules and path
+  node edits mirror, exports leave the history alone, kept results current on reopen, and a strata
+  stroke on Archsimkats Valley from 13.8 to 1.8 ms per move.
+
 ## The agents' tooling
 
 What the agents asked for, and where it came from. Most of it is built; the App guide and the
@@ -289,6 +335,8 @@ wish with its status.
   cp1252 default broke edits in almost every wave. `faf-map dev replace` (2H) keeps a file's line
   endings and UTF-8, and the root `AGENTS.md` explains the traps.
 - **Shorter answers**: every answer carried the whole state until 5A made it short by default.
+- **Since wave 8**: `restart` and `expand` (6B), `menu` and `window` (7A), `click` and `set` that
+  aim, wait for the control to settle and refuse rather than land elsewhere (12A).
 - **Still open** (wave 7's list): a `camera {x, z, distance, yaw, pitch}` command; a way to pull
   real files out of the game's archives; `mouse moves:[...]` at a set rate to measure per-move work;
   `wait` by an id rather than a list index; a wait for "the window has the keyboard"; seeing a
@@ -303,6 +351,10 @@ wish with its status.
 - Moving a wave generator does not move its mirrored copies; a plugin command's height and mask
   edits are not mirrored automatically (the plugin repeats them at `map.images`).
 - The first real upload to the FAF vault waits for the owner (`TODO.md`).
+- Importing a map does not restore its symmetry; a mask-reference layer added on a 4096 map still
+  stalls the window for a few hundred milliseconds; the editor runs 8 to 15 times slower while its
+  window has no focus (Windows' power throttling), so timings from a test editor compare only with
+  each other.
 - A workspace converted before asset format 4 converts again on its next start (about 30 s).
 
 ## Lessons

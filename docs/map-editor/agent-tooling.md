@@ -2,7 +2,7 @@
 
 Every agent of the waves ([agent-waves.md](agent-waves.md)) ended its report with a Tooling
 section: did it have enough to test its work through tests and by running the editor, and what was
-missing, awkward or slow. This is that list, in the order the wishes came in (52 items by wave 7),
+missing, awkward or slow. This is that list, in the order the wishes came in (66 items by wave 12),
 with what came of each.
 
 **Status**: **built** (and by which agent), **partly** (what is left), **open**, or **not checked**
@@ -102,6 +102,25 @@ commands that exist.
 |---|---|---|---|
 | 51 | 7B | A `camera {x, z, distance, yaw, pitch}` command (the wheel in 3D did nothing through automation); `faf-map dev extract <game path>` for real game files; `mouse moves:[...]` at a set rate, to measure per-move work as a real mouse gives it; finding an empty point of ground for drags | Open |
 | 52 | 7A | The editor reopens maximized at 2560 px after a restart (checks at 1280 need `window` first); `wait` by an id rather than a list index (`generated.0.status`); "Choose ... in the picker" labels where no picker opens; a wait for "the window has the keyboard"; the full App suite takes 1.5 min | Open |
+
+## Waves 8 to 12
+
+| # | From | Wish | Status |
+|---|---|---|---|
+| 53 | 8C | Mouse places are view pixels: a drag off the map silently does nothing; scroll a panel's section into view for a screenshot; command arguments that take enum names | Open |
+| 54 | 8A, 8B | `perf` against a baseline build; `perf before=` without a running editor; `quiet` for `perf`; a tool tip in automation; a test mode for "Show the folder" (it opens real Explorer windows) | Open |
+| 55 | 9A | `faf-map editor` without `--port` uses 5372 silently (make it required); `screenshot gpu` in side by side shows only the 3D half; a ready 4096 test project with layers; stroke a list of points | Open |
+| 56 | 9D | A read of the preview's path nodes; a screenshot framing a region; timing library code without a temporary test | Open |
+| 57 | 9B | Refuse to start an editor older than its sources; read one layer of a stack (`grid layer=`) | Open |
+| 58 | 9C | `get` shows a decal's set; reach an asset tile by name; a DDS info command; an overlay folder for test assets in a scratch workspace | Partly: the map's own decals on the shelf (12B) |
+| 59 | 10E | Add a file to the map's own files; read an exported folder's files and formats | Partly: `map.addFiles` (12B) |
+| 60 | 10D, 10B | `state.inspector.title`; `click under=`; `objects` rows with a unit's army and group; a preset as a picture | Open |
+| 61 | 10A | A cube map as a strip in a screenshot; log messages in automation | Open |
+| 62 | 10F | Labels with a middle dot garble in Git Bash; `assets.browse tileSize=`; `screenshot part=picker` | Open |
+| 63 | 11A | `click` waits for a scroll and refuses hidden controls; answer an OS file dialog; a tool-tip screenshot; `objects kind=markers` counts path nodes | Partly: `click` and `set` aim and refuse (12A) |
+| 64 | 12A | `ui` describes what lies in a button (pictures); `screenshot part=menu` | Open |
+| 65 | 12B | Warn when a command's argument has a name automation keeps for itself (`paths`) | Open |
+| 66 | 12C | `perf` says whether the window has focus (Windows slows an editor without focus 8 to 15 times); time a library operation in-process; `perf trace=` for nested spans, or `dotnet-trace` installed | Open |
 
 ## Still open, by theme
 
