@@ -252,6 +252,10 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     /// mouse pointed there; null for where the mouse is.</param>
     public Task<string> CaptureAsync(string path, Vector2? brushAt = null)
     {
+        if (_noOpenGl)
+        {
+            return Task.FromException<string>(new InvalidOperationException(Error));
+        }
         _capture?.TrySetCanceled();
         _capture = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         _capturePath = Path.GetFullPath(path);
@@ -325,6 +329,12 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
         int height = Math.Max(1, (int)(Bounds.Height * scaling));
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)fb);
         _gl.Viewport(0, 0, (uint)width, (uint)height);
+        if (GlVersion.Type != GlProfileType.OpenGLES)
+        {
+            // OpenGL ES filters cube maps across their faces' edges; desktop OpenGL (Linux, macOS)
+            // only when asked, else the sky's blurred levels show the cube's faces as a box
+            _gl.Enable(EnableCap.TextureCubeMapSeamless);
+        }
         _timer?.Begin();
         // the sky: the canvas of the views (Styles/Tokens.axaml)
         Avalonia.Media.Color sky = this.TryFindResource("CanvasBrush", ActualThemeVariant, out object? canvas) && canvas is Avalonia.Media.ISolidColorBrush brush
@@ -595,6 +605,33 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             // hidden, the mouse is no longer over it: the place under the mouse is the other view's
             _mouseInside = false;
         }
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _ = CheckOpenGlAsync();
+    }
+
+    private bool _noOpenGl;
+
+    /// <summary>
+    /// The base starts the view only when the window draws with OpenGL; a window drawn in software
+    /// (no driver for the card, or Linux's software OpenGL llvmpipe, which Avalonia turns down unless
+    /// <see cref="Program.SoftwareOpenGlVariable"/> is 1) leaves it empty. Then <see cref="Error"/> says so.
+    /// </summary>
+    private async Task CheckOpenGlAsync()
+    {
+        if (Avalonia.Rendering.Composition.ElementComposition.GetElementVisual(this)?.Compositor is not { } compositor
+            || await compositor.TryGetCompositionGpuInterop() is not null || Renderer is not null)
+        {
+            return;
+        }
+        _noOpenGl = true;
+        Error = OperatingSystem.IsLinux()
+            ? $"The 3D view needs OpenGL, and the window is drawn without it: install the graphics card's driver, or start the editor with {Program.SoftwareOpenGlVariable}=1 to draw on Mesa's software OpenGL (llvmpipe)"
+            : "The 3D view needs OpenGL, and the window is drawn without it: install the graphics card's driver";
+        Log.LogWarning("{Reason}", Error);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

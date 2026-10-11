@@ -214,7 +214,7 @@ namespace FAForever.MapEditor.Cli
                 {
                     return 0;
                 }
-                if (!process.WaitForExit(TimeSpan.FromSeconds(o.Timeout)))
+                if (!WaitForExit(process, TimeSpan.FromSeconds(o.Timeout)))
                 {
                     if (!o.Force)
                     {
@@ -222,14 +222,56 @@ namespace FAForever.MapEditor.Cli
                         return 1;
                     }
                     process.Kill(entireProcessTree: true);
-                    process.WaitForExit(TimeSpan.FromSeconds(10));
+                    bool ended = WaitForExit(process, TimeSpan.FromSeconds(10));
                     Console.Error.WriteLine($"Ended the editor (process {process.Id})");
+                    return ended ? 0 : 1;
                 }
-                else
+                Console.Error.WriteLine($"The editor (process {process.Id}) exited");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Waits until the process has exited, or the time is up; whether it exited.
+        /// </summary>
+        private static bool WaitForExit(Process process, TimeSpan timeout)
+        {
+            Stopwatch clock = Stopwatch.StartNew();
+            while (!process.WaitForExit(TimeSpan.FromMilliseconds(250)))
+            {
+                if (IsZombie(process.Id))
                 {
-                    Console.Error.WriteLine($"The editor (process {process.Id}) exited");
+                    return true;
                 }
-                return process.HasExited ? 0 : 1;
+                if (clock.Elapsed >= timeout)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Whether a process on Linux has exited and waits for its parent to collect it (state Z in
+        /// <c>/proc/&lt;pid&gt;/stat</c>). This tool is not its parent, so it looks alive to .NET; in a
+        /// container whose first process collects nothing (<c>docker run</c> without <c>--init</c>) it
+        /// stays so forever.
+        /// </summary>
+        private static bool IsZombie(int pid)
+        {
+            if (!OperatingSystem.IsLinux())
+            {
+                return false;
+            }
+            try
+            {
+                string stat = File.ReadAllText($"/proc/{pid}/stat");
+                // "pid (name) state ...": the name may hold spaces and brackets
+                return stat[(stat.LastIndexOf(')') + 1)..].TrimStart().StartsWith('Z');
+            }
+            catch (IOException)
+            {
+                return false;
             }
         }
 
