@@ -210,6 +210,12 @@ public sealed partial class MainWindow : Window
         MenuItem Menu(MenuLayout layout, bool top)
         {
             MenuItem menu = new MenuItem { Header = top ? "_" + layout.Title : layout.Title };
+            // a mode's submenu shows the mode's key (F2) beside its name, as its first item does
+            if (!top && layout.Items.FirstOrDefault() is string first && first.EndsWith(".mode", StringComparison.Ordinal)
+                && adapters[first].Command.Gesture is string modeKey)
+            {
+                menu.InputGesture = KeyGesture.Parse(modeKey);
+            }
             foreach (object entry in layout.Items)
             {
                 menu.Items.Add(entry switch

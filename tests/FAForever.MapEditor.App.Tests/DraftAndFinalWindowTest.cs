@@ -104,8 +104,8 @@ namespace FAForever.MapEditor.App.Tests
 
             JsonArray ui = UiTree.Describe(window, hidden: false);
             string text = ui.ToJsonString();
-            foreach (string label in new[] { "Show the draft heightmap", "Preview of the draft heightmap", "Preview of the final heightmap", "Show the height layers used in shared",
-                "Show the height layers whose source is curve", "Write the draft for procedural tools", "Use an output as the final's base", "Write the draft again whenever it changes" })
+            foreach (string label in new[] { "Show the draft heightmap", "Preview of the draft heightmap", "Preview of the final heightmap", "Show the height layers shared by the draft and the final",
+                "Show the curves among the height layers", "Write the draft for procedural tools", "Use an output as the final's base", "Write the draft again whenever it changes" })
             {
                 StringAssert.Contains(text, $"\"label\":\"{label.Replace("'", "\\" + "u0027", StringComparison.Ordinal)}\"", label);
             }

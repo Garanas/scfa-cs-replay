@@ -67,5 +67,13 @@ public sealed partial class ModePanel : UserControl
             BindingOperations.GetBindingExpressionBase(field, TextBox.TextProperty)?.UpdateSource();
             e.Handled = true;
         }
+        else if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None && e.Source is TextBox name && name.Classes.Contains("presetname")
+            && _model?.Presets.SaveNewCommand is { } save && save.CanExecute(null) && _model.Presets.HasLibrary)
+        {
+            // Enter in a new preset's name presses Save
+            BindingOperations.GetBindingExpressionBase(name, TextBox.TextProperty)?.UpdateSource();
+            save.Execute(null);
+            e.Handled = true;
+        }
     }
 }
