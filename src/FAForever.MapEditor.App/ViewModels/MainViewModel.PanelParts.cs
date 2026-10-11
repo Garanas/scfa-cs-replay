@@ -36,15 +36,7 @@ public sealed partial class MainViewModel
         Presets.Register(new PresetKind(AtmospherePresets.SkyKind, "Sky presets", CaptureSky, ApplySky));
         foreach (PanelParts list in PanelPartLists.Values)
         {
-            list.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(PanelParts.Chosen))
-                {
-                    RefreshPanelSections();
-                }
-            };
-            // an entry a person chose has the inspector, also over a tile chosen on the shelf
-            list.Picked += (_, _) => InspectTheMode();
+            WatchPanelParts(list);
         }
         PropertyChanged += (_, e) =>
         {
@@ -111,6 +103,33 @@ public sealed partial class MainViewModel
                     break;
             }
         };
+    }
+
+    /// <summary>
+    /// The panel follows the entry chosen in a list, and an entry a person chose has the inspector,
+    /// also over a tile chosen on the shelf.
+    /// </summary>
+    private void WatchPanelParts(PanelParts list)
+    {
+        list.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(PanelParts.Chosen))
+            {
+                RefreshPanelSections();
+            }
+        };
+        list.Picked += (_, _) => InspectTheMode();
+    }
+
+    /// <summary>
+    /// Adds a mode's list of entries made after the others (the Plugins mode's, whose view model
+    /// comes last): <c>view.inspectPart</c> and <c>state.panelParts</c> know it.
+    /// </summary>
+    private void AddPanelPartList(string mode, PanelParts list)
+    {
+        PanelPartLists = new Dictionary<string, PanelParts>(PanelPartLists, StringComparer.Ordinal) { [mode] = list };
+        WatchPanelParts(list);
+        RefreshPanelSections();
     }
 
     /// <summary>

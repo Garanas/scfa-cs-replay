@@ -761,6 +761,23 @@
   <Style Selector="Border.badge.uses TextBlock">
     <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
   </Style>
+  <!-- a plugin's kind as a tag (F-15): in its entry of the Plugins mode's list and in the inspector -->
+  <Style Selector="Border.badge.pluginkind">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- an entry of the Plugins mode's list (F-15): its title and tag, its state under them -->
+  <Style Selector="Button.partentry.pluginentry">
+    <Setter Property="Height" Value="{StaticResource PluginEntryHeight}" />
+  </Style>
+  <Style Selector="Button.partentry TextBlock.partdetail.pluginstate">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+  <!-- a plugin's errors in the inspector (F-15): selectable, to copy them -->
+  <Style Selector="SelectableTextBlock.pluginerrors">
+    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
   <!-- a unit's icon as the game's build menu shows it, in the corner of its tile (U-1) -->
   <Style Selector="Border.uniticon">
     <Setter Property="Width" Value="{StaticResource UnitIconBadgeSize}" />
@@ -926,14 +943,7 @@
   <Style Selector="ListBox.versionfiles">
     <Setter Property="MaxHeight" Value="{StaticResource VersionFilesHeight}" />
   </Style>
-  <!-- the Plugins page (F-15): a wider page, its list of plugins scrolls -->
-  <Style Selector="Border.dialog.plugins">
-    <Setter Property="Width" Value="{StaticResource PluginsDialogWidth}" />
-  </Style>
-  <Style Selector="ScrollViewer.pluginslist">
-    <Setter Property="MaxHeight" Value="{StaticResource PluginsListHeight}" />
-  </Style>
-  <!-- the keyboard shortcuts page (F-1) and the workspace settings page (F-5): as wide as the Plugins page, their lists scroll -->
+  <!-- the keyboard shortcuts page (F-1) and the workspace settings page (F-5): wider pages, their lists scroll -->
   <Style Selector="Border.dialog.shortcuts, Border.dialog.workspacesettings">
     <Setter Property="Width" Value="{StaticResource PluginsDialogWidth}" />
   </Style>

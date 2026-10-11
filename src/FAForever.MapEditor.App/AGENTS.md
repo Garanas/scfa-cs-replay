@@ -2050,12 +2050,14 @@ User story T-9 (wave 9A); the library does the work (its guide, "Draft and final
 ## Lua plugins
 
 User stories F-15 and the Lua part of F-1, F-13 and F-14 (`ViewModels/PluginsViewModel` as
-`model.Plugins`, `Plugins/`, `Views/PluginsPage`, `Commands/Plugins/ManagePlugins.cs`). The runtime
+`model.Plugins`, `Plugins/`, the Plugins mode in `ViewModels/PluginsMode.cs`,
+`PluginsViewModel.Parts.cs` and `Views/PluginPanels/`, `Commands/Plugins/ManagePlugins.cs`). The runtime
 is [Lua-CSharp](https://github.com/nuskey8/Lua-CSharp) (`LuaCSharp`, Lua 5.2 in C#, MIT): pure
 managed code, its calls cancellable in the middle of a loop.
 
 - **Where they live**: a folder each in the workspace's `plugins/` with its `plugin.lua` and an
-  optional `plugin.json` (`name`, `version`, `description`; the folder's name otherwise). The
+  optional `plugin.json` (`name`, `version`, `description`; the folder's name otherwise; `category`
+  and `kind`, below). The
   folder's name is the plugin's id (letters, digits, dashes, underscores). They are loaded when the
   workspace is ready (`Events.WorkspaceOpened`) and a plugin is read again when a file of its folder
   changes (`ProjectWatcher`); `plugins.reload` reads them all. The first time a workspace opens,
@@ -2066,8 +2068,8 @@ managed code, its calls cancellable in the middle of a loop.
   Then its commands go into the registry (`EditorCommand.Owner` is the plugin, `Menu` the Plugins
   menu: `Menus.WithPlugins` puts them at its end, by title; the window makes the menus again on
   `CommandRegistry.CommandsChanged`), its checks into `Problems.Checks`, its fields into a panel on
-  the page (a `SettingGroup` of `Setting`s that run `plugins.setField`).
-- **On or off** per plugin (`plugins.enable {plugin, on?}`, the page's check box), remembered in
+  the inspector (a `SettingGroup` of `Setting`s that run `plugins.setField`).
+- **On or off** per plugin (`plugins.enable {plugin, on?}`, the inspector's check box), remembered in
   the user's settings (`UserSettingsDto.Plugins`: the folders turned off, and the fields' values per
   plugin); off, its commands and checks are gone.
 - **A run of a plugin's command** (`plugin.<folder>.<id>`, needs a map and no stroke) is one step of
@@ -2083,16 +2085,38 @@ managed code, its calls cancellable in the middle of a loop.
   command, without the time of the commands it runs; `CallLimit`, 2 s, for loading, a check or an
   event): the script is cancelled where it is, and its error says so. Lua runs on the window's
   thread; an error is logged (`Plugins`), shown in the status line for a command, and listed under
-  the plugin on the page (the last five), and never stops the editor. Memory is not limited.
+  the plugin in the Plugins mode (the last five), and never stops the editor. Memory is not limited.
 - **Checks and events only read**: a check (span `plugins.check`) and a handler of an event (span
   `plugins.event`) get the map but no edits, no `editor.run` and nothing that waits. A plugin whose
   command is running (waiting for a command it runs) skips its checks and events meanwhile, since a
   Lua state runs one thing at a time. The steps inside a plugin's run raise no `changed` for the
   plugins; the run raises one when it ends. A plugin cannot run a plugin's command.
-- **The page** (`plugins.manage`, Plugins menu): the folder (Show, Reload), each plugin with its
-  check box, description and what it registered, its errors, a button per command and its panel's
-  fields; `state.plugins` has the same (on, loaded, running, errors, commands, checks, events,
-  fields' values).
+- **The Plugins mode** (wave 14C; `PluginsMode` beside `ProceduralSections.cs`, F12, the rail's
+  bottom group after Procedural; `plugins.manage {plugin?}` chooses it, and that plugin's entry): the
+  panel lists, the inspector edits. The panel (`Views/PluginPanels/PluginsList`, `PluginsListSection`)
+  has Show the folder and Reload at its top, then `PluginsViewModel.Parts`: a fixed first entry
+  `plugins.overview` ("All plugins" under Workspace: the folder, the summary, how `plugin.json` names
+  a plugin) and an entry `plugins.plugin.<folder>` per plugin under its heading, with its kind as a
+  tag (`Border.badge.pluginkind`) and its state as the detail (`1 error`, `off`, `on · 1 tool`, the
+  first of tools, checks and commands). The heading (`PluginsViewModel.HeadingOf`, `LuaPlugin.ListedUnder`)
+  is `plugin.json`'s `category` (free text), else the title of the mode its first tool joins (kept
+  by folder while the plugin is off, within the session), else Other; headings alphabetical, Other
+  last. `kind` is one of `PluginKinds.All` (brush, check, command, generator, export, other); left
+  out it reads as other, and one the editor does not know reads as other with a warning in the
+  plugin's errors. The list follows every load, reload, failure and on or off (`SyncParts` from
+  `Changed`, span `plugins.list`): two passes of `PanelParts.SyncGroup`, first taking out what left
+  each heading, then each heading in order after the one before it, so a plugin added, removed,
+  renamed or moved to another category is in step and the chosen entry stays chosen; an entry's
+  content (`PluginPart`) is given the plugin read again (`ReloadAll` makes new `LuaPlugin`s). The
+  inspector (`PluginDetailsSection`, `Views/PluginPanels/PluginPartView` through `PanelPartView`):
+  the on check box (`<name> on`) and the kind, description, version, heading, folder, its errors
+  (None without), a button per command, its fields (`SettingList`) and what it registered
+  (`LuaPlugin.Facts`: each command, each tool with its mode, each check, the fields, the events).
+  The mode's own tool is Select (`plugins.select`, every kind of thing), for what a plugin's
+  command acts on; a plugin's tool with `mode = "plugins"` joins it. `state.plugins` has the folder,
+  `open` (the mode shows), the summary, `chosen` (the plugin's folder, or null) and each plugin (on,
+  loaded, running, category, kind, errors, commands, checks, tools, events, fields' values);
+  `state.panelParts.plugins` the list. Tests: `PluginsModeTest`, `PluginsWindowTest`.
 - **Performance**: a check runs a moment after every step, so it must be cheap; one that reads many
   things keeps its result while `map.revision(part)` stays the same (the example's check: 60 ms to
   count Archsimkats Valley's 8304 props, nothing when they did not change).
@@ -2118,7 +2142,7 @@ managed code, its calls cancellable in the middle of a loop.
   too while the symmetry mirrors edits (`mirror = false` leaves them out); its other edits
   (`setHeight`, `paintMask`, moves) are its own, and `map.images(x, z)` gives the places to repeat
   them at. Its options row (`ToolOptions.axaml`, `tools:PluginTool`) shows the
-  plugin's fields the tool names, set as on the page, each a setting of the row of its own
+  plugin's fields the tool names, set as in the inspector, each a setting of the row of its own
   (`Controls/ToolRowItems`), so only those that do not fit go behind More; `radius` (a number, or
   a number field's key) is the circle the views draw, and a radius field takes the brush keys
   (`[`, `]`, control and the wheel) within its limits. `state.plugins.items[].tools` lists them. Span `plugins.tool`. The
@@ -2235,9 +2259,10 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   the inspector. Checked against it (October 2026): Terrain (height layers listed, the chosen one
   in the inspector), Paint (strata listed, the chosen stratum in the inspector), Units (the tree of
   armies and groups listed, the chosen army or group in the inspector, a unit chosen selected),
-  Decals (groups listed, the selection in the inspector), Water and Lighting (below), Map (below) and
-  Procedural (the generated results listed, section "The Procedural mode") follow it; the Props
-  panel's Placing is still edited in the panel, for a later wave to move.
+  Decals (groups listed, the selection in the inspector), Water and Lighting (below), Map (below),
+  Procedural (the generated results listed, section "The Procedural mode") and Plugins (the plugins
+  listed by category, section "Lua plugins") follow it; the Props panel's Placing is still edited
+  in the panel, for a later wave to move.
 - **Who has the inspector: what was chosen last** of three (`MainViewModel.InspectorOwner`, an
   `InspectorOwner`: `Tile`, `Selection`, `Part`; `state.inspector` has `owner`, what it `shows`
   (`asset`, `selection`, `mode`) and the mode's inspector `parts`): a tile of the shelf (or the
@@ -2327,8 +2352,8 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   `MapWideSlotViewModel`, its detail the slot's source).
   Presets below: lighting presets, and sky presets while the sky is chosen (`ForParts`).
 - **The rail** (`Views/ModeRail`): the modes of groups 0 and 1 at the top (`RailModes`), the bottom
-  group (`EditorModes.BottomGroup`, `BottomRailModes`) at the bottom above a divider and the Plugins
-  entry (`plugins.manage`). Masks (Shift+F3, after Paint, which it took the masks from; filled in by
+  group (`EditorModes.BottomGroup`, `BottomRailModes`: Procedural and Plugins, F12) at the bottom
+  below a divider. Masks (Shift+F3, after Paint, which it took the masks from; filled in by
   wave 9B, section "Stacks of coverage") and Procedural (F11, group `BottomGroup`; its
   sections are the generated results). F1 to F9 stay as they were. A mode's tool tip names its shortcut.
 - **Keyboard shortcuts** (`help.shortcuts {query?}`, Shift+F1, Help menu; `Views/ShortcutsPage`): every

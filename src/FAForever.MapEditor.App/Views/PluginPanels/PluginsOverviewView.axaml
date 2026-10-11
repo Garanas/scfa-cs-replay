@@ -1,0 +1,25 @@
+<!-- The Plugins mode's first entry in the inspector (F-15): where the plugins are, how many, and how plugin.json names a
+     plugin's category and kind. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.PluginPanels.PluginsOverviewView"
+             x:DataType="vm:PluginsOverviewPart">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Folder" />
+        <TextBlock Classes="mono" Text="{Binding Plugins.Folder, FallbackValue='', TargetNullValue='No workspace is set up'}" TextWrapping="Wrap"
+                   AutomationProperties.Name="Plugins folder" />
+      </DockPanel>
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Plugins" />
+        <TextBlock Text="{Binding Plugins.Summary}" TextWrapping="Wrap" AutomationProperties.Name="Plugins summary" />
+      </DockPanel>
+      <TextBlock Classes="caption"
+                 Text="Their commands are in the Plugins menu and the palette, each run one step of undo; their tools join their mode's tools; their checks are in the Problems tab. Choose a plugin to turn it on or off, run its commands and set its fields." />
+      <TextBlock Classes="caption"
+                 Text="A plugin's plugin.json names it: name, version, description, category (the heading it is listed under; without one, the mode its tools join, else Other) and kind (brush, check, command, generator, export or other: its tag)." />
+    </StackPanel>
+  </Border>
+</UserControl>

@@ -24,10 +24,10 @@ namespace FAForever.MapEditor.App.ViewModels;
 /// <c>plugins/</c> with its <c>plugin.lua</c>, loaded when the workspace is ready and again when its
 /// files change, on or off by the user (remembered in the settings). A plugin registers commands
 /// (in the Plugins menu, the palette and automation like any command; a run is one step of undo),
-/// problem checks (the Problems tab), a panel of fields (the Plugins page) and handlers of the
-/// editor's events, which may stop a save or export. Its Lua runs on the window's thread with a
-/// time limit per call; an error shows in the Console and on the Plugins page and never stops the
-/// editor.
+/// problem checks (the Problems tab), a panel of fields (the Plugins mode's inspector) and handlers
+/// of the editor's events, which may stop a save or export. Its Lua runs on the window's thread with
+/// a time limit per call; an error shows in the Console and under the plugin in the Plugins mode, and
+/// never stops the editor.
 /// </summary>
 public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
 {
@@ -63,6 +63,9 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
         model.Events.BeforeSave += (_, e) => Veto("beforeSave", e);
         model.Events.BeforeExport += (_, e) => Veto("beforeExport", e);
         model.MapChanged += (_, _) => RefreshPanels();
+        Parts = new PanelParts([new PanelPart(OverviewPart, "All plugins", PluginsMode.OverviewGroup, new PluginsOverviewPart(this),
+            "The workspace's Lua plugins: a folder each in the plugins folder with its plugin.lua, read again when its files change.")]);
+        SyncParts();
     }
 
     public ILogger Log { get; }
@@ -89,12 +92,6 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
     public ObservableCollection<LuaPlugin> Items { get; } = [];
 
     public bool IsEmpty => Items.Count == 0;
-
-    /// <summary>
-    /// Whether the Plugins page shows.
-    /// </summary>
-    [ObservableProperty]
-    public partial bool IsOpen { get; set; }
 
     /// <summary>
     /// E.g. <c>2 plugins, 1 off, 1 with errors</c>.
@@ -138,13 +135,8 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
 
     public MapDocument MirrorPlaced(MapDocument document, IReadOnlyList<ObjectRef> placed) => _model.MirrorPlaced(document, placed, out _);
 
-    public void Show() => IsOpen = true;
-
-    [RelayCommand]
-    private void Close() => IsOpen = false;
-
     /// <summary>
-    /// The check box of a plugin on the page: turns it over through <c>plugins.enable</c>.
+    /// The check box of a plugin in the inspector: turns it over through <c>plugins.enable</c>.
     /// </summary>
     [RelayCommand]
     private async Task Toggle(string id)
@@ -233,6 +225,11 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
         catch (Exception exception) when (exception is InvalidDataException or IOException)
         {
             Fail(plugin, "loading", exception);
+        }
+        if (plugin.Manifest.UnknownKind is string unknown)
+        {
+            plugin.AddError($"{PluginManifest.File}: the kind '{unknown}' is none of {string.Join(", ", PluginKinds.All)}; it reads as {PluginKinds.Other}");
+            Log.LogWarning("The plugin {Plugin} names the kind {Kind}, which the editor does not know", plugin.Id, unknown);
         }
         if (!plugin.IsOn)
         {
@@ -759,13 +756,16 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
     public JsonObject Describe() => new JsonObject
     {
         ["folder"] = Folder,
-        ["open"] = IsOpen,
+        ["open"] = _model.SelectedMode?.Definition.Id == PluginsMode.Id,
         ["summary"] = Summary,
+        ["chosen"] = (Parts.Chosen.Content as PluginPart)?.Plugin.Id,
         ["items"] = new JsonArray([.. Items.Select(plugin => (JsonNode)new JsonObject
         {
             ["id"] = plugin.Id,
             ["name"] = plugin.Manifest.Name,
             ["version"] = plugin.Manifest.Version,
+            ["category"] = plugin.ListedUnder,
+            ["kind"] = plugin.Kind,
             ["on"] = plugin.IsOn,
             ["loaded"] = plugin.IsLoaded,
             ["running"] = plugin.IsRunning,
@@ -782,6 +782,7 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
     {
         OnPropertyChanged(nameof(Summary));
         OnPropertyChanged(nameof(IsEmpty));
+        SyncParts();
     }
 }
 

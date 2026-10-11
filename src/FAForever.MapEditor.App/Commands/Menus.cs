@@ -67,6 +67,7 @@ public static class Menus
             Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack"),
             Mode("units", "units.pick", "units.addGroup", "units.selectGroup", "units.placePreset", "units.asWrecks"),
             Mode("procedural"),
+            Mode("plugins"),
             new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.star", "assets.reload", "assets.reloadShown"]),
         ]),
         new MenuLayout("Generate",

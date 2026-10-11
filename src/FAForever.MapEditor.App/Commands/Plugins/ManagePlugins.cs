@@ -5,17 +5,27 @@ using MediatR;
 namespace FAForever.MapEditor.App.Commands;
 
 /// <summary>
-/// Shows the Plugins page (user story F-15): the workspace's Lua plugins, each on or off, what it
-/// registered, its errors and its panel.
+/// Chooses the Plugins mode (user story F-15): the workspace's Lua plugins listed by category, the
+/// chosen one in the inspector (on or off, what it registered, its errors and its fields).
 /// </summary>
-[EditorCommand("plugins.manage", "Plugins...", Story = "F-15")]
-public sealed record ManagePlugins : IRequest;
+/// <param name="Plugin">A plugin's folder name, whose entry the inspector then shows; left out, the
+/// entry chosen last stays.</param>
+[EditorCommand("plugins.manage", "Manage the plugins", Story = "F-15")]
+public sealed record ManagePlugins(string? Plugin = null) : IRequest;
 
-public sealed class ManagePluginsHandler(PluginsViewModel plugins) : IRequestHandler<ManagePlugins>
+public sealed class ManagePluginsHandler(MainViewModel model, PluginsViewModel plugins) : IRequestHandler<ManagePlugins>
 {
     public Task Handle(ManagePlugins request, CancellationToken cancellationToken)
     {
-        plugins.Show();
+        if (request.Plugin is string plugin)
+        {
+            plugins.Choose(plugin);
+        }
+        if (model.SelectedMode?.Definition.Id != PluginsMode.Id)
+        {
+            model.SelectMode(PluginsMode.Id);
+        }
+        model.InspectTheMode();
         return Task.CompletedTask;
     }
 }
@@ -61,7 +71,7 @@ public sealed class ShowPluginsFolderHandler(MainViewModel model, PluginsViewMod
 }
 
 /// <summary>
-/// Turns a plugin on or off (user story F-15), as its check box on the Plugins page does; the user's
+/// Turns a plugin on or off (user story F-15), as its check box in the Plugins mode does; the user's
 /// settings remember it. Off, its commands and checks are gone.
 /// </summary>
 /// <param name="Plugin">The plugin's folder name.</param>
@@ -81,7 +91,7 @@ public sealed class EnablePluginHandler(MainViewModel model, PluginsViewModel pl
 }
 
 /// <summary>
-/// Sets a field of a plugin's panel (user story F-15), as the field on the Plugins page does; the
+/// Sets a field of a plugin's panel (user story F-15), as the field in the Plugins mode does; the
 /// user's settings remember it.
 /// </summary>
 /// <param name="Field">The field's key.</param>

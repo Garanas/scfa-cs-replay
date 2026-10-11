@@ -140,8 +140,10 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **F-15 Lua plugins.** Plugins with commands, tools and panels, through the controller and
       the events; a run is one step of undo. Today: the workspace's `plugins/` (a folder each with
       its `plugin.lua` and `plugin.json`), loaded when the workspace is ready and read again when a
-      file changes; the Plugins page (Plugins, Plugins...) with each plugin on or off (remembered),
-      its errors, its commands and its panel's fields; plugins register commands (the Plugins menu,
+      file changes; the Plugins mode (at the rail's bottom, F12) lists them by category (`plugin.json`'s
+      `category`, else the mode of their tools, else Other) with their kind as a tag (`kind`: brush,
+      check, command, generator, export, other), and its inspector shows the chosen one on or off
+      (remembered), its errors, its commands, its fields and what it registered; plugins register commands (the Plugins menu,
       the palette, automation; a run is one step of undo, a failing run changes nothing), tools of
       a mode (the left mouse in the views calls their press, drag and release with the place; a
       stroke is one step of undo shown while the mouse is down, a failing one changes nothing; their

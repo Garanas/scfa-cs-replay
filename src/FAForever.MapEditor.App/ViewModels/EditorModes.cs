@@ -102,7 +102,7 @@ public static class EditorModes
     private const string BrushPresetsEmpty = "None yet: save the brush's settings (shape, mode, radius, strength) to use them again.";
 
     /// <summary>
-    /// The group of the modes at the bottom of the rail, above the Plugins entry.
+    /// The group of the modes at the bottom of the rail: Procedural and Plugins.
     /// </summary>
     public const int BottomGroup = 2;
 
@@ -250,6 +250,12 @@ public static class EditorModes
             ProceduralMode.Tools,
             ProceduralMode.Sections,
             ProceduralMode.Inspector),
+
+        // the Plugins mode (wave 14C): its tools and sections are PluginsMode's
+        new ModeDefinition(PluginsMode.Id, "Plugins", "Icon.Plugins", "The workspace's Lua plugins: on or off, their commands, fields and errors", BottomGroup, "F12", "F-15",
+            PluginsMode.Tools,
+            PluginsMode.Sections,
+            PluginsMode.Inspector),
     ];
 }
 

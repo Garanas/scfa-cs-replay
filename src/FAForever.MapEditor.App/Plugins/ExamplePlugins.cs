@@ -26,6 +26,10 @@ public static class ExamplePlugins
         // Reclaim per army 1.0: warned of a few rocks more or less
         "reclaim-per-army/plugin.lua:c2ea11c2f32ed706b47746183b6892a709eb1b17b4d527b257586ff82240a42d",
         "reclaim-per-army/plugin.json:6df515540bd07a85769c25e23fec332965b6f44baf00786426eb0eed26d11aa8",
+        // the manifests before they named their category and kind (wave 14C)
+        "plateau-brush/plugin.json:e1f4874b08620267c9ce099d16e555ba6f43a3a7b33e6c89e84bf501ca5f783a",
+        "reclaim-per-army/plugin.json:4831774f6230efaa4ccf8e0bb0e84f9e3b777eccabb17de2d237501050344bb5",
+        "scatter-rocks/plugin.json:816e06ad53053c77fbd4066e89e67cfa71fc475ae0178c37c186450d89899997",
     };
 
     /// <summary>

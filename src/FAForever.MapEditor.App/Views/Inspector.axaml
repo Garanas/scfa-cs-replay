@@ -388,6 +388,10 @@
                   </StackPanel>
                 </Border>
               </DataTemplate>
+              <!-- the chosen entry of the Plugins mode's list: a plugin, or all of them (wave 14C) -->
+              <DataTemplate DataType="vm:PluginDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Plugins.Parts}" />
+              </DataTemplate>
             </ItemsControl.DataTemplates>
           </ItemsControl>
           <!-- only in a mode with no part of its own to show: how to select things -->

@@ -34,7 +34,7 @@ public sealed partial class MainWindow : Window
         // a field that gives its value when it loses the keyboard gives it on Enter too
         AddHandler(KeyDownEvent, OnEnterInField, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
         // a page that opens takes the keyboard; one that closes gives it back to the views
-        foreach (Control page in new Control[] { DiagnosticsPageView, PluginsPageView, VersionControlPageView, ReportProblemPageView, NewMapPageView, ShortcutsPageView, WorkspaceSettingsPageView })
+        foreach (Control page in new Control[] { DiagnosticsPageView, VersionControlPageView, ReportProblemPageView, NewMapPageView, ShortcutsPageView, WorkspaceSettingsPageView })
         {
             page.PropertyChanged += (_, e) =>
             {
@@ -499,7 +499,6 @@ public sealed partial class MainWindow : Window
         "newMap" => NewMapPageView,
         "report" => ReportProblemPageView,
         "versionControl" => VersionControlPageView,
-        "plugins" => PluginsPageView,
         "diagnostics" => DiagnosticsPageView,
         _ => null,
     };

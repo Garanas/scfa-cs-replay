@@ -8,12 +8,13 @@ using Avalonia.VisualTree;
 using FAForever.MapEditor.App.Automation;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
+using FAForever.MapEditor.App.Views.PluginPanels;
 
 namespace FAForever.MapEditor.App.Tests
 {
     /// <summary>
     /// The plugins in the window (user story F-15): their commands in the Plugins menu, the Plugins
-    /// page with its check boxes, buttons and fields, as a person uses them.
+    /// mode with its list and the chosen plugin's check box, buttons and fields, as a person uses them.
     /// </summary>
     [TestClass]
     public sealed class PluginsWindowTest
@@ -49,7 +50,7 @@ namespace FAForever.MapEditor.App.Tests
             (MainWindow window, MainViewModel model) = await Open();
 
             string?[] items = [.. Plugins(window).Items.OfType<MenuItem>().Select(item => (string?)item.Header)];
-            CollectionAssert.IsSubsetOf(new[] { "Plugins...", "Reload the plugins", "Count reclaim per army", "Scatter rocks on steep slopes" }, items);
+            CollectionAssert.IsSubsetOf(new[] { "Manage the plugins", "Reload the plugins", "Count reclaim per army", "Scatter rocks on steep slopes" }, items);
 
             await model.Commands.RunAsync("plugins.enable", new JsonObject { ["plugin"] = "scatter-rocks", ["on"] = false }, interactive: false);
             Dispatcher.UIThread.RunJobs();
@@ -61,22 +62,35 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
-        public Task ThePageListsThePluginsAndItsButtonsAndBoxesWork() => HeadlessApp.Run(async () =>
+        public Task TheModeListsThePluginsAndTheInspectorsButtonsAndBoxesWork() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
 
             await model.Commands.RunAsync("plugins.manage");
             Dispatcher.UIThread.RunJobs();
-            PluginsPage page = window.GetVisualDescendants().OfType<PluginsPage>().Single();
-            Assert.IsTrue(page.IsVisible);
+            Assert.AreEqual("plugins", model.SelectedMode!.Definition.Id, "the command chooses the mode");
+            Assert.IsFalse(model.IsPageOpen, "no page over the window");
+            PluginsList list = window.GetVisualDescendants().OfType<PluginsList>().Single();
+            string[] headings = [.. list.GetVisualDescendants().OfType<TextBlock>().Where(text => text.Classes.Contains("overline")).Select(text => text.Text ?? "")];
+            CollectionAssert.AreEqual(new[] { "WORKSPACE", "CHECKS", "PROPS", "TERRAIN" }, headings, "the plugins under their categories");
+            Assert.IsTrue(list.GetVisualDescendants().OfType<Border>().Any(border => border.Classes.Contains("pluginkind")
+                && border.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == "brush")), "the kind as a tag");
 
-            Button count = page.GetVisualDescendants().OfType<Button>().Single(button => button.Content as string == "Count reclaim per army");
+            Click(window, list.GetVisualDescendants().OfType<Button>().Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == "Reclaim per army"));
+            Assert.AreEqual("plugins.plugin.reclaim-per-army", model.Plugins.Parts.Chosen.Id, "a click on its entry chooses it");
+            Inspector inspector = window.GetVisualDescendants().OfType<Inspector>().Single();
+            PluginPartView view = inspector.GetVisualDescendants().OfType<PluginPartView>().Single();
+            Button count = view.GetVisualDescendants().OfType<Button>().Single(button => button.Content as string == "Count reclaim per army");
             Click(window, count);
             await Task.Delay(50);
             Dispatcher.UIThread.RunJobs();
             StringAssert.StartsWith(model.Status, "Mass of reclaim per army:", "the button runs the plugin's command");
+            TextBox tolerance = view.GetVisualDescendants().OfType<TextBox>().Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Tolerance (%)");
+            Assert.AreEqual("25", tolerance.Text, "a field of the panel shows its value");
 
-            CheckBox scatter = page.GetVisualDescendants().OfType<CheckBox>().Single(box => box.Content as string == "Scatter rocks 1.0");
+            Click(window, list.GetVisualDescendants().OfType<Button>().Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == "Scatter rocks"));
+            view = inspector.GetVisualDescendants().OfType<PluginPartView>().Single();
+            CheckBox scatter = view.GetVisualDescendants().OfType<CheckBox>().Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Scatter rocks on");
             Assert.IsTrue(scatter.IsChecked);
             Click(window, scatter);
             await Task.Delay(50);
@@ -84,9 +98,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(model.Plugins.Find("scatter-rocks")!.IsOn, "the box turns it off");
             Assert.IsNull(model.Commands.Find("plugin.scatter-rocks.scatter"));
             Assert.IsFalse(scatter.IsChecked);
-
-            TextBox tolerance = page.GetVisualDescendants().OfType<TextBox>().Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Tolerance (%)");
-            Assert.AreEqual("25", tolerance.Text, "a field of the panel shows its value");
+            Assert.AreEqual("plugins.plugin.scatter-rocks", model.Plugins.Parts.Chosen.Id, "still chosen");
 
             List<string> unlabelled = [];
             void Check(JsonArray nodes)
@@ -103,7 +115,8 @@ namespace FAForever.MapEditor.App.Tests
                     }
                 }
             }
-            Check(UiTree.Describe(page, hidden: false));
+            Check(UiTree.Describe(list, hidden: false));
+            Check(UiTree.Describe(view, hidden: false));
             CollectionAssert.AreEqual(Array.Empty<string>(), unlabelled);
             window.Close();
         });

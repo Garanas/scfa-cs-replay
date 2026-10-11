@@ -8,6 +8,7 @@
              xmlns:rules="using:FAForever.MapEditor.App.Views.RulePanels"
              xmlns:procedural="using:FAForever.MapEditor.App.Views.ProceduralPanels"
              xmlns:decalpanels="using:FAForever.MapEditor.App.Views.DecalPanels"
+             xmlns:pluginpanels="using:FAForever.MapEditor.App.Views.PluginPanels"
              x:Class="FAForever.MapEditor.App.Views.ModePanel"
              x:DataType="vm:MainViewModel">
   <Border Classes="modepanel">
@@ -451,6 +452,10 @@
             </DataTemplate>
             <DataTemplate DataType="vm:LayerTexturesSection">
               <panels:LayerTexturesPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+            </DataTemplate>
+            <!-- the Plugins mode (wave 14C): the plugins by category, the chosen one in the inspector -->
+            <DataTemplate DataType="vm:PluginsListSection">
+              <pluginpanels:PluginsList DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Plugins}" />
             </DataTemplate>
           </ItemsControl.DataTemplates>
         </ItemsControl>
