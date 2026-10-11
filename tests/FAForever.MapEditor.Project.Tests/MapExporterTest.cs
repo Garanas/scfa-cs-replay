@@ -46,11 +46,12 @@ namespace FAForever.MapEditor.Project.Tests
                 NormalMaps = written.NormalMaps,
                 StratumMasks = written.StratumMasks,
                 WaterMap = written.WaterMap,
-                DecalHeader = written.DecalHeader,
+                NextDecalId = written.NextDecalId,
+                NextDecalGroupId = written.NextDecalGroupId,
             };
             Assert.AreEqual(
                 (original.Decals.Count == 0 ? 0 : original.Decals.Max(d => d.Id) + 1, original.DecalGroups.Count == 0 ? 0 : original.DecalGroups.Max(g => g.Id) + 1),
-                written.DecalHeader);
+                (written.NextDecalId, written.NextDecalGroupId));
             CollectionAssert.AreEqual(ScmapWriter.Write(withTextures), exported[file + ".scmap"]);
 
             // the uncompressed textures keep every pixel, the compressed ones nearly every
@@ -162,6 +163,19 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual("my_map", document.Name);
             Assert.AreEqual("local plans = '/maps/my_map.v0004/plans.lua'\n", Text(exported["my_map_script.lua"]));
             CollectionAssert.AreEqual(new byte[] { 1, 2, 3 }, exported["env/layers/rock.dds"]);
+        }
+
+        [TestMethod]
+        public void WritesTwoTextureSlotsPerDecal()
+        {
+            // the engine's decal holds two textures; a decal with one (the sandbox's) gets an empty second
+            MapDocument document = MapImporter.ImportFolder(ProjectFolders.ThetaPassage);
+            document = document with { Decals = document.Decals.SetItem(0, document.Decals[0] with { Textures = ["/env/rock.dds"] }) };
+
+            Scmap scmap = MapExporter.Export(document).Scmap;
+
+            CollectionAssert.AreEqual(new[] { "/env/rock.dds", "" }, scmap.Decals[0].Textures.ToArray());
+            Assert.IsTrue(scmap.Decals.All(decal => decal.Textures.Count == 2));
         }
 
         [TestMethod]

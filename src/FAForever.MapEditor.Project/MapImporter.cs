@@ -106,7 +106,7 @@ namespace FAForever.MapEditor.Project
                         ShoreColor = Color32.FromArgb(m.ShoreColor),
                         LandStartColor = Color32.FromArgb(m.LandStartColor),
                         LandEndColor = Color32.FromArgb(m.LandEndColor),
-                        Unknown = m.Unknown,
+                        ImagerElevationOffset = m.ImagerElevationOffset,
                     }
                     : null,
                 Decals = [.. scmap.Decals.Select(d => new Decal
@@ -241,11 +241,10 @@ namespace FAForever.MapEditor.Project
 
         private static Terrain ToTerrain(Scmap scmap)
         {
-            if (scmap.NormalMaps.Count != 1)
-            {
-                throw new MapProjectException($"The map has {scmap.NormalMaps.Count} normal maps; the editor holds one");
-            }
-            (int normalWidth, int normalHeight, TextureFormat normalFormat, byte[] normal) = DdsTexture.Read(scmap.NormalMaps[0], "normal map");
+            // a map stored in tiles (larger than 2048) becomes one image; the size of its tiles is kept
+            // when it is not the engine's
+            (int normalWidth, int normalHeight, TextureFormat normalFormat, byte[] normal) = NormalMapTiles.Stitch(scmap);
+            bool engineTiles = (scmap.NormalMapTileWidth, scmap.NormalMapTileHeight) == NormalMapTiles.DefaultTileSize(scmap.Width, scmap.Height);
             (int previewWidth, int previewHeight, _, byte[] preview) = DdsTexture.Read(scmap.Preview, "preview");
 
             return new Terrain
@@ -263,6 +262,8 @@ namespace FAForever.MapEditor.Project
                 StratumMasks = SplitMasks(scmap.StratumMasks),
                 NormalMap = Pixels.FromRgba(normalWidth, normalHeight, normal),
                 NormalMapFormat = normalFormat,
+                NormalMapTileWidth = engineTiles ? null : scmap.NormalMapTileWidth,
+                NormalMapTileHeight = engineTiles ? null : scmap.NormalMapTileHeight,
                 Preview = Pixels.FromRgba(previewWidth, previewHeight, preview),
             };
         }

@@ -230,7 +230,7 @@ namespace FAForever.MapEditor.Project.Files
             ShoreColor = Argb(source.ShoreColor),
             LandStartColor = Argb(source.LandStartColor),
             LandEndColor = Argb(source.LandEndColor),
-            Unknown = source.Unknown,
+            ImagerElevationOffset = source.ImagerElevationOffset,
         };
 
         public static Minimap ToModel(MinimapDto source) => new Minimap
@@ -241,7 +241,7 @@ namespace FAForever.MapEditor.Project.Files
             ShoreColor = ParseArgb(source.ShoreColor, "Minimap.ShoreColor"),
             LandStartColor = ParseArgb(source.LandStartColor, "Minimap.LandStartColor"),
             LandEndColor = ParseArgb(source.LandEndColor, "Minimap.LandEndColor"),
-            Unknown = source.Unknown,
+            ImagerElevationOffset = source.ImagerElevationOffset,
         };
 
         public static DecalDto ToDto(Decal source) => new DecalDto

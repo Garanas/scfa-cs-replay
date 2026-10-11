@@ -4,9 +4,10 @@ namespace FAForever.MapEditor.Project.Editing
 {
     /// <summary>
     /// The version of the <c>.scmap</c> a map is written as (<see cref="Terrain.ScmapVersion"/>).
-    /// 56 and 60 differ only in the skybox (and the count of cartographic decals after it), which
-    /// version 60 stores and the game draws; 53 holds six terrain layers and one stratum mask, so a
-    /// map of 53 keeps its version.
+    /// 56 and 60 differ in the skybox, which version 60 stores and the game draws, the imager
+    /// elevation offset after the minimap's colours and the count of the strategic view's decals after
+    /// the skybox (the engine's gates are 58, 57 and 59); 53 holds six terrain layers and one stratum
+    /// mask, so a map of 53 keeps its version.
     /// </summary>
     public static class ScmapVersions
     {

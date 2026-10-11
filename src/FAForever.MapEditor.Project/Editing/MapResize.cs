@@ -171,6 +171,8 @@ namespace FAForever.MapEditor.Project.Editing
                     Types = Resized(terrain.Types),
                     StratumMasks = terrain.StratumMasks with { Layers = [.. terrain.StratumMasks.Layers.Select(layer => Resized(layer))] },
                     NormalMap = Resized(terrain.NormalMap),
+                    NormalMapTileWidth = null,
+                    NormalMapTileHeight = null,
                 },
                 Water = water with
                 {

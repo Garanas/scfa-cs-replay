@@ -9,7 +9,7 @@ namespace FAForever.MapEditor.Project.Files.InMemory
     {
         /// <summary>
         /// The version of the <c>.scmap</c> to write: 53 (Supreme Commander), 56 (Forged Alliance)
-        /// or 60 (FAF map editor, with a skybox).
+        /// or 60 (what the engine saves, with a skybox: the game's own maps and the FAF map editor's).
         /// </summary>
         public required int ScmapVersion { get; init; }
 
@@ -38,9 +38,25 @@ namespace FAForever.MapEditor.Project.Files.InMemory
 
         public required StratumMasks StratumMasks { get; init; }
 
+        /// <summary>
+        /// The normal map, one image (a map stored in tiles is imported as their whole). The game
+        /// does not read it: it makes the normal map from the heightmap.
+        /// </summary>
         public required TiledBuffer<Color32> NormalMap { get; init; }
 
         public required TextureFormat NormalMapFormat { get; init; }
+
+        /// <summary>
+        /// The width in ogrids of the tiles the imported map stored its normal map in, kept while the
+        /// normal map is the imported one (<see cref="FileFormats.Map.Scmap.NormalMapTileWidth"/>); null
+        /// writes the engine's tiles (the map's size, at most 2048).
+        /// </summary>
+        public int? NormalMapTileWidth { get; init; }
+
+        /// <summary>
+        /// The height of those tiles; see <see cref="NormalMapTileWidth"/>.
+        /// </summary>
+        public int? NormalMapTileHeight { get; init; }
 
         /// <summary>
         /// The preview the <c>.scmap</c> starts with, 256 by 256 pixels.

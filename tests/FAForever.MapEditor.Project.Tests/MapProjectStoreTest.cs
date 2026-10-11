@@ -39,6 +39,19 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void KeepsTheImagerElevationOffsetUnderItsOldKey()
+        {
+            MapDocument document = MapImporter.ImportFolder(ProjectFolders.ThetaPassage);
+            document = document with { Minimap = document.Minimap! with { ImagerElevationOffset = 6.25f } };
+            string project = ProjectFolders.New("project");
+
+            MapProjectStore.Save(document, project);
+
+            StringAssert.Contains(File.ReadAllText(Path.Combine(project, MapProjectLayout.Map)), "\"unknown\": 6.25");
+            Assert.AreEqual(6.25f, MapProjectStore.Load(project).Minimap!.ImagerElevationOffset);
+        }
+
+        [TestMethod]
         public void WritesTheFilesOfAProject()
         {
             string project = Saved(ProjectFolders.ThetaPassage);

@@ -212,6 +212,9 @@ namespace FAForever.MapEditor.Project
             Terrain terrain = d.Terrain;
             Water water = d.Water;
             Lighting l = d.Lighting;
+            (int normalTileWidth, int normalTileHeight, IReadOnlyList<byte[]> normalMaps) = NormalMapTiles.Split(
+                terrain.Heightmap.Width, terrain.Heightmap.Height, terrain.NormalMap.Width, terrain.NormalMap.Height,
+                Pixels.ToRgba(terrain.NormalMap), terrain.NormalMapFormat, terrain.NormalMapTileWidth, terrain.NormalMapTileHeight);
             return new Scmap
             {
                 Version = terrain.ScmapVersion,
@@ -249,14 +252,18 @@ namespace FAForever.MapEditor.Project
                     g.Texture, g.Ramp, g.Position, g.Rotation, g.Velocity, g.LifetimeFirst, g.LifetimeSecond, g.PeriodFirst, g.PeriodSecond,
                     g.ScaleFirst, g.ScaleSecond, g.FrameCount, g.FrameRateFirst, g.FrameRateSecond, g.StripCount))],
                 Minimap = d.Minimap is Minimap m
-                    ? new ScmapMinimap(m.ContourInterval, m.DeepWaterColor.ToArgb(), m.ContourColor.ToArgb(), m.ShoreColor.ToArgb(), m.LandStartColor.ToArgb(), m.LandEndColor.ToArgb(), m.Unknown)
+                    ? new ScmapMinimap(m.ContourInterval, m.DeepWaterColor.ToArgb(), m.ContourColor.ToArgb(), m.ShoreColor.ToArgb(), m.LandStartColor.ToArgb(), m.LandEndColor.ToArgb(), m.ImagerElevationOffset)
                     : null,
                 Tileset = terrain.Tileset,
                 Layers = [.. terrain.Layers.Select(x => new ScmapTerrainLayer(x.AlbedoPath, x.AlbedoScale, x.NormalPath, x.NormalScale))],
-                DecalHeader = DecalHeader(d),
-                Decals = [.. d.Decals.Select(x => new ScmapDecal(x.Id, (int)x.Type, [.. x.Textures], x.Scale, x.Position, x.Rotation, x.CutOffLod, x.NearCutOffLod, x.OwnerArmy))],
+                // the engine's counters for decals and groups made at run time (the FAF map editor's Unknown7, Unknown8)
+                NextDecalId = d.Decals.IsEmpty ? 0 : d.Decals.Max(decal => decal.Id) + 1,
+                NextDecalGroupId = d.DecalGroups.IsEmpty ? 0 : d.DecalGroups.Max(group => group.Id) + 1,
+                Decals = [.. d.Decals.Select(x => new ScmapDecal(x.Id, (int)x.Type, TwoSlots(x.Textures), x.Scale, x.Position, x.Rotation, x.CutOffLod, x.NearCutOffLod, x.OwnerArmy))],
                 DecalGroups = [.. d.DecalGroups.Select(g => new ScmapDecalGroup(g.Id, g.Name, [.. g.DecalIds]))],
-                NormalMaps = [Texture(terrain.NormalMap, terrain.NormalMapFormat)],
+                NormalMapTileWidth = normalTileWidth,
+                NormalMapTileHeight = normalTileHeight,
+                NormalMaps = normalMaps,
                 StratumMasks = JoinMasks(terrain.StratumMasks),
                 WaterMap = Texture(water.Map, water.MapFormat),
                 WaterFoamMask = water.FoamMask.ToArray(),
@@ -270,11 +277,11 @@ namespace FAForever.MapEditor.Project
         }
 
         /// <summary>
-        /// The two numbers before the decals, which the map editors keep as counters (the FAF map
-        /// editor calls them Unknown7 and Unknown8): one more than the highest decal id and group id.
+        /// A decal's textures in the two slots the engine's decal holds: a missing slot is empty, and
+        /// more than two are left for <see cref="ScmapWriter"/> to refuse.
         /// </summary>
-        private static (int, int) DecalHeader(MapDocument d) =>
-            (d.Decals.IsEmpty ? 0 : d.Decals.Max(decal => decal.Id) + 1, d.DecalGroups.IsEmpty ? 0 : d.DecalGroups.Max(group => group.Id) + 1);
+        private static string[] TwoSlots(IReadOnlyList<string> textures) =>
+            textures.Count >= 2 ? [.. textures] : [.. textures, .. Enumerable.Repeat("", 2 - textures.Count)];
 
         private static ScmapSkybox ToScmapSkybox(Skybox s) => new ScmapSkybox
         {

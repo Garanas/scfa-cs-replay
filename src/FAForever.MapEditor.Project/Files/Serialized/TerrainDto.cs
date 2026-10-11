@@ -45,5 +45,16 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// How the normal map is stored in the <c>.scmap</c>.
         /// </summary>
         public required TextureFormat NormalMapFormat { get; init; }
+
+        /// <summary>
+        /// The width in ogrids of the tiles the imported map stored its normal map in, while the
+        /// normal map is the imported one; absent for the engine's tiles (the map's size, at most 2048).
+        /// </summary>
+        public int? NormalMapTileWidth { get; init; }
+
+        /// <summary>
+        /// The height of those tiles.
+        /// </summary>
+        public int? NormalMapTileHeight { get; init; }
     }
 }

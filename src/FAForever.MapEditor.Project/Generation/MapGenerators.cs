@@ -39,7 +39,9 @@ namespace FAForever.MapEditor.Project.Generation
 
     /// <summary>
     /// The normal map of the terrain (user story S-4, <see cref="TerrainImages.NormalMap"/>), made at
-    /// the size of the map's own and put in its place; its texture format stays.
+    /// the size of the map's own and put in its place; its texture format stays, and it is written in
+    /// the engine's tiles. The game does not read it (it makes its own from the heightmap); it is for
+    /// the editor's views and other tools.
     /// </summary>
     public sealed class NormalMapGenerator : IDocumentGenerator
     {
@@ -57,6 +59,6 @@ namespace FAForever.MapEditor.Project.Generation
             TerrainImages.NormalMap(document.Terrain.Heightmap, document.Terrain.NormalMap.Width, document.Terrain.NormalMap.Height);
 
         public MapDocument Apply(MapDocument document, object value) =>
-            document with { Terrain = document.Terrain with { NormalMap = (TiledBuffer<Color32>)value } };
+            document with { Terrain = document.Terrain with { NormalMap = (TiledBuffer<Color32>)value, NormalMapTileWidth = null, NormalMapTileHeight = null } };
     }
 }
