@@ -150,11 +150,13 @@ public sealed class AddHeightLayerHandler(MainViewModel model, IEditorDialogs di
 /// <param name="Mirrored">Whether the layer draws the curve's images by the chosen symmetry too
 /// (F-12); left out, while the symmetry mirrors edits.</param>
 /// <param name="LineOnly">For a closed curve: shape its line only; left out, it fills its inside.</param>
+/// <param name="BlocksWalkability">For a cliff: whether its face blocks walkability; left out, a cliff's does.</param>
 [EditorCommand("terrain.addCurve", "Add a curve", Story = "T-4", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record AddHeightCurve(CurvePointArgument[] Points, string? Profile = null, float? Width = null, float? Falloff = null, float? Height = null,
     bool Closed = false, string? Name = null, bool? Mirrored = null, float? FalloffRight = null, string? Shape = null, int? TerraceSteps = null,
     float? CliffFace = null, string? RoadMode = null, float? Camber = null, float? NoiseAmplitude = null, float? NoiseScale = null, int? NoiseSeed = null,
-    float[]? HeightVariation = null, float[]? WidthVariation = null, float? VariationScale = null, bool? LineOnly = null) : IRequest<string>, ICurveFields;
+    float[]? HeightVariation = null, float[]? WidthVariation = null, float? VariationScale = null, bool? LineOnly = null,
+    bool? BlocksWalkability = null) : IRequest<string>, ICurveFields;
 
 public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler<AddHeightCurve, string>
 {
@@ -174,6 +176,8 @@ public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler
             Width = request.Width ?? (float)tool.CurveWidth,
             Falloff = request.Falloff ?? (float)tool.Falloff,
             Closed = request.Closed,
+            // a new cliff's face blocks walkability unless asked otherwise
+            BlocksWalkability = profile == CurveProfile.Cliff,
             Symmetry = HeightLayerSettings.SymmetryOf(model, request.Mirrored),
             Points = [.. HeightCurveArguments.PointsOf(document, request.Points, profile, height)],
         }, request);
@@ -205,11 +209,14 @@ public sealed class AddHeightCurveHandler(MainViewModel model) : IRequestHandler
 /// <c>{x, z, height?, width?, falloffLeft?, falloffRight?, strength?, sharp?}</c>.</param>
 /// <param name="Mirrored">True: the layer draws the curve's images by the chosen symmetry too
 /// (F-12); false: the curve alone.</param>
+/// <param name="BlocksWalkability">For a cliff: whether its face blocks walkability; left out, as it was
+/// (a curve that becomes a cliff blocks).</param>
 [EditorCommand("terrain.setCurve", "Change a curve", Story = "T-4", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record SetHeightCurve(string? Layer = null, string? Profile = null, float? Width = null, float? Falloff = null, float? Height = null,
     bool? Closed = null, CurvePointArgument[]? Points = null, bool? Mirrored = null, float? FalloffRight = null, string? Shape = null, int? TerraceSteps = null,
     float? CliffFace = null, string? RoadMode = null, float? Camber = null, float? NoiseAmplitude = null, float? NoiseScale = null, int? NoiseSeed = null,
-    float[]? HeightVariation = null, float[]? WidthVariation = null, float? VariationScale = null, bool? LineOnly = null) : IRequest, ICurveFields;
+    float[]? HeightVariation = null, float[]? WidthVariation = null, float? VariationScale = null, bool? LineOnly = null,
+    bool? BlocksWalkability = null) : IRequest, ICurveFields;
 
 public sealed class SetHeightCurveHandler(MainViewModel model) : IRequestHandler<SetHeightCurve>
 {
@@ -229,6 +236,8 @@ public sealed class SetHeightCurveHandler(MainViewModel model) : IRequestHandler
             Width = request.Width ?? curve.Width,
             Falloff = request.Falloff ?? curve.Falloff,
             Closed = request.Closed ?? curve.Closed,
+            // a curve that becomes a cliff is a new cliff: its face blocks walkability unless asked otherwise
+            BlocksWalkability = profile == CurveProfile.Cliff && curve.Profile != CurveProfile.Cliff || curve.BlocksWalkability,
             Symmetry = request.Mirrored is bool mirrored ? HeightLayerSettings.SymmetryOf(model, mirrored) : curve.Symmetry,
             Points = request.Points is CurvePointArgument[] points
                 ? [.. HeightCurveArguments.PointsOf(document, points, profile, request.Height ?? curve.Points.FirstOrDefault()?.Height ?? 10)]
