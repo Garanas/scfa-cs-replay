@@ -41,6 +41,22 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
+          <!-- the heading's footer: a line while it has no entries, and its buttons (the Map panel's Add army) -->
+          <TextBlock Classes="caption" Text="{Binding Footer.EmptyText}" IsVisible="{Binding ShowsEmptyText}" />
+          <ItemsControl ItemsSource="{Binding Footer.Actions}" IsVisible="{Binding HasActions}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Rows="1" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:PanelPartAction">
+                <Button HorizontalAlignment="Stretch" Content="{Binding Title}" Command="{Binding Command}" CommandParameter="{Binding Parameter}"
+                        ToolTip.Tip="{Binding Help}"
+                        AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding Help}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </StackPanel>
       </DataTemplate>
     </ItemsControl.ItemTemplate>

@@ -1,0 +1,25 @@
+<!-- An area of the Map panel's list in the inspector (M-3, M-5): its name and corners, whether it is the playable area,
+     Show it in the 3D view and Remove it. The area is selected on the map while its entry is chosen. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.MapAreaPanel"
+             x:DataType="vm:MapAreaPart">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <TextBlock Classes="caption mono" Text="{Binding Rectangle}" TextWrapping="Wrap" AutomationProperties.Name="Rectangle of the chosen area" />
+      <CheckBox Content="Playable area" IsChecked="{Binding Area.Playable}"
+                AutomationProperties.Name="The chosen area is the playable area"
+                AutomationProperties.HelpText="Make this area the playable area at the start; the export makes the map's script set it" />
+      <TextBlock Classes="caption" Text="The first area is the playable area unless another is chosen" IsVisible="{Binding Area.IsPlayableByConvention}" />
+      <controls:SettingList DataContext="{Binding Area.Fields}" ShowsTitle="False" />
+      <UniformGrid Rows="1">
+        <Button HorizontalAlignment="Stretch" Content="Show" Command="{Binding FocusCommand}"
+                AutomationProperties.Name="Show the chosen area in the 3D view" />
+        <Button HorizontalAlignment="Stretch" Content="Remove the area" Command="{Binding RemoveCommand}"
+                AutomationProperties.Name="Remove the chosen area" />
+      </UniformGrid>
+    </StackPanel>
+  </Border>
+</UserControl>

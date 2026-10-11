@@ -1,32 +1,38 @@
-<!-- The map's script and the other files of its folder (M-6): the script opens in the person's own editor. -->
+<!-- The map's script and the other files of its folder in the inspector (M-6): the script opens in the person's own editor. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
-             xmlns:controls="using:FAForever.MapEditor.App.Controls"
              x:Class="FAForever.MapEditor.App.Views.MapPanels.ScriptPanel"
              x:DataType="vm:MainViewModel">
-  <Border Classes="group">
-    <StackPanel Classes="stack">
-      <TextBlock Classes="overline" Text="{Binding Source='Script and files', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-      <TextBlock Classes="caption" Text="{Binding ScriptFiles.Script}" AutomationProperties.Name="Script of the map" />
-      <StackPanel Classes="inline">
-        <Button Content="Open the script" Command="{Binding RunCommand}" CommandParameter="file.openScript" IsEnabled="{Binding ScriptFiles.IsProject}"
-                AutomationProperties.HelpText="In the system's editor for .lua files; what it saves comes into the map" />
-        <Button Content="Show the files" Command="{Binding RunCommand}" CommandParameter="file.showMapFiles" IsEnabled="{Binding ScriptFiles.IsProject}"
-                AutomationProperties.HelpText="The other files of the map's folder, in the file manager" />
+  <StackPanel>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="label" Text="Script" />
+        <TextBlock Classes="caption" Text="{Binding ScriptFiles.Script}" AutomationProperties.Name="Script of the map" />
+        <StackPanel Classes="inline">
+          <Button Content="Open the script" Command="{Binding RunCommand}" CommandParameter="file.openScript" IsEnabled="{Binding ScriptFiles.IsProject}"
+                  AutomationProperties.HelpText="In the system's editor for .lua files; what it saves comes into the map" />
+          <Button Content="Show the files" Command="{Binding RunCommand}" CommandParameter="file.showMapFiles" IsEnabled="{Binding ScriptFiles.IsProject}"
+                  AutomationProperties.HelpText="The other files of the map's folder, in the file manager" />
+        </StackPanel>
+        <TextBlock Classes="caption" Text="Save the map as a project to open its script." IsVisible="{Binding !ScriptFiles.IsProject}" />
       </StackPanel>
-      <TextBlock Classes="caption" Text="Save the map as a project to open its script." IsVisible="{Binding !ScriptFiles.IsProject}" />
-      <TextBlock Classes="secondary" Text="{Binding ScriptFiles.Summary}" AutomationProperties.Name="Files of the map's folder" />
-      <ItemsControl ItemsSource="{Binding ScriptFiles.Files}" IsVisible="{Binding ScriptFiles.HasFiles}" AutomationProperties.Name="Files">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:MapFileItem">
-            <DockPanel>
-              <TextBlock DockPanel.Dock="Right" Classes="caption" Text="{Binding Size}" />
-              <TextBlock Classes="mono" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
-            </DockPanel>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </StackPanel>
-  </Border>
+    </Border>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="label" Text="Files" />
+        <TextBlock Classes="secondary" Text="{Binding ScriptFiles.Summary}" AutomationProperties.Name="Files of the map's folder" />
+        <ItemsControl ItemsSource="{Binding ScriptFiles.Files}" IsVisible="{Binding ScriptFiles.HasFiles}" AutomationProperties.Name="Files">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MapFileItem">
+              <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Classes="caption" Text="{Binding Size}" />
+                <TextBlock Classes="mono" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+              </DockPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+  </StackPanel>
 </UserControl>

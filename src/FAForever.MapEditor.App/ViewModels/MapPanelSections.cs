@@ -4,25 +4,7 @@ namespace FAForever.MapEditor.App.ViewModels;
 // M-5, M-6, W-1, L-1, S-2), each with its template in Views/ModePanel.axaml or Views/Inspector.axaml
 // and its view model a part of MainViewModel (MainViewModel.MapPanels.cs).
 
-/// <summary>
-/// The Map mode's panel: what players see of the map (user story M-1), <see cref="MainViewModel.MapInformation"/>.
-/// </summary>
-public sealed record MapInformationSection() : PanelSection("Information");
-
-/// <summary>
-/// The Map mode's inspector: the map's size, players and preview (user story M-1).
-/// </summary>
-public sealed record MapFactsSection() : PanelSection("Map");
-
-/// <summary>
-/// The Map mode's areas by name (user story M-5), <see cref="MainViewModel.AreaList"/>.
-/// </summary>
-public sealed record AreasSection() : PanelSection("Areas");
-
-/// <summary>
-/// The map's script and the other files of its folder (user story M-6), <see cref="MainViewModel.ScriptFiles"/>.
-/// </summary>
-public sealed record ScriptSection() : PanelSection("Script and files");
+// The Map mode's panel and inspector are in MapParts.cs.
 
 /// <summary>
 /// The Water mode's panel (user stories W-1, W-2): on or off, then the list of what there is

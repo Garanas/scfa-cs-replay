@@ -1,14 +1,38 @@
-<!-- The Map panel's information (M-1): what players see of the map, each field one step of undo. -->
+<!-- The Map panel's Information in the inspector (M-1): About, Game and Preview, each field one step of undo, with the map's
+     folder, size and armies and the preview the .scmap starts with. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              x:Class="FAForever.MapEditor.App.Views.MapPanels.MapInformationPanel"
              x:DataType="vm:MainViewModel">
-  <Border Classes="group">
-    <StackPanel Classes="stack">
-      <TextBlock Classes="overline" Text="{Binding Source=Information, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-      <controls:SettingList DataContext="{Binding MapInformation.Settings}" ShowsTitle="False" />
-    </StackPanel>
-  </Border>
+  <StackPanel>
+    <Border Classes="group">
+      <controls:SettingList DataContext="{Binding MapInformation.About}" />
+    </Border>
+    <Border Classes="group">
+      <controls:SettingList DataContext="{Binding MapInformation.Game}" />
+    </Border>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <controls:SettingList DataContext="{Binding MapInformation.PreviewSettings}" />
+        <Border Classes="thumbnail" HorizontalAlignment="Left">
+          <Image Classes="mappreview" Source="{Binding MapInformation.Preview, Converter={x:Static controls:MapPreviewConverter.Instance}}"
+                 AutomationProperties.Name="Preview of the map" ToolTip.Tip="The preview the .scmap starts with, which the lobby shows" />
+        </Border>
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Folder" />
+          <TextBlock Classes="mono" Text="{Binding MapInformation.Folder}" TextWrapping="Wrap" AutomationProperties.Name="Folder of the map" />
+        </DockPanel>
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Size" />
+          <TextBlock Text="{Binding MapInformation.Size}" TextWrapping="Wrap" AutomationProperties.Name="Size of the map" />
+        </DockPanel>
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Armies" />
+          <TextBlock Text="{Binding MapInformation.Players}" TextWrapping="Wrap" AutomationProperties.Name="Armies of the map" />
+        </DockPanel>
+      </StackPanel>
+    </Border>
+  </StackPanel>
 </UserControl>

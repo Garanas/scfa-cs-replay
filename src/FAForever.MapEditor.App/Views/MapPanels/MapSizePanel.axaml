@@ -1,0 +1,30 @@
+<!-- The Map panel's Size and playable area in the inspector (M-3): the size now, what the Map size tool would make (its
+     options row above the views holds its controls) and which area is playable at the start. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.MapSizePanel"
+             x:DataType="vm:MapSizePart">
+  <StackPanel>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="label" Text="Size" />
+        <TextBlock Text="{Binding Details.Size}" TextWrapping="Wrap" AutomationProperties.Name="Size of the map now" />
+        <TextBlock Classes="label" Text="With the Map size tool" />
+        <TextBlock Classes="mono" Text="{Binding Tool.Summary}" TextWrapping="Wrap" AutomationProperties.Name="Size the Map size tool makes" />
+        <TextBlock Classes="caption" TextWrapping="Wrap"
+                   Text="The tool's options above the views choose the new size, where the old map lies in it and what fills what it gains; drag the rectangle in a view to move it. Apply resizes the map, one step of undo." />
+      </StackPanel>
+    </Border>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="label" Text="Playable area" />
+        <TextBlock Text="{Binding Details.Playable}" TextWrapping="Wrap" AutomationProperties.Name="Playable area of the map" />
+        <ComboBox ItemsSource="{Binding Details.Areas}" SelectedItem="{Binding Details.PlayableArea}" IsVisible="{Binding Details.HasAreas}"
+                  HorizontalAlignment="Stretch"
+                  AutomationProperties.Name="Choose the playable area"
+                  AutomationProperties.HelpText="The area the game plays in at the start; the export makes the map's script set it" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

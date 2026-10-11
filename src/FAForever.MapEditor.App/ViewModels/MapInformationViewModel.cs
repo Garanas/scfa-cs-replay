@@ -9,8 +9,10 @@ namespace FAForever.MapEditor.App.ViewModels;
 /// <summary>
 /// What players see of the map (user story M-1): its name, description, author, version, type,
 /// preview, no-rush radius, whether it adapts to the number of players, and its reclaim; each
-/// field changes the map through <c>map.information</c>, one step of undo per field. The
-/// inspector shows its size, players and the preview the <c>.scmap</c> starts with.
+/// field changes the map through <c>map.information</c>, one step of undo per field. The Map
+/// panel's Information entry shows them in the inspector in three groups (<see cref="About"/>,
+/// <see cref="Game"/>, <see cref="PreviewSettings"/>), with the map's folder, size, armies and the
+/// preview the <c>.scmap</c> starts with.
 /// </summary>
 public sealed partial class MapInformationViewModel : ObservableObject
 {
@@ -49,9 +51,40 @@ public sealed partial class MapInformationViewModel : ObservableObject
             },
             new NumberSetting("Reclaim: energy", command, "reclaimEnergy", d => d.Scenario.Reclaim?.Energy ?? 0, run),
         ]);
+        About = Pick("About", "name", "description", "author", "version");
+        Game = Pick("Game", "type", "noRushRadius", "adaptiveMap");
+        PreviewSettings = Pick("Preview", "preview");
     }
 
+    /// <summary>
+    /// Every field, refreshed together; the inspector shows them in <see cref="About"/>,
+    /// <see cref="Game"/> and <see cref="PreviewSettings"/>.
+    /// </summary>
     public SettingGroup Settings { get; }
+
+    /// <summary>
+    /// The name, description, author and version.
+    /// </summary>
+    public SettingGroup About { get; }
+
+    /// <summary>
+    /// The type, no-rush radius and whether the map adapts.
+    /// </summary>
+    public SettingGroup Game { get; }
+
+    /// <summary>
+    /// The path of a preview image the scenario names.
+    /// </summary>
+    public SettingGroup PreviewSettings { get; }
+
+    private SettingGroup Pick(string title, params string[] arguments) =>
+        new SettingGroup(title, [.. arguments.Select(argument => Settings.Settings.First(setting => setting.Argument == argument))]);
+
+    /// <summary>
+    /// The Map panel's line beside Information: <c>v3 · 4 players</c>.
+    /// </summary>
+    [ObservableProperty]
+    public partial string Summary { get; private set; } = "";
 
     /// <summary>
     /// E.g. <c>20 km, 1024 by 1024 ogrids</c>; empty without a map.
@@ -108,6 +141,7 @@ public sealed partial class MapInformationViewModel : ObservableObject
             Settings.Refresh(null);
             Size = "";
             Players = "";
+            Summary = "";
             Folder = "";
             Preview = null;
             return;
@@ -119,6 +153,9 @@ public sealed partial class MapInformationViewModel : ObservableObject
             Players = string.Create(CultureInfo.InvariantCulture,
                 $"{document.Scenario.PlayableArmies.Length} players, {document.Scenario.ExtraArmies.Length} other armies");
             Folder = document.Folder.ToString();
+            int players = document.Scenario.PlayableArmies.Length;
+            string playing = string.Create(CultureInfo.InvariantCulture, $"{players} {(players == 1 ? "player" : "players")}");
+            Summary = document.Version is int version ? string.Create(CultureInfo.InvariantCulture, $"v{version} · {playing}") : playing;
         }
         Size = document.Width == document.Height
             ? string.Create(CultureInfo.InvariantCulture, $"{Kilometres(document.Width)}, {document.Width} by {document.Height} ogrids")

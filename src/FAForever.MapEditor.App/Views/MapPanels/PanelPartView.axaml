@@ -6,6 +6,7 @@
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              xmlns:decalpanels="using:FAForever.MapEditor.App.Views.DecalPanels"
              xmlns:procedural="using:FAForever.MapEditor.App.Views.ProceduralPanels"
+             xmlns:panels="using:FAForever.MapEditor.App.Views.MapPanels"
              x:Class="FAForever.MapEditor.App.Views.MapPanels.PanelPartView"
              x:DataType="vm:PanelParts">
   <StackPanel>
@@ -100,6 +101,24 @@
               </Panel>
             </StackPanel>
           </Border>
+        </DataTemplate>
+        <!-- the Map mode's entries (wave 14A): the information, size and playable area, script and files, an army, an area -->
+        <DataTemplate DataType="vm:MapInformationPart">
+          <panels:MapInformationPanel DataContext="{Binding Model}" />
+        </DataTemplate>
+        <DataTemplate DataType="vm:MapSizePart">
+          <panels:MapSizePanel />
+        </DataTemplate>
+        <DataTemplate DataType="vm:MapScriptPart">
+          <panels:ScriptPanel DataContext="{Binding Model}" />
+        </DataTemplate>
+        <DataTemplate DataType="vm:MapArmyPart">
+          <Border Classes="group">
+            <panels:ArmyPanel DataContext="{Binding Armies}" />
+          </Border>
+        </DataTemplate>
+        <DataTemplate DataType="vm:MapAreaPart">
+          <panels:MapAreaPanel />
         </DataTemplate>
       </ContentControl.DataTemplates>
     </ContentControl>

@@ -9,7 +9,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// <summary>
 /// Changes what players see of the map (user story M-1), one step of undo; the steps that change
 /// the same fields one after the other are one step (typing in a field again, a slider dragged).
-/// Without arguments it shows the Map panel, whose fields run it.
+/// Without arguments it shows the Map panel's Information in the inspector, whose fields run it.
 /// </summary>
 /// <param name="Name">The name players see.</param>
 /// <param name="Version">The map's version in the vault; 0 for none.</param>
@@ -49,8 +49,8 @@ public sealed class EditMapInformationHandler(MainViewModel model) : IRequestHan
         string[] given = [.. request.Given];
         if (given.Length == 0)
         {
-            model.SelectMode("map");
-            model.Status = "The map's information is in the Map panel";
+            model.InspectPart(MapPartsViewModel.InformationPart);
+            model.Status = "The map's information is in the inspector";
             return Task.CompletedTask;
         }
         ScenarioType? type = request.Type switch
