@@ -14,7 +14,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// Procedural mode's generated path networks are never markers of the project, so clearing a layer
 /// makes the generated network its only one.
 /// </summary>
-/// <param name="Kind"><c>spawns</c>, <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c>, <c>weather</c> or
+/// <param name="Kind"><c>spawns</c>, <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c>, <c>blank</c>, <c>weather</c> or
 /// <c>path</c> (a name of <c>markers.showKind</c> such as <c>landPaths</c> works too).</param>
 /// <param name="Layer">With <c>path</c>: <c>land</c>, <c>water</c>, <c>amphibious</c> or <c>air</c>;
 /// left out, the path nodes of every layer.</param>

@@ -197,6 +197,7 @@ public static class EditorModes
                 new ToolDefinition("markers.hydrocarbon", "Hydrocarbon", "R-1") { Make = model => new PlaceMarkerTool(model, MarkerPlacement.Hydrocarbon) },
                 new ToolDefinition("markers.path", "Path node", "R-3") { Make = model => new PathTool(model) },
                 new ToolDefinition("markers.ai", "AI marker", "R-1") { Make = model => new PlaceMarkerTool(model, MarkerPlacement.Ai) },
+                new ToolDefinition("markers.blank", "Blank", "R-1") { Make = model => new PlaceMarkerTool(model, MarkerPlacement.Blank) },
                 new ToolDefinition("markers.chain", "Chain", "R-4") { Make = model => new ChainTool(model) },
                 new ToolDefinition("markers.weatherDefinition", "Weather", "R-1") { Make = model => new PlaceMarkerTool(model, MarkerPlacement.WeatherDefinition) },
                 new ToolDefinition("markers.weatherGenerator", "Clouds", "R-1") { Make = model => new PlaceMarkerTool(model, MarkerPlacement.WeatherGenerator) },

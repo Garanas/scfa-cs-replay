@@ -68,7 +68,7 @@ public sealed class SetMarkersHandler(SelectionViewModel selection, CurrentEdit 
             {
                 throw new ArgumentException("An AI marker needs a type");
             }
-            foreach (AiMarker ai in markers.OfType<AiMarker>().Where(m => m.Type != type))
+            foreach (AiMarker ai in markers.OfType<AiMarker>().Where(m => !m.IsBlank && m.Type != type))
             {
                 string name = Renamed(document, ai.Name, ai.Type, type);
                 document = document.UpdateMarker(ai.Id, _ => ai with { Type = type, Name = name });

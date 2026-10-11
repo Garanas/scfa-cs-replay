@@ -70,7 +70,7 @@ namespace FAForever.MapEditor.App.Tests
             MapDocument document = model.ShownDocument!;
 
             CollectionAssert.AreEqual(new[] { "Markers", "Path nodes", "Chains and options" }, parts.Groups.Select(group => group.Title).ToArray());
-            CollectionAssert.AreEqual(new[] { "markers.kind.spawns", "markers.kind.mass", "markers.kind.hydrocarbon", "markers.kind.ai", "markers.kind.weather" },
+            CollectionAssert.AreEqual(new[] { "markers.kind.spawns", "markers.kind.mass", "markers.kind.hydrocarbon", "markers.kind.ai", "markers.kind.blank", "markers.kind.weather" },
                 parts.Groups[0].Parts.Select(part => part.Id).ToArray());
             CollectionAssert.AreEqual(new[] { "markers.paths.land", "markers.paths.amphibious", "markers.paths.water", "markers.paths.air" },
                 parts.Groups[1].Parts.Select(part => part.Id).ToArray());
@@ -267,5 +267,52 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(!paths, heading.IsChecked);
             window.Close();
         });
+        [TestMethod]
+        public async Task ABlankMarkerIsAKindOfItsOwnPlacedChainedAndCleared()
+        {
+            MainViewModel model = await Open();
+            int ais = model.ShownDocument!.CountKind(MarkerKinds.AiMarkers);
+
+            // the Blank tool places a blank marker named as the game's editors name it, on the half-ogrid grid
+            model.SelectTool("markers.blank");
+            Tools.IMapTool tool = model.ActiveTool!.Tool!;
+            tool.Press(30.2f, 40.9f, Tools.ToolInput.Default);
+            tool.Release();
+            await Task.Yield();
+            AiMarker first = (AiMarker)model.ShownDocument!.Find(model.Selection.Items.Single())!;
+            Assert.IsTrue(first.IsBlank);
+            Assert.AreEqual("Blank Marker 01", first.Name);
+            Assert.AreEqual(30f, first.Position.X);
+            Assert.AreEqual(41f, first.Position.Z);
+            CommandRun second = await Run(model, "markers.place", new JsonObject { ["kind"] = "blank", ["x"] = 50, ["z"] = 50 });
+            Assert.AreEqual("Blank Marker 02", ((JsonObject)second.Result!)["name"]!.GetValue<string>());
+            Assert.AreEqual(ais, model.ShownDocument!.CountKind(MarkerKinds.AiMarkers), "not counted as AI markers");
+            Assert.AreEqual("2", model.Markers.Parts.Find("markers.kind.blank")!.Detail);
+
+            // a blank marker has no AI type to choose, and the AI types do not offer it
+            Assert.IsFalse(model.Selection.Inspector.Sections.OfType<MarkerSelection>().Single().HasAiMarkers);
+            Assert.IsFalse(model.Selection.Inspector.Sections.OfType<MarkerSelection>().Single().AiTypes.Contains(AiMarker.BlankType));
+
+            // a chain of blank markers, from the selection
+            int secondId = ObjectRef.Parse(((JsonObject)second.Result!)["ref"]!.GetValue<string>()).Id;
+            model.Selection.Set([ObjectRef.Marker(first.Id), ObjectRef.Marker(secondId)]);
+            await model.Markers.AddChainCommand.ExecuteAsync(null);
+            CollectionAssert.AreEqual(new[] { first.Id, secondId }, model.ShownDocument!.Markers.Chains[^1].MarkerIds.ToArray());
+
+            // the chain tool adds a blank marker it clicks
+            Assert.IsTrue((await Run(model, "markers.place", new JsonObject { ["kind"] = "blank", ["x"] = 70, ["z"] = 50 })).Ran);
+            AiMarker third = model.ShownDocument!.Markers.AiMarkers[^1];
+            model.SelectTool("markers.chain");
+            model.ActiveTool!.Tool!.Press(third.Position.X, third.Position.Z, Tools.ToolInput.Default);
+            model.ActiveTool!.Tool!.Release();
+            await Task.Yield();
+            Assert.AreEqual(third.Id, model.ShownDocument!.Markers.Chains[^1].MarkerIds[^1]);
+
+            // Select them and Clear
+            Assert.AreEqual(3, (await Run(model, "markers.select", new JsonObject { ["kind"] = "blank" })).Result);
+            Assert.AreEqual(3, (await Run(model, "markers.clear", new JsonObject { ["kind"] = "blank" })).Result);
+            Assert.AreEqual("Removed 3 blank markers", model.Status);
+            Assert.AreEqual(ais, model.ShownDocument!.CountKind(MarkerKinds.AiMarkers), "the AI markers stay");
+        }
     }
 }

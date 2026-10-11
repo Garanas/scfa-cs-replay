@@ -353,7 +353,8 @@ reads again when it changes; and nothing that generates runs by itself.
 ## R: Markers
 
 - [x] **R-1 Place markers.** Spawns, mass and hydrocarbon deposits, AI markers, path nodes and
-      weather by kind; move and delete them; snap to the grid. Weather: the Weather and Clouds tools
+      weather by kind, and blank markers (a kind of their own, the Blank tool); move and delete
+      them; snap to the grid. Weather: the Weather and Clouds tools
       (the game's weather definition and generator) and their fields in the inspector
       (`markers.setWeather`); with symmetry (F-12) a marker's images are placed with it.
 - [x] **R-2 Marker properties.** The selected markers in the inspector.

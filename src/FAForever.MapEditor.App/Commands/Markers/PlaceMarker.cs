@@ -19,7 +19,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// game puts them, and say so when the ground is too steep for the storages around an extractor;
 /// a deposit on an ogrid that holds one already is refused, and the one there selected.
 /// </summary>
-/// <param name="Kind"><c>spawn</c>, <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c>, <c>path</c>, <c>weatherDefinition</c> or
+/// <param name="Kind"><c>spawn</c>, <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c>, <c>blank</c> (a blank marker, <c>Blank Marker 01</c>), <c>path</c>, <c>weatherDefinition</c> or
 /// <c>weatherGenerator</c> (as the game's marker templates make them: weather of the style of the map's
 /// biome, else Tundra; ten clouds 180 high).</param>
 /// <param name="X">In ogrids.</param>
@@ -61,11 +61,13 @@ public sealed class PlaceMarkerHandler(MainViewModel model, MarkersViewModel mar
             "mass" => new ResourceMarker { Id = 0, Name = "Mass 01", Kind = ResourceKind.Mass, Position = position },
             "hydrocarbon" => new ResourceMarker { Id = 0, Name = "Hydrocarbon 01", Kind = ResourceKind.Hydrocarbon, Position = position },
             "ai" => new AiMarker { Id = 0, Name = $"{type} 01", Type = type, Position = position },
+            // named as the game's editors name it; written as a marker of type Blank Marker
+            "blank" => new AiMarker { Id = 0, Name = $"{AiMarker.BlankType} 01", Type = AiMarker.BlankType, Position = position },
             "path" => new PathNode { Id = 0, Name = $"{LayerPrefix(layer)}PN1", Layer = layer, Position = position },
             // the style of the map's biome: a desert map gets desert weather
             "weatherdefinition" => WeatherStyles.NewDefinition("Weather Definition 01", position, WeatherStyles.StyleOf(document)),
             "weathergenerator" => WeatherStyles.NewGenerator("Weather Generator 01", position),
-            _ => throw new ArgumentException($"There is no kind of marker '{request.Kind}' to place: spawn, mass, hydrocarbon, ai, path, weatherDefinition or weatherGenerator"),
+            _ => throw new ArgumentException($"There is no kind of marker '{request.Kind}' to place: spawn, mass, hydrocarbon, ai, blank, path, weatherDefinition or weatherGenerator"),
         };
 
         document = document.AddMarker(marker with { Name = NextName(document, marker.Name) }, out Marker added);

@@ -236,11 +236,12 @@ public sealed partial class MarkersViewModel : ObservableObject
     public static IReadOnlyList<MarkerKindChoice> Choices { get; } =
     [
         // the colours of the library's Marker.Color: a spawn's, a deposit's, an expansion area's (the
-        // most common AI marker), a weather marker's, and each layer's path nodes
+        // most common AI marker), a blank marker's, a weather marker's, and each layer's path nodes
         new MarkerKindChoice(MarkerKinds.Spawns, "spawns", "Spawns", "Spawns", 0xff800080),
         new MarkerKindChoice(MarkerKinds.Mass, "mass", "Mass", "Mass", 0xff808080),
         new MarkerKindChoice(MarkerKinds.Hydrocarbon, "hydrocarbon", "Hydrocarbon", "Hydrocarbon", 0xff008000),
         new MarkerKindChoice(MarkerKinds.AiMarkers, "ai", "AI markers", "AI markers", 0xff008080),
+        new MarkerKindChoice(MarkerKinds.Blank, "blank", "Blank markers", "Blank markers", 0xff800080),
         new MarkerKindChoice(MarkerKinds.Weather, "weather", "Weather", "Weather", 0xff808000),
         new MarkerKindChoice(MarkerKinds.LandPaths, "landPaths", "Land path nodes", "Land", 0xff00ff00, PathLayer.Land),
         new MarkerKindChoice(MarkerKinds.AmphibiousPaths, "amphibiousPaths", "Amphibious path nodes", "Amphibious", 0xff00ffff, PathLayer.Amphibious),
@@ -255,7 +256,7 @@ public sealed partial class MarkersViewModel : ObservableObject
 
     /// <summary>
     /// The kinds named by <c>markers.clear {kind, layer?}</c> and <c>markers.select</c>: <c>spawns</c>,
-    /// <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c>, <c>weather</c>, or <c>path</c> with a layer
+    /// <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c>, <c>blank</c>, <c>weather</c>, or <c>path</c> with a layer
     /// (<c>land</c>, <c>water</c>, <c>amphibious</c>, <c>air</c>) or without one for every layer; a name
     /// of <c>markers.showKind</c> (<c>landPaths</c>) works too. In any case.
     /// </summary>
@@ -291,6 +292,7 @@ public sealed partial class MarkersViewModel : ObservableObject
             MarkerKinds.Mass => "mass deposit",
             MarkerKinds.Hydrocarbon => "hydrocarbon deposit",
             MarkerKinds.AiMarkers => "AI marker",
+            MarkerKinds.Blank => "blank marker",
             MarkerKinds.Weather => "weather marker",
             MarkerKinds.LandPaths => "land path node",
             MarkerKinds.WaterPaths => "water path node",

@@ -9,7 +9,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// Markers panel's "By kind" do. What is hidden is not picked either. The overlays Markers and
 /// Path nodes still show or hide them all.
 /// </summary>
-/// <param name="Kind"><c>spawns</c>, <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c>, <c>weather</c>,
+/// <param name="Kind"><c>spawns</c>, <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c>, <c>blank</c>, <c>weather</c>,
 /// <c>landPaths</c>, <c>waterPaths</c>, <c>amphibiousPaths</c> or <c>airPaths</c>.</param>
 /// <param name="On">Whether it shows; left out, it turns over.</param>
 /// <returns>Whether it shows now.</returns>

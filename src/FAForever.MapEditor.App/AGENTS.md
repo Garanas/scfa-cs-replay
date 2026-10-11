@@ -1433,7 +1433,7 @@ guide); the App holds the tools, the panel's part `MarkersViewModel` (`model.Mar
 inspector's `MarkerSelection`.
 
 - **Placing** (`Tools/MarkerTools.cs`, R-1): `PlaceMarkerTool` with its `MarkerPlacement` for the
-  tools Spawn, Mass, Hydrocarbon and AI marker; a click runs `markers.place {kind, x, z, type?,
+  tools Spawn, Mass, Hydrocarbon, AI marker and Blank; a click runs `markers.place {kind, x, z, type?,
   layer?, linkTo?}` (one step of undo), which puts the marker on the terrain, names it one more
   than the highest of its kind (`Mass 12`, `Rally Point 03`, `LandPN7`) and selects it, so the
   inspector shows it. Deposits always go to an ogrid's centre (`x.5`, as the game puts them);
@@ -1456,7 +1456,7 @@ inspector's `MarkerSelection`.
   `MarkersViewModel.Parts.cs`; panel `Views/MapPanels/MarkersPanel` for `MarkerListSection`, inspector
   `PanelPartView` for `MarkerDetailsSection`, registered as `PanelPartLists["markers"]`). Headings and
   entries (`view.inspectPart` ids): **Markers**, a kind each (`markers.kind.spawns`, `.mass`,
-  `.hydrocarbon`, `.ai`, `.weather`); **Path nodes**, a layer each (`markers.paths.land`,
+  `.hydrocarbon`, `.ai`, `.blank`, `.weather`); **Path nodes**, a layer each (`markers.paths.land`,
   `.amphibious`, `.water`, `.air`); **Chains and options**, a chain each (`markers.chain.<name>`, kept
   in step with the map by `SyncGroup` on every refresh) and the adaptive map (`markers.adaptive`,
   always last). A kind's or layer's row (`MarkerKindRow`; a chain's `MarkerListRow`) has its show check box at its left
@@ -1471,8 +1471,16 @@ inspector's `MarkerSelection`.
   Clear every path node (`markers.clear {kind, layer?}`), and how the export treats the Procedural
   mode's generated network of the layer (`MarkersViewModel.Export` from `PathNodeSettings`: not
   written, no network of that layer, joined at export, replace at export).
+- **Blank markers** (wave 14B): a kind of their own (`MarkerKinds.Blank`), places a script points at
+  and points of chains. In the model an `AiMarker` of type `Blank Marker` (`AiMarker.BlankType`,
+  `IsBlank`), so the files keep them as they were (a blank marker named like an army is a spawn, as
+  `MarkerTranslation` reads it); `KindOf` counts it as `Blank`, not `AiMarkers`. The Blank tool
+  (`markers.blank`, `MarkerPlacement.Blank`) runs `markers.place kind=blank` (`Blank Marker 01`, the
+  half-ogrid grid as AI markers); the AI types (`AiMarker.KnownTypes`, the AI marker tool's and the
+  inspector's) leave it out, and `markers.set type=` changes no blank marker. The chain tool and
+  "Chain from the selection" take them as any marker.
 - **Clear** (`Commands/Markers/Clear.cs`, owner decision Q3): `markers.clear {kind, layer?}` takes
-  `spawns`, `mass`, `hydrocarbon`, `ai`, `weather` or `path` (with `land`, `water`, `amphibious`,
+  `spawns`, `mass`, `hydrocarbon`, `ai`, `blank`, `weather` or `path` (with `land`, `water`, `amphibious`,
   `air`, or none for every layer; `markers.showKind`'s names such as `landPaths` work too,
   `MarkersViewModel.KindsOf`), one step of undo through `MarkerEdits.RemoveKind` (spawns the highest
   number first, so each takes its playable army and none is renamed; links and chain entries go,

@@ -1,4 +1,5 @@
 using System.Numerics;
+using FAForever.FileFormats.Map;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -225,6 +226,31 @@ namespace FAForever.MapEditor.Project.Tests
                 Assert.IsTrue(original.Scenario.PlayableArmies.Contains(army), $"{army} kept its name: an army with units stays as an extra army");
             }
             Assert.AreEqual(original.Markers.Resources.Length, cleared.Markers.Resources.Length, "only the spawns");
+        }
+
+        [TestMethod]
+        public void ABlankMarkerIsAKindOfItsOwnAndRoundTripsAsABlankMarker()
+        {
+            AiMarker blank = new AiMarker { Id = 0, Name = "Blank Marker 01", Type = AiMarker.BlankType, Position = new Vector3(10, 0, 10) };
+            AiMarker rally = new AiMarker { Id = 0, Name = "Rally Point 01", Type = "Rally Point", Position = new Vector3(12, 0, 10) };
+            Assert.AreEqual(MarkerKinds.Blank, MarkerEdits.KindOf(blank));
+            Assert.AreEqual(MarkerKinds.AiMarkers, MarkerEdits.KindOf(rally));
+            Assert.IsFalse(AiMarker.KnownTypes.Contains(AiMarker.BlankType), "not among the AI types to choose");
+            Assert.AreEqual(0xff800080u, ((uint)blank.Color.Alpha << 24) | ((uint)blank.Color.Red << 16) | ((uint)blank.Color.Green << 8) | blank.Color.Blue);
+
+            MapDocument document = original.AddMarker(blank, out Marker added).AddMarker(rally, out Marker rallyAdded);
+            Assert.AreEqual(1, document.CountKind(MarkerKinds.Blank));
+
+            // written as a marker of type Blank Marker, read back as a blank marker (not a spawn: no army's name)
+            MapMarker written = MarkerTranslation.ToMapMarkers(document.Markers).Single(marker => marker.Name == added.Name);
+            Assert.AreEqual(AiMarker.BlankType, written.Type);
+            MarkerSet read = MarkerTranslation.ToMarkerSet([written], [], [], new Dictionary<string, Vector2>());
+            Assert.IsTrue(read.AiMarkers.Single().IsBlank);
+
+            MapDocument cleared = document.RemoveKind(MarkerKinds.Blank, out int removed);
+            Assert.AreEqual(1, removed);
+            Assert.IsNull(cleared.FindMarker(added.Id));
+            Assert.IsNotNull(cleared.FindMarker(rallyAdded.Id), "the AI markers stay");
         }
     }
 }

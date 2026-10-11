@@ -18,7 +18,7 @@ namespace FAForever.MapEditor.Project.Editing
         Mass = 2,
         Hydrocarbon = 4,
         /// <summary>
-        /// The markers the AI and scripts read (<see cref="AiMarker"/>), of every type.
+        /// The markers the AI and scripts read (<see cref="AiMarker"/>), of every type but the blank marker (<see cref="Blank"/>).
         /// </summary>
         AiMarkers = 8,
         /// <summary>
@@ -30,7 +30,11 @@ namespace FAForever.MapEditor.Project.Editing
         AmphibiousPaths = 128,
         AirPaths = 256,
         PathNodes = LandPaths | WaterPaths | AmphibiousPaths | AirPaths,
-        All = Spawns | Mass | Hydrocarbon | AiMarkers | Weather | PathNodes,
+        /// <summary>
+        /// Blank markers (<see cref="AiMarker.BlankType"/>): places a script points at, points of chains.
+        /// </summary>
+        Blank = 512,
+        All = Spawns | Mass | Hydrocarbon | AiMarkers | Weather | PathNodes | Blank,
     }
 
     /// <summary>
@@ -83,7 +87,7 @@ namespace FAForever.MapEditor.Project.Editing
             Spawn => MarkerKinds.Spawns,
             ResourceMarker resource => resource.Kind == ResourceKind.Mass ? MarkerKinds.Mass : MarkerKinds.Hydrocarbon,
             PathNode node => KindOf(node.Layer),
-            AiMarker => MarkerKinds.AiMarkers,
+            AiMarker ai => ai.IsBlank ? MarkerKinds.Blank : MarkerKinds.AiMarkers,
             _ => MarkerKinds.Weather,
         };
 
