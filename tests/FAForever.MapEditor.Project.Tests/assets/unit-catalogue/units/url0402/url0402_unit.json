@@ -1,0 +1,66 @@
+{
+  "id": "url0402",
+  "name": "Experimental Spiderbot",
+  "faction": "Cybran",
+  "techLevel": 4,
+  "categories": [
+    "AMPHIBIOUS",
+    "BOT",
+    "BUILTBYTIER3COMMANDER",
+    "BUILTBYTIER3ENGINEER",
+    "COUNTERINTELLIGENCE",
+    "CQUEMOV",
+    "CYBRAN",
+    "DIRECTFIRE",
+    "DRAGBUILD",
+    "EXPERIMENTAL",
+    "INTELLIGENCE",
+    "LAND",
+    "LOWSELECTPRIO",
+    "MOBILE",
+    "NEEDMOBILEBUILD",
+    "OVERLAYANTIAIR",
+    "OVERLAYANTINAVY",
+    "OVERLAYCOUNTERINTEL",
+    "OVERLAYDIRECTFIRE",
+    "OVERLAYINDIRECTFIRE",
+    "OVERLAYSONAR",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SNIPEMODE",
+    "SONAR",
+    "STEALTHFIELD",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_experimental_generic",
+  "buildIcon": "amph",
+  "size": {
+    "x": 2.8,
+    "y": 2.8,
+    "z": 4
+  },
+  "uniformScale": 0.0725,
+  "health": 45000,
+  "massCost": 20000,
+  "energyCost": 260000,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 200,
+      "mesh": "/units/url0402/url0402_lod0.glb",
+      "shader": "Insect",
+      "albedo": "/units/url0402/url0402_albedo.png",
+      "normals": "/units/url0402/url0402_normalsts.png",
+      "specular": "/units/url0402/url0402_specteam.png"
+    },
+    {
+      "cutoff": 400,
+      "mesh": "/units/url0402/url0402_lod1.glb",
+      "shader": "Insect",
+      "albedo": "/units/url0402/url0402_lod1_albedo.png",
+      "normals": "/units/url0402/url0402_normalsts.png",
+      "specular": "/units/url0402/url0402_lod1_specteam.png"
+    }
+  ]
+}

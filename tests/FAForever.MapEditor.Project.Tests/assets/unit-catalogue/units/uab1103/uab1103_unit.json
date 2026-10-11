@@ -1,0 +1,57 @@
+{
+  "id": "uab1103",
+  "name": "Mass Extractor",
+  "faction": "Aeon",
+  "techLevel": 1,
+  "categories": [
+    "AEON",
+    "BUILTBYCOMMANDER",
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3ENGINEER",
+    "CQUEMOV",
+    "DRAGBUILD",
+    "ECONOMIC",
+    "MASSEXTRACTION",
+    "MASSPRODUCTION",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SHOWQUEUE",
+    "SIZE4",
+    "SORTECONOMY",
+    "STRUCTURE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_structure1_mass",
+  "buildIcon": "amph",
+  "size": {
+    "x": 0.75,
+    "y": 1.4,
+    "z": 0.75
+  },
+  "uniformScale": 0.15,
+  "health": 370,
+  "massCost": 36,
+  "energyCost": 360,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 120,
+      "mesh": "/units/uab1103/uab1103_lod0.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uab1103/uab1103_albedo.png",
+      "normals": "/units/uab1103/uab1103_normalsts.png",
+      "specular": "/units/uab1103/uab1103_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/uab1103/uab1103_lod1.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uab1103/uab1103_lod1_albedo.png",
+      "normals": "/units/uab1103/uab1103_normalsts.png",
+      "specular": "/units/uab1103/uab1103_lod1_specteam.png"
+    }
+  ]
+}

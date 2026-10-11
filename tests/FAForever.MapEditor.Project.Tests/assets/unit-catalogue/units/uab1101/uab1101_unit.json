@@ -1,0 +1,55 @@
+{
+  "id": "uab1101",
+  "name": "Power Generator",
+  "faction": "Aeon",
+  "techLevel": 1,
+  "categories": [
+    "AEON",
+    "BUILTBYCOMMANDER",
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3ENGINEER",
+    "DRAGBUILD",
+    "ECONOMIC",
+    "ENERGYPRODUCTION",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SIZE4",
+    "SORTECONOMY",
+    "STRUCTURE",
+    "TECH1",
+    "VISIBLETORECON",
+    "VOLATILE"
+  ],
+  "strategicIcon": "icon_structure1_energy",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.75,
+    "y": 0.5,
+    "z": 0.75
+  },
+  "uniformScale": 0.045,
+  "health": 525,
+  "massCost": 75,
+  "energyCost": 750,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 120,
+      "mesh": "/units/uab1101/uab1101_lod0.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uab1101/uab1101_albedo.png",
+      "normals": "/units/uab1101/uab1101_normalsts.png",
+      "specular": "/units/uab1101/uab1101_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/uab1101/uab1101_lod1.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uab1101/uab1101_lod1_albedo.png",
+      "normals": "/units/uab1101/uab1101_normalsts.png",
+      "specular": "/units/uab1101/uab1101_lod1_specteam.png"
+    }
+  ]
+}

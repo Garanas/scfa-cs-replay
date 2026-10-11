@@ -1,0 +1,52 @@
+{
+  "id": "xsl0201",
+  "name": "Medium Tank",
+  "faction": "Seraphim",
+  "techLevel": 1,
+  "categories": [
+    "BUILTBYTIER1FACTORY",
+    "BUILTBYTIER2FACTORY",
+    "BUILTBYTIER3FACTORY",
+    "DIRECTFIRE",
+    "LAND",
+    "MOBILE",
+    "OVERLAYDIRECTFIRE",
+    "PRODUCTFA",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SERAPHIM",
+    "TANK",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_land1_directfire",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.7,
+    "y": 0.5,
+    "z": 1.1
+  },
+  "uniformScale": 0.063,
+  "health": 280,
+  "massCost": 54,
+  "energyCost": 270,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/xsl0201/xsl0201_lod0.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsl0201/xsl0201_albedo.png",
+      "normals": "/units/xsl0201/xsl0201_normalsts.png",
+      "specular": "/units/xsl0201/xsl0201_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/xsl0201/xsl0201_lod1.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsl0201/xsl0201_lod1_albedo.png",
+      "normals": "/units/xsl0201/xsl0201_normalsts.png",
+      "specular": "/units/xsl0201/xsl0201_specteam.png"
+    }
+  ]
+}

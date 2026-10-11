@@ -1,0 +1,55 @@
+{
+  "id": "xsb4201",
+  "name": "Tactical Missile Defense",
+  "faction": "Seraphim",
+  "techLevel": 2,
+  "categories": [
+    "ANTIMISSILE",
+    "BUILTBYTIER2COMMANDER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3COMMANDER",
+    "BUILTBYTIER3ENGINEER",
+    "DEFENSE",
+    "DRAGBUILD",
+    "OVERLAYDEFENSE",
+    "PRODUCTFA",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SERAPHIM",
+    "SIZE4",
+    "SORTDEFENSE",
+    "STRUCTURE",
+    "TECH2",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_structure2_antimissile",
+  "buildIcon": "amph",
+  "size": {
+    "x": 0.65,
+    "y": 1.3,
+    "z": 1
+  },
+  "uniformScale": 0.05,
+  "health": 975,
+  "massCost": 280,
+  "energyCost": 3200,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/xsb4201/xsb4201_lod0.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsb4201/xsb4201_albedo.png",
+      "normals": "/units/xsb4201/xsb4201_normalsts.png",
+      "specular": "/units/xsb4201/xsb4201_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/xsb4201/xsb4201_lod1.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsb4201/xsb4201_lod1_albedo.png",
+      "normals": "/units/xsb4201/xsb4201_normalsts.png",
+      "specular": "/units/xsb4201/xsb4201_lod1_specteam.png"
+    }
+  ]
+}

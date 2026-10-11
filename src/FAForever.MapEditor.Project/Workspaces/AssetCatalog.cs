@@ -165,6 +165,12 @@ namespace FAForever.MapEditor.Project.Workspaces
         public ImmutableArray<AssetFact> Facts { get; init; } = [];
 
         /// <summary>
+        /// A unit's categories from its blueprint (<c>STRUCTURE</c>, <c>ENERGYPRODUCTION</c>, <c>TECH1</c>), in
+        /// upper case; empty for the other kinds.
+        /// </summary>
+        public ImmutableArray<string> Categories { get; init; } = [];
+
+        /// <summary>
         /// The mass a prop gives when it is reclaimed, from its blueprint; 0 for the other kinds.
         /// </summary>
         public double ReclaimMass { get; init; }
@@ -543,6 +549,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                     IconBackground = IconBackgroundOf(assets, unit.BuildIcon),
                     File = file,
                     Facts = [.. facts],
+                    Categories = [.. unit.Categories.Select(category => category.ToUpperInvariant())],
                     MassCost = unit.MassCost,
                     EnergyCost = unit.EnergyCost,
                 };

@@ -1,0 +1,55 @@
+{
+  "id": "uel0101",
+  "name": "Land Scout",
+  "faction": "Uef",
+  "techLevel": 1,
+  "categories": [
+    "BUILTBYTIER1FACTORY",
+    "BUILTBYTIER2FACTORY",
+    "BUILTBYTIER3FACTORY",
+    "DIRECTFIRE",
+    "INTELLIGENCE",
+    "LAND",
+    "MOBILE",
+    "OVERLAYDIRECTFIRE",
+    "OVERLAYRADAR",
+    "PRODUCTSC1",
+    "RADAR",
+    "RECLAIMABLE",
+    "SCOUT",
+    "SELECTABLE",
+    "TECH1",
+    "UEF",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_land1_intel",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.6,
+    "y": 0.7,
+    "z": 1
+  },
+  "uniformScale": 0.08,
+  "health": 29,
+  "massCost": 12,
+  "energyCost": 80,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/uel0101/uel0101_lod0.glb",
+      "shader": "Unit",
+      "albedo": "/units/uel0101/uel0101_albedo.png",
+      "normals": "/units/uel0101/uel0101_normalsts.png",
+      "specular": "/units/uel0101/uel0101_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/uel0101/uel0101_lod1.glb",
+      "shader": "Unit",
+      "albedo": "/units/uel0101/uel0101_lod1_albedo.png",
+      "normals": "/units/uel0101/uel0101_normalsts.png",
+      "specular": "/units/uel0101/uel0101_lod1_specteam.png"
+    }
+  ]
+}

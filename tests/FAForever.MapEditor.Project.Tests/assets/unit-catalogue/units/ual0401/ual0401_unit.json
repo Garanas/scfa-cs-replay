@@ -1,0 +1,58 @@
+{
+  "id": "ual0401",
+  "name": "Experimental Assault Bot",
+  "faction": "Aeon",
+  "techLevel": 4,
+  "categories": [
+    "AEON",
+    "AMPHIBIOUS",
+    "BOT",
+    "BUILTBYTIER3COMMANDER",
+    "BUILTBYTIER3ENGINEER",
+    "CQUEMOV",
+    "DIRECTFIRE",
+    "DRAGBUILD",
+    "EXPERIMENTAL",
+    "LAND",
+    "LOWSELECTPRIO",
+    "MOBILE",
+    "NEEDMOBILEBUILD",
+    "OVERLAYDIRECTFIRE",
+    "OVERLAYINDIRECTFIRE",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SNIPEMODE",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_experimental_generic",
+  "buildIcon": "amph",
+  "size": {
+    "x": 3,
+    "y": 7,
+    "z": 1.9
+  },
+  "uniformScale": 0.1,
+  "health": 99999,
+  "massCost": 27500,
+  "energyCost": 343750,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 250,
+      "mesh": "/units/ual0401/ual0401_lod0.glb",
+      "shader": "Aeon",
+      "albedo": "/units/ual0401/ual0401_albedo.png",
+      "normals": "/units/ual0401/ual0401_normalsts.png",
+      "specular": "/units/ual0401/ual0401_specteam.png"
+    },
+    {
+      "cutoff": 500,
+      "mesh": "/units/ual0401/ual0401_lod1.glb",
+      "shader": "Aeon",
+      "albedo": "/units/ual0401/ual0401_lod1_albedo.png",
+      "normals": "/units/ual0401/ual0401_normalsts.png",
+      "specular": "/units/ual0401/ual0401_lod1_specteam.png"
+    }
+  ]
+}

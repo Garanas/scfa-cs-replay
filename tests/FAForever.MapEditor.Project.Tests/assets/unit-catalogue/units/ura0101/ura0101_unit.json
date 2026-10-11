@@ -1,0 +1,58 @@
+{
+  "id": "ura0101",
+  "name": "Air Scout",
+  "faction": "Cybran",
+  "techLevel": 1,
+  "categories": [
+    "AIR",
+    "BUILTBYTIER1FACTORY",
+    "BUILTBYTIER2FACTORY",
+    "BUILTBYTIER3FACTORY",
+    "CYBRAN",
+    "HIGHALTAIR",
+    "INTELLIGENCE",
+    "MOBILE",
+    "OVERLAYRADAR",
+    "OVERLAYSONAR",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SCOUT",
+    "SELECTABLE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_fighter1_intel",
+  "buildIcon": "air",
+  "size": {
+    "x": 0.8,
+    "y": 0.4,
+    "z": 1
+  },
+  "footprint": {
+    "sizeX": 1,
+    "sizeZ": 1
+  },
+  "uniformScale": 0.07,
+  "health": 26,
+  "massCost": 40,
+  "energyCost": 580,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 120,
+      "mesh": "/units/ura0101/ura0101_lod0.glb",
+      "shader": "Insect",
+      "albedo": "/units/ura0101/ura0101_albedo.png",
+      "normals": "/units/ura0101/ura0101_normalsts.png",
+      "specular": "/units/ura0101/ura0101_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/ura0101/ura0101_lod1.glb",
+      "shader": "Insect",
+      "albedo": "/units/ura0101/ura0101_lod1_albedo.png",
+      "normals": "/units/ura0101/ura0101_normalsts.png",
+      "specular": "/units/ura0101/ura0101_lod1_specteam.png"
+    }
+  ]
+}

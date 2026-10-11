@@ -1,0 +1,58 @@
+{
+  "id": "uab2101",
+  "name": "Point Defense",
+  "faction": "Aeon",
+  "techLevel": 1,
+  "categories": [
+    "AEON",
+    "BUILTBYCOMMANDER",
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3ENGINEER",
+    "CQUEMOV",
+    "DEFENSE",
+    "DIRECTFIRE",
+    "DRAGBUILD",
+    "FASTDECAY",
+    "OVERLAYDIRECTFIRE",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SIZE4",
+    "SNIPEMODE",
+    "SORTDEFENSE",
+    "STRUCTURE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_structure1_directfire",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.6,
+    "y": 0.8,
+    "z": 0.6
+  },
+  "uniformScale": 0.04,
+  "health": 1300,
+  "massCost": 250,
+  "energyCost": 2000,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/uab2101/uab2101_lod0.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uab2101/uab2101_albedo.png",
+      "normals": "/units/uab2101/uab2101_normalsts.png",
+      "specular": "/units/uab2101/uab2101_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/uab2101/uab2101_lod1.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uab2101/uab2101_lod1_albedo.png",
+      "normals": "/units/uab2101/uab2101_normalsts.png",
+      "specular": "/units/uab2101/uab2101_lod1_specteam.png"
+    }
+  ]
+}
