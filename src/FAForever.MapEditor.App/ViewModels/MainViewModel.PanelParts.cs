@@ -31,6 +31,7 @@ public sealed partial class MainViewModel
             ["lighting"] = LightingSettings.Parts,
             ["decals"] = WideDecals.Parts,
             ["procedural"] = ProceduralList.Parts,
+            ["markers"] = Markers.Parts,
         };
         Presets.Register(new PresetKind(AtmospherePresets.SkyKind, "Sky presets", CaptureSky, ApplySky));
         foreach (PanelParts list in PanelPartLists.Values)

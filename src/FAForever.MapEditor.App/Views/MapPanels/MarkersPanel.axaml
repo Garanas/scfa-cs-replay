@@ -1,0 +1,69 @@
+<!-- The Markers panel's list (R-1 to R-6; wave 14B): under Markers a kind each with its show check box, colour and count,
+     under Path nodes a layer each, under Chains and options a chain each and the adaptive map. The headings Markers and
+     Path nodes carry the check boxes of their overlays. Choosing an entry shows it in the inspector (PanelPartView). -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.MarkersPanel"
+             x:DataType="vm:MainViewModel"
+             x:Name="Root">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <ItemsControl ItemsSource="{Binding Markers.ListGroups}" AutomationProperties.Name="Markers by kind, layer and chain">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Classes="stack" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:MarkerListGroup">
+            <StackPanel Classes="partgroup">
+              <DockPanel>
+                <!-- the overlay of the heading (Markers, Path nodes), as its chip above the views -->
+                <CheckBox DockPanel.Dock="Right" Classes="boxonly" IsVisible="{Binding HasOverlay}"
+                          IsChecked="{Binding Overlay.IsOn, Mode=OneWay, FallbackValue=False}"
+                          Command="{Binding #Root.((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="{Binding Overlay.Definition.CommandId, FallbackValue={x:Null}}"
+                          AutomationProperties.Name="{Binding OverlayLabel}"
+                          AutomationProperties.HelpText="In both views, as the overlay's chip above them" />
+                <TextBlock Classes="overline" VerticalAlignment="Center" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              </DockPanel>
+              <ItemsControl ItemsSource="{Binding Rows}" AutomationProperties.Name="{Binding Title}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Classes="partentries" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:MarkerListRow">
+                    <DockPanel>
+                      <!-- a kind's or layer's show check box (markers.showKind) -->
+                      <CheckBox DockPanel.Dock="Left" Classes="boxonly" IsVisible="{Binding IsKind}"
+                                IsChecked="{Binding Kind.IsOn, Mode=OneWay, FallbackValue=False}" Command="{Binding Kind.ToggleShownCommand, FallbackValue={x:Null}}"
+                                AutomationProperties.Name="{Binding Kind.ShowLabel, FallbackValue=''}" />
+                      <Button Classes="partentry" Classes.selected="{Binding Part.IsChosen}"
+                              Command="{Binding Parts.ChooseItemCommand}" CommandParameter="{Binding Part}"
+                              ToolTip.Tip="{Binding Part.Help}"
+                              AutomationProperties.Name="{Binding Part.Title}" AutomationProperties.HelpText="{Binding Part.Label}">
+                        <DockPanel>
+                          <Border DockPanel.Dock="Left" Classes="swatch markersswatch" IsVisible="{Binding IsKind}"
+                                  Background="{Binding Kind.Swatch, Converter={x:Static controls:ArgbBrushConverter.Instance}, FallbackValue={x:Null}}" />
+                          <TextBlock DockPanel.Dock="Right" Classes="partdetail" Text="{Binding Part.Detail}" />
+                          <TextBlock Text="{Binding Part.Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                      </Button>
+                    </DockPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <!-- a new chain: of the selected markers, in the order they were selected (markers.addChain) -->
+      <Button HorizontalAlignment="Stretch" Content="Chain from the selection" Command="{Binding Markers.AddChainCommand}"
+              AutomationProperties.Name="Add a chain from the selection"
+              AutomationProperties.HelpText="Makes a chain of the selected markers, in the order they were selected; or click markers with the chain tool" />
+    </StackPanel>
+  </Border>
+</UserControl>

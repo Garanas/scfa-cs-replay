@@ -10,23 +10,21 @@ using FAForever.MapEditor.Project.Files.InMemory;
 namespace FAForever.MapEditor.App.ViewModels;
 
 /// <summary>
-/// The Markers panel's kinds, each shown or hidden in both views (user story R-6).
+/// The Markers panel's list (user stories R-1 to R-6): the kinds of markers with their counts and
+/// show check boxes, the path nodes per layer, the chains and the adaptive map; the overlays Markers
+/// and Path nodes are the check boxes of their headings.
 /// </summary>
-public sealed record MarkerKindsSection() : PanelSection("By kind");
+public sealed record MarkerListSection() : PanelSection("Markers");
 
 /// <summary>
-/// The Markers panel's chains: make, rename, put in order, delete (user story R-4).
+/// The entry chosen in the Markers panel's list, in the inspector: a kind's or layer's counts, Select
+/// and Clear; a chain's name and markers; the adaptive map's settings.
 /// </summary>
-public sealed record ChainsSection() : PanelSection("Chains");
+public sealed record MarkerDetailsSection() : PanelSection("Marker kind, chain or option");
 
 /// <summary>
-/// The Markers panel's adaptive map: whether it adapts, and which deposits wait for which army
-/// (user story R-5).
-/// </summary>
-public sealed record AdaptiveSection() : PanelSection("Adaptive map");
-
-/// <summary>
-/// A kind of marker in the panel: a check box with how many the map has.
+/// A kind of marker (or the path nodes of a layer): an entry of the Markers panel's list with its
+/// colour, count and show check box, and what the inspector shows of it while it is chosen.
 /// </summary>
 public sealed partial class MarkerKindItem(MarkerKindChoice choice, MarkersViewModel owner) : ObservableObject
 {
@@ -38,24 +36,143 @@ public sealed partial class MarkerKindItem(MarkerKindChoice choice, MarkersViewM
     public string Id => choice.Id;
 
     /// <summary>
+    /// Its entry in the panel's list (<c>view.inspectPart</c>): <c>markers.kind.mass</c>, <c>markers.paths.land</c>.
+    /// </summary>
+    public string PartId => choice.PartId;
+
+    /// <summary>
+    /// Its entry's title: <c>Mass</c>, <c>Land</c>.
+    /// </summary>
+    public string Title => choice.Entry;
+
+    /// <summary>
+    /// Whether it is the path nodes of a layer.
+    /// </summary>
+    public bool IsPathLayer => choice.Layer is not null;
+
+    /// <summary>
+    /// The colour the game and the views give its markers, <c>0xAARRGGBB</c>.
+    /// </summary>
+    public uint Swatch => choice.Colour;
+
+    /// <summary>
     /// E.g. <c>Mass (48)</c>.
     /// </summary>
     [ObservableProperty]
     public partial string Label { get; private set; } = choice.Title;
 
+    /// <summary>
+    /// How many the map has.
+    /// </summary>
+    [ObservableProperty]
+    public partial int Count { get; private set; }
+
+    /// <summary>
+    /// How many links the path nodes of the layer have, a link both ways once; 0 for other kinds.
+    /// </summary>
+    [ObservableProperty]
+    public partial int Links { get; private set; }
+
+    /// <summary>
+    /// How the export treats the Procedural mode's generated network of the layer beside these
+    /// nodes (joined or replacing them); empty for other kinds.
+    /// </summary>
+    [ObservableProperty]
+    public partial string ExportText { get; private set; } = "";
+
+    /// <summary>
+    /// The short form of <see cref="ExportText"/>: <c>joined at export</c>, <c>replace at export</c>, <c>not written</c>.
+    /// </summary>
+    [ObservableProperty]
+    public partial string ExportFact { get; private set; } = "";
+
     public bool IsOn => owner.Shows(choice.Kind);
 
-    internal void Refresh(int count)
+    public string ShownText => IsOn ? "yes" : "no";
+
+    /// <summary>
+    /// The name of its show check box: <c>Show mass</c>, <c>Show land path nodes</c>.
+    /// </summary>
+    public string ShowLabel => $"Show {choice.Title.ToLowerInvariant().Replace("ai ", "AI ", StringComparison.Ordinal)}";
+
+    /// <summary>
+    /// What its Clear button says and does.
+    /// </summary>
+    public string ClearLabel => IsPathLayer ? "Clear the layer" : "Clear them";
+
+    public string ClearHelp => $"Removes every {MarkersViewModel.Noun(choice.Kind, 1)} of the map, one step of undo; links and chains to them go with them"
+        + (choice.Kind == MarkerKinds.Spawns ? ", and each spawn's playable army (one with units stays as an extra army)" : "");
+
+    public string SelectHelp => $"Selects every {MarkersViewModel.Noun(choice.Kind, 1)} of the map";
+
+    internal void Refresh(int count, int links, (string Text, string Fact) export)
     {
+        Count = count;
+        Links = links;
+        (ExportText, ExportFact) = export;
         Label = $"{choice.Title} ({count})";
-        OnPropertyChanged(nameof(IsOn));
+        RefreshShown();
     }
+
+    internal void RefreshShown()
+    {
+        OnPropertyChanged(nameof(IsOn));
+        OnPropertyChanged(nameof(ShownText));
+    }
+
+    /// <summary>
+    /// Its check box in the panel: shows or hides the kind (<c>markers.showKind</c>).
+    /// </summary>
+    [RelayCommand]
+    private Task ToggleShown() => owner.ToggleKindCommand.ExecuteAsync(this);
+
+    /// <summary>
+    /// Selects every marker of the kind (<c>markers.select</c>).
+    /// </summary>
+    [RelayCommand]
+    private Task Select() => owner.Run("markers.select", choice.Arguments());
+
+    /// <summary>
+    /// Removes every marker of the kind, one step of undo (<c>markers.clear</c>).
+    /// </summary>
+    [RelayCommand]
+    private Task Clear() => owner.Run("markers.clear", choice.Arguments());
+
+    /// <summary>
+    /// Removes the path nodes of every layer, one step of undo (<c>markers.clear kind=path</c>).
+    /// </summary>
+    [RelayCommand]
+    private Task ClearEveryPathNode() => owner.Run("markers.clear", new JsonObject { ["kind"] = MarkersViewModel.PathKind });
 }
 
 /// <summary>
 /// A kind of marker by its name in commands and its title in the panel.
 /// </summary>
-public sealed record MarkerKindChoice(MarkerKinds Kind, string Id, string Title);
+/// <param name="Id">Its name in <c>markers.showKind</c>: <c>mass</c>, <c>landPaths</c>.</param>
+/// <param name="Title">What it is called alone: <c>Mass</c>, <c>Land path nodes</c>.</param>
+/// <param name="Entry">Its entry's title in the panel's list, under its heading: <c>Mass</c>, <c>Land</c>.</param>
+/// <param name="Colour">The colour its markers have, <c>0xAARRGGBB</c> (the library's <c>Marker.Color</c>).</param>
+/// <param name="Layer">The layer of path nodes; null for the other kinds.</param>
+public sealed record MarkerKindChoice(MarkerKinds Kind, string Id, string Title, string Entry, uint Colour, PathLayer? Layer = null)
+{
+    /// <summary>
+    /// Its entry in the Markers panel's list: <c>markers.kind.mass</c>, <c>markers.paths.land</c>.
+    /// </summary>
+    public string PartId => Layer is PathLayer layer ? $"markers.paths.{LayerName(layer)}" : $"markers.kind.{Id}";
+
+    /// <summary>
+    /// The arguments of <c>markers.clear</c> and <c>markers.select</c> for it: <c>{kind: mass}</c>,
+    /// <c>{kind: path, layer: land}</c>.
+    /// </summary>
+    public JsonObject Arguments() => Layer is PathLayer layer
+        ? new JsonObject { ["kind"] = MarkersViewModel.PathKind, ["layer"] = LayerName(layer) }
+        : new JsonObject { ["kind"] = Id };
+
+    /// <summary>
+    /// A layer's name in commands: <c>land</c>, <c>water</c>, <c>amphibious</c>, <c>air</c>.
+    /// </summary>
+    public static string LayerName(PathLayer layer) => layer.ToString().ToLowerInvariant();
+}
 
 /// <summary>
 /// A chain in the panel, with its markers in order.
@@ -99,23 +216,86 @@ public sealed partial class MarkersViewModel : ObservableObject
     {
         _run = run;
         Kinds = [.. Choices.Select(choice => new MarkerKindItem(choice, this))];
+        Parts = MakeParts();
     }
+
+    /// <summary>
+    /// Runs a command of the editor, as the panel's and the inspector's buttons do.
+    /// </summary>
+    internal Task Run(string id, JsonObject arguments) => _run(id, arguments);
 
     /// <summary>
     /// The kinds one by one, in the order of the panel.
     /// </summary>
     public static IReadOnlyList<MarkerKindChoice> Choices { get; } =
     [
-        new MarkerKindChoice(MarkerKinds.Spawns, "spawns", "Spawns"),
-        new MarkerKindChoice(MarkerKinds.Mass, "mass", "Mass"),
-        new MarkerKindChoice(MarkerKinds.Hydrocarbon, "hydrocarbon", "Hydrocarbon"),
-        new MarkerKindChoice(MarkerKinds.AiMarkers, "ai", "AI markers"),
-        new MarkerKindChoice(MarkerKinds.Weather, "weather", "Weather"),
-        new MarkerKindChoice(MarkerKinds.LandPaths, "landPaths", "Land path nodes"),
-        new MarkerKindChoice(MarkerKinds.WaterPaths, "waterPaths", "Water path nodes"),
-        new MarkerKindChoice(MarkerKinds.AmphibiousPaths, "amphibiousPaths", "Amphibious path nodes"),
-        new MarkerKindChoice(MarkerKinds.AirPaths, "airPaths", "Air path nodes"),
+        // the colours of the library's Marker.Color: a spawn's, a deposit's, an expansion area's (the
+        // most common AI marker), a weather marker's, and each layer's path nodes
+        new MarkerKindChoice(MarkerKinds.Spawns, "spawns", "Spawns", "Spawns", 0xff800080),
+        new MarkerKindChoice(MarkerKinds.Mass, "mass", "Mass", "Mass", 0xff808080),
+        new MarkerKindChoice(MarkerKinds.Hydrocarbon, "hydrocarbon", "Hydrocarbon", "Hydrocarbon", 0xff008000),
+        new MarkerKindChoice(MarkerKinds.AiMarkers, "ai", "AI markers", "AI markers", 0xff008080),
+        new MarkerKindChoice(MarkerKinds.Weather, "weather", "Weather", "Weather", 0xff808000),
+        new MarkerKindChoice(MarkerKinds.LandPaths, "landPaths", "Land path nodes", "Land", 0xff00ff00, PathLayer.Land),
+        new MarkerKindChoice(MarkerKinds.AmphibiousPaths, "amphibiousPaths", "Amphibious path nodes", "Amphibious", 0xff00ffff, PathLayer.Amphibious),
+        new MarkerKindChoice(MarkerKinds.WaterPaths, "waterPaths", "Water path nodes", "Water", 0xff0000ff, PathLayer.Water),
+        new MarkerKindChoice(MarkerKinds.AirPaths, "airPaths", "Air path nodes", "Air", 0xffffffff, PathLayer.Air),
     ];
+
+    /// <summary>
+    /// The kind <c>markers.clear</c> and <c>markers.select</c> call the path nodes, with a layer or of every layer.
+    /// </summary>
+    public const string PathKind = "path";
+
+    /// <summary>
+    /// The kinds named by <c>markers.clear {kind, layer?}</c> and <c>markers.select</c>: <c>spawns</c>,
+    /// <c>mass</c>, <c>hydrocarbon</c>, <c>ai</c>, <c>weather</c>, or <c>path</c> with a layer
+    /// (<c>land</c>, <c>water</c>, <c>amphibious</c>, <c>air</c>) or without one for every layer; a name
+    /// of <c>markers.showKind</c> (<c>landPaths</c>) works too. In any case.
+    /// </summary>
+    /// <exception cref="ArgumentException">No kind or layer has the name, or a layer is given with a kind that has none.</exception>
+    public static MarkerKinds KindsOf(string kind, string? layer)
+    {
+        if (string.Equals(kind, PathKind, StringComparison.OrdinalIgnoreCase) || string.Equals(kind, "paths", StringComparison.OrdinalIgnoreCase) || string.Equals(kind, "pathNodes", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(layer))
+            {
+                return MarkerKinds.PathNodes;
+            }
+            return Enum.TryParse(layer.Trim(), ignoreCase: true, out PathLayer named) && Enum.IsDefined(named)
+                ? MarkerEdits.KindOf(named)
+                : throw new ArgumentException($"There is no layer of path nodes '{layer}': land, water, amphibious, air");
+        }
+        MarkerKinds kinds = KindNamed(string.Equals(kind, "spawn", StringComparison.OrdinalIgnoreCase) ? "spawns" : kind);
+        return string.IsNullOrWhiteSpace(layer)
+            ? kinds
+            : throw new ArgumentException($"Only path nodes have a layer: give kind={PathKind} layer={layer}");
+    }
+
+    /// <summary>
+    /// What markers of some kinds are called in the status line: <c>1 spawn</c>, <c>412 land path
+    /// nodes</c>, <c>3 path nodes</c> (of every layer); with a count of 1 and <paramref name="number"/>
+    /// off, the noun alone (<c>mass deposit</c>).
+    /// </summary>
+    public static string Noun(MarkerKinds kinds, int count, bool number = false)
+    {
+        string one = kinds switch
+        {
+            MarkerKinds.Spawns => "spawn",
+            MarkerKinds.Mass => "mass deposit",
+            MarkerKinds.Hydrocarbon => "hydrocarbon deposit",
+            MarkerKinds.AiMarkers => "AI marker",
+            MarkerKinds.Weather => "weather marker",
+            MarkerKinds.LandPaths => "land path node",
+            MarkerKinds.WaterPaths => "water path node",
+            MarkerKinds.AmphibiousPaths => "amphibious path node",
+            MarkerKinds.AirPaths => "air path node",
+            MarkerKinds.PathNodes => "path node",
+            _ => "marker",
+        };
+        string noun = count == 1 ? one : $"{one}s";
+        return number || count != 1 ? $"{count} {noun}" : noun;
+    }
 
     /// <summary>
     /// A kind by its name in commands (<see cref="MarkerKindChoice.Id"/>), in any case.
@@ -152,7 +332,7 @@ public sealed partial class MarkersViewModel : ObservableObject
         ShownKinds = shown;
         foreach (MarkerKindItem item in Kinds)
         {
-            item.Refresh(Count(item.Kind));
+            item.RefreshShown();
         }
         Changed?.Invoke(this, EventArgs.Empty);
     }
@@ -298,17 +478,15 @@ public sealed partial class MarkersViewModel : ObservableObject
     /// </summary>
     public void Refresh(MapDocument? document)
     {
-        if (ReferenceEquals(document?.Markers, _document?.Markers) && ReferenceEquals(document?.Scenario, _document?.Scenario) && document is not null)
+        if (ReferenceEquals(document?.Markers, _document?.Markers) && ReferenceEquals(document?.Scenario, _document?.Scenario)
+            && ReferenceEquals(document?.Procedural.PathNodes, _document?.Procedural.PathNodes) && document is not null)
         {
             _document = document;
             return;
         }
         using Performance.Span measure = Performance.Measure("model.markers-panel");
         _document = document;
-        foreach (MarkerKindItem item in Kinds)
-        {
-            item.Refresh(Count(item.Kind));
-        }
+        RefreshKinds(document);
         if (document is null)
         {
             Chains = [];
@@ -316,6 +494,7 @@ public sealed partial class MarkersViewModel : ObservableObject
             IsAdaptive = false;
             AdaptiveArmies = [];
             AlwaysThere = "";
+            SyncChainParts();
             return;
         }
 
@@ -327,13 +506,14 @@ public sealed partial class MarkersViewModel : ObservableObject
         }
         Chains = [.. document.Markers.Chains.Select(chain => new ChainItem(chain.Name,
             [.. chain.MarkerIds.Select((id, index) => new ChainEntry(chain.Name, index, id, names.GetValueOrDefault(id, $"marker {id}")))]))];
+        IsAdaptive = document.Scenario.AdaptiveMap;
+        SyncChainParts();
         SelectedChain = Chains.FirstOrDefault(chain => chain.Name == chosen);
         if (SelectedChain is not null)
         {
             _chosenAfterRefresh = null;
         }
 
-        IsAdaptive = document.Scenario.AdaptiveMap;
         AdaptiveArmies = [.. document.Scenario.PlayableArmies.Select(army => new AdaptiveArmy(army, document.Markers.Resources.Count(resource => resource.SpawnWithArmy == army)))];
         int always = document.Markers.Resources.Count(resource => resource.SpawnWithArmy is null);
         AlwaysThere = $"{always} {(always == 1 ? "deposit is" : "deposits are")} there whoever plays";
@@ -357,6 +537,4 @@ public sealed partial class MarkersViewModel : ObservableObject
     }
 
     private string? _chosenAfterRefresh;
-
-    private int Count(MarkerKinds kind) => _document?.Markers.All.Count(marker => MarkerEdits.KindOf(marker) == kind) ?? 0;
 }

@@ -26,6 +26,8 @@ public sealed partial class MainViewModel
     private void InitializeMarkers()
     {
         Markers.Changed += (_, _) => RefreshOverlays();
+        // the list's headings Markers and Path nodes carry the check boxes of their overlays
+        Markers.UseOverlays(Overlays);
         DocumentChanged += (_, _) => Markers.Refresh(ShownDocument);
         MapChanged += (_, _) => Markers.Refresh(ShownDocument);
         PropertyChanged += OnMarkerToolChosen;

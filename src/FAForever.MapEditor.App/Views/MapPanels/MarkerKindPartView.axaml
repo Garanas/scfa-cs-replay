@@ -1,0 +1,51 @@
+<!-- A kind of marker or a layer of path nodes chosen in the Markers panel's list (R-6, R-3; wave 14B): how many, links and
+     whether it shows, Select them and Clear (markers.select, markers.clear: one step of undo), and for path nodes how the
+     export treats the Procedural mode's generated network beside them. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.MarkerKindPartView"
+             x:DataType="vm:MarkerKindItem">
+  <StackPanel>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Markers" />
+          <TextBlock Classes="mono" Text="{Binding Count}" AutomationProperties.Name="How many markers of the kind" />
+        </DockPanel>
+        <DockPanel IsVisible="{Binding IsPathLayer}">
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Links" />
+          <TextBlock Classes="mono" Text="{Binding Links}" AutomationProperties.Name="How many links the layer has"
+                     ToolTip.Tip="A link both ways counts once" />
+        </DockPanel>
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Shown" />
+          <TextBlock Text="{Binding ShownText}" AutomationProperties.Name="Whether the kind shows in the views"
+                     ToolTip.Tip="Its check box in the panel's list; the overlay of its heading shows or hides the whole heading" />
+        </DockPanel>
+        <DockPanel IsVisible="{Binding IsPathLayer}">
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Generated" />
+          <TextBlock Text="{Binding ExportFact}" AutomationProperties.Name="What the export does with the generated network" />
+        </DockPanel>
+      </StackPanel>
+    </Border>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <WrapPanel Classes="chips">
+          <Button Content="Select them" Command="{Binding SelectCommand}" AutomationProperties.HelpText="{Binding SelectHelp}" />
+          <Button Content="{Binding ClearLabel}" Command="{Binding ClearCommand}" AutomationProperties.HelpText="{Binding ClearHelp}" />
+        </WrapPanel>
+        <Button HorizontalAlignment="Stretch" Content="Clear every path node" Command="{Binding ClearEveryPathNodeCommand}" IsVisible="{Binding IsPathLayer}"
+                AutomationProperties.HelpText="Removes the path nodes of every layer, one step of undo" />
+        <TextBlock Classes="caption" TextWrapping="Wrap"
+                   Text="Clearing removes the map's own markers, placed by hand, imported or written by an older editor; undo brings them back." />
+      </StackPanel>
+    </Border>
+    <Border Classes="group" IsVisible="{Binding IsPathLayer}">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="heading" Text="Generated networks" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding ExportText}" AutomationProperties.Name="How the export treats the generated network" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

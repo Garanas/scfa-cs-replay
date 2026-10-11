@@ -1,0 +1,39 @@
+<!-- A chain chosen in the Markers panel's list (R-4; wave 14B): its name, its markers in order with up, down and take out
+     (markers.setChain), Select its markers and Delete. The chain tool adds what it clicks to the chain chosen here. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.ChainPartView"
+             x:DataType="vm:ChainPart">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Name" />
+        <TextBox Classes="commit" Text="{Binding NameText, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Name of the chain" />
+      </DockPanel>
+      <ItemsControl ItemsSource="{Binding Chain.Entries, FallbackValue={x:Null}}" AutomationProperties.Name="Markers of the chain">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ChainEntry">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Classes="beside" Content="×"
+                      Command="{Binding $parent[ItemsControl].((vm:ChainPart)DataContext).Owner.RemoveEntryCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Name, StringFormat='Take {0} out of the chain'}" />
+              <Button DockPanel.Dock="Right" Classes="beside" Content="↓"
+                      Command="{Binding $parent[ItemsControl].((vm:ChainPart)DataContext).Owner.MoveDownCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Name, StringFormat='Move {0} down'}" />
+              <Button DockPanel.Dock="Right" Classes="beside" Content="↑"
+                      Command="{Binding $parent[ItemsControl].((vm:ChainPart)DataContext).Owner.MoveUpCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Name, StringFormat='Move {0} up'}" />
+              <TextBlock Text="{Binding Line}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock Classes="caption" TextWrapping="Wrap" Text="Click markers with the chain tool to add them at the end; control takes one out." />
+      <WrapPanel Classes="chips">
+        <Button Content="Select its markers" Command="{Binding SelectCommand}" AutomationProperties.Name="Select the chain's markers" />
+        <Button Content="Delete the chain" Command="{Binding DeleteCommand}" AutomationProperties.HelpText="Its markers stay" />
+      </WrapPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

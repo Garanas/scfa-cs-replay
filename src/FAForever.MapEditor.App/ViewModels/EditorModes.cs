@@ -203,13 +203,12 @@ public static class EditorModes
                 new ToolDefinition("markers.preset", "Preset", "F-10") { Make = model => new MarkerPresetTool(model) },
             ],
             [
-                new OverlaySection(),
-                new MarkerKindsSection(),
-                new ChainsSection(),
-                new AdaptiveSection(),
+                // the kinds, layers of path nodes, chains and the adaptive map as a list (wave 14B), presets last
+                new MarkerListSection(),
                 new PresetSection(MarkerPresets.Kind, "Marker presets") { EmptyText = "None yet: select markers, such as a spawn with its deposits, and save them to place them again.", SaveLabel = "Save the selected markers as a preset" },
             ],
-            []),
+            // the entry chosen in the list: a kind's or layer's counts, Select and Clear; a chain; the adaptive map
+            [new MarkerDetailsSection()]),
 
         new ModeDefinition("props", "Props", "Icon.Props", "Place and paint props, props from rules, reclaim", 1, "F7", "P-1",
             [
@@ -266,7 +265,7 @@ public sealed record OverlayDefinition(string Id, string Title, string CommandTi
     public bool IsIncomplete => Missing is not null;
 
     /// <summary>
-    /// The mode whose panel lists it too (<see cref="OverlaySection"/>), e.g. <c>markers</c>.
+    /// The mode whose panel lists it too (an <see cref="OverlaySection"/>, or the check box of the heading of its title in the Markers panel's list), e.g. <c>markers</c>.
     /// </summary>
     public string? Panel { get; init; }
 

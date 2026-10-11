@@ -6,6 +6,7 @@
              xmlns:controls="using:FAForever.MapEditor.App.Controls"
              xmlns:decalpanels="using:FAForever.MapEditor.App.Views.DecalPanels"
              xmlns:procedural="using:FAForever.MapEditor.App.Views.ProceduralPanels"
+             xmlns:local="using:FAForever.MapEditor.App.Views.MapPanels"
              x:Class="FAForever.MapEditor.App.Views.MapPanels.PanelPartView"
              x:DataType="vm:PanelParts">
   <StackPanel>
@@ -100,6 +101,16 @@
               </Panel>
             </StackPanel>
           </Border>
+        </DataTemplate>
+        <!-- the Markers mode's entries (wave 14B): a kind or layer of path nodes, a chain, the adaptive map -->
+        <DataTemplate DataType="vm:MarkerKindItem">
+          <local:MarkerKindPartView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:ChainPart">
+          <local:ChainPartView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:AdaptivePart">
+          <local:AdaptivePartView />
         </DataTemplate>
       </ContentControl.DataTemplates>
     </ContentControl>

@@ -821,6 +821,10 @@
     <Setter Property="Height" Value="{StaticResource ProceduralPictureSize}" />
     <Setter Property="HorizontalAlignment" Value="Left" />
   </Style>
+  <!-- the colour of a kind of marker before its title in the Markers panel's list (wave 14B) -->
+  <Style Selector="Border.swatch.markersswatch">
+    <Setter Property="Margin" Value="{StaticResource SwatchGap}" />
+  </Style>
 
   <!-- a list of many short lines: the Console -->
   <Style Selector="ListBox.log ListBoxItem">
