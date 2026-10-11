@@ -198,6 +198,12 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(commands.Any(item => item.Keys == "Shift+F3" && item.What == "Masks mode"));
             Assert.IsTrue(commands.Any(item => item.Keys == "Ctrl+]"), "a bracket shows as itself");
 
+            ShortcutItem[] toolKeys = [.. model.Shortcuts.Sections[1].Items];
+            foreach (string keys in new[] { "1 to 9", "Alt+1 to 9", "Shift+1 to 9", "Double click" })
+            {
+                Assert.IsTrue(toolKeys.Any(item => item.Keys == keys && item.Where.Contains("Select")), $"the page lists {keys} of the Select tool");
+            }
+
             model.Shortcuts.Query = "3d wheel";
             Assert.AreEqual("The mouse in the views", model.Shortcuts.Sections.Single().Title);
             Assert.AreEqual(1, model.Shortcuts.Count);

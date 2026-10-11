@@ -97,7 +97,7 @@ public sealed partial class PaletteSlotItem(int index, UnitPaletteSlot slot, Ass
 /// <summary>
 /// A unit or preset placed last (user story U-8), offered again as a chip under the palette.
 /// </summary>
-public sealed class LastPlacedItem(string key, AssetEntry? entry, Preset? preset)
+public sealed class LastPlacedItem(string key, AssetEntry? entry, Preset? preset, bool qualify = false)
 {
     private const string UnitPrefix = "unit:";
     private const string PresetPrefix = "preset:";
@@ -123,6 +123,17 @@ public sealed class LastPlacedItem(string key, AssetEntry? entry, Preset? preset
     public AssetEntry? Entry => entry;
 
     public string Title => IsUnit ? entry?.Name ?? Name : Name;
+
+    /// <summary>
+    /// What the chip reads: the title, with the faction after it when another chip has the same
+    /// title (an Aeon and a UEF Power Generator).
+    /// </summary>
+    public string ChipText => qualify && entry is not null ? $"{entry.Name} ({entry.Group})" : Title;
+
+    /// <summary>
+    /// The tool tip: the full name, the unit's id and how to place it again.
+    /// </summary>
+    public string Help => IsUnit ? $"{ChipText} ({Name}): click to place it again" : $"The preset {Name}: click to place it again";
 
     public string? Icon => entry?.Icon;
 
@@ -503,9 +514,18 @@ public sealed partial class UnitPalettesViewModel : ObservableObject
     /// <summary>
     /// Chooses a unit or preset placed last for the place tool, as a slot does.
     /// </summary>
-    public Task PickLastPlacedAsync(LastPlacedItem item) => item.IsPreset
-        ? _run("presets.apply", new JsonObject { ["kind"] = PresetKinds.Units, ["name"] = item.Name })
-        : _run("units.pick", new JsonObject { ["key"] = item.Name });
+    public async Task PickLastPlacedAsync(LastPlacedItem item)
+    {
+        await (item.IsPreset
+            ? _run("presets.apply", new JsonObject { ["kind"] = PresetKinds.Units, ["name"] = item.Name })
+            : _run("units.pick", new JsonObject { ["key"] = item.Name }));
+        ChoosePlaceTool?.Invoke();
+    }
+
+    /// <summary>
+    /// Chooses the Place tool of the Units mode; the editor sets it. A chip and a slot both choose it.
+    /// </summary>
+    public Action? ChoosePlaceTool { get; set; }
 
     /// <summary>
     /// Writes the palette chosen and the list placed last into the user's settings.
@@ -572,13 +592,16 @@ public sealed partial class UnitPalettesViewModel : ObservableObject
 
     private void RebuildLastPlaced()
     {
-        LastPlaced = [.. _lastPlaced.Select(key =>
+        List<(string Key, AssetEntry? Entry, Preset? Preset)> found = [.. _lastPlaced.Select(key =>
         {
             LastPlacedItem bare = new LastPlacedItem(key, null, null);
             AssetEntry? entry = bare.IsUnit && _assets.Find(bare.Name) is { Kind: AssetKind.Unit } unit ? unit : null;
             Preset? preset = bare.IsPreset ? FindPreset(bare.Name) : null;
-            return new LastPlacedItem(key, entry, preset);
+            return (key, entry, preset);
         })];
+        // two chips with one name say their faction
+        HashSet<string> twice = [.. found.Where(item => item.Entry is not null).GroupBy(item => item.Entry!.Name).Where(g => g.Count() > 1).Select(g => g.Key)];
+        LastPlaced = [.. found.Select(item => new LastPlacedItem(item.Key, item.Entry, item.Preset, item.Entry is not null && twice.Contains(item.Entry.Name)))];
     }
 
     /// <summary>

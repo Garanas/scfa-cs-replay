@@ -45,7 +45,15 @@ public sealed partial class StoredSelectionChip(int slot, string? group, int cou
     /// </summary>
     public string Label => $"Recall the selection stored as {slot}";
 
-    public string Help => $"{(group is null ? "" : $"{group}: ")}{count} {(count == 1 ? "thing" : "things")}; the digit {slot} recalls it, shift adds it, Alt and the digit stores the selection again";
+    /// <summary>
+    /// Whether none of its things is left on the map; the digit still holds them (undo of a delete
+    /// brings them back) until it is stored over or cleared.
+    /// </summary>
+    public bool IsGone => count == 0;
+
+    public string Help => count == 0
+        ? $"Its units are gone from the map (undo of the delete brings them back); Alt and {slot} with nothing selected clears it, with a selection stores that"
+        : $"{(group is null ? "" : $"{group}: ")}{count} {(count == 1 ? "thing" : "things")}; the digit {slot} recalls it, shift adds it, Alt and the digit stores the selection again, Alt and the digit with nothing selected clears it";
 
     [RelayCommand]
     private Task Recall() => recall(slot);
@@ -112,10 +120,7 @@ public sealed partial class StoredSelectionsViewModel : ObservableObject
                     try
                     {
                         ObjectRef thing = ObjectRef.Parse(text);
-                        if (document.Exists(thing))
-                        {
-                            kept.Add(thing);
-                        }
+                        kept.Add(thing);
                     }
                     catch (FormatException exception)
                     {
@@ -159,7 +164,8 @@ public sealed partial class StoredSelectionsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Selects what a digit holds, what no longer exists left out (and out of the digit).
+    /// Selects what a digit holds, what no longer exists left out (the digit keeps it, so undo of a
+    /// delete brings the selection back to life).
     /// </summary>
     /// <param name="add">Adds to the selection in place of replacing it.</param>
     /// <returns>How many things are selected afterwards.</returns>
@@ -172,20 +178,8 @@ public sealed partial class StoredSelectionsViewModel : ObservableObject
         {
             throw new ArgumentException($"Nothing is stored as {slot}: select something and press Alt+{slot}");
         }
+        // what is gone stays stored: undo of a delete brings it back
         ImmutableArray<ObjectRef> left = [.. stored.Where(document.Exists)];
-        if (left.Length != stored.Length)
-        {
-            if (left.IsEmpty)
-            {
-                _slots.Remove(slot);
-            }
-            else
-            {
-                _slots[slot] = left;
-            }
-            Save();
-            Refresh(document);
-        }
         _model.Selection.Apply(left, add ? SelectionChange.Add : SelectionChange.Replace);
         return _model.Selection.Count;
     }
@@ -226,10 +220,7 @@ public sealed partial class StoredSelectionsViewModel : ObservableObject
                     same = false;
                 }
             }
-            if (count > 0)
-            {
-                chips.Add(new StoredSelectionChip(slot, same ? group : null, count, digit => _model.RunWithAsync("select.recall", new JsonObject { ["slot"] = digit })));
-            }
+            chips.Add(new StoredSelectionChip(slot, same ? group : null, count, digit => _model.RunWithAsync("select.recall", new JsonObject { ["slot"] = digit })));
         }
         if (!chips.Select(chip => (chip.Slot, chip.Text)).SequenceEqual(Chips.Select(chip => (chip.Slot, chip.Text))))
         {

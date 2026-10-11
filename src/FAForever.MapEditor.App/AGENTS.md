@@ -1561,10 +1561,16 @@ change, span `model.armies`), the place tool and the commands.
   0 (also the number pad; not with Shift or Ctrl, which stay the views') and Tab / Shift+Tab (the next and
   previous palette); no view uses Tab. A tile of the shelf dragged onto a slot, a unit tile's context menu
   ("Put in a slot of ..."), a units preset of the list dragged onto a slot or its context menu put it in
-  a slot; a slot's context menu chooses a unit or clears it. **Last placed**: the last six distinct units
+  a slot; a slot's context menu chooses a unit or clears it. A slot's key is a corner badge with its own
+  surface and a name (a preset's, a missing unit's, "drop here") sits below it, wrapping to two lines
+  (`PaletteSlotNameInset`); its full name is the tool tip. `ui` reports a button's visible texts only, so a
+  slot says its text once. **Last placed**: the last six distinct units
   or presets placed (`units.add`, `units.addMany`, `units.placePreset`, noticed through
-  `CommandRegistry.Completed`) are kept in the user's settings (`units.lastPlaced`, as `unit:ueb0101` or
-  `preset:Name`, with the palette chosen last) and offered as chips. `state.units.palette`: `names`,
+  `CommandRegistry.Completed`, and the Scatter brush's stroke, which is no command) are kept in the user's
+  settings (`units.lastPlaced`, as `unit:ueb0101` or
+  `preset:Name`, with the palette chosen last) and offered as chips; two chips of one name say their faction
+  (`Power Generator (Aeon)`), the tool tip has the id, and a click chooses the unit or preset and the Place
+  tool (`UnitPalettesViewModel.PickLastPlacedAsync`), as a slot does. `state.units.palette`: `names`,
   `chosen`, `chosenSlot` (null for none), `slots` (`key`, `unit`, `preset`, `title`, `missing`, `chosen`),
   `lastPlaced`. A slot's unit the workspace lacks shows its id with a red frame.
 - **Example unit presets and army roles** (U-6): the library's `ExampleUnitPresets` (38 presets
@@ -1593,19 +1599,29 @@ change, span `model.armies`), the place tool and the commands.
 - **Preset instances** (U-9; the library's `PresetInstances`, its guide): the group `units.placePreset`
   makes knows the preset (`UnitGroup.Instance`: the name, a fingerprint of the preset's content, the
   place, heading and time). The tree's row of such a group carries the preset's name as a tag
-  (`Border.badge.instance`, after the detail as a plugin's kind is) and, when the preset's file
-  changed since or is gone, `preset changed` (`badge.stale`) or `preset missing` (`badge.missing`);
+  (`Border.badge.instance`) only when the group is not named after it (`GroupNode.ShowsInstanceName`: the
+  name, or the name and a number, as a second placement of a preset is named `Cybran farm 2`,
+  `DocumentEdits.FreeCopyName`) and, when the preset's file
+  changed since or is gone, `preset changed` (`badge.stale`) or `preset missing` (`badge.missing`), beside
+  the entry when both fit on a line and under it otherwise (`Controls/BesideOrBelowPanel`);
   its screen-reader name says so too (`GroupNode.Description`, `..., placed from the preset Village,
-  preset changed`). The Unit presets list shows after each preset `×2 placed` and `1 out of date`
+  preset changed`). The Unit presets list shows on each preset's row `×2` and `1 changed`
   (`Controls/PresetInstanceBadges`, from `PresetsViewModel.Instances`, counted again when the armies
-  or the presets change). The inspector's group panel has the block "Placed from a preset": the
+  or the presets change; its name and tool tip say `Placed 2 times on this map, 1 out of date`). The
+  list has the chips All, Starred, Civilian, Wrecks and Mine (`presets.filter {filter}`,
+  `PresetsViewModel.Filter`; Civilian is the role, Wrecks the wrecks flag, Mine a preset whose file is not
+  one of the shipped examples; Show the preset resets a filter that hides it) and a star on each row
+  (`presets.star {kind, name, on?}`, kept like an asset's star in the workspace's `favourites.json` under
+  `preset:units:<lower-case name>`); `state.presets.filters` has the filter, the total and the starred names. The inspector's group panel has the block "Placed from a preset": the
   preset with its count, `at 100, 100 · 90° · 2026-10-09`, a warning line while the file changed or
   is gone, and the buttons Select the instance (`units.selectInstance {army?, group?}`: the group's
   units, as a double click on one of them with a select tool does; `ToolInput.Clicks`, which both
   views pass), Save back to the preset (`units.saveInstance {army?, group?, confirm?}`, `[UndoStep]`:
   asks, since the preset's file is overwritten; without a person `confirm: true`; writes the file
   inside the step and sets the fingerprint, so the instance is current and the preset's other
-  instances out of date; a file that cannot be written is logged, `Presets`), Show the preset
+  instances out of date; a file that cannot be written is logged, `Presets`; the file's bytes before and
+  after are kept (`SavedBackPresets`), so undo of the step writes the file as it was, redo what the save
+  wrote, and a map that closes forgets them), Show the preset
   (`units.showPreset {name?}`: the Units mode, the list scrolled to it and its button `highlighted`,
   `PresetsViewModel.Highlighted`, until another kind lists or the preset is gone) and Detach from
   the preset (`units.detachInstance {army?, group?}`, `[UndoStep]`: the units stay). Left out, the
@@ -1682,8 +1698,10 @@ change, span `model.armies`), the place tool and the commands.
     its choices, count and `open`.
   - **Stored selections**: in a select tool (any `SelectTool`, so the Decals mode's too) Alt and 1 to 9
     store the selection (`select.store {slot}`, an empty selection empties the digit), a digit recalls
-    it (`select.recall {slot, add?}`, shift adds; a thing that is gone is dropped silently, also from the
-    digit), the numeric keypad too, never with control (Ctrl+1 to 3 are the views). The active tool owns
+    it (`select.recall {slot, add?}`, shift adds; a thing that is gone is left out of the selection but
+    stays in the digit, whose chip then reads `3 · 0` dimmed until it is stored over or cleared, so undo of a
+    delete brings it back to life; Alt and the digit with nothing selected clears it), the numeric keypad
+    too, never with control (Ctrl+1 to 3 are the views). The active tool owns
     the key: the place tool's digits pick palette slots (`UnitPlaceTool.PaletteKey`). `model.StoredSelections`
     keeps them with the project in the user's settings (`UserSettings.StoredSelections(folder)`, by the
     project's folder; a map that is not a project keeps them while the editor runs): the units and areas by
@@ -1704,8 +1722,14 @@ change, span `model.armies`), the place tool and the commands.
     overlay `armyColours` (the chip `Show Army colours`, `view.overlay.armyColours`, `ShowArmyColours`) turns
     them off: every unit but a wreck is the small square of the theme's unit brush. The 3D view is not
     coloured by army.
-- A double click on a unit of a placed preset selects the whole instance before the move handle of the
-  selection, which the first click of the double click put over the unit, takes the press.
+- A double click on a unit in a select tool selects its group's units (with the groups in it), Alt and a
+  double click its army's; a unit of a placed preset gets the instance's group. This takes the press before
+  the move handle of the selection, which the first click of the double click put over the unit. The status
+  line says what was selected (`Selected the 17 units of INITIAL/Cybran farm of ARMY_1`); a click says
+  `Selected UNIT_12 (Land Factory)` or `Selected 4 units`, Delete `Deleted 4 units`. `mouse clicks=2` with
+  `modifiers=Alt` does it in tests and automation.
+- The Select by popover lies at the right of the top view. Within Area lists the areas by name and chooses
+  none until one is picked (the count says `Choose an area`; Add and Select refuse until then).
 
 ## Markers: placing, linking, chains
 

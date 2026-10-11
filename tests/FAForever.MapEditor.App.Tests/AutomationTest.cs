@@ -142,7 +142,11 @@ namespace FAForever.MapEditor.App.Tests
             StringAssert.Contains(model.Status, "an instance of the preset Village");
             JsonObject town = (JsonObject)(await Send(automation, "view-point", new JsonObject { ["ref"] = "unit:UNIT_1" }))["point"]!["top"]!;
             await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = town["x"]!.DeepClone(), ["y"] = town["y"]!.DeepClone(), ["action"] = "doubleClick" });
-            Assert.AreEqual(1, model.Selection.Count, "a unit of a group made by hand");
+            Assert.AreEqual(2, model.Selection.Count, "a unit of a group made by hand: that group's units");
+            StringAssert.Contains(model.Status, "of INITIAL/Town of ARMY_1");
+            await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = town["x"]!.DeepClone(), ["y"] = town["y"]!.DeepClone(), ["clicks"] = 2, ["modifiers"] = "Alt" });
+            Assert.AreEqual(model.ShownDocument!.UnitsIn("ARMY_1", []).Count(), model.Selection.Count, "Alt: the army's units");
+            StringAssert.Contains(model.Status, "ARMY_1");
             window.Close();
         });
 

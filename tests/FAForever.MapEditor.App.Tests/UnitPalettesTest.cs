@@ -265,6 +265,32 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task AScatterStrokeIsPlacedLastAChipThatReadsAlikeSaysItsFactionAndAChipChoosesThePlaceTool()
+        {
+            (MainViewModel model, _) = await Open();
+            UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
+            await Run(model, "units.pick", new JsonObject { ["key"] = "uec1101" });
+            await Run(model, "units.placeMode", new JsonObject { ["mode"] = "scatter" });
+            tool.Press(100, 100);
+            tool.Release();
+            Assert.AreEqual("unit:uec1101", model.UnitPalettes.LastPlaced.Single().Key, "the brush feeds the list");
+
+            // the same name twice: the faction after it; the tool tip has the id
+            AssetEntry aeon = model.Assets.Find("ual0001")!;
+            AssetEntry uef = model.Assets.Find("uec1101")!;
+            LastPlacedItem alike = new LastPlacedItem("unit:a", uef with { Name = "Power Generator", Group = "UEF" }, null, qualify: true);
+            Assert.AreEqual("Power Generator (UEF)", alike.ChipText);
+            StringAssert.Contains(alike.Help, "unit:a".Substring(5));
+            Assert.AreEqual("Residential", new LastPlacedItem("unit:b", uef with { Name = "Residential" }, null).ChipText);
+            _ = aeon;
+
+            // a chip chooses the Place tool, in the Select tool too
+            model.SelectTool("units.select");
+            await model.UnitPalettes.PickLastPlacedAsync(model.UnitPalettes.LastPlaced.Single());
+            Assert.AreEqual("units.place", model.ActiveTool!.Definition.Id);
+        }
+
+        [TestMethod]
         public async Task TheExamplePalettesListAndASlotOfAUnitTheWorkspaceLacksIsMarked()
         {
             (MainViewModel model, PresetLibrary library) = await Open();

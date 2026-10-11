@@ -327,13 +327,18 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             return;
         }
         if (input.Clicks >= 2 && change == SelectionChange.Replace && under is { Kind: ObjectKind.Unit } doubled
-            && model.ShownDocument!.InstanceOf(doubled.Name!) is PlacedInstance instance)
+            && model.ShownDocument!.FindUnit(doubled.Name!) is PlacedUnit hit)
         {
-            // a double click on a unit placed from a preset: the whole instance, its group's units (U-9); before the handles,
-            // since the first click of the double click selected the unit and put the move handle over it
-            model.Selection.Set(model.ShownDocument!.UnitsIn(instance.Army, instance.Path).Select(unit => ObjectRef.Unit(unit.Unit.Name)));
+            // a double click on a unit selects its group's units, Alt its army's; a unit placed from a preset has
+            // the instance's group (U-9, U-10). Before the handles, since the first click of the double click
+            // selected the unit and put the move handle over it
+            bool army = input.Modifiers.HasFlag(ToolModifiers.Alt);
+            PlacedInstance? instance = army ? null : model.ShownDocument!.InstanceOf(doubled.Name!);
+            IReadOnlyList<string> path = army ? [] : instance?.Path ?? hit.Group;
+            model.Selection.Set(model.ShownDocument!.UnitsIn(hit.Army, path).Select(unit => ObjectRef.Unit(unit.Unit.Name)));
             model.InspectTheSelection();
-            model.Status = $"Selected the {MainViewModel.Units(model.Selection.Count)} of {UnitGroupEdits.PathText(instance.Path)} of {instance.Army}, an instance of the preset {instance.Instance.Preset}";
+            model.Status = $"Selected the {MainViewModel.Units(model.Selection.Count)} of {(path.Count == 0 ? hit.Army : $"{UnitGroupEdits.PathText(path)} of {hit.Army}")}"
+                + (instance is null ? "" : $", an instance of the preset {instance.Instance.Preset}");
             _gesture = Gesture.Click;
             return;
         }
@@ -351,6 +356,7 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             if (change == SelectionChange.Toggle)
             {
                 model.Selection.Apply([picked], SelectionChange.Toggle);
+                SayClicked();
                 _gesture = Gesture.Click;
             }
             else
@@ -359,6 +365,7 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
                 {
                     model.Selection.Apply([picked], change);
                 }
+                SayClicked();
                 // a click on a thing selected already gives the inspector back to the selection
                 model.InspectTheSelection();
                 _gesture = Gesture.Move;
@@ -646,6 +653,22 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
         else if (change == SelectionChange.Replace)
         {
             model.Selection.Clear();
+        }
+        SayClicked();
+    }
+
+    /// <summary>
+    /// The status line after a click: what is selected now, a unit by its name and what it is.
+    /// </summary>
+    private void SayClicked()
+    {
+        if (model.Selection is { Count: 1 } single && single.Items[0] is { Kind: ObjectKind.Unit } unit && model.ShownDocument?.FindUnit(unit.Name!) is PlacedUnit placed)
+        {
+            model.Status = $"Selected {placed.Unit.Name} ({model.Assets.Find(placed.Unit.Blueprint)?.Name ?? placed.Unit.Blueprint})";
+        }
+        else
+        {
+            model.Status = model.SelectedText;
         }
     }
 

@@ -180,13 +180,24 @@ public sealed partial class SelectByViewModel : ObservableObject
     /// Selects what matches, replacing the selection.
     /// </summary>
     [RelayCommand]
-    private Task Select() => _model.RunWithAsync("select.where", Arguments(add: false));
+    private Task Select() => NeedsArea ? Refuse() : _model.RunWithAsync("select.where", Arguments(add: false));
+
+    /// <summary>
+    /// Whether "within an area" is chosen and no area is: Select and Add would ask for the whole map.
+    /// </summary>
+    private bool NeedsArea => Within == "area" && AreaChoice is null;
+
+    private Task Refuse()
+    {
+        _model.Status = AreaChoices.Count == 0 ? "The map has no areas to select within" : "Choose an area to select within";
+        return Task.CompletedTask;
+    }
 
     /// <summary>
     /// Adds what matches to the selection.
     /// </summary>
     [RelayCommand]
-    private Task Add() => _model.RunWithAsync("select.where", Arguments(add: true));
+    private Task Add() => NeedsArea ? Refuse() : _model.RunWithAsync("select.where", Arguments(add: true));
 
     /// <summary>
     /// Asks for every unit again.
@@ -317,13 +328,14 @@ public sealed partial class SelectByViewModel : ObservableObject
                 ArmyChoice = AnyArmy;
             }
         }
-        string[] areas = [.. document?.Markers.Areas.Select(area => area.Name) ?? []];
+        // sorted by name; none is chosen until one is picked
+        string[] areas = [.. (document?.Markers.Areas.Select(area => area.Name) ?? []).Order(StringComparer.OrdinalIgnoreCase)];
         if (!AreaChoices.SequenceEqual(areas))
         {
             AreaChoices = areas;
-            if (AreaChoice is null || !areas.Contains(AreaChoice))
+            if (AreaChoice is not null && !areas.Contains(AreaChoice))
             {
-                AreaChoice = areas.FirstOrDefault();
+                AreaChoice = null;
             }
         }
         Recount();
@@ -342,7 +354,7 @@ public sealed partial class SelectByViewModel : ObservableObject
             using Performance.Span measure = Performance.Measure("model.select-by-count");
             string within = Within == "area" ? AreaChoice is null ? "map" : $"area:{AreaChoice}" : Within;
             Count = _model.UnitsWhere(Query(), within).Length;
-            CountText = Within == "area" && AreaChoice is null ? "The map has no areas" : $"{MainViewModel.Units(Count)} match";
+            CountText = Within == "area" && AreaChoice is null ? AreaChoices.Count == 0 ? "The map has no areas" : "Choose an area" : $"{MainViewModel.Units(Count)} match";
         }
         catch (ArgumentException exception)
         {

@@ -327,6 +327,16 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(new PresetInstanceCount(2, 1), model.Presets.Instances["Village"]);
             Assert.AreEqual("Save the instance back to its preset", model.Map.Session.UndoDescription, "one step");
 
+            // undo of the save puts the preset file back as it was (the hand-edited one), redo writes the saved layout again
+            byte[] savedFile = File.ReadAllBytes(library.FileOf(UnitPresets.Kind, "Village"));
+            model.Undo();
+            Assert.AreEqual(2, library.Find(UnitPresets.Kind, "Village")!.Read<UnitPresetSettings>().Count, "the file holds its units from before the save");
+            Assert.AreEqual("edited by hand", library.Find(UnitPresets.Kind, "Village")!.Read<UnitPresetSettings>().Source);
+            Assert.AreEqual(PresetInstanceState.Changed, model.Armies.Tree.SelectMany(n => n.SelfAndBelow()).Single(n => n.Key == "ARMY_2:INITIAL/Village").InstanceState, "the instance is out of date again");
+            model.Redo();
+            CollectionAssert.AreEqual(savedFile, File.ReadAllBytes(library.FileOf(UnitPresets.Kind, "Village")), "redo writes what the save wrote");
+            Assert.AreEqual(PresetInstanceState.Current, model.Armies.Tree.SelectMany(n => n.SelfAndBelow()).Single(n => n.Key == "ARMY_2:INITIAL/Village").InstanceState);
+
             // show the preset: the list highlights it; detach: the link is gone, the units stay, undo brings it back
             CommandRun shown = await Run(model, "units.showPreset", new JsonObject { ["name"] = "Village" });
             Assert.AreEqual("Village", model.Presets.Highlighted);
@@ -400,6 +410,55 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("Place a preset", model.Map!.Session.UndoDescription, "the army comes with the units, in one step");
             model.Undo();
             Assert.IsFalse(model.ShownDocument!.Armies.Any(army => army.Name == UnitPresets.EnemyArmy), "undone, the army goes with the base");
+        }
+
+        [TestMethod]
+        public void ATreeRowRepeatsThePresetNameOnlyWhenTheGroupIsNamedOtherwise()
+        {
+            Assert.IsTrue(GroupNode.NamedAfter("Cybran farm", "Cybran farm"));
+            Assert.IsTrue(GroupNode.NamedAfter("cybran farm 2", "Cybran farm"), "a second placement");
+            Assert.IsFalse(GroupNode.NamedAfter("Cybran farm north", "Cybran farm"));
+            Assert.IsFalse(GroupNode.NamedAfter("Base", "Cybran farm"));
+            Assert.IsFalse(GroupNode.NamedAfter("Cybran farm 2b", "Cybran farm"));
+        }
+
+        [TestMethod]
+        public async Task TheUnitPresetsListFiltersByStarCivilianWrecksAndMine()
+        {
+            MainViewModel model = new MainViewModel(new NoDialogs());
+            model.Assets.Use(Catalog());
+            model.OpenNewMap(NewMap.Create(new NewMapSettings { Size = 256 }));
+            PresetLibrary library = ExamplesAndAnEnemyBase();
+            model.Presets.Use(library);
+            model.SelectMode("units");
+            model.Assets.Favourites.Open(Path.Combine(library.Folder, "favourites.json"));
+            Assert.IsTrue(model.Presets.HasFilters);
+            int all = model.Presets.Shown.Count;
+            Assert.AreEqual(5, model.Presets.FilterChips.Count);
+
+            JsonObject mine = (JsonObject)(await Run(model, "presets.filter", new JsonObject { ["filter"] = "mine" })).Result!;
+            CollectionAssert.AreEqual(new[] { "Test enemy base" }, mine["shown"]!.AsArray().Select(name => name!.GetValue<string>()).ToArray(), "the examples are not the user's");
+            Assert.IsTrue(model.Presets.FilterChips.Single(chip => chip.IsOn).Filter == PresetFilter.Mine);
+
+            await Run(model, "presets.filter", new JsonObject { ["filter"] = "Civilian" });
+            Assert.IsTrue(model.Presets.Shown.Count > 0 && model.Presets.Shown.Count < all);
+            Assert.IsTrue(model.Presets.Shown.All(preset => preset.Read<UnitPresetSettings>().Role == ArmyRoles.Civilian));
+            await Run(model, "presets.filter", new JsonObject { ["filter"] = "wrecks" });
+            Assert.IsTrue(model.Presets.Shown.Count > 0 && model.Presets.Shown.All(preset => preset.Read<UnitPresetSettings>().Wrecks));
+
+            await Run(model, "presets.filter", new JsonObject { ["filter"] = "starred" });
+            Assert.AreEqual(0, model.Presets.Shown.Count);
+            Assert.IsTrue(model.Presets.NoneMatch);
+            Assert.IsFalse(model.Presets.IsEmpty, "an empty filter is not an empty list");
+            await Run(model, "presets.star", new JsonObject { ["kind"] = UnitPresets.Kind, ["name"] = "UEF civilian town" });
+            CollectionAssert.AreEqual(new[] { "UEF civilian town" }, model.Presets.Shown.Select(preset => preset.Name).ToArray());
+            CollectionAssert.Contains(model.Assets.Favourites.Starred.ToArray(), PresetsViewModel.StarKey(UnitPresets.Kind, "UEF civilian town"), "kept as the shelf keeps its stars");
+            await Run(model, "presets.star", new JsonObject { ["kind"] = UnitPresets.Kind, ["name"] = "UEF civilian town", ["on"] = false });
+            Assert.AreEqual(0, model.Presets.Shown.Count);
+
+            await Run(model, "presets.filter", new JsonObject { ["filter"] = "all" });
+            Assert.AreEqual(all, model.Presets.Shown.Count);
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "presets.filter", new JsonObject { ["filter"] = "tall" }));
         }
 
         [TestMethod]

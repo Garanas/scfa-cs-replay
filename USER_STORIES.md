@@ -526,7 +526,8 @@ reads again when it changes; and nothing that generates runs by itself.
       base, T2, defences, naval, civilian); the units placed last are offered again.
       Today: the Units panel's Palette section (a combo of the palettes, + for a new one, a menu to rename,
       delete or show the folder, ten slots with their keys and the units' icons, the chosen one filled,
-      "drop here" while empty) and the last six placed as chips; 1 to 9 and 0 pick a slot and Tab and
+      "drop here" while empty) and the last six placed as chips (the Scatter brush's too; a click chooses
+      the Place tool); 1 to 9 and 0 pick a slot and Tab and
       Shift+Tab change palette while the Place tool is active; a shelf tile (dragged or from its context
       menu) and a units preset (dragged or from its context menu) go into a slot, a slot clears from its
       menu; `units.palette`, `units.slot`, `units.setSlot`, `units.newPalette`, `units.renamePalette`,
@@ -541,9 +542,12 @@ reads again when it changes; and nothing that generates runs by itself.
       "preset changed" or "preset missing", the Unit presets list shows "×2 placed" and "1 out of
       date", the inspector's "Placed from a preset" block says which preset, where, how and when,
       and whether the file changed, with Select the instance (also a double click on one of its
-      units), Save back to the preset (asked first; the file keeps its role and wrecks), Show the
+      units), Save back to the preset (asked first; the file keeps its role and wrecks; undo puts
+      the file back as it was), Show the
       preset (highlighted in the list) and Detach; Problems notes instances whose preset changed or
-      is missing (`preset-changed`); the export writes the group as any other.
+      is missing (`preset-changed`); the export writes the group as any other. A second placement of a
+      preset is named "<preset> 2"; a group named after its preset shows no repeated tag; the list has
+      the filters All, Starred, Civilian, Wrecks and Mine and a star per preset.
 - [x] **U-10 Select by and stored selections.** Select units by army, faction, kind, tech,
       blueprint and wrecks, within the map, the selection or an area, replacing the selection or
       adding to it; store the selection under 1 to 9 (Alt and the digit) and recall it (the digit),
@@ -556,7 +560,9 @@ reads again when it changes; and nothing that generates runs by itself.
       project in the user's settings and shown as chips along the top view (`3 · Cybran farm · 17`); a click
       inside a structure's footprint, or a box that touches it, picks it (Picks: Footprint or Centre); the
       top view draws a structure as its footprint and a mobile unit as a diamond in the army's colour (the
-      chip Army colours turns it off; the 3D view is not coloured by army).
+      chip Army colours turns it off; the 3D view is not coloured by army); a double click on a unit
+      selects its group's units, Alt and a double click its army's; a stored selection whose units are
+      gone stays, dimmed, until stored over or cleared.
 - [x] **U-11 Editing many units.** Group the selection into a new group (Ctrl+G) and ungroup; the
       group as a choice in the inspector; replace the blueprint of the selected units, or convert
       them to another faction's unit of the same kind and tech; a move keeps structures on the
