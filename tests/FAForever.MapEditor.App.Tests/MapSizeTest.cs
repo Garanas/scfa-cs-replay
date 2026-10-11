@@ -168,7 +168,9 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("HardFFA.v0002", Path.GetFileName(run.Result!.ToString()));
             Assert.AreEqual(2, model.Map!.Document.Version, "the map keeps its new version");
             Assert.IsTrue(model.History.Any(entry => entry.Description == "Raise the version to 2"));
-            Assert.AreEqual(GeneratedStatus.Current, model.Generation.States.Single(state => state.Generator.Id == MapPreview.GeneratorId).Status, "rendered before the export");
+            Assert.AreEqual(GeneratedStatus.Stale, model.Generation.States.Single(state => state.Generator.Id == MapPreview.GeneratorId).Status,
+                "the export renders the preview into its copy; the project keeps its own until Generate");
+            Assert.AreEqual(ExportStepStatus.Done, model.Export.Lines.Single(line => line.Id == MapPreview.GeneratorId).Status, "rendered for the export");
             StringAssert.Contains(model.Status, "(version 2); exporting with raise makes version 3");
             StringAssert.Contains(File.ReadAllText(Path.Combine(run.Result!.ToString()!, "HardFFA_scenario.lua")), "map_version = 2");
 

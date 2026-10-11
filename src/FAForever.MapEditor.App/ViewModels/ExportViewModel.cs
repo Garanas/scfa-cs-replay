@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.ViewModels;
@@ -208,6 +209,8 @@ public sealed partial class ExportViewModel : ObservableObject
                 Lines = [.. lines];
                 try
                 {
+                    // a span per step: the export's steps grow with the map
+                    using Performance.Span measure = Performance.Measure($"export.{step.Id}");
                     await step.Run(run);
                 }
                 catch (Exception exception)

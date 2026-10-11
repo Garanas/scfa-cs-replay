@@ -95,9 +95,12 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(model.Map!.Document.Procedural.RegeneratesOnItsOwn("walkability"));
             Assert.AreEqual("Regenerate the walkability on its own", model.Map.Session.UndoDescription);
 
-            // turned on, a map without walkability gets it
+            // turned on, a map without walkability gets it; a result kept outside the map is no step of undo
+            int steps = model.History.Count;
             await model.AutoGeneration.WhenIdleAsync();
             Assert.AreEqual(GeneratedStatus.Current, model.Generation.Results.States(model.Map.Document)[0].Status);
+            Assert.AreEqual(steps, model.History.Count, "the first run on its own adds no step");
+            Assert.AreEqual("Regenerate the walkability on its own", model.Map.Session.UndoDescription, "the last step is still turning it on");
             int kept = model.AutoGeneration.Kept;
 
             // a change to its inputs: it is out of date, then current again on its own
@@ -105,6 +108,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(model.AutoGeneration.IsPending("walkability"), "the timer runs");
             await model.AutoGeneration.WhenIdleAsync();
             Assert.AreEqual(kept + 1, model.AutoGeneration.Kept);
+            Assert.AreEqual(steps + 1, model.History.Count, "only the change is a step");
             Assert.AreEqual(GeneratedStatus.Current, model.Generation.Results.States(model.Map.Document).Single(state => state.Generator.Id == "walkability").Status);
             StringAssert.StartsWith(model.Status, "Regenerated the walkability on its own");
 
@@ -252,16 +256,18 @@ namespace FAForever.MapEditor.App.Tests
                 }
             };
 
+            int steps = model.History.Count;
+            MapDocument before = model.Map!.Document;
             string folder = await model.ExportAsync(Path.Combine(Root, Guid.NewGuid().ToString("N")));
 
+            Assert.AreEqual(steps, model.History.Count, "the export works on a copy: no step of undo");
+            Assert.AreSame(before, model.Map.Document, "the project is as it was");
             CollectionAssert.AreEqual(new[] { "normalMap", "preview", "wideDecals", "pathNodes", "walkabilityMarks", "ddsTextures", "write" }, model.Export.Lines.Select(line => line.Id).ToArray());
             CollectionAssert.AreEqual(new[] { ExportStepStatus.Skipped, ExportStepStatus.Done, ExportStepStatus.Skipped, ExportStepStatus.Skipped, ExportStepStatus.Skipped, ExportStepStatus.Skipped, ExportStepStatus.Done }, model.Export.Lines.Select(line => line.Status).ToArray());
             Assert.AreEqual("Exporting, step 2 of 7: Render the preview", progress[0]);
-            Assert.AreEqual(GeneratedStatus.Current, model.Generation.States.Single(state => state.Generator.Id == "preview").Status, "rendered although never generated");
             StringAssert.StartsWith(File.ReadAllText(Path.Combine(folder, "HardFFA_scenario.lua")), "-- Made with the FAF Map Editor ");
 
-            // a second export renders it again, the same picture: no step of undo
-            int steps = model.History.Count;
+            // a second export renders it again
             await model.ExportAsync(Path.Combine(Root, Guid.NewGuid().ToString("N")));
             Assert.AreEqual(ExportStepStatus.Done, model.Export.Lines[1].Status);
             Assert.AreEqual(steps, model.History.Count);
