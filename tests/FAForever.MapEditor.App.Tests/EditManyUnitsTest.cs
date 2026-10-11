@@ -365,7 +365,7 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.IsInstanceOfType<ComboBox>(Find("Group of the selected units"));
             Assert.AreEqual("ueb1101 Uef Power Generator", ((TextBlock)Find("Blueprint of the selected units")!).Text);
-            foreach (string label in new[] { "Replace the units' blueprint", "Convert the units to a faction", "Group the selected units", "Ungroup the selected units", "Distribute the selected units evenly" })
+            foreach (string label in new[] { "Replace the units' blueprint", "Convert the units to UEF", "Convert the units to Cybran", "Convert the units to Aeon", "Convert the units to Seraphim", "Group the selected units", "Ungroup the selected units", "Distribute the selected units evenly" })
             {
                 Assert.IsNotNull(Find(label), label);
             }
@@ -386,6 +386,10 @@ namespace FAForever.MapEditor.App.Tests
             EditorDriver driver = EditorDriver.InProcess(new AutomationServer(window, model, port: 0));
             await driver.Send("click", new JsonObject { ["label"] = "Distribute the selected units evenly" });
             Assert.AreEqual(45.5f, UnitNamed(model, b).Position.X, "the middle of 40.5 and 50.5");
+
+            // a chip converts the selection to a faction
+            await driver.Send("click", new JsonObject { ["label"] = "Convert the units to Cybran" });
+            Assert.AreEqual("urb1101", UnitNamed(model, b).Blueprint);
         });
     }
 }

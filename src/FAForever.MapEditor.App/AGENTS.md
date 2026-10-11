@@ -1604,6 +1604,33 @@ change, span `model.armies`), the place tool and the commands.
   The link is never used to change the map (the owner's decision: no update from the preset).
   Tests: `UnitsTest.APlacedPresetIsAnInstance...`, `UnitsModeInspectorTest.AGroupPlacedFromAPreset...`,
   `AutomationTest.TheStateCarriesAPlacedInstance...`.
+- **Editing many units** (U-11; `Commands/Units/EditUnits.cs`, the library's `UnitGroupEdits`,
+  `UnitEdits`, `UnitConversion`, `BuildGrid`; its guide): the inspector of selected units has the
+  army, the Group as a combo of the army's groups (`UnitGroupChoice`, `INITIAL/Outpost`, the root
+  as `(the root group)`; choosing one runs `units.moveToGroup`; a dash and read only while the
+  units are in different groups or armies), the Blueprint (`ueb1101 Power Generator`, or how many
+  kinds) with Replace... and the chips UEF, Cybran, Aeon and Seraphim (a row of chips, not a menu:
+  popups lie outside what `ui` and `click` reach), the buttons Group (Ctrl+G), Ungroup and
+  Distribute (three units or more); Duplicate, Delete and Select none stay above. Commands, all
+  one step of undo: `units.group {name?}` (Ctrl+G; a group per army under the deepest group
+  holding that army's selected units, named `GROUP_n` or the name, the first chosen in the tree;
+  answers `count` and `groups`), `units.ungroup {army?, group?}` (left out, the deepest group that
+  holds all the selected units, else the tree's chosen group; the units and groups go into the
+  group above, `RemoveGroup` with the units kept; an army's `INITIAL` and `WRECKAGE` are the
+  game's and are refused; no gesture: Ctrl+Shift+G is Select similar), `units.replace
+  {blueprint?}` (every selected unit takes the blueprint; the picker without an argument; the
+  workspace must have it) and `units.toFaction {faction}` (`uef`, `cybran`, `aeon`, `seraphim`;
+  answers `converted`, `left`: no counterpart, and `already`; the status line says both, `Converted
+  3 units to Cybran; 1 left as it is: no Cybran counterpart`), `units.distribute {axis?}` (`x` or
+  `z`, else the longer extent; fewer than three units is refused; the symmetry's partners do not
+  follow). All are in the Units menu. **Moves keep structures on the build grid**
+  (`HandleSettings.KeepOnGrid`, default on, the check box "Keep structures on the build grid" in
+  the select tool's options row, `select.handles keepOnGrid`): the handles' drag and
+  `edit.nudge` ask `MainViewModel.KeepOnGrid` (span `tool.keep-on-grid`, in
+  `MainViewModel.BuildGrid.cs`) for the offset, rounded so that the first structure of the
+  selection lands on its grid, every other thing moving by the same amount (the symmetry's
+  partners as before, by the image of that offset); `edit.place` rounds the place the same way.
+  Tests: `EditManyUnitsTest` (commands, the inspector, Ctrl+G, a handle drag, nudge, place).
 - **Wrecks** (U-5; the library's `UnitWrecks`, its guide says why a group): the place tool's
   As wrecks (`AsWrecks`, the check box after Choose...) places into the army's `WRECKAGE` group in
   place of the chosen group (`units.add {wreck?}`; left out, the tool's); `units.asWrecks {wreck?}`
@@ -1892,8 +1919,8 @@ User stories F-11, L-1 and V-3. The maths of the handles is the library's (`Sele
   axis (also dragging a selected thing). Each drag is one step (`Move the selection`, `Turn the
   selection`, `Scale the selection`) and calls the library's edits. The settings are
   `MainViewModel.Handles` (`HandleSettings`: shown, the pivot `Selection` or `Each`, the snap),
-  in the select tools' options and `select.handles {show?, pivot?, snap?}` (without arguments: on
-  and off). `edit.rotate {degrees?, about?}` (Q and E) and `edit.scale {factor?, x?, z?, about?}`
+  in the select tools' options and `select.handles {show?, pivot?, snap?, keepOnGrid?}` (without
+  arguments: on and off; `state.handles.keepOnGrid`). `edit.rotate {degrees?, about?}` (Q and E) and `edit.scale {factor?, x?, z?, about?}`
   go about the handles' pivot unless `about` says.
 - **Focus and the status bar**: `camera.focusSelection` (View menu; F in the 3D view) shows the
   selection's box; the status bar shows how many are selected and the size of their bounds

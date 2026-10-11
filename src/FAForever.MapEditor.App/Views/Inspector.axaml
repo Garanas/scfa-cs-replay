@@ -318,18 +318,19 @@
                       <Button Content="Replace..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.replace"
                               AutomationProperties.Name="Replace the units' blueprint"
                               AutomationProperties.HelpText="Give the selected units another blueprint, chosen in the picker; their name, place, heading, army and group stay, structures stay on the build grid" />
-                      <Button Content="To faction..." AutomationProperties.Name="Convert the units to a faction"
-                              AutomationProperties.HelpText="Make each selected unit the same kind of unit of another faction; a unit with no counterpart stays as it is">
-                        <Button.Flyout>
-                          <MenuFlyout>
-                            <MenuItem Header="UEF" Command="{Binding ToFactionCommand}" CommandParameter="uef" AutomationProperties.Name="Convert the units to UEF" />
-                            <MenuItem Header="Cybran" Command="{Binding ToFactionCommand}" CommandParameter="cybran" AutomationProperties.Name="Convert the units to Cybran" />
-                            <MenuItem Header="Aeon" Command="{Binding ToFactionCommand}" CommandParameter="aeon" AutomationProperties.Name="Convert the units to Aeon" />
-                            <MenuItem Header="Seraphim" Command="{Binding ToFactionCommand}" CommandParameter="seraphim" AutomationProperties.Name="Convert the units to Seraphim" />
-                          </MenuFlyout>
-                        </Button.Flyout>
-                      </Button>
                     </StackPanel>
+                    <!-- each unit becomes the same kind of unit of that faction; one that has none stays as it is -->
+                    <TextBlock Classes="label" Text="To faction" />
+                    <WrapPanel Classes="chips">
+                      <Button Classes="chip" Content="UEF" Command="{Binding ToFactionCommand}" CommandParameter="uef" AutomationProperties.Name="Convert the units to UEF"
+                              AutomationProperties.HelpText="Make each selected unit the same kind of unit of this faction; a unit with no counterpart stays as it is" />
+                      <Button Classes="chip" Content="Cybran" Command="{Binding ToFactionCommand}" CommandParameter="cybran" AutomationProperties.Name="Convert the units to Cybran"
+                              AutomationProperties.HelpText="Make each selected unit the same kind of unit of this faction; a unit with no counterpart stays as it is" />
+                      <Button Classes="chip" Content="Aeon" Command="{Binding ToFactionCommand}" CommandParameter="aeon" AutomationProperties.Name="Convert the units to Aeon"
+                              AutomationProperties.HelpText="Make each selected unit the same kind of unit of this faction; a unit with no counterpart stays as it is" />
+                      <Button Classes="chip" Content="Seraphim" Command="{Binding ToFactionCommand}" CommandParameter="seraphim" AutomationProperties.Name="Convert the units to Seraphim"
+                              AutomationProperties.HelpText="Make each selected unit the same kind of unit of this faction; a unit with no counterpart stays as it is" />
+                    </WrapPanel>
                     <StackPanel Classes="inline">
                       <Button Content="Group" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.group"
                               AutomationProperties.Name="Group the selected units" ToolTip.Tip="Put the selected units into a new group (Ctrl+G)"

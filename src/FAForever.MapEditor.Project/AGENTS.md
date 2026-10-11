@@ -91,8 +91,31 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     to a whole ogrid, so structures stay on the build grid) placed as a new group, turned;
     `SetInstance` (below). The game
     creates the units of each army's `INITIAL`, with the groups in it, at the start.
+    `GroupUnits` (U-11): a new group per army among the units, under the deepest group that holds
+    that army's units (the name made free among its siblings), the units moved into it.
     `BuildGrid.Snap`: a structure an odd number of ogrids wide on a half ogrid, an even one on a
-    whole; a quarter turn swaps its sides.
+    whole; a quarter turn swaps its sides. `BuildGrid.KeepOnGrid` rounds the offset of a move so
+    that the first structure among the things lands where `Snap` puts it (everything else moves by
+    the same amount; the offset as it is without a structure), `KeepPlaceOnGrid` the same for the
+    place `PlaceObjects` puts things at; the caller gives the footprint of a blueprint that is a
+    structure (null for another unit), since the document holds blueprint ids only.
+  - `UnitEdits` (U-11): `ReplaceUnits` (a function answers a `UnitReplacement` per unit: the new id
+    and, for a structure, its footprint; name, army, group, place, heading and height above the
+    terrain stay, a structure snaps to its new footprint's grid and a heading that was no
+    structure's to quarter turns; null leaves the unit) and `DistributeUnits` (units spread
+    evenly between the first and last along x or z, `LongerAlongX` when no axis is given; ends
+    stay, a structure between them snaps; fewer than three change nothing).
+  - `UnitConversion` (U-11): `Counterpart(entry, faction, catalog)`, the unit of another faction
+    that stands for a unit. The ids are series, faction letter, kind letter and digits (`ueb1101`,
+    `urb1101`, `uab1101`, `xsb1101`: the Seraphim's base series is `x`): the same digits under
+    the target's letters when the catalogue has that unit with the same layer, tech level and
+    civilian flag (`SameIds`); else the unit of the target with the same layer, tech and civilian
+    flag that shares most of the categories that say what a unit does (`Purposes`: not the
+    faction, tech, layer, `BUILTBY*`, `PRODUCT*`, `SORT*`, `SIZE*`, `OVERLAY*`), the nearest in mass
+    cost when equal; null when none shares one. `AssetEntry.Categories` carries a unit's
+    blueprint categories. Tests: `UnitConversionTest` over 42 real blueprints in
+    `tests/FAForever.MapEditor.Project.Tests/assets/unit-catalogue` (JSON only, copied from a
+    converted workspace), `UnitEditsTest`.
   - `UnitLayouts` (U-7, pure maths; the editor's place tool and `units.addMany` put the units on
     the terrain with `AddUnits`): the places and headings (`UnitPlace`: x, z, radians clockwise
     from +x) of many units at once from a unit's footprint (`Extent` turned in quarter turns; none
