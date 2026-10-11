@@ -124,7 +124,17 @@ public sealed partial class PropsViewModel : ObservableObject
         model.MapChanged += (_, _) => RefreshReclaim();
         model.Selection.Inspector.Catalog = () => model.Assets.Catalog;
         model.Presets.Register(new PresetKind(PaletteKind, "Palettes", Capture, Apply));
-        Palette.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsPaletteEmpty));
+        Palette.CollectionChanged += (_, _) =>
+        {
+            if (Palette.Count > 0)
+            {
+                // a new palette begun: what Clear took away is not offered any more
+                _cleared = null;
+            }
+            OnPropertyChanged(nameof(IsPaletteEmpty));
+            OnPropertyChanged(nameof(CanRestorePalette));
+        };
+        model.MapChanged += (_, _) => _clearedAt = null;
     }
 
     #region Placing
@@ -279,15 +289,61 @@ public sealed partial class PropsViewModel : ObservableObject
         return item;
     }
 
+    // what Clear took away, while the palette stays empty; and the map's version it was cleared at
+    private PaletteItem[]? _cleared;
+    private MapDocument? _clearedAt;
+
     /// <summary>
-    /// Empties the palette.
+    /// Empties the palette. The palette is the tool's, like a brush's settings, so this is no step of
+    /// the map's history; what it held can be brought back (<see cref="RestorePalette"/>) while the
+    /// palette stays empty.
     /// </summary>
+    /// <param name="at">The map's version as it is cleared: undo right after it (the map unchanged since) restores the palette.</param>
     /// <returns>How many props it held.</returns>
-    public int ClearPalette()
+    public int ClearPalette(MapDocument? at = null)
     {
         int count = Palette.Count;
+        PaletteItem[] held = [.. Palette];
         Palette.Clear();
+        if (count > 0)
+        {
+            _cleared = held;
+            _clearedAt = at;
+            OnPropertyChanged(nameof(CanRestorePalette));
+        }
         return count;
+    }
+
+    /// <summary>
+    /// Whether the props Clear took away can be brought back: the palette is still empty.
+    /// </summary>
+    public bool CanRestorePalette => _cleared is not null && Palette.Count == 0;
+
+    /// <summary>
+    /// Whether undo should restore the palette rather than undo a step of the map: the palette was
+    /// cleared last, at this version of the map, and is still empty.
+    /// </summary>
+    public bool UndoesClear(MapDocument? document) => CanRestorePalette && _clearedAt is not null && ReferenceEquals(_clearedAt, document);
+
+    /// <summary>
+    /// Brings back the props Clear took away, with their weights.
+    /// </summary>
+    /// <returns>How many came back; 0 when there is nothing to bring back.</returns>
+    public int RestorePalette()
+    {
+        if (!CanRestorePalette)
+        {
+            return 0;
+        }
+        PaletteItem[] held = _cleared!;
+        _cleared = null;
+        _clearedAt = null;
+        foreach (PaletteItem item in held)
+        {
+            Palette.Add(item);
+        }
+        OnPropertyChanged(nameof(CanRestorePalette));
+        return held.Length;
     }
 
     /// <summary>
@@ -539,6 +595,7 @@ public sealed partial class PropsViewModel : ObservableObject
             ["sink"] = Sink,
             ["followTerrain"] = FollowTerrain,
             ["palette"] = new JsonArray([.. Palette.Select(item => (JsonNode)new JsonObject { ["key"] = item.Key, ["weight"] = item.Weight })]),
+            ["canRestorePalette"] = CanRestorePalette,
             ["paint"] = new JsonObject
             {
                 ["radius"] = paint.Radius,

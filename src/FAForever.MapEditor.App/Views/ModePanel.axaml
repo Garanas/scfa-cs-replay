@@ -377,7 +377,10 @@
                             AutomationProperties.HelpText="Choose a prop for the palette in the picker" />
                     <Button Content="Clear" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.clearPalette"
                             IsEnabled="{Binding !IsPaletteEmpty}"
-                            AutomationProperties.Name="Clear the palette" AutomationProperties.HelpText="Takes every prop out of the palette, to start a new one" />
+                            AutomationProperties.Name="Clear the palette" AutomationProperties.HelpText="Takes every prop out of the palette, to start a new one; Restore or undo brings them back" />
+                    <Button Content="Restore" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.restorePalette"
+                            IsVisible="{Binding CanRestorePalette}"
+                            AutomationProperties.Name="Restore the palette" AutomationProperties.HelpText="Brings back the props Clear took away, with their weights" />
                   </StackPanel>
                 </StackPanel>
               </Border>

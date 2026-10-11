@@ -256,8 +256,39 @@ namespace FAForever.MapEditor.App.Tests
 
             Assert.AreEqual(1, (int)(await Run(model, "props.clearPalette")).Result!);
             Assert.IsTrue(model.Props.IsPaletteEmpty);
-            Assert.AreEqual("Cleared the palette of 1 prop", model.Status);
+            Assert.AreEqual("Cleared the palette of 1 prop; Restore or undo brings them back", model.Status);
             Assert.AreEqual(0, (int)(await Run(model, "props.clearPalette")).Result!);
+            Assert.IsTrue(model.Props.CanRestorePalette, "a second Clear of nothing keeps what the first took away");
+
+            // Restore brings it back with its weight
+            Assert.AreEqual(1, (int)(await Run(model, "props.restorePalette")).Result!);
+            Assert.AreEqual(prop.Key, model.Props.Palette.Single().Key);
+            Assert.IsFalse(model.Props.CanRestorePalette);
+        }
+
+        [TestMethod]
+        public async Task UndoRightAfterClearingThePaletteBringsItBack()
+        {
+            MainViewModel model = await ContentTest.Open("props.paint");
+            AssetEntry prop = model.Assets.Catalog.Entries.First(entry => entry.Kind == AssetKind.Prop);
+            await Run(model, "props.place", new JsonObject { ["x"] = 50, ["z"] = 50, ["key"] = prop.Key });
+            int props = model.ShownDocument!.Props.Length;
+            model.Props.AddToPalette(prop.Key, 3);
+
+            await Run(model, "props.clearPalette");
+            Assert.IsTrue(model.CanUndo);
+            await Run(model, "edit.undo");
+            Assert.AreEqual(3, model.Props.Palette.Single().Weight, "the palette is back, with its weight");
+            Assert.AreEqual(props, model.ShownDocument!.Props.Length, "the step before (the prop placed) is not undone");
+            Assert.AreEqual("Undone: Clear the palette (1 prop back)", model.Status);
+
+            // once the map changed after Clear, undo is the map's again and Restore stays offered
+            await Run(model, "props.clearPalette");
+            await Run(model, "props.place", new JsonObject { ["x"] = 80, ["z"] = 80, ["key"] = prop.Key });
+            await Run(model, "edit.undo");
+            Assert.AreEqual(props, model.ShownDocument!.Props.Length, "the prop placed after Clear is undone");
+            Assert.IsTrue(model.Props.IsPaletteEmpty);
+            Assert.IsTrue(model.Props.CanRestorePalette);
         }
 
         [TestMethod]

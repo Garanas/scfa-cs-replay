@@ -50,7 +50,9 @@ public sealed class RemoveFromPropPaletteHandler(MainViewModel model) : IRequest
 
 /// <summary>
 /// Empties the painting palette (user story P-2): the Props panel's Clear beside the palette, to
-/// start a new one; a palette saved as a preset brings it back.
+/// start a new one. The palette is the tool's, like a brush's settings, and stays out of the map's
+/// history; Restore (<c>props.restorePalette</c>) brings the props back while the palette stays
+/// empty, and so does undo right after it, before the map is edited again.
 /// </summary>
 /// <returns>How many props it held.</returns>
 [EditorCommand("props.clearPalette", "Clear the palette", Story = "P-2")]
@@ -60,8 +62,28 @@ public sealed class ClearPropPaletteHandler(MainViewModel model) : IRequestHandl
 {
     public Task<int> Handle(ClearPropPalette request, CancellationToken cancellationToken)
     {
-        int count = model.Props.ClearPalette();
-        model.Status = count == 0 ? "The palette is empty already" : $"Cleared the palette of {count} {(count == 1 ? "prop" : "props")}";
+        int count = model.Props.ClearPalette(model.Map?.Document);
+        model.Status = count == 0 ? "The palette is empty already" : $"Cleared the palette of {count} {(count == 1 ? "prop" : "props")}; Restore or undo brings them back";
+        model.Commands.NotifyCanRunChanged();
+        return Task.FromResult(count);
+    }
+}
+
+/// <summary>
+/// Brings back the props the palette's Clear took away (user story P-2), with their weights: the
+/// Props panel's Restore, shown while the palette stays empty after Clear.
+/// </summary>
+/// <returns>How many props came back.</returns>
+[EditorCommand("props.restorePalette", "Restore the palette", Story = "P-2")]
+public sealed record RestorePropPalette : IRequest<int>;
+
+public sealed class RestorePropPaletteHandler(MainViewModel model) : IRequestHandler<RestorePropPalette, int>
+{
+    public Task<int> Handle(RestorePropPalette request, CancellationToken cancellationToken)
+    {
+        int count = model.Props.RestorePalette();
+        model.Status = count == 0 ? "Nothing to restore: the palette was not cleared, or has props again" : $"Restored the palette: {count} {(count == 1 ? "prop" : "props")}";
+        model.Commands.NotifyCanRunChanged();
         return Task.FromResult(count);
     }
 }
