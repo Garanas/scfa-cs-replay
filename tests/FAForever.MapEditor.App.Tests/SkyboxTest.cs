@@ -185,7 +185,7 @@ namespace FAForever.MapEditor.App.Tests
                 StringAssert.Contains(Part(model).VersionNote, $"version {version} map");
                 StringAssert.Contains(Part(model).VersionNote, "default dome", "the game draws its own dome for such a map");
             }
-            model.EditMap("Make it version 60", d => d with { Terrain = d.Terrain with { ScmapVersion = 60 } });
+            await Run(model, "map.setScmapVersion", new JsonObject { ["version"] = 60 });
             Assert.AreEqual("", Part(model).VersionNote);
         }
     }

@@ -246,6 +246,11 @@ public sealed partial class ChoiceSetting(string label, string command, string a
     /// </summary>
     public IReadOnlyList<string> Choices => _choices;
 
+    /// <summary>
+    /// What the command is given for a choice, when not its text (a number: the file version).
+    /// </summary>
+    public Func<string, JsonNode?>? Value { get; init; }
+
     public string? Chosen
     {
         get => _chosen;
@@ -253,7 +258,7 @@ public sealed partial class ChoiceSetting(string label, string command, string a
         {
             if (value is not null && value != _chosen)
             {
-                Give(value);
+                Give(Value is null ? value : Value(value));
             }
         }
     }

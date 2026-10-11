@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
@@ -98,6 +99,12 @@ public sealed partial class SkyboxPart : ObservableObject
     public partial string VersionNote { get; private set; } = "";
 
     /// <summary>
+    /// Whether the map can be written as version 60 to use the skybox (a map of 56; 53 keeps its version).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool CanWriteAsVersion60 { get; private set; }
+
+    /// <summary>
     /// The line beside the panel's entry.
     /// </summary>
     public string Detail { get; private set; } = "";
@@ -127,6 +134,7 @@ public sealed partial class SkyboxPart : ObservableObject
         VersionNote = skybox is not null && version is > 0 and < 60
             ? $"The map is a version {version} map, which stores no skybox: the game draws its own default dome (made from the map's size), and the export leaves this one out. It stays in the project and the sky cube map is made from it."
             : "";
+        CanWriteAsVersion60 = skybox is not null && version is >= NewMap.TenLayersFrom and < 60;
         Detail = document is null ? "" : skybox is null ? "none" : Count(skybox.Planets.Length, "object");
     }
 
@@ -159,5 +167,11 @@ public sealed partial class SkyboxPart : ObservableObject
 
     [RelayCommand(CanExecute = nameof(HasSkybox))]
     private Task Remove() => _run("lighting.removeSkybox", []);
+
+    /// <summary>
+    /// Writes the map as version 60, so the game draws this skybox (<c>map.setScmapVersion</c>).
+    /// </summary>
+    [RelayCommand]
+    private Task WriteAsVersion60() => _run("map.setScmapVersion", new JsonObject { ["version"] = 60 });
 
 }

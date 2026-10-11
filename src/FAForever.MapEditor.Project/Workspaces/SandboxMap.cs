@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Numerics;
 using System.Security.Cryptography;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 
@@ -134,7 +135,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             AssetEntry[] units = [.. catalog.Entries.Where(entry => entry.Kind == AssetKind.Unit)
                 .OrderByDescending(entry => entry.IsCivilian).ThenBy(entry => entry.Key, StringComparer.Ordinal).Take(2)];
 
-            return new MapDocument
+            return Skyboxes.WithGameDefault(new MapDocument
             {
                 Name = "sandbox",
                 FileName = "sandbox",
@@ -151,7 +152,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                 },
                 Terrain = new Terrain
                 {
-                    ScmapVersion = 56,
+                    ScmapVersion = NewMap.ScmapVersion,
                     Heightmap = heightmap,
                     Types = TiledBuffer<byte>.Create(Size, Size),
                     Shader = "TTerrainXP",
@@ -226,7 +227,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                         Orientation = Vector3.Zero,
                     })]),
                 ],
-            };
+            });
         }
 
         private static IEnumerable<AssetEntry> Pick(AssetCatalog catalog, AssetKind kind, string biome, int count) =>
