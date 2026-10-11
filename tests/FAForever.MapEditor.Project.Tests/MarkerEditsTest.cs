@@ -162,5 +162,69 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(original.Markers.Spawns.Length, all.Length, "only the spawns");
             Assert.AreEqual(original.Markers.Spawns.Length, original.All(ObjectKinds.Markers, MarkerKinds.Spawns).Count());
         }
+
+        private static string Describe(MarkerSet markers) => string.Join(";", markers.All.Select(marker => marker is PathNode node
+            ? $"{node.Id}:{node.Name}[{string.Join(",", node.AdjacentTo)}]"
+            : $"{marker.Id}:{marker.Name}")) + "|" + string.Join(";", markers.Chains.Select(chain => $"{chain.Name}[{string.Join(",", chain.MarkerIds)}]"));
+
+        [TestMethod]
+        public void RemovingAKindRemovesItsMarkersAsRemovingThemOneByOneDoes()
+        {
+            MapDocument document = original
+                .AddMarker(new PathNode { Id = 0, Name = "LandPN1", Layer = PathLayer.Land, Position = new Vector3(10, 0, 10) }, out Marker a)
+                .AddMarker(new PathNode { Id = 0, Name = "LandPN2", Layer = PathLayer.Land, Position = new Vector3(20, 0, 10) }, out Marker b)
+                .AddMarker(new PathNode { Id = 0, Name = "AirPN1", Layer = PathLayer.Air, Position = new Vector3(30, 0, 10) }, out Marker air)
+                .AddMarker(new PathNode { Id = 0, Name = "AirPN2", Layer = PathLayer.Air, Position = new Vector3(40, 0, 10) }, out Marker air2);
+            document = document.LinkPathNodes(a.Id, b.Id).LinkPathNodes(air.Id, air2.Id)
+                .AddChain(new Chain { Name = "Mixed", MarkerIds = [a.Id, air.Id, original.Markers.Resources[0].Id] }, out _)
+                .AddChain(new Chain { Name = "Land", MarkerIds = [a.Id, b.Id] }, out _);
+            int land = document.CountKind(MarkerKinds.LandPaths);
+            Assert.AreEqual(1, document.CountLinks(MarkerKinds.LandPaths) - original.CountLinks(MarkerKinds.LandPaths), "a link both ways counts once");
+
+            MapDocument cleared = document.RemoveKind(MarkerKinds.LandPaths, out int removed);
+
+            MapDocument oneByOne = document;
+            foreach (PathNode node in document.Markers.PathNodes.Where(node => node.Layer == PathLayer.Land))
+            {
+                oneByOne = oneByOne.RemoveMarker(node.Id);
+            }
+            Assert.AreEqual(land, removed);
+            Assert.AreEqual(0, cleared.CountKind(MarkerKinds.LandPaths));
+            Assert.AreEqual(Describe(oneByOne.Markers), Describe(cleared.Markers), "links and chains as RemoveMarker leaves them");
+            CollectionAssert.AreEqual(new[] { air.Id, original.Markers.Resources[0].Id }, cleared.Markers.Chains[0].MarkerIds.ToArray());
+            Assert.AreEqual(0, cleared.Markers.Chains[1].MarkerIds.Length, "an emptied chain stays, as RemoveMarker leaves it");
+            Assert.IsTrue(cleared.AreLinked(air.Id, air2.Id), "another layer keeps its links");
+
+            MapDocument everyNode = document.RemoveKind(MarkerKinds.PathNodes, out int nodes);
+            Assert.AreEqual(document.Markers.PathNodes.Length, nodes);
+            Assert.AreEqual(0, everyNode.Markers.PathNodes.Length);
+            Assert.AreEqual(document.Markers.Resources.Length, everyNode.Markers.Resources.Length, "deposits stay");
+
+            MapDocument mass = document.RemoveKind(MarkerKinds.Mass, out int deposits);
+            Assert.AreEqual(document.Markers.Resources.Count(r => r.Kind == ResourceKind.Mass), deposits);
+            Assert.IsTrue(mass.Markers.Resources.All(r => r.Kind == ResourceKind.Hydrocarbon));
+            Assert.AreSame(document, document.RemoveKind(MarkerKinds.None, out int none));
+            Assert.AreEqual(0, none);
+        }
+
+        [TestMethod]
+        public void RemovingTheSpawnsRemovesTheirArmiesWithoutRenamingAny()
+        {
+            ResourceMarker deposit = original.Markers.Resources[0];
+            MapDocument adaptive = original.UpdateResource(deposit.Name, resource => resource with { SpawnWithArmy = "ARMY_2" });
+
+            MapDocument cleared = adaptive.RemoveKind(MarkerKinds.Spawns, out int removed);
+
+            Assert.AreEqual(original.Markers.Spawns.Length, removed);
+            Assert.AreEqual(0, cleared.Markers.Spawns.Length);
+            Assert.AreEqual(0, cleared.Scenario.PlayableArmies.Length, "every playable army went with its spawn");
+            Assert.IsNull(cleared.Markers.Resources[0].SpawnWithArmy, "the deposits wait for no army that went");
+            CollectionAssert.AreEqual(original.Scenario.ExtraArmies.ToArray(), cleared.Scenario.ExtraArmies.Where(original.Scenario.ExtraArmies.Contains).ToArray(), "the extra armies stay");
+            foreach (string army in cleared.Scenario.ExtraArmies.Where(name => !original.Scenario.ExtraArmies.Contains(name)))
+            {
+                Assert.IsTrue(original.Scenario.PlayableArmies.Contains(army), $"{army} kept its name: an army with units stays as an extra army");
+            }
+            Assert.AreEqual(original.Markers.Resources.Length, cleared.Markers.Resources.Length, "only the spawns");
+        }
     }
 }

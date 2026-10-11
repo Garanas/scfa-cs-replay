@@ -303,7 +303,12 @@ playable army), links between path nodes of one layer (`LinkPathNodes`, `UnlinkP
 `SetPathLayer`), chains by name (`AddChain`, `UpdateChain`, `RemoveChain`), the grids a marker
 snaps to (`Snap`, `MarkerSnap`), how steep the ground under a deposit is (`Steepness`), and the
 kinds of markers one by one (`MarkerKinds`, `KindOf`), which `MapObjects.Nearest`, `Inside` and
-`All` take to leave hidden kinds out.
+`All` take to leave hidden kinds out. `RemoveKind(kinds, out removed)` (the Markers mode's Clear)
+removes every marker of some kinds as `RemoveMarker` would one by one: spawns go through it, the
+highest number first, so each takes its playable army (one with units stays as an extra army) and no
+army is renamed on the way; the other kinds go in one pass (links and chain entries to them go, an
+emptied chain stays; tested equal to the one-by-one result). `CountKind` and `CountLinks` (a link
+both ways once) count what the Markers panel shows.
 
 **Generated path networks** (user story R-3, `Generation/PathNetworks`, `PathSkeleton`,
 `PathNetworkEdits`; `PathNetworkGenerator`, a plain `IGenerator` with walkability's inputs and
