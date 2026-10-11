@@ -57,8 +57,9 @@ public sealed class EditMaskRulesHandler(MainViewModel model) : IRequestHandler<
 }
 
 /// <summary>
-/// Adds a rule to a mask's rules (user story K-2), one step of undo: the mask is then made from its
-/// rules when generated (<c>generate.masks</c>).
+/// Adds a rule to a mask's rules (user story K-2), one step of undo, in which the rules layers are
+/// made again from their rules (<see cref="MainViewModel.WithRulesMade"/>), so the mask shows what
+/// its rules make at once; the rule edits below do the same.
 /// </summary>
 /// <param name="Kind">Slope, Height, WaterDistance, Layer, Noise, Blur, Grow, Shrink, Threshold or Invert.</param>
 /// <param name="Mask">Left out, the mask being edited, else the chosen one; a stratum's rules layer
@@ -87,7 +88,9 @@ public sealed class AddMaskRuleHandler(MainViewModel model, CurrentEdit edit) : 
             rule = rule with { Source = edit.Transaction.Document.Masks.Keys.FirstOrDefault(name => name != mask) ?? MaskRuleSources.Stratum(1) };
         }
         int index = r.Index ?? edit.Transaction.Document.MaskRulesOf(mask, layer).Length;
-        edit.Transaction.Apply(document => document.AddMaskRule(mask, rule, index, layer));
+        object? made = null;
+        edit.Transaction.Apply(document => model.WithRulesMade(document.AddMaskRule(mask, rule, index, layer), out made));
+        model.KeepRulesMade(made, edit.Transaction.Document);
         if (model.MaskRules.Editing != mask && layer is null)
         {
             model.EditMaskRules(mask);
@@ -121,10 +124,15 @@ public sealed class SetMaskRuleHandler(MainViewModel model) : IRequestHandler<Se
             throw new ArgumentException("Give what to change: kind, combine, invert, min, max, soft, source, scale, seed or radius");
         }
         MaskRuleKind? kind = r.Kind is null ? null : MaskRuleArguments.Parse<MaskRuleKind>(r.Kind, "kind of mask rule");
-        model.EditMap($"Mask {mask}, rule {r.Index + 1}: {given.Replace(",", ", ")}", document => document.UpdateMaskRule(mask, r.Index, rule =>
-            Change(kind is MaskRuleKind other && other != rule.Kind ? MaskRule.Of(other) with { Combine = rule.Combine, Invert = rule.Invert } : rule,
-                r.Combine, r.Invert, r.Min, r.Max, r.Soft, r.Source, r.Scale, r.Seed, r.Radius), layer),
-            $"paint.setMaskRule:{mask}:{layer}:{r.Index}:{given}");
+        object? made = null;
+        model.EditMap($"Mask {mask}, rule {r.Index + 1}: {given.Replace(",", ", ")}", document =>
+        {
+            MapDocument changed = document.UpdateMaskRule(mask, r.Index, rule =>
+                Change(kind is MaskRuleKind other && other != rule.Kind ? MaskRule.Of(other) with { Combine = rule.Combine, Invert = rule.Invert } : rule,
+                    r.Combine, r.Invert, r.Min, r.Max, r.Soft, r.Source, r.Scale, r.Seed, r.Radius), layer);
+            return ReferenceEquals(changed, document) ? document : model.WithRulesMade(changed, out made);
+        }, $"paint.setMaskRule:{mask}:{layer}:{r.Index}:{given}");
+        model.KeepRulesMade(made, model.Map?.Document);
         return Task.CompletedTask;
     }
 
@@ -168,7 +176,9 @@ public sealed class RemoveMaskRuleHandler(MainViewModel model, CurrentEdit edit)
     {
         string mask = MaskRuleArguments.Mask(model, request.Mask);
         string? layer = MaskRuleArguments.Layer(model, mask, request.Layer);
-        edit.Transaction.Apply(document => document.RemoveMaskRule(mask, request.Index, layer));
+        object? made = null;
+        edit.Transaction.Apply(document => model.WithRulesMade(document.RemoveMaskRule(mask, request.Index, layer), out made));
+        model.KeepRulesMade(made, edit.Transaction.Document);
         model.Status = $"Took rule {request.Index + 1} out of the mask {mask}";
         return Task.CompletedTask;
     }
@@ -187,7 +197,9 @@ public sealed class MoveMaskRuleHandler(MainViewModel model, CurrentEdit edit) :
     {
         string mask = MaskRuleArguments.Mask(model, request.Mask);
         string? layer = MaskRuleArguments.Layer(model, mask, request.Layer);
-        edit.Transaction.Apply(document => document.MoveMaskRule(mask, request.Index, request.To, layer));
+        object? made = null;
+        edit.Transaction.Apply(document => model.WithRulesMade(document.MoveMaskRule(mask, request.Index, request.To, layer), out made));
+        model.KeepRulesMade(made, edit.Transaction.Document);
         model.Status = $"Moved rule {request.Index + 1} of the mask {mask} to {request.To + 1}";
         return Task.CompletedTask;
     }
