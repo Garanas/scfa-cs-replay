@@ -37,18 +37,7 @@ public sealed class AddUnitHandler(MainViewModel model, AssetsViewModel assets, 
     {
         UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
         MapDocument document = edit.Transaction.Document;
-        string blueprint = request.Blueprint ?? tool.Unit?.Key
-            ?? throw new ArgumentException("Choose a unit to place (Units, Choose a unit), or give its id as the argument blueprint");
-        AssetEntry? entry = assets.Catalog.Find(blueprint);
-        if (entry is not null && entry.Kind != AssetKind.Unit)
-        {
-            throw new ArgumentException($"'{blueprint}' is no unit");
-        }
-        string id = entry?.Key ?? blueprint.Trim().ToLowerInvariant();
-        if (entry is null)
-        {
-            model.Logger("Editor").LogWarning("The workspace has no unit {Blueprint}: placed as it is, without its footprint", id);
-        }
+        (string id, AssetEntry? entry) = UnitCommands.ResolveUnit(request.Blueprint, tool, assets, model);
         string army = request.Army ?? tool.Army ?? throw new ArgumentException("The map has no army to place units for: add one in the Map mode");
         UnitCommands.RequireArmy(document, army);
         bool wreck = request.Wreck ?? tool.AsWrecks;
@@ -122,6 +111,53 @@ internal static class UnitCommands
         {
             throw new ArgumentException(exception.Message, exception);
         }
+    }
+
+    /// <summary>
+    /// The unit a placing command places: the blueprint given, else the place tool's unit, as the
+    /// catalogue knows it (its id in lower case; a unit the workspace lacks is placed as it is, with
+    /// a warning, and has no entry).
+    /// </summary>
+    /// <exception cref="ArgumentException">No unit is given or chosen, or the key is no unit.</exception>
+    public static (string Id, AssetEntry? Entry) ResolveUnit(string? blueprint, UnitPlaceTool tool, AssetsViewModel assets, MainViewModel model)
+    {
+        string key = blueprint ?? tool.Unit?.Key
+            ?? throw new ArgumentException("Choose a unit to place (Units, Choose a unit), or give its id as the argument blueprint");
+        AssetEntry? entry = assets.Catalog.Find(key);
+        if (entry is not null && entry.Kind != AssetKind.Unit)
+        {
+            throw new ArgumentException($"'{key}' is no unit");
+        }
+        string id = entry?.Key ?? key.Trim().ToLowerInvariant();
+        if (entry is null)
+        {
+            model.Logger("Editor").LogWarning("The workspace has no unit {Blueprint}: placed as it is, without its footprint", id);
+        }
+        return (id, entry);
+    }
+
+    /// <summary>
+    /// A unit standing on the terrain at a place: a structure on the build grid and in quarter
+    /// turns, a mobile unit as the place says; named when it is added.
+    /// </summary>
+    public static Project.Files.InMemory.Unit Make(MapDocument document, string id, AssetEntry? entry, UnitPlace place)
+    {
+        float x = place.X;
+        float z = place.Z;
+        float heading = place.Heading;
+        if (entry is { IsStructure: true })
+        {
+            heading = BuildGrid.SnapHeading(heading);
+            (double sizeX, double sizeZ) = entry.Footprint ?? (1, 1);
+            (x, z) = BuildGrid.Snap(x, z, sizeX, sizeZ, heading);
+        }
+        return new Project.Files.InMemory.Unit
+        {
+            Name = "",
+            Blueprint = id,
+            Position = new System.Numerics.Vector3(x, document.Terrain.Heightmap.HeightAt(Math.Clamp(x, 0, document.Width), Math.Clamp(z, 0, document.Height)), z),
+            Orientation = new System.Numerics.Vector3(0, Wrap(heading), 0),
+        };
     }
 
     /// <exception cref="ArgumentException">The map has no army of that name.</exception>

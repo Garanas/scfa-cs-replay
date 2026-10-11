@@ -149,6 +149,15 @@ public static class BrushKeys
                 erase.Radius = RadiusStep(erase.Radius, steps);
                 status = Say("Radius", erase.Radius, "0", " ogrids");
                 return true;
+            // the place tool's scatter brush (U-7): its radius, with shift how many it scatters
+            case UnitPlaceTool { Mode: PlaceMode.Scatter } place when strength:
+                place.Count = Math.Clamp(place.Count + steps, 1, 200);
+                status = Say("Count", place.Count, "0", " units a click");
+                return true;
+            case UnitPlaceTool { Mode: PlaceMode.Scatter } place:
+                place.Radius = RadiusStep(place.Radius, steps);
+                status = Say("Radius", place.Radius, "0", " ogrids");
+                return true;
             default:
                 return false;
         }

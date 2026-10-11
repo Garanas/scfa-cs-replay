@@ -82,16 +82,25 @@ public static class PresetPreview
     {
         foreach (Unit unit in group.Units)
         {
-            (double sizeX, double sizeZ) = catalog.Find(unit.Blueprint)?.Footprint ?? (1, 1);
-            (float sin, float cos) = MathF.SinCos(unit.Orientation.Y);
-            float hx = (float)sizeX / 2;
-            float hz = (float)sizeZ / 2;
-            outlines.Add(new PreviewOutline(new Vector2(unit.Position.X, unit.Position.Z), new Vector2(hx * cos, hx * sin), new Vector2(-hz * sin, hz * cos)));
+            outlines.Add(Footprint(catalog.Find(unit.Blueprint)?.Footprint, unit.Position.X, unit.Position.Z, unit.Orientation.Y));
         }
         foreach (UnitGroup child in group.Groups)
         {
             AddUnits(outlines, child, catalog);
         }
+    }
+
+    /// <summary>
+    /// The footprint of one unit where it would stand: its size turned by its heading, about its centre.
+    /// </summary>
+    /// <param name="radians">The unit's heading, clockwise in the top view.</param>
+    public static PreviewOutline Footprint((double SizeX, double SizeZ)? footprint, float x, float z, float radians)
+    {
+        (double sizeX, double sizeZ) = footprint ?? (1, 1);
+        (float sin, float cos) = MathF.SinCos(radians);
+        float hx = (float)sizeX / 2;
+        float hz = (float)sizeZ / 2;
+        return new PreviewOutline(new Vector2(x, z), new Vector2(hx * cos, hx * sin), new Vector2(-hz * sin, hz * cos));
     }
 
     /// <summary>
@@ -101,16 +110,40 @@ public static class PresetPreview
     /// <param name="radians">The tool's turn, clockwise in the top view.</param>
     public static IReadOnlyList<ToolShape> Shapes(MainViewModel model, ToolView view, IReadOnlyList<PreviewOutline> outlines, float radians)
     {
-        if (outlines.Count == 0 || model.Pointer is not (float px, float pz) || model.ShownDocument is not MapDocument document)
+        if (outlines.Count == 0 || model.Pointer is not (float px, float pz))
         {
             return [];
         }
-        using Performance.Span measure = Performance.Measure("tool.preset-preview");
         Vector2 middle = new Vector2(MathF.Round(px), MathF.Round(pz));
-        Heightmap heights = document.Terrain.Heightmap;
-        IReadOnlyList<MapSymmetryTransform> parts = model.EditTransforms(document);
         (float sin, float cos) = MathF.SinCos(radians);
         Vector2 Turn(Vector2 v) => new Vector2(v.X * cos - v.Y * sin, v.X * sin + v.Y * cos);
+        List<PreviewOutline> placed = new List<PreviewOutline>(Math.Min(outlines.Count, MaxOutlines));
+        foreach (PreviewOutline outline in outlines)
+        {
+            if (placed.Count >= MaxOutlines)
+            {
+                break;
+            }
+            placed.Add(new PreviewOutline(middle + Turn(outline.Centre), Turn(outline.HalfU), Turn(outline.HalfV)));
+        }
+        return ShapesAt(model, view, placed);
+    }
+
+    /// <summary>
+    /// Outlines at their own places on the map (the footprints a drag of the place tool will fill,
+    /// user story U-7), in the view's pixels, each with its images in the other parts of the map while
+    /// the symmetry mirrors edits: the thing itself with a shadow, an image dashed-light.
+    /// </summary>
+    /// <param name="span">The performance span the drawing is measured as.</param>
+    public static IReadOnlyList<ToolShape> ShapesAt(MainViewModel model, ToolView view, IReadOnlyList<PreviewOutline> outlines, string span = "tool.preset-preview")
+    {
+        if (outlines.Count == 0 || model.ShownDocument is not MapDocument document)
+        {
+            return [];
+        }
+        using Performance.Span measure = Performance.Measure(span);
+        Heightmap heights = document.Terrain.Heightmap;
+        IReadOnlyList<MapSymmetryTransform> parts = model.EditTransforms(document);
         List<ToolShape> shapes = [];
         Vector2[] corners = new Vector2[4];
         int drawn = 0;
@@ -120,9 +153,9 @@ public static class PresetPreview
             {
                 break;
             }
-            Vector2 centre = middle + Turn(outline.Centre);
-            Vector2 u = Turn(outline.HalfU);
-            Vector2 v = Turn(outline.HalfV);
+            Vector2 centre = outline.Centre;
+            Vector2 u = outline.HalfU;
+            Vector2 v = outline.HalfV;
             corners[0] = centre - u - v;
             corners[1] = centre + u - v;
             corners[2] = centre + u + v;
