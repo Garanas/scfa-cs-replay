@@ -498,6 +498,44 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task ADragWithThePlaceToolInLineModePlacesALineAndEscapeCancelsOne() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await OpenWithItsDialogs();
+            Show(window, MapViewTab.Top);
+            await model.Commands.RunAsync("units.placeMode", new JsonObject { ["mode"] = "line", ["spacing"] = 4 }, interactive: false);
+            await model.Commands.RunAsync("units.pick", new JsonObject { ["key"] = "uel0101" }, interactive: false);
+            Dispatcher.UIThread.RunJobs();
+            int steps = model.History.Count;
+            Point middle = Middle(window.MapView, window);
+
+            // a drag places the line as one step, with its footprints under the mouse meanwhile
+            window.MouseMove(middle);
+            window.MouseDown(middle, MouseButton.Left);
+            window.MouseMove(middle + new Vector(60, 0));
+            UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
+            Assert.IsTrue(tool.IsDragging && tool.PlannedCount > 1, $"the drag plans {tool.PlannedCount} units");
+            Assert.IsTrue(tool.Shapes(window.MapView.ToolViewOf(null)).Count >= tool.PlannedCount, "an outline per unit under the mouse");
+            window.MouseUp(middle + new Vector(60, 0), MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual(steps + 1, model.History.Count, "one step");
+            Assert.IsTrue(model.Selection.Count > 1, "the line is selected");
+            StringAssert.StartsWith(model.Map!.Session.UndoDescription, $"Place {model.Selection.Count} units (Snoop) in a line");
+
+            // Escape while dragging cancels it
+            window.MouseMove(middle + new Vector(0, 40));
+            window.MouseDown(middle + new Vector(0, 40), MouseButton.Left);
+            window.MouseMove(middle + new Vector(0, 100));
+            Assert.IsTrue(tool.IsDragging);
+            window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
+            Assert.IsFalse(tool.IsDragging, "Escape cancels the line");
+            window.MouseUp(middle + new Vector(0, 100), MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+            Assert.AreEqual(steps + 1, model.History.Count, "nothing placed");
+            StringAssert.Contains(model.Status, "Cancelled");
+            window.Close();
+        });
+
+        [TestMethod]
         public Task SwitchingViewsKeepsBothInTheWindow() => Run(async () =>
         {
             (MainWindow window, _) = await Open();

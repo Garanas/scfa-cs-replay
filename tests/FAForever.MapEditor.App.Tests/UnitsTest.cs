@@ -315,6 +315,151 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task ALineOfStructuresIsPlacedAsOneStepWithItsImagesIntoTheGroup()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "rotational", ["count"] = 2 });
+            int steps = model.History.Count;
+
+            CommandRun line = await Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["x0"] = 40.2, ["z0"] = 60.4, ["x1"] = 52.3, ["z1"] = 60.4, ["blueprint"] = "uec1201", ["army"] = "ARMY_1", ["group"] = "INITIAL/Farms" });
+            JsonObject result = (JsonObject)line.Result!;
+            Assert.AreEqual(5, result["count"]!.GetValue<int>(), "3 wide along x: every 3 ogrids over 12");
+            Assert.AreEqual(5, result["images"]!.GetValue<int>(), "an image each in the other part");
+            Assert.AreEqual(steps + 1, model.History.Count, "one step");
+            StringAssert.StartsWith(model.Map!.Session.UndoDescription, "Place 5 units (UEF Farm) in a line");
+            Assert.AreEqual(10, model.Selection.Count, "what was placed is selected, with its images");
+
+            string[] names = [.. ((JsonArray)result["units"]!).Select(name => name!.GetValue<string>())];
+            PlacedUnit[] placed = [.. names.Select(name => model.ShownDocument!.FindUnit(name)!)];
+            Assert.IsTrue(placed.All(unit => unit.Army == "ARMY_1" && UnitGroupEdits.PathText(unit.Group) == "INITIAL/Farms"), "into the group, made for them");
+            Assert.AreEqual((40.5f, 60f), (placed[0].Unit.Position.X, placed[0].Unit.Position.Z), "on the build grid");
+            Assert.AreEqual(3, placed[1].Unit.Position.X - placed[0].Unit.Position.X, 1e-4, "butting together at the footprint");
+            Assert.IsTrue(placed.All(unit => unit.Unit.Orientation.Y == 0), "facing along x");
+            Assert.IsTrue(model.Undo());
+            Assert.IsTrue(names.All(name => model.ShownDocument!.FindUnit(name) is null), "undone together");
+
+            CommandRun tanks = await Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["x0"] = 100, ["z0"] = 100, ["x1"] = 100, ["z1"] = 109, ["blueprint"] = "uel0101", ["spacing"] = 3, ["faceAlong"] = true });
+            string first = ((JsonArray)((JsonObject)tanks.Result!)["units"]!)[0]!.GetValue<string>();
+            Assert.AreEqual(4, ((JsonObject)tanks.Result!)["count"]!.GetValue<int>(), "mobile units at the spacing");
+            Assert.AreEqual(90, SelectionInspector.Degrees(UnitNamed(model, first).Orientation.Y), 1e-3, "facing along the line, down +z");
+
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["x0"] = -5, ["z0"] = 5, ["x1"] = 10, ["z1"] = 5, ["blueprint"] = "uel0101" }), "a point outside the map is refused");
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["blueprint"] = "uel0101" }), "no points");
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "spiral", ["x0"] = 5, ["z0"] = 5, ["blueprint"] = "uel0101" }));
+        }
+
+        [TestMethod]
+        public async Task AHollowRectangleOfWallsAndARingAroundTheSelectionOrTheStructureUnderTheMouse()
+        {
+            MainViewModel model = await Open();
+            CommandRun walls = await Run(model, "units.addMany", new JsonObject { ["mode"] = "rectangle", ["x0"] = 20.3, ["z0"] = 30.2, ["x1"] = 30.1, ["z1"] = 35.9, ["blueprint"] = "uec1101", ["hollow"] = true, ["army"] = "ARMY_2" });
+            Assert.AreEqual(2 * 10 + 2 * 4, ((JsonObject)walls.Result!)["count"]!.GetValue<int>(), "the border of 10 by 6 walls of 1 by 1");
+            StringAssert.Contains(model.Status, "in a hollow rectangle");
+            string[] names = [.. ((JsonArray)((JsonObject)walls.Result!)["units"]!).Select(name => name!.GetValue<string>())];
+            Assert.IsTrue(names.All(name => { Unit wall = UnitNamed(model, name); return wall.Position.X is 20.5f or 29.5f || wall.Position.Z is 30.5f or 35.5f; }), "only the border");
+
+            CommandRun filled = await Run(model, "units.addMany", new JsonObject { ["mode"] = "rectangle", ["x0"] = 60, ["z0"] = 60, ["x1"] = 66, ["z1"] = 64, ["blueprint"] = "uel0101", ["spacing"] = 2, ["heading"] = 45 });
+            Assert.AreEqual(4 * 3, ((JsonObject)filled.Result!)["count"]!.GetValue<int>(), "mobile units on a grid of the spacing");
+
+            // a ring around a factory: the selection, else the structure under the click
+            await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1201", ["x"] = 100.5, ["z"] = 100, ["army"] = "ARMY_1" });
+            string factory = model.ShownDocument!.AllUnits().Single(unit => unit.Unit.Blueprint == "uec1201").Unit.Name;
+            model.Selection.Set([ObjectRef.Unit(factory)]);
+            CommandRun ring = await Run(model, "units.addMany", new JsonObject { ["mode"] = "ring", ["blueprint"] = "uec1101", ["distance"] = 1, ["army"] = "ARMY_1" });
+            JsonObject around = (JsonObject)ring.Result!;
+            Assert.AreEqual(2 * 7 + 2 * 4, around["count"]!.GetValue<int>(), "a 3 by 2 footprint, one ogrid of room, walls of 1 by 1: 7 by 6 around it");
+            string[] ringed = [.. ((JsonArray)around["units"]!).Select(name => name!.GetValue<string>())];
+            Assert.AreEqual(97.5f, ringed.Min(name => UnitNamed(model, name).Position.X), "the footprint spans 99 to 102; the walls' inner edge at 98");
+            Assert.AreEqual(103.5f, ringed.Max(name => UnitNamed(model, name).Position.X));
+            Assert.AreEqual(97.5f, ringed.Min(name => UnitNamed(model, name).Position.Z), "the footprint spans 99 to 101 along z");
+            Assert.AreEqual(102.5f, ringed.Max(name => UnitNamed(model, name).Position.Z));
+            CollectionAssert.AreEquivalent(ringed.Select(ObjectRef.Unit).ToArray(), model.Selection.Items.ToArray(), "the ring is selected");
+
+            model.Selection.Clear();
+            CommandRun under = await Run(model, "units.addMany", new JsonObject { ["mode"] = "ring", ["x"] = 101, ["z"] = 100.5, ["blueprint"] = "uec1101", ["distance"] = 0, ["army"] = "ARMY_1" });
+            Assert.AreEqual(2 * 5 + 2 * 2, ((JsonObject)under.Result!)["count"]!.GetValue<int>(), "around the factory under the click, touching it");
+            model.Selection.Clear();
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "ring", ["x"] = 200, ["z"] = 200, ["blueprint"] = "uec1101" }), "nothing to ring there");
+        }
+
+        [TestMethod]
+        public async Task AScatterPlacesWrecksApartAndTheSameSeedGivesTheSamePlaces()
+        {
+            MainViewModel model = await Open();
+            JsonObject arguments = new JsonObject { ["mode"] = "scatter", ["x"] = 100, ["z"] = 100, ["radius"] = 10, ["count"] = 8, ["leastDistance"] = 3, ["seed"] = 5, ["blueprint"] = "uel0101", ["wreck"] = true, ["army"] = "ARMY_1" };
+            CommandRun scatter = await Run(model, "units.addMany", arguments);
+            JsonObject result = (JsonObject)scatter.Result!;
+            Assert.AreEqual(8, result["count"]!.GetValue<int>());
+            Assert.IsTrue(result["wreck"]!.GetValue<bool>());
+            StringAssert.StartsWith(result["group"]!.GetValue<string>(), UnitWrecks.GroupName);
+            Unit[] wrecks = [.. ((JsonArray)result["units"]!).Select(name => UnitNamed(model, name!.GetValue<string>()))];
+            Assert.IsTrue(wrecks.All(wreck => UnitWrecks.IsWreck(model.ShownDocument!.FindUnit(wreck.Name)!)));
+            for (int i = 0; i < wrecks.Length; i++)
+            {
+                Assert.IsTrue(Vector2.Distance(new Vector2(wrecks[i].Position.X, wrecks[i].Position.Z), new Vector2(100, 100)) <= 10, "within the circle");
+                for (int j = i + 1; j < wrecks.Length; j++)
+                {
+                    Assert.IsTrue(Vector2.Distance(new Vector2(wrecks[i].Position.X, wrecks[i].Position.Z), new Vector2(wrecks[j].Position.X, wrecks[j].Position.Z)) >= 3, "the least distance");
+                }
+            }
+            Assert.IsTrue(wrecks.Select(wreck => wreck.Orientation.Y).Distinct().Count() > 1, "random headings");
+            Assert.AreEqual(8, model.Selection.Count);
+
+            model.Undo();
+            CommandRun again = await Run(model, "units.addMany", (JsonObject)arguments.DeepClone());
+            Unit[] same = [.. ((JsonArray)((JsonObject)again.Result!)["units"]!).Select(name => UnitNamed(model, name!.GetValue<string>()))];
+            CollectionAssert.AreEqual(wrecks.Select(wreck => wreck.Position).ToArray(), same.Select(wreck => wreck.Position).ToArray(), "the same seed gives the same places");
+        }
+
+        [TestMethod]
+        public async Task ThePlaceToolsModeAndSettingsAreSetAndItsDragPlacesALineWhichEscapeCancels()
+        {
+            MainViewModel model = await Open("units.select");
+            CommandRun set = await Run(model, "units.placeMode", new JsonObject { ["mode"] = "line", ["spacing"] = 3, ["faceAlong"] = false, ["heading"] = 90 });
+            UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
+            Assert.AreEqual("units.place", model.ActiveTool!.Definition.Id, "choosing a way chooses the Place tool");
+            Assert.AreEqual(PlaceMode.Line, tool.Mode);
+            Assert.AreEqual((3.0, false, 90.0), (tool.Spacing, tool.FaceAlong, tool.Heading));
+            Assert.AreEqual("Line", ((JsonObject)set.Result!)["mode"]!.GetValue<string>());
+            Assert.IsTrue(tool.Modes.Single(choice => choice.Mode == PlaceMode.Line).IsOn, "the segmented control shows it");
+
+            await Run(model, "units.pick", new JsonObject { ["key"] = "uel0101" });
+            int steps = model.History.Count;
+            tool.Press(10, 10, ToolInput.Default);
+            tool.Drag(22, 10.2f, ToolInput.Default);
+            Assert.IsTrue(tool.IsDragging);
+            Assert.AreEqual(5, tool.PlannedCount, "every 3 ogrids over 12");
+            StringAssert.Contains(model.Status, "5 × Snoop");
+            Assert.AreEqual(2 * 5, tool.Shapes(ToolView.Flat(0.5f)).Count, "the footprints under the mouse, each with its shadow");
+            Assert.IsTrue(tool.Key("Escape", ToolModifiers.None), "Escape cancels the drag");
+            Assert.IsFalse(tool.IsDragging);
+            tool.Release();
+            Assert.AreEqual(steps, model.History.Count, "nothing placed");
+
+            tool.Press(10, 10, ToolInput.Default);
+            tool.Drag(22, 20, new ToolInput(ToolModifiers.Shift, 0.5f));
+            tool.Release();
+            await Task.Yield();
+            Assert.AreEqual(steps + 1, model.History.Count, "the release places the line as one step");
+            StringAssert.StartsWith(model.Map!.Session.UndoDescription, "Place 6 units (Snoop) in a line");
+            Unit last = UnitNamed(model, model.Selection.Items[^1].Name!);
+            Assert.AreEqual(last.Position.X - 10, last.Position.Z - 10, 0.01, "with shift the line keeps to 45 degrees");
+            Assert.AreEqual(90, SelectionInspector.Degrees(last.Orientation.Y), 1e-3, "not facing along: the facing set");
+
+            CommandRun next = await Run(model, "units.placeMode");
+            Assert.AreEqual("Rectangle", ((JsonObject)next.Result!)["mode"]!.GetValue<string>(), "without a mode, the next way");
+            await Run(model, "units.placeMode", new JsonObject { ["mode"] = "scatter", ["radius"] = 12, ["count"] = 4, ["leastDistance"] = 1 });
+            Assert.AreEqual(12, tool.CursorRadius, "the scatter brush's circle");
+            tool.Press(100, 100, ToolInput.Default);
+            tool.Release();
+            await Task.Yield();
+            Assert.AreEqual(steps + 2, model.History.Count, "a click of the scatter brush is one step");
+            Assert.AreEqual(4, model.Selection.Count);
+            StringAssert.StartsWith(model.Map!.Session.UndoDescription, "Scatter Snoop");
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.placeMode", new JsonObject { ["mode"] = "spiral" }));
+        }
+
+        [TestMethod]
         public async Task TheArmiesAreAddedRenamedChangedAndRemoved()
         {
             MainViewModel model = await Open();
