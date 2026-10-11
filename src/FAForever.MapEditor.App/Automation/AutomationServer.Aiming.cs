@@ -118,7 +118,7 @@ public sealed partial class AutomationServer
                 {
                     ComboBox { IsDropDownOpen: true } box => $"the list of {Describe(box)}",
                     MenuItem { IsSubMenuOpen: true } item => $"the menu {Describe(item)}",
-                    ToolRow { IsExpanded: true } row => $"More of {Describe(row)}",
+                    ToolRow { IsExpanded: true } row => $"More of {(Avalonia.Automation.AutomationProperties.GetName(row) is { Length: > 0 } name ? name : row.Name is { Length: > 0 } named ? named : "the tool's options row")}",
                     Avalonia.Controls.Primitives.Popup { IsOpen: true } popup when popup.TemplatedParent is not (ComboBox or MenuItem) => $"a popup in {Describe(popup.Parent as Visual ?? popup)}",
                     _ => null,
                 };

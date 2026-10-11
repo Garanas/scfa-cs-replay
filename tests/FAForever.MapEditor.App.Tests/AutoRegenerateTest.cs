@@ -139,6 +139,14 @@ namespace FAForever.MapEditor.App.Tests
             await model.AutoGeneration.WhenIdleAsync();
             Assert.AreEqual(kept, model.AutoGeneration.Kept, "nothing regenerated");
             Assert.AreEqual(2, model.Generation.Results.RecentOf(NavigationMeshGenerator.GeneratorId).Count);
+
+            // a change waits to regenerate; undone at once, the version before has its result and the wait stops
+            model.AutoGeneration.Delay = TimeSpan.FromSeconds(5);
+            Raise(model, 50, 52);
+            Assert.IsTrue(model.AutoGeneration.IsPending(NavigationMeshGenerator.GeneratorId));
+            model.Undo();
+            Assert.AreSame(second, model.Navigation.Mesh);
+            Assert.IsFalse(model.AutoGeneration.IsPending(NavigationMeshGenerator.GeneratorId), "the remembered result is current: nothing waits");
         }
 
         [TestMethod]

@@ -210,10 +210,11 @@ public sealed class AutoGeneration
                     {
                         continue;
                     }
-                    // a newer change: the run stops, the timer starts again
+                    // a newer change: the run stops, the timer starts again unless the result is current
+                    // now (an undo or redo to a version whose result was remembered)
                     Stop(id);
                 }
-                else if (_generation.Results.ResultOf(id) is GeneratedResult result ? !result.IsStale(document) : LeftWhenMissing(id, document))
+                if (_generation.Results.ResultOf(id) is GeneratedResult result ? !result.IsStale(document) : LeftWhenMissing(id, document))
                 {
                     continue;
                 }
