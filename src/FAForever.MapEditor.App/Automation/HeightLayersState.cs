@@ -65,6 +65,7 @@ public static class HeightLayersState
                     ["lineOnly"] = curve.LineOnly,
                     ["fills"] = curve.Fills,
                     ["grades"] = HeightCurveArguments.GradesOf(curve),
+                    ["blocksWalkability"] = curve.BlocksWalkability,
                 } : null,
             })]),
             ["curveTool"] = new JsonObject

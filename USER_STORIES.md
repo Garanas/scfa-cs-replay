@@ -265,8 +265,8 @@ reads again when it changes; and nothing that generates runs by itself.
       along the curve", the place tool's "Along a curve...") places a decal or decal set along the
       curve once, as ordinary decals with spacing, width, offset, alternating sides, random turn and
       jitter, and the images of a mirrored curve; one step of undo. Missing: the window's node
-      table and a height per point by hand in the views (wave 18), cliff faces in the walkability
-      marks (D3).
+      table and a height per point by hand in the views (wave 18). Cliff faces block walkability (D3): a
+      cliff curve's face counts as marked blocked unless marked open by hand, `blocksWalkability`.
 - [x] **T-5 Heightmap layers.** A stack of layers that add up to the heightmap: the base, sculpting,
       curves, imported results of World Machine or Gaea; per layer a way of combining (add, maximum,
       minimum, replace), strength, a mask, visible or hidden, locked. Shape the general form in the

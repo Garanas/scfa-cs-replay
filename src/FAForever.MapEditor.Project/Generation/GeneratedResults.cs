@@ -43,6 +43,12 @@ namespace FAForever.MapEditor.Project.Generation
         /// </summary>
         public static GeneratedInput WalkabilityMarks { get; } = new GeneratedInput("walkability marks", document => document.WalkabilityMarks);
 
+        /// <summary>
+        /// The cliffs whose faces block walkability (user story T-4, <see cref="Editing.CliffFaces"/>):
+        /// a cliff's face moved, or its blocking turned on or off, makes walkability out of date.
+        /// </summary>
+        public static GeneratedInput CliffFaces { get; } = new GeneratedInput("cliff faces", Editing.CliffFaces.KeyOf);
+
         public static GeneratedInput Lighting { get; } = new GeneratedInput("lighting", document => document.Lighting);
 
         public static GeneratedInput Markers { get; } = new GeneratedInput("markers", document => document.Markers);

@@ -81,23 +81,29 @@ namespace FAForever.MapEditor.Project.Editing
         /// <summary>
         /// The terrain types as the export writes them, row by row: a blocked mark makes the type the
         /// game reads for that ogrid (at its far corner) <see cref="BlockingType"/>, an open mark makes
-        /// a blocking type there <see cref="OpenType"/>.
+        /// a blocking type there <see cref="OpenType"/>. The face of a cliff that blocks walkability
+        /// (<see cref="CliffFaces"/>) counts as marked blocked where no mark says open.
         /// </summary>
         public static byte[] TerrainTypes(MapDocument document)
         {
             byte[] types = document.Terrain.Types.ToArray();
-            if (document.WalkabilityMarks is not TiledBuffer<byte> marks || marks.Width != document.Terrain.Types.Width || marks.Height != document.Terrain.Types.Height)
+            int width = document.Terrain.Types.Width;
+            int height = document.Terrain.Types.Height;
+            byte[]? marked = document.WalkabilityMarks is TiledBuffer<byte> marks && marks.Width == width && marks.Height == height ? marks.ToArray() : null;
+            bool[]? faces = width == document.Width && height == document.Height ? CliffFaces.Grid(document) : null;
+            if (marked is null && faces is null)
             {
                 return types;
             }
-            int width = marks.Width;
-            int height = marks.Height;
-            byte[] marked = marks.ToArray();
             for (int z = 0; z + 1 < height; z++)
             {
                 for (int x = 0; x + 1 < width; x++)
                 {
-                    byte mark = marked[z * width + x];
+                    byte mark = marked?[z * width + x] ?? None;
+                    if (mark == None && faces?[z * width + x] == true)
+                    {
+                        mark = Blocked;
+                    }
                     if (mark == None)
                     {
                         continue;
@@ -120,9 +126,36 @@ namespace FAForever.MapEditor.Project.Editing
         /// <summary>
         /// The terrain types as the export writes them (<see cref="TerrainTypes(MapDocument)"/>).
         /// </summary>
-        public static TiledBuffer<byte> ExportedTypes(MapDocument document) => document.WalkabilityMarks is null
+        public static TiledBuffer<byte> ExportedTypes(MapDocument document) => document.WalkabilityMarks is null && CliffFaces.Grid(document) is null
             ? document.Terrain.Types
             : TiledBuffer<byte>.FromArray(document.Terrain.Types.Width, document.Terrain.Types.Height, TerrainTypes(document));
+
+        /// <summary>
+        /// The marks with the faces of cliffs that block walkability (<see cref="CliffFaces"/>) as
+        /// blocked where no mark is: what walkability takes as marked, for the Walkability tool's view.
+        /// The marks themselves (null for none) when no face blocks; the tiles without a face are the
+        /// marks' own.
+        /// </summary>
+        public static TiledBuffer<byte>? WithCliffFaces(MapDocument document)
+        {
+            TiledBuffer<byte>? marks = document.WalkabilityMarks is TiledBuffer<byte> own && own.Width == document.Width && own.Height == document.Height ? own : null;
+            IReadOnlyList<int> faces = CliffFaces.Indices(document);
+            if (faces.Count == 0)
+            {
+                return marks;
+            }
+            TiledBuffer<byte>.Builder builder = (marks ?? TiledBuffer<byte>.Create(document.Width, document.Height)).ToBuilder();
+            foreach (int i in faces)
+            {
+                int x = i % document.Width;
+                int z = i / document.Width;
+                if (builder[x, z] == None)
+                {
+                    builder[x, z] = Blocked;
+                }
+            }
+            return builder.ToBuffer();
+        }
 
         /// <summary>
         /// The ogrids marked open, row by row, for <see cref="NavGenerator"/>; null without any.

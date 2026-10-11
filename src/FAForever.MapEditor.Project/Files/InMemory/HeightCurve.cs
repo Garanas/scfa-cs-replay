@@ -230,6 +230,14 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public bool LineOnly { get; init; }
 
         /// <summary>
+        /// For a cliff: whether its face is impassable to units even where its slope alone would let
+        /// them through (<see cref="Editing.CliffFaces"/>): walkability and the export's terrain types
+        /// block the ogrids under the face, unless walkability is marked open by hand there. New cliffs
+        /// block; a curve read from a project without the setting does not.
+        /// </summary>
+        public bool BlocksWalkability { get; init; }
+
+        /// <summary>
         /// Whether a closed curve fills its inside.
         /// </summary>
         public bool Fills => Closed && !LineOnly && Points.Length >= 3;
@@ -240,7 +248,7 @@ namespace FAForever.MapEditor.Project.Files.InMemory
             && TerraceSteps == other.TerraceSteps && CliffFace == other.CliffFace && RoadMode == other.RoadMode && Camber == other.Camber
             && NoiseAmplitude == other.NoiseAmplitude && NoiseScale == other.NoiseScale && NoiseSeed == other.NoiseSeed
             && HeightVariation == other.HeightVariation && WidthVariation == other.WidthVariation && VariationScale == other.VariationScale
-            && LineOnly == other.LineOnly && Points.AsSpan().SequenceEqual(other.Points.AsSpan());
+            && LineOnly == other.LineOnly && BlocksWalkability == other.BlocksWalkability && Points.AsSpan().SequenceEqual(other.Points.AsSpan());
 
         public override int GetHashCode() => HashCode.Combine(Profile, Width, Falloff, Closed, Points.Length, NoiseAmplitude, LineOnly);
     }

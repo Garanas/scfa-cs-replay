@@ -1349,7 +1349,7 @@ namespace FAForever.MapEditor.Project.Generation
         public string Story => "R-3";
 
         public IReadOnlyList<GeneratedInput> Inputs { get; } =
-            [GeneratedInput.Heightmap, GeneratedInput.TerrainTypes, GeneratedInput.WaterLevel, GeneratedInput.DepositsAndAreas, GeneratedInput.MapType, GeneratedInput.WalkabilityMarks,
+            [GeneratedInput.Heightmap, GeneratedInput.TerrainTypes, GeneratedInput.WaterLevel, GeneratedInput.DepositsAndAreas, GeneratedInput.MapType, GeneratedInput.WalkabilityMarks, GeneratedInput.CliffFaces,
              GeneratedInput.PathNodeSettings];
 
         /// <summary>

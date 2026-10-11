@@ -29,7 +29,8 @@ public enum WalkabilityMark
 /// <see cref="PaintTarget.WalkabilityMarks"/>, <see cref="WalkabilityMarks"/>). Generating
 /// walkability takes the marks over what the heights and terrain types make, so walkability goes
 /// out of date with each stroke; the export writes blocked ogrids as a blocking terrain type. The
-/// top view shows the marks while the tool is active: blocked red, open green.
+/// top view shows the marks while the tool is active: blocked red, open green; the faces of cliffs
+/// that block walkability (<see cref="CliffFaces"/>) show as blocked where no mark is.
 /// </summary>
 public sealed partial class WalkabilityMarkTool : GridPaintTool
 {
@@ -39,10 +40,40 @@ public sealed partial class WalkabilityMarkTool : GridPaintTool
     /// </summary>
     public static IReadOnlyList<uint> Palette { get; } = [0x00000000, 0xFFE0453A, 0xFF4CC46A, .. Enumerable.Repeat(0x00000000u, 253)];
 
-    private static readonly GridOverlay Overlay = new GridOverlay("walkability marks", document => document.WalkabilityMarks, Palette);
+    private static readonly GridOverlay Overlay = new GridOverlay("walkability marks", MarksWithCliffFaces, Palette);
+
+    private static readonly Lock ShownGate = new Lock();
+
+    private static (TiledBuffer<byte>? Marks, CliffFaces.Key Faces, TiledBuffer<byte>? Shown)? _shown;
 
     private TiledBuffer<byte>? _counted;
     private (int Blocked, int Open) _counts;
+
+    /// <summary>
+    /// The marks with the blocking cliff faces as blocked (<see cref="WalkabilityMarks.WithCliffFaces"/>),
+    /// the same grid while neither changes, so the views draw it again only after a change.
+    /// </summary>
+    private static TiledBuffer<byte>? MarksWithCliffFaces(MapDocument document)
+    {
+        CliffFaces.Key faces = CliffFaces.KeyOf(document);
+        if (faces.IsEmpty)
+        {
+            return document.WalkabilityMarks;
+        }
+        lock (ShownGate)
+        {
+            if (_shown is { } shown && ReferenceEquals(shown.Marks, document.WalkabilityMarks) && shown.Faces.Equals(faces))
+            {
+                return shown.Shown;
+            }
+        }
+        TiledBuffer<byte>? made = WalkabilityMarks.WithCliffFaces(document);
+        lock (ShownGate)
+        {
+            _shown = (document.WalkabilityMarks, faces, made);
+        }
+        return made;
+    }
 
     public WalkabilityMarkTool(MainViewModel model) : base(model)
     {
@@ -90,6 +121,8 @@ public sealed partial class WalkabilityMarkTool : GridPaintTool
             ["radius"] = Radius,
             ["blocked"] = _counts.Blocked,
             ["open"] = _counts.Open,
+            // ogrids under the faces of cliffs that block walkability (wave 18, D3)
+            ["curveFaces"] = Model.ShownDocument is MapDocument document ? CliffFaces.Count(document) : 0,
         };
     }
 }

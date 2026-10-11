@@ -356,6 +356,111 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// The least half width of a face's band of ogrids: an ogrid's half diagonal and a little, so
+        /// that the ogrids under a face of any width join by their sides and corners into a wall
+        /// units cannot slip through.
+        /// </summary>
+        private const float FaceBand = 0.75f;
+
+        /// <summary>
+        /// The ogrids under a cliff's face (user story T-4, D3): those whose centre lies within half
+        /// the face's width (<see cref="HeightCurve.CliffFace"/>, at least <see cref="FaceBand"/>) of
+        /// the drop, the edge noise moving the drop as it moves the terrain, where the cliff rises;
+        /// for a closed cliff that fills, its rim. The images of a curve drawn by a symmetry are
+        /// included. Each ogrid once, as its index row by row (<c>z * mapWidth + x</c>), in order;
+        /// empty for a curve that is no cliff. Whether the face blocks walkability
+        /// (<see cref="HeightCurve.BlocksWalkability"/>) is the caller's (<see cref="CliffFaces"/>).
+        /// </summary>
+        public static int[] FaceCells(HeightCurve curve, int mapWidth, int mapHeight)
+        {
+            if (curve.Profile != CurveProfile.Cliff || curve.Points.Length < 2 || mapWidth <= 0 || mapHeight <= 0)
+            {
+                return [];
+            }
+            float half = Math.Max(FaceBand, Math.Max(0, curve.CliffFace) / 2);
+            float reach = half + MathF.Abs(curve.NoiseAmplitude);
+            bool fills = curve.Fills;
+            HashSet<int> cells = [];
+            foreach (PartLine part in PartLines(curve, Samples(curve), mapWidth, mapHeight))
+            {
+                FaceCellsOf(curve, part, half, reach, fills, mapWidth, mapHeight, cells);
+            }
+            int[] sorted = [.. cells];
+            Array.Sort(sorted);
+            return sorted;
+        }
+
+        /// <summary>
+        /// Adds the ogrids under one part's face to <paramref name="cells"/>.
+        /// </summary>
+        private static void FaceCellsOf(HeightCurve curve, PartLine part, float half, float reach, bool fills, int mapWidth, int mapHeight, HashSet<int> cells)
+        {
+            CurveSample[] line = part.Line;
+            if (line.Length < 2)
+            {
+                return;
+            }
+            bool outsideIsLeft = fills && FillOf(line).OutsideIsLeft;
+            // per ogrid near the line: the nearest segment's distance, side and place along it
+            Dictionary<int, (float Distance, int Segment, float Along, bool Left)> near = [];
+            for (int s = 0; s + 1 < line.Length; s++)
+            {
+                CurveSample a = line[s], b = line[s + 1];
+                Vector2 from = new Vector2(a.X, a.Z);
+                Vector2 along = new Vector2(b.X, b.Z) - from;
+                float lengthSquared = along.LengthSquared();
+                int x0 = Math.Max(0, (int)MathF.Floor(Math.Min(a.X, b.X) - reach - 0.5f));
+                int x1 = Math.Min(mapWidth - 1, (int)MathF.Ceiling(Math.Max(a.X, b.X) + reach));
+                int z0 = Math.Max(0, (int)MathF.Floor(Math.Min(a.Z, b.Z) - reach - 0.5f));
+                int z1 = Math.Min(mapHeight - 1, (int)MathF.Ceiling(Math.Max(a.Z, b.Z) + reach));
+                for (int z = z0; z <= z1; z++)
+                {
+                    for (int x = x0; x <= x1; x++)
+                    {
+                        // the ogrid's centre
+                        Vector2 to = new Vector2(x + 0.5f, z + 0.5f) - from;
+                        float t = lengthSquared > 0 ? Math.Clamp(Vector2.Dot(to, along) / lengthSquared, 0, 1) : 0;
+                        float d = (to - along * t).Length();
+                        if (d > reach)
+                        {
+                            continue;
+                        }
+                        int index = z * mapWidth + x;
+                        if (!near.TryGetValue(index, out var best) || d < best.Distance)
+                        {
+                            // the left of the direction of travel in the top view (x right, z down), as Nearest
+                            near[index] = (d, s, t, along.X * to.Y - along.Y * to.X < 0);
+                        }
+                    }
+                }
+            }
+            float scale = Math.Max(0.01f, curve.NoiseScale);
+            foreach ((int index, (float d, int segment, float t, bool left)) in near)
+            {
+                CurveSample here = Lerp(line[segment], line[segment + 1], t);
+                if (here.Height * here.Strength == 0)
+                {
+                    // no drop here
+                    continue;
+                }
+                int x = index % mapWidth, z = index / mapWidth;
+                float noise = 0;
+                if (curve.NoiseAmplitude != 0)
+                {
+                    // as ValueAt: an image reads the noise at the original place
+                    Vector2 at = part.NoisePlace is MapSymmetryTransform place ? place.Apply(new Vector2(x + 0.5f, z + 0.5f)) : new Vector2(x + 0.5f, z + 0.5f);
+                    noise = curve.NoiseAmplitude * HeightNoise.At(at.X / scale, at.Y / scale, curve.NoiseSeed);
+                }
+                // the signed distance to the drop as the terrain has it: a fill's inside, an open cliff's left, positive
+                float signed = fills ? (left != outsideIsLeft ? d : -d) : left ? d : -d;
+                if (MathF.Abs(signed + (fills ? -noise : noise)) <= half)
+                {
+                    cells.Add(index);
+                }
+            }
+        }
+
+        /// <summary>
         /// One part's line: the curve's samples where that part has them, and where the part reads
         /// the edge noise (null: in place; else the original place of its own).
         /// </summary>

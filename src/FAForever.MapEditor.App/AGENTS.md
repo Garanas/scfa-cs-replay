@@ -2206,6 +2206,11 @@ User stories T-5 and T-4; the library does the work (its guide, "Height layers a
   On an 81 km map a ridge of about 520 ogrids is changed in about 8 to 12 ms (`model.height-layers`,
   debug build; 40 to 70 ms before wave 17), 10 to 22 ms with edge noise and variation.
 - Not built yet: a height per point by hand in the views, merging layers.
+- **Cliff faces and walkability** (D3): `terrain.addCurve` and `terrain.setCurve` take
+  `blocksWalkability` (a curve that becomes a cliff blocks unless told otherwise); the Walkability
+  tool draws the faces as blocked marks while active; `state.walkabilityMarks.curveFaces` is the number
+  of ogrids and `state.heightLayers` says it per curve (`blocksWalkability`). Test:
+  `CliffWalkabilityTest`.
 - **Decals along a curve** (D2, `Commands/Decals/AlongCurve.cs`, `DecalsAlongCurveViewModel` as
   `model.DecalsAlong`): `decals.alongCurve {layer?, key?, spacing?, width?, length?, offset?,
   alternate?, randomTurn?, jitter?, seed?, cutOff?}` (Decals menu) places the decals once through the

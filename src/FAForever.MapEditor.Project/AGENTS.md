@@ -1222,6 +1222,21 @@ User stories T-5 and T-4 (`MapDocument.HeightStack`, `Editing/HeightLayers`, `He
   stack in memory), and their first save writes `stacks/` and removes `layers/`. An image layer's
   file is read again whenever it changes, also for a layer added since the last save
   (`EditedMap.Reload` takes such a file as another tool's, `MapProjectStore.IsImageLayerFile`).
+- **Cliff faces block walkability** (D3, `HeightCurve.BlocksWalkability`, `Editing/CliffFaces`,
+  `HeightCurves.FaceCells`): a cliff curve with the flag (a cliff made by `terrain.addCurve` or
+  `terrain.setCurve` has it; a curve read from a project without `blocksWalkability` has not; on disk
+  the optional `blocksWalkability` of the curve in format 9) makes the ogrids under its face count as
+  marked blocked. `FaceCells(curve, width, height)` is the drop widened by the face width, the
+  curve's images through its symmetry, the edge noise included, a closed cliff's rim too. `CliffFaces`
+  keeps the ogrids per curve (`ConditionalWeakTable`, curves are immutable) and merges those of the
+  visible blocking curves of the final stack per call, remembering the last answer (`Grid`, `Count`,
+  `Indices`, `KeyOf`). `WalkabilityMarks.TerrainTypes`, the walkability generator and the export
+  block them unless a hand mark says open; they are never written into `WalkabilityMarks`, so
+  editing the curve moves the face. `CliffFaces.Key` is an input of the walkability, navigation mesh
+  and path network results (`GeneratedResults`), so a cliff edit makes them out of date and they
+  regenerate by themselves while shown. The check `walkability-marks` counts them. Measured (4096
+  ogrids, one cliff of 200 points with edge noise): 119 ms the first time, 0 cached, 93 ms for a
+  second changed curve. Tests: `CliffFacesTest`.
 - **Decals along a curve** (D2, `DecalEdits.AlongCurve(document, curve, pattern, DecalsAlongCurve, out
   added)`, `Editing/DecalEdits.AlongCurve.cs`): places decals once, as ordinary decals on top of the
   others; nothing ties them to the curve afterwards. `PlacesAlong(line, settings)` cuts the spline

@@ -183,21 +183,37 @@ public sealed partial class MainViewModel
             Applies = run =>
             {
                 (int blocked, int open) = WalkabilityMarks.Count(run.Document.WalkabilityMarks);
-                run.Note = blocked + open == 0 ? "no marks" : null;
-                return blocked + open > 0;
+                int faces = CliffFaces.Count(run.Document);
+                run.Note = blocked + open + faces == 0 ? "no marks" : null;
+                return blocked + open + faces > 0;
             },
             Run = run =>
             {
                 (int blocked, int open) = WalkabilityMarks.Count(run.Document.WalkabilityMarks);
+                int faces = CliffFaces.Count(run.Document);
                 run.Document = run.Document with
                 {
                     Terrain = run.Document.Terrain with { Types = TiledBuffer<byte>.FromArray(run.Document.Width, run.Document.Height, WalkabilityMarks.TerrainTypes(run.Document)) },
-                    WalkabilityMarks = null,
+                    // the open marks stay while cliff faces block: they win over a face, also when the export reads the types again
+                    WalkabilityMarks = faces > 0 && open > 0 ? OnlyOpen(run.Document.WalkabilityMarks!) : null,
                 };
-                run.Note = $"{Units(blocked, "ogrid")} blocked, {Units(open, "ogrid")} open";
+                run.Note = $"{Units(blocked, "ogrid")} blocked, {Units(open, "ogrid")} open" + (faces > 0 ? $", {Units(faces, "ogrid")} under cliff faces" : "");
                 return Task.CompletedTask;
             },
         });
+    }
+
+    /// <summary>
+    /// The marks with only those that say open.
+    /// </summary>
+    private static TiledBuffer<byte> OnlyOpen(TiledBuffer<byte> marks)
+    {
+        byte[] values = marks.ToArray();
+        for (int i = 0; i < values.Length; i++)
+        {
+            values[i] = values[i] == WalkabilityMarks.Open ? WalkabilityMarks.Open : WalkabilityMarks.None;
+        }
+        return TiledBuffer<byte>.FromArray(marks.Width, marks.Height, values);
     }
 
     private static string Units(int count, string noun) => count == 1 ? $"1 {noun}" : $"{count:N0} {noun}s";
