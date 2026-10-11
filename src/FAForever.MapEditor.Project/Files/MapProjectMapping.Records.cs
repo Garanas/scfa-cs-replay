@@ -331,6 +331,7 @@ namespace FAForever.MapEditor.Project.Files
             Name = source.Name,
             Groups = [.. source.Groups.Select(item => ToDto(item))],
             Units = [.. source.Units.Select(item => ToDto(item))],
+            Instance = source.Instance is null ? null : ToDto(source.Instance),
         };
 
         public static UnitGroup ToModel(UnitGroupDto source) => new UnitGroup
@@ -338,7 +339,26 @@ namespace FAForever.MapEditor.Project.Files
             Name = source.Name,
             Groups = [.. source.Groups.Select(item => ToModel(item))],
             Units = [.. source.Units.Select(item => ToModel(item))],
+            Instance = source.Instance is null ? null : ToModel(source.Instance),
         };
+
+        public static PresetInstanceDto ToDto(PresetInstance source) => new PresetInstanceDto
+        {
+            Preset = source.Preset,
+            Fingerprint = source.Fingerprint,
+            X = source.X,
+            Z = source.Z,
+            Heading = source.Heading,
+            PlacedAt = source.PlacedAt,
+        };
+
+        public static PresetInstance ToModel(PresetInstanceDto source) => new PresetInstance(
+            source.Preset,
+            source.Fingerprint,
+            source.X,
+            source.Z,
+            source.Heading,
+            source.PlacedAt);
 
         public static UnitDto ToDto(Unit source) => new UnitDto
         {

@@ -268,6 +268,22 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// Sets or clears the unit preset a group was placed from (user story U-9,
+        /// <see cref="UnitGroup.Instance"/>). The root group of an army is never an instance.
+        /// </summary>
+        /// <exception cref="KeyNotFoundException">The army or the group does not exist.</exception>
+        /// <exception cref="ArgumentException">It is the root group.</exception>
+        public static MapDocument SetInstance(this MapDocument document, string army, IReadOnlyList<string> path, PresetInstance? instance)
+        {
+            UnitGroup group = RequireGroup(document, army, path);
+            if (path.Count == 0 && instance is not null)
+            {
+                throw new ArgumentException($"The root group of {army} cannot be an instance of a preset");
+            }
+            return group.Instance == instance ? document : document.ChangeGroup(army, path, g => g with { Instance = instance });
+        }
+
+        /// <summary>
         /// The document with the group at a path of an army changed.
         /// </summary>
         /// <exception cref="KeyNotFoundException">The army or the group does not exist.</exception>

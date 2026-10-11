@@ -27,7 +27,9 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// <c>cumulusDispersionRamp</c>, <c>cumulusTexture</c>) where format 7 had <c>midColor</c>, no
         /// <c>clouds7</c>, and always four cirrus layers. A project of format 7 opens: its
         /// <c>midColor</c> and <c>clouds7</c> are left out and its cirrus layers made four. An editor
-        /// reads every version up to its own.
+        /// reads every version up to its own. Optional additions to format 8, which a project may lack
+        /// (no new version: an older project reads as if it held none of them): a unit group's
+        /// <c>instance</c>, the unit preset it was placed from (<c>PresetInstanceDto</c>, user story U-9).
         /// </summary>
         public const int CurrentFormatVersion = 8;
 
