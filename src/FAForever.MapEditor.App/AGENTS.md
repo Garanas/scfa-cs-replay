@@ -2175,7 +2175,40 @@ User stories T-5 and T-4; the library does the work (its guide, "Height layers a
   `fills` and `grades` (from, to, rise, run, percent, degrees, steepestPercent, steepestAt).
   On an 81 km map a ridge of about 520 ogrids is changed in about 8 to 12 ms (`model.height-layers`,
   debug build; 40 to 70 ms before wave 17), 10 to 22 ms with edge noise and variation.
-- Not built yet: a height per point by hand in the views, merging layers.
+- Not built yet: merging layers.
+- **The curve in the window** (wave 18, `ViewModels/HeightLayersViewModel.Curve.cs`,
+  `ViewModels/CurveNodesViewModel.cs`, `Tools/CurveTool.cs`, `CurveWindowTest`):
+  - The inspector's `Curve` group (profile, width, height) is followed by `CurveGroups`
+    (`CurveSettingGroup`: a `SettingGroup` and the test of which curves show it): falloff (with "Same
+    on both sides" and the right falloff), a cliff's fade back, fade shape and terrace steps, the
+    cliff's face, road mode, camber, closed, line only, mirrored, edge noise and the variation along
+    the curve. Each field runs `terrain.setCurve` (`Setting.ValueOf` turns what is typed into the
+    command's value: the variation's heights "from .. to .." are absolute while the points share one
+    height, else offsets, `VariationNote` says which). The check box "Cliff face blocks walkability"
+    runs `terrain.setCurve blocksWalkability` (cliffs only). The Mirrored box follows the chosen curve when a command
+    changed it (`LayerStackViewModel` refreshes the fields when the chosen layer changed).
+  - The table (`CurveNodesViewModel`, `HeightStack.Nodes`): a `CurveNodeRow` per point (two decimals;
+    an empty field is the curve's value, its hint); a field runs `terrain.setCurvePoint` (`clear`
+    for an emptied one); the grade of each stretch under its row, in the warning colour above
+    `GradeLimit` (percent, 30); a fill greys the heights. Chosen points (`Chosen`, `Current`) are
+    the list's selection, the curve tool's press and `terrain.chooseCurvePoints {points?, layer?}`
+    (no step of undo). Buttons: Reverse, Even the grade (the first to the last chosen point, else
+    the curve's ends), Snap to the ground (ends, chosen, all; off with the reason for ridges, valleys
+    and cliffs). `terrain.setCurveTool {pointHeight?, typedHeight?, showReach?, gradeLimit?}` sets the
+    window's own options; all are in `state.heightLayers.curveTool` (`pointHeight`, `typedHeight`,
+    `showReach`, `chosenPoints`, `gradeLimit`).
+  - The tool: pressing a point chooses it; shift and a drag on a point sets its height from the
+    mouse's height on the screen (a unit per two pixels at half an ogrid a pixel; the same in both
+    views; the status line shows it; one step); `+` and `-` change the chosen points' heights by 1
+    (shift 0.1, control 5; one point: `terrain.setCurvePoint`, so presses merge); a fill has one
+    height and says so. New points take their height by the option "New point's height": automatic
+    (the ground for a road, else the last point's), last point's, ground, typed.
+  - Lines: `ToolMarks` has `Outlines` (`MarkOutline`: dashed width edge, dotted fade end, thinner
+    for images; from the library's `CurveOutlines`), `ChosenHandles` and `CornerHandles` (handles
+    round, a sharp corner square, a chosen point larger and filled). The top view draws them in
+    `DrawMarks`, the 3D view as `ToolLine` (with `Dash`) and `ToolDisc` through `ShapeRenderer`.
+    The tool caches its marks per curve, so a frame costs nothing; making them is the span
+    `tool.curve-marks` (8 ms for about 1800 ogrids of line with an image, debug build).
 - **Cliff faces and walkability** (D3): `terrain.addCurve` and `terrain.setCurve` take
   `blocksWalkability` (a curve that becomes a cliff blocks unless told otherwise); the Walkability
   tool draws the faces as blocked marks while active; `state.walkabilityMarks.curveFaces` is the number

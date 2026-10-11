@@ -27,6 +27,8 @@ public sealed partial class MainViewModel
             FollowChosenHeightLayer();
             Tool<CurveTool>().OnLayerChanged();
         };
+        // the chosen points of a curve (T-4) are drawn larger in both views
+        HeightStack.Nodes.ChosenChanged += (_, _) => Tool<CurveTool>().OnLayerChanged();
     }
 
     /// <summary>

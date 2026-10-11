@@ -1124,6 +1124,10 @@ User stories T-5 and T-4 (`MapDocument.HeightStack`, `Editing/HeightLayers`, `He
   the width (a cliff: a drop of an ogrid at the curve, full over the width on the high side) and
   a smooth fade over the falloff. `SetCurve` rasterizes again, reusing the tiles that come out the
   same, within the tiles the old and new curve reach; a new profile brings its way of combining.
+- **Curve outlines** (wave 18, `Editing/CurveOutlines.cs`): `CurveOutlines.Of(curve, width, height)`
+  gives the lines the window draws along a curve and its images: where the full width ends
+  (`Edge`) and where the fade ends (`Fade`), from `HeightCurves.Samples` (so per-point values and
+  variation count, edge noise does not); a cliff's high side, a fill's rim outside.
 - **The curve's settings in full** (wave 17, the owner's chosen upgrades; `HeightCurve.cs`,
   `HeightCurves`): every curve has them; a new setting is a property at the end with a default.
   - *Per point* (`CurvePoint(X, Z, Height, Width?, FalloffLeft?, FalloffRight?, Strength?, Sharp)`):

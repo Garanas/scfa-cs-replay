@@ -893,6 +893,16 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                     shapes.Add(new ToolLine(imageLine, false, 1, ToolInk.Selection));
                 }
             }
+            foreach (MarkOutline outline in marks.Outlines ?? [])
+            {
+                // how far a curve reaches (T-4): the width's edge dashed, the fade's end dotted, an image thinner
+                if (outline.Points.Count >= 2 && TerrainLine(heights, view, outline.Points) is Vector2[] reach)
+                {
+                    ToolDash dash = outline.Dotted ? ToolDash.Dotted : ToolDash.Dashed;
+                    shapes.Add(new ToolLine(reach, false, outline.Thin ? 2 : 3, ToolInk.Shadow) { Dash = dash });
+                    shapes.Add(new ToolLine(reach, false, outline.Thin ? 1 : 1.5f, ToolInk.Selection) { Dash = dash });
+                }
+            }
             if (marks.Path is { Count: >= 2 } path && TerrainLine(heights, view, path) is Vector2[] line)
             {
                 // a curve on the terrain (T-4)
@@ -904,12 +914,23 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                 shapes.Add(new ToolLine([from, to], false, 4, ToolInk.Shadow));
                 shapes.Add(new ToolLine([from, to], false, 2, ToolInk.Selection));
             }
-            foreach ((float x, float z) in marks.Handles)
+            for (int i = 0; i < marks.Handles.Count; i++)
             {
-                if (At(x, z) is Vector2 at)
+                if (At(marks.Handles[i].X, marks.Handles[i].Z) is not Vector2 at)
+                {
+                    continue;
+                }
+                if (marks.ChosenHandles is null)
                 {
                     shapes.Add(new ToolSquare(at, 4, ToolInk.Fill, ToolInk.Selection));
+                    continue;
                 }
+                // a curve's points: round, a sharp corner square, a chosen point larger and filled
+                bool chosen = marks.ChosenHandles.Contains(i);
+                ToolInk fill = chosen ? ToolInk.Selection : ToolInk.Fill;
+                shapes.Add(marks.CornerHandles?.Contains(i) == true
+                    ? new ToolSquare(at, chosen ? 6 : 4, fill, ToolInk.Selection)
+                    : new ToolDisc(at, chosen ? 6 : 4, fill, ToolInk.Selection));
             }
         }
         shapes.AddRange(tool.Shapes(view));
