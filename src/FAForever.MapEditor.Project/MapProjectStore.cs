@@ -46,12 +46,29 @@ namespace FAForever.MapEditor.Project
             ProjectJson.Write(Of(MapProjectLayout.Markers), MapProjectMapping.ToDto(document.Markers));
             ProjectJson.Write(Of(MapProjectLayout.Armies), document.Armies.Select(MapProjectMapping.ToDto).ToList());
 
+            // a grid a stack of layers makes is the editor's, named so (.gen); without a stack it is the map's own:
+            // written under its name, and the file under the other name removed
+            void SaveGrid(LayerTarget target, Func<MapDocument, object> part, Action<string> write)
+            {
+                string file = MapProjectLayout.GridFile(document, target);
+                string plain = MapProjectLayout.GridFile(target);
+                string other = file == plain ? MapProjectLayout.Generated(plain) : plain;
+                if (Stale(file, part))
+                {
+                    write(Of(file));
+                }
+                if (File.Exists(Of(other)))
+                {
+                    File.Delete(Of(other));
+                }
+            }
+
             Terrain terrain = document.Terrain;
-            if (Stale(MapProjectLayout.Heightmap, d => d.Terrain.Heightmap.Samples))
+            SaveGrid(LayerTarget.Heightmap, d => d.Terrain.Heightmap.Samples, file =>
             {
                 TiledBuffer<ushort> heights = terrain.Heightmap.Samples;
-                ProjectImages.WriteGray16(Of(MapProjectLayout.Heightmap), heights.Width, heights.Height, heights.ToArray());
-            }
+                ProjectImages.WriteGray16(file, heights.Width, heights.Height, heights.ToArray());
+            });
             if (Stale(MapProjectLayout.TerrainTypes, d => d.Terrain.Types))
             {
                 WriteGray8(Of(MapProjectLayout.TerrainTypes), terrain.Types);
@@ -67,10 +84,8 @@ namespace FAForever.MapEditor.Project
             for (int layer = 0; layer < terrain.StratumMasks.Layers.Length; layer++)
             {
                 int index = layer;
-                if (Stale(MapProjectLayout.StratumMask(layer + 1), d => d.Terrain.StratumMasks.Layers.Length > index ? d.Terrain.StratumMasks.Layers[index] : d))
-                {
-                    WriteGray8(Of(MapProjectLayout.StratumMask(layer + 1)), terrain.StratumMasks.Layers[layer]);
-                }
+                SaveGrid(LayerTarget.Stratum(layer + 1), d => d.Terrain.StratumMasks.Layers.Length > index ? d.Terrain.StratumMasks.Layers[index] : d,
+                    file => WriteGray8(file, terrain.StratumMasks.Layers[index]));
             }
 
             Water water = document.Water;
@@ -78,18 +93,9 @@ namespace FAForever.MapEditor.Project
             {
                 WriteRgba(Of(MapProjectLayout.WaterMap), water.Map);
             }
-            if (Stale(MapProjectLayout.WaterFoam, d => d.Water.FoamMask))
-            {
-                WriteGray8(Of(MapProjectLayout.WaterFoam), water.FoamMask);
-            }
-            if (Stale(MapProjectLayout.WaterFlatness, d => d.Water.FlatnessMask))
-            {
-                WriteGray8(Of(MapProjectLayout.WaterFlatness), water.FlatnessMask);
-            }
-            if (Stale(MapProjectLayout.WaterDepthBias, d => d.Water.DepthBiasMask))
-            {
-                WriteGray8(Of(MapProjectLayout.WaterDepthBias), water.DepthBiasMask);
-            }
+            SaveGrid(LayerTarget.Water(WaterMask.Foam), d => d.Water.FoamMask, file => WriteGray8(file, water.FoamMask));
+            SaveGrid(LayerTarget.Water(WaterMask.Flatness), d => d.Water.FlatnessMask, file => WriteGray8(file, water.FlatnessMask));
+            SaveGrid(LayerTarget.Water(WaterMask.DepthBias), d => d.Water.DepthBiasMask, file => WriteGray8(file, water.DepthBiasMask));
 
             SaveMasks(document, folder, previous);
             SaveWalkabilityMarks(document, folder, previous);
@@ -146,9 +152,9 @@ namespace FAForever.MapEditor.Project
                 NormalMap = ReadRgba(Of(MapProjectLayout.NormalMap)),
                 Preview = Pixels.FromRgba(256, 256, ProjectImages.ReadRgba(Of(MapProjectLayout.Preview), 256, 256)),
                 WaterMap = ReadRgba(Of(MapProjectLayout.WaterMap)),
-                WaterFoamMask = ReadGray8(Of(MapProjectLayout.WaterFoam), width / 2, height / 2),
-                WaterFlatnessMask = ReadGray8(Of(MapProjectLayout.WaterFlatness), width / 2, height / 2),
-                WaterDepthBiasMask = ReadGray8(Of(MapProjectLayout.WaterDepthBias), width / 2, height / 2),
+                WaterFoamMask = ReadGray8(Existing(folder, MapProjectLayout.WaterFoam), width / 2, height / 2),
+                WaterFlatnessMask = ReadGray8(Existing(folder, MapProjectLayout.WaterFlatness), width / 2, height / 2),
+                WaterDepthBiasMask = ReadGray8(Existing(folder, MapProjectLayout.WaterDepthBias), width / 2, height / 2),
                 Masks = ReadMasks(folder, width, height),
             };
 
@@ -186,6 +192,11 @@ namespace FAForever.MapEditor.Project
 
             foreach (string changed in changedFiles.Select(file => file.Replace('\\', '/')).Distinct())
             {
+                if (MapProjectLayout.IsGenerated(changed))
+                {
+                    // the editor's own (.gen): made from other things, never read back
+                    continue;
+                }
                 switch (changed)
                 {
                     case MapProjectLayout.Map:
@@ -264,6 +275,11 @@ namespace FAForever.MapEditor.Project
                             && layer >= 1 && layer <= document.Terrain.StratumMasks.Layers.Length)
                         {
                             StratumMasks masks = document.Terrain.StratumMasks;
+                            if (!File.Exists(Of(changed)) && File.Exists(Of(MapProjectLayout.Generated(changed))))
+                            {
+                                // removed because a stack makes the mask now: the editor's (.gen) holds it
+                                break;
+                            }
                             TiledBuffer<byte> mask = File.Exists(Of(changed))
                                 ? ReadGray8(Of(changed), masks.Width, masks.Height)
                                 : TiledBuffer<byte>.Create(masks.Width, masks.Height);
@@ -290,9 +306,17 @@ namespace FAForever.MapEditor.Project
                         {
                             document = ReloadHeightStack(document, folder);
                         }
-                        else if (ImportedLayerOf(document, folder, changed) is Layer imported)
+                        else if (IsImageLayerFile(document, folder, changed))
                         {
-                            document = ReloadImported(document, folder, imported);
+                            // a tool's file that image layers read (of the heightmap, of masks): each reads it again
+                            if (ImportedLayerOf(document, folder, changed) is Layer imported)
+                            {
+                                document = ReloadImported(document, folder, imported);
+                            }
+                            foreach ((LayerTarget target, Layer image) in CoverageImageLayersOf(document, folder, changed))
+                            {
+                                document = ReloadCoverageImage(document, folder, target, image);
+                            }
                         }
                         else if (changed.StartsWith(MapProjectLayout.Files + "/", StringComparison.Ordinal))
                         {
@@ -317,12 +341,14 @@ namespace FAForever.MapEditor.Project
         private static void SaveMasks(MapDocument document, string folder, MapDocument? previous)
         {
             string masks = Path.Combine(folder, MapProjectLayout.Masks);
+            HashSet<string> wanted = new HashSet<string>(document.Masks.Keys.Select(name => Path.GetFileName(MapProjectLayout.GridFile(document, LayerTarget.Mask(name)))), StringComparer.Ordinal);
             if (Directory.Exists(masks))
             {
                 foreach (string file in Directory.EnumerateFiles(masks, "*.png").ToList())
                 {
-                    // gone, or renamed to another case of its name (Windows compares file names without case): written again below
-                    if (!document.Masks.ContainsKey(Path.GetFileNameWithoutExtension(file)))
+                    // gone, renamed to another case of its name (Windows compares file names without case), or
+                    // made by a stack since (.gen) or no longer: written again below
+                    if (!wanted.Contains(Path.GetFileName(file)))
                     {
                         File.Delete(file);
                     }
@@ -330,7 +356,7 @@ namespace FAForever.MapEditor.Project
             }
             foreach ((string name, TiledBuffer<byte> mask) in document.Masks)
             {
-                string file = Path.Combine(folder, MapProjectLayout.Mask(name));
+                string file = Path.Combine(folder, MapProjectLayout.GridFile(document, LayerTarget.Mask(name)));
                 bool unchanged = previous is not null && previous.Masks.TryGetValue(name, out TiledBuffer<byte>? before) && ReferenceEquals(before, mask);
                 if (!unchanged || !File.Exists(file))
                 {
@@ -341,7 +367,8 @@ namespace FAForever.MapEditor.Project
 
         /// <summary>
         /// The masks for tools of a project: every PNG in its <see cref="MapProjectLayout.Masks"/>
-        /// folder, the map's size or half of it.
+        /// folder, the map's size or half of it, named after the file (<c>forest.png</c>, or
+        /// <c>forest.gen.png</c> while a stack makes it; the map's own name first).
         /// </summary>
         /// <exception cref="MapProjectException">A mask has another size.</exception>
         private static ImmutableSortedDictionary<string, TiledBuffer<byte>> ReadMasks(string folder, int width, int height)
@@ -352,8 +379,14 @@ namespace FAForever.MapEditor.Project
                 return ImmutableSortedDictionary.Create<string, TiledBuffer<byte>>(StringComparer.Ordinal);
             }
             return Directory.EnumerateFiles(masks, "*.png")
-                .ToImmutableSortedDictionary(file => Path.GetFileNameWithoutExtension(file), file => ReadMask(file, width, height), StringComparer.Ordinal);
+                .GroupBy(MaskNameOf, StringComparer.Ordinal)
+                .ToImmutableSortedDictionary(group => group.Key, group => ReadMask(group.OrderBy(MapProjectLayout.IsGenerated).First(), width, height), StringComparer.Ordinal);
         }
+
+        /// <summary>
+        /// The name of the mask for tools a file of the masks folder holds: <c>forest.gen.png</c> holds <c>forest</c>.
+        /// </summary>
+        private static string MaskNameOf(string file) => Path.GetFileNameWithoutExtension(MapProjectLayout.WithoutGenerated(file));
 
         private static TiledBuffer<byte> ReadMask(string file, int width, int height)
         {
@@ -370,6 +403,11 @@ namespace FAForever.MapEditor.Project
         /// </summary>
         private static MapDocument ReloadMask(MapDocument document, string file, string name)
         {
+            // the map's own file removed because a stack makes the mask now: the editor's (.gen) holds it
+            if (!File.Exists(file) && File.Exists(MapProjectLayout.Generated(file)))
+            {
+                return document;
+            }
             if (!File.Exists(file))
             {
                 return document.Masks.ContainsKey(name) ? document with { Masks = document.Masks.Remove(name) } : document;
@@ -432,6 +470,18 @@ namespace FAForever.MapEditor.Project
             }
         }
 
+        /// <summary>
+        /// The full path of a grid's file as the project has it: the map's own name, else the name of
+        /// the editor's (<see cref="MapProjectLayout.Generated"/>, while a stack of layers makes the
+        /// grid), else the map's own name (missing).
+        /// </summary>
+        private static string Existing(string folder, string file)
+        {
+            string plain = Path.Combine(folder, file);
+            string generated = Path.Combine(folder, MapProjectLayout.Generated(file));
+            return File.Exists(plain) || !File.Exists(generated) ? plain : generated;
+        }
+
         private static ushort[] ReadHeightmap(string folder, int width, int height)
         {
             string png = Path.Combine(folder, MapProjectLayout.Heightmap);
@@ -441,9 +491,15 @@ namespace FAForever.MapEditor.Project
             }
 
             string raw = Path.Combine(folder, MapProjectLayout.HeightmapRaw);
+            string generated = Path.Combine(folder, MapProjectLayout.Generated(MapProjectLayout.Heightmap));
+            if (!File.Exists(raw) && File.Exists(generated))
+            {
+                // what the height layers made at the last save; opening makes it again from them
+                return ProjectImages.ReadGray16(generated, width + 1, height + 1);
+            }
             if (!File.Exists(raw))
             {
-                throw new MapProjectException($"{folder} has no {MapProjectLayout.Heightmap} or {MapProjectLayout.HeightmapRaw}");
+                throw new MapProjectException($"{folder} has no {MapProjectLayout.Heightmap}, {MapProjectLayout.HeightmapRaw} or {MapProjectLayout.Generated(MapProjectLayout.Heightmap)}");
             }
             byte[] bytes = File.ReadAllBytes(raw);
             int expected = (width + 1) * (height + 1) * 2;
@@ -465,7 +521,7 @@ namespace FAForever.MapEditor.Project
         /// </summary>
         private static StratumMasks ReadStratumMasks(string folder, int count, int mapWidth, int mapHeight)
         {
-            string[] paths = [.. Enumerable.Range(1, count).Select(layer => Path.Combine(folder, MapProjectLayout.StratumMask(layer)))];
+            string[] paths = [.. Enumerable.Range(1, count).Select(layer => Existing(folder, MapProjectLayout.StratumMask(layer)))];
             (int width, int height) = paths.FirstOrDefault(File.Exists) is string first ? ProjectImages.Size(first) : (mapWidth, mapHeight);
             return new StratumMasks
             {

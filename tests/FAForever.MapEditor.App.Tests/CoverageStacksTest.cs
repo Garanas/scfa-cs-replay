@@ -116,6 +116,25 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task TheInspectorSaysWhichFilesTheEditorWritesAndWhichAreTheMapsOwn()
+        {
+            MainViewModel model = await Open();
+            model.SelectMode("paint");
+            model.LayerTextures.Choose(2);
+            StringAssert.Contains(model.StratumStack.ResultNote, "Saved as stratum-masks/stratum-2.png, the map's own", "no stack yet: one painted layer");
+            StringAssert.Contains(model.StratumStack.FileNote, "the map's own");
+
+            await Run(model, "layers.add", new JsonObject { ["source"] = "rules", ["name"] = "Hills" });
+            StringAssert.Contains(model.StratumStack.ResultNote, "Makes stratum-masks/stratum-2.gen.png, the editor's");
+            StringAssert.Contains(model.StratumStack.FileNote, "stacks/stratum-2/Hills.gen.png, the editor's: made again from its rules");
+            model.StratumStack.Choose(CoverageLayers.PaintedName);
+            StringAssert.Contains(model.StratumStack.FileNote, $"stacks/stratum-2/{CoverageLayers.PaintedName}.png, the map's own");
+
+            await Run(model, "layers.add", new JsonObject { ["source"] = "stratum", ["mask"] = "stratum 1" });
+            Assert.AreEqual("No file: it reads stratum 1", model.StratumStack.FileNote);
+        }
+
+        [TestMethod]
         public async Task TheStrataToolPaintsTheChosenStratumsPaintedLayer()
         {
             MainViewModel model = await Open();

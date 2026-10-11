@@ -29,9 +29,9 @@ namespace FAForever.MapEditor.Project
         private static bool HasFile(Layer layer) => layer.Source is not (CurveSource or MaskRefSource);
 
         /// <summary>
-        /// Whether a height layer is read from an image in the project folder that is there (the final's
-        /// base from a procedural tool's output in <c>procedural/temp</c>, an imported heightmap kept in
-        /// the project): the project then keeps no copy of its heights, as opening reads the image again.
+        /// Whether a layer is read from an image in the project folder that is there (the final's base
+        /// from a procedural tool's output in <c>procedural/temp</c>, an imported heightmap or mask kept in
+        /// the project): the project then keeps no copy of its values, as opening reads the image again.
         /// An image outside the project keeps its copy, for when the file moves or the project is opened
         /// on another computer.
         /// </summary>
@@ -72,13 +72,13 @@ namespace FAForever.MapEditor.Project
             HashSet<string> files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Layer layer in stack.Layers.Where(HasFile))
             {
-                if (!(heights && ReadsOwnImage(folder, layer)))
+                if (!ReadsOwnImage(folder, layer))
                 {
-                    files.Add(Path.GetFileName(MapProjectLayout.StackLayer(key, layer.Name)));
+                    files.Add(Path.GetFileName(MapProjectLayout.StackLayerFile(key, layer)));
                 }
                 if ((heights && layer.Coverage is not null) || (!heights && layer.Alpha is not null))
                 {
-                    files.Add(Path.GetFileName(MapProjectLayout.StackLayerCoverage(key, layer.Name)));
+                    files.Add(Path.GetFileName(MapProjectLayout.StackLayerCoverageFile(key, layer)));
                 }
             }
             if (Directory.Exists(directory))
@@ -113,7 +113,12 @@ namespace FAForever.MapEditor.Project
             foreach (Layer layer in stack.Layers.Where(HasFile))
             {
                 Layer? before = previous?.Find(layer.Name);
-                string values = Path.Combine(folder, MapProjectLayout.StackLayer(key, layer.Name));
+                if (before is not null && MapProjectLayout.IsGeneratedLayer(before) != MapProjectLayout.IsGeneratedLayer(layer))
+                {
+                    // named the other way before (painted, now rules): its files are written anew
+                    before = null;
+                }
+                string values = Path.Combine(folder, MapProjectLayout.StackLayerFile(key, layer));
                 if (heights)
                 {
                     bool sameEncoding = before is not null && before.Name == layer.Name && OffsetOf(before, scale) == OffsetOf(layer, scale) && previousScale == scale;
@@ -131,7 +136,7 @@ namespace FAForever.MapEditor.Project
                     }
                     if (layer.Coverage is TiledBuffer<byte> coverage)
                     {
-                        string file = Path.Combine(folder, MapProjectLayout.StackLayerCoverage(key, layer.Name));
+                        string file = Path.Combine(folder, MapProjectLayout.StackLayerCoverageFile(key, layer));
                         if (before is null || before.Name != layer.Name || !ReferenceEquals(before.Coverage, coverage) || !File.Exists(file))
                         {
                             WriteGray8(file, coverage);
@@ -140,13 +145,14 @@ namespace FAForever.MapEditor.Project
                 }
                 else
                 {
-                    if (layer.Coverage is TiledBuffer<byte> coverage
+                    // an image of the project is read from its file, which the editor never writes: no copy
+                    if (layer.Coverage is TiledBuffer<byte> coverage && !ReadsOwnImage(folder, layer)
                         && (before is null || before.Name != layer.Name || !ReferenceEquals(before.Coverage, coverage) || !File.Exists(values)))
                     {
                         WriteGray8(values, coverage);
                     }
                     // a painted layer's alpha: where it was painted
-                    string alphaFile = Path.Combine(folder, MapProjectLayout.StackLayerCoverage(key, layer.Name));
+                    string alphaFile = Path.Combine(folder, MapProjectLayout.StackLayerCoverageFile(key, layer));
                     if (layer.Alpha is TiledBuffer<byte> alpha
                         && (before is null || before.Name != layer.Name || !ReferenceEquals(before.Alpha, alpha) || !File.Exists(alphaFile)))
                     {
@@ -354,10 +360,21 @@ namespace FAForever.MapEditor.Project
                     IsBase = entry.Base == true,
                 };
                 layer = ReadGrids(document, target, folder, grid, scale, layer, before, entry.Offset ?? 0,
-                    MapProjectLayout.StackLayer(target.Key, entry.Name), MapProjectLayout.StackLayerCoverage(target.Key, entry.Name));
+                    NamedEitherWay(folder, MapProjectLayout.StackLayerFile(target.Key, layer)),
+                    NamedEitherWay(folder, MapProjectLayout.StackLayerCoverageFile(target.Key, layer)));
                 layers.Add(before is not null && SameLayer(before, layer) ? before : layer);
             }
             return layers.ToImmutable();
+        }
+
+        /// <summary>
+        /// A layer's file as the project has it: under the name it has now, else under the other
+        /// (a project of format 6 names a rules layer's file without <c>.gen</c>), else the name it has now.
+        /// </summary>
+        private static string NamedEitherWay(string folder, string file)
+        {
+            string other = MapProjectLayout.IsGenerated(file) ? MapProjectLayout.WithoutGenerated(file) : MapProjectLayout.Generated(file);
+            return File.Exists(Path.Combine(folder, file)) || !File.Exists(Path.Combine(folder, other)) ? file : other;
         }
 
         /// <summary>
@@ -403,9 +420,15 @@ namespace FAForever.MapEditor.Project
                 return layer with { Values = values, Coverage = coverage };
             }
             string alphaFile = Path.Combine(folder, coverageFile);
+            // an image layer reads its file when it is there (the tool that writes it may have changed it
+            // while the editor was closed); its copy in the stack's folder holds what it read last
+            string? source = layer.Path is string imagePath ? Path.GetFullPath(Path.Combine(folder, imagePath)) : null;
+            TiledBuffer<byte> read = source is not null && File.Exists(source)
+                ? TiledBuffer<byte>.FromArray(grid.Width, grid.Height, CoverageLayerEdits.ReadImage(document, target, source))
+                : ReadGray8(Path.Combine(folder, valuesFile), grid.Width, grid.Height);
             return layer with
             {
-                Coverage = SameOrRead(ReadGray8(Path.Combine(folder, valuesFile), grid.Width, grid.Height), held?.Coverage),
+                Coverage = SameOrRead(read, held?.Coverage),
                 Alpha = File.Exists(alphaFile) ? SameOrRead(ReadGray8(alphaFile, grid.Width, grid.Height), held?.Alpha) : null,
             };
         }
@@ -534,10 +557,39 @@ namespace FAForever.MapEditor.Project
 
         /// <summary>
         /// Whether a file of the project (relative to its folder) is the file an image layer of the
-        /// heightmap is read from: another tool's, never one the editor's save writes.
+        /// heightmap or of a stack of coverage is read from: another tool's, never one the editor's save writes.
         /// </summary>
         public static bool IsImageLayerFile(MapDocument document, string folder, string file) =>
-            ImportedLayerOf(document, folder, file.Replace('\\', '/')) is not null;
+            ImportedLayerOf(document, folder, file.Replace('\\', '/')) is not null
+            || CoverageImageLayersOf(document, folder, file.Replace('\\', '/')).Any();
+
+        /// <summary>
+        /// The image layers of the stacks of coverage whose file is the changed file.
+        /// </summary>
+        private static IEnumerable<(LayerTarget Target, Layer Layer)> CoverageImageLayersOf(MapDocument document, string folder, string changed)
+        {
+            string full = Path.GetFullPath(Path.Combine(folder, changed));
+            return [.. document.CoverageStacks.Values.SelectMany(stack => stack.Layers
+                .Where(layer => layer.Path is string source && string.Equals(Path.GetFullPath(Path.Combine(folder, source)), full, StringComparison.OrdinalIgnoreCase))
+                .Select(layer => (stack.Target, layer)))];
+        }
+
+        /// <summary>
+        /// The document with an image layer of a stack of coverage read again from its file; a file
+        /// that is gone leaves the layer as it is.
+        /// </summary>
+        private static MapDocument ReloadCoverageImage(MapDocument document, string folder, LayerTarget target, Layer layer)
+        {
+            string path = Path.GetFullPath(Path.Combine(folder, layer.Path!));
+            if (!File.Exists(path))
+            {
+                return document;
+            }
+            TiledBuffer<byte> grid = CoverageLayers.StackOf(document, target).Layers.First(each => each.Name == layer.Name).Coverage
+                ?? throw new MapProjectException($"The image layer {layer.Name} of {target} has no grid");
+            byte[] values = CoverageLayerEdits.ReadImage(document, target, path);
+            return CoverageLayerEdits.SetGrid(document, target, layer.Name, TiledBuffer<byte>.FromArray(grid.Width, grid.Height, values));
+        }
 
         /// <summary>
         /// The document with an image layer read again from its file; a file that is gone leaves the

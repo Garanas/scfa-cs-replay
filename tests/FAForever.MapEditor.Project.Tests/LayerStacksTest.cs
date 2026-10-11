@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Files.Serialized;
 
 namespace FAForever.MapEditor.Project.Tests
 {
@@ -240,10 +241,11 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsTrue(File.Exists(Path.Combine(project, "stacks", "heightmap", "Base.png")));
             Assert.IsTrue(File.Exists(Path.Combine(project, "stacks", "heightmap", "Sculpt.png")));
             Assert.IsFalse(File.Exists(Path.Combine(project, "stacks", "heightmap", "Lift.png")), "a mask reference has no file");
-            Assert.IsTrue(File.Exists(Path.Combine(project, MapProjectLayout.Heightmap)), "the composite is written");
+            Assert.IsTrue(File.Exists(Path.Combine(project, "heightmap.gen.png")), "the composite is written, named as the editor's");
+            Assert.IsFalse(File.Exists(Path.Combine(project, MapProjectLayout.Heightmap)));
             Assert.IsFalse(Directory.Exists(Path.Combine(project, "layers")));
             JsonObject map = JsonNode.Parse(File.ReadAllText(Path.Combine(project, MapProjectLayout.Map)))!.AsObject();
-            Assert.AreEqual(6, map["formatVersion"]!.GetValue<int>());
+            Assert.AreEqual(MapProjectDto.CurrentFormatVersion, map["formatVersion"]!.GetValue<int>());
             JsonObject index = JsonNode.Parse(File.ReadAllText(Path.Combine(project, "stacks", "heightmap.json")))!.AsObject();
             Assert.AreEqual("heightmap", index["target"]!.GetValue<string>());
             Assert.AreEqual("painted", index["layers"]![0]!["source"]!.GetValue<string>());
@@ -256,6 +258,8 @@ namespace FAForever.MapEditor.Project.Tests
             // without layers the stack's files go
             MapProjectStore.Save(HeightLayerEdits.Bake(loaded), project, loaded);
             Assert.IsFalse(Directory.Exists(Path.Combine(project, "stacks")));
+            Assert.IsTrue(File.Exists(Path.Combine(project, MapProjectLayout.Heightmap)), "the map's own heightmap again");
+            Assert.IsFalse(File.Exists(Path.Combine(project, "heightmap.gen.png")));
         }
 
         [TestMethod]

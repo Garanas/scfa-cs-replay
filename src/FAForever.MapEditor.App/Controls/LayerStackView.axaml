@@ -30,6 +30,9 @@
     </ListBox>
     <TextBlock Classes="caption" IsVisible="{Binding IsEmpty}" Text="{Binding #Root.EmptyText}" />
     <TextBlock Classes="caption" Text="{Binding Summary}" IsVisible="{Binding HasLayers}" />
+    <!-- who writes the files: the editor's own (.gen), the map's own, or a tool's that an image layer reads -->
+    <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding ResultNote}" IsVisible="{Binding HasLayers}"
+               AutomationProperties.Name="The file the layers make" />
     <ItemsControl ItemsSource="{Binding AddChoices}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
@@ -49,6 +52,8 @@
       <Button Content="Remove" Command="{Binding RemoveCommand}" IsEnabled="{Binding CanRemove}" AutomationProperties.Name="{Binding RemoveLabel}"
               AutomationProperties.HelpText="{Binding #Root.RemoveHelp}" />
     </WrapPanel>
+    <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding FileNote}" IsVisible="{Binding #Root.ShowsChosenSettings}"
+               AutomationProperties.Name="The chosen layer's file" />
     <controls:SettingList DataContext="{Binding Layer}" ShowsTitle="False"
                           IsVisible="{Binding #Root.ShowsChosenSettings}" />
   </StackPanel>

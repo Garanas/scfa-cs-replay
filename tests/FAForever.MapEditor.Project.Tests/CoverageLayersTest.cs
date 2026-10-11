@@ -195,7 +195,9 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsTrue(File.Exists(Path.Combine(project, "stacks", "stratum-2.json")));
             Assert.IsTrue(File.Exists(Path.Combine(project, "stacks", "stratum-2", "Paths.png")));
             Assert.IsTrue(File.Exists(Path.Combine(project, "stacks", "stratum-2", "Paths.coverage.png")), "a painted layer's alpha");
-            Assert.IsTrue(File.Exists(Path.Combine(project, "stratum-masks", "stratum-2.png")), "the composite stays where it was, for the export and other tools");
+            Assert.IsTrue(File.Exists(Path.Combine(project, "stratum-masks", "stratum-2.gen.png")), "the composite, named as the editor's");
+            Assert.IsFalse(File.Exists(Path.Combine(project, "stratum-masks", "stratum-2.png")));
+            Assert.IsTrue(File.Exists(Path.Combine(project, "stratum-masks", "stratum-1.png")), "a grid without a stack keeps the map's own name");
 
             MapDocument loaded = MapProjectStore.Load(project);
             LayerStack stack = loaded.CoverageStacks["stratum-2"];
@@ -210,6 +212,8 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsFalse(session.Document.CoverageStacks.ContainsKey("stratum-2"));
             MapProjectStore.Save(session.Document, project, previous: loaded);
             Assert.IsFalse(File.Exists(Path.Combine(project, "stacks", "stratum-2.json")));
+            Assert.IsTrue(File.Exists(Path.Combine(project, "stratum-masks", "stratum-2.png")), "the map's own again");
+            Assert.IsFalse(File.Exists(Path.Combine(project, "stratum-masks", "stratum-2.gen.png")));
         }
 
         [TestMethod]

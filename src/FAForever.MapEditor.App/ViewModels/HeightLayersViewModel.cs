@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
@@ -383,6 +384,15 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
         DecalMasks?.Refresh(IsDecalMasks ? Document : null);
         Use?.Refresh(Chosen is null ? null : Document);
     }
+
+    /// <summary>
+    /// The final makes the map's heightmap; the draft is no file of the project, only written for
+    /// World Machine and Gaea when asked.
+    /// </summary>
+    protected override string ResultNoteOf(MapDocument document, LayerStack stack) =>
+        _shownHeights?.Invoke() == HeightStackKind.Draft
+            ? $"Makes the draft, kept in memory; Write the draft saves it as {ProceduralFiles.DraftHeightmap} and .r16, the editor's files for World Machine and Gaea"
+            : base.ResultNoteOf(document, stack);
 
     [RelayCommand]
     private Task AddSculpt() => _run("terrain.addLayer", new JsonObject { ["kind"] = "sculpt" });

@@ -86,7 +86,7 @@
         <WrapPanel Classes="chips">
           <Button Content="Write the draft" Command="{Binding DraftFinal.WriteDraftCommand}"
                   AutomationProperties.Name="Write the draft for procedural tools"
-                  AutomationProperties.HelpText="Writes procedural/temp/draft-heightmap.png and .r16 (16-bit) and the ticked masks" />
+                  AutomationProperties.HelpText="Writes procedural/temp/draft-heightmap.gen.png and .gen.r16 (16-bit) and the ticked masks" />
           <Button Content="Use as the final's base..." Command="{Binding DraftFinal.UseAsFinalBaseCommand}"
                   AutomationProperties.Name="Use an output as the final's base"
                   AutomationProperties.HelpText="Choose the tool's output: the final starts from it, read again whenever the tool writes it; the draft keeps its own base" />

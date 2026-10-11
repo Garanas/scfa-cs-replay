@@ -16,26 +16,37 @@ namespace FAForever.MapEditor.Project
     /// final's base keeps its last reading in <c>stacks/heightmap/</c>):
     /// </para>
     /// <list type="bullet">
-    /// <item><c>draft-heightmap.png</c>: the draft, 16-bit grey, (width + 1) by (height + 1)
+    /// <item><c>draft-heightmap.gen.png</c>: the draft, 16-bit grey, (width + 1) by (height + 1)
     /// samples, one step 1/128 of a game unit as the map's heightmap.</item>
-    /// <item><c>draft-heightmap.r16</c>: the same samples as raw little-endian 16-bit values, row by
+    /// <item><c>draft-heightmap.gen.r16</c>: the same samples as raw little-endian 16-bit values, row by
     /// row from the north-west corner (what World Machine and Gaea call R16 or RAW16).</item>
-    /// <item><c>draft-mask-&lt;name&gt;.png</c>: a ticked mask for tools, 8-bit grey at its own size
+    /// <item><c>draft-mask-&lt;name&gt;.gen.png</c>: a ticked mask for tools, 8-bit grey at its own size
     /// (the map's or half of it).</item>
     /// <item>anything else: the tools' outputs (<see cref="Outputs"/>).</item>
     /// </list>
+    /// <para>
+    /// The editor's files are named so (<c>.gen</c>, <see cref="MapProjectLayout.Generated"/>): it
+    /// writes them again whenever the draft or a ticked mask changes. A tool writes its outputs under
+    /// names of its own, which the editor never writes. A project of format 6 named the editor's files
+    /// without <c>.gen</c>; writing the draft removes those.
+    /// </para>
     /// </remarks>
     public static class ProceduralFiles
     {
         /// <summary>
         /// The draft heightmap as a 16-bit PNG, relative to the project folder.
         /// </summary>
-        public const string DraftHeightmap = MapProjectLayout.ProceduralTemp + "/draft-heightmap.png";
+        public const string DraftHeightmap = MapProjectLayout.ProceduralTemp + "/draft-heightmap.gen.png";
 
         /// <summary>
         /// The draft heightmap as raw 16-bit samples, relative to the project folder.
         /// </summary>
-        public const string DraftHeightmapRaw = MapProjectLayout.ProceduralTemp + "/draft-heightmap.r16";
+        public const string DraftHeightmapRaw = MapProjectLayout.ProceduralTemp + "/draft-heightmap.gen.r16";
+
+        /// <summary>
+        /// The draft's files as a project of format 6 named them, removed when the draft is written.
+        /// </summary>
+        private static readonly string[] Earlier = [MapProjectLayout.ProceduralTemp + "/draft-heightmap.png", MapProjectLayout.ProceduralTemp + "/draft-heightmap.r16"];
 
         private const string MaskPrefix = "draft-mask-";
 
@@ -47,17 +58,18 @@ namespace FAForever.MapEditor.Project
         /// <summary>
         /// A mask's file beside the draft, relative to the project folder.
         /// </summary>
-        public static string DraftMask(string name) => $"{MapProjectLayout.ProceduralTemp}/{MaskPrefix}{name}.png";
+        public static string DraftMask(string name) => $"{MapProjectLayout.ProceduralTemp}/{MaskPrefix}{name}{MapProjectLayout.GeneratedMark}.png";
 
         /// <summary>
-        /// Whether a file of the project folder is one the editor writes for the tools (an input).
+        /// Whether a file of the project folder is one the editor writes for the tools (an input): one
+        /// named <c>.gen</c>, or the draft's files as a project of format 6 named them.
         /// </summary>
         public static bool IsInput(string relative)
         {
             relative = relative.Replace('\\', '/');
             string name = Path.GetFileName(relative);
-            return relative.Equals(DraftHeightmap, StringComparison.OrdinalIgnoreCase)
-                || relative.Equals(DraftHeightmapRaw, StringComparison.OrdinalIgnoreCase)
+            return MapProjectLayout.IsGenerated(relative)
+                || Earlier.Contains(relative, StringComparer.OrdinalIgnoreCase)
                 || (relative.StartsWith(MapProjectLayout.ProceduralTemp + "/", StringComparison.OrdinalIgnoreCase) && name.StartsWith(MaskPrefix, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -92,6 +104,10 @@ namespace FAForever.MapEditor.Project
                 {
                     File.Delete(old);
                 }
+            }
+            foreach (string old in Earlier.Select(file => Path.Combine(folder, file)).Where(File.Exists))
+            {
+                File.Delete(old);
             }
             return written;
         }

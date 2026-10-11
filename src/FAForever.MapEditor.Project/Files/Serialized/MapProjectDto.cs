@@ -16,10 +16,16 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// with the layers' PNGs in <c>stacks/&lt;target&gt;/</c>, <c>LayerStackDto</c>), the heightmap's
         /// as <c>stacks/heightmap.json</c> in place of <c>layers/</c>; the composite is still written
         /// (<c>heightmap.png</c>). A project of format 3 to 5 opens unchanged: its <c>layers/</c> becomes
-        /// the heightmap's stack in memory, and its next save writes format 6. An editor reads every
-        /// version up to its own.
+        /// the heightmap's stack in memory, and its next save writes format 6. 7: a file the editor
+        /// makes from other things is named so (<c>.gen</c> before the extension,
+        /// <see cref="MapProjectLayout.Generated"/>): the grid of a target with a stack
+        /// (<c>heightmap.gen.png</c>, <c>stratum-masks/stratum-2.gen.png</c>, <c>masks/forest.gen.png</c>),
+        /// a rules or decal-masks layer's file, the draft for World Machine and Gaea; an image layer of a
+        /// stack of coverage reads its file in the project and keeps no copy. A project of format 6
+        /// opens unchanged (each file is read under either name) and its next save renames them. An
+        /// editor reads every version up to its own.
         /// </summary>
-        public const int CurrentFormatVersion = 6;
+        public const int CurrentFormatVersion = 7;
 
         /// <summary>
         /// The layout of the project; <see cref="CurrentFormatVersion"/> for projects this library writes.

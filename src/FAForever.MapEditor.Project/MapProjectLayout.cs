@@ -1,3 +1,5 @@
+using FAForever.MapEditor.Project.Files.InMemory;
+
 namespace FAForever.MapEditor.Project
 {
     /// <summary>
@@ -30,6 +32,17 @@ namespace FAForever.MapEditor.Project
     /// procedural/temp/             what those tools build, made again from the sources; not versioned
     /// .gitignore, .gitattributes   written when version control is turned on (ProjectRepository)
     /// </code>
+    /// <para>
+    /// Who writes a file shows in its name (format 7). A file whose name ends in <c>.gen</c> before
+    /// its extension (<see cref="Generated"/>: <c>stratum-masks/stratum-2.gen.png</c>) is made by the
+    /// editor from other things and written again whenever they change: the grid of a target with a
+    /// stack of layers (what the stack makes), a rules or decal-masks layer's grid, the draft for World
+    /// Machine and Gaea. Another tool may read it; what it writes into it is lost, and the editor does
+    /// not read it back. Every other file is the map's own: the editor writes it when it is edited
+    /// there (a painted layer, a mask without a stack), and reads back what another tool writes into
+    /// it. A file an image layer reads (<c>procedural/temp/forest.png</c>) belongs to the tool that
+    /// writes it: the editor never writes it, and reads it again when it changes.
+    /// </para>
     /// </remarks>
     public static class MapProjectLayout
     {
@@ -139,7 +152,100 @@ namespace FAForever.MapEditor.Project
         public const string GitAttributes = ".gitattributes";
 
         /// <summary>
-        /// The mask of terrain layer <paramref name="layer"/>: 1 to 8, or 1 to 4 in version 53.
+        /// What the name of a file the editor makes from other things ends with before its extension.
+        /// </summary>
+        public const string GeneratedMark = ".gen";
+
+        /// <summary>
+        /// The name a file has when the editor makes it from other things:
+        /// <c>stratum-masks/stratum-2.png</c> becomes <c>stratum-masks/stratum-2.gen.png</c>.
+        /// </summary>
+        public static string Generated(string file)
+        {
+            string extension = Path.GetExtension(file);
+            return file[..^extension.Length] + GeneratedMark + extension;
+        }
+
+        /// <summary>
+        /// Whether a file's name says the editor makes it (<see cref="Generated"/>), whatever its folder.
+        /// </summary>
+        public static bool IsGenerated(string file) =>
+            Path.GetFileNameWithoutExtension(file.Replace('\\', '/')).EndsWith(GeneratedMark, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// A file's name without <see cref="GeneratedMark"/>: <c>forest.gen.png</c> gives <c>forest.png</c>.
+        /// </summary>
+        public static string WithoutGenerated(string file)
+        {
+            if (!IsGenerated(file))
+            {
+                return file;
+            }
+            string extension = Path.GetExtension(file);
+            return file[..^(GeneratedMark.Length + extension.Length)] + extension;
+        }
+
+        /// <summary>
+        /// The file of the grid a stack of layers makes, as the map's own (without a stack):
+        /// <c>heightmap.png</c>, <c>stratum-masks/stratum-2.png</c>, <c>masks/forest.png</c>, <c>water/foam.png</c>.
+        /// </summary>
+        /// <exception cref="ArgumentException">The target is no grid of a project.</exception>
+        public static string GridFile(LayerTarget target)
+        {
+            if (target.IsHeights)
+            {
+                return Heightmap;
+            }
+            if (target.Key.StartsWith("stratum-", StringComparison.Ordinal))
+            {
+                return $"{StratumMasks}/{target.Key}.png";
+            }
+            if (target.Key.StartsWith("mask-", StringComparison.Ordinal))
+            {
+                return Mask(target.Key["mask-".Length..]);
+            }
+            return target.Key switch
+            {
+                "water-foam" => WaterFoam,
+                "water-flatness" => WaterFlatness,
+                "water-depth-bias" => WaterDepthBias,
+                _ => throw new ArgumentException($"{target} is no grid of a project", nameof(target)),
+            };
+        }
+
+        /// <summary>
+        /// The file a target's grid is saved in: <see cref="Generated"/> while a stack of layers makes it
+        /// (the heightmap with height layers, a grid with a stack of coverage), else the map's own.
+        /// </summary>
+        public static string GridFile(MapDocument document, LayerTarget target) =>
+            IsMadeByStack(document, target) ? Generated(GridFile(target)) : GridFile(target);
+
+        /// <summary>
+        /// Whether a stack of layers makes a target's grid, so the editor writes its file.
+        /// </summary>
+        public static bool IsMadeByStack(MapDocument document, LayerTarget target) =>
+            target.IsHeights ? !document.HeightStack.IsEmpty : document.CoverageStacks.ContainsKey(target.Key);
+
+        /// <summary>
+        /// Whether the editor makes a layer's grid from its source (rules, decal masks), so its file is
+        /// <see cref="Generated"/>; a painted or image layer holds what was painted or read.
+        /// </summary>
+        public static bool IsGeneratedLayer(Layer layer) => layer.Source is RulesSource or DecalMasksSource;
+
+        /// <summary>
+        /// The file of a layer's values: <c>stacks/stratum-2/Paint.png</c>, <c>stacks/stratum-2/Rocks.gen.png</c>.
+        /// </summary>
+        public static string StackLayerFile(string target, Layer layer) =>
+            IsGeneratedLayer(layer) ? Generated(StackLayer(target, layer.Name)) : StackLayer(target, layer.Name);
+
+        /// <summary>
+        /// The file of a layer's coverage (heights) or alpha (a painted layer of coverage), named as <see cref="StackLayerFile"/>.
+        /// </summary>
+        public static string StackLayerCoverageFile(string target, Layer layer) =>
+            IsGeneratedLayer(layer) ? Generated(StackLayerCoverage(target, layer.Name)) : StackLayerCoverage(target, layer.Name);
+
+        /// <summary>
+        /// The file of the mask of terrain layer <paramref name="layer"/>: 1 to 8, or 1 to 4 in version 53.
         /// </summary>
         public static string StratumMask(int layer) => $"{StratumMasks}/stratum-{layer}.png";
 

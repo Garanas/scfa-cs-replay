@@ -119,7 +119,7 @@ public sealed partial class DraftFinalViewModel : ObservableObject
     /// What the last write of the draft did, or what it will do.
     /// </summary>
     [ObservableProperty]
-    public partial string WriteFacts { get; private set; } = "Writes procedural/temp/draft-heightmap.png and .r16 (16-bit) for World Machine or Gaea.";
+    public partial string WriteFacts { get; private set; } = "Writes procedural/temp/draft-heightmap.gen.png and .gen.r16 (16-bit) for World Machine or Gaea.";
 
     public bool HasMasks => Masks.Count > 0;
 

@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.App.Rendering;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
@@ -228,6 +229,19 @@ public partial class LayerStackViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     public partial string Summary { get; private set; } = "";
+
+    /// <summary>
+    /// Where the chosen layer's values are kept in the project and who writes them (the editor's
+    /// <c>.gen</c> file, the map's own, a tool's file an image layer reads); empty without one.
+    /// </summary>
+    [ObservableProperty]
+    public partial string FileNote { get; private set; } = "";
+
+    /// <summary>
+    /// The file of the grid the stack makes and who writes it; empty without a map.
+    /// </summary>
+    [ObservableProperty]
+    public partial string ResultNote { get; private set; } = "";
 
     /// <summary>
     /// Raised when another layer is chosen.
@@ -527,5 +541,21 @@ public partial class LayerStackViewModel : ObservableObject
     protected virtual void RefreshSettings()
     {
         Layer.Refresh(Chosen is null ? null : _document);
+        RefreshNotes();
     }
+
+    /// <summary>
+    /// Says again which files the chosen layer and the stack's grid are kept in.
+    /// </summary>
+    private void RefreshNotes()
+    {
+        LayerStack? stack = _document is null ? null : _read(_document);
+        FileNote = stack is not null && ChosenLayer is Layer layer ? ProjectFileNotes.OfLayer(stack.Target, layer) : "";
+        ResultNote = _document is not null && stack is not null ? ResultNoteOf(_document, stack) : "";
+    }
+
+    /// <summary>
+    /// What <see cref="ResultNote"/> says of a stack: its grid's file (<see cref="ProjectFileNotes.OfResult"/>).
+    /// </summary>
+    protected virtual string ResultNoteOf(MapDocument document, LayerStack stack) => ProjectFileNotes.OfResult(document, stack.Target);
 }

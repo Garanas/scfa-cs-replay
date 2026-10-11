@@ -18,6 +18,9 @@
               AutomationProperties.HelpText="Reads the imported layer's file again, as the editor does when it changes in the project folder" />
       <controls:SettingList DataContext="{Binding HeightStack.Curve}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HeightStack.IsCurve}" />
       <controls:SettingList DataContext="{Binding HeightStack.DecalMasks}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HeightStack.IsDecalMasks}" />
+      <!-- who writes the layer's file: the editor's own (.gen), the map's own, or a tool's -->
+      <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding HeightStack.FileNote}" IsVisible="{Binding HeightStack.HasLayers}"
+                 AutomationProperties.Name="The chosen height layer's file" />
     </StackPanel>
   </Border>
 </UserControl>

@@ -775,8 +775,9 @@ of the model above, keyed by its target's key (`stratum-2`, `mask-forest`, `wate
   stack or `Trivial` (one painted layer `Painted`, replacing, holding the grid itself). The first
   stack edit stores it; a stack that comes back to that shape (`IsTrivialShape`, its layer as the
   grid holds it) leaves the dictionary again. So an older project opens with one painted layer per
-  grid holding what it held (lossless) and saves as before; the composite stays in its usual file
-  (`stratum-masks/`, `masks/`, `water-*.png`) for the export and other tools.
+  grid holding what it held (lossless) and saves under the grid's own name (`stratum-masks/stratum-2.png`,
+  `masks/forest.png`, `water/foam.png`). While a stack makes the grid, the editor writes it as its
+  own file, `stratum-masks/stratum-2.gen.png` (section "Who writes a file: `.gen`").
 - **The untouched part of a painted layer** (8A's caveat): a coverage layer gets an alpha,
   `Layer.Alpha` (0 to 255, the target's size; null for all of it). A painted layer added to a stack
   (`NewPainted`) starts with value and alpha 0 and combines by Replace, so it changes nothing until
@@ -817,13 +818,47 @@ of the model above, keyed by its target's key (`stratum-2`, `mask-forest`, `wate
 - **On disk**: `stacks/<key>.json` (`LayerStackDto`, unchanged), layers' PNGs in `stacks/<key>/`;
   no DTO changed. An older project's `masks/<name>.rules.json` loads as a rules layer holding the
   mask's PNG (when the mask has no stack file); the first save removes it. Reload reads a stack again
-  when one of its files changes. Image layers of coverage are not read again when their file
-  changes (gap).
+  when one of its files changes. An image layer reads its file (in the project, or anywhere when
+  it is there at opening) and keeps no copy of a file in the project; Reload reads it again when the
+  file changes (`CoverageImageLayersOf`, `ReloadCoverageImage`, through `CoverageLayerEdits.SetGrid`).
 - **A new source**: its record and name in `LayerSources`, its fields in `LayerDto` and its read in
   `ReadStack`, a `CoverageLayerEdits.New...`, the masks or things it reads in `CoverageLayers.ReadsOf`
   when they decide the order, and a follow step (like rules: made again in the edit that changes what
   it reads). The window's side is one add choice and a `layers.add` source (the App guide, "Stacks of
   coverage"). The decal masks (below) are one: they read no mask, so `ReadsOf` leaves them out.
+
+## Who writes a file: `.gen`
+
+Format 7 (`MapProjectDto.CurrentFormatVersion`). The owner asked that a map maker can see on disk
+which files the editor controls and which belong to other tools: a file the editor makes from other
+things has `.gen` before its extension (`MapProjectLayout.Generated`, `IsGenerated`,
+`WithoutGenerated`).
+
+- **The editor's (`.gen`)**: the grid of a target a stack makes (`MapProjectLayout.GridFile(document,
+  target)`, `IsMadeByStack`: `heightmap.gen.png` with height layers, `stratum-masks/stratum-N.gen.png`,
+  `masks/<name>.gen.png`, `water/foam.gen.png` with a stack of coverage), a rules or decal-masks layer's
+  grid (`StackLayerFile`, `StackLayerCoverageFile`, `IsGeneratedLayer`: `stacks/stratum-2/Hills.gen.png`)
+  and the draft for World Machine and Gaea (`ProceduralFiles`). Written again whenever what they are
+  made from changes; Reload skips them, so what another tool saves into one is not read back and is
+  lost at the next save.
+- **The map's own**: every other file (the grid of a target without a stack, a painted layer's
+  values and alpha, `terrain-types.png`, the JSON): written when it is edited in the editor, read back
+  when another tool saves into it.
+- **A tool's**: the file an image layer reads (of the heightmap or a stack of coverage), named in the
+  layer's `path`: never written by the editor, read again when it changes (in the project folder) or
+  at opening. A file in the project keeps no copy; one outside it keeps its last reading in
+  `stacks/<key>/<name>.png`.
+- **Switching**: a save writes a grid under the name it has now and removes the file under the other
+  (a stack added or ended); a layer's file under the other name goes with the layers' files the stack
+  no longer has. Reload takes a plain file that is gone while its `.gen` file is there (and the other
+  way round) as no change, so the editor's own renames are no edits.
+- **Format 6** projects open unchanged: each grid and layer file is read under either name
+  (`MapProjectStore.Existing`, `NamedEitherWay`, `ReadMasks` names a mask without `.gen`), and the
+  next save renames them.
+- **In words** (`ProjectFileNotes`): `OfLayer(target, layer)` and `OfResult(document, target)` say
+  where a layer's values and a stack's grid are kept and who writes them; the App's stack control
+  shows them under the list and the chosen layer.
+- Tests: `GeneratedFilesTest`.
 
 ## Decals over the whole map, decal sets and decal masks
 
@@ -979,8 +1014,9 @@ User stories T-5 and T-4 (`MapDocument.HeightStack`, `Editing/HeightLayers`, `He
   absent without layers) and per layer except curves and mask references
   `stacks/heightmap/<name>.png` (16-bit, sample 0 at `offset`: -32768 steps for layers of
   differences, 0 otherwise) and `stacks/heightmap/<name>.coverage.png`; a coverage stack's layers
-  are 8-bit PNGs of the target's size. `SaveStack`/`ReadStack` work for any target. Load composites
-  the layers again (the saved `heightmap.png` is their composite, written by the editor). A save
+  are 8-bit PNGs of the target's size; a rules or decal-masks layer's are the editor's,
+  `<name>.gen.png`. `SaveStack`/`ReadStack` work for any target. Load composites the layers again
+  (the saved `heightmap.gen.png` is their composite, written by the editor). A save
   writes only the layers whose grids changed. Reload reads the stack again when a file of it
   changes, an image layer's file when that changes, and a changed `heightmap.png` into the base.
   **Older projects** (format 3 to 5) keep the layers as `layers/layers.json` (`HeightLayersDto`, kinds
@@ -1031,10 +1067,11 @@ the final starts from their output and is what the game gets.
   out while the two stacks are the same). A project without `draft` (every older one) opens with
   every layer in both: the same terrain. Shared layers load as one object in both stacks.
 - **Files for World Machine and Gaea** (`ProceduralFiles`, all in `procedural/temp/`):
-  `draft-heightmap.png` (16-bit grey, (width + 1) by (height + 1), one step 1/128 game unit),
-  `draft-heightmap.r16` (the same samples, raw little-endian, row by row from the north-west),
-  `draft-mask-<name>.png` (a ticked mask for tools, 8-bit at its own size; an unticked one's file is
-  removed); every other image file there is an output (`Outputs`, newest first). `WriteDraft` writes
+  `draft-heightmap.gen.png` (16-bit grey, (width + 1) by (height + 1), one step 1/128 game unit),
+  `draft-heightmap.gen.r16` (the same samples, raw little-endian, row by row from the north-west),
+  `draft-mask-<name>.gen.png` (a ticked mask for tools, 8-bit at its own size; an unticked one's file
+  is removed); every other image file there is an output (`Outputs`, newest first; `IsInput` knows
+  the editor's by `.gen`, and the names of format 6, which `WriteDraft` removes). `WriteDraft` writes
   them; the map's settings (`ProceduralSettings.DraftMasks`, `WriteDraftOnChange`; `map.json`'s
   `procedural.draftMasks`, `procedural.writeDraft`) say which masks and whether the editor writes them
   again whenever they change.

@@ -1856,6 +1856,13 @@ Wave 9B (user stories K-1, K-2, S-1, W-2); the model is the library's (its guide
 coverage"). Files: `ViewModels/CoverageStackViewModel.cs`, `MainViewModel.CoverageStacks.cs`,
 `Commands/Layers/CoverageLayers.cs`, `Views/MapPanels/MaskStackPanel`, `LayerPanel`, `PanelPartView`.
 
+- **Which files the editor writes** (every stack control, `LayerStackViewModel.ResultNote` and
+  `FileNote`, the library's `ProjectFileNotes`): under the list, the grid's file and who writes it
+  (`Makes stratum-masks/stratum-2.gen.png, the editor's: ...`, or `Saved as ..., the map's own` while
+  the grid has no stack); above the chosen layer's settings, its file (`stacks/stratum-2/Hills.gen.png,
+  the editor's`, a painted layer's `the map's own`, an image layer's `Reads procedural/temp/forest.png,
+  the tool's file`, a mask reference's `No file`). The Terrain inspector shows the height layer's;
+  the draft says where Write the draft saves it. The library's guide, "Who writes a file: `.gen`".
 - **`CoverageStackViewModel`** (a `LayerStackViewModel`): the stack of a target given by a function
   (the chosen mask, stratum or water map), the `layers.*` commands with the target's key added, add
   choices Painted, Image, Mask, Stratum, Rules (`AddChoicesOf`; a new source is one more choice),
@@ -1963,7 +1970,7 @@ User story T-9 (wave 9A); the library does the work (its guide, "Draft and final
   Write the draft, Use as the final's base..., Share the draft's base). `DraftFinalViewModel` holds
   its state. The inspector adds "Used in" (`terrain.setLayer use=...`: `Draft and final`, `Draft
   only`, `Final only`); its Shown is the shown heightmap's on/off.
-- **Commands**: `terrain.writeDraft` (Needs a project; writes `procedural/temp/draft-heightmap.png`,
+- **Commands**: `terrain.writeDraft` (Needs a project; writes `procedural/temp/draft-heightmap.gen.png`,
   `.r16` and the ticked masks; span `model.write-draft`), `terrain.setDraftOut {masks?, auto?}` (the
   map's settings, a step of undo), `terrain.useAsFinalBase {path?}` (asks for the output, starting in
   `procedural/temp/`; a step of undo; a file outside the project is read again only when the project
