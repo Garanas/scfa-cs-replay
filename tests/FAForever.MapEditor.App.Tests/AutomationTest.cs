@@ -222,6 +222,49 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task TheStateDescribesThePlaceToolsWayAndSettings() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            JsonObject before = (JsonObject)(await Send(automation, "state"))["units"]!["place"]!;
+            Assert.AreEqual("Single", before["mode"]!.GetValue<string>());
+
+            JsonObject set = await Send(automation, "run", new JsonObject { ["id"] = "units.placeMode", ["mode"] = "rectangle", ["hollow"] = true, ["spacing"] = 2.5, ["count"] = 9 });
+            Assert.IsTrue(set["ran"]!.GetValue<bool>(), set.ToJsonString());
+            JsonObject place = (JsonObject)(await Send(automation, "state"))["units"]!["place"]!;
+            Assert.AreEqual("Rectangle", place["mode"]!.GetValue<string>());
+            Assert.IsTrue(place["hollow"]!.GetValue<bool>());
+            Assert.AreEqual(2.5, place["spacing"]!.GetValue<double>());
+            Assert.AreEqual(9, place["count"]!.GetValue<int>());
+            Assert.IsFalse(place["dragging"]!.GetValue<bool>());
+            Assert.AreEqual("units.place", model.ActiveTool!.Definition.Id);
+
+            // the segmented control's chips say which way is on
+            JsonArray ui = (JsonArray)(await Send(automation, "ui", new JsonObject { ["under"] = "How to place" }))["ui"]!;
+            Dictionary<string, bool> chips = [];
+            void Collect(JsonArray nodes)
+            {
+                foreach (JsonObject node in nodes.Cast<JsonObject>())
+                {
+                    if (node["text"] is JsonNode text && node["checked"] is JsonNode on)
+                    {
+                        chips[text.GetValue<string>()] = on.GetValue<bool>();
+                    }
+                    if (node["children"] is JsonArray children)
+                    {
+                        Collect(children);
+                    }
+                }
+            }
+            Collect(ui);
+            Assert.IsTrue(chips.GetValueOrDefault("Rectangle"), ui.ToJsonString());
+            Assert.IsFalse(chips.GetValueOrDefault("Line", true));
+            Assert.AreEqual(5, chips.Count, "Single, Line, Rectangle, Ring, Scatter");
+            JsonObject clicked = await Send(automation, "click", new JsonObject { ["label"] = "Scatter with a brush" });
+            Assert.AreEqual("Scatter", model.Tool<FAForever.MapEditor.App.Tools.UnitPlaceTool>().Mode.ToString(), clicked.ToJsonString());
+            window.Close();
+        });
+
+        [TestMethod]
         public Task UiUnderGivesOnePartOfTheWindow() => Run(async () =>
         {
             (MainWindow window, _, AutomationServer automation) = await Open();

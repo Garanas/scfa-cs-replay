@@ -106,6 +106,52 @@ namespace FAForever.MapEditor.Project.Editing
             };
         }
 
+        /// <summary>
+        /// Adds many units to one group of an army, made when it does not exist, as one new version
+        /// (user story U-7): each unit whose name is empty or taken gets the next free name
+        /// (<see cref="NextUnitName"/>, counting the units added before it).
+        /// </summary>
+        /// <param name="group">The names of the groups from the army's root group down, e.g. <c>INITIAL</c>; empty for the root group.</param>
+        /// <param name="names">The units' names, in the order given.</param>
+        /// <exception cref="KeyNotFoundException">No army has the name.</exception>
+        public static MapDocument AddUnits(this MapDocument document, string army, IReadOnlyList<string> group, IEnumerable<Unit> units, out ImmutableArray<string> names)
+        {
+            HashSet<string> taken = [.. document.AllUnits().Select(unit => unit.Unit.Name)];
+            int next = NextNumber(taken, "UNIT_");
+            ImmutableArray<Unit>.Builder added = ImmutableArray.CreateBuilder<Unit>();
+            ImmutableArray<string>.Builder named = ImmutableArray.CreateBuilder<string>();
+            foreach (Unit unit in units)
+            {
+                Unit placed = unit;
+                if (placed.Name.Length == 0 || !taken.Add(placed.Name))
+                {
+                    string name;
+                    do
+                    {
+                        name = $"UNIT_{next++}";
+                    }
+                    while (!taken.Add(name));
+                    placed = placed with { Name = name };
+                }
+                added.Add(placed);
+                named.Add(placed.Name);
+            }
+            names = named.ToImmutable();
+            if (added.Count == 0)
+            {
+                if (document.Armies.All(a => a.Name != army))
+                {
+                    throw new KeyNotFoundException($"The map has no army {army}");
+                }
+                return document;
+            }
+            ImmutableArray<Unit> all = added.ToImmutable();
+            return document with
+            {
+                Armies = document.Armies.Update(a => a.Name == army, a => a with { Units = AddAllTo(a.Units, group, 0, all) }, $"army {army}"),
+            };
+        }
+
         /// <exception cref="KeyNotFoundException">No unit has the name.</exception>
         public static MapDocument UpdateUnit(this MapDocument document, string name, Func<Unit, Unit> update)
         {
@@ -155,6 +201,22 @@ namespace FAForever.MapEditor.Project.Editing
             return index < 0
                 ? group with { Groups = group.Groups.Add(AddTo(new UnitGroup { Name = path[depth] }, path, depth + 1, unit)) }
                 : group with { Groups = group.Groups.SetItem(index, AddTo(group.Groups[index], path, depth + 1, unit)) };
+        }
+
+        private static UnitGroup AddAllTo(UnitGroup group, IReadOnlyList<string> path, int depth, ImmutableArray<Unit> units)
+        {
+            if (depth == path.Count)
+            {
+                return group with { Units = group.Units.AddRange(units) };
+            }
+            int index = -1;
+            for (int i = 0; i < group.Groups.Length && index < 0; i++)
+            {
+                index = group.Groups[i].Name == path[depth] ? i : -1;
+            }
+            return index < 0
+                ? group with { Groups = group.Groups.Add(AddAllTo(new UnitGroup { Name = path[depth] }, path, depth + 1, units)) }
+                : group with { Groups = group.Groups.SetItem(index, AddAllTo(group.Groups[index], path, depth + 1, units)) };
         }
 
         /// <summary>

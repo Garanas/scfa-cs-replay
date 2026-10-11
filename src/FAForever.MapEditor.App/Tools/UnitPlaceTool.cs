@@ -1,10 +1,14 @@
 using System.Collections.Immutable;
+using System.Numerics;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
+using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.Tools;
 
@@ -18,16 +22,78 @@ public sealed record GroupChoice(string Path, string Title)
 }
 
 /// <summary>
+/// One way to place in the options row's segmented control (user story U-7): a chip that is on
+/// while it is the tool's <see cref="UnitPlaceTool.Mode"/>.
+/// </summary>
+public sealed partial class PlaceModeChoice(UnitPlaceTool tool, PlaceMode mode) : ObservableObject
+{
+    public PlaceMode Mode => mode;
+
+    public string Title => mode.ToString();
+
+    /// <summary>
+    /// For screen readers and automation: <c>Place in a line</c>.
+    /// </summary>
+    public string Label => mode switch
+    {
+        PlaceMode.Single => "Place one unit at a time",
+        PlaceMode.Line => "Place in a line",
+        PlaceMode.Rectangle => "Place in a rectangle",
+        PlaceMode.Ring => "Place a ring",
+        PlaceMode.Scatter => "Scatter with a brush",
+        _ => $"Place: {mode}",
+    };
+
+    public string Help => UnitPlaceTool.HelpOf(mode);
+
+    public bool IsOn => tool.Mode == mode;
+
+    [RelayCommand]
+    private void Choose() => tool.Mode = mode;
+
+    internal void Refresh() => OnPropertyChanged(nameof(IsOn));
+}
+
+/// <summary>
 /// Places units for an army (user story U-2), or a units preset (U-4): a click places the chosen
 /// unit at the mouse (one step of undo, through <c>units.add</c>), into the chosen army's chosen
 /// group, named with a free <c>UNIT_n</c>. A structure turns in quarter turns and snaps to the
 /// build grid; a mobile unit turns freely. The unit comes from the unit picker (Choose...), a tile
 /// chosen on the shelf, or a tile dropped on a view, which places it where it is dropped. Q and E
 /// turn what is placed next: a structure or a preset a quarter turn, a mobile unit 15 degrees
-/// (with shift a quarter turn). A preset's units show under the mouse before the click.
+/// (with shift a quarter turn). A preset's units show under the mouse before the click, and so
+/// does a single unit's footprint.
 /// </summary>
-public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObject, IMapTool, IAssetDropTarget
+/// <remarks>
+/// <para>
+/// Many at once (user story U-7, <see cref="Mode"/>): <see cref="PlaceMode.Line"/> and
+/// <see cref="PlaceMode.Rectangle"/> are dragged out (the footprints of every unit the drag will
+/// place show under the mouse, the status line counts them; shift keeps a line to eighth turns;
+/// Escape cancels), and the release runs one <c>units.addMany</c>, one step of undo.
+/// <see cref="PlaceMode.Ring"/> places around the selected units' footprints, or around the structure
+/// under the mouse, a <see cref="Distance"/> away, at a click. <see cref="PlaceMode.Scatter"/> is a
+/// brush (<see cref="BrushStroke"/>; <c>[</c> and <c>]</c> its radius): a click scatters
+/// <see cref="Count"/> units at random headings in its circle, none closer than
+/// <see cref="LeastDistance"/>, and a drag goes on at that density; the stroke is one step. Every
+/// mode places into the options row's army and group, as wrecks when asked, gives the symmetry's
+/// images and selects what it placed. The maths is the library's <see cref="UnitLayouts"/>.
+/// </para>
+/// </remarks>
+public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDropTarget
 {
+    /// <summary>
+    /// How far, in pixels, the mouse moves before a press becomes a drag.
+    /// </summary>
+    private const float DragPixels = 3;
+
+    private readonly MainViewModel model;
+
+    public UnitPlaceTool(MainViewModel model)
+    {
+        this.model = model;
+        Modes = [.. Enum.GetValues<PlaceMode>().Select(mode => new PlaceModeChoice(this, mode))];
+    }
+
     /// <summary>
     /// The armies of the map, for the combo box.
     /// </summary>
@@ -62,7 +128,7 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
     /// The unit it places, from the picker or the shelf; null until one is chosen.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(HasUnit))]
+    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(HasUnit), nameof(UsesSpacing))]
     public partial AssetEntry? Unit { get; set; }
 
     public bool HasUnit => Unit is not null;
@@ -96,11 +162,6 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
     }
 
     /// <summary>
-    /// A preset's units under the mouse, where a click puts them (turned in quarter turns, as placing does).
-    /// </summary>
-    public IReadOnlyList<ToolShape> Shapes(ToolView view) => Preset is null ? [] : PresetPreview.Shapes(model, view, _outlines, BuildGrid.SnapHeading((float)(Heading * Math.PI / 180)));
-
-    /// <summary>
     /// What a click places, as the options bar says it.
     /// </summary>
     public string UnitTitle => Preset is string preset ? $"Preset {preset}"
@@ -120,9 +181,136 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
     [ObservableProperty]
     public partial double Heading { get; set; }
 
-    public double CursorRadius => 0;
+    #region Many at once (U-7)
 
-    public string Help => "Click to place; Q and E turn; drop a unit from the shelf to place it there";
+    /// <summary>
+    /// How a click or drag places: one unit, a line, a rectangle, a ring or a scatter.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLine), nameof(IsRectangle), nameof(IsRing), nameof(IsScatter), nameof(UsesSpacing), nameof(Help), nameof(CursorRadius))]
+    public partial PlaceMode Mode { get; set; } = PlaceMode.Single;
+
+    /// <summary>
+    /// The ways to place, for the options row's segmented control.
+    /// </summary>
+    public IReadOnlyList<PlaceModeChoice> Modes { get; }
+
+    public bool IsLine => Mode == PlaceMode.Line;
+
+    public bool IsRectangle => Mode == PlaceMode.Rectangle;
+
+    public bool IsRing => Mode == PlaceMode.Ring;
+
+    public bool IsScatter => Mode == PlaceMode.Scatter;
+
+    /// <summary>
+    /// Whether the spacing matters: a line, rectangle or ring of mobile units (structures butt
+    /// together at their footprint).
+    /// </summary>
+    public bool UsesSpacing => Mode is PlaceMode.Line or PlaceMode.Rectangle or PlaceMode.Ring && Unit?.IsStructure != true;
+
+    /// <summary>
+    /// Between the centres of mobile units in a line, rectangle or ring, in ogrids.
+    /// </summary>
+    [ObservableProperty]
+    public partial double Spacing { get; set; } = 2;
+
+    /// <summary>
+    /// Whether the units of a line face along it; else they face <see cref="Heading"/>.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool FaceAlong { get; set; } = true;
+
+    /// <summary>
+    /// Whether a rectangle is only its border (a wall around a yard).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool Hollow { get; set; }
+
+    /// <summary>
+    /// Between a ring and the footprints it goes around, in ogrids.
+    /// </summary>
+    [ObservableProperty]
+    public partial double Distance { get; set; } = 1;
+
+    /// <summary>
+    /// How many units a click of the scatter brush puts in its circle (a drag goes on at that density).
+    /// </summary>
+    [ObservableProperty]
+    public partial int Count { get; set; } = 6;
+
+    /// <summary>
+    /// How close scattered units may stand to each other, in ogrids.
+    /// </summary>
+    [ObservableProperty]
+    public partial double LeastDistance { get; set; } = 2;
+
+    /// <summary>
+    /// The scatter brush's radius, in ogrids.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CursorRadius))]
+    public partial double Radius { get; set; } = 8;
+
+    /// <summary>
+    /// The layout settings as the library takes them.
+    /// </summary>
+    public UnitLayoutSettings LayoutSettings => new UnitLayoutSettings((float)Spacing, FaceAlong, Hollow, (float)Distance, (float)(Heading * Math.PI / 180));
+
+    partial void OnModeChanged(PlaceMode value)
+    {
+        CancelDrag();
+        foreach (PlaceModeChoice choice in Modes)
+        {
+            choice.Refresh();
+        }
+    }
+
+    /// <summary>
+    /// What a mode does, for the options row and the status line.
+    /// </summary>
+    public static string HelpOf(PlaceMode mode) => mode switch
+    {
+        PlaceMode.Line => "Drag a line; Shift keeps it to 45°; Escape cancels; Q and E turn",
+        PlaceMode.Rectangle => "Drag a rectangle (Hollow: only its border); Escape cancels; Q and E turn",
+        PlaceMode.Ring => "Click to place a ring around the selected units, or around the structure under the mouse",
+        PlaceMode.Scatter => "Click or drag to scatter units at random; [ and ] the radius, Shift with them the count",
+        _ => "Click to place; Q and E turn; drop a unit from the shelf to place it there",
+    };
+
+    // the drag of a line or rectangle
+    private Vector2? _from;
+    private Vector2 _to;
+    private bool _dragging;
+    private ToolInput _input = ToolInput.Default;
+    private ImmutableArray<UnitPlace> _planned = [];
+
+    // the scatter brush's stroke
+    private BrushStroke? _stroke;
+    private List<Vector2> _scattered = [];
+    private int _seed;
+    private int _dabs;
+    private readonly List<ObjectRef> _strokePlaced = [];
+    private int _strokeImages;
+
+    // the ring's preview, made again only when what it depends on changes
+    private (MapDocument Document, ImmutableArray<ObjectRef> Selection, Vector2? Pointer, string? Unit, UnitLayoutSettings Settings, ImmutableArray<UnitPlace> Places)? _ring;
+
+    /// <summary>
+    /// Whether a line or rectangle is being dragged out.
+    /// </summary>
+    public bool IsDragging => _dragging;
+
+    /// <summary>
+    /// How many units the drag going on will place.
+    /// </summary>
+    public int PlannedCount => _planned.Length;
+
+    #endregion
+
+    public double CursorRadius => Mode == PlaceMode.Scatter ? Radius : 0;
+
+    public string Help => HelpOf(Mode);
 
     /// <summary>
     /// Its settings for automation's <c>state</c>.
@@ -136,9 +324,19 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
         ["group"] = Group,
         ["heading"] = Heading,
         ["asWrecks"] = AsWrecks,
-        ["previewOutlines"] = Preset is null ? 0 : _outlines.Count,
+        ["previewOutlines"] = Preset is not null ? _outlines.Count : _dragging ? _planned.Length : Unit is null ? 0 : Mode == PlaceMode.Ring ? _ring?.Places.Length ?? 0 : Mode == PlaceMode.Scatter ? 0 : 1,
         ["structure"] = Unit?.IsStructure,
         ["footprint"] = Unit?.Footprint is (double x, double z) ? new JsonArray(x, z) : null,
+        ["mode"] = Mode.ToString(),
+        ["spacing"] = Spacing,
+        ["faceAlong"] = FaceAlong,
+        ["hollow"] = Hollow,
+        ["distance"] = Distance,
+        ["count"] = Count,
+        ["leastDistance"] = LeastDistance,
+        ["radius"] = Radius,
+        ["dragging"] = _dragging,
+        ["planned"] = _planned.Length,
     };
 
     partial void OnUnitChanged(AssetEntry? value)
@@ -151,8 +349,13 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
 
     partial void OnArmyChanged(string? value) => RefreshGroups(model.ShownDocument);
 
-    public void Press(float x, float z)
+    public void Press(float x, float z) => Press(x, z, ToolInput.Default);
+
+    public void Drag(float x, float z) => Drag(x, z, _input);
+
+    public void Press(float x, float z, ToolInput input)
     {
+        _input = input;
         if (model.ShownDocument is null)
         {
             return;
@@ -160,27 +363,86 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
         if (Preset is string preset)
         {
             _ = model.RunWithAsync("units.placePreset", new JsonObject { ["name"] = preset, ["x"] = x, ["z"] = z });
+            return;
         }
-        else if (Unit is not null)
-        {
-            _ = model.RunWithAsync("units.add", new JsonObject { ["x"] = x, ["z"] = z });
-        }
-        else
+        if (Unit is null)
         {
             model.Status = "Choose a unit to place: Units, Choose a unit, or a unit on the asset shelf";
+            return;
+        }
+        switch (Mode)
+        {
+            case PlaceMode.Line:
+            case PlaceMode.Rectangle:
+                _from = new Vector2(x, z);
+                _to = _from.Value;
+                _dragging = true;
+                Plan();
+                break;
+            case PlaceMode.Ring:
+                _ = model.RunWithAsync("units.addMany", new JsonObject { ["mode"] = "ring", ["x"] = x, ["z"] = z });
+                break;
+            case PlaceMode.Scatter:
+                StartScatter(x, z);
+                break;
+            default:
+                _ = model.RunWithAsync("units.add", new JsonObject { ["x"] = x, ["z"] = z });
+                break;
         }
     }
 
-    public void Drag(float x, float z)
+    public void Drag(float x, float z, ToolInput input)
     {
+        _input = input;
+        if (_stroke is not null)
+        {
+            _stroke.MoveTo(x, z);
+            return;
+        }
+        if (_from is not Vector2 from || !_dragging)
+        {
+            return;
+        }
+        Vector2 to = new Vector2(x, z);
+        if (Mode == PlaceMode.Line && input.Modifiers.HasFlag(ToolModifiers.Shift))
+        {
+            to = UnitLayouts.Constrain(from, to, UnitLayouts.EighthTurn);
+        }
+        _to = to;
+        Plan();
     }
 
     public void Release()
     {
+        if (_stroke is BrushStroke stroke)
+        {
+            EndScatter(stroke);
+            return;
+        }
+        if (_from is not Vector2 from || !_dragging)
+        {
+            return;
+        }
+        Vector2 to = _to;
+        CancelDrag();
+        _ = model.RunWithAsync("units.addMany", new JsonObject
+        {
+            ["mode"] = Mode.ToString(),
+            ["x0"] = from.X,
+            ["z0"] = from.Y,
+            ["x1"] = to.X,
+            ["z1"] = to.Y,
+        });
     }
 
     public bool Key(string key, ToolModifiers modifiers)
     {
+        if (key == "Escape" && _dragging)
+        {
+            CancelDrag();
+            model.Status = $"Cancelled the {Mode.ToString().ToLowerInvariant()}: nothing placed";
+            return true;
+        }
         if (modifiers.HasFlag(ToolModifiers.Control) || modifiers.HasFlag(ToolModifiers.Alt) || key is not ("Q" or "E"))
         {
             return false;
@@ -189,7 +451,45 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
         double heading = (Heading + (key == "E" ? step : -step)) % 360;
         Heading = heading < 0 ? heading + 360 : heading;
         model.Status = $"Places facing {Heading:0}°";
+        if (_dragging)
+        {
+            Plan();
+        }
         return true;
+    }
+
+    /// <summary>
+    /// What the views draw under the mouse: a preset's units, the footprints a drag will fill, the
+    /// ring a click will place, or the one unit a click will place (span <c>tool.place-preview</c>).
+    /// </summary>
+    public IReadOnlyList<ToolShape> Shapes(ToolView view)
+    {
+        if (Preset is not null)
+        {
+            return PresetPreview.Shapes(model, view, _outlines, BuildGrid.SnapHeading((float)(Heading * Math.PI / 180)));
+        }
+        if (Unit is not AssetEntry unit || model.ShownDocument is not MapDocument document)
+        {
+            return [];
+        }
+        if (_dragging)
+        {
+            return PresetPreview.ShapesAt(model, view, Outlines(unit, _planned), "tool.place-preview");
+        }
+        switch (Mode)
+        {
+            case PlaceMode.Scatter:
+                return [];
+            case PlaceMode.Ring:
+                return PresetPreview.ShapesAt(model, view, Outlines(unit, RingPlan(document, unit)), "tool.place-preview");
+            default:
+                if (model.Pointer is not (float px, float pz))
+                {
+                    return [];
+                }
+                UnitPlace single = UnitPlans.Single(unit, px, pz, (float)(Heading * Math.PI / 180));
+                return PresetPreview.ShapesAt(model, view, [PresetPreview.Footprint(unit.Footprint, single.X, single.Z, single.Heading)], "tool.place-preview");
+        }
     }
 
     public bool Accepts(AssetEntry entry) => entry.Kind == AssetKind.Unit;
@@ -266,4 +566,139 @@ public sealed partial class UnitPlaceTool(MainViewModel model) : ObservableObjec
             ChosenGroup = choices.First(choice => choice.Path == UnitGroupEdits.InitialGroup);
         }
     }
+
+    #region The drag, the ring and the scatter
+
+    /// <summary>
+    /// The places the drag going on will fill, and the status line's count and length.
+    /// </summary>
+    private void Plan()
+    {
+        if (_from is not Vector2 from || Unit is not AssetEntry unit)
+        {
+            return;
+        }
+        using Performance.Span measure = Performance.Measure("tool.place-plan");
+        _planned = UnitPlans.Of(Mode, unit, from, _to, null, LayoutSettings);
+        OnPropertyChanged(nameof(PlannedCount));
+        float length = Vector2.Distance(from, _to);
+        string size = Mode == PlaceMode.Line
+            ? $"{length:0.#} ogrids"
+            : $"{MathF.Abs(_to.X - from.X):0.#} × {MathF.Abs(_to.Y - from.Y):0.#} ogrids";
+        model.Status = $"{_planned.Length} × {unit.Name}, {size}; release to place, Escape to cancel";
+    }
+
+    private void CancelDrag()
+    {
+        _from = null;
+        _dragging = false;
+        _planned = [];
+        OnPropertyChanged(nameof(PlannedCount));
+    }
+
+    /// <summary>
+    /// The ring a click places now: around the selected units, else around the structure under the mouse.
+    /// </summary>
+    private ImmutableArray<UnitPlace> RingPlan(MapDocument document, AssetEntry unit)
+    {
+        Vector2? pointer = model.Pointer is (float px, float pz) ? new Vector2(px, pz) : null;
+        ImmutableArray<ObjectRef> selection = model.Selection.Items;
+        UnitLayoutSettings settings = LayoutSettings;
+        if (_ring is { } ring && ReferenceEquals(ring.Document, document) && ring.Selection == selection && ring.Pointer == pointer && ring.Unit == unit.Key && ring.Settings == settings)
+        {
+            return ring.Places;
+        }
+        using Performance.Span measure = Performance.Measure("tool.place-plan");
+        (float X0, float Z0, float X1, float Z1)? bounds = UnitPlans.RingBounds(document, model.Assets.Catalog, selection, pointer);
+        ImmutableArray<UnitPlace> places = bounds is null ? [] : UnitPlans.Of(PlaceMode.Ring, unit, default, default, bounds, settings);
+        _ring = (document, selection, pointer, unit.Key, settings, places);
+        return places;
+    }
+
+    private static IReadOnlyList<PreviewOutline> Outlines(AssetEntry unit, ImmutableArray<UnitPlace> places)
+    {
+        PreviewOutline[] outlines = new PreviewOutline[Math.Min(places.Length, PresetPreview.MaxOutlines)];
+        for (int i = 0; i < outlines.Length; i++)
+        {
+            outlines[i] = PresetPreview.Footprint(unit.Footprint, places[i].X, places[i].Z, places[i].Heading);
+        }
+        return outlines;
+    }
+
+    /// <summary>
+    /// A stroke of the scatter brush: the first dab fills its circle with <see cref="Count"/> units,
+    /// each next one the strip it moves on at the same density; each dab's units are added with
+    /// their images and selected when the stroke ends. A unit the workspace lacks is placed 1 by 1.
+    /// </summary>
+    private void StartScatter(float x, float z)
+    {
+        if (model.StrokeInProgress is not null || Unit is not AssetEntry unit)
+        {
+            return;
+        }
+        string army = Army ?? "";
+        if (model.ShownDocument?.FindArmy(army) is null)
+        {
+            model.Status = "The map has no army to place units for: add one in the Map mode";
+            return;
+        }
+        _scattered = [];
+        _seed = Random.Shared.Next();
+        _dabs = 0;
+        _strokePlaced.Clear();
+        _strokeImages = 0;
+        float radius = (float)Radius;
+        float circle = MathF.PI * radius * radius;
+        // the first dab covers its circle; each next one the strip it moves on, a quarter of the radius
+        float strip = 2 * radius * Math.Max(0.5f, radius / 4);
+        _stroke = new BrushStroke(model, $"Scatter {unit.Name}", Radius, x, z, (edit, dab) =>
+        {
+            int count = _dabs == 0 ? Count : (int)MathF.Ceiling(Count * strip / circle);
+            ImmutableArray<UnitPlace> places = UnitLayouts.Scatter(new Vector2(dab.X, dab.Z), radius, count, (float)LeastDistance, _seed + _dabs++, _scattered);
+            MapDocument document = edit.Document;
+            List<Project.Files.InMemory.Unit> units = [];
+            foreach (UnitPlace place in places)
+            {
+                if (place.X < 0 || place.Z < 0 || place.X > document.Width || place.Z > document.Height)
+                {
+                    continue;
+                }
+                _scattered.Add(new Vector2(place.X, place.Z));
+                units.Add(Commands.UnitCommands.Make(document, unit.Key, unit, place));
+            }
+            if (units.Count == 0)
+            {
+                return;
+            }
+            ImmutableArray<string> group = AsWrecks ? document.WreckagePath(army) : UnitGroupEdits.ParsePath(Group);
+            edit.Apply(current =>
+            {
+                current = current.AddUnits(army, group, units, out ImmutableArray<string> names);
+                current = model.MirrorPlaced(current, [.. names.Select(ObjectRef.Unit)], out ImmutableArray<ObjectRef> all);
+                _strokePlaced.AddRange(all);
+                _strokeImages += all.Length - names.Length;
+                return current;
+            });
+        }, mirror: false);
+    }
+
+    private void EndScatter(BrushStroke stroke)
+    {
+        stroke.End();
+        _stroke = null;
+        int placed = _strokePlaced.Count - _strokeImages;
+        if (placed > 0 && model.ShownDocument is MapDocument document)
+        {
+            model.Selection.Set(_strokePlaced.Where(document.Exists));
+            model.Status = $"Scattered {MainViewModel.Units(placed)} ({Unit?.Name}) for {Army}{(AsWrecks ? " as wrecks" : "")}{(_strokeImages > 0 ? $" and {_strokeImages} mirrored" : "")}";
+        }
+        else
+        {
+            model.Status = "Scattered nothing: no place in the circle keeps the least distance, or it lies outside the map";
+            model.Logger("Editor").LogInformation("A scatter stroke placed no unit (radius {Radius}, count {Count}, least distance {LeastDistance})", Radius, Count, LeastDistance);
+        }
+        _strokePlaced.Clear();
+    }
+
+    #endregion
 }

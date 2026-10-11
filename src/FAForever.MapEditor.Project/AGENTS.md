@@ -70,7 +70,9 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
 - Edits name what they change, never a position in a list: props by `Prop.Id` (in memory only; a
   project numbers them on load), markers and armies by name. Shared edits live in `DocumentEdits`.
   - `DocumentEdits`: add, update and remove props, decals (removing one takes it out of its
-    groups), units (`AddUnit(army, group path, unit)`, found by name with `FindUnit` and
+    groups), units (`AddUnit(army, group path, unit)`; `AddUnits(army, group path, units, out
+    names)` puts many into one group as one version, each empty or taken name the next free
+    `UNIT_n`; found by name with `FindUnit` and
     `AllUnits` as `PlacedUnit`: army, group path, unit), markers of every kind by id
     (`AddMarker` gives a new id and a free name, `FreeName`: `Mass 08` becomes `Mass 12`;
     `RemoveMarker` drops every path node link and chain entry to it; `UpdateMarker` may not change
@@ -90,6 +92,22 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     creates the units of each army's `INITIAL`, with the groups in it, at the start.
     `BuildGrid.Snap`: a structure an odd number of ogrids wide on a half ogrid, an even one on a
     whole; a quarter turn swaps its sides.
+  - `UnitLayouts` (U-7, pure maths; the editor's place tool and `units.addMany` put the units on
+    the terrain with `AddUnits`): the places and headings (`UnitPlace`: x, z, radians clockwise
+    from +x) of many units at once from a unit's footprint (`Extent` turned in quarter turns; none
+    is 1 by 1). `Line(from, to, footprint, spacing, faceAlong, heading, isStructure)`: structures
+    butt together at their footprint along the line, each on the build grid (two that land on one
+    place are one), mobile units a spacing apart (at least `MinimumSpacing`, a quarter ogrid),
+    each facing along the line (structures in the nearest quarter turn) or the heading;
+    `Constrain(from, to, step)` keeps a line's angle to whole steps (`EighthTurn` with shift).
+    `Rectangle(cornerA, cornerB, footprint, hollow, spacing, heading, isStructure)`: rows of the
+    footprint from the corner nearest the origin, the rectangle rounded to whole ogrids (mobile
+    units a grid of the spacing); hollow keeps the border. `Ring(bounds, footprint, distance,
+    spacing, heading, isStructure)`: a hollow rectangle whose inner edge lies `distance` outside
+    the bounds (mobile units spread evenly about the spacing apart). `Scatter(centre, radius,
+    count, leastDistance, seed, existing)`: random places and headings within a circle, none closer
+    than the least distance to each other or to the places given, the same for the same seed,
+    fewer when the circle is full. Tests: `UnitLayoutsTest`.
   - `ObjectRef` names one thing of any kind (`marker:12`, `prop:5`, `decal:3`, `unit:UNIT_5`,
     `area:AREA_1`), for the editor's selection (user story F-11). `MapObjects` gives a thing's
     place (its centre: a decal's position is a corner), heading (about the up axis, from +x towards

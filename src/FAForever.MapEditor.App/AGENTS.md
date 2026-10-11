@@ -1470,7 +1470,41 @@ change, span `model.armies`), the place tool and the commands.
   1 by 1 without one) turns in quarter turns and snaps to the build grid: an odd size on a half
   ogrid, an even one on a whole. Q and E turn what is placed next (a structure or preset 90
   degrees, a mobile unit 15, shift 90); the select tool turns a selection of structures 90.
-  A blueprint the workspace lacks is placed as it is, with a warning.
+  A blueprint the workspace lacks is placed as it is, with a warning. A single unit's footprint
+  shows under the mouse where a click puts it (a structure on the build grid), as a preset's does.
+- **Many at once** (U-7; `UnitPlaceTool.Mode`, `Tools/UnitPlans.cs`, `Commands/Units/AddUnits.cs`;
+  the maths is the library's `UnitLayouts`, its guide): the options row's segmented control
+  (chips `Single`, `Line`, `Rectangle`, `Ring`, `Scatter`; labelled `Place in a line`, ...) comes
+  first, then the settings of that way (Spacing for mobile units, Face along for a line, Hollow for
+  a rectangle, Distance for a ring, Count, Least distance and Radius for a scatter), then the
+  unit, Choose..., As wrecks, Army, Group and Facing (a number field; Q and E turn it). Line and
+  Rectangle are dragged out in either view: the footprints of every unit the drag will place show
+  under the mouse (`PresetPreview.ShapesAt`, span `tool.place-preview`; the plan itself
+  `tool.place-plan`), the status line counts them (`14 × T1 Wall Section, 14 ogrids`), shift keeps
+  a line to eighth turns (`UnitLayouts.Constrain`), Escape cancels (`IsDragging`,
+  `PlannedCount`), and the release runs one `units.addMany` (one step: `Place 14 units (T1 Wall
+  Section) in a line of 14 ogrids`). Ring: a click runs `units.addMany mode=ring` around the
+  selected units' footprint bounds, else around the structure whose footprint holds the click
+  (`UnitPlans.RingBounds`), `Distance` ogrids away; the ring shows under the mouse first. Scatter:
+  a `BrushStroke` (radius with `[` and `]`, shift with them the count; `CursorRadius` is its circle)
+  whose first dab scatters `Count` units in its circle at random headings, none closer than
+  `LeastDistance` to each other (`UnitLayouts.Scatter`, a seed per stroke), each next dab the strip
+  it moves on at that density; the stroke is one step (`Scatter Snoop`), its units added with their
+  images per dab and selected when it ends. Every way places into the row's army and group (wrecks
+  into `WRECKAGE`), a structure on the build grid in quarter turns, gives the symmetry's images
+  (`MirrorPlaced`) and selects what it placed; a unit that would stand outside the map is left out
+  (the status says how many), a point outside it is refused as `units.add` refuses.
+  `units.addMany {mode?, x0?, z0?, x1?, z1?, x?, z?, points?, blueprint?, heading?, army?, group?,
+  wreck?, spacing?, faceAlong?, hollow?, distance?, count?, leastDistance?, radius?, seed?}` (Units
+  menu; what is left out is the tool's: `x0..z1` a line or rectangle, `x, z` a ring's click or a
+  scatter's centre, `points` `[[x, z], ...]` instead, a scatter's each a dab; the answer has the
+  names, `count`, `images`, `outside`) and `units.placeMode {mode?, spacing?, faceAlong?, hollow?,
+  distance?, count?, leastDistance?, radius?, heading?}` (Units menu; chooses the Place tool;
+  without a mode the next way, so the menu steps through them). `state.units.place` adds `mode`
+  and the settings, `dragging` and `planned`; `previewOutlines` counts what shows under the
+  mouse. The shortcuts page lists Shift, Escape and the brackets. Tests: `UnitsTest` (the
+  commands, one step, images, the group, the tool's drag and Escape), `MainWindowTest` (the mouse),
+  `AutomationTest` (the state, the chips).
 - **The tree** (`UnitGroupsSection`, a `TreeView` of `GroupNode`s with their units counted
   with the groups in them; expanded nodes stay expanded when it is made again) is the Units panel's
   list; the inspector edits what is chosen in it (`UnitGroupDetailsSection`,
@@ -1531,7 +1565,7 @@ change, span `model.armies`), the place tool and the commands.
   (`MapWreckBrush`) where a unit is a square; `get` answers `wreck`. Not built yet: placing a units
   preset as wrecks (a preset places into a new group of its name).
 - Automation: `state.units` (`place`: unit, preset, army, group, heading, structure, footprint,
-  asWrecks; `tree`: the chosen group and the first 200 groups with their units) and `state.armies` (name,
+  asWrecks, mode and the settings of the ways to place; `tree`: the chosen group and the first 200 groups with their units) and `state.armies` (name,
   playable, team, factions, spawn, units, alliances, chosen).
 - **Dragging in the tree** (U-3): section "Content to use again" below.
 - Not built yet: team colours in the views.

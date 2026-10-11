@@ -307,9 +307,47 @@
                         AutomationProperties.HelpText="Places this decal along the chosen curve layer (else the topmost curve), with the spacing, offset and sides of the curve's Decals along the curve" />
               </controls:ToolRow>
             </DataTemplate>
-            <!-- placing units (U-2) or a units preset (U-4): what, for which army, into which group, facing where -->
+            <!-- placing units (U-2) or a units preset (U-4): how to place (U-7: one, a line, a rectangle, a ring, a scatter) and
+                 the settings of that way first, then what, for which army, into which group, facing where -->
             <DataTemplate DataType="tools:UnitPlaceTool">
               <controls:ToolRow Classes="toolrow">
+                <ItemsControl ItemsSource="{Binding Modes}" AutomationProperties.Name="How to place" AutomationProperties.HelpText="One unit a click, a line or rectangle dragged out, a ring around the selection, or a scatter brush">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Classes="inline" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="tools:PlaceModeChoice">
+                      <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Title}" Command="{Binding ChooseCommand}"
+                              AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Classes="inline" IsVisible="{Binding UsesSpacing}">
+                  <TextBlock Classes="label" Text="Spacing" />
+                  <TextBox Classes="toolfield" Text="{Binding Spacing, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                           AutomationProperties.Name="Spacing of mobile units in ogrids" AutomationProperties.HelpText="Between the centres of mobile units in a line, rectangle or ring; structures butt together at their footprint" />
+                </StackPanel>
+                <CheckBox Content="Face along" IsChecked="{Binding FaceAlong}" IsVisible="{Binding IsLine}" AutomationProperties.Name="Face along the line"
+                          AutomationProperties.HelpText="Each unit faces the way the line goes (a structure in the nearest quarter turn); unchecked, the facing below" />
+                <CheckBox Content="Hollow" IsChecked="{Binding Hollow}" IsVisible="{Binding IsRectangle}" AutomationProperties.Name="Only the rectangle's border"
+                          AutomationProperties.HelpText="A wall around a yard: only the border is filled" />
+                <StackPanel Classes="inline" IsVisible="{Binding IsRing}">
+                  <TextBlock Classes="label" Text="Distance" />
+                  <TextBox Classes="toolfield" Text="{Binding Distance, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                           AutomationProperties.Name="Distance of the ring from what it goes around in ogrids" AutomationProperties.HelpText="Between the footprints of the selected units (or the structure under the mouse) and the ring" />
+                </StackPanel>
+                <StackPanel Classes="inline" IsVisible="{Binding IsScatter}">
+                  <TextBlock Classes="label" Text="Count" />
+                  <TextBox Classes="toolfield" Text="{Binding Count, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                           AutomationProperties.Name="Units a click scatters" AutomationProperties.HelpText="How many a click puts in the brush's circle; a drag goes on at that density" />
+                  <TextBlock Classes="label" Text="Least distance" />
+                  <TextBox Classes="toolfield" Text="{Binding LeastDistance, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                           AutomationProperties.Name="Least distance between scattered units in ogrids" />
+                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0}'}" />
+                  <Slider Minimum="1" Maximum="128" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Scatter brush radius in ogrids" />
+                </StackPanel>
                 <StackPanel Classes="inline">
                   <controls:AssetThumbnail Model="{Binding Unit.Model}" Width="{StaticResource ToolButtonHeight}" Height="{StaticResource ToolButtonHeight}"
                                            IsVisible="{Binding HasUnit}" AutomationProperties.Name="Picture of the unit to place" />
@@ -329,7 +367,11 @@
                             AutomationProperties.Name="Group to place units into"
                             AutomationProperties.HelpText="The game creates the units of INITIAL, with its groups, when the game starts" />
                 </StackPanel>
-                <TextBlock Classes="label" Text="{Binding Heading, StringFormat='Facing: {0:0}°'}" />
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="Facing" />
+                  <TextBox Classes="toolfield" Text="{Binding Heading, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                           AutomationProperties.Name="Facing of placed units in degrees" AutomationProperties.HelpText="Clockwise from +x in the top view; Q and E turn it (a structure a quarter turn)" />
+                </StackPanel>
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </controls:ToolRow>
             </DataTemplate>
