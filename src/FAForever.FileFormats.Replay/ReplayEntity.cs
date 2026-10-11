@@ -2,11 +2,12 @@ namespace FAForever.FileFormats.Replay
 {
     /// <summary>
     /// What kind of unit an entity probably is, judged from the orders it received. Only
-    /// <see cref="Commander"/> is certain (serial 0 of an army); the others are guesses.
+    /// <see cref="Commander"/> is close to certain (serial 0 of an army); the others are guesses.
     /// </summary>
     public enum ReplayEntityKind
     {
-        /// <summary>The army's commander (ACU): entity serial 0.</summary>
+        /// <summary>The army's commander (ACU): entity serial 0. The serial holds until the commander is
+        /// destroyed; in game modes that continue after that, a later unit of the army takes it.</summary>
         Commander,
 
         /// <summary>Received construction, reclaim, repair or capture orders.</summary>
@@ -40,8 +41,10 @@ namespace FAForever.FileFormats.Replay
         int SelectionSize);
 
     /// <summary>
-    /// An entity that received orders, with those orders in time order. See AGENTS.md for the
-    /// layout of entity ids: <c>(army index &lt;&lt; 20) | serial</c>.
+    /// An entity id that received orders, with those orders in time order. See AGENTS.md for the
+    /// layout of entity ids: <c>(army index &lt;&lt; 20) | serial</c>. The engine reuses the id of a
+    /// destroyed unit for a later unit of the same army, so in a long game one entity can hold the
+    /// orders of several units; the replay does not say when a unit died.
     /// </summary>
     public record ReplayEntity(
         int EntityId,
@@ -50,10 +53,18 @@ namespace FAForever.FileFormats.Replay
         IReadOnlyList<ReplayEntityOrder> Orders)
     {
         /// <summary>The army index encoded in the entity id.</summary>
-        public int Army => EntityId >> 20;
+        public int Army => ReplayEntityId.GetIndex(EntityId);
 
-        /// <summary>The serial number within the army: the order in which units appeared.</summary>
-        public int Serial => EntityId & 0xFFFFF;
+        /// <summary>The family encoded in the entity id: <see cref="ReplayEntityFamily.Unit"/> for selections.</summary>
+        public ReplayEntityFamily Family => ReplayEntityId.GetFamily(EntityId);
+
+        /// <summary>
+        /// The serial number within the army. The army's first unit (its commander at the start)
+        /// has serial 0; a new unit takes the lowest serial that is free, which is a serial of a unit
+        /// destroyed at least about 10 seconds earlier when there is one, so the serial does not tell
+        /// the order in which units appeared.
+        /// </summary>
+        public int Serial => ReplayEntityId.GetSerial(EntityId);
 
         /// <summary>When the entity received its first order.</summary>
         public TimeSpan FirstSeen => Orders[0].Timestamp;

@@ -108,7 +108,7 @@ namespace FAForever.FileFormats.Replay.Tests
         {
             CommandData Order(int identifier, string blueprintId) => new(
                 identifier, CommandType.IssueBuildFactory, new CommandTarget.None(), new CommandFormation.NoFormation(),
-                blueprintId, new LuaData.Nil(), false, 0, 0, 0, 0, 0, 0);
+                blueprintId, new LuaData.Nil(), false, -1, -1, new CommandTarget.None(), [], 1, 1);
 
             List<ReplayQueueChange> changes = ReplaySemantics.GetQueueChanges(
             [
@@ -144,6 +144,77 @@ namespace FAForever.FileFormats.Replay.Tests
                 .ToList();
 
             CollectionAssert.AreEqual(fromMapEvents, fromCommands);
+        }
+
+        private static List<(int SourceId, CommandData Data)> Orders(Replay replay)
+            => replay.Body.UserInput
+                .Select(input => input switch
+                {
+                    ReplayInput.IssueCommand command => (input.SourceId, command.Data),
+                    ReplayInput.IssueFactoryCommand command => (input.SourceId, command.Data),
+                    _ => (input.SourceId, null!),
+                })
+                .Where(order => order.Data is not null)
+                .ToList();
+
+        /// <summary>
+        /// A formation is a script index, an orientation (a unit quaternion that turns about the
+        /// vertical axis) and a scale of 1.
+        /// </summary>
+        [TestMethod]
+        [DataRow("assets/faforever/23225104.fafreplay", 9542)]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 4226)]
+        [DataRow("assets/scfa/balthazar-03.SCFAReplay", 3999)]
+        public void FormationsAreAQuaternionAndAScaleTest(string file, int expectedFormations)
+        {
+            List<CommandFormation.Formation> formations = Orders(Load(file))
+                .Select(order => order.Data.Formation)
+                .OfType<CommandFormation.Formation>()
+                .ToList();
+
+            Assert.AreEqual(expectedFormations, formations.Count);
+            foreach (CommandFormation.Formation formation in formations)
+            {
+                ReplayOrientation q = formation.Orientation;
+                Assert.AreEqual(1.0, Math.Sqrt(q.W * q.W + q.X * q.X + q.Y * q.Y + q.Z * q.Z), 0.001, formation.ToString());
+                Assert.AreEqual(0f, q.X, 0.001f);
+                Assert.AreEqual(0f, q.Z, 0.001f);
+                Assert.AreEqual(1f, formation.Scale);
+                Assert.IsTrue(formation.ScriptIndex >= 0);
+                Assert.IsTrue(Math.Abs(q.GetHeading()) <= 2 * Math.PI);
+            }
+        }
+
+        /// <summary>
+        /// The fields every measured order leaves at their defaults: no second target, no cells, a
+        /// max count and count of 1. A coordinating command id appears only on attack orders and is a
+        /// command of the same source; an insert-before id is a command of the same source too.
+        /// </summary>
+        [TestMethod]
+        [DataRow("assets/faforever/23225104.fafreplay", 8, 7)]
+        [DataRow("assets/faforever/23225323.fafreplay", 5, 7)]
+        [DataRow("assets/faforever/TestCommands01.fafreplay", 1, 6)]
+        [DataRow("assets/scfa/21stGameOceanScampsV2.SCFAReplay", 0, 12)]
+        public void CoordinatedAttacksAndQueueInsertionsTest(string file, int expectedCoordinated, int expectedInsertions)
+        {
+            List<(int SourceId, CommandData Data)> orders = Orders(Load(file));
+
+            foreach ((int sourceId, CommandData data) in orders)
+            {
+                Assert.AreEqual(sourceId, data.Identifier >> 24, "A command id starts with its source.");
+                Assert.IsInstanceOfType<CommandTarget.None>(data.SecondTarget);
+                Assert.AreEqual(0, data.Cells.Count);
+                Assert.AreEqual((1, 1), (data.MaxCount, data.Count));
+            }
+
+            List<(int SourceId, CommandData Data)> coordinated = orders.Where(order => order.Data.CoordinatingCommandId != -1).ToList();
+            Assert.AreEqual(expectedCoordinated, coordinated.Count);
+            Assert.IsTrue(coordinated.All(order => order.Data.Type == CommandType.IssueAttack));
+            Assert.IsTrue(coordinated.All(order => order.Data.CoordinatingCommandId >> 24 == order.SourceId));
+
+            List<(int SourceId, CommandData Data)> insertions = orders.Where(order => order.Data.InsertBeforeCommandId != -1).ToList();
+            Assert.AreEqual(expectedInsertions, insertions.Count);
+            Assert.IsTrue(insertions.All(order => order.Data.InsertBeforeCommandId >> 24 == order.SourceId));
         }
     }
 }

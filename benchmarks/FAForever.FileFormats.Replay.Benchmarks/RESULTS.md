@@ -140,3 +140,35 @@ Observations:
   laird replays (+6–10%) have standard deviations of that order.
 - An entity id is `(army index << 20) | serial`; serial 0 is the commander, and its first order
   is always the first construction order (pinned by `ReplayCommandsTest`).
+
+## Step 7: framed messages and the engine's command layout (2026-10-11)
+
+Not an optimisation but a correction: every message is now checked against its framed length
+(an Error in its place when it does not decode to exactly that length, an Unknown for a type the
+engine does not know), WarpEntity, SetCommandCells and ExecuteLuaInSim are read in the engine's
+layout, and an order keeps every field (second target as a target, the cell list, the counts).
+Body only, `--filter "*ParseBenchmark.Body*" --inProcess`, before and after back to back.
+
+| Replay | Before | Checks in the loop | Fixed-size messages in the loop, the rest in `DecodeInput` |
+|---|---:|---:|---:|
+| `faforever/23225104.fafreplay` | 11.06 ms / 9,214 KB | 16.17 ms / 9,549 KB | 11.22 ms / 9,548 KB |
+| `faforever/23225323.fafreplay` | 4.76 ms / 3,322 KB | 7.75 ms / 3,516 KB | 5.54 ms / 3,516 KB |
+| `faforever/23225440.fafreplay` | 2.19 ms / 1,698 KB | 2.68 ms / 1,783 KB | 2.25 ms / 1,783 KB |
+| `faforever/23225508.fafreplay` | 0.85 ms / 594 KB | 1.11 ms / 619 KB | 0.87 ms / 619 KB |
+| `faforever/23225685.fafreplay` | 4.92 ms / 3,748 KB | 5.93 ms / 3,892 KB | 5.19 ms / 3,892 KB |
+| `faforever/TestCommands01.fafreplay` | 4.97 ms / 3,558 KB | 6.36 ms / 3,706 KB | 5.72 ms / 3,706 KB |
+| `faforever/gzip/22453414.fafreplay` | 6.8 μs / 30.5 KB | 8.2 μs / 30.8 KB | 6.7 μs / 30.8 KB |
+| `scfa/laird-binary-01.SCFAReplay` | 99.46 ms / 68,780 KB | 102.71 ms / 68,954 KB | 96.48 ms / 68,954 KB |
+| `scfa/laird-binary-02.SCFAReplay` | 44.27 ms / 34,383 KB | 48.92 ms / 34,517 KB | 45.50 ms / 34,517 KB |
+
+Observations:
+
+- **A try/catch and a saved copy of the loop's state around every message cost up to 60%** on the
+  FAF replays, whose streams are mostly Advance and SetCommandSource: the locals of the loop no
+  longer stay in registers.
+- Advance, SetCommandSource and VerifyChecksum have a fixed size, so their length is checked
+  before they are read and they stay in the loop without exception handling; every other message
+  goes through `DecodeInput`, which holds the try/catch. That brings the timings back to within
+  1–15% of before (the largest differences have standard deviations of about 3%).
+- Allocations grow by 2–6%: `CommandData` holds two more references (the second target and the
+  cell list, both shared empty values in practice).

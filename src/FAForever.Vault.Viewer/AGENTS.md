@@ -111,8 +111,8 @@ The Viewer is installable (`wwwroot/manifest.webmanifest`) and starts offline.
   the question mark when the service cannot render the map.
   The FAF API links no map to a game on a generated map, so a search result has none. Its tile is a
   "Show map" button: `Services/Replays/ReplayMapLookup.cs` downloads the start of the replay (a Range
-  request of 64 KB, then 256 KB; `ReplayLoader.TryReadPathToScenario`) and keeps the answer while the
-  app runs. Only on a click, never for a whole page. `GameCard` is an `<article>` with a link that
+  request of 64 KB, then 256 KB; `ReplayLoader.TryReadMapPath`, the `.scmap` path of the header) and
+  keeps the answer while the app runs. Only on a click, never for a whole page. `GameCard` is an `<article>` with a link that
   covers it, since a button inside a link is not allowed; the tile lets clicks through except on its button.
   Replays on disk need none of this: the FAF client writes the real map name in the first line.
 - Faction icons live in `wwwroot/images/factions/` (copied from the FAF game

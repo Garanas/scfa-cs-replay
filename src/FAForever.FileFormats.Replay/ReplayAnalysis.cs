@@ -226,7 +226,7 @@ namespace FAForever.FileFormats.Replay
                 ReplayInput.DecreaseCommandCount => true,
                 ReplayInput.UpdateCommandTarget => true,
                 ReplayInput.UpdateCommandType => true,
-                ReplayInput.UpdateCommandLuaParameters => true,
+                ReplayInput.SetCommandCells => true,
                 ReplayInput.RemoveCommandFromQueue => true,
                 ReplayInput.RequestPause => true,
                 ReplayInput.RequestResume => true,

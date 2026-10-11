@@ -160,7 +160,8 @@ OAuth clients (both public, PKCE):
 
 ## Gotchas
 
-- Player names come from `Replay.Header.Clients[input.SourceId]`; ticks are **10 per second**.
+- Player names come from `Replay.Header.Clients[input.SourceId]`; ticks are **10 per second** (they
+  count the engine's beats, which go on during a pause).
 - `ReplayLoadingStage` is declared in the **global namespace** (not `FAForever.FileFormats.Replay`).
 - `ReplayMetadata` field names are mixed-case on purpose (they mirror the JSON): `uid`, `mapname`,
   `launched_at` (unix seconds), `num_players`, `FeaturedMod`, …

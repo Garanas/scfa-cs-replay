@@ -3,6 +3,8 @@ namespace FAForever.FileFormats.Replay
 {
     /// <summary>
     /// Order of the enumeration is relevant - it maps directly to the byte value that represents the command type in the replay binary file.
+    /// The engine's names (<c>ECmdStreamOp</c> in faf-re) differ in places: Resume (5), SetCommandTarget (16),
+    /// SetCommandType (17), LuaSimCallback (22).
     /// </summary>
     public enum ReplayInputType
     {
@@ -24,7 +26,7 @@ namespace FAForever.FileFormats.Replay
         DecreaseCommandCount = 15,
         UpdateCommandTarget = 16,
         UpdateCommandType = 17,
-        UpdateCommandParameters = 18,
+        SetCommandCells = 18,
         RemoveFromCommandQueue = 19,
         DebugCommand = 20,
         ExecuteLuaInSim = 21,
