@@ -225,6 +225,44 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// The map's own files the export leaves out (by their path in the map's folder): the decal
+        /// sets' masks (pictures named <c>_mask</c> or <c>_mask_&lt;name&gt;</c>), which feed decal-masks
+        /// layers in the editor and which the game never reads; one a decal's texture, a stratum, or a
+        /// Lua file of the map names is written as any other file.
+        /// </summary>
+        public static IReadOnlySet<string> UnexportedMasks(MapDocument document)
+        {
+            HashSet<string> masks = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string path in document.Files.Keys)
+            {
+                if (Workspaces.MapOwnAssets.IsPicture(path) && PartOf(path).Part == DecalSetPart.Mask)
+                {
+                    masks.Add(path);
+                }
+            }
+            if (masks.Count == 0)
+            {
+                return masks;
+            }
+            // what the game reads by name stays
+            IEnumerable<string> named = document.Decals.SelectMany(decal => decal.Textures)
+                .Concat(document.Terrain.Layers.SelectMany(layer => new[] { layer.AlbedoPath, layer.NormalPath }));
+            foreach (string reference in named)
+            {
+                if (Workspaces.MapOwnAssets.InFolder(reference) is string own)
+                {
+                    masks.RemoveWhere(mask => string.Equals(mask, own, StringComparison.OrdinalIgnoreCase));
+                }
+            }
+            string[] scripts = [.. document.Files
+                .Where(file => file.Key.EndsWith(".lua", StringComparison.OrdinalIgnoreCase) || file.Key.EndsWith(".bp", StringComparison.OrdinalIgnoreCase))
+                .Select(file => System.Text.Encoding.UTF8.GetString(file.Value.AsSpan()))
+                .Concat(document.Script is { } script ? [System.Text.Encoding.UTF8.GetString(script.AsSpan())] : [])];
+            masks.RemoveWhere(mask => scripts.Any(text => text.Contains("/" + mask, StringComparison.OrdinalIgnoreCase)));
+            return masks;
+        }
+
+        /// <summary>
         /// The masks of a name the map's decal sets have, by decal: the decal and the game path of
         /// its mask. <paramref name="sets"/> limits it to sets of those names (empty for all).
         /// </summary>

@@ -21,6 +21,7 @@
                                    EmptyText="The mask has no layers."
                                    RemoveHelp="The mask becomes what the other layers make" />
           <controls:SettingList DataContext="{Binding MaskStack.Reference}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).MaskStack.IsReference}" />
+          <controls:SettingList DataContext="{Binding MaskStack.DecalMasks}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).MaskStack.IsDecalMasks}" />
         </StackPanel>
       </StackPanel>
     </Border>

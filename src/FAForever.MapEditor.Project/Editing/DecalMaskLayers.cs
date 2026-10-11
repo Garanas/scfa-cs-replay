@@ -127,7 +127,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         public static MapDocument Follow(MapDocument previous, MapDocument next, IDecalMaskPictures? pictures)
         {
-            if (pictures is null || ReferenceEquals(previous.Decals, next.Decals))
+            if (pictures is null || previous.Decals == next.Decals)
             {
                 return next;
             }
@@ -149,7 +149,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         public static LayerStack Follow(MapDocument previous, MapDocument next, LayerStack stack, IDecalMaskPictures pictures)
         {
-            if (!stack.Layers.Any(layer => layer.Source is DecalMasksSource) || ReferenceEquals(previous.Decals, next.Decals))
+            if (!stack.Layers.Any(layer => layer.Source is DecalMasksSource) || previous.Decals == next.Decals)
             {
                 return stack;
             }

@@ -82,5 +82,5 @@ public static class AssetDrag
     }
 
     private static AssetEntry? Dragged(DragEventArgs e, Func<MainViewModel?> model) =>
-        KeyOf(e.DataTransfer) is string key && model() is { HasMap: true } editor ? editor.Assets.Catalog.Find(key) : null;
+        KeyOf(e.DataTransfer) is string key && model() is { HasMap: true } editor ? editor.Assets.Find(key) : null;
 }

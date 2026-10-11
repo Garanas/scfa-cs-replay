@@ -32,9 +32,13 @@ public sealed class PlaceDecalHandler(MainViewModel model, SelectionViewModel se
         DecalPlaceTool tool = model.DecalPlaceTool;
         string key = request.Key ?? tool.Decal
             ?? throw new InvalidOperationException("Choose a decal to place first (decals.choose), or give its key");
-        if (model.Assets.Catalog.Find(key) is AssetEntry entry && entry.Kind != AssetKind.Decal)
+        if (model.Assets.Find(key) is AssetEntry entry && entry.Kind != AssetKind.Decal)
         {
             throw new ArgumentException($"'{key}' is a {AssetsViewModel.Noun(entry.Kind, 1).ToLowerInvariant()}, not a decal");
+        }
+        if (model.ShownDocument is MapDocument shown && !DecalPlaceTool.IsOnMap(shown, request.X, request.Z))
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.X), $"{request.X}, {request.Z} lies outside the map: a decal's middle lies on it");
         }
         ObjectRef added = default;
         System.Collections.Immutable.ImmutableArray<ObjectRef> all = [];

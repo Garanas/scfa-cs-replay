@@ -99,11 +99,11 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
 
     partial void OnDecalChanged(string? value)
     {
-        Entry = value is null ? null : model.Assets.Catalog.Find(value);
-        Set = value is not null && Entry is null ? DecalSets.Find(model.Assets.Catalog.Entries, model.ShownDocument, value) : null;
+        Entry = value is null ? null : model.Assets.Find(value);
+        Set = value is not null && Entry is null ? DecalSets.Find(model.Assets.AllEntries, model.ShownDocument, value) : null;
         if (Set?.First is string first)
         {
-            Entry = model.Assets.Catalog.Find(first);
+            Entry = model.Assets.Find(first);
         }
         OnPropertyChanged(nameof(Set));
         Aspect = Entry?.Image is string image ? AspectOf(image, model.Logger("Assets")) : Set?.First is string own ? OwnAspect(own) : 1;
@@ -127,6 +127,12 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
         if (Decal is not string key)
         {
             model.Status = "Choose a decal to place first: Choose in the options, Ctrl+P, or a decal on the shelf";
+            return;
+        }
+        if (!IsOnMap(model.ShownDocument, x, z))
+        {
+            // as props and units: a decal's middle lies on the map, so its mirror images do too
+            model.Status = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{x:0.#}, {z:0.#} lies outside the map: click on the map to place the decal");
             return;
         }
         _dragWidth = (float)Width;
@@ -157,7 +163,7 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
         // the decal spans the drag: from the press to the mouse, its centre half way
         _dragWidth = MathF.Max(distance, DecalEdits.SmallestSide);
         _dragHeading = MathF.Atan2(dz, dx);
-        _dragCentre = (_from.X + dx / 2, _from.Z + dz / 2);
+        _dragCentre = ClampToMap(model.ShownDocument!, _from.X + dx / 2, _from.Z + dz / 2);
         Show(key);
     }
 
@@ -178,6 +184,16 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
     }
 
     public bool Accepts(AssetEntry entry) => entry.Kind == AssetKind.Decal;
+
+    /// <summary>
+    /// Whether a place lies on the map (its edges included), where a decal's middle may lie.
+    /// </summary>
+    public static bool IsOnMap(MapDocument document, float x, float z) => x >= 0 && z >= 0 && x <= document.Width && z <= document.Height;
+
+    /// <summary>
+    /// The nearest place on the map: a dragged decal's middle stays on it.
+    /// </summary>
+    public static (float X, float Z) ClampToMap(MapDocument document, float x, float z) => (Math.Clamp(x, 0, document.Width), Math.Clamp(z, 0, document.Height));
 
     /// <summary>
     /// A decal dropped from the shelf becomes the chosen one and is placed where it fell.
@@ -203,7 +219,7 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
         float cutOff = cutOffLod ?? (float)CutOffLod;
         // a decal set's name (no texture of that key): one decal carrying all the set's textures
         DecalSetAssets? set = key == Decal ? Set
-            : model.Assets.Catalog.Find(key) is null ? DecalSets.Find(model.Assets.Catalog.Entries, document, key) : null;
+            : model.Assets.Find(key) is null ? DecalSets.Find(model.Assets.AllEntries, document, key) : null;
         return set is not null
             ? DecalEdits.NewDecalSet(document.Terrain.Heightmap, set, x, z, wide, length ?? wide * aspect, turn, cutOff)
             : DecalEdits.NewDecal(document.Terrain.Heightmap, key, x, z, wide, length ?? wide * aspect, turn, cutOff);

@@ -1,4 +1,5 @@
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Workspaces;
 using MediatR;
 
@@ -43,7 +44,16 @@ public sealed class PickAssetHandler(MainViewModel model, AssetsViewModel assets
             model.Status = "Chose nothing";
             return null;
         }
-        AssetEntry entry = assets.Catalog.Find(chosen) ?? throw new ArgumentException($"The workspace has no asset '{chosen}'");
+        // a decal set's name, as the picker answers for a set's tile (D-1): the whole set is chosen
+        if (kind == AssetKind.Decal && assets.Find(chosen) is null
+            && DecalSets.Find(assets.AllEntries, model.ShownDocument, chosen) is DecalSetAssets set)
+        {
+            assets.SelectSet(set);
+            assets.NoteUsed(set.First ?? set.Name);
+            model.Status = $"Chose the decal set {Path.GetFileName(set.Name)} ({set.Summary})";
+            return set.Name;
+        }
+        AssetEntry entry = assets.Find(chosen) ?? throw new ArgumentException($"The workspace has no asset '{chosen}'");
         if (entry.Kind != kind && !anyKind)
         {
             throw new ArgumentException($"'{chosen}' is a {AssetsViewModel.Noun(entry.Kind, 1).ToLowerInvariant()}, not a {AssetsViewModel.Noun(kind, 1).ToLowerInvariant()}");

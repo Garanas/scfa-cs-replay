@@ -87,7 +87,7 @@ public sealed partial class MainViewModel
             {
                 return Decals.HiddenDecals;
             }
-            if (_hiddenDecalsOf is { } made && ReferenceEquals(made.Document.Decals, document.Decals) && ReferenceEquals(made.Groups, Decals.HiddenDecals) && made.Isolated == Isolated)
+            if (_hiddenDecalsOf is { } made && made.Document.Decals == document.Decals && ReferenceEquals(made.Groups, Decals.HiddenDecals) && made.Isolated == Isolated)
             {
                 return made.Hidden;
             }

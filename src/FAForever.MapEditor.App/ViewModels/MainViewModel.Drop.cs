@@ -42,7 +42,7 @@ public sealed partial class MainViewModel
     /// <exception cref="ArgumentException">The workspace has no such asset.</exception>
     public bool DropAsset(string key, float x, float z)
     {
-        AssetEntry entry = Assets.Catalog.Find(key) ?? throw new ArgumentException($"The workspace has no asset '{key}'");
+        AssetEntry entry = Assets.Find(key) ?? throw new ArgumentException($"The workspace has no asset '{key}'");
         AssetDropEventArgs drop = new AssetDropEventArgs(entry, x, z);
         if (ActiveTool?.Tool is IAssetDropTarget target && target.Accepts(entry))
         {

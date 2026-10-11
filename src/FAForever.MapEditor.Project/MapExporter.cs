@@ -81,12 +81,16 @@ namespace FAForever.MapEditor.Project
         }
 
         /// <summary>
-        /// The map's own files; for a map whose adaptive files the export writes (user story R-5,
-        /// <see cref="AdaptiveScript.Writes"/>) with its <c>_options.lua</c> and <c>_tables.lua</c>.
+        /// The map's own files, without its decal sets' masks (<see cref="Editing.DecalSets.UnexportedMasks"/>:
+        /// they feed decal-masks layers and the game never reads them); for a map whose adaptive files the
+        /// export writes (user story R-5, <see cref="AdaptiveScript.Writes"/>) with its <c>_options.lua</c>
+        /// and <c>_tables.lua</c>.
         /// </summary>
         private static Dictionary<string, byte[]> FilesOf(MapDocument document)
         {
-            Dictionary<string, byte[]> files = document.Files.ToDictionary(entry => entry.Key, entry => ImmutableCollectionsMarshal.AsArray(entry.Value)!);
+            IReadOnlySet<string> masks = Editing.DecalSets.UnexportedMasks(document);
+            Dictionary<string, byte[]> files = document.Files.Where(entry => !masks.Contains(entry.Key))
+                .ToDictionary(entry => entry.Key, entry => ImmutableCollectionsMarshal.AsArray(entry.Value)!);
             if (AdaptiveScript.Writes(document))
             {
                 files[$"{document.FileName}_options.lua"] = MapImporter.LuaEncoding.GetBytes(AdaptiveScript.Options(document));

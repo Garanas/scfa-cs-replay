@@ -52,7 +52,7 @@ public static class Menus
             "map.mode", Separator,
             "map.information", "map.armies", "map.addArea", Separator,
             "map.addArmy", Separator,
-            "map.resize", Separator,
+            "map.resize", "map.addFiles", Separator,
             .. ToolsOf("map"),
         ]),
         new MenuLayout("Modes",

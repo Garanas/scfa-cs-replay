@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.App.Diagnostics;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.ViewModels;
@@ -185,7 +186,7 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
     {
         get
         {
-            int all = catalog().Entries.Count(entry => entry.Kind == Kind);
+            int all = Entries.Count(entry => entry.Kind == Kind);
             string noun = AssetsViewModel.Noun(Kind, all).ToLowerInvariant();
             return Tiles.Count == all ? $"{all} {noun}" : $"{Tiles.Count} of {all} {noun}";
         }
@@ -216,7 +217,7 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
         Show = null;
         _rebuilding = false;
         Rebuild();
-        if (current is not null && catalog().Find(current) is AssetEntry entry && Tiles.FirstOrDefault(tile => tile.Entry == entry) is AssetTile tile)
+        if (current is not null && Find(current) is AssetEntry entry && Tiles.FirstOrDefault(tile => tile.Members.Contains(entry)) is AssetTile tile)
         {
             Select(tile);
         }
@@ -233,9 +234,17 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
     {
         if (Selected is AssetTile tile)
         {
-            Close(tile.Entry.Key);
+            // a decal set's tile chooses the whole set, by its name (D-1)
+            Close(tile.Set?.Name ?? tile.Entry.Key);
         }
     }
+
+    /// <summary>
+    /// The assets to choose from: the workspace's, and the open map's own (the shelf's <see cref="AssetsViewModel.MapEntries"/>).
+    /// </summary>
+    private IEnumerable<AssetEntry> Entries => Shelf is AssetsViewModel shelf && shelf.MapEntries.Count > 0 ? catalog().Entries.Concat(shelf.MapEntries) : catalog().Entries;
+
+    private AssetEntry? Find(string key) => catalog().Find(key) ?? (Shelf?.MapEntries is { Count: > 0 } own ? MapOwnAssets.Find(own, key) : null);
 
     /// <summary>
     /// Chooses a tile, as a double click does.
@@ -376,7 +385,7 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
         using Performance.Span measure = Performance.Measure("assets.pick-filter");
         string[] words = AssetSearch.Words(Query);
         AssetFavourites? favourites = Shelf?.Favourites;
-        List<AssetEntry> matching = [.. catalog().Entries.Where(entry => entry.Kind == Kind && AssetSearch.Matches(entry, words))];
+        List<AssetEntry> matching = [.. Entries.Where(entry => entry.Kind == Kind && AssetSearch.Matches(entry, words))];
         Shows = favourites is null ? [] :
         [
             new AssetChoice(Starred, "Starred", matching.Count(entry => favourites.IsStarred(entry.Key)), Show == Starred),
@@ -411,8 +420,28 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
             .Select(tech => new AssetChoice(tech.Key, AssetSearch.TechTitle(tech.First().TechLevel), tech.Count(), tech.Key == Tech))];
 
         AssetEntry? selected = Selected?.Entry;
-        Tiles = [.. AssetSearch.Sorted(ofKind.Where(entry => InGroup(entry) && InCategory(entry) && InTech(entry)), CanSort ? Sort : AssetSort.Listed)
-            .Select(entry => new AssetTile(entry, [entry]) { IsStarred = favourites?.IsStarred(entry.Key) == true })];
+        bool selectedSet = Selected?.IsSet == true;
+        IEnumerable<AssetEntry> shown = AssetSearch.Sorted(ofKind.Where(entry => InGroup(entry) && InCategory(entry) && InTech(entry)), CanSort ? Sort : AssetSort.Listed);
+        if (Kind == AssetKind.Decal)
+        {
+            // a decal set is one tile, its albedo's picture, chosen as a whole (D-1); its textures alone as tiles of their own besides
+            Dictionary<string, DecalSetAssets> sets = DecalSets.Of(Entries).ToDictionary(set => set.Name, StringComparer.Ordinal);
+            List<AssetTile> tiles = [];
+            foreach (IGrouping<string, AssetEntry> family in shown.GroupBy(entry => DecalSets.PartOf(entry.Key).Name, StringComparer.Ordinal))
+            {
+                if (sets.TryGetValue(family.Key, out DecalSetAssets? set))
+                {
+                    AssetEntry[] members = [.. family.OrderBy(entry => DecalSets.PartOf(entry.Key).Part == DecalSetPart.Albedo ? 0 : 1)];
+                    tiles.Add(new AssetTile(members[0], members, set) { IsStarred = members.Any(member => favourites?.IsStarred(member.Key) == true) });
+                }
+                tiles.AddRange(family.Select(entry => new AssetTile(entry, [entry]) { IsStarred = favourites?.IsStarred(entry.Key) == true }));
+            }
+            Tiles = tiles;
+        }
+        else
+        {
+            Tiles = [.. shown.Select(entry => new AssetTile(entry, [entry]) { IsStarred = favourites?.IsStarred(entry.Key) == true })];
+        }
         MakeRows();
 
         OnPropertyChanged(nameof(Groups));
@@ -425,7 +454,7 @@ public sealed partial class AssetPickerViewModel(Func<AssetCatalog> catalog) : O
         OnPropertyChanged(nameof(EmptyText));
         OnPropertyChanged(nameof(Summary));
 
-        Select(Tiles.FirstOrDefault(tile => tile.Entry == selected) ?? Tiles.FirstOrDefault());
+        Select(Tiles.FirstOrDefault(tile => tile.Entry == selected && tile.IsSet == selectedSet) ?? Tiles.FirstOrDefault(tile => tile.Entry == selected) ?? Tiles.FirstOrDefault());
     }
 
     private void MakeRows()

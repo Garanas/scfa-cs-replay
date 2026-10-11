@@ -12,7 +12,8 @@ namespace FAForever.MapEditor.App.Commands;
 /// </summary>
 /// <param name="Layer">The layer; left out, the chosen one.</param>
 /// <param name="Mask"><c>main</c> for the plain <c>_mask</c>, else the name after <c>_mask_</c>.</param>
-/// <param name="Sets">The sets by name (<c>/env/rocky/decals/rock01</c>) separated by commas; empty for every set.</param>
+/// <param name="Sets">The sets by name (<c>/env/rocky/decals/rock01</c>, or a placed set's short name <c>rock01</c>)
+/// separated by commas; empty or <c>Every set</c> for every set.</param>
 /// <param name="Height">In game units at a full mask.</param>
 [EditorCommand("terrain.setDecalMasks", "Set a decal-masks layer", Story = "D-1", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record SetDecalMasksLayer(string? Layer = null, string? Mask = null, string? Sets = null, float? Height = null) : IRequest;
@@ -27,9 +28,7 @@ public sealed class SetDecalMasksLayerHandler(MainViewModel model) : IRequestHan
             throw new ArgumentException($"The height layer {layer.Name} does not draw decal masks");
         }
         string mask = request.Mask?.Trim().ToLowerInvariant() is { Length: > 0 } named ? named : source.Mask;
-        ImmutableArray<string> sets = request.Sets is string list
-            ? [.. list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(DecalEdits.TexturePath)]
-            : source.Sets;
+        ImmutableArray<string> sets = request.Sets is string list ? DecalMaskArguments.Sets(model.ShownDocument, list) : source.Sets;
         DecalMasksSource changed = new DecalMasksSource(mask, sets, request.Height ?? source.Height);
         model.EditMap($"Set the height layer {layer.Name}", document =>
             document with { HeightStack = DecalMaskLayers.SetSource(document, document.HeightStack, layer.Name, changed, model.DecalPictures) });
@@ -46,7 +45,8 @@ public sealed class SetDecalMasksLayerHandler(MainViewModel model) : IRequestHan
 /// <param name="Target">The grid (a mask by name, <c>stratum:2</c>, a water map); left out, the one the mode shows.</param>
 /// <param name="Layer">The layer; left out, the chosen one.</param>
 /// <param name="Mask"><c>main</c> for the plain <c>_mask</c>, else the name after <c>_mask_</c>.</param>
-/// <param name="Sets">The sets by name (<c>/env/rocky/decals/rock01</c>) separated by commas; empty for every set.</param>
+/// <param name="Sets">The sets by name (<c>/env/rocky/decals/rock01</c>, or a placed set's short name <c>rock01</c>)
+/// separated by commas; empty or <c>Every set</c> for every set.</param>
 [EditorCommand("layers.setDecalMasks", "Set a decal-masks layer of a mask, stratum or water map", Story = "D-1", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record SetCoverageDecalMasks(string? Target = null, string? Layer = null, string? Mask = null, string? Sets = null) : IRequest;
 
@@ -61,9 +61,7 @@ public sealed class SetCoverageDecalMasksHandler(MainViewModel model) : IRequest
             throw new ArgumentException($"The layer {layer.Name} does not draw decal masks");
         }
         string mask = request.Mask?.Trim().ToLowerInvariant() is { Length: > 0 } named ? named : source.Mask;
-        ImmutableArray<string> sets = request.Sets is string list
-            ? [.. list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(DecalEdits.TexturePath)]
-            : source.Sets;
+        ImmutableArray<string> sets = request.Sets is string list ? DecalMaskArguments.Sets(model.ShownDocument, list) : source.Sets;
         DecalMasksSource changed = new DecalMasksSource(mask, sets);
         model.EditMap($"Set the layer {layer.Name} of {CoverageLayerArguments.Title(target)}", document =>
         {
@@ -73,5 +71,29 @@ public sealed class SetCoverageDecalMasksHandler(MainViewModel model) : IRequest
         model.CoverageStackOf(target)?.Refresh(model.ShownDocument);
         model.Status = $"The layer {layer.Name} draws the {LayerStackViewModel.DecalMasksSummary(changed)}";
         return Task.CompletedTask;
+    }
+}
+
+/// <summary>
+/// The decal sets a decal-masks command names.
+/// </summary>
+internal static class DecalMaskArguments
+{
+    /// <summary>
+    /// The sets of a list separated by commas as a layer keeps them (game paths): a placed set's short
+    /// name (<c>rock01</c>) is that set's path; empty, or <c>Every set</c>, for every set.
+    /// </summary>
+    public static ImmutableArray<string> Sets(MapDocument? document, string list)
+    {
+        string[] names = list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (names.Length == 0 || names.Any(name => string.Equals(name, CoverageStackViewModel.EverySet, StringComparison.OrdinalIgnoreCase)))
+        {
+            return [];
+        }
+        string[] placed = document is null ? [] : [.. document.Decals.Select(decal => decal.Set?.Name).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)];
+        return [.. names.Select(name => name.Contains('/')
+            ? DecalEdits.TexturePath(name)
+            : placed.FirstOrDefault(set => string.Equals(Path.GetFileName(set), name, StringComparison.OrdinalIgnoreCase))
+                ?? throw new ArgumentException($"No placed decal set is named {name}: give a set's path (/env/rocky/decals/rock01) or the name of a placed one"))];
     }
 }

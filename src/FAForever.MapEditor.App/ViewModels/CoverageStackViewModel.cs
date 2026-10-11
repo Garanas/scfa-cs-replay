@@ -26,6 +26,7 @@ public sealed partial class CoverageStackViewModel : LayerStackViewModel
     private readonly Func<LayerTarget?> _target;
     private readonly Func<string, JsonObject, Task> _run;
     private string _referenceChoices = "";
+    private string _decalChoices = "";
 
     /// <param name="target">The grid shown now; null for none (no mask chosen).</param>
     /// <param name="word">What a layer is called in labels: <c>mask layer</c>.</param>
@@ -41,7 +42,20 @@ public sealed partial class CoverageStackViewModel : LayerStackViewModel
         _target = target;
         _run = run;
         Reference = MakeReference([]);
+        DecalMasks = MakeDecalMasks([], []);
     }
+
+    /// <summary>
+    /// What the chosen decal-masks layer draws (user story D-1, decision 3): which named mask of each
+    /// placed decal set (<c>main</c>, <c>moss</c>), and of which sets (every set, or one).
+    /// </summary>
+    [ObservableProperty]
+    public partial SettingGroup DecalMasks { get; private set; }
+
+    /// <summary>
+    /// Whether the chosen layer draws the masks of the placed decal sets.
+    /// </summary>
+    public bool IsDecalMasks => ChosenLayer?.Source is DecalMasksSource;
 
     /// <summary>
     /// The grid shown now.
@@ -94,6 +108,15 @@ public sealed partial class CoverageStackViewModel : LayerStackViewModel
             Reference = MakeReference(Document is null ? [] : ReferenceChoices(Document));
         }
         Reference.Refresh(IsReference ? Document : null);
+        (IReadOnlyList<string> masks, IReadOnlyList<string> sets) = Document is null ? ([], []) : DecalChoices(Document);
+        string decalChoices = string.Join("|", masks) + "/" + string.Join("|", sets);
+        if (decalChoices != _decalChoices)
+        {
+            _decalChoices = decalChoices;
+            DecalMasks = MakeDecalMasks(masks, sets);
+        }
+        DecalMasks.Refresh(IsDecalMasks ? Document : null);
+        OnPropertyChanged(nameof(IsDecalMasks));
         OnPropertyChanged(nameof(IsReference));
         OnPropertyChanged(nameof(IsRules));
     }
@@ -116,6 +139,47 @@ public sealed partial class CoverageStackViewModel : LayerStackViewModel
             },
             new NumberSetting("Threshold", "layers.set", "threshold", d => Of(d).Threshold, _run, Fixed) { Minimum = 0, Maximum = 1, HasSlider = true, Help = "Below this the mask counts as nothing" },
             new BoolSetting("Inverted", "layers.set", "invert", d => Of(d).Invert, _run, Fixed) { Help = "Where the mask is not" },
+        ]);
+    }
+
+    /// <summary>
+    /// The value of the decal sets' choice that draws the masks of every set.
+    /// </summary>
+    public const string EverySet = "Every set";
+
+    /// <summary>
+    /// The names of masks the placed decal sets have (<c>main</c> first), and the placed sets by their
+    /// short name (<c>rock01</c>).
+    /// </summary>
+    public static (IReadOnlyList<string> Masks, IReadOnlyList<string> Sets) DecalChoices(MapDocument document)
+    {
+        IReadOnlyList<string> placed = DecalMaskLayers.MaskNamesOf(document);
+        IReadOnlyList<string> masks = [DecalSets.MainMask, .. placed.Where(name => name != DecalSets.MainMask)];
+        IReadOnlyList<string> sets = [EverySet, .. document.Decals.Where(decal => decal.Set is not null)
+            .Select(decal => Path.GetFileName(decal.Set!.Name)).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase)];
+        return (masks, sets);
+    }
+
+    /// <summary>
+    /// A decal-masks layer's sets as the choice shows them: <see cref="EverySet"/>, or their short names.
+    /// </summary>
+    public static string SetsTitle(DecalMasksSource source) =>
+        source.Sets.IsEmpty ? EverySet : string.Join(", ", source.Sets.Select(set => Path.GetFileName(set)));
+
+    private SettingGroup MakeDecalMasks(IReadOnlyList<string> masks, IReadOnlyList<string> sets)
+    {
+        JsonObject Fixed() => new JsonObject { [Commands.LayerArgument] = Chosen };
+        DecalMasksSource Of(MapDocument d) => _read(d)?.Find(Chosen)?.Source as DecalMasksSource ?? DecalMasksSource.Every;
+        return new SettingGroup("Decal masks",
+        [
+            new ChoiceSetting("Mask", "layers.setDecalMasks", "mask", masks, d => Of(d).Mask, _run, Fixed)
+            {
+                Help = "Which mask of each decal set it draws: main for the plain _mask, else the name after _mask_ (moss of rock01_mask_moss)",
+            },
+            new ChoiceSetting("Decal sets", "layers.setDecalMasks", "sets", sets, d => SetsTitle(Of(d)), _run, Fixed)
+            {
+                Help = "Whose masks it draws: every placed decal set, or the placed decals of one set",
+            },
         ]);
     }
 
