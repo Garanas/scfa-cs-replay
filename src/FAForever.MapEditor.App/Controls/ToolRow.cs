@@ -33,6 +33,13 @@ public sealed class ToolRow : Panel
     public static readonly StyledProperty<Thickness> OverflowPaddingProperty =
         AvaloniaProperty.Register<ToolRow, Thickness>(nameof(OverflowPadding));
 
+    /// <summary>
+    /// How far below the row the settings that overflow (and the box behind them) start: the height
+    /// of the bar that lies under the row and must stay reachable while they show.
+    /// </summary>
+    public static readonly StyledProperty<double> OverflowOffsetProperty =
+        AvaloniaProperty.Register<ToolRow, double>(nameof(OverflowOffset));
+
     private readonly ToggleButton _more = new ToggleButton();
     // behind the settings that do not fit, while they show (Border.tooloverflow)
     private readonly Border _box = new Border
@@ -47,7 +54,7 @@ public sealed class ToolRow : Panel
 
     static ToolRow()
     {
-        AffectsMeasure<ToolRow>(SpacingProperty, OverflowPaddingProperty);
+        AffectsMeasure<ToolRow>(SpacingProperty, OverflowPaddingProperty, OverflowOffsetProperty);
         IsExpandedProperty.Changed.AddClassHandler<ToolRow>((row, _) => row.OnExpandedChanged());
     }
 
@@ -78,6 +85,12 @@ public sealed class ToolRow : Panel
     {
         get => GetValue(IsExpandedProperty);
         set => SetValue(IsExpandedProperty, value);
+    }
+
+    public double OverflowOffset
+    {
+        get => GetValue(OverflowOffsetProperty);
+        set => SetValue(OverflowOffsetProperty, value);
     }
 
     public Thickness OverflowPadding
@@ -192,7 +205,7 @@ public sealed class ToolRow : Panel
 
         // the settings that do not fit: rows of the same height below the row, over the views
         Thickness pad = OverflowPadding;
-        double left = pad.Left, top = height + pad.Top, right = finalSize.Width - pad.Right;
+        double left = pad.Left, top = height + OverflowOffset + pad.Top, right = finalSize.Width - pad.Right;
         double rowX = left, rowY = top;
         foreach (Control item in Items.Where(_overflow.Contains))
         {
@@ -218,7 +231,7 @@ public sealed class ToolRow : Panel
             boxRight = bar.Bounds.Width - at.X;
         }
         _box.Measure(Size.Infinity);
-        _box.Arrange(_overflow.Count == 0 ? default : new Rect(boxLeft, height, boxRight - boxLeft, rowY + pad.Bottom));
+        _box.Arrange(_overflow.Count == 0 ? default : new Rect(boxLeft, height + OverflowOffset, boxRight - boxLeft, rowY + pad.Bottom - OverflowOffset));
         return finalSize;
     }
 

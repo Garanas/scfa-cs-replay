@@ -479,6 +479,10 @@ public sealed partial class AutomationServer
         Size size = window.Bounds.Size;
         using RenderTargetBitmap whole = new RenderTargetBitmap(new PixelSize(Math.Max(1, (int)(size.Width * scale)), Math.Max(1, (int)(size.Height * scale))), new Vector(96 * scale, 96 * scale));
         whole.Render(window);
+        if (TopLevel.GetTopLevel(control) is Window host && Windows.Contains(host))
+        {
+            DrawPopups(whole, scale);
+        }
         PixelSize pixels = new PixelSize(Math.Max(1, (int)(place.Width * scale)), Math.Max(1, (int)(place.Height * scale)));
         using RenderTargetBitmap cut = new RenderTargetBitmap(pixels, new Vector(96 * scale, 96 * scale));
         using (Avalonia.Media.DrawingContext context = cut.CreateDrawingContext())

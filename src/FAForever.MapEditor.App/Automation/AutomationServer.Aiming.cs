@@ -103,39 +103,6 @@ public sealed partial class AutomationServer
     }
 
     /// <summary>
-    /// The popups open over the editor's windows (a combo box's list, a menu, the options row's More,
-    /// a context menu): screenshots do not show them, yet a click elsewhere first closes them. Null
-    /// when none is open (<c>key key=Escape</c> closes one).
-    /// </summary>
-    private JsonArray? PopupsState()
-    {
-        JsonArray open = [];
-        foreach (Window each in Windows)
-        {
-            foreach (Control control in each.GetVisualDescendants().OfType<Control>())
-            {
-                string? what = control switch
-                {
-                    ComboBox { IsDropDownOpen: true } box => $"the list of {Describe(box)}",
-                    MenuItem { IsSubMenuOpen: true } item => $"the menu {Describe(item)}",
-                    ToolRow { IsExpanded: true } row => $"More of {(Avalonia.Automation.AutomationProperties.GetName(row) is { Length: > 0 } name ? name : row.Name is { Length: > 0 } named ? named : "the tool's options row")}",
-                    Avalonia.Controls.Primitives.Popup { IsOpen: true } popup when popup.TemplatedParent is not (ComboBox or MenuItem) => $"a popup in {Describe(popup.Parent as Visual ?? popup)}",
-                    _ => null,
-                };
-                if (what is not null)
-                {
-                    open.Add(what);
-                }
-            }
-            if (each.ContextMenu is { IsOpen: true })
-            {
-                open.Add("a context menu");
-            }
-        }
-        return open.Count == 0 ? null : open;
-    }
-
-    /// <summary>
     /// The item of a tree or list, or the button, a control lies in: what a click on it reaches.
     /// </summary>
     private static Control? ItemAround(Control control) =>

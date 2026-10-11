@@ -279,7 +279,7 @@ public static class UiTree
         || control is ListBoxItem item && !item.GetVisualDescendants().Any(inner => inner is Button or ToggleButton or TextBox or Slider or ComboBox)
         || control is MenuItem { ItemCount: 0 };
 
-    private static string? TextOf(Control control)
+    internal static string? TextOf(Control control)
     {
         string? text = control switch
         {

@@ -81,8 +81,10 @@ public sealed partial class AutomationServer
         int index = arguments["index"]?.GetValue<int>() ?? 0;
         // in the editor's window or a floating panel's (user story V-4)
         Visual? under = UnderOf(arguments);
-        List<Control> matches = [.. (under is not null ? [under] : Windows.Cast<Visual>())
+        // what is open over them counts too: a context menu's or a flyout's item is clicked in the popup's own window
+        List<Control> matches = [.. (under is not null ? [under] : Windows.Cast<Visual>().Concat(OpenPopups().Select(popup => popup.Content).OfType<Visual>()))
             .SelectMany(root => UiTree.FindAll(root, label))
+            .Distinct()
             .Where(each => type is null || UiTree.IsOfType(each, type))];
         if (matches.Count == 0)
         {

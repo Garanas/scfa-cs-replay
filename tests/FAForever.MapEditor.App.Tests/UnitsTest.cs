@@ -75,7 +75,7 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = await Open();
             UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
-            Assert.AreEqual("NEUTRAL_CIVILIAN", tool.Army, "civilians, the units maps place most");
+            Assert.AreEqual("ARMY_5", tool.Army, "the playable army whose spawn lies nearest the map's middle");
             Assert.AreEqual(UnitGroupEdits.InitialGroup, tool.Group);
 
             tool.Press(40, 60);
@@ -87,7 +87,7 @@ namespace FAForever.MapEditor.App.Tests
             tool.Press(40.3f, 60.7f);
             tool.Release();
             PlacedUnit placed = model.ShownDocument!.FindUnit("UNIT_1")!;
-            Assert.AreEqual(("NEUTRAL_CIVILIAN", "INITIAL"), (placed.Army, UnitGroupEdits.PathText(placed.Group)));
+            Assert.AreEqual(("ARMY_5", "INITIAL"), (placed.Army, UnitGroupEdits.PathText(placed.Group)));
             Assert.AreEqual((40.5f, 61f), (placed.Unit.Position.X, placed.Unit.Position.Z), "3 wide on a half ogrid, 2 deep on a whole one");
             Assert.AreEqual(model.ShownDocument.Terrain.Heightmap.HeightAt(40.5f, 61), placed.Unit.Position.Y, 1e-4, "on the terrain");
             Assert.AreEqual("Place a unit", model.Map!.Session.UndoDescription);

@@ -212,7 +212,7 @@ public sealed class AddManyUnitsHandler(MainViewModel model, AssetsViewModel ass
         selection.Set(placed);
         string what = $"{MainViewModel.Units(names.Length)} ({entry?.Name ?? id})";
         edit.Transaction.Description = $"Place {what} {how}".TrimEnd();
-        model.Status = $"Placed {what} for {army}{(wreck ? " as wrecks" : "")} {how}{MainViewModel.Mirrored(placed.Length - names.Length + 1)}{(outside > 0 ? $"; {outside} left out beyond the map's edge" : "")}".Replace("  ", " ");
+        model.Status = $"Placed {what} {UnitCommands.Where(army, group, true)} {how}{MainViewModel.Mirrored(placed.Length - names.Length + 1)}{(outside > 0 ? $"; {outside} left out beyond the map's edge" : "")}".Replace("  ", " ");
         if (outside > 0)
         {
             model.Logger("Editor").LogInformation("{Outside} of the units to place lay outside the map and were left out", outside);

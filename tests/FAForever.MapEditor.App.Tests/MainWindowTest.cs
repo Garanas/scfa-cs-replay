@@ -930,7 +930,7 @@ namespace FAForever.MapEditor.App.Tests
             model.SelectTool("units.place");
             await model.Commands.RunAsync("units.pick", new JsonObject { ["key"] = "uel0101" }, interactive: false);
             Dispatcher.UIThread.RunJobs();
-            TextBlock title = window.GetVisualDescendants().OfType<TextBlock>().First(block => block.Text == "Snoop (uel0101)");
+            TextBlock title = window.GetVisualDescendants().OfType<TextBlock>().First(block => block.Text == "Snoop");
             Assert.IsTrue(title.IsEffectivelyVisible, "the options bar says what a click places");
 
             Point at = Middle(window.MapView, window);
@@ -943,12 +943,12 @@ namespace FAForever.MapEditor.App.Tests
             PlacedUnit unit = model.ShownDocument!.FindUnit("UNIT_1")!;
             Assert.AreEqual(place.X, unit.Unit.Position.X, 0.01, "where the mouse is");
             Assert.AreEqual(place.Y, unit.Unit.Position.Z, 0.01);
-            Assert.AreEqual(("NEUTRAL_CIVILIAN", 2), (unit.Army, model.History.Count), "for the civilians, one step");
+            Assert.AreEqual(("ARMY_5", 2), (unit.Army, model.History.Count), "for the army of the nearest spawn, one step");
 
             TreeView tree = window.GetVisualDescendants().OfType<TreeView>().Single(view => Avalonia.Automation.AutomationProperties.GetName(view) == "Armies and their unit groups");
             Assert.IsTrue(tree.IsEffectivelyVisible, "the Units mode's panel shows the armies");
             List<string?> texts = [.. tree.GetVisualDescendants().OfType<TextBlock>().Select(block => block.Text)];
-            CollectionAssert.Contains(texts, "NEUTRAL_CIVILIAN");
+            CollectionAssert.Contains(texts, "ARMY_5");
             CollectionAssert.Contains(texts, "1 unit", "the count as the entry's detail");
             window.Close();
         });

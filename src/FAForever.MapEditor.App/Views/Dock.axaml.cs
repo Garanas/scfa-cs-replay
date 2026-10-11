@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using FAForever.MapEditor.App.ViewModels;
 
 namespace FAForever.MapEditor.App.Views;
@@ -62,7 +63,15 @@ public sealed partial class Dock : UserControl
     /// </summary>
     private bool AtTheEnd() => ConsoleList.Scroll is not { } scroll || scroll.Offset.Y + scroll.Viewport.Height >= scroll.Extent.Height - 4;
 
-    // a double click or Enter on a problem goes to its place (user story F-14)
+    // a click on a problem selects its things, a double click or Enter goes to its place too (user story F-14)
+    private void OnProblemTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Source is Avalonia.Visual source && source.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not null)
+        {
+            ShowSelectedProblem(frame: false);
+        }
+    }
+
     private void OnProblemDoubleTapped(object? sender, TappedEventArgs e) => ShowSelectedProblem();
 
     private void OnProblemKeyDown(object? sender, KeyEventArgs e)
@@ -73,13 +82,13 @@ public sealed partial class Dock : UserControl
         }
     }
 
-    private bool ShowSelectedProblem()
+    private bool ShowSelectedProblem(bool frame = true)
     {
         if (_model is null || ProblemList.SelectedIndex < 0)
         {
             return false;
         }
-        _ = _model.RunWithAsync("problems.show", new JsonObject { ["index"] = ProblemList.SelectedIndex });
+        _ = _model.RunWithAsync("problems.show", new JsonObject { ["index"] = ProblemList.SelectedIndex, ["frame"] = frame });
         return true;
     }
 

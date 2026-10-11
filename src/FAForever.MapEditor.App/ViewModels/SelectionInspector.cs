@@ -226,6 +226,22 @@ public sealed partial class SelectionInspector : ObservableObject
     }
 
     /// <summary>
+    /// Tells the window to show a field's value again once the edit that came from typing in it is
+    /// done: an edit that leaves the value as it was (the mixed sign) raises no change of its own,
+    /// so the text typed would stay.
+    /// </summary>
+    private async Task ShowAfter(Task edit, string property)
+    {
+        try
+        {
+            await edit;
+        }
+        finally
+        {
+            OnPropertyChanged(property);
+        }
+    }
+    /// <summary>
     /// A value typed into a field: a number goes to every selected thing; anything else (the mixed
     /// sign, nothing, a typo) changes nothing and the field shows its value again.
     /// </summary>
@@ -245,7 +261,7 @@ public sealed partial class SelectionInspector : ObservableObject
             OnPropertyChanged(property);
             return;
         }
-        _ = _run("edit.place", new JsonObject { [argument] = number });
+        _ = ShowAfter(_run("edit.place", new JsonObject { [argument] = number }), property);
     }
 }
 
@@ -268,6 +284,22 @@ public abstract partial class SelectionSection : ObservableObject
     /// </summary>
     public Func<string, JsonObject, Task> Run { get; internal set; } = (_, _) => Task.CompletedTask;
 
+    /// <summary>
+    /// Tells the window to show a field's value again once the edit that came from typing in it is
+    /// done: an edit that leaves the value as it was (the mixed sign) raises no change of its own,
+    /// so the text typed would stay.
+    /// </summary>
+    protected async Task ShowAfter(Task edit, string property)
+    {
+        try
+        {
+            await edit;
+        }
+        finally
+        {
+            OnPropertyChanged(property);
+        }
+    }
     public abstract ObjectKind Kind { get; }
 
 
@@ -448,7 +480,7 @@ public sealed partial class PropSelection : SelectionSection
             OnPropertyChanged(property);
             return;
         }
-        _ = Owner.Run(command, new JsonObject { [argument] = number });
+        _ = ShowAfter(Owner.Run(command, new JsonObject { [argument] = number }), property);
     }
 }
 
@@ -557,7 +589,7 @@ public sealed class DecalSelection : SelectionSection
             OnPropertyChanged(property);
             return;
         }
-        _ = Run(command, new JsonObject { [argument] = number });
+        _ = ShowAfter(Run(command, new JsonObject { [argument] = number }), property);
     }
 }
 

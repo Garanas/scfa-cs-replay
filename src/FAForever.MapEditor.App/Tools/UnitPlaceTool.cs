@@ -129,7 +129,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// The unit it places, from the picker or the shelf; null until one is chosen.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(HasUnit), nameof(UsesSpacing))]
+    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(UnitButtonText), nameof(HasUnit), nameof(UsesSpacing))]
     public partial AssetEntry? Unit { get; set; }
 
     public bool HasUnit => Unit is not null;
@@ -138,7 +138,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// The units preset it places instead of a unit; null for none.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(HasPreset))]
+    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(UnitButtonText), nameof(HasPreset))]
     public partial string? Preset { get; set; }
 
     public bool HasPreset => Preset is not null;
@@ -161,6 +161,11 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         PresetRole = role;
         Preset = name;
     }
+
+    /// <summary>
+    /// What the unit button of the options row reads: the preset or unit's name.
+    /// </summary>
+    public string UnitButtonText => Preset is string preset ? preset : Unit is AssetEntry unit ? unit.Name : "Choose a unit";
 
     /// <summary>
     /// What a click places, as the options bar says it.
@@ -195,6 +200,21 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// The ways to place, for the options row's segmented control.
     /// </summary>
     public IReadOnlyList<PlaceModeChoice> Modes { get; }
+
+    /// <summary>
+    /// The way chosen, for the options row's combo box.
+    /// </summary>
+    public PlaceModeChoice ModeChoice
+    {
+        get => Modes.First(choice => choice.Mode == Mode);
+        set
+        {
+            if (value is not null)
+            {
+                Mode = value.Mode;
+            }
+        }
+    }
 
     public bool IsLine => Mode == PlaceMode.Line;
 
@@ -261,6 +281,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     partial void OnModeChanged(PlaceMode value)
     {
         CancelDrag();
+        OnPropertyChanged(nameof(ModeChoice));
         foreach (PlaceModeChoice choice in Modes)
         {
             choice.Refresh();
@@ -354,7 +375,63 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         }
     }
 
-    partial void OnArmyChanged(string? value) => RefreshGroups(model.ShownDocument);
+    partial void OnArmyChanged(string? value)
+    {
+        ArmyChosen |= !_defaulting;
+        RefreshGroups(model.ShownDocument);
+        // another army chosen in the row: the tree shows it too
+        if (!_defaulting && !_following && value is not null)
+        {
+            GroupPicked?.Invoke(value, Group);
+        }
+    }
+
+    private bool _defaulting;
+
+    /// <summary>
+    /// Whether the army was chosen (in the row, in the tree or by a command) rather than defaulted;
+    /// a chosen army stays until the map has no such army.
+    /// </summary>
+    public bool ArmyChosen { get; private set; }
+
+    /// <summary>
+    /// The view's middle in ogrids, for the army it places for by default; null (the map's middle)
+    /// until the window sets it.
+    /// </summary>
+    public Func<Vector2?>? ViewMiddle { get; set; }
+
+    /// <summary>
+    /// The army a new place tool places for: the playable army whose spawn lies nearest the view's
+    /// middle, else the civilians (<c>NEUTRAL_CIVILIAN</c>), the first extra army, the first army.
+    /// </summary>
+    public string? DefaultArmy(MapDocument document)
+    {
+        Vector2 middle = ViewMiddle?.Invoke() ?? new Vector2(document.Width / 2f, document.Height / 2f);
+        string? nearest = document.Markers.Spawns
+            .Where(spawn => document.Scenario.PlayableArmies.Contains(spawn.Army) && document.FindArmy(spawn.Army) is not null)
+            .OrderBy(spawn => Vector2.DistanceSquared(new Vector2(spawn.Position.X, spawn.Position.Z), middle))
+            .FirstOrDefault()?.Army;
+        return nearest
+            ?? document.FindArmy("NEUTRAL_CIVILIAN")?.Name
+            ?? document.Scenario.ExtraArmies.FirstOrDefault(name => document.FindArmy(name) is not null)
+            ?? document.Armies.FirstOrDefault()?.Name;
+    }
+
+    private bool _following;
+
+    /// <summary>
+    /// Raised with the army and group's path when the user chooses a group in the row's combo box,
+    /// so the Units mode's tree shows the same group (the tree's choice reaches <see cref="PlaceInto"/>).
+    /// </summary>
+    public event Action<string, string>? GroupPicked;
+
+    partial void OnChosenGroupChanged(GroupChoice? value)
+    {
+        if (!_following && value is not null && Army is string army)
+        {
+            GroupPicked?.Invoke(army, value.Path);
+        }
+    }
 
     public void Press(float x, float z) => Press(x, z, ToolInput.Default);
 
@@ -668,9 +745,15 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         }
         if (document is not null && (Army is null || document.FindArmy(Army) is null))
         {
-            Army = document.FindArmy("NEUTRAL_CIVILIAN")?.Name
-                ?? document.Scenario.ExtraArmies.FirstOrDefault(name => document.FindArmy(name) is not null)
-                ?? armies.FirstOrDefault()?.Name;
+            _defaulting = true;
+            try
+            {
+                Army = DefaultArmy(document);
+            }
+            finally
+            {
+                _defaulting = false;
+            }
         }
         RefreshGroups(document);
     }
@@ -680,15 +763,37 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// </summary>
     public void PlaceInto(string army, string group)
     {
-        Army = army;
-        if (Groups.All(choice => choice.Path != group))
+        _following = true;
+        try
         {
-            RefreshGroups(model.ShownDocument);
+            Army = army;
+            if (Groups.All(choice => choice.Path != group))
+            {
+                RefreshGroups(model.ShownDocument);
+            }
+            ChosenGroup = Groups.FirstOrDefault(choice => choice.Path == group) ?? ChosenGroup;
         }
-        ChosenGroup = Groups.FirstOrDefault(choice => choice.Path == group) ?? ChosenGroup;
+        finally
+        {
+            _following = false;
+        }
     }
 
     private void RefreshGroups(MapDocument? document)
+    {
+        bool following = _following;
+        _following = true;
+        try
+        {
+            RefreshGroupsCore(document);
+        }
+        finally
+        {
+            _following = following;
+        }
+    }
+
+    private void RefreshGroupsCore(MapDocument? document)
     {
         UnitGroup? root = Army is null ? null : document?.FindArmy(Army)?.Units;
         List<GroupChoice> choices = [];
