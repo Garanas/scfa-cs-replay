@@ -765,6 +765,19 @@
   <Style Selector="Border.badge.pluginkind">
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- an entry of the Plugins mode's list (F-15): its title and tag, its state under them -->
+  <Style Selector="Button.partentry.pluginentry">
+    <Setter Property="Height" Value="{StaticResource PluginEntryHeight}" />
+  </Style>
+  <Style Selector="Button.partentry TextBlock.partdetail.pluginstate">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+  <!-- a plugin's errors in the inspector (F-15): selectable, to copy them -->
+  <Style Selector="SelectableTextBlock.pluginerrors">
+    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
   <!-- a unit's icon as the game's build menu shows it, in the corner of its tile (U-1) -->
   <Style Selector="Border.uniticon">
     <Setter Property="Width" Value="{StaticResource UnitIconBadgeSize}" />

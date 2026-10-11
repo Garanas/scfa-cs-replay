@@ -137,6 +137,7 @@ public sealed partial class PluginsViewModel
                 content.Plugin = now;
             }
         }
+        Parts.Items[0].Detail = Items.Count == 1 ? "1 plugin" : $"{Items.Count} plugins";
         if (chosen != Parts.Chosen.Id && Parts.Find(chosen) is not null)
         {
             Parts.Choose(chosen);

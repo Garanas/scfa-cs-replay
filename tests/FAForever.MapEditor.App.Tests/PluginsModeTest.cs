@@ -62,6 +62,7 @@ namespace FAForever.MapEditor.App.Tests
 
             CollectionAssert.AreEqual(new[] { "Workspace", "Checks", "Props", "Terrain" }, Headings(model), "the first entry, then the categories in order");
             Assert.AreEqual(PluginsViewModel.OverviewPart, model.Plugins.Parts.Items[0].Id);
+            Assert.AreEqual("3 plugins", model.Plugins.Parts.Items[0].Detail);
             CollectionAssert.AreEqual(new[] { "Plateau brush" }, Under(model, "Terrain"));
             Assert.AreEqual("brush", model.Plugins.Find("plateau-brush")!.Kind);
             Assert.AreEqual("check", model.Plugins.Find("reclaim-per-army")!.Kind);

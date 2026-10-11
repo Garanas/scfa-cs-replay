@@ -42,7 +42,7 @@
     <Border Classes="group">
       <StackPanel Classes="stack">
         <TextBlock Classes="overline" Text="{Binding Source=Errors, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-        <SelectableTextBlock Classes="error caption" Text="{Binding Plugin.ErrorText}" IsVisible="{Binding Plugin.HasErrors}"
+        <SelectableTextBlock Classes="pluginerrors" Text="{Binding Plugin.ErrorText}" IsVisible="{Binding Plugin.HasErrors}"
                              AutomationProperties.Name="{Binding Plugin.Id, StringFormat='Errors of {0}'}" />
         <TextBlock Classes="caption" Text="None" IsVisible="{Binding !Plugin.HasErrors}" />
       </StackPanel>
