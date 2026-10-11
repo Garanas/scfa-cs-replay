@@ -39,8 +39,11 @@ public sealed record PropReclaimSection() : PanelSection("Reclaim");
 /// <param name="Text">The whole line in words, as a screen reader says it.</param>
 public sealed record ReclaimLine(string? Prefix, double Mass, double Energy, string Suffix, string Text)
 {
+    /// <summary>
+    /// The line of a total, in whole numbers as <see cref="PropsViewModel.Describe"/> says it.
+    /// </summary>
     public static ReclaimLine Of(string? prefix, ReclaimTotal total) =>
-        new ReclaimLine(prefix, total.Mass, total.Energy, PropsViewModel.InProps(total.Props),
+        new ReclaimLine(prefix, Math.Round(total.Mass), Math.Round(total.Energy), PropsViewModel.InProps(total.Props),
             (prefix is null ? "" : prefix + " ") + PropsViewModel.Describe(total));
 }
 

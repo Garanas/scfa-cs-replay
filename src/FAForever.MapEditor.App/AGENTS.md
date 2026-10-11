@@ -2117,6 +2117,17 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   the picker's combo box order the tiles as listed, the most mass first or the most energy first
   (`AssetSort`, `AssetSearch.Sorted`); `assets.browse {sort}`, whose tiles carry `economy`, `mass`
   and `energy`. Lua's `editor.assets` gives `massCost` and `energyCost`.
+  Mass and energy show after their icons wherever the editor shows an asset's values:
+  `Controls/EconomyAmount` (`Mass`, `Energy`, `IsShort` for a tile's `5.2k`, `Prefix`, `Suffix`,
+  `EmptyText` for "No cost"; its theme in `Styles/Controls.axaml`) draws `Icon.Mass` in `MassBrush`
+  and `Icon.Energy` in `EnergyBrush` (both theme variants) at its font's size, and names itself in
+  words for a screen reader (`5,220 mass, 47,400 energy`; a name the view sets wins). It is in the
+  shelf's and the picker's tiles (the energy goes to the next line in a narrow tile; the tiles of a
+  row are as high as the highest), the inspector's facts (`AssetFact.Mass`/`Energy`, `IsEconomy`),
+  the selected props' reclaim and the Props panel's reclaim (`ReclaimLine`, whole numbers as
+  `PropsViewModel.Describe`). The shelf's sort button shows the icon of what comes first beside
+  `Icon.Sort`; the picker's combo box lists `AssetSearch.SortChoices` with their icons. `ui` reads an
+  `EconomyAmount` as one control (its `text` `5.2k 47.4k`, its `label` in words). Tests: `EconomyIconsTest`.
 - Tests: `PanelsAndShellTest` (the operations), `PanelsAndShellWindowTest` (the mouse and keys).
 
 ## Small rules of editing, looks and speed
