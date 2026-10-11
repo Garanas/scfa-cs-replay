@@ -1,0 +1,41 @@
+<!-- The adaptive map chosen in the Markers panel's list (R-5; wave 14B): whether the map leaves out the deposits of armies no one
+     plays, the deposits per army, the groups of civilians and wrecks by lobby option, and what the export writes of it. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.AdaptivePartView"
+             x:DataType="vm:AdaptivePart">
+  <Border Classes="group">
+    <StackPanel Classes="stack" DataContext="{Binding Markers}" x:DataType="vm:MarkersViewModel">
+      <CheckBox Content="Leave out the deposits of armies no one plays" IsChecked="{Binding IsAdaptive, Mode=OneWay}" Command="{Binding ToggleAdaptiveCommand}"
+                AutomationProperties.Name="Adaptive map" />
+      <TextBlock Classes="caption" Text="{Binding AlwaysThere}" />
+      <ItemsControl ItemsSource="{Binding AdaptiveArmies}" AutomationProperties.Name="Deposits per army">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:AdaptiveArmy">
+            <TextBlock Classes="caption" Text="{Binding Line}" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock Classes="caption" TextWrapping="Wrap" Text="Select deposits to choose the army they wait for in the inspector." />
+      <!-- the adaptive script's groups of civilians and wrecks by lobby option (R-5) -->
+      <TextBlock Classes="label section" Text="Groups by lobby option" />
+      <ItemsControl ItemsSource="{Binding OptionalGroups}" AutomationProperties.Name="Optional groups of units">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:OptionalGroupItem">
+            <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding Line}" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <DockPanel>
+        <TextBox DockPanel.Dock="Right" Classes="mono commit" Width="{StaticResource FactLabelWidth}" Text="{Binding OptionLevel}" AutomationProperties.Name="Option value of the new group"
+                 AutomationProperties.HelpText="The lobby option's value from which on the adaptive script creates the group, 2 or more; empty for a name without one" />
+        <TextBox Classes="commit" Text="{Binding OptionName}" AutomationProperties.Name="Option of the new group"
+                 AutomationProperties.HelpText="E.g. Civilian_Defenses or Wreckage: the group is called Optional_ with it and the value" />
+      </DockPanel>
+      <Button Content="Add group with the selected units" Command="{Binding AddOptionalGroupCommand}"
+              AutomationProperties.HelpText="Adds Optional_option_value beside INITIAL with the selected units in it: to their own army when they are all of one extra army, else to ARMY_17 or NEUTRAL_CIVILIAN" />
+      <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding AdaptiveFilesText}" AutomationProperties.Name="What the export writes of the adaptive map" />
+    </StackPanel>
+  </Border>
+</UserControl>

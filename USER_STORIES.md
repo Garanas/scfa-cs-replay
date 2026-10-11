@@ -364,7 +364,8 @@ reads again when it changes; and nothing that generates runs by itself.
 ## R: Markers
 
 - [x] **R-1 Place markers.** Spawns, mass and hydrocarbon deposits, AI markers, path nodes and
-      weather by kind; move and delete them; snap to the grid. Weather: the Weather and Clouds tools
+      weather by kind, and blank markers (a kind of their own, the Blank tool); move and delete
+      them; snap to the grid. Weather: the Weather and Clouds tools
       (the game's weather definition and generator) and their fields in the inspector
       (`markers.setWeather`); with symmetry (F-12) a marker's images are placed with it.
 - [x] **R-2 Marker properties.** The selected markers in the inspector.
@@ -388,6 +389,11 @@ reads again when it changes; and nothing that generates runs by itself.
       civilians by the number of players: groups `Optional_Players_<n>`, created by that script
       when n or more players are in the game.
 - [x] **R-6 Show markers.** Markers and path nodes on or off in the top view and in 3D, per kind.
+      The Markers panel lists the kinds and the layers of path nodes with their colours, counts and
+      show check boxes, the chains and the adaptive map; the chosen entry's inspector selects or
+      clears every marker of its kind (`markers.select`, `markers.clear {kind, layer?}`: one step of
+      undo, links, chains and spawns' armies kept right) and says how the export treats the generated
+      networks beside a layer's own nodes.
 
 ## P: Props
 

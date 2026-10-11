@@ -44,6 +44,11 @@ public enum MarkerPlacement
     /// A place where clouds form.
     /// </summary>
     WeatherGenerator,
+
+    /// <summary>
+    /// A blank marker: a place in the world a script points at, or a point of a chain.
+    /// </summary>
+    Blank,
 }
 
 /// <summary>
@@ -98,6 +103,7 @@ public sealed partial class PlaceMarkerTool(MainViewModel model, MarkerPlacement
     {
         MarkerPlacement.Spawn => "Click to place a spawn: the next playable army",
         MarkerPlacement.Ai => "Click to place an AI marker of the chosen type",
+        MarkerPlacement.Blank => "Click to place a blank marker: a place a script points at, or a point of a chain",
         MarkerPlacement.WeatherDefinition => "Click to place the weather of the map (the game reads the first); the inspector sets its style and clouds",
         MarkerPlacement.WeatherGenerator => "Click to place a place where clouds form; the inspector sets how many and how high",
         _ => "Click to place a deposit on an ogrid's centre",
@@ -113,6 +119,7 @@ public sealed partial class PlaceMarkerTool(MainViewModel model, MarkerPlacement
         MarkerPlacement.Hydrocarbon => "hydrocarbon",
         MarkerPlacement.WeatherDefinition => "weatherDefinition",
         MarkerPlacement.WeatherGenerator => "weatherGenerator",
+        MarkerPlacement.Blank => "blank",
         _ => "ai",
     };
 
@@ -200,7 +207,8 @@ public sealed partial class PlaceMarkerTool(MainViewModel model, MarkerPlacement
     {
         MarkerPlacement.Spawn => marker is Spawn,
         MarkerPlacement.Mass or MarkerPlacement.Hydrocarbon => marker is ResourceMarker,
-        MarkerPlacement.Ai => marker is AiMarker,
+        MarkerPlacement.Ai => marker is AiMarker { IsBlank: false },
+        MarkerPlacement.Blank => marker is AiMarker { IsBlank: true },
         MarkerPlacement.WeatherDefinition => marker is WeatherDefinition,
         MarkerPlacement.WeatherGenerator => marker is WeatherGenerator,
         _ => false,

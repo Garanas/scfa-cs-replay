@@ -243,15 +243,18 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(model.HasNoInspectorParts);
             Assert.IsFalse(Caption().IsEffectivelyVisible, "the Units mode's inspector shows the chosen army or group");
 
+            // the Markers mode lists its kinds, layers and chains (wave 14B): the chosen entry is its part
             model.SelectMode("markers");
             Dispatcher.UIThread.RunJobs();
-            Assert.IsTrue(model.HasNoInspectorParts);
-            Assert.IsTrue(Caption().IsEffectivelyVisible, "the Markers mode has no part of its own: how to select things");
+            Assert.IsFalse(model.HasNoInspectorParts);
+            Assert.IsFalse(Caption().IsEffectivelyVisible, "the Markers mode's inspector shows the chosen kind, layer or chain");
 
-            // there the selection keeps the inspector, whoever chose last
+            // a selection takes the inspector, and choosing the mode's part gives it back while the selection stays
             model.Selection.Set([ObjectRef.Marker(model.ShownDocument!.Markers.Spawns[0].Id)]);
-            model.InspectTheMode();
             Assert.IsTrue(model.InspectsSelection);
+            model.InspectTheMode();
+            Assert.IsFalse(model.InspectsSelection);
+            Assert.IsTrue(model.Selection.HasAny);
             window.Close();
         });
 

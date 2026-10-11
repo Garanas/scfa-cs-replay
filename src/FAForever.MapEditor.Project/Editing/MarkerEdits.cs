@@ -18,7 +18,7 @@ namespace FAForever.MapEditor.Project.Editing
         Mass = 2,
         Hydrocarbon = 4,
         /// <summary>
-        /// The markers the AI and scripts read (<see cref="AiMarker"/>), of every type.
+        /// The markers the AI and scripts read (<see cref="AiMarker"/>), of every type but the blank marker (<see cref="Blank"/>).
         /// </summary>
         AiMarkers = 8,
         /// <summary>
@@ -30,7 +30,11 @@ namespace FAForever.MapEditor.Project.Editing
         AmphibiousPaths = 128,
         AirPaths = 256,
         PathNodes = LandPaths | WaterPaths | AmphibiousPaths | AirPaths,
-        All = Spawns | Mass | Hydrocarbon | AiMarkers | Weather | PathNodes,
+        /// <summary>
+        /// Blank markers (<see cref="AiMarker.BlankType"/>): places a script points at, points of chains.
+        /// </summary>
+        Blank = 512,
+        All = Spawns | Mass | Hydrocarbon | AiMarkers | Weather | PathNodes | Blank,
     }
 
     /// <summary>
@@ -83,7 +87,7 @@ namespace FAForever.MapEditor.Project.Editing
             Spawn => MarkerKinds.Spawns,
             ResourceMarker resource => resource.Kind == ResourceKind.Mass ? MarkerKinds.Mass : MarkerKinds.Hydrocarbon,
             PathNode node => KindOf(node.Layer),
-            AiMarker => MarkerKinds.AiMarkers,
+            AiMarker ai => ai.IsBlank ? MarkerKinds.Blank : MarkerKinds.AiMarkers,
             _ => MarkerKinds.Weather,
         };
 
@@ -421,6 +425,84 @@ namespace FAForever.MapEditor.Project.Editing
             ImmutableArray<Chain> chains = document.Markers.Chains;
             Chain chain = chains.FirstOrDefault(c => c.Name == name) ?? throw new KeyNotFoundException($"The map has no chain {name}");
             return document with { Markers = document.Markers with { Chains = chains.Remove(chain) } };
+        }
+
+        #endregion
+
+        #region Removing by kind
+
+        /// <summary>
+        /// Removes every marker of some kinds (the Markers mode's Clear), with what
+        /// <see cref="DocumentEdits.RemoveMarker"/> takes with each: links of path nodes to them and
+        /// their places in chains (an emptied chain stays). Spawns go one by one through
+        /// <see cref="DocumentEdits.RemoveMarker"/>, the highest number first, so each takes its
+        /// playable army with it (an army with units stays as an extra army) and no army is renamed on
+        /// the way; the other kinds go in one pass, with the same result as removing them one by one.
+        /// </summary>
+        /// <param name="kinds">E.g. <see cref="MarkerKinds.LandPaths"/>, or <see cref="MarkerKinds.PathNodes"/> for every layer.</param>
+        /// <param name="removed">How many markers went.</param>
+        public static MapDocument RemoveKind(this MapDocument document, MarkerKinds kinds, out int removed)
+        {
+            removed = 0;
+            if ((kinds & MarkerKinds.Spawns) != 0)
+            {
+                foreach (Spawn spawn in document.Markers.Spawns.OrderByDescending(spawn => SpawnNumber(spawn.Name) ?? int.MaxValue).ToArray())
+                {
+                    document = document.RemoveMarker(spawn.Id);
+                    removed++;
+                }
+            }
+            MarkerKinds others = kinds & ~MarkerKinds.Spawns;
+            if (others == MarkerKinds.None)
+            {
+                return document;
+            }
+            MarkerSet markers = document.Markers;
+            HashSet<int> ids = [.. markers.All.Where(marker => marker is not Spawn && (KindOf(marker) & others) != 0).Select(marker => marker.Id)];
+            if (ids.Count == 0)
+            {
+                return document;
+            }
+            removed += ids.Count;
+            ImmutableArray<T> Without<T>(ImmutableArray<T> list) where T : Marker =>
+                list.Any(marker => ids.Contains(marker.Id)) ? [.. list.Where(marker => !ids.Contains(marker.Id))] : list;
+            return document with
+            {
+                Markers = markers with
+                {
+                    Resources = Without(markers.Resources),
+                    AiMarkers = Without(markers.AiMarkers),
+                    WeatherDefinitions = Without(markers.WeatherDefinitions),
+                    WeatherGenerators = Without(markers.WeatherGenerators),
+                    PathNodes = [.. Without(markers.PathNodes).Select(node => node.AdjacentTo.Any(ids.Contains) ? node with { AdjacentTo = [.. node.AdjacentTo.Where(other => !ids.Contains(other))] } : node)],
+                    Chains = [.. markers.Chains.Select(chain => chain.MarkerIds.Any(ids.Contains) ? chain with { MarkerIds = [.. chain.MarkerIds.Where(other => !ids.Contains(other))] } : chain)],
+                },
+            };
+        }
+
+        /// <summary>
+        /// How many markers of some kinds the map has.
+        /// </summary>
+        public static int CountKind(this MapDocument document, MarkerKinds kinds) => document.Markers.All.Count(marker => (KindOf(marker) & kinds) != 0);
+
+        /// <summary>
+        /// How many links the path nodes of some layers have, a link both ways counted once.
+        /// </summary>
+        public static int CountLinks(this MapDocument document, MarkerKinds kinds)
+        {
+            HashSet<(int, int)> links = [];
+            foreach (PathNode node in document.Markers.PathNodes)
+            {
+                if ((KindOf(node.Layer) & kinds) == 0)
+                {
+                    continue;
+                }
+                foreach (int other in node.AdjacentTo)
+                {
+                    links.Add(node.Id < other ? (node.Id, other) : (other, node.Id));
+                }
+            }
+            return links.Count;
         }
 
         #endregion

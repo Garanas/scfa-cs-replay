@@ -443,9 +443,9 @@ namespace FAForever.MapEditor.App.Tests
             model.Commands.Ran += command => ran.Add(command.Id);
             model.SelectMode("markers");
             Dispatcher.UIThread.RunJobs();
-            // the panel's boxes, not the select tool's filter (whose boxes are named "Select markers", ...)
+            // the boxes of the list's headings Markers and Path nodes, not the select tool's filter (whose boxes are named "Select markers", ...)
             CheckBox Box(string title) => window.GetVisualDescendants().OfType<CheckBox>()
-                .Single(box => box.Content as string == title && Avalonia.Automation.AutomationProperties.GetName(box)?.StartsWith("Select ", StringComparison.Ordinal) != true);
+                .Single(box => Avalonia.Automation.AutomationProperties.GetName(box) == $"Show {title.ToLowerInvariant()}");
             Assert.IsTrue(Box("Markers").IsChecked);
             Assert.IsFalse(Box("Path nodes").IsChecked);
 
@@ -960,14 +960,26 @@ namespace FAForever.MapEditor.App.Tests
                     }
                 }
             }
-            JsonArray ui = UiTree.Describe(window, hidden: true);
-            Check(ui);
-            CollectionAssert.AreEqual(Array.Empty<string>(), unlabelled);
-            string json = ui.ToJsonString();
-            foreach (string label in new[] { "Kinds of markers shown", "Chains", "Name of the chain", "Adaptive map", "Type of the AI markers", "No-rush offset across", "Layer of the path nodes to place" })
+            void Labelled(params string[] labels)
             {
-                StringAssert.Contains(json, $"\"label\":\"{label}\"");
+                Dispatcher.UIThread.RunJobs();
+                JsonArray ui = UiTree.Describe(window, hidden: true);
+                Check(ui);
+                CollectionAssert.AreEqual(Array.Empty<string>(), unlabelled, string.Join("; ", unlabelled));
+                string json = ui.ToJsonString();
+                foreach (string label in labels)
+                {
+                    StringAssert.Contains(json, $"\"label\":\"{label}\"");
+                }
             }
+            Labelled("Markers by kind, layer and chain", "Show mass", "Show markers", "Show path nodes", "Add a chain from the selection", "Type of the AI markers", "No-rush offset across", "Layer of the path nodes to place");
+            // the list's entries in the inspector: a layer of path nodes, a chain, the adaptive map
+            model.InspectPart("markers.paths.land");
+            Labelled("How many links the layer has", "How the export treats the generated network");
+            model.InspectPart("markers.chain.Chain_1");
+            Labelled("Name of the chain", "Markers of the chain");
+            model.InspectPart("markers.adaptive");
+            Labelled("Adaptive map", "Option of the new group");
             window.Close();
         });
 

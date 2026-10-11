@@ -157,7 +157,8 @@ public sealed partial class MarkerSelection : SelectionSection
         base.Refresh(document, things);
         Marker[] markers = [.. things.Select(document.Find).OfType<Marker>()];
         ResourceMarker[] deposits = [.. markers.OfType<ResourceMarker>()];
-        AiMarker[] ais = [.. markers.OfType<AiMarker>()];
+        // a blank marker has no type to choose: it is a kind of its own
+        AiMarker[] ais = [.. markers.OfType<AiMarker>().Where(ai => !ai.IsBlank)];
         PathNode[] nodes = [.. markers.OfType<PathNode>()];
         Spawn[] spawns = [.. markers.OfType<Spawn>()];
         Weather.Refresh(document, markers);

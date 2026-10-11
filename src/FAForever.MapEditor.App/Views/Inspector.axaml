@@ -392,6 +392,10 @@
               <DataTemplate DataType="vm:PluginDetailsSection">
                 <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Plugins.Parts}" />
               </DataTemplate>
+              <!-- the entry chosen in the Markers panel's list (wave 14B): a kind, a layer of path nodes, a chain, the adaptive map -->
+              <DataTemplate DataType="vm:MarkerDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Markers.Parts}" />
+              </DataTemplate>
             </ItemsControl.DataTemplates>
           </ItemsControl>
           <!-- only in a mode with no part of its own to show: how to select things -->
