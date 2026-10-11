@@ -134,8 +134,7 @@ namespace FAForever.MapEditor.App.Tests
             ModePanel panel = window.GetVisualDescendants().OfType<ModePanel>().Single();
 
             // the tree's badge names the preset, the list counts the instance
-            Border badge = panel.GetVisualDescendants().OfType<Border>().Single(border => border.Classes.Contains("instance") && border.IsEffectivelyVisible && border.Child is TextBlock { Text: "Village" });
-            Assert.IsNotNull(badge, "the group placed carries the preset's name");
+            Assert.IsFalse(panel.GetVisualDescendants().OfType<Border>().Any(border => border.Classes.Contains("instance") && border.IsEffectivelyVisible && border.Child is TextBlock { Text: "Village" }), "a group named after its preset does not repeat the name as a badge");
             Assert.IsFalse(panel.GetVisualDescendants().OfType<Border>().Any(border => border.Classes.Contains("stale") && border.IsEffectivelyVisible), "the preset is as it was");
             PresetInstanceBadges counts = panel.GetVisualDescendants().OfType<PresetInstanceBadges>().Single(badges => badges.Preset == "Village");
             Assert.IsTrue(counts.IsEffectivelyVisible);

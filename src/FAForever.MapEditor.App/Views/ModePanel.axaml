@@ -118,14 +118,36 @@
               <Border Classes="group">
                 <StackPanel Classes="stack">
                   <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <!-- the Unit presets: All, Starred, Civilian, Wrecks, Mine (U-9) -->
+                  <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.FilterChips}"
+                                IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.HasFilters}"
+                                AutomationProperties.Name="Filter of the unit presets">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel Classes="chips" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:PresetFilterChip">
+                        <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Title}" Command="{Binding ChooseCommand}"
+                                AutomationProperties.Name="{Binding Label}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Classes="caption" Text="No unit preset matches this filter."
+                             IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.NoneMatch}" />
                   <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.Shown}" AutomationProperties.Name="{Binding Title}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="ws:Preset">
-                        <StackPanel>
                         <DockPanel>
                           <Button DockPanel.Dock="Right" Classes="beside" Content="×"
                                   Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.DeleteShownCommand}" CommandParameter="{Binding}"
                                   AutomationProperties.Name="{Binding Name, StringFormat='Delete the preset {0}'}" />
+                          <controls:PresetStar DockPanel.Dock="Right" Preset="{Binding}" Presets="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets}"
+                                               IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.HasFilters}" />
+                          <!-- a unit preset: how often it is placed on this map and how many of those changed since, on the row (U-9) -->
+                          <controls:PresetInstanceBadges DockPanel.Dock="Right" VerticalAlignment="Center" Preset="{Binding Name}"
+                                                         Counts="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.Instances}" />
                           <!-- its name, and what it places as the detail (units, markers), as the list modes' entries -->
                           <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                   Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.ApplyShownCommand}" CommandParameter="{Binding}"
@@ -133,10 +155,6 @@
                             <controls:PartEntryText IsAlike="False" Title="{Binding Name}" Detail="{Binding Converter={x:Static controls:PresetDetailConverter.Instance}}" />
                           </Button>
                         </DockPanel>
-                        <!-- a unit preset: how often it is placed on this map and how many of those are out of date, under its name (U-9) -->
-                        <controls:PresetInstanceBadges HorizontalAlignment="Left" Preset="{Binding Name}"
-                                                       Counts="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.Instances}" />
-                        </StackPanel>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -190,19 +208,25 @@
                          a group placed from a unit preset carries the preset's name as a tag, and whether the preset changed since (U-9) -->
                     <TreeView.DataTemplates>
                       <TreeDataTemplate DataType="vm:GroupNode" ItemsSource="{Binding Items}">
+                        <!-- the state of the preset ("preset changed") beside the name on the same line; the preset's own name as a
+                             badge under it only when the group is not named after it -->
                         <StackPanel>
-                          <controls:PartEntryText Title="{Binding Title}" Detail="{Binding Detail}" />
-                          <WrapPanel IsVisible="{Binding HasInstance}">
+                          <controls:BesideOrBelowPanel>
+                            <controls:PartEntryText Title="{Binding Title}" Detail="{Binding Detail}" />
+                            <StackPanel IsVisible="{Binding HasInstanceState}">
+                              <Border Classes="badge stale" IsVisible="{Binding IsInstanceChanged}"
+                                      ToolTip.Tip="The preset's file changed after this group was placed; the map keeps its own layout">
+                                <TextBlock Text="{Binding InstanceStateText}" />
+                              </Border>
+                              <Border Classes="badge missing" IsVisible="{Binding IsInstanceMissing}"
+                                      ToolTip.Tip="The workspace has no preset of this name">
+                                <TextBlock Text="{Binding InstanceStateText}" />
+                              </Border>
+                            </StackPanel>
+                          </controls:BesideOrBelowPanel>
+                          <WrapPanel IsVisible="{Binding ShowsInstanceName}">
                             <Border Classes="badge instance" ToolTip.Tip="Placed from this unit preset: the inspector shows the link">
                               <TextBlock Text="{Binding InstanceName}" />
-                            </Border>
-                            <Border Classes="badge stale" IsVisible="{Binding IsInstanceChanged}"
-                                    ToolTip.Tip="The preset's file changed after this group was placed; the map keeps its own layout">
-                              <TextBlock Text="{Binding InstanceStateText}" />
-                            </Border>
-                            <Border Classes="badge missing" IsVisible="{Binding IsInstanceMissing}"
-                                    ToolTip.Tip="The workspace has no preset of this name">
-                              <TextBlock Text="{Binding InstanceStateText}" />
                             </Border>
                           </WrapPanel>
                         </StackPanel>

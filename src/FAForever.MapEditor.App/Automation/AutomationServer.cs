@@ -644,6 +644,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 ["kind"] = model.Presets.Kind,
                 ["shown"] = new JsonArray([.. model.Presets.Shown.Select(preset => (JsonNode)JsonValue.Create(preset.Name))]),
                 ["highlighted"] = model.Presets.Highlighted,
+                ["filters"] = model.Presets.DescribeFilters(),
                 // per unit preset placed on the map: how often, and how many of those instances are out of date (U-9)
                 ["instances"] = new JsonObject([.. model.Presets.Instances.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
                     .Select(entry => KeyValuePair.Create(entry.Key, (JsonNode?)new JsonObject { ["placed"] = entry.Value.Placed, ["outOfDate"] = entry.Value.OutOfDate }))]),

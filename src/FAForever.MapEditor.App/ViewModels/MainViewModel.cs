@@ -158,6 +158,9 @@ public sealed partial class MainViewModel : ObservableObject
         Palette = new PaletteViewModel(Commands, RunAsync);
         Presets = new PresetsViewModel(Logger("Assets"), _ui, (id, arguments) => TryAsync(() => Commands.RunAsync(id, arguments, interactive: true)));
         UnitPalettes = new UnitPalettesViewModel(Presets, Assets, Logger("Assets"), RunWithAsync);
+        Presets.UseStars(Assets);
+        SavedBack = new SavedBackPresets(Logger("Presets"));
+        MapChanged += (_, _) => SavedBack.Clear();
         InitializeShell();
         InitializeSelection();
         InitializeSelectionTools();
@@ -260,6 +263,11 @@ public sealed partial class MainViewModel : ObservableObject
     /// The workspace's presets, and those the mode's panel lists (user story F-10).
     /// </summary>
     public PresetsViewModel Presets { get; }
+
+    /// <summary>
+    /// The preset files "Save back to the preset" overwrote, for undo and redo of the step.
+    /// </summary>
+    public SavedBackPresets SavedBack { get; }
 
     /// <summary>
     /// The symmetry edits are mirrored by, and whose guides the top view draws (user story F-12).
@@ -827,6 +835,10 @@ public sealed partial class MainViewModel : ObservableObject
     {
         KeepDerived(change);
         SayDone(change);
+        if (SavedBack.Follow(change, Presets.Library))
+        {
+            Presets.Refresh();
+        }
         Events.OnDocumentChanged(change);
     }
 

@@ -108,7 +108,7 @@ namespace FAForever.MapEditor.Project.Tests
             CollectionAssert.AreEqual(new[] { "INITIAL", "Town", "Walls" }, placed.FindUnit("UNIT_4")!.Group.ToArray());
 
             placed.PlaceUnits(template, "ARMY_2", ["INITIAL"], 0, 0, 0, out _, out ImmutableArray<string> again);
-            Assert.AreEqual("Town 1", again[^1], "a second town gets its own group");
+            Assert.AreEqual("Town 2", again[^1], "a second town gets its own group, counted from 2");
             Assert.ThrowsException<ArgumentException>(() => document.CaptureUnits(["NOBODY"], "x"));
         }
 

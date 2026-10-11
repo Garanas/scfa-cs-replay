@@ -185,6 +185,8 @@ namespace FAForever.MapEditor.App.Tests
 
             // a right-click on a units preset of the panel's list: a menu with a slot for each of the ten
             Button apply = (Button)Find(window, "Apply the preset Village");
+            apply.BringIntoView();
+            Dispatcher.UIThread.RunJobs();
             Click(window, apply, MouseButton.Right);
             Assert.IsNotNull(apply.ContextMenu, "the preset's button got its menu");
             Assert.IsTrue(apply.ContextMenu!.IsOpen, "and it opened");

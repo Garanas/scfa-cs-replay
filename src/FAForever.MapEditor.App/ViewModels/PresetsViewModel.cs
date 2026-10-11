@@ -92,7 +92,7 @@ public sealed partial class PresetsViewModel : ObservableObject
     /// <summary>
     /// Whether the panel's kind has no presets yet.
     /// </summary>
-    public bool IsEmpty => Shown.Count == 0;
+    public bool IsEmpty => _all.Count == 0;
 
     /// <summary>
     /// The names typed for a new preset, by kind: a name typed in the Water panel stays there.
@@ -120,6 +120,8 @@ public sealed partial class PresetsViewModel : ObservableObject
     partial void OnKindChanged(string? value)
     {
         OnPropertyChanged(nameof(NewName));
+        OnPropertyChanged(nameof(HasFilters));
+        MakeChips();
         Highlighted = null;
     }
 
@@ -365,25 +367,29 @@ public sealed partial class PresetsViewModel : ObservableObject
         _fingerprints.Clear();
         if (Library is null || Kind is null)
         {
+            _all = [];
             Shown = [];
+            OnPropertyChanged(nameof(IsEmpty));
             Changed?.Invoke(this, EventArgs.Empty);
             return;
         }
         List<string> unreadable = [];
         try
         {
-            Shown = Library.List(Kind, unreadable);
+            _all = Library.List(Kind, unreadable);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             _log.LogWarning(exception, "Cannot read the presets in {Folder}: {Reason}", Library.Folder, exception.Message);
-            Shown = [];
+            _all = [];
         }
+        ApplyFilter();
+        OnPropertyChanged(nameof(IsEmpty));
         foreach (string file in unreadable)
         {
             _log.LogWarning("A preset cannot be read: {File}", file);
         }
-        if (Highlighted is string highlighted && !Shown.Any(preset => string.Equals(preset.Name, highlighted, StringComparison.OrdinalIgnoreCase)))
+        if (Highlighted is string highlighted && !_all.Any(preset => string.Equals(preset.Name, highlighted, StringComparison.OrdinalIgnoreCase)))
         {
             Highlighted = null;
         }

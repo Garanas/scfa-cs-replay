@@ -124,6 +124,16 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void NamesACopyWithTheNumberFromTwo()
+        {
+            Assert.AreEqual("Cybran farm", DocumentEdits.FreeCopyName(["INITIAL"], "Cybran farm"));
+            Assert.AreEqual("Cybran farm 2", DocumentEdits.FreeCopyName(["Cybran farm"], "Cybran farm"));
+            Assert.AreEqual("Cybran farm 3", DocumentEdits.FreeCopyName(["Cybran farm", "Cybran farm 2"], "Cybran farm"));
+            Assert.AreEqual("Cybran farm 4", DocumentEdits.FreeCopyName(["Cybran farm", "Cybran farm 3"], "Cybran farm 3"), "a copy's name counts on");
+            Assert.AreEqual("Town 2", DocumentEdits.FreeCopyName(["Town 1"], "Town 1"), "never below 2");
+        }
+
+        [TestMethod]
         public void RemovingAMarkerTakesAwayEveryLinkToIt()
         {
             MapDocument document = original

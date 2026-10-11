@@ -130,7 +130,9 @@ public sealed class RecallSelectionHandler(MainViewModel model) : IRequestHandle
     public Task<int> Handle(RecallSelection request, CancellationToken cancellationToken)
     {
         int count = model.StoredSelections.Recall(request.Slot, request.Add);
-        model.Status = $"Recalled {request.Slot}: {model.SelectedText.ToLowerInvariant()}";
+        model.Status = count == 0
+            ? $"Recalled {request.Slot}: its units are gone from the map; it stays until stored over (Alt+{request.Slot} with nothing selected clears it)"
+            : $"Recalled {request.Slot}: {model.SelectedText.ToLowerInvariant()}";
         return Task.FromResult(count);
     }
 }

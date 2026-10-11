@@ -18,6 +18,7 @@ public sealed partial class MainViewModel
     private void InitializeUnitPalettes()
     {
         UnitPlaceTool place = Tool<UnitPlaceTool>();
+        UnitPalettes.ChoosePlaceTool = () => SelectTool("units.place");
         // the slot that holds what the tool places is the chosen one
         place.PropertyChanged += (_, e) =>
         {

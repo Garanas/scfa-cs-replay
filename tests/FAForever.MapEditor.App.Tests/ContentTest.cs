@@ -97,7 +97,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(props + 1, model.ShownDocument!.Props.Length);
             Assert.AreEqual(3, model.Selection.Count, "what it placed is selected");
             PlacedUnit placed = model.ShownDocument.AllUnits().Single(unit => unit.Army == "NEUTRAL_CIVILIAN" && unit.Unit.Blueprint == "uec1201" && unit.Unit.Name != "UNIT_1");
-            CollectionAssert.AreEqual(new[] { "INITIAL", "Village 1" }, placed.Group.ToArray(), "a new group named after the preset in INITIAL, beside the one it was saved from");
+            CollectionAssert.AreEqual(new[] { "INITIAL", "Village 2" }, placed.Group.ToArray(), "a new group named after the preset in INITIAL, beside the one it was saved from");
 
             // Q and E turn by quarter turns
             Assert.IsTrue(tool.Key("E", ToolModifiers.None));

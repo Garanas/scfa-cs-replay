@@ -91,7 +91,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:LastPlacedItem">
               <Button Classes="chip" Command="{Binding $parent[UserControl].((vm:UnitPalettesViewModel)DataContext).PickLastPlacedCommand}" CommandParameter="{Binding}"
-                      ToolTip.Tip="{Binding Label}" AutomationProperties.Name="{Binding Label}">
+                      ToolTip.Tip="{Binding Help}" AutomationProperties.Name="{Binding Label}">
                 <StackPanel Orientation="Horizontal">
                   <Border Classes="chipicon" IsVisible="{Binding HasIcon}">
                     <Panel>
@@ -99,7 +99,7 @@
                       <controls:AssetThumbnail Source="{Binding Icon}" DecodeWidth="32" Checker="False" />
                     </Panel>
                   </Border>
-                  <TextBlock Text="{Binding Title}" />
+                  <TextBlock Text="{Binding ChipText}" />
                 </StackPanel>
               </Button>
             </DataTemplate>

@@ -848,6 +848,10 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         if (placed > 0 && model.ShownDocument is MapDocument document)
         {
             model.Selection.Set(_strokePlaced.Where(document.Exists));
+            if (Unit is AssetEntry scattered)
+            {
+                model.UnitPalettes.NotePlaced(LastPlacedItem.UnitKey(scattered.Key));
+            }
             model.Status = $"Scattered {MainViewModel.Units(placed)} ({Unit?.Name}) for {Army}{(AsWrecks ? " as wrecks" : "")}{(_strokeImages > 0 ? $" and {_strokeImages} mirrored" : "")}";
         }
         else

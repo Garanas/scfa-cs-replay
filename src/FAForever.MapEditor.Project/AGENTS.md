@@ -88,7 +88,8 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     group `Units`): add, rename (unique among siblings), remove (its units and groups to the group
     above, or along with it), move into another group of any army; `MoveUnits` between armies and
     groups; `CaptureUnits` and `PlaceUnits`, a template of units relative to its middle (rounded
-    to a whole ogrid, so structures stay on the build grid) placed as a new group, turned;
+    to a whole ogrid, so structures stay on the build grid) placed as a new group, turned (named after the template;
+    when a sibling has the name, with a number from 2: `Cybran farm`, `Cybran farm 2`, `DocumentEdits.FreeCopyName`);
     `SetInstance` (below). The game
     creates the units of each army's `INITIAL`, with the groups in it, at the start.
     `GroupUnits` (U-11): a new group per army among the units, under the deepest group that holds

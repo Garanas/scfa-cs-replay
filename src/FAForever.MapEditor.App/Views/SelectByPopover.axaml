@@ -106,7 +106,10 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <ComboBox ItemsSource="{Binding AreaChoices}" SelectedItem="{Binding AreaChoice}" IsVisible="{Binding InArea}" AutomationProperties.Name="Area to select within" />
+      </StackPanel>
+      <StackPanel Classes="inline" IsVisible="{Binding InArea}">
+        <TextBlock Classes="label fieldlabel" Text="Area" />
+        <ComboBox ItemsSource="{Binding AreaChoices}" SelectedItem="{Binding AreaChoice}" PlaceholderText="Choose an area" AutomationProperties.Name="Area to select within" />
       </StackPanel>
       <DockPanel>
         <StackPanel DockPanel.Dock="Right" Classes="inline">
