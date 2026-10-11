@@ -2,6 +2,7 @@ using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.Commands;
 
@@ -32,7 +33,8 @@ internal static class MapWideArgument
 /// albedo's specular. A file given alone makes the source a file; an empty specular takes it away.
 /// </summary>
 /// <param name="Kind"><c>albedo</c>, <c>normal</c> or <c>shadow</c>.</param>
-/// <param name="File">A picture (PNG, DDS, ...), relative to the project when it lies in it, or a path into the map's own folder.</param>
+/// <param name="File">A picture (PNG, DDS, ...): kept relative to the project when it lies in it, a path into the
+/// map's own folder as it is, else copied into the map's own files (<c>env/decals/map_albedo.png</c> and the like).</param>
 /// <param name="Specular">The albedo's second texture, a file; empty for none.</param>
 [UndoStep]
 [EditorCommand("decals.setWide", "Set a map-wide decal", Story = "D-1", Needs = Needs.Map)]
@@ -46,7 +48,8 @@ public sealed class SetMapWideDecalHandler(MainViewModel model, CurrentEdit edit
         MapDocument document = model.ShownDocument ?? throw new InvalidOperationException("No map is open");
         MapWideDecals wide = document.WideDecals;
         MapWideSlot slot = wide.SlotOf(kind);
-        string? file = request.File?.Trim() is { Length: > 0 } given ? MapWideFiles.Relative(model, given) : null;
+        List<(string Path, byte[] Bytes)> copies = [];
+        string? file = request.File?.Trim() is { Length: > 0 } given ? MapWideFiles.Keep(model, document, given, MapWideFiles.NameOf(kind), copies) : null;
         MapWideSource source = request.Source is string named ? MapWideArgument.SourceOf(named) : file is not null ? MapWideSource.File : slot.Source;
         MapWideSlot changed = source switch
         {
@@ -61,10 +64,10 @@ public sealed class SetMapWideDecalHandler(MainViewModel model, CurrentEdit edit
             {
                 throw new ArgumentException("Only the map-wide albedo has a specular");
             }
-            wide = wide with { Specular = specular.Trim().Length == 0 ? null : MapWideFiles.Relative(model, specular.Trim()) };
+            wide = wide with { Specular = specular.Trim().Length == 0 ? null : MapWideFiles.Keep(model, document, specular.Trim(), MapWideFiles.SpecularName, copies) };
         }
         MapWideDecals result = wide;
-        edit.Transaction.Apply(d => d with { WideDecals = result });
+        edit.Transaction.Apply(d => MapWideFiles.With(d, copies) with { WideDecals = result });
         model.Status = $"The map-wide {model.WideDecals.SlotOf(kind).Title.ToLowerInvariant()}: {changed.Source switch { MapWideSource.File => changed.File, MapWideSource.Generated => "generated at export", _ => "none" }}";
         return Task.CompletedTask;
     }
@@ -103,8 +106,9 @@ public sealed class ChooseMapWideFileHandler(MainViewModel model, IEditorDialogs
             model.Status = "Chose no file";
             return null;
         }
-        string file = MapWideFiles.Relative(model, path);
-        model.EditMap(specular ? "Choose the map-wide albedo's specular" : $"Choose the map-wide {title}'s file", document => document with
+        List<(string Path, byte[] Bytes)> copies = [];
+        string file = MapWideFiles.Keep(model, model.ShownDocument!, path, specular ? MapWideFiles.SpecularName : MapWideFiles.NameOf(kind), copies);
+        model.EditMap(specular ? "Choose the map-wide albedo's specular" : $"Choose the map-wide {title}'s file", document => MapWideFiles.With(document, copies) with
         {
             WideDecals = specular ? document.WideDecals with { Specular = file } : document.WideDecals.With(kind, MapWideSlot.Of(file)),
         });
@@ -194,10 +198,67 @@ public sealed class GenerateShadowDecalHandler(MainViewModel model) : IRequestHa
 internal static class MapWideFiles
 {
     /// <summary>
-    /// A path into the map's own folder as it is, a file in the project relative to it, any other absolute.
+    /// The name a copied specular gets among the map's own files, as Kaali (kaali.v0004) names it.
     /// </summary>
-    public static string Relative(MainViewModel model, string path) =>
-        path.StartsWith("/maps/", StringComparison.OrdinalIgnoreCase)
-            ? path
-            : AddHeightLayerHandler.SourceOf(model.Map?.ProjectFolder, Path.GetFullPath(path, model.Map?.ProjectFolder ?? Environment.CurrentDirectory));
+    public const string SpecularName = "map_specular";
+
+    /// <summary>
+    /// The name a slot's copied file gets among the map's own files (with its own extension), as
+    /// Kaali names the decals the export writes: <c>map_albedo</c>, <c>map_normals</c>, <c>map_lighting</c>.
+    /// </summary>
+    public static string NameOf(MapWideKind kind) => kind switch
+    {
+        MapWideKind.Albedo => "map_albedo",
+        MapWideKind.Normal => "map_normals",
+        _ => "map_lighting",
+    };
+
+    /// <summary>
+    /// A file as the map keeps it (user story D-1): a path into the map's own folder as it is, a file
+    /// in the project relative to it; a file anywhere else is copied into the map's own files
+    /// (<c>env/decals/&lt;name&gt;</c>, kept in the project's <c>files/</c>), so the project keeps working
+    /// when the file moves or on another computer, and the map names the copy. A file that is not
+    /// there is kept by its full path (the slot then says it is missing).
+    /// </summary>
+    /// <param name="name">The copy's name without extension: <see cref="NameOf"/>, <see cref="SpecularName"/>.</param>
+    /// <param name="copies">Gets the copy to add to the map's files (<see cref="With"/>).</param>
+    public static string Keep(MainViewModel model, MapDocument document, string path, string name, List<(string Path, byte[] Bytes)> copies)
+    {
+        if (path.StartsWith("/maps/", StringComparison.OrdinalIgnoreCase))
+        {
+            return path;
+        }
+        string? project = model.Map?.ProjectFolder;
+        string full = Path.GetFullPath(path, project ?? Environment.CurrentDirectory);
+        string kept = AddHeightLayerHandler.SourceOf(project, full);
+        if (!Path.IsPathRooted(kept) || !File.Exists(full))
+        {
+            return kept;
+        }
+        string inMap = $"{AddMapFilesHandler.DecalsFolder}/{name}{Path.GetExtension(full).ToLowerInvariant()}";
+        copies.Add((inMap, File.ReadAllBytes(full)));
+        model.Logger("Files").LogInformation("Copied {File} into the map's own files as {Copy}", full, inMap);
+        return $"/maps/{document.Folder}/{inMap}";
+    }
+
+    /// <summary>
+    /// The document with the copies among its own files, replacing a file of the same name in any case.
+    /// </summary>
+    public static MapDocument With(MapDocument document, IReadOnlyList<(string Path, byte[] Bytes)> copies)
+    {
+        if (copies.Count == 0)
+        {
+            return document;
+        }
+        var files = document.Files;
+        foreach ((string path, byte[] bytes) in copies)
+        {
+            if (files.Keys.FirstOrDefault(file => string.Equals(file, path, StringComparison.OrdinalIgnoreCase)) is string old)
+            {
+                files = files.Remove(old);
+            }
+            files = files.SetItem(path, System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(bytes));
+        }
+        return document with { Files = files };
+    }
 }

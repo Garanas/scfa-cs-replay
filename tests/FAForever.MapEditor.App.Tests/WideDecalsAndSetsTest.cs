@@ -91,8 +91,11 @@ namespace FAForever.MapEditor.App.Tests
             string specular = Picture("specular.png", MagickColors.Gray);
             await Run(model, "decals.chooseWideFile", new JsonObject { ["kind"] = "albedo", ["path"] = albedo });
             await Run(model, "decals.setWide", new JsonObject { ["kind"] = "albedo", ["specular"] = specular });
-            Assert.AreEqual(MapWideSlot.Of(albedo), model.ShownDocument!.WideDecals.Albedo, "a file outside the project: its full path");
-            Assert.AreEqual(specular, model.ShownDocument.WideDecals.Specular);
+            string folder = model.ShownDocument!.Folder.ToString();
+            Assert.AreEqual(MapWideSlot.Of($"/maps/{folder}/env/decals/map_albedo.png"), model.ShownDocument!.WideDecals.Albedo, "a file outside the project: copied into the map's own files");
+            Assert.AreEqual($"/maps/{folder}/env/decals/map_specular.png", model.ShownDocument.WideDecals.Specular);
+            CollectionAssert.AreEqual(File.ReadAllBytes(albedo), model.ShownDocument.Files["env/decals/map_albedo.png"].ToArray());
+            Assert.IsTrue(model.ShownDocument.Files.ContainsKey("env/decals/map_specular.png"));
             Assert.IsInstanceOfType<TexturePicture>(model.WideDecals.Albedo.Preview, "the file's picture");
             StringAssert.StartsWith(model.WideDecals.Albedo.Status, "From ");
 
@@ -108,6 +111,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsFalse(model.ShownDocument!.WideDecals.ShadowSettings.SunShadows);
             model.Undo();
             Assert.IsNull(model.ShownDocument.WideDecals.Specular);
+            Assert.IsFalse(model.ShownDocument.Files.ContainsKey("env/decals/map_specular.png"), "its copy goes with it");
         }
 
         [TestMethod]
