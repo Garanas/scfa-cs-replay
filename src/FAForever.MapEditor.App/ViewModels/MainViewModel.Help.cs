@@ -22,6 +22,7 @@ public sealed partial class MainViewModel
         WorkspaceSettings = new WorkspaceSettingsViewModel(Setup, _dialogs, Logger("Workspace"), RunWithAsync);
         Shortcuts.PropertyChanged += (_, e) => OnPageChanged(e.PropertyName);
         WorkspaceSettings.PropertyChanged += (_, e) => OnPageChanged(e.PropertyName);
+        FollowWorkspaceSettingsPage();
     }
 
     private void OnPageChanged(string? property)

@@ -72,6 +72,23 @@ namespace FAForever.MapEditor.Project.Workspaces
                 ExportChoices.Where(id => id == PathNetworkGenerator.GeneratorId ? settings.PathNodes.WritesOnExport : settings.GeneratesOnExport(id))),
         };
 
+        /// <summary>
+        /// These defaults with a map's choices for one result: whether it regenerates on its own and,
+        /// when the export has a choice about it, whether the export makes or writes it ("Use as
+        /// workspace default" on that result's entry). The other results keep their defaults.
+        /// </summary>
+        public ProceduralDefaults WithChoicesOf(ProceduralSettings settings, string id)
+        {
+            ProceduralDefaults map = Of(settings);
+            ProceduralDefaults defaults = WithAutoGenerate(id, map.RegeneratesOnItsOwn(id));
+            return ExportChoices.Contains(id) ? defaults.WithOnExport(id, map.OnExport.Contains(id)) : defaults;
+        }
+
+        /// <summary>
+        /// Whether a map makes the same choices for one result as these defaults (<see cref="WithChoicesOf"/>).
+        /// </summary>
+        public bool HasChoicesOf(ProceduralSettings settings, string id) => Equals(WithChoicesOf(settings, id));
+
         public bool Equals(ProceduralDefaults? other) =>
             other is not null && AutoGenerate.SetEquals(other.AutoGenerate) && OnExport.SetEquals(other.OnExport);
 

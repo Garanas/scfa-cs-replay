@@ -28,11 +28,6 @@
                                     Help="The folder the FAF client keeps maps and mods in. Maps are exported into its maps folder."
                                     Folder="{Binding WorkspaceSettings.VaultFolder}" BrowseCommand="{Binding WorkspaceSettings.BrowseVaultFolderCommand}" />
               <TextBlock Classes="error" Text="{Binding WorkspaceSettings.Error}" IsVisible="{Binding WorkspaceSettings.HasError}" AutomationProperties.Name="What is wrong with the folders" />
-              <StackPanel Classes="inline">
-                <Button Content="Save" Command="{Binding WorkspaceSettings.SaveCommand}" AutomationProperties.Name="Save the workspace's folders"
-                        AutomationProperties.HelpText="Writes them into workspace.json; another game or FAF folder asks for the assets to be converted again" />
-                <Button Content="Revert" Command="{Binding WorkspaceSettings.RevertCommand}" AutomationProperties.Name="Put the folders back as saved" />
-              </StackPanel>
 
               <TextBlock Classes="heading section" Text="Converted assets" />
               <TextBlock Classes="caption" Text="{Binding WorkspaceSettings.AssetsText}" AutomationProperties.Name="Format of the converted assets" />
@@ -43,7 +38,7 @@
                       AutomationProperties.HelpText="Converts the game's and FAF's environment and units into the workspace again: about a minute; the editor waits until it is done" />
 
               <TextBlock Classes="heading section" Text="Procedural defaults for new and imported maps" />
-              <TextBlock Classes="caption" TextWrapping="Wrap" Text="What a map made or imported in this workspace regenerates on its own (while the views show it) and makes on export. A project opened keeps its own; the Procedural mode's Use as workspace default takes a map's."
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="What a map made or imported in this workspace regenerates on its own (while the views show it) and makes on export. A project opened keeps its own; a Procedural entry's Use as workspace default takes that result's choices from the open map."
                          AutomationProperties.Name="What the Procedural defaults are" />
               <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding WorkspaceProceduralText}" AutomationProperties.Name="The workspace's Procedural defaults" />
               <ItemsControl ItemsSource="{Binding WorkspaceProceduralRows}" AutomationProperties.Name="Procedural defaults of the workspace">
@@ -70,9 +65,21 @@
           </ScrollViewer>
         </Border>
         <Border Classes="dialogpart">
+          <!-- one way of saving for the whole page: the folders and the Procedural defaults together -->
           <DockPanel>
-            <Button DockPanel.Dock="Right" Classes="accent" Content="Close" Command="{Binding WorkspaceSettings.CloseCommand}" />
-            <TextBlock Classes="caption" Text="Help, Folders shows each of these folders in the file manager." VerticalAlignment="Center" />
+            <StackPanel Classes="inline" DockPanel.Dock="Right">
+              <Button Content="Save" Classes.accent="{Binding WorkspaceSettings.HasChanges}" Command="{Binding WorkspaceSettings.SaveCommand}"
+                      AutomationProperties.Name="Save the workspace settings"
+                      AutomationProperties.HelpText="Writes the folders and the Procedural defaults into workspace.json; another game or FAF folder asks for the assets to be converted again" />
+              <Button Content="Revert" Command="{Binding WorkspaceSettings.RevertCommand}" IsEnabled="{Binding WorkspaceSettings.HasChanges}"
+                      AutomationProperties.Name="Put the workspace settings back as saved" />
+              <Button Content="Close" Command="{Binding WorkspaceSettings.CloseCommand}" AutomationProperties.HelpText="Closes the page; changes not saved are dropped" />
+            </StackPanel>
+            <StackPanel Classes="stack" VerticalAlignment="Center">
+              <TextBlock Classes="caption" Classes.warning="{Binding WorkspaceSettings.HasChanges}" TextWrapping="Wrap" Text="{Binding WorkspaceSettings.ChangesText}"
+                         AutomationProperties.Name="Whether the workspace settings are saved" />
+              <TextBlock Classes="caption" Text="Help, Folders shows each of these folders in the file manager." />
+            </StackPanel>
           </DockPanel>
         </Border>
       </StackPanel>

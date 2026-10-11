@@ -11,7 +11,9 @@ namespace FAForever.MapEditor.App.ViewModels;
 /// File, Workspace settings (user story F-5): a page over the window that edits where the workspace
 /// finds the game, FAF's data and the vault maps are exported to (<c>workspace.json</c>), and shows
 /// the converted assets (their format, when they were converted, whether they are current) with
-/// Convert again; it links to the plugins and diagnostics pages.
+/// Convert again, and the Procedural defaults for new and imported maps; it links to the plugins and
+/// diagnostics pages. The page saves one way: the folders and the defaults are changed on the page
+/// and written together by its Save (Revert puts both back).
 /// </summary>
 /// <param name="setup">The workspace and its conversion.</param>
 /// <param name="run">Runs a command with arguments, as a button does.</param>
@@ -27,19 +29,82 @@ public sealed partial class WorkspaceSettingsViewModel(WorkspaceSetupViewModel s
     public partial string Folder { get; private set; } = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasChanges), nameof(ChangesText))]
     public partial string GameFolder { get; set; } = "";
 
     /// <summary>
     /// FAF's <c>gamedata</c> folder; empty without FAF.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasChanges), nameof(ChangesText))]
     public partial string FafDataFolder { get; set; } = "";
 
     /// <summary>
     /// The vault; maps are exported into its <c>maps</c> folder.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasChanges), nameof(ChangesText))]
     public partial string VaultFolder { get; set; } = "";
+
+    /// <summary>
+    /// The Procedural defaults as the page's check boxes have them, written by Save; null while no
+    /// workspace is set up.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasChanges), nameof(ChangesText))]
+    public partial ProceduralDefaults? ProceduralDraft { get; private set; }
+
+    /// <summary>
+    /// Whether the page holds changes Save has not written: a folder or a Procedural default.
+    /// </summary>
+    public bool HasChanges => setup.Workspace is Workspace workspace
+        && (GameFolder != workspace.GameFolder || FafDataFolder != (workspace.FafDataFolder ?? "") || VaultFolder != workspace.VaultFolder
+            || (ProceduralDraft is not null && !ProceduralDraft.Equals(workspace.Procedural)));
+
+    /// <summary>
+    /// The footer's line: what Save writes, or that everything is saved.
+    /// </summary>
+    public string ChangesText => HasChanges
+        ? "Not saved yet: Save writes the folders and the Procedural defaults into workspace.json; Revert puts them back."
+        : "Everything on this page is saved in workspace.json.";
+
+    /// <summary>
+    /// Turns a Procedural default on the page on or off (written by Save).
+    /// </summary>
+    /// <param name="auto">Whether new maps regenerate it on their own; null leaves it.</param>
+    /// <param name="onExport">Whether their export makes or writes it; null leaves it.</param>
+    public void ChangeProcedural(string id, bool? auto, bool? onExport)
+    {
+        if (ProceduralDraft is not ProceduralDefaults draft)
+        {
+            return;
+        }
+        if (auto is bool a)
+        {
+            draft = draft.WithAutoGenerate(id, a);
+        }
+        if (onExport is bool e)
+        {
+            draft = draft.WithOnExport(id, e);
+        }
+        ProceduralDraft = draft;
+    }
+
+    /// <summary>
+    /// The workspace's Procedural defaults were written outside the page (Use as workspace default,
+    /// <c>workspace.setProcedural</c>): the page takes what was written, keeping its other changes.
+    /// </summary>
+    /// <param name="id">The one result written; null when all were.</param>
+    internal void ProceduralSaved(ProceduralDefaults saved, string? id)
+    {
+        if (id is null || ProceduralDraft is not ProceduralDefaults draft)
+        {
+            ProceduralDraft = saved;
+            return;
+        }
+        draft = draft.WithAutoGenerate(id, saved.RegeneratesOnItsOwn(id));
+        ProceduralDraft = ProceduralDefaults.ExportChoices.Contains(id) ? draft.WithOnExport(id, saved.OnExport.Contains(id)) : draft;
+    }
 
     /// <summary>
     /// What is wrong with the folders as typed; null when nothing is.
@@ -102,6 +167,24 @@ public sealed partial class WorkspaceSettingsViewModel(WorkspaceSetupViewModel s
         GameFolder = workspace.GameFolder;
         FafDataFolder = workspace.FafDataFolder ?? "";
         VaultFolder = workspace.VaultFolder;
+        ProceduralDraft = workspace.Procedural;
+        OnPropertyChanged(nameof(HasChanges));
+        OnPropertyChanged(nameof(ChangesText));
+    }
+
+    /// <summary>
+    /// Another workspace was set up: the page shows its settings.
+    /// </summary>
+    internal void WorkspaceChanged()
+    {
+        if (setup.Workspace is Workspace workspace)
+        {
+            Fill(workspace);
+        }
+        else
+        {
+            ProceduralDraft = null;
+        }
     }
 
     /// <summary>
@@ -133,20 +216,29 @@ public sealed partial class WorkspaceSettingsViewModel(WorkspaceSetupViewModel s
     }
 
     /// <summary>
-    /// Writes the folders as typed into the workspace (through <c>file.workspaceSettings</c>, which
-    /// automation runs with the folders as its arguments).
+    /// Writes the folders as typed and the Procedural defaults into the workspace (through
+    /// <c>file.workspaceSettings</c>, which automation runs with them as its arguments).
     /// </summary>
+    /// <param name="procedural">The Procedural defaults to write; null writes the page's (while it is open), else keeps the workspace's.</param>
     /// <returns>Whether they were written; <see cref="Error"/> says why not.</returns>
-    public async Task<bool> ApplyAsync(string? gameFolder = null, string? fafDataFolder = null, string? vaultFolder = null)
+    public async Task<bool> ApplyAsync(string? gameFolder = null, string? fafDataFolder = null, string? vaultFolder = null, ProceduralDefaults? procedural = null)
     {
         Workspace workspace = setup.Workspace ?? throw new InvalidOperationException("Set up a workspace first");
         string game = gameFolder ?? (IsOpen ? GameFolder : workspace.GameFolder);
         string? faf = fafDataFolder ?? (IsOpen ? FafDataFolder : workspace.FafDataFolder);
         string vault = vaultFolder ?? (IsOpen ? VaultFolder : workspace.VaultFolder);
+        ProceduralDefaults defaults = procedural ?? (IsOpen ? ProceduralDraft : null) ?? workspace.Procedural;
         try
         {
-            Workspace changed = setup.ChangeFolders(game, faf, vault);
-            Fill(changed);
+            if (game != workspace.GameFolder || (faf ?? "") != (workspace.FafDataFolder ?? "") || vault != workspace.VaultFolder)
+            {
+                setup.ChangeFolders(game, faf, vault);
+            }
+            if (!defaults.Equals(setup.Workspace!.Procedural))
+            {
+                setup.ChangeProcedural(defaults);
+            }
+            Fill(setup.Workspace!);
             Error = null;
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or UnauthorizedAccessException or Project.MapProjectException)
@@ -160,7 +252,7 @@ public sealed partial class WorkspaceSettingsViewModel(WorkspaceSetupViewModel s
     }
 
     /// <summary>
-    /// The page's Save: writes the folders as typed.
+    /// The page's Save: writes the folders as typed and the Procedural defaults as checked.
     /// </summary>
     [RelayCommand]
     private Task Save() => run("file.workspaceSettings", new JsonObject
@@ -168,6 +260,8 @@ public sealed partial class WorkspaceSettingsViewModel(WorkspaceSetupViewModel s
         ["gameFolder"] = GameFolder,
         ["fafDataFolder"] = FafDataFolder,
         ["vaultFolder"] = VaultFolder,
+        ["autoGenerate"] = new JsonArray([.. (ProceduralDraft?.AutoGenerate ?? []).Select(id => (JsonNode)JsonValue.Create(id))]),
+        ["onExport"] = new JsonArray([.. (ProceduralDraft?.OnExport ?? []).Select(id => (JsonNode)JsonValue.Create(id))]),
     });
 
     /// <summary>

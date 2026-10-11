@@ -68,35 +68,58 @@ public sealed partial class MainViewModel
     [ObservableProperty]
     public partial string WorkspaceProceduralText { get; private set; } = "";
 
+    // the Workspace settings page's check boxes change the page's defaults; its Save writes them with the folders
     [RelayCommand]
-    private Task ToggleWorkspaceAuto(string id) => RunWithAsync("workspace.setProcedural", new JsonObject
-    {
-        ["id"] = id,
-        ["auto"] = !(Setup.Workspace?.Procedural.RegeneratesOnItsOwn(id) ?? false),
-    });
+    private void ToggleWorkspaceAuto(string id) =>
+        WorkspaceSettings.ChangeProcedural(id, !(WorkspaceSettings.ProceduralDraft?.RegeneratesOnItsOwn(id) ?? false), null);
 
     [RelayCommand]
-    private Task ToggleWorkspaceOnExport(string id) => RunWithAsync("workspace.setProcedural", new JsonObject
-    {
-        ["id"] = id,
-        ["onExport"] = !(Setup.Workspace?.Procedural.OnExport.Contains(id) ?? false),
-    });
+    private void ToggleWorkspaceOnExport(string id) =>
+        WorkspaceSettings.ChangeProcedural(id, null, !(WorkspaceSettings.ProceduralDraft?.OnExport.Contains(id) ?? false));
 
     /// <summary>
-    /// Shows the workspace's Procedural defaults as they are now.
+    /// The Workspace settings page shows the workspace's defaults and follows its check boxes (called
+    /// once the page's part is made).
+    /// </summary>
+    private void FollowWorkspaceSettingsPage()
+    {
+        ProceduralList.WorkspaceDefault = id => Setup.Workspace is Workspace workspace && Map?.Document is MapDocument document
+            ? ($"New maps of this workspace {WorkspaceDefaultOf(id, workspace.Procedural)}"
+                + (workspace.Procedural.HasChoicesOf(document.Procedural, id) ? ", as this map does." : "; this map does otherwise."),
+               workspace.Procedural.HasChoicesOf(document.Procedural, id))
+            : null;
+        WorkspaceSettings.WorkspaceChanged();
+        WorkspaceSettings.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(WorkspaceSettingsViewModel.ProceduralDraft))
+            {
+                RefreshWorkspaceProcedural();
+            }
+        };
+        RefreshWorkspaceProcedural();
+    }
+
+    /// <summary>
+    /// Shows the Procedural defaults as the Workspace settings page has them (saved or not), in the
+    /// order of the Procedural mode's list, and each entry's line about the workspace's default.
     /// </summary>
     private void RefreshWorkspaceProcedural()
     {
+        ProceduralList?.Refresh();
         if (Setup.Workspace is not Workspace workspace)
         {
             WorkspaceProceduralRows = [];
             WorkspaceProceduralText = "";
             return;
         }
-        ProceduralDefaults defaults = workspace.Procedural;
-        WorkspaceProceduralRows = [.. Generation.Results.InOrder().Select(generator => new WorkspaceProceduralRow(
-            generator.Id, generator.Title, defaults.RegeneratesOnItsOwn(generator.Id),
-            ProceduralDefaults.ExportChoices.Contains(generator.Id), defaults.OnExport.Contains(generator.Id)))];
+        ProceduralDefaults defaults = WorkspaceSettings?.ProceduralDraft ?? workspace.Procedural;
+        List<string> listed = ProceduralList is null ? [] : [.. ProceduralList.Results.Select(part => part.GeneratorId)];
+        WorkspaceProceduralRows = [.. Generation.Results.InOrder()
+            .Select((generator, order) => (generator, place: listed.IndexOf(generator.Id) is int at and >= 0 ? at : listed.Count + order))
+            .OrderBy(pair => pair.place)
+            .Select(pair => new WorkspaceProceduralRow(
+                pair.generator.Id, pair.generator.Title, defaults.RegeneratesOnItsOwn(pair.generator.Id),
+                ProceduralDefaults.ExportChoices.Contains(pair.generator.Id), defaults.OnExport.Contains(pair.generator.Id)))];
         WorkspaceProceduralText = $"{(defaults.IsDefault ? "The editor's defaults" : "The workspace's own")}: {DescribeDefaults(defaults)}.";
     }
 
@@ -106,6 +129,7 @@ public sealed partial class MainViewModel
         {
             if (e.PropertyName == nameof(WorkspaceSetupViewModel.Workspace))
             {
+                WorkspaceSettings?.WorkspaceChanged();
                 RefreshWorkspaceProcedural();
             }
         };
@@ -261,14 +285,39 @@ public sealed partial class MainViewModel
     /// Makes the open map's Procedural settings (what regenerates on its own, what the export makes)
     /// the workspace's defaults for the maps made or imported in it.
     /// </summary>
+    /// <param name="id">Only this result's choices; the others keep their defaults. Null for every one.</param>
     /// <exception cref="InvalidOperationException">No map is open, or no workspace is set up.</exception>
-    public ProceduralDefaults UseAsWorkspaceDefault()
+    /// <exception cref="ArgumentException">There is no such generator.</exception>
+    public ProceduralDefaults UseAsWorkspaceDefault(string? id = null)
     {
         EditedMap map = RequireMap();
-        ProceduralDefaults defaults = ProceduralDefaults.Of(map.Document.Procedural);
+        Workspace workspace = Setup.Workspace ?? throw new InvalidOperationException("Set up a workspace first");
+        if (id is not null && Generation.Results.Find(id) is null)
+        {
+            throw new ArgumentException($"There is no generator '{id}': {string.Join(", ", Generation.Results.Generators.Select(generator => generator.Id))}");
+        }
+        ProceduralDefaults defaults = id is null
+            ? ProceduralDefaults.Of(map.Document.Procedural)
+            : workspace.Procedural.WithChoicesOf(map.Document.Procedural, id);
         Setup.ChangeProcedural(defaults);
+        WorkspaceSettings.ProceduralSaved(defaults, id);
         RefreshWorkspaceProcedural();
         return defaults;
+    }
+
+    /// <summary>
+    /// What new maps of the workspace do with one result, e.g. <c>regenerate the walkability on their
+    /// own</c>, <c>make the normal map on export</c>, <c>generate the preview only when asked</c>.
+    /// </summary>
+    public string WorkspaceDefaultOf(string id, ProceduralDefaults defaults)
+    {
+        string title = TitleOf(id);
+        string auto = defaults.RegeneratesOnItsOwn(id) ? $"regenerate the {title} on their own" : $"generate the {title} only when asked";
+        if (!ProceduralDefaults.ExportChoices.Contains(id))
+        {
+            return auto;
+        }
+        return defaults.OnExport.Contains(id) ? $"{auto}, and make or write it on export" : $"{auto}, and leave it out on export";
     }
 
     /// <summary>
@@ -297,13 +346,14 @@ public sealed partial class MainViewModel
             defaults = defaults.WithOnExport(id, e);
         }
         Setup.ChangeProcedural(defaults);
+        WorkspaceSettings.ProceduralSaved(defaults, id);
         RefreshWorkspaceProcedural();
         return defaults;
     }
 
     /// <summary>
     /// The workspace's Procedural defaults in words, e.g. <c>regenerate on their own: walkability,
-    /// navigation mesh; on export: normal map</c>.
+    /// connected regions; on export: normal map</c>.
     /// </summary>
     public string DescribeDefaults(ProceduralDefaults defaults)
     {
