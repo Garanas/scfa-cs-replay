@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Seraphim defences",
+  "settings": {
+    "slots": [
+      {
+        "unit": "xsb5101"
+      },
+      {
+        "unit": "xsb2101"
+      },
+      {
+        "unit": "xsb2301"
+      },
+      {
+        "unit": "xsb2104"
+      },
+      {
+        "unit": "xsb2204"
+      },
+      {
+        "unit": "xsb2304"
+      },
+      {
+        "unit": "xsb4202"
+      },
+      {
+        "unit": "xsb4301"
+      },
+      {
+        "unit": "xsb2108"
+      },
+      {
+        "unit": "xsb2109"
+      }
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Cybran T2",
+  "settings": {
+    "slots": [
+      {
+        "unit": "urb0201"
+      },
+      {
+        "unit": "urb0202"
+      },
+      {
+        "unit": "urb0203"
+      },
+      {
+        "unit": "urb1201"
+      },
+      {
+        "unit": "urb1202"
+      },
+      {
+        "unit": "urb2301"
+      },
+      {
+        "unit": "urb2204"
+      },
+      {
+        "unit": "urb2303"
+      },
+      {
+        "unit": "urb4202"
+      },
+      {
+        "unit": "urb3201"
+      }
+    ]
+  }
+}

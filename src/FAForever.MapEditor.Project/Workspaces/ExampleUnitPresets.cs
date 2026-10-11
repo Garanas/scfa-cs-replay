@@ -1,6 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-
 namespace FAForever.MapEditor.Project.Workspaces
 {
     /// <summary>
@@ -17,17 +14,14 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// <c>.examples</c> there names the ones written. A copy still equal to an earlier version of its
     /// example (<see cref="Earlier"/>), untouched by the user, is brought up to date; one the user
     /// changed is left alone. An untouched copy of an example that no longer ships (<see cref="Removed"/>)
-    /// is deleted.
+    /// is deleted. The mechanism is <see cref="ExamplePresetFiles"/>, shared with the example unit palettes.
     /// </remarks>
     public static class ExampleUnitPresets
     {
-        private const string Prefix = "ExampleUnitPresets/";
-        private const string Written = ".examples";
-
         /// <summary>
         /// The SHA-256 of earlier versions of the examples' files (lines ending in a line feed), as
         /// <c>file:hash</c>: a copy still equal to one was not changed by the user and is replaced by
-        /// the current version. A file changed for a release adds its old hash here.
+        /// the current version. A file changed for a release adds its old hash here (<see cref="ExamplePresetFiles.Hash"/>).
         /// </summary>
         private static readonly HashSet<string> Earlier = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -75,20 +69,17 @@ namespace FAForever.MapEditor.Project.Workspaces
             "Wrecked Cybran town.json:5c0508ee51ecaea098afcd7acbd8a1d0e73855bc4abb3cf94c462d62ed43445c",
         };
 
+        private static readonly ExamplePresetFiles Files = new ExamplePresetFiles("ExampleUnitPresets/", Earlier, Removed);
+
         /// <summary>
         /// The examples' file names, e.g. <c>Aeon base, small.json</c>.
         /// </summary>
-        public static IReadOnlyList<string> Names => [.. Resources().Select(resource => resource.File).Order(StringComparer.Ordinal)];
+        public static IReadOnlyList<string> Names => Files.Names;
 
         /// <summary>
         /// The shipped text of an example's file.
         /// </summary>
-        public static string Text(string file)
-        {
-            string resource = Resources().First(r => r.File == file).Resource;
-            using StreamReader reader = new StreamReader(typeof(ExampleUnitPresets).Assembly.GetManifestResourceStream(resource)!);
-            return reader.ReadToEnd();
-        }
+        public static string Text(string file) => Files.Text(file);
 
         /// <summary>
         /// Writes the examples the workspace never had into its <c>presets/units</c>, brings untouched
@@ -100,77 +91,12 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <summary>
         /// Writes the examples into a folder of units presets (see <see cref="Ensure(Workspace)"/>).
         /// </summary>
-        public static IReadOnlyList<string> Ensure(string unitsFolder)
-        {
-            string written = Path.Combine(unitsFolder, Written);
-            HashSet<string> had = new HashSet<string>(File.Exists(written) ? File.ReadAllLines(written) : [], StringComparer.OrdinalIgnoreCase);
-            List<string> now = [];
-            List<string> recorded = [];
-            RemoveRetired(unitsFolder);
-            foreach ((string file, _) in Resources())
-            {
-                string path = Path.Combine(unitsFolder, file);
-                string shipped = Text(file);
-                if (File.Exists(path))
-                {
-                    string onDisk = File.ReadAllText(path);
-                    if (Normal(onDisk) != Normal(shipped) && Earlier.Contains($"{file}:{Hash(onDisk)}"))
-                    {
-                        File.WriteAllText(path, shipped);
-                        now.Add(file);
-                    }
-                    if (!had.Contains(file))
-                    {
-                        recorded.Add(file);
-                    }
-                    continue;
-                }
-                if (had.Contains(file))
-                {
-                    continue;
-                }
-                Directory.CreateDirectory(unitsFolder);
-                File.WriteAllText(path, shipped);
-                now.Add(file);
-                recorded.Add(file);
-            }
-            if (recorded.Count > 0)
-            {
-                File.WriteAllLines(written, [.. had.Concat(recorded).Order(StringComparer.OrdinalIgnoreCase)]);
-            }
-            return now;
-        }
+        public static IReadOnlyList<string> Ensure(string unitsFolder) => Files.Ensure(unitsFolder);
 
         /// <summary>
         /// Deletes the untouched copies of examples that no longer ship (<see cref="Removed"/>).
         /// </summary>
         /// <returns>The files deleted.</returns>
-        public static IReadOnlyList<string> RemoveRetired(string unitsFolder)
-        {
-            List<string> deleted = [];
-            if (!Directory.Exists(unitsFolder))
-            {
-                return deleted;
-            }
-            foreach (string file in Removed.Select(entry => entry[..entry.LastIndexOf(':')]).Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                string path = Path.Combine(unitsFolder, file);
-                if (File.Exists(path) && Removed.Contains($"{file}:{Hash(File.ReadAllText(path))}"))
-                {
-                    File.Delete(path);
-                    deleted.Add(file);
-                }
-            }
-            return deleted;
-        }
-
-        private static string Normal(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal);
-
-        private static string Hash(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Normal(text))));
-
-        private static IEnumerable<(string File, string Resource)> Resources() =>
-            typeof(ExampleUnitPresets).Assembly.GetManifestResourceNames()
-                .Where(resource => resource.StartsWith(Prefix, StringComparison.Ordinal))
-                .Select(resource => (resource[Prefix.Length..], resource));
+        public static IReadOnlyList<string> RemoveRetired(string unitsFolder) => Files.RemoveRetired(unitsFolder);
     }
 }

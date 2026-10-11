@@ -35,6 +35,12 @@ namespace FAForever.MapEditor.Project.Workspaces
 
         public const string Units = "units";
 
+        /// <summary>
+        /// Palettes of ten slots, each a unit or a units preset, for the Units mode's place tool
+        /// (<see cref="UnitPalettes"/>, user story U-8).
+        /// </summary>
+        public const string Palettes = "palettes";
+
         public const string Markers = "markers";
 
         /// <summary>
@@ -51,7 +57,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <summary>
         /// Every kind the editor knows, in the order the Help menu's folders and the guides list them.
         /// </summary>
-        public static IReadOnlyList<string> All { get; } = [Brushes, Stamps, Lighting, Water, Sky, Props, Units, Markers, Selections, Maps];
+        public static IReadOnlyList<string> All { get; } = [Brushes, Stamps, Lighting, Water, Sky, Props, Units, Palettes, Markers, Selections, Maps];
 
         /// <summary>
         /// The kinds by the names their folders had before they were plural; a command or file that

@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Aeon naval",
+  "settings": {
+    "slots": [
+      {
+        "unit": "uab0103"
+      },
+      {
+        "unit": "uab0203"
+      },
+      {
+        "unit": "uab0303"
+      },
+      {
+        "unit": "uab2109"
+      },
+      {
+        "unit": "uab2205"
+      },
+      {
+        "unit": "uab3102"
+      },
+      {
+        "unit": "uab3202"
+      },
+      {
+        "unit": "uab2104"
+      },
+      {
+        "unit": "uab2204"
+      },
+      {
+        "unit": "uab4202"
+      }
+    ]
+  }
+}

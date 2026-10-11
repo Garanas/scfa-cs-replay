@@ -94,6 +94,18 @@ namespace FAForever.MapEditor.Project.Workspaces
         public void SetRegenerateOnTheirOwn(bool on) => Update(settings => settings with { Generation = on ? null : new GenerationSettingsDto { OnTheirOwn = false } });
 
         /// <summary>
+        /// The Units mode's choices (user story U-8): the palette chosen last and the units placed
+        /// last; empty until a palette is chosen or a unit placed.
+        /// </summary>
+        public UnitsSettingsDto Units => Read().Units ?? new UnitsSettingsDto();
+
+        /// <summary>
+        /// Remembers the Units mode's choices.
+        /// </summary>
+        /// <exception cref="IOException">The file cannot be written.</exception>
+        public void SetUnits(UnitsSettingsDto units) => Update(settings => settings with { Units = units });
+
+        /// <summary>
         /// Remembers <paramref name="folder"/> as the workspace.
         /// </summary>
         public void SetWorkspace(string folder) => Update(settings => settings with { Workspace = Path.GetFullPath(folder) });
@@ -174,6 +186,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                 Layout = Part<LayoutSettingsDto>("layout"),
                 Plugins = Part<PluginSettingsDto>("plugins"),
                 Generation = Part<GenerationSettingsDto>("generation"),
+                Units = Part<UnitsSettingsDto>("units"),
             };
             Problem = problems.Count == 0 ? null : $"{File}: {string.Join("; ", problems)}";
             return settings;
