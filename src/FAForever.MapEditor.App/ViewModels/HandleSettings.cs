@@ -77,6 +77,13 @@ public sealed partial class HandleSettings : ObservableObject
     public partial HandleSnap Snap { get; set; }
 
     /// <summary>
+    /// Whether a move of a selection with structures is rounded so that the first structure lands on
+    /// the build grid (user story U-11): the handles' drag, the arrow keys and <c>edit.place</c>.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool KeepOnGrid { get; set; } = true;
+
+    /// <summary>
     /// Raised when a setting changes: the views draw the handles again.
     /// </summary>
     public event EventHandler? Changed;

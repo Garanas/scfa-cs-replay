@@ -440,17 +440,52 @@ namespace FAForever.MapEditor.Project.Editing
         /// <param name="structureFootprint">A blueprint's footprint in ogrids when it is a structure; null for any other unit.</param>
         public static (float Dx, float Dz) KeepOnGrid(MapDocument document, IEnumerable<ObjectRef> things, float dx, float dz, Func<string, (double SizeX, double SizeZ)?> structureFootprint)
         {
-            foreach (ObjectRef thing in things)
+            if (FirstStructure(document, things, structureFootprint) is not (PlacedUnit placed, double sizeX, double sizeZ))
             {
-                if (thing.Kind != ObjectKind.Unit || thing.Name is null || document.FindUnit(thing.Name) is not PlacedUnit placed || structureFootprint(placed.Unit.Blueprint) is not (double sizeX, double sizeZ))
-                {
-                    continue;
-                }
-                Vector3 p = placed.Unit.Position;
-                (float x, float z) = Snap(p.X + dx, p.Z + dz, sizeX, sizeZ, placed.Unit.Orientation.Y);
-                return (x - p.X, z - p.Z);
+                return (dx, dz);
             }
-            return (dx, dz);
+            Vector3 p = placed.Unit.Position;
+            (float x, float z) = Snap(p.X + dx, p.Z + dz, sizeX, sizeZ, placed.Unit.Orientation.Y);
+            return (x - p.X, z - p.Z);
+        }
+
+        /// <summary>
+        /// The place things are put at (<see cref="ObjectEdits.PlaceObjects"/>: <c>x</c> and <c>z</c>,
+        /// either left out to stay) rounded so that the first structure among them stands on the build
+        /// grid; the place given when none is a structure. An axis left out stays left out.
+        /// </summary>
+        public static (float? X, float? Z) KeepPlaceOnGrid(MapDocument document, IEnumerable<ObjectRef> things, float? x, float? z, Func<string, (double SizeX, double SizeZ)?> structureFootprint)
+        {
+            if ((x is null && z is null) || FirstStructure(document, things, structureFootprint) is not (PlacedUnit placed, double sizeX, double sizeZ))
+            {
+                return (x, z);
+            }
+            Vector3 p = placed.Unit.Position;
+            (float sx, float sz) = Snap(x ?? p.X, z ?? p.Z, sizeX, sizeZ, placed.Unit.Orientation.Y);
+            return (x is null ? null : sx, z is null ? null : sz);
+        }
+
+        /// <summary>
+        /// The first of the things that is a structure, with its footprint; null for none.
+        /// </summary>
+        private static (PlacedUnit Unit, double SizeX, double SizeZ)? FirstStructure(MapDocument document, IEnumerable<ObjectRef> things, Func<string, (double SizeX, double SizeZ)?> structureFootprint)
+        {
+            ObjectRef[] units = [.. things.Where(thing => thing.Kind == ObjectKind.Unit && thing.Name is not null)];
+            if (units.Length == 0)
+            {
+                return null;
+            }
+            // one pass over the map's units, not one per thing
+            HashSet<string> names = [.. units.Select(thing => thing.Name!)];
+            Dictionary<string, PlacedUnit> found = document.AllUnits().Where(unit => names.Contains(unit.Unit.Name)).GroupBy(unit => unit.Unit.Name).ToDictionary(group => group.Key, group => group.First());
+            foreach (ObjectRef thing in units)
+            {
+                if (found.TryGetValue(thing.Name!, out PlacedUnit? placed) && structureFootprint(placed.Unit.Blueprint) is (double sizeX, double sizeZ))
+                {
+                    return (placed, sizeX, sizeZ);
+                }
+            }
+            return null;
         }
 
         private static float Axis(float value, int size) => size % 2 == 1 ? MathF.Floor(value) + 0.5f : MathF.Round(value);

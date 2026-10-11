@@ -250,6 +250,8 @@
                   <TextBlock Classes="label" Text="Shift snaps to" />
                   <ComboBox ItemsSource="{Binding Snaps}" SelectedItem="{Binding Snap}" AutomationProperties.Name="Grid a move snaps to with shift"
                             AutomationProperties.HelpText="Shift snaps a move to this grid, a turn to 15 degrees, a scale to tenths" />
+                  <CheckBox Content="Keep structures on the build grid" IsChecked="{Binding KeepOnGrid}" AutomationProperties.Name="Keep structures on the build grid"
+                            AutomationProperties.HelpText="A move of a selection with structures is rounded so that the first structure lands on the build grid; everything else moves by the same amount" />
                 </StackPanel>
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Help}" ToolTip.Tip="{Binding Help}" />
               </controls:ToolRow>

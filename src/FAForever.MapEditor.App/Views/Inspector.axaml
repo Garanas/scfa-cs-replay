@@ -303,7 +303,44 @@
                       <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" AutomationProperties.Name="Army of the selected units"
                                 AutomationProperties.HelpText="Choosing another gives the selected units to it, in its group INITIAL" />
                     </StackPanel>
-                    <TextBlock Classes="caption" Text="{Binding Group, StringFormat='Group: {0}'}" />
+                    <!-- the army's groups as a choice (U-11): a dash while they are in different ones or belong to several armies -->
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Group" Width="{StaticResource FactLabelWidth}" />
+                      <ComboBox ItemsSource="{Binding Groups}" SelectedItem="{Binding GroupChoice}" IsEnabled="{Binding CanChooseGroup}" PlaceholderText="—"
+                                HorizontalAlignment="Stretch" AutomationProperties.Name="Group of the selected units"
+                                AutomationProperties.HelpText="Choosing a group moves the selected units into it, each staying in its army; a dash when they are in different groups or armies" />
+                    </DockPanel>
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Blueprint" Width="{StaticResource FactLabelWidth}" />
+                      <TextBlock Classes="mono" Text="{Binding Blueprint}" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Blueprint of the selected units" />
+                    </DockPanel>
+                    <StackPanel Classes="inline">
+                      <Button Content="Replace..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.replace"
+                              AutomationProperties.Name="Replace the units' blueprint"
+                              AutomationProperties.HelpText="Give the selected units another blueprint, chosen in the picker; their name, place, heading, army and group stay, structures stay on the build grid" />
+                      <Button Content="To faction..." AutomationProperties.Name="Convert the units to a faction"
+                              AutomationProperties.HelpText="Make each selected unit the same kind of unit of another faction; a unit with no counterpart stays as it is">
+                        <Button.Flyout>
+                          <MenuFlyout>
+                            <MenuItem Header="UEF" Command="{Binding ToFactionCommand}" CommandParameter="uef" AutomationProperties.Name="Convert the units to UEF" />
+                            <MenuItem Header="Cybran" Command="{Binding ToFactionCommand}" CommandParameter="cybran" AutomationProperties.Name="Convert the units to Cybran" />
+                            <MenuItem Header="Aeon" Command="{Binding ToFactionCommand}" CommandParameter="aeon" AutomationProperties.Name="Convert the units to Aeon" />
+                            <MenuItem Header="Seraphim" Command="{Binding ToFactionCommand}" CommandParameter="seraphim" AutomationProperties.Name="Convert the units to Seraphim" />
+                          </MenuFlyout>
+                        </Button.Flyout>
+                      </Button>
+                    </StackPanel>
+                    <StackPanel Classes="inline">
+                      <Button Content="Group" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.group"
+                              AutomationProperties.Name="Group the selected units" ToolTip.Tip="Put the selected units into a new group (Ctrl+G)"
+                              AutomationProperties.HelpText="A new group under the deepest group that holds them all, one per army; Ctrl+G" />
+                      <Button Content="Ungroup" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.ungroup"
+                              IsEnabled="{Binding CanUngroup}" AutomationProperties.Name="Ungroup the selected units"
+                              AutomationProperties.HelpText="Dissolve the group the selected units are in: its units and groups go into the group above" />
+                      <Button Content="Distribute" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="units.distribute"
+                              IsEnabled="{Binding CanDistribute}" AutomationProperties.Name="Distribute the selected units evenly"
+                              AutomationProperties.HelpText="Three or more units: spread them evenly between the first and last along the longer of x and z; structures stay on the build grid" />
+                    </StackPanel>
                     <!-- wrecks (U-5): the army's WRECKAGE group; a dash when some are -->
                     <CheckBox Content="Wrecks" IsChecked="{Binding Wrecks}" AutomationProperties.Name="The selected units are wrecks"
                               AutomationProperties.HelpText="Wrecks lie in their army's WRECKAGE group, which the game turns into wrecks when it starts" />

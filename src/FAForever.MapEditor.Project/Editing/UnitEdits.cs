@@ -55,6 +55,15 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// Whether the units spread out further along x than along z (true when equal); true for none.
+        /// </summary>
+        public static bool LongerAlongX(MapDocument document, IEnumerable<string> names)
+        {
+            Vector3[] places = [.. names.Distinct(StringComparer.Ordinal).Select(document.FindUnit).OfType<PlacedUnit>().Select(unit => unit.Unit.Position)];
+            return places.Length == 0 || places.Max(p => p.X) - places.Min(p => p.X) >= places.Max(p => p.Z) - places.Min(p => p.Z);
+        }
+
+        /// <summary>
         /// Spreads units evenly along an axis between the first and the last of them along it, keeping
         /// their order there; the two ends stay, and a structure between them stands on the build grid.
         /// </summary>
@@ -69,7 +78,7 @@ namespace FAForever.MapEditor.Project.Editing
             {
                 return document;
             }
-            bool x = alongX ?? (units.Max(u => u.Unit.Position.X) - units.Min(u => u.Unit.Position.X) >= units.Max(u => u.Unit.Position.Z) - units.Min(u => u.Unit.Position.Z));
+            bool x = alongX ?? LongerAlongX(document, units.Select(unit => unit.Unit.Name));
             float Along(PlacedUnit unit) => x ? unit.Unit.Position.X : unit.Unit.Position.Z;
             PlacedUnit[] ordered = [.. units.OrderBy(Along).ThenBy(unit => unit.Unit.Name, StringComparer.Ordinal)];
             float first = Along(ordered[0]);
