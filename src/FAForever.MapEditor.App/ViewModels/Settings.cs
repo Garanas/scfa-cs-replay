@@ -41,6 +41,12 @@ public abstract partial class Setting : ObservableObject
     public string? Help { get; init; }
 
     /// <summary>
+    /// What the command is given for a value, when not the value itself (an offset worked out from
+    /// an absolute height, a range from one of its ends); null gives the value.
+    /// </summary>
+    public Func<JsonNode?, JsonNode?>? ValueOf { get; init; }
+
+    /// <summary>
     /// The command's argument the value goes to.
     /// </summary>
     public string Argument { get; }
@@ -71,7 +77,7 @@ public abstract partial class Setting : ObservableObject
     protected void Give(JsonNode? value)
     {
         JsonObject arguments = _fixed?.Invoke() ?? [];
-        arguments[Argument] = value;
+        arguments[Argument] = ValueOf is null ? value : ValueOf(value);
         _ = _run(_command, arguments);
     }
 

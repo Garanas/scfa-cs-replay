@@ -16,7 +16,103 @@
       <controls:SettingList DataContext="{Binding HeightStack.Use}" ShowsTitle="False" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HeightStack.HasLayers}" />
       <Button Content="Read the file again" Command="{Binding HeightStack.ReloadCommand}" IsVisible="{Binding HeightStack.IsImported}"
               AutomationProperties.HelpText="Reads the imported layer's file again, as the editor does when it changes in the project folder" />
-      <controls:SettingList DataContext="{Binding HeightStack.Curve}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HeightStack.IsCurve}" />
+      <!-- the curve's settings (T-4): its groups, each shown only for the profiles that use it -->
+      <StackPanel Classes="stack" IsVisible="{Binding HeightStack.IsCurve}">
+        <controls:SettingList DataContext="{Binding HeightStack.Curve}" />
+        <ItemsControl ItemsSource="{Binding HeightStack.CurveGroups}" AutomationProperties.Name="The curve's settings">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Classes="stack" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="vm:CurveSettingGroup">
+              <Panel IsVisible="{Binding IsShown}">
+                <controls:SettingList DataContext="{Binding Group}" ShowsTitle="{Binding $parent[Panel].((vm:CurveSettingGroup)DataContext).ShowsTitle}" />
+              </Panel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding HeightStack.VariationNote}" AutomationProperties.Name="How the variation is shown" />
+
+        <!-- the points as a table (T-4): a row per point, the grade between rows, the chosen points; the buttons that work on points -->
+        <StackPanel Classes="stack section" DataContext="{Binding HeightStack.Nodes}" x:DataType="vm:CurveNodesViewModel">
+          <TextBlock Classes="heading" Text="Points" />
+          <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding ChosenText}" AutomationProperties.Name="Chosen points of the curve" />
+          <DockPanel ToolTip.Tip="A stretch whose grade is somewhere steeper than this shows in the warning colour: a hint of what units climb">
+            <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Grade limit %" />
+            <TextBox Classes="mono commit settingnumber" HorizontalAlignment="Left"
+                     Text="{Binding GradeLimit, UpdateSourceTrigger=LostFocus, Converter={x:Static controls:NumberTextConverter.Instance}}"
+                     AutomationProperties.Name="Grade limit of the curve's points"
+                     AutomationProperties.HelpText="A stretch whose grade is somewhere steeper than this many percent shows in the warning colour" />
+          </DockPanel>
+          <Grid ColumnDefinitions="28,*,*,*,*" RowDefinitions="Auto,Auto" AutomationProperties.Name="Columns of the curve's points">
+            <TextBlock Grid.Column="0" Classes="curvenodehead" Text="#" />
+            <TextBlock Grid.Column="1" Classes="curvenodehead" Text="X" />
+            <TextBlock Grid.Column="2" Classes="curvenodehead" Text="Z" />
+            <TextBlock Grid.Column="3" Classes="curvenodehead" Text="Height" />
+            <TextBlock Grid.Column="4" Classes="curvenodehead" Text="Strength" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Classes="curvenodehead" Text="Width" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Classes="curvenodehead" Text="Left fall" />
+            <TextBlock Grid.Row="1" Grid.Column="3" Classes="curvenodehead" Text="Right fall" />
+            <TextBlock Grid.Row="1" Grid.Column="4" Classes="curvenodehead" Text="Sharp" />
+          </Grid>
+          <ListBox x:Name="NodeList" Classes="curvenodes" ItemsSource="{Binding Rows}" SelectionMode="Multiple"
+                   AutomationProperties.Name="Points of the curve"
+                   AutomationProperties.HelpText="A row per point: an empty field takes the curve's value (its hint); Ctrl or Shift and a click choose more points">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel />
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="vm:CurveNodeRow">
+                <Grid ColumnDefinitions="28,*,*,*,*" RowDefinitions="Auto,Auto,Auto">
+                  <TextBlock Grid.Column="0" Classes="mono" Text="{Binding Number}" VerticalAlignment="Center" />
+                  <TextBox Grid.Column="1" Classes="curvenodefield commit" Text="{Binding X, UpdateSourceTrigger=LostFocus}"
+                           AutomationProperties.Name="{Binding Number, StringFormat='Point {0} x'}" />
+                  <TextBox Grid.Column="2" Classes="curvenodefield commit" Text="{Binding Z, UpdateSourceTrigger=LostFocus}"
+                           AutomationProperties.Name="{Binding Number, StringFormat='Point {0} z'}" />
+                  <TextBox Grid.Column="3" Classes="curvenodefield commit" Text="{Binding Height, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding HeightEditable}"
+                           AutomationProperties.Name="{Binding Number, StringFormat='Point {0} height'}"
+                           AutomationProperties.HelpText="The point's height (a road's or river bed's) or rise; a fill has one height, the mean of its points'" />
+                  <TextBox Grid.Column="4" Classes="curvenodefield commit" Text="{Binding Strength, UpdateSourceTrigger=LostFocus}" PlaceholderText="1"
+                           AutomationProperties.Name="{Binding Number, StringFormat='Point {0} strength'}" AutomationProperties.HelpText="0 to 1; empty: full" />
+                  <TextBox Grid.Row="1" Grid.Column="1" Classes="curvenodefield commit" Text="{Binding Width, UpdateSourceTrigger=LostFocus}" PlaceholderText="{Binding WidthHint}"
+                           AutomationProperties.Name="{Binding Number, StringFormat='Point {0} width'}" AutomationProperties.HelpText="Empty: the curve's width" />
+                  <TextBox Grid.Row="1" Grid.Column="2" Classes="curvenodefield commit" Text="{Binding FalloffLeft, UpdateSourceTrigger=LostFocus}" PlaceholderText="{Binding FalloffLeftHint}"
+                           AutomationProperties.Name="{Binding Number, StringFormat='Point {0} left falloff'}" AutomationProperties.HelpText="Empty: the curve's falloff" />
+                  <TextBox Grid.Row="1" Grid.Column="3" Classes="curvenodefield commit" Text="{Binding FalloffRight, UpdateSourceTrigger=LostFocus}" PlaceholderText="{Binding FalloffRightHint}"
+                           AutomationProperties.Name="{Binding Number, StringFormat='Point {0} right falloff'}" AutomationProperties.HelpText="Empty: the curve's right falloff" />
+                  <CheckBox Grid.Row="1" Grid.Column="4" IsChecked="{Binding Sharp}" AutomationProperties.Name="{Binding Number, StringFormat='Point {0} sharp'}"
+                            AutomationProperties.HelpText="The path makes a corner at the point" ToolTip.Tip="The path makes a corner at the point" />
+                  <TextBlock Grid.Row="2" Grid.ColumnSpan="5" Classes="caption" Classes.warning="{Binding IsSteep}" Text="{Binding Grade}"
+                             IsVisible="{Binding Grade, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                             AutomationProperties.Name="{Binding Number, StringFormat='Grade after point {0}'}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <WrapPanel Classes="row">
+            <Button Content="Reverse" Command="{Binding ReverseCommand}" AutomationProperties.Name="Reverse the curve"
+                    AutomationProperties.HelpText="Its points in the other order; it keeps its look, a cliff raises its other side"
+                    ToolTip.Tip="Its points in the other order; it keeps its look, a cliff raises its other side" />
+            <Button Content="{Binding EvenTitle}" Command="{Binding EvenGradeCommand}" AutomationProperties.Name="Even the grade"
+                    AutomationProperties.HelpText="The points between the first and last chosen point (else the curve's ends) get heights on a straight line: a ramp"
+                    ToolTip.Tip="The points between the first and last chosen point (else the curve's ends) get heights on a straight line: a ramp" />
+          </WrapPanel>
+          <TextBlock Classes="label" Text="Snap to the ground" />
+          <WrapPanel Classes="row" ToolTip.Tip="{Binding SnapReason}">
+            <Button Content="The ends" Command="{Binding SnapEndsCommand}" AutomationProperties.Name="Snap the curve's ends to the ground"
+                    AutomationProperties.HelpText="The first and last point get the height the layers below make there" />
+            <Button Content="The chosen" Command="{Binding SnapChosenCommand}" AutomationProperties.Name="Snap the chosen points to the ground"
+                    AutomationProperties.HelpText="The chosen points get the height the layers below make there" />
+            <Button Content="All" Command="{Binding SnapAllCommand}" AutomationProperties.Name="Snap every point to the ground"
+                    AutomationProperties.HelpText="Every point gets the height the layers below make there" />
+          </WrapPanel>
+          <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding SnapReason}" IsVisible="{Binding !CanSnap}" AutomationProperties.Name="Why the snap is off" />
+        </StackPanel>
+      </StackPanel>
       <!-- Decals along the curve (T-4, D2): placed once as ordinary decals by decals.alongCurve; the editor's settings, not the curve's -->
       <StackPanel Classes="stack section" x:DataType="vm:DecalsAlongCurveViewModel"
                   DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DecalsAlong}"

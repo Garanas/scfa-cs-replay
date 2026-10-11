@@ -281,12 +281,15 @@ public partial class LayerStackViewModel : ObservableObject
         string signature = FilterKey + "#" + string.Join("|", layers.Select(layer => layer.Name + ":" + SummaryOf(layer) + ":" + layer.Path));
         if (document is not null && stack is not null && signature == _signature)
         {
+            bool chosenChanged = false;
             if (!ReferenceEquals(stack, _shown))
             {
                 FollowPreviews(document, stack);
+                // a setting the list does not show (a curve mirrored, its falloff) changed the chosen layer: its fields follow
+                chosenChanged = !ReferenceEquals(_shown?.Layers.FirstOrDefault(layer => layer.Name == Chosen), stack.Layers.FirstOrDefault(layer => layer.Name == Chosen));
             }
             _shown = stack;
-            if (newSettings)
+            if (newSettings || chosenChanged)
             {
                 // the fields made again for other clip choices show the chosen layer at once
                 RefreshSettings();
