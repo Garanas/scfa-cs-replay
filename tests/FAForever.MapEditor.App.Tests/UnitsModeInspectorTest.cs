@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FAForever.MapEditor.App.Automation;
 using FAForever.MapEditor.App.Commands;
+using FAForever.MapEditor.App.Controls;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
@@ -116,6 +117,74 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual("map.army.ARMY_2", model.MapParts.Parts.Chosen.Id, "the chosen army's entry");
             ArmyPanel map = window.GetVisualDescendants().OfType<Inspector>().Single().GetVisualDescendants().OfType<ArmyPanel>().Single(view => view.IsEffectivelyVisible);
             Assert.AreEqual("ARMY_2", map.GetVisualDescendants().OfType<TextBox>().First(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Name of the chosen army").Text);
+            window.Close();
+        });
+
+        /// <summary>
+        /// A group placed from a preset (user story U-9): the tree's badge, the list's count, the
+        /// inspector's block with its buttons, Save back asking first, Detach.
+        /// </summary>
+        [TestMethod]
+        public Task AGroupPlacedFromAPresetShowsThePresetInTheTreeTheListAndTheInspector() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            await model.Commands.RunAsync("units.saveGroupAsPreset", new JsonObject { ["army"] = "ARMY_1", ["group"] = "INITIAL", ["name"] = "Village" }, interactive: false);
+            Assert.IsTrue((await model.Commands.RunAsync("units.placePreset", new JsonObject { ["name"] = "Village", ["x"] = 100, ["z"] = 100, ["army"] = "ARMY_2" }, interactive: false)).Ran);
+            await Send(automation, "expand", new JsonObject { ["label"] = "Armies and their unit groups", ["all"] = true });
+            ModePanel panel = window.GetVisualDescendants().OfType<ModePanel>().Single();
+
+            // the tree's badge names the preset, the list counts the instance
+            Border badge = panel.GetVisualDescendants().OfType<Border>().Single(border => border.Classes.Contains("instance") && border.IsEffectivelyVisible && border.Child is TextBlock { Text: "Village" });
+            Assert.IsNotNull(badge, "the group placed carries the preset's name");
+            Assert.IsFalse(panel.GetVisualDescendants().OfType<Border>().Any(border => border.Classes.Contains("stale") && border.IsEffectivelyVisible), "the preset is as it was");
+            PresetInstanceBadges counts = panel.GetVisualDescendants().OfType<PresetInstanceBadges>().Single(badges => badges.Preset == "Village");
+            Assert.IsTrue(counts.IsEffectivelyVisible);
+            Assert.AreEqual("Placed 1 time on this map", Avalonia.Automation.AutomationProperties.GetName(counts));
+
+            // the inspector's block
+            await Send(automation, "click", new JsonObject { ["label"] = "Group INITIAL/Village of ARMY_2, 2 units, placed from the preset Village" });
+            Assert.AreEqual("Village", ((TextBlock)InInspector(window, "Chosen army or group")!).Text);
+            Assert.AreEqual("Village", ((TextBlock)InInspector(window, "Preset of the chosen instance")!).Text);
+            Assert.AreEqual("×1 placed", ((TextBlock)InInspector(window, "How often the preset of the chosen instance is placed")!).Text);
+            StringAssert.StartsWith(((TextBlock)InInspector(window, "Where and when the chosen instance was placed")!).Text, "at 100, 100 · 0° · ");
+            Assert.IsNull(InInspector(window, "How the chosen instance stands to its preset"), "nothing to say while the preset is current");
+            await Send(automation, "click", new JsonObject { ["label"] = "Select the units of the chosen instance" });
+            Assert.AreEqual(2, model.Selection.Count);
+
+            // the preset's file changed: the badges and the inspector say so; Save back asks, then the instance is current again
+            PresetLibrary library = model.Presets.Library!;
+            library.Save(Preset.Of(UnitPresets.Kind, "Village", library.Find(UnitPresets.Kind, "Village")!.Read<UnitPresetSettings>() with { Source = "edited" }));
+            model.Presets.Refresh();
+            Dispatcher.UIThread.RunJobs();
+            await Send(automation, "click", new JsonObject { ["label"] = "Group INITIAL/Village of ARMY_2, 2 units, placed from the preset Village, preset changed" });
+            Assert.IsTrue(panel.GetVisualDescendants().OfType<Border>().Any(border => border.Classes.Contains("stale") && border.IsEffectivelyVisible && border.Child is TextBlock { Text: "preset changed" }));
+            // the list was made again from the files: its badges are new controls
+            counts = panel.GetVisualDescendants().OfType<PresetInstanceBadges>().Single(badges => badges.Preset == "Village");
+            Assert.AreEqual("Placed 1 time on this map, 1 out of date", Avalonia.Automation.AutomationProperties.GetName(counts));
+            StringAssert.StartsWith(((TextBlock)InInspector(window, "How the chosen instance stands to its preset")!).Text, "The preset changed after this was placed");
+            JsonObject clicked = await Send(automation, "click", new JsonObject { ["label"] = "Save the chosen instance back into its preset" });
+            Assert.IsTrue(clicked["ok"]!.GetValue<bool>(), clicked.ToJsonString());
+            Assert.AreEqual("Save back to the preset", model.Question.Title, "it asks: the file is overwritten");
+            await Send(automation, "dialog", new JsonObject { ["button"] = "Save back" });
+            for (int i = 0; i < 100 && (model.Question.IsOpen || !model.Status.StartsWith("Saved INITIAL/Village", StringComparison.Ordinal)); i++)
+            {
+                await Task.Delay(10);
+                Dispatcher.UIThread.RunJobs();
+            }
+            StringAssert.StartsWith(model.Status, "Saved INITIAL/Village of ARMY_2 back into the preset Village");
+            Assert.AreEqual("edited", library.Find(UnitPresets.Kind, "Village")!.Read<UnitPresetSettings>().Source, "the file holds the group's layout and keeps its source");
+            Assert.AreEqual(PresetInstanceState.Current, model.Armies.ChosenGroup!.InstanceState);
+            Assert.IsNull(InInspector(window, "How the chosen instance stands to its preset"));
+
+            // Show the preset highlights it in the list; Detach forgets the link
+            await Send(automation, "click", new JsonObject { ["label"] = "Show the preset of the chosen instance" });
+            Assert.AreEqual("Village", model.Presets.Highlighted);
+            Dispatcher.UIThread.RunJobs();
+            Assert.IsTrue(panel.GetVisualDescendants().OfType<Button>().Any(button => button.Classes.Contains("highlighted") && button.IsEffectivelyVisible), "its button is highlighted");
+            await Send(automation, "click", new JsonObject { ["label"] = "Detach the chosen instance from its preset" });
+            Assert.IsNull(model.ShownDocument!.FindGroup("ARMY_2", ["INITIAL", "Village"])!.Instance);
+            Assert.IsNull(InInspector(window, "Preset of the chosen instance"), "the block is gone");
+            Assert.IsFalse(counts.IsEffectivelyVisible, "placed nowhere");
             window.Close();
         });
 

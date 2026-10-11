@@ -28,12 +28,22 @@ public sealed partial class MainViewModel
     {
         UnitPlaceTool place = Tool<UnitPlaceTool>();
         Presets.Register(UnitPreset.Of(this));
+        // the tree and the inspector tell how a placed instance stands to its preset (U-9)
+        Armies.PresetFingerprint = Presets.UnitPresetFingerprint;
         DocumentChanged += (_, _) =>
         {
             using Performance.Span measure = Performance.Measure("model.units");
             // the tool first: the tree's chosen group goes to the tool, which must know the group
             place.Refresh(ShownDocument);
             Armies.Refresh(ShownDocument);
+            Presets.CountInstances(ShownDocument);
+        };
+        // the presets changed on disk (or one was saved): every instance's state again, and the check
+        Presets.Changed += (_, _) =>
+        {
+            Armies.RefreshInstances();
+            Presets.CountInstances(ShownDocument, again: true);
+            Problems.Schedule();
         };
 
         // a unit chosen on the shelf or in the picker is what the place tool places

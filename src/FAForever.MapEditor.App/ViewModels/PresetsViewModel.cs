@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FAForever.MapEditor.Project;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Workspaces;
 using Microsoft.Extensions.Logging;
 
@@ -15,6 +16,12 @@ namespace FAForever.MapEditor.App.ViewModels;
 /// <param name="Capture">The settings as they are now, and a name to suggest for them.</param>
 /// <param name="Apply">Makes the settings of a preset the editor's.</param>
 public sealed record PresetKind(string Kind, string Title, Func<(string Name, JsonObject Settings)> Capture, Action<Preset> Apply);
+
+/// <summary>
+/// How often a unit preset is placed on the open map, and how many of those instances are out of
+/// date (user story U-9).
+/// </summary>
+public sealed record PresetInstanceCount(int Placed, int OutOfDate);
 
 /// <summary>
 /// The presets of a mode's panel, of one kind (<see cref="PresetsViewModel.Kind"/>).
@@ -110,7 +117,77 @@ public sealed partial class PresetsViewModel : ObservableObject
         }
     }
 
-    partial void OnKindChanged(string? value) => OnPropertyChanged(nameof(NewName));
+    partial void OnKindChanged(string? value)
+    {
+        OnPropertyChanged(nameof(NewName));
+        Highlighted = null;
+    }
+
+    #region Instances of unit presets (U-9)
+
+    private readonly Dictionary<string, string?> _fingerprints = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+    private System.Collections.Immutable.ImmutableArray<FAForever.MapEditor.Project.Files.InMemory.Army>? _countedArmies;
+
+    /// <summary>
+    /// Raised after the presets were read again (a file changed, one was saved or deleted): what
+    /// shows the state of placed instances looks again.
+    /// </summary>
+    public event EventHandler? Changed;
+
+    /// <summary>
+    /// The fingerprint of the workspace's units preset of a name (<see cref="UnitPresets.Fingerprint(UnitPresetSettings)"/>),
+    /// null for a name it has no preset of or without a workspace; read from the file once, until
+    /// the presets change.
+    /// </summary>
+    public string? UnitPresetFingerprint(string name)
+    {
+        if (Library is not PresetLibrary library)
+        {
+            return null;
+        }
+        if (!_fingerprints.TryGetValue(name, out string? fingerprint))
+        {
+            fingerprint = PresetInstances.FingerprintOf(library, name);
+            _fingerprints[name] = fingerprint;
+        }
+        return fingerprint;
+    }
+
+    /// <summary>
+    /// The preset the panel's list highlights and scrolls to (Show the preset), by name; null for none.
+    /// </summary>
+    [ObservableProperty]
+    public partial string? Highlighted { get; set; }
+
+    /// <summary>
+    /// Per preset name (ignoring case), how often it is placed on the open map and how many of
+    /// those instances are out of date (the preset changed since): the list's badges.
+    /// </summary>
+    [ObservableProperty]
+    public partial IReadOnlyDictionary<string, PresetInstanceCount> Instances { get; private set; } = new Dictionary<string, PresetInstanceCount>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Counts the instances of a version of the map, when its armies changed or the presets did.
+    /// </summary>
+    /// <param name="again">Count also when the armies are those counted last (the presets changed).</param>
+    public void CountInstances(FAForever.MapEditor.Project.Files.InMemory.MapDocument? document, bool again = false)
+    {
+        if (!again && document?.Armies == _countedArmies)
+        {
+            return;
+        }
+        _countedArmies = document?.Armies;
+        Dictionary<string, PresetInstanceCount> counts = new Dictionary<string, PresetInstanceCount>(StringComparer.OrdinalIgnoreCase);
+        foreach (PlacedInstance instance in document?.Instances() ?? [])
+        {
+            PresetInstanceCount count = counts.GetValueOrDefault(instance.Instance.Preset, new PresetInstanceCount(0, 0));
+            bool outOfDate = HasLibrary && PresetInstances.StateOf(instance.Instance, UnitPresetFingerprint) == PresetInstanceState.Changed;
+            counts[instance.Instance.Preset] = new PresetInstanceCount(count.Placed + 1, count.OutOfDate + (outOfDate ? 1 : 0));
+        }
+        Instances = counts;
+    }
+
+    #endregion
 
     /// <exception cref="ArgumentException">The kind is registered already, or is no kind.</exception>
     public void Register(PresetKind kind)
@@ -262,9 +339,12 @@ public sealed partial class PresetsViewModel : ObservableObject
     /// </summary>
     public void Refresh()
     {
+        // the files changed: the fingerprints of the unit presets are read again when asked
+        _fingerprints.Clear();
         if (Library is null || Kind is null)
         {
             Shown = [];
+            Changed?.Invoke(this, EventArgs.Empty);
             return;
         }
         List<string> unreadable = [];
@@ -281,6 +361,11 @@ public sealed partial class PresetsViewModel : ObservableObject
         {
             _log.LogWarning("A preset cannot be read: {File}", file);
         }
+        if (Highlighted is string highlighted && !Shown.Any(preset => string.Equals(preset.Name, highlighted, StringComparison.OrdinalIgnoreCase)))
+        {
+            Highlighted = null;
+        }
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

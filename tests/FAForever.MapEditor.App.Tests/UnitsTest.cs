@@ -257,6 +257,94 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsNull(tool.Preset);
         }
 
+        /// <summary>
+        /// A group placed from a preset knows the preset (user story U-9): the tree's badge and the
+        /// list's count, selecting the instance, the preset's file changing on disk, saving the
+        /// instance back (asked first), detaching it, and showing the preset.
+        /// </summary>
+        [TestMethod]
+        public async Task APlacedPresetIsAnInstanceThatIsSelectedSavedBackAndDetached()
+        {
+            MainViewModel model = await Open();
+            PresetLibrary library = new PresetLibrary(Path.Combine(AppContext.BaseDirectory, "presets", Guid.NewGuid().ToString("N")));
+            model.Presets.Use(library);
+            await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1201", ["x"] = 50, ["z"] = 50, ["army"] = "ARMY_1", ["group"] = "INITIAL/Town" });
+            await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1101", ["x"] = 60, ["z"] = 50, ["army"] = "ARMY_1", ["group"] = "INITIAL/Town" });
+            await Run(model, "units.saveGroupAsPreset", new JsonObject { ["army"] = "ARMY_1", ["group"] = "INITIAL/Town", ["name"] = "Village" });
+            Assert.IsNull(model.ShownDocument!.FindGroup("ARMY_1", ["INITIAL", "Town"])!.Instance, "a group saved as a preset is no instance of it");
+
+            await Run(model, "units.placePreset", new JsonObject { ["name"] = "Village", ["x"] = 100, ["z"] = 100, ["army"] = "ARMY_2", ["heading"] = 90 });
+            await Run(model, "units.placePreset", new JsonObject { ["name"] = "Village", ["x"] = 200, ["z"] = 100, ["army"] = "ARMY_3" });
+            PresetInstance instance = model.ShownDocument!.FindGroup("ARMY_2", ["INITIAL", "Village"])!.Instance ?? throw new AssertFailedException("the group placed is an instance");
+            Assert.AreEqual("Village", instance.Preset);
+            Assert.AreEqual((100f, 100f), (instance.X, instance.Z));
+            Assert.AreEqual(MathF.PI / 2, instance.Heading, 1e-5);
+            Assert.IsTrue((DateTimeOffset.Now - instance.PlacedAt).Duration() < TimeSpan.FromMinutes(1), "placed now");
+            Assert.AreEqual("Place a preset", model.Map!.Session.UndoDescription);
+
+            // the tree's badge and the list's count
+            GroupNode node = model.Armies.Tree.SelectMany(n => n.SelfAndBelow()).Single(n => n.Key == "ARMY_2:INITIAL/Village");
+            Assert.IsTrue(node.HasInstance);
+            Assert.AreEqual(("Village", PresetInstanceState.Current, ""), (node.InstanceName, node.InstanceState, node.InstanceStateText));
+            StringAssert.Contains(node.Description, "placed from the preset Village");
+            Assert.AreEqual(new PresetInstanceCount(2, 0), model.Presets.Instances["Village"]);
+            Assert.AreEqual(0, model.Problems.Items.Count(item => item.Problem.Check == "preset-changed"));
+
+            // select the instance: the group's units; a group not placed from a preset refuses
+            CommandRun selected = await Run(model, "units.selectInstance", new JsonObject { ["army"] = "ARMY_2", ["group"] = "INITIAL/Village" });
+            Assert.AreEqual(2, selected.Result);
+            Assert.IsTrue(model.Selection.Items.All(thing => model.ShownDocument!.FindUnit(thing.Name!)!.Army == "ARMY_2"));
+            StringAssert.Contains(model.Status, "of the instance INITIAL/Village of ARMY_2 (the preset Village)");
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.selectInstance", new JsonObject { ["army"] = "ARMY_1", ["group"] = "INITIAL/Town" }), "no instance");
+
+            // the preset's file changes on disk: the instances are out of date, the list and the check say so
+            library.Save(Preset.Of(UnitPresets.Kind, "Village", library.Find(UnitPresets.Kind, "Village")!.Read<UnitPresetSettings>() with { Source = "edited by hand" }));
+            model.Presets.Refresh();
+            Assert.AreEqual(PresetInstanceState.Changed, node.InstanceState, "the same node tells its new state");
+            Assert.AreEqual("preset changed", node.InstanceStateText);
+            Assert.AreEqual(new PresetInstanceCount(2, 2), model.Presets.Instances["Village"]);
+            Assert.AreEqual(2, model.Problems.Items.Count(item => item.Problem.Check == "preset-changed"));
+            model.Armies.Choose("ARMY_2", ["INITIAL", "Village"]);
+            Assert.IsTrue(model.Armies.IsInstanceChosen);
+            Assert.AreEqual("Village", model.Armies.InstancePreset);
+            StringAssert.StartsWith(model.Armies.InstancePlacedText, "at 100, 100 · 90° · ");
+            Assert.AreEqual("×2 placed", model.Armies.InstanceCountText);
+            StringAssert.StartsWith(model.Armies.InstanceNote, "The preset changed after this was placed");
+
+            // save back: asked first (without a person, confirm must be given); then the file holds the group's layout and the instance is current
+            await Run(model, "units.add", new JsonObject { ["blueprint"] = "uec1101", ["x"] = 110, ["z"] = 110, ["army"] = "ARMY_2", ["group"] = "INITIAL/Village" });
+            Assert.AreEqual(PresetInstanceState.Changed, model.Armies.ChosenGroup!.InstanceState, "a unit added to it keeps the link");
+            InvalidOperationException asked = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => Run(model, "units.saveInstance", new JsonObject { ["army"] = "ARMY_2", ["group"] = "INITIAL/Village" }));
+            StringAssert.Contains(asked.Message, "confirm: true");
+            Assert.AreEqual("edited by hand", library.Find(UnitPresets.Kind, "Village")!.Read<UnitPresetSettings>().Source, "nothing was written");
+            CommandRun saved = await Run(model, "units.saveInstance", new JsonObject { ["army"] = "ARMY_2", ["group"] = "INITIAL/Village", ["confirm"] = true });
+            Assert.AreEqual(3, ((JsonObject)saved.Result!)["units"]!.GetValue<int>());
+            UnitPresetSettings settings = library.Find(UnitPresets.Kind, "Village")!.Read<UnitPresetSettings>();
+            Assert.AreEqual(3, settings.Count);
+            Assert.AreEqual("edited by hand", settings.Source, "the file keeps what is not the layout");
+            Assert.AreEqual(PresetInstanceState.Current, model.Armies.ChosenGroup!.InstanceState);
+            Assert.AreEqual(PresetInstanceState.Changed, model.Armies.Tree.SelectMany(n => n.SelfAndBelow()).Single(n => n.Key == "ARMY_3:INITIAL/Village").InstanceState, "the other instance is out of date now");
+            Assert.AreEqual(new PresetInstanceCount(2, 1), model.Presets.Instances["Village"]);
+            Assert.AreEqual("Save the instance back to its preset", model.Map.Session.UndoDescription, "one step");
+
+            // show the preset: the list highlights it; detach: the link is gone, the units stay, undo brings it back
+            CommandRun shown = await Run(model, "units.showPreset", new JsonObject { ["name"] = "Village" });
+            Assert.AreEqual("Village", model.Presets.Highlighted);
+            Assert.IsTrue(((JsonObject)shown.Result!)["found"]!.GetValue<bool>());
+            Assert.AreEqual("units", model.SelectedMode.Definition.Id);
+            await Run(model, "units.detachInstance", new JsonObject { ["army"] = "ARMY_3", ["group"] = "INITIAL/Village" });
+            Assert.IsNull(model.ShownDocument!.FindGroup("ARMY_3", ["INITIAL", "Village"])!.Instance);
+            Assert.AreEqual(2, model.ShownDocument!.UnitsIn("ARMY_3", ["INITIAL", "Village"]).Count());
+            Assert.AreEqual(new PresetInstanceCount(1, 0), model.Presets.Instances["Village"]);
+            model.Undo();
+            Assert.IsNotNull(model.ShownDocument!.FindGroup("ARMY_3", ["INITIAL", "Village"])!.Instance);
+
+            // a project keeps the link; the export leaves it out
+            string project = Path.Combine(AppContext.BaseDirectory, "projects", Guid.NewGuid().ToString("N"));
+            await model.SaveAsAsync(project);
+            StringAssert.Contains(File.ReadAllText(Path.Combine(project, "armies.json")), "\"preset\": \"Village\"");
+        }
+
         [TestMethod]
         public async Task AnExampleUnitsPresetGoesToTheArmyOfItsRoleAndAWreckFieldIntoTheWreckage()
         {

@@ -1511,6 +1511,32 @@ change, span `model.armies`), the place tool and the commands.
 - The panel's and inspector's commands are in no menu (`units.add`, `units.renameGroup`,
   `units.removeGroup`, `units.saveGroupAsPreset`, `units.moveGroup`, `units.moveToArmy`, `units.moveToGroup`,
   `map.renameArmy`, `map.setArmy`, `map.setAlliance`, `map.removeArmy`).
+- **Preset instances** (U-9; the library's `PresetInstances`, its guide): the group `units.placePreset`
+  makes knows the preset (`UnitGroup.Instance`: the name, a fingerprint of the preset's content, the
+  place, heading and time). The tree's row of such a group carries the preset's name as a tag
+  (`Border.badge.instance`, after the detail as a plugin's kind is) and, when the preset's file
+  changed since or is gone, `preset changed` (`badge.stale`) or `preset missing` (`badge.missing`);
+  its screen-reader name says so too (`GroupNode.Description`, `..., placed from the preset Village,
+  preset changed`). The Unit presets list shows after each preset `×2 placed` and `1 out of date`
+  (`Controls/PresetInstanceBadges`, from `PresetsViewModel.Instances`, counted again when the armies
+  or the presets change). The inspector's group panel has the block "Placed from a preset": the
+  preset with its count, `at 100, 100 · 90° · 2026-10-09`, a warning line while the file changed or
+  is gone, and the buttons Select the instance (`units.selectInstance {army?, group?}`: the group's
+  units, as a double click on one of them with a select tool does; `ToolInput.Clicks`, which both
+  views pass), Save back to the preset (`units.saveInstance {army?, group?, confirm?}`, `[UndoStep]`:
+  asks, since the preset's file is overwritten; without a person `confirm: true`; writes the file
+  inside the step and sets the fingerprint, so the instance is current and the preset's other
+  instances out of date; a file that cannot be written is logged, `Presets`), Show the preset
+  (`units.showPreset {name?}`: the Units mode, the list scrolled to it and its button `highlighted`,
+  `PresetsViewModel.Highlighted`, until another kind lists or the preset is gone) and Detach from
+  the preset (`units.detachInstance {army?, group?}`, `[UndoStep]`: the units stay). Left out, the
+  army and group are the tree's chosen group. The four are in the Units menu too. `ArmiesViewModel`
+  reads the states through `PresetFingerprint` (the presets part's `UnitPresetFingerprint`, read
+  from the files once until they change, `PresetsViewModel.Changed`), which the checks read too
+  (`preset-changed`, a note, `ProblemContext.PresetFingerprint`; run again when the presets change).
+  The link is never used to change the map (the owner's decision: no update from the preset).
+  Tests: `UnitsTest.APlacedPresetIsAnInstance...`, `UnitsModeInspectorTest.AGroupPlacedFromAPreset...`,
+  `AutomationTest.TheStateCarriesAPlacedInstance...`.
 - **Wrecks** (U-5; the library's `UnitWrecks`, its guide says why a group): the place tool's
   As wrecks (`AsWrecks`, the check box after Choose...) places into the army's `WRECKAGE` group in
   place of the chosen group (`units.add {wreck?}`; left out, the tool's); `units.asWrecks {wreck?}`
@@ -1521,8 +1547,11 @@ change, span `model.armies`), the place tool and the commands.
   (`MapWreckBrush`) where a unit is a square; `get` answers `wreck`. Not built yet: placing a units
   preset as wrecks (a preset places into a new group of its name).
 - Automation: `state.units` (`place`: unit, preset, army, group, heading, structure, footprint,
-  asWrecks; `tree`: the chosen group and the first 200 groups with their units) and `state.armies` (name,
-  playable, team, factions, spawn, units, alliances, chosen).
+  asWrecks; `tree`: the chosen group and the first 200 groups with their units and, for a group
+  placed from a preset, `instance`: the preset and its state, `Current`, `Changed` or `Missing`) and
+  `state.armies` (name, playable, team, factions, spawn, units, alliances, chosen); `get ref=unit:...`
+  answers `instance` (the preset, the instance's group and its state) for a unit of one;
+  `state.presets` has `highlighted` and `instances` (per preset placed: `placed`, `outOfDate`).
 - **Dragging in the tree** (U-3): section "Content to use again" below.
 - Not built yet: team colours in the views.
 

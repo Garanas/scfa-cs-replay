@@ -18,7 +18,8 @@ namespace FAForever.MapEditor.App.Tools;
 /// keeping each thing on the terrain. Its keys in a view: Escape selects nothing, Q and E turn the
 /// selection by 15 degrees (with shift, or when only structures are selected, 90), the arrows move
 /// it an ogrid (with shift 8). Holding R while dragging turns the selection as the mouse goes round
-/// its middle.
+/// its middle. A double click on a unit of a group placed from a preset selects the whole instance
+/// (user story U-9).
 /// </summary>
 /// <remarks>
 /// The selection has handles in both views (<see cref="Shapes"/>, laid out by the library's
@@ -276,7 +277,16 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
         }
         if (under is ObjectRef picked)
         {
-            if (change == SelectionChange.Toggle)
+            if (input.Clicks >= 2 && change == SelectionChange.Replace && picked.Kind == ObjectKind.Unit
+                && model.ShownDocument!.InstanceOf(picked.Name!) is PlacedInstance instance)
+            {
+                // a double click on a unit placed from a preset: the whole instance, its group's units (U-9)
+                model.Selection.Set(model.ShownDocument!.UnitsIn(instance.Army, instance.Path).Select(unit => ObjectRef.Unit(unit.Unit.Name)));
+                model.InspectTheSelection();
+                model.Status = $"Selected the {MainViewModel.Units(model.Selection.Count)} of {UnitGroupEdits.PathText(instance.Path)} of {instance.Army}, an instance of the preset {instance.Instance.Preset}";
+                _gesture = Gesture.Click;
+            }
+            else if (change == SelectionChange.Toggle)
             {
                 model.Selection.Apply([picked], SelectionChange.Toggle);
                 _gesture = Gesture.Click;

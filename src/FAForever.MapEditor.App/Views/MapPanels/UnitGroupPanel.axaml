@@ -52,6 +52,43 @@
                   AutomationProperties.HelpText="Its units and groups go to the group above it" />
         </StackPanel>
       </Border>
+      <!-- a group placed from a unit preset (U-9): which preset, where and when, whether the preset changed since;
+           select the instance, save its layout back into the preset, show the preset in the list, or detach it.
+           The map is never changed from the preset. -->
+      <Border Classes="group" IsVisible="{Binding IsInstanceChosen}">
+        <StackPanel Classes="stack">
+          <TextBlock Classes="overline" Text="{Binding Source='Placed from a preset', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Preset" />
+            <Border DockPanel.Dock="Right" Classes="badge instance" ToolTip.Tip="How often the preset is placed on this map">
+              <TextBlock Text="{Binding InstanceCountText}" AutomationProperties.Name="How often the preset of the chosen instance is placed" />
+            </Border>
+            <TextBlock Classes="mono" Text="{Binding InstancePreset}" TextWrapping="Wrap" AutomationProperties.Name="Preset of the chosen instance" />
+          </DockPanel>
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Placed" />
+            <TextBlock Classes="mono" Text="{Binding InstancePlacedText}" TextWrapping="Wrap"
+                       AutomationProperties.Name="Where and when the chosen instance was placed"
+                       ToolTip.Tip="The place of the preset's middle in ogrids, its turn, and the day" />
+          </DockPanel>
+          <TextBlock Classes="warning" Text="{Binding InstanceNote}" IsVisible="{Binding HasInstanceNote}"
+                     AutomationProperties.Name="How the chosen instance stands to its preset" />
+          <Button HorizontalAlignment="Stretch" Content="Select the instance" Command="{Binding SelectInstanceCommand}"
+                  AutomationProperties.Name="Select the units of the chosen instance"
+                  AutomationProperties.HelpText="The group's units with those of the groups in it; a double click on one of them in a view does the same" />
+          <Button HorizontalAlignment="Stretch" Content="Save back to the preset" Command="{Binding SaveInstanceCommand}"
+                  AutomationProperties.Name="Save the chosen instance back into its preset"
+                  AutomationProperties.HelpText="Writes this group's layout into the preset's file, after asking; the instance is current afterwards" />
+          <Button HorizontalAlignment="Stretch" Content="Show the preset" Command="{Binding ShowPresetCommand}" IsEnabled="{Binding !IsInstanceMissing}"
+                  AutomationProperties.Name="Show the preset of the chosen instance"
+                  AutomationProperties.HelpText="Scrolls the panel's Unit presets to it and highlights it" />
+          <Button HorizontalAlignment="Stretch" Content="Detach from the preset" Command="{Binding DetachInstanceCommand}"
+                  AutomationProperties.Name="Detach the chosen instance from its preset"
+                  AutomationProperties.HelpText="Forgets which preset the group came from; the units stay" />
+          <TextBlock Classes="caption" TextWrapping="Wrap"
+                     Text="Save back writes this group's layout into the preset file; Detach forgets the link. The map is never changed from the preset." />
+        </StackPanel>
+      </Border>
       <!-- an army: the Map mode's army fields -->
       <Border Classes="group" IsVisible="{Binding IsArmyChosen}">
         <panels:ArmyPanel />

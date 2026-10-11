@@ -57,6 +57,7 @@ public sealed partial class ModePanel : UserControl
         {
             _model.PropertyChanged += OnModelChanged;
         }
+        WatchPresets();
     }
 
     private void OnModelChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -66,6 +67,61 @@ public sealed partial class ModePanel : UserControl
             Scroller.Offset = default;
             // again once the new mode's sections are laid out: the scroll viewer keeps what it showed in sight otherwise
             Avalonia.Threading.Dispatcher.UIThread.Post(() => Scroller.Offset = default, Avalonia.Threading.DispatcherPriority.Background);
+        }
+    }
+
+    private ViewModels.PresetsViewModel? _presets;
+
+    /// <summary>
+    /// The preset Show the preset points at (user story U-9): its button in the panel's list of
+    /// presets gets the class <c>highlighted</c> and is scrolled into view, once the list is laid
+    /// out; the others lose it. Set again when the list is made again.
+    /// </summary>
+    private void OnPresetsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(ViewModels.PresetsViewModel.Highlighted) or nameof(ViewModels.PresetsViewModel.Shown))
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(HighlightPreset, Avalonia.Threading.DispatcherPriority.Background);
+        }
+    }
+
+    private void HighlightPreset()
+    {
+        string? highlighted = _presets?.Highlighted;
+        foreach (Button button in this.GetVisualDescendants().OfType<Button>())
+        {
+            bool isHighlighted = highlighted is not null && button.DataContext is FAForever.MapEditor.Project.Workspaces.Preset preset
+                && button.Parent is DockPanel && string.Equals(preset.Name, highlighted, StringComparison.OrdinalIgnoreCase)
+                && !button.Classes.Contains("beside");
+            button.Classes.Set("highlighted", isHighlighted);
+            if (isHighlighted)
+            {
+                button.BringIntoView();
+            }
+        }
+    }
+
+    protected override void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        WatchPresets();
+    }
+
+    private void WatchPresets()
+    {
+        ViewModels.PresetsViewModel? presets = _model?.Presets;
+        if (ReferenceEquals(presets, _presets))
+        {
+            return;
+        }
+        if (_presets is not null)
+        {
+            _presets.PropertyChanged -= OnPresetsChanged;
+        }
+        _presets = presets;
+        if (_presets is not null)
+        {
+            _presets.PropertyChanged += OnPresetsChanged;
         }
     }
 
