@@ -103,6 +103,25 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public void SelectedUnitsShowWhatTheyCost()
+        {
+            string folder = TestAssets.Folder();
+            File.WriteAllText(Path.Combine(Directory.CreateDirectory(Path.Combine(folder, "units", "uab0301")).FullName, "uab0301_unit.json"),
+                """{ "id": "UAB0301", "name": "Factory", "faction": "Aeon", "categories": ["AEON", "STRUCTURE"], "massCost": 5220, "energyCost": 47400 }""");
+            Project.Workspaces.AssetCatalog catalog = Project.Workspaces.AssetCatalog.Load(folder);
+            Project.Editing.PlacedUnit Placed(string blueprint) =>
+                new Project.Editing.PlacedUnit("ARMY_1", [], new Project.Files.InMemory.Unit { Name = "UNIT_1", Blueprint = blueprint });
+
+            UnitCostLine one = UnitCostLine.Of([Placed("uab0301")], catalog)!;
+            Assert.AreEqual((5220.0, 47400.0, (string?)null), (one.Mass, one.Energy, one.Suffix));
+            Assert.AreEqual("5,220 mass, 47,400 energy", one.Text);
+
+            UnitCostLine two = UnitCostLine.Of([Placed("uab0301"), Placed("uab0301"), Placed("unknown")], catalog)!;
+            Assert.AreEqual((10440.0, "for 2 units"), (two.Mass, two.Suffix), "the units whose cost the catalogue knows");
+            Assert.IsNull(UnitCostLine.Of([Placed("unknown")], catalog));
+        }
+
+        [TestMethod]
         public void APathNodesPlaceIsSaidToATenth()
         {
             Assert.AreEqual("x 406.3, z 283.2", Commands.AddGeneratedPathNodeHandler.Place(406.3352, 283.2033));
