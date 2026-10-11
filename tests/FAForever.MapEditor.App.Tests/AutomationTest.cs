@@ -557,6 +557,9 @@ namespace FAForever.MapEditor.App.Tests
         {
             (MainWindow window, MainViewModel model, AutomationServer automation) = await OpenUnits();
             Control preset = UiTree.Find(window, "Apply the preset Village")!;
+            // the palette above the presets list is tall: scroll the preset into the panel first
+            preset.BringIntoView();
+            Dispatcher.UIThread.RunJobs();
             Point from = Middle(preset, window);
             Point to = Middle(UiTree.Find(window, "Palette slot 3: empty")!, window);
             await Send(automation, "state");
