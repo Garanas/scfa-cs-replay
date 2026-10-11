@@ -43,10 +43,12 @@ namespace FAForever.MapEditor.Project
 
         /// <summary>
         /// Imports the map folder of the game or the vault, e.g. <c>maps/theta_passage.v0004</c>.
-        /// It has no project folder until it is saved (<see cref="SaveAs"/>).
+        /// It has no project folder until it is saved (<see cref="SaveAs"/>). Decals over the whole map
+        /// become the map-wide slots and decal sets one decal each (<see cref="Editing.ImportedDecals"/>),
+        /// so a map the editor exported comes back as it was made.
         /// </summary>
         /// <exception cref="MapProjectException">The folder holds no readable map.</exception>
-        public static EditedMap ImportMap(string mapFolder) => new EditedMap(MapImporter.ImportFolder(mapFolder), null);
+        public static EditedMap ImportMap(string mapFolder) => new EditedMap(Editing.ImportedDecals.Recognise(MapImporter.ImportFolder(mapFolder)), null);
 
         /// <summary>
         /// A map made in the editor (<see cref="NewMap.Create"/>): it has no project folder until it

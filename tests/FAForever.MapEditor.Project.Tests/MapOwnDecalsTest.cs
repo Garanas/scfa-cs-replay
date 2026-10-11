@@ -14,6 +14,9 @@ namespace FAForever.MapEditor.Project.Tests
     [TestClass]
     public class MapOwnDecalsTest
     {
+        [ClassCleanup]
+        public static void Cleanup() => ProjectFolders.Clean();
+
         private static MapDocument Flat() => NewMap.Create(new NewMapSettings { Name = "Own", Size = 256 });
 
         /// <summary>
@@ -123,6 +126,97 @@ namespace FAForever.MapEditor.Project.Tests
             document = document with { Files = document.Files.SetItem("lua/rocks.lua", [.. System.Text.Encoding.UTF8.GetBytes("local m = '/maps/own.v0001/env/decals/crag_mask_moss.png'")]) };
 
             CollectionAssert.AreEquivalent(new[] { "env/decals/crag_mask.png" }, DecalSets.UnexportedMasks(document).ToArray());
+        }
+
+        /// <summary>
+        /// A map of 256 with Kaali's three decals over the whole map, of its own files, and a decal of the game's.
+        /// </summary>
+        private static MapDocument KaaliLayout()
+        {
+            MapDocument document = Flat();
+            string root = $"/maps/{document.Folder}/env/decals/";
+            Decal Wide(int id, DecalType type, string first, string second) => new Decal
+            {
+                Id = id,
+                Type = type,
+                Textures = [first, second],
+                Scale = new System.Numerics.Vector3(256, 256, 256),
+                Position = new System.Numerics.Vector3(0, 16.5f, 0),
+                CutOffLod = 10000,
+                OwnerArmy = -1,
+            };
+            document = document with
+            {
+                WideDecals = MapWideDecals.None,
+                Files = document.Files.SetItem("env/decals/map_albedo.dds", Png(1, false)).SetItem("env/decals/map_specular.dds", Png(2, false))
+                    .SetItem("env/decals/map_lighting.dds", Png(3, false)).SetItem("env/decals/map_normals.dds", Png(4, false)),
+                Decals =
+                [
+                    Wide(0, DecalType.Albedo, root + "map_albedo.dds", root + "map_specular.dds"),
+                    Wide(1, DecalType.Albedo, root + "map_lighting.dds", ""),
+                    Wide(2, DecalType.Normals, root + "map_normals.dds", ""),
+                ],
+                DecalGroups = [new DecalGroup { Id = 1, Name = "Base", DecalIds = [0, 1, 2] }],
+            };
+            return document.PlaceDecal(DecalEdits.NewDecal(document.Terrain.Heightmap, "/env/evergreen/decals/e_mud001_albedo.dds", 50, 50, 10, 10, 0), out _);
+        }
+
+        [TestMethod]
+        public void ImportsKaalisDecalsIntoTheMapWideSlots()
+        {
+            MapDocument document = KaaliLayout();
+            string root = $"/maps/{document.Folder}/env/decals/";
+
+            MapDocument imported = ImportedDecals.Recognise(document);
+
+            Assert.AreEqual(MapWideSlot.Of(root + "map_albedo.dds"), imported.WideDecals.Albedo);
+            Assert.AreEqual(root + "map_specular.dds", imported.WideDecals.Specular);
+            Assert.AreEqual(MapWideSlot.Of(root + "map_lighting.dds"), imported.WideDecals.Shadow);
+            Assert.AreEqual(MapWideSlot.Of(root + "map_normals.dds"), imported.WideDecals.Normal);
+            Assert.AreEqual("/env/evergreen/decals/e_mud001_albedo.dds", imported.Decals.Single().Textures[0], "the others stay decals");
+            Assert.IsTrue(imported.DecalGroups.Single().DecalIds.IsEmpty, "the slots leave the groups");
+
+            // exported again, they come back in Kaali's layout (at the height of the map's corner)
+            MapDocument exported = MapWideDecalsExport.Apply(imported, _ => null, out _);
+            CollectionAssert.AreEqual(document.Decals.Take(3).Select(decal => (decal.Type, decal.Textures[0], decal.Textures[1], decal.Position with { Y = 0 }, decal.Scale, decal.CutOffLod)).ToArray(),
+                exported.Decals.Take(3).Select(decal => (decal.Type, decal.Textures[0], decal.Textures[1], decal.Position with { Y = 0 }, decal.Scale, decal.CutOffLod)).ToArray());
+        }
+
+        [TestMethod]
+        public void LeavesADecalOfTheGamesOverTheWholeMapAsItIs()
+        {
+            MapDocument document = KaaliLayout();
+            document = document with { Decals = document.Decals.SetItem(2, document.Decals[2] with { Textures = ["/env/common/decals/normals_big.dds", ""] }) };
+
+            MapDocument imported = ImportedDecals.Recognise(document);
+
+            Assert.AreEqual(MapWideSource.None, imported.WideDecals.Normal.Source, "the slot names the map's own files only");
+            Assert.AreEqual(2, imported.Decals.Length);
+        }
+
+        [TestMethod]
+        public void ImportsTheEditorsExportWithItsSlotsAndSets()
+        {
+            MapDocument document = WithOwnSet();
+            DecalSetAssets set = DecalSets.Of(MapOwnAssets.Decals(document, (_, _) => null)).Single();
+            document = document.PlaceDecal(DecalEdits.NewDecalSet(document.Terrain.Heightmap, set, 100, 100, 32, 32, 0.5f), out _)
+                .PlaceDecal(DecalEdits.NewDecal(document.Terrain.Heightmap, "/env/evergreen/decals/e_mud001_albedo.dds", 50, 50, 10, 10, 0), out _);
+            document = document with { WideDecals = MapWideDecals.NewMap with { Albedo = MapWideSlot.Of($"/maps/{document.Folder}/env/decals/puddle.png") } };
+            string folder = ProjectFolders.New("own-export");
+            EditedMap map = EditedMap.New(document);
+            string exported = map.Export(folder, wideDecals: true, ddsTextures: true);
+
+            MapDocument back = EditedMap.ImportMap(exported).Document;
+
+            Assert.AreEqual(MapWideSource.File, back.WideDecals.Albedo.Source);
+            Assert.AreEqual(MapWideSource.File, back.WideDecals.Normal.Source, "a generated decal comes back as its file");
+            Assert.AreEqual(MapWideSource.File, back.WideDecals.Shadow.Source);
+            Decal crag = back.Decals.Single(decal => decal.Set is not null);
+            StringAssert.EndsWith(crag.Set!.Name, "/env/decals/crag");
+            StringAssert.EndsWith(crag.Set.Normals, "/env/decals/crag_normals.dds");
+            Assert.AreEqual(0.5f, crag.Rotation.Y, 1e-5f);
+            Assert.AreEqual(2, back.Decals.Length, "the set and the game's decal");
+            Assert.IsFalse(back.Files.Keys.Any(file => file.Contains("_mask", StringComparison.Ordinal)), "the masks were never exported");
         }
     }
 }
