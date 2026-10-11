@@ -16,7 +16,9 @@ namespace FAForever.MapEditor.App.Commands;
 /// What is left out is the place tool's: its army, group (the new group goes in it) and heading;
 /// the place, the mouse's (else the middle of the map). A preset with an army role (the examples:
 /// civilian, enemy, player) goes to the army of that role on this map (<see cref="UnitPresets.ArmyFor"/>)
-/// unless the army is given; one of wrecks into the army's <c>WRECKAGE</c> group. Selects the units
+/// unless the army is given (an enemy preset on a map with only the civilians' extra army adds
+/// <c>ARMY_9</c> for it, in the same step, so the enemy is not the town's army); one of wrecks into
+/// the army's <c>WRECKAGE</c> group. Selects the units
 /// placed, with their images (a player's preset's images go to the partner spawns' armies).
 /// </summary>
 /// <param name="Name">The preset's name (Units mode, Presets); left out, the one the place tool places.</param>
@@ -49,19 +51,24 @@ public sealed class PlaceUnitPresetHandler(MainViewModel model, PresetsViewModel
         ImmutableArray<string> group = [];
         ImmutableArray<ObjectRef> placed = [];
         string army = "";
+        bool added = false;
         UnitCommands.Apply(edit, d =>
         {
             // the new group is named after the preset, not after the group its units were saved from
+            int armies = d.Armies.Length;
             d = UnitPresets.Place(d, settings, preset.Name, request.Army, tool.Army, parent, wreck, x, z, radians, out names, out group, out army);
+            added = d.Armies.Length > armies;
             // with the symmetry, the preset's units in every part of the map, in the same group (F-12)
             return model.MirrorPlaced(d, [.. names.Select(ObjectRef.Unit)], out placed);
         });
         // what was placed is selected, as placing a unit selects it
         selection.Set(placed);
-        model.Status = $"Placed the preset {preset.Name}: {MainViewModel.Units(names.Length)} in {UnitGroupEdits.PathText(group)} of {army}";
+        model.Status = $"Placed the preset {preset.Name}: {MainViewModel.Units(names.Length)} in {UnitGroupEdits.PathText(group)} of {army}"
+            + (added ? $" (added the extra army {army} for the enemy role)" : "");
         return Task.FromResult(new JsonObject
         {
             ["army"] = army,
+            ["addedArmy"] = added,
             ["group"] = UnitGroupEdits.PathText(group),
             ["units"] = new JsonArray([.. names.Select(name => (JsonNode)JsonValue.Create(name))]),
         });
