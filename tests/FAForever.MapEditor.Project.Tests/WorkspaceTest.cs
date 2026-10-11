@@ -144,6 +144,22 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void RemembersWhetherResultsRegenerateOnTheirOwn()
+        {
+            UserSettings settings = new UserSettings(Path.Combine(ProjectFolders.New("settings"), "settings.json"));
+            Assert.IsTrue(settings.RegenerateOnTheirOwn, "on until the user turns it off");
+            settings.SetWorkspace("D:/maps/workspace");
+
+            settings.SetRegenerateOnTheirOwn(false);
+
+            Assert.IsFalse(settings.RegenerateOnTheirOwn);
+            Assert.AreEqual(Path.GetFullPath("D:/maps/workspace"), settings.Workspace, "the rest stays");
+            settings.SetRegenerateOnTheirOwn(true);
+            Assert.IsTrue(settings.RegenerateOnTheirOwn);
+            Assert.IsFalse(File.ReadAllText(settings.File).Contains("generation", StringComparison.OrdinalIgnoreCase), "the default writes nothing");
+        }
+
+        [TestMethod]
         public void RemembersTheChoicesAboutDiagnosticsBesideTheWorkspace()
         {
             UserSettings settings = new UserSettings(Path.Combine(ProjectFolders.New("settings"), "settings.json"));

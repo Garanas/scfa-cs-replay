@@ -27,6 +27,24 @@ namespace FAForever.MapEditor.Project.Workspaces.Serialized
         /// absent until the user changes one.
         /// </summary>
         public PluginSettingsDto? Plugins { get; init; }
+
+        /// <summary>
+        /// How generated results are made while the editor runs (the Procedural mode); absent until
+        /// the user changes it.
+        /// </summary>
+        public GenerationSettingsDto? Generation { get; init; }
+    }
+
+    /// <summary>
+    /// The user's choices about generated results, for every map.
+    /// </summary>
+    public sealed record GenerationSettingsDto
+    {
+        /// <summary>
+        /// Whether results regenerate on their own (each map says which, while the views show them);
+        /// absent for yes.
+        /// </summary>
+        public bool? OnTheirOwn { get; init; }
     }
 
     /// <summary>

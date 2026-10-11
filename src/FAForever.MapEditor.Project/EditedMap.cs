@@ -47,8 +47,13 @@ namespace FAForever.MapEditor.Project
         /// become the map-wide slots and decal sets one decal each (<see cref="Editing.ImportedDecals"/>),
         /// so a map the editor exported comes back as it was made.
         /// </summary>
+        /// <param name="defaults">The workspace's Procedural settings the map starts with; null for the editor's own.</param>
         /// <exception cref="MapProjectException">The folder holds no readable map.</exception>
-        public static EditedMap ImportMap(string mapFolder) => new EditedMap(Editing.ImportedDecals.Recognise(MapImporter.ImportFolder(mapFolder)), null);
+        public static EditedMap ImportMap(string mapFolder, Workspaces.ProceduralDefaults? defaults = null)
+        {
+            MapDocument document = Editing.ImportedDecals.Recognise(MapImporter.ImportFolder(mapFolder));
+            return new EditedMap(defaults is null ? document : document with { Procedural = defaults.ApplyTo(document.Procedural) }, null);
+        }
 
         /// <summary>
         /// A map made in the editor (<see cref="NewMap.Create"/>): it has no project folder until it
@@ -65,7 +70,7 @@ namespace FAForever.MapEditor.Project
 
         public static Task<EditedMap> OpenProjectAsync(string folder) => Task.Run(() => OpenProject(folder));
 
-        public static Task<EditedMap> ImportMapAsync(string mapFolder) => Task.Run(() => ImportMap(mapFolder));
+        public static Task<EditedMap> ImportMapAsync(string mapFolder, Workspaces.ProceduralDefaults? defaults = null) => Task.Run(() => ImportMap(mapFolder, defaults));
 
         /// <summary>
         /// Saves the map in its project folder, writing only what changed since the last save.

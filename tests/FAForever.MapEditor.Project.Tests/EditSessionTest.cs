@@ -329,5 +329,101 @@ namespace FAForever.MapEditor.Project.Tests
                 session.BeginGroup("Two");
             });
         }
+
+        [TestMethod]
+        public void PutsADerivedResultIntoTheCurrentVersionWithoutAStep()
+        {
+            EditSession session = new EditSession(original);
+            List<DocumentChange> changes = [];
+            session.Changed += (_, change) => changes.Add(change);
+            session.Edit("Move a prop", MoveProp(1, Vector3.One));
+            session.MarkSaved();
+
+            Assert.IsTrue(session.Derive("Generate the normal map", MoveProp(2, new Vector3(2, 0, 0))));
+
+            Assert.AreEqual(1, session.History.Count, "no step of its own");
+            Assert.AreEqual("Move a prop", session.UndoDescription);
+            Assert.IsTrue(session.IsModified, "the map counts as changed");
+            Assert.AreEqual(new Vector3(2, 0, 0), session.Document.Props[1].Position);
+            Assert.AreEqual(ChangeReason.Derive, changes[^1].Reason);
+            Assert.AreEqual("Generate the normal map", changes[^1].Description);
+            Assert.IsFalse(session.Derive("Again", document => document with { }), "nothing changed");
+
+            // undo returns the version before with its own results; redo this one with the derived result
+            session.Undo();
+            Assert.AreSame(original, session.Document);
+            session.Redo();
+            Assert.AreEqual(new Vector3(2, 0, 0), session.Document.Props[1].Position);
+        }
+
+        [TestMethod]
+        public void ADerivedResultKeepsWhatCanBeRedoneAndMerges()
+        {
+            EditSession session = new EditSession(original);
+            session.Edit("First", MoveProp(1, Vector3.One));
+            session.Edit("Second", MoveProp(1, new Vector3(5, 0, 0)));
+            session.Undo();
+
+            session.Derive("Derived", MoveProp(2, Vector3.One));
+
+            Assert.IsTrue(session.CanRedo, "the steps that can be redone stay");
+            Assert.AreEqual("Second", session.RedoDescription);
+            Assert.AreEqual(Vector3.One, session.Document.Props[1].Position);
+
+            // a merging edit goes on from the derived version
+            session.Redo();
+            session.Edit("Drag", MoveProp(3, Vector3.One), mergeKey: "drag");
+            session.Derive("Derived", MoveProp(4, Vector3.One));
+            session.Edit("Drag", MoveProp(3, new Vector3(3, 0, 0)), mergeKey: "drag");
+            Assert.AreEqual(3, session.History.Count);
+            Assert.AreEqual(Vector3.One, session.Document.Props[3].Position, "the derived result stays in the merged step");
+        }
+
+        [TestMethod]
+        public void ADerivedResultWaitsForTheTransaction()
+        {
+            EditSession session = new EditSession(original);
+            List<DocumentChange> changes = [];
+            session.Changed += (_, change) => changes.Add(change);
+
+            using (EditTransaction stroke = session.Begin("Stroke"))
+            {
+                stroke.Apply(MoveProp(1, Vector3.One));
+                Assert.IsFalse(session.Derive("Derived", MoveProp(2, Vector3.One)));
+                Assert.AreEqual(1, session.DerivedWaiting);
+                Assert.AreEqual(0, changes.Count);
+                stroke.Commit();
+            }
+
+            Assert.AreEqual(0, session.DerivedWaiting);
+            CollectionAssert.AreEqual(new[] { ChangeReason.Edit, ChangeReason.Derive }, changes.Select(change => change.Reason).ToArray());
+            Assert.AreEqual(1, session.History.Count);
+            Assert.AreEqual(Vector3.One, session.Document.Props[0].Position);
+            Assert.AreEqual(Vector3.One, session.Document.Props[1].Position);
+
+            // a transaction thrown away still lets it in
+            using (EditTransaction thrown = session.Begin("Thrown"))
+            {
+                session.Derive("Derived", MoveProp(3, Vector3.One));
+            }
+            Assert.AreEqual(Vector3.One, session.Document.Props[2].Position);
+            Assert.AreEqual(1, session.History.Count);
+        }
+
+        [TestMethod]
+        public void AGroupKeepsWhatWasDerivedInIt()
+        {
+            EditSession session = new EditSession(original);
+
+            using (EditGroup group = session.BeginGroup("Plugin"))
+            {
+                session.Edit("Step", MoveProp(1, Vector3.One));
+                session.Derive("Derived", MoveProp(2, Vector3.One));
+                group.Commit();
+            }
+
+            Assert.AreEqual(1, session.History.Count);
+            Assert.AreEqual(Vector3.One, session.Document.Props[1].Position);
+        }
     }
 }
