@@ -1,0 +1,114 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Cybran civilian village",
+  "settings": {
+    "group": {
+      "name": "Cybran civilian village",
+      "units": [
+        {
+          "blueprint": "urc1101",
+          "x": -16.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1401",
+          "x": 9.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 5.5,
+          "y": 0,
+          "z": 15.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1301",
+          "x": 13.5,
+          "y": 0,
+          "z": -15.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 5.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -20.5,
+          "y": 0,
+          "z": 15.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 21.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1401",
+          "x": 17.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": -1.571
+        },
+        {
+          "blueprint": "urc1301",
+          "x": -2.5,
+          "y": 0,
+          "z": 7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 1.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1301",
+          "x": -7.5,
+          "y": 0,
+          "z": -3.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1301",
+          "x": -12.5,
+          "y": 0,
+          "z": 7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1902",
+          "x": -7.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1501",
+          "x": -7.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 14,
+    "role": "civilian",
+    "source": "FAF_Coop_Theban_Colony, army Civilian, group M2_Civ_Buildings"
+  }
+}

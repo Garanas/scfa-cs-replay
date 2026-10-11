@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Naval graveyard",
+  "settings": {
+    "group": {
+      "name": "Naval graveyard",
+      "units": [
+        {
+          "blueprint": "ues0302",
+          "x": 0.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0.908
+        },
+        {
+          "blueprint": "ues0103",
+          "x": -8,
+          "y": 0,
+          "z": -3,
+          "heading": -2.234
+        },
+        {
+          "blueprint": "ues0103",
+          "x": 8,
+          "y": 0,
+          "z": 3,
+          "heading": 0.951
+        },
+        {
+          "blueprint": "ues0103",
+          "x": 5,
+          "y": 0,
+          "z": 7,
+          "heading": 1.021
+        },
+        {
+          "blueprint": "ues0103",
+          "x": -5,
+          "y": 0,
+          "z": -7,
+          "heading": -2.269
+        }
+      ],
+      "groups": []
+    },
+    "count": 5,
+    "role": "civilian",
+    "wrecks": true,
+    "source": "adaptive_canis_river.v0002, army ARMY_15"
+  }
+}

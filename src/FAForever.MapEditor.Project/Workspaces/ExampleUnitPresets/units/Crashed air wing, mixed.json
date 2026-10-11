@@ -1,0 +1,80 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Crashed air wing, mixed",
+  "settings": {
+    "group": {
+      "name": "Crashed air wing, mixed",
+      "units": [
+        {
+          "blueprint": "uaa0104",
+          "x": 8.5,
+          "y": 0,
+          "z": -9,
+          "heading": -1.44
+        },
+        {
+          "blueprint": "uaa0103",
+          "x": 12,
+          "y": 0,
+          "z": 1.5,
+          "heading": -2.19
+        },
+        {
+          "blueprint": "uea0102",
+          "x": -9.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": -2.836
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": -11.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": -2.513
+        },
+        {
+          "blueprint": "uea0102",
+          "x": -9.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": -2.417
+        },
+        {
+          "blueprint": "uea0102",
+          "x": -0.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": -2.557
+        },
+        {
+          "blueprint": "uaa0103",
+          "x": -2,
+          "y": 0,
+          "z": -0.5,
+          "heading": -2.583
+        },
+        {
+          "blueprint": "uaa0103",
+          "x": -3,
+          "y": 0,
+          "z": -11.5,
+          "heading": -2.801
+        },
+        {
+          "blueprint": "uaa0102",
+          "x": 4.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": -2.513
+        }
+      ],
+      "groups": []
+    },
+    "count": 9,
+    "role": "civilian",
+    "wrecks": true,
+    "source": "X1MP_001, army NEUTRAL_CIVILIAN, group WRECKAGE"
+  }
+}

@@ -1255,13 +1255,21 @@ army's role (`ArmyRoles`: player, civilian, enemy), the faction, size and bluepr
 the patterns of the names with numbers stripped; one-line Lua functions in a save's orders are
 blanked first. `faf-map dev scan-units <folders...> --out scan.json` runs it.
 `Workspaces/UnitTemplates` makes units presets from picks (`UnitTemplatePick`: map, army, group
-path, role, wrecks, groups to leave out, a rectangle, blueprints, a radius about the median):
+path, role, wrecks, groups to leave out, a rectangle, blueprints, a radius about the median,
+civilians only: civilian units without the civilian wall segments, `UnitGroupScan.IsCivilianWall`;
+blueprints to leave out):
 the subtree's units around their middle (a whole ogrid, so structures stay on the build grid),
 in the base's role groups (`CanonicalRole`, `RoleOrder`), each on the terrain (y 0).
 `faf-map dev unit-templates docs/map-editor/unit-template-picks.json <folders...> --out
 src/FAForever.MapEditor.Project/Workspaces/ExampleUnitPresets` writes the shipped examples, which
 `ExampleUnitPresets.Ensure` writes into a workspace's `presets/units` once (`.examples` names those
-written; a copy equal to an earlier version, listed in `Earlier`, is updated; a changed one stays).
+written; a copy equal to an earlier version, listed in `Earlier`, is updated; a copy equal to an
+example that no longer ships, listed in `Removed`, is deleted; a changed one stays). The examples
+are the civilians' only (owner's decision, October 2026): 26 settlements of the four building
+styles, picked from the scan's civilian groups of 6 to 80 buildings and cut to one cluster with a
+rectangle, `civilianOnly` stripping walls and defences, and 12 small wreck fields. Enemy bases and
+players' starts are left to the map maker's own presets; `UnitPresets.ArmyFor` still places a
+preset of any role. The scan itself is not committed: run it again into a scratch folder.
 `Workspaces/UnitPresets` holds the preset records (`UnitPresetSettings` with the optional `Role`,
 `Wrecks`, `Source`), `ArmyFor(document, role, x, z)` and `Place`. An enemy is never put in a
 civilian army: on a map whose only extra armies are the civilians' (a new map's `ARMY_17` and

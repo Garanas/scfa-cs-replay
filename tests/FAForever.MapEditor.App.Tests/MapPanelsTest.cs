@@ -77,9 +77,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(ScenarioType.Skirmish, model.Map.Document.Scenario.Type);
             Assert.AreEqual("skirmish", Setting<ChoiceSetting>(model.MapInformation.Settings, "Type").Chosen, "the field follows the undo");
 
-            await Run(model, "map.information", new JsonObject { ["version"] = 7, ["reclaimMass"] = 1200 });
+            await Run(model, "map.information", new JsonObject { ["version"] = 7 });
             Assert.AreEqual(7, model.Map.Document.Version);
-            Assert.AreEqual(1200, model.Map.Document.Scenario.Reclaim!.Mass);
             Assert.AreEqual("hardffa.v0007", model.MapInformation.Folder.ToLowerInvariant());
             Assert.IsNotNull(model.MapInformation.Preview);
             StringAssert.StartsWith(model.MapInformation.Size, "5 km, 256 by 256");

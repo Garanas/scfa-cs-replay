@@ -166,9 +166,9 @@ reads again when it changes; and nothing that generates runs by itself.
 ## M: The map
 
 - [x] **M-1 Map information.** Name, description, author, version, type (skirmish, campaign),
-      preview image, no-rush radius, adaptive map, reclaim: the Map panel's fields
-      (`map.information`), one step of undo per field; the inspector shows the size, armies and
-      the `.scmap`'s preview.
+      preview image, no-rush radius, adaptive map: the Map panel's fields (`map.information`), one
+      step of undo per field, and the reclaim the export writes, read only; the inspector shows
+      the size, armies and the `.scmap`'s preview.
 - [x] **M-2 New map.** Size, starting height, water, biome or template; from scratch. Today:
       File, New map (`file.new`): one of the game's sizes, the height, water and its elevation,
       the strata of one of six biomes, spawns and the playable area; templates in the workspace's
@@ -224,7 +224,9 @@ reads again when it changes; and nothing that generates runs by itself.
       stroke), erode (thermal) and scale around a base with a brush, round (falloff smooth, linear
       or sharp) or the shape of one of the workspace's brushes (T-2), turned by hand or at random per
       dab; limits on the lowest and highest height it makes. Every brush's radius by `[` and `]`
-      or control and the wheel over a view, its strength with shift. Missing: hydraulic erosion.
+      or control and the wheel over a view, its strength with shift; a brush's picture turned with
+      Q and E (15 degrees, shift 90) or alt and the wheel (5 degrees a notch). Missing: hydraulic
+      erosion.
 - [x] **T-2 Brush presets.** The user's own brushes and stamps, in the workspace. Today: the
       brush shapes, greyscale PNGs of the workspace's `brushes` folder, in the asset shelf of the
       Terrain mode, read again when they change; they are the shapes of the sculpt and strata
@@ -407,7 +409,8 @@ reads again when it changes; and nothing that generates runs by itself.
       Mirror, on by default). Kept as `prop-rules.json`; exported as ordinary props.
 - [x] **P-5 Reclaim.** The mass and energy of the props, for the map and per area. Today: the
       Props panel's Reclaim (the map, per area), the selected props' in the inspector, from the
-      blueprints' values (`props.reclaim`).
+      blueprints' values (`props.reclaim`); the export writes the props' totals into the scenario
+      for the lobby (its step `reclaim`; units and wrecks not counted).
 
 ## D: Decals
 
@@ -457,12 +460,15 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **U-4 Unit presets.** A civilian base, a defence line: a group saved as a preset and placed
       again, for any army (F-10). The Units mode's Presets: the selected units or the chosen group,
       placed with the Place tool at the mouse as a new group, turned in quarter turns.
-- [x] **U-6 Unit templates from real maps.** Every workspace starts with 36 example unit presets
-      taken from the campaign, coop and vault maps (bases per faction and size with their role
-      groups, defence points, wall rings and lines, civilian towns, wreck fields, players' starts);
-      each names an army role (civilian, enemy, player) that places it for the matching army of
+- [x] **U-6 Unit templates from real maps.** Every workspace starts with 38 example unit presets
+      taken from the campaign, coop and vault maps: 26 civilian settlements of the four building
+      styles (UEF, Aeon, Cybran, Seraphim) from hamlets to cities, farms, an industrial yard, a
+      research campus, a network hub, a rift site, without walls or defences, and 12 small wreck
+      fields (a few tanks, crashed gunships, a destroyed convoy, naval graveyards, mixed factions).
+      A preset names an army role (civilian, enemy, player) that places it for the matching army of
       the map, an enemy on a map with only the civilians' armies in an extra army `ARMY_9` added
-      for it (`faf-map dev scan-units`, `dev unit-templates`).
+      for it (`faf-map dev scan-units`, `dev unit-templates`); untouched copies of the examples of
+      earlier releases (enemy bases, players' starts) leave the workspace.
 - [x] **U-5 Wrecks.** Place units as wrecks: the place tool's As wrecks and `units.asWrecks` on the
       selection (the inspector's Wrecks check box) put them into their army's `WRECKAGE` group, which
       the game turns into wrecks when it starts, as the vault's maps keep them; grey and dark in 3D, a

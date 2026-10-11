@@ -1,0 +1,422 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Aeon civilian city",
+  "settings": {
+    "group": {
+      "name": "Aeon civilian city",
+      "units": [
+        {
+          "blueprint": "uac1101",
+          "x": -4.5,
+          "y": 0,
+          "z": 34.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 29.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": -26.5,
+          "y": 0,
+          "z": 21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": -5.5,
+          "y": 0,
+          "z": -15.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": -29.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": -17.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 31.5,
+          "y": 0,
+          "z": 26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 29.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -8.5,
+          "y": 0,
+          "z": 29.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": -29.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 12.5,
+          "y": 0,
+          "z": -28.5,
+          "heading": -0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": 11.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 29.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 0.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": 25.5,
+          "y": 0,
+          "z": 23.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 6.5,
+          "y": 0,
+          "z": -15.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 25.5,
+          "y": 0,
+          "z": 29.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": 29.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": 0.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 33.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -10.5,
+          "y": 0,
+          "z": -28.5,
+          "heading": -0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": -14.5,
+          "y": 0,
+          "z": 21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": 25.5,
+          "y": 0,
+          "z": 16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": -6.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": 7.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -33.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 0.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": -22.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": -18.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 6.5,
+          "y": 0,
+          "z": 13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": 7.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": 23.5,
+          "y": 0,
+          "z": -23.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": -6.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -6.5,
+          "y": 0,
+          "z": -34.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": -23.5,
+          "y": 0,
+          "z": -23.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 17.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": 17.5,
+          "y": 0,
+          "z": -26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": 19.5,
+          "y": 0,
+          "z": 20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 19.5,
+          "y": 0,
+          "z": 26.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": -10.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": -20.5,
+          "y": 0,
+          "z": 30.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 7.5,
+          "y": 0,
+          "z": -34.5,
+          "heading": -0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": -5.5,
+          "y": 0,
+          "z": 13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 23.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": 31.5,
+          "y": 0,
+          "z": 20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -29.5,
+          "y": 0,
+          "z": -6.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": -20.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": -26.5,
+          "y": 0,
+          "z": 27.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": -14.5,
+          "y": 0,
+          "z": 27.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 13.5,
+          "y": 0,
+          "z": 28.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": 23.5,
+          "y": 0,
+          "z": -30.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 9.5,
+          "y": 0,
+          "z": 34.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": 0.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": -23.5,
+          "y": 0,
+          "z": -30.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": -17.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -29.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": 19.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": -20.5,
+          "y": 0,
+          "z": 24.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 58,
+    "role": "civilian",
+    "source": "Supreme Commander Forged Alliance/maps/SCMP_026, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}

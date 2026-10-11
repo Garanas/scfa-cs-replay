@@ -1,0 +1,149 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "UEF civilian town, small",
+  "settings": {
+    "group": {
+      "name": "UEF civilian town, small",
+      "units": [
+        {
+          "blueprint": "uec1201",
+          "x": -3.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1201",
+          "x": -9.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 18.5,
+          "y": 0,
+          "z": 0.5,
+          "heading": 1.588
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 13.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1201",
+          "x": 2.5,
+          "y": 0,
+          "z": -11.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 18.5,
+          "y": 0,
+          "z": -4.5,
+          "heading": 1.588
+        },
+        {
+          "blueprint": "uec1401",
+          "x": -8.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 5.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": -17.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 10.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 18.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": 1.588
+        },
+        {
+          "blueprint": "uec1101",
+          "x": -17.5,
+          "y": 0,
+          "z": 0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 8.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1301",
+          "x": 13.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1501",
+          "x": -11.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1401",
+          "x": -1.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1301",
+          "x": 13.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1501",
+          "x": -11.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": -17.5,
+          "y": 0,
+          "z": -4.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 19,
+    "role": "civilian",
+    "source": "Supreme Commander Forged Alliance/maps/SCMP_022, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}

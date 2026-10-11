@@ -284,6 +284,12 @@ namespace FAForever.MapEditor.Project.Tests
                 Assert.AreEqual("AREA_1", area.Area);
                 Assert.AreEqual(20, area.Total.Mass);
                 Assert.AreEqual(2, area.Total.Props, "the unknown one at 15, 15 counts, as 0");
+
+                CollectionAssert.AreEqual(new[] { "/env/unknown_prop.bp" }, PropReclaim.UnknownBlueprints(document.Props, catalog).ToArray());
+                MapDocument exported = PropReclaim.IntoScenario(document with { Scenario = document.Scenario with { Reclaim = new Reclaim { Mass = 999 } } }, catalog, out ReclaimTotal total);
+                Assert.AreEqual((40.0, 10.0), (exported.Scenario.Reclaim!.Mass, exported.Scenario.Reclaim.Energy), "the scenario's reclaim is the props'");
+                Assert.AreEqual(1, total.Unknown);
+                Assert.IsNull(PropReclaim.IntoScenario(document with { Props = [] }, catalog, out _).Scenario.Reclaim, "no props, no reclaim");
             }
             finally
             {

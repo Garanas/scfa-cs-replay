@@ -1,0 +1,72 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "UEF research campus",
+  "settings": {
+    "group": {
+      "name": "UEF research campus",
+      "units": [
+        {
+          "blueprint": "uec1201",
+          "x": -7.5,
+          "y": 0,
+          "z": -13.5,
+          "heading": -0.785
+        },
+        {
+          "blueprint": "uec1501",
+          "x": -6.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": -0.785
+        },
+        {
+          "blueprint": "uec1201",
+          "x": -12.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": -2.356
+        },
+        {
+          "blueprint": "uec1501",
+          "x": 14.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": 0.785
+        },
+        {
+          "blueprint": "uec1201",
+          "x": -13.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": -0.785
+        },
+        {
+          "blueprint": "uec1201",
+          "x": 8.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 2.356
+        },
+        {
+          "blueprint": "uec1201",
+          "x": 14.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": 2.356
+        },
+        {
+          "blueprint": "uec1201",
+          "x": 8.5,
+          "y": 0,
+          "z": -13.5,
+          "heading": 0.785
+        }
+      ],
+      "groups": []
+    },
+    "count": 8,
+    "role": "civilian",
+    "source": "X1MP_007, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}

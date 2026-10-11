@@ -1,0 +1,65 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "UEF farm",
+  "settings": {
+    "group": {
+      "name": "UEF farm",
+      "units": [
+        {
+          "blueprint": "uec1101",
+          "x": -10.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0.026
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 1.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0.026
+        },
+        {
+          "blueprint": "uec1401",
+          "x": 8.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1401",
+          "x": -4.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uec1101",
+          "x": -4.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0.026
+        },
+        {
+          "blueprint": "uec1101",
+          "x": 11.179199,
+          "y": 0,
+          "z": 8.378845,
+          "heading": 0.026
+        },
+        {
+          "blueprint": "uec1401",
+          "x": 1.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 7,
+    "role": "civilian",
+    "source": "Supreme Commander Forged Alliance/maps/SCMP_035, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}

@@ -1,0 +1,289 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Cybran civilian city",
+  "settings": {
+    "group": {
+      "name": "Cybran civilian city",
+      "units": [
+        {
+          "blueprint": "urc1501",
+          "x": 5.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 0.009
+        },
+        {
+          "blueprint": "urc1501",
+          "x": -1.5,
+          "y": 0,
+          "z": 25.5,
+          "heading": -3.115
+        },
+        {
+          "blueprint": "urc1201",
+          "x": -1.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 1.597
+        },
+        {
+          "blueprint": "urc1501",
+          "x": 13.5,
+          "y": 0,
+          "z": 25.5,
+          "heading": -3.124
+        },
+        {
+          "blueprint": "urc1301",
+          "x": -9.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": 0.026
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -33.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0.035
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 14.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": -1.484
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 19.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1301",
+          "x": -9.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": 0.009
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -21.5,
+          "y": 0,
+          "z": -19.5,
+          "heading": 1.588
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 14.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 1.571
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -21.5,
+          "y": 0,
+          "z": -14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 32.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": -1.553
+        },
+        {
+          "blueprint": "urc1501",
+          "x": 8.5,
+          "y": 0,
+          "z": 25.5,
+          "heading": -3.124
+        },
+        {
+          "blueprint": "urc1501",
+          "x": -4.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 0.009
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -21.5,
+          "y": 0,
+          "z": -24.5,
+          "heading": -3.133
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -19.5,
+          "y": 0,
+          "z": 6.5,
+          "heading": -1.545
+        },
+        {
+          "blueprint": "urc1401",
+          "x": 4.5,
+          "y": 0,
+          "z": -24.5,
+          "heading": -0.026
+        },
+        {
+          "blueprint": "urc1501",
+          "x": 3.5,
+          "y": 0,
+          "z": 25.5,
+          "heading": -3.115
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -33.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1401",
+          "x": -9.5,
+          "y": 0,
+          "z": -24.5,
+          "heading": -0.017
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 14.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": -3.124
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -28.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -3.115
+        },
+        {
+          "blueprint": "urc1201",
+          "x": 3.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": -1.536
+        },
+        {
+          "blueprint": "urc1401",
+          "x": -23.5,
+          "y": 0,
+          "z": 22.5,
+          "heading": -1.536
+        },
+        {
+          "blueprint": "urc1301",
+          "x": -9.5,
+          "y": 0,
+          "z": -12.5,
+          "heading": 0.026
+        },
+        {
+          "blueprint": "urc1201",
+          "x": 4.5,
+          "y": 0,
+          "z": -17.5,
+          "heading": -0.026
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 19.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 1.562
+        },
+        {
+          "blueprint": "urc1401",
+          "x": -2.5,
+          "y": 0,
+          "z": -24.5,
+          "heading": 0.017
+        },
+        {
+          "blueprint": "urc1501",
+          "x": 0.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 0.009
+        },
+        {
+          "blueprint": "urc1201",
+          "x": 4.5,
+          "y": 0,
+          "z": -12.5,
+          "heading": -1.614
+        },
+        {
+          "blueprint": "urc1401",
+          "x": 11.5,
+          "y": 0,
+          "z": -24.5,
+          "heading": 0.044
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -33.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": -3.133
+        },
+        {
+          "blueprint": "urc1501",
+          "x": 10.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": -0
+        },
+        {
+          "blueprint": "urc1401",
+          "x": -16.5,
+          "y": 0,
+          "z": 22.5,
+          "heading": -1.536
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 19.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": -1.518
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 32.5,
+          "y": 0,
+          "z": 3.5,
+          "heading": 3.124
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -28.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 1.588
+        },
+        {
+          "blueprint": "urc1501",
+          "x": 15.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": -0
+        }
+      ],
+      "groups": []
+    },
+    "count": 39,
+    "role": "civilian",
+    "source": "Supreme Commander Forged Alliance/maps/SCMP_025, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}

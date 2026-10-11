@@ -1067,6 +1067,13 @@ every other part).
   (waiting, running, done or not needed with a note, failed with why; a failed step stops the
   export), `state.procedural.export`. The file the export writes names the editor (the library's
   `EditorStamp`).
+- **Reclaim** (P-5, M-1; `MainViewModel.ReclaimExport.cs`): the step `reclaim` at `GameFilesOrder`
+  sets `ScenarioInfo.Reclaim` (the totals the lobby shows) in the version the export writes from
+  the props only (the library's `PropReclaim.IntoScenario`, rounded; none without props), the owner's
+  decision: units and wrecks are not counted. Its note says the totals and names the first three
+  blueprints the workspace does not know, which count as 0 (`ReclaimNote`; logged as a warning).
+  Without converted assets it is not needed and the map's own totals stay. An imported map's
+  reclaim stays in the project and is written over by the next export.
 - **Textures as DDS** (M-10, wave 10E; `MainViewModel.DdsTextures.cs`): the step `ddsTextures` at
   `TexturesOrder` 600, after every step that may add a texture, runs the library's `TextureExport`
   on the version the export writes (performance span `model.dds-textures`), with its shared cache;
@@ -1389,9 +1396,11 @@ change, span `model.armies`), the place tool and the commands.
   Applying one makes it what the place tool places (`Preset`); a click runs `units.placePreset
   {name?, x?, z?, army?, group?, heading?}`: a new group named after the preset in the tool's
   group, turned in quarter turns. Choosing a unit leaves the preset.
-- **Example unit presets and army roles** (U-6): the library's `ExampleUnitPresets` (36 presets
-  embedded in FAForever.MapEditor.Project) are written into `presets/units` when the workspace
-  opens (`PresetsViewModel.Open`; a deleted one stays deleted, an edited one is left alone). A
+- **Example unit presets and army roles** (U-6): the library's `ExampleUnitPresets` (38 presets
+  embedded in FAForever.MapEditor.Project, all the civilians': settlements and wreck fields) are
+  written into `presets/units` when the workspace opens (`PresetsViewModel.Open`; a deleted one
+  stays deleted, an edited one is left alone, an untouched copy of an example that no longer
+  ships is deleted). A
   preset may name an army role (`UnitPresetSettings.Role`: civilian, enemy, player) and wrecks
   (`Wrecks`): `units.placePreset {..., wreck?}` then places it for `UnitPresets.ArmyFor` (the
   civilians; an army no player takes besides the civilians', `ARMY_9` first, and on a map without
@@ -1547,7 +1556,8 @@ follow the terrain, and the reclaim. The maths is the library's (`PropOrientatio
 - **Panel**: Placing, Palette (thumbnail, weight, cross; Add a prop, Clear, `props.clearPalette`, and Restore), Palettes (presets of kind
   `props`: the props with weights, the paint brush, the Placing settings), Rules (P-4,
   planned), Reclaim (map and per area, counted again only when the props, areas or catalogue
-  change; span `model.props-reclaim`). The inspector's `PropSelection` adds pitch, roll, scale,
+  change; span `model.props-reclaim`; the export writes the map's totals into the scenario, section
+  "The Procedural mode", Reclaim). The inspector's `PropSelection` adds pitch, roll, scale,
   the selection's reclaim and the buttons of the commands above.
 - Automation: `state.props` (the place tool's prop, Placing, palette, paint and erase settings,
   reclaim with areas).
@@ -1695,7 +1705,9 @@ mode panel's and inspector's templates only name it).
   the person touches (focus or pointer over it) gives its value: a slider coerces its value by
   itself when its range arrives after the value, which once rewrote every area to 1 by 1.
 - **Commands**: `map.information {name?, description?, author?, version?, type?, preview?,
-  noRushRadius?, adaptiveMap?, reclaimMass?, reclaimEnergy?}` (without arguments: the Map panel),
+  noRushRadius?, adaptiveMap?}` (without arguments: the Map panel; the reclaim is not typed: a
+  read-only line under the fields, `MapInformationViewModel.ReclaimAtExport`, `state.mapPanels`'s
+  `information.reclaimAtExport`, says what the export step `reclaim` writes),
   `map.addArea {name?, x0?, z0?, x1?, z1?}` (selects it and chooses the areas tool),
   `map.setArea {name, rename?, x0?, ...}`, `map.removeArea {name}`; `file.openScript` (the
   project's `script.lua` in the system's application for `.lua`, written with a skirmish map's
@@ -2268,6 +2280,9 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   checked as the setup checks them) and keeps the assets: other archives make them out of date, and
   the page says so. `state.workspaceSettings`. Never press Convert again in a scratch workspace whose
   `assets` is a link to another's.
+- **Presets at the bottom**: every mode's preset sections are the last of its panel (the Terrain
+  mode's brush and stamp presets after the height layers, the Props mode's palettes after the rules
+  and reclaim); a new section goes before them (`PanelsAndShellTest.EveryModesPresetsAreAtTheBottomOfItsPanel`).
 - **Presets in one folder**: `presets/` with plural kinds (`brushes`, `stamps`, `lighting`, `water`,
   `sky`, `props`, `units`, `markers`, `selections`, `maps`: the map templates). `PresetsViewModel.Open`
   moves a workspace's old folders once (`PresetFolders.Move`: `brush`, `props-palette`, `selection`,
@@ -2607,6 +2622,17 @@ last frame drawn.
   (`MainViewModel.BrushWheel`). The sculpt, strata, mask, water, terrain types, props paint and
   erase brushes take them; the status line says the new value and the options row's sliders follow,
   also behind More. Control with `[` and `]` stays the decals' order.
+- **Turning a brush** (T-1, the owner's decision of October 2026; `BrushKeys.TurnKey`, `Turn`,
+  `TurnWheel`): Q and E turn the picture of the active brush 15 degrees anticlockwise or clockwise
+  (shift: 90), alt and the wheel over a view 5 degrees a notch (`MainViewModel.BrushTurnWheel`,
+  a notch away from the person clockwise; the delta's x when a system gives alt's wheel sideways),
+  for every tool with a shape (`IShapedBrushTool`: sculpt, strata, masks, water maps, terrain
+  types, walkability marks, stamp). A round brush ignores them (the key goes on to the tool, the
+  wheel zooms as without alt); with Random rotation on they set the angle the dabs start from. The
+  outline under the mouse turns at once (a change of the shape redraws the cursor), the status line
+  says `Brush rotation: 30°` and the options row's Rotation follows. The stamp keeps its own Q and E
+  (`StampTool.Key`, `The stamp turned 15°`) and takes alt with the wheel; the select and place tools
+  keep Q and E for what they turn (no shaped brush). Tests: `BrushTurnTest`.
 - **Undo brings back the selection** (`MainViewModel.UndoSelection`): each version of the document
   remembers what was selected while it was the current one (not while an edit runs: a command that
   deletes clears the selection inside its step); undo and redo select that again, as far as the

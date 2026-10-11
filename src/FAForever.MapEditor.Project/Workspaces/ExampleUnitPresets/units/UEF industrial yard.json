@@ -1,0 +1,93 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "UEF industrial yard",
+  "settings": {
+    "group": {
+      "name": "UEF industrial yard",
+      "units": [
+        {
+          "blueprint": "uec1904",
+          "x": -5.62796,
+          "y": 0,
+          "z": 10.575439,
+          "heading": 2.435
+        },
+        {
+          "blueprint": "uec1905",
+          "x": -3,
+          "y": 0,
+          "z": 12,
+          "heading": 2.635
+        },
+        {
+          "blueprint": "uec1907",
+          "x": 11.392731,
+          "y": 0,
+          "z": 14.220337,
+          "heading": -2.234
+        },
+        {
+          "blueprint": "uec1905",
+          "x": 10,
+          "y": 0,
+          "z": -15,
+          "heading": -0.367
+        },
+        {
+          "blueprint": "uec1905",
+          "x": -6.775238,
+          "y": 0,
+          "z": -12.639893,
+          "heading": 0.777
+        },
+        {
+          "blueprint": "uec1907",
+          "x": 12.076599,
+          "y": 0,
+          "z": 12.189392,
+          "heading": -2.234
+        },
+        {
+          "blueprint": "uec1907",
+          "x": -11.419525,
+          "y": 0,
+          "z": -8.367737,
+          "heading": 0.942
+        },
+        {
+          "blueprint": "uec1905",
+          "x": 7,
+          "y": 0,
+          "z": -15,
+          "heading": -0.148
+        },
+        {
+          "blueprint": "uec1906",
+          "x": 0,
+          "y": 0,
+          "z": 12,
+          "heading": 2.775
+        },
+        {
+          "blueprint": "uec1903",
+          "x": 11.008881,
+          "y": 0,
+          "z": 4.9718018,
+          "heading": 0.969
+        },
+        {
+          "blueprint": "uec1907",
+          "x": -7.8780212,
+          "y": 0,
+          "z": -9.085388,
+          "heading": 0.942
+        }
+      ],
+      "groups": []
+    },
+    "count": 11,
+    "role": "civilian",
+    "source": "SCCA_A06, army Aeon, group Black_Sun_Support"
+  }
+}

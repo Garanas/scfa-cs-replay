@@ -1,0 +1,79 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Cybran civilian hamlet",
+  "settings": {
+    "group": {
+      "name": "Cybran civilian hamlet",
+      "units": [
+        {
+          "blueprint": "urc1301",
+          "x": 10.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": 0.009
+        },
+        {
+          "blueprint": "urc1201",
+          "x": -10.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": -1.536
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 0.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": -1.484
+        },
+        {
+          "blueprint": "urc1201",
+          "x": 10.5,
+          "y": 0,
+          "z": -4.5,
+          "heading": 1.597
+        },
+        {
+          "blueprint": "urc1501",
+          "x": -9.5,
+          "y": 0,
+          "z": 7.5,
+          "heading": 0.009
+        },
+        {
+          "blueprint": "urc1301",
+          "x": 10.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0.026
+        },
+        {
+          "blueprint": "urc1201",
+          "x": -5.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": -1.536
+        },
+        {
+          "blueprint": "urc1201",
+          "x": 10.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 1.597
+        },
+        {
+          "blueprint": "urc1501",
+          "x": -9.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": -0
+        }
+      ],
+      "groups": []
+    },
+    "count": 9,
+    "role": "civilian",
+    "source": "Supreme Commander Forged Alliance/maps/SCMP_025, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}

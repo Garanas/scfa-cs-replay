@@ -68,6 +68,13 @@ namespace FAForever.MapEditor.App.Tests
             JsonObject clicked = await Send(automation, "click", new JsonObject { ["label"] = "Write the draft for procedural tools" });
             Assert.IsTrue(clicked["clicked"]!["finished"]!.GetValue<bool>(), "the click waits for the command it started");
             StringAssert.StartsWith(model.Status, "Wrote the draft for procedural tools", "the answer's status says what the click did");
+
+            // the brush presets end the panel, below its fold
+            model.Presets.Use(new Project.Workspaces.PresetLibrary(Path.Combine(AppContext.BaseDirectory, "presets", Guid.NewGuid().ToString("N"))));
+            panel.Offset = default;
+            Dispatcher.UIThread.RunJobs();
+            await Send(automation, "click", new JsonObject { ["label"] = "Save the brush's settings as a preset" });
+            Assert.AreEqual(1, model.Presets.Shown.Count, "the button below the fold was clicked");
             Assert.IsTrue(panel.Offset.Y > 0, "the panel was scrolled to reach the button");
             window.Close();
         });

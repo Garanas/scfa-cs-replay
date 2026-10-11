@@ -1,0 +1,93 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Aeon civilian village",
+  "settings": {
+    "group": {
+      "name": "Aeon civilian village",
+      "units": [
+        {
+          "blueprint": "uac1501",
+          "x": 18.5,
+          "y": 0,
+          "z": 1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 14.5,
+          "y": 0,
+          "z": -4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": -6.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 0.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": -18.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": -7.5,
+          "y": 0,
+          "z": -14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 6.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": 6.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": -18.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": 5.5,
+          "y": 0,
+          "z": -14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -5.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 11,
+    "role": "civilian",
+    "source": "Supreme Commander Forged Alliance/maps/SCMP_018, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}

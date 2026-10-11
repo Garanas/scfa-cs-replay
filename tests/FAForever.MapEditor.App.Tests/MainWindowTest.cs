@@ -776,8 +776,14 @@ namespace FAForever.MapEditor.App.Tests
             SculptTool sculpt = model.Tool<SculptTool>();
             sculpt.Radius = 25;
             Dispatcher.UIThread.RunJobs();
-            Button Named(string name) => window.GetVisualDescendants().OfType<Button>()
-                .Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == name);
+            Button Named(string name)
+            {
+                // the presets are at the bottom of the panel, below its fold
+                Button found = window.GetVisualDescendants().OfType<Button>().Single(button => Avalonia.Automation.AutomationProperties.GetName(button) == name);
+                found.BringIntoView();
+                Dispatcher.UIThread.RunJobs();
+                return found;
+            }
 
             Click(window, Named("Save the brush's settings as a preset"));
             Assert.AreEqual("Raise 25", model.Presets.Shown.Single().Name);

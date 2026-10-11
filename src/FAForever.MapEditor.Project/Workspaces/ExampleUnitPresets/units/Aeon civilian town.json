@@ -1,0 +1,135 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Aeon civilian town",
+  "settings": {
+    "group": {
+      "name": "Aeon civilian town",
+      "units": [
+        {
+          "blueprint": "uac1501",
+          "x": -13.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": 0.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": 14.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 21.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": 8.5,
+          "y": 0,
+          "z": 0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 21.5,
+          "y": 0,
+          "z": -13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 14.5,
+          "y": 0,
+          "z": 21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1401",
+          "x": -13.5,
+          "y": 0,
+          "z": -13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1301",
+          "x": -7.5,
+          "y": 0,
+          "z": 0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": 14.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1501",
+          "x": 14.5,
+          "y": 0,
+          "z": -13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -20.5,
+          "y": 0,
+          "z": -13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -20.5,
+          "y": 0,
+          "z": 14.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1201",
+          "x": 0.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1901",
+          "x": 0.5,
+          "y": 0,
+          "z": 0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -13.5,
+          "y": 0,
+          "z": 21.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "uac1101",
+          "x": -13.5,
+          "y": 0,
+          "z": -20.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 17,
+    "role": "civilian",
+    "source": "virmire.v0002, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}

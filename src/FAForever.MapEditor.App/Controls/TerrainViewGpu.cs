@@ -709,6 +709,13 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             e.Handled = true;
             return;
         }
+        // alt and the wheel: the brush's picture turns (some systems give alt's wheel sideways)
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Alt) && !e.KeyModifiers.HasFlag(KeyModifiers.Control)
+            && _model?.BrushTurnWheel(Tools.BrushKeys.Notches(e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X)) == true)
+        {
+            e.Handled = true;
+            return;
+        }
         int notches = Math.Sign(e.Delta.Y) * Math.Max(1, (int)Math.Round(Math.Abs(e.Delta.Y)));
         _model?.Camera.Zoom(InView(e.GetPosition(this)), (float)(Bounds.Width / Math.Max(1, Bounds.Height)), notches);
         Moved();

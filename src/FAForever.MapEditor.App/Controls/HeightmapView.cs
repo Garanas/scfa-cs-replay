@@ -435,6 +435,13 @@ public sealed partial class HeightmapView : Control
             e.Handled = true;
             return;
         }
+        // alt and the wheel: the brush's picture turns (some systems give alt's wheel sideways)
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Alt) && !e.KeyModifiers.HasFlag(KeyModifiers.Control)
+            && _model?.BrushTurnWheel(Tools.BrushKeys.Notches(e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X)) == true)
+        {
+            e.Handled = true;
+            return;
+        }
         Point at = e.GetPosition(this);
         Point map = ControlToMap(at);
         _zoom = Math.Clamp(_zoom * Math.Pow(1.2, e.Delta.Y), 0.05, 64);

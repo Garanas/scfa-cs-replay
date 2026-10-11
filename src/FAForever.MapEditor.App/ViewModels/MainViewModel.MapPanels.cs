@@ -162,6 +162,7 @@ public sealed partial class MainViewModel
                 ["size"] = MapInformation.Size,
                 ["noRushRadius"] = document?.Scenario.NoRushRadius,
                 ["adaptive"] = document?.Scenario.AdaptiveMap,
+                ["reclaimAtExport"] = MapInformation.ReclaimAtExport,
             },
             ["areas"] = new JsonArray([.. AreaList.Items.Select(item => (JsonNode)JsonValue.Create(item.Rectangle.Length > 0 ? $"{item.Area.Name}: {item.Rectangle}" : item.Area.Name))]),
             ["script"] = ScriptFiles.Script,

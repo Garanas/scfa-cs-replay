@@ -143,6 +143,22 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public void EveryModesPresetsAreAtTheBottomOfItsPanel()
+        {
+            foreach (ModeDefinition mode in EditorModes.All)
+            {
+                int firstPreset = mode.Sections.ToList().FindIndex(section => section is PresetSection);
+                if (firstPreset < 0)
+                {
+                    continue;
+                }
+                Assert.IsTrue(mode.Sections.Skip(firstPreset).All(section => section is PresetSection), $"{mode.Id}: nothing after its presets");
+            }
+            Assert.IsInstanceOfType<PresetSection>(EditorModes.All.Single(mode => mode.Id == "terrain").Sections[^1]);
+            Assert.IsInstanceOfType<PresetSection>(EditorModes.All.Single(mode => mode.Id == "props").Sections[^1]);
+        }
+
+        [TestMethod]
         public void TheRailHasTheMasksAndProceduralModesAndThePluginsBelow()
         {
             MainViewModel model = new MainViewModel(new NoDialogs());

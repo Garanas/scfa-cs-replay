@@ -52,6 +52,24 @@ namespace FAForever.MapEditor.App.Tests
 
         private static Unit UnitNamed(MainViewModel model, string name) => model.ShownDocument!.FindUnit(name)!.Unit;
 
+        /// <summary>
+        /// The examples and a test's own enemy base (the examples are all the civilians'): a factory
+        /// and two turrets in their role groups, saved as <c>Test enemy base</c>.
+        /// </summary>
+        private static PresetLibrary ExamplesAndAnEnemyBase()
+        {
+            string folder = Path.Combine(AppContext.BaseDirectory, "presets", Guid.NewGuid().ToString("N"));
+            ExampleUnitPresets.Ensure(Path.Combine(folder, PresetKinds.Units));
+            PresetLibrary library = new PresetLibrary(folder);
+            UnitPresetGroup group = new UnitPresetGroup("Test enemy base", [],
+            [
+                new UnitPresetGroup("Factories", [new UnitPresetUnit("ueb0101", 0, 0, 0, 0)], []),
+                new UnitPresetGroup("Defense", [new UnitPresetUnit("ueb2101", -6, 0, 0, 0), new UnitPresetUnit("ueb2101", 6, 0, 0, 0)], []),
+            ]);
+            library.Save(Preset.Of(UnitPresets.Kind, "Test enemy base", new UnitPresetSettings(group, 3, ArmyRoles.Enemy)));
+            return library;
+        }
+
         [TestMethod]
         public async Task AClickPlacesTheChosenUnitAsOneStepAndAStructureSnapsToTheBuildGrid()
         {
@@ -243,26 +261,31 @@ namespace FAForever.MapEditor.App.Tests
         public async Task AnExampleUnitsPresetGoesToTheArmyOfItsRoleAndAWreckFieldIntoTheWreckage()
         {
             MainViewModel model = await Open();
-            string folder = Path.Combine(AppContext.BaseDirectory, "presets", Guid.NewGuid().ToString("N"));
-            ExampleUnitPresets.Ensure(Path.Combine(folder, PresetKinds.Units));
-            model.Presets.Use(new PresetLibrary(folder));
-            Assert.IsTrue(model.Presets.Shown.Any(preset => preset.Name == "Aeon base, small"), "the Units mode's panel lists the examples");
+            model.Presets.Use(ExamplesAndAnEnemyBase());
+            Assert.IsTrue(model.Presets.Shown.Any(preset => preset.Name == "Aeon civilian town"), "the Units mode's panel lists the examples");
 
-            await Run(model, "presets.apply", new JsonObject { ["kind"] = UnitPreset.Kind, ["name"] = "Aeon base, small" });
+            await Run(model, "presets.apply", new JsonObject { ["kind"] = UnitPreset.Kind, ["name"] = "Aeon civilian town" });
             UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
-            Assert.AreEqual(ArmyRoles.Enemy, tool.PresetRole);
+            Assert.AreEqual(ArmyRoles.Civilian, tool.PresetRole);
             tool.PlaceInto("ARMY_3", "INITIAL");
             tool.Press(200, 200);
-            Assert.IsTrue(model.Selection.Items.Count() > 20);
+            Assert.IsTrue(model.Selection.Items.Count() > 10);
+            Assert.IsTrue(model.Selection.Items.All(unit => model.ShownDocument!.FindUnit(unit.Name!)!.Army == "NEUTRAL_CIVILIAN"), "a civilian town goes to the civilians, whatever the tool's army");
+            CollectionAssert.AreEqual(new[] { "INITIAL", "Aeon civilian town" }, model.ShownDocument!.FindUnit(model.Selection.Items[0].Name!)!.Group.ToArray(), "in a group of its name");
+
+            await Run(model, "presets.apply", new JsonObject { ["kind"] = UnitPreset.Kind, ["name"] = "Test enemy base" });
+            Assert.AreEqual(ArmyRoles.Enemy, tool.PresetRole);
+            tool.Press(300, 300);
+            Assert.AreEqual(3, model.Selection.Items.Count());
             Assert.IsTrue(model.Selection.Items.All(unit => model.ShownDocument!.FindUnit(unit.Name!)!.Army == "ARMY_9"), "an enemy's base goes to the army no player takes, whatever the tool's army");
-            CollectionAssert.AreEqual(new[] { "INITIAL", "Aeon base, small", "Factories" }, model.ShownDocument!.FindUnit(model.Selection.Items[0].Name!)!.Group.ToArray(), "with the base's role groups");
+            CollectionAssert.AreEqual(new[] { "INITIAL", "Test enemy base", "Factories" }, model.ShownDocument!.FindUnit(model.Selection.Items[0].Name!)!.Group.ToArray(), "with the base's role groups");
 
             CommandRun wrecks = await Run(model, "units.placePreset", new JsonObject { ["name"] = "Wreck field, mixed", ["x"] = 100, ["z"] = 300 });
             Assert.AreEqual("NEUTRAL_CIVILIAN", ((JsonObject)wrecks.Result!)["army"]!.GetValue<string>());
             StringAssert.StartsWith(((JsonObject)wrecks.Result!)["group"]!.GetValue<string>(), UnitWrecks.GroupName + "/");
             Assert.IsTrue(model.Selection.Items.All(unit => UnitWrecks.IsWreck(model.ShownDocument!.FindUnit(unit.Name!)!)));
 
-            CommandRun given = await Run(model, "units.placePreset", new JsonObject { ["name"] = "UEF wall line", ["x"] = 300, ["z"] = 100, ["army"] = "ARMY_4" });
+            CommandRun given = await Run(model, "units.placePreset", new JsonObject { ["name"] = "UEF farm", ["x"] = 300, ["z"] = 100, ["army"] = "ARMY_4" });
             Assert.AreEqual("ARMY_4", ((JsonObject)given.Result!)["army"]!.GetValue<string>(), "an army given wins over the role");
         }
 
@@ -272,15 +295,13 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = new MainViewModel(new NoDialogs());
             model.Assets.Use(Catalog());
             model.OpenNewMap(NewMap.Create(new NewMapSettings { Size = 256 }));
-            string folder = Path.Combine(AppContext.BaseDirectory, "presets", Guid.NewGuid().ToString("N"));
-            ExampleUnitPresets.Ensure(Path.Combine(folder, PresetKinds.Units));
-            model.Presets.Use(new PresetLibrary(folder));
+            model.Presets.Use(ExamplesAndAnEnemyBase());
 
             await Run(model, "presets.apply", new JsonObject { ["kind"] = UnitPreset.Kind, ["name"] = "UEF civilian town" });
             CommandRun town = await Run(model, "units.placePreset", new JsonObject { ["x"] = 60, ["z"] = 60 });
             string civilians = ((JsonObject)town.Result!)["army"]!.GetValue<string>();
 
-            await Run(model, "presets.apply", new JsonObject { ["kind"] = UnitPreset.Kind, ["name"] = "Aeon base, small" });
+            await Run(model, "presets.apply", new JsonObject { ["kind"] = UnitPreset.Kind, ["name"] = "Test enemy base" });
             StringAssert.Contains(model.Status, $"the enemy army ({UnitPresets.EnemyArmy}, a new extra army)", "the hint says the army placing it adds");
             CommandRun enemy = await Run(model, "units.placePreset", new JsonObject { ["x"] = 190, ["z"] = 190 });
             JsonObject result = (JsonObject)enemy.Result!;
