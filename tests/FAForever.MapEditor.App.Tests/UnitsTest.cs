@@ -431,7 +431,12 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(4, ((JsonObject)tanks.Result!)["count"]!.GetValue<int>(), "mobile units at the spacing");
             Assert.AreEqual(90, SelectionInspector.Degrees(UnitNamed(model, first).Orientation.Y), 1e-3, "facing along the line, down +z");
 
-            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["x0"] = -5, ["z0"] = 5, ["x1"] = 10, ["z1"] = 5, ["blueprint"] = "uel0101" }), "a point outside the map is refused");
+            CommandRun edge = await Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["x0"] = -5, ["z0"] = 5, ["x1"] = 10, ["z1"] = 5, ["blueprint"] = "uel0101", ["spacing"] = 3 });
+            Assert.AreEqual(2, ((JsonObject)edge.Result!)["outside"]!.GetValue<int>(), "the places at -5 and -2 are left out");
+            Assert.AreEqual(4, ((JsonObject)edge.Result!)["count"]!.GetValue<int>(), "1, 4, 7 and 10");
+            StringAssert.Contains(model.Status, "left out beyond the map's edge");
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["x0"] = -5, ["z0"] = 5, ["x1"] = -1, ["z1"] = 5, ["blueprint"] = "uel0101" }), "nothing of it lies on the map");
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "ring", ["x"] = -5, ["z"] = 5, ["blueprint"] = "uel0101" }), "the click of a ring must lie on the map");
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["blueprint"] = "uel0101" }), "no points");
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "spiral", ["x0"] = 5, ["z0"] = 5, ["blueprint"] = "uel0101" }));
         }

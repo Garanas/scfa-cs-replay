@@ -34,10 +34,14 @@ namespace FAForever.MapEditor.Project.Tests
                 Directory.CreateDirectory(Path.GetDirectoryName(file)!);
                 File.WriteAllText(file, json);
             }
-            Write("uxb0101", """{ "id": "uxb0101", "name": "Land Factory", "faction": "Uef", "categories": ["UEF", "STRUCTURE", "LAND"], "footprint": { "sizeX": 5, "sizeZ": 5, "maxSlope": 0.25 }, "skirt": { "sizeX": 8, "sizeZ": 8, "offsetX": -1.5, "offsetZ": -1.5 }, "buildOnLayers": ["Land"] }""");
+            Write("uxb0101", """{ "id": "uxb0101", "name": "Land Factory", "faction": "Uef", "categories": ["UEF", "STRUCTURE", "LAND"], "footprint": { "sizeX": 5, "sizeZ": 5, "maxSlope": 0.25 }, "skirt": { "sizeX": 8, "sizeZ": 8, "offsetX": -1.5, "offsetZ": -1.5 }, "buildOnLayers": ["Land"], "maxGroundVariation": 1.1, "flattenSkirt": true }""");
             Write("uxb0103", """{ "id": "uxb0103", "name": "Naval Factory", "faction": "Uef", "categories": ["UEF", "STRUCTURE", "NAVAL"], "footprint": { "sizeX": 5, "sizeZ": 5, "minWaterDepth": 1.5 }, "skirt": { "sizeX": 8, "sizeZ": 8, "offsetX": -1.5, "offsetZ": -1.5 }, "buildOnLayers": ["Water"] }""");
             Write("uxb5101", """{ "id": "uxb5101", "name": "Wall", "faction": "Uef", "categories": ["UEF", "STRUCTURE", "WALL"], "footprint": { "sizeX": 1, "sizeZ": 1 } }""");
             Write("uxl0001", """{ "id": "uxl0001", "name": "Tank", "faction": "Uef", "categories": ["UEF", "LAND", "MOBILE"], "footprint": { "sizeX": 1, "sizeZ": 1 } }""");
+            // the game's: a storage has a footprint of 1, an extractor and a power generator none (1 by 1), both a skirt of 2 about the centre
+            Write("uxb1106", """{ "id": "uxb1106", "name": "Mass Storage", "faction": "Uef", "categories": ["UEF", "STRUCTURE", "LAND"], "footprint": { "sizeX": 1, "sizeZ": 1 }, "skirt": { "sizeX": 2, "sizeZ": 2, "offsetX": -0.5, "offsetZ": -0.5 }, "buildOnLayers": ["Land", "Seabed"] }""");
+            Write("uxb1103", """{ "id": "uxb1103", "name": "Mass Extractor", "faction": "Uef", "categories": ["UEF", "STRUCTURE", "LAND"], "skirt": { "sizeX": 2, "sizeZ": 2, "offsetX": -0.5, "offsetZ": -0.5 }, "buildOnLayers": ["Land", "Seabed"] }""");
+            Write("uxb1101", """{ "id": "uxb1101", "name": "Power Generator", "faction": "Uef", "categories": ["UEF", "STRUCTURE", "LAND"], "skirt": { "sizeX": 2, "sizeZ": 2, "offsetX": -0.5, "offsetZ": -0.5 }, "buildOnLayers": ["Land"] }""");
             Write("uxb9999", """{ "id": "uxb9999", "name": "Mystery", "faction": "Uef", "categories": ["UEF", "STRUCTURE"] }""");
             catalog = AssetCatalog.Load(folder);
         }
@@ -58,6 +62,10 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(new Skirt(8, 8, -1.5, -1.5), limits.Skirt);
             CollectionAssert.AreEqual(new[] { "Land" }, limits.Layers!.Value.ToArray());
             Assert.AreEqual(0.25, limits.MaxSlope);
+            Assert.AreEqual(1.1, limits.MaxGroundVariation);
+            Assert.IsTrue(limits.FlattenSkirt);
+            Assert.AreEqual(1.0, catalog.Find("uxb1106")!.Limits!.MaxGroundVariation, "the engine's default when the blueprint gives none");
+            Assert.IsFalse(catalog.Find("uxb1106")!.Limits!.FlattenSkirt);
             Assert.AreEqual(1.5, catalog.Find("uxb0103")!.Limits!.MinWaterDepth);
             Assert.IsNull(catalog.Find("uxb9999")!.Limits, "a blueprint that says nothing: nothing to check");
         }
@@ -90,13 +98,48 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
-        public void WrecksMobileUnitsAndUnknownBlueprintsAreLeftOut()
+        public void WrecksAndMobileUnitsAreLeftOut()
         {
             MapDocument document = baseMap.AddUnits(Army, ["INITIAL", UnitWrecks.GroupName], [At("uxb0101", 100.5f, 100.5f)], out _);
-            document = With(document, At("uxb0101", 102.5f, 100.5f), At("uxl0001", 102.5f, 100.5f), At("uxl0001", 102.5f, 100.5f), At("uxb9999", 102.5f, 100.5f));
+            document = With(document, At("uxb0101", 108.5f, 100.5f), At("uxl0001", 108.5f, 100.5f), At("uxl0001", 108.5f, 100.5f));
 
             Assert.AreEqual(0, Run(document, "units-overlap").Count);
             Assert.AreEqual(0, Run(document, "units-ground").Count);
+        }
+
+        [TestMethod]
+        public void AStructureWhoseBlueprintSaysNothingHasTheEnginesDefaultFootprint()
+        {
+            // 1 by 1, so the next ogrid is free and the same one is not
+            Assert.AreEqual(0, Run(With(baseMap, At("uxb9999", 102.5f, 100.5f), At("uxb9999", 103.5f, 100.5f)), "units-overlap").Count);
+            Assert.AreEqual(1, Run(With(baseMap, At("uxb9999", 102.5f, 100.5f), At("uxb9999", 102.5f, 100.5f)), "units-overlap").Count);
+        }
+
+        [TestMethod]
+        public void AMassStorageBesideAnExtractorAndAFactoryBesideAGeneratorTouchButDoNotOverlap()
+        {
+            // the game's pairs: the skirt of a unit without a footprint lies at the corner of the 1 by 1 footprint plus the offset
+            MapDocument beside = With(baseMap, At("uxb1106", 238.5f, 283.5f), At("uxb1103", 240.5f, 283.5f));
+            Assert.AreEqual(0, Run(beside, "units-overlap").Count);
+            Assert.AreEqual(0, Run(With(baseMap, At("uxb1106", 240.5f, 283.5f), At("uxb1103", 238.5f, 283.5f)), "units-overlap").Count, "the same pair the other way round");
+            Assert.AreEqual(1, Run(With(baseMap, At("uxb1106", 238.5f, 283.5f), At("uxb1103", 239.5f, 283.5f)), "units-overlap").Count);
+
+            // a factory's skirt runs from 96.5 to 104.5, a generator's from 104.5 to 106.5 and from 94.5 to 96.5
+            MapDocument factory = With(baseMap, At("uxb0101", 100.5f, 100.5f), At("uxb1101", 105.5f, 100.5f), At("uxb1101", 95.5f, 100.5f), At("uxb1101", 100.5f, 105.5f), At("uxb1101", 100.5f, 95.5f));
+            Assert.AreEqual(0, Run(factory, "units-overlap").Count);
+            Assert.AreEqual(1, Run(With(baseMap, At("uxb0101", 100.5f, 100.5f), At("uxb1101", 104.5f, 100.5f)), "units-overlap").Count);
+        }
+
+        [TestMethod]
+        public void TheSkirtIsAtLeastTheFootprintAndItsOffsetNeverPositive()
+        {
+            AssetEntry factory = catalog.Find("uxb0101")!;
+
+            PlacementRect rect = PlacementChecks.SkirtOf(factory, 100.5f, 100.5f, 0);
+
+            Assert.AreEqual(new PlacementRect(96.5f, 96.5f, 104.5f, 104.5f), rect);
+            PlacementRect extractor = PlacementChecks.SkirtOf(catalog.Find("uxb1103")!, 240.5f, 283.5f, 0);
+            Assert.AreEqual(new PlacementRect(239.5f, 282.5f, 241.5f, 284.5f), extractor, "from the corner of a footprint of 1 by 1 at 240 and 283, less half an ogrid");
         }
 
         [TestMethod]
@@ -119,7 +162,7 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
-        public void AFactoryOnACliffIsAWarningAndOneOnASlightSlopeIsNot()
+        public void AFactoryOnACliffIsAWarningAndOneOnLevelGroundIsNot()
         {
             Heightmap heights = baseMap.Terrain.Heightmap;
             TiledBuffer<ushort>.Builder builder = heights.Samples.ToBuilder();
@@ -131,13 +174,54 @@ namespace FAForever.MapEditor.Project.Tests
                 }
             }
             MapDocument slope = baseMap with { Terrain = baseMap.Terrain with { Heightmap = heights with { Samples = builder.ToBuffer() } } };
-            // a cliff of 10 between x 109 and 110; a gentle slope of 4/128 an ogrid elsewhere
-            MapDocument document = With(slope, At("uxb0101", 109.5f, 100.5f), At("uxb0101", 160.5f, 100.5f));
+            // a cliff of 10 between x 109 and 110; level ground west of it
+            MapDocument document = With(slope, At("uxb0101", 109.5f, 100.5f), At("uxb0101", 60.5f, 100.5f));
 
             Problem problem = Run(document, "units-ground").Single();
 
-            StringAssert.Contains(problem.Message, "the ground rises");
+            StringAssert.Contains(problem.Message, "the ground around it");
+            StringAssert.Contains(problem.Message, "it allows 1.1");
             Assert.IsTrue(problem.Place!.Value.X < 111);
+        }
+
+        [TestMethod]
+        public void AFactoryOnAHillIsTooSteepAndTheEngineAllowsALittleOnAStructureWithoutFlatten()
+        {
+            // the hill of the QA: 42.9, 38.5 and 29.6 at x of 60, 64 and 68, level along z
+            Heightmap heights = baseMap.Terrain.Heightmap;
+            TiledBuffer<ushort>.Builder builder = heights.Samples.ToBuilder();
+            for (int z = 0; z <= heights.Height; z++)
+            {
+                for (int x = 0; x <= heights.Width; x++)
+                {
+                    float height = x <= 60 ? 42.9f : x <= 64 ? 42.9f - (x - 60) * 1.1f : 38.5f - (x - 64) * 2.225f;
+                    builder[x, z] = (ushort)MathF.Round(height * 128);
+                }
+            }
+            MapDocument hill = baseMap with { Terrain = baseMap.Terrain with { Heightmap = heights with { Samples = builder.ToBuffer() } } };
+
+            Problem factory = Run(With(hill, At("uxb0101", 64.5f, 100.5f)), "units-ground").Single();
+            StringAssert.Contains(factory.Message, "Land Factory");
+
+            // a generator (no flatten, 2 by 2 skirt) on a slope of 0.6 an ogrid: 1.2 under its skirt of 3 samples, more than 1
+            Heightmap ramp = baseMap.Terrain.Heightmap;
+            TiledBuffer<ushort>.Builder ramped = ramp.Samples.ToBuilder();
+            for (int z = 0; z <= ramp.Height; z++)
+            {
+                for (int x = 0; x <= ramp.Width; x++)
+                {
+                    ramped[x, z] = (ushort)MathF.Round((20 + x * 0.6f) * 128);
+                }
+            }
+            MapDocument sloped = baseMap with { Terrain = baseMap.Terrain with { Heightmap = ramp with { Samples = ramped.ToBuffer() } } };
+            StringAssert.Contains(Run(With(sloped, At("uxb1101", 100.5f, 100.5f)), "units-ground").Single().Message, "the ground under it rises and falls 1.2, it allows 1");
+            Assert.AreEqual(0, Run(With(baseMap, At("uxb1101", 100.5f, 100.5f)), "units-ground").Count, "flat ground");
+        }
+
+        [TestMethod]
+        public void TheGroundOfAStructureOnTheMapsEdgeIsReadWithinTheMap()
+        {
+            Assert.AreEqual(0, Run(With(baseMap, At("uxb0101", 4.5f, 4.5f), At("uxb1101", 0.5f, baseMap.Height - 0.5f)), "units-ground").Count);
         }
 
         [TestMethod]

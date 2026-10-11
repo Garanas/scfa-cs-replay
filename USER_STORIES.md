@@ -505,16 +505,19 @@ reads again when it changes; and nothing that generates runs by itself.
       the game turns into wrecks when it starts, as the vault's maps keep them; grey and dark in 3D, a
       cross in the top view; a warning for wrecks of a playable army.
 - [x] **U-7 Place many at once.** The Place tool's ways to place: a line (structures butt together
-      at their footprint, walls above all; mobile units at a chosen spacing; each facing along the
+      at their skirt, walls above all; mobile units at a chosen spacing; each facing along the
       line or the chosen heading), a rectangle (filled, or hollow for walls), a ring around the
       selection, and a scatter brush for mobile units and wrecks (a count per stroke, random
       headings, a least distance); each one step of undo, with its symmetry images, its footprints
       shown under the mouse before the mouse is released, and a single unit's footprint shown too.
       Today: the options row's Single, Line, Rectangle, Ring and Scatter with each way's settings
       (`units.placeMode`); a line or rectangle is dragged out with every footprint under the mouse
-      and the count in the status line (Shift keeps a line to 45°, Escape cancels) and placed on
-      release as one step (`units.addMany`); a ring goes around the selected units' footprints or
-      the structure under the mouse at a distance; the scatter brush (`[` and `]` its radius) puts
+      (red where it would overlap another or break a placement rule, or lies beyond the map's
+      edge, which is left out) and the count in the status line (Shift keeps a line to 45°, Escape
+      cancels) and placed on release as one step (`units.addMany`; more than 500 units are asked
+      about first); structures are spaced by their skirt, as the game's build templates are; a
+      ring goes around the selected units' skirts or the structure under the mouse at a distance
+      from them; the scatter brush (`[` and `]` its radius) puts
       the count in its circle at random headings, none closer than the least distance, and a drag
       goes on at that density; every way places into the row's army and group, as wrecks when
       asked, with the symmetry's images, and selects what it placed; a single unit's footprint
@@ -570,8 +573,8 @@ reads again when it changes; and nothing that generates runs by itself.
       build grid (the select tool's check box "Keep structures on the build grid").
 - [x] **U-12 Placement checks.** Problems lists structures whose footprints overlap and structures
       where the ground does not allow them (too steep, the wrong layer: water or land), from the
-      blueprint's skirt, build layers and slope limit, which the workspace's converted assets carry;
-      the footprint under the mouse turns red there. Today: the converted assets carry each unit's skirt, build layers, slope limit and least water depth (asset format 6); the checks `units-overlap` and `units-ground` warn in Problems (choosing an overlap selects both units), and the Place tool's footprints (single, line, rectangle, ring) turn red with the reason in the status line; placing stays allowed.
+      blueprint's skirt, build layers and ground rule, which the workspace's converted assets carry;
+      the footprint under the mouse turns red there. Today: the converted assets carry each unit's skirt, build layers, `MaxGroundVariation`, `FlattenSkirt` and least water depth (asset format 7); the checks `units-overlap` (by the skirt the engine reserves) and `units-ground` (the layer, the water's depth and the engine's flatness rule for structures: the ground under the skirt may differ by `MaxGroundVariation`, 1 by default) warn in Problems (choosing an overlap selects both units), and the Place tool's footprints (single, line, rectangle, ring) turn red, also where planned units overlap each other, with the reason in the status line; placing stays allowed.
 
 ## V: Views
 

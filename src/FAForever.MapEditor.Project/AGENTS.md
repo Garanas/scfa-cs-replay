@@ -118,17 +118,20 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     converted workspace), `UnitEditsTest`.
   - `UnitLayouts` (U-7, pure maths; the editor's place tool and `units.addMany` put the units on
     the terrain with `AddUnits`): the places and headings (`UnitPlace`: x, z, radians clockwise
-    from +x) of many units at once from a unit's footprint (`Extent` turned in quarter turns; none
-    is 1 by 1). `Line(from, to, footprint, spacing, faceAlong, heading, isStructure)`: structures
-    butt together at their footprint along the line, each on the build grid (two that land on one
-    place are one), mobile units a spacing apart (at least `MinimumSpacing`, a quarter ogrid),
+    from +x) of many units at once from a unit's footprint and skirt (`Extent` turned in quarter
+    turns; none is 1 by 1; `Pitch` is the larger of footprint and skirt along each axis, the room a
+    structure takes in a layout). `Line(from, to, footprint, spacing, faceAlong, heading,
+    isStructure, skirt)`: structures butt together at their skirt along the line (power generators,
+    factories and extractors skirt to skirt as the game's build templates; a wall's skirt is its
+    footprint), each on the build grid (two that land on one place are one), mobile units a spacing apart (at least `MinimumSpacing`, a quarter ogrid),
     each facing along the line (structures in the nearest quarter turn) or the heading;
     `Constrain(from, to, step)` keeps a line's angle to whole steps (`EighthTurn` with shift).
-    `Rectangle(cornerA, cornerB, footprint, hollow, spacing, heading, isStructure)`: rows of the
-    footprint from the corner nearest the origin, the rectangle rounded to whole ogrids (mobile
+    `Rectangle(cornerA, cornerB, footprint, hollow, spacing, heading, isStructure, skirt)`: rows of
+    the skirt from the corner nearest the origin (each unit snapped to the build grid by its footprint), the rectangle rounded to whole ogrids (mobile
     units a grid of the spacing); hollow keeps the border. `Ring(bounds, footprint, distance,
-    spacing, heading, isStructure)`: a hollow rectangle whose inner edge lies `distance` outside
-    the bounds (mobile units spread evenly about the spacing apart). `Scatter(centre, radius,
+    spacing, heading, isStructure, skirt)`: a hollow rectangle whose inner edge lies `distance` outside
+    the bounds, which are the skirts of what it goes around (the inner edge on whole ogrids, never
+    inside them; mobile units spread evenly about the spacing apart). `Scatter(centre, radius,
     count, leastDistance, seed, existing)`: random places and headings within a circle, none closer
     than the least distance to each other or to the places given, the same for the same seed,
     fewer when the circle is full. Tests: `UnitLayoutsTest`.
@@ -1543,21 +1546,35 @@ map's things.
   since, or which the workspace has no preset of; reads the fingerprints the editor keeps
   (`ProblemContext.PresetFingerprint`, null for a name without a preset) and finds nothing without them.
 - `units-overlap` and `units-ground` (warnings, U-12; `PlacementChecks`, `PlacementIndex`): two
-  structures (wrecks, mobile units and blueprints without a footprint or skirt left out) whose
-  skirts, else footprints, overlap, one problem per pair naming both (`Problem.Related` is the
-  second, selected with the first; the place is the middle of the shared ground; edges that touch
-  do not overlap, so walls side by side are fine); and a structure on a layer its
-  `BuildOnLayerCaps` excludes (the terrain height under its centre against the water height:
-  land, or water and seabed under it), in water shallower than its `MinWaterDepth`, or on ground
-  steeper than its `MaxSlope` (the rise per ogrid from the footprint's centre to each corner, from
-  the heightmap). A skirt starts `SkirtOffset` from the footprint's corner (a land factory: 5 by 5,
-  skirt 8 by 8, offset -1.5), turned in quarter turns. What a blueprint does not say is not
-  checked. At most 200 problems per check, then one line saying how many more. The
+  structures (wrecks and mobile units left out) whose skirts overlap, one problem per pair naming
+  both (`Problem.Related` is the second, selected with the first; the place is the middle of the
+  shared ground; edges that touch do not overlap, so walls side by side and a mass storage beside
+  its extractor are fine); and a structure on a layer its `BuildOnLayerCaps` excludes (the terrain
+  height under its centre against the water height: land, or water and seabed under it), in water
+  shallower than its `MinWaterDepth`, or on uneven ground. The skirt is the engine's
+  (`RUnitBlueprint::GetSkirtRect`, `ComputeDerivedQuantities`: Draiget/faf-re
+  `src/sdk/moho/resource/blueprints/RUnitBlueprint.cpp`): it starts at the footprint's corner plus
+  `SkirtOffset` (never positive) and is `SkirtSize` or the footprint if that is larger. A
+  structure whose blueprint has no `Footprint` has the footprint the engine gives it, its hitbox
+  `SizeX`, `SizeZ` rounded up to whole ogrids (`REntityBlueprint::OnInitBlueprint`; the catalog
+  fills `AssetEntry.Footprint` with it): a power generator or extractor 1 by 1, an air staging
+  facility 3 by 3 (a land factory: 5 by 5, skirt 8 by 8, offset -1.5). Uneven ground is the
+  engine's placement rule (`OCCUPY_Check` in `src/sdk/moho/sim/STIMap.cpp`, `GroundVariation`): the
+  heightmap samples inside the skirt (the structure on the grid, both edges included) may differ by
+  at most `Physics.MaxGroundVariation` (1 when the blueprint gives none, 1.1 or 1.2 for the big
+  ones); a blueprint with `Physics.FlattenSkirt` (every ordinary building) has the engine check
+  the ring of samples just outside the skirt against the whole height (`ceil`) of the last one, the
+  level the ground is flattened to. Mobile units' `Footprint.MaxSlope` is not checked. At most 200
+  problems per check, then one line saying how many more. The
   structures sit in a grid of cells of 16 ogrids (`PlacementIndex.Of(document, catalog)`, made
   once per document), so 2,000 structures take a few milliseconds. The place tool's red preview
   calls `PlacementChecks.OverlapAt` and `GroundIssue`, so it and Problems agree. The blueprint's
-  limits are in the converted assets (`UnitBlueprintDto.Skirt`, `BuildOnLayers`, `Footprint.MaxSlope`,
-  `MinWaterDepth`; `AssetEntry.Limits`): asset format 6, so a workspace converted before converts again.
+  limits are in the converted assets (`UnitBlueprintDto.Skirt`, `BuildOnLayers`, `MaxGroundVariation`,
+  `FlattenSkirt`, `Footprint.MinWaterDepth`; `AssetEntry.Limits`): asset format 7, so a workspace
+  converted before converts again. `PlacementChecks.OverlapAmong` finds the planned units of one
+  drag that overlap each other (the place tool's preview). On the QA's imported mission map
+  (1,400 units) the overlaps fell from 121 to 5: two duplicated storage and extractor pairs the map
+  maker placed twice, and a science lab 0.03 ogrid off the grid against its power generator.
 
 ## Unit templates from real maps
 

@@ -14,14 +14,16 @@ namespace FAForever.MapEditor.App.Commands;
 
 /// <summary>
 /// Places many units at once (user story U-7), one step of undo: a line from one place to another
-/// (structures butting together at their footprint, mobile units a spacing apart, each facing
+/// (structures butting together at their skirt, mobile units a spacing apart, each facing
 /// along the line or the heading), a rectangle between two corners (filled, or hollow for walls),
-/// a ring around the selected units' footprints or around the structure at a place, or a scatter
+/// a ring around the selected units (a structure's skirt) or around the structure at a place, or a scatter
 /// of random places within a circle (random headings, none closer than the least distance). What
 /// is left out is the place tool's: its mode, unit, army, group, heading and settings. A structure
 /// stands on the build grid in quarter turns. With the symmetry, every unit's images are placed
 /// too (a structure's image on the build grid); what was placed is selected. A unit that would
-/// stand outside the map is left out; the points themselves must lie on it.
+/// stand outside the map is left out (the ends of a line and the corners of a rectangle may lie
+/// outside it; the other points must lie on the map). More than <see cref="AddManyUnits.AskAbove"/>
+/// units are asked about first; without a person to ask, <paramref name="Confirm"/> must be true.
 /// </summary>
 /// <param name="Mode"><c>line</c>, <c>rectangle</c>, <c>ring</c> or <c>scatter</c>; left out, the place tool's (<c>single</c> places one unit at <c>x0, z0</c>).</param>
 /// <param name="X0">A line's start, a rectangle's corner, in ogrids.</param>
@@ -41,16 +43,24 @@ namespace FAForever.MapEditor.App.Commands;
 /// <param name="LeastDistance">How close scattered units may stand, in ogrids.</param>
 /// <param name="Radius">A scatter's circle, in ogrids.</param>
 /// <param name="Seed">A scatter's random seed, for the same places again; left out, a new one.</param>
+/// <param name="Confirm">Yes to placing more than <see cref="AddManyUnits.AskAbove"/> units, when nobody can be asked.</param>
 /// <returns>The units' names, how many (and how many images), the army, group, mode and how many places lay outside the map.</returns>
 [UndoStep]
 [EditorCommand("units.addMany", "Place many units", Story = "U-7")]
 public sealed record AddManyUnits(string? Mode = null, float? X0 = null, float? Z0 = null, float? X1 = null, float? Z1 = null, float? X = null, float? Z = null,
     IReadOnlyList<IReadOnlyList<float>>? Points = null, string? Blueprint = null, float? Heading = null, string? Army = null, string? Group = null, bool? Wreck = null,
-    float? Spacing = null, bool? FaceAlong = null, bool? Hollow = null, float? Distance = null, int? Count = null, float? LeastDistance = null, float? Radius = null, int? Seed = null) : IRequest<JsonObject>;
-
-public sealed class AddManyUnitsHandler(MainViewModel model, AssetsViewModel assets, SelectionViewModel selection, CurrentEdit edit) : IRequestHandler<AddManyUnits, JsonObject>
+    float? Spacing = null, bool? FaceAlong = null, bool? Hollow = null, float? Distance = null, int? Count = null, float? LeastDistance = null, float? Radius = null, int? Seed = null, bool Confirm = false) : IRequest<JsonObject>
 {
-    public Task<JsonObject> Handle(AddManyUnits request, CancellationToken cancellationToken)
+    /// <summary>
+    /// More units than this in one go are asked about first: a slip of the mouse on a big map is
+    /// one huge step.
+    /// </summary>
+    public const int AskAbove = 500;
+}
+
+public sealed class AddManyUnitsHandler(MainViewModel model, AssetsViewModel assets, SelectionViewModel selection, IEditorDialogs dialogs, CurrentEdit edit) : IRequestHandler<AddManyUnits, JsonObject>
+{
+    public async Task<JsonObject> Handle(AddManyUnits request, CancellationToken cancellationToken)
     {
         using Performance.Span measure = Performance.Measure("model.add-many-units");
         UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
@@ -96,7 +106,8 @@ public sealed class AddManyUnitsHandler(MainViewModel model, AssetsViewModel ass
         {
             points.Add(new Vector2(x, z));
         }
-        foreach (Vector2 point in points)
+        // a line's ends and a rectangle's corners may lie beyond the edge: the units inside are placed
+        foreach (Vector2 point in mode is PlaceMode.Line or PlaceMode.Rectangle ? (IEnumerable<Vector2>)[] : points)
         {
             if (point.X < 0 || point.Y < 0 || point.X > document.Width || point.Y > document.Height)
             {
@@ -184,6 +195,11 @@ public sealed class AddManyUnitsHandler(MainViewModel model, AssetsViewModel ass
         {
             throw new ArgumentException(outside > 0 ? $"Every one of the {outside} places lies outside the map" : "Nothing to place there");
         }
+        if (units.Count > AddManyUnits.AskAbove && !request.Confirm && !await dialogs.ConfirmAsync("Place many units",
+            string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Place {units.Count:N0} units ({entry?.Name ?? id}) {how} as one step?"), "Place"))
+        {
+            throw new OperationCanceledException("Placing was cancelled");
+        }
 
         ImmutableArray<string> names = [];
         ImmutableArray<ObjectRef> placed = [];
@@ -201,7 +217,7 @@ public sealed class AddManyUnitsHandler(MainViewModel model, AssetsViewModel ass
         {
             model.Logger("Editor").LogInformation("{Outside} of the units to place lay outside the map and were left out", outside);
         }
-        return Task.FromResult(new JsonObject
+        return new JsonObject
         {
             ["mode"] = mode.ToString(),
             ["count"] = names.Length,
@@ -212,7 +228,7 @@ public sealed class AddManyUnitsHandler(MainViewModel model, AssetsViewModel ass
             ["group"] = UnitGroupEdits.PathText(group),
             ["wreck"] = wreck,
             ["outside"] = outside,
-        });
+        };
     }
 }
 

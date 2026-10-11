@@ -1496,7 +1496,7 @@ change, span `model.armies`), the place tool and the commands.
   (`MirrorPlaced`) and selects what it placed; a unit that would stand outside the map is left out
   (the status says how many), a point outside it is refused as `units.add` refuses.
   `units.addMany {mode?, x0?, z0?, x1?, z1?, x?, z?, points?, blueprint?, heading?, army?, group?,
-  wreck?, spacing?, faceAlong?, hollow?, distance?, count?, leastDistance?, radius?, seed?}` (Units
+  wreck?, spacing?, faceAlong?, hollow?, distance?, count?, leastDistance?, radius?, seed?, confirm?}` (Units
   menu; what is left out is the tool's: `x0..z1` a line or rectangle, `x, z` a ring's click or a
   scatter's centre, `points` `[[x, z], ...]` instead, a scatter's each a dab; the answer has the
   names, `count`, `images`, `outside`) and `units.placeMode {mode?, spacing?, faceAlong?, hollow?,
@@ -1507,9 +1507,18 @@ change, span `model.armies`), the place tool and the commands.
   commands, one step, images, the group, the tool's drag and Escape), `MainWindowTest` (the mouse),
   `AutomationTest` (the state, the chips).
 - **Placement checks** (U-12): the Place tool's footprints under the mouse (single, a drag's
-  line or rectangle, the ring) are drawn in `ToolInk.Danger` (`DangerBrush`, 2 pixels) where a
-  click would overlap a structure or break the ground rules of the blueprint
-  (`UnitPlaceTool.VerdictOf`, the library's `PlacementChecks`, span `tool.place-checks`);
+  line or rectangle, the ring) are drawn in `ToolInk.Danger` (`DangerBrush`, 3 pixels over a dark
+  halo of 7, so it reads on water) where a click would overlap a structure (by the skirt), overlap
+  another of the units of the same drag, or break the ground rules of the blueprint
+  (`UnitPlaceTool.VerdictOf`, the library's `PlacementChecks`, span `tool.place-checks`); a place
+  beyond the map's edge is drawn the same way, and left out when placed (`state.units.place.outside`;
+  the status line says how many). A line or rectangle may start or end outside the map: the units
+  inside are placed and `units.addMany` returns `outside`. More than 500 units
+  (`AddManyUnits.AskAbove`) are asked about first (`Place many units`, `dialog button=Place`);
+  `units.addMany confirm=true` skips the question, and a run for automation without it fails with
+  that hint. Structures in a line, rectangle or ring are spaced by the skirt (`UnitPlans.SkirtSize`,
+  `UnitLayouts.Pitch`) and a ring's distance counts from the outer edge of the skirts it goes
+  around (`UnitPlans.Bounds`), so none of them is red;
   placing is still allowed. The status line says why (`Overlaps the Land Factory UNIT_12`, `Naval
   Factory: it cannot be built on land`), set when the mouse moves (`MainViewModel.Pointer` calls
   `UnitPlaceTool.PointerMoved`: a status set while drawing throws, Avalonia forbids invalidating

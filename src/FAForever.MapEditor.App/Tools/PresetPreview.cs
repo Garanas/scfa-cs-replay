@@ -36,6 +36,13 @@ public static class PresetPreview
     public const int MaxOutlines = 2000;
 
     /// <summary>
+    /// The width of the outline of a unit that breaks a rule, and of the dark halo under it, in pixels.
+    /// </summary>
+    private const float BreakingWidth = 3;
+
+    private const float BreakingHalo = 7;
+
+    /// <summary>
     /// The outlines of a selection preset's things: props and markers as small squares, decals as
     /// their rectangles, units as their footprints.
     /// </summary>
@@ -183,12 +190,13 @@ public static class PresetPreview
                     continue;
                 }
                 bool image = part != MapSymmetryTransform.Identity;
+                bool breaks = !image && blocked is not null && number < blocked.Count && blocked[number];
                 if (!image)
                 {
-                    shapes.Add(new ToolLine(points, true, 3, ToolInk.Shadow));
+                    // a rule-breaking outline is thicker and has a wide dark halo, so it reads on water and on bright ground
+                    shapes.Add(new ToolLine(points, true, breaks ? BreakingHalo : 3, ToolInk.Shadow));
                 }
-                bool breaks = !image && blocked is not null && number < blocked.Count && blocked[number];
-                shapes.Add(new ToolLine(points, true, breaks ? 2 : 1, breaks ? ToolInk.Danger : image ? ToolInk.Hover : ToolInk.Selection));
+                shapes.Add(new ToolLine(points, true, breaks ? BreakingWidth : 1, breaks ? ToolInk.Danger : image ? ToolInk.Hover : ToolInk.Selection));
             }
         }
         return shapes;

@@ -131,6 +131,79 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(22, tanks.Max(tank => tank.Z));
         }
 
+        private static readonly (double, double) PowerGenerator = (1, 1);
+        private static readonly (double, double) PowerGeneratorSkirt = (2, 2);
+        private static readonly (double, double) LandFactory = (5, 5);
+        private static readonly (double, double) LandFactorySkirt = (8, 8);
+
+        private static bool Overlap(UnitPlace a, UnitPlace b, double skirt) =>
+            Math.Abs(a.X - b.X) < skirt - 0.01 && Math.Abs(a.Z - b.Z) < skirt - 0.01;
+
+        private static void AssertNoneOverlap(ImmutableArray<UnitPlace> places, double skirt)
+        {
+            for (int i = 0; i < places.Length; i++)
+            {
+                for (int j = i + 1; j < places.Length; j++)
+                {
+                    Assert.IsFalse(Overlap(places[i], places[j], skirt), $"{places[i]} and {places[j]} overlap");
+                }
+            }
+        }
+
+        [TestMethod]
+        public void StructuresInALineButtSkirtToSkirt()
+        {
+            ImmutableArray<UnitPlace> generators = UnitLayouts.Line(new Vector2(10, 10), new Vector2(20.5f, 10), PowerGenerator, 1, true, 0, true, PowerGeneratorSkirt);
+            Assert.AreEqual(6, generators.Length, "a skirt of 2 every 2 ogrids");
+            Assert.AreEqual(2f, generators[1].X - generators[0].X);
+            Assert.AreEqual(0.5f, generators[0].X % 1, "still on the build grid");
+            AssertNoneOverlap(generators, 2);
+
+            ImmutableArray<UnitPlace> factories = UnitLayouts.Line(new Vector2(10, 10), new Vector2(60, 10), LandFactory, 1, true, 0, true, LandFactorySkirt);
+            Assert.AreEqual(7, factories.Length);
+            Assert.AreEqual(8f, factories[1].X - factories[0].X);
+            AssertNoneOverlap(factories, 8);
+
+            ImmutableArray<UnitPlace> down = UnitLayouts.Line(new Vector2(10, 10), new Vector2(10, 40), LandFactory, 1, true, 0, true, LandFactorySkirt);
+            AssertNoneOverlap(down, 8);
+            ImmutableArray<UnitPlace> slanted = UnitLayouts.Line(new Vector2(10, 10), new Vector2(50, 30), PowerGenerator, 1, true, 0, true, PowerGeneratorSkirt);
+            AssertNoneOverlap(slanted, 2);
+            ImmutableArray<UnitPlace> diagonal = UnitLayouts.Line(new Vector2(10, 10), new Vector2(40, 40), LandFactory, 1, true, 0, true, LandFactorySkirt);
+            AssertNoneOverlap(diagonal, 8);
+
+            ImmutableArray<UnitPlace> walls = UnitLayouts.Line(new Vector2(10, 10), new Vector2(20, 10), Wall, 1, true, 0, true, (1, 1));
+            Assert.AreEqual(11, walls.Length, "a wall's skirt is its footprint: one wall");
+        }
+
+        [TestMethod]
+        public void StructuresInARectangleButtSkirtToSkirt()
+        {
+            ImmutableArray<UnitPlace> generators = UnitLayouts.Rectangle(new Vector2(10, 10), new Vector2(20, 16), PowerGenerator, false, 1, 0, true, PowerGeneratorSkirt);
+            Assert.AreEqual(5 * 3, generators.Length, "5 by 3 generators of 2");
+            Assert.IsTrue(generators.All(place => place.X % 1 == 0.5f && place.Z % 1 == 0.5f), "on the build grid");
+            AssertNoneOverlap(generators, 2);
+
+            ImmutableArray<UnitPlace> factories = UnitLayouts.Rectangle(new Vector2(0, 0), new Vector2(40, 24), LandFactory, false, 1, 0, true, LandFactorySkirt);
+            Assert.AreEqual(5 * 3, factories.Length);
+            AssertNoneOverlap(factories, 8);
+            AssertNoneOverlap(UnitLayouts.Rectangle(new Vector2(0, 0), new Vector2(40, 24), LandFactory, false, 1, MathF.PI / 2, true, LandFactorySkirt), 8);
+        }
+
+        [TestMethod]
+        public void ARingCountsItsDistanceFromTheOuterEdgeOfTheSkirtsItGoesAround()
+        {
+            // the skirt of a factory at 100.5: 96.5 to 104.5; walls 1 ogrid from it have their inner edge at 95 and 106
+            ImmutableArray<UnitPlace> walls = UnitLayouts.Ring((96.5f, 96.5f, 104.5f, 104.5f), Wall, distance: 1, spacing: 1, heading: 0, isStructure: true, skirt: (1, 1));
+
+            Assert.AreEqual(94.5f, walls.Min(wall => wall.X));
+            Assert.AreEqual(106.5f, walls.Max(wall => wall.X));
+            Assert.IsTrue(walls.All(wall => wall.X <= 95.5f || wall.X >= 105.5f || wall.Z <= 95.5f || wall.Z >= 105.5f), "none inside the skirt or its gap");
+
+            ImmutableArray<UnitPlace> generators = UnitLayouts.Ring((96.5f, 96.5f, 104.5f, 104.5f), PowerGenerator, distance: 0, spacing: 1, heading: 0, isStructure: true, skirt: PowerGeneratorSkirt);
+            Assert.IsTrue(generators.All(place => place.X - 1 >= 104.5f - 0.01f && place.X > 100 || place.X + 1 <= 96.5f + 0.01f && place.X < 100 || place.Z - 1 >= 104.5f - 0.01f && place.Z > 100 || place.Z + 1 <= 96.5f + 0.01f && place.Z < 100), "their skirts touch the factory's and never reach into it");
+            AssertNoneOverlap(generators, 2);
+        }
+
         [TestMethod]
         public void AScatterKeepsTheLeastDistanceAndRepeatsWithItsSeed()
         {

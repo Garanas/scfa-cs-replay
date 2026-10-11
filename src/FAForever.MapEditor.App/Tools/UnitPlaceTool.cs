@@ -342,6 +342,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         ["planned"] = _planned.Length,
         ["blocked"] = verdict is { Count: > 0 },
         ["blockedCount"] = verdict?.Count ?? 0,
+        ["outside"] = verdict?.Outside ?? 0,
         ["why"] = verdict?.Why,
     };
 
@@ -536,14 +537,20 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
 
     /// <summary>
     /// Which of the places the unit would break a rule at (user story U-12): overlap an existing
-    /// structure or stand on ground its blueprint rules out (<see cref="PlacementChecks"/>, the
-    /// Problems tab's functions). Placing is allowed anyway. Wrecks and mobile units break none.
+    /// structure or another planned one, or stand on ground its blueprint rules out
+    /// (<see cref="PlacementChecks"/>, the Problems tab's functions), and which lie outside the map
+    /// (left out when placed). Placing is allowed anyway. Wrecks and mobile units break no rule.
     /// </summary>
-    /// <param name="Blocked">One flag per place, as many as outlines are drawn.</param>
+    /// <param name="Blocked">One flag per place, as many as outlines are drawn: a place that breaks a rule or lies outside the map.</param>
     /// <param name="Why">What is wrong at the first place that breaks a rule, e.g. <c>Overlaps the Land Factory UNIT_12</c>.</param>
-    public sealed record PlaceVerdict(bool[] Blocked, string? Why)
+    /// <param name="Outside">How many of the places lie outside the map.</param>
+    /// <param name="Breaking">How many of the places inside the map break a rule.</param>
+    public sealed record PlaceVerdict(bool[] Blocked, string? Why, int Outside = 0, int Breaking = 0)
     {
-        public int Count => Blocked.Count(blocked => blocked);
+        /// <summary>
+        /// How many places break a rule.
+        /// </summary>
+        public int Count => Breaking;
     }
 
     /// <summary>
@@ -552,28 +559,61 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     public PlaceVerdict VerdictOf(MapDocument document, AssetEntry unit, ImmutableArray<UnitPlace> places)
     {
         bool[] blocked = new bool[Math.Min(places.Length, PresetPreview.MaxOutlines)];
+        bool[] outside = new bool[blocked.Length];
+        int outsideCount = 0;
+        for (int i = 0; i < blocked.Length; i++)
+        {
+            UnitPlace place = places[i];
+            if (place.X < 0 || place.Z < 0 || place.X > document.Width || place.Z > document.Height)
+            {
+                blocked[i] = outside[i] = true;
+                outsideCount++;
+            }
+        }
+        // the ones past the outlines drawn are counted too, for the status line
+        for (int i = blocked.Length; i < places.Length; i++)
+        {
+            if (places[i].X < 0 || places[i].Z < 0 || places[i].X > document.Width || places[i].Z > document.Height)
+            {
+                outsideCount++;
+            }
+        }
+        string? outsideWhy = outsideCount > 0 ? $"{MainViewModel.Units(outsideCount)} lie{(outsideCount == 1 ? "s" : "")} beyond the map's edge and are left out" : null;
         if (!unit.IsStructure || AsWrecks || model.Assets.Catalog is not AssetCatalog catalog)
         {
-            return new PlaceVerdict(blocked, null);
+            return new PlaceVerdict(blocked, outsideWhy, outsideCount);
         }
         using Performance.Span measure = Performance.Measure("tool.place-checks");
         PlacementIndex index = PlacementIndex.Of(document, catalog);
         Heightmap heights = document.Terrain.Heightmap;
         float? water = document.Water.HasWater ? document.Water.Elevation : null;
+        PlacementRect[] rects = new PlacementRect[blocked.Length];
+        for (int i = 0; i < rects.Length; i++)
+        {
+            rects[i] = PlacementChecks.SkirtOf(unit, places[i].X, places[i].Z, places[i].Heading);
+        }
+        bool[] among = PlacementChecks.OverlapAmong(rects);
         string? why = null;
+        int breaking = 0;
         for (int i = 0; i < blocked.Length; i++)
         {
+            if (outside[i])
+            {
+                continue;
+            }
             UnitPlace place = places[i];
             string? reason = PlacementChecks.OverlapAt(index, unit, place.X, place.Z, place.Heading) is PlacedStructure other
                 ? $"Overlaps the {other.Title}"
+                : among[i] ? "Overlaps another of the units to place"
                 : PlacementChecks.GroundIssue(heights, water, unit, place.X, place.Z, place.Heading) is string ground ? $"{unit.Name}: {ground}" : null;
             if (reason is not null)
             {
                 blocked[i] = true;
+                breaking++;
                 why ??= reason;
             }
         }
-        return new PlaceVerdict(blocked, why);
+        return new PlaceVerdict(blocked, why ?? outsideWhy, outsideCount, breaking);
     }
 
     /// <summary>
@@ -702,7 +742,8 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
             : $"{MathF.Abs(_to.X - from.X):0.#} × {MathF.Abs(_to.Y - from.Y):0.#} ogrids";
         PlaceVerdict? verdict = model.ShownDocument is MapDocument shown ? VerdictOf(shown, unit, _planned) : null;
         string breaks = verdict is { Count: > 0 } ? $"; {verdict.Count} break{(verdict.Count == 1 ? "s" : "")} a rule: {verdict.Why}" : "";
-        model.Status = $"{_planned.Length} × {unit.Name}, {size}{breaks}; release to place, Escape to cancel";
+        string left = verdict is { Outside: > 0 } ? $"; {verdict.Outside} beyond the map's edge {(verdict.Outside == 1 ? "is" : "are")} left out" : "";
+        model.Status = $"{_planned.Length} × {unit.Name}, {size}{breaks}{left}; release to place, Escape to cancel";
     }
 
     private void CancelDrag()
