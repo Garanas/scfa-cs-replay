@@ -20,11 +20,6 @@ public sealed record UnitGroupsSection() : PanelSection("Armies and groups");
 public sealed record UnitGroupDetailsSection() : PanelSection("Army or group");
 
 /// <summary>
-/// The Map mode's armies and teams (user story M-4).
-/// </summary>
-public sealed record ArmiesSection() : PanelSection("Armies and teams");
-
-/// <summary>
 /// An army or one of its groups in the Units mode's tree, with how many units it holds (with the
 /// groups in it).
 /// </summary>

@@ -110,11 +110,11 @@ namespace FAForever.MapEditor.App.Tests
             await Send(automation, "click", new JsonObject { ["label"] = "Put the chosen army in the team" });
             Assert.AreEqual("2", model.ShownDocument!.TeamOf("ARMY_2"), "the fields edit the army");
 
-            // the Map mode's list shows the same army with the same view
-            Assert.IsTrue((await model.Commands.RunAsync("map.mode", null, interactive: false)).Ran);
+            // the Map mode's army entry shows the same army with the same view in the inspector
+            Assert.IsTrue((await model.Commands.RunAsync("map.armies", null, interactive: false)).Ran);
             Dispatcher.UIThread.RunJobs();
-            ArmyPanel map = window.GetVisualDescendants().OfType<ModePanel>().Single().GetVisualDescendants().OfType<ArmyPanel>().Single();
-            Assert.IsTrue(map.IsEffectivelyVisible);
+            Assert.AreEqual("map.army.ARMY_2", model.MapParts.Parts.Chosen.Id, "the chosen army's entry");
+            ArmyPanel map = window.GetVisualDescendants().OfType<Inspector>().Single().GetVisualDescendants().OfType<ArmyPanel>().Single(view => view.IsEffectivelyVisible);
             Assert.AreEqual("ARMY_2", map.GetVisualDescendants().OfType<TextBox>().First(box => Avalonia.Automation.AutomationProperties.GetName(box) == "Name of the chosen army").Text);
             window.Close();
         });

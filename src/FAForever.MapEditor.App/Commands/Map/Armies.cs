@@ -8,10 +8,11 @@ using MediatR;
 namespace FAForever.MapEditor.App.Commands;
 
 /// <summary>
-/// Shows the map's armies and teams (user story M-4): the Map mode, whose panel lists them with
-/// the chosen army's settings. Its answer lists the armies, as automation's <c>state</c> does.
+/// Shows the map's armies and teams (user story M-4): the Map mode, whose panel lists them, with an
+/// army's settings in the inspector (the one asked for, else the chosen army, else the first). Its
+/// answer lists the armies, as automation's <c>state</c> does.
 /// </summary>
-/// <param name="Army">An army to choose in the list.</param>
+/// <param name="Army">An army to show.</param>
 [EditorCommand("map.armies", "Armies and teams...", Story = "M-4", Needs = Needs.Map)]
 public sealed record EditArmies(string? Army = null) : IRequest<JsonArray>;
 
@@ -19,10 +20,18 @@ public sealed class EditArmiesHandler(MainViewModel model, ArmiesViewModel armie
 {
     public Task<JsonArray> Handle(EditArmies request, CancellationToken cancellationToken)
     {
-        model.SelectMode("map");
-        if (request.Army is string army)
+        string? army = request.Army ?? armies.ChosenArmy?.Name ?? armies.Rows.FirstOrDefault()?.Name;
+        if (request.Army is not null && !armies.Rows.Any(row => row.Name == request.Army))
         {
-            armies.ChosenArmy = armies.Rows.FirstOrDefault(row => row.Name == army) ?? throw new ArgumentException($"The map has no army {army}");
+            throw new ArgumentException($"The map has no army {request.Army}");
+        }
+        if (army is null)
+        {
+            model.SelectMode("map");
+        }
+        else
+        {
+            model.InspectPart(MapPartsViewModel.ArmyPart(army));
         }
         return Task.FromResult(armies.DescribeArmies());
     }

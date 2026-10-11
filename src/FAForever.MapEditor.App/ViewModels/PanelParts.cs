@@ -78,7 +78,33 @@ public sealed record PanelPartEntry(string Id, string Title, Func<object> Conten
 /// <summary>
 /// The entries of a mode panel's list under one heading.
 /// </summary>
-public sealed record PanelPartGroup(string Title, IReadOnlyList<PanelPart> Parts);
+/// <param name="Footer">The heading's buttons and what it says without entries (<see cref="PanelParts.SetFooter"/>); null for none.</param>
+public sealed record PanelPartGroup(string Title, IReadOnlyList<PanelPart> Parts, PanelPartFooter? Footer = null)
+{
+    /// <summary>
+    /// Whether the heading says its <see cref="PanelPartFooter.EmptyText"/>: it has no entries.
+    /// </summary>
+    public bool ShowsEmptyText => Parts.Count == 0 && Footer?.EmptyText is not null;
+
+    public bool HasActions => Footer is { Actions.Count: > 0 };
+}
+
+/// <summary>
+/// A button under a heading of a mode panel's list, such as the Map panel's Add army.
+/// </summary>
+/// <param name="Label">What a screen reader says of it; null for its title.</param>
+/// <param name="Help">Its tool tip and help for screen readers.</param>
+public sealed record PanelPartAction(string Title, System.Windows.Input.ICommand Command, object? Parameter = null, string? Label = null, string? Help = null)
+{
+    public string Name => Label ?? Title;
+}
+
+/// <summary>
+/// What a heading of a mode panel's list shows after its entries: buttons (Add army, Add extra), and a
+/// line while it has no entries (<c>No areas yet</c>). A heading with a footer shows also without entries.
+/// </summary>
+/// <param name="After">Where the heading goes while it has no entries: after this heading (the list's end when null).</param>
+public sealed record PanelPartFooter(IReadOnlyList<PanelPartAction> Actions, string? EmptyText = null, string? After = null);
 
 /// <summary>
 /// A mode panel's list of what there is to edit, one entry chosen at a time; the inspector shows the
@@ -94,7 +120,7 @@ public sealed partial class PanelParts : ObservableObject
             throw new ArgumentException("A list of parts holds at least one", nameof(parts));
         }
         _items = [.. parts];
-        Groups = GroupsOf(_items);
+        Groups = GroupsOf();
         Chosen = parts[0];
         parts[0].IsChosen = true;
     }
@@ -108,8 +134,34 @@ public sealed partial class PanelParts : ObservableObject
     /// </summary>
     public IReadOnlyList<PanelPartGroup> Groups { get; private set; }
 
-    private static IReadOnlyList<PanelPartGroup> GroupsOf(IEnumerable<PanelPart> parts) =>
-        [.. parts.GroupBy(part => part.Group).Select(group => new PanelPartGroup(group.Key, [.. group]))];
+    private readonly Dictionary<string, PanelPartFooter> _footers = new Dictionary<string, PanelPartFooter>(StringComparer.Ordinal);
+
+    private IReadOnlyList<PanelPartGroup> GroupsOf()
+    {
+        List<PanelPartGroup> groups = [.. _items.GroupBy(part => part.Group).Select(group => new PanelPartGroup(group.Key, [.. group], _footers.GetValueOrDefault(group.Key)))];
+        // a heading with a footer and no entries: after the heading its footer names
+        foreach ((string title, PanelPartFooter footer) in _footers)
+        {
+            if (groups.Any(group => group.Title == title))
+            {
+                continue;
+            }
+            int after = footer.After is null ? -1 : groups.FindIndex(group => group.Title == footer.After);
+            groups.Insert(after < 0 ? groups.Count : after + 1, new PanelPartGroup(title, [], footer));
+        }
+        return groups;
+    }
+
+    /// <summary>
+    /// Gives a heading buttons after its entries and a line for while it has none; the heading then
+    /// shows also without entries. The Map panel's Armies have Add army and Add extra.
+    /// </summary>
+    public void SetFooter(string group, PanelPartFooter footer)
+    {
+        _footers[group] = footer;
+        Groups = GroupsOf();
+        OnPropertyChanged(nameof(Groups));
+    }
 
     /// <summary>
     /// Adds an entry at a place of the list (at its end when <paramref name="index"/> is out of it), e.g.
@@ -123,7 +175,7 @@ public sealed partial class PanelParts : ObservableObject
             throw new ArgumentException($"The list has a part '{part.Id}' already");
         }
         _items.Insert(index < 0 || index > _items.Count ? _items.Count : index, part);
-        Groups = GroupsOf(_items);
+        Groups = GroupsOf();
         OnPropertyChanged(nameof(Items));
         OnPropertyChanged(nameof(Groups));
     }
@@ -148,7 +200,14 @@ public sealed partial class PanelParts : ObservableObject
             item.IsChosen = item == part;
         }
         Chosen = part;
+        Chose?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>
+    /// Raised whenever an entry is chosen, also the one chosen already (<see cref="Choose"/>): what
+    /// choosing does besides showing it, such as the Map panel's area selected on the map.
+    /// </summary>
+    public event EventHandler? Chose;
 
     /// <summary>
     /// Takes an entry out of the list; when it was chosen, the first entry is chosen.
@@ -162,7 +221,7 @@ public sealed partial class PanelParts : ObservableObject
             throw new ArgumentException("A list of parts holds at least one");
         }
         _items.Remove(part);
-        Groups = GroupsOf(_items);
+        Groups = GroupsOf();
         OnPropertyChanged(nameof(Items));
         OnPropertyChanged(nameof(Groups));
         if (part == Chosen)
@@ -247,7 +306,7 @@ public sealed partial class PanelParts : ObservableObject
             return new PanelPart(entry.Id, entry.Title, group, entry.Content(), entry.Help) { Detail = entry.Detail ?? "" };
         })];
         _items.InsertRange(Math.Min(at, _items.Count), synced);
-        Groups = GroupsOf(_items);
+        Groups = GroupsOf();
         OnPropertyChanged(nameof(Items));
         OnPropertyChanged(nameof(Groups));
         if (chosenHere && !_items.Contains(Chosen))

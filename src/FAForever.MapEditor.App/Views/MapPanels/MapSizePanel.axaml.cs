@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace FAForever.MapEditor.App.Views.MapPanels;
 
-public sealed partial class MapFactsPanel : UserControl
+public sealed partial class MapSizePanel : UserControl
 {
-    public MapFactsPanel()
+    public MapSizePanel()
     {
         InitializeComponent();
     }

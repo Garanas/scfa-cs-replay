@@ -338,9 +338,9 @@
           </Border>
           <ItemsControl ItemsSource="{Binding InspectorParts}" AutomationProperties.Name="Inspector">
             <ItemsControl.DataTemplates>
-              <!-- the map and its atmosphere (M-1, W-1, S-2): a view of their own each, on the editor's view model -->
-              <DataTemplate DataType="vm:MapFactsSection">
-                <panels:MapFactsPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              <!-- what is chosen in the Map panel's list (wave 14A) -->
+              <DataTemplate DataType="vm:MapDetailsSection">
+                <panels:PanelPartView DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).MapParts.Parts}" />
               </DataTemplate>
               <!-- what is chosen in the Lighting and Water panels' lists -->
               <DataTemplate DataType="vm:LightingDetailsSection">

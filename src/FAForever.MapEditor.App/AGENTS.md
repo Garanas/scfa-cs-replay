@@ -1448,9 +1448,9 @@ change, span `model.armies`), the place tool and the commands.
   in place of the tool's army, unless `army` is given, and wrecks into the army's `WRECKAGE` group;
   with the symmetry a player's preset's images go to the partner spawns' armies (`MirrorPlaced`).
   The tool keeps the role (`PresetRole`, `state` `presetRole`); applying says the army in the status line.
-- **Armies** (`ArmiesSection` in the Map mode, `map.armies {army?}` shows it): the list with each
-  army's summary, Add army and Add extra (`map.addArmy {name?, extra?, x?, z?}`), and the chosen
-  army's fields (`Views/MapPanels/ArmyPanel`, also the Units mode's inspector for an army): name (`map.renameArmy`), playable, team and factions (`map.setArmy {army, playable?,
+- **Armies** (an entry per army in the Map panel's list, section "Panels list, the inspector edits";
+  `map.armies {army?}` shows one): Add army and Add extra under the heading
+  (`map.addArmy {name?, extra?, x?, z?}`), and the chosen army's fields in the inspector (`Views/MapPanels/ArmyPanel`, also the Units mode's inspector for an army): name (`map.renameArmy`), playable, team and factions (`map.setArmy {army, playable?,
   factions?, team?}`, one step), alliances (`map.setAlliance {army, other, stance?, mutual?}`)
   and Remove (`map.removeArmy`). The spawn follows its army (renamed, removed, added for a
   playable army); the library's guide says why teams are written after the team FFA.
@@ -1744,9 +1744,10 @@ mode panel's and inspector's templates only name it).
   the person touches (focus or pointer over it) gives its value: a slider coerces its value by
   itself when its range arrives after the value, which once rewrote every area to 1 by 1.
 - **Commands**: `map.information {name?, description?, author?, version?, type?, preview?,
-  noRushRadius?, adaptiveMap?}` (without arguments: the Map panel; the reclaim is not typed: a
-  read-only line under the fields, `MapInformationViewModel.ReclaimAtExport`, `state.mapPanels`'s
-  `information.reclaimAtExport`, says what the export step `reclaim` writes),
+  noRushRadius?, adaptiveMap?}` (without arguments: the Map panel's Information entry in the
+  inspector; the reclaim is not typed: a read-only line under the Game fields,
+  `MapInformationViewModel.ReclaimAtExport`, `state.mapPanels`'s `information.reclaimAtExport`, says
+  what the export step `reclaim` writes),
   `map.addArea {name?, x0?, z0?, x1?, z1?}` (selects it and chooses the areas tool),
   `map.setArea {name, rename?, x0?, ...}`, `map.removeArea {name}`; `file.openScript` (the
   project's `script.lua` in the system's application for `.lua`, written with a skirmish map's
@@ -1817,8 +1818,9 @@ library's (`MapResize`, `MapScript`; its guide).
   and that the normal map and preview are out of date. A document of another size (a resize, its
   undo) raises `MapChanged` and resets the camera, so both views start over; the tool takes the size.
 - **The playable area**: `map.setPlayableArea {name?}` (none: the first area again); the inspector of
-  one selected area has a check box "Playable area"; the top view labels it and the Map panel's
-  list marks it.
+  one selected area has a check box "Playable area", and so has an area's entry in the Map panel's
+  list; the inspector of Size and playable area chooses it too; the top view labels it and the Map
+  panel's list marks it (`playable`).
 - **Export** (`file.export {folder?, version?, raise?}`): `raise` raises the map's own version first
   (a step of undo: the project keeps it); a preview out of date is rendered before the export; the
   status names the version written and the next. The map's own preview and normal map count as
@@ -2233,10 +2235,9 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   the inspector. Checked against it (October 2026): Terrain (height layers listed, the chosen one
   in the inspector), Paint (strata listed, the chosen stratum in the inspector), Units (the tree of
   armies and groups listed, the chosen army or group in the inspector, a unit chosen selected),
-  Decals (groups listed, the selection in the inspector), Water and Lighting (below) and Procedural (the
-  generated results listed, section "The Procedural mode") follow it; the Map
-  panel's Information fields and the Props panel's Placing are
-  still edited in the panel, for a later wave to move.
+  Decals (groups listed, the selection in the inspector), Water and Lighting (below), Map (below) and
+  Procedural (the generated results listed, section "The Procedural mode") follow it; the Props
+  panel's Placing is still edited in the panel, for a later wave to move.
 - **Who has the inspector: what was chosen last** of three (`MainViewModel.InspectorOwner`, an
   `InspectorOwner`: `Tile`, `Selection`, `Part`; `state.inspector` has `owner`, what it `shows`
   (`asset`, `selection`, `mode`) and the mode's inspector `parts`): a tile of the shelf (or the
@@ -2280,7 +2281,13 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   ones taken out, the others keep their content and get the new title (`PanelPart.Title` is
   observable) and detail; the chosen entry stays chosen when it stays, else the heading's first,
   else the list's first. When nothing changed it makes nothing and raises nothing, so it is cheap
-  to call on every change. Tests: `PanelPartsSyncTest`. `view.inspectPart {part}` (in no menu) chooses an entry and its mode;
+  to call on every change. Tests: `PanelPartsSyncTest`. **A heading's footer**
+  (`PanelParts.SetFooter(heading, PanelPartFooter)`): buttons after its entries (`PanelPartAction`:
+  title, command and parameter, label, help; drawn side by side by `PanelPartList`) and a line while
+  it has no entries; a heading with a footer shows also without entries (after its `After`
+  heading). `PanelParts.Chose` is raised by every `Choose`, also of the entry chosen already (what
+  choosing does besides showing, such as the Map panel's area selected on the map; `Chosen`'s change
+  is raised only when another entry is chosen). `view.inspectPart {part}` (in no menu) chooses an entry and its mode;
   `state.panelParts` has each list's chosen entry, its content's type and every entry's detail.
 - **Water** (`WaterSettings.Parts`): Water on (a check box above the list), Settings (Elevations
   and colour, its detail the surface's elevation; Surface and reflection; Textures and waves, the
@@ -2290,6 +2297,30 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   the options row, which says `Map: Foam`, and are not repeated). Each map's entry has a picture of
   it and its count of layers (`PanelPart.Preview`, `Detail`; a map without a stack of its own has one). The Waves entry chooses the Waves tool; and back, choosing a tool or a
   map for the brush (`brush.set waterMask`, a preset) shows its entry. Presets below.
+- **Map** (`MapParts`, `ViewModels/MapParts.cs` and `MainViewModel.MapParts.cs`, wave 14A): under Map
+  Information (`map.information`; the inspector's About: name, description, author, version; Game:
+  type, no-rush radius, adaptive; Preview: the preview's path, the `.scmap`'s picture, the folder,
+  size and armies; `MapInformationPart`, `Views/MapPanels/MapInformationPanel`; its detail `v3 · 4
+  players`), Size and playable area (`map.size`; it chooses the Map size tool and the tool chooses it,
+  as the Waves entry does; the inspector says the size now, what the tool would make and which area
+  is playable, with a combo box to choose another, `map.setPlayableArea`; `MapSizePart`,
+  `MapSizeDetails`, `Views/MapPanels/MapSizePanel`) and Script and files (`map.script`; Open the
+  script, Show the files and the file list, `Views/MapPanels/ScriptPanel`). Under Armies an entry per
+  army (`map.army.<NAME>`, detail `team 1`, `playable` without a team, or `extra · 42 units`; the
+  inspector is `ArmyPanel`, the Units mode's view of an army: choosing the entry makes it
+  `ArmiesViewModel.ChosenArmy`, and an army chosen elsewhere, by the Units mode's tree, a rename or a
+  command, is the entry shown while an army entry is), with Add army and Add extra in the heading's
+  footer (the new army's entry is shown). Under Areas an entry per area (`map.area.<NAME>`, detail
+  `playable` or its size `96 × 64`; the inspector's `MapAreaPart`, `Views/MapPanels/MapAreaPanel`:
+  the rectangle, Playable area, the name and corners (`AreaSelection`'s fields), Show and Remove the
+  area): choosing it selects the area on the map, so its handles show, while the entry keeps the
+  inspector; a rename there shows the entry under its new name; one area selected on the map (a
+  click, `map.addArea`) chooses its entry and the selection has the inspector. The footer has Add an
+  area (the new area selected and its entry shown) and Draw (`tool.map.areas`). Armies and areas are
+  synced with `SyncGroup` on `DocumentChanged` and `MapChanged` only when `Armies.Rows` or the areas
+  changed (span `model.map-parts`). Selection presets below. `map.information` without arguments and
+  `map.armies {army?}` (the army asked for, else the chosen army, else the first) show their entries.
+  Tests: `MapModeTest`, `MapModeWindowTest`.
 - **Lighting** (`LightingSettings.Parts`): Sun (azimuth, elevation, colour, multiplier; the Sun
   tool's line), Colours and ambience, Fog, Bloom, Sky and cube maps (the sky's cube maps and
   background), and Shadow decal under Map-wide decals (the map-wide shadow decal's slot itself,
