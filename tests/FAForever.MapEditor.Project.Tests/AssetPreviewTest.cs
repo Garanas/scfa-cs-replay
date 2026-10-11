@@ -40,7 +40,8 @@ namespace FAForever.MapEditor.Project.Tests
         [TestMethod]
         public void DrawsTheMeshWithItsAlbedo()
         {
-            RgbaImage image = AssetPreview.Render(Model(albedo: MagickColors.Red), 48);
+            // a prop's shader: without a name the engine draws a mesh as a unit (Unit), with its metal
+            RgbaImage image = AssetPreview.Render(Model("VertexNormal", albedo: MagickColors.Red), 48);
 
             Assert.AreEqual((48, 48), (image.Width, image.Height));
             var drawn = Drawn(image);

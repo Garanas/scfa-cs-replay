@@ -125,9 +125,41 @@ namespace FAForever.FileFormats.Mesh.Tests
         {
             ScmVertex vertex = new ScmVertex(Vector3.Zero, Vector3.UnitY, Vector3.UnitX, Vector3.UnitZ, Vector2.Zero, Vector2.Zero, 0);
 
-            // cross(y, x) is -z
-            Assert.AreEqual(new Vector4(Vector3.UnitX, -1), GlbWriter.Tangent(vertex));
-            Assert.AreEqual(new Vector4(Vector3.UnitX, 1), GlbWriter.Tangent(vertex with { Binormal = -Vector3.UnitZ }));
+            // the game's tangent turned round; cross(y, -x) is z, along the binormal
+            Assert.AreEqual(new Vector4(-Vector3.UnitX, 1), GlbWriter.Tangent(vertex));
+            Assert.AreEqual(new Vector4(-Vector3.UnitX, -1), GlbWriter.Tangent(vertex with { Binormal = -Vector3.UnitZ }));
+        }
+
+        [TestMethod]
+        [DataRow(ScmParserTest.Ual0101Lod0)]
+        [DataRow(ScmParserTest.Uel0401Lod1)]
+        [DataRow(ScmParserTest.Xsl0001Lod1)]
+        [DataRow(ScmParserTest.Blender)]
+        [DataRow(ScmParserTest.FafVrtx)]
+        public void WritesTangentsInTheConventionOfGltf(string path)
+        {
+            // glTF's tangent points along the texture's u, its bitangent up the image (against v)
+            Scm scm = Parse(path);
+            int along = 0, against = 0, up = 0, down = 0;
+            for (int t = 0; t < scm.Indices.Length; t += 3)
+            {
+                ScmVertex a = scm.Vertices[scm.Indices[t]], b = scm.Vertices[scm.Indices[t + 1]], c = scm.Vertices[scm.Indices[t + 2]];
+                Vector3 e1 = b.Position - a.Position, e2 = c.Position - a.Position;
+                Vector2 d1 = b.Uv0 - a.Uv0, d2 = c.Uv0 - a.Uv0;
+                float determinant = d1.X * d2.Y - d2.X * d1.Y;
+                if (MathF.Abs(determinant) < 1e-9f)
+                {
+                    continue;
+                }
+                Vector3 alongU = (e1 * d2.Y - e2 * d1.Y) / determinant;
+                Vector3 alongV = (e2 * d1.X - e1 * d2.X) / determinant;
+                Vector4 tangent = GlbWriter.Tangent(a);
+                Vector3 bitangent = Vector3.Cross(GlbWriter.Normal(a), new Vector3(tangent.X, tangent.Y, tangent.Z)) * tangent.W;
+                if (Vector3.Dot(alongU, new Vector3(tangent.X, tangent.Y, tangent.Z)) > 0) { along++; } else { against++; }
+                if (Vector3.Dot(alongV, bitangent) < 0) { up++; } else { down++; }
+            }
+            Assert.IsTrue(along > 9 * against, $"along u {along}, against {against}");
+            Assert.IsTrue(up > 9 * down, $"up the image {up}, down {down}");
         }
 
         [TestMethod]

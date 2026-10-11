@@ -545,13 +545,18 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
 - `AssetConverter` turns them into `assets/`, keeping the game's paths in lower case: textures as
   8-bit PNG with alpha, prop and unit blueprints as the editor's JSON (`PropBlueprintDto`,
   `UnitBlueprintDto`, read with FileFormats.Blueprints by `AssetBlueprints`), meshes as glTF
-  (`.glb`, by `GlbWriter` of FileFormats.Mesh: the triangles, the skeleton as a skin, no material);
-  scripts, animations and the rest are left out. The levels of detail get the names the engine
-  fills in (`<name>_lod<n>.scm`, `_albedo.dds`, `_normalsts.dds`, `_specteam.dds`); a name is
-  relative to the blueprint's folder and may step out of it (the tree groups use
-  `../Brch01_s1_albedo.dds`), and a file the archives lack is left out. It writes into `assets.new/` and replaces `assets/` when done; a stopped
-  conversion goes on where it was. For game version 3839 (FAF of October 2026): 30 s, 3 GB, 7044
-  textures, 2184 meshes, 563 props, 606 units.
+  (`.glb`, by `GlbWriter` of FileFormats.Mesh: the triangles, the skeleton as a skin, tangents in
+  glTF's convention, no material; the mesh library's guide,
+  [`../FAForever.FileFormats.Mesh/AGENTS.md`](../FAForever.FileFormats.Mesh/AGENTS.md), says how
+  the engine reads a mesh); scripts, animations and the rest are left out. The levels of detail
+  get the names the engine fills in (`<name>_lod<n>.scm`, `_albedo.dds`, `_normalsts.dds`,
+  `_specteam.dds`); a name is relative to the blueprint's folder and may step out of it (the tree
+  groups use `../Brch01_s1_albedo.dds`), and a file the archives lack is left out. A level without
+  `LODCutoff` keeps no cutoff in the JSON; the 3D view takes the engine's default, 1000. A file
+  that cannot be converted is named in `assets/skipped.txt`. It writes into `assets.new/` and
+  replaces `assets/` when done; a stopped conversion goes on where it was. For game version 3839
+  (FAF of October 2026): 32 s, 3 GB, 7044 textures, 2188 meshes (every mesh of the game and FAF,
+  also the four whose vertex section is named `VRTX`), 563 props, 606 units, nothing skipped.
 - `AssetCheck` tells whether the assets are current: converted by this editor version (and
   `AssetConverter.FormatVersion`, raise it when the output changes) from the archives as they are.
   Only FAF's `.nx2` are checked; same size and time is unchanged, otherwise the SHA-256 decides.
@@ -608,9 +613,11 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   `.glb`, the albedo, normal and specular maps and the shader of its first level of detail) by
   `AssetPreview.Render`, with `MeshPreview` of FileFormats.Mesh: on the processor, from above and
   in front, shaded as the game's `effects/mesh.fx` (FAF's, in `effects.nx2`) shades it. The
-  shader's name chooses the formula (`MeshPreview.ShaderOf`: the factions' PBR shaders with their
-  team colour, normal-mapped props, vertex-normal props) and the alpha test (`AlphaRef` 0x80 for
-  the `...Alpha` shaders of trees and bushes, 0x23 for `VertexNormal`). The light is the game
+  shader's name, resolved as the engine resolves it (`MeshPreview.ShaderName`: no name is `Unit`,
+  `TMeshAlpha` is `NormalMappedAlpha`, `Simple` and `Team` are `Unit`, ...), chooses the formula
+  (`MeshPreview.ShaderOf`: the factions' PBR shaders with their team colour, normal-mapped props,
+  vertex-normal props) and the alpha test (`AlphaRef` 0x80 for the `...Alpha` shaders of trees
+  and bushes, 0x23 for `VertexNormal`). The light is the game
   editor's default, the environment a gradient fitted to `DefaultEnvCube.dds`, the army blue;
   there are no shadows. The textures are read at most twice the picture's width. A unit takes
   about 50 to 300 ms at 160 pixels, most of it reading the three textures.

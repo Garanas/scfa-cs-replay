@@ -33,6 +33,21 @@ namespace FAForever.FileFormats.Mesh
         public required IReadOnlyList<string> Information { get; init; }
 
         /// <summary>
+        /// The number of bones the game skins the vertices with, as the header stores it (at byte
+        /// 0x0C): the bones of the GPU skinning palette, the first ones of <see cref="Bones"/>; the
+        /// bones after them are attachment points that no vertex moves with. Null leaves it to
+        /// <see cref="ScmWriter"/>, which writes <see cref="ScmWriter.WeightedBoneCount"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="ScmParser"/> keeps what the file says, so a mesh writes back to the same bytes:
+        /// the game's exporter stores one more than the highest bone a vertex uses, some of FAF's
+        /// meshes store the number of all bones (<c>UES0304_LOD0</c>: 26 where its vertices use 9).
+        /// The engine gives a draw 80 palette slots (<see cref="ScmWriter.MaxSkinnedBones"/>); see
+        /// the library's guide (<c>AGENTS.md</c>).
+        /// </remarks>
+        public int? SkinnedBoneCount { get; init; }
+
+        /// <summary>
         /// The number of triangles.
         /// </summary>
         public int TriangleCount => Indices.Length / 3;
@@ -45,30 +60,39 @@ namespace FAForever.FileFormats.Mesh
     /// <param name="RestPoseInverse">From the mesh's space to the bone's space in the rest pose.</param>
     /// <param name="Position">The position relative to the parent bone.</param>
     /// <param name="Rotation">The rotation relative to the parent bone.</param>
-    /// <param name="Parent">The index of the parent bone, -1 for the root.</param>
-    /// <param name="Reserved1">A number that the exporter of the game fills and other exporters leave
-    /// 0; its meaning is unknown. Kept so that a mesh writes back to the same bytes.</param>
-    /// <param name="Reserved2">As <paramref name="Reserved1"/>.</param>
+    /// <param name="Parent">The index of the parent bone, -1 for the root. A parent comes before its
+    /// children: the engine updates the pose in one pass from the first bone to the last.</param>
+    /// <param name="FirstVertex">The index of the first vertex that moves with the bone. The game's
+    /// exporter sorts the vertices and triangles by bone and fills this in; other exporters mostly
+    /// leave it 0. The engine never reads it; it is kept so that a mesh writes back to the same bytes.</param>
+    /// <param name="TriangleCount">The number of triangles of the bone, filled in by the game's
+    /// exporter as <paramref name="FirstVertex"/> is, and never read by the engine.</param>
     public sealed record ScmBone(
         string Name,
         Matrix4x4 RestPoseInverse,
         Vector3 Position,
         Quaternion Rotation,
         int Parent,
-        int Reserved1 = 0,
-        int Reserved2 = 0);
+        int FirstVertex = 0,
+        int TriangleCount = 0);
 
     /// <summary>
     /// A vertex of a mesh in the rest pose.
     /// </summary>
     /// <param name="Position">The position in the mesh's space.</param>
     /// <param name="Normal">The normal of the surface.</param>
-    /// <param name="Tangent">The tangent of the normal map's space.</param>
-    /// <param name="Binormal">The binormal of the normal map's space.</param>
-    /// <param name="Uv0">The texture coordinates of the albedo and the other textures of the unit.</param>
-    /// <param name="Uv1">A second set of texture coordinates, which some shaders use.</param>
-    /// <param name="Bone0">The bone the vertex moves with.</param>
-    /// <param name="Bone1">A second bone, for skinning. The game's meshes leave it 0, as the next two.</param>
+    /// <param name="Tangent">The tangent of the normal map's space; the normal map's alpha (its y)
+    /// tilts the normal along it. In the game's meshes it points against the texture's u
+    /// (<see cref="GlbWriter.Tangent"/> turns it round for glTF).</param>
+    /// <param name="Binormal">The binormal of the normal map's space; the normal map's green (its x)
+    /// tilts the normal along it. In the game's meshes it points against the texture's v.</param>
+    /// <param name="Uv0">The texture coordinates of the albedo and the specular (team colour) map.</param>
+    /// <param name="Uv1">The second set of texture coordinates, which the game's shaders read the normal
+    /// map with (<c>texcoord0.zw</c> in <c>effects/mesh.fx</c>).</param>
+    /// <param name="Bone0">The bone the vertex moves with, with weight 1: the only bone the game's
+    /// shaders read.</param>
+    /// <param name="Bone1">A second bone, for skinning. The game's meshes leave it 0, as the next two,
+    /// and the shaders never read them.</param>
     /// <param name="Bone2">A third bone.</param>
     /// <param name="Bone3">A fourth bone.</param>
     public readonly record struct ScmVertex(

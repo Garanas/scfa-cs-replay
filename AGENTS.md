@@ -3,7 +3,7 @@
 A .NET 10 solution for parsing and analysing Supreme Commander: Forged Alliance (Forever) replays,
 with a Blazor WebAssembly front-end for searching the FAForever vault and inspecting replays.
 
-This file holds what applies everywhere. Each top-level folder and six projects have their own
+This file holds what applies everywhere. Each top-level folder and seven projects have their own
 guide, which agents that support nested guides pick up when they touch files there. Read it before
 planning work there:
 
@@ -20,6 +20,10 @@ planning work there:
 - **Map work** (`FAForever.FileFormats.Map`):
   [`src/FAForever.FileFormats.Map/AGENTS.md`](src/FAForever.FileFormats.Map/AGENTS.md) covers the
   `.scmap` versions, the map's Lua files, the navigational mesh and the test maps.
+- **Mesh work** (`FAForever.FileFormats.Mesh`):
+  [`src/FAForever.FileFormats.Mesh/AGENTS.md`](src/FAForever.FileFormats.Mesh/AGENTS.md) covers the
+  `.scm` and `.sca` layouts as the engine reads them (from the faf-re reconstruction), how the engine
+  draws a mesh (skinning, LODs, texture and shader names), glTF's conventions and other tools' quirks.
 - **Map editor work** (`FAForever.MapEditor.Project`, `FAForever.MapEditor.Cli`):
   [`src/FAForever.MapEditor.Project/AGENTS.md`](src/FAForever.MapEditor.Project/AGENTS.md) covers the
   editor's model, the project format, undo and what the export to the game's files derives;
