@@ -236,7 +236,7 @@ namespace FAForever.MapEditor.Project
                         document = ReloadGray8(document, Of(changed), document.Terrain.Types, width, height, (d, types) => d with { Terrain = d.Terrain with { Types = types } });
                         break;
                     case MapProjectLayout.NormalMap:
-                        document = ReloadRgba(document, Of(changed), document.Terrain.NormalMap, (d, image) => d with { Terrain = d.Terrain with { NormalMap = image } });
+                        document = ReloadRgba(document, Of(changed), document.Terrain.NormalMap, (d, image) => d with { Terrain = d.Terrain with { NormalMap = image, NormalMapTileWidth = null, NormalMapTileHeight = null } });
                         break;
                     case MapProjectLayout.Preview:
                         document = ReloadRgba(document, Of(changed), document.Terrain.Preview, (d, image) => d with { Terrain = d.Terrain with { Preview = image } });

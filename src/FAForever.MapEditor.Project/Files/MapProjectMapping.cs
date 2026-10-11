@@ -357,6 +357,8 @@ namespace FAForever.MapEditor.Project.Files
             Tileset = source.Tileset,
             Layers = [.. source.Layers.Select(layer => ToDto(layer))],
             NormalMapFormat = source.NormalMapFormat,
+            NormalMapTileWidth = source.NormalMapTileWidth,
+            NormalMapTileHeight = source.NormalMapTileHeight,
         };
 
         private static Terrain ToModel(TerrainDto source, MapProjectImages images) => new Terrain
@@ -374,6 +376,8 @@ namespace FAForever.MapEditor.Project.Files
             StratumMasks = images.StratumMasks,
             NormalMap = images.NormalMap,
             NormalMapFormat = source.NormalMapFormat,
+            NormalMapTileWidth = source.NormalMapTileWidth,
+            NormalMapTileHeight = source.NormalMapTileHeight,
             Preview = images.Preview,
         };
 

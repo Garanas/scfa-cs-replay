@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace FAForever.MapEditor.Project.Files.Serialized
 {
     /// <summary>
@@ -18,8 +20,11 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         public required string LandEndColor { get; init; }
 
         /// <summary>
-        /// A number after the colours in version 60, whose meaning is unknown.
+        /// How far the borders of the map imager are lifted above the terrain's middle height (version
+        /// 57 on). Its key is <c>unknown</c>, the name projects have stored it under since before its
+        /// meaning was known.
         /// </summary>
-        public float? Unknown { get; init; }
+        [JsonPropertyName("unknown")]
+        public float? ImagerElevationOffset { get; init; }
     }
 }

@@ -128,7 +128,7 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreNotEqual(albedo.Id, normals.Id);
             Assert.AreEqual(lone.Id, decals[2].Id, "the others keep their ids");
             CollectionAssert.AreEqual(new[] { albedo.Id, normals.Id }, files.Scmap.DecalGroups.Single(g => g.Id == group.Id).DecalIds.ToArray());
-            Assert.AreEqual(document.Decals.Max(decal => decal.Id) + 2, files.Scmap.DecalHeader.Item1, "the counter after the new id");
+            Assert.AreEqual(document.Decals.Max(decal => decal.Id) + 2, files.Scmap.NextDecalId, "the counter after the new id");
         }
 
         [TestMethod]

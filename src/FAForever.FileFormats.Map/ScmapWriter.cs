@@ -9,9 +9,11 @@ namespace FAForever.FileFormats.Map
     /// <see cref="ScmapParser"/>. A parsed map writes back to the same bytes.
     /// </summary>
     /// <remarks>
-    /// The layout follows the saver of the FAF map editor (<c>Assets/Scripts/HazardX SCMAP Code/Map.cs</c>
-    /// in FAForever/FAForeverMapEditor). The fields the parser does not keep are constants there and
-    /// in every map of the vault: they are written as such.
+    /// The layout is the engine's (<c>CWldTerrainRes::Save</c> and <c>CWldTerrainRes::Load</c> in
+    /// Draiget/faf-re, commit 2ba55b2, <c>src/sdk/moho/sim/CWldMap.cpp</c>) and the FAF map editor's
+    /// (<c>Assets/Scripts/HazardX SCMAP Code/Map.cs</c> in FAForever/FAForeverMapEditor). The only
+    /// field the parser does not keep is the terrain's size in the preview's header, which repeats
+    /// the heightmap's.
     /// </remarks>
     public static class ScmapWriter
     {
@@ -37,12 +39,17 @@ namespace FAForever.FileFormats.Map
 
             w.Int32(ScmapParser.Magic);
             w.Int32(2);
-            w.UInt32(0xbeeffeed);
+            w.UInt32(ScmapParser.PreviewMagic);
             w.Int32(2);
             w.Single(scmap.Width);
             w.Single(scmap.Height);
-            w.Int32(0);
-            w.Int16(0);
+            w.WideString(scmap.PreviewName);
+            w.Int32(scmap.PreviewMetadata.Count);
+            foreach (ScmapPreviewMetadata entry in scmap.PreviewMetadata)
+            {
+                w.UInt32(entry.Tag);
+                w.UInt32(entry.Value);
+            }
 
             w.Blob(scmap.Preview);
 
@@ -55,16 +62,16 @@ namespace FAForever.FileFormats.Map
             w.Single(heightmap.Scale);
             w.UInt16s(heightmap.Samples);
 
-            if (version >= 56)
+            if (version >= 54)
             {
-                w.Byte(0);
+                w.Byte(scmap.CompositeTerrainShader ? (byte)1 : (byte)0);
             }
 
             w.String(scmap.TerrainShader);
             w.String(scmap.BackgroundTexture);
             w.String(scmap.SkyCubemap);
 
-            if (version >= 56)
+            if (version >= 55)
             {
                 w.Int32(scmap.EnvironmentCubemaps.Count);
                 foreach (ScmapCubemap cubemap in scmap.EnvironmentCubemaps)
@@ -121,11 +128,14 @@ namespace FAForever.FileFormats.Map
                 w.UInt32(minimap.ShoreColor);
                 w.UInt32(minimap.LandStartColor);
                 w.UInt32(minimap.LandEndColor);
-                if (version > 56)
+                if (version >= 57)
                 {
-                    w.Single(minimap.Unknown ?? 0f);
+                    w.Single(minimap.ImagerElevationOffset ?? 0f);
                 }
+            }
 
+            if (version >= 54)
+            {
                 // ten albedo textures, then nine normal maps: the top layer has none
                 foreach (ScmapTerrainLayer layer in scmap.Layers)
                 {
@@ -141,7 +151,7 @@ namespace FAForever.FileFormats.Map
             else
             {
                 w.String(scmap.Tileset ?? "No Tileset");
-                w.Int32(scmap.Layers.Count);
+                w.Int32(scmap.StoredLayerCount ?? ScmapParser.Version53LayerCount);
                 foreach (ScmapTerrainLayer layer in scmap.Layers)
                 {
                     w.String(layer.Albedo);
@@ -151,8 +161,8 @@ namespace FAForever.FileFormats.Map
                 }
             }
 
-            w.Int32(scmap.DecalHeader.First);
-            w.Int32(scmap.DecalHeader.Second);
+            w.Int32(scmap.NextDecalId);
+            w.Int32(scmap.NextDecalGroupId);
 
             w.Int32(scmap.Decals.Count);
             foreach (ScmapDecal decal in scmap.Decals)
@@ -184,8 +194,8 @@ namespace FAForever.FileFormats.Map
                 }
             }
 
-            w.Int32(scmap.Width);
-            w.Int32(scmap.Height);
+            w.Int32(scmap.NormalMapTileWidth);
+            w.Int32(scmap.NormalMapTileHeight);
 
             w.Int32(scmap.NormalMaps.Count);
             foreach (byte[] normalMap in scmap.NormalMaps)
@@ -193,27 +203,50 @@ namespace FAForever.FileFormats.Map
                 w.Blob(normalMap);
             }
 
-            if (version < 56)
+            if (version < 54)
             {
-                w.Int32(1);
+                w.Int32(scmap.StratumMasks.Count);
             }
             foreach (byte[] mask in scmap.StratumMasks)
             {
                 w.Blob(mask);
             }
 
-            w.Int32(1);
+            w.Int32(1 + scmap.ExtraWaterMaps.Count);
             w.Blob(scmap.WaterMap);
+            foreach (byte[] waterMap in scmap.ExtraWaterMaps)
+            {
+                w.Blob(waterMap);
+            }
 
             w.Bytes(scmap.WaterFoamMask);
             w.Bytes(scmap.WaterFlatnessMask);
             w.Bytes(scmap.WaterDepthBiasMask);
             w.Bytes(scmap.TerrainTypes);
 
-            if (version >= 60)
+            if (version >= 58)
             {
                 WriteSkybox(ref w, scmap.Skybox!);
-                w.Int32(0); // no batches of cartographic decals
+            }
+            if (version >= 59)
+            {
+                w.Int32(scmap.CartographicDecals.Count);
+                foreach (ScmapCartographicDecalBatch batch in scmap.CartographicDecals)
+                {
+                    if (version >= 60)
+                    {
+                        w.String(batch.Technique);
+                    }
+                    w.String(batch.Texture);
+                    w.Int32(batch.Decals.Count);
+                    foreach (ScmapCartographicDecal decal in batch.Decals)
+                    {
+                        foreach (float value in decal.Values)
+                        {
+                            w.Single(value);
+                        }
+                    }
+                }
             }
 
             w.Int32(scmap.Props.Count);
@@ -250,22 +283,41 @@ namespace FAForever.FileFormats.Map
             Require(scmap.TerrainTypes.Length == scmap.Width * scmap.Height, "The terrain types must have one byte per ogrid");
             Require(scmap.Water.WaveTextures.Count == 4, "The water has exactly four wave textures");
 
+            Require(scmap.NormalMapTileWidth > 0 && scmap.NormalMapTileHeight > 0, "The normal map's tiles have a size");
+            Require(scmap.Decals.All(decal => decal.Textures.Count == 2), "A decal has exactly two texture slots (the engine's decal holds two)");
+
             if (version >= 56)
             {
                 Require(scmap.Minimap is not null, $"A version {version} map has minimap colours");
+            }
+            if (version >= 54)
+            {
                 Require(scmap.Layers.Count == 10, $"A version {version} map has ten terrain layers");
                 Require(scmap.StratumMasks.Count == 2, $"A version {version} map has two stratum masks");
             }
             else
             {
-                Require(scmap.EnvironmentCubemaps.Count == 1, "A version 53 map has one environment cubemap");
-                Require(scmap.StratumMasks.Count == 1, "A version 53 map has one stratum mask");
+                Require(scmap.Layers.Count == ScmapParser.Version53LayerCount, $"A version {version} map has six terrain layers (the engine reads six)");
+                Require(scmap.StratumMasks.Count >= 1, $"A version {version} map has a stratum mask");
+            }
+            if (version < 55)
+            {
+                Require(scmap.EnvironmentCubemaps.Count == 1, $"A version {version} map has one environment cubemap");
             }
 
-            if (version >= 60)
+            if (version >= 58)
             {
                 Require(scmap.Skybox is not null, $"A version {version} map has a skybox");
                 Require(scmap.Skybox!.CirrusLayers.Count == ScmapSkybox.CirrusLayerCount, $"A skybox has {ScmapSkybox.CirrusLayerCount} cirrus layers");
+            }
+            if (version >= 59)
+            {
+                Require(scmap.CartographicDecals.All(batch => batch.Decals.All(decal => decal.Values.Count == ScmapCartographicDecal.ValueCount)),
+                    $"A decal of the strategic view has {ScmapCartographicDecal.ValueCount} numbers");
+            }
+            else
+            {
+                Require(scmap.CartographicDecals.Count == 0, $"A version {version} map has no decals of the strategic view");
             }
         }
 
@@ -360,11 +412,27 @@ namespace FAForever.FileFormats.Map
 
             public readonly void Byte(byte value) => _stream.WriteByte(value);
 
-            public readonly void Int16(short value)
+            public readonly void UInt16(ushort value)
             {
                 Span<byte> buffer = stackalloc byte[2];
-                BinaryPrimitives.WriteInt16LittleEndian(buffer, value);
+                BinaryPrimitives.WriteUInt16LittleEndian(buffer, value);
                 _stream.Write(buffer);
+            }
+
+            /// <summary>
+            /// A string of 16-bit characters that ends with a zero character.
+            /// </summary>
+            public readonly void WideString(string text)
+            {
+                if (text.Contains('\0'))
+                {
+                    throw new ArgumentException($"A string in a map cannot contain a zero character: {text}", "scmap");
+                }
+                foreach (char c in text)
+                {
+                    UInt16(c);
+                }
+                UInt16(0);
             }
 
             public readonly void Int32(int value)

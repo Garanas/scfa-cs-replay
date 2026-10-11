@@ -17,7 +17,10 @@ namespace FAForever.FileFormats.Map
     }
 
     /// <summary>
-    /// Reads the binary map format (<c>.scmap</c>), versions 53, 56 and 60.
+    /// Reads the binary map format (<c>.scmap</c>), versions 53, 56 and 60, as the engine reads it
+    /// (<c>CWldMap::MapLoad</c>, <c>RWldMapPreviewChunk::Load</c> and <c>CWldTerrainRes::Load</c> in
+    /// Draiget/faf-re, commit 2ba55b2, <c>src/sdk/moho/sim/CWldMap.cpp</c>); the library's guide
+    /// describes every block.
     /// </summary>
     public static class ScmapParser
     {
@@ -59,9 +62,26 @@ namespace FAForever.FileFormats.Map
                 throw new ScmapFormatException($"Unknown major version {major}, expected 2", 4);
             }
 
-            // 0xbeeffeed, 2, the width and height as floats, 0 (int) and 0 (short): the heightmap
-            // repeats the size, so none of it is kept
-            r.Skip(4 + 4 + 4 + 4 + 4 + 2);
+            // the preview's header: 0xbeeffeed, its version (2), the terrain's size as floats (the
+            // heightmap repeats it, so it is not kept), a name in UTF-16 up to a zero, and a count of
+            // (tag, value) pairs
+            int previewStart = r.Position;
+            if (r.UInt32() != PreviewMagic)
+            {
+                throw new ScmapFormatException("The preview's header is missing", previewStart);
+            }
+            int previewVersion = r.Int32();
+            if (previewVersion != 2)
+            {
+                throw new ScmapFormatException($"Unknown preview version {previewVersion}, expected 2", previewStart + 4);
+            }
+            r.Skip(4 + 4);
+            string previewName = r.WideString();
+            ScmapPreviewMetadata[] previewMetadata = new ScmapPreviewMetadata[r.Count()];
+            for (int i = 0; i < previewMetadata.Length; i++)
+            {
+                previewMetadata[i] = new ScmapPreviewMetadata(r.UInt32(), r.UInt32());
+            }
 
             byte[] preview = r.Bytes(r.Count());
 
@@ -77,17 +97,15 @@ namespace FAForever.FileFormats.Map
             ushort[] samples = r.UInt16s(checked((width + 1) * (height + 1)));
             ScmapHeightmap heightmap = new ScmapHeightmap(width, height, heightScale, samples);
 
-            if (version >= 56)
-            {
-                r.Skip(1); // always 0
-            }
+            // whether the terrain shader is composite, from version 54 on
+            bool compositeTerrainShader = version >= 54 && r.Byte() != 0;
 
             string terrainShader = r.String();
             string background = r.String();
             string skyCubemap = r.String();
 
             ScmapCubemap[] cubemaps;
-            if (version >= 56)
+            if (version >= 55)
             {
                 cubemaps = new ScmapCubemap[r.Count()];
                 for (int i = 0; i < cubemaps.Length; i++)
@@ -136,8 +154,6 @@ namespace FAForever.FileFormats.Map
             }
 
             ScmapMinimap? minimap = null;
-            string? tileset = null;
-            ScmapTerrainLayer[] layers;
             if (version >= 56)
             {
                 minimap = new ScmapMinimap(
@@ -147,8 +163,14 @@ namespace FAForever.FileFormats.Map
                     ShoreColor: r.UInt32(),
                     LandStartColor: r.UInt32(),
                     LandEndColor: r.UInt32(),
-                    Unknown: version > 56 ? r.Single() : null);
+                    ImagerElevationOffset: version >= 57 ? r.Single() : null);
+            }
 
+            string? tileset = null;
+            int? storedLayerCount = null;
+            ScmapTerrainLayer[] layers;
+            if (version >= 54)
+            {
                 // ten albedo textures, then nine normal maps: the top layer has none
                 (string Path, float Scale)[] albedos = new (string, float)[10];
                 for (int i = 0; i < albedos.Length; i++)
@@ -165,8 +187,10 @@ namespace FAForever.FileFormats.Map
             }
             else
             {
+                // a string and a number the engine discards, then always six layers
                 tileset = r.String();
-                layers = new ScmapTerrainLayer[r.Count()];
+                storedLayerCount = r.Int32();
+                layers = new ScmapTerrainLayer[Version53LayerCount];
                 for (int i = 0; i < layers.Length; i++)
                 {
                     string albedo = r.String();
@@ -175,7 +199,9 @@ namespace FAForever.FileFormats.Map
                 }
             }
 
-            (int, int) decalHeader = (r.Int32(), r.Int32());
+            // the decal manager's counters: the next decal id and the next decal group id
+            int nextDecalId = r.Int32();
+            int nextDecalGroupId = r.Int32();
 
             ScmapDecal[] decals = new ScmapDecal[r.Count()];
             for (int i = 0; i < decals.Length; i++)
@@ -212,10 +238,10 @@ namespace FAForever.FileFormats.Map
                 decalGroups[i] = new ScmapDecalGroup(id, name, decalIds);
             }
 
-            // the size again, which the masks below use
-            int textureWidth = r.Int32();
-            int textureHeight = r.Int32();
-
+            // the normal map: the size of its tiles (at most 2048 by 2048), then the tiles, which the
+            // engine skips (it makes the normal map from the heightmap)
+            int normalMapTileWidth = r.Int32();
+            int normalMapTileHeight = r.Int32();
             byte[][] normalMaps = new byte[r.Count()][];
             for (int i = 0; i < normalMaps.Length; i++)
             {
@@ -223,36 +249,49 @@ namespace FAForever.FileFormats.Map
             }
 
             byte[][] stratumMasks;
-            if (version >= 56)
+            if (version >= 54)
             {
                 stratumMasks = [r.Bytes(r.Count()), r.Bytes(r.Count())];
             }
             else
             {
-                r.Skip(4); // always 1
-                stratumMasks = [r.Bytes(r.Count())];
+                stratumMasks = new byte[r.Count()][];
+                for (int i = 0; i < stratumMasks.Length; i++)
+                {
+                    stratumMasks[i] = r.Bytes(r.Count());
+                }
             }
 
-            r.Skip(4); // always 1
+            // a count of water maps, of which the engine uses the first
+            int waterMapStart = r.Position;
+            int waterMapCount = r.Count();
+            if (waterMapCount == 0)
+            {
+                throw new ScmapFormatException("The map has no water map", waterMapStart);
+            }
             byte[] waterMap = r.Bytes(r.Count());
+            byte[][] extraWaterMaps = new byte[waterMapCount - 1][];
+            for (int i = 0; i < extraWaterMaps.Length; i++)
+            {
+                extraWaterMaps[i] = r.Bytes(r.Count());
+            }
 
-            int halfSize = checked(textureWidth / 2 * (textureHeight / 2));
+            // the masks and the terrain types follow the heightmap's size, whatever the normal map's
+            int halfSize = checked(width / 2 * (height / 2));
             byte[] foam = r.Bytes(halfSize);
             byte[] flatness = r.Bytes(halfSize);
             byte[] depthBias = r.Bytes(halfSize);
-            byte[] terrainTypes = r.Bytes(checked(textureWidth * textureHeight));
+            byte[] terrainTypes = r.Bytes(checked(width * height));
 
             ScmapSkybox? skybox = null;
-            if (version >= 60)
+            ScmapCartographicDecalBatch[] cartographicDecals = [];
+            if (version >= 58)
             {
                 skybox = ReadSkybox(ref r);
-                // the cartographic decals (Moho::Cartographic::ReadDecals): a count of batches, 0 in every map known
-                int start = r.Position;
-                int batches = r.Int32();
-                if (batches != 0)
-                {
-                    throw new ScmapFormatException($"The map has {batches} batches of cartographic decals, which this parser does not read", start);
-                }
+            }
+            if (version >= 59)
+            {
+                cartographicDecals = ReadCartographicDecals(ref r, version);
             }
 
             ScmapProp[] props = new ScmapProp[r.Count()];
@@ -275,9 +314,12 @@ namespace FAForever.FileFormats.Map
             return new Scmap
             {
                 Version = version,
+                PreviewName = previewName,
+                PreviewMetadata = previewMetadata,
                 Preview = preview,
                 Heightmap = heightmap,
                 TerrainShader = terrainShader,
+                CompositeTerrainShader = compositeTerrainShader,
                 BackgroundTexture = background,
                 SkyCubemap = skyCubemap,
                 EnvironmentCubemaps = cubemaps,
@@ -286,25 +328,70 @@ namespace FAForever.FileFormats.Map
                 WaveGenerators = waveGenerators,
                 Minimap = minimap,
                 Tileset = tileset,
+                StoredLayerCount = storedLayerCount,
                 Layers = layers,
-                DecalHeader = decalHeader,
+                NextDecalId = nextDecalId,
+                NextDecalGroupId = nextDecalGroupId,
                 Decals = decals,
                 DecalGroups = decalGroups,
+                NormalMapTileWidth = normalMapTileWidth,
+                NormalMapTileHeight = normalMapTileHeight,
                 NormalMaps = normalMaps,
                 StratumMasks = stratumMasks,
                 WaterMap = waterMap,
+                ExtraWaterMaps = extraWaterMaps,
                 WaterFoamMask = foam,
                 WaterFlatnessMask = flatness,
                 WaterDepthBiasMask = depthBias,
                 TerrainTypes = terrainTypes,
                 Skybox = skybox,
+                CartographicDecals = cartographicDecals,
                 Props = props,
             };
         }
 
+        /// <summary>
+        /// The first four bytes of the preview's header.
+        /// </summary>
+        internal const uint PreviewMagic = 0xbeeffeed;
+
+        /// <summary>
+        /// The layers a version 53 map holds: the engine always reads six.
+        /// </summary>
+        public const int Version53LayerCount = 6;
+
+        /// <summary>
+        /// The decals of the strategic view (<c>Cartographic::ReadDecals</c> and
+        /// <c>CartographicDecalBatch::Read</c> in Draiget/faf-re, <c>src/sdk/moho/render/Cartographic.cpp</c>):
+        /// a count of batches; each a technique (from version 60 on), a texture and a count of decals of
+        /// nine numbers each.
+        /// </summary>
+        private static ScmapCartographicDecalBatch[] ReadCartographicDecals(ref Reader r, int version)
+        {
+            ScmapCartographicDecalBatch[] batches = new ScmapCartographicDecalBatch[r.Count()];
+            for (int i = 0; i < batches.Length; i++)
+            {
+                string technique = version >= 60 ? r.String() : ScmapCartographicDecalBatch.DefaultTechnique;
+                string texture = r.String();
+                ScmapCartographicDecal[] decals = new ScmapCartographicDecal[r.Count()];
+                for (int d = 0; d < decals.Length; d++)
+                {
+                    float[] values = new float[ScmapCartographicDecal.ValueCount];
+                    for (int v = 0; v < values.Length; v++)
+                    {
+                        values[v] = r.Single();
+                    }
+                    decals[d] = new ScmapCartographicDecal(values);
+                }
+                batches[i] = new ScmapCartographicDecalBatch(technique, texture, decals);
+            }
+            return batches;
+        }
+
         private static ScmapWater ReadWater(ref Reader r)
         {
-            bool hasWater = r.Byte() == 1;
+            // any byte other than 0 means water to the engine
+            bool hasWater = r.Byte() != 0;
             float elevation = r.Single();
             float elevationDeep = r.Single();
             float elevationAbyss = r.Single();
@@ -497,6 +584,21 @@ namespace FAForever.FileFormats.Map
                 Position++;
                 return text;
             }
+
+            /// <summary>
+            /// A string of 16-bit characters that ends with a zero character.
+            /// </summary>
+            public string WideString()
+            {
+                StringBuilder text = new StringBuilder();
+                for (ushort c = UInt16(); c != 0; c = UInt16())
+                {
+                    text.Append((char)c);
+                }
+                return text.ToString();
+            }
+
+            public ushort UInt16() => BinaryPrimitives.ReadUInt16LittleEndian(Take(2));
 
             /// <summary>
             /// A string of a known length, without a zero byte.

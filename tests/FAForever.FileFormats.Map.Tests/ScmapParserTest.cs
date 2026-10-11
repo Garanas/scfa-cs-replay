@@ -58,7 +58,7 @@ namespace FAForever.FileFormats.Map.Tests
 
             Assert.IsNotNull(scmap.Minimap);
             Assert.AreEqual(10, scmap.Minimap.ContourInterval);
-            Assert.AreEqual(0f, scmap.Minimap.Unknown);
+            Assert.AreEqual(0f, scmap.Minimap.ImagerElevationOffset);
 
             Assert.IsFalse(scmap.Water.HasWater);
             Assert.AreEqual(4, scmap.Water.WaveTextures.Count);
@@ -84,7 +84,7 @@ namespace FAForever.FileFormats.Map.Tests
             Assert.IsTrue(scmap.Water.HasWater);
             Assert.AreEqual(6.0625f, scmap.Water.Elevation);
             Assert.IsNotNull(scmap.Minimap);
-            Assert.IsNull(scmap.Minimap.Unknown, "version 56 stores no number after the minimap colours");
+            Assert.IsNull(scmap.Minimap.ImagerElevationOffset, "version 56 stores no imager elevation offset");
             Assert.IsNull(scmap.Skybox, "only version 60 stores a skybox");
             Assert.AreEqual(10, scmap.Layers.Count);
             Assert.AreEqual(2, scmap.StratumMasks.Count);
@@ -163,6 +163,129 @@ namespace FAForever.FileFormats.Map.Tests
             ScmapFormatException exception = Assert.ThrowsException<ScmapFormatException>(() => ScmapParser.Parse(bytes));
 
             StringAssert.Contains(exception.Message, "57");
+        }
+
+        [TestMethod]
+        [DataRow(ThetaPassage, 256)]
+        [DataRow(HardFfa, 256)]
+        [DataRow(CoopR01, 512)]
+        public void ReadsTheSizeOfTheNormalMapsTiles(string map, int size)
+        {
+            Scmap scmap = ParseAsset(map);
+
+            Assert.AreEqual((size, size), (scmap.NormalMapTileWidth, scmap.NormalMapTileHeight));
+            Assert.AreEqual(1, scmap.NormalMaps.Count);
+        }
+
+        [TestMethod]
+        public void SizesTheMasksAndTerrainTypesFromTheHeightmapNotFromTheNormalMap()
+        {
+            // as the game's maps of 4096 by 4096 (SCMP_029, SCMP_030, X1MP_012): four tiles of half the
+            // map's size, and grids of the map's size after them
+            Scmap scmap = ParseAsset(HardFfa);
+            byte[] tile = scmap.NormalMaps[0];
+            byte[] bytes = ScmapWriter.Write(scmap with { NormalMapTileWidth = 128, NormalMapTileHeight = 128, NormalMaps = [tile, tile, tile, tile] });
+
+            Scmap tiled = ScmapParser.Parse(bytes);
+
+            Assert.AreEqual((128, 128), (tiled.NormalMapTileWidth, tiled.NormalMapTileHeight));
+            Assert.AreEqual(4, tiled.NormalMaps.Count);
+            Assert.AreEqual(128 * 128, tiled.WaterFoamMask.Length);
+            Assert.AreEqual(256 * 256, tiled.TerrainTypes.Length);
+            CollectionAssert.AreEqual(scmap.TerrainTypes, tiled.TerrainTypes);
+            CollectionAssert.AreEqual(scmap.WaterDepthBiasMask, tiled.WaterDepthBiasMask);
+            Assert.AreEqual(scmap.Props.Count, tiled.Props.Count);
+            CollectionAssert.AreEqual(bytes, ScmapWriter.Write(tiled), "the tile size is written back");
+        }
+
+        [TestMethod]
+        public void ReadsAnyByteButZeroAsWater()
+        {
+            Scmap scmap = ParseAsset(ThetaPassage);
+            byte[] dry = ScmapWriter.Write(scmap);
+            byte[] wet = ScmapWriter.Write(scmap with { Water = scmap.Water with { HasWater = true } });
+            int flag = dry.AsSpan().CommonPrefixLength(wet);
+            Assert.AreEqual((0, 1), (dry[flag], wet[flag]));
+
+            dry[flag] = 2;
+
+            Assert.IsTrue(ScmapParser.Parse(dry).Water.HasWater, "the engine reads the flag as not 0");
+        }
+
+        [TestMethod]
+        public void ReadsTheCompositeShaderFlag()
+        {
+            Scmap scmap = ParseAsset(ThetaPassage);
+            Assert.IsFalse(scmap.CompositeTerrainShader);
+
+            Scmap reparsed = ScmapParser.Parse(ScmapWriter.Write(scmap with { CompositeTerrainShader = true }));
+
+            Assert.IsTrue(reparsed.CompositeTerrainShader);
+        }
+
+        [TestMethod]
+        public void ReadsThePreviewsNameAndEntries()
+        {
+            Scmap scmap = ParseAsset(HardFfa);
+            Assert.AreEqual("", scmap.PreviewName);
+            Assert.AreEqual(0, scmap.PreviewMetadata.Count);
+            byte[] bytes = ScmapWriter.Write(scmap with { PreviewName = "Hård", PreviewMetadata = [new ScmapPreviewMetadata(7, 0xdeadbeef)] });
+
+            Scmap reparsed = ScmapParser.Parse(bytes);
+
+            Assert.AreEqual("Hård", reparsed.PreviewName);
+            CollectionAssert.AreEqual(new[] { new ScmapPreviewMetadata(7, 0xdeadbeef) }, reparsed.PreviewMetadata.ToArray());
+            // the name in UTF-16 up to a zero character, then the count of entries
+            Assert.AreEqual("Hård\0", System.Text.Encoding.Unicode.GetString(bytes, 24, 10));
+            Assert.AreEqual(1, BitConverter.ToInt32(bytes, 34));
+            CollectionAssert.AreEqual(scmap.Preview, reparsed.Preview);
+        }
+
+        [TestMethod]
+        public void ReadsTheDecalCounters()
+        {
+            Scmap scmap = ParseAsset(ThetaPassage);
+
+            Assert.IsTrue(scmap.NextDecalId > scmap.Decals.Max(decal => decal.Id), "the next decal id comes after every decal's");
+            Assert.AreEqual(0, scmap.DecalGroups.Count);
+        }
+
+        [TestMethod]
+        public void ReadsTheDecalsOfTheStrategicView()
+        {
+            Scmap scmap = ParseAsset(ThetaPassage);
+            Assert.AreEqual(0, scmap.CartographicDecals.Count);
+            ScmapCartographicDecalBatch batch = new ScmapCartographicDecalBatch("Decal", "/textures/ui/common/game/cartographic/x.dds",
+                [new ScmapCartographicDecal([1, 2, 3, 4, 5, 6, 7, 8, 9]), new ScmapCartographicDecal([9, 8, 7, 6, 5, 4, 3, 2, 1])]);
+
+            Scmap reparsed = ScmapParser.Parse(ScmapWriter.Write(scmap with { CartographicDecals = [batch] }));
+
+            ScmapCartographicDecalBatch read = reparsed.CartographicDecals.Single();
+            Assert.AreEqual((batch.Technique, batch.Texture), (read.Technique, read.Texture));
+            CollectionAssert.AreEqual(new float[] { 9, 8, 7, 6, 5, 4, 3, 2, 1 }, read.Decals[1].Values.ToArray());
+            Assert.AreEqual(scmap.Props.Count, reparsed.Props.Count);
+        }
+
+        [TestMethod]
+        public void ReadsAVersion53MapsCountsAsTheEngineDoes()
+        {
+            Scmap scmap = ParseAsset(CoopR01);
+            Assert.AreEqual(6, scmap.StoredLayerCount);
+
+            // the engine reads six layers whatever the number after the tileset, and every stratum mask counted
+            Scmap reparsed = ScmapParser.Parse(ScmapWriter.Write(scmap with
+            {
+                StoredLayerCount = 3,
+                StratumMasks = [scmap.StratumMasks[0], scmap.StratumMasks[0]],
+                ExtraWaterMaps = [scmap.WaterMap],
+            }));
+
+            Assert.AreEqual(3, reparsed.StoredLayerCount);
+            Assert.AreEqual(6, reparsed.Layers.Count);
+            Assert.AreEqual(scmap.Layers[5], reparsed.Layers[5]);
+            Assert.AreEqual(2, reparsed.StratumMasks.Count);
+            Assert.AreEqual(1, reparsed.ExtraWaterMaps.Count);
+            Assert.AreEqual(scmap.Props.Count, reparsed.Props.Count);
         }
 
         [TestMethod]

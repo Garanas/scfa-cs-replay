@@ -82,6 +82,32 @@ namespace FAForever.FileFormats.Map.Tests
         }
 
         [TestMethod]
+        public void RejectsWhatTheEngineCannotRead()
+        {
+            Scmap coop = ScmapParser.Parse(File.ReadAllBytes(ScmapParserTest.CoopR01 + ".scmap"));
+            Scmap theta = ScmapParser.Parse(File.ReadAllBytes(ScmapParserTest.ThetaPassage + ".scmap"));
+            Scmap hardFfa = ScmapParser.Parse(File.ReadAllBytes(ScmapParserTest.HardFfa + ".scmap"));
+
+            ArgumentException layers = Assert.ThrowsException<ArgumentException>(() => ScmapWriter.Write(coop with { Layers = [.. coop.Layers.Take(5)] }));
+            StringAssert.Contains(layers.Message, "six terrain layers");
+
+            ArgumentException slots = Assert.ThrowsException<ArgumentException>(() =>
+                ScmapWriter.Write(theta with { Decals = [theta.Decals[0] with { Textures = ["a.dds", "", ""] }] }));
+            StringAssert.Contains(slots.Message, "two texture slots");
+
+            ArgumentException values = Assert.ThrowsException<ArgumentException>(() =>
+                ScmapWriter.Write(theta with { CartographicDecals = [new ScmapCartographicDecalBatch("Decal", "x.dds", [new ScmapCartographicDecal([1, 2])])] }));
+            StringAssert.Contains(values.Message, "9 numbers");
+
+            ArgumentException early = Assert.ThrowsException<ArgumentException>(() =>
+                ScmapWriter.Write(hardFfa with { CartographicDecals = [new ScmapCartographicDecalBatch("Decal", "x.dds", [])] }));
+            StringAssert.Contains(early.Message, "strategic view");
+
+            ArgumentException tiles = Assert.ThrowsException<ArgumentException>(() => ScmapWriter.Write(theta with { NormalMapTileWidth = 0 }));
+            StringAssert.Contains(tiles.Message, "normal map");
+        }
+
+        [TestMethod]
         public void RejectsAStringWithAZeroByte()
         {
             Scmap scmap = ScmapParser.Parse(File.ReadAllBytes(ScmapParserTest.HardFfa + ".scmap"));
