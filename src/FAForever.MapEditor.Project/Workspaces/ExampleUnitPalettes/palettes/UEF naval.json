@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "UEF naval",
+  "settings": {
+    "slots": [
+      {
+        "unit": "ueb0103"
+      },
+      {
+        "unit": "ueb0203"
+      },
+      {
+        "unit": "ueb0303"
+      },
+      {
+        "unit": "ueb2109"
+      },
+      {
+        "unit": "ueb2205"
+      },
+      {
+        "unit": "ueb3102"
+      },
+      {
+        "unit": "ueb3202"
+      },
+      {
+        "unit": "ueb2104"
+      },
+      {
+        "unit": "ueb2204"
+      },
+      {
+        "unit": "ueb4202"
+      }
+    ]
+  }
+}

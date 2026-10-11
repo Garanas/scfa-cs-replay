@@ -37,12 +37,16 @@ namespace FAForever.MapEditor.Project.Checks
     /// <param name="HasAsset">Whether the workspace has a converted file of a game path; the editor keeps the answers.</param>
     /// <param name="Results">The generated results, such as the last walkability.</param>
     /// <param name="Walkability">What changed in the land's walkability when it was generated last.</param>
+    /// <param name="PresetFingerprint">The fingerprint of the workspace's units preset of a name
+    /// (<see cref="UnitPresets.Fingerprint(UnitPresetSettings)"/>), null for a name the workspace has
+    /// no preset of; the editor keeps the answers until the presets change. Absent without a workspace.</param>
     public sealed record ProblemContext(
         MapDocument Document,
         AssetCatalog? Catalog = null,
         Func<string, bool>? HasAsset = null,
         GeneratedResults? Results = null,
-        WalkabilityChanges? Walkability = null);
+        WalkabilityChanges? Walkability = null,
+        Func<string, string?>? PresetFingerprint = null);
 
     /// <summary>
     /// A check of a map: the editor's own (<see cref="MapChecks"/>) and, later, a plugin's (user

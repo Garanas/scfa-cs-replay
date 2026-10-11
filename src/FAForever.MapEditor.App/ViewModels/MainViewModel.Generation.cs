@@ -74,7 +74,8 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// What the checks read now: the map, the workspace's assets, the last walkability's changes.
+    /// What the checks read now: the map, the workspace's assets, the last walkability's changes,
+    /// and the fingerprints of the workspace's unit presets (kept by the presets part).
     /// </summary>
     private ProblemContext? CheckContext() => Map?.Document is MapDocument document
         ? new ProblemContext(
@@ -82,7 +83,8 @@ public sealed partial class MainViewModel
             Assets.Catalog.Entries.Count > 0 ? Assets.Catalog : null,
             Setup.Workspace is Workspace workspace ? path => _hasAsset.GetOrAdd(path, key => workspace.FindAsset(key) is not null) : null,
             Generation.Results,
-            Walkability.LandChanges)
+            Walkability.LandChanges,
+            Presets.HasLibrary ? Presets.UnitPresetFingerprint : null)
         : null;
 
     // the assets were read again: the checks look at them again

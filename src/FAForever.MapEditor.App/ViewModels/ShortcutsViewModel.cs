@@ -45,6 +45,8 @@ public sealed partial class ShortcutsViewModel(CommandRegistry commands) : Obser
         new ShortcutItem("Shift and a drag", "Keep a line of units to 45 degree steps", "Units, Place in a line"),
         new ShortcutItem("Escape", "Cancel the line or rectangle of units being dragged", "Units, Place in a line or rectangle"),
         new ShortcutItem("[ and ]", "The scatter brush's radius smaller or larger; with Shift how many units a click scatters", "Units, Scatter"),
+        new ShortcutItem("1 to 9, 0", "Pick a slot of the chosen palette: its unit or preset is placed next", "Units place tool"),
+        new ShortcutItem("Tab and Shift+Tab", "The next or previous palette", "Units place tool"),
         new ShortcutItem("Arrow keys", "Move the selection an ogrid (Shift: 8)", "Select tools"),
         new ShortcutItem("R and a drag", "Turn the selection about its middle with the mouse", "Select tools"),
         new ShortcutItem("X and a drag", "Move the selection along x only", "Select tools"),

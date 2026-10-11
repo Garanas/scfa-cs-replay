@@ -65,6 +65,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             // the plain sandbox written at setup becomes one made of the assets
             SandboxMap.Ensure(workspace);
             ExampleUnitPresets.Ensure(workspace);
+            ExampleUnitPalettes.Ensure(workspace);
             return (workspace, link);
         }
 

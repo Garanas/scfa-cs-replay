@@ -30,7 +30,9 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// curve's own values per point (<c>nodes</c>), its shape, noise, variation and road mode, and
         /// <c>lineOnly</c> written for every closed curve, which fills its inside unless line only; a
         /// closed curve of format 8 or older (without <c>lineOnly</c>) opens as line only. An editor
-        /// reads every version up to its own.
+        /// reads every version up to its own. Optional additions, which a project may lack (no new
+        /// version: an older project reads as if it held none of them): a unit group's
+        /// <c>instance</c>, the unit preset it was placed from (<c>PresetInstanceDto</c>, user story U-9).
         /// </summary>
         public const int CurrentFormatVersion = 9;
 

@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "UEF civilian",
+  "settings": {
+    "slots": [
+      {
+        "preset": "UEF civilian city"
+      },
+      {
+        "preset": "UEF civilian town"
+      },
+      {
+        "preset": "UEF civilian town, central"
+      },
+      {
+        "preset": "UEF civilian town, small"
+      },
+      {
+        "preset": "UEF civilian village"
+      },
+      {
+        "preset": "UEF civilian hamlet"
+      },
+      {
+        "preset": "UEF colony"
+      },
+      {
+        "preset": "UEF farm"
+      },
+      {
+        "preset": "UEF industrial yard"
+      },
+      {
+        "preset": "UEF research campus"
+      }
+    ]
+  }
+}

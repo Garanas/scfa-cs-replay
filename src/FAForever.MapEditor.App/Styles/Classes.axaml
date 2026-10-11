@@ -799,6 +799,27 @@
   <Style Selector="Border.badge.pluginkind">
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- a group placed from a unit preset (U-9): the preset's name on the group in the Units tree and the preset's count of
+       instances in the list (instance); that the preset changed since (stale) or is gone (missing) -->
+  <Style Selector="Border.badge.instance, Border.badge.stale, Border.badge.missing">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.badge.instance TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource LinkBrush}" />
+  </Style>
+  <Style Selector="Border.badge.stale TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
+  </Style>
+  <Style Selector="Border.badge.missing TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+  </Style>
+  <!-- the preset Show the preset points at in the Unit presets list (U-9) -->
+  <Style Selector="Button.highlighted /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+  </Style>
+  <Style Selector="Button.highlighted TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
   <!-- a plugin's errors in the inspector (F-15): selectable, to copy them -->
   <Style Selector="SelectableTextBlock.pluginerrors">
     <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
@@ -811,6 +832,92 @@
     <Setter Property="Height" Value="{StaticResource UnitIconBadgeSize}" />
     <Setter Property="Margin" Value="{StaticResource BadgeGap}" />
     <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <!-- a slot of the Units mode's palette (U-8): its key in a corner, the unit's icon over the picture of its layer or the
+       preset's name in a dashed frame, "drop here" while empty; chosen while the place tool places what it holds -->
+  <Style Selector="Button.slot">
+    <Setter Property="Height" Value="{StaticResource PaletteSlotHeight}" />
+    <Setter Property="Margin" Value="{StaticResource PaletteSlotGap}" />
+    <Setter Property="Padding" Value="{StaticResource PaletteSlotPadding}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlRaisedBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.slot.chosen">
+    <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.slot.chosen:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SelectedHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <!-- a tile of the shelf dragged over it: where it would land -->
+  <Style Selector="Button.slot.droptarget">
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedStrokeBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SelectedHoverBrush}" />
+  </Style>
+  <Style Selector="Button.slot.missing">
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+  </Style>
+  <Style Selector="Button.slot TextBlock.slotname">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="MaxLines" Value="2" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.slot TextBlock.slotempty">
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <!-- the dashed frame of a preset in a slot -->
+  <Style Selector="Rectangle.slotdash">
+    <Setter Property="Stroke" Value="{DynamicResource PlannedStrokeBrush}" />
+    <Setter Property="StrokeThickness" Value="1" />
+    <Setter Property="StrokeDashArray" Value="2,2" />
+    <Setter Property="RadiusX" Value="3" />
+    <Setter Property="RadiusY" Value="3" />
+  </Style>
+  <Style Selector="Button.slot.chosen Rectangle.slotdash">
+    <Setter Property="Stroke" Value="{DynamicResource SelectedStrokeBrush}" />
+  </Style>
+  <!-- the slot's key: a small badge in its corner -->
+  <Style Selector="Border.slotkey">
+    <Setter Property="Padding" Value="{StaticResource BadgePadding}" />
+    <Setter Property="CornerRadius" Value="{StaticResource BadgeRadius}" />
+    <Setter Property="Background" Value="{DynamicResource InputBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+  </Style>
+  <Style Selector="Border.slotkey TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.slot.chosen Border.slotkey">
+    <Setter Property="Background" Value="{DynamicResource SelectedStrokeBrush}" />
+  </Style>
+  <Style Selector="Button.slot.chosen Border.slotkey TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource OnSelectedBrush}" />
+  </Style>
+  <!-- the slots in rows of five -->
+  <Style Selector="UniformGrid.slots">
+    <Setter Property="Columns" Value="5" />
+  </Style>
+  <!-- a unit placed last: its icon before its name on a chip -->
+  <Style Selector="Border.chipicon">
+    <Setter Property="Width" Value="{StaticResource ChipIconSize}" />
+    <Setter Property="Height" Value="{StaticResource ChipIconSize}" />
+    <Setter Property="Margin" Value="{StaticResource ChipIconGap}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="ClipToBounds" Value="True" />
   </Style>
   <!-- the asset in the inspector, and in the tool tip of a tile -->

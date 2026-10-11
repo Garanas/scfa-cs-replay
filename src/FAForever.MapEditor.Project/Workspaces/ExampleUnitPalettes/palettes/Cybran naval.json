@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Cybran naval",
+  "settings": {
+    "slots": [
+      {
+        "unit": "urb0103"
+      },
+      {
+        "unit": "urb0203"
+      },
+      {
+        "unit": "urb0303"
+      },
+      {
+        "unit": "urb2109"
+      },
+      {
+        "unit": "urb2205"
+      },
+      {
+        "unit": "urb3102"
+      },
+      {
+        "unit": "urb3202"
+      },
+      {
+        "unit": "urb2104"
+      },
+      {
+        "unit": "urb2204"
+      },
+      {
+        "unit": "urb4202"
+      }
+    ]
+  }
+}

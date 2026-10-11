@@ -68,7 +68,7 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual("props", PresetKinds.Of("props-palette"));
             Assert.AreEqual("selections", PresetKinds.Of("selection"));
             Assert.AreEqual("lighting", PresetKinds.Of("lighting"));
-            CollectionAssert.AreEqual(new[] { "brushes", "stamps", "lighting", "water", "sky", "props", "units", "markers", "selections", "maps" }, PresetKinds.All.ToArray());
+            CollectionAssert.AreEqual(new[] { "brushes", "stamps", "lighting", "water", "sky", "props", "units", "palettes", "markers", "selections", "maps" }, PresetKinds.All.ToArray());
         }
     }
 }

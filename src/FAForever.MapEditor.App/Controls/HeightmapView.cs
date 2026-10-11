@@ -468,7 +468,7 @@ public sealed partial class HeightmapView : Control
             // the left mouse is the active tool's
             Point map = ControlToMap(at);
             _pressed = tool;
-            tool.Press((float)map.X, (float)map.Y, InputOf(e.KeyModifiers));
+            tool.Press((float)map.X, (float)map.Y, InputOf(e.KeyModifiers) with { Clicks = Math.Max(1, e.ClickCount) });
             e.Pointer.Capture(this);
         }
         else if (buttons.IsRightButtonPressed || buttons.IsMiddleButtonPressed)

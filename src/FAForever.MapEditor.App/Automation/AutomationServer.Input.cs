@@ -534,6 +534,13 @@ public sealed partial class AutomationServer
                 node["group"] = string.Join("/", unit.Group);
                 node["wreck"] = UnitWrecks.IsWreck(unit);
                 node["orientation"] = Vector(unit.Unit.Orientation);
+                // the preset its group was placed from, and how that stands to the preset's file (U-9)
+                node["instance"] = document.InstanceOf(unit.Army, unit.Group) is PlacedInstance instance ? new JsonObject
+                {
+                    ["preset"] = instance.Instance.Preset,
+                    ["group"] = string.Join("/", instance.Path),
+                    ["state"] = model.Presets.HasLibrary ? PresetInstances.StateOf(instance.Instance, model.Presets.UnitPresetFingerprint).ToString() : null,
+                } : null;
                 break;
             case Marker marker:
                 node["name"] = marker.Name;

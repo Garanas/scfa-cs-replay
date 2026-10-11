@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Aeon T2",
+  "settings": {
+    "slots": [
+      {
+        "unit": "uab0201"
+      },
+      {
+        "unit": "uab0202"
+      },
+      {
+        "unit": "uab0203"
+      },
+      {
+        "unit": "uab1201"
+      },
+      {
+        "unit": "uab1202"
+      },
+      {
+        "unit": "uab2301"
+      },
+      {
+        "unit": "uab2204"
+      },
+      {
+        "unit": "uab2303"
+      },
+      {
+        "unit": "uab4202"
+      },
+      {
+        "unit": "uab3201"
+      }
+    ]
+  }
+}

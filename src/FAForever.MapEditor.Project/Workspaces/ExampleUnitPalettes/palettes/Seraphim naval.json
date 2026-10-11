@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Seraphim naval",
+  "settings": {
+    "slots": [
+      {
+        "unit": "xsb0103"
+      },
+      {
+        "unit": "xsb0203"
+      },
+      {
+        "unit": "xsb0303"
+      },
+      {
+        "unit": "xsb2109"
+      },
+      {
+        "unit": "xsb2205"
+      },
+      {
+        "unit": "xsb3102"
+      },
+      {
+        "unit": "xsb3202"
+      },
+      {
+        "unit": "xsb2104"
+      },
+      {
+        "unit": "xsb2204"
+      },
+      {
+        "unit": "xsb4202"
+      }
+    ]
+  }
+}

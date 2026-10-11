@@ -7,6 +7,8 @@
   <ItemGroup>
     <!-- the example unit presets every workspace starts with (ExampleUnitPresets), made by faf-map dev unit-templates -->
     <EmbeddedResource Include="Workspaces\ExampleUnitPresets\units\*.json" LogicalName="ExampleUnitPresets/%(Filename)%(Extension)" />
+    <!-- the example unit palettes every workspace starts with (ExampleUnitPalettes, user story U-8) -->
+    <EmbeddedResource Include="Workspaces\ExampleUnitPalettes\palettes\*.json" LogicalName="ExampleUnitPalettes/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,29 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Aeon civilian",
+  "settings": {
+    "slots": [
+      {
+        "preset": "Aeon civilian city"
+      },
+      {
+        "preset": "Aeon civilian town"
+      },
+      {
+        "preset": "Aeon civilian village"
+      },
+      {
+        "preset": "Aeon civilian hamlet"
+      },
+      {
+        "preset": "Aeon palace grounds"
+      },
+      {},
+      {},
+      {},
+      {},
+      {}
+    ]
+  }
+}

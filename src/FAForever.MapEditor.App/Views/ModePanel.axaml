@@ -121,6 +121,7 @@
                   <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.Shown}" AutomationProperties.Name="{Binding Title}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="ws:Preset">
+                        <StackPanel>
                         <DockPanel>
                           <Button DockPanel.Dock="Right" Classes="beside" Content="×"
                                   Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.DeleteShownCommand}" CommandParameter="{Binding}"
@@ -132,6 +133,10 @@
                             <controls:PartEntryText IsAlike="False" Title="{Binding Name}" Detail="{Binding Converter={x:Static controls:PresetDetailConverter.Instance}}" />
                           </Button>
                         </DockPanel>
+                        <!-- a unit preset: how often it is placed on this map and how many of those are out of date, under its name (U-9) -->
+                        <controls:PresetInstanceBadges HorizontalAlignment="Left" Preset="{Binding Name}"
+                                                       Counts="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Presets.Instances}" />
+                        </StackPanel>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -153,14 +158,20 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
+            <!-- the Units mode's palette (U-8): the chosen palette's ten slots and the units placed last, a view of its own -->
+            <DataTemplate DataType="vm:UnitPaletteSection">
+              <panels:UnitPalettePanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).UnitPalettes}" />
+            </DataTemplate>
             <!-- the armies and their trees of unit groups (U-3): choosing one is where new units and groups go, and the inspector shows it -->
             <DataTemplate DataType="vm:UnitGroupsSection">
               <Border Classes="group">
                 <StackPanel Classes="stack">
                   <TextBlock Classes="overline" Text="{Binding Title, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+                  <!-- the rows take the panel's width (no scrolling sideways): a detail or tag that does not fit goes under the title -->
                   <TreeView ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.Tree}"
                             SelectedItem="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.ChosenNode}"
                             controls:UnitTreeDrag.IsEnabled="True"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                             AutomationProperties.Name="Armies and their unit groups"
                             AutomationProperties.HelpText="Choose an army or group: the place tool places into it, and the inspector shows its fields and buttons; a unit chosen is selected; drag units and groups onto a group to move them">
                     <TreeView.Styles>
@@ -175,10 +186,26 @@
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                       </Style>
                     </TreeView.Styles>
-                    <!-- an army, group or unit as the other list modes' entries: its name, its count or blueprint as the detail -->
+                    <!-- an army, group or unit as the other list modes' entries: its name, its count or blueprint as the detail;
+                         a group placed from a unit preset carries the preset's name as a tag, and whether the preset changed since (U-9) -->
                     <TreeView.DataTemplates>
                       <TreeDataTemplate DataType="vm:GroupNode" ItemsSource="{Binding Items}">
-                        <controls:PartEntryText Title="{Binding Title}" Detail="{Binding Detail}" />
+                        <StackPanel>
+                          <controls:PartEntryText Title="{Binding Title}" Detail="{Binding Detail}" />
+                          <WrapPanel IsVisible="{Binding HasInstance}">
+                            <Border Classes="badge instance" ToolTip.Tip="Placed from this unit preset: the inspector shows the link">
+                              <TextBlock Text="{Binding InstanceName}" />
+                            </Border>
+                            <Border Classes="badge stale" IsVisible="{Binding IsInstanceChanged}"
+                                    ToolTip.Tip="The preset's file changed after this group was placed; the map keeps its own layout">
+                              <TextBlock Text="{Binding InstanceStateText}" />
+                            </Border>
+                            <Border Classes="badge missing" IsVisible="{Binding IsInstanceMissing}"
+                                    ToolTip.Tip="The workspace has no preset of this name">
+                              <TextBlock Text="{Binding InstanceStateText}" />
+                            </Border>
+                          </WrapPanel>
+                        </StackPanel>
                       </TreeDataTemplate>
                       <DataTemplate DataType="vm:UnitNode">
                         <controls:PartEntryText Classes="unitentry" Title="{Binding Name}" Detail="{Binding Blueprint}" />

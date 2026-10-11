@@ -22,7 +22,37 @@ namespace FAForever.MapEditor.Project.Checks
             new ProblemCheck("wrecks-in-playable-army", "Wrecks only a player's slot creates", WrecksInPlayableArmies),
             new ProblemCheck("steep-deposit", "Deposits on steep ground", SteepDeposits),
             new ProblemCheck("walkability-marks", "Ground marked open that the game blocks", OpenMarksTheGameBlocks),
+            new ProblemCheck("preset-changed", "Instances whose preset changed or is missing", PresetsChanged),
         ];
+
+        /// <summary>
+        /// A group placed from a unit preset (user story U-9) whose preset's file changed since, or
+        /// which the workspace has no preset of: worth knowing, since the map is never changed from
+        /// the preset. Needs the fingerprints of the workspace's presets (<see cref="ProblemContext.PresetFingerprint"/>).
+        /// </summary>
+        public static IEnumerable<Problem> PresetsChanged(ProblemContext context)
+        {
+            if (context.PresetFingerprint is not Func<string, string?> fingerprintOf)
+            {
+                yield break;
+            }
+            MapDocument document = context.Document;
+            foreach (PlacedInstance instance in document.Instances())
+            {
+                PresetInstanceState state = PresetInstances.StateOf(instance.Instance, fingerprintOf);
+                if (state == PresetInstanceState.Current)
+                {
+                    continue;
+                }
+                string group = $"{UnitGroupEdits.PathText(instance.Path)} of {instance.Army}";
+                string message = state == PresetInstanceState.Missing
+                    ? $"The group {group} was placed from the preset {instance.Instance.Preset}, which the workspace has no preset of"
+                    : $"The group {group} was placed from the preset {instance.Instance.Preset}, which changed since; the map keeps its own layout";
+                PlacedUnit? first = document.UnitsIn(instance.Army, instance.Path).FirstOrDefault();
+                yield return new Problem("preset-changed", ProblemSeverity.Info, message,
+                    first is null ? null : ObjectRef.Unit(first.Unit.Name), PresetInstances.PlaceOf(document, instance));
+            }
+        }
 
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<TiledBuffer<byte>, OpenMarksResult> OpenMarks = [];
 

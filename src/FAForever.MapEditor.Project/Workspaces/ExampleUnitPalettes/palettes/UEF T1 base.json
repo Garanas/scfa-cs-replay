@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "UEF T1 base",
+  "settings": {
+    "slots": [
+      {
+        "unit": "ueb0101"
+      },
+      {
+        "unit": "ueb0102"
+      },
+      {
+        "unit": "ueb1103"
+      },
+      {
+        "unit": "ueb1101"
+      },
+      {
+        "unit": "ueb1105"
+      },
+      {
+        "unit": "ueb5101"
+      },
+      {
+        "unit": "ueb2101"
+      },
+      {
+        "unit": "ueb3101"
+      },
+      {
+        "unit": "ueb0103"
+      },
+      {
+        "unit": "ueb1106"
+      }
+    ]
+  }
+}

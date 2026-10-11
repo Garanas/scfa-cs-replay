@@ -519,17 +519,31 @@ reads again when it changes; and nothing that generates runs by itself.
       goes on at that density; every way places into the row's army and group, as wrecks when
       asked, with the symmetry's images, and selects what it placed; a single unit's footprint
       shows under the mouse.
-- [ ] **U-8 Palettes.** A named set of ten slots, each a unit or a unit preset, saved in the
+- [x] **U-8 Palettes.** A named set of ten slots, each a unit or a unit preset, saved in the
       workspace beside the presets; the Units mode shows the chosen palette, keys 1 to 0 pick a slot
       while the view has the keyboard and Tab goes to the next palette; a unit from the shelf or the
       picker and a preset from the list are dropped into a slot; example palettes per faction (a T1
       base, T2, defences, naval, civilian); the units placed last are offered again.
-- [ ] **U-9 Preset instances.** The group a unit preset is placed as knows the preset: its name, a
+      Today: the Units panel's Palette section (a combo of the palettes, + for a new one, a menu to rename,
+      delete or show the folder, ten slots with their keys and the units' icons, the chosen one filled,
+      "drop here" while empty) and the last six placed as chips; 1 to 9 and 0 pick a slot and Tab and
+      Shift+Tab change palette while the Place tool is active; a shelf tile (dragged or from its context
+      menu) and a units preset (dragged or from its context menu) go into a slot, a slot clears from its
+      menu; `units.palette`, `units.slot`, `units.setSlot`, `units.newPalette`, `units.renamePalette`,
+      `units.deletePalette`, `state.units.palette`; twenty example palettes written into each workspace.
+- [x] **U-9 Preset instances.** The group a unit preset is placed as knows the preset: its name, a
       fingerprint of the preset's content, and where and how it was placed; the tree and the
       inspector say so, the presets list counts how often each is placed and whether the preset
       changed since; select the instance, save the instance's layout back into the preset, or
       detach it. The link lives in the project and is never used to change the map; the export
-      leaves it out.
+      leaves it out. Today: placing a preset makes the group its instance (units added to it later
+      belong to it), kept in `armies.json`; the tree tags the group with the preset's name and
+      "preset changed" or "preset missing", the Unit presets list shows "×2 placed" and "1 out of
+      date", the inspector's "Placed from a preset" block says which preset, where, how and when,
+      and whether the file changed, with Select the instance (also a double click on one of its
+      units), Save back to the preset (asked first; the file keeps its role and wrecks), Show the
+      preset (highlighted in the list) and Detach; Problems notes instances whose preset changed or
+      is missing (`preset-changed`); the export writes the group as any other.
 - [ ] **U-10 Select by and stored selections.** Select units by army, faction, kind, tech,
       blueprint and wrecks, within the map, the selection or an area, replacing the selection or
       adding to it; store the selection under 1 to 9 (Alt and the digit) and recall it (the digit),

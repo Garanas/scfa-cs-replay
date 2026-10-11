@@ -683,7 +683,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             {
                 _pressed = tool;
                 // the thing under the mouse is the one the ray meets, not the nearest on the ground
-                tool.Press(place.X, place.Z, InputAt(place, e.KeyModifiers) with { Picks = true, Picked = PickAt(_mouse, _model.SelectableKinds) });
+                tool.Press(place.X, place.Z, InputAt(place, e.KeyModifiers) with { Picks = true, Picked = PickAt(_mouse, _model.SelectableKinds), Clicks = Math.Max(1, e.ClickCount) });
                 e.Pointer.Capture(this);
             }
             e.Handled = true;

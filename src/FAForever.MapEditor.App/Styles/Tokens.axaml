@@ -305,6 +305,13 @@
   <x:Double x:Key="ToolThumbnailSize">30</x:Double>
   <!-- a unit's icon in the corner of its tile (U-1) -->
   <x:Double x:Key="UnitIconBadgeSize">26</x:Double>
+  <!-- a slot of the Units mode's palette (U-8): its key, the unit's icon or the preset's name -->
+  <x:Double x:Key="PaletteSlotHeight">46</x:Double>
+  <Thickness x:Key="PaletteSlotGap">0,0,4,4</Thickness>
+  <Thickness x:Key="PaletteSlotPadding">2</Thickness>
+  <!-- the icon of a unit placed last, on its chip -->
+  <x:Double x:Key="ChipIconSize">16</x:Double>
+  <Thickness x:Key="ChipIconGap">0,0,6,0</Thickness>
   <x:Double x:Key="ToolNumberWidth">56</x:Double>
   <!-- a number typed in the tool options (a height, a slope) -->
   <x:Double x:Key="ToolFieldWidth">52</x:Double>
