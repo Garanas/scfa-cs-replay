@@ -108,7 +108,9 @@ public enum ToolModifiers
 /// <param name="Picked">What the view picked, or null for nothing, when it <paramref name="Picks"/>.</param>
 /// <param name="View">How the view shows the map, for what a tool draws and finds on screen (its
 /// handles); null without a view, which <see cref="ViewAt"/> stands in for.</param>
-public readonly record struct ToolInput(ToolModifiers Modifiers, float OgridsPerPixel, bool Picks = false, ObjectRef? Picked = null, ToolView? View = null)
+/// <param name="Clicks">How many times the button was pressed in a row at a press (2 for a double
+/// click, as the view's pointer counts them); 1 without a view.</param>
+public readonly record struct ToolInput(ToolModifiers Modifiers, float OgridsPerPixel, bool Picks = false, ObjectRef? Picked = null, ToolView? View = null, int Clicks = 1)
 {
     /// <summary>
     /// The view, or without one a view straight down at <see cref="OgridsPerPixel"/> with the mouse at a place.

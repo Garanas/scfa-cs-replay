@@ -25,9 +25,44 @@ public sealed record UnitGroupDetailsSection() : PanelSection("Army or group");
 /// </summary>
 /// <param name="Path">Below the army's root group; empty for the army itself (its root group).</param>
 /// <param name="Units">The units directly in it, shown in the tree after its groups (user story U-3).</param>
-public sealed partial class GroupNode(string army, ImmutableArray<string> path, int count, IReadOnlyList<GroupNode> children, IReadOnlyList<UnitNode>? units = null) : ObservableObject
+/// <param name="Instance">The unit preset the group was placed from (user story U-9), or null.</param>
+public sealed partial class GroupNode(string army, ImmutableArray<string> path, int count, IReadOnlyList<GroupNode> children, IReadOnlyList<UnitNode>? units = null, PresetInstance? instance = null) : ObservableObject
 {
     public string Army => army;
+
+    /// <summary>
+    /// The unit preset the group was placed from (user story U-9), or null for a group made otherwise.
+    /// </summary>
+    public PresetInstance? Instance => instance;
+
+    public bool HasInstance => instance is not null;
+
+    /// <summary>
+    /// The preset's name, the tree's badge on the group.
+    /// </summary>
+    public string InstanceName => instance?.Preset ?? "";
+
+    /// <summary>
+    /// How the instance stands to its preset's file (<see cref="PresetInstances.StateOf(PresetInstance, Func{string, string?})"/>);
+    /// null without an instance or without a workspace to look in. Set again when the presets change.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsInstanceChanged), nameof(IsInstanceMissing), nameof(InstanceStateText), nameof(Description))]
+    public partial PresetInstanceState? InstanceState { get; set; }
+
+    public bool IsInstanceChanged => InstanceState == PresetInstanceState.Changed;
+
+    public bool IsInstanceMissing => InstanceState == PresetInstanceState.Missing;
+
+    /// <summary>
+    /// The tree's badge after the preset's name: <c>preset changed</c>, <c>preset missing</c>, or nothing.
+    /// </summary>
+    public string InstanceStateText => InstanceState switch
+    {
+        PresetInstanceState.Changed => "preset changed",
+        PresetInstanceState.Missing => "preset missing",
+        _ => "",
+    };
 
     public ImmutableArray<string> Path => path;
 
@@ -68,9 +103,11 @@ public sealed partial class GroupNode(string army, ImmutableArray<string> path, 
     public string Detail => MainViewModel.Units(count);
 
     /// <summary>
-    /// What a screen reader says: the army and the group.
+    /// What a screen reader says: the army and the group, and the preset it was placed from.
     /// </summary>
-    public string Description => path.IsEmpty ? $"Army {army}, {MainViewModel.Units(count)}" : $"Group {PathText} of {army}, {MainViewModel.Units(count)}";
+    public string Description => path.IsEmpty ? $"Army {army}, {MainViewModel.Units(count)}"
+        : $"Group {PathText} of {army}, {MainViewModel.Units(count)}"
+            + (instance is null ? "" : $", placed from the preset {instance.Preset}" + (InstanceStateText.Length == 0 ? "" : $", {InstanceStateText}"));
 
     /// <summary>
     /// Whether the tree shows its children; kept when the tree is made again.
@@ -173,8 +210,104 @@ public sealed partial class ArmiesViewModel : ObservableObject
     /// tool places.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasChosenGroup), nameof(CanChangeChosenGroup), nameof(ChosenGroupTitle), nameof(ChosenGroupUnits), nameof(IsArmyChosen), nameof(ChosenGroupCaption))]
+    [NotifyPropertyChangedFor(nameof(HasChosenGroup), nameof(CanChangeChosenGroup), nameof(ChosenGroupTitle), nameof(ChosenGroupUnits), nameof(IsArmyChosen), nameof(ChosenGroupCaption),
+        nameof(IsInstanceChosen), nameof(InstancePreset), nameof(InstancePlacedText), nameof(InstanceCountText), nameof(InstanceNote), nameof(HasInstanceNote), nameof(IsInstanceMissing))]
     public partial GroupNode? ChosenGroup { get; set; }
+
+    #region The chosen group's preset instance (U-9)
+
+    /// <summary>
+    /// The fingerprint of the workspace's units preset of a name, null for none (the presets part
+    /// gives it, keeping the answers); null without a workspace, when no state is known.
+    /// </summary>
+    public Func<string, string?>? PresetFingerprint { get; set; }
+
+    /// <summary>
+    /// Whether the chosen group was placed from a preset: the inspector's "Placed from a preset" block.
+    /// </summary>
+    public bool IsInstanceChosen => ChosenGroup is { Instance: not null };
+
+    /// <summary>
+    /// The preset the chosen group was placed from.
+    /// </summary>
+    public string InstancePreset => ChosenGroup?.Instance?.Preset ?? "";
+
+    /// <summary>
+    /// Where, how and when it was placed: <c>at 332, 214 · 90° · 2026-10-09</c>.
+    /// </summary>
+    public string InstancePlacedText => ChosenGroup?.Instance is PresetInstance instance
+        ? string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"at {instance.X:0.#}, {instance.Z:0.#} · {MathF.Round(instance.Heading * 180 / MathF.PI):0}° · {instance.PlacedAt.ToLocalTime():yyyy-MM-dd}")
+        : "";
+
+    /// <summary>
+    /// How often the preset is placed on this map: <c>×2 placed</c>.
+    /// </summary>
+    public string InstanceCountText => ChosenGroup?.Instance is PresetInstance instance && _shown is MapDocument document
+        ? $"×{document.CountInstances(instance.Preset)} placed"
+        : "";
+
+    /// <summary>
+    /// What the inspector says about the preset's file: changed since, or missing; empty while current or unknown.
+    /// </summary>
+    public string InstanceNote => ChosenGroup?.InstanceState switch
+    {
+        PresetInstanceState.Changed => "The preset changed after this was placed. The map keeps its own layout: Save back writes this group's into the preset.",
+        PresetInstanceState.Missing => "The workspace has no preset of this name. Save back writes this group's layout as the preset again.",
+        _ => "",
+    };
+
+    public bool HasInstanceNote => InstanceNote.Length > 0;
+
+    public bool IsInstanceMissing => ChosenGroup?.InstanceState == PresetInstanceState.Missing;
+
+    /// <summary>
+    /// Tells every instance's state again (the presets on disk changed) and the inspector's block.
+    /// </summary>
+    public void RefreshInstances()
+    {
+        foreach (GroupNode node in Tree.SelectMany(node => node.SelfAndBelow()))
+        {
+            if (node.Instance is PresetInstance instance)
+            {
+                node.InstanceState = StateOf(instance);
+            }
+        }
+        NotifyInstanceChosen();
+    }
+
+    private PresetInstanceState? StateOf(PresetInstance instance) =>
+        PresetFingerprint is Func<string, string?> fingerprintOf ? PresetInstances.StateOf(instance, fingerprintOf) : null;
+
+    private void NotifyInstanceChosen()
+    {
+        foreach (string property in new[] { nameof(IsInstanceChosen), nameof(InstancePreset), nameof(InstancePlacedText), nameof(InstanceCountText), nameof(InstanceNote), nameof(HasInstanceNote), nameof(IsInstanceMissing) })
+        {
+            OnPropertyChanged(property);
+        }
+    }
+
+    [RelayCommand]
+    private Task SelectInstance() => ChosenGroup is { Instance: not null } node
+        ? _run("units.selectInstance", new JsonObject { ["army"] = node.Army, ["group"] = node.PathText })
+        : Task.CompletedTask;
+
+    [RelayCommand]
+    private Task SaveInstance() => ChosenGroup is { Instance: not null } node
+        ? _run("units.saveInstance", new JsonObject { ["army"] = node.Army, ["group"] = node.PathText })
+        : Task.CompletedTask;
+
+    [RelayCommand]
+    private Task ShowPreset() => ChosenGroup is { Instance: PresetInstance instance }
+        ? _run("units.showPreset", new JsonObject { ["name"] = instance.Preset })
+        : Task.CompletedTask;
+
+    [RelayCommand]
+    private Task DetachInstance() => ChosenGroup is { Instance: not null } node
+        ? _run("units.detachInstance", new JsonObject { ["army"] = node.Army, ["group"] = node.PathText })
+        : Task.CompletedTask;
+
+    #endregion
 
     public bool HasChosenGroup => ChosenGroup is not null;
 
@@ -367,15 +500,18 @@ public sealed partial class ArmiesViewModel : ObservableObject
         }
         GroupNode Node(string army, ImmutableArray<string> path, UnitGroup group) => new GroupNode(army, path, UnitGroupEdits.CountUnits(group),
             [.. group.Groups.Select(child => Node(army, path.Add(child.Name), child))],
-            [.. group.Units.Select(unit => new UnitNode(army, path, unit.Name, unit.Blueprint))])
+            [.. group.Units.Select(unit => new UnitNode(army, path, unit.Name, unit.Blueprint))],
+            group.Instance)
         {
             IsExpanded = _expanded.Contains($"{army}:{UnitGroupEdits.PathText(path)}"),
+            InstanceState = group.Instance is PresetInstance instance ? StateOf(instance) : null,
         };
         GroupNode[] tree = [.. armies
             .OrderBy(army => playable.Contains(army.Name) ? 0 : 1)
             .ThenBy(army => playable.Contains(army.Name) ? MapPartsViewModel.NumberOf(army.Name) ?? int.MaxValue : 0)
             .Select(army => Node(army.Name, [], army.Units))];
-        string key = string.Join("|", tree.SelectMany(node => node.SelfAndBelow()).Select(node => $"{node.Key}={node.Count}:{string.Join(",", node.Units.Select(unit => unit.Name))}"));
+        string key = string.Join("|", tree.SelectMany(node => node.SelfAndBelow())
+            .Select(node => $"{node.Key}={node.Count}:{string.Join(",", node.Units.Select(unit => unit.Name))}:{node.Instance?.Preset}:{node.Instance?.Fingerprint}"));
         if (key == _treeKey)
         {
             return;
@@ -384,6 +520,8 @@ public sealed partial class ArmiesViewModel : ObservableObject
         _treeKey = key;
         Tree = tree;
         ChosenGroup = chosen is null ? null : tree.SelectMany(node => node.SelfAndBelow()).FirstOrDefault(node => node.Key == chosen);
+        // the same group chosen again, in a new node: its instance's block follows
+        NotifyInstanceChosen();
     }
 
     private void RefreshRows(MapDocument? document)
@@ -566,8 +704,8 @@ public sealed partial class ArmiesViewModel : ObservableObject
     })]);
 
     /// <summary>
-    /// The tree for automation's <c>state</c>: each army and group with its units, the first 200,
-    /// and the chosen one.
+    /// The tree for automation's <c>state</c>: each army and group with its units and, for a group
+    /// placed from a preset, its instance (the preset and how it stands), the first 200, and the chosen one.
     /// </summary>
     public JsonObject DescribeGroups() => new JsonObject
     {
@@ -577,6 +715,11 @@ public sealed partial class ArmiesViewModel : ObservableObject
             ["army"] = n.Army,
             ["group"] = n.PathText,
             ["units"] = n.Count,
+            ["instance"] = n.Instance is PresetInstance instance ? new JsonObject
+            {
+                ["preset"] = instance.Preset,
+                ["state"] = n.InstanceState?.ToString(),
+            } : null,
         })]),
     };
 }

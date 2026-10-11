@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using System.Numerics;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -71,6 +73,38 @@ namespace FAForever.MapEditor.Project.Workspaces
         public static int CountUnits(UnitPresetGroup group) => (group.Units?.Count ?? 0) + (group.Groups ?? []).Sum(CountUnits);
 
         /// <summary>
+        /// A fingerprint of a preset's content (user story U-9): the first 16 hexadecimal digits of
+        /// the SHA-256 of the settings written as JSON on one line, in the editor's own order of
+        /// properties. The same preset gives the same fingerprint on every computer, and a unit
+        /// added or taken out, moved or turned, a group renamed, or the role or wrecks changed gives
+        /// another. A group placed from a preset keeps it (<see cref="PresetInstance"/>), so the
+        /// editor can tell whether the preset's file changed since.
+        /// </summary>
+        public static string Fingerprint(UnitPresetSettings settings)
+        {
+            byte[] text = JsonSerializer.SerializeToUtf8Bytes(settings, FingerprintJson);
+            return Convert.ToHexStringLower(SHA256.HashData(text))[..16];
+        }
+
+        /// <summary>
+        /// The fingerprint of a preset file's content, or null when the file does not hold a units preset.
+        /// </summary>
+        public static string? Fingerprint(Preset preset)
+        {
+            try
+            {
+                return Fingerprint(preset.Read<UnitPresetSettings>());
+            }
+            catch (MapProjectException)
+            {
+                return null;
+            }
+        }
+
+        // as the editor writes a preset's JSON (camel case, enums as text, nulls left out), on one line
+        private static readonly JsonSerializerOptions FingerprintJson = new JsonSerializerOptions(ProjectJson.Options) { WriteIndented = false };
+
+        /// <summary>
         /// The army of a map a role's units go to when placed at a place, among the armies the map
         /// has (a preset makes none, as selection presets put their units on the map's armies):
         /// <list type="bullet">
@@ -140,6 +174,9 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <see cref="EnemyArmy"/> as an extra army when the map has none for enemies), else for
         /// <paramref name="fallback"/>; into <paramref name="parent"/> (its groups made when missing),
         /// or the army's <c>WRECKAGE</c> group when the preset holds wrecks or <paramref name="wrecks"/> says so.
+        /// The new group is an instance of the preset (user story U-9, <see cref="UnitGroup.Instance"/>):
+        /// it keeps the preset's name, the fingerprint of <paramref name="settings"/>, the place and
+        /// turn, and <paramref name="placedAt"/> (now when left out).
         /// </summary>
         /// <param name="radians">The turn, clockwise in the top view.</param>
         /// <param name="placed">The units' names.</param>
@@ -148,7 +185,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <exception cref="ArgumentException">No army to place for, or the map has no such army.</exception>
         public static MapDocument Place(MapDocument document, UnitPresetSettings settings, string name, string? army, string? fallback,
             IReadOnlyList<string> parent, bool? wrecks, float x, float z, float radians,
-            out ImmutableArray<string> placed, out ImmutableArray<string> group, out string placedFor)
+            out ImmutableArray<string> placed, out ImmutableArray<string> group, out string placedFor, DateTimeOffset? placedAt = null)
         {
             if (army is null && ArmyOrNewFor(document, settings.Role, x, z) is (string forRole, bool added))
             {
@@ -174,7 +211,9 @@ namespace FAForever.MapEditor.Project.Workspaces
                 }
             }
             UnitGroup template = ToTemplate(settings.Group) with { Name = name.Replace('/', '-') };
-            return document.PlaceUnits(template, chosen, into, x, z, radians, out placed, out group);
+            document = document.PlaceUnits(template, chosen, into, x, z, radians, out placed, out group);
+            PresetInstance instance = new PresetInstance(name, Fingerprint(settings), x, z, radians, placedAt ?? DateTimeOffset.Now);
+            return document.SetInstance(chosen, group, instance);
         }
     }
 }

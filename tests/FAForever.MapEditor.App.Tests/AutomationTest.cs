@@ -105,6 +105,47 @@ namespace FAForever.MapEditor.App.Tests
             window.Close();
         });
 
+        /// <summary>
+        /// A group placed from a unit preset (user story U-9) in the state and in <c>get</c>, and a
+        /// double click on one of its units in the top view selecting the whole instance.
+        /// </summary>
+        [TestMethod]
+        public Task TheStateCarriesAPlacedInstanceAndADoubleClickSelectsIt() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            model.Presets.Use(new FAForever.MapEditor.Project.Workspaces.PresetLibrary(Path.Combine(AppContext.BaseDirectory, "presets", Guid.NewGuid().ToString("N"))));
+            model.View = MapViewTab.Top;
+            model.SelectMode("units");
+            foreach (int x in new[] { 60, 70 })
+            {
+                await Send(automation, "run", new JsonObject { ["id"] = "units.add", ["blueprint"] = "uec1101", ["x"] = x, ["z"] = 60, ["army"] = "ARMY_1", ["group"] = "INITIAL/Town" });
+            }
+            await Send(automation, "run", new JsonObject { ["id"] = "units.saveGroupAsPreset", ["army"] = "ARMY_1", ["group"] = "INITIAL/Town", ["name"] = "Village" });
+            JsonObject placed = await Send(automation, "run", new JsonObject { ["id"] = "units.placePreset", ["name"] = "Village", ["x"] = 120, ["z"] = 120, ["army"] = "ARMY_2" });
+            string unit = placed["result"]!["units"]![0]!.GetValue<string>();
+
+            JsonObject state = await Send(automation, "state");
+            JsonObject group = state["units"]!["tree"]!["groups"]!.AsArray().Select(node => (JsonObject)node!).Single(node => node["group"]!.GetValue<string>() == "INITIAL/Village");
+            Assert.AreEqual("Village", group["instance"]!["preset"]!.GetValue<string>());
+            Assert.AreEqual("Current", group["instance"]!["state"]!.GetValue<string>());
+            Assert.IsNull(state["units"]!["tree"]!["groups"]!.AsArray().Select(node => (JsonObject)node!).Single(node => node["group"]!.GetValue<string>() == "INITIAL/Town")["instance"], "a group made by hand has none");
+            Assert.AreEqual(1, state["presets"]!["instances"]!["Village"]!["placed"]!.GetValue<int>());
+            JsonObject described = (JsonObject)(await Send(automation, "get", new JsonObject { ["ref"] = $"unit:{unit}" }))["object"]!;
+            Assert.AreEqual("Village", described["instance"]!["preset"]!.GetValue<string>());
+            Assert.AreEqual("INITIAL/Village", described["instance"]!["group"]!.GetValue<string>());
+
+            // a double click on a unit of the instance selects the whole instance; on another unit, that unit alone
+            await Send(automation, "tool", new JsonObject { ["id"] = "units.select" });
+            JsonObject top = (JsonObject)(await Send(automation, "view-point", new JsonObject { ["ref"] = $"unit:{unit}" }))["point"]!["top"]!;
+            await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = top["x"]!.DeepClone(), ["y"] = top["y"]!.DeepClone(), ["action"] = "doubleClick" });
+            Assert.AreEqual(2, model.Selection.Count, "the instance's two units");
+            StringAssert.Contains(model.Status, "an instance of the preset Village");
+            JsonObject town = (JsonObject)(await Send(automation, "view-point", new JsonObject { ["ref"] = "unit:UNIT_1" }))["point"]!["top"]!;
+            await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = town["x"]!.DeepClone(), ["y"] = town["y"]!.DeepClone(), ["action"] = "doubleClick" });
+            Assert.AreEqual(1, model.Selection.Count, "a unit of a group made by hand");
+            window.Close();
+        });
+
         [TestMethod]
         public Task DataDraggedOntoTheTopViewIsDroppedThere() => Run(async () =>
         {

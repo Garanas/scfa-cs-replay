@@ -88,7 +88,8 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     group `Units`): add, rename (unique among siblings), remove (its units and groups to the group
     above, or along with it), move into another group of any army; `MoveUnits` between armies and
     groups; `CaptureUnits` and `PlaceUnits`, a template of units relative to its middle (rounded
-    to a whole ogrid, so structures stay on the build grid) placed as a new group, turned. The game
+    to a whole ogrid, so structures stay on the build grid) placed as a new group, turned;
+    `SetInstance` (below). The game
     creates the units of each army's `INITIAL`, with the groups in it, at the start.
     `BuildGrid.Snap`: a structure an odd number of ogrids wide on a half ogrid, an even one on a
     whole; a quarter turn swaps its sides.
@@ -108,6 +109,27 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     count, leastDistance, seed, existing)`: random places and headings within a circle, none closer
     than the least distance to each other or to the places given, the same for the same seed,
     fewer when the circle is full. Tests: `UnitLayoutsTest`.
+  - **Preset instances** (U-9, `Editing/PresetInstances`, `UnitGroup.Instance`, a `PresetInstance`):
+    the group a unit preset is placed as knows the preset: its name, a fingerprint of the preset's
+    content (`UnitPresets.Fingerprint`: the first 16 hex digits of the SHA-256 of its
+    `UnitPresetSettings` as one-line JSON in the editor's order of properties, the same on every
+    computer; a unit added, taken out, moved or turned, a group renamed, the role or wrecks changed
+    gives another), the place and heading it was placed with, and when. `UnitPresets.Place` sets it
+    on the group it makes (the owner's decision: that group is the instance, units added to it later
+    belong to it; a group in it is part of the instance, not one of its own); `PlaceUnits` itself,
+    selection presets and hand-made groups make none, and an import never does. `Instances` lists
+    them, `InstanceOf` finds the one a group or unit belongs to (the deepest group up its path with
+    an instance), `CountInstances` counts a preset's. `StateOf` compares the fingerprint with the
+    preset file's (`FingerprintOf`): `Current`, `Changed`, `Missing`. `SaveInstance` captures the
+    group's units as Save as a preset does (`CaptureUnits`: around their middle, heights above the
+    terrain), writes them over the preset's file (which keeps its role, wrecks and source; a file
+    that is gone is made again) and sets the fingerprint to the new content's, so the instance is
+    current and the preset's other instances are out of date; where and when it was placed stays.
+    `Detach` clears the link; the units stay. The link is never used to change the map (no update
+    from the preset). On disk `armies.json` keeps it as a group's optional `instance`
+    (`PresetInstanceDto`; absent for none and in every older project, which reads as having none:
+    no new format version, see `MapProjectDto`); the export writes the group as any other, since
+    the game has no field. Tests: `PresetInstancesTest` (the fingerprint's value is pinned there).
   - `ObjectRef` names one thing of any kind (`marker:12`, `prop:5`, `decal:3`, `unit:UNIT_5`,
     `area:AREA_1`), for the editor's selection (user story F-11). `MapObjects` gives a thing's
     place (its centre: a decal's position is a corner), heading (about the up axis, from +x towards
@@ -1438,7 +1460,7 @@ User stories K-2 and P-4; generated only when asked, as the other results (F-7).
 
 User story F-14 (`Checks/`): an `IProblemCheck` (or a `ProblemCheck` made of a function) reads a
 `ProblemContext` (the document; the workspace's catalogue and whether it has a file, the generated
-results, the last walkability changes: each may be missing) and yields `Problem`s (check, severity
+results, the last walkability changes, the fingerprints of the unit presets: each may be missing) and yields `Problem`s (check, severity
 `Info`/`Warning`/`Error`, message, the `ObjectRef` to select and the place to look at).
 `ProblemChecks` holds the editor's own (`MapChecks.All`) and those registered, and runs them all,
 worst first; a check that throws is reported apart and finds nothing. Checks run after each step,
@@ -1455,6 +1477,9 @@ map's things.
   generated the time before.
 - `steep-deposit` (warning): a mass or hydrocarbon deposit whose ground rises more than
   `MarkerEdits.MaxGroundVariation` over the square it needs (`MarkerEdits.Steepness`).
+- `preset-changed` (a note): a group placed from a unit preset (U-9) whose preset's file changed
+  since, or which the workspace has no preset of; reads the fingerprints the editor keeps
+  (`ProblemContext.PresetFingerprint`, null for a name without a preset) and finds nothing without them.
 
 ## Unit templates from real maps
 
