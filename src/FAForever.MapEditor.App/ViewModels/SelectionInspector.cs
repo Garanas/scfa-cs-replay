@@ -374,6 +374,12 @@ public sealed partial class PropSelection : SelectionSection
     [ObservableProperty]
     public partial string Reclaim { get; private set; } = "";
 
+    /// <summary>
+    /// <see cref="Reclaim"/> as the inspector shows it, after the mass and energy icons; null without props.
+    /// </summary>
+    [ObservableProperty]
+    public partial ReclaimLine? ReclaimShown { get; private set; }
+
     public override void Refresh(MapDocument document, IReadOnlyList<ObjectRef> things)
     {
         base.Refresh(document, things);
@@ -389,7 +395,9 @@ public sealed partial class PropSelection : SelectionSection
         Show(ref _pitch, nameof(Pitch), Shared(pitches, "0.#"));
         Show(ref _roll, nameof(Roll), Shared(rolls, "0.#"));
         Show(ref _scale, nameof(Scale), Shared(props.Select(PropOrientation.UniformScale), "0.###"));
-        Reclaim = props.Length == 0 ? "" : PropsViewModel.Describe(PropReclaim.Of(props, Owner?.Catalog() ?? AssetCatalog.Empty));
+        ReclaimTotal? reclaim = props.Length == 0 ? null : PropReclaim.Of(props, Owner?.Catalog() ?? AssetCatalog.Empty);
+        Reclaim = reclaim is null ? "" : PropsViewModel.Describe(reclaim);
+        ReclaimShown = reclaim is null ? null : ReclaimLine.Of(null, reclaim);
     }
 
     protected override IEnumerable<string> LinesOf(MapDocument document, IReadOnlyList<ObjectRef> things) =>

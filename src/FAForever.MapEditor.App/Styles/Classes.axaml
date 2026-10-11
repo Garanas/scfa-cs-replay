@@ -391,11 +391,59 @@
 
   <!-- an entry of a mode panel's list (Controls/PanelPartList): its title, its detail at the right; the chosen one filled -->
   <!-- a tile's line of mass and energy (F-8): a unit's cost, a prop's reclaim -->
-  <Style Selector="TextBlock.tileeconomy">
+  <Style Selector="controls|EconomyAmount.tileeconomy">
     <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <!-- mass and energy in numbers elsewhere: the inspector's facts, the Props panel's reclaim -->
+  <Style Selector="controls|EconomyAmount.economymono">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+  </Style>
+  <Style Selector="controls|EconomyAmount.economycaption">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <!-- the parts of an EconomyAmount (Styles/Controls.axaml): each icon filled in its colour, at the text's size -->
+  <Style Selector="Path.economyicon">
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="StrokeThickness" Value="1" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="{StaticResource EconomyIconGap}" />
+  </Style>
+  <Style Selector="Path.economyicon.economymass">
+    <Setter Property="Fill" Value="{DynamicResource MassBrush}" />
+    <Setter Property="Stroke" Value="{DynamicResource MassBrush}" />
+  </Style>
+  <Style Selector="Path.economyicon.economyenergy">
+    <Setter Property="Fill" Value="{DynamicResource EnergyBrush}" />
+    <Setter Property="Stroke" Value="{DynamicResource EnergyBrush}" />
+  </Style>
+  <!-- a mass or energy icon by itself: in a combo box's item (the text's size), on the shelf's sort button -->
+  <Style Selector="Path.economyicon.economybody">
+    <Setter Property="Width" Value="{StaticResource FontSizeBody}" />
+    <Setter Property="Height" Value="{StaticResource FontSizeBody}" />
+    <Setter Property="Margin" Value="{StaticResource EconomyValueGap}" />
+  </Style>
+  <Style Selector="Path.economyicon.economysmall">
+    <Setter Property="Width" Value="{StaticResource IconSizeSmall}" />
+    <Setter Property="Height" Value="{StaticResource IconSizeSmall}" />
+    <Setter Property="Margin" Value="{StaticResource EconomySuffixGap}" />
+  </Style>
+  <Style Selector="TextBlock.economytext">
+    <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="TextWrapping" Value="NoWrap" />
-    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style Selector="TextBlock.economyvalue">
+    <Setter Property="Margin" Value="{StaticResource EconomyValueGap}" />
+  </Style>
+  <Style Selector="TextBlock.economyprefix">
+    <Setter Property="Margin" Value="{StaticResource EconomyTextGap}" />
+  </Style>
+  <Style Selector="TextBlock.economysuffix">
+    <Setter Property="Margin" Value="{StaticResource EconomySuffixGap}" />
   </Style>
   <Style Selector="StackPanel.partgroup">
     <Setter Property="Spacing" Value="{StaticResource SpaceSmall}" />
@@ -648,6 +696,8 @@
     <Setter Property="Padding" Value="{StaticResource TilePadding}" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Top" />
+    <!-- the tiles of a row as high as the highest: a line of mass and energy may take two lines -->
+    <Setter Property="VerticalAlignment" Value="Stretch" />
     <Setter Property="CornerRadius" Value="{StaticResource RailButtonRadius}" />
     <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ControlRaisedBrush}" />

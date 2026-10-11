@@ -65,6 +65,11 @@ public static class AssetSearch
     public static IReadOnlyList<string> SortTitles { get; } = ["As listed", "Most mass first", "Most energy first"];
 
     /// <summary>
+    /// The orders as the picker's combo box lists them, with the mass or energy icon.
+    /// </summary>
+    public static IReadOnlyList<AssetSortChoice> SortChoices { get; } = [.. Enum.GetValues<AssetSort>().Select(sort => new AssetSortChoice(sort, SortTitles[(int)sort]))];
+
+    /// <summary>
     /// Mass or energy in a few characters for a tile: <c>0.27</c>, <c>850</c>, <c>5.2k</c>, <c>7.5M</c>.
     /// </summary>
     public static string Short(double value) => value switch
@@ -81,4 +86,16 @@ public static class AssetSearch
         4 => "Experimental",
         int tech => $"T{tech}",
     };
+}
+
+/// <summary>
+/// An order of the tiles as a combo box lists it: its title after the mass or energy icon.
+/// </summary>
+public sealed record AssetSortChoice(AssetSort Sort, string Title)
+{
+    public bool IsMass => Sort == AssetSort.Mass;
+
+    public bool IsEnergy => Sort == AssetSort.Energy;
+
+    public override string ToString() => Title;
 }

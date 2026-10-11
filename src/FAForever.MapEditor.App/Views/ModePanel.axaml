@@ -387,12 +387,15 @@
               <Border Classes="group">
                 <StackPanel Classes="stack" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Props}" x:DataType="vm:PropsViewModel">
                   <TextBlock Classes="overline" Text="{Binding Source=Reclaim, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
-                  <TextBlock Classes="mono" TextWrapping="Wrap" Text="{Binding ReclaimText}" AutomationProperties.Name="Reclaim of the map" />
+                  <controls:EconomyAmount Classes="economymono" Mass="{Binding ReclaimShown.Mass, FallbackValue=0}" Energy="{Binding ReclaimShown.Energy, FallbackValue=0}"
+                                          Suffix="{Binding ReclaimShown.Suffix, FallbackValue={x:Null}}" IsVisible="{Binding ReclaimShown, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                          AutomationProperties.Name="{Binding ReclaimText, StringFormat='Reclaim of the map: {0}'}" />
                   <TextBlock Classes="caption warning" TextWrapping="Wrap" Text="{Binding ReclaimNote}" IsVisible="{Binding ReclaimNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                  <ItemsControl ItemsSource="{Binding ReclaimAreas}" AutomationProperties.Name="Reclaim per area">
+                  <ItemsControl ItemsSource="{Binding ReclaimAreaLines}" AutomationProperties.Name="Reclaim per area">
                     <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding}" />
+                      <DataTemplate x:DataType="vm:ReclaimLine">
+                        <controls:EconomyAmount Classes="economycaption" Prefix="{Binding Prefix}" Mass="{Binding Mass}" Energy="{Binding Energy}" Suffix="{Binding Suffix}"
+                                                AutomationProperties.Name="{Binding Text}" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>

@@ -245,7 +245,7 @@ public static class UiTree
     /// An item of a list is one unless it holds controls of its own (a layer's check boxes).
     /// </remarks>
     private static bool IsLeaf(Control control) =>
-        control is Button or ToggleButton or TabItem or TextBox or Slider or ComboBox or ProgressBar or TextBlock
+        control is Button or ToggleButton or TabItem or TextBox or Slider or ComboBox or ProgressBar or TextBlock or Controls.EconomyAmount
         || control is ListBoxItem item && !item.GetVisualDescendants().Any(inner => inner is Button or ToggleButton or TextBox or Slider or ComboBox)
         || control is MenuItem { ItemCount: 0 };
 
@@ -255,6 +255,7 @@ public static class UiTree
         {
             TextBox box => box.Text,
             TextBlock block => block.Text,
+            Controls.EconomyAmount amount => amount.Text,
             HeaderedSelectingItemsControl { Header: string header } => header,
             HeaderedContentControl { Header: string header } => header,
             ContentControl { Content: string content } => content,

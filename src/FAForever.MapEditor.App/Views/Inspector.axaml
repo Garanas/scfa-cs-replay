@@ -72,7 +72,11 @@
                   <DataTemplate x:DataType="workspaces:AssetFact">
                     <DockPanel>
                       <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="{Binding Label}" Width="{StaticResource FactLabelWidth}" />
-                      <TextBlock Text="{Binding Value}" TextWrapping="Wrap" />
+                      <Panel>
+                        <TextBlock Text="{Binding Value}" TextWrapping="Wrap" IsVisible="{Binding !IsEconomy}" />
+                        <!-- a unit's cost, a prop's reclaim: after the mass and energy icons (F-8) -->
+                        <controls:EconomyAmount Mass="{Binding Mass, TargetNullValue=0}" Energy="{Binding Energy, TargetNullValue=0}" IsVisible="{Binding IsEconomy}" />
+                      </Panel>
                     </DockPanel>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -215,7 +219,8 @@
                     </DockPanel>
                     <DockPanel>
                       <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Reclaim" Width="{StaticResource FactLabelWidth}" />
-                      <TextBlock TextWrapping="Wrap" Text="{Binding Reclaim}" AutomationProperties.Name="Reclaim of the selected props" />
+                      <controls:EconomyAmount Mass="{Binding ReclaimShown.Mass, FallbackValue=0}" Energy="{Binding ReclaimShown.Energy, FallbackValue=0}" Suffix="{Binding ReclaimShown.Suffix, FallbackValue={x:Null}}"
+                                              AutomationProperties.Name="{Binding Reclaim, StringFormat='Reclaim of the selected props: {0}'}" />
                     </DockPanel>
                     <StackPanel Classes="inline">
                       <Button Content="Align to terrain" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="props.alignToTerrain"

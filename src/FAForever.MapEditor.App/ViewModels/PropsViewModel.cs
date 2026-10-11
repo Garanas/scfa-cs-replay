@@ -31,6 +31,23 @@ public sealed record PropPlacementSection() : PanelSection("Placing");
 public sealed record PropReclaimSection() : PanelSection("Reclaim");
 
 /// <summary>
+/// A total of reclaim as a line shows it: the mass and energy after their icons
+/// (<c>Controls/EconomyAmount</c>), e.g. <c>Base: [mass] 1,200 [energy] 300 in 45 props</c>.
+/// </summary>
+/// <param name="Prefix">What comes before the values (an area's name and a colon); null for none.</param>
+/// <param name="Suffix">What comes after them: <c>in 45 props</c>.</param>
+/// <param name="Text">The whole line in words, as a screen reader says it.</param>
+public sealed record ReclaimLine(string? Prefix, double Mass, double Energy, string Suffix, string Text)
+{
+    /// <summary>
+    /// The line of a total, in whole numbers as <see cref="PropsViewModel.Describe"/> says it.
+    /// </summary>
+    public static ReclaimLine Of(string? prefix, ReclaimTotal total) =>
+        new ReclaimLine(prefix, Math.Round(total.Mass), Math.Round(total.Energy), PropsViewModel.InProps(total.Props),
+            (prefix is null ? "" : prefix + " ") + PropsViewModel.Describe(total));
+}
+
+/// <summary>
 /// A way placed props stand, with what the Placing section calls it.
 /// </summary>
 public sealed record AlignmentChoice(PropAlignment Value, string Title)
@@ -360,6 +377,19 @@ public sealed partial class PropsViewModel : ObservableObject
     public partial IReadOnlyList<string> ReclaimAreas { get; private set; } = [];
 
     /// <summary>
+    /// The reclaim of the map's props as the Props panel shows it, after the mass and energy
+    /// icons; null without a map.
+    /// </summary>
+    [ObservableProperty]
+    public partial ReclaimLine? ReclaimShown { get; private set; }
+
+    /// <summary>
+    /// The reclaim per area, likewise, a line each.
+    /// </summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<ReclaimLine> ReclaimAreaLines { get; private set; } = [];
+
+    /// <summary>
     /// The reclaim of the map's props, as last counted.
     /// </summary>
     public ReclaimTotal Reclaim { get; private set; } = ReclaimTotal.None;
@@ -395,13 +425,20 @@ public sealed partial class PropsViewModel : ObservableObject
         ReclaimText = document is null ? "" : Describe(Reclaim);
         ReclaimNote = Reclaim.Unknown == 0 ? "" : $"{Count(Reclaim.Unknown)} props have a blueprint the workspace has not and count as nothing.";
         ReclaimAreas = [.. ReclaimPerArea.Select(area => $"{area.Area}: {Describe(area.Total)}")];
+        ReclaimShown = document is null ? null : ReclaimLine.Of(null, Reclaim);
+        ReclaimAreaLines = [.. ReclaimPerArea.Select(area => ReclaimLine.Of($"{area.Area}:", area.Total))];
     }
 
     /// <summary>
     /// A total as the panel and the inspector show it: <c>1 200 mass, 300 energy in 45 props</c>.
     /// </summary>
     public static string Describe(ReclaimTotal total) =>
-        $"{Count(total.Mass)} mass, {Count(total.Energy)} energy in {Count(total.Props)} {(total.Props == 1 ? "prop" : "props")}";
+        $"{Count(total.Mass)} mass, {Count(total.Energy)} energy {InProps(total.Props)}";
+
+    /// <summary>
+    /// The props a total counts: <c>in 45 props</c>, <c>in 1 prop</c>.
+    /// </summary>
+    public static string InProps(int props) => $"in {Count(props)} {(props == 1 ? "prop" : "props")}";
 
     private static string Count(double value) => Math.Round(value).ToString("#,0", CultureInfo.InvariantCulture);
 
