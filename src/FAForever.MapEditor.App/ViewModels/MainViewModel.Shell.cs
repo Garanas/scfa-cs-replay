@@ -319,6 +319,7 @@ public sealed partial class MainViewModel
             "symmetry" => new OverlayItem(overlay, () => ShowSymmetry, value => ShowSymmetry = value),
             "props" => new OverlayItem(overlay, () => ShowProps, value => ShowProps = value),
             "units" => new OverlayItem(overlay, () => ShowUnits, value => ShowUnits = value),
+            "armyColours" => new OverlayItem(overlay, () => ShowArmyColours, value => ShowArmyColours = value),
             "areas" => new OverlayItem(overlay, () => ShowAreas, value => ShowAreas = value),
             "mask" => new OverlayItem(overlay, () => ShowMask, value => ShowMask = value),
             "grid" => new OverlayItem(overlay, () => ShowGrid, value => ShowGrid = value, () => EditorCulture.Format(GridSpacing)),

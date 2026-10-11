@@ -39,7 +39,15 @@ namespace FAForever.MapEditor.Project.Workspaces
             StrategicIcon = unit.StrategicIconName,
             BuildIcon = unit.General.Icon,
             Size = Size(unit),
-            Footprint = unit.Footprint is { SizeX: double x, SizeZ: double z } ? new FootprintDto { SizeX = x, SizeZ = z } : null,
+            Footprint = unit.Footprint is { SizeX: double x, SizeZ: double z } footprint
+                ? new FootprintDto { SizeX = x, SizeZ = z, MaxSlope = footprint.MaxSlope, MinWaterDepth = footprint.MinWaterDepth }
+                : null,
+            Skirt = unit.Physics is { SkirtSizeX: double skirtX, SkirtSizeZ: double skirtZ } physics
+                ? new SkirtDto { SizeX = skirtX, SizeZ = skirtZ, OffsetX = physics.SkirtOffsetX ?? 0, OffsetZ = physics.SkirtOffsetZ ?? 0 }
+                : null,
+            BuildOnLayers = unit.Physics.BuildOnLayerCaps.Count > 0
+                ? [.. unit.Physics.BuildOnLayerCaps.Select(layer => layer.StartsWith("LAYER_", StringComparison.Ordinal) ? layer["LAYER_".Length..] : layer).Order(StringComparer.Ordinal)]
+                : null,
             UniformScale = unit.Display.UniformScale,
             Health = unit.Defense.MaxHealth ?? unit.Defense.Health,
             MassCost = unit.Economy.BuildCostMass,

@@ -124,6 +124,12 @@ namespace FAForever.MapEditor.Project.Workspaces
         public (double SizeX, double SizeZ)? Footprint { get; init; }
 
         /// <summary>
+        /// What a structure's blueprint limits where it stands (user story U-12); null for the
+        /// other kinds and for a unit whose blueprint names none of it.
+        /// </summary>
+        public PlacementLimits? Limits { get; init; }
+
+        /// <summary>
         /// Whether a unit is a structure, which stands on the build grid (<see cref="Editing.BuildGrid"/>).
         /// </summary>
         public bool IsStructure => Kind == AssetKind.Unit && Category == "structure";
@@ -163,6 +169,12 @@ namespace FAForever.MapEditor.Project.Workspaces
         public required string File { get; init; }
 
         public ImmutableArray<AssetFact> Facts { get; init; } = [];
+
+        /// <summary>
+        /// A unit's categories from its blueprint (<c>STRUCTURE</c>, <c>ENERGYPRODUCTION</c>, <c>TECH1</c>), in
+        /// upper case; empty for the other kinds.
+        /// </summary>
+        public ImmutableArray<string> Categories { get; init; } = [];
 
         /// <summary>
         /// The mass a prop gives when it is reclaimed, from its blueprint; 0 for the other kinds.
@@ -538,11 +550,19 @@ namespace FAForever.MapEditor.Project.Workspaces
                     IsCivilian = categories.Contains("CIVILIAN"),
                     TechLevel = unit.TechLevel,
                     Footprint = unit.Footprint is { } size ? (size.SizeX, size.SizeZ) : null,
+                    Limits = unit.Skirt is null && unit.BuildOnLayers is null && unit.Footprint?.MaxSlope is null && unit.Footprint?.MinWaterDepth is null
+                        ? null
+                        : new PlacementLimits(
+                            unit.Skirt is { } skirt ? new Skirt(skirt.SizeX, skirt.SizeZ, skirt.OffsetX, skirt.OffsetZ) : null,
+                            unit.BuildOnLayers is { } layers ? [.. layers] : null,
+                            unit.Footprint?.MaxSlope,
+                            unit.Footprint?.MinWaterDepth),
                     Model = ModelOf(assets, unit.Lods),
                     Icon = File.Exists(Path.Combine(assets, UnitIconFolder, id + "_icon.png")) ? Path.Combine(assets, UnitIconFolder, id + "_icon.png") : null,
                     IconBackground = IconBackgroundOf(assets, unit.BuildIcon),
                     File = file,
                     Facts = [.. facts],
+                    Categories = [.. unit.Categories.Select(category => category.ToUpperInvariant())],
                     MassCost = unit.MassCost,
                     EnergyCost = unit.EnergyCost,
                 };

@@ -165,6 +165,7 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeDecals();
         InitializeUnits();
         InitializeUnitPalettes();
+        InitializeUnitSelection();
         InitializeMarkers();
         Props = new PropsViewModel(this);
         InitializePainting();
@@ -306,6 +307,7 @@ public sealed partial class MainViewModel : ObservableObject
         LoadLayout(settings);
         LoadAutoRegenerate(settings);
         UnitPalettes.Load(settings);
+        StoredSelections.Load(settings);
         if (settings.Problem is string problem)
         {
             // a part of the settings that cannot be read is left out, never silently

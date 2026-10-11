@@ -1041,7 +1041,8 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   (`Editor`) and finds nothing. The tab's header counts the errors and warnings; a double click or
   Enter on a line runs `problems.show {index}` (`MainViewModel.ShowProblem`): it selects the
   problem's thing, the top view centres on its place at 4 pixels an ogrid and the 3D camera
-  focuses on it (30 ogrids around). `plugins.check` runs the checks now and shows the tab.
+  focuses on it (30 ogrids around); a problem with `Related` things (the second structure of an
+  overlap) selects them too. `plugins.check` runs the checks now and shows the tab.
 
 ## The Procedural mode: generated results, the navigation mesh, export steps
 
@@ -1505,6 +1506,17 @@ change, span `model.armies`), the place tool and the commands.
   mouse. The shortcuts page lists Shift, Escape and the brackets. Tests: `UnitsTest` (the
   commands, one step, images, the group, the tool's drag and Escape), `MainWindowTest` (the mouse),
   `AutomationTest` (the state, the chips).
+- **Placement checks** (U-12): the Place tool's footprints under the mouse (single, a drag's
+  line or rectangle, the ring) are drawn in `ToolInk.Danger` (`DangerBrush`, 2 pixels) where a
+  click would overlap a structure or break the ground rules of the blueprint
+  (`UnitPlaceTool.VerdictOf`, the library's `PlacementChecks`, span `tool.place-checks`);
+  placing is still allowed. The status line says why (`Overlaps the Land Factory UNIT_12`, `Naval
+  Factory: it cannot be built on land`), set when the mouse moves (`MainViewModel.Pointer` calls
+  `UnitPlaceTool.PointerMoved`: a status set while drawing throws, Avalonia forbids invalidating
+  in the render pass) and for a drag in the planning status. Wrecks and mobile units are never
+  red; presets are not checked. `state.units.place` has `blocked`, `blockedCount` and `why`;
+  `plugins.check` and `state.problems.items` give a problem's `related` things; choosing an
+  overlap in Problems selects both units. Tests: `PlacementChecksTest`, `AutomationTest`.
 - **The tree** (`UnitGroupsSection`, a `TreeView` of `GroupNode`s with their units counted
   with the groups in them; expanded nodes stay expanded when it is made again) is the Units panel's
   list; the inspector edits what is chosen in it (`UnitGroupDetailsSection`,
@@ -1604,6 +1616,33 @@ change, span `model.armies`), the place tool and the commands.
   The link is never used to change the map (the owner's decision: no update from the preset).
   Tests: `UnitsTest.APlacedPresetIsAnInstance...`, `UnitsModeInspectorTest.AGroupPlacedFromAPreset...`,
   `AutomationTest.TheStateCarriesAPlacedInstance...`.
+- **Editing many units** (U-11; `Commands/Units/EditUnits.cs`, the library's `UnitGroupEdits`,
+  `UnitEdits`, `UnitConversion`, `BuildGrid`; its guide): the inspector of selected units has the
+  army, the Group as a combo of the army's groups (`UnitGroupChoice`, `INITIAL/Outpost`, the root
+  as `(the root group)`; choosing one runs `units.moveToGroup`; a dash and read only while the
+  units are in different groups or armies), the Blueprint (`ueb1101 Power Generator`, or how many
+  kinds) with Replace... and the chips UEF, Cybran, Aeon and Seraphim (a row of chips, not a menu:
+  popups lie outside what `ui` and `click` reach), the buttons Group (Ctrl+G), Ungroup and
+  Distribute (three units or more); Duplicate, Delete and Select none stay above. Commands, all
+  one step of undo: `units.group {name?}` (Ctrl+G; a group per army under the deepest group
+  holding that army's selected units, named `GROUP_n` or the name, the first chosen in the tree;
+  answers `count` and `groups`), `units.ungroup {army?, group?}` (left out, the deepest group that
+  holds all the selected units, else the tree's chosen group; the units and groups go into the
+  group above, `RemoveGroup` with the units kept; an army's `INITIAL` and `WRECKAGE` are the
+  game's and are refused; no gesture: Ctrl+Shift+G is Select similar), `units.replace
+  {blueprint?}` (every selected unit takes the blueprint; the picker without an argument; the
+  workspace must have it) and `units.toFaction {faction}` (`uef`, `cybran`, `aeon`, `seraphim`;
+  answers `converted`, `left`: no counterpart, and `already`; the status line says both, `Converted
+  3 units to Cybran; 1 left as it is: no Cybran counterpart`), `units.distribute {axis?}` (`x` or
+  `z`, else the longer extent; fewer than three units is refused; the symmetry's partners do not
+  follow). All are in the Units menu. **Moves keep structures on the build grid**
+  (`HandleSettings.KeepOnGrid`, default on, the check box "Keep structures on the build grid" in
+  the select tool's options row, `select.handles keepOnGrid`): the handles' drag and
+  `edit.nudge` ask `MainViewModel.KeepOnGrid` (span `tool.keep-on-grid`, in
+  `MainViewModel.BuildGrid.cs`) for the offset, rounded so that the first structure of the
+  selection lands on its grid, every other thing moving by the same amount (the symmetry's
+  partners as before, by the image of that offset); `edit.place` rounds the place the same way.
+  Tests: `EditManyUnitsTest` (commands, the inspector, Ctrl+G, a handle drag, nudge, place).
 - **Wrecks** (U-5; the library's `UnitWrecks`, its guide says why a group): the place tool's
   As wrecks (`AsWrecks`, the check box after Choose...) places into the army's `WRECKAGE` group in
   place of the chosen group (`units.add {wreck?}`; left out, the tool's); `units.asWrecks {wreck?}`
@@ -1621,7 +1660,52 @@ change, span `model.armies`), the place tool and the commands.
   instance's group and its state) for a unit of one; `state.presets` has `highlighted` and
   `instances` (per preset placed: `placed`, `outOfDate`).
 - **Dragging in the tree** (U-3): section "Content to use again" below.
-- Not built yet: team colours in the views.
+- **Select by, stored selections, footprints** (U-10; `MainViewModel.UnitSelection.cs`,
+  `ViewModels/SelectByViewModel.cs`, `StoredSelectionsViewModel.cs`, `Commands/Select/SelectWhere.cs`):
+  - `select.where {army?, faction?, kind?, tech?, blueprint?, wrecks?, within?, add?}` (Select menu has
+    `select.by`) selects units by what they are and answers how many are selected; what is left out
+    asks nothing. `faction` (`uef`, `aeon`, `cybran`, `seraphim`, `other`), `kind` (`structure`, `land`,
+    `air`, `naval`, `other`) and `tech` (1 to 4) take one or more: a text with commas (`uef,aeon`), a
+    list, a number. `wrecks` is `leave` (the default), `only` or `include`; `within` is `map` (the
+    default), `selection` or `area:NAME`; `add` keeps the selection. The question is the library's
+    `UnitQuery` (its guide: a faction is the blueprint's in the catalogue, else the army's); the view
+    model leaves out what isolating the selection hides (`UnitsWhere`, span `model.select-where`). A
+    value that is none of the choices is an `ArgumentException` listing them.
+  - **The popover** is the select tool's `Select by...` button (shown while the tool picks units): an
+    overlay `Border.popover` in the window's tree over the top view (`Views/SelectByPopover`, not a
+    `Popup`, so `ui` and `click` reach its controls), `model.SelectBy`: Army combo, Faction, Kind, Tech
+    and Wrecks and Within as chips (`ToggleButton.chip`, named `Select by faction UEF`, `Wrecks: only`,
+    `Within the selection`, ...), Blueprint text, the live count (`28 units match`, span
+    `model.select-by-count`, counted again when the document or, within the selection, the selection
+    changes), Add and Select (they run `select.where`), Reset and Close; `select.by {open?}` and the
+    button open it, another tool, Close and Escape inside it close it. `state.selection.selectBy` has
+    its choices, count and `open`.
+  - **Stored selections**: in a select tool (any `SelectTool`, so the Decals mode's too) Alt and 1 to 9
+    store the selection (`select.store {slot}`, an empty selection empties the digit), a digit recalls
+    it (`select.recall {slot, add?}`, shift adds; a thing that is gone is dropped silently, also from the
+    digit), the numeric keypad too, never with control (Ctrl+1 to 3 are the views). The active tool owns
+    the key: the place tool's digits pick palette slots (`UnitPlaceTool.PaletteKey`). `model.StoredSelections`
+    keeps them with the project in the user's settings (`UserSettings.StoredSelections(folder)`, by the
+    project's folder; a map that is not a project keeps them while the editor runs): the units and areas by
+    name, never a marker, prop or decal (their ids are of one session), never the map's files. The chips
+    lie along the bottom of the top view (`ItemsControl.storedchips` in `MainWindow`'s `TopOverlays`, which
+    follows the top view's columns): `3 · Cybran farm · 17`, the group's name when all its units share the
+    group, else `3 · 17`, the count of what is left; a click recalls it, and the chip that holds exactly
+    the selection is lit. `state.selection.stored` has the slots (things, count, group, chip).
+  - **Picks** in the select tool's row (`Footprint`, the default, or `Centre`; `MainViewModel.UnitPicks`,
+    `state.selection.unitPicks`): a click inside a structure's footprint picks it, and a box that touches it,
+    through the library's `MapObjects.Nearest` and `Inside` with `UnitFootprints` (the catalogue's footprint
+    of a structure; a mobile unit is a point). The 3D view picks by its own ray.
+  - **Army colours** in the top view (`Controls/HeightmapView.Units.cs`, span `top.units`, `UnitsDrawn` for
+    tests and automation): a structure as its footprint (turned by its heading) outlined and filled faintly
+    in its army's colour, a mobile unit a small diamond, a wreck the ashen cross as before; a footprint under
+    3 pixels is the small square again. The colours are the map's, made in code (`ViewModels/ArmyColours`:
+    the army's own `Color` when the map sets one, else its place in the army list, the civilians grey). The
+    overlay `armyColours` (the chip `Show Army colours`, `view.overlay.armyColours`, `ShowArmyColours`) turns
+    them off: every unit but a wreck is the small square of the theme's unit brush. The 3D view is not
+    coloured by army.
+- A double click on a unit of a placed preset selects the whole instance before the move handle of the
+  selection, which the first click of the double click put over the unit, takes the press.
 
 ## Markers: placing, linking, chains
 
@@ -1892,8 +1976,8 @@ User stories F-11, L-1 and V-3. The maths of the handles is the library's (`Sele
   axis (also dragging a selected thing). Each drag is one step (`Move the selection`, `Turn the
   selection`, `Scale the selection`) and calls the library's edits. The settings are
   `MainViewModel.Handles` (`HandleSettings`: shown, the pivot `Selection` or `Each`, the snap),
-  in the select tools' options and `select.handles {show?, pivot?, snap?}` (without arguments: on
-  and off). `edit.rotate {degrees?, about?}` (Q and E) and `edit.scale {factor?, x?, z?, about?}`
+  in the select tools' options and `select.handles {show?, pivot?, snap?, keepOnGrid?}` (without
+  arguments: on and off; `state.handles.keepOnGrid`). `edit.rotate {degrees?, about?}` (Q and E) and `edit.scale {factor?, x?, z?, about?}`
   go about the handles' pivot unless `about` says.
 - **Focus and the status bar**: `camera.focusSelection` (View menu; F in the 3D view) shows the
   selection's box; the status bar shows how many are selected and the size of their bounds
@@ -2924,8 +3008,8 @@ changes them. Places are in device-independent pixels of a view (`view: top|3d`)
 (the default); a hidden view is refused (`tab` first). The mouse finds what lies under it in the
 last frame drawn.
 
-- `mouse {view?, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, to?: [x, y], steps?, notches?, modifiers?}`:
-  `click` is the default; `drag` presses at `x, y` and lets go at `to` after `steps` moves; `wheel`
+- `mouse {view?, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, clicks?, to?: [x, y], steps?, notches?, modifiers?}`:
+  `click` is the default; `clicks` (1 to 3) presses that many times in a row (`clicks=2` is `doubleClick`: the views count it, `ToolInput.Clicks`); `drag` presses at `x, y` and lets go at `to` after `steps` moves; `wheel`
   turns `notches` (positive zooms in). The answer's `mouse` has where it is and what it hit.
 - `key {key, action?, modifiers?, repeat?}`: a name (`E`, `Delete`, `Escape`, `Enter`, `F5`, `Up`, `5`,
   `Shift`, `Ctrl`, `Alt`) or a gesture (`Ctrl+K`, `Ctrl+Shift+Z`); modifiers as a list or

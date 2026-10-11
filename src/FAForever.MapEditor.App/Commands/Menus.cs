@@ -37,7 +37,7 @@ public static class Menus
             "edit.copy", "edit.paste", "edit.duplicate", "edit.delete", "edit.rotate", "edit.scale", "edit.mirror", Separator,
             "edit.saveAsPreset", "edit.saveSelectionPreset", "edit.placePreset",
         ]),
-        new MenuLayout("Select", ["select.all", "select.none", "select.similar", "select.invert", "select.insideArea", "select.isolate", Separator, "select.symmetry", "select.mirrorEdits", "select.symmetryPartners", "select.handles"]),
+        new MenuLayout("Select", ["select.all", "select.none", "select.similar", "select.by", "select.invert", "select.insideArea", "select.isolate", Separator, "select.symmetry", "select.mirrorEdits", "select.symmetryPartners", "select.handles"]),
         new MenuLayout("View",
         [
             "view.top", "view.3d", "view.sideBySide", "view.fit", "camera.home", "camera.focusSelection", "view.frame", Separator,
@@ -65,7 +65,7 @@ public static class Menus
             Mode("markers", "markers.addChain", "markers.adaptive", "markers.placePreset"),
             Mode("props", "props.choose", "props.addToPalette", "props.clearPalette", "props.restorePalette", "props.followTerrain", Separator, "props.alignToTerrain", "props.upright", "props.dropToGround", "props.randomize", "props.replace", "props.randomVariant", Separator, "props.reclaim", "props.addRule", "props.keepFromRules"),
             Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack", Separator, "decals.alongCurve"),
-            Mode("units", "units.pick", "units.placeMode", "units.addMany", "units.addGroup", "units.selectGroup", "units.placePreset", "units.asWrecks", Separator, "units.newPalette", "units.renamePalette", "units.deletePalette", "units.nextPalette", Separator, "units.selectInstance", "units.saveInstance", "units.showPreset", "units.detachInstance"),
+            Mode("units", "units.pick", "units.placeMode", "units.addMany", "units.addGroup", "units.selectGroup", "units.placePreset", "units.asWrecks", Separator, "units.group", "units.ungroup", "units.replace", "units.toFaction", "units.distribute", Separator, "units.newPalette", "units.renamePalette", "units.deletePalette", "units.nextPalette", Separator, "units.selectInstance", "units.saveInstance", "units.showPreset", "units.detachInstance"),
             Mode("procedural"),
             Mode("plugins"),
             new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.star", "assets.reload", "assets.reloadShown"]),

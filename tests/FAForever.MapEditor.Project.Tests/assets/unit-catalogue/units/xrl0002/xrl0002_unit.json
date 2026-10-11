@@ -1,0 +1,56 @@
+{
+  "id": "xrl0002",
+  "name": "Crab Egg (Engineer)",
+  "faction": "Cybran",
+  "techLevel": 3,
+  "categories": [
+    "CONSTRUCTION",
+    "CRABEGG",
+    "CYBRAN",
+    "DRAGBUILD",
+    "FACTORY",
+    "LAND",
+    "PRODUCTFA",
+    "RALLYPOINT",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SHOWQUEUE",
+    "STRUCTURE",
+    "TECH3",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_structure_generic",
+  "buildIcon": "land",
+  "size": {
+    "x": 1,
+    "y": 1,
+    "z": 1
+  },
+  "footprint": {
+    "sizeX": 1,
+    "sizeZ": 1
+  },
+  "uniformScale": 0.05,
+  "health": 10,
+  "massCost": 312,
+  "energyCost": 1560,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 200,
+      "mesh": "/units/xrl0002/xrl0002_lod0.glb",
+      "shader": "Insect",
+      "albedo": "/units/xrl0002/xrl0002_albedo.png",
+      "normals": "/units/xrl0002/xrl0002_normalsts.png",
+      "specular": "/units/xrl0002/xrl0002_specteam.png"
+    },
+    {
+      "cutoff": 500,
+      "mesh": "/units/xrl0002/xrl0002_lod1.glb",
+      "shader": "Insect",
+      "albedo": "/units/xrl0002/xrl0002_lod1_albedo.png",
+      "normals": "/units/xrl0002/xrl0002_normalsts.png",
+      "specular": "/units/xrl0002/xrl0002_lod1_specteam.png"
+    }
+  ]
+}

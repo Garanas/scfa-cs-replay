@@ -91,8 +91,31 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     to a whole ogrid, so structures stay on the build grid) placed as a new group, turned;
     `SetInstance` (below). The game
     creates the units of each army's `INITIAL`, with the groups in it, at the start.
+    `GroupUnits` (U-11): a new group per army among the units, under the deepest group that holds
+    that army's units (the name made free among its siblings), the units moved into it.
     `BuildGrid.Snap`: a structure an odd number of ogrids wide on a half ogrid, an even one on a
-    whole; a quarter turn swaps its sides.
+    whole; a quarter turn swaps its sides. `BuildGrid.KeepOnGrid` rounds the offset of a move so
+    that the first structure among the things lands where `Snap` puts it (everything else moves by
+    the same amount; the offset as it is without a structure), `KeepPlaceOnGrid` the same for the
+    place `PlaceObjects` puts things at; the caller gives the footprint of a blueprint that is a
+    structure (null for another unit), since the document holds blueprint ids only.
+  - `UnitEdits` (U-11): `ReplaceUnits` (a function answers a `UnitReplacement` per unit: the new id
+    and, for a structure, its footprint; name, army, group, place, heading and height above the
+    terrain stay, a structure snaps to its new footprint's grid and a heading that was no
+    structure's to quarter turns; null leaves the unit) and `DistributeUnits` (units spread
+    evenly between the first and last along x or z, `LongerAlongX` when no axis is given; ends
+    stay, a structure between them snaps; fewer than three change nothing).
+  - `UnitConversion` (U-11): `Counterpart(entry, faction, catalog)`, the unit of another faction
+    that stands for a unit. The ids are series, faction letter, kind letter and digits (`ueb1101`,
+    `urb1101`, `uab1101`, `xsb1101`: the Seraphim's base series is `x`): the same digits under
+    the target's letters when the catalogue has that unit with the same layer, tech level and
+    civilian flag (`SameIds`); else the unit of the target with the same layer, tech and civilian
+    flag that shares most of the categories that say what a unit does (`Purposes`: not the
+    faction, tech, layer, `BUILTBY*`, `PRODUCT*`, `SORT*`, `SIZE*`, `OVERLAY*`), the nearest in mass
+    cost when equal; null when none shares one. `AssetEntry.Categories` carries a unit's
+    blueprint categories. Tests: `UnitConversionTest` over 42 real blueprints in
+    `tests/FAForever.MapEditor.Project.Tests/assets/unit-catalogue` (JSON only, copied from a
+    converted workspace), `UnitEditsTest`.
   - `UnitLayouts` (U-7, pure maths; the editor's place tool and `units.addMany` put the units on
     the terrain with `AddUnits`): the places and headings (`UnitPlace`: x, z, radians clockwise
     from +x) of many units at once from a unit's footprint (`Extent` turned in quarter turns; none
@@ -140,6 +163,13 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     (`ObjectClipboard`; copied path nodes keep their links among each other). Things keep to the
     terrain: they stay as high above it as they were (`Heightmap.HeightAt`, between the corners).
     `Nearest` takes what may be picked at all (`include`): the editor leaves out hidden decals.
+    `Nearest` and `Inside` also take `UnitFootprints`, a function from a blueprint to what a structure
+    takes up in ogrids (null for a unit picked by its centre), which the caller supplies (the editor
+    knows the catalogue): a click inside the footprint's rectangle, turned by the unit's heading
+    (`FootprintCorners`; sides under 1 count as 1), picks the structure (the nearer centre first among
+    overlapping ones, a unit that is no structure or lies outside it by the 7 pixels of its centre as
+    before), and a box that touches the rectangle takes it (the turned rectangle against the box, not
+    its span). Tests: `FootprintPickingTest`.
   - **Handles of the selection** (`SelectionHandles.cs`, user story F-11): `SelectionFrame.Of` is
     the box they sit on (the middle of the things' bounds at their mean height; turned with decals
     that all face one way; which handles the things have: the ring when something turns or several
@@ -504,6 +534,16 @@ game content after import and export of vault maps with wrecks). Groups that ada
 create as wrecks by option (`Optional_Wreckage_<n>`, `CreateArmyGroup(army, group, true)`) are
 ordinary groups to the editor: only the script decides.
 
+**Asking for units** (U-10, `Editing/UnitQuery`): `UnitQuery` says army, factions (`uef`, `aeon`,
+`cybran`, `seraphim`, `other`), kinds (`structure`, `land`, `air`, `naval`, `other`: the catalogue's
+`Category`, `other` for the rest and for a blueprint it lacks), tech levels (the catalogue's `TechLevel`;
+a unit without one matches no tech asked for), a blueprint (an id, or part of an id or of the unit's
+name, in any case) and wrecks (`WreckChoice.Leave`, `Only`, `Include`); every part left empty asks
+nothing. A unit's faction is its blueprint's (`AssetEntry.Group`), the army's (`Army.Faction`, an index
+of `ArmyEdits.Factions`) when the catalogue lacks the blueprint. `Select(document, find, within)` gives
+the names in the map's order, among those of `within` when given (the caller resolves the selection or
+an area). Tests: `UnitQueryTest`.
+
 ## The vault: rules, zip, upload and sign-in
 
 User story M-8 (`Vault/`). How FAForever takes a map, from the source of the
@@ -568,7 +608,10 @@ the Procedural defaults of new and imported maps (`procedural`, section "Generat
 `UserSettings` remembers where the workspace is, outside it (`%APPDATA%\FAF Map Editor\settings.json`;
 also the layout, the plugins turned off and whether results regenerate on their own, `generation`;
 the environment variable `FAF_MAP_EDITOR_SETTINGS` names another file, which tests and automation
-use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.lua` for the defaults.
+use so that the user's own stays alone). `StoredSelections(projectFolder)` and `SetStoredSelections`
+keep the selections stored under the digits 1 to 9 per project (the folder's full path), as the text of
+the things (`unit:UNIT_5`; the editor keeps units and areas), never in the map's files.
+`FafInstallation` reads FAF's `fa_path.lua` for the defaults.
 
 - `GameArchives` lays the archives over each other as the game mounts them: per name (`env`,
   `units`, and `textures` when the game has it) the game's `.scd`, then FAF's `.nx2`, which wins.
@@ -675,7 +718,7 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   it (`ScratchWorkspace.Create(folder, source, assetsInto)`), never the source's own. `init
   --settings <file>` remembers the workspace in that file rather than the user's.
 - **The user's settings** (`UserSettings`) are read part by part (workspace, telemetry, layout,
-  plugins): a part with a value of the wrong type is left out and named in `Problem` (the editor
+  plugins, units, stored selections): a part with a value of the wrong type is left out and named in `Problem` (the editor
   logs it and says so in the status line), the rest is read; a file that is not JSON at all reads
   as empty and is never written over (`MapProjectException`), so a typo does not lose the user's
   workspace.
@@ -1499,6 +1542,22 @@ map's things.
 - `preset-changed` (a note): a group placed from a unit preset (U-9) whose preset's file changed
   since, or which the workspace has no preset of; reads the fingerprints the editor keeps
   (`ProblemContext.PresetFingerprint`, null for a name without a preset) and finds nothing without them.
+- `units-overlap` and `units-ground` (warnings, U-12; `PlacementChecks`, `PlacementIndex`): two
+  structures (wrecks, mobile units and blueprints without a footprint or skirt left out) whose
+  skirts, else footprints, overlap, one problem per pair naming both (`Problem.Related` is the
+  second, selected with the first; the place is the middle of the shared ground; edges that touch
+  do not overlap, so walls side by side are fine); and a structure on a layer its
+  `BuildOnLayerCaps` excludes (the terrain height under its centre against the water height:
+  land, or water and seabed under it), in water shallower than its `MinWaterDepth`, or on ground
+  steeper than its `MaxSlope` (the rise per ogrid from the footprint's centre to each corner, from
+  the heightmap). A skirt starts `SkirtOffset` from the footprint's corner (a land factory: 5 by 5,
+  skirt 8 by 8, offset -1.5), turned in quarter turns. What a blueprint does not say is not
+  checked. At most 200 problems per check, then one line saying how many more. The
+  structures sit in a grid of cells of 16 ogrids (`PlacementIndex.Of(document, catalog)`, made
+  once per document), so 2,000 structures take a few milliseconds. The place tool's red preview
+  calls `PlacementChecks.OverlapAt` and `GroundIssue`, so it and Problems agree. The blueprint's
+  limits are in the converted assets (`UnitBlueprintDto.Skirt`, `BuildOnLayers`, `Footprint.MaxSlope`,
+  `MinWaterDepth`; `AssetEntry.Limits`): asset format 6, so a workspace converted before converts again.
 
 ## Unit templates from real maps
 

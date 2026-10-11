@@ -45,6 +45,18 @@ namespace FAForever.MapEditor.Project.Workspaces.Serialized
         /// </summary>
         public FootprintDto? Footprint { get; init; }
 
+        /// <summary>
+        /// The ground a structure reserves (<c>Physics.SkirtSizeX</c>, ...); absent when the
+        /// blueprint names none.
+        /// </summary>
+        public SkirtDto? Skirt { get; init; }
+
+        /// <summary>
+        /// The layers it may be built on (<c>Physics.BuildOnLayerCaps</c>) without the <c>LAYER_</c>
+        /// prefix: <c>Land</c>, <c>Water</c>, <c>Seabed</c>; absent when the blueprint lists none.
+        /// </summary>
+        public List<string>? BuildOnLayers { get; init; }
+
         public double? UniformScale { get; init; }
 
         public double? Health { get; init; }

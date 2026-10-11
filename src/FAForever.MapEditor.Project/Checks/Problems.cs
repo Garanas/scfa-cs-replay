@@ -27,7 +27,8 @@ namespace FAForever.MapEditor.Project.Checks
     /// <param name="Check">The id of the check that found it, e.g. <c>spawn-without-mass</c>.</param>
     /// <param name="Thing">The thing it is about, which the editor selects when the person goes there.</param>
     /// <param name="Place">The place on the map (x, z in ogrids) to go to; else the thing's place.</param>
-    public sealed record Problem(string Check, ProblemSeverity Severity, string Message, ObjectRef? Thing = null, Vector2? Place = null);
+    /// <param name="Related">Other things the problem is about (the second structure of an overlap), selected with <paramref name="Thing"/>.</param>
+    public sealed record Problem(string Check, ProblemSeverity Severity, string Message, ObjectRef? Thing = null, Vector2? Place = null, IReadOnlyList<ObjectRef>? Related = null);
 
     /// <summary>
     /// What a check reads: the document, and what the editor knows besides it. Each part but the

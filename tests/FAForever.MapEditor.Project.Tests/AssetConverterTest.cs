@@ -137,6 +137,10 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(18000, acu.MassCost);
             Assert.AreEqual(0.9, acu.WreckageMass);
             Assert.AreEqual(1, acu.Footprint!.SizeX);
+            Assert.AreEqual((0.25, 1.5), (acu.Footprint.MaxSlope, acu.Footprint.MinWaterDepth), "the slope and water the ground must have (user story U-12)");
+            Assert.AreEqual(4, acu.Skirt!.SizeZ);
+            Assert.AreEqual(-1.5, acu.Skirt.OffsetZ);
+            CollectionAssert.AreEqual(new[] { "Land", "Seabed" }, acu.BuildOnLayers);
             Assert.AreEqual("/units/uel0001/uel0001_lod0.glb", acu.Lods.Single().Mesh);
             Assert.AreEqual("/units/uel0001/uel0001_albedo.png", acu.Lods[0].Albedo);
             Assert.AreEqual("/units/uel0001/uel0001_normalsts.png", acu.Lods[0].Normals);

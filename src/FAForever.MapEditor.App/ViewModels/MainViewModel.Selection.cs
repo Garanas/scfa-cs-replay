@@ -23,7 +23,17 @@ public sealed partial class MainViewModel
     /// The place under the mouse in a view, in ogrids; null while the mouse is outside the views.
     /// Paste puts what was copied here.
     /// </summary>
-    public (float X, float Z)? Pointer { get; set; }
+    public (float X, float Z)? Pointer
+    {
+        get => _pointer;
+        set
+        {
+            _pointer = value;
+            (ActiveTool?.Tool as UnitPlaceTool)?.PointerMoved();
+        }
+    }
+
+    private (float X, float Z)? _pointer;
 
     /// <summary>
     /// Whether the views show the props: as dots in the top view, as their models in 3D.
@@ -42,6 +52,15 @@ public sealed partial class MainViewModel
     /// </summary>
     [ObservableProperty]
     public partial bool ShowAreas { get; set; } = true;
+
+    /// <summary>
+    /// Whether the top view draws the units in their army's colour (a structure as its footprint, a
+    /// mobile unit as a diamond); off, every unit is the small square of the theme's unit colour.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool ShowArmyColours { get; set; } = true;
+
+    partial void OnShowArmyColoursChanged(bool value) => RefreshOverlays();
 
     partial void OnShowPropsChanged(bool value) => RefreshOverlays();
 
@@ -161,7 +180,7 @@ public sealed partial class MainViewModel
     /// </summary>
     /// <param name="ogridsPerPixel">How large a pixel of the view is on the map.</param>
     public ObjectRef? PickAt(float x, float z, float ogridsPerPixel, ObjectKinds? kinds = null) =>
-        ShownDocument?.Nearest(x, z, ogridsPerPixel, kinds ?? SelectableKinds, Decals.HiddenDecals.Count > 0 || Isolated is not null ? IsPickable : null, ShownMarkerKinds);
+        ShownDocument?.Nearest(x, z, ogridsPerPixel, kinds ?? SelectableKinds, Decals.HiddenDecals.Count > 0 || Isolated is not null ? IsPickable : null, ShownMarkerKinds, UnitFootprintsForPicking);
 
     /// <summary>
     /// Selects what a click at a place picks; a click on nothing clears the selection unless it adds.
@@ -188,7 +207,7 @@ public sealed partial class MainViewModel
     {
         if (ShownDocument is MapDocument document)
         {
-            Selection.Apply(document.Inside(x0, z0, x1, z1, kinds ?? BoxKinds, ShownMarkerKinds).Where(IsPickable), change);
+            Selection.Apply(document.Inside(x0, z0, x1, z1, kinds ?? BoxKinds, ShownMarkerKinds, UnitFootprintsForPicking).Where(IsPickable), change);
         }
     }
 

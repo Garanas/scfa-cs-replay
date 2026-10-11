@@ -1,0 +1,58 @@
+{
+  "id": "urb2101",
+  "name": "Point Defense",
+  "faction": "Cybran",
+  "techLevel": 1,
+  "categories": [
+    "BUILTBYCOMMANDER",
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3ENGINEER",
+    "CQUEMOV",
+    "CYBRAN",
+    "DEFENSE",
+    "DIRECTFIRE",
+    "DRAGBUILD",
+    "FASTDECAY",
+    "OVERLAYDIRECTFIRE",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SIZE4",
+    "SNIPEMODE",
+    "SORTDEFENSE",
+    "STRUCTURE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_structure1_directfire",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.6,
+    "y": 0.8,
+    "z": 0.6
+  },
+  "uniformScale": 0.17,
+  "health": 1300,
+  "massCost": 250,
+  "energyCost": 2000,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/urb2101/urb2101_lod0.glb",
+      "shader": "Insect",
+      "albedo": "/units/urb2101/urb2101_albedo.png",
+      "normals": "/units/urb2101/urb2101_normalsts.png",
+      "specular": "/units/urb2101/urb2101_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/urb2101/urb2101_lod1.glb",
+      "shader": "Insect",
+      "albedo": "/units/urb2101/urb2101_lod1_albedo.png",
+      "normals": "/units/urb2101/urb2101_normalsts.png",
+      "specular": "/units/urb2101/urb2101_lod1_specteam.png"
+    }
+  ]
+}

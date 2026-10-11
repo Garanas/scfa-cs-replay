@@ -311,6 +311,7 @@ public static class EditorOverlays
         new OverlayDefinition("areas", "Areas", "Show areas", "M-5") { Swatch = "MapAreaBrush" },
         new OverlayDefinition("props", "Props", "Show props", "V-2"),
         new OverlayDefinition("units", "Units", "Show units", "V-2"),
+        new OverlayDefinition("armyColours", "Army colours", "Show the units in their army's colour in the top view", "U-10"),
         new OverlayDefinition("decals", "Decals", "Show decals", "V-3"),
         new OverlayDefinition("navigation", "Connected regions", "Show the connected regions: where units of a layer can path between", "T-8") { Swatch = "MapRegion1Brush" },
         new OverlayDefinition("generatedPathNodes", "Generated nodes", "Show the generated path nodes", "R-3") { Panel = "procedural" },

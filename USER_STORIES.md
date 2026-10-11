@@ -544,20 +544,34 @@ reads again when it changes; and nothing that generates runs by itself.
       units), Save back to the preset (asked first; the file keeps its role and wrecks), Show the
       preset (highlighted in the list) and Detach; Problems notes instances whose preset changed or
       is missing (`preset-changed`); the export writes the group as any other.
-- [ ] **U-10 Select by and stored selections.** Select units by army, faction, kind, tech,
+- [x] **U-10 Select by and stored selections.** Select units by army, faction, kind, tech,
       blueprint and wrecks, within the map, the selection or an area, replacing the selection or
       adding to it; store the selection under 1 to 9 (Alt and the digit) and recall it (the digit),
       as the game's control groups, kept with the project and shown along the view; a click inside
       a structure's footprint picks it; the top view draws units as their footprint in the army's
       colour.
-- [ ] **U-11 Editing many units.** Group the selection into a new group (Ctrl+G) and ungroup; the
+      Today: `select.where` and the select tool's Select by popover choose units by all of those, within
+      the map, the selection or an area, replacing or adding (`select.by` opens it); Alt and a digit store
+      the selection and a digit recalls it (`select.store`, `select.recall`, in every select tool), kept per
+      project in the user's settings and shown as chips along the top view (`3 · Cybran farm · 17`); a click
+      inside a structure's footprint, or a box that touches it, picks it (Picks: Footprint or Centre); the
+      top view draws a structure as its footprint and a mobile unit as a diamond in the army's colour (the
+      chip Army colours turns it off; the 3D view is not coloured by army).
+- [x] **U-11 Editing many units.** Group the selection into a new group (Ctrl+G) and ungroup; the
       group as a choice in the inspector; replace the blueprint of the selected units, or convert
       them to another faction's unit of the same kind and tech; a move keeps structures on the
-      build grid; distribute the selection evenly.
-- [ ] **U-12 Placement checks.** Problems lists structures whose footprints overlap and structures
+      build grid; distribute the selection evenly. Today: `units.group` (Ctrl+G, a group per army
+      under the deepest group holding the selected units) and `units.ungroup`; the inspector's
+      Group is a combo of the army's groups, with Blueprint, Replace..., the faction chips UEF,
+      Cybran, Aeon and Seraphim (the same id under the other faction's letters, else the unit with
+      the same layer and tech that shares most categories; a unit without a counterpart stays and
+      is counted), Group, Ungroup and Distribute (`units.distribute`, three units or more); a
+      handle drag, the arrows and `edit.place` round the move so the first structure lands on the
+      build grid (the select tool's check box "Keep structures on the build grid").
+- [x] **U-12 Placement checks.** Problems lists structures whose footprints overlap and structures
       where the ground does not allow them (too steep, the wrong layer: water or land), from the
       blueprint's skirt, build layers and slope limit, which the workspace's converted assets carry;
-      the footprint under the mouse turns red there.
+      the footprint under the mouse turns red there. Today: the converted assets carry each unit's skirt, build layers, slope limit and least water depth (asset format 6); the checks `units-overlap` and `units-ground` warn in Problems (choosing an overlap selects both units), and the Place tool's footprints (single, line, rectangle, ring) turn red with the reason in the status line; placing stays allowed.
 
 ## V: Views
 

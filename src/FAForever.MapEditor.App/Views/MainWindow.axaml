@@ -142,6 +142,25 @@
             <Grid x:Name="Maps" ColumnDefinitions="*,Auto,*">
               <controls:HeightmapView x:Name="Heightmap" ClipToBounds="True" AutomationProperties.Name="Top view"
                                        AutomationProperties.HelpText="The left mouse uses the tool; right or middle moves; the wheel zooms; alt and a click sends the 3D camera there; after a click the active tool takes keys (the Select tool: Q, E, the arrows, Escape; a brush: [ and ] the radius, shift with them the strength); control and the wheel change a brush's radius" />
+              <!-- over the top view (MainWindow.ShowChosenView gives it the view's columns): the Select by popover (U-10) and the
+                   chips of the selections stored under the digits, along the bottom -->
+              <Grid x:Name="TopOverlays" Grid.Column="0">
+                <views:SelectByPopover DataContext="{Binding SelectBy}" />
+                <ItemsControl Classes="storedchips" ItemsSource="{Binding StoredSelections.Chips}" IsVisible="{Binding StoredSelections.HasChips}"
+                              AutomationProperties.Name="Stored selections">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Classes="inline" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StoredSelectionChip">
+                      <Button Classes="chip" Classes.on="{Binding IsCurrent}" Content="{Binding Text}" Command="{Binding RecallCommand}"
+                              AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Grid>
               <GridSplitter x:Name="ViewsSplitter" Grid.Column="1" Classes="layoutsplitter" ResizeDirection="Columns" IsVisible="False"
                             AutomationProperties.Name="Resize the views" />
               <controls:TerrainViewGpu x:Name="Terrain3D" IsVisible="False" AutomationProperties.Name="3D view"

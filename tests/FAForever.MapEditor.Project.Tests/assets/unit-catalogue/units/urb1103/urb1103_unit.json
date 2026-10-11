@@ -1,0 +1,57 @@
+{
+  "id": "urb1103",
+  "name": "Mass Extractor",
+  "faction": "Cybran",
+  "techLevel": 1,
+  "categories": [
+    "BUILTBYCOMMANDER",
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3ENGINEER",
+    "CQUEMOV",
+    "CYBRAN",
+    "DRAGBUILD",
+    "ECONOMIC",
+    "MASSEXTRACTION",
+    "MASSPRODUCTION",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SHOWQUEUE",
+    "SIZE4",
+    "SORTECONOMY",
+    "STRUCTURE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_structure1_mass",
+  "buildIcon": "amph",
+  "size": {
+    "x": 0.75,
+    "y": 1.8,
+    "z": 0.75
+  },
+  "uniformScale": 0.1,
+  "health": 360,
+  "massCost": 36,
+  "energyCost": 360,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 120,
+      "mesh": "/units/urb1103/urb1103_lod0.glb",
+      "shader": "Insect",
+      "albedo": "/units/urb1103/urb1103_albedo.png",
+      "normals": "/units/urb1103/urb1103_normalsts.png",
+      "specular": "/units/urb1103/urb1103_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/urb1103/urb1103_lod1.glb",
+      "shader": "Insect",
+      "albedo": "/units/urb1103/urb1103_lod1_albedo.png",
+      "normals": "/units/urb1103/urb1103_normalsts.png",
+      "specular": "/units/urb1103/urb1103_lod1_specteam.png"
+    }
+  ]
+}

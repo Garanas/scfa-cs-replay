@@ -39,6 +39,13 @@ namespace FAForever.MapEditor.Project.Workspaces.Serialized
         /// absent until a palette is chosen or a unit placed.
         /// </summary>
         public UnitsSettingsDto? Units { get; init; }
+
+        /// <summary>
+        /// The selections stored under the digits 1 to 9 (user story U-10), by project folder (its full
+        /// path), then by digit: the things as <c>unit:UNIT_5</c>; absent until one is stored. The
+        /// map's own files never hold them.
+        /// </summary>
+        public Dictionary<string, Dictionary<string, List<string>>>? StoredSelections { get; init; }
     }
 
     /// <summary>

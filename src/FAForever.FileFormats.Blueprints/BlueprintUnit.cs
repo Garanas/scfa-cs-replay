@@ -356,6 +356,13 @@ namespace FAForever.FileFormats.Blueprints
 
         public double? SkirtSizeZ { get; init; }
 
+        /// <summary>
+        /// Where the skirt starts, from the footprint's corner (negative: it reaches beyond it).
+        /// </summary>
+        public double? SkirtOffsetX { get; init; }
+
+        public double? SkirtOffsetZ { get; init; }
+
         internal static BlueprintUnitPhysics Read(LuaTableReader t) => new BlueprintUnitPhysics
         {
             Raw = t.Table,
@@ -375,6 +382,8 @@ namespace FAForever.FileFormats.Blueprints
             WaterSpeedMultiplier = t.Number("WaterSpeedMultiplier"),
             SkirtSizeX = t.Number("SkirtSizeX"),
             SkirtSizeZ = t.Number("SkirtSizeZ"),
+            SkirtOffsetX = t.Number("SkirtOffsetX"),
+            SkirtOffsetZ = t.Number("SkirtOffsetZ"),
         };
     }
 

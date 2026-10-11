@@ -1,0 +1,55 @@
+{
+  "id": "ual0101",
+  "name": "Land Scout",
+  "faction": "Aeon",
+  "techLevel": 1,
+  "categories": [
+    "AEON",
+    "BUILTBYTIER1FACTORY",
+    "BUILTBYTIER2FACTORY",
+    "BUILTBYTIER3FACTORY",
+    "DIRECTFIRE",
+    "HOVER",
+    "INTELLIGENCE",
+    "LAND",
+    "MOBILE",
+    "OVERLAYDIRECTFIRE",
+    "OVERLAYRADAR",
+    "PRODUCTSC1",
+    "RECLAIMABLE",
+    "SCOUT",
+    "SELECTABLE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_land1_intel",
+  "buildIcon": "amph",
+  "size": {
+    "x": 0.6,
+    "y": 0.7,
+    "z": 1
+  },
+  "uniformScale": 0.08,
+  "health": 20,
+  "massCost": 8,
+  "energyCost": 60,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 100,
+      "mesh": "/units/ual0101/ual0101_lod0.glb",
+      "shader": "Aeon",
+      "albedo": "/units/ual0101/ual0101_albedo.png",
+      "normals": "/units/ual0101/ual0101_normalsts.png",
+      "specular": "/units/ual0101/ual0101_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/ual0101/ual0101_lod1.glb",
+      "shader": "Aeon",
+      "albedo": "/units/ual0101/ual0101_lod1_albedo.png",
+      "normals": "/units/ual0101/ual0101_normalsts.png",
+      "specular": "/units/ual0101/ual0101_lod1_specteam.png"
+    }
+  ]
+}

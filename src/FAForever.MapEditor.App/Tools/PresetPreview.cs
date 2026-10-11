@@ -135,7 +135,8 @@ public static class PresetPreview
     /// the symmetry mirrors edits: the thing itself with a shadow, an image dashed-light.
     /// </summary>
     /// <param name="span">The performance span the drawing is measured as.</param>
-    public static IReadOnlyList<ToolShape> ShapesAt(MainViewModel model, ToolView view, IReadOnlyList<PreviewOutline> outlines, string span = "tool.preset-preview")
+    /// <param name="blocked">Per outline whether it breaks a rule (user story U-12): drawn in the danger colour.</param>
+    public static IReadOnlyList<ToolShape> ShapesAt(MainViewModel model, ToolView view, IReadOnlyList<PreviewOutline> outlines, string span = "tool.preset-preview", IReadOnlyList<bool>? blocked = null)
     {
         if (outlines.Count == 0 || model.ShownDocument is not MapDocument document)
         {
@@ -149,7 +150,8 @@ public static class PresetPreview
         int drawn = 0;
         foreach (PreviewOutline outline in outlines)
         {
-            if (drawn++ >= MaxOutlines)
+            int number = drawn++;
+            if (number >= MaxOutlines)
             {
                 break;
             }
@@ -185,7 +187,8 @@ public static class PresetPreview
                 {
                     shapes.Add(new ToolLine(points, true, 3, ToolInk.Shadow));
                 }
-                shapes.Add(new ToolLine(points, true, 1, image ? ToolInk.Hover : ToolInk.Selection));
+                bool breaks = !image && blocked is not null && number < blocked.Count && blocked[number];
+                shapes.Add(new ToolLine(points, true, breaks ? 2 : 1, breaks ? ToolInk.Danger : image ? ToolInk.Hover : ToolInk.Selection));
             }
         }
         return shapes;

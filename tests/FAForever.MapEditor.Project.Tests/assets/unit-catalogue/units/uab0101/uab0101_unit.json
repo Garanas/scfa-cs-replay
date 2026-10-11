@@ -1,0 +1,61 @@
+{
+  "id": "uab0101",
+  "name": "Land Factory",
+  "faction": "Aeon",
+  "techLevel": 1,
+  "categories": [
+    "AEON",
+    "BUILTBYCOMMANDER",
+    "BUILTBYTIER1ENGINEER",
+    "BUILTBYTIER2ENGINEER",
+    "BUILTBYTIER3ENGINEER",
+    "CONSTRUCTION",
+    "DRAGBUILD",
+    "FACTORY",
+    "LAND",
+    "PRODUCTSC1",
+    "RALLYPOINT",
+    "RECLAIMABLE",
+    "SELECTABLE",
+    "SHOWQUEUE",
+    "SIZE16",
+    "SORTCONSTRUCTION",
+    "STRUCTURE",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_factory1_land",
+  "buildIcon": "land",
+  "size": {
+    "x": 3.6,
+    "y": 1,
+    "z": 3.6
+  },
+  "footprint": {
+    "sizeX": 5,
+    "sizeZ": 5
+  },
+  "uniformScale": 0.275,
+  "health": 3200,
+  "massCost": 240,
+  "energyCost": 2100,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 200,
+      "mesh": "/units/uab0101/uab0101_lod0.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uab0101/uab0101_albedo.png",
+      "normals": "/units/uab0101/uab0101_normalsts.png",
+      "specular": "/units/uab0101/uab0101_specteam.png"
+    },
+    {
+      "cutoff": 500,
+      "mesh": "/units/uab0101/uab0101_lod1.glb",
+      "shader": "Aeon",
+      "albedo": "/units/uab0101/uab0101_lod1_albedo.png",
+      "normals": "/units/uab0101/uab0101_lod1_normalsts.png",
+      "specular": "/units/uab0101/uab0101_lod1_specteam.png"
+    }
+  ]
+}

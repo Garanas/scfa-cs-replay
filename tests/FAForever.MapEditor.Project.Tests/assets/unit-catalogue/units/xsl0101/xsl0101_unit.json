@@ -1,0 +1,58 @@
+{
+  "id": "xsl0101",
+  "name": "Combat Scout",
+  "faction": "Seraphim",
+  "techLevel": 1,
+  "categories": [
+    "BOT",
+    "BUILTBYTIER1FACTORY",
+    "BUILTBYTIER2FACTORY",
+    "BUILTBYTIER3FACTORY",
+    "COUNTERINTELLIGENCE",
+    "DIRECTFIRE",
+    "INTELLIGENCE",
+    "LAND",
+    "MOBILE",
+    "OVERLAYDIRECTFIRE",
+    "OVERLAYRADAR",
+    "PRODUCTFA",
+    "RADAR",
+    "RECLAIMABLE",
+    "SCOUT",
+    "SELECTABLE",
+    "SERAPHIM",
+    "STEALTH",
+    "TECH1",
+    "VISIBLETORECON"
+  ],
+  "strategicIcon": "icon_bot1_intel",
+  "buildIcon": "land",
+  "size": {
+    "x": 0.6,
+    "y": 0.75,
+    "z": 0.9
+  },
+  "uniformScale": 0.064,
+  "health": 35,
+  "massCost": 20,
+  "energyCost": 80,
+  "wreckageMass": 0.9,
+  "lods": [
+    {
+      "cutoff": 20,
+      "mesh": "/units/xsl0101/xsl0101_lod0.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsl0101/xsl0101_albedo.png",
+      "normals": "/units/xsl0101/xsl0101_normalsts.png",
+      "specular": "/units/xsl0101/xsl0101_specteam.png"
+    },
+    {
+      "cutoff": 215,
+      "mesh": "/units/xsl0101/xsl0101_lod1.glb",
+      "shader": "Seraphim",
+      "albedo": "/units/xsl0101/xsl0101_lod1_albedo.png",
+      "normals": "/units/xsl0101/xsl0101_normalsts.png",
+      "specular": "/units/xsl0101/xsl0101_lod1_specteam.png"
+    }
+  ]
+}

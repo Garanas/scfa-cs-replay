@@ -567,6 +567,8 @@ public sealed partial class MainWindow : Window
         }
         _shownView = view;
         Heightmap.IsVisible = view is MapViewTab.Top or MapViewTab.SideBySide;
+        TopOverlays.IsVisible = Heightmap.IsVisible;
+        Grid.SetColumnSpan(TopOverlays, sideBySide ? 1 : 3);
         Terrain3D.IsVisible = view is MapViewTab.ThreeD or MapViewTab.SideBySide;
         ViewsSplitter.IsVisible = sideBySide;
         Grid.SetColumnSpan(Heightmap, sideBySide ? 1 : 3);

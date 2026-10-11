@@ -146,6 +146,51 @@ namespace FAForever.MapEditor.App.Tests
             window.Close();
         });
 
+        /// <summary>
+        /// <c>mouse clicks=2</c> presses twice in a row, which the view counts as a double click (user story U-10),
+        /// and the state carries the stored selections, the Select by popover and how units are picked.
+        /// </summary>
+        [TestMethod]
+        public Task MouseClicksTwoDoubleClicksAndTheStateCarriesStoredSelections() => Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            model.Presets.Use(new FAForever.MapEditor.Project.Workspaces.PresetLibrary(Path.Combine(AppContext.BaseDirectory, "presets", Guid.NewGuid().ToString("N"))));
+            model.View = MapViewTab.Top;
+            model.SelectMode("units");
+            foreach (int x in new[] { 60, 70 })
+            {
+                await Send(automation, "run", new JsonObject { ["id"] = "units.add", ["blueprint"] = "uec1101", ["x"] = x, ["z"] = 60, ["army"] = "ARMY_1", ["group"] = "INITIAL/Town" });
+            }
+            await Send(automation, "run", new JsonObject { ["id"] = "units.saveGroupAsPreset", ["army"] = "ARMY_1", ["group"] = "INITIAL/Town", ["name"] = "Village" });
+            JsonObject placed = await Send(automation, "run", new JsonObject { ["id"] = "units.placePreset", ["name"] = "Village", ["x"] = 120, ["z"] = 120, ["army"] = "ARMY_2" });
+            string unit = placed["result"]!["units"]![0]!.GetValue<string>();
+            await Send(automation, "tool", new JsonObject { ["id"] = "units.select" });
+            JsonObject top = (JsonObject)(await Send(automation, "view-point", new JsonObject { ["ref"] = $"unit:{unit}" }))["point"]!["top"]!;
+
+            await Send(automation, "run", new JsonObject { ["id"] = "select.none" });
+            Assert.AreEqual(0, model.Selection.Count, "placing a preset selects its units; nothing is selected before the click");
+            await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = top["x"]!.DeepClone(), ["y"] = top["y"]!.DeepClone(), ["clicks"] = 1 });
+            Assert.AreEqual(1, model.Selection.Count, "clicks 1 is a click");
+            // the unit is selected and has its move handle in the middle: the double click still selects the instance
+            await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = top["x"]!.DeepClone(), ["y"] = top["y"]!.DeepClone(), ["clicks"] = 2 });
+            Assert.AreEqual(2, model.Selection.Count, "clicks 2 selects the instance: a double click on a unit of a placed preset");
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = top["x"]!.DeepClone(), ["y"] = top["y"]!.DeepClone(), ["clicks"] = 9 }));
+
+            await Send(automation, "run", new JsonObject { ["id"] = "select.store", ["slot"] = 2 });
+            JsonObject selection = (JsonObject)(await Send(automation, "state"))["selection"]!;
+            JsonObject stored = (JsonObject)selection["stored"]!["slots"]!["2"]!;
+            Assert.AreEqual(2, stored["count"]!.GetValue<int>());
+            Assert.AreEqual("Village", stored["group"]!.GetValue<string>());
+            Assert.AreEqual("2 · Village · 2", stored["chip"]!.GetValue<string>());
+            Assert.AreEqual("Footprint", selection["unitPicks"]!.GetValue<string>());
+            Assert.IsFalse(selection["selectBy"]!["open"]!.GetValue<bool>());
+
+            await Send(automation, "run", new JsonObject { ["id"] = "select.none" });
+            JsonObject recalled = await Send(automation, "run", new JsonObject { ["id"] = "select.recall", ["slot"] = 2 });
+            Assert.AreEqual(2, recalled["result"]!.GetValue<int>());
+            window.Close();
+        });
+
         [TestMethod]
         public Task DataDraggedOntoTheTopViewIsDroppedThere() => Run(async () =>
         {
@@ -277,6 +322,9 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(2.5, place["spacing"]!.GetValue<double>());
             Assert.AreEqual(9, place["count"]!.GetValue<int>());
             Assert.IsFalse(place["dragging"]!.GetValue<bool>());
+            Assert.IsFalse(place["blocked"]!.GetValue<bool>(), "nothing to place, nothing red (user story U-12)");
+            Assert.AreEqual(0, place["blockedCount"]!.GetValue<int>());
+            Assert.IsNull(place["why"]);
             Assert.AreEqual("units.place", model.ActiveTool!.Definition.Id);
 
             // the segmented control's chips say which way is on

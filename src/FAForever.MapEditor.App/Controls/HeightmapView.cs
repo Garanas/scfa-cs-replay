@@ -590,6 +590,7 @@ public sealed partial class HeightmapView : Control
         [ToolInk.AxisZ] = Token<IBrush>("MapHandleAxisZBrush"),
         [ToolInk.Shadow] = Token<IBrush>("OverlayShadowBrush"),
         [ToolInk.Sun] = Token<IBrush>("WarningBrush"),
+        [ToolInk.Danger] = Token<IBrush>("DangerBrush"),
     })[ink];
 
     /// <summary>
@@ -719,7 +720,7 @@ public sealed partial class HeightmapView : Control
     }
 
     /// <summary>
-    /// The areas as dashed rectangles with their names, the props as dots and the units as squares,
+    /// The areas as dashed rectangles with their names, the props as dots and the units (see <see cref="DrawUnits"/>),
     /// each when its overlay is on; only what lies in the view.
     /// </summary>
     private void DrawThings(DrawingContext context, Overlay overlay, MapDocument document, MainViewModel model)
@@ -749,27 +750,7 @@ public sealed partial class HeightmapView : Control
         }
         if (model.ShowUnits)
         {
-            foreach (PlacedUnit unit in document.AllUnits())
-            {
-                Point at = MapToControl(unit.Unit.Position.X, unit.Unit.Position.Z);
-                if (!shown.Contains(at) || !model.IsDrawn(ObjectRef.Unit(unit.Unit.Name)))
-                {
-                    continue;
-                }
-                if (UnitWrecks.IsWreck(unit))
-                {
-                    // a wreck (U-5): an ashen cross where a unit is a square
-                    foreach (IPen pen in (ReadOnlySpan<IPen>)[overlay.WreckShadow, overlay.Wreck])
-                    {
-                        context.DrawLine(pen, at + new Vector(-3.5, -3.5), at + new Vector(3.5, 3.5));
-                        context.DrawLine(pen, at + new Vector(-3.5, 3.5), at + new Vector(3.5, -3.5));
-                    }
-                }
-                else
-                {
-                    context.DrawRectangle(overlay.Unit, overlay.Shadow, new Rect(at.X - 3.5, at.Y - 3.5, 7, 7));
-                }
-            }
+            DrawUnits(context, overlay, document, model, shown);
         }
     }
 
