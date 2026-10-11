@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "UEF T2",
+  "settings": {
+    "slots": [
+      {
+        "unit": "ueb0201"
+      },
+      {
+        "unit": "ueb0202"
+      },
+      {
+        "unit": "ueb0203"
+      },
+      {
+        "unit": "ueb1201"
+      },
+      {
+        "unit": "ueb1202"
+      },
+      {
+        "unit": "ueb2301"
+      },
+      {
+        "unit": "ueb2204"
+      },
+      {
+        "unit": "ueb2303"
+      },
+      {
+        "unit": "ueb4202"
+      },
+      {
+        "unit": "ueb3201"
+      }
+    ]
+  }
+}

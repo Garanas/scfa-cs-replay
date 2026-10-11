@@ -199,6 +199,12 @@ public sealed partial class PresetsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Raised when the library is another (null) or files changed in it (their paths): what lists
+    /// presets of a kind the panel does not (the unit palettes) reads them again.
+    /// </summary>
+    public event Action<IReadOnlyList<string>?>? LibraryChanged;
+
+    /// <summary>
     /// Uses the presets of a library, without watching it (tests).
     /// </summary>
     public void Use(PresetLibrary library)
@@ -207,11 +213,13 @@ public sealed partial class PresetsViewModel : ObservableObject
         OnPropertyChanged(nameof(Library));
         OnPropertyChanged(nameof(HasLibrary));
         Refresh();
+        LibraryChanged?.Invoke(null);
     }
 
     /// <summary>
     /// Uses the workspace's presets, and reads them again when a file changes there. Opening writes
-    /// only the example unit presets the workspace never had (<see cref="ExampleUnitPresets"/>).
+    /// only the example unit presets and palettes the workspace never had (<see cref="ExampleUnitPresets"/>,
+    /// <see cref="ExampleUnitPalettes"/>).
     /// </summary>
     public void Open(Workspace workspace)
     {
@@ -255,7 +263,8 @@ public sealed partial class PresetsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Writes the example unit presets the workspace never had (<see cref="ExampleUnitPresets"/>).
+    /// Writes the example unit presets and palettes the workspace never had (<see cref="ExampleUnitPresets"/>,
+    /// <see cref="ExampleUnitPalettes"/>).
     /// </summary>
     private void WriteExamples(Workspace workspace)
     {
@@ -270,6 +279,18 @@ public sealed partial class PresetsViewModel : ObservableObject
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             _log.LogError(exception, "Writing the example unit presets into {Folder} failed: {Reason}", workspace.PresetsFolder, exception.Message);
+        }
+        try
+        {
+            IReadOnlyList<string> written = ExampleUnitPalettes.Ensure(workspace);
+            if (written.Count > 0)
+            {
+                _log.LogInformation("Wrote {Count} example unit palettes into {Folder}", written.Count, workspace.PresetsFolder);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _log.LogError(exception, "Writing the example unit palettes into {Folder} failed: {Reason}", workspace.PresetsFolder, exception.Message);
         }
     }
 
@@ -292,6 +313,7 @@ public sealed partial class PresetsViewModel : ObservableObject
         {
             _log.LogInformation("The presets changed on disk: {Files}", string.Join(", ", files));
             Refresh();
+            LibraryChanged?.Invoke([.. files]);
         });
     }
 

@@ -1,0 +1,111 @@
+<!-- The Units mode's palette (U-8): the chosen palette (a combo box; + makes one, the menu renames, deletes or shows the folder),
+     its ten slots in two rows of five (the key in a corner; a unit's icon over the picture of its layer, a preset's name in a
+     dashed frame, "drop here" while empty; the slot that holds what the place tool places is filled), and the units and presets
+     placed last as chips. A slot clicked picks it (units.slot); a tile of the shelf dropped on a slot or a slot's context menu
+     puts something in it (units.setSlot); the keys 1 to 9 and 0 pick a slot while the place tool is active, Tab the next palette. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.UnitPalettePanel"
+             x:DataType="vm:UnitPalettesViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Classes="inline">
+          <Button Classes="chip icononly" Command="{Binding NewPaletteCommand}" IsEnabled="{Binding HasLibrary}"
+                  ToolTip.Tip="A new, empty palette of ten slots; asks for its name"
+                  AutomationProperties.Name="New palette" AutomationProperties.HelpText="A new, empty palette of ten slots; asks for its name">
+            <Path Classes="icon small" Data="{StaticResource Icon.Plus}" />
+          </Button>
+          <Button Classes="chip" Content="…" IsEnabled="{Binding HasLibrary}"
+                  ToolTip.Tip="Rename or delete the chosen palette, show the palettes folder"
+                  AutomationProperties.Name="Palette menu" AutomationProperties.HelpText="Rename or delete the chosen palette, show the palettes folder">
+            <Button.Flyout>
+              <MenuFlyout>
+                <MenuItem Header="Rename..." Command="{Binding RenamePaletteCommand}" IsEnabled="{Binding HasChosen}" AutomationProperties.Name="Rename the palette" />
+                <MenuItem Header="Delete" Command="{Binding DeletePaletteCommand}" IsEnabled="{Binding HasChosen}" AutomationProperties.Name="Delete the palette" />
+                <MenuItem Header="Show the folder" Command="{Binding ShowFolderCommand}" AutomationProperties.Name="Show the folder of the palettes" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
+        </StackPanel>
+        <TextBlock Classes="overline" VerticalAlignment="Center" Text="{Binding Source=Palette, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      </DockPanel>
+      <ComboBox ItemsSource="{Binding Names}" SelectedItem="{Binding Chosen}" HorizontalAlignment="Stretch" IsVisible="{Binding HasPalettes}"
+                AutomationProperties.Name="Palette" AutomationProperties.HelpText="The palette whose slots the keys 1 to 9 and 0 pick; Tab goes to the next one while a view has the keyboard" />
+      <TextBlock Classes="caption" IsVisible="{Binding !HasPalettes}"
+                 Text="None yet: + makes a palette of ten slots; drop units from the shelf, or presets from the list below, into them." />
+      <ItemsControl x:Name="SlotGrid" ItemsSource="{Binding Slots}" IsVisible="{Binding HasPalettes}" AutomationProperties.Name="Palette slots">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Classes="slots" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:PaletteSlotItem">
+            <Button Classes="slot" Classes.chosen="{Binding IsChosen}" Classes.missing="{Binding IsMissing}"
+                    Command="{Binding $parent[UserControl].((vm:UnitPalettesViewModel)DataContext).PickSlotCommand}" CommandParameter="{Binding}"
+                    ToolTip.Tip="{Binding Help}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}">
+              <Button.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="Choose a unit..." Command="{Binding $parent[UserControl].((vm:UnitPalettesViewModel)DataContext).ChooseUnitForSlotCommand}" CommandParameter="{Binding}"
+                            AutomationProperties.Name="{Binding Key, StringFormat='Choose a unit for slot {0}'}" />
+                  <MenuItem Header="Clear the slot" Command="{Binding $parent[UserControl].((vm:UnitPalettesViewModel)DataContext).ClearSlotCommand}" CommandParameter="{Binding}"
+                            IsEnabled="{Binding !IsEmpty}" AutomationProperties.Name="{Binding Key, StringFormat='Clear slot {0}'}" />
+                </ContextMenu>
+              </Button.ContextMenu>
+              <Panel>
+                <!-- a unit: the game's icon over the picture of its layer, as the shelf's tiles show it; its mesh without an icon -->
+                <Panel IsVisible="{Binding HasIcon}">
+                  <controls:AssetThumbnail Source="{Binding IconBackground}" DecodeWidth="64" Checker="False" />
+                  <controls:AssetThumbnail Source="{Binding Icon}" DecodeWidth="64" Checker="False" />
+                </Panel>
+                <controls:AssetThumbnail Model="{Binding Model}" DecodeWidth="64" IsVisible="{Binding ShowsModel}" />
+                <TextBlock Classes="slotname" Text="{Binding Title}" IsVisible="{Binding IsMissing}" />
+                <!-- a preset: its name in a dashed frame -->
+                <Panel IsVisible="{Binding IsPreset}">
+                  <Rectangle Classes="slotdash" />
+                  <TextBlock Classes="slotname" Text="{Binding Title}" />
+                </Panel>
+                <TextBlock Classes="slotname slotempty" Text="{Binding Title}" IsVisible="{Binding IsEmpty}" />
+                <Border Classes="slotkey">
+                  <TextBlock Text="{Binding Key}" />
+                </Border>
+              </Panel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock Classes="caption" IsVisible="{Binding HasPalettes}"
+                 Text="Keys 1 to 9 and 0 pick a slot while a view has the keyboard and the Place tool is active; Tab the next palette. Drop a unit from the shelf into a slot, or right-click one." />
+      <!-- the units and presets placed last (U-8), the newest first; a click chooses one again -->
+      <StackPanel Classes="stack" IsVisible="{Binding HasLastPlaced}">
+        <TextBlock Classes="overline section" Text="{Binding Source='Last placed', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <ItemsControl ItemsSource="{Binding LastPlaced}" AutomationProperties.Name="Last placed">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Classes="chips" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:LastPlacedItem">
+              <Button Classes="chip" Command="{Binding $parent[UserControl].((vm:UnitPalettesViewModel)DataContext).PickLastPlacedCommand}" CommandParameter="{Binding}"
+                      ToolTip.Tip="{Binding Label}" AutomationProperties.Name="{Binding Label}">
+                <StackPanel Orientation="Horizontal">
+                  <Border Classes="chipicon" IsVisible="{Binding HasIcon}">
+                    <Panel>
+                      <controls:AssetThumbnail Source="{Binding IconBackground}" DecodeWidth="32" Checker="False" />
+                      <controls:AssetThumbnail Source="{Binding Icon}" DecodeWidth="32" Checker="False" />
+                    </Panel>
+                  </Border>
+                  <TextBlock Text="{Binding Title}" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

@@ -158,6 +158,10 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
+            <!-- the Units mode's palette (U-8): the chosen palette's ten slots and the units placed last, a view of its own -->
+            <DataTemplate DataType="vm:UnitPaletteSection">
+              <panels:UnitPalettePanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).UnitPalettes}" />
+            </DataTemplate>
             <!-- the armies and their trees of unit groups (U-3): choosing one is where new units and groups go, and the inspector shows it -->
             <DataTemplate DataType="vm:UnitGroupsSection">
               <Border Classes="group">

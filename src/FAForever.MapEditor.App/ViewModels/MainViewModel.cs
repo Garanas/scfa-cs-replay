@@ -157,12 +157,14 @@ public sealed partial class MainViewModel : ObservableObject
         Commands = CommandServices.Create(this, _dialogs, typeof(MainViewModel).Assembly);
         Palette = new PaletteViewModel(Commands, RunAsync);
         Presets = new PresetsViewModel(Logger("Assets"), _ui, (id, arguments) => TryAsync(() => Commands.RunAsync(id, arguments, interactive: true)));
+        UnitPalettes = new UnitPalettesViewModel(Presets, Assets, Logger("Assets"), RunWithAsync);
         InitializeShell();
         InitializeSelection();
         InitializeSelectionTools();
         InitializeGeneration();
         InitializeDecals();
         InitializeUnits();
+        InitializeUnitPalettes();
         InitializeMarkers();
         Props = new PropsViewModel(this);
         InitializePainting();
@@ -303,6 +305,7 @@ public sealed partial class MainViewModel : ObservableObject
         Diagnostics.Settings = settings;
         LoadLayout(settings);
         LoadAutoRegenerate(settings);
+        UnitPalettes.Load(settings);
         if (settings.Problem is string problem)
         {
             // a part of the settings that cannot be read is left out, never silently

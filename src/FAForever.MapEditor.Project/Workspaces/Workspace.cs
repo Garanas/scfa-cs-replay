@@ -116,7 +116,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// Sets up a workspace in <paramref name="folder"/>, which must be absent, empty or a
         /// workspace already (whose settings are then replaced; its projects and assets stay), with
         /// its sandbox (<see cref="SandboxMap"/>) when that is missing and the example unit presets
-        /// (<see cref="ExampleUnitPresets"/>).
+        /// (<see cref="ExampleUnitPresets"/>) and unit palettes (<see cref="ExampleUnitPalettes"/>).
         /// </summary>
         /// <exception cref="MapProjectException">The folder holds something else.</exception>
         public static Workspace Create(string folder, string gameFolder, string? fafDataFolder, string vaultFolder)
@@ -136,6 +136,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             workspace.Save();
             SandboxMap.Ensure(workspace);
             ExampleUnitPresets.Ensure(workspace);
+            ExampleUnitPalettes.Ensure(workspace);
             return workspace;
         }
 

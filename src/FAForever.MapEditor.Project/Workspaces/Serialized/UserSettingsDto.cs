@@ -33,6 +33,29 @@ namespace FAForever.MapEditor.Project.Workspaces.Serialized
         /// the user changes it.
         /// </summary>
         public GenerationSettingsDto? Generation { get; init; }
+
+        /// <summary>
+        /// The Units mode's choices (user story U-8): the palette chosen and the units placed last;
+        /// absent until a palette is chosen or a unit placed.
+        /// </summary>
+        public UnitsSettingsDto? Units { get; init; }
+    }
+
+    /// <summary>
+    /// The user's choices in the Units mode: the palette chosen last and what was placed last.
+    /// </summary>
+    public sealed record UnitsSettingsDto
+    {
+        /// <summary>
+        /// The name of the palette chosen last; absent for the first of the workspace's.
+        /// </summary>
+        public string? Palette { get; init; }
+
+        /// <summary>
+        /// The units and presets placed last, the newest first, each as <c>unit:&lt;id&gt;</c> or
+        /// <c>preset:&lt;name&gt;</c>; absent for none.
+        /// </summary>
+        public List<string>? LastPlaced { get; init; }
     }
 
     /// <summary>

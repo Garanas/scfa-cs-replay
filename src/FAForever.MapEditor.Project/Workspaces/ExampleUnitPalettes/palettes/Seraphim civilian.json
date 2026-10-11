@@ -1,0 +1,25 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Seraphim civilian",
+  "settings": {
+    "slots": [
+      {
+        "preset": "Seraphim civilian hamlet"
+      },
+      {
+        "preset": "Seraphim civilian village"
+      },
+      {
+        "preset": "Seraphim rift site"
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ]
+  }
+}

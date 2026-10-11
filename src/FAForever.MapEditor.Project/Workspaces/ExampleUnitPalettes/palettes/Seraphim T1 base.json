@@ -1,0 +1,39 @@
+{
+  "formatVersion": 1,
+  "kind": "palettes",
+  "name": "Seraphim T1 base",
+  "settings": {
+    "slots": [
+      {
+        "unit": "xsb0101"
+      },
+      {
+        "unit": "xsb0102"
+      },
+      {
+        "unit": "xsb1103"
+      },
+      {
+        "unit": "xsb1101"
+      },
+      {
+        "unit": "xsb1105"
+      },
+      {
+        "unit": "xsb5101"
+      },
+      {
+        "unit": "xsb2101"
+      },
+      {
+        "unit": "xsb3101"
+      },
+      {
+        "unit": "xsb0103"
+      },
+      {
+        "unit": "xsb1106"
+      }
+    ]
+  }
+}

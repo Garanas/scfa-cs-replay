@@ -33,6 +33,7 @@ public sealed partial class AssetShelf : UserControl
         Grid.AddHandler(PointerPressedEvent, OnTilePressed, RoutingStrategies.Tunnel);
         Grid.AddHandler(PointerMovedEvent, OnTileDragged, RoutingStrategies.Tunnel);
         Grid.AddHandler(PointerReleasedEvent, (_, _) => _press = null, RoutingStrategies.Tunnel);
+        Grid.AddHandler(ContextRequestedEvent, OnTileContext, RoutingStrategies.Bubble);
     }
 
     /// <summary>
@@ -118,6 +119,47 @@ public sealed partial class AssetShelf : UserControl
         // of the selected family, the variant the inspector shows
         AssetEntry entry = _model?.Selected == tile && _model.SelectedMember is AssetEntry member ? member : tile.Entry;
         await DragDrop.DoDragDropAsync(args, AssetDrag.Of(entry), DragDropEffects.Copy);
+    }
+
+    /// <summary>
+    /// A right-click on a unit's tile opens a menu that puts the unit into one of the chosen palette's
+    /// ten slots (<c>units.setSlot</c>, user story U-8); the other tiles have no menu.
+    /// </summary>
+    private void OnTileContext(object? sender, ContextRequestedEventArgs e)
+    {
+        if (TopLevel.GetTopLevel(this)?.DataContext is not MainViewModel model || e.Source is not Visual source
+            || source.FindAncestorOfType<Button>(includeSelf: true) is not Button button
+            || button.DataContext is not AssetTile { Entry.Kind: AssetKind.Unit } tile
+            || button.ContextMenu is not null)
+        {
+            return;
+        }
+        // the button keeps the menu and opens it itself from now on; its items are made again each time it opens
+        string unit = _model?.Selected == tile && _model.SelectedMember is AssetEntry member ? member.Key : tile.Entry.Key;
+        ContextMenu menu = new ContextMenu();
+        menu.ItemsSource = PaletteItems(model, unit);
+        menu.Opening += (_, _) => menu.ItemsSource = PaletteItems(model, unit);
+        button.ContextMenu = menu;
+        menu.Open(button);
+        e.Handled = true;
+    }
+
+    private static List<object> PaletteItems(MainViewModel model, string unit)
+    {
+        UnitPalettesViewModel palettes = model.UnitPalettes;
+        MenuItem into = new MenuItem { Header = palettes.Chosen is string chosen ? $"Put in a slot of {chosen}" : "Put in a palette slot", IsEnabled = palettes.HasChosen };
+        Avalonia.Automation.AutomationProperties.SetName(into, $"Put {unit} in a palette slot");
+        List<object> slots = [];
+        foreach (PaletteSlotItem slot in palettes.Slots)
+        {
+            MenuItem item = new MenuItem { Header = slot.IsEmpty ? $"Slot {slot.Key} (empty)" : $"Slot {slot.Key}: {slot.Title}" };
+            Avalonia.Automation.AutomationProperties.SetName(item, $"Put {unit} in palette slot {slot.Key}");
+            int number = slot.Index + 1;
+            item.Click += (_, _) => _ = model.RunWithAsync("units.setSlot", new System.Text.Json.Nodes.JsonObject { ["slot"] = number, ["unit"] = unit });
+            slots.Add(item);
+        }
+        into.ItemsSource = slots;
+        return [into];
     }
 
     private void OnGridKeyDown(object? sender, KeyEventArgs e)

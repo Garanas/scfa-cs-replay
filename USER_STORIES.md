@@ -513,11 +513,18 @@ reads again when it changes; and nothing that generates runs by itself.
       goes on at that density; every way places into the row's army and group, as wrecks when
       asked, with the symmetry's images, and selects what it placed; a single unit's footprint
       shows under the mouse.
-- [ ] **U-8 Palettes.** A named set of ten slots, each a unit or a unit preset, saved in the
+- [x] **U-8 Palettes.** A named set of ten slots, each a unit or a unit preset, saved in the
       workspace beside the presets; the Units mode shows the chosen palette, keys 1 to 0 pick a slot
       while the view has the keyboard and Tab goes to the next palette; a unit from the shelf or the
       picker and a preset from the list are dropped into a slot; example palettes per faction (a T1
       base, T2, defences, naval, civilian); the units placed last are offered again.
+      Today: the Units panel's Palette section (a combo of the palettes, + for a new one, a menu to rename,
+      delete or show the folder, ten slots with their keys and the units' icons, the chosen one filled,
+      "drop here" while empty) and the last six placed as chips; 1 to 9 and 0 pick a slot and Tab and
+      Shift+Tab change palette while the Place tool is active; a shelf tile (dragged or from its context
+      menu) and a units preset (dragged or from its context menu) go into a slot, a slot clears from its
+      menu; `units.palette`, `units.slot`, `units.setSlot`, `units.newPalette`, `units.renamePalette`,
+      `units.deletePalette`, `state.units.palette`; twenty example palettes written into each workspace.
 - [x] **U-9 Preset instances.** The group a unit preset is placed as knows the preset: its name, a
       fingerprint of the preset's content, and where and how it was placed; the tree and the
       inspector say so, the presets list counts how often each is placed and whether the preset

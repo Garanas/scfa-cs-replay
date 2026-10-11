@@ -1528,6 +1528,13 @@ civilian army: on a map whose only extra armies are the civilians' (a new map's 
 `NEUTRAL_CIVILIAN`) `ArmyFor` has none for it, and `Place` adds the extra army `EnemyArmy`
 (`ARMY_9`, else the next free extra name; `ArmyOrNewFor` says which) in the same edit. The game's
 folders, the coop maps and the vault are only read.
+`Workspaces/UnitPalettes` (U-8) holds the palettes of the Units mode: the preset kind `palettes`, ten
+slots per palette (`UnitPaletteSettings`, each `UnitPaletteSlot` a unit's id in lower case, a units
+preset's name, or empty), `Read`, `SetSlot`, `ToPreset`, and the keys' order (`KeyLabel`, `SlotOfKey`:
+1 to 9, then 0). `ExampleUnitPalettes.Ensure` writes twenty examples per faction (T1 base, T2,
+defences, naval, civilian) into `presets/palettes` the way the example unit presets are written. The
+user's settings keep the palette chosen last and the six units or presets placed last
+(`UnitsSettingsDto`: `Palette`, `LastPlaced`).
 
 ## Tests
 

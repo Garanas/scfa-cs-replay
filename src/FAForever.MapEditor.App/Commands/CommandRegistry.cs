@@ -82,6 +82,12 @@ public sealed class EditorCommand
 public sealed record CommandRun(bool Ran, object? Result, string? Why = null, Exception? Error = null);
 
 /// <summary>
+/// A command that ran (<see cref="CommandRegistry.Completed"/>): the command, the arguments it was
+/// given and what it answered (null for none).
+/// </summary>
+public sealed record CommandCompleted(EditorCommand Command, JsonObject Arguments, object? Result);
+
+/// <summary>
 /// The controller of model, view and controller (user story F-1): every command of the editor, by
 /// id. Menus, shortcuts, the command palette, automation and later Lua run commands through it, so
 /// they behave the same. It makes a command's request from its arguments and sends it to the
@@ -117,6 +123,12 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
     /// Raised after a command ran.
     /// </summary>
     public event Action<EditorCommand>? Ran;
+
+    /// <summary>
+    /// Raised after a command ran, with the arguments it was given and its result: what follows
+    /// what was placed (the Units mode's last placed) reads them here.
+    /// </summary>
+    public event Action<CommandCompleted>? Completed;
 
     /// <summary>
     /// Raised when what the commands need may have changed (<see cref="CanRun"/>): a map was opened,
@@ -284,6 +296,7 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
         }
         Count(command, "ran");
         Ran?.Invoke(command);
+        Completed?.Invoke(new CommandCompleted(command, arguments ?? [], result is Unit ? null : result));
         return new CommandRun(true, result is Unit ? null : result);
     }
 

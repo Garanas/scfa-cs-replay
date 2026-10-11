@@ -649,6 +649,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             {
                 ["place"] = model.Tool<UnitPlaceTool>().Describe(),
                 ["tree"] = model.Armies.DescribeGroups(),
+                ["palette"] = model.UnitPalettes.Describe(),
             },
             ["armies"] = model.Armies.DescribeArmies(),
             ["generated"] = new JsonArray([.. model.Generation.States.Select(state => (JsonNode)new JsonObject

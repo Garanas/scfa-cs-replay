@@ -1532,6 +1532,29 @@ change, span `model.armies`), the place tool and the commands.
   Applying one makes it what the place tool places (`Preset`); a click runs `units.placePreset
   {name?, x?, z?, army?, group?, heading?}`: a new group named after the preset in the tool's
   group, turned in quarter turns. Choosing a unit leaves the preset.
+- **Palettes** (U-8): `ViewModels/UnitPalettesViewModel` (`MainViewModel.UnitPalettes`, wired in
+  `MainViewModel.Palettes.cs`) reads the workspace's palettes (presets of kind `palettes`, ten slots each,
+  a unit or a units preset; `Project/Workspaces/UnitPalettes`, example palettes per faction written into
+  `presets/palettes` as the example unit presets are) and shows the chosen one in the Units panel's
+  `Views/MapPanels/UnitPalettePanel` (a `UnitPaletteSection` between the tools and the tree): a combo of
+  the palettes, + (`units.newPalette`, asks for a name), the menu (rename, delete, show the folder), ten
+  slot buttons (the key in a corner; the unit's icon as the shelf's tiles draw it, a preset's name in a
+  dashed frame, "drop here" while empty, filled while it holds what the place tool places) and the last
+  placed as chips. Commands (`Commands/Units/Palettes.cs`, all `U-8`): `units.palette {name}`,
+  `units.nextPalette {back?}`, `units.slot {n}` (1 to 9, 0 or 10 for the tenth: a unit goes through
+  `units.pick`, a preset through `presets.apply {kind: units, name}`, then the Place tool is chosen; an empty
+  or missing slot only says so), `units.setSlot {slot, palette?, unit? | preset? | clear?}` (without a unit
+  or preset it asks the picker; writes the palette's file at once), `units.newPalette {name?}`,
+  `units.renamePalette {to?, name?}`, `units.deletePalette {name?}`. The Place tool's `Key` takes 1 to 9 and
+  0 (also the number pad; not with Shift or Ctrl, which stay the views') and Tab / Shift+Tab (the next and
+  previous palette); no view uses Tab. A tile of the shelf dragged onto a slot, a unit tile's context menu
+  ("Put in a slot of ..."), a units preset of the list dragged onto a slot or its context menu put it in
+  a slot; a slot's context menu chooses a unit or clears it. **Last placed**: the last six distinct units
+  or presets placed (`units.add`, `units.addMany`, `units.placePreset`, noticed through
+  `CommandRegistry.Completed`) are kept in the user's settings (`units.lastPlaced`, as `unit:ueb0101` or
+  `preset:Name`, with the palette chosen last) and offered as chips. `state.units.palette`: `names`,
+  `chosen`, `chosenSlot` (null for none), `slots` (`key`, `unit`, `preset`, `title`, `missing`, `chosen`),
+  `lastPlaced`. A slot's unit the workspace lacks shows its id with a red frame.
 - **Example unit presets and army roles** (U-6): the library's `ExampleUnitPresets` (38 presets
   embedded in FAForever.MapEditor.Project, all the civilians': settlements and wreck fields) are
   written into `presets/units` when the workspace opens (`PresetsViewModel.Open`; a deleted one
