@@ -630,6 +630,11 @@
     <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="VerticalAlignment" Value="Bottom" />
   </Style>
+  <!-- a chip over the terrain needs a surface of its own to read on -->
+  <Style Selector="ItemsControl.storedchips Button.chip:not(.on)">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
 
   <!-- chips side by side -->
   <Style Selector="WrapPanel.chips">

@@ -126,7 +126,11 @@ public sealed partial class MainViewModel
                 SelectBy.Close();
             }
         };
-        Selection.Changed += (_, _) => SelectBy.SelectionChanged();
+        Selection.Changed += (_, _) =>
+        {
+            SelectBy.SelectionChanged();
+            StoredSelections.SelectionChanged();
+        };
         DocumentChanged += (_, _) => SelectBy.DocumentChanged();
         MapChanged += (_, _) => SelectBy.DocumentChanged();
     }

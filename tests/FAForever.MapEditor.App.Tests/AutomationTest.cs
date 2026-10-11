@@ -171,8 +171,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(0, model.Selection.Count, "placing a preset selects its units; nothing is selected before the click");
             await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = top["x"]!.DeepClone(), ["y"] = top["y"]!.DeepClone(), ["clicks"] = 1 });
             Assert.AreEqual(1, model.Selection.Count, "clicks 1 is a click");
-            // (a unit selected has its handle in the middle, which a press takes before anything under it)
-            await Send(automation, "run", new JsonObject { ["id"] = "select.none" });
+            // the unit is selected and has its move handle in the middle: the double click still selects the instance
             await Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = top["x"]!.DeepClone(), ["y"] = top["y"]!.DeepClone(), ["clicks"] = 2 });
             Assert.AreEqual(2, model.Selection.Count, "clicks 2 selects the instance: a double click on a unit of a placed preset");
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => Send(automation, "mouse", new JsonObject { ["view"] = "top", ["x"] = top["x"]!.DeepClone(), ["y"] = top["y"]!.DeepClone(), ["clicks"] = 9 }));

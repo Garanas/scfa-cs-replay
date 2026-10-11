@@ -155,7 +155,7 @@
                   </ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:StoredSelectionChip">
-                      <Button Classes="chip" Content="{Binding Text}" Command="{Binding RecallCommand}"
+                      <Button Classes="chip" Classes.on="{Binding IsCurrent}" Content="{Binding Text}" Command="{Binding RecallCommand}"
                               AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" ToolTip.Tip="{Binding Help}" />
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>

@@ -326,6 +326,17 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             _gesture = Gesture.Turn;
             return;
         }
+        if (input.Clicks >= 2 && change == SelectionChange.Replace && under is { Kind: ObjectKind.Unit } doubled
+            && model.ShownDocument!.InstanceOf(doubled.Name!) is PlacedInstance instance)
+        {
+            // a double click on a unit placed from a preset: the whole instance, its group's units (U-9); before the handles,
+            // since the first click of the double click selected the unit and put the move handle over it
+            model.Selection.Set(model.ShownDocument!.UnitsIn(instance.Army, instance.Path).Select(unit => ObjectRef.Unit(unit.Unit.Name)));
+            model.InspectTheSelection();
+            model.Status = $"Selected the {MainViewModel.Units(model.Selection.Count)} of {UnitGroupEdits.PathText(instance.Path)} of {instance.Army}, an instance of the preset {instance.Instance.Preset}";
+            _gesture = Gesture.Click;
+            return;
+        }
         if (HandleAt(x, z, input) is { IsNone: false } part && Frame is SelectionFrame frame)
         {
             _view = input.ViewAt(x, z);
@@ -337,16 +348,7 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
         }
         if (under is ObjectRef picked)
         {
-            if (input.Clicks >= 2 && change == SelectionChange.Replace && picked.Kind == ObjectKind.Unit
-                && model.ShownDocument!.InstanceOf(picked.Name!) is PlacedInstance instance)
-            {
-                // a double click on a unit placed from a preset: the whole instance, its group's units (U-9)
-                model.Selection.Set(model.ShownDocument!.UnitsIn(instance.Army, instance.Path).Select(unit => ObjectRef.Unit(unit.Unit.Name)));
-                model.InspectTheSelection();
-                model.Status = $"Selected the {MainViewModel.Units(model.Selection.Count)} of {UnitGroupEdits.PathText(instance.Path)} of {instance.Army}, an instance of the preset {instance.Instance.Preset}";
-                _gesture = Gesture.Click;
-            }
-            else if (change == SelectionChange.Toggle)
+            if (change == SelectionChange.Toggle)
             {
                 model.Selection.Apply([picked], SelectionChange.Toggle);
                 _gesture = Gesture.Click;

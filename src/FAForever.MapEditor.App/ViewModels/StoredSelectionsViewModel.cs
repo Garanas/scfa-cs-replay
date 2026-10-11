@@ -30,6 +30,12 @@ public sealed partial class StoredSelectionChip(int slot, string? group, int cou
     public int Count => count;
 
     /// <summary>
+    /// Whether the selection is what it holds now.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsCurrent { get; set; }
+
+    /// <summary>
     /// <c>3 · Cybran farm · 17</c>, or <c>3 · 17</c> without a group.
     /// </summary>
     public string Text => group is null ? $"{slot} · {count}" : $"{slot} · {group} · {count}";
@@ -228,6 +234,19 @@ public sealed partial class StoredSelectionsViewModel : ObservableObject
         if (!chips.Select(chip => (chip.Slot, chip.Text)).SequenceEqual(Chips.Select(chip => (chip.Slot, chip.Text))))
         {
             Chips = chips;
+        }
+        SelectionChanged();
+    }
+
+    /// <summary>
+    /// The selection changed: the chip that holds exactly it lights up.
+    /// </summary>
+    public void SelectionChanged()
+    {
+        foreach (StoredSelectionChip chip in Chips)
+        {
+            ImmutableArray<ObjectRef> stored = _slots.GetValueOrDefault(chip.Slot, []);
+            chip.IsCurrent = _model.Selection.HasAny && stored.Length == _model.Selection.Count && stored.All(_model.Selection.Contains);
         }
     }
 

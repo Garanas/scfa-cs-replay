@@ -71,7 +71,7 @@ public sealed partial class SelectByViewModel : ObservableObject
     private SelectByChip Chip(HashSet<string> set, string value, string label) =>
         new SelectByChip(Title(value), label, () => set.Contains(value), on => Toggle(set, value, on));
 
-    private static string Title(string value) => value.Length == 0 ? value : char.ToUpperInvariant(value[0]) + value[1..];
+    private static string Title(string value) => value == "uef" ? "UEF" : value.Length == 0 ? value : char.ToUpperInvariant(value[0]) + value[1..];
 
     private void Toggle<T>(HashSet<T> set, T value, bool on)
     {
