@@ -54,6 +54,48 @@ namespace FAForever.MapEditor.Project.Checks
                     $"{result.Count} ogrids are marked open where the ground is too steep or under water: walkability counts them open, the game's units will not pass there",
                     null, new Vector2(x + 0.5f, z + 0.5f));
             }
+            if (OpenOnCliffFaces(document, marks) is { Count: > 0, First: (int fx, int fz) } faces)
+            {
+                yield return new Problem("walkability-marks", ProblemSeverity.Info,
+                    $"{faces.Count} ogrids under cliff faces that block walkability are marked open by hand: the marks win, units pass there where the ground lets them",
+                    null, new Vector2(fx + 0.5f, fz + 0.5f));
+            }
+        }
+
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<TiledBuffer<byte>, OpenOnFacesResult> OpenOnFaces = [];
+
+        private sealed record OpenOnFacesResult(CliffFaces.Key Faces, int Count, (int X, int Z)? First);
+
+        /// <summary>
+        /// The ogrids under the faces of cliffs that block walkability (<see cref="CliffFaces"/>) that
+        /// are marked open by hand, where the mark wins: their count and the first; kept per version
+        /// of the marks and the cliffs.
+        /// </summary>
+        private static (int Count, (int X, int Z)? First) OpenOnCliffFaces(MapDocument document, TiledBuffer<byte> marks)
+        {
+            CliffFaces.Key key = CliffFaces.KeyOf(document);
+            if (key.IsEmpty || marks.Width != document.Width || marks.Height != document.Height)
+            {
+                return (0, null);
+            }
+            if (!OpenOnFaces.TryGetValue(marks, out OpenOnFacesResult? result) || !result.Faces.Equals(key))
+            {
+                int count = 0;
+                (int, int)? first = null;
+                foreach (int i in CliffFaces.Indices(document))
+                {
+                    int x = i % marks.Width;
+                    int z = i / marks.Width;
+                    if (marks[x, z] == WalkabilityMarks.Open)
+                    {
+                        count++;
+                        first ??= (x, z);
+                    }
+                }
+                result = new OpenOnFacesResult(key, count, first);
+                OpenOnFaces.AddOrUpdate(marks, result);
+            }
+            return (result.Count, result.First);
         }
 
         /// <summary>

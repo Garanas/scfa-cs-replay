@@ -217,6 +217,11 @@ namespace FAForever.MapEditor.Project.Files.Serialized
         /// only, so it keeps its look.
         /// </summary>
         public bool? LineOnly { get; init; }
+
+        /// <summary>
+        /// True for a cliff whose face blocks walkability (format 9); absent: it does not.
+        /// </summary>
+        public bool? BlocksWalkability { get; init; }
     }
 
     /// <summary>

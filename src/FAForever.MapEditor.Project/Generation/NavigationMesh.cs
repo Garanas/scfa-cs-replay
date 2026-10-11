@@ -130,7 +130,7 @@ namespace FAForever.MapEditor.Project.Generation
         public string Story => "T-8";
 
         public IReadOnlyList<GeneratedInput> Inputs { get; } =
-            [GeneratedInput.Heightmap, GeneratedInput.TerrainTypes, GeneratedInput.WaterLevel, GeneratedInput.DepositsAndAreas, GeneratedInput.MapType, GeneratedInput.WalkabilityMarks,
+            [GeneratedInput.Heightmap, GeneratedInput.TerrainTypes, GeneratedInput.WaterLevel, GeneratedInput.DepositsAndAreas, GeneratedInput.MapType, GeneratedInput.WalkabilityMarks, GeneratedInput.CliffFaces,
              GeneratedInput.Spawns];
 
         public IReadOnlyList<string> Reads { get; } = [WalkabilityGenerator.GeneratorId];
