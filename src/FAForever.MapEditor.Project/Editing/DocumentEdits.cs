@@ -454,6 +454,28 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// A name for a copy of something: <paramref name="wanted"/> when free; else its name (without a
+        /// number after it) with the next number from 2 (<c>Cybran farm</c>, <c>Cybran farm 2</c>,
+        /// <c>Cybran farm 3</c>). A second placement of a preset reads as the second one.
+        /// </summary>
+        public static string FreeCopyName(IEnumerable<string> taken, string wanted)
+        {
+            string[] names = [.. taken];
+            if (!names.Contains(wanted, StringComparer.Ordinal))
+            {
+                return wanted;
+            }
+            string stem = wanted;
+            int space = wanted.LastIndexOf(' ');
+            if (space > 0 && int.TryParse(wanted.AsSpan(space + 1), NumberStyles.None, CultureInfo.InvariantCulture, out _))
+            {
+                stem = wanted[..space];
+            }
+            int next = Math.Max(2, NextNumber(names, stem + " "));
+            return $"{stem} {next.ToString(CultureInfo.InvariantCulture)}";
+        }
+
+        /// <summary>
         /// One more than the highest number that follows <paramref name="prefix"/> in a name, 1 when none does.
         /// </summary>
         private static int NextNumber(IEnumerable<string> names, string prefix)

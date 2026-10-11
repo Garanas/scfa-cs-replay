@@ -1038,10 +1038,10 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
   logged, and the status line after it names them. The context holds the workspace's catalogue
   (in memory) and whether the workspace has a file (`Workspace.FindAsset`, each answer kept until
   the assets are read again), so no check touches the disk twice. A check that throws is logged
-  (`Editor`) and finds nothing. The tab's header counts the errors and warnings; a double click or
-  Enter on a line runs `problems.show {index}` (`MainViewModel.ShowProblem`): it selects the
-  problem's thing, the top view centres on its place at 4 pixels an ogrid and the 3D camera
-  focuses on it (30 ogrids around); a problem with `Related` things (the second structure of an
+  (`Editor`) and finds nothing. The tab's header counts the errors and warnings; a click on a
+  line selects the problem's things (`problems.show {index, frame: false}`), a double click or
+  Enter runs `problems.show {index}` (`MainViewModel.ShowProblem`): it selects them, the top view
+  centres on the place at 4 pixels an ogrid and the 3D camera focuses on it (30 ogrids around); a problem with `Related` things (the second structure of an
   overlap) selects them too. `plugins.check` runs the checks now and shows the tab.
 
 ## The Procedural mode: generated results, the navigation mesh, export steps
@@ -1465,20 +1465,33 @@ change, span `model.armies`), the place tool and the commands.
   is the tool's. Its unit comes from the picker (Choose..., `units.pick`), a unit tile chosen on
   the shelf (`Assets.Shown`), or a tile dropped on a view (`IAssetDropTarget`; a unit dropped while
   another tool is active chooses the place tool and places it, through `AssetDropped`). Its army
-  is the civilians (`NEUTRAL_CIVILIAN`, else the first extra army) until another is chosen, its
-  group `INITIAL` (the group whose units the game creates at the start) or the group chosen in the
-  tree. A structure (the catalogue's `IsStructure`, its `Footprint` from the converted JSON;
+  is, until another is chosen (`ArmyChosen`), the playable army whose spawn lies nearest the middle
+  of the top view (`UnitPlaceTool.DefaultArmy`, the view's middle from `ViewMiddle`; the map's
+  middle before a window sets it), else the civilians (`NEUTRAL_CIVILIAN`, then the first extra
+  army, then the first army); a map with armies to play on so places the first base for an army
+  of its own. Its group is `INITIAL` (the group whose units the game creates at the start) or the
+  group chosen in the tree: the options row's Group combo box and the tree's chosen group are one
+  choice (a group chosen in the tree sets the combo and `state.units.place.group`, the combo sets
+  the tree's, and so does an army chosen in the row: `UnitPlaceTool.GroupPicked`, `PlaceInto`; a tree made
+  again after an edit keeps its choice in a new node of the same key, which is no new choice). The status line says where a unit went when
+  it is not the army's `INITIAL`: `Placed UNIT_7 (Mass Extractor) into ARMY_17's WRECKAGE: a wreck`,
+  `... into ARMY_1's INITIAL/Town` (`UnitCommands.Where`; many at once say `: wrecks`). A structure (the catalogue's `IsStructure`, its `Footprint` from the converted JSON;
   1 by 1 without one) turns in quarter turns and snaps to the build grid: an odd size on a half
   ogrid, an even one on a whole. Q and E turn what is placed next (a structure or preset 90
   degrees, a mobile unit 15, shift 90); the select tool turns a selection of structures 90.
   A blueprint the workspace lacks is placed as it is, with a warning. A single unit's footprint
   shows under the mouse where a click puts it (a structure on the build grid), as a preset's does.
 - **Many at once** (U-7; `UnitPlaceTool.Mode`, `Tools/UnitPlans.cs`, `Commands/Units/AddUnits.cs`;
-  the maths is the library's `UnitLayouts`, its guide): the options row's segmented control
-  (chips `Single`, `Line`, `Rectangle`, `Ring`, `Scatter`; labelled `Place in a line`, ...) comes
-  first, then the settings of that way (Spacing for mobile units, Face along for a line, Hollow for
-  a rectangle, Distance for a ring, Count, Least distance and Radius for a scatter), then the
-  unit, Choose..., As wrecks, Army, Group and Facing (a number field; Q and E turn it). Line and
+  the maths is the library's `UnitLayouts`, its guide): the options row's combo box
+  How to place (`Single`, `Line`, `Rectangle`, `Ring`, `Scatter`; `set label="How to place"
+  value=Line`) comes first, then the unit (one button: its picture and name; it opens the picker),
+  Army and Group (combo boxes without a label of their own: the names say what they are), so that at
+  1280 pixels the row shows those four before More; behind More follow the settings of the way
+  (Face along for a line, Hollow for a rectangle, Distance for a ring, Count, Least distance and
+  Radius for a scatter), Facing (a number field; Q and E turn it), Spacing for mobile units and As
+  wrecks. What overflows lies below the views' own bar (`ToolRow.OverflowOffset`, the bar's height,
+  set for the tool options' rows in `ToolOptions.axaml`), so the symmetry combo and the overlay
+  chips stay reachable while More shows. Line and
   Rectangle are dragged out in either view: the footprints of every unit the drag will place show
   under the mouse (`PresetPreview.ShapesAt`, span `tool.place-preview`; the plan itself
   `tool.place-plan`), the status line counts them (`14 × T1 Wall Section, 14 ogrids`), shift keeps
@@ -1496,7 +1509,7 @@ change, span `model.armies`), the place tool and the commands.
   (`MirrorPlaced`) and selects what it placed; a unit that would stand outside the map is left out
   (the status says how many), a point outside it is refused as `units.add` refuses.
   `units.addMany {mode?, x0?, z0?, x1?, z1?, x?, z?, points?, blueprint?, heading?, army?, group?,
-  wreck?, spacing?, faceAlong?, hollow?, distance?, count?, leastDistance?, radius?, seed?}` (Units
+  wreck?, spacing?, faceAlong?, hollow?, distance?, count?, leastDistance?, radius?, seed?, confirm?}` (Units
   menu; what is left out is the tool's: `x0..z1` a line or rectangle, `x, z` a ring's click or a
   scatter's centre, `points` `[[x, z], ...]` instead, a scatter's each a dab; the answer has the
   names, `count`, `images`, `outside`) and `units.placeMode {mode?, spacing?, faceAlong?, hollow?,
@@ -1507,9 +1520,18 @@ change, span `model.armies`), the place tool and the commands.
   commands, one step, images, the group, the tool's drag and Escape), `MainWindowTest` (the mouse),
   `AutomationTest` (the state, the chips).
 - **Placement checks** (U-12): the Place tool's footprints under the mouse (single, a drag's
-  line or rectangle, the ring) are drawn in `ToolInk.Danger` (`DangerBrush`, 2 pixels) where a
-  click would overlap a structure or break the ground rules of the blueprint
-  (`UnitPlaceTool.VerdictOf`, the library's `PlacementChecks`, span `tool.place-checks`);
+  line or rectangle, the ring) are drawn in `ToolInk.Danger` (`DangerBrush`, 3 pixels over a dark
+  halo of 7, so it reads on water) where a click would overlap a structure (by the skirt), overlap
+  another of the units of the same drag, or break the ground rules of the blueprint
+  (`UnitPlaceTool.VerdictOf`, the library's `PlacementChecks`, span `tool.place-checks`); a place
+  beyond the map's edge is drawn the same way, and left out when placed (`state.units.place.outside`;
+  the status line says how many). A line or rectangle may start or end outside the map: the units
+  inside are placed and `units.addMany` returns `outside`. More than 500 units
+  (`AddManyUnits.AskAbove`) are asked about first (`Place many units`, `dialog button=Place`);
+  `units.addMany confirm=true` skips the question, and a run for automation without it fails with
+  that hint. Structures in a line, rectangle or ring are spaced by the skirt (`UnitPlans.SkirtSize`,
+  `UnitLayouts.Pitch`) and a ring's distance counts from the outer edge of the skirts it goes
+  around (`UnitPlans.Bounds`), so none of them is red;
   placing is still allowed. The status line says why (`Overlaps the Land Factory UNIT_12`, `Naval
   Factory: it cannot be built on land`), set when the mouse moves (`MainViewModel.Pointer` calls
   `UnitPlaceTool.PointerMoved`: a status set while drawing throws, Avalonia forbids invalidating
@@ -1561,10 +1583,16 @@ change, span `model.armies`), the place tool and the commands.
   0 (also the number pad; not with Shift or Ctrl, which stay the views') and Tab / Shift+Tab (the next and
   previous palette); no view uses Tab. A tile of the shelf dragged onto a slot, a unit tile's context menu
   ("Put in a slot of ..."), a units preset of the list dragged onto a slot or its context menu put it in
-  a slot; a slot's context menu chooses a unit or clears it. **Last placed**: the last six distinct units
+  a slot; a slot's context menu chooses a unit or clears it. A slot's key is a corner badge with its own
+  surface and a name (a preset's, a missing unit's, "drop here") sits below it, wrapping to two lines
+  (`PaletteSlotNameInset`); its full name is the tool tip. `ui` reports a button's visible texts only, so a
+  slot says its text once. **Last placed**: the last six distinct units
   or presets placed (`units.add`, `units.addMany`, `units.placePreset`, noticed through
-  `CommandRegistry.Completed`) are kept in the user's settings (`units.lastPlaced`, as `unit:ueb0101` or
-  `preset:Name`, with the palette chosen last) and offered as chips. `state.units.palette`: `names`,
+  `CommandRegistry.Completed`, and the Scatter brush's stroke, which is no command) are kept in the user's
+  settings (`units.lastPlaced`, as `unit:ueb0101` or
+  `preset:Name`, with the palette chosen last) and offered as chips; two chips of one name say their faction
+  (`Power Generator (Aeon)`), the tool tip has the id, and a click chooses the unit or preset and the Place
+  tool (`UnitPalettesViewModel.PickLastPlacedAsync`), as a slot does. `state.units.palette`: `names`,
   `chosen`, `chosenSlot` (null for none), `slots` (`key`, `unit`, `preset`, `title`, `missing`, `chosen`),
   `lastPlaced`. A slot's unit the workspace lacks shows its id with a red frame.
 - **Example unit presets and army roles** (U-6): the library's `ExampleUnitPresets` (38 presets
@@ -1593,19 +1621,29 @@ change, span `model.armies`), the place tool and the commands.
 - **Preset instances** (U-9; the library's `PresetInstances`, its guide): the group `units.placePreset`
   makes knows the preset (`UnitGroup.Instance`: the name, a fingerprint of the preset's content, the
   place, heading and time). The tree's row of such a group carries the preset's name as a tag
-  (`Border.badge.instance`, after the detail as a plugin's kind is) and, when the preset's file
-  changed since or is gone, `preset changed` (`badge.stale`) or `preset missing` (`badge.missing`);
+  (`Border.badge.instance`) only when the group is not named after it (`GroupNode.ShowsInstanceName`: the
+  name, or the name and a number, as a second placement of a preset is named `Cybran farm 2`,
+  `DocumentEdits.FreeCopyName`) and, when the preset's file
+  changed since or is gone, `preset changed` (`badge.stale`) or `preset missing` (`badge.missing`), beside
+  the entry when both fit on a line and under it otherwise (`Controls/BesideOrBelowPanel`);
   its screen-reader name says so too (`GroupNode.Description`, `..., placed from the preset Village,
-  preset changed`). The Unit presets list shows after each preset `×2 placed` and `1 out of date`
+  preset changed`). The Unit presets list shows on each preset's row `×2` and `1 changed`
   (`Controls/PresetInstanceBadges`, from `PresetsViewModel.Instances`, counted again when the armies
-  or the presets change). The inspector's group panel has the block "Placed from a preset": the
+  or the presets change; its name and tool tip say `Placed 2 times on this map, 1 out of date`). The
+  list has the chips All, Starred, Civilian, Wrecks and Mine (`presets.filter {filter}`,
+  `PresetsViewModel.Filter`; Civilian is the role, Wrecks the wrecks flag, Mine a preset whose file is not
+  one of the shipped examples; Show the preset resets a filter that hides it) and a star on each row
+  (`presets.star {kind, name, on?}`, kept like an asset's star in the workspace's `favourites.json` under
+  `preset:units:<lower-case name>`); `state.presets.filters` has the filter, the total and the starred names. The inspector's group panel has the block "Placed from a preset": the
   preset with its count, `at 100, 100 · 90° · 2026-10-09`, a warning line while the file changed or
   is gone, and the buttons Select the instance (`units.selectInstance {army?, group?}`: the group's
   units, as a double click on one of them with a select tool does; `ToolInput.Clicks`, which both
   views pass), Save back to the preset (`units.saveInstance {army?, group?, confirm?}`, `[UndoStep]`:
   asks, since the preset's file is overwritten; without a person `confirm: true`; writes the file
   inside the step and sets the fingerprint, so the instance is current and the preset's other
-  instances out of date; a file that cannot be written is logged, `Presets`), Show the preset
+  instances out of date; a file that cannot be written is logged, `Presets`; the file's bytes before and
+  after are kept (`SavedBackPresets`), so undo of the step writes the file as it was, redo what the save
+  wrote, and a map that closes forgets them), Show the preset
   (`units.showPreset {name?}`: the Units mode, the list scrolled to it and its button `highlighted`,
   `PresetsViewModel.Highlighted`, until another kind lists or the preset is gone) and Detach from
   the preset (`units.detachInstance {army?, group?}`, `[UndoStep]`: the units stay). Left out, the
@@ -1636,7 +1674,7 @@ change, span `model.armies`), the place tool and the commands.
   3 units to Cybran; 1 left as it is: no Cybran counterpart`), `units.distribute {axis?}` (`x` or
   `z`, else the longer extent; fewer than three units is refused; the symmetry's partners do not
   follow). All are in the Units menu. **Moves keep structures on the build grid**
-  (`HandleSettings.KeepOnGrid`, default on, the check box "Keep structures on the build grid" in
+  (`HandleSettings.KeepOnGrid`, default on, the check box "Keep on grid" (named "Keep structures on the build grid") in
   the select tool's options row, `select.handles keepOnGrid`): the handles' drag and
   `edit.nudge` ask `MainViewModel.KeepOnGrid` (span `tool.keep-on-grid`, in
   `MainViewModel.BuildGrid.cs`) for the offset, rounded so that the first structure of the
@@ -1644,7 +1682,7 @@ change, span `model.armies`), the place tool and the commands.
   partners as before, by the image of that offset); `edit.place` rounds the place the same way.
   Tests: `EditManyUnitsTest` (commands, the inspector, Ctrl+G, a handle drag, nudge, place).
 - **Wrecks** (U-5; the library's `UnitWrecks`, its guide says why a group): the place tool's
-  As wrecks (`AsWrecks`, the check box after Choose...) places into the army's `WRECKAGE` group in
+  As wrecks (`AsWrecks`, the check box behind More) places into the army's `WRECKAGE` group in
   place of the chosen group (`units.add {wreck?}`; left out, the tool's); `units.asWrecks {wreck?}`
   (Units menu, `[UndoStep]`) makes the selected units wrecks or, with `wreck: false`, units again in
   their army's `INITIAL`, and says when an army is playable; the inspector's unit section has a
@@ -1682,8 +1720,10 @@ change, span `model.armies`), the place tool and the commands.
     its choices, count and `open`.
   - **Stored selections**: in a select tool (any `SelectTool`, so the Decals mode's too) Alt and 1 to 9
     store the selection (`select.store {slot}`, an empty selection empties the digit), a digit recalls
-    it (`select.recall {slot, add?}`, shift adds; a thing that is gone is dropped silently, also from the
-    digit), the numeric keypad too, never with control (Ctrl+1 to 3 are the views). The active tool owns
+    it (`select.recall {slot, add?}`, shift adds; a thing that is gone is left out of the selection but
+    stays in the digit, whose chip then reads `3 · 0` dimmed until it is stored over or cleared, so undo of a
+    delete brings it back to life; Alt and the digit with nothing selected clears it), the numeric keypad
+    too, never with control (Ctrl+1 to 3 are the views). The active tool owns
     the key: the place tool's digits pick palette slots (`UnitPlaceTool.PaletteKey`). `model.StoredSelections`
     keeps them with the project in the user's settings (`UserSettings.StoredSelections(folder)`, by the
     project's folder; a map that is not a project keeps them while the editor runs): the units and areas by
@@ -1704,8 +1744,14 @@ change, span `model.armies`), the place tool and the commands.
     overlay `armyColours` (the chip `Show Army colours`, `view.overlay.armyColours`, `ShowArmyColours`) turns
     them off: every unit but a wreck is the small square of the theme's unit brush. The 3D view is not
     coloured by army.
-- A double click on a unit of a placed preset selects the whole instance before the move handle of the
-  selection, which the first click of the double click put over the unit, takes the press.
+- A double click on a unit in a select tool selects its group's units (with the groups in it), Alt and a
+  double click its army's; a unit of a placed preset gets the instance's group. This takes the press before
+  the move handle of the selection, which the first click of the double click put over the unit. The status
+  line says what was selected (`Selected the 17 units of INITIAL/Cybran farm of ARMY_1`); a click says
+  `Selected UNIT_12 (Land Factory)` or `Selected 4 units`, Delete `Deleted 4 units`. `mouse clicks=2` with
+  `modifiers=Alt` does it in tests and automation.
+- The Select by popover lies at the right of the top view. Within Area lists the areas by name and chooses
+  none until one is picked (the count says `Choose an area`; Add and Select refuse until then).
 
 ## Markers: placing, linking, chains
 
@@ -3019,9 +3065,12 @@ last frame drawn.
   held while dragging keeps the axis). The answer's `focused` names the control with the keyboard,
   `held` the keys held down (also `state.views.keysHeld`).
 - `type {text}`: text into the focused control (a search field), as an input method hands it.
-- `drag {view?, from, to?, data?, button?, steps?, modifiers?}`: with `data` (an asset's key) a drag
-  from outside dropped at `to`, as a tile from the shelf (`dropped`: what the target did); without,
-  the mouse dragged with a button held.
+- `drag {view?, from, to?, data?, button?, steps?, modifiers?}`: with `data` a drag from outside
+  dropped at `to` (`dropped`: what the target did): an asset's key as a tile from the shelf, or
+  `preset:<name>` as a units preset of the Units mode's list (onto a palette slot, U-8); without,
+  the mouse dragged with a button held. A drag with the mouse (here or `mouse action=drag`) that
+  starts on a shelf tile or a units preset of the list is refused with that advice: those start the
+  system's drag and drop, which waits for a real mouse release and would hang the editor.
 - `run {id, interactive: true, wait: false}` starts a command as the menu does and answers at once
   (`started`, `finished`), so a picker or question it opens can be driven with `key` and `type`;
   `interactive: true` alone waits for it, unless it asks a question over the window (then it
@@ -3089,9 +3138,15 @@ last frame drawn.
   (`CommandRegistry.Running`), unless one asks a question or opens the picker; its answer has the
   type, the place, `checked` (after the click and what it ran), `focused`, `finished`, `matches`
   (how many controls the label fits) and `others` (up to five of the rest). `state.popups` (also in
-  every answer's short state) lists what is open over the windows and screenshots do not show: a
-  combo box's list, a menu, an options row's More, a popup (null when none; `key key=Escape` closes
-  one). `run {id, args}` takes the command's arguments in `args` when one of them is called `id`
+  every answer's short state) lists what is open over the windows (null when none; `key key=Escape`
+  closes one): per popup its `kind` (`list`, `menu`, `more`, `popup`, `context menu`, `flyout`), `what`
+  (the control it belongs to) and, for a context menu, a flyout or a popup, its `items` with `type`,
+  `label`, `text` and `enabled`. `ui` has each of them as a node of type `Popup` (`name` the kind,
+  its controls inside, places relative to the popup's own window), `click label=` reaches their
+  items (the click goes to the popup's window as the mouse would) and screenshots of the window
+  draw the operating system's popup windows over it, where they lie (`AutomationServer.Popups`).
+  `run id=view.theme variant=dark|light|system` switches the theme at run time, to look at the
+  light tokens (the editor starts dark; nothing is saved). `run {id, args}` takes the command's arguments in `args` when one of them is called `id`
   (`run id=generate.auto args={"id":"navigationMesh","on":true}`). `set` aims the same way, and chooses a
   list's item by clicking it where no check box or button of the item lies (`PlainPointOf`), so
   what a person's click starts runs too (`AutomationAimingTest`). `ui {under}` and `set` find a control the same way: `Combine` is the combo box labelled

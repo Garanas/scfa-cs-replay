@@ -39,7 +39,7 @@ public sealed partial class AutomationServer
         "mouse {view?: top|3d|window, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, to?: [x, y], steps?, notches?, modifiers?}",
         "key {key: E|Delete|Escape|Ctrl+K|Shift..., action?: press|down|up, modifiers?, repeat?}",
         "type {text}",
-        "drag {view?, from: [x, y], to?: [x, y], data?: asset key, button?, steps?, modifiers?}",
+        "drag {view?, from: [x, y], to?: [x, y], data?: asset key or preset:<units preset>, button?, steps?, modifiers?}",
         "view-point {x, z, y?} or {ref}",
         "get {ref} or {name}",
         "objects {kind?: markers|pathNodes|props|units|decals|areas|all, name?, near?: [x, z], count?}",
@@ -100,6 +100,7 @@ public sealed partial class AutomationServer
                         await DragStepwiseAsync(at, InWindow(view, Pair(arguments, "to")), button, (int)(Number(arguments, "steps") ?? 10), modifiers);
                         break;
                     case "drag":
+                        RefuseSystemDrag(at);
                         Input.Drag(at, InWindow(view, Pair(arguments, "to")), button, (int)(Number(arguments, "steps") ?? 10), modifiers);
                         break;
                     case "wheel":
@@ -155,11 +156,16 @@ public sealed partial class AutomationServer
                 int steps = (int)(Number(arguments, "steps") ?? 5);
                 if (arguments["data"]?.GetValue<string>() is string key)
                 {
-                    // as a tile dragged from the shelf: the asset's key, dropped where the drag ends
-                    result["dropped"] = Input.DropData(from, to, AssetDrag.Of(key), steps, modifiers).ToString();
+                    // as a tile dragged from the shelf (the asset's key) or a units preset of the list
+                    // (preset:<name>), dropped where the drag ends
+                    IDataTransfer data = key.StartsWith(PresetDragPrefix, StringComparison.OrdinalIgnoreCase)
+                        ? Views.MapPanels.UnitPalettePanel.PresetDrag(key[PresetDragPrefix.Length..])
+                        : AssetDrag.Of(key);
+                    result["dropped"] = Input.DropData(from, to, data, steps, modifiers).ToString();
                 }
                 else
                 {
+                    RefuseSystemDrag(from);
                     Input.Drag(from, to, WindowInput.ParseButton(arguments["button"]?.GetValue<string>()), steps, modifiers);
                 }
                 await LetInputSettleAsync();
@@ -271,6 +277,26 @@ public sealed partial class AutomationServer
     }
 
     /// <summary>
+    /// The start of <c>drag data</c> for a units preset: <c>preset:Cybran farm</c>.
+    /// </summary>
+    private const string PresetDragPrefix = "preset:";
+
+    /// <summary>
+    /// Refuses a drag with the mouse that begins on a tile of the shelf or a units preset of the list:
+    /// those start the system's drag and drop, which waits for a real mouse release, and the editor
+    /// would stop answering. <c>drag</c> with <c>data</c> drops what the drag carries instead.
+    /// </summary>
+    private void RefuseSystemDrag(Point at)
+    {
+        if (window.InputHitTest(at) is Visual grabbed
+            && grabbed.FindAncestorOfType<Button>(includeSelf: true)?.DataContext is AssetTile or FAForever.MapEditor.Project.Workspaces.Preset { Kind: FAForever.MapEditor.Project.Workspaces.PresetKinds.Units })
+        {
+            throw new ArgumentException($"A drag with the mouse from {Describe(grabbed)} starts the system's drag and drop, which waits for a real mouse and would hang the editor: "
+                + "give data (drag from=[x, y] to=[x, y] data=<the asset's key>, or data=preset:<the units preset's name>) to drop it where the drag would end");
+        }
+    }
+
+    /// <summary>
     /// <c>ui</c>: the whole window, or with <c>under</c> the part under the control of that name,
     /// label or text.
     /// </summary>
@@ -285,6 +311,11 @@ public sealed partial class AutomationServer
             foreach (JsonNode floating in DescribeFloatingWindows(hidden))
             {
                 tree.Add(floating);
+            }
+            // the popups open over it: context menus, flyouts, lists (their items by label, for click)
+            foreach (JsonNode popup in DescribePopups(hidden))
+            {
+                tree.Add(popup);
             }
         }
         else

@@ -306,7 +306,9 @@
   <!-- a unit's icon in the corner of its tile (U-1) -->
   <x:Double x:Key="UnitIconBadgeSize">26</x:Double>
   <!-- a slot of the Units mode's palette (U-8): its key, the unit's icon or the preset's name -->
-  <x:Double x:Key="PaletteSlotHeight">46</x:Double>
+  <x:Double x:Key="PaletteSlotHeight">56</x:Double>
+  <!-- the room above a slot's name for its key badge, so that the digit never sits on the text -->
+  <Thickness x:Key="PaletteSlotNameInset">0,16,0,0</Thickness>
   <Thickness x:Key="PaletteSlotGap">0,0,4,4</Thickness>
   <Thickness x:Key="PaletteSlotPadding">2</Thickness>
   <!-- the icon of a unit placed last, on its chip -->
@@ -346,6 +348,8 @@
   <!-- a question over the window (unsaved changes, confirmations) -->
   <x:Double x:Key="QuestionWidth">460</x:Double>
   <x:Double x:Key="PopoverWidth">400</x:Double>
+  <!-- the name of a field in the popover: shorter than a card's, so that the chips have the room -->
+  <x:Double x:Key="PopoverLabelWidth">64</x:Double>
   <Thickness x:Key="PopoverOffset">8</Thickness>
   <Thickness x:Key="DialogPadding">14,10</Thickness>
   <Thickness x:Key="DividerGap">8,4</Thickness>

@@ -75,7 +75,7 @@ namespace FAForever.MapEditor.App.Tests
         {
             MainViewModel model = await Open();
             UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
-            Assert.AreEqual("NEUTRAL_CIVILIAN", tool.Army, "civilians, the units maps place most");
+            Assert.AreEqual("ARMY_5", tool.Army, "the playable army whose spawn lies nearest the map's middle");
             Assert.AreEqual(UnitGroupEdits.InitialGroup, tool.Group);
 
             tool.Press(40, 60);
@@ -87,7 +87,7 @@ namespace FAForever.MapEditor.App.Tests
             tool.Press(40.3f, 60.7f);
             tool.Release();
             PlacedUnit placed = model.ShownDocument!.FindUnit("UNIT_1")!;
-            Assert.AreEqual(("NEUTRAL_CIVILIAN", "INITIAL"), (placed.Army, UnitGroupEdits.PathText(placed.Group)));
+            Assert.AreEqual(("ARMY_5", "INITIAL"), (placed.Army, UnitGroupEdits.PathText(placed.Group)));
             Assert.AreEqual((40.5f, 61f), (placed.Unit.Position.X, placed.Unit.Position.Z), "3 wide on a half ogrid, 2 deep on a whole one");
             Assert.AreEqual(model.ShownDocument.Terrain.Heightmap.HeightAt(40.5f, 61), placed.Unit.Position.Y, 1e-4, "on the terrain");
             Assert.AreEqual("Place a unit", model.Map!.Session.UndoDescription);
@@ -327,6 +327,16 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(new PresetInstanceCount(2, 1), model.Presets.Instances["Village"]);
             Assert.AreEqual("Save the instance back to its preset", model.Map.Session.UndoDescription, "one step");
 
+            // undo of the save puts the preset file back as it was (the hand-edited one), redo writes the saved layout again
+            byte[] savedFile = File.ReadAllBytes(library.FileOf(UnitPresets.Kind, "Village"));
+            model.Undo();
+            Assert.AreEqual(2, library.Find(UnitPresets.Kind, "Village")!.Read<UnitPresetSettings>().Count, "the file holds its units from before the save");
+            Assert.AreEqual("edited by hand", library.Find(UnitPresets.Kind, "Village")!.Read<UnitPresetSettings>().Source);
+            Assert.AreEqual(PresetInstanceState.Changed, model.Armies.Tree.SelectMany(n => n.SelfAndBelow()).Single(n => n.Key == "ARMY_2:INITIAL/Village").InstanceState, "the instance is out of date again");
+            model.Redo();
+            CollectionAssert.AreEqual(savedFile, File.ReadAllBytes(library.FileOf(UnitPresets.Kind, "Village")), "redo writes what the save wrote");
+            Assert.AreEqual(PresetInstanceState.Current, model.Armies.Tree.SelectMany(n => n.SelfAndBelow()).Single(n => n.Key == "ARMY_2:INITIAL/Village").InstanceState);
+
             // show the preset: the list highlights it; detach: the link is gone, the units stay, undo brings it back
             CommandRun shown = await Run(model, "units.showPreset", new JsonObject { ["name"] = "Village" });
             Assert.AreEqual("Village", model.Presets.Highlighted);
@@ -403,6 +413,55 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public void ATreeRowRepeatsThePresetNameOnlyWhenTheGroupIsNamedOtherwise()
+        {
+            Assert.IsTrue(GroupNode.NamedAfter("Cybran farm", "Cybran farm"));
+            Assert.IsTrue(GroupNode.NamedAfter("cybran farm 2", "Cybran farm"), "a second placement");
+            Assert.IsFalse(GroupNode.NamedAfter("Cybran farm north", "Cybran farm"));
+            Assert.IsFalse(GroupNode.NamedAfter("Base", "Cybran farm"));
+            Assert.IsFalse(GroupNode.NamedAfter("Cybran farm 2b", "Cybran farm"));
+        }
+
+        [TestMethod]
+        public async Task TheUnitPresetsListFiltersByStarCivilianWrecksAndMine()
+        {
+            MainViewModel model = new MainViewModel(new NoDialogs());
+            model.Assets.Use(Catalog());
+            model.OpenNewMap(NewMap.Create(new NewMapSettings { Size = 256 }));
+            PresetLibrary library = ExamplesAndAnEnemyBase();
+            model.Presets.Use(library);
+            model.SelectMode("units");
+            model.Assets.Favourites.Open(Path.Combine(library.Folder, "favourites.json"));
+            Assert.IsTrue(model.Presets.HasFilters);
+            int all = model.Presets.Shown.Count;
+            Assert.AreEqual(5, model.Presets.FilterChips.Count);
+
+            JsonObject mine = (JsonObject)(await Run(model, "presets.filter", new JsonObject { ["filter"] = "mine" })).Result!;
+            CollectionAssert.AreEqual(new[] { "Test enemy base" }, mine["shown"]!.AsArray().Select(name => name!.GetValue<string>()).ToArray(), "the examples are not the user's");
+            Assert.IsTrue(model.Presets.FilterChips.Single(chip => chip.IsOn).Filter == PresetFilter.Mine);
+
+            await Run(model, "presets.filter", new JsonObject { ["filter"] = "Civilian" });
+            Assert.IsTrue(model.Presets.Shown.Count > 0 && model.Presets.Shown.Count < all);
+            Assert.IsTrue(model.Presets.Shown.All(preset => preset.Read<UnitPresetSettings>().Role == ArmyRoles.Civilian));
+            await Run(model, "presets.filter", new JsonObject { ["filter"] = "wrecks" });
+            Assert.IsTrue(model.Presets.Shown.Count > 0 && model.Presets.Shown.All(preset => preset.Read<UnitPresetSettings>().Wrecks));
+
+            await Run(model, "presets.filter", new JsonObject { ["filter"] = "starred" });
+            Assert.AreEqual(0, model.Presets.Shown.Count);
+            Assert.IsTrue(model.Presets.NoneMatch);
+            Assert.IsFalse(model.Presets.IsEmpty, "an empty filter is not an empty list");
+            await Run(model, "presets.star", new JsonObject { ["kind"] = UnitPresets.Kind, ["name"] = "UEF civilian town" });
+            CollectionAssert.AreEqual(new[] { "UEF civilian town" }, model.Presets.Shown.Select(preset => preset.Name).ToArray());
+            CollectionAssert.Contains(model.Assets.Favourites.Starred.ToArray(), PresetsViewModel.StarKey(UnitPresets.Kind, "UEF civilian town"), "kept as the shelf keeps its stars");
+            await Run(model, "presets.star", new JsonObject { ["kind"] = UnitPresets.Kind, ["name"] = "UEF civilian town", ["on"] = false });
+            Assert.AreEqual(0, model.Presets.Shown.Count);
+
+            await Run(model, "presets.filter", new JsonObject { ["filter"] = "all" });
+            Assert.AreEqual(all, model.Presets.Shown.Count);
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "presets.filter", new JsonObject { ["filter"] = "tall" }));
+        }
+
+        [TestMethod]
         public async Task ALineOfStructuresIsPlacedAsOneStepWithItsImagesIntoTheGroup()
         {
             MainViewModel model = await Open();
@@ -431,7 +490,12 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(4, ((JsonObject)tanks.Result!)["count"]!.GetValue<int>(), "mobile units at the spacing");
             Assert.AreEqual(90, SelectionInspector.Degrees(UnitNamed(model, first).Orientation.Y), 1e-3, "facing along the line, down +z");
 
-            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["x0"] = -5, ["z0"] = 5, ["x1"] = 10, ["z1"] = 5, ["blueprint"] = "uel0101" }), "a point outside the map is refused");
+            CommandRun edge = await Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["x0"] = -5, ["z0"] = 5, ["x1"] = 10, ["z1"] = 5, ["blueprint"] = "uel0101", ["spacing"] = 3 });
+            Assert.AreEqual(2, ((JsonObject)edge.Result!)["outside"]!.GetValue<int>(), "the places at -5 and -2 are left out");
+            Assert.AreEqual(4, ((JsonObject)edge.Result!)["count"]!.GetValue<int>(), "1, 4, 7 and 10");
+            StringAssert.Contains(model.Status, "left out beyond the map's edge");
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["x0"] = -5, ["z0"] = 5, ["x1"] = -1, ["z1"] = 5, ["blueprint"] = "uel0101" }), "nothing of it lies on the map");
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "ring", ["x"] = -5, ["z"] = 5, ["blueprint"] = "uel0101" }), "the click of a ring must lie on the map");
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "line", ["blueprint"] = "uel0101" }), "no points");
             await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "units.addMany", new JsonObject { ["mode"] = "spiral", ["x0"] = 5, ["z0"] = 5, ["blueprint"] = "uel0101" }));
         }

@@ -85,9 +85,14 @@ public sealed class SaveUnitInstanceHandler(MainViewModel model, ArmiesViewModel
             throw new OperationCanceledException("Saving back was cancelled");
         }
         Preset? saved = null;
+        string before = instance.Instance.Fingerprint;
+        byte[]? fileBefore = null;
         try
         {
+            string file = library.FileOf(UnitPresets.Kind, instance.Instance.Preset);
+            fileBefore = File.Exists(file) ? File.ReadAllBytes(file) : null;
             UnitCommands.Apply(edit, d => d.SaveInstance(instance.Army, instance.Path, library, out saved));
+            model.SavedBack.Note(instance.Army, instance.Path, instance.Instance.Preset, before, UnitPresets.Fingerprint(saved!)!, fileBefore, File.ReadAllBytes(library.FileOf(UnitPresets.Kind, saved!.Name)));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -122,6 +127,11 @@ public sealed class ShowUnitPresetHandler(MainViewModel model, ArmiesViewModel a
             ?? throw new ArgumentException("Choose a group placed from a preset in the Units mode's tree, or give the preset's name as the argument name");
         bool has = library.Find(UnitPresets.Kind, name) is not null;
         model.SelectMode("units");
+        if (has && presets.Shown.All(preset => !string.Equals(preset.Name, name, StringComparison.OrdinalIgnoreCase)))
+        {
+            // the filter hides it: show them all
+            presets.Filter = PresetFilter.All;
+        }
         presets.Highlighted = name;
         model.Status = has ? $"The preset {name} is highlighted in Unit presets" : $"The workspace has no unit preset {name}: the list cannot show it";
         return Task.FromResult(new JsonObject { ["name"] = name, ["found"] = has });

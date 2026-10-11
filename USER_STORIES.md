@@ -135,8 +135,8 @@ reads again when it changes; and nothing that generates runs by itself.
       the Problems tab, checked a moment after each step and before a save or export (never
       stopping it), with checks for armies without a spawn, spawns without mass nearby, textures
       and blueprints or models the map and workspace lack, and passages opened or closed since
-      walkability was generated last; a double click or Enter goes to a problem (selects it, the
-      top view and 3D camera look at it); Lua plugins add checks of their own (F-15).
+      walkability was generated last; a click selects a problem's things, a double click or Enter
+      goes to it too (the top view and 3D camera look at it); Lua plugins add checks of their own (F-15).
 - [x] **F-15 Lua plugins.** Plugins with commands, tools and panels, through the controller and
       the events; a run is one step of undo. Today: the workspace's `plugins/` (a folder each with
       its `plugin.lua` and `plugin.json`), loaded when the workspace is ready and read again when a
@@ -505,16 +505,21 @@ reads again when it changes; and nothing that generates runs by itself.
       the game turns into wrecks when it starts, as the vault's maps keep them; grey and dark in 3D, a
       cross in the top view; a warning for wrecks of a playable army.
 - [x] **U-7 Place many at once.** The Place tool's ways to place: a line (structures butt together
-      at their footprint, walls above all; mobile units at a chosen spacing; each facing along the
+      at their skirt, walls above all; mobile units at a chosen spacing; each facing along the
       line or the chosen heading), a rectangle (filled, or hollow for walls), a ring around the
       selection, and a scatter brush for mobile units and wrecks (a count per stroke, random
       headings, a least distance); each one step of undo, with its symmetry images, its footprints
       shown under the mouse before the mouse is released, and a single unit's footprint shown too.
-      Today: the options row's Single, Line, Rectangle, Ring and Scatter with each way's settings
-      (`units.placeMode`); a line or rectangle is dragged out with every footprint under the mouse
-      and the count in the status line (Shift keeps a line to 45°, Escape cancels) and placed on
-      release as one step (`units.addMany`); a ring goes around the selected units' footprints or
-      the structure under the mouse at a distance; the scatter brush (`[` and `]` its radius) puts
+      Today: the options row's How to place (Single, Line, Rectangle, Ring, Scatter), the unit, Army
+      and Group first, the way's settings behind More (`units.placeMode`); the army is that of the
+      spawn nearest the view's middle on a map with armies to play on, else the civilians, and the
+      group the tree's chosen one; the status line says where units went; a line or rectangle is
+      dragged out with every footprint under the mouse (red where it would overlap another or break
+      a placement rule, or lies beyond the map's edge, which is left out) and the count in the
+      status line (Shift keeps a line to 45°, Escape cancels) and placed on release as one step
+      (`units.addMany`; more than 500 units are asked about first); structures are spaced by their
+      skirt, as the game's build templates are; a ring goes around the selected units' skirts or
+      the structure under the mouse at a distance from them; the scatter brush (`[` and `]` its radius) puts
       the count in its circle at random headings, none closer than the least distance, and a drag
       goes on at that density; every way places into the row's army and group, as wrecks when
       asked, with the symmetry's images, and selects what it placed; a single unit's footprint
@@ -526,7 +531,8 @@ reads again when it changes; and nothing that generates runs by itself.
       base, T2, defences, naval, civilian); the units placed last are offered again.
       Today: the Units panel's Palette section (a combo of the palettes, + for a new one, a menu to rename,
       delete or show the folder, ten slots with their keys and the units' icons, the chosen one filled,
-      "drop here" while empty) and the last six placed as chips; 1 to 9 and 0 pick a slot and Tab and
+      "drop here" while empty) and the last six placed as chips (the Scatter brush's too; a click chooses
+      the Place tool); 1 to 9 and 0 pick a slot and Tab and
       Shift+Tab change palette while the Place tool is active; a shelf tile (dragged or from its context
       menu) and a units preset (dragged or from its context menu) go into a slot, a slot clears from its
       menu; `units.palette`, `units.slot`, `units.setSlot`, `units.newPalette`, `units.renamePalette`,
@@ -541,9 +547,12 @@ reads again when it changes; and nothing that generates runs by itself.
       "preset changed" or "preset missing", the Unit presets list shows "×2 placed" and "1 out of
       date", the inspector's "Placed from a preset" block says which preset, where, how and when,
       and whether the file changed, with Select the instance (also a double click on one of its
-      units), Save back to the preset (asked first; the file keeps its role and wrecks), Show the
+      units), Save back to the preset (asked first; the file keeps its role and wrecks; undo puts
+      the file back as it was), Show the
       preset (highlighted in the list) and Detach; Problems notes instances whose preset changed or
-      is missing (`preset-changed`); the export writes the group as any other.
+      is missing (`preset-changed`); the export writes the group as any other. A second placement of a
+      preset is named "<preset> 2"; a group named after its preset shows no repeated tag; the list has
+      the filters All, Starred, Civilian, Wrecks and Mine and a star per preset.
 - [x] **U-10 Select by and stored selections.** Select units by army, faction, kind, tech,
       blueprint and wrecks, within the map, the selection or an area, replacing the selection or
       adding to it; store the selection under 1 to 9 (Alt and the digit) and recall it (the digit),
@@ -556,7 +565,9 @@ reads again when it changes; and nothing that generates runs by itself.
       project in the user's settings and shown as chips along the top view (`3 · Cybran farm · 17`); a click
       inside a structure's footprint, or a box that touches it, picks it (Picks: Footprint or Centre); the
       top view draws a structure as its footprint and a mobile unit as a diamond in the army's colour (the
-      chip Army colours turns it off; the 3D view is not coloured by army).
+      chip Army colours turns it off; the 3D view is not coloured by army); a double click on a unit
+      selects its group's units, Alt and a double click its army's; a stored selection whose units are
+      gone stays, dimmed, until stored over or cleared.
 - [x] **U-11 Editing many units.** Group the selection into a new group (Ctrl+G) and ungroup; the
       group as a choice in the inspector; replace the blueprint of the selected units, or convert
       them to another faction's unit of the same kind and tech; a move keeps structures on the
@@ -567,11 +578,11 @@ reads again when it changes; and nothing that generates runs by itself.
       the same layer and tech that shares most categories; a unit without a counterpart stays and
       is counted), Group, Ungroup and Distribute (`units.distribute`, three units or more); a
       handle drag, the arrows and `edit.place` round the move so the first structure lands on the
-      build grid (the select tool's check box "Keep structures on the build grid").
+      build grid (the select tool's check box "Keep on grid").
 - [x] **U-12 Placement checks.** Problems lists structures whose footprints overlap and structures
       where the ground does not allow them (too steep, the wrong layer: water or land), from the
-      blueprint's skirt, build layers and slope limit, which the workspace's converted assets carry;
-      the footprint under the mouse turns red there. Today: the converted assets carry each unit's skirt, build layers, slope limit and least water depth (asset format 6); the checks `units-overlap` and `units-ground` warn in Problems (choosing an overlap selects both units), and the Place tool's footprints (single, line, rectangle, ring) turn red with the reason in the status line; placing stays allowed.
+      blueprint's skirt, build layers and ground rule, which the workspace's converted assets carry;
+      the footprint under the mouse turns red there. Today: the converted assets carry each unit's skirt, build layers, `MaxGroundVariation`, `FlattenSkirt` and least water depth (asset format 7); the checks `units-overlap` (by the skirt the engine reserves) and `units-ground` (the layer, the water's depth and the engine's flatness rule for structures: the ground under the skirt may differ by `MaxGroundVariation`, 1 by default) warn in Problems (choosing an overlap selects both units), and the Place tool's footprints (single, line, rectangle, ring) turn red, also where planned units overlap each other, with the reason in the status line; placing stays allowed.
 
 ## V: Views
 

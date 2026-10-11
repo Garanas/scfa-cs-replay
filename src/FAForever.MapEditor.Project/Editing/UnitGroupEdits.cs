@@ -267,13 +267,13 @@ namespace FAForever.MapEditor.Project.Editing
         /// </summary>
         /// <param name="radians">The turn, clockwise in the top view.</param>
         /// <param name="placed">The units' names, in the order of the template.</param>
-        /// <param name="group">The new group's path: the template's name, made free among its siblings.</param>
+        /// <param name="group">The new group's path: the template's name; when a sibling has it, the name and a number from 2 (<c>Cybran farm 2</c>).</param>
         /// <exception cref="KeyNotFoundException">The army or the group to place into does not exist.</exception>
         public static MapDocument PlaceUnits(this MapDocument document, UnitGroup template, string army, IReadOnlyList<string> parent, float x, float z, float radians,
             out ImmutableArray<string> placed, out ImmutableArray<string> group)
         {
             UnitGroup into = RequireGroup(document, army, parent);
-            string name = DocumentEdits.FreeName(into.Groups.Select(g => g.Name), CheckGroupName(template.Name.Length == 0 ? "GROUP_1" : template.Name));
+            string name = DocumentEdits.FreeCopyName(into.Groups.Select(g => g.Name), CheckGroupName(template.Name.Length == 0 ? "GROUP_1" : template.Name));
             group = [.. parent, name];
             Heightmap heights = document.Terrain.Heightmap;
             (float sin, float cos) = MathF.SinCos(radians);

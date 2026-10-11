@@ -67,11 +67,26 @@ public sealed partial class MainViewModel
         };
 
         // the group chosen in the tree is where the place tool places
+        // (a tree made again keeps its choice in a new node of the same key: that is no new choice, and must not
+        // take the tool back from the army or group chosen in its row since)
+        string? placedInto = null;
         Armies.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(ArmiesViewModel.ChosenGroup) && Armies.ChosenGroup is GroupNode node)
+            if (e.PropertyName == nameof(ArmiesViewModel.ChosenGroup) && Armies.ChosenGroup is GroupNode node && node.Key != placedInto)
             {
+                placedInto = node.Key;
                 place.PlaceInto(node.Army, node.PathText);
+            }
+        };
+        // and the row's Group combo chooses the group in the tree: one choice, shown twice
+        place.GroupPicked += (army, path) =>
+        {
+            if (Armies.ChosenGroup?.Key != $"{army}:{path}" && !Armies.Choose(army, UnitGroupEdits.ParsePath(path)))
+            {
+                // the army has no such group yet (INITIAL is made by placing): its root group stands for it in the tree,
+                // and the tool keeps the group it has
+                placedInto = $"{army}:";
+                Armies.Choose(army, []);
             }
         };
     }

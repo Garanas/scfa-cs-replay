@@ -279,7 +279,7 @@ public static class UiTree
         || control is ListBoxItem item && !item.GetVisualDescendants().Any(inner => inner is Button or ToggleButton or TextBox or Slider or ComboBox)
         || control is MenuItem { ItemCount: 0 };
 
-    private static string? TextOf(Control control)
+    internal static string? TextOf(Control control)
     {
         string? text = control switch
         {
@@ -289,12 +289,28 @@ public static class UiTree
             HeaderedSelectingItemsControl { Header: string header } => header,
             HeaderedContentControl { Header: string header } => header,
             ContentControl { Content: string content } => content,
+            // the texts a person sees: a text of a hidden part (a slot's name for a preset while it holds a unit) is left out
             Button or ToggleButton or ListBoxItem or TabItem => string.Join(" ", control.GetVisualDescendants().OfType<TextBlock>()
-                .Select(block => block.Text).Where(t => !string.IsNullOrWhiteSpace(t))),
+                .Where(block => IsShownIn(block, control)).Select(block => block.Text).Where(t => !string.IsNullOrWhiteSpace(t))),
             _ => null,
         };
         // menu headers carry the access key's underscore; other texts keep theirs (rocklight_albedo)
         return string.IsNullOrWhiteSpace(text) ? null : control is MenuItem ? text.Replace("_", "", StringComparison.Ordinal) : text;
+    }
+
+    /// <summary>
+    /// Whether nothing between a text and the control that holds it is hidden.
+    /// </summary>
+    private static bool IsShownIn(Visual text, Control holder)
+    {
+        for (Visual? at = text; at is not null && !ReferenceEquals(at, holder); at = at.GetVisualParent())
+        {
+            if (!at.IsVisible)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static JsonArray Bounds(Control control, Visual root)

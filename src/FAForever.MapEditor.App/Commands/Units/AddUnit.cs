@@ -77,7 +77,7 @@ public sealed class AddUnitHandler(MainViewModel model, AssetsViewModel assets, 
         {
             model.Selection.Set(all);
         }
-        model.Status = $"Placed {name} ({entry?.Name ?? id}) for {army}{(wreck ? " as a wreck" : "")}{MainViewModel.Mirrored(all.Length)}";
+        model.Status = $"Placed {name} ({entry?.Name ?? id}) {UnitCommands.Where(army, group, false)}{MainViewModel.Mirrored(all.Length)}";
         return Task.FromResult(new JsonObject
         {
             ["name"] = name,
@@ -97,6 +97,20 @@ public sealed class AddUnitHandler(MainViewModel model, AssetsViewModel assets, 
 /// </summary>
 internal static class UnitCommands
 {
+    /// <summary>
+    /// Where placed units went, for the status line: <c>for ARMY_1</c> into the initial group, else
+    /// <c>into ARMY_1's WRECKAGE: a wreck</c> (a group below a <c>WRECKAGE</c> group is wrecks).
+    /// </summary>
+    public static string Where(string army, ImmutableArray<string> group, bool plural)
+    {
+        if (group.IsEmpty || (group.Length == 1 && group[0] == UnitGroupEdits.InitialGroup))
+        {
+            return $"for {army}";
+        }
+        bool wrecks = group.Contains(UnitWrecks.GroupName, StringComparer.Ordinal);
+        return $"into {army}'s {UnitGroupEdits.PathText(group)}{(wrecks ? (plural ? ": wrecks" : ": a wreck") : "")}";
+    }
+
     /// <summary>
     /// Applies an edit of the library; a thing it does not find (an army, a group) is an argument
     /// that is wrong, which the status line shows.

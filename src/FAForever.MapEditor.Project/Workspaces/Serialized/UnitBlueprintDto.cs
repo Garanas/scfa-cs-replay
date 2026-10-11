@@ -57,6 +57,17 @@ namespace FAForever.MapEditor.Project.Workspaces.Serialized
         /// </summary>
         public List<string>? BuildOnLayers { get; init; }
 
+        /// <summary>
+        /// How much the ground under the skirt may rise and fall (<c>Physics.MaxGroundVariation</c>);
+        /// absent when the blueprint gives none (the engine's default is 1).
+        /// </summary>
+        public double? MaxGroundVariation { get; init; }
+
+        /// <summary>
+        /// Whether the structure levels the ground under its skirt (<c>Physics.FlattenSkirt</c>).
+        /// </summary>
+        public bool FlattenSkirt { get; init; }
+
         public double? UniformScale { get; init; }
 
         public double? Health { get; init; }

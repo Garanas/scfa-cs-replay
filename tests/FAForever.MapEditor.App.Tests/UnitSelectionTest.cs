@@ -170,7 +170,7 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public async Task ARecalledSelectionDropsTheUnitsThatAreGone()
+        public async Task ARecalledSelectionKeepsTheUnitsThatAreGoneUntilStoredOver()
         {
             (MainViewModel model, string farm, string home, string snoop, _, _) = await Open();
             model.Selection.Set([ObjectRef.Unit(farm), ObjectRef.Unit(home), ObjectRef.Unit(snoop)]);
@@ -179,15 +179,92 @@ namespace FAForever.MapEditor.App.Tests
 
             model.Selection.Set([ObjectRef.Unit(home)]);
             await Run(model, "edit.delete");
+            StringAssert.Contains(model.Status, "Deleted 1 unit");
             Assert.AreEqual("2 · 2", model.StoredSelections.Chips.Single().Text, "the chip counts what is left");
 
             Assert.AreEqual(2, (int)(await Run(model, "select.recall", new JsonObject { ["slot"] = 2 })).Result!);
             CollectionAssert.AreEquivalent(new[] { farm, snoop }, Selected(model));
-            Assert.AreEqual(2, model.StoredSelections.Of(2).Length, "and the digit holds what is left");
+            Assert.AreEqual(3, model.StoredSelections.Of(2).Length, "the digit keeps what is gone");
+
+            // all of it gone: the digit stays, dimmed, and undo of the delete brings it back to life
+            model.Selection.Set([ObjectRef.Unit(farm), ObjectRef.Unit(snoop)]);
+            await Run(model, "edit.delete");
+            Assert.AreEqual("2 · 0", model.StoredSelections.Chips.Single().Text);
+            Assert.IsTrue(model.StoredSelections.Chips.Single().IsGone);
+            Assert.AreEqual(0, (int)(await Run(model, "select.recall", new JsonObject { ["slot"] = 2 })).Result!);
+            StringAssert.Contains(model.Status, "its units are gone");
+            Assert.AreEqual(3, model.StoredSelections.Of(2).Length);
+            model.Undo();
+            Assert.AreEqual("2 · 2", model.StoredSelections.Chips.Single().Text);
+            Assert.IsFalse(model.StoredSelections.Chips.Single().IsGone);
+            Assert.AreEqual(2, (int)(await Run(model, "select.recall", new JsonObject { ["slot"] = 2 })).Result!);
 
             model.Selection.Clear();
             await Run(model, "select.store", new JsonObject { ["slot"] = 2 });
             Assert.AreEqual(0, model.StoredSelections.Chips.Count, "storing nothing empties the digit");
+        }
+
+        [TestMethod]
+        public async Task SelectByListsTheAreasSortedAndChoosesNoneUntilOnePicked()
+        {
+            (MainViewModel model, _, _, _, _, _) = await Open();
+            model.Map!.Session.Edit("Areas", document => document.AddArea(new Area { Name = "Zulu", X1 = 50, Z1 = 50 }).AddArea(new Area { Name = "alpha", X1 = 50, Z1 = 50 }).AddArea(new Area { Name = "Mid", X1 = 50, Z1 = 50 }));
+            model.SelectBy.Toggle();
+            Assert.IsTrue(model.SelectBy.IsOpen);
+            string[] areas = [.. model.ShownDocument!.Markers.Areas.Select(area => area.Name)];
+            Assert.IsTrue(areas.Length > 1, "the test map has areas");
+            CollectionAssert.AreEqual(areas.Order(StringComparer.OrdinalIgnoreCase).ToArray(), model.SelectBy.AreaChoices.ToArray(), "by name");
+
+            model.SelectBy.Within = "area";
+            Assert.IsNull(model.SelectBy.AreaChoice, "none chosen yet");
+            Assert.AreEqual("Choose an area", model.SelectBy.CountText);
+            model.SelectBy.SelectCommand.Execute(null);
+            Assert.AreEqual("Choose an area to select within", model.Status);
+            Assert.IsFalse(model.Selection.HasAny, "it does not select the whole map");
+
+            model.SelectBy.AreaChoice = areas[0];
+            StringAssert.EndsWith(model.SelectBy.CountText, "match");
+        }
+
+        [TestMethod]
+        public async Task AClickAndDeleteSayWhatTheyDid()
+        {
+            (MainViewModel model, string farm, string home, string snoop, _, _) = await Open();
+            SelectTool select = (SelectTool)model.ActiveTool!.Tool!;
+            select.Press(160, 100);
+            select.Release();
+            Assert.AreEqual($"Selected {snoop} (Snoop)", model.Status);
+            select.Press(100, 100);
+            select.Release();
+            Assert.AreEqual($"Selected {farm} (UEF Farm)", model.Status);
+            await Run(model, "select.all");
+            await Run(model, "edit.delete");
+            StringAssert.StartsWith(model.Status, "Deleted 5 units");
+            _ = home;
+        }
+
+        /// <summary>
+        /// A double click on any unit selects its group's units, with Alt its army's (user story U-10).
+        /// </summary>
+        [TestMethod]
+        public async Task ADoubleClickSelectsTheGroupAndAltDoubleClickTheArmy()
+        {
+            (MainViewModel model, string farm, string home, string snoop, _, _) = await Open();
+            SelectTool select = (SelectTool)model.ActiveTool!.Tool!;
+            ToolInput twice = new ToolInput(ToolModifiers.None, 0.1f, Clicks: 2);
+            select.Press(100, 100, twice);
+            select.Release();
+            CollectionAssert.AreEquivalent(new[] { farm, home }, Selected(model), "the group INITIAL/Farm");
+            StringAssert.Contains(model.Status, "of INITIAL/Farm of ARMY_1");
+
+            select.Press(100, 100, twice with { Modifiers = ToolModifiers.Alt });
+            select.Release();
+            CollectionAssert.AreEquivalent(new[] { farm, home, snoop }, Selected(model), "the army ARMY_1");
+            StringAssert.Contains(model.Status, "units of ARMY_1");
+
+            select.Press(160, 100, twice);
+            select.Release();
+            CollectionAssert.AreEquivalent(new[] { farm, home, snoop }, Selected(model), "INITIAL holds the Farm group too");
         }
 
         [TestMethod]

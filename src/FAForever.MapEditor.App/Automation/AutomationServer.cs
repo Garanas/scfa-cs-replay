@@ -644,6 +644,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 ["kind"] = model.Presets.Kind,
                 ["shown"] = new JsonArray([.. model.Presets.Shown.Select(preset => (JsonNode)JsonValue.Create(preset.Name))]),
                 ["highlighted"] = model.Presets.Highlighted,
+                ["filters"] = model.Presets.DescribeFilters(),
                 // per unit preset placed on the map: how often, and how many of those instances are out of date (U-9)
                 ["instances"] = new JsonObject([.. model.Presets.Instances.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
                     .Select(entry => KeyValuePair.Create(entry.Key, (JsonNode?)new JsonObject { ["placed"] = entry.Value.Placed, ["outOfDate"] = entry.Value.OutOfDate }))]),
@@ -822,6 +823,10 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             new PixelSize(Math.Max(1, (int)(size.Width * scale)), Math.Max(1, (int)(size.Height * scale))),
             new Vector(96 * scale, 96 * scale));
         bitmap.Render(visual);
+        if (!mapOnly)
+        {
+            DrawPopups(bitmap, scale);
+        }
         string full = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(full)!);
         bitmap.Save(full, new PngBitmapEncoderOptions());

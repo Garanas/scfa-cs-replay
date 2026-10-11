@@ -19,8 +19,10 @@ public sealed class DeleteHandler(MainViewModel model, SelectionViewModel select
     public Task Handle(Delete request, CancellationToken cancellationToken)
     {
         ImmutableArray<ObjectRef> things = selection.Items;
+        string deleted = selection.Summary;
         edit.Transaction.Apply(document => document.RemoveObjects(things.Concat(model.PartnersOf(document, things).Select(partner => partner.Partner)).Distinct()));
         selection.Clear();
+        model.Status = $"Deleted {deleted}";
         return Task.CompletedTask;
     }
 }

@@ -129,7 +129,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// The unit it places, from the picker or the shelf; null until one is chosen.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(HasUnit), nameof(UsesSpacing))]
+    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(UnitButtonText), nameof(HasUnit), nameof(UsesSpacing))]
     public partial AssetEntry? Unit { get; set; }
 
     public bool HasUnit => Unit is not null;
@@ -138,7 +138,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// The units preset it places instead of a unit; null for none.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(HasPreset))]
+    [NotifyPropertyChangedFor(nameof(UnitTitle), nameof(UnitButtonText), nameof(HasPreset))]
     public partial string? Preset { get; set; }
 
     public bool HasPreset => Preset is not null;
@@ -161,6 +161,11 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         PresetRole = role;
         Preset = name;
     }
+
+    /// <summary>
+    /// What the unit button of the options row reads: the preset or unit's name.
+    /// </summary>
+    public string UnitButtonText => Preset is string preset ? preset : Unit is AssetEntry unit ? unit.Name : "Choose a unit";
 
     /// <summary>
     /// What a click places, as the options bar says it.
@@ -195,6 +200,21 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// The ways to place, for the options row's segmented control.
     /// </summary>
     public IReadOnlyList<PlaceModeChoice> Modes { get; }
+
+    /// <summary>
+    /// The way chosen, for the options row's combo box.
+    /// </summary>
+    public PlaceModeChoice ModeChoice
+    {
+        get => Modes.First(choice => choice.Mode == Mode);
+        set
+        {
+            if (value is not null)
+            {
+                Mode = value.Mode;
+            }
+        }
+    }
 
     public bool IsLine => Mode == PlaceMode.Line;
 
@@ -261,6 +281,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     partial void OnModeChanged(PlaceMode value)
     {
         CancelDrag();
+        OnPropertyChanged(nameof(ModeChoice));
         foreach (PlaceModeChoice choice in Modes)
         {
             choice.Refresh();
@@ -342,6 +363,7 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         ["planned"] = _planned.Length,
         ["blocked"] = verdict is { Count: > 0 },
         ["blockedCount"] = verdict?.Count ?? 0,
+        ["outside"] = verdict?.Outside ?? 0,
         ["why"] = verdict?.Why,
     };
 
@@ -353,7 +375,63 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         }
     }
 
-    partial void OnArmyChanged(string? value) => RefreshGroups(model.ShownDocument);
+    partial void OnArmyChanged(string? value)
+    {
+        ArmyChosen |= !_defaulting;
+        RefreshGroups(model.ShownDocument);
+        // another army chosen in the row: the tree shows it too
+        if (!_defaulting && !_following && value is not null)
+        {
+            GroupPicked?.Invoke(value, Group);
+        }
+    }
+
+    private bool _defaulting;
+
+    /// <summary>
+    /// Whether the army was chosen (in the row, in the tree or by a command) rather than defaulted;
+    /// a chosen army stays until the map has no such army.
+    /// </summary>
+    public bool ArmyChosen { get; private set; }
+
+    /// <summary>
+    /// The view's middle in ogrids, for the army it places for by default; null (the map's middle)
+    /// until the window sets it.
+    /// </summary>
+    public Func<Vector2?>? ViewMiddle { get; set; }
+
+    /// <summary>
+    /// The army a new place tool places for: the playable army whose spawn lies nearest the view's
+    /// middle, else the civilians (<c>NEUTRAL_CIVILIAN</c>), the first extra army, the first army.
+    /// </summary>
+    public string? DefaultArmy(MapDocument document)
+    {
+        Vector2 middle = ViewMiddle?.Invoke() ?? new Vector2(document.Width / 2f, document.Height / 2f);
+        string? nearest = document.Markers.Spawns
+            .Where(spawn => document.Scenario.PlayableArmies.Contains(spawn.Army) && document.FindArmy(spawn.Army) is not null)
+            .OrderBy(spawn => Vector2.DistanceSquared(new Vector2(spawn.Position.X, spawn.Position.Z), middle))
+            .FirstOrDefault()?.Army;
+        return nearest
+            ?? document.FindArmy("NEUTRAL_CIVILIAN")?.Name
+            ?? document.Scenario.ExtraArmies.FirstOrDefault(name => document.FindArmy(name) is not null)
+            ?? document.Armies.FirstOrDefault()?.Name;
+    }
+
+    private bool _following;
+
+    /// <summary>
+    /// Raised with the army and group's path when the user chooses a group in the row's combo box,
+    /// so the Units mode's tree shows the same group (the tree's choice reaches <see cref="PlaceInto"/>).
+    /// </summary>
+    public event Action<string, string>? GroupPicked;
+
+    partial void OnChosenGroupChanged(GroupChoice? value)
+    {
+        if (!_following && value is not null && Army is string army)
+        {
+            GroupPicked?.Invoke(army, value.Path);
+        }
+    }
 
     public void Press(float x, float z) => Press(x, z, ToolInput.Default);
 
@@ -536,14 +614,20 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
 
     /// <summary>
     /// Which of the places the unit would break a rule at (user story U-12): overlap an existing
-    /// structure or stand on ground its blueprint rules out (<see cref="PlacementChecks"/>, the
-    /// Problems tab's functions). Placing is allowed anyway. Wrecks and mobile units break none.
+    /// structure or another planned one, or stand on ground its blueprint rules out
+    /// (<see cref="PlacementChecks"/>, the Problems tab's functions), and which lie outside the map
+    /// (left out when placed). Placing is allowed anyway. Wrecks and mobile units break no rule.
     /// </summary>
-    /// <param name="Blocked">One flag per place, as many as outlines are drawn.</param>
+    /// <param name="Blocked">One flag per place, as many as outlines are drawn: a place that breaks a rule or lies outside the map.</param>
     /// <param name="Why">What is wrong at the first place that breaks a rule, e.g. <c>Overlaps the Land Factory UNIT_12</c>.</param>
-    public sealed record PlaceVerdict(bool[] Blocked, string? Why)
+    /// <param name="Outside">How many of the places lie outside the map.</param>
+    /// <param name="Breaking">How many of the places inside the map break a rule.</param>
+    public sealed record PlaceVerdict(bool[] Blocked, string? Why, int Outside = 0, int Breaking = 0)
     {
-        public int Count => Blocked.Count(blocked => blocked);
+        /// <summary>
+        /// How many places break a rule.
+        /// </summary>
+        public int Count => Breaking;
     }
 
     /// <summary>
@@ -552,28 +636,61 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     public PlaceVerdict VerdictOf(MapDocument document, AssetEntry unit, ImmutableArray<UnitPlace> places)
     {
         bool[] blocked = new bool[Math.Min(places.Length, PresetPreview.MaxOutlines)];
+        bool[] outside = new bool[blocked.Length];
+        int outsideCount = 0;
+        for (int i = 0; i < blocked.Length; i++)
+        {
+            UnitPlace place = places[i];
+            if (place.X < 0 || place.Z < 0 || place.X > document.Width || place.Z > document.Height)
+            {
+                blocked[i] = outside[i] = true;
+                outsideCount++;
+            }
+        }
+        // the ones past the outlines drawn are counted too, for the status line
+        for (int i = blocked.Length; i < places.Length; i++)
+        {
+            if (places[i].X < 0 || places[i].Z < 0 || places[i].X > document.Width || places[i].Z > document.Height)
+            {
+                outsideCount++;
+            }
+        }
+        string? outsideWhy = outsideCount > 0 ? $"{MainViewModel.Units(outsideCount)} lie{(outsideCount == 1 ? "s" : "")} beyond the map's edge and are left out" : null;
         if (!unit.IsStructure || AsWrecks || model.Assets.Catalog is not AssetCatalog catalog)
         {
-            return new PlaceVerdict(blocked, null);
+            return new PlaceVerdict(blocked, outsideWhy, outsideCount);
         }
         using Performance.Span measure = Performance.Measure("tool.place-checks");
         PlacementIndex index = PlacementIndex.Of(document, catalog);
         Heightmap heights = document.Terrain.Heightmap;
         float? water = document.Water.HasWater ? document.Water.Elevation : null;
+        PlacementRect[] rects = new PlacementRect[blocked.Length];
+        for (int i = 0; i < rects.Length; i++)
+        {
+            rects[i] = PlacementChecks.SkirtOf(unit, places[i].X, places[i].Z, places[i].Heading);
+        }
+        bool[] among = PlacementChecks.OverlapAmong(rects);
         string? why = null;
+        int breaking = 0;
         for (int i = 0; i < blocked.Length; i++)
         {
+            if (outside[i])
+            {
+                continue;
+            }
             UnitPlace place = places[i];
             string? reason = PlacementChecks.OverlapAt(index, unit, place.X, place.Z, place.Heading) is PlacedStructure other
                 ? $"Overlaps the {other.Title}"
+                : among[i] ? "Overlaps another of the units to place"
                 : PlacementChecks.GroundIssue(heights, water, unit, place.X, place.Z, place.Heading) is string ground ? $"{unit.Name}: {ground}" : null;
             if (reason is not null)
             {
                 blocked[i] = true;
+                breaking++;
                 why ??= reason;
             }
         }
-        return new PlaceVerdict(blocked, why);
+        return new PlaceVerdict(blocked, why ?? outsideWhy, outsideCount, breaking);
     }
 
     /// <summary>
@@ -628,9 +745,15 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         }
         if (document is not null && (Army is null || document.FindArmy(Army) is null))
         {
-            Army = document.FindArmy("NEUTRAL_CIVILIAN")?.Name
-                ?? document.Scenario.ExtraArmies.FirstOrDefault(name => document.FindArmy(name) is not null)
-                ?? armies.FirstOrDefault()?.Name;
+            _defaulting = true;
+            try
+            {
+                Army = DefaultArmy(document);
+            }
+            finally
+            {
+                _defaulting = false;
+            }
         }
         RefreshGroups(document);
     }
@@ -640,15 +763,37 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     /// </summary>
     public void PlaceInto(string army, string group)
     {
-        Army = army;
-        if (Groups.All(choice => choice.Path != group))
+        _following = true;
+        try
         {
-            RefreshGroups(model.ShownDocument);
+            Army = army;
+            if (Groups.All(choice => choice.Path != group))
+            {
+                RefreshGroups(model.ShownDocument);
+            }
+            ChosenGroup = Groups.FirstOrDefault(choice => choice.Path == group) ?? ChosenGroup;
         }
-        ChosenGroup = Groups.FirstOrDefault(choice => choice.Path == group) ?? ChosenGroup;
+        finally
+        {
+            _following = false;
+        }
     }
 
     private void RefreshGroups(MapDocument? document)
+    {
+        bool following = _following;
+        _following = true;
+        try
+        {
+            RefreshGroupsCore(document);
+        }
+        finally
+        {
+            _following = following;
+        }
+    }
+
+    private void RefreshGroupsCore(MapDocument? document)
     {
         UnitGroup? root = Army is null ? null : document?.FindArmy(Army)?.Units;
         List<GroupChoice> choices = [];
@@ -702,7 +847,8 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
             : $"{MathF.Abs(_to.X - from.X):0.#} × {MathF.Abs(_to.Y - from.Y):0.#} ogrids";
         PlaceVerdict? verdict = model.ShownDocument is MapDocument shown ? VerdictOf(shown, unit, _planned) : null;
         string breaks = verdict is { Count: > 0 } ? $"; {verdict.Count} break{(verdict.Count == 1 ? "s" : "")} a rule: {verdict.Why}" : "";
-        model.Status = $"{_planned.Length} × {unit.Name}, {size}{breaks}; release to place, Escape to cancel";
+        string left = verdict is { Outside: > 0 } ? $"; {verdict.Outside} beyond the map's edge {(verdict.Outside == 1 ? "is" : "are")} left out" : "";
+        model.Status = $"{_planned.Length} × {unit.Name}, {size}{breaks}{left}; release to place, Escape to cancel";
     }
 
     private void CancelDrag()
@@ -807,6 +953,10 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
         if (placed > 0 && model.ShownDocument is MapDocument document)
         {
             model.Selection.Set(_strokePlaced.Where(document.Exists));
+            if (Unit is AssetEntry scattered)
+            {
+                model.UnitPalettes.NotePlaced(LastPlacedItem.UnitKey(scattered.Key));
+            }
             model.Status = $"Scattered {MainViewModel.Units(placed)} ({Unit?.Name}) for {Army}{(AsWrecks ? " as wrecks" : "")}{(_strokeImages > 0 ? $" and {_strokeImages} mirrored" : "")}";
         }
         else

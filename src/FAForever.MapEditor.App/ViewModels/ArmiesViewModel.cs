@@ -43,16 +43,40 @@ public sealed partial class GroupNode(string army, ImmutableArray<string> path, 
     public string InstanceName => instance?.Preset ?? "";
 
     /// <summary>
+    /// Whether the tree shows the preset's name as a badge: not when the group is named after it
+    /// (the name, or the name and a number as a second placement gets), which would repeat the row.
+    /// </summary>
+    public bool ShowsInstanceName => instance is not null && !NamedAfter(Title, instance.Preset);
+
+    /// <summary>
+    /// Whether a group's name is the preset's, or the preset's and a number (<c>Cybran farm 2</c>).
+    /// </summary>
+    public static bool NamedAfter(string group, string preset)
+    {
+        if (string.Equals(group, preset, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        return group.Length > preset.Length + 1 && group.StartsWith(preset, StringComparison.OrdinalIgnoreCase)
+            && group[preset.Length] == ' ' && group[(preset.Length + 1)..].All(char.IsAsciiDigit);
+    }
+
+    /// <summary>
     /// How the instance stands to its preset's file (<see cref="PresetInstances.StateOf(PresetInstance, Func{string, string?})"/>);
     /// null without an instance or without a workspace to look in. Set again when the presets change.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsInstanceChanged), nameof(IsInstanceMissing), nameof(InstanceStateText), nameof(Description))]
+    [NotifyPropertyChangedFor(nameof(IsInstanceChanged), nameof(IsInstanceMissing), nameof(HasInstanceState), nameof(InstanceStateText), nameof(Description))]
     public partial PresetInstanceState? InstanceState { get; set; }
 
     public bool IsInstanceChanged => InstanceState == PresetInstanceState.Changed;
 
     public bool IsInstanceMissing => InstanceState == PresetInstanceState.Missing;
+
+    /// <summary>
+    /// Whether the tree has a state to tag the row with (changed or missing).
+    /// </summary>
+    public bool HasInstanceState => IsInstanceChanged || IsInstanceMissing;
 
     /// <summary>
     /// The tree's badge after the preset's name: <c>preset changed</c>, <c>preset missing</c>, or nothing.
