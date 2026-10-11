@@ -968,7 +968,9 @@ every other part).
   walkability, navigation mesh, path networks; Terrain surface: normal map, normal decal, shadow
   decal; From rules: masks, props; Pictures: preview), each with a picture where one exists
   (`ImagePreview`: walkability and the regions as `NavGridPicture`, the normal map and preview as
-  `ColourGridPicture`, the decals their slot's), its title, how it stands (`Missing`, `Out of date`,
+  `ColourGridPicture`, the decals their slot's, the path networks' nodes and links as
+  `PathNetworkPicture`, the masks from rules as the first rules layer's grid, the props from rules
+  as `RulePropsPicture`, a dot per prop a rule placed; `Rendering/PointPictures.cs`), its title, how it stands (`Missing`, `Out of date`,
   `Current`, `Generating`; a decal taken from a file or none says its source) and Generate (its
   command, the ids kept); Export last (`procedural.export`). The entries are a `PanelParts`
   (`PanelPartLists["procedural"]`, ids `procedural.<generator id>`), so `view.inspectPart` and
@@ -2100,10 +2102,11 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   `state.panelParts` has each list's chosen entry, its content's type and every entry's detail.
 - **Water** (`WaterSettings.Parts`): Water on (a check box above the list), Settings (Elevations
   and colour, its detail the surface's elevation; Surface and reflection; Textures and waves, the
-  four wave textures with them), Maps (Foam, Flatness, Depth bias, their size as detail) and Wave
+  four wave textures with them), Maps (Foam, Flatness, Depth bias) and Wave
   generators (how many). A map chosen makes the Paint water tool paint it and chooses that tool;
-  the inspector shows the brush's erase, radius and strength (its shape stays in the options row,
-  which says `Map: Foam`). The Waves entry chooses the Waves tool; and back, choosing a tool or a
+  the inspector shows the map's stack of layers (the brush's shape, radius, strength and erase stay in
+  the options row, which says `Map: Foam`, and are not repeated). Each map's entry has a picture of
+  it and its count of layers (`PanelPart.Preview`, `Detail`; a map without a stack of its own has one). The Waves entry chooses the Waves tool; and back, choosing a tool or a
   map for the brush (`brush.set waterMask`, a preset) shows its entry. Presets below.
 - **Lighting** (`LightingSettings.Parts`): Sun (azimuth, elevation, colour, multiplier; the Sun
   tool's line), Colours and ambience, Fog, Bloom, Sky and cube maps (the sky's cube maps and

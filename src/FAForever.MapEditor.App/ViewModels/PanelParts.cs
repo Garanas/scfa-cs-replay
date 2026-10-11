@@ -46,6 +46,17 @@ public sealed partial class PanelPart(string id, string title, string group, obj
     public string Label => Detail.Length == 0 ? Title : $"{Title}: {Detail}";
 
     partial void OnDetailChanged(string value) => OnPropertyChanged(nameof(Label));
+
+    /// <summary>
+    /// A small picture before its title in the panel (a water map's); null for none.
+    /// </summary>
+    [ObservableProperty]
+    public partial Rendering.PreviewPicture? Preview { get; set; }
+
+    /// <summary>
+    /// What a screen reader says of its picture.
+    /// </summary>
+    public string PreviewLabel => $"Preview of {Title}";
 }
 
 /// <summary>

@@ -794,6 +794,10 @@
   </Style>
 
   <!-- an entry of the map-wide decals (D-1): as tall as its preview -->
+  <!-- an entry of a panel's list with a picture (a water map's): as tall as its picture -->
+  <Style Selector="Button.partentry.partwithpreview">
+    <Setter Property="Height" Value="{StaticResource WideDecalEntryHeight}" />
+  </Style>
   <Style Selector="Button.partentry.widedecalentry">
     <Setter Property="Height" Value="{StaticResource WideDecalEntryHeight}" />
   </Style>

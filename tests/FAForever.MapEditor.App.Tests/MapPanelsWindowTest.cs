@@ -45,7 +45,7 @@ namespace FAForever.MapEditor.App.Tests
 
         [TestMethod]
         [DataRow("map", "No-rush radius")]
-        [DataRow("water", "Water brush radius in ogrids")]
+        [DataRow("water", "Water map painted")]
         [DataRow("lighting", "Azimuth")]
         [DataRow("paint", "Albedo scale")]
         public Task EveryFieldOfThePanelsHasALabel(string mode, string field) => HeadlessApp.Run(async () =>

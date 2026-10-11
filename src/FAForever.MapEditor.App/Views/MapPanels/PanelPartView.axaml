@@ -59,7 +59,7 @@
         <DataTemplate DataType="vm:WaterMapPart">
           <Border Classes="group">
             <StackPanel Classes="stack">
-              <TextBlock Classes="caption" Text="The Paint water tool paints this map's chosen painted layer; the top view shows the map while the tool is active. Its shape is in the tool's options." />
+              <TextBlock Classes="caption" Text="The Paint water tool paints this map's chosen painted layer; the top view shows the map while the tool is active. Its shape, radius, strength and erase are in the tool's options." />
               <!-- the map as a stack of layers (W-2): exported as what its layers make -->
               <StackPanel Classes="stack" IsVisible="{Binding HasStack}">
                 <controls:LayerStackView DataContext="{Binding Stack}" ShowsSettings="True"
@@ -69,20 +69,6 @@
                 <Panel IsVisible="{Binding Stack.IsReference, FallbackValue=False}">
                   <controls:SettingList DataContext="{Binding Stack.Reference}" />
                 </Panel>
-              </StackPanel>
-              <StackPanel Classes="stack" IsVisible="{Binding HasBrush}">
-                <CheckBox Content="Erase" IsChecked="{Binding Brush.Erase}" AutomationProperties.Name="Erase the water map"
-                          AutomationProperties.HelpText="Take the map away where the brush goes, rather than add to it" />
-                <DockPanel>
-                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Radius" Width="{StaticResource FactLabelWidth}" VerticalAlignment="Center" />
-                  <TextBlock DockPanel.Dock="Right" Classes="mono" Text="{Binding Brush.Radius, StringFormat='{}{0:0}'}" Width="{StaticResource FactLabelWidth}" TextAlignment="Right" VerticalAlignment="Center" />
-                  <Slider Minimum="1" Maximum="128" Value="{Binding Brush.Radius}" AutomationProperties.Name="Water brush radius in ogrids" />
-                </DockPanel>
-                <DockPanel>
-                  <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Strength" Width="{StaticResource FactLabelWidth}" VerticalAlignment="Center" />
-                  <TextBlock DockPanel.Dock="Right" Classes="mono" Text="{Binding Brush.Strength, StringFormat='{}{0:0.00}'}" Width="{StaticResource FactLabelWidth}" TextAlignment="Right" VerticalAlignment="Center" />
-                  <Slider Minimum="0.01" Maximum="1" Value="{Binding Brush.Strength}" AutomationProperties.Name="Water brush strength of the map" />
-                </DockPanel>
               </StackPanel>
             </StackPanel>
           </Border>

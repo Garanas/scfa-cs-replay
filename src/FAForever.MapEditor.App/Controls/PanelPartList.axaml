@@ -25,11 +25,15 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:PanelPart">
-                <Button Classes="partentry" Classes.selected="{Binding IsChosen}"
+                <Button Classes="partentry" Classes.selected="{Binding IsChosen}" Classes.partwithpreview="{Binding Preview, Converter={x:Static ObjectConverters.IsNotNull}}"
                         Command="{Binding #Root.((vm:PanelParts)DataContext).ChooseItemCommand}" CommandParameter="{Binding}"
                         ToolTip.Tip="{Binding Help}"
                         AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding Label}">
                   <DockPanel>
+                    <!-- a picture of it when it has one (a water map's) -->
+                    <Border DockPanel.Dock="Left" Classes="thumbnail imagepreview" IsVisible="{Binding Preview, Converter={x:Static ObjectConverters.IsNotNull}}">
+                      <controls:ImagePreview Picture="{Binding Preview}" AutomationProperties.Name="{Binding PreviewLabel}" />
+                    </Border>
                     <TextBlock DockPanel.Dock="Right" Classes="partdetail" Text="{Binding Detail}" />
                     <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
                   </DockPanel>
