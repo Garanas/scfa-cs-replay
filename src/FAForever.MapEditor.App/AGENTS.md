@@ -1052,7 +1052,8 @@ every other part).
   "Generated nodes"; the top view the path-node markers' look at half strength,
   `HeightmapView.PathNetwork.cs`, span `top.generated-paths`; the 3D view faint links and small
   crosses in the scene, `TerrainViewGpu.PathNetwork.cs`, span `3d.generated-paths`; the layers the
-  Markers panel's kinds show), never into the document. The settings are the map's
+  Markers panel's kinds show, and while the Path nodes tool is active only the layer it edits, so
+  the air's grid never covers the land's nodes: `MainViewModel.GeneratedPathKinds`), never into the document. The settings are the map's
   (`ProceduralSettings.PathNodes`): `generate.setPathNodes {layers?, spacing?, airSpacing?,
   smoothing?, minimumDistance?, fill?, replace?, onExport?}` (0 for a default distance), each a step
   of undo, which put the result out of date. `markers.connectPaths {layers?, spacing?, airSpacing?,

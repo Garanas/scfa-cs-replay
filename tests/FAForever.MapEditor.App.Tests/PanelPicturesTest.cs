@@ -55,6 +55,35 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task ThePathNodesToolShowsOnlyTheLayerItEdits() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model) = await Open();
+            await Run(model, "generate.navigation");
+            await Run(model, "markers.connectPaths");
+            model.ShowGeneratedPathNodes = true;
+            int Drawn()
+            {
+                Dispatcher.UIThread.RunJobs();
+                Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                Dispatcher.UIThread.RunJobs();
+                return window.MapView.GeneratedNodesDrawn;
+            }
+            Project.Generation.PathNetwork network = model.PathNodes.Preview!.Network;
+            int all = network.Nodes;
+            int land = network[Project.Files.PathLayer.Land]!.Nodes.Length;
+            Assert.IsTrue(land < all, "the map has nodes of other layers too");
+            Assert.AreEqual(all, Drawn(), "without the tool: the layers the Markers mode shows, all of them");
+
+            model.SelectTool("procedural.pathNodes");
+            Assert.AreEqual(Project.Editing.MarkerKinds.LandPaths, model.GeneratedPathKinds);
+            Assert.AreEqual(land, Drawn(), "the tool edits the land: the air's grid is not drawn over it");
+
+            model.SelectTool("procedural.regions");
+            Assert.AreEqual(all, Drawn());
+            window.Close();
+        });
+
+        [TestMethod]
         public Task TheProceduralListHasPicturesOfPathsAndOfWhatRulesMade() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();

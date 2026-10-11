@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
@@ -54,6 +55,12 @@ public sealed partial class MainViewModel
             if (e.PropertyName == nameof(ActiveTool) && ActiveTool?.Tool is Tools.PathNodeEditTool)
             {
                 ShowGeneratedPathNodes = true;
+            }
+            // the layers drawn follow the tool coming and going (GeneratedPathKinds)
+            if (e.PropertyName == nameof(ActiveTool) && (ActiveTool?.Tool is Tools.PathNodeEditTool) != _pathToolShown)
+            {
+                _pathToolShown = !_pathToolShown;
+                RefreshOverlays();
             }
         };
         DocumentChanged += (_, _) => PathNodes.Refresh();
@@ -239,4 +246,18 @@ public sealed partial class MainViewModel
     /// them on the ground). Made once per preview.
     /// </summary>
     public MarkerSet? PreviewMarkers => PathNodes.PreviewMarkers;
+
+    /// <summary>
+    /// Which layers of the generated path networks the views draw: while the Path nodes tool is
+    /// active only the layer it edits (the air's grid never covers the land's nodes being edited),
+    /// else the path-node layers the Markers mode shows.
+    /// </summary>
+    public MarkerKinds GeneratedPathKinds => ActiveTool?.Tool is Tools.PathNodeEditTool tool
+        ? MarkerEdits.KindOf(tool.Layer)
+        : Markers.ShownKinds & MarkerKinds.PathNodes;
+
+    /// <summary>
+    /// Whether the Path nodes tool was active when the overlays were last drawn.
+    /// </summary>
+    private bool _pathToolShown;
 }
