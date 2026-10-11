@@ -375,18 +375,79 @@ wish with its status.
 
 ## What is still open
 
-- The water on Archsimkats Valley looks milky; it follows that map's own settings, and without
-  the game to compare against the formula was left alone.
-- About 1.8 s of startup stall (window creation, plugins and the import on the UI thread).
-- Panels cannot be moved by dragging their header, and panels sharing a side have no splitter.
-- Moving a wave generator does not move its mirrored copies; a plugin command's height and mask
-  edits are not mirrored automatically (the plugin repeats them at `map.images`).
-- The first real upload to the FAF vault waits for the owner (`TODO.md`).
-- Importing a map does not restore its symmetry; a mask-reference layer added on a 4096 map still
-  stalls the window for a few hundred milliseconds; the editor runs 8 to 15 times slower while its
-  window has no focus (Windows' power throttling), so timings from a test editor compare only with
-  each other.
+Written at the end of wave 16 (2026-10-11), in the order it should be done. Everything below is
+`feature/map-editor` at a3c98f8 or later; nothing of it is pushed, and the branch is not merged into
+`main`.
+
+### 1. Proof in the game (needs the owner, with the game)
+No map made with the editor has been loaded in Forged Alliance or FAF yet. The tests prove that
+maps round-trip through the editor's own reader and writer (98 vault maps), not that the game draws
+and plays them the same. To compare in the game, with two or three exported maps (Kaali, one with
+decals and a generated sky, one adaptive map):
+- the terrain, strata and the map-wide decals in Kaali's layout (albedo, normals, shadow);
+- the generated sky cube and the skybox (also in `TODO.md`), the water (Archsimkats Valley looks
+  milky in the editor), the textures converted to DDS;
+- the reclaim totals in the lobby, the adaptive scripts and optional groups, wrecks;
+- the markers: spawns, deposits, blank markers, chains, and the generated path networks the AI uses.
+- The first real upload to the vault with a real account (`TODO.md`).
+
+### 2. CI and review
+- Neither `test.yml` nor `map-editor.yml` has run on this work: both run on `main` (the tests also
+  on pull requests to `main`). Push the branch and open a pull request so the tests run on GitHub's
+  Linux runner; run `map-editor.yml` by hand on the branch (or give it a `pull_request` trigger) to see
+  the three builds, the Linux start check and the 3D check.
+- `feature/map-editor` holds 16 waves; it has never had a review. Merging it into `main` is the
+  owner's call.
+
+### 3. Shipping it to people
+- Builds are workflow artifacts that expire after 90 days: no GitHub Releases, version numbers or
+  changelog yet.
+- The builds are unsigned: SmartScreen warns on Windows, Gatekeeper blocks the macOS executable, and
+  macOS expects a `.app` bundle. The macOS build has never been started.
+- No getting-started guide for map makers beyond the keyboard shortcuts page.
+- Crash reports and telemetry stay on the user's computer: sending works, but no server collects them,
+  and "Report a problem" writes a zip nothing uploads.
+
+### 4. The editor
+- The Props mode is the last mode whose settings (Placing) are edited in the panel rather than the
+  inspector.
+- The Lighting panel still has a "not built yet" entry for a darkening shadow decal
+  (`LightingSettingsViewModel`, `PlannedPart` of L-1), while wave 9 built the map-wide shadow decal:
+  check and remove it.
+- Symmetry: importing a map does not restore its symmetry; moving a wave generator does not move its
+  mirrored copies; scaling and turning about the selection's centre are not mirrored; a plugin
+  command's height and mask edits are not mirrored by themselves (the plugin repeats them at
+  `map.images`).
+- Not built yet (the App guide's lists): team colours in the views; hydraulic erosion; limits for the
+  water and mask brushes; the map size's rectangle and handles in 3D; dragging a panel by its header
+  (and a splitter between panels sharing a side); choosing toolbar commands in the window; the vault
+  upload's licence, its versions page and cancelling an upload; a height per curve point in the views
+  and merging layers; a mark of the drop place; dashed box outlines and a 3D ruler label; a line while
+  a path link is dragged; placing a units preset as wrecks; `generate.stale` making props from masks
+  generated in the same run.
+- A plugin's `kind` is not checked against what it registers.
+- Speed: about 1.8 s of stall at start-up (window, plugins and the import on the UI thread); a
+  mask-reference layer added on a 4096 map stalls the window for a few hundred milliseconds. The editor
+  runs 8 to 15 times slower while its window has no focus (Windows' power throttling), so timings from
+  a test editor compare only with each other.
 - A workspace converted before asset format 4 converts again on its next start (about 30 s).
+- Seen once in wave 16 and not chased: the Connected regions chip was off after a mode switch; the
+  sandbox starts with nothing set to regenerate on its own.
+
+### 5. Platforms
+- Linux works (tests, start, 3D under Xvfb); its file dialogs and opening folders in a file manager
+  were not tried. Without a graphics card the 3D view needs `FAF_MAP_EDITOR_SOFTWARE_GL=1`.
+- macOS is built by the workflow and untested: its OpenGL 4.1, Avalonia's OpenGL control there and
+  its file dialogs are unchecked.
+
+### 6. Tooling
+73 wishes of the agents, about half open: `agent-tooling.md`.
+
+### Housekeeping
+The worktrees of waves 13 to 16 (`D:\wt\13a` ... `D:\wt\16c`, `D:\wt\15qa`) and their branches
+`wave13/*` to `wave16/*` are merged and can be removed; their scratch workspaces `D:\wt\ws-*` hold
+nothing that is not in the repository (their `assets` are links to shared converted assets: remove the
+link, never the target).
 
 ## Lessons
 
