@@ -98,9 +98,10 @@ namespace FAForever.MapEditor.App.Tests
             Labelled<TextBox>(window, "From");
             Labelled<Button>(window, "Generate the masks from their rules");
 
+            Assert.IsTrue(model.Map.Document.Masks["forest"].ToArray().Any(value => value > 0), "the rule's result shows at once");
             Click(window, Labelled<Button>(window, "Generate the masks from their rules"));
             await Settle();
-            Assert.AreEqual(steps + 2, model.History.Count, "generated: one step");
+            Assert.AreEqual(steps + 1, model.History.Count, "made with the rule: generating again changes nothing");
             CollectionAssert.AreEqual(Array.Empty<string>(), Unlabelled(window));
             window.Close();
         });

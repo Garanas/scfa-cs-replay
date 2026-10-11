@@ -93,10 +93,14 @@ public sealed class TerrainPicture
             {
                 foreach ((int tileX, int tileY) in samples.ChangedTiles(_samples!))
                 {
-                    // one sample more on each side: the shading of a sample reads its neighbours
-                    int x0 = tileX * TiledBuffer<ushort>.TileSize - 1;
-                    int y0 = tileY * TiledBuffer<ushort>.TileSize - 1;
-                    changed.Add(Clip(new SampleRect(x0, y0, x0 + TiledBuffer<ushort>.TileSize + 1, y0 + TiledBuffer<ushort>.TileSize + 1)));
+                    // the part of the tile whose samples differ (a dab touches a few), one sample more on
+                    // each side: the shading of a sample reads its neighbours
+                    if (ChangedBox(samples, _samples!, tileX, tileY) is (int bx0, int by0, int bx1, int by1))
+                    {
+                        int x0 = tileX * TiledBuffer<ushort>.TileSize;
+                        int y0 = tileY * TiledBuffer<ushort>.TileSize;
+                        changed.Add(Clip(new SampleRect(x0 + bx0 - 1, y0 + by0 - 1, x0 + bx1 + 1, y0 + by1 + 1)));
+                    }
                 }
             }
             if (mask is not null && !ReferenceEquals(mask, _mask))
@@ -106,17 +110,30 @@ public sealed class TerrainPicture
                 double perPixelY = (Height - 1) / (double)mask.Height;
                 foreach ((int tileX, int tileY) in mask.ChangedTiles(_mask!))
                 {
-                    int size = TiledBuffer<byte>.TileSize;
+                    if (ChangedBox(mask, _mask!, tileX, tileY) is not (int bx0, int by0, int bx1, int by1))
+                    {
+                        continue;
+                    }
+                    int x0 = tileX * TiledBuffer<byte>.TileSize;
+                    int y0 = tileY * TiledBuffer<byte>.TileSize;
                     changed.Add(Clip(new SampleRect(
-                        (int)Math.Floor(tileX * size * perPixelX) - 1,
-                        (int)Math.Floor(tileY * size * perPixelY) - 1,
-                        (int)Math.Ceiling((tileX + 1) * size * perPixelX) + 1,
-                        (int)Math.Ceiling((tileY + 1) * size * perPixelY) + 1)));
+                        (int)Math.Floor((x0 + bx0) * perPixelX) - 1,
+                        (int)Math.Floor((y0 + by0) * perPixelY) - 1,
+                        (int)Math.Ceiling((x0 + bx1 + 1) * perPixelX) + 1,
+                        (int)Math.Ceiling((y0 + by1 + 1) * perPixelY) + 1)));
                 }
             }
-            foreach (SampleRect rect in changed)
+            if (changed.Count > ParallelRects)
             {
-                Colour(samples, mask, rect);
+                // a stratum or mask changed everywhere (a mask layer added): the rows of tiles spread over the processors
+                Parallel.ForEach(changed, rect => Colour(samples, mask, rect));
+            }
+            else
+            {
+                foreach (SampleRect rect in changed)
+                {
+                    Colour(samples, mask, rect);
+                }
             }
         }
 
@@ -124,6 +141,12 @@ public sealed class TerrainPicture
         _mask = mask;
         return changed;
     }
+
+    /// <summary>
+    /// From this many rectangles on, <see cref="Update"/> colours them on several processors (they
+    /// touch only at their edges, where both write the same colour).
+    /// </summary>
+    private const int ParallelRects = 8;
 
     /// <summary>
     /// Whether <see cref="Update"/> of this document colours the whole picture again: its size,
@@ -143,6 +166,45 @@ public sealed class TerrainPicture
             || key != _overlay
             || (mask is not null && MaskColour != _maskColourOf)
             || (mask is not null && (_mask is null || mask.Width != _mask.Width || mask.Height != _mask.Height));
+    }
+
+    /// <summary>
+    /// The columns and rows of a tile (inclusive, within the tile) where two versions of a grid
+    /// differ; null when they hold the same values there. Grids of another size differ everywhere.
+    /// </summary>
+    internal static (int X0, int Y0, int X1, int Y1)? ChangedBox<T>(TiledBuffer<T> now, TiledBuffer<T> before, int tileX, int tileY)
+        where T : unmanaged, IEquatable<T>
+    {
+        const int Size = TiledBuffer<T>.TileSize;
+        int columns = Math.Min(Size, now.Width - tileX * Size);
+        int rows = Math.Min(Size, now.Height - tileY * Size);
+        if (before.Width != now.Width || before.Height != now.Height)
+        {
+            return (0, 0, columns - 1, rows - 1);
+        }
+        ReadOnlySpan<T> a = now.Tile(tileX, tileY);
+        ReadOnlySpan<T> b = before.Tile(tileX, tileY);
+        int x0 = int.MaxValue, y0 = int.MaxValue, x1 = -1, y1 = -1;
+        for (int row = 0; row < rows; row++)
+        {
+            ReadOnlySpan<T> left = a.Slice(row * Size, columns);
+            ReadOnlySpan<T> right = b.Slice(row * Size, columns);
+            int first = left.CommonPrefixLength(right);
+            if (first == columns)
+            {
+                continue;
+            }
+            int last = columns - 1;
+            while (last > first && left[last].Equals(right[last]))
+            {
+                last--;
+            }
+            x0 = Math.Min(x0, first);
+            x1 = Math.Max(x1, last);
+            y0 = Math.Min(y0, row);
+            y1 = row;
+        }
+        return x1 < 0 ? null : (x0, y0, x1, y1);
     }
 
     private SampleRect Clip(SampleRect rect) => new SampleRect(

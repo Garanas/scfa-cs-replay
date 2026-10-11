@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.Rendering;
@@ -6,6 +7,7 @@ using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
+using FAForever.MapEditor.Project.Workspaces;
 using Microsoft.Extensions.Logging;
 
 namespace FAForever.MapEditor.App.ViewModels;
@@ -44,37 +46,80 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// The preview and the normal map the map was opened with are its own: generated for that
-    /// version, so the status tells when the terrain changed since and an export renders the
-    /// preview again. A normal map of one colour everywhere (a new map's or the sandbox's
-    /// placeholder) was never generated and stays missing.
+    /// The results the map was opened with in its own files are its own, made for that version: the
+    /// preview, the normal map, the rules layers of its masks and strata, the props its rules placed
+    /// and the generated sky cube map count as current, so the status tells when what they are made
+    /// from changed since. A normal map of one colour everywhere (a new map's or the sandbox's
+    /// placeholder) on terrain that is not flat was never generated and stays missing, as do rules
+    /// the map has not; on flat terrain that one colour is what generating makes.
     /// </summary>
     private void KeepMapPreview(EditedMap map)
     {
-        if (Generation.Results.Find(MapPreview.GeneratorId) is IGenerator preview)
+        MapDocument document = map.Document;
+        void Keep(string id, object value)
         {
-            Generation.Results.Keep(GeneratedResult.Of(preview, map.Document, map.Document.Terrain.Preview));
+            if (Generation.Results.Find(id) is IGenerator generator)
+            {
+                Generation.Results.Keep(GeneratedResult.Of(generator, document, value));
+            }
         }
-        if (Generation.Results.Find(NormalMapGenerator.GeneratorId) is IGenerator normalMap && !IsOneColour(map.Document.Terrain.NormalMap))
+        Keep(MapPreview.GeneratorId, document.Terrain.Preview);
+        if (!IsOneColour(document.Terrain.NormalMap) || IsOneValue(document.Terrain.Heightmap.Samples))
         {
-            Generation.Results.Keep(GeneratedResult.Of(normalMap, map.Document, map.Document.Terrain.NormalMap));
+            Keep(NormalMapGenerator.GeneratorId, document.Terrain.NormalMap);
         }
-        Generation.Refresh(map.Document);
+        // the rules layers hold what their rules made last
+        (string Target, string Layer, TiledBuffer<byte> Grid)[] rulesLayers = [.. document.CoverageStacks
+            .SelectMany(entry => entry.Value.Layers
+                .Where(layer => layer.Source is RulesSource && layer.Coverage is not null)
+                .Select(layer => (entry.Key, layer.Name, layer.Coverage!)))];
+        if (rulesLayers.Length > 0)
+        {
+            Keep(MaskRulesGenerator.GeneratorId, (IReadOnlyList<(string Target, string Layer, TiledBuffer<byte> Grid)>)rulesLayers);
+        }
+        if (!document.PropRules.IsEmpty)
+        {
+            Keep(PropRulesGenerator.GeneratorId, (ImmutableArray<Prop>)[.. document.Props.Where(prop => prop.Rule is not null)]);
+        }
+        if (document.Files.TryGetValue(SkyCubeMaps.FilePath, out ImmutableArray<byte> cube))
+        {
+            try
+            {
+                DecodedTexture strip = CubeMaps.Decode([.. cube]);
+                Keep(SkyCubeGenerator.GeneratorId, new SkyCubeResult([.. cube], SkyCubeGenerator.Small(strip, SkyCubeGenerator.PreviewFace), strip.Height,
+                    "kept with the map", document.Sky.Skybox is null ? "made from the lighting" : "the map's skybox"));
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                FilesLog.LogWarning(exception, "The map's sky cube map {File} does not read; it counts as never made: {Reason}", SkyCubeMaps.FilePath, exception.Message);
+            }
+        }
+        Generation.Refresh(document);
     }
 
     /// <summary>
     /// Whether every pixel of a picture is the same; it stops at the first that differs.
     /// </summary>
-    public static bool IsOneColour(TiledBuffer<Color32> picture)
+    public static bool IsOneColour(TiledBuffer<Color32> picture) => IsOneValue(picture);
+
+    /// <summary>
+    /// Whether every value of a grid is the same (a flat heightmap); it stops at the first that differs.
+    /// </summary>
+    public static bool IsOneValue<T>(TiledBuffer<T> picture) where T : unmanaged, IEquatable<T>
     {
-        Color32 first = picture.Tile(0, 0)[0];
+        const int Size = TiledBuffer<T>.TileSize;
+        T first = picture.Tile(0, 0)[0];
         for (int y = 0; y < picture.TilesY; y++)
         {
             for (int x = 0; x < picture.TilesX; x++)
             {
-                foreach (Color32 pixel in picture.Tile(x, y))
+                // the part of an edge tile outside the grid does not count
+                ReadOnlySpan<T> tile = picture.Tile(x, y);
+                int columns = Math.Min(Size, picture.Width - x * Size);
+                int rows = Math.Min(Size, picture.Height - y * Size);
+                for (int row = 0; row < rows; row++)
                 {
-                    if (!pixel.Equals(first))
+                    if (tile.Slice(row * Size, columns).ContainsAnyExcept(first))
                     {
                         return false;
                     }

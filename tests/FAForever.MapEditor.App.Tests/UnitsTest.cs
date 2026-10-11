@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
@@ -263,6 +264,33 @@ namespace FAForever.MapEditor.App.Tests
 
             CommandRun given = await Run(model, "units.placePreset", new JsonObject { ["name"] = "UEF wall line", ["x"] = 300, ["z"] = 100, ["army"] = "ARMY_4" });
             Assert.AreEqual("ARMY_4", ((JsonObject)given.Result!)["army"]!.GetValue<string>(), "an army given wins over the role");
+        }
+
+        [TestMethod]
+        public async Task AnEnemyPresetOnANewMapAddsAnArmyOfItsOwn()
+        {
+            MainViewModel model = new MainViewModel(new NoDialogs());
+            model.Assets.Use(Catalog());
+            model.OpenNewMap(NewMap.Create(new NewMapSettings { Size = 256 }));
+            string folder = Path.Combine(AppContext.BaseDirectory, "presets", Guid.NewGuid().ToString("N"));
+            ExampleUnitPresets.Ensure(Path.Combine(folder, PresetKinds.Units));
+            model.Presets.Use(new PresetLibrary(folder));
+
+            await Run(model, "presets.apply", new JsonObject { ["kind"] = UnitPreset.Kind, ["name"] = "UEF civilian town" });
+            CommandRun town = await Run(model, "units.placePreset", new JsonObject { ["x"] = 60, ["z"] = 60 });
+            string civilians = ((JsonObject)town.Result!)["army"]!.GetValue<string>();
+
+            await Run(model, "presets.apply", new JsonObject { ["kind"] = UnitPreset.Kind, ["name"] = "Aeon base, small" });
+            StringAssert.Contains(model.Status, $"the enemy army ({UnitPresets.EnemyArmy}, a new extra army)", "the hint says the army placing it adds");
+            CommandRun enemy = await Run(model, "units.placePreset", new JsonObject { ["x"] = 190, ["z"] = 190 });
+            JsonObject result = (JsonObject)enemy.Result!;
+            Assert.AreEqual(UnitPresets.EnemyArmy, result["army"]!.GetValue<string>());
+            Assert.AreNotEqual(civilians, UnitPresets.EnemyArmy, "the enemy base is not in the town's army");
+            Assert.IsTrue(result["addedArmy"]!.GetValue<bool>());
+            StringAssert.Contains(model.Status, "added the extra army ARMY_9");
+            Assert.AreEqual("Place a preset", model.Map!.Session.UndoDescription, "the army comes with the units, in one step");
+            model.Undo();
+            Assert.IsFalse(model.ShownDocument!.Armies.Any(army => army.Name == UnitPresets.EnemyArmy), "undone, the army goes with the base");
         }
 
         [TestMethod]

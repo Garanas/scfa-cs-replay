@@ -68,11 +68,12 @@ public sealed class AddPropRuleHandler(MainViewModel model, CurrentEdit edit) : 
 /// </summary>
 /// <param name="Clustering">None, Noise or Clusters.</param>
 /// <param name="Alignment">ByCategory, Upright or Terrain.</param>
+/// <param name="Mirror">Whether its props follow the map's symmetry (on unless turned off).</param>
 [EditorCommand("props.setRule", "Change a prop rule", Story = "P-4", Needs = Needs.Map | Needs.NoStroke)]
 public sealed record SetPropRule(string? Rule = null, string? Name = null, float? Density = null, float? Spacing = null, bool? Fade = null,
     string? Clustering = null, float? ClusterSize = null, float? ClusterCover = null, float? MinSlope = null, float? MaxSlope = null,
     bool? AboveWater = null, int? Seed = null, string? Alignment = null, bool? RandomTurn = null, float? RandomTilt = null,
-    float? ScaleMin = null, float? ScaleMax = null, float? Sink = null) : IRequest;
+    float? ScaleMin = null, float? ScaleMax = null, float? Sink = null, bool? Mirror = null) : IRequest;
 
 public sealed class SetPropRuleHandler(MainViewModel model) : IRequestHandler<SetPropRule>
 {
@@ -82,10 +83,10 @@ public sealed class SetPropRuleHandler(MainViewModel model) : IRequestHandler<Se
         string given = WaterArguments.Given(("name", r.Name), ("density", r.Density), ("spacing", r.Spacing), ("fade", r.Fade), ("clustering", r.Clustering),
             ("clusterSize", r.ClusterSize), ("clusterCover", r.ClusterCover), ("minSlope", r.MinSlope), ("maxSlope", r.MaxSlope), ("aboveWater", r.AboveWater),
             ("seed", r.Seed), ("alignment", r.Alignment), ("randomTurn", r.RandomTurn), ("randomTilt", r.RandomTilt), ("scaleMin", r.ScaleMin),
-            ("scaleMax", r.ScaleMax), ("sink", r.Sink));
+            ("scaleMax", r.ScaleMax), ("sink", r.Sink), ("mirror", r.Mirror));
         if (given.Length == 0)
         {
-            throw new ArgumentException("Give what to change: name, density, spacing, fade, clustering, clusterSize, clusterCover, minSlope, maxSlope, aboveWater, seed, alignment, randomTurn, randomTilt, scaleMin, scaleMax or sink");
+            throw new ArgumentException("Give what to change: name, density, spacing, fade, clustering, clusterSize, clusterCover, minSlope, maxSlope, aboveWater, seed, alignment, randomTurn, randomTilt, scaleMin, scaleMax, sink or mirror");
         }
         if (r.Density is < 0 or > 100 || r.Spacing is < 0 or > 64)
         {
@@ -111,6 +112,7 @@ public sealed class SetPropRuleHandler(MainViewModel model) : IRequestHandler<Se
             MaxSlope = r.MaxSlope ?? rule.MaxSlope,
             AboveWater = r.AboveWater ?? rule.AboveWater,
             Seed = r.Seed ?? rule.Seed,
+            Mirror = r.Mirror ?? rule.Mirror,
             Placement = rule.Placement with
             {
                 Alignment = alignment ?? rule.Placement.Alignment,

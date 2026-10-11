@@ -18,7 +18,7 @@
           <TextBlock Classes="heading" Text="{Binding Heading}" TextWrapping="Wrap" VerticalAlignment="Center" />
         </DockPanel>
         <TextBlock Classes="caption" TextWrapping="Wrap" IsVisible="{Binding !HasRules}"
-                   Text="No rules yet: the mask is painted by hand. Add a rule; the rules run in order, each combining with what the ones before made." />
+                   Text="No rules yet: this layer makes nothing until a rule is added. The rules run in order, each combining with what the ones before made, and the layer shows what they make at once." />
         <ItemsControl ItemsSource="{Binding Rules}" AutomationProperties.Name="Rules of the mask">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>

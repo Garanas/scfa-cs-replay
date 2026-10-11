@@ -135,6 +135,40 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task EditsByHandMirrorWithTheSymmetry()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "rotational", ["count"] = 2 });
+            await Run(model, "select.mirrorEdits", new JsonObject { ["on"] = true });
+            await Run(model, "markers.connectPaths", new JsonObject { ["layers"] = new JsonArray("Land"), ["spacing"] = 16 });
+            MapDocument document = model.Map!.Document;
+            Vector2 Image(Vector2 place) => new Vector2(document.Width - place.X, document.Height - place.Y);
+
+            // a node added comes with its image, in one step
+            Vector2 at = new Vector2(100.25f, 60.25f);
+            await Run(model, "generate.addPathNode", new JsonObject { ["x"] = at.X, ["z"] = at.Y });
+            Assert.AreEqual("Add 2 land path nodes, mirrored", model.Map.Session.UndoDescription);
+            StringAssert.EndsWith(model.Status, "and 1 mirrored");
+            PathLayerNetwork network = Land(model);
+            Assert.IsTrue(network.Nodes.Any(node => node.Role == PathNodeRole.Added && Vector2.Distance(node.Place, at) < 0.01f));
+            Assert.IsTrue(network.Nodes.Any(node => node.Role == PathNodeRole.Added && Vector2.Distance(node.Place, Image(at)) < 0.01f), "its image in the other half");
+
+            // removing a node takes its partner along, when the network has one near the image
+            GeneratedPathNode partnered = network.Nodes.First(node => node.Role != PathNodeRole.Added
+                && model.PathNodes.NodeAt(Image(node.Place).X, Image(node.Place).Y, MainViewModel.PathNodePartnerReach, PathLayer.Land) is PreviewPathNode partner
+                && Vector2.Distance(partner.Node.Place, node.Place) > 8);
+            int before = network.Nodes.Length;
+            await Run(model, "generate.removePathNode", new JsonObject { ["x"] = partnered.X, ["z"] = partnered.Z, ["within"] = 0.01 });
+            Assert.AreEqual(before - 2, Land(model).Nodes.Length, "the node and its partner");
+            Assert.AreEqual("Remove 2 path nodes, mirrored", model.Map.Session.UndoDescription);
+
+            // with mirroring off, an edit stays where it is made
+            await Run(model, "select.mirrorEdits", new JsonObject { ["on"] = false });
+            await Run(model, "generate.addPathNode", new JsonObject { ["x"] = 80.25f, ["z"] = 40.25f });
+            Assert.AreEqual("Add a land path node", model.Map.Session.UndoDescription);
+        }
+
+        [TestMethod]
         public async Task TheExportWritesTheNetworkAndTheProjectKeepsNone()
         {
             MainViewModel model = await Open();

@@ -76,8 +76,9 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <list type="bullet">
         /// <item><c>civilian</c>: the civilians (<see cref="AdaptiveGroups.CivilianArmy"/>: <c>ARMY_17</c>,
         /// else <c>NEUTRAL_CIVILIAN</c>, else the first army no player takes).</item>
-        /// <item><c>enemy</c>: an army no player takes besides the civilians (<c>ARMY_9</c> first), else
-        /// the civilians, whom the lobby can make hostile.</item>
+        /// <item><c>enemy</c>: an army no player takes besides the civilians (<c>ARMY_9</c> first); none
+        /// when the map has only the civilians' (<see cref="Place"/> then adds <see cref="EnemyArmy"/>),
+        /// so an enemy base is never in the army of the town it attacks.</item>
         /// <item><c>player</c>: the army whose spawn is nearest to the place, else the first playable army.
         /// With the symmetry on, the images go to the armies of the partner spawns.</item>
         /// </list>
@@ -92,9 +93,8 @@ namespace FAForever.MapEditor.Project.Workspaces
                     return AdaptiveGroups.CivilianArmy(document);
                 case ArmyRoles.Enemy:
                     string? civilians = AdaptiveGroups.CivilianArmy(document);
-                    return extra.FirstOrDefault(name => name == "ARMY_9")
-                        ?? extra.FirstOrDefault(name => name != civilians && name != "NEUTRAL_CIVILIAN")
-                        ?? civilians;
+                    return extra.FirstOrDefault(name => name == EnemyArmy)
+                        ?? extra.FirstOrDefault(name => name != civilians && name != "NEUTRAL_CIVILIAN");
                 case ArmyRoles.Player:
                     string[] playable = [.. document.Armies.Select(army => army.Name).Where(document.IsPlayable)];
                     return document.Markers.Spawns
@@ -109,9 +109,35 @@ namespace FAForever.MapEditor.Project.Workspaces
         }
 
         /// <summary>
+        /// The extra army an enemy preset adds to a map that has none for enemies: <c>ARMY_9</c>, the
+        /// first of the extra armies by the game's numbering.
+        /// </summary>
+        public const string EnemyArmy = "ARMY_9";
+
+        /// <summary>
+        /// The army a role's units would go to, and whether placing them adds it: an enemy preset on a
+        /// map without an army for enemies adds <see cref="EnemyArmy"/> (or the next free extra name).
+        /// </summary>
+        /// <returns>The army, or null when the map has none for the role and none is added.</returns>
+        public static (string? Army, bool Added) ArmyOrNewFor(MapDocument document, string? role, float x, float z)
+        {
+            if (ArmyFor(document, role, x, z) is string army)
+            {
+                return (army, false);
+            }
+            if (role != ArmyRoles.Enemy)
+            {
+                return (null, false);
+            }
+            HashSet<string> taken = [.. document.Armies.Select(a => a.Name), .. document.Scenario.PlayableArmies, .. document.Scenario.ExtraArmies];
+            return (taken.Contains(EnemyArmy) ? DocumentEdits.FreeName(taken, "ARMY_17") : EnemyArmy, true);
+        }
+
+        /// <summary>
         /// Places a preset as a new group named after it, its middle at a place and turned about it,
         /// each unit as high above the terrain as it was saved: for <paramref name="army"/> when
-        /// given, else for the army of the preset's role (<see cref="ArmyFor"/>), else for
+        /// given, else for the army of the preset's role (<see cref="ArmyFor"/>; an enemy preset adds
+        /// <see cref="EnemyArmy"/> as an extra army when the map has none for enemies), else for
         /// <paramref name="fallback"/>; into <paramref name="parent"/> (its groups made when missing),
         /// or the army's <c>WRECKAGE</c> group when the preset holds wrecks or <paramref name="wrecks"/> says so.
         /// </summary>
@@ -124,7 +150,15 @@ namespace FAForever.MapEditor.Project.Workspaces
             IReadOnlyList<string> parent, bool? wrecks, float x, float z, float radians,
             out ImmutableArray<string> placed, out ImmutableArray<string> group, out string placedFor)
         {
-            placedFor = army ?? ArmyFor(document, settings.Role, x, z) ?? fallback
+            if (army is null && ArmyOrNewFor(document, settings.Role, x, z) is (string forRole, bool added))
+            {
+                if (added)
+                {
+                    document = document.AddArmy(forRole, playable: false, spawn: null, out _);
+                }
+                army = forRole;
+            }
+            placedFor = army ?? fallback
                 ?? throw new ArgumentException("The map has no army to place units for: add one in the Map mode");
             string chosen = placedFor;
             if (!document.Armies.Any(a => a.Name == chosen))

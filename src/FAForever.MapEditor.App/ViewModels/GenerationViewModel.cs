@@ -199,11 +199,64 @@ public sealed partial class GenerationViewModel : ObservableObject
     /// <param name="apply">Puts a result that is part of the map (<see cref="IDocumentGenerator"/>)
     /// into it and gives the document it then is; without it such a result is only kept.</param>
     /// <returns>What was out of date, and why, in the order generated.</returns>
-    public IReadOnlyList<GeneratedState> GenerateStale(MapDocument document, Func<IDocumentGenerator, object, MapDocument>? apply = null)
+    public IReadOnlyList<GeneratedState> GenerateStale(MapDocument document, Func<IDocumentGenerator, object, MapDocument>? apply = null) =>
+        GenerateStale(document, apply, missing: false, out _);
+
+    private readonly Dictionary<string, Func<MapDocument, string?>> _leftWhenMissing = new Dictionary<string, Func<MapDocument, string?>>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Says why a result never made for a map is left out when everything missing is generated
+    /// (<c>generate.all</c>): a function of the map giving the reason, or null to make it after all.
+    /// </summary>
+    public void LeaveWhenMissing(string id, Func<MapDocument, string?> reason) => _leftWhenMissing[id] = reason;
+
+    /// <summary>
+    /// Why a result never made for this map is left out when everything missing is generated; null
+    /// when it is made.
+    /// </summary>
+    public string? WhyLeftWhenMissing(string id, MapDocument document) => _leftWhenMissing.GetValueOrDefault(id)?.Invoke(document);
+
+    /// <summary>
+    /// <see cref="GenerateStale(MapDocument, Func{IDocumentGenerator, object, MapDocument}?)"/>, and
+    /// with <paramref name="missing"/> also the results of the listed generators never made for the
+    /// map, in the same order, except those <see cref="LeaveWhenMissing"/> gives a reason for.
+    /// </summary>
+    /// <param name="left">The results never made that were left out, with why.</param>
+    /// <returns>What was generated (out of date or missing), in the order generated.</returns>
+    public IReadOnlyList<GeneratedState> GenerateStale(MapDocument document, Func<IDocumentGenerator, object, MapDocument>? apply, bool missing,
+        out IReadOnlyList<(IGenerator Generator, string Reason)> left)
     {
         List<GeneratedState> generated = [];
         HashSet<string> done = new HashSet<string>(StringComparer.Ordinal);
-        while (Results.Stale(document).FirstOrDefault(state => !done.Contains(state.Generator.Id)) is GeneratedState state)
+        Dictionary<string, (IGenerator, string)> leftOut = new Dictionary<string, (IGenerator, string)>(StringComparer.Ordinal);
+        GeneratedState? Next()
+        {
+            IReadOnlyList<GeneratedState> states = Results.States(document);
+            foreach (IGenerator generator in Results.InOrder())
+            {
+                if (done.Contains(generator.Id))
+                {
+                    continue;
+                }
+                GeneratedState state = states.First(s => s.Generator == generator);
+                if (state.Status == GeneratedStatus.Stale)
+                {
+                    return state;
+                }
+                if (missing && state.Status == GeneratedStatus.Missing && _commands.ContainsKey(generator.Id))
+                {
+                    if (WhyLeftWhenMissing(generator.Id, document) is string reason)
+                    {
+                        leftOut[generator.Id] = (generator, reason);
+                        continue;
+                    }
+                    leftOut.Remove(generator.Id);
+                    return state;
+                }
+            }
+            return null;
+        }
+        while (Next() is GeneratedState state)
         {
             using Performance.Span measure = Performance.Measure("model.generate");
             done.Add(state.Generator.Id);
@@ -217,6 +270,7 @@ public sealed partial class GenerationViewModel : ObservableObject
             }
         }
         Refresh(document);
+        left = [.. leftOut.Values];
         return generated;
     }
 }

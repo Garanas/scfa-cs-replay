@@ -45,6 +45,11 @@ namespace FAForever.MapEditor.Project.Editing
         private const int Size = TiledBuffer<float>.TileSize;
 
         /// <summary>
+        /// Up to how many tiles a composite makes on the calling thread; more go to the pool.
+        /// </summary>
+        private const int SequentialTiles = 16;
+
+        /// <summary>
         /// The key of a mask for tools, for <see cref="Layer.Clip"/> and <see cref="MaskRefSource.Key"/>.
         /// </summary>
         public static string MaskKey(string name) => MaskPrefix + name;
@@ -242,9 +247,28 @@ namespace FAForever.MapEditor.Project.Editing
         {
             StackGrid grid = GridOf(next, after);
             bool[] dirty = new bool[grid.TilesX * grid.TilesY];
-            if (GridOf(previous, before) != grid || !SameSettings(before, after))
+            if (GridOf(previous, before) != grid)
             {
                 Array.Fill(dirty, true);
+                return dirty;
+            }
+            if (!SameSettings(before, after))
+            {
+                // a layer added or removed (the others as they were) changes only where it works
+                if (OneLayerMore(before, after) is Layer added)
+                {
+                    MarkWhereItWorks(dirty, grid, added);
+                }
+                else if (OneLayerMore(after, before) is Layer removed)
+                {
+                    MarkWhereItWorks(dirty, grid, removed);
+                }
+                else
+                {
+                    Array.Fill(dirty, true);
+                    return dirty;
+                }
+                MarkMasksRead(previous, next, after, grid, dirty);
                 return dirty;
             }
             for (int i = 0; i < after.Layers.Length; i++)
@@ -268,6 +292,15 @@ namespace FAForever.MapEditor.Project.Editing
                     Mark(dirty, grid.TilesX, layer.Alpha.ChangedTiles(was.Alpha));
                 }
             }
+            MarkMasksRead(previous, next, after, grid, dirty);
+            return dirty;
+        }
+
+        /// <summary>
+        /// Marks the tiles whose samples read a part of a mask the stack reads that changed.
+        /// </summary>
+        private static void MarkMasksRead(MapDocument previous, MapDocument next, LayerStack after, StackGrid grid, bool[] dirty)
+        {
             if (!ReferenceEquals(previous.Masks, next.Masks) || !ReferenceEquals(previous.Terrain.StratumMasks, next.Terrain.StratumMasks))
             {
                 foreach (string key in MaskKeysOf(after))
@@ -275,7 +308,73 @@ namespace FAForever.MapEditor.Project.Editing
                     MarkMask(dirty, grid, MaskOf(previous, key), MaskOf(next, key));
                 }
             }
-            return dirty;
+        }
+
+        /// <summary>
+        /// The one layer <paramref name="more"/> has besides the layers of <paramref name="fewer"/>,
+        /// which it holds as they were and in their order; null when the stacks differ otherwise.
+        /// </summary>
+        private static Layer? OneLayerMore(LayerStack fewer, LayerStack more)
+        {
+            if (more.Layers.Length != fewer.Layers.Length + 1 || more.Target != fewer.Target)
+            {
+                return null;
+            }
+            int extra = -1;
+            for (int i = 0, j = 0; i < more.Layers.Length; i++)
+            {
+                if (j < fewer.Layers.Length && more.Layers[i].Equals(fewer.Layers[j]))
+                {
+                    j++;
+                }
+                else if (extra < 0)
+                {
+                    extra = i;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            return extra < 0 ? null : more.Layers[extra];
+        }
+
+        /// <summary>
+        /// Marks the tiles where a layer can change what the stack makes: none for a hidden or
+        /// powerless one; where its alpha (coverage) or, in a stack of heights, its coverage is above
+        /// 0; everywhere for the rest.
+        /// </summary>
+        private static void MarkWhereItWorks(bool[] dirty, StackGrid grid, Layer layer)
+        {
+            if (!layer.Visible || layer.Strength <= 0)
+            {
+                return;
+            }
+            TiledBuffer<byte>? extent = layer.Source is MaskRefSource ? null : grid.Corners ? layer.Coverage : layer.Alpha;
+            if (extent is null || extent.Width != grid.Width || extent.Height != grid.Height)
+            {
+                Array.Fill(dirty, true);
+                return;
+            }
+            // the tiles of an untouched grid are one shared tile: each tile is looked at once
+            Dictionary<object, bool> works = new Dictionary<object, bool>(ReferenceEqualityComparer.Instance);
+            for (int tileY = 0; tileY < grid.TilesY; tileY++)
+            {
+                for (int tileX = 0; tileX < grid.TilesX; tileX++)
+                {
+                    ReadOnlySpan<byte> tile = extent.Tile(tileX, tileY);
+                    object key = extent.TileKey(tileX, tileY);
+                    if (!works.TryGetValue(key, out bool any))
+                    {
+                        any = tile.ContainsAnyExcept((byte)0);
+                        works[key] = any;
+                    }
+                    if (any)
+                    {
+                        dirty[tileY * grid.TilesX + tileX] = true;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -454,6 +553,10 @@ namespace FAForever.MapEditor.Project.Editing
                 }
 
                 Weights(resolved, grid, tileX, tileY, columns, rows, weights);
+                // a mask of the grid's own size is read pixel for pixel: sampling it between its pixels gives the same
+                ReadOnlySpan<byte> referenceTile = reference is not null && OfGridSize(resolved.Reference!, grid)
+                    ? resolved.Reference!.Tile(tileX, tileY)
+                    : default;
                 if (heights && reference is null)
                 {
                     // the common case, kept free of the others' branches: a stroke composites it for every dab
@@ -485,7 +588,9 @@ namespace FAForever.MapEditor.Project.Editing
                         float v;
                         if (reference is not null)
                         {
-                            float m = SampleAt(resolved.Reference!, grid.MapWidth, grid.MapHeight, grid.X(tileX * Size + column), grid.Z(tileY * Size + row));
+                            float m = !referenceTile.IsEmpty
+                                ? referenceTile[i] / 255f
+                                : SampleAt(resolved.Reference!, grid.MapWidth, grid.MapHeight, grid.X(tileX * Size + column), grid.Z(tileY * Size + row));
                             m = reference.Invert ? 1 - m : m;
                             m = m < reference.Threshold ? 0 : m;
                             v = heights ? m * reference.Height : m;
@@ -517,6 +622,12 @@ namespace FAForever.MapEditor.Project.Editing
         };
 
         /// <summary>
+        /// Whether a mask has a grid of coverage's own size, so its pixels lie at the grid's samples.
+        /// </summary>
+        private static bool OfGridSize(TiledBuffer<byte> mask, StackGrid grid) =>
+            !grid.Corners && mask.Width == grid.Width && mask.Height == grid.Height;
+
+        /// <summary>
         /// A layer's weight at each place of a tile: strength × clip × (in a stack of heights) coverage.
         /// </summary>
         private static void Weights(Resolved resolved, StackGrid grid, int tileX, int tileY, int columns, int rows, Span<float> weights)
@@ -539,7 +650,15 @@ namespace FAForever.MapEditor.Project.Editing
                     weights[i] *= covered[i] / 255f;
                 }
             }
-            if (resolved.Clip is TiledBuffer<byte> clip)
+            if (resolved.Clip is TiledBuffer<byte> sameSize && OfGridSize(sameSize, grid))
+            {
+                ReadOnlySpan<byte> clipped = sameSize.Tile(tileX, tileY);
+                for (int i = 0; i < weights.Length; i++)
+                {
+                    weights[i] *= clipped[i] / 255f;
+                }
+            }
+            else if (resolved.Clip is TiledBuffer<byte> clip)
             {
                 for (int row = 0; row < rows; row++)
                 {
@@ -598,14 +717,51 @@ namespace FAForever.MapEditor.Project.Editing
             }
             int tilesX = current.TilesX;
             int count = tilesX * current.TilesY;
+            int dirtyCount = dirty is null ? count : dirty.Count(marked => marked);
+            if (dirtyCount == 0)
+            {
+                // nothing a change touched: a layer added or removed that works nowhere
+                return current;
+            }
             Resolved[] layers = Resolve(document, stack);
             T[]?[] results = new T[count][];
-            Parallel.For(0, count, () => (Values: new float[Size * Size], Weights: new float[Size * Size]), (t, _, buffers) =>
+            if (dirtyCount <= SequentialTiles)
             {
-                if (dirty is not null && !dirty[t])
+                // a dab of a brush: a few tiles are quicker on this thread than handed to the pool
+                (float[] Values, float[] Weights) buffers = (new float[Size * Size], new float[Size * Size]);
+                for (int t = 0; t < count; t++)
                 {
-                    return buffers;
+                    if (dirty is null || dirty[t])
+                    {
+                        CompositeTile(t, buffers);
+                    }
                 }
+            }
+            else
+            {
+                Parallel.For(0, count, () => (Values: new float[Size * Size], Weights: new float[Size * Size]), (t, _, buffers) =>
+                {
+                    if (dirty is null || dirty[t])
+                    {
+                        CompositeTile(t, buffers);
+                    }
+                    return buffers;
+                }, _ => { });
+            }
+
+            TiledBuffer<T>.Builder? builder = null;
+            for (int t = 0; t < results.Length; t++)
+            {
+                if (results[t] is T[] tile)
+                {
+                    builder ??= current.ToBuilder();
+                    builder.SetTile(t % tilesX, t / tilesX, tile);
+                }
+            }
+            return builder is null ? current : builder.ToBuffer();
+
+            void CompositeTile(int t, (float[] Values, float[] Weights) buffers)
+            {
                 int tileX = t % tilesX;
                 int tileY = t / tilesX;
                 Tile(layers, grid, tileX, tileY, buffers.Values, buffers.Weights);
@@ -627,19 +783,7 @@ namespace FAForever.MapEditor.Project.Editing
                     }
                 }
                 results[t] = tile;
-                return buffers;
-            }, _ => { });
-
-            TiledBuffer<T>.Builder? builder = null;
-            for (int t = 0; t < results.Length; t++)
-            {
-                if (results[t] is T[] tile)
-                {
-                    builder ??= current.ToBuilder();
-                    builder.SetTile(t % tilesX, t / tilesX, tile);
-                }
             }
-            return builder is null ? current : builder.ToBuffer();
         }
 
         private static LayerStack TakeChanges<T, TCodec>(MapDocument document, LayerStack stack, TiledBuffer<T> before, TiledBuffer<T> now, TCodec codec, string? into, bool[] dirty)

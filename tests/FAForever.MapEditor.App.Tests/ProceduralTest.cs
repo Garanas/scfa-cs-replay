@@ -88,6 +88,52 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task EverythingMakesWhatIsMissingAndSaysWhyItLeavesTheRest()
+        {
+            MainViewModel model = await Open();
+            Raise(model, 100, 102);
+            CommandRun listed = await Run(model, "generate.all", new JsonObject { ["list"] = true });
+            JsonObject list = (JsonObject)listed.Result!;
+            string[] toMake = [.. list["made"]!.AsArray().Select(item => (string)item!["id"]!)];
+            CollectionAssert.IsSubsetOf(new[] { "walkability", "navigationMesh" }, toMake, "never made: made");
+            Assert.IsTrue(model.Generation.Results.InOrder().Select(generator => generator.Id).Where(toMake.Contains).SequenceEqual(toMake), "in the order one feeds the next");
+            Assert.IsFalse(model.Generation.Results.States(model.Map!.Document).All(state => state.Status != GeneratedStatus.Missing), "listing makes nothing");
+
+            CommandRun run = await Run(model, "generate.all");
+            JsonObject result = (JsonObject)run.Result!;
+            CollectionAssert.AreEqual(toMake, result["made"]!.AsArray().Select(item => (string)item!["id"]!).ToArray());
+            Dictionary<string, string> left = result["left"]!.AsArray().ToDictionary(item => (string)item!["id"]!, item => (string)item!["why"]!);
+            StringAssert.Contains(left["skyCube"], "only when asked");
+            Assert.AreEqual("the map has no rules layer", left[MaskRulesGenerator.GeneratorId]);
+            Assert.AreEqual("the map has no prop rules", left[PropRulesGenerator.GeneratorId]);
+            StringAssert.Contains(model.Status, "left out: ");
+            StringAssert.Contains(model.Status, "(never made)");
+
+            IReadOnlyList<GeneratedState> states = model.Generation.Results.States(model.Map!.Document);
+            Assert.IsFalse(states.Any(state => state.Status == GeneratedStatus.Stale), "nothing out of date");
+            CollectionAssert.AreEquivalent(left.Keys.ToArray(), states.Where(state => state.Status == GeneratedStatus.Missing && model.Generation.CommandOf(state.Generator.Id) is not null)
+                .Select(state => state.Generator.Id).ToArray(), "missing are only those left out, with why");
+        }
+
+        [TestMethod]
+        public void AFlatMapsNormalMapIsCurrentAndAHillyMapsPlaceholderMissing()
+        {
+            MainViewModel model = new MainViewModel(new MainViewModelTest.Answers());
+            model.OpenNewMap(Project.NewMap.Create(new Project.NewMapSettings { Size = 256 }));
+            GeneratedStatus NormalMap() => model.Generation.Results.States(model.Map!.Document).Single(state => state.Generator.Id == NormalMapGenerator.GeneratorId).Status;
+            Assert.AreEqual(GeneratedStatus.Current, NormalMap(), "flat terrain: the one colour is what generating makes");
+            Raise(model, 100, 102);
+            Assert.AreEqual(GeneratedStatus.Stale, NormalMap());
+
+            // a placeholder of one colour under hills was never generated
+            MapDocument hilly = Project.NewMap.Create(new Project.NewMapSettings { Size = 256 });
+            TiledBuffer<ushort>.Builder samples = hilly.Terrain.Heightmap.Samples.ToBuilder();
+            samples[10, 10] = 9000;
+            model.OpenNewMap(hilly with { Terrain = hilly.Terrain with { Heightmap = hilly.Terrain.Heightmap with { Samples = samples.ToBuffer() } } });
+            Assert.AreEqual(GeneratedStatus.Missing, NormalMap());
+        }
+
+        [TestMethod]
         public async Task WalkabilityRegeneratesASecondAfterAChange()
         {
             MainViewModel model = await Open();
@@ -95,9 +141,12 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(model.Map!.Document.Procedural.RegeneratesOnItsOwn("walkability"));
             Assert.AreEqual("Regenerate the walkability on its own", model.Map.Session.UndoDescription);
 
-            // turned on, a map without walkability gets it
+            // turned on, a map without walkability gets it; a result kept outside the map is no step of undo
+            int steps = model.History.Count;
             await model.AutoGeneration.WhenIdleAsync();
             Assert.AreEqual(GeneratedStatus.Current, model.Generation.Results.States(model.Map.Document)[0].Status);
+            Assert.AreEqual(steps, model.History.Count, "the first run on its own adds no step");
+            Assert.AreEqual("Regenerate the walkability on its own", model.Map.Session.UndoDescription, "the last step is still turning it on");
             int kept = model.AutoGeneration.Kept;
 
             // a change to its inputs: it is out of date, then current again on its own
@@ -105,6 +154,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsTrue(model.AutoGeneration.IsPending("walkability"), "the timer runs");
             await model.AutoGeneration.WhenIdleAsync();
             Assert.AreEqual(kept + 1, model.AutoGeneration.Kept);
+            Assert.AreEqual(steps + 1, model.History.Count, "only the change is a step");
             Assert.AreEqual(GeneratedStatus.Current, model.Generation.Results.States(model.Map.Document).Single(state => state.Generator.Id == "walkability").Status);
             StringAssert.StartsWith(model.Status, "Regenerated the walkability on its own");
 
@@ -252,16 +302,18 @@ namespace FAForever.MapEditor.App.Tests
                 }
             };
 
+            int steps = model.History.Count;
+            MapDocument before = model.Map!.Document;
             string folder = await model.ExportAsync(Path.Combine(Root, Guid.NewGuid().ToString("N")));
 
+            Assert.AreEqual(steps, model.History.Count, "the export works on a copy: no step of undo");
+            Assert.AreSame(before, model.Map.Document, "the project is as it was");
             CollectionAssert.AreEqual(new[] { "normalMap", "preview", "wideDecals", "pathNodes", "walkabilityMarks", "ddsTextures", "write" }, model.Export.Lines.Select(line => line.Id).ToArray());
             CollectionAssert.AreEqual(new[] { ExportStepStatus.Skipped, ExportStepStatus.Done, ExportStepStatus.Skipped, ExportStepStatus.Skipped, ExportStepStatus.Skipped, ExportStepStatus.Skipped, ExportStepStatus.Done }, model.Export.Lines.Select(line => line.Status).ToArray());
             Assert.AreEqual("Exporting, step 2 of 7: Render the preview", progress[0]);
-            Assert.AreEqual(GeneratedStatus.Current, model.Generation.States.Single(state => state.Generator.Id == "preview").Status, "rendered although never generated");
             StringAssert.StartsWith(File.ReadAllText(Path.Combine(folder, "HardFFA_scenario.lua")), "-- Made with the FAF Map Editor ");
 
-            // a second export renders it again, the same picture: no step of undo
-            int steps = model.History.Count;
+            // a second export renders it again
             await model.ExportAsync(Path.Combine(Root, Guid.NewGuid().ToString("N")));
             Assert.AreEqual(ExportStepStatus.Done, model.Export.Lines[1].Status);
             Assert.AreEqual(steps, model.History.Count);

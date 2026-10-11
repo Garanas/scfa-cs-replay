@@ -172,6 +172,33 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void AnEnemyPresetOnANewMapGetsAnArmyOfItsOwn()
+        {
+            // a new map has the civilians' ARMY_17 and NEUTRAL_CIVILIAN, no army for enemies
+            MapDocument document = NewMap.Create(new NewMapSettings { Size = 256 });
+            string civilians = UnitPresets.ArmyFor(document, ArmyRoles.Civilian, 10, 10)!;
+            Assert.IsNull(UnitPresets.ArmyFor(document, ArmyRoles.Enemy, 10, 10), "neither civilian army is the enemy's");
+            Assert.AreEqual((UnitPresets.EnemyArmy, true), UnitPresets.ArmyOrNewFor(document, ArmyRoles.Enemy, 10, 10));
+
+            UnitPresetSettings town = Example("UEF civilian town");
+            document = UnitPresets.Place(document, town, "Town", null, null, ["INITIAL"], null, 64, 64, 0, out _, out _, out string townArmy);
+            UnitPresetSettings enemy = ExampleUnitPresets.Names.Select(name => Example(Path.GetFileNameWithoutExtension(name))).First(preset => preset.Role == ArmyRoles.Enemy);
+            document = UnitPresets.Place(document, enemy, "Base", null, null, ["INITIAL"], null, 180, 180, 0, out ImmutableArray<string> names, out _, out string enemyArmy);
+
+            Assert.AreEqual(civilians, townArmy);
+            Assert.AreEqual(UnitPresets.EnemyArmy, enemyArmy, "the enemy base is not the town's army");
+            CollectionAssert.Contains(document.Scenario.ExtraArmies.ToArray(), UnitPresets.EnemyArmy, "added as an extra army");
+            Assert.IsFalse(document.IsPlayable(UnitPresets.EnemyArmy));
+            Assert.IsTrue(names.All(name => document.FindUnit(name)!.Army == UnitPresets.EnemyArmy));
+
+            // the next enemy preset goes to the army added, without another
+            int armies = document.Armies.Length;
+            UnitPresets.Place(document, enemy, "Base 2", null, null, ["INITIAL"], null, 100, 180, 0, out _, out _, out string again);
+            Assert.AreEqual(UnitPresets.EnemyArmy, again);
+            Assert.AreEqual(armies, document.Armies.Length);
+        }
+
+        [TestMethod]
         public void AWreckFieldGoesIntoTheArmysWreckageGroup()
         {
             MapDocument document = HardFfa();

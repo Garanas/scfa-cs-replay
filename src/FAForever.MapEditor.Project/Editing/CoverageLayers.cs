@@ -238,7 +238,8 @@ namespace FAForever.MapEditor.Project.Editing
                 LayerStack followed = LayerStacks.FollowRenamedMasks(previous, result, stack);
                 TiledBuffer<byte> now = target.Grid!.Read(result);
                 TiledBuffer<byte>? before = Exists(previous, target) ? target.Grid.Read(previous) : null;
-                LayerStack? was = previous.CoverageStacks.GetValueOrDefault(key);
+                // a grid without a stack before was its own painted layer: the first layer added changes only where it works
+                LayerStack? was = previous.CoverageStacks.GetValueOrDefault(key) ?? (before is not null ? Trivial(previous, target) : null);
                 bool sameSize = before is not null && before.Width == now.Width && before.Height == now.Height;
                 if (was is not null && ReferenceEquals(was, followed) && ReferenceEquals(before, now) && !MasksChanged(previous, result, followed))
                 {

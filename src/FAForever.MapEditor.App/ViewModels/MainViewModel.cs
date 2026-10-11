@@ -456,7 +456,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public bool CanSave => HasMap && !IsBusy;
 
-    public bool CanUndo => Map?.Session.CanUndo == true && _stroke is null;
+    public bool CanUndo => (Map?.Session.CanUndo == true || Props?.UndoesClear(Map?.Document) == true) && _stroke is null;
 
     public bool CanRedo => Map?.Session.CanRedo == true && _stroke is null;
 
@@ -550,7 +550,25 @@ public sealed partial class MainViewModel : ObservableObject
         Events.OnMapSaved(map);
     }
 
-    public bool Undo() => _stroke is null && Map?.Session.Undo() == true;
+    /// <summary>
+    /// Undoes the last step of the map's history; right after the palette was cleared (the map
+    /// unchanged since), brings the palette back instead, so the step before is not undone unseen.
+    /// </summary>
+    public bool Undo()
+    {
+        if (_stroke is not null)
+        {
+            return false;
+        }
+        if (Props.UndoesClear(Map?.Document))
+        {
+            int count = Props.RestorePalette();
+            Status = $"Undone: Clear the palette ({count} {(count == 1 ? "prop" : "props")} back)";
+            Commands.NotifyCanRunChanged();
+            return true;
+        }
+        return Map?.Session.Undo() == true;
+    }
 
     public bool Redo() => _stroke is null && Map?.Session.Redo() == true;
 

@@ -4,6 +4,7 @@ using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.Tests
 {
@@ -34,7 +35,7 @@ namespace FAForever.MapEditor.App.Tests
         private static GeneratedState StateOf(MainViewModel model, string id) => model.Generation.States.Single(state => state.Generator.Id == id);
 
         [TestMethod]
-        public async Task EditsTheRulesOfAMaskAndGeneratesItWhenAsked()
+        public async Task EditsTheRulesOfAMaskAndShowsWhatTheyMakeAtOnce()
         {
             MainViewModel model = await Open();
             await Run(model, "paint.addMask", new JsonObject { ["name"] = "flat" });
@@ -57,21 +58,24 @@ namespace FAForever.MapEditor.App.Tests
             await Task.Yield();
             Assert.AreEqual(12, model.Map!.Document.MaskRules["flat"].Rules[0].Max);
 
-            Assert.AreEqual(GeneratedStatus.Missing, StateOf(model, MaskRulesGenerator.GeneratorId).Status, "nothing generates by itself");
-            Assert.IsTrue(model.Map.Document.Masks["flat"].ToArray().All(value => value == 0));
-            int steps = model.History.Count;
+            // editing the rules makes the mask from them in the same step
+            byte[] mask = model.Map.Document.Masks["flat"].ToArray();
+            Assert.IsTrue(mask.Any(value => value == 255) && mask.Any(value => value == 0), "flat ground away from the water, not the hills");
+            Assert.AreEqual(GeneratedStatus.Current, StateOf(model, MaskRulesGenerator.GeneratorId).Status, "what the rules make is current");
+            StringAssert.Contains(model.MaskRules.Status, "up to date");
+            await Run(model, "paint.setMaskRule", new JsonObject { ["index"] = 1, ["invert"] = true });
+            Assert.IsFalse(model.Map.Document.Masks["flat"].ToArray().SequenceEqual(mask), "the mask follows the rule changed");
+            Assert.AreEqual(GeneratedStatus.Current, StateOf(model, MaskRulesGenerator.GeneratorId).Status);
 
+            // what the rules read changes: out of date until generated, one step of undo
+            model.Map.Session.Edit("Raise the water", document => document with { Water = document.Water with { Elevation = document.Water.Elevation + 4 } });
+            Assert.AreEqual(GeneratedStatus.Stale, StateOf(model, MaskRulesGenerator.GeneratorId).Status, "the water level changed");
+            StringAssert.Contains(model.Generation.Summary, "Masks from rules");
+            int steps = model.History.Count;
             CommandRun generated = await Run(model, "generate.masks");
             Assert.AreEqual(1, generated.Result);
             Assert.AreEqual(steps + 1, model.History.Count, "one step of undo");
-            byte[] mask = model.Map.Document.Masks["flat"].ToArray();
-            Assert.IsTrue(mask.Any(value => value == 255) && mask.Any(value => value == 0), "flat ground away from the water, not the hills");
             Assert.AreEqual(GeneratedStatus.Current, StateOf(model, MaskRulesGenerator.GeneratorId).Status);
-            StringAssert.Contains(model.MaskRules.Status, "up to date");
-
-            await Run(model, "paint.setMaskRule", new JsonObject { ["index"] = 1, ["invert"] = true });
-            Assert.AreEqual(GeneratedStatus.Stale, StateOf(model, MaskRulesGenerator.GeneratorId).Status, "a rule changed");
-            StringAssert.Contains(model.Generation.Summary, "Masks from rules");
 
             await Run(model, "paint.moveMaskRule", new JsonObject { ["index"] = 1, ["to"] = 0 });
             Assert.AreEqual(MaskRuleKind.WaterDistance, model.MaskRules.Rules[0].Kind);
@@ -99,8 +103,8 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsNotNull(model.MaskRules.PreviewOverlay, "made on a thread of the pool");
             Assert.AreSame(model.MaskRules.PreviewOverlay, model.ShownGrid, "the top view shows the preview");
             TiledBuffer<byte> preview = model.ShownGrid!.Select(model.Map!.Document)!;
-            Assert.IsTrue(preview.ToArray().Any(value => value == 255), "what the rules make, before it is generated");
-            Assert.IsTrue(model.Map.Document.Masks["high"].ToArray().All(value => value == 0), "the mask itself is not generated");
+            Assert.IsTrue(preview.ToArray().Any(value => value == 255), "what the rules make");
+            CollectionAssert.AreEqual(preview.ToArray(), model.Map.Document.Masks["high"].ToArray(), "the mask itself shows what the rules make too");
 
             model.MaskRules.ShowPreview = false;
             Assert.AreNotSame(preview, model.ShownGrid?.Select(model.Map.Document), "without the preview, the mask");
@@ -203,15 +207,20 @@ namespace FAForever.MapEditor.App.Tests
             await Run(model, "generate.props");
             Assert.AreEqual(GeneratedStatus.Current, StateOf(model, PropRulesGenerator.GeneratorId).Status);
 
-            // the mask's rule changes: the mask is out of date, the props not yet
+            // the mask's rule changes: the mask follows at once, the props that read it are out of date
             await Run(model, "paint.setMaskRule", new JsonObject { ["index"] = 0, ["max"] = 20 });
-            Assert.AreEqual(GeneratedStatus.Stale, StateOf(model, MaskRulesGenerator.GeneratorId).Status);
-            Assert.AreEqual(GeneratedStatus.Current, StateOf(model, PropRulesGenerator.GeneratorId).Status);
+            Assert.AreEqual(GeneratedStatus.Current, StateOf(model, MaskRulesGenerator.GeneratorId).Status);
+            Assert.AreEqual(GeneratedStatus.Stale, StateOf(model, PropRulesGenerator.GeneratorId).Status);
             int forest = model.Map!.Document.CountRuleProps("Forest");
+
+            // and the terrain under both changes a little: both out of date
+            model.Map.Session.Edit("Raise the water", document => document with { Water = document.Water with { Elevation = document.Water.Elevation + 0.01f } });
+            Assert.AreEqual(GeneratedStatus.Stale, StateOf(model, MaskRulesGenerator.GeneratorId).Status);
 
             CommandRun run = await Run(model, "generate.stale");
             CollectionAssert.AreEqual(new[] { MaskRulesGenerator.GeneratorId, PropRulesGenerator.GeneratorId },
-                ((JsonArray)run.Result!).Select(item => (string)item!["id"]!).ToArray(), "the props after the masks they read");
+                ((JsonArray)run.Result!).Select(item => (string)item!["id"]!).Where(id => id is MaskRulesGenerator.GeneratorId or PropRulesGenerator.GeneratorId).ToArray(),
+                "the props after the masks they read");
             Assert.AreEqual(0, model.Generation.Results.Stale(model.Map!.Document).Count, "nothing left out of date");
             Assert.IsTrue(model.Map.Document.CountRuleProps("Forest") > forest, "more flat ground, more trees");
 
@@ -219,6 +228,42 @@ namespace FAForever.MapEditor.App.Tests
             int Index(string id) => order.ToList().FindIndex(generator => generator.Id == id);
             Assert.IsTrue(Index(MaskRulesGenerator.GeneratorId) < Index(PropRulesGenerator.GeneratorId));
             Assert.IsTrue(Index(WalkabilityGenerator.GeneratorId) < Index(PathNetworkGenerator.GeneratorId));
+        }
+
+        [TestMethod]
+        public async Task ResultsKeptInTheProjectAreCurrentWhenItOpensAgain()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "paint.addMask", new JsonObject { ["name"] = "flat" });
+            await Run(model, "paint.addMaskRule", new JsonObject { ["mask"] = "flat", ["kind"] = "Slope", ["max"] = 8 });
+            await Run(model, "props.addRule", new JsonObject { ["name"] = "Forest", ["density"] = 1 });
+            await Run(model, "props.setRulePalette", new JsonObject { ["props"] = new JsonArray(Pine) });
+            await Run(model, "generate.props");
+            // a sky cube map among the map's files, as Generate leaves it
+            byte[] rgba = new byte[6 * 16 * 16 * 4];
+            Array.Fill(rgba, (byte)200);
+            byte[] cube = SkyCubeMaps.Dds(new DecodedTexture(6 * 16, 16, rgba));
+            model.Map!.Session.Edit("Generate the sky cube map", document => document with
+            {
+                Files = document.Files.SetItem(SkyCubeMaps.FilePath, [.. cube]),
+            });
+            string project = Path.Combine(AppContext.BaseDirectory, "rules-kept", Guid.NewGuid().ToString("N"));
+            await model.SaveAsAsync(project);
+
+            MainViewModel reopened = new MainViewModel(new MainViewModelTest.Answers());
+            await reopened.OpenAsync(project);
+            GeneratedStatus StatusOf(string id) => reopened.Generation.States.Single(state => state.Generator.Id == id).Status;
+            Assert.AreEqual(GeneratedStatus.Current, StatusOf(MaskRulesGenerator.GeneratorId), "the rules layers hold what their rules made");
+            Assert.AreEqual(GeneratedStatus.Current, StatusOf(PropRulesGenerator.GeneratorId), "the props of the rules are in the project");
+            Assert.AreEqual(GeneratedStatus.Current, StatusOf("skyCube"), "the sky cube map is among the map's files");
+            StringAssert.Contains(reopened.SkyCube.Status, "Up to date");
+            Assert.AreEqual(16, reopened.SkyCube.Describe()["size"]!.GetValue<int>());
+
+            // and out of date once what they are made from changes
+            reopened.Map!.Session.Edit("Raise the water", document => document with { Water = document.Water with { Elevation = document.Water.Elevation + 2 } });
+            reopened.Generation.Refresh(reopened.Map.Document);
+            Assert.AreEqual(GeneratedStatus.Stale, StatusOf(MaskRulesGenerator.GeneratorId));
+            Assert.AreEqual(GeneratedStatus.Stale, StatusOf(PropRulesGenerator.GeneratorId));
         }
 
         [TestMethod]

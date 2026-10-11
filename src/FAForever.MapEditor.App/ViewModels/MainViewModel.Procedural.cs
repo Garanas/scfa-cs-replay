@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -195,15 +196,15 @@ public sealed partial class MainViewModel
             },
             Run = async run =>
             {
-                run.Note = $"{string.Join(", ", Generation.Results.ResultOf(NormalMapGenerator.GeneratorId)!.ChangedInputs(run.Document))} changed";
+                string changed = string.Join(", ", Generation.Results.ResultOf(NormalMapGenerator.GeneratorId)!.ChangedInputs(run.Document));
                 await GenerateIntoExportAsync(run, NormalMapGenerator.GeneratorId);
+                run.Note = $"{changed} changed; made for the export, the project keeps its own";
             },
         });
         Export.Register(new ExportStep(MapPreview.GeneratorId, "Render the preview", ExportStep.PreviewOrder)
         {
-            // always, as the textures it is drawn with are no input; into the map only when it differs
-            Run = run => GenerateIntoExportAsync(run, MapPreview.GeneratorId, (document, value) =>
-                !document.Terrain.Preview.ToArray().AsSpan().SequenceEqual(((TiledBuffer<Color32>)value).ToArray())),
+            // always, as the textures it is drawn with are no input
+            Run = run => GenerateIntoExportAsync(run, MapPreview.GeneratorId),
         });
         Export.Register(new ExportStep("walkabilityMarks", "Write the walkability marks into the terrain types", ExportStep.GameFilesOrder)
         {
@@ -230,15 +231,23 @@ public sealed partial class MainViewModel
     private static string Units(int count, string noun) => count == 1 ? $"1 {noun}" : $"{count:N0} {noun}s";
 
     /// <summary>
-    /// Generates a part of the map for an export: into the map (a step of undo, as Generate does) and
-    /// into the version the export writes.
+    /// Generates a part of the map for an export, on a thread of the pool, into the version the
+    /// export writes only: the export works on a copy, so the project, its history and its generated
+    /// results stay as they are (Generate in the Procedural mode keeps a result with the project).
     /// </summary>
-    private async Task GenerateIntoExportAsync(ExportRun run, string id, Func<MapDocument, object, bool>? changesMap = null)
+    private async Task GenerateIntoExportAsync(ExportRun run, string id)
     {
-        GeneratedResult result = await GenerateAsync(id, changesMap);
-        if (result.Generator is IDocumentGenerator part)
+        IGenerator generator = Generation.Results.Find(id) ?? throw new InvalidOperationException($"There is no generator '{id}'");
+        Generation.Results.HandResults(generator);
+        MapDocument from = run.Document;
+        object value = await Task.Run(() =>
         {
-            run.Document = part.Apply(run.Document, result.Value);
+            using Performance.Span measure = Performance.Measure("model.generate-export");
+            return generator.Generate(from);
+        });
+        if (generator is IDocumentGenerator part)
+        {
+            run.Document = part.Apply(run.Document, value);
         }
     }
 

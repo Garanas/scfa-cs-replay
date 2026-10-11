@@ -28,6 +28,8 @@ public sealed partial class MainViewModel
     {
         SkyCubeGenerator = new SkyCubeGenerator(() => Setup.Workspace) { Log = Logger("Editor") };
         Generation.Register(SkyCubeGenerator, "generate.skyCube");
+        // it writes a cube map among the map's files that is then chosen as the sky: only its own command makes it
+        Generation.LeaveWhenMissing(SkyCubeGenerator.GeneratorId, _ => "made only when asked: Generate, Sky cube map");
         Procedural.OnExport(SkyCubeGenerator.GeneratorId, ExportUse.Copied);
         SkyCube = new SkyCubeViewModel(RunWithAsync, Generation, () => Map?.Document);
         DocumentChanged += (_, _) => SkyCube.Refresh();

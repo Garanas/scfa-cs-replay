@@ -155,7 +155,9 @@ public sealed class SetPathNodesHandler(MainViewModel model) : IRequestHandler<S
 /// <summary>
 /// Adds a path node by hand to a generated network (the Path nodes tool's click on empty ground):
 /// kept with the map as an edit, one step of undo, linked to up to three of its nearest generated
-/// neighbours it sees, and applied again after every generation.
+/// neighbours it sees, and applied again after every generation. While the symmetry mirrors edits,
+/// a node goes to its image in every other part too, as a path node placed in the Markers mode does;
+/// moving, removing and linking a node take its mirror partners along the same way.
 /// </summary>
 /// <param name="Layer"><c>Land</c> (left out), <c>Water</c>, <c>Amphibious</c>, <c>Air</c>.</param>
 [EditorCommand("generate.addPathNode", "Add a path node to the generated network", Story = "R-3", Needs = Needs.Map | Needs.NoStroke)]
@@ -170,8 +172,9 @@ public sealed class AddGeneratedPathNodeHandler(MainViewModel model) : IRequestH
         {
             throw new ArgumentException("Generate the path networks first (markers.connectPaths)");
         }
-        model.AddGeneratedPathNode(layer, request.X, request.Z);
-        model.Status = $"Added a {layer.ToString().ToLowerInvariant()} path node at {Place(request.X, request.Z)}";
+        int added = model.AddGeneratedPathNode(layer, request.X, request.Z);
+        model.Status = $"Added a {layer.ToString().ToLowerInvariant()} path node at {Place(request.X, request.Z)}"
+            + (added > 1 ? $" and {added - 1} mirrored" : "");
         return Task.CompletedTask;
     }
 

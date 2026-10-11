@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
+using FAForever.FileFormats.Map;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -155,37 +156,97 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// Adds a node by hand to a generated network (a step of undo), linked to its nearest generated
-    /// neighbours, and chooses it.
+    /// How far from the image of a generated node its mirror partner may lie, in ogrids: the network
+    /// of a symmetric map is symmetric only as far as its skeleton is.
     /// </summary>
-    public void AddGeneratedPathNode(PathLayer layer, float x, float z)
+    public const float PathNodePartnerReach = 4;
+
+    /// <summary>
+    /// The other parts of the map the edits by hand of the path networks are mirrored into, as
+    /// markers placed by hand are (user story F-12): while the symmetry mirrors edits, else none.
+    /// </summary>
+    private IReadOnlyList<MapSymmetryTransform> PathNodeImages() =>
+        Map?.Document is MapDocument document ? [.. EditTransforms(document).Skip(1)] : [];
+
+    /// <summary>
+    /// The generated node nearest the image of a node in another part, of its layer, within
+    /// <see cref="PathNodePartnerReach"/>; null when there is none or it is the node itself.
+    /// </summary>
+    private PreviewPathNode? PathNodePartner(PreviewPathNode node, MapSymmetryTransform transform)
     {
-        Vector2 at = OnTheMap(x, z);
-        EditPathNodes($"Add a {layer.ToString().ToLowerInvariant()} path node", settings => PathNetworkEdits.AddNode(settings, layer, at.X, at.Y));
-        PathNodes.Chosen = PathNodes.NodeAt(at.X, at.Y, 0.01f, layer);
+        Vector2 image = transform.Apply(node.Node.Place);
+        PreviewPathNode? partner = PathNodes.NodeAt(image.X, image.Y, PathNodePartnerReach, node.Layer);
+        return partner is null || partner.Index == node.Index ? null : partner;
     }
 
     /// <summary>
-    /// Moves a node of a generated network (a step of undo).
+    /// Adds a node by hand to a generated network (a step of undo), linked to its nearest generated
+    /// neighbours, and chooses it; while the symmetry mirrors edits, with a node at its image in
+    /// every other part (one inside the map and not on the node itself).
+    /// </summary>
+    /// <returns>How many nodes were added.</returns>
+    public int AddGeneratedPathNode(PathLayer layer, float x, float z)
+    {
+        Vector2 at = OnTheMap(x, z);
+        MapDocument document = RequireMap().Document;
+        List<Vector2> places = [at];
+        foreach (MapSymmetryTransform transform in PathNodeImages())
+        {
+            Vector2 image = transform.Apply(at);
+            if (image.X >= 0 && image.Y >= 0 && image.X <= document.Width && image.Y <= document.Height
+                && places.All(place => Vector2.Distance(place, image) > 0.5f))
+            {
+                places.Add(image);
+            }
+        }
+        EditPathNodes(places.Count == 1 ? $"Add a {layer.ToString().ToLowerInvariant()} path node" : $"Add {places.Count} {layer.ToString().ToLowerInvariant()} path nodes, mirrored",
+            settings => places.Aggregate(settings, (edited, place) => PathNetworkEdits.AddNode(edited, layer, place.X, place.Y)));
+        PathNodes.Chosen = PathNodes.NodeAt(at.X, at.Y, 0.01f, layer);
+        return places.Count;
+    }
+
+    /// <summary>
+    /// Moves a node of a generated network (a step of undo); while the symmetry mirrors edits, its
+    /// mirror partners to the images of the new place.
     /// </summary>
     public void MoveGeneratedPathNode(PreviewPathNode node, float x, float z)
     {
         Vector2 at = OnTheMap(x, z);
-        EditPathNodes("Move a path node", settings => PathNetworkEdits.MoveNode(settings, node.Layer, node.Node.Ref, at.X, at.Y));
+        List<(PreviewPathNode Node, Vector2 To)> moves = [(node, at)];
+        foreach (MapSymmetryTransform transform in PathNodeImages())
+        {
+            if (PathNodePartner(node, transform) is PreviewPathNode partner && moves.All(move => move.Node.Index != partner.Index))
+            {
+                moves.Add((partner, transform.Apply(at)));
+            }
+        }
+        EditPathNodes(moves.Count == 1 ? "Move a path node" : $"Move {moves.Count} path nodes, mirrored",
+            settings => moves.Aggregate(settings, (edited, move) => PathNetworkEdits.MoveNode(edited, move.Node.Layer, move.Node.Node.Ref, move.To.X, move.To.Y)));
         PathNodes.Chosen = PathNodes.NodeAt(at.X, at.Y, 0.01f, node.Layer);
     }
 
     /// <summary>
-    /// Removes a node of a generated network with its links (a step of undo).
+    /// Removes a node of a generated network with its links (a step of undo); while the symmetry
+    /// mirrors edits, its mirror partners too.
     /// </summary>
     public void RemoveGeneratedPathNode(PreviewPathNode node)
     {
-        EditPathNodes("Remove a path node", settings => PathNetworkEdits.RemoveNode(settings, node.Layer, node.Node.Ref));
+        List<PreviewPathNode> removed = [node];
+        foreach (MapSymmetryTransform transform in PathNodeImages())
+        {
+            if (PathNodePartner(node, transform) is PreviewPathNode partner && removed.All(other => other.Index != partner.Index))
+            {
+                removed.Add(partner);
+            }
+        }
+        EditPathNodes(removed.Count == 1 ? "Remove a path node" : $"Remove {removed.Count} path nodes, mirrored",
+            settings => removed.Aggregate(settings, (edited, gone) => PathNetworkEdits.RemoveNode(edited, gone.Layer, gone.Node.Ref)));
         PathNodes.Chosen = null;
     }
 
     /// <summary>
-    /// Links two nodes of a generated network, or cuts their link (a step of undo).
+    /// Links two nodes of a generated network, or cuts their link (a step of undo); while the
+    /// symmetry mirrors edits, their mirror partners in every other part too.
     /// </summary>
     /// <exception cref="ArgumentException">They are of different layers, or the same node.</exception>
     public void LinkGeneratedPathNodes(PreviewPathNode a, PreviewPathNode b, bool cut)
@@ -198,7 +259,18 @@ public sealed partial class MainViewModel
         {
             throw new ArgumentException("A node does not link to itself");
         }
-        EditPathNodes(cut ? "Cut a path link" : "Link two path nodes", settings => PathNetworkEdits.Link(settings, a.Layer, a.Node.Ref, b.Node.Ref, cut));
+        List<(PreviewPathNode A, PreviewPathNode B)> links = [(a, b)];
+        foreach (MapSymmetryTransform transform in PathNodeImages())
+        {
+            if (PathNodePartner(a, transform) is PreviewPathNode pa && PathNodePartner(b, transform) is PreviewPathNode pb && pa.Index != pb.Index
+                && links.All(link => !((link.A.Index == pa.Index && link.B.Index == pb.Index) || (link.A.Index == pb.Index && link.B.Index == pa.Index))))
+            {
+                links.Add((pa, pb));
+            }
+        }
+        string what = cut ? "Cut a path link" : "Link two path nodes";
+        EditPathNodes(links.Count == 1 ? what : $"{what}, mirrored ({links.Count})",
+            settings => links.Aggregate(settings, (edited, link) => PathNetworkEdits.Link(edited, a.Layer, link.A.Node.Ref, link.B.Node.Ref, cut)));
     }
 
     /// <summary>
