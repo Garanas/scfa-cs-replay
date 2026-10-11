@@ -27,6 +27,21 @@ namespace FAForever.MapEditor.App.Tests
             public Task<SaveChoice> AskToSaveChangesAsync(string mapName) => Task.FromResult(SaveChoice.Discard);
         }
 
+        private sealed class Asking(bool answer) : IEditorDialogs
+        {
+            public int Asked { get; private set; }
+
+            public Task<string?> PickFolderAsync(string title, string? startIn = null) => Task.FromResult<string?>(null);
+
+            public Task<SaveChoice> AskToSaveChangesAsync(string mapName) => Task.FromResult(SaveChoice.Discard);
+
+            public Task<bool> ConfirmAsync(string title, string message, string action)
+            {
+                Asked++;
+                return Task.FromResult(answer);
+            }
+        }
+
         /// <summary>
         /// The test assets with a land factory (5 by 5, skirt 8 by 8, land only), a naval factory
         /// (water only, 1.5 deep at least) and a mobile unit.
@@ -63,6 +78,12 @@ namespace FAForever.MapEditor.App.Tests
             JsonObject place = model.Tool<UnitPlaceTool>().Describe();
             return (place["blockedCount"]!.GetValue<int>(), place["why"]?.GetValue<string>());
         }
+
+        /// <summary>
+        /// Level ground at 20, where a structure stands anywhere.
+        /// </summary>
+        private static void Flat(MainViewModel model) => model.Map!.Session.Edit("Flat", document =>
+            document with { Terrain = document.Terrain with { Heightmap = document.Terrain.Heightmap with { Samples = TiledBuffer<ushort>.Create(document.Width + 1, document.Height + 1, (ushort)(20 * 128)) } } });
 
         private static void Water(MainViewModel model, float elevation) =>
             model.Map!.Session.Edit("Water", document => document with { Water = document.Water with { HasWater = true, Elevation = elevation } });
@@ -124,6 +145,98 @@ namespace FAForever.MapEditor.App.Tests
 
             await Run(model, "units.pick", new JsonObject { ["key"] = "uxl0001" });
             Assert.AreEqual(0, Preview(model).Blocked, "a mobile unit is never checked");
+        }
+
+        [TestMethod]
+        public async Task ADragThatLeavesTheMapIsDrawnRedWhereItIsLeftOutAndTheStatusSaysHowMany()
+        {
+            MainViewModel model = await Open();
+            Water(model, -1000);
+            await Run(model, "units.pick", new JsonObject { ["key"] = "uxl0001" });
+            await Run(model, "units.placeMode", new JsonObject { ["mode"] = "line", ["spacing"] = 3 });
+            UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
+
+            tool.Press(-5, 20, ToolInput.Default);
+            tool.Drag(10, 20, ToolInput.Default);
+
+            JsonObject state = tool.Describe();
+            Assert.AreEqual(6, state["planned"]!.GetValue<int>());
+            Assert.AreEqual(2, state["outside"]!.GetValue<int>());
+            StringAssert.Contains(model.Status, "2 beyond the map's edge are left out");
+            Assert.IsTrue(tool.Shapes(ToolView.Flat(0.5f)).OfType<ToolLine>().Any(line => line.Ink == ToolInk.Danger), "the outside ones are drawn red");
+            tool.Release();
+            await Task.Delay(200);
+            Assert.AreEqual(4, model.Selection.Count, "the ones on the map are placed");
+        }
+
+        [TestMethod]
+        public async Task PlannedStructuresThatOverlapEachOtherAreRedToo()
+        {
+            MainViewModel model = await Open();
+            Water(model, -1000);
+            AssetEntry factory = model.Assets.Catalog!.Find("uxb0101")!;
+            UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
+            System.Collections.Immutable.ImmutableArray<UnitPlace> places = [new UnitPlace(100.5f, 100.5f, 0), new UnitPlace(104.5f, 100.5f, 0), new UnitPlace(140.5f, 100.5f, 0)];
+
+            UnitPlaceTool.PlaceVerdict verdict = tool.VerdictOf(model.ShownDocument!, factory, places);
+
+            CollectionAssert.AreEqual(new[] { true, true, false }, verdict.Blocked);
+            Assert.AreEqual("Overlaps another of the units to place", verdict.Why);
+        }
+
+        [TestMethod]
+        public async Task ALineOfStructuresIsLaidOutSkirtToSkirtSoNoneIsRed()
+        {
+            MainViewModel model = await Open();
+            Water(model, -1000);
+            Flat(model);
+            await Run(model, "units.pick", new JsonObject { ["key"] = "uxb0101" });
+            await Run(model, "units.placeMode", new JsonObject { ["mode"] = "rectangle" });
+            UnitPlaceTool tool = model.Tool<UnitPlaceTool>();
+
+            tool.Press(150, 150, ToolInput.Default);
+            tool.Drag(190, 175, ToolInput.Default);
+
+            Assert.AreEqual(5 * 3, tool.PlannedCount, "factories of 8 apart");
+            Assert.AreEqual(0, tool.Describe()["blockedCount"]!.GetValue<int>(), tool.Describe()["why"]?.ToString());
+            tool.Release();
+            await Task.Delay(200);
+            model.Problems.Run();
+            Assert.AreEqual(0, model.Problems.Items.Count(item => item.Problem.Check == "units-overlap"), string.Join("; ", model.Problems.Items.Select(item => item.Problem.Message)));
+        }
+
+        [TestMethod]
+        public async Task MoreThanFiveHundredUnitsAreAskedAboutFirst()
+        {
+            Asking no = new Asking(false);
+            MainViewModel model = new MainViewModel(no);
+            model.Assets.Use(Catalog());
+            await model.OpenAsync(HardFfa);
+            model.SelectTool("units.place");
+            JsonObject big = new JsonObject { ["mode"] = "rectangle", ["x0"] = 20, ["z0"] = 20, ["x1"] = 60, ["z1"] = 40, ["blueprint"] = "uxl0001", ["spacing"] = 1, ["army"] = "ARMY_1" };
+            int units = model.ShownDocument!.AllUnits().Count();
+
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => Run(model, "units.addMany", (JsonObject)big.DeepClone()), "automation must say confirm");
+            Assert.AreEqual(units, model.ShownDocument!.AllUnits().Count());
+
+            try
+            {
+                await model.Commands.RunAsync("units.addMany", (JsonObject)big.DeepClone(), interactive: true);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            Assert.AreEqual(1, no.Asked, "a person is asked");
+            Assert.AreEqual(units, model.ShownDocument!.AllUnits().Count(), "and said no");
+
+            big["confirm"] = true;
+            CommandRun placed = await Run(model, "units.addMany", big);
+            Assert.AreEqual(41 * 21, ((JsonObject)placed.Result!)["count"]!.GetValue<int>());
+            Assert.AreEqual(1, no.Asked, "confirm skips the question");
+
+            // 500 or fewer are placed without a question
+            await Run(model, "units.addMany", new JsonObject { ["mode"] = "rectangle", ["x0"] = 100, ["z0"] = 100, ["x1"] = 110, ["z1"] = 120, ["blueprint"] = "uxl0001", ["spacing"] = 1, ["army"] = "ARMY_1" });
+            Assert.AreEqual(1, no.Asked);
         }
 
         [TestMethod]
