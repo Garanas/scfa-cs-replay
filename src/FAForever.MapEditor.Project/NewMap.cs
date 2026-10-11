@@ -77,7 +77,8 @@ namespace FAForever.MapEditor.Project
     /// <param name="Id">E.g. <c>evergreen</c>.</param>
     /// <param name="Layers">The ten layers of a version 56 map: the lower layer, eight strata (the
     /// first few filled, the rest empty) and the upper layer.</param>
-    public sealed record NewMapBiome(string Id, string Title, ImmutableArray<TerrainLayer> Layers);
+    /// <param name="WaterCubemap">What the water reflects: the game's sky cube map of the biome.</param>
+    public sealed record NewMapBiome(string Id, string Title, ImmutableArray<TerrainLayer> Layers, string WaterCubemap = NewMap.DefaultWaterCubemap);
 
     /// <summary>
     /// Makes a map from scratch (user story M-2): flat terrain at a height, water or none, the
@@ -104,6 +105,11 @@ namespace FAForever.MapEditor.Project
         public const int LayerCount = 10;
 
         /// <summary>
+        /// What a new map's water reflects when its biome names nothing else.
+        /// </summary>
+        public const string DefaultWaterCubemap = "/textures/environment/skycube_evergreen01a.dds";
+
+        /// <summary>
         /// The script of a skirmish map, as the map editors write it.
         /// </summary>
         public const string DefaultScript = """
@@ -125,37 +131,37 @@ namespace FAForever.MapEditor.Project
         /// </summary>
         public static IReadOnlyList<NewMapBiome> Biomes { get; } =
         [
-            Biome("evergreen", "Evergreen", "/env/evergreen/layers/macrotexture000_albedo.dds",
+            Biome("evergreen", "/textures/environment/skycube_evergreen01a.dds", "Evergreen", "/env/evergreen/layers/macrotexture000_albedo.dds",
                 ("/env/evergreen/layers/sandlight_albedo.dds", "/env/evergreen/layers/sandlight_normals.dds", 4),
                 ("/env/evergreen/layers/grass000_albedo.dds", "/env/evergreen/layers/grass000_normals.dds", 4),
                 ("/env/evergreen/layers/grass001_albedo.dds", "/env/evergreen/layers/grass001_normals.dds", 6),
                 ("/env/evergreen/layers/dirt001_albedo.dds", "/env/evergreen/layers/dirt001_normals.dds", 4),
                 ("/env/evergreen/layers/rockmed_albedo.dds", "/env/evergreen/layers/rockmed_normals.dds", 8)),
-            Biome("desert", "Desert", "/env/evergreen/layers/macrotexture000_albedo.dds",
+            Biome("desert", "/textures/environment/skycube_desert01a.dds", "Desert", "/env/evergreen/layers/macrotexture000_albedo.dds",
                 ("/env/desert/layers/des_sandlight_albedo.dds", "/env/desert/layers/des_sandlight_normal.dds", 4),
                 ("/env/desert/layers/des_sandmed_albedo.dds", "/env/desert/layers/des_sandmed_normal.dds", 4),
                 ("/env/desert/layers/des_sanddark_albedo.dds", "/env/desert/layers/des_sanddark_normal.dds", 4),
                 ("/env/desert/layers/des_gravel_albedo.dds", "/env/desert/layers/des_gravel_normal.dds", 4),
                 ("/env/desert/layers/des_rock_albedo.dds", "/env/desert/layers/des_rock_normal.dds", 8)),
-            Biome("tundra", "Tundra", "/env/tundra/layers/macroice_albedo.dds",
+            Biome("tundra", "/textures/environment/skycube_tundra02a.dds", "Tundra", "/env/tundra/layers/macroice_albedo.dds",
                 ("/env/tundra/layers/tund_sandlight2_albedo.dds", "/env/tundra/layers/tund_sandlight2_normal.dds", 4),
                 ("/env/tundra/layers/tund_grass_albedo.dds", "/env/tundra/layers/tund_sandmed_normal.dds", 4),
                 ("/env/tundra/layers/tund_gravil_albedo.dds", "/env/tundra/layers/tund_sandwet_normal.dds", 4),
                 ("/env/tundra/layers/tund_rock_albedo.dds", "/env/tundra/layers/tund_rock_normal.dds", 8),
                 ("/env/tundra/layers/tund_snow_albedo.dds", "/env/tundra/layers/tund_snow_normal.dds", 6)),
-            Biome("lava", "Lava", "/env/lava/layers/lav_macrotexture000_albedo.dds",
+            Biome("lava", "/textures/environment/skycube_lava01a.dds", "Lava", "/env/lava/layers/lav_macrotexture000_albedo.dds",
                 ("/env/lava/layers/lav_gravel_albedo.dds", "/env/lava/layers/lav_gravel_normals.dds", 4),
                 ("/env/lava/layers/lav_cracked02_albedo.dds", "/env/lava/layers/lav_cracked02_normals.dds", 4),
                 ("/env/lava/layers/lav_rock01_albedo.dds", "/env/lava/layers/lav_rock01_normals.dds", 6),
                 ("/env/lava/layers/lav_rock04_albedo.dds", "/env/lava/layers/lav_rock04_normals.dds", 8),
                 ("/env/lava/layers/lav_ribbon_albedo.dds", "/env/lava/layers/lav_ribbon_normals.dds", 4)),
-            Biome("tropical", "Tropical", "/env/evergreen/layers/macrotexture000_albedo.dds",
+            Biome("tropical", "/textures/environment/skycube_tropical01a.dds", "Tropical", "/env/evergreen/layers/macrotexture000_albedo.dds",
                 ("/env/tropical/layers/trop_sand_albedo.dds", "/env/tropical/layers/trop_sand_normal.dds", 4),
                 ("/env/tropical/layers/trop_grass_albedo.dds", "/env/tropical/layers/trop_grassjung_normal.dds", 4),
                 ("/env/tropical/layers/trop_grassjung_albedo.dds", "/env/tropical/layers/trop_grassjung_normal.dds", 6),
                 ("/env/tropical/layers/trop_dirt_albedo.dds", "/env/tropical/layers/trop_none_normal.dds", 4),
                 ("/env/tropical/layers/trop_rock_albedo.dds", "/env/tropical/layers/trop_rock_normal.dds", 8)),
-            Biome("red-barrens", "Red Barrens", "/env/red barrens/layers/macrotexture001_albedo.dds",
+            Biome("red-barrens", "/textures/environment/skycube_redrocks05a.dds", "Red Barrens", "/env/red barrens/layers/macrotexture001_albedo.dds",
                 ("/env/red barrens/layers/rb_sand_albedo.dds", "/env/red barrens/layers/rb_sand_normal.dds", 4),
                 ("/env/red barrens/layers/rb_redmud_albedo.dds", "/env/red barrens/layers/rb_redmud_normal.dds", 4),
                 ("/env/red barrens/layers/rb_cracked_albedo.dds", "/env/red barrens/layers/rb_cracked_normal.dds", 4),
@@ -294,7 +300,7 @@ namespace FAForever.MapEditor.Project
                     SunColor = new Vector3(0.52f, 0.47f, 0.35f),
                     SunReflection = 1,
                     SunGlow = 0,
-                    Cubemap = "/textures/environment/skycube_evergreen01a.dds",
+                    Cubemap = biome.WaterCubemap,
                     Ramp = "/textures/engine/waterramp.dds",
                     WaveTextures =
                     [
@@ -361,7 +367,7 @@ namespace FAForever.MapEditor.Project
             return [layers[0], .. Enumerable.Range(0, count - 2).Select(i => i < strata.Length ? strata[i] : empty), layers.Length > 1 ? layers[^1] : empty];
         }
 
-        private static NewMapBiome Biome(string id, string title, string upper, params (string Albedo, string Normal, float Scale)[] strata)
+        private static NewMapBiome Biome(string id, string water, string title, string upper, params (string Albedo, string Normal, float Scale)[] strata)
         {
             TerrainLayer Empty() => new TerrainLayer { AlbedoPath = "", NormalPath = "", AlbedoScale = 4, NormalScale = 4 };
             ImmutableArray<TerrainLayer>.Builder layers = ImmutableArray.CreateBuilder<TerrainLayer>(10);
@@ -374,7 +380,7 @@ namespace FAForever.MapEditor.Project
                 layers.Add(Empty());
             }
             layers.Add(new TerrainLayer { AlbedoPath = upper, AlbedoScale = 128, NormalPath = "", NormalScale = 0 });
-            return new NewMapBiome(id, title, layers.MoveToImmutable());
+            return new NewMapBiome(id, title, layers.MoveToImmutable(), water);
         }
     }
 }
