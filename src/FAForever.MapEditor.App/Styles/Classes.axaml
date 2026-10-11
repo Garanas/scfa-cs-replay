@@ -608,6 +608,29 @@
     <Setter Property="Margin" Value="{StaticResource DividerGap}" />
   </Style>
 
+  <!-- a card that lies over the views, near the button that opens it (Select by) -->
+  <Style Selector="Border.popover">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource DialogRadius}" />
+    <Setter Property="Padding" Value="{StaticResource PanelPadding}" />
+    <Setter Property="Margin" Value="{StaticResource PopoverOffset}" />
+    <Setter Property="Width" Value="{StaticResource PopoverWidth}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+  </Style>
+  <!-- the name of a field in a card, so that the fields line up -->
+  <Style Selector="TextBlock.fieldlabel">
+    <Setter Property="Width" Value="{StaticResource FactLabelWidth}" />
+  </Style>
+  <!-- the chips of the stored selections along the bottom of the top view -->
+  <Style Selector="ItemsControl.storedchips">
+    <Setter Property="Margin" Value="{StaticResource PopoverOffset}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
+  </Style>
+
   <!-- chips side by side -->
   <Style Selector="WrapPanel.chips">
     <Setter Property="ItemSpacing" Value="{StaticResource SpaceSmall}" />

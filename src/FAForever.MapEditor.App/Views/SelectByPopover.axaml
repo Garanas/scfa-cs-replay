@@ -1,0 +1,122 @@
+<!-- Select by (U-10): the popover of the select tool's Select by button, over the top view. Units chosen by army, faction, kind,
+     tech level, blueprint and wrecks, within the map, the selection or an area; the number that match shows as the choice changes;
+     Add keeps the selection, Select replaces it (both run select.where). It lies in the window's tree, not in a popup, so
+     automation reaches its controls; Close, the Select by button again or another tool hides it. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.SelectByPopover"
+             x:DataType="vm:SelectByViewModel">
+  <Border Classes="popover" IsVisible="{Binding IsOpen}" AutomationProperties.Name="Select by">
+    <StackPanel Classes="stack">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Classes="inline">
+          <Button Classes="chip" Content="Reset" Command="{Binding ResetCommand}" AutomationProperties.Name="Reset what to select by"
+                  AutomationProperties.HelpText="Asks for every unit that is not a wreck, in the whole map" />
+          <Button Classes="chip" Content="Close" Command="{Binding ToggleCommand}" AutomationProperties.Name="Close Select by" />
+        </StackPanel>
+        <TextBlock Classes="heading" VerticalAlignment="Center" Text="Select by" />
+      </DockPanel>
+      <StackPanel Classes="inline">
+        <TextBlock Classes="label fieldlabel" Text="Army" />
+        <ComboBox ItemsSource="{Binding ArmyChoices}" SelectedItem="{Binding ArmyChoice}" AutomationProperties.Name="Select by army"
+                  AutomationProperties.HelpText="The units of one army, or Any army" />
+      </StackPanel>
+      <StackPanel Classes="inline">
+        <TextBlock Classes="label fieldlabel" Text="Faction" />
+        <ItemsControl ItemsSource="{Binding Factions}" AutomationProperties.Name="Factions to select by">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Classes="chips" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SelectByChip">
+              <ToggleButton Classes="chip" Content="{Binding Title}" IsChecked="{Binding IsOn}" AutomationProperties.Name="{Binding Label}"
+                            AutomationProperties.HelpText="The blueprint's faction; none chosen asks for every faction" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+      <StackPanel Classes="inline">
+        <TextBlock Classes="label fieldlabel" Text="Kind" />
+        <ItemsControl ItemsSource="{Binding Kinds}" AutomationProperties.Name="Kinds to select by">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Classes="chips" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SelectByChip">
+              <ToggleButton Classes="chip" Content="{Binding Title}" IsChecked="{Binding IsOn}" AutomationProperties.Name="{Binding Label}"
+                            AutomationProperties.HelpText="Structure, land, air, naval, or other (a unit the assets lack)" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+      <StackPanel Classes="inline">
+        <TextBlock Classes="label fieldlabel" Text="Tech" />
+        <ItemsControl ItemsSource="{Binding Tech}" AutomationProperties.Name="Tech levels to select by">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Classes="chips" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SelectByChip">
+              <ToggleButton Classes="chip" Content="{Binding Title}" IsChecked="{Binding IsOn}" AutomationProperties.Name="{Binding Label}"
+                            AutomationProperties.HelpText="1 to 3, and 4 for an experimental" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+      <StackPanel Classes="inline">
+        <TextBlock Classes="label fieldlabel" Text="Blueprint" />
+        <TextBox Classes="toolfield" Text="{Binding Blueprint}" Watermark="any" AutomationProperties.Name="Select by blueprint"
+                 AutomationProperties.HelpText="A blueprint id such as ueb1101, or part of an id or of a unit's name such as factory" />
+      </StackPanel>
+      <StackPanel Classes="inline">
+        <TextBlock Classes="label fieldlabel" Text="Wrecks" />
+        <ItemsControl ItemsSource="{Binding Wrecks}" AutomationProperties.Name="Wrecks to select by">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Classes="chips" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SelectByChip">
+              <ToggleButton Classes="chip" Content="{Binding Title}" IsChecked="{Binding IsOn}" AutomationProperties.Name="{Binding Label}"
+                            AutomationProperties.HelpText="Leave out the wrecks, select only them, or include them" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+      <StackPanel Classes="inline">
+        <TextBlock Classes="label fieldlabel" Text="Within" />
+        <ItemsControl ItemsSource="{Binding Places}" AutomationProperties.Name="Where to select within">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Classes="chips" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SelectByChip">
+              <ToggleButton Classes="chip" Content="{Binding Title}" IsChecked="{Binding IsOn}" AutomationProperties.Name="{Binding Label}"
+                            AutomationProperties.HelpText="The whole map, the units selected now, or the units inside an area" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ComboBox ItemsSource="{Binding AreaChoices}" SelectedItem="{Binding AreaChoice}" IsVisible="{Binding InArea}" AutomationProperties.Name="Area to select within" />
+      </StackPanel>
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Classes="inline">
+          <Button Content="Add" Command="{Binding AddCommand}" AutomationProperties.Name="Add the matching units to the selection"
+                  AutomationProperties.HelpText="Keeps the selection and adds the units that match" />
+          <Button Content="Select" Command="{Binding SelectCommand}" AutomationProperties.Name="Select the matching units"
+                  AutomationProperties.HelpText="The units that match become the selection" />
+        </StackPanel>
+        <TextBlock VerticalAlignment="Center" Text="{Binding CountText}" AutomationProperties.Name="Units that match" />
+      </DockPanel>
+    </StackPanel>
+  </Border>
+</UserControl>
