@@ -103,11 +103,16 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
-        public Task TheAutoSwitchInTheViewsBarTurnsRegeneratingOnTheirOwnOffAndSaysWhatWaits() => HeadlessApp.Run(async () =>
+        public Task TheAutoSwitchInTheStatusBarTurnsRegeneratingOnTheirOwnOffAndSaysWhatWaits() => HeadlessApp.Run(async () =>
         {
             (MainWindow window, MainViewModel model) = await Open();
             Avalonia.Controls.Primitives.ToggleButton chip = Named<Avalonia.Controls.Primitives.ToggleButton>(window, "Regenerate results on their own");
             Assert.IsTrue(chip.IsChecked);
+            // in the status bar, so the overlays' chips above the views keep their room at 1280 pixels
+            FAForever.MapEditor.App.Controls.ToolRow views = window.GetVisualDescendants().OfType<FAForever.MapEditor.App.Controls.ToolRow>().Single(row => row.Name == "ViewOptions");
+            Assert.IsFalse(chip.GetVisualAncestors().Contains(views));
+            Control camera = Named<Avalonia.Controls.Primitives.ToggleButton>(window, "Show 3D camera");
+            Assert.IsFalse(FAForever.MapEditor.App.Controls.ToolRow.IsInOverflow(camera), "the 3D camera's chip shows in the row");
             TextBlock text = Named<TextBlock>(window, "What regenerates on its own now");
             Assert.AreEqual("Auto", text.Text);
 
