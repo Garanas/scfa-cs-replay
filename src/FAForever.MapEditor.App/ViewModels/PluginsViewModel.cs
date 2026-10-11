@@ -119,6 +119,11 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
             {
                 parts.Add($"{failing} with errors");
             }
+            int doubtful = Items.Count(plugin => plugin.HasWarnings && !plugin.HasErrors);
+            if (doubtful > 0)
+            {
+                parts.Add($"{doubtful} with warnings");
+            }
             return string.Join(", ", parts);
         }
     }
@@ -228,7 +233,7 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
         }
         if (plugin.Manifest.UnknownKind is string unknown)
         {
-            plugin.AddError($"{PluginManifest.File}: the kind '{unknown}' is none of {string.Join(", ", PluginKinds.All)}; it reads as {PluginKinds.Other}");
+            plugin.AddWarning($"{PluginManifest.File}: the kind '{unknown}' is none of {string.Join(", ", PluginKinds.All)}; it reads as {PluginKinds.Other}");
             Log.LogWarning("The plugin {Plugin} names the kind {Kind}, which the editor does not know", plugin.Id, unknown);
         }
         if (!plugin.IsOn)
@@ -511,6 +516,11 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
         PluginSettingsDto plugins = settings.Plugins;
         _off.Clear();
         _off.UnionWith(plugins.Off ?? []);
+        _toolModes.Clear();
+        foreach ((string plugin, string mode) in plugins.ToolModes ?? [])
+        {
+            _toolModes[plugin] = mode;
+        }
         _values.Clear();
         foreach ((string plugin, Dictionary<string, string> values) in plugins.Values ?? [])
         {
@@ -530,6 +540,7 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
             {
                 Off = _off.Count == 0 ? null : [.. _off.Order(StringComparer.OrdinalIgnoreCase)],
                 Values = _values.Count == 0 ? null : _values.ToDictionary(pair => pair.Key, pair => pair.Value),
+                ToolModes = _toolModes.Count == 0 ? null : new Dictionary<string, string>(_toolModes, StringComparer.OrdinalIgnoreCase),
             });
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FAForever.MapEditor.Project.MapProjectException)
@@ -770,6 +781,7 @@ public sealed partial class PluginsViewModel : ObservableObject, IPluginHost
             ["loaded"] = plugin.IsLoaded,
             ["running"] = plugin.IsRunning,
             ["errors"] = new JsonArray([.. plugin.Errors.Select(error => (JsonNode)JsonValue.Create(error))]),
+            ["warnings"] = new JsonArray([.. plugin.Warnings.Select(warning => (JsonNode)JsonValue.Create(warning))]),
             ["commands"] = new JsonArray([.. plugin.Commands.Select(command => (JsonNode)JsonValue.Create(command.Id))]),
             ["checks"] = new JsonArray([.. plugin.Checks.Select(check => (JsonNode)JsonValue.Create(check.Id))]),
             ["tools"] = new JsonArray([.. plugin.Tools.Select(tool => (JsonNode)new JsonObject { ["id"] = tool.Id, ["mode"] = tool.Mode, ["title"] = tool.Title, ["fields"] = new JsonArray([.. tool.Fields.Select(key => (JsonNode)JsonValue.Create(key))]) })]),

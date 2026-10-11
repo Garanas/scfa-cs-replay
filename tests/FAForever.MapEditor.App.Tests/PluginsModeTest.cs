@@ -97,6 +97,45 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task ThePluginsModeShowsNoToolsOfOnlySelectUntilAPluginGivesItATool()
+        {
+            string folder = EmptyFolder();
+            MainViewModel model = await Open(folder);
+            model.SelectMode(PluginsMode.Id);
+            Assert.IsFalse(model.ShowsToolTiles, "a lone Select is no choice to show");
+            Assert.AreEqual("plugins.select", model.ActiveTool!.Definition.Id, "it stays the active tool");
+            model.SelectMode("terrain");
+            Assert.IsTrue(model.ShowsToolTiles);
+
+            Write(folder, "own", """plugin.tool{ id = "poke", title = "Poke", mode = "plugins", press = function(x, z) end }""");
+            model.Plugins.OnFilesChanged(["own/plugin.lua"]);
+            model.SelectMode(PluginsMode.Id);
+            Assert.IsTrue(model.ShowsToolTiles, "with a plugin's tool there is a choice");
+        }
+
+        [TestMethod]
+        public async Task APluginTurnedOffKeepsItsToolsHeadingAfterARestart()
+        {
+            string folder = EmptyFolder();
+            Write(folder, "dabber", Tool);
+            Project.Workspaces.UserSettings settings = new Project.Workspaces.UserSettings(Path.Combine(NewFolder(), "settings.json"));
+            MainViewModel model = new MainViewModel(new MainViewModelTest.Answers());
+            model.Diagnostics.Settings = settings;
+            await model.OpenAsync(HardFfa);
+            model.Plugins.Open(folder);
+            CollectionAssert.AreEqual(new[] { "dabber" }, Under(model, "Props"));
+            await model.Commands.RunAsync("plugins.enable", new JsonObject { ["plugin"] = "dabber", ["on"] = false }, interactive: false);
+
+            // the editor starts again: the plugin is off, its script never runs, and it stays under Props
+            MainViewModel again = new MainViewModel(new MainViewModelTest.Answers());
+            again.Diagnostics.Settings = new Project.Workspaces.UserSettings(settings.File);
+            again.Plugins.Open(folder);
+            Assert.IsFalse(again.Plugins.Find("dabber")!.IsOn);
+            CollectionAssert.AreEqual(new[] { "dabber" }, Under(again, "Props"));
+            Assert.AreEqual("props", again.Diagnostics.Settings.Plugins.ToolModes!["dabber"]);
+        }
+
+        [TestMethod]
         public async Task AKindTheEditorDoesNotKnowReadsAsOtherWithAWarning()
         {
             string folder = EmptyFolder();
@@ -108,8 +147,11 @@ namespace FAForever.MapEditor.App.Tests
             LuaPlugin odd = model.Plugins.Find("odd")!;
             Assert.AreEqual("other", odd.Kind);
             Assert.IsTrue(odd.IsLoaded, "it still loads");
-            StringAssert.Contains(odd.ErrorText, "the kind 'Teleporter' is none of brush, check, command, generator, export, other");
-            Assert.AreEqual("1 error", model.Plugins.Parts.Find("plugins.plugin.odd")!.Detail);
+            StringAssert.Contains(odd.WarningText, "the kind 'Teleporter' is none of brush, check, command, generator, export, other");
+            Assert.IsFalse(odd.HasErrors, "a warning, not an error");
+            Assert.AreEqual("on · 1 warning", model.Plugins.Parts.Find("plugins.plugin.odd")!.Detail);
+            StringAssert.Contains(model.Plugins.Summary, "1 with warnings");
+            Assert.AreEqual(1, model.Plugins.Describe()["items"]!.AsArray().Cast<JsonObject>().Single(item => item["id"]!.GetValue<string>() == "odd")["warnings"]!.AsArray().Count);
             Assert.AreEqual("export", model.Plugins.Find("fine")!.Kind, "a kind in capitals is known");
         }
 

@@ -61,6 +61,12 @@ namespace FAForever.MapEditor.Project.Workspaces.Serialized
         /// Per plugin folder, the values of its panel's fields by key, as text.
         /// </summary>
         public Dictionary<string, Dictionary<string, string>>? Values { get; init; }
+
+        /// <summary>
+        /// Per plugin folder, the mode its tools joined when it was last loaded: a plugin turned off
+        /// stays under that mode's heading in the Plugins mode, also after a restart.
+        /// </summary>
+        public Dictionary<string, string>? ToolModes { get; init; }
     }
 
     /// <summary>

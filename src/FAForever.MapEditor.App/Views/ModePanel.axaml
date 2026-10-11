@@ -21,7 +21,7 @@
           </StackPanel>
         </Border>
 
-        <Border Classes="group">
+        <Border Classes="group" IsVisible="{Binding ShowsToolTiles}">
           <StackPanel Classes="stack">
             <TextBlock Classes="overline" Text="{Binding Source=Tools, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
             <ItemsControl ItemsSource="{Binding Tools}" AutomationProperties.Name="Tools">
