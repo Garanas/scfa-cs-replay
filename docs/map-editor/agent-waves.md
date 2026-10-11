@@ -349,6 +349,31 @@ results regenerate on their own only while the views show them; unit presets are
 - Beside the waves: a workflow publishing standalone editors for Windows, Linux and macOS on every push
   to `main`, with a start check of the Linux build on a virtual display.
 
+## Waves 17 and 18: richer height curves
+
+The owner evaluated nineteen proposals for the curve layers on the artifact "Height curve upgrades"
+(memory note `curve-upgrades-plan`): everything built but surface roughness (dropped: ground stays
+flat where units walk) and curves as masks (not decided). Decisions: a node overrides width, both
+falloffs, height, strength and a sharp corner; noise alike in every part of a symmetric map; closed
+curves fill (older ones load as line only, project format 9); smooth heights for every curve;
+variation along a curve as ranges. Height per node mattered most, for ramps.
+
+- **Wave 17**: 17A the library and commands (per-node values, monotone heights, fade shapes and
+  terraces, cliff face, edge noise and variation ranges matching across symmetric parts, closed fills,
+  river, road modes and camber, reverse, set a point, even grade, snap to the ground, grades; a ridge
+  of 520 ogrids on the 81 km map now 8 to 12 ms an edit, 40 to 70 before); 17B decals along a curve.
+- **Wave 18** (agents on Sonnet from here, the owner's choice): 18A the window (the inspector's groups
+  by profile, the node table with grades, Reverse, Even the grade, Snap, a point's height by shift and
+  a drag or + and -, the new point's height from the ground, width and fade lines in both views);
+  18B cliff faces block walkability unless marked open (checked after the merge: a gentle cliff's face
+  walkable with it off, 49,083 passable ogrids, blocked with it on, 46,685).
+- Both wave 18 agents were cut off by the usage limit and restarted; the restarted agents found and
+  kept their predecessors' work in the worktrees.
+- The shared converted assets were still format 4 after another session raised
+  `AssetConverter.FormatVersion` to 5: no agent's test editor got past the update page until the main
+  session converted them (`faf-map workspace convert D:/wt/scratch-5c/wsconv`, 32 s). Check the
+  assets' format when setting up a wave.
+
 ## The agents' tooling
 
 What the agents asked for, and where it came from. Most of it is built; the App guide and the
