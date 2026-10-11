@@ -58,6 +58,54 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(ShownGrid));
     }
 
+    /// <summary>
+    /// The tints over the terrain (the overlays <c>mask</c>, <c>walkability</c> and <c>navigation</c>)
+    /// each mode had when it was left; a mode not shown yet starts with none.
+    /// </summary>
+    private readonly Dictionary<string, (bool Mask, bool Walkability, bool Navigation)> _tintsByMode = new Dictionary<string, (bool, bool, bool)>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The mode whose tints show now.
+    /// </summary>
+    private string? _tintsMode;
+
+    /// <summary>
+    /// The tints over the terrain belong to a mode: a mask shown in the Paint mode, walkability in
+    /// the Procedural mode, do not stay over the Lighting or Masks mode's views. Leaving a mode keeps
+    /// what it showed; entering one shows what it showed when it was left (none the first time).
+    /// The other overlays (markers, props, the grid) stay as they are in every mode.
+    /// </summary>
+    private void FollowModeTints()
+    {
+        string? mode = SelectedMode?.Definition.Id;
+        if (mode == _tintsMode)
+        {
+            return;
+        }
+        if (_tintsMode is not null)
+        {
+            _tintsByMode[_tintsMode] = (ShowMask, ShowWalkability, ShowNavigation);
+        }
+        _tintsMode = mode;
+        (bool mask, bool walkability, bool navigation) = mode is not null && _tintsByMode.TryGetValue(mode, out var kept) ? kept : default;
+        // the ones turned off first: one turned on turns the others off
+        if (!mask)
+        {
+            ShowMask = false;
+        }
+        if (!walkability)
+        {
+            ShowWalkability = false;
+        }
+        if (!navigation)
+        {
+            ShowNavigation = false;
+        }
+        ShowMask = ShowMask || mask;
+        ShowWalkability = ShowWalkability || walkability;
+        ShowNavigation = ShowNavigation || navigation;
+    }
+
     private void InitializePainting()
     {
         DocumentChanged += (_, _) => Masks.Refresh(ShownDocument);
@@ -68,6 +116,10 @@ public sealed partial class MainViewModel
         };
         PropertyChanged += (_, e) =>
         {
+            if (e.PropertyName == nameof(SelectedMode))
+            {
+                FollowModeTints();
+            }
             if (e.PropertyName is nameof(ActiveTool) or nameof(SelectedMode))
             {
                 OnPropertyChanged(nameof(ShownGrid));

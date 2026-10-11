@@ -129,7 +129,11 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   (`OverlayDefinition.Swatch`: walkability, mask, areas). What does not fit at the window's width
   lies behind the row's More, over the views (the bar has `ZIndex` 1, the tool's options 2, so their
   More lies over this bar). At 1280 by 800 the top view is 464 pixels high (`TheViewsBarIsOneRow...`).
-  Walkability and a mask tint the terrain in turn: turning one on turns the other off.
+  Walkability and a mask tint the terrain in turn: turning one on turns the other off. The tints
+  (mask, walkability, regions) belong to the mode they were turned on in
+  (`MainViewModel.FollowModeTints`): leaving a mode keeps what it showed, entering one shows what it
+  showed when it was left (none the first time), so the Paint mode's mask never lies over the
+  Lighting mode's views. The other overlays stay as they are in every mode (`ModeTintsTest`).
 - **What the views draw again, by event**: `DocumentChanged` when the shown document changes
   (an edit, undo, reload, a dab, a stroke thrown away): the top view updates the tiles that
   changed, the 3D view uploads them. `OverlaysChanged` (an overlay turned on or off),
