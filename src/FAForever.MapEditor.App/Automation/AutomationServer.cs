@@ -628,6 +628,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 })]),
             },
             ["wideDecals"] = model.WideDecals.Describe(),
+            ["decalsAlongCurve"] = model.DecalsAlong.Describe(),
             ["skyCube"] = model.SkyCube.Describe(),
             ["mapPanels"] = model.DescribeMapPanels(),
             ["mapSize"] = model.DescribeMapSize(),

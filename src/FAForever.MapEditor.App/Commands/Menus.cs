@@ -64,7 +64,7 @@ public static class Menus
             Mode("lighting", "lighting.preset", "lighting.chooseCubemap", "lighting.importSkybox", "lighting.addSkybox", "lighting.removeSkybox"),
             Mode("markers", "markers.addChain", "markers.adaptive", "markers.placePreset"),
             Mode("props", "props.choose", "props.addToPalette", "props.clearPalette", "props.restorePalette", "props.followTerrain", Separator, "props.alignToTerrain", "props.upright", "props.dropToGround", "props.randomize", "props.replace", "props.randomVariant", Separator, "props.reclaim", "props.addRule", "props.keepFromRules"),
-            Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack"),
+            Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack", Separator, "decals.alongCurve"),
             Mode("units", "units.pick", "units.addGroup", "units.selectGroup", "units.placePreset", "units.asWrecks"),
             Mode("procedural"),
             Mode("plugins"),

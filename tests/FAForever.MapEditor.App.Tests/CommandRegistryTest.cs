@@ -119,7 +119,7 @@ namespace FAForever.MapEditor.App.Tests
             CollectionAssert.AreEqual(
                 new[]
                 {
-                    "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look", "decals.addToGroup", "decals.chooseWideFile", "decals.deleteGroup",
+                    "assets.drop", "assets.select", "assets.showFile", "brush.set", "camera.focus", "camera.look", "decals.addToGroup", "decals.chooseAlongCurve", "decals.chooseWideFile", "decals.deleteGroup",
                     "decals.lod", "decals.place", "decals.removeFromGroup", "decals.renameGroup", "decals.scale", "decals.selectGroup", "decals.setShadow", "decals.setWide", "decals.showGroup", "decals.size",
                     "diagnostics.flush", "diagnostics.set", "diagnostics.upload", "edit.goTo", "edit.nudge", "edit.place", "file.enableVersionControl",
                     "file.restoreCommit", "file.showCommit", "file.showMapFiles", "generate.addPathNode", "generate.auto", "generate.clearPathEdits", "generate.linkPathNodes", "generate.movePathNode", "generate.onExport", "generate.removePathNode", "generate.setNavigation", "generate.setPathNodes", "generate.setSkyCube", "generate.useSkyCube", "layers.choose", "layers.move", "layers.remove", "layers.set", "layers.setDecalMasks", "lighting.set", "lighting.setCirrusLayer", "lighting.setSky", "lighting.setSkybox", "map.removeArea", "map.removeArmy", "map.renameArmy", "map.setAlliance",
