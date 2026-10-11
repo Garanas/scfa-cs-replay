@@ -1874,7 +1874,10 @@ coverage"). Files: `ViewModels/CoverageStackViewModel.cs`, `MainViewModel.Covera
   rules layer, the rule editor. Its tool is the mask brush (`masks.paint`, moved from the Paint
   mode). The overlay Mask and the brush show the chosen mask. Masks are never exported.
 - **The Paint mode**: the strata list has each texture's picture (`LayerItem.Texture`, the
-  converted PNG through the catalog; made again when the catalog loads); the inspector's
+  converted PNG through the catalog; made again when the catalog loads) and each stratum's final
+  mask beside it (`LayerItem.Mask`, a `CoveragePicture` of `Terrain.StratumMasks`: what its stack
+  makes, the map is drawn and exported with; it follows a stroke without the list being made
+  again; the lower and upper layers have none); the inspector's
   `LayerSection` shows the chosen stratum's textures, then "Mask layers" (the stack) and the rule
   editor for a rules layer.
 - **The Water mode**: each map's entry shows its stack above the brush's settings.

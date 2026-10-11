@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text.Json.Nodes;
 using FAForever.MapEditor.App.Commands;
+using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project;
@@ -299,6 +300,29 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(2, model.LayerTextures.SelectedIndex, "and the list follows the tool (brush.set layer)");
             model.LayerTextures.Choose(0);
             Assert.AreEqual(2, model.StrataTool.Layer, "the lower layer has no mask: the tool keeps its stratum");
+        }
+
+        [TestMethod]
+        public async Task EachStratumInTheListShowsItsFinalMaskWhichFollowsAStroke()
+        {
+            MainViewModel model = await Open();
+            LayerItem stratum = model.LayerTextures.Items.Single(item => item.Index == 2);
+            Assert.AreSame(model.Map!.Document.Terrain.StratumMasks.Layers[1], ((CoveragePicture)stratum.Mask!).Grid, "the mask the map is drawn and exported with");
+            Assert.AreEqual("Final mask of Stratum 2", stratum.MaskLabel);
+            Assert.IsNull(model.LayerTextures.Items.Single(item => item.Index == 0).Mask, "the lower layer lies under everything");
+            Assert.IsNull(model.LayerTextures.Items[0].Mask, "the upper layer has no mask");
+
+            model.LayerTextures.Choose(2);
+            model.SelectTool("paint.strata");
+            LayerItem other = model.LayerTextures.Items.Single(item => item.Index == 3);
+            PreviewPicture? otherMask = other.Mask;
+            model.Stroke([(100, 100), (110, 100), (120, 100)]);
+            Assert.AreSame(stratum, model.LayerTextures.Items.Single(item => item.Index == 2), "a stroke keeps the list and its choice");
+            Assert.AreSame(model.Map.Document.Terrain.StratumMasks.Layers[1], ((CoveragePicture)stratum.Mask!).Grid, "its picture follows the stroke");
+            Assert.AreSame(otherMask, other.Mask, "the other strata keep theirs");
+
+            model.Undo();
+            Assert.AreSame(model.Map.Document.Terrain.StratumMasks.Layers[1], ((CoveragePicture)stratum.Mask!).Grid, "and undo");
         }
 
         [TestMethod]

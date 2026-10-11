@@ -13,19 +13,53 @@ namespace FAForever.MapEditor.App.ViewModels;
 /// A layer of the terrain in the Paint panel's list (user story S-2).
 /// </summary>
 /// <param name="Index">0 is the lower layer, the last the upper one, the strata between.</param>
-/// <param name="Texture">Its albedo texture as a small picture (the converted PNG); null without one.</param>
-public sealed record LayerItem(int Index, string Title, string Albedo, string Normal, bool IsUsed, bool IsStratum, bool CanMoveUp, bool CanMoveDown,
-    PreviewPicture? Texture = null)
+/// <param name="index">0 is the lower layer, the last the upper one, the strata between.</param>
+/// <param name="texture">Its albedo texture as a small picture (the converted PNG); null without one.</param>
+/// <param name="mask">A stratum's final mask (what its stack of layers makes, what the map is drawn and exported with); null for the lower and upper layers.</param>
+public sealed partial class LayerItem(int index, string title, string albedo, string normal, bool isUsed, bool isStratum, bool canMoveUp, bool canMoveDown,
+    PreviewPicture? texture = null, PreviewPicture? mask = null) : ObservableObject
 {
+    public int Index => index;
+
+    public string Title => title;
+
+    public string Albedo => albedo;
+
+    public string Normal => normal;
+
+    public bool IsUsed => isUsed;
+
+    public bool IsStratum => isStratum;
+
+    public bool CanMoveUp => canMoveUp;
+
+    public bool CanMoveDown => canMoveDown;
+
+    public PreviewPicture? Texture => texture;
+
+    /// <summary>
+    /// A stratum's final mask as a small picture, larger while the mouse rests on it; it follows a
+    /// stroke. Null for the lower layer (under everything) and the upper one (by its alpha).
+    /// </summary>
+    [ObservableProperty]
+    public partial PreviewPicture? Mask { get; internal set; } = mask;
+
     /// <summary>
     /// What a screen reader says of its picture.
     /// </summary>
     public string TextureLabel => $"Texture of {Title}";
 
     /// <summary>
+    /// What a screen reader says of its mask's picture.
+    /// </summary>
+    public string MaskLabel => IsStratum ? $"Final mask of {Title}" : $"{Title}: no mask";
+
+    /// <summary>
     /// E.g. <c>grass000 · normal grass000_normals</c>, or that the stratum is unused.
     /// </summary>
     public string Textures => !IsUsed ? "unused" : Normal.Length == 0 ? Albedo : $"{Albedo} · normal {Normal}";
+
+    public override string ToString() => Title;
 }
 
 /// <summary>
@@ -41,6 +75,7 @@ public sealed partial class LayerTexturesViewModel : ObservableObject
 {
     private readonly Func<string, JsonObject, Task> _run;
     private ImmutableArray<TerrainLayer> _shown;
+    private StratumMasks? _shownMasks;
     private MapDocument? _document;
 
     private readonly Func<string, string?> _textureFile;
@@ -197,11 +232,31 @@ public sealed partial class LayerTexturesViewModel : ObservableObject
         _document = document;
         ShowShader(document);
         ImmutableArray<TerrainLayer> layers = document?.Terrain.Layers ?? [];
+        StratumMasks? masks = document?.Terrain.StratumMasks;
+        PreviewPicture? MaskOf(int index) => masks is not null && document!.Terrain.IsStratum(index) && index - 1 < masks.Layers.Length
+            ? new CoveragePicture(masks.Layers[index - 1])
+            : null;
         if (document is not null && layers == _shown)
         {
+            if (!ReferenceEquals(masks, _shownMasks))
+            {
+                // a stroke or a stack's layer changes a mask: its picture follows, the list stays
+                StratumMasks? before = _shownMasks;
+                _shownMasks = masks;
+                foreach (LayerItem item in Items)
+                {
+                    int at = item.Index - 1;
+                    if (item.IsStratum && (before is null || at >= before.Layers.Length || at >= masks!.Layers.Length
+                        || !ReferenceEquals(before.Layers[at], masks.Layers[at])))
+                    {
+                        item.Mask = MaskOf(item.Index);
+                    }
+                }
+            }
             return;
         }
         _shown = layers;
+        _shownMasks = masks;
         int selected = Selected?.Index ?? 1;
         int count = layers.Length;
         // the upper layer first, as they lie on each other
@@ -210,7 +265,8 @@ public sealed partial class LayerTexturesViewModel : ObservableObject
             layer.IsUsed() || index == 0 || index == count - 1, document!.Terrain.IsStratum(index),
             document.Terrain.IsStratum(index) && document.Terrain.IsStratum(index + 1),
             document.Terrain.IsStratum(index) && document.Terrain.IsStratum(index - 1),
-            layer.AlbedoPath.Length > 0 && _textureFile(layer.AlbedoPath) is string file ? new FilePicture(file) : null)).Reverse()];
+            layer.AlbedoPath.Length > 0 && _textureFile(layer.AlbedoPath) is string file ? new FilePicture(file) : null,
+            MaskOf(index))).Reverse()];
         Summary = document is null
             ? ""
             : string.Create(CultureInfo.InvariantCulture,

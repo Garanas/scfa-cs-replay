@@ -1,5 +1,5 @@
-<!-- The Paint panel's layers (S-1, S-2): the layers as they lie on each other, the upper first; a stratum chosen here is the one the
-     strata tool paints, and the inspector shows the chosen layer's textures; add, remove and reorder strata. -->
+<!-- The Paint panel's layers (S-1, S-2): the layers as they lie on each other, the upper first, each with its texture and a stratum
+     with its final mask; a stratum chosen here is the one the strata tool paints, and the inspector shows the chosen layer's textures; add, remove and reorder strata. -->
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
@@ -17,6 +17,11 @@
             <DockPanel>
               <Border DockPanel.Dock="Left" Classes="thumbnail imagepreview">
                 <controls:ImagePreview Picture="{Binding Texture}" AutomationProperties.Name="{Binding TextureLabel}" />
+              </Border>
+              <!-- a stratum's final mask, what its stack of layers makes; the lower and upper layers have none -->
+              <Border DockPanel.Dock="Left" Classes="thumbnail imagepreview">
+                <controls:ImagePreview Picture="{Binding Mask}" AutomationProperties.Name="{Binding MaskLabel}"
+                                       AutomationProperties.HelpText="Where the stratum covers the terrain, white fully" />
               </Border>
               <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="{Binding Title}" />
