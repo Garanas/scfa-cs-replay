@@ -934,11 +934,23 @@ maths the library's (`Generation/Walkability`, `TerrainImages`, `Checks/`; its g
 - **Generating one result**: `MainViewModel.GenerateAsync(id)` runs the generator on a pool thread
   from the version of the map at that moment (span `model.generate`, logged and measured as the
   operation `generate`), keeps the result, and puts a result that is part of the map
-  (`IDocumentGenerator`: the normal map, the preview) into it as one step of undo, named
-  `Generate the ...`; while a stroke holds its transaction that step waits until the stroke ends.
-  Editing goes on meanwhile; a result of a version edited since shows as out of date. A second
-  run of the same generator while one runs is refused. `generate.stale` puts what it makes into
-  the map the same way (`MainViewModel.GenerateStale`).
+  (`IDocumentGenerator`: the normal map, the preview, masks and props from rules, the sky cube map)
+  into it as a derived change (next item). Editing goes on meanwhile; a result of a version edited
+  since shows as out of date. A second run of the same generator while one runs is refused.
+  `generate.stale` and `generate.all` put what they make into the map the same way
+  (`MainViewModel.GenerateStale`).
+- **Derived results, no step of undo** (the owner's decision Q4; `MainViewModel.DeriveResult`, the
+  library's `EditSession.Derive`): a generated result that goes into the map, asked for or made on
+  its own, enters the current version without a step of undo (`ChangeReason.Derive`; the map
+  counts as modified, the history and what can be redone stay; while a stroke holds its
+  transaction it waits until the stroke ends). The person undoes the source (a heightmap edit, a
+  rule) and the result goes with it. A result that was current for the version it goes into is kept
+  again for the version it makes (`KeepDerived`), so putting it in place never makes it out of date
+  nor starts it again on its own; the last results of each such generator are remembered
+  (`RecentResults`, 8), and an undo or redo keeps the one made for the version it goes to, so the
+  list reads current at once. The selection of a version follows its derived change. The status
+  line says what was generated (the command's text, or `Regenerated the ... on its own`). A rule
+  edit still makes its masks in its own step (`WithRulesMade`): that is the edit itself.
 - **The list of generated results** is the Procedural mode's (section "The Procedural mode"
   below): an entry per registered generator (`GenerationViewModel.Rows`, through
   `ProceduralViewModel.Rows` and `ProceduralListViewModel`), walkability's choices (the layer of
@@ -1003,12 +1015,13 @@ every other part).
   `state.panelParts` know them; one is always chosen, walkability first. The inspector
   (`ProceduralDetailsSection`, through `PanelPartView`'s templates for `ProceduralPart` and
   `ProceduralExportPart`) shows the chosen one: its picture larger, how it stands with Generate
-  ("from the inspector" in its label), Preview in the views, Regenerate on its own, the export's
+  ("from the inspector" in its label), Preview in the views, Regenerate on its own with when it does
+  (`ProceduralRow.AutoWhen`), Use as workspace default (`generate.useAsWorkspaceDefault`), the export's
   check box or what the export does, what it is made from (`IGenerator.Inputs` and the results it
   `Reads`), when it was made in this session and how long it took (`GenerationViewModel.TimingOf`,
   noted by `GenerateAsync`, `AutoGeneration` and `GenerateStale`), facts (the normal map's size,
   the rules' counts), then its details: walkability's choices (`WalkabilityPanel`), the navigation
-  mesh's layer, routes and regions (`NavigationPanel`), the path networks' part (`PathNodesPanel`,
+  mesh's layer and connected regions (`NavigationPanel`), the path networks' part (`PathNodesPanel`,
   which keeps its own Generate and export check box), a map-wide decal's settings, the export's
   steps (`ExportStepsPanel`). An entry with a tool picks it (navigation mesh: Regions, path networks:
   Path nodes), and picking a tool in the mode shows its entry; coming into the mode with its first
@@ -1022,36 +1035,61 @@ every other part).
   command (`GenerationViewModel.Rows`, the commands keep their ids: `generate.walkability`,
   `markers.connectPaths`, ...), with "Preview in the views" when an overlay shows its result
   (`ProceduralViewModel.PreviewWith(generator, overlay)`: walkability, `navigation`, `pathNodes`;
-  the check box runs the overlay's command), "Regenerate on its own" for a generator that opted in,
+  the check box runs the overlay's command), "Regenerate on its own" (every generator),
   and what the export does (`OnExport(generator, ExportUse)`: the normal map `WhenOutOfDate` with a
   check box, the preview `Always`). The settings are the map's (`MapDocument.Procedural`, the
   library's `ProceduralSettings`, kept in `map.json`): `generate.auto {id?, on?}` and
   `generate.onExport {id, on?}`, each a step of undo, in no menu.
-- **Regenerating on its own** (`model.AutoGeneration`, `ViewModels/AutoGeneration.cs`): for a
-  generator in `ProceduralSettings.AutoGenerate` that opted in (`AutoGeneration.Allow(id)`;
-  walkability does), `Follow` (on every `DocumentChanged`) compares its inputs (`IGenerator.Inputs`)
-  with those it was scheduled for: a change restarts a timer of `Delay` (1 s); then it generates on a
-  pool thread from the map as it is (`IGenerator.Generate(document, CancellationToken)`, span
-  `model.generate-auto`) and keeps the result as any other; a newer change to its inputs cancels the
-  run (walkability stops between the steps of `NavGenerator`) and starts the timer again. A
-  person's Generate takes over (`GenerateAsync` stops it), another map stops everything. Another
-  generator opts in with one `Allow` line, and overrides `Generate(document, token)` when it can stop
-  midway. `state.procedural.auto` (`pending`, `kept`, `cancelled`); tests set `Delay` small and await
-  `WhenIdleAsync`.
+- **Regenerating on its own** (the owner's decision Q5; `model.AutoGeneration`, `ViewModels/AutoGeneration.cs`,
+  `MainViewModel.AutoRegenerate.cs`): every registered generator may (`AutoGeneration.Allowed`); for one in
+  `ProceduralSettings.AutoGenerate`, **only while the views show its result** (`ShowsWhen(id, document => ..., when)`),
+  `Follow` (on every `DocumentChanged`, and when what the views show changes: the chips, the view, the mode, the
+  chosen mask; span `model.generate-auto-follow`) compares its inputs (`IGenerator.Inputs`) with those it was
+  scheduled for: a change restarts a timer of `Delay` (1 s); then it generates on a pool thread from the map as it
+  is (`IGenerator.Generate(document, CancellationToken)`, span `model.generate-auto`) and keeps the result as any
+  other; one that is part of the map goes in through `Apply` (`DeriveResult`, no step of undo). A newer change to
+  its inputs cancels the run (walkability stops between the steps of `NavGenerator`) and starts the timer again; a
+  result hidden meanwhile stops its timer (a run goes on to its end). A result never made that Everything leaves
+  out (`Generation.LeaveWhenMissing`: masks from rules without a rules layer, the sky cube map, a decal from a
+  file) is not made on its own. When each shows: walkability, the connected regions and the path networks while
+  their chip is on (Walkability, Connected regions, Generated nodes); masks from rules while a stratum has a rules
+  layer (the terrain always shows the strata) or the mask overlay or the Masks mode shows a mask with one; props
+  from rules while the Props chip is on; the normal map while the Procedural mode shows its picture (the views
+  draw no normal map); the preview while the Map or Procedural mode shows it; the normal and shadow decals while
+  the 3D view shows the decals and the slot is the generated one; the sky cube map while the 3D view shows and
+  the map holds a generated one. A person's Generate takes over (`GenerateAsync` stops it), another map stops
+  everything. `state.procedural.auto` (`on`, `pending`, `waiting`, `running`, `hidden`: out of date but not shown,
+  `shown` per generator, `text`, `tip`, `kept`, `cancelled`); tests set `Delay` small and await `WhenIdleAsync`.
+- **The switch in the views' bar** (`generate.automatic {on?}`, Generate menu): a chip after Mirror
+  (`MainWindow.axaml`, `Regenerate results on their own`) turns regenerating on their own on and off for the
+  editor, every map (`AutoGeneration.IsOn`; remembered in the user's settings, `UserSettings.RegenerateOnTheirOwn`,
+  on by default; the maps keep their settings). Its text says what waits or runs (`Auto`, `Auto: 1 waiting`,
+  `Auto: 1 running`, `Auto off`), its tool tip which results regenerate on their own, which wait, run, or wait to
+  be shown (`MainViewModel.AutoRegenerateText`, `AutoRegenerateTip`; span `model.auto-regenerate`).
+- **Workspace defaults** (Q5; the library's `ProceduralDefaults`, `workspace.json`'s optional `procedural`): what
+  a map made or imported in the workspace regenerates on its own (without a block: walkability, the navigation
+  mesh, masks from rules; not the path networks) and what its export makes or writes (the normal map, the path
+  networks: `ProceduralDefaults.ExportChoices`). Applied by `OpenNewMap` (`file.new`, a template), the sandbox
+  when it is written (`SandboxMap.Ensure`) and the editor's import (`EditedMap.ImportMap(folder, defaults)`); a
+  project opened keeps its own. `generate.useAsWorkspaceDefault` (Generate menu, and each Procedural entry's
+  inspector: Use as workspace default) takes the open map's; `workspace.setProcedural {id, auto?, onExport?}` is
+  the Workspace settings page's list (a check box per result, On export where the export has a choice;
+  `MainViewModel.WorkspaceProceduralRows`); `state.workspaceSettings.procedural`.
 - **The navigation mesh** (`generate.navigation`, Generate menu; `model.Navigation`,
-  `NavigationViewModel`; the library's `NavigationMeshGenerator`): per layer the regions (largest
-  first, the first 12 listed: size, starts, deposits; a start within 8 ogrids of a region belongs to
-  it, starts in none are named), the routes between the nearest starts or every pair
-  (`generate.setNavigation {layer?, routes?, region?}`: the layer and the chosen region are the
-  view's, the routes the map's, a step of undo). The overlay `navigation` (the Regions chip) colours
+  `NavigationViewModel`; the library's `NavigationMeshGenerator`): per layer the connected regions
+  (largest first, the first 12 listed: size, starts, deposits; a start within 8 ogrids of a region
+  belongs to it, starts in none are named; `generate.setNavigation {layer?, region?}`: the layer and
+  the chosen region are the view's). Every text a person reads says "Connected regions" (the chip,
+  the tool, the heading, the help, the tool's "Chosen connected region"); the ids (`navigation`,
+  `procedural.regions`) stay. The overlay `navigation` (the Connected regions chip) colours
   the regions of the chosen layer (`Rendering/RegionPixels`, tokens `MapRegion1Brush` to
   `MapRegion8Brush`, `MapRegionChosenBrush`; dark where units cannot go) in the top view
   (`HeightmapView.Navigation.cs`, span `top.regions`, made again only for another mesh, layer, region
   or theme: 28 ms on a 4096 map) and in 3D in walkability's slot of the overlays' pass
-  (`TerrainViewGpu.Navigation.cs`), with the routes as lines (`MapRouteBrush`; 3D: on the terrain,
-  span `3d.routes`). One tint at a time: walkability, the mask and the regions turn each other off.
-  The Regions tool (`procedural.regions`) chooses the region under a click. On a 4096 map the mesh
-  with its routes takes about 2.2 s (routes are searched in the game's blocks of 4 ogrids).
+  (`TerrainViewGpu.Navigation.cs`). One tint at a time: walkability, the mask and the regions turn
+  each other off. The Connected regions tool (`procedural.regions`) chooses the region under a click.
+  On a 4096 map the regions take well under a second once walkability is there; it regenerates on
+  its own while its chip is on (a workspace default).
 - **Export as steps** (`model.Export`, `ExportViewModel`; `MainViewModel.ExportAsync`): the
   registered `ExportStep`s in their `Order` (`GenerateOrder` 100: the normal map when out of date
   and the map does not keep its own; `PreviewOrder` 200: the preview, always; `GameFilesOrder` 500:
@@ -1088,8 +1126,8 @@ every other part).
   of undo, which put the result out of date. `markers.connectPaths {layers?, spacing?, airSpacing?,
   smoothing?, replace?}` (the row's and the panel's Generate) keeps what it is given in one step,
   `Generate the path networks`, turns writing on export on the first time, and generates on a pool
-  thread with the current walkability or navigation mesh. It may regenerate on its own
-  (`AutoGeneration.Allow`). The row's export check box is `ExportUse.Written` (the map's
+  thread with the current walkability or navigation mesh. It may regenerate on its own (while the
+  Generated nodes chip is on). The row's export check box is `ExportUse.Written` (the map's
   `PathNodes.OnExport`, through `ProceduralViewModel.OnExport(id, use, isOn, set)`).
 - **Edits by hand on top** (the owner's decision: generated nodes are the base, edits go on top):
   the Path nodes tool (`procedural.pathNodes`, `Tools/PathNodeEditTool.cs`, its layer in the options
@@ -1114,8 +1152,8 @@ every other part).
   the highest `LandPN` and so on; the map's own nodes stay and each piece of them is linked to the
   nearest generated node it sees, or with Replace they are left out of the files. The project never
   holds a generated node.
-- Automation: `state.procedural` (rows, auto, navigation with regions and routes, `showNavigation`,
-  `routesTop`, `routes3d`, export steps); `state.pathNodes` (settings, status, the preview per layer,
+- Automation: `state.procedural` (rows with `autoWhen`, auto, navigation with its connected regions,
+  `showNavigation`, export steps); `state.pathNodes` (settings, status, the preview per layer,
   the edits in words, `unmatched`, the chosen node).
 - **The map-wide normal and shadow decals** (9C) are generators too (`normalDecal`, `shadowDecal`,
   previews of at most 2048 pixels; may regenerate on their own) and have the panel section Map-wide
@@ -1132,7 +1170,7 @@ every other part).
   within `FacesTimeout`, and always on the UI thread, where `generate.stale` runs). Spans `model.sky-cube.sky`,
   `.gpu`, `.terrain`, `.dds`. On Sandbox with the 1196 sky objects of a skybox preset: about 0.8 s for the sky at
   1024, 80 ms for the faces on the card, 0.2 s for the DDS. Commands: `generate.skyCube {use?}` (Generate menu;
-  one step of undo putting `env/cubemaps/skycube_generated.dds` among the map's files), `generate.setSkyCube
+  putting `env/cubemaps/skycube_generated.dds` among the map's files without a step of undo, derived), `generate.setSkyCube
   {resolution?, eyeHeight?, terrain?, sunDisc?}` and `generate.useSkyCube {sky?, environment?, water?}` (all
   three when none is given; the water's cube map is no input, so using it keeps the cube current), and
   `lighting.importSkybox {path?}` (Lighting menu: a skybox preset of the FAF map editor, JSON, into the map's
@@ -1591,9 +1629,10 @@ Terrain panel's generated list and `generate.stale`.
 - **Props from rules follow the symmetry**: on a map with a symmetry (`MapDocument.Symmetry`) a
   rule's props come with their images in every other part (the library's `PropRules`), unless the
   rule's Mirror is off (`props.setRule {mirror}`, the inspector's "Mirror with the map's symmetry").
-- Generating runs on a thread of the pool through `MainViewModel.GenerateAsync` and is one step of
-  undo (`Generate the masks from rules`, `Generate the props from rules`); 7 500 trees on Seton's
-  Clutch (20 km) take about 35 ms.
+- Generating runs on a thread of the pool through `MainViewModel.GenerateAsync` and goes into the
+  map without a step of undo (a derived result, section "Walkability, the normal map and preview");
+  masks from rules regenerate on their own by the workspace's default while they show; 7 500 trees
+  on Seton's Clutch (20 km) take about 35 ms.
 - Automation: `state.rules` (`masks`: the mask being edited, its rules with their fields, whether a
   preview shows, how they stand, the masks with rules; `props`: the chosen rule, the rules with
   their summaries, its palette and number of layers, how they stand).

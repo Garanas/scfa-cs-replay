@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -192,6 +193,7 @@ public sealed partial class MainViewModel
         {
             return;
         }
+        using Performance.Span measure = Performance.Measure("model.auto-regenerate");
         IReadOnlyList<string> running = AutoGeneration.Running;
         IReadOnlyList<string> waiting = AutoGeneration.Waiting;
         IReadOnlyList<string> hidden = AutoGeneration.Hidden;

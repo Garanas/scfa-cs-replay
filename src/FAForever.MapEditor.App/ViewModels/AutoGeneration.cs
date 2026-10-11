@@ -138,9 +138,16 @@ public sealed class AutoGeneration
                 return [];
             }
             return [.. document.Procedural.AutoGenerate.Where(id => _generation.Results.Find(id) is not null && !IsShown(id, document)
-                && (_generation.Results.ResultOf(id) is not GeneratedResult result || result.IsStale(document)))];
+                && (_generation.Results.ResultOf(id) is GeneratedResult result ? result.IsStale(document) : !LeftWhenMissing(id, document)))];
         }
     }
+
+    /// <summary>
+    /// Whether a result never made for the map is left alone, as Everything out of date or missing
+    /// leaves it (<see cref="GenerationViewModel.LeaveWhenMissing"/>: masks from rules on a map without
+    /// rules, the sky cube map made only when asked, a map-wide decal taken from a file).
+    /// </summary>
+    private bool LeftWhenMissing(string id, MapDocument document) => _generation.WhyLeftWhenMissing(id, document) is not null;
 
     /// <summary>
     /// How many runs finished and were kept, and how many a newer change stopped (for automation and tests).
@@ -206,7 +213,7 @@ public sealed class AutoGeneration
                     // a newer change: the run stops, the timer starts again
                     Stop(id);
                 }
-                else if (_generation.Results.ResultOf(id) is GeneratedResult result && !result.IsStale(document))
+                else if (_generation.Results.ResultOf(id) is GeneratedResult result ? !result.IsStale(document) : LeftWhenMissing(id, document))
                 {
                     continue;
                 }

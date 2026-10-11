@@ -49,7 +49,14 @@ reads again when it changes; and nothing that generates runs by itself.
       out of date or missing (`generate.all`) also makes what was never made and says why it leaves
       the rest (the sky cube map only when asked); results kept in the project (rules layers, props
       of rules, the sky cube map, the preview and normal map) count as current when it opens; the
-      export generates into its copy only and leaves the history alone.
+      export generates into its copy only and leaves the history alone. A generated result that
+      goes into the map is derived: no step of undo; undoing its source takes it back with it, and
+      each version keeps the results made for it. Every result may regenerate on its own (each
+      entry's check box, the map's), only while the views show it; the Auto switch in the views'
+      bar turns that on and off for the editor and says what waits or runs; the workspace says
+      what new and imported maps regenerate on their own and make on export (by default
+      walkability, connected regions and masks from rules), edited on the Workspace settings page
+      or taken from a map (Use as workspace default).
 - [x] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
       missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map

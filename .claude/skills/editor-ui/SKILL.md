@@ -143,7 +143,8 @@ faf-map editor run id=generate.navigation --port 5372                    # the P
 faf-map editor run id=generate.skyCube use=true --port 5372              # a sky cube map from the map, used for sky, units, water (state.skyCube)
 faf-map editor run id=view.inspectPart part=procedural.navigationMesh --port 5372   # a generated result's entry in the inspector (state.procedural.list)
 faf-map editor run id=terrain.switchHeights to=draft --port 5372          # both views show the draft, brushes write it (state.draftFinal); Ctrl+Shift+D
-faf-map editor run id=generate.auto on=true --port 5372                  # walkability regenerates 1 s after a change; wait path=procedural.auto.kept
+faf-map editor run id=generate.auto on=true --port 5372                  # walkability regenerates 1 s after a change while its chip is on; wait path=procedural.auto.kept
+faf-map editor run id=generate.automatic on=false --port 5372            # the views' bar's Auto switch: nothing regenerates on its own (state.procedural.auto: waiting, running, hidden)
 faf-map editor run id=file.export --port 5372 && faf-map editor state path=procedural.export --port 5372   # the export's steps
 ```
 
