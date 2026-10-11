@@ -1040,6 +1040,66 @@ User stories T-5 and T-4 (`MapDocument.HeightStack`, `Editing/HeightLayers`, `He
   the width (a cliff: a drop of an ogrid at the curve, full over the width on the high side) and
   a smooth fade over the falloff. `SetCurve` rasterizes again, reusing the tiles that come out the
   same, within the tiles the old and new curve reach; a new profile brings its way of combining.
+- **The curve's settings in full** (wave 17, the owner's chosen upgrades; `HeightCurve.cs`,
+  `HeightCurves`): every curve has them; a new setting is a property at the end with a default.
+  - *Per point* (`CurvePoint(X, Z, Height, Width?, FalloffLeft?, FalloffRight?, Strength?, Sharp)`):
+    null is the curve's value (`IsPlain`: none set). Between points the values blend by a
+    smoothstep. Strength (0 to 1, null 1) scales the profile (a road's or river's coverage). A sharp
+    point makes a corner: the Catmull-Rom neighbour across it is the point itself.
+  - *Heights between points* follow a monotone cubic (Fritsch and Carlson) for every curve: nothing
+    lies outside the two points' heights, points of one height keep exactly that height (curves of
+    one height make exactly what they made before; `HeightCurvesTest` compares with the old code,
+    `LegacyHeightCurves` in the tests).
+  - *Per curve*: `Falloff` (left, and right too) and `FalloffRight` (null: the same); `FalloffShape`
+    (`Smooth`, `Linear`, `EaseIn`, `EaseOut`, `Terraced` with `TerraceSteps`; null: the profile's,
+    `HeightCurves.ShapeOf`: ease out for a river, smooth otherwise; `HeightCurves.Fade(t, shape,
+    steps)` is the curve of it), applied to the fade and to a cliff's face (a terraced face is a
+    terraced cliff); `CliffFace` (the drop's width in ogrids; 1 and smooth is the cliff as it always
+    was; the cliff fades back over its left falloff, its high side's); `RoadMode` (`Both` replace,
+    `CutOnly` minimum, `FillOnly` maximum: `HeightCurves.CombineOf(curve)`, which `NewCurve` and
+    `SetCurve` set as a profile does, unless the map maker chose another way); `Camber` (a road's or
+    river's left edge that much higher than its right, across the width); edge noise
+    `NoiseAmplitude` (ogrids, 0 none), `NoiseScale`, `NoiseSeed` (`HeightNoise` at the place moves
+    the distance to the line before the fade, the signed distance of a cliff or a fill); variation
+    along the curve as ranges, `HeightVariation` and `WidthVariation` (`CurveRange(Min, Max)`, added
+    to the height in game units and the width in ogrids: -1 to 0 on a ridge of 5 gives 4 to 5) with
+    `VariationScale` (ogrids along the curve), one-dimensional noise over the distance along the
+    curve with the same seed; `LineOnly` (closed curves).
+  - *Profiles*: `River` (appended) is a road that only cuts (minimum, coverage, absolute heights like
+    a road's: `HeightCurves.IsAbsolute`), its banks easing out unless a shape is set.
+  - *Closed curves fill* (`HeightCurve.Fills`: closed, not line only, three points or more): the
+    inside (even and odd crossings per row on the sampled line) counts as on the curve, the outside
+    fades over the falloff on the outside's side; a closed cliff raises its inside with the face at
+    the line and no fade back. A fill has one height and strength, the means of its samples' along
+    the curve: per-point heights do not tilt a fill. Edge noise makes the rim ragged.
+  - *Symmetry*: the images are drawn from the curve's own samples turned or mirrored (a mirrored
+    image runs the other way, so its left is the image of the curve's left), so they carry the same
+    variation; each reads the edge noise at the original place (the inverse of its transform, as
+    `HeightBrush.NoisePlace` does). Every part of a map is alike (no setting). Where parts overlap,
+    the one that shapes most wins as before.
+  - *Reading a curve* (for the window's node table, lines and grades): `HeightCurves.Samples(curve)`
+    gives `CurveSample`s about an ogrid apart with every value there (height and width with the
+    variation, both falloffs, strength, `Distance` along the spline, `Node`: the point's index at a
+    point, else -1); `Spline` the same as points. `HeightCurves.Grades(curve)` gives per pair of
+    points a `CurveGrade` (rise, run along the spline, percent, degrees, the steepest grade and where).
+  - *Edits* (`HeightLayerEdits`, each through `SetCurve`, refused on a locked layer): `CurveOf`,
+    `ReverseCurve` (`HeightCurves.Reversed`: the points in the other order, the falloffs left and
+    right swapped, the curve's and each point's, for every profile but the cliff, whose high side
+    flips; the camber's sign; variation then reads the distance from the other end),
+    `SetCurvePoint(index, point)`, `EvenGrade(from, to)` (`HeightCurves.EvenGrade`: the points
+    between get heights on a straight line by the distance along the spline), `SnapCurve(indices?)`
+    (a road's or river's points get the height the layers below its layer make there, in the stack
+    that holds it: an explicit snap, nothing follows the ground later).
+  - *Cost*: the reach is per segment (widths, falloffs, the face and the noise's amplitude), the
+    bands of rows and the reuse of tiles as before; a part's values are worked out in parallel per
+    row, then merged. A ridge of about 650 ogrids on an 81 km map: 5 ms before, 6 ms now, 8 ms
+    with noise and variation (`ALongCurveWithNoiseOnTheLargestMapStaysQuick`, debug).
+  - *On disk* (format 9): the curve's `nodes` (the points with values of their own, by `index`),
+    `falloffRight`, `falloffShape`, `terraceSteps`, `cliffFace`, `roadMode`, `camber`,
+    `noiseAmplitude`, `noiseScale`, `noiseSeed`, `heightVariation` and `widthVariation` as
+    `[min, max]`, `variationScale` (each left out at its default), and `lineOnly`, written for every
+    closed curve: a closed curve without it (format 8 and older) opens as line only, so it keeps its
+    look; new closed curves fill.
 - **On disk** (format 6, `MapProjectStore.Stacks.cs`): `stacks/heightmap.json` (`LayerStackDto`:
   the target, the layers with name, `source`, combine, strength, clip, hidden, locked, base, and
   their source's fields: `offset`, `path`, `mask`/`threshold`/`invert`/`height`, `rules`, `curve`;

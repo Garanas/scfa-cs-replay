@@ -2108,6 +2108,26 @@ User stories T-5 and T-4; the library does the work (its guide, "Height layers a
   `Base`, `Sculpt`, `Imported`, `Curve`, and its `sourceKind`, `painted`, `image`, `curve`, `mask`).
 - On an 81 km map: adding the first layer 0.2 s, a stroke's move about 30 ms, a curve edit 0.3 to
   0.7 s with the views' own reaction to the new heights (debug build).
+- **The curves' settings in commands** (wave 17, `Commands/Terrain/HeightCurves.cs`; the library's
+  guide, "The curve's settings in full"): `terrain.addCurve` and `terrain.setCurve` also take
+  `falloffRight` (negative: the same as the falloff), `shape` (`smooth`, `linear`, `easeIn`,
+  `easeOut`, `terraced`, `default`: the profile's), `terraceSteps`, `cliffFace`, `roadMode` (`both`,
+  `cutOnly`, `fillOnly`), `camber`, `noiseAmplitude`, `noiseScale`, `noiseSeed`, `heightVariation`
+  and `widthVariation` (`[min, max]`), `variationScale` and `lineOnly` (`ICurveFields`,
+  `HeightCurveArguments`); the profile `river`. Points are `[x, z]`, `[x, z, height]` or objects
+  `{x, z, height?, width?, falloffLeft?, falloffRight?, strength?, sharp?}` (`CurvePointArgument`;
+  the curve tool sends a point with values of its own as an object, so they stay). A river's points
+  without heights put its bed `height` below the water's elevation (below 0 without water), and the
+  status says where. Further, each one step of undo and in no menu (wave 18 adds their buttons):
+  `terrain.reverseCurve {layer?}`, `terrain.setCurvePoint {index, layer?, x?, z?, height?, width?,
+  falloffLeft?, falloffRight?, strength?, sharp?, clear?}` (`clear`: `width,strength`, or `all`, gives
+  values back to the curve; the same point's same values typed again are one step),
+  `terrain.evenGrade {from, to, layer?}`, `terrain.snapCurve {layer?, points?: ends|all|[indices]}`
+  (ends when left out; a road or river only). `state.heightLayers` gives each curve's `nodes` (its
+  points with values of their own, with `index`), every setting (`shape` resolved, `shapeSet`),
+  `fills` and `grades` (from, to, rise, run, percent, degrees, steepestPercent, steepestAt).
+  On an 81 km map a ridge of about 520 ogrids is changed in about 8 to 12 ms (`model.height-layers`,
+  debug build; 40 to 70 ms before wave 17), 10 to 22 ms with edge noise and variation.
 - Not built yet: a height per point by hand in the views, merging layers.
 
 ## Draft and final heightmaps

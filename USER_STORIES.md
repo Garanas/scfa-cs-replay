@@ -255,8 +255,14 @@ reads again when it changes; and nothing that generates runs by itself.
       terrain follows (it stays a layer, see T-5). Today: the curve tool draws a Catmull-Rom curve
       layer point by point in the top view, moves, inserts and removes points; the inspector sets
       its profile, width, falloff, height and whether it is closed; the 3D view draws the curve and
-      its points on the terrain, where the tool works as in the top view. Missing: a height per
-      point by hand in the views.
+      its points on the terrain, where the tool works as in the top view. Wave 17 (library and
+      commands): width, falloffs, strength and a sharp corner per point; smooth heights between
+      points; reverse; falloff shapes (terraced too) and a cliff's face width; edge noise and
+      variation along the curve as ranges, alike in every part of a symmetric map; closed curves
+      fill (older ones open as line only); a river; road modes (cut only, fill only) and camber;
+      ramps (a point's values, an even grade, points snapped to the ground, the grades). Missing:
+      the window's node table and a height per point by hand in the views (wave 18), decals along
+      a curve (wave 17B), cliff faces in the walkability marks (D3).
 - [x] **T-5 Heightmap layers.** A stack of layers that add up to the heightmap: the base, sculpting,
       curves, imported results of World Machine or Gaea; per layer a way of combining (add, maximum,
       minimum, replace), strength, a mask, visible or hidden, locked. Shape the general form in the
