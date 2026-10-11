@@ -184,7 +184,8 @@ namespace FAForever.MapEditor.Project.Checks
         }
 
         /// <summary>
-        /// The footprint of a unit in ogrids: its blueprint's, else the engine's default of 1 by 1.
+        /// The footprint of a unit in ogrids: its blueprint's or the engine's default for a structure without one
+        /// (<see cref="AssetEntry.Footprint"/>), else 1 by 1.
         /// </summary>
         public static (double SizeX, double SizeZ) FootprintSize(AssetEntry entry) => entry.Footprint ?? (1, 1);
 
@@ -192,7 +193,7 @@ namespace FAForever.MapEditor.Project.Checks
         /// The ground a structure reserves at a place, as the engine computes it
         /// (<c>RUnitBlueprint::GetSkirtRect</c>): the skirt starts at the footprint's corner plus
         /// the skirt offset (never positive) and is at least as large as the footprint; a blueprint
-        /// without a skirt reserves its footprint, and one without a footprint has the default 1 by 1.
+        /// without a skirt reserves its footprint.
         /// </summary>
         /// <param name="x">Its centre, in ogrids.</param>
         /// <param name="radians">Its heading.</param>

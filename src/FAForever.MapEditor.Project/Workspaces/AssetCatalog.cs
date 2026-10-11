@@ -119,7 +119,8 @@ namespace FAForever.MapEditor.Project.Workspaces
 
         /// <summary>
         /// The space a unit takes up on the map in ogrids, along x and z when it is not turned;
-        /// null for the other kinds and for units whose blueprint names none.
+        /// null for the other kinds. A structure whose blueprint names none has the engine's default,
+        /// its hitbox rounded up to whole ogrids (<c>REntityBlueprint::OnInitBlueprint</c>).
         /// </summary>
         public (double SizeX, double SizeZ)? Footprint { get; init; }
 
@@ -549,7 +550,9 @@ namespace FAForever.MapEditor.Project.Workspaces
                     Family = id,
                     IsCivilian = categories.Contains("CIVILIAN"),
                     TechLevel = unit.TechLevel,
-                    Footprint = unit.Footprint is { } size ? (size.SizeX, size.SizeZ) : null,
+                    Footprint = unit.Footprint is { } size ? (size.SizeX, size.SizeZ)
+                        : layer == "structure" && unit.Size is { } hitbox ? (Math.Max(1, Math.Ceiling(hitbox.X)), Math.Max(1, Math.Ceiling(hitbox.Z)))
+                        : null,
                     Limits = unit.Skirt is null && unit.BuildOnLayers is null && unit.Footprint?.MaxSlope is null && unit.Footprint?.MinWaterDepth is null
                         && unit.MaxGroundVariation is null && !unit.FlattenSkirt
                         ? null
