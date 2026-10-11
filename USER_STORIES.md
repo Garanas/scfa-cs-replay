@@ -544,12 +544,19 @@ reads again when it changes; and nothing that generates runs by itself.
       units), Save back to the preset (asked first; the file keeps its role and wrecks), Show the
       preset (highlighted in the list) and Detach; Problems notes instances whose preset changed or
       is missing (`preset-changed`); the export writes the group as any other.
-- [ ] **U-10 Select by and stored selections.** Select units by army, faction, kind, tech,
+- [x] **U-10 Select by and stored selections.** Select units by army, faction, kind, tech,
       blueprint and wrecks, within the map, the selection or an area, replacing the selection or
       adding to it; store the selection under 1 to 9 (Alt and the digit) and recall it (the digit),
       as the game's control groups, kept with the project and shown along the view; a click inside
       a structure's footprint picks it; the top view draws units as their footprint in the army's
       colour.
+      Today: `select.where` and the select tool's Select by popover choose units by all of those, within
+      the map, the selection or an area, replacing or adding (`select.by` opens it); Alt and a digit store
+      the selection and a digit recalls it (`select.store`, `select.recall`, in every select tool), kept per
+      project in the user's settings and shown as chips along the top view (`3 · Cybran farm · 17`); a click
+      inside a structure's footprint, or a box that touches it, picks it (Picks: Footprint or Centre); the
+      top view draws a structure as its footprint and a mobile unit as a diamond in the army's colour (the
+      chip Army colours turns it off; the 3D view is not coloured by army).
 - [x] **U-11 Editing many units.** Group the selection into a new group (Ctrl+G) and ungroup; the
       group as a choice in the inspector; replace the blueprint of the selected units, or convert
       them to another faction's unit of the same kind and tech; a move keeps structures on the

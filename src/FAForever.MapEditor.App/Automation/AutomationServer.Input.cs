@@ -79,19 +79,22 @@ public sealed partial class AutomationServer
                     case "up":
                         Input.Up(at, button, modifiers);
                         break;
-                    case "click":
+                    case "click" or "doubleclick":
+                    {
+                        // clicks=2 presses twice in a row, which the views count as a double click (ToolInput.Clicks)
+                        int clicks = (int)(Number(arguments, "clicks") ?? (action.Equals("doubleClick", StringComparison.OrdinalIgnoreCase) ? 2 : 1));
+                        if (clicks is < 1 or > 3)
+                        {
+                            throw new ArgumentException($"clicks is {clicks}: 1 to 3");
+                        }
                         Input.Move(at, modifiers);
-                        Input.Down(at, button, modifiers);
-                        Input.Up(at, button, modifiers);
-                        break;
-                    case "doubleclick":
-                        Input.Move(at, modifiers);
-                        for (int i = 0; i < 2; i++)
+                        for (int i = 0; i < clicks; i++)
                         {
                             Input.Down(at, button, modifiers);
                             Input.Up(at, button, modifiers);
                         }
                         break;
+                    }
                     case "drag" when window.InputHitTest(at) is Visual grabbed && grabbed.FindAncestorOfType<Avalonia.Controls.Primitives.Thumb>(includeSelf: true) is not null:
                         // a splitter or another thumb moves by the layout between the moves: one at a time
                         await DragStepwiseAsync(at, InWindow(view, Pair(arguments, "to")), button, (int)(Number(arguments, "steps") ?? 10), modifiers);

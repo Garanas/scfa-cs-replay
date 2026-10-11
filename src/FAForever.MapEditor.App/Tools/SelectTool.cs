@@ -10,6 +10,47 @@ using FAForever.MapEditor.Project.Files.InMemory;
 namespace FAForever.MapEditor.App.Tools;
 
 /// <summary>
+/// One way units are picked in the select tool's options (user story U-10): a chip that is on while it
+/// is <see cref="MainViewModel.UnitPicks"/>.
+/// </summary>
+public sealed partial class UnitPickChoice : ObservableObject
+{
+    private readonly MainViewModel _model;
+    private readonly UnitPicking _mode;
+
+    public UnitPickChoice(MainViewModel model, UnitPicking mode)
+    {
+        _model = model;
+        _mode = mode;
+        model.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.UnitPicks))
+            {
+                OnPropertyChanged(nameof(IsOn));
+            }
+        };
+    }
+
+    public UnitPicking Mode => _mode;
+
+    public string Title => _mode.ToString();
+
+    /// <summary>
+    /// For screen readers and automation: <c>Pick units by their footprint</c>.
+    /// </summary>
+    public string Label => _mode == UnitPicking.Footprint ? "Pick units by their footprint" : "Pick units by their centre";
+
+    public string Help => _mode == UnitPicking.Footprint
+        ? "A click inside a structure's footprint picks it, and a box that touches it; a mobile unit by its centre"
+        : "Every unit by its centre, within a few pixels";
+
+    public bool IsOn => _model.UnitPicks == _mode;
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void Choose() => _model.UnitPicks = _mode;
+}
+
+/// <summary>
 /// Selects things on the map and moves them (user story F-11). A click selects the nearest thing
 /// within a few pixels, shift adds it and control takes it out or adds it; a click on nothing
 /// selects nothing. Dragging on empty ground draws a box that selects what lies in it (with shift
@@ -102,17 +143,36 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
 
     public bool HasFilters => Filters.Count > 0;
 
+    /// <summary>
+    /// Whether the tool picks units, so that its options say how (<see cref="MainViewModel.UnitPicks"/>).
+    /// </summary>
+    public bool PicksUnits => Kinds.HasFlag(ObjectKinds.Units);
+
+    /// <summary>
+    /// What the choice of how units are picked is called: <c>Picks</c>, or <c>Units by</c> beside the kinds' filter.
+    /// </summary>
+    public string UnitPicksLabel => HasFilters ? "Units by" : "Picks";
+
+    private IReadOnlyList<UnitPickChoice>? _unitPickChoices;
+
+    /// <summary>
+    /// How units are picked, as chips: the structure's footprint, or every unit's centre.
+    /// </summary>
+    public IReadOnlyList<UnitPickChoice> UnitPickChoices => _unitPickChoices ??= [.. Enum.GetValues<UnitPicking>().Select(mode => new UnitPickChoice(model, mode))];
+
     partial void OnKindsChanged(ObjectKinds value)
     {
         _filters = null;
         OnPropertyChanged(nameof(Filters));
         OnPropertyChanged(nameof(HasFilters));
+        OnPropertyChanged(nameof(PicksUnits));
+        OnPropertyChanged(nameof(UnitPicksLabel));
     }
 
     /// <summary>
     /// What the options bar says about using it.
     /// </summary>
-    public string Help => "Click to select, shift adds, control toggles; drag a box on empty ground; drag the selection or its handles to move, turn or scale it (shift snaps, hold X or Z for one axis, R to turn); Q and E turn it, the arrows move it, Delete removes it";
+    public string Help => "Click to select, shift adds, control toggles; drag a box on empty ground; drag the selection or its handles to move, turn or scale it (shift snaps, hold X or Z for one axis, R to turn); Q and E turn it, the arrows move it, Delete removes it; 1 to 9 recall a stored selection, Alt and a digit store one";
 
     /// <summary>
     /// The handle under the mouse when a view last drew, or the one being dragged.
@@ -266,6 +326,17 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             _gesture = Gesture.Turn;
             return;
         }
+        if (input.Clicks >= 2 && change == SelectionChange.Replace && under is { Kind: ObjectKind.Unit } doubled
+            && model.ShownDocument!.InstanceOf(doubled.Name!) is PlacedInstance instance)
+        {
+            // a double click on a unit placed from a preset: the whole instance, its group's units (U-9); before the handles,
+            // since the first click of the double click selected the unit and put the move handle over it
+            model.Selection.Set(model.ShownDocument!.UnitsIn(instance.Army, instance.Path).Select(unit => ObjectRef.Unit(unit.Unit.Name)));
+            model.InspectTheSelection();
+            model.Status = $"Selected the {MainViewModel.Units(model.Selection.Count)} of {UnitGroupEdits.PathText(instance.Path)} of {instance.Army}, an instance of the preset {instance.Instance.Preset}";
+            _gesture = Gesture.Click;
+            return;
+        }
         if (HandleAt(x, z, input) is { IsNone: false } part && Frame is SelectionFrame frame)
         {
             _view = input.ViewAt(x, z);
@@ -277,16 +348,7 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
         }
         if (under is ObjectRef picked)
         {
-            if (input.Clicks >= 2 && change == SelectionChange.Replace && picked.Kind == ObjectKind.Unit
-                && model.ShownDocument!.InstanceOf(picked.Name!) is PlacedInstance instance)
-            {
-                // a double click on a unit placed from a preset: the whole instance, its group's units (U-9)
-                model.Selection.Set(model.ShownDocument!.UnitsIn(instance.Army, instance.Path).Select(unit => ObjectRef.Unit(unit.Unit.Name)));
-                model.InspectTheSelection();
-                model.Status = $"Selected the {MainViewModel.Units(model.Selection.Count)} of {UnitGroupEdits.PathText(instance.Path)} of {instance.Army}, an instance of the preset {instance.Instance.Preset}";
-                _gesture = Gesture.Click;
-            }
-            else if (change == SelectionChange.Toggle)
+            if (change == SelectionChange.Toggle)
             {
                 model.Selection.Apply([picked], SelectionChange.Toggle);
                 _gesture = Gesture.Click;
@@ -385,6 +447,10 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
     public bool Key(string key, ToolModifiers modifiers)
     {
         bool shift = modifiers.HasFlag(ToolModifiers.Shift);
+        if (StoredSelectionKey(key, modifiers))
+        {
+            return true;
+        }
         if (key == "Escape")
         {
             if (model.Selection.IsEmpty)
@@ -415,6 +481,29 @@ public sealed partial class SelectTool(MainViewModel model, ObjectKinds kinds) :
             return false;
         }
         _ = model.RunWithAsync(command, arguments);
+        return true;
+    }
+
+    /// <summary>
+    /// The digits 1 to 9 (user story U-10): Alt and a digit store the selection, a digit recalls it,
+    /// shift adds it to the selection. The place tool's digits pick palette slots; the active tool owns the key.
+    /// </summary>
+    private bool StoredSelectionKey(string key, ToolModifiers modifiers)
+    {
+        string digit = key.Length == 2 && key[0] == 'D' ? key[1..] : key.StartsWith("NumPad", StringComparison.Ordinal) && key.Length == 7 ? key[6..] : "";
+        if (digit.Length != 1 || digit[0] is < '1' or > '9' || modifiers.HasFlag(ToolModifiers.Control))
+        {
+            return false;
+        }
+        int slot = digit[0] - '0';
+        if (modifiers.HasFlag(ToolModifiers.Alt))
+        {
+            _ = model.RunWithAsync("select.store", new JsonObject { ["slot"] = slot });
+        }
+        else
+        {
+            _ = model.RunWithAsync("select.recall", new JsonObject { ["slot"] = slot, ["add"] = modifiers.HasFlag(ToolModifiers.Shift) });
+        }
         return true;
     }
 

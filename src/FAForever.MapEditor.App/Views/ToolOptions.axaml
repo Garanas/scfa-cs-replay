@@ -241,6 +241,26 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                 </StackPanel>
+                <!-- units chosen by what they are (U-10): the popover lies over the top view (SelectByPopover in MainWindow) -->
+                <Button Content="Select by..." IsVisible="{Binding PicksUnits}" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="select.by"
+                        AutomationProperties.Name="Select units by what they are"
+                        AutomationProperties.HelpText="Opens a popover: choose the army, faction, kind, tech level, blueprint and wrecks, within the map, the selection or an area; Add keeps the selection, Select replaces it" />
+                <StackPanel Classes="inline" IsVisible="{Binding PicksUnits}">
+                  <TextBlock Classes="label" Text="{Binding UnitPicksLabel}" />
+                  <ItemsControl ItemsSource="{Binding UnitPickChoices}" AutomationProperties.Name="How units are picked">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Classes="inline" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="tools:UnitPickChoice">
+                        <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Title}" Command="{Binding ChooseCommand}"
+                                AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" ToolTip.Tip="{Binding Help}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
                 <StackPanel Classes="inline" DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Handles}">
                   <CheckBox Content="Handles" IsChecked="{Binding Show}" AutomationProperties.Name="Show the handles of the selection"
                             AutomationProperties.HelpText="The square moves, the arrows move along x or z, the ring turns, the squares on the box scale" />

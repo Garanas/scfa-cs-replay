@@ -1660,7 +1660,52 @@ change, span `model.armies`), the place tool and the commands.
   instance's group and its state) for a unit of one; `state.presets` has `highlighted` and
   `instances` (per preset placed: `placed`, `outOfDate`).
 - **Dragging in the tree** (U-3): section "Content to use again" below.
-- Not built yet: team colours in the views.
+- **Select by, stored selections, footprints** (U-10; `MainViewModel.UnitSelection.cs`,
+  `ViewModels/SelectByViewModel.cs`, `StoredSelectionsViewModel.cs`, `Commands/Select/SelectWhere.cs`):
+  - `select.where {army?, faction?, kind?, tech?, blueprint?, wrecks?, within?, add?}` (Select menu has
+    `select.by`) selects units by what they are and answers how many are selected; what is left out
+    asks nothing. `faction` (`uef`, `aeon`, `cybran`, `seraphim`, `other`), `kind` (`structure`, `land`,
+    `air`, `naval`, `other`) and `tech` (1 to 4) take one or more: a text with commas (`uef,aeon`), a
+    list, a number. `wrecks` is `leave` (the default), `only` or `include`; `within` is `map` (the
+    default), `selection` or `area:NAME`; `add` keeps the selection. The question is the library's
+    `UnitQuery` (its guide: a faction is the blueprint's in the catalogue, else the army's); the view
+    model leaves out what isolating the selection hides (`UnitsWhere`, span `model.select-where`). A
+    value that is none of the choices is an `ArgumentException` listing them.
+  - **The popover** is the select tool's `Select by...` button (shown while the tool picks units): an
+    overlay `Border.popover` in the window's tree over the top view (`Views/SelectByPopover`, not a
+    `Popup`, so `ui` and `click` reach its controls), `model.SelectBy`: Army combo, Faction, Kind, Tech
+    and Wrecks and Within as chips (`ToggleButton.chip`, named `Select by faction UEF`, `Wrecks: only`,
+    `Within the selection`, ...), Blueprint text, the live count (`28 units match`, span
+    `model.select-by-count`, counted again when the document or, within the selection, the selection
+    changes), Add and Select (they run `select.where`), Reset and Close; `select.by {open?}` and the
+    button open it, another tool, Close and Escape inside it close it. `state.selection.selectBy` has
+    its choices, count and `open`.
+  - **Stored selections**: in a select tool (any `SelectTool`, so the Decals mode's too) Alt and 1 to 9
+    store the selection (`select.store {slot}`, an empty selection empties the digit), a digit recalls
+    it (`select.recall {slot, add?}`, shift adds; a thing that is gone is dropped silently, also from the
+    digit), the numeric keypad too, never with control (Ctrl+1 to 3 are the views). The active tool owns
+    the key: the place tool's digits pick palette slots (`UnitPlaceTool.PaletteKey`). `model.StoredSelections`
+    keeps them with the project in the user's settings (`UserSettings.StoredSelections(folder)`, by the
+    project's folder; a map that is not a project keeps them while the editor runs): the units and areas by
+    name, never a marker, prop or decal (their ids are of one session), never the map's files. The chips
+    lie along the bottom of the top view (`ItemsControl.storedchips` in `MainWindow`'s `TopOverlays`, which
+    follows the top view's columns): `3 · Cybran farm · 17`, the group's name when all its units share the
+    group, else `3 · 17`, the count of what is left; a click recalls it, and the chip that holds exactly
+    the selection is lit. `state.selection.stored` has the slots (things, count, group, chip).
+  - **Picks** in the select tool's row (`Footprint`, the default, or `Centre`; `MainViewModel.UnitPicks`,
+    `state.selection.unitPicks`): a click inside a structure's footprint picks it, and a box that touches it,
+    through the library's `MapObjects.Nearest` and `Inside` with `UnitFootprints` (the catalogue's footprint
+    of a structure; a mobile unit is a point). The 3D view picks by its own ray.
+  - **Army colours** in the top view (`Controls/HeightmapView.Units.cs`, span `top.units`, `UnitsDrawn` for
+    tests and automation): a structure as its footprint (turned by its heading) outlined and filled faintly
+    in its army's colour, a mobile unit a small diamond, a wreck the ashen cross as before; a footprint under
+    3 pixels is the small square again. The colours are the map's, made in code (`ViewModels/ArmyColours`:
+    the army's own `Color` when the map sets one, else its place in the army list, the civilians grey). The
+    overlay `armyColours` (the chip `Show Army colours`, `view.overlay.armyColours`, `ShowArmyColours`) turns
+    them off: every unit but a wreck is the small square of the theme's unit brush. The 3D view is not
+    coloured by army.
+- A double click on a unit of a placed preset selects the whole instance before the move handle of the
+  selection, which the first click of the double click put over the unit, takes the press.
 
 ## Markers: placing, linking, chains
 
@@ -2963,8 +3008,8 @@ changes them. Places are in device-independent pixels of a view (`view: top|3d`)
 (the default); a hidden view is refused (`tab` first). The mouse finds what lies under it in the
 last frame drawn.
 
-- `mouse {view?, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, to?: [x, y], steps?, notches?, modifiers?}`:
-  `click` is the default; `drag` presses at `x, y` and lets go at `to` after `steps` moves; `wheel`
+- `mouse {view?, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, clicks?, to?: [x, y], steps?, notches?, modifiers?}`:
+  `click` is the default; `clicks` (1 to 3) presses that many times in a row (`clicks=2` is `doubleClick`: the views count it, `ToolInput.Clicks`); `drag` presses at `x, y` and lets go at `to` after `steps` moves; `wheel`
   turns `notches` (positive zooms in). The answer's `mouse` has where it is and what it hit.
 - `key {key, action?, modifiers?, repeat?}`: a name (`E`, `Delete`, `Escape`, `Enter`, `F5`, `Up`, `5`,
   `Shift`, `Ctrl`, `Alt`) or a gesture (`Ctrl+K`, `Ctrl+Shift+Z`); modifiers as a list or

@@ -106,6 +106,47 @@ namespace FAForever.MapEditor.Project.Workspaces
         public void SetUnits(UnitsSettingsDto units) => Update(settings => settings with { Units = units });
 
         /// <summary>
+        /// The selections stored under the digits 1 to 9 for the project in <paramref name="projectFolder"/>
+        /// (user story U-10), each as the text of its things (<c>unit:UNIT_5</c>, see
+        /// <see cref="Editing.ObjectRef"/>); empty for a project that has none.
+        /// </summary>
+        public IReadOnlyDictionary<int, IReadOnlyList<string>> StoredSelections(string projectFolder)
+        {
+            Dictionary<int, IReadOnlyList<string>> slots = [];
+            if (Read().StoredSelections?.GetValueOrDefault(Path.GetFullPath(projectFolder)) is { } stored)
+            {
+                foreach ((string slot, List<string> things) in stored)
+                {
+                    if (int.TryParse(slot, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int number) && number is >= 1 and <= 9)
+                    {
+                        slots[number] = things;
+                    }
+                }
+            }
+            return slots;
+        }
+
+        /// <summary>
+        /// Remembers the selections stored for a project (<see cref="StoredSelections"/>), all slots
+        /// at once; a project without any is forgotten.
+        /// </summary>
+        /// <exception cref="IOException">The file cannot be written.</exception>
+        public void SetStoredSelections(string projectFolder, IReadOnlyDictionary<int, IReadOnlyList<string>> slots) => Update(settings =>
+        {
+            Dictionary<string, Dictionary<string, List<string>>> all = new Dictionary<string, Dictionary<string, List<string>>>(settings.StoredSelections ?? [], StringComparer.Ordinal);
+            string key = Path.GetFullPath(projectFolder);
+            if (slots.Count == 0)
+            {
+                all.Remove(key);
+            }
+            else
+            {
+                all[key] = slots.OrderBy(slot => slot.Key).ToDictionary(slot => slot.Key.ToString(System.Globalization.CultureInfo.InvariantCulture), slot => slot.Value.ToList());
+            }
+            return settings with { StoredSelections = all.Count == 0 ? null : all };
+        });
+
+        /// <summary>
         /// Remembers <paramref name="folder"/> as the workspace.
         /// </summary>
         public void SetWorkspace(string folder) => Update(settings => settings with { Workspace = Path.GetFullPath(folder) });
@@ -187,6 +228,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                 Plugins = Part<PluginSettingsDto>("plugins"),
                 Generation = Part<GenerationSettingsDto>("generation"),
                 Units = Part<UnitsSettingsDto>("units"),
+                StoredSelections = Part<Dictionary<string, Dictionary<string, List<string>>>>("storedSelections"),
             };
             Problem = problems.Count == 0 ? null : $"{File}: {string.Join("; ", problems)}";
             return settings;

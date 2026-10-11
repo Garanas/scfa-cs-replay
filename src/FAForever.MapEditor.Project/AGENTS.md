@@ -163,6 +163,13 @@ prop are mapped in `Files/MapProjectMapping.cs`; the scenario, armies and marker
     (`ObjectClipboard`; copied path nodes keep their links among each other). Things keep to the
     terrain: they stay as high above it as they were (`Heightmap.HeightAt`, between the corners).
     `Nearest` takes what may be picked at all (`include`): the editor leaves out hidden decals.
+    `Nearest` and `Inside` also take `UnitFootprints`, a function from a blueprint to what a structure
+    takes up in ogrids (null for a unit picked by its centre), which the caller supplies (the editor
+    knows the catalogue): a click inside the footprint's rectangle, turned by the unit's heading
+    (`FootprintCorners`; sides under 1 count as 1), picks the structure (the nearer centre first among
+    overlapping ones, a unit that is no structure or lies outside it by the 7 pixels of its centre as
+    before), and a box that touches the rectangle takes it (the turned rectangle against the box, not
+    its span). Tests: `FootprintPickingTest`.
   - **Handles of the selection** (`SelectionHandles.cs`, user story F-11): `SelectionFrame.Of` is
     the box they sit on (the middle of the things' bounds at their mean height; turned with decals
     that all face one way; which handles the things have: the ring when something turns or several
@@ -527,6 +534,16 @@ game content after import and export of vault maps with wrecks). Groups that ada
 create as wrecks by option (`Optional_Wreckage_<n>`, `CreateArmyGroup(army, group, true)`) are
 ordinary groups to the editor: only the script decides.
 
+**Asking for units** (U-10, `Editing/UnitQuery`): `UnitQuery` says army, factions (`uef`, `aeon`,
+`cybran`, `seraphim`, `other`), kinds (`structure`, `land`, `air`, `naval`, `other`: the catalogue's
+`Category`, `other` for the rest and for a blueprint it lacks), tech levels (the catalogue's `TechLevel`;
+a unit without one matches no tech asked for), a blueprint (an id, or part of an id or of the unit's
+name, in any case) and wrecks (`WreckChoice.Leave`, `Only`, `Include`); every part left empty asks
+nothing. A unit's faction is its blueprint's (`AssetEntry.Group`), the army's (`Army.Faction`, an index
+of `ArmyEdits.Factions`) when the catalogue lacks the blueprint. `Select(document, find, within)` gives
+the names in the map's order, among those of `within` when given (the caller resolves the selection or
+an area). Tests: `UnitQueryTest`.
+
 ## The vault: rules, zip, upload and sign-in
 
 User story M-8 (`Vault/`). How FAForever takes a map, from the source of the
@@ -591,7 +608,10 @@ the Procedural defaults of new and imported maps (`procedural`, section "Generat
 `UserSettings` remembers where the workspace is, outside it (`%APPDATA%\FAF Map Editor\settings.json`;
 also the layout, the plugins turned off and whether results regenerate on their own, `generation`;
 the environment variable `FAF_MAP_EDITOR_SETTINGS` names another file, which tests and automation
-use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.lua` for the defaults.
+use so that the user's own stays alone). `StoredSelections(projectFolder)` and `SetStoredSelections`
+keep the selections stored under the digits 1 to 9 per project (the folder's full path), as the text of
+the things (`unit:UNIT_5`; the editor keeps units and areas), never in the map's files.
+`FafInstallation` reads FAF's `fa_path.lua` for the defaults.
 
 - `GameArchives` lays the archives over each other as the game mounts them: per name (`env`,
   `units`, and `textures` when the game has it) the game's `.scd`, then FAF's `.nx2`, which wins.
@@ -698,7 +718,7 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   it (`ScratchWorkspace.Create(folder, source, assetsInto)`), never the source's own. `init
   --settings <file>` remembers the workspace in that file rather than the user's.
 - **The user's settings** (`UserSettings`) are read part by part (workspace, telemetry, layout,
-  plugins): a part with a value of the wrong type is left out and named in `Problem` (the editor
+  plugins, units, stored selections): a part with a value of the wrong type is left out and named in `Problem` (the editor
   logs it and says so in the status line), the rest is read; a file that is not JSON at all reads
   as empty and is never written over (`MapProjectException`), so a typo does not lose the user's
   workspace.
