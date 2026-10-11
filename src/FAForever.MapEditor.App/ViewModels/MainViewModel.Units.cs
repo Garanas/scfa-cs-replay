@@ -65,4 +65,18 @@ public sealed partial class MainViewModel
             }
         };
     }
+
+    /// <summary>
+    /// A unit chosen in the Units mode's tree: it is selected, and the selection has the inspector
+    /// (also when it was selected already).
+    /// </summary>
+    public void InspectUnit(UnitNode unit)
+    {
+        if (Assets.HasSelection)
+        {
+            Assets.Select((AssetTile?)null);
+        }
+        Selection.Set([ObjectRef.Unit(unit.Name)]);
+        InspectTheSelection();
+    }
 }

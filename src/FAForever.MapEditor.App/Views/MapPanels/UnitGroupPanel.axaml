@@ -1,0 +1,81 @@
+<!-- The Units mode's inspector (U-3, U-4, M-4): the army or group chosen in the tree. A group: its army, path and units,
+     Rename and Remove; an army: the same fields as the Map mode's army (ArmyPanel); both: Add a group, Select its units,
+     Move the selection here, Save as a preset. A unit chosen in the tree is selected, and the selection has the inspector. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:panels="using:FAForever.MapEditor.App.Views.MapPanels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.MapPanels.UnitGroupPanel"
+             x:DataType="vm:ArmiesViewModel">
+  <StackPanel>
+    <Border Classes="group" IsVisible="{Binding !HasChosenGroup}">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="heading" Text="Armies and groups" />
+        <TextBlock Classes="caption" TextWrapping="Wrap"
+                   Text="Choose an army or group in the tree: its fields show here, and the place tool places into it. A unit chosen in the tree is selected." />
+      </StackPanel>
+    </Border>
+    <StackPanel IsVisible="{Binding HasChosenGroup}">
+      <Border Classes="group">
+        <StackPanel Classes="stack">
+          <TextBlock Classes="overline" Text="{Binding ChosenGroupKind, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+          <TextBlock Classes="heading" Text="{Binding ChosenGroupTitle}" TextWrapping="Wrap" AutomationProperties.Name="Chosen army or group" />
+          <DockPanel IsVisible="{Binding CanChangeChosenGroup}">
+            <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Army" />
+            <TextBlock Text="{Binding ChosenGroup.Army, FallbackValue=''}" AutomationProperties.Name="Army of the chosen group" />
+          </DockPanel>
+          <DockPanel IsVisible="{Binding CanChangeChosenGroup}">
+            <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Path" />
+            <TextBlock Classes="mono" Text="{Binding ChosenGroup.PathText, FallbackValue=''}" TextWrapping="Wrap" AutomationProperties.Name="Path of the chosen group" />
+          </DockPanel>
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Units" />
+            <TextBlock Text="{Binding ChosenGroupUnits}" AutomationProperties.Name="Units of the chosen army or group"
+                       ToolTip.Tip="With the units of the groups in it" />
+          </DockPanel>
+        </StackPanel>
+      </Border>
+      <!-- a group: its name and Remove -->
+      <Border Classes="group" IsVisible="{Binding CanChangeChosenGroup}">
+        <StackPanel Classes="stack">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="beside" Content="Rename" Command="{Binding RenameGroupCommand}"
+                    AutomationProperties.Name="Rename the chosen group" />
+            <TextBox Text="{Binding GroupName}" PlaceholderText="Group name"
+                     AutomationProperties.Name="Name of the chosen group"
+                     AutomationProperties.HelpText="Its new name; a sibling may not have it" />
+          </DockPanel>
+          <Button HorizontalAlignment="Stretch" Content="Remove the group" Command="{Binding RemoveGroupCommand}"
+                  AutomationProperties.Name="Remove the chosen group"
+                  AutomationProperties.HelpText="Its units and groups go to the group above it" />
+        </StackPanel>
+      </Border>
+      <!-- an army: the Map mode's army fields -->
+      <Border Classes="group" IsVisible="{Binding IsArmyChosen}">
+        <panels:ArmyPanel />
+      </Border>
+      <Border Classes="group">
+        <StackPanel Classes="stack">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="beside" Content="Add a group" Command="{Binding AddGroupCommand}"
+                    AutomationProperties.Name="Add a group to the chosen army or group"
+                    AutomationProperties.HelpText="The new group is chosen in the tree" />
+            <TextBox Text="{Binding NewGroupName}" PlaceholderText="New group (GROUP_1)"
+                     AutomationProperties.Name="Name of the new group"
+                     AutomationProperties.HelpText="Left empty, GROUP_1 or the next free number" />
+          </DockPanel>
+          <Button HorizontalAlignment="Stretch" Content="Select its units" Command="{Binding SelectGroupUnitsCommand}"
+                  AutomationProperties.Name="Select the units of the chosen army or group"
+                  AutomationProperties.HelpText="With the units of the groups in it; the inspector then shows the selection" />
+          <Button HorizontalAlignment="Stretch" Content="Move the selection here" Command="{Binding MoveSelectionHereCommand}"
+                  AutomationProperties.Name="Move the selected units into the chosen army or group"
+                  AutomationProperties.HelpText="The units selected on the map, which stay selected" />
+          <Button HorizontalAlignment="Stretch" Content="Save as a preset" Command="{Binding SaveGroupAsPresetCommand}"
+                  AutomationProperties.Name="Save the units of the chosen army or group as a preset"
+                  AutomationProperties.HelpText="Whatever is selected; the preset is named after the group and listed in the panel's Presets" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

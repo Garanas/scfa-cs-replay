@@ -295,7 +295,23 @@ public sealed partial class PresetsViewModel : ObservableObject
     {
         PresetLibrary library = Library ?? throw new InvalidOperationException("Presets need a workspace");
         PresetKind handler = Handler(kind ?? Kind ?? throw new InvalidOperationException("Choose a tool with settings to save, such as the sculpt or strata brush"));
-        (string suggested, JsonObject settings) = handler.Capture();
+        return Save(handler.Kind, name, handler.Capture());
+    }
+
+    /// <summary>
+    /// Saves settings captured otherwise than as the kind captures them now (a group of units
+    /// chosen in the tree, whatever is selected).
+    /// </summary>
+    /// <param name="captured">The settings and the name to suggest for them.</param>
+    /// <param name="name">Null or empty for the suggested name, made unique.</param>
+    /// <returns>The preset.</returns>
+    /// <exception cref="InvalidOperationException">No workspace.</exception>
+    /// <exception cref="ArgumentException">The editor cannot save presets of that kind.</exception>
+    public Preset Save(string kind, string? name, (string Name, JsonObject Settings) captured)
+    {
+        PresetLibrary library = Library ?? throw new InvalidOperationException("Presets need a workspace");
+        PresetKind handler = Handler(kind);
+        (string suggested, JsonObject settings) = captured;
         Preset preset = new Preset(handler.Kind, string.IsNullOrWhiteSpace(name) ? library.FreeName(handler.Kind, suggested) : name.Trim(), settings);
         string file = library.Save(preset);
         _log.LogInformation("Saved the preset {Name} ({Kind}) in {File}", preset.Name, preset.Kind, file);

@@ -105,6 +105,7 @@ public sealed partial class AreaTool(MainViewModel model) : ObservableObject, IM
             {
                 model.Selection.Apply([thing], input.Modifiers.HasFlag(ToolModifiers.Shift) ? SelectionChange.Add : SelectionChange.Replace);
             }
+            model.InspectTheSelection();
             _area = area.Name;
             _original = area;
             _handle = handle;

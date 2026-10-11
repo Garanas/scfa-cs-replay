@@ -679,6 +679,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["panelParts"] = model.DescribePanelParts(),
             ["shortcuts"] = model.Shortcuts.Describe(),
             ["workspaceSettings"] = model.WorkspaceSettings.Describe(),
+            ["inspector"] = model.DescribeInspector(),
         };
     }
 

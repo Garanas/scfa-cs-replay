@@ -150,9 +150,24 @@ public sealed partial class SelectionViewModel : ObservableObject
         }
         if (_items.Any(thing => !document.Exists(thing)))
         {
-            Set(_items.Where(document.Exists));
+            IsPruning = true;
+            try
+            {
+                Set(_items.Where(document.Exists));
+            }
+            finally
+            {
+                IsPruning = false;
+            }
         }
     }
+
+    /// <summary>
+    /// Whether the change being raised (<see cref="Changed"/>) only dropped what the document no
+    /// longer has (<see cref="Prune"/>): no person or command chose it, so it does not take the
+    /// inspector.
+    /// </summary>
+    public bool IsPruning { get; private set; }
 
     /// <summary>
     /// How many of each kind are selected, e.g. <c>2 markers, 1 prop</c>; empty for none.

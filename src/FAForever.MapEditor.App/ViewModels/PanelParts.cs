@@ -16,7 +16,13 @@ public sealed partial class PanelPart(string id, string title, string group, obj
 {
     public string Id => id;
 
-    public string Title => title;
+    /// <summary>
+    /// What the panel's entry says; <see cref="PanelParts.SyncGroup"/> retitles an entry that a mode
+    /// keeps in step with the map (an army renamed).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Label), nameof(PreviewLabel))]
+    public partial string Title { get; internal set; } = title;
 
     public string Group => group;
 
@@ -58,6 +64,16 @@ public sealed partial class PanelPart(string id, string title, string group, obj
     /// </summary>
     public string PreviewLabel => $"Preview of {Title}";
 }
+
+/// <summary>
+/// An entry of a list whose entries come and go with the map (an army, an area, a chain), as a mode
+/// gives it to <see cref="PanelParts.SyncGroup"/>.
+/// </summary>
+/// <param name="Id">What names it whatever version of the map, e.g. <c>map.army.ARMY_1</c>.</param>
+/// <param name="Content">Makes what the inspector shows of it, only when the entry is new.</param>
+/// <param name="Detail">The short line beside its title; null leaves the entry's as it is.</param>
+/// <param name="Help">Its tool tip and the inspector's line under its title, for a new entry.</param>
+public sealed record PanelPartEntry(string Id, string Title, Func<object> Content, string? Detail = null, string? Help = null);
 
 /// <summary>
 /// The entries of a mode panel's list under one heading.
@@ -153,6 +169,108 @@ public sealed partial class PanelParts : ObservableObject
         {
             Choose(_items[0].Id);
         }
+    }
+
+    /// <summary>
+    /// Keeps the entries under one heading in step with what a mode has now (the map's armies, areas
+    /// or chains, on every change of the map): entries whose id is new are added, in the order
+    /// given, those whose id is gone are taken out, and those that stay keep their content and are
+    /// retitled (and given the new detail, when one is given). The chosen entry stays chosen when it
+    /// stays; when it went, the heading's first entry is chosen, else the list's first. Cheap when
+    /// nothing changed: no entry is made and nothing is raised.
+    /// </summary>
+    /// <param name="group">The heading, e.g. <c>Armies</c>.</param>
+    /// <param name="entries">Every entry the heading holds now; none takes the heading away.</param>
+    /// <param name="afterGroup">Where a heading that has no entry yet goes: after the entries of
+    /// this heading (the list's end when null or absent). A heading with entries stays where it is.</param>
+    /// <returns>Whether anything changed.</returns>
+    /// <exception cref="ArgumentException">Two entries have one id, an id is another heading's, or
+    /// the list would be empty.</exception>
+    public bool SyncGroup(string group, IReadOnlyList<PanelPartEntry> entries, string? afterGroup = null)
+    {
+        int first = _items.FindIndex(part => part.Group == group);
+        int held = first < 0 ? 0 : _items.Count(part => part.Group == group);
+        bool same = held == entries.Count;
+        for (int i = 0, j = Math.Max(first, 0); same && i < entries.Count; j++)
+        {
+            if (_items[j].Group != group)
+            {
+                continue;
+            }
+            same = _items[j].Id == entries[i].Id;
+            i++;
+        }
+        if (same)
+        {
+            bool retitled = false;
+            for (int i = 0, j = Math.Max(first, 0); i < entries.Count; j++)
+            {
+                if (_items[j].Group == group)
+                {
+                    retitled |= Update(_items[j], entries[i]);
+                    i++;
+                }
+            }
+            return retitled;
+        }
+
+        HashSet<string> ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (PanelPartEntry entry in entries)
+        {
+            if (!ids.Add(entry.Id))
+            {
+                throw new ArgumentException($"Two entries of {group} have the id '{entry.Id}'");
+            }
+            if (Find(entry.Id) is { } other && other.Group != group)
+            {
+                throw new ArgumentException($"The id '{entry.Id}' is an entry of {other.Group}");
+            }
+        }
+        if (entries.Count == 0 && held == _items.Count)
+        {
+            throw new ArgumentException("A list of parts holds at least one");
+        }
+
+        Dictionary<string, PanelPart> kept = _items.Where(part => part.Group == group).ToDictionary(part => part.Id, StringComparer.Ordinal);
+        bool chosenHere = Chosen.Group == group;
+        int at = first >= 0
+            ? first - _items.Take(first).Count(part => part.Group == group)
+            : afterGroup is not null && _items.FindLastIndex(part => part.Group == afterGroup) is int last and >= 0 ? last + 1 : _items.Count;
+        _items.RemoveAll(part => part.Group == group);
+        PanelPart[] synced = [.. entries.Select(entry =>
+        {
+            if (kept.TryGetValue(entry.Id, out PanelPart? part))
+            {
+                Update(part, entry);
+                return part;
+            }
+            return new PanelPart(entry.Id, entry.Title, group, entry.Content(), entry.Help) { Detail = entry.Detail ?? "" };
+        })];
+        _items.InsertRange(Math.Min(at, _items.Count), synced);
+        Groups = GroupsOf(_items);
+        OnPropertyChanged(nameof(Items));
+        OnPropertyChanged(nameof(Groups));
+        if (chosenHere && !_items.Contains(Chosen))
+        {
+            Choose(synced.Length > 0 ? synced[0].Id : _items[0].Id);
+        }
+        return true;
+    }
+
+    private static bool Update(PanelPart part, PanelPartEntry entry)
+    {
+        bool changed = false;
+        if (part.Title != entry.Title)
+        {
+            part.Title = entry.Title;
+            changed = true;
+        }
+        if (entry.Detail is string detail && part.Detail != detail)
+        {
+            part.Detail = detail;
+            changed = true;
+        }
+        return changed;
     }
 
     /// <summary>

@@ -371,6 +371,10 @@
               <DataTemplate DataType="vm:HeightLayerSection">
                 <panels:HeightLayerPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
               </DataTemplate>
+              <!-- the army or group chosen in the Units mode's tree (U-3, M-4) -->
+              <DataTemplate DataType="vm:UnitGroupDetailsSection">
+                <panels:UnitGroupPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies}" />
+              </DataTemplate>
               <DataTemplate DataType="vm:PlannedSection">
                 <Border Classes="group">
                   <StackPanel Classes="stack">
@@ -386,7 +390,8 @@
               </DataTemplate>
             </ItemsControl.DataTemplates>
           </ItemsControl>
-          <Border Classes="group">
+          <!-- only in a mode with no part of its own to show: how to select things -->
+          <Border Classes="group" IsVisible="{Binding HasNoInspectorParts}">
             <StackPanel Classes="stack">
               <TextBlock Classes="heading" Text="Selection" />
               <TextBlock Classes="caption" TextWrapping="Wrap" Text="Nothing is selected. Choose a mode's Select tool and click a thing in either view, or drag a box around several in either view; shift adds, control toggles. The handles then move, turn and scale the selection." />

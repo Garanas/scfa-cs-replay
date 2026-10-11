@@ -147,7 +147,7 @@
                 </StackPanel>
               </Border>
             </DataTemplate>
-            <!-- the armies and their trees of unit groups (U-3): choosing one is where new units and groups go -->
+            <!-- the armies and their trees of unit groups (U-3): choosing one is where new units and groups go, and the inspector shows it -->
             <DataTemplate DataType="vm:UnitGroupsSection">
               <Border Classes="group">
                 <StackPanel Classes="stack">
@@ -156,7 +156,7 @@
                             SelectedItem="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.ChosenNode}"
                             controls:UnitTreeDrag.IsEnabled="True"
                             AutomationProperties.Name="Armies and their unit groups"
-                            AutomationProperties.HelpText="Choose an army or group: the place tool places into it, and the buttons below work on it; drag units and groups onto a group to move them">
+                            AutomationProperties.HelpText="Choose an army or group: the place tool places into it, and the inspector shows its fields and buttons; a unit chosen is selected; drag units and groups onto a group to move them">
                     <TreeView.Styles>
                       <!-- groups and units alike: a unit never opens -->
                       <Style Selector="TreeViewItem">
@@ -173,34 +173,6 @@
                       </DataTemplate>
                     </TreeView.DataTemplates>
                   </TreeView>
-                  <DockPanel>
-                    <Button DockPanel.Dock="Right" Classes="beside" Content="Add"
-                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.AddGroupCommand}"
-                            IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.HasChosenGroup}"
-                            AutomationProperties.Name="Add a group to the chosen army or group" />
-                    <TextBox Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.GroupName}" PlaceholderText="Group name"
-                             AutomationProperties.Name="Name of the group"
-                             AutomationProperties.HelpText="The name a new group gets, or the chosen group's new name" />
-                  </DockPanel>
-                  <UniformGrid Columns="2">
-                    <Button HorizontalAlignment="Stretch" Content="Rename"
-                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.RenameGroupCommand}"
-                            IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.CanChangeChosenGroup}"
-                            AutomationProperties.Name="Rename the chosen group" />
-                    <Button HorizontalAlignment="Stretch" Content="Remove"
-                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.RemoveGroupCommand}"
-                            IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.CanChangeChosenGroup}"
-                            AutomationProperties.Name="Remove the chosen group"
-                            AutomationProperties.HelpText="Its units and groups go to the group above it" />
-                    <Button HorizontalAlignment="Stretch" Content="Select units"
-                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.SelectGroupUnitsCommand}"
-                            IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.HasChosenGroup}"
-                            AutomationProperties.Name="Select the units of the chosen group" />
-                    <Button HorizontalAlignment="Stretch" Content="Move here"
-                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.MoveSelectionHereCommand}"
-                            IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.HasChosenGroup}"
-                            AutomationProperties.Name="Move the selected units into the chosen group" />
-                  </UniformGrid>
                 </StackPanel>
               </Border>
             </DataTemplate>
@@ -229,50 +201,8 @@
                             Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.AddExtraArmyCommand}"
                             AutomationProperties.Name="Add an extra army" AutomationProperties.HelpText="An army no player takes, such as civilians" />
                   </UniformGrid>
-                  <StackPanel Classes="stack" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.HasChosenArmy}">
-                    <DockPanel>
-                      <Button DockPanel.Dock="Right" Classes="beside" Content="Rename"
-                              Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.RenameArmyCommand}"
-                              AutomationProperties.Name="Rename the chosen army" />
-                      <TextBox Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.ArmyName}"
-                               AutomationProperties.Name="Name of the chosen army"
-                               AutomationProperties.HelpText="Its spawn marker takes the new name too" />
-                    </DockPanel>
-                    <CheckBox Content="Playable" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.Playable}"
-                              AutomationProperties.Name="Players take the chosen army"
-                              AutomationProperties.HelpText="A playable army gets a spawn when it has none; an extra army is one no player takes" />
-                    <DockPanel>
-                      <Button DockPanel.Dock="Right" Classes="beside" Content="Set"
-                              Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.SetTeamCommand}"
-                              AutomationProperties.Name="Put the chosen army in the team" />
-                      <TextBox Text="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.Team}" PlaceholderText="Team (none)"
-                               AutomationProperties.Name="Team of the chosen army"
-                               AutomationProperties.HelpText="Empty for no team. The game's lobby reads only the team FFA of every playable army, which the export writes first" />
-                    </DockPanel>
-                    <TextBlock Classes="label" Text="Limited to the factions (none: any)" />
-                    <UniformGrid Columns="2">
-                      <CheckBox Content="UEF" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.Uef}" />
-                      <CheckBox Content="Aeon" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.Aeon}" />
-                      <CheckBox Content="Cybran" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.Cybran}" />
-                      <CheckBox Content="Seraphim" IsChecked="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.Seraphim}" />
-                    </UniformGrid>
-                    <TextBlock Classes="label" Text="Alliances" />
-                    <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.Alliances}" AutomationProperties.Name="Alliances of the chosen army">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:AllianceRow">
-                          <DockPanel>
-                            <ComboBox DockPanel.Dock="Right" ItemsSource="{x:Static vm:AllianceRow.Choices}" SelectedItem="{Binding Stance}"
-                                      AutomationProperties.Name="{Binding Other, StringFormat='Stance towards {0}'}" />
-                            <TextBlock VerticalAlignment="Center" Text="{Binding Other}" />
-                          </DockPanel>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <Button HorizontalAlignment="Stretch" Content="Remove the army"
-                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.RemoveArmyCommand}"
-                            AutomationProperties.Name="Remove the chosen army"
-                            AutomationProperties.HelpText="With its units and its spawn" />
-                  </StackPanel>
+                  <panels:ArmyPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies}"
+                                    IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies.HasChosenArmy}" />
                 </StackPanel>
               </Border>
             </DataTemplate>
