@@ -211,6 +211,11 @@ public enum ToolInk
     /// The sun (<c>WarningBrush</c>).
     /// </summary>
     Sun,
+
+    /// <summary>
+    /// What would break a rule: a place preview over another structure or ground it cannot stand on (<c>DangerBrush</c>).
+    /// </summary>
+    Danger,
 }
 
 /// <summary>

@@ -590,6 +590,7 @@ public sealed partial class HeightmapView : Control
         [ToolInk.AxisZ] = Token<IBrush>("MapHandleAxisZBrush"),
         [ToolInk.Shadow] = Token<IBrush>("OverlayShadowBrush"),
         [ToolInk.Sun] = Token<IBrush>("WarningBrush"),
+        [ToolInk.Danger] = Token<IBrush>("DangerBrush"),
     })[ink];
 
     /// <summary>

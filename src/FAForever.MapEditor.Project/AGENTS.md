@@ -1495,6 +1495,22 @@ map's things.
 - `preset-changed` (a note): a group placed from a unit preset (U-9) whose preset's file changed
   since, or which the workspace has no preset of; reads the fingerprints the editor keeps
   (`ProblemContext.PresetFingerprint`, null for a name without a preset) and finds nothing without them.
+- `units-overlap` and `units-ground` (warnings, U-12; `PlacementChecks`, `PlacementIndex`): two
+  structures (wrecks, mobile units and blueprints without a footprint or skirt left out) whose
+  skirts, else footprints, overlap, one problem per pair naming both (`Problem.Related` is the
+  second, selected with the first; the place is the middle of the shared ground; edges that touch
+  do not overlap, so walls side by side are fine); and a structure on a layer its
+  `BuildOnLayerCaps` excludes (the terrain height under its centre against the water height:
+  land, or water and seabed under it), in water shallower than its `MinWaterDepth`, or on ground
+  steeper than its `MaxSlope` (the rise per ogrid from the footprint's centre to each corner, from
+  the heightmap). A skirt starts `SkirtOffset` from the footprint's corner (a land factory: 5 by 5,
+  skirt 8 by 8, offset -1.5), turned in quarter turns. What a blueprint does not say is not
+  checked. At most 200 problems per check, then one line saying how many more. The
+  structures sit in a grid of cells of 16 ogrids (`PlacementIndex.Of(document, catalog)`, made
+  once per document), so 2,000 structures take a few milliseconds. The place tool's red preview
+  calls `PlacementChecks.OverlapAt` and `GroundIssue`, so it and Problems agree. The blueprint's
+  limits are in the converted assets (`UnitBlueprintDto.Skirt`, `BuildOnLayers`, `Footprint.MaxSlope`,
+  `MinWaterDepth`; `AssetEntry.Limits`): asset format 6, so a workspace converted before converts again.
 
 ## Unit templates from real maps
 

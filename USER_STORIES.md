@@ -548,10 +548,10 @@ reads again when it changes; and nothing that generates runs by itself.
       group as a choice in the inspector; replace the blueprint of the selected units, or convert
       them to another faction's unit of the same kind and tech; a move keeps structures on the
       build grid; distribute the selection evenly.
-- [ ] **U-12 Placement checks.** Problems lists structures whose footprints overlap and structures
+- [x] **U-12 Placement checks.** Problems lists structures whose footprints overlap and structures
       where the ground does not allow them (too steep, the wrong layer: water or land), from the
       blueprint's skirt, build layers and slope limit, which the workspace's converted assets carry;
-      the footprint under the mouse turns red there.
+      the footprint under the mouse turns red there. Today: the converted assets carry each unit's skirt, build layers, slope limit and least water depth (asset format 6); the checks `units-overlap` and `units-ground` warn in Problems (choosing an overlap selects both units), and the Place tool's footprints (single, line, rectangle, ring) turn red with the reason in the status line; placing stays allowed.
 
 ## V: Views
 

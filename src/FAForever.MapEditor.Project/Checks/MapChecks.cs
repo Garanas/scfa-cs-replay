@@ -23,6 +23,7 @@ namespace FAForever.MapEditor.Project.Checks
             new ProblemCheck("steep-deposit", "Deposits on steep ground", SteepDeposits),
             new ProblemCheck("walkability-marks", "Ground marked open that the game blocks", OpenMarksTheGameBlocks),
             new ProblemCheck("preset-changed", "Instances whose preset changed or is missing", PresetsChanged),
+            .. PlacementChecks.All,
         ];
 
         /// <summary>
