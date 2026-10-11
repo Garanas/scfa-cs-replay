@@ -10,342 +10,216 @@
           "blueprint": "uel0202",
           "x": 0.7400055,
           "y": 0,
-          "z": -11.267914,
+          "z": -10.267914,
           "heading": -0.157
-        },
-        {
-          "blueprint": "uab5101",
-          "x": 26.5,
-          "y": 0,
-          "z": 13.5,
-          "heading": 0
-        },
-        {
-          "blueprint": "uab5101",
-          "x": -29.5,
-          "y": 0,
-          "z": 14.5,
-          "heading": -0.096
-        },
-        {
-          "blueprint": "uab5101",
-          "x": 19.515427,
-          "y": 0,
-          "z": 23.499893,
-          "heading": -0.044
-        },
-        {
-          "blueprint": "uab5101",
-          "x": 19.5,
-          "y": 0,
-          "z": 22.5,
-          "heading": -0.044
-        },
-        {
-          "blueprint": "uab5101",
-          "x": -24.5,
-          "y": 0,
-          "z": 18.5,
-          "heading": -0.044
-        },
-        {
-          "blueprint": "uab5101",
-          "x": 3.5,
-          "y": 0,
-          "z": -16.5,
-          "heading": 0
         },
         {
           "blueprint": "uel0202",
           "x": -27.549026,
           "y": 0,
-          "z": 21.756607,
+          "z": 22.756607,
           "heading": 2.173
         },
         {
           "blueprint": "uel0202",
           "x": -2.5645828,
           "y": 0,
-          "z": -7.515625,
+          "z": -6.515625,
           "heading": -0.157
-        },
-        {
-          "blueprint": "uab5101",
-          "x": -21.5,
-          "y": 0,
-          "z": 23.5,
-          "heading": -0.044
-        },
-        {
-          "blueprint": "uab5101",
-          "x": 16.515427,
-          "y": 0,
-          "z": 27.499893,
-          "heading": -0.044
         },
         {
           "blueprint": "uel0202",
           "x": -17.5,
           "y": 0,
-          "z": 17.5,
+          "z": 18.5,
           "heading": 2.173
         },
         {
           "blueprint": "uel0303",
           "x": 3.5,
           "y": 0,
-          "z": -2.5,
+          "z": -1.5,
           "heading": -0.471
         },
         {
           "blueprint": "uel0202",
           "x": -4.5353622,
           "y": 0,
-          "z": -20.71093,
+          "z": -19.71093,
           "heading": -0.157
         },
         {
           "blueprint": "uel0202",
           "x": 18.5,
           "y": 0,
-          "z": 16.5,
+          "z": 17.5,
           "heading": -1.798
-        },
-        {
-          "blueprint": "uab5101",
-          "x": 26.5,
-          "y": 0,
-          "z": 15.5,
-          "heading": 0
-        },
-        {
-          "blueprint": "uab5101",
-          "x": 10.5,
-          "y": 0,
-          "z": -14.5,
-          "heading": 0
         },
         {
           "blueprint": "uel0202",
           "x": 0.52767944,
           "y": 0,
-          "z": -21.31556,
+          "z": -20.31556,
           "heading": -0.157
         },
         {
           "blueprint": "uel0202",
           "x": 21.5,
           "y": 0,
-          "z": 20.5,
+          "z": 21.5,
           "heading": -2.051
         },
         {
           "blueprint": "uea0203",
           "x": -11.5,
           "y": 0,
-          "z": -1.5,
+          "z": -0.5,
           "heading": 2.478
-        },
-        {
-          "blueprint": "uab5101",
-          "x": -3.5,
-          "y": 0,
-          "z": -16.5,
-          "heading": 0
         },
         {
           "blueprint": "uel0202",
           "x": 0.056930542,
           "y": 0,
-          "z": -15.334061,
+          "z": -14.334061,
           "heading": -0.157
         },
         {
           "blueprint": "uel0303",
           "x": -13.5,
           "y": 0,
-          "z": 12.5,
+          "z": 13.5,
           "heading": 2.339
         },
         {
           "blueprint": "uea0203",
           "x": 13.5,
           "y": 0,
-          "z": 6.5,
+          "z": 7.5,
           "heading": -0.82
         },
         {
           "blueprint": "uel0202",
           "x": 25.496872,
           "y": 0,
-          "z": 25.612045,
+          "z": 26.612045,
           "heading": 1.763
-        },
-        {
-          "blueprint": "uab5101",
-          "x": 6.5,
-          "y": 0,
-          "z": -16.5,
-          "heading": 0
-        },
-        {
-          "blueprint": "uab5101",
-          "x": -20.5,
-          "y": 0,
-          "z": 24.5,
-          "heading": -0.044
-        },
-        {
-          "blueprint": "uab5101",
-          "x": -11.5,
-          "y": 0,
-          "z": -13.5,
-          "heading": 0
         },
         {
           "blueprint": "uel0202",
           "x": -1.5,
           "y": 0,
-          "z": -27.5,
+          "z": -26.5,
           "heading": -0.157
         },
         {
           "blueprint": "uel0303",
           "x": -0.92510986,
           "y": 0,
-          "z": 5.3335648,
+          "z": 6.3335648,
           "heading": -2.26
         },
         {
           "blueprint": "uac1501",
           "x": 11.5,
           "y": 0,
-          "z": -2.5,
+          "z": -1.5,
           "heading": 0
         },
         {
           "blueprint": "uac1401",
           "x": -6.5,
           "y": 0,
-          "z": 10.5,
+          "z": 11.5,
           "heading": 0
-        },
-        {
-          "blueprint": "uab5101",
-          "x": -27.5,
-          "y": 0,
-          "z": 16.5,
-          "heading": -0.044
-        },
-        {
-          "blueprint": "uab5101",
-          "x": -17.5,
-          "y": 0,
-          "z": 27.5,
-          "heading": -0.044
         },
         {
           "blueprint": "uel0202",
           "x": -29.5,
           "y": 0,
-          "z": 25.5,
+          "z": 26.5,
           "heading": 2.173
         },
         {
           "blueprint": "uel0202",
           "x": 30.5,
           "y": 0,
-          "z": 24.5,
+          "z": 25.5,
           "heading": 1.763
         },
         {
           "blueprint": "uel0303",
           "x": 3.5,
           "y": 0,
-          "z": 9.5,
+          "z": 10.5,
           "heading": 2.059
         },
         {
           "blueprint": "uel0303",
           "x": 0.5,
           "y": 0,
-          "z": 15.5,
+          "z": 16.5,
           "heading": -2.618
-        },
-        {
-          "blueprint": "uab5101",
-          "x": -6.5,
-          "y": 0,
-          "z": -16.5,
-          "heading": 0
         },
         {
           "blueprint": "uel0202",
           "x": -21.952263,
           "y": 0,
-          "z": 19.72403,
+          "z": 20.72403,
           "heading": 2.173
         },
         {
           "blueprint": "uea0203",
           "x": 4.5,
           "y": 0,
-          "z": 18.5,
+          "z": 19.5,
           "heading": 2.801
-        },
-        {
-          "blueprint": "uab5101",
-          "x": 24.5,
-          "y": 0,
-          "z": 18.5,
-          "heading": 0
         },
         {
           "blueprint": "uel0303",
           "x": 8.5,
           "y": 0,
-          "z": 18.5,
+          "z": 19.5,
           "heading": -2.391
         },
         {
           "blueprint": "uel0202",
           "x": -24.331726,
           "y": 0,
-          "z": 26.114258,
+          "z": 27.114258,
           "heading": 2.173
         },
         {
           "blueprint": "uel0202",
           "x": -13.5,
           "y": 0,
-          "z": 19.5,
+          "z": 20.5,
           "heading": 2.173
         },
         {
           "blueprint": "uel0303",
           "x": 4.9394836,
           "y": 0,
-          "z": 5.898041,
+          "z": 6.898041,
           "heading": 0.55
         },
         {
           "blueprint": "uel0202",
           "x": 19.5,
           "y": 0,
-          "z": 12.5,
+          "z": 13.5,
           "heading": -1.58
         },
         {
           "blueprint": "uel0202",
           "x": 28.5,
           "y": 0,
-          "z": 20.5,
+          "z": 21.5,
           "heading": 1.763
         }
       ],
       "groups": []
     },
-    "count": 48,
+    "count": 30,
     "role": "civilian",
     "wrecks": true,
     "source": "Supreme Commander Forged Alliance/maps/SCMP_018, army NEUTRAL_CIVILIAN, group WRECKAGE"

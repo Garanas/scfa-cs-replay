@@ -1,0 +1,101 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Destroyed convoy",
+  "settings": {
+    "group": {
+      "name": "Destroyed convoy",
+      "units": [
+        {
+          "blueprint": "uel0106",
+          "x": 2.713562,
+          "y": 0,
+          "z": 5.5753174,
+          "heading": -2.234
+        },
+        {
+          "blueprint": "uel0106",
+          "x": 5.354492,
+          "y": 0,
+          "z": 5.3125,
+          "heading": -1.728
+        },
+        {
+          "blueprint": "urc0001",
+          "x": -1.4508972,
+          "y": 0,
+          "z": 2.237793,
+          "heading": 1.868
+        },
+        {
+          "blueprint": "urc0001",
+          "x": -3.7655334,
+          "y": 0,
+          "z": -1.6002808,
+          "heading": 1.501
+        },
+        {
+          "blueprint": "uel0106",
+          "x": -0.11898804,
+          "y": 0,
+          "z": 6.3844604,
+          "heading": -2.513
+        },
+        {
+          "blueprint": "uel0106",
+          "x": 5.0071716,
+          "y": 0,
+          "z": -3.071289,
+          "heading": -0.908
+        },
+        {
+          "blueprint": "urc0001",
+          "x": -5.8807983,
+          "y": 0,
+          "z": 0.5656738,
+          "heading": 1.475
+        },
+        {
+          "blueprint": "uel0106",
+          "x": 3.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": -1.484
+        },
+        {
+          "blueprint": "urc0001",
+          "x": 1.9614563,
+          "y": 0,
+          "z": -1.2997437,
+          "heading": 1.318
+        },
+        {
+          "blueprint": "uel0106",
+          "x": 3.2697449,
+          "y": 0,
+          "z": -6.6362305,
+          "heading": -0.637
+        },
+        {
+          "blueprint": "uel0106",
+          "x": 6.2639465,
+          "y": 0,
+          "z": 1.9924316,
+          "heading": -1.894
+        },
+        {
+          "blueprint": "uel0106",
+          "x": -3.9502563,
+          "y": 0,
+          "z": 5.6868286,
+          "heading": -2.644
+        }
+      ],
+      "groups": []
+    },
+    "count": 12,
+    "role": "civilian",
+    "wrecks": true,
+    "source": "FAF_Coop_Operation_Trident, army Civilians, group M1_Wreckages"
+  }
+}

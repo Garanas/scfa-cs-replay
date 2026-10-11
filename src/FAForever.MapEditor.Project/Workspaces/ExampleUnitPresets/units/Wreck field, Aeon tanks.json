@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Wreck field, Aeon tanks",
+  "settings": {
+    "group": {
+      "name": "Wreck field, Aeon tanks",
+      "units": [
+        {
+          "blueprint": "ual0103",
+          "x": 2.5,
+          "y": 0,
+          "z": -2.5,
+          "heading": -0.209
+        },
+        {
+          "blueprint": "ual0104",
+          "x": -2.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": 0.131
+        },
+        {
+          "blueprint": "ual0103",
+          "x": -6.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0.122
+        },
+        {
+          "blueprint": "ual0202",
+          "x": -0.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": -0.358
+        },
+        {
+          "blueprint": "ual0103",
+          "x": 5.5,
+          "y": 0,
+          "z": -1.5,
+          "heading": -0.305
+        }
+      ],
+      "groups": []
+    },
+    "count": 5,
+    "role": "civilian",
+    "wrecks": true,
+    "source": "forgotten_facilities_10x10.v0011, army ARMY_9, group WRECKAGE"
+  }
+}

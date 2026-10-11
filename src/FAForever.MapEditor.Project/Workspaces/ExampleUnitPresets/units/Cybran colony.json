@@ -1,0 +1,135 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Cybran colony",
+  "settings": {
+    "group": {
+      "name": "Cybran colony",
+      "units": [
+        {
+          "blueprint": "urc1101",
+          "x": 5.5,
+          "y": 0,
+          "z": 17.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1401",
+          "x": 22.5,
+          "y": 0,
+          "z": 13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 19.5,
+          "y": 0,
+          "z": -16.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1401",
+          "x": 16.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1201",
+          "x": -22.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -17.5,
+          "y": 0,
+          "z": -4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1301",
+          "x": -3.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1501",
+          "x": -9.5,
+          "y": 0,
+          "z": 9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -12.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 14.5,
+          "y": 0,
+          "z": -12.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 1.5,
+          "y": 0,
+          "z": 12.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1401",
+          "x": -20.5,
+          "y": 0,
+          "z": 18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1301",
+          "x": -7.5,
+          "y": 0,
+          "z": -13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1201",
+          "x": 10.5,
+          "y": 0,
+          "z": 4.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": -11.5,
+          "y": 0,
+          "z": -18.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1501",
+          "x": -14.5,
+          "y": 0,
+          "z": 13.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "urc1101",
+          "x": 9.5,
+          "y": 0,
+          "z": -8.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 17,
+    "role": "civilian",
+    "source": "FAF_Coop_Operation_Uhthe_Thuum_QAI, army Cybran1, group Objectives/P1Civilanbase"
+  }
+}

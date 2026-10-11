@@ -111,6 +111,30 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void APickOfCiviliansOnlyLeavesOutWallsAndDefencesAndWithoutLeavesOutBlueprints()
+        {
+            string root = ProjectFolders.New("unit-civilians");
+            WriteMap(Path.Combine(root, "town"), "town", ["ARMY_1"], "NEUTRAL_CIVILIAN",
+                Army("ARMY_1", Group("INITIAL")),
+                Army("NEUTRAL_CIVILIAN", Group("INITIAL",
+                    Unit("UNIT_1", "uec1101", 100, 100), Unit("UNIT_2", "uec1401", 106, 100), Unit("UNIT_3", "uec0001", 104, 104),
+                    Unit("UNIT_4", "ueb5101", 96, 96), Unit("UNIT_5", "xec8001", 96, 98), Unit("UNIT_6", "xec9003", 96, 100),
+                    Unit("UNIT_7", "ueb2101", 110, 110), Unit("UNIT_8", "xsc9002", 100, 108))));
+            (IReadOnlyList<Preset> presets, IReadOnlyList<string> problems) = UnitTemplates.Make(
+            [
+                new UnitTemplatePick("Town", "town", "NEUTRAL_CIVILIAN", "INITIAL", ArmyRoles.Civilian, CivilianOnly: true),
+                new UnitTemplatePick("Town without trucks", "town", "NEUTRAL_CIVILIAN", "INITIAL", ArmyRoles.Civilian, CivilianOnly: true, Without: ["UEC0001"]),
+            ], [root]);
+
+            Assert.AreEqual(0, problems.Count, string.Join("; ", problems));
+            string[] Blueprints(Preset preset) => [.. preset.Read<UnitPresetSettings>().Group.Units.Select(unit => unit.Blueprint).Order(StringComparer.Ordinal)];
+            CollectionAssert.AreEqual(new[] { "uec0001", "uec1101", "uec1401", "xsc9002" }, Blueprints(presets[0]), "the faction's walls and turret and the civilian wall segments left out");
+            CollectionAssert.AreEqual(new[] { "uec1101", "uec1401", "xsc9002" }, Blueprints(presets[1]), "a blueprint left out, whatever its case");
+            Assert.IsTrue(UnitGroupScan.IsCivilianWall("xrc8105"));
+            Assert.IsFalse(UnitGroupScan.IsCivilianWall("xsc9002"), "the jammer crystal is no wall");
+        }
+
+        [TestMethod]
         public void APickBecomesAPresetAroundItsMiddleWithTheBasesRoleGroups()
         {
             string root = Fixture();
@@ -142,6 +166,12 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         private static MapDocument HardFfa() => MapImporter.ImportFolder(ProjectFolders.HardFfa);
+
+        /// <summary>
+        /// A preset of a role no example has (the examples are civilians'): two structures.
+        /// </summary>
+        private static UnitPresetSettings OfRole(string role) =>
+            new UnitPresetSettings(new UnitPresetGroup(role, [new UnitPresetUnit("ueb2101", -2, 0, 0, 0), new UnitPresetUnit("ueb1101", 2, 0, 0, 0)], []), 2, role);
 
         private static UnitPresetSettings Example(string name)
         {
@@ -182,7 +212,7 @@ namespace FAForever.MapEditor.Project.Tests
 
             UnitPresetSettings town = Example("UEF civilian town");
             document = UnitPresets.Place(document, town, "Town", null, null, ["INITIAL"], null, 64, 64, 0, out _, out _, out string townArmy);
-            UnitPresetSettings enemy = ExampleUnitPresets.Names.Select(name => Example(Path.GetFileNameWithoutExtension(name))).First(preset => preset.Role == ArmyRoles.Enemy);
+            UnitPresetSettings enemy = OfRole(ArmyRoles.Enemy);
             document = UnitPresets.Place(document, enemy, "Base", null, null, ["INITIAL"], null, 180, 180, 0, out ImmutableArray<string> names, out _, out string enemyArmy);
 
             Assert.AreEqual(civilians, townArmy);
@@ -222,7 +252,7 @@ namespace FAForever.MapEditor.Project.Tests
             document = document.MoveObjects([ObjectRef.Marker(second.Id)], image.X - second.Position.X, image.Y - second.Position.Z);
             IReadOnlyList<MapSymmetryTransform> transforms = MapSymmetry.Transforms(MapSymmetryKind.Rotational, 2, document.Width, document.Height);
 
-            UnitPresetSettings start = Example("Player start, UEF outpost");
+            UnitPresetSettings start = OfRole(ArmyRoles.Player);
             Assert.AreEqual(ArmyRoles.Player, start.Role);
             float x = MathF.Round(first.Position.X), z = MathF.Round(first.Position.Z);
             document = UnitPresets.Place(document, start, "Start", null, null, ["INITIAL"], null, x, z, 0,
@@ -243,16 +273,32 @@ namespace FAForever.MapEditor.Project.Tests
             CollectionAssert.AreEquivalent(ExampleUnitPresets.Names.ToArray(), written.ToArray());
             PresetLibrary library = new PresetLibrary(Path.GetDirectoryName(folder)!);
             Assert.AreEqual(written.Count, library.List(UnitPresets.Kind).Count, "every example reads as a units preset");
-            foreach (string role in ArmyRoles.All)
-            {
-                Assert.IsTrue(library.List(UnitPresets.Kind).Any(p => p.Read<UnitPresetSettings>().Role == role), $"an example for the role {role}");
-            }
+            Assert.IsTrue(library.List(UnitPresets.Kind).All(p => p.Read<UnitPresetSettings>().Role == ArmyRoles.Civilian), "every example is the civilians'");
 
-            File.Delete(Path.Combine(folder, "UEF wall ring.json"));
-            File.WriteAllText(Path.Combine(folder, "Aeon base, small.json"), "{ \"formatVersion\": 1, \"kind\": \"units\", \"name\": \"Aeon base, small\", \"settings\": { \"group\": { \"name\": \"x\", \"units\": [], \"groups\": [] }, \"count\": 0 } }");
+            File.Delete(Path.Combine(folder, "UEF farm.json"));
+            File.WriteAllText(Path.Combine(folder, "Aeon civilian hamlet.json"), "{ \"formatVersion\": 1, \"kind\": \"units\", \"name\": \"Aeon civilian hamlet\", \"settings\": { \"group\": { \"name\": \"x\", \"units\": [], \"groups\": [] }, \"count\": 0 } }");
             Assert.AreEqual(0, ExampleUnitPresets.Ensure(folder).Count, "nothing again");
-            Assert.IsFalse(File.Exists(Path.Combine(folder, "UEF wall ring.json")), "a deleted example stays deleted");
-            Assert.AreEqual(0, library.Find(UnitPresets.Kind, "Aeon base, small")!.Read<UnitPresetSettings>().Count, "an edited example is left alone");
+            Assert.IsFalse(File.Exists(Path.Combine(folder, "UEF farm.json")), "a deleted example stays deleted");
+            Assert.AreEqual(0, library.Find(UnitPresets.Kind, "Aeon civilian hamlet")!.Read<UnitPresetSettings>().Count, "an edited example is left alone");
+        }
+
+        [TestMethod]
+        public void AnUntouchedCopyOfAnExampleThatNoLongerShipsIsDeletedAndAnEditedOneStays()
+        {
+            string folder = Path.Combine(ProjectFolders.New("retired-units"), "presets", "units");
+            Directory.CreateDirectory(folder);
+            // an example of an earlier release, as a workspace still holds it (CRLF or LF alike)
+            string retired = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "assets", "retired-unit-presets", "Player start, UEF outpost.json"));
+            File.WriteAllText(Path.Combine(folder, "Player start, UEF outpost.json"), retired.ReplaceLineEndings("\r\n"));
+            File.WriteAllText(Path.Combine(folder, "UEF base, small.json"), retired.Replace("Player start, UEF outpost", "UEF base, small", StringComparison.Ordinal));
+            File.WriteAllText(Path.Combine(folder, "My own.json"), retired.Replace("Player start, UEF outpost", "My own", StringComparison.Ordinal));
+
+            ExampleUnitPresets.Ensure(folder);
+
+            Assert.IsFalse(File.Exists(Path.Combine(folder, "Player start, UEF outpost.json")), "untouched, it goes");
+            Assert.IsTrue(File.Exists(Path.Combine(folder, "UEF base, small.json")), "a retired example the user changed stays");
+            Assert.IsTrue(File.Exists(Path.Combine(folder, "My own.json")), "the user's own presets stay");
+            Assert.IsTrue(File.Exists(Path.Combine(folder, "UEF farm.json")), "the current examples are written");
         }
 
         [TestMethod]

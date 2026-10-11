@@ -247,6 +247,16 @@ namespace FAForever.MapEditor.Project.Workspaces
         public static bool IsCivilianUnit(string blueprint) => blueprint.Length >= 3 && char.ToLowerInvariant(blueprint[2]) == 'c';
 
         /// <summary>
+        /// Whether a blueprint is one of the civilian wall segments the expansion added: <c>xec8001</c>
+        /// to <c>xec8020</c> and <c>xec9001</c> on for the UEF, <c>xac8nnn</c>, <c>xrc8nnn</c> and
+        /// <c>xsc8nnn</c> for the others.
+        /// </summary>
+        public static bool IsCivilianWall(string blueprint) =>
+            blueprint.Length == 7 && char.ToLowerInvariant(blueprint[0]) == 'x' && char.ToLowerInvariant(blueprint[2]) == 'c'
+            && (blueprint[3] == '8' || (blueprint[3] == '9' && char.ToLowerInvariant(blueprint[1]) == 'e'))
+            && blueprint[4..].All(char.IsAsciiDigit);
+
+        /// <summary>
         /// The faction of a blueprint as a scan names it: <c>Civilian</c> for a civilian's, else its
         /// faction (<see cref="BlueprintIds.GetFaction"/>), else <c>Other</c>.
         /// </summary>

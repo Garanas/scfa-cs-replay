@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Wreck field, Cybran bots",
+  "settings": {
+    "group": {
+      "name": "Wreck field, Cybran bots",
+      "units": [
+        {
+          "blueprint": "url0304",
+          "x": -1.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": -0.628
+        },
+        {
+          "blueprint": "url0303",
+          "x": -0.5,
+          "y": 0,
+          "z": 0.5,
+          "heading": -0.585
+        },
+        {
+          "blueprint": "url0303",
+          "x": -0.58947754,
+          "y": 0,
+          "z": 2.7357788,
+          "heading": -1.606
+        },
+        {
+          "blueprint": "url0303",
+          "x": -7.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": -1.597
+        },
+        {
+          "blueprint": "url0303",
+          "x": 8.5,
+          "y": 0,
+          "z": -5.5,
+          "heading": -0.995
+        }
+      ],
+      "groups": []
+    },
+    "count": 5,
+    "role": "civilian",
+    "wrecks": true,
+    "source": "X1CA_006, army ControlCenter, group M2_Wreckage"
+  }
+}

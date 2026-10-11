@@ -1,0 +1,45 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Wreck field, UEF tanks",
+  "settings": {
+    "group": {
+      "name": "Wreck field, UEF tanks",
+      "units": [
+        {
+          "blueprint": "uel0202",
+          "x": -7.5,
+          "y": 0,
+          "z": 5.5,
+          "heading": -0.428
+        },
+        {
+          "blueprint": "uel0201",
+          "x": -1.023407,
+          "y": 0,
+          "z": 6.7423096,
+          "heading": -1.021
+        },
+        {
+          "blueprint": "uel0202",
+          "x": 3.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": -0.079
+        },
+        {
+          "blueprint": "uel0201",
+          "x": 6.5,
+          "y": 0,
+          "z": -7.5,
+          "heading": 0.463
+        }
+      ],
+      "groups": []
+    },
+    "count": 4,
+    "role": "civilian",
+    "wrecks": true,
+    "source": "rainmakers_survival.v0065, army Neutrals, group Wrecks"
+  }
+}

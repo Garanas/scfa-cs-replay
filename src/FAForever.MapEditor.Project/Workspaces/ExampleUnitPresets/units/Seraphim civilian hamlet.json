@@ -1,0 +1,58 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Seraphim civilian hamlet",
+  "settings": {
+    "group": {
+      "name": "Seraphim civilian hamlet",
+      "units": [
+        {
+          "blueprint": "xsc1501",
+          "x": 9.5,
+          "y": 0,
+          "z": 8.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "xsc1501",
+          "x": -8.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "xsc1301",
+          "x": -8.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "xsc1301",
+          "x": 8.5,
+          "y": 0,
+          "z": -0.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "xsc1501",
+          "x": -2.5,
+          "y": 0,
+          "z": 10.5,
+          "heading": 0
+        },
+        {
+          "blueprint": "xsc1501",
+          "x": 2.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": 0
+        }
+      ],
+      "groups": []
+    },
+    "count": 6,
+    "role": "civilian",
+    "source": "FAF_Coop_Operation_Red_Revenge, army Seraphim, group P1/P1Labs/P1LabsDF2"
+  }
+}

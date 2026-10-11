@@ -1379,9 +1379,11 @@ change, span `model.armies`), the place tool and the commands.
   Applying one makes it what the place tool places (`Preset`); a click runs `units.placePreset
   {name?, x?, z?, army?, group?, heading?}`: a new group named after the preset in the tool's
   group, turned in quarter turns. Choosing a unit leaves the preset.
-- **Example unit presets and army roles** (U-6): the library's `ExampleUnitPresets` (36 presets
-  embedded in FAForever.MapEditor.Project) are written into `presets/units` when the workspace
-  opens (`PresetsViewModel.Open`; a deleted one stays deleted, an edited one is left alone). A
+- **Example unit presets and army roles** (U-6): the library's `ExampleUnitPresets` (38 presets
+  embedded in FAForever.MapEditor.Project, all the civilians': settlements and wreck fields) are
+  written into `presets/units` when the workspace opens (`PresetsViewModel.Open`; a deleted one
+  stays deleted, an edited one is left alone, an untouched copy of an example that no longer
+  ships is deleted). A
   preset may name an army role (`UnitPresetSettings.Role`: civilian, enemy, player) and wrecks
   (`Wrecks`): `units.placePreset {..., wreck?}` then places it for `UnitPresets.ArmyFor` (the
   civilians; an army no player takes besides the civilians', `ARMY_9` first, and on a map without

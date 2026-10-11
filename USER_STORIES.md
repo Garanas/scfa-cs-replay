@@ -455,12 +455,15 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **U-4 Unit presets.** A civilian base, a defence line: a group saved as a preset and placed
       again, for any army (F-10). The Units mode's Presets: the selected units or the chosen group,
       placed with the Place tool at the mouse as a new group, turned in quarter turns.
-- [x] **U-6 Unit templates from real maps.** Every workspace starts with 36 example unit presets
-      taken from the campaign, coop and vault maps (bases per faction and size with their role
-      groups, defence points, wall rings and lines, civilian towns, wreck fields, players' starts);
-      each names an army role (civilian, enemy, player) that places it for the matching army of
+- [x] **U-6 Unit templates from real maps.** Every workspace starts with 38 example unit presets
+      taken from the campaign, coop and vault maps: 26 civilian settlements of the four building
+      styles (UEF, Aeon, Cybran, Seraphim) from hamlets to cities, farms, an industrial yard, a
+      research campus, a network hub, a rift site, without walls or defences, and 12 small wreck
+      fields (a few tanks, crashed gunships, a destroyed convoy, naval graveyards, mixed factions).
+      A preset names an army role (civilian, enemy, player) that places it for the matching army of
       the map, an enemy on a map with only the civilians' armies in an extra army `ARMY_9` added
-      for it (`faf-map dev scan-units`, `dev unit-templates`).
+      for it (`faf-map dev scan-units`, `dev unit-templates`); untouched copies of the examples of
+      earlier releases (enemy bases, players' starts) leave the workspace.
 - [x] **U-5 Wrecks.** Place units as wrecks: the place tool's As wrecks and `units.asWrecks` on the
       selection (the inspector's Wrecks check box) put them into their army's `WRECKAGE` group, which
       the game turns into wrecks when it starts, as the vault's maps keep them; grey and dark in 3D, a

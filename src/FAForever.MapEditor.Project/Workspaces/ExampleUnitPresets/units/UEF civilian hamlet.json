@@ -1,0 +1,72 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "UEF civilian hamlet",
+  "settings": {
+    "group": {
+      "name": "UEF civilian hamlet",
+      "units": [
+        {
+          "blueprint": "uec1401",
+          "x": -7.5,
+          "y": 0,
+          "z": -3.5,
+          "heading": -0.009
+        },
+        {
+          "blueprint": "uec1501",
+          "x": -7.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": -0.026
+        },
+        {
+          "blueprint": "uec1501",
+          "x": -7.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": -0.026
+        },
+        {
+          "blueprint": "uec1101",
+          "x": -8.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": -0.026
+        },
+        {
+          "blueprint": "uec1201",
+          "x": -2.5,
+          "y": 0,
+          "z": 2.5,
+          "heading": -0.026
+        },
+        {
+          "blueprint": "uec1301",
+          "x": 7.5,
+          "y": 0,
+          "z": -10.5,
+          "heading": -0.026
+        },
+        {
+          "blueprint": "uec1101",
+          "x": -2.5,
+          "y": 0,
+          "z": -9.5,
+          "heading": -0.026
+        },
+        {
+          "blueprint": "uec1501",
+          "x": -1.5,
+          "y": 0,
+          "z": 11.5,
+          "heading": -0.026
+        }
+      ],
+      "groups": []
+    },
+    "count": 8,
+    "role": "civilian",
+    "source": "Supreme Commander Forged Alliance/maps/SCMP_001, army NEUTRAL_CIVILIAN, group INITIAL"
+  }
+}

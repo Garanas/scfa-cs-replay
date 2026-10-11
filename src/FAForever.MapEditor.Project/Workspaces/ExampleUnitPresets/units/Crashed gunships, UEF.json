@@ -1,0 +1,66 @@
+{
+  "formatVersion": 1,
+  "kind": "units",
+  "name": "Crashed gunships, UEF",
+  "settings": {
+    "group": {
+      "name": "Crashed gunships, UEF",
+      "units": [
+        {
+          "blueprint": "uea0203",
+          "x": -1.579956,
+          "y": 0,
+          "z": -0.59765625,
+          "heading": 2.304
+        },
+        {
+          "blueprint": "uea0203",
+          "x": -1.3757935,
+          "y": 0,
+          "z": -6.376831,
+          "heading": 2.286
+        },
+        {
+          "blueprint": "uea0104",
+          "x": -3.47583,
+          "y": 0,
+          "z": 5.911499,
+          "heading": -0.497
+        },
+        {
+          "blueprint": "uea0203",
+          "x": -6.636627,
+          "y": 0,
+          "z": -1.3961182,
+          "heading": 1.475
+        },
+        {
+          "blueprint": "uea0203",
+          "x": 3.4385529,
+          "y": 0,
+          "z": 3.5855713,
+          "heading": 1.614
+        },
+        {
+          "blueprint": "uea0203",
+          "x": 2.1697998,
+          "y": 0,
+          "z": -2.7185059,
+          "heading": 1.484
+        },
+        {
+          "blueprint": "uea0104",
+          "x": 6.5426636,
+          "y": 0,
+          "z": -1.6641846,
+          "heading": -0.838
+        }
+      ],
+      "groups": []
+    },
+    "count": 7,
+    "role": "civilian",
+    "wrecks": true,
+    "source": "FAF_Coop_Prothyon_16, army UEFAlly, group Wrecks/M5_Wrecks"
+  }
+}

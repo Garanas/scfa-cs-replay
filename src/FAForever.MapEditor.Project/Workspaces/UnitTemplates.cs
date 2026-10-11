@@ -19,6 +19,10 @@ namespace FAForever.MapEditor.Project.Workspaces
     /// <param name="Blueprints">Only units of these blueprints.</param>
     /// <param name="Radius">Only the units within this many ogrids of the middle of all of them (the
     /// median of their places), to leave out a base's far outposts.</param>
+    /// <param name="CivilianOnly">Only civilian units (<see cref="UnitGroupScan.IsCivilianUnit"/>) and none
+    /// of the civilian wall segments (<see cref="UnitGroupScan.IsCivilianWall"/>): a town without its walls
+    /// and defences.</param>
+    /// <param name="Without">Units of these blueprints left out.</param>
     public sealed record UnitTemplatePick(
         string Name,
         string Map,
@@ -29,7 +33,9 @@ namespace FAForever.MapEditor.Project.Workspaces
         IReadOnlyList<string>? Leave = null,
         IReadOnlyList<float>? Area = null,
         IReadOnlyList<string>? Blueprints = null,
-        float? Radius = null);
+        float? Radius = null,
+        bool CivilianOnly = false,
+        IReadOnlyList<string>? Without = null);
 
     /// <summary>
     /// Makes units presets from groups of real maps (<c>faf-map dev unit-templates</c>): the units of
@@ -117,6 +123,7 @@ namespace FAForever.MapEditor.Project.Workspaces
             }
             HashSet<string> leave = new HashSet<string>(pick.Leave ?? [], StringComparer.OrdinalIgnoreCase);
             HashSet<string>? blueprints = pick.Blueprints is null ? null : new HashSet<string>(pick.Blueprints, StringComparer.OrdinalIgnoreCase);
+            HashSet<string> without = new HashSet<string>(pick.Without ?? [], StringComparer.OrdinalIgnoreCase);
             List<(string? Role, MapUnit Unit)> units = [];
             Gather(group, null, true);
             void Gather(MapUnitGroup g, string? role, bool top)
@@ -136,7 +143,7 @@ namespace FAForever.MapEditor.Project.Workspaces
                 }
                 foreach (MapUnit unit in g.Units)
                 {
-                    if (Inside(unit.Position) && (blueprints is null || blueprints.Contains(unit.BlueprintId)))
+                    if (Inside(unit.Position) && Kept(unit.BlueprintId))
                     {
                         units.Add((role, unit));
                     }
@@ -146,6 +153,10 @@ namespace FAForever.MapEditor.Project.Workspaces
                     Gather(child, role, false);
                 }
             }
+            bool Kept(string blueprint) =>
+                (blueprints is null || blueprints.Contains(blueprint))
+                && !without.Contains(blueprint)
+                && (!pick.CivilianOnly || (UnitGroupScan.IsCivilianUnit(blueprint) && !UnitGroupScan.IsCivilianWall(blueprint)));
             bool Inside(Vector3 p) => pick.Area is not { Count: 4 } a || (p.X >= a[0] && p.Z >= a[1] && p.X <= a[2] && p.Z <= a[3]);
 
             // the same unit in two difficulty levels counts once
