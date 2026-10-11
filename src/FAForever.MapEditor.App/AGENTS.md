@@ -615,12 +615,14 @@ What it found, and the rules that came of it:
   driven by automation while another window has the focus may be slowed by Windows (on the
   wave 12 machine a stack composite took 200 ms in the editor and 15 ms in a test of the same
   code). The library's speed tests (`CoverageStacksSpeedTest`) time the maths alone.
-- Work in proportion to what changed, at every level (wave 12, an 81 km map): a layer added to a
-  stack composites only where it works (none for a new painted layer: 180 ms became 2 to 17 ms),
-  a few dirty tiles are composited on the calling thread, and the top view colours only the part
-  of a tile whose samples or mask pixels differ (`TerrainPicture.ChangedBox`; a strata stroke went
-  from 13.8 to 3.9 ms a move, `top.document-changed` from 7.9 to 0.7 ms), many rectangles on
-  several processors.
+- Work in proportion to what changed, at every level (wave 12): a layer added to a stack
+  composites only where it works (none for a new painted layer), a few dirty tiles are composited
+  on the calling thread, and the top view colours only the part of a tile whose samples or mask
+  pixels differ (`TerrainPicture.ChangedBox`), many rectangles on several processors. Three
+  stratum layers added and a strata stroke over them, before and after: Archsimkats Valley
+  `tool.stroke` 13.8 to 1.8 ms a move, `top.document-changed` 8.6 to 0.8 ms, the layers 49 to 28 ms
+  each and no stall; an 81 km map `tool.stroke` 15.5 to 3.9 ms, the layers 430 to 135 ms each (a
+  painted one a few ms; a mask reference composites everything it changes).
 - Looking a texture up asks the file system (`File.Exists`, the time of the file); the 3D view
   drew 533 decal runs a frame and spent 33 of 35 ms doing so. It keeps the sources by path and
   looks them up again only when the map's files change or the asset watcher reports a change.
