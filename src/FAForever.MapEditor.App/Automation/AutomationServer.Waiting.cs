@@ -182,7 +182,10 @@ public sealed partial class AutomationServer
         DateTime? built = null;
         try
         {
-            built = string.IsNullOrEmpty(assembly.Location) ? null : File.GetLastWriteTimeUtc(assembly.Location);
+            // the assembly's file, or in a single-file build (which has none) the executable itself
+            string dll = Path.Combine(AppContext.BaseDirectory, assembly.GetName().Name + ".dll");
+            string? file = File.Exists(dll) ? dll : Environment.ProcessPath;
+            built = file is null ? null : File.GetLastWriteTimeUtc(file);
         }
         catch (IOException)
         {

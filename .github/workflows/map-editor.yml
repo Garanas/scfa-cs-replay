@@ -1,0 +1,51 @@
+# Builds the map editor as one standalone Windows executable (the .NET runtime and every native
+# library inside it, nothing to install) on every push to main, and keeps it as a workflow artifact.
+
+name: Map editor
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 10.0.x
+
+    # self-contained single file: the runtime, Avalonia's Skia and ANGLE and Magick.NET's native
+    # libraries are packed into faf-map-editor.exe and unpacked by itself on first start; not
+    # trimmed (automation and MediatR use reflection). The commit goes into the editor's version
+    # (EditorStamp, the files the export writes).
+    - name: Publish
+      shell: pwsh
+      run: >
+        dotnet publish src/FAForever.MapEditor.App
+        -c Release -r win-x64 --self-contained true
+        -p:PublishSingleFile=true
+        -p:IncludeNativeLibrariesForSelfExtract=true
+        -p:EnableCompressionInSingleFile=true
+        -p:DebugType=None -p:DebugSymbols=false
+        -p:SourceRevisionId=${{ github.sha }}
+        -o publish
+
+    - name: Name the artifact
+      id: name
+      shell: pwsh
+      run: |
+        $short = "${{ github.sha }}".Substring(0, 7)
+        "artifact=faf-map-editor-win-x64-$short" >> $env:GITHUB_OUTPUT
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.name.outputs.artifact }}
+        # the executable alone: the symbol files some native packages bring along are left out
+        path: publish/faf-map-editor.exe
+        if-no-files-found: error
+        retention-days: 90

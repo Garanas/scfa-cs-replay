@@ -79,6 +79,10 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
   Everything about the server (compose stack, setup script, deploy key, runbook) lives in a
   separate public repository, [Garanas/jipwijnia-vps](https://github.com/Garanas/jipwijnia-vps); try
   the image locally with `docker build -t scfa-cs-replay . && docker run --rm -p 8080:8080 scfa-cs-replay`.
+  The map editor is built on every push to `main` too (`.github/workflows/map-editor.yml`, also
+  run by hand): one standalone `faf-map-editor.exe` for Windows (self-contained, single file, the
+  runtime and native libraries inside, its version carrying the commit), kept 90 days as the
+  workflow artifact `faf-map-editor-win-x64-<commit>`.
   The footer shows the commit a build came from (`src/FAForever.Vault.Viewer/Services/BuildInfo.cs`; CI
   passes it as the `SOURCE_REVISION` build argument, since the image build has no `.git`).
 
