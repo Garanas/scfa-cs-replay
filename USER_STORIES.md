@@ -45,7 +45,11 @@ reads again when it changes; and nothing that generates runs by itself.
       the normal map and the preview are generated this way (T-7, S-4), and so are masks and props
       from rules (K-2, P-4). The Procedural mode lists every generated result as an entry with how
       it stands (missing, out of date, current), a picture and Generate; choosing one shows its
-      settings, what it is made from and when it was made in the inspector.
+      settings, what it is made from and when it was made in the inspector. Generate, Everything
+      out of date or missing (`generate.all`) also makes what was never made and says why it leaves
+      the rest (the sky cube map only when asked); results kept in the project (rules layers, props
+      of rules, the sky cube map, the preview and normal map) count as current when it opens; the
+      export generates into its copy only and leaves the history alone.
 - [x] **F-8 Asset discovery.** See which assets are loaded and where each comes from (the game,
       FAF, the workspace's own, the map's own files), which are in use by the map, which are
       missing; open an asset's file; reload one. Today: the asset shelf (F-9) shows what the map
@@ -311,8 +315,9 @@ reads again when it changes; and nothing that generates runs by itself.
       when asked. Today: a rules layer of a mask's or stratum's stack shows its rules under the stack:
       slope, height and distance to water (ranges with soft edges), other masks or strata, noise,
       combined in order (multiply, min, max, add, subtract) and changed by blur, grow, shrink,
-      threshold and invert; a preview in the top view; `generate.masks` makes them (one step of
-      undo), out of date when the terrain, water level, rules or masks they read change. Kept in
+      threshold and invert; a preview in the top view; editing the rules makes the rules layers in
+      the same step, so the mask shows what they make at once; `generate.masks` makes them again
+      (one step of undo) when the terrain, water level or masks they read change. Kept in
       the stack's JSON; an older project's `masks/<name>.rules.json` becomes a rules layer.
 
 ## W: Water
@@ -359,7 +364,8 @@ reads again when it changes; and nothing that generates runs by itself.
       previewed in the views and written as markers only by the export; out of date when
       walkability's inputs or the settings change (F-7). Edits by hand on top of the generated
       network with the Path nodes tool (add, move, remove, link, cut; `generate.addPathNode`, ...),
-      kept with the map and applied again after every generation.
+      kept with the map and applied again after every generation, mirrored with the symmetry as
+      markers placed by hand are (F-12).
 - [x] **R-4 Chains.** Create a chain and put markers in order.
 - [x] **R-5 Adaptive maps.** Which markers (deposits, civilians) exist for which number of players
       and options. Today: whether the map adapts, the army each deposit waits for, and the groups of
@@ -385,7 +391,8 @@ reads again when it changes; and nothing that generates runs by itself.
 - [x] **P-2 Paint props.** A palette of props with weights; density, random scale and rotation;
       an eraser. Today: the paint tool (radius, density, spacing; the Placing settings), the
       palette in the Props panel (from the picker, or the shelf while painting) saved as presets
-      (Palettes), cleared at once (`props.clearPalette`), the eraser (all props, or only the palette's).
+      (Palettes), cleared at once (`props.clearPalette`; Restore, `props.restorePalette`, or undo right
+      after brings it back), the eraser (all props, or only the palette's).
 - [x] **P-3 Paint where a layer is.** Paint only where a stratum or mask covers the terrain (trees
       only on grass), and not where another one does: the paint tool's Only on and Not on offer
       the strata and the masks for tools of K-1 (`Mask: forest`), with a threshold.
@@ -396,7 +403,8 @@ reads again when it changes; and nothing that generates runs by itself.
       Rule (palette, layers that allow or forbid with thresholds, density, spacing, clustering by
       noise or copses, slope, water, how they stand); `generate.props` replaces the props the rules
       placed (each carries its rule's name) and keeps the others; `props.keepFromRules` makes
-      generated props hand-placed. Kept as `prop-rules.json`; exported as ordinary props.
+      generated props hand-placed. On a symmetric map each prop comes with its images (a rule's
+      Mirror, on by default). Kept as `prop-rules.json`; exported as ordinary props.
 - [x] **P-5 Reclaim.** The mass and energy of the props, for the map and per area. Today: the
       Props panel's Reclaim (the map, per area), the selected props' in the inspector, from the
       blueprints' values (`props.reclaim`).
@@ -446,7 +454,8 @@ reads again when it changes; and nothing that generates runs by itself.
       taken from the campaign, coop and vault maps (bases per faction and size with their role
       groups, defence points, wall rings and lines, civilian towns, wreck fields, players' starts);
       each names an army role (civilian, enemy, player) that places it for the matching army of
-      the map (`faf-map dev scan-units`, `dev unit-templates`).
+      the map, an enemy on a map with only the civilians' armies in an extra army `ARMY_9` added
+      for it (`faf-map dev scan-units`, `dev unit-templates`).
 - [x] **U-5 Wrecks.** Place units as wrecks: the place tool's As wrecks and `units.asWrecks` on the
       selection (the inspector's Wrecks check box) put them into their army's `WRECKAGE` group, which
       the game turns into wrecks when it starts, as the vault's maps keep them; grey and dark in 3D, a

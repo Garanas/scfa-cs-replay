@@ -611,6 +611,16 @@ around new work that may grow with the map: `3d.*` (the 3D view's frame and its 
 `top.*`, `model.*`, `tool.*`, `camera.smooth-ground`.
 
 What it found, and the rules that came of it:
+- Measure the editor in the foreground, or compare before and after in the same state: a window
+  driven by automation while another window has the focus may be slowed by Windows (on the
+  wave 12 machine a stack composite took 200 ms in the editor and 15 ms in a test of the same
+  code). The library's speed tests (`CoverageStacksSpeedTest`) time the maths alone.
+- Work in proportion to what changed, at every level (wave 12, an 81 km map): a layer added to a
+  stack composites only where it works (none for a new painted layer: 180 ms became 2 to 17 ms),
+  a few dirty tiles are composited on the calling thread, and the top view colours only the part
+  of a tile whose samples or mask pixels differ (`TerrainPicture.ChangedBox`; a strata stroke went
+  from 13.8 to 3.9 ms a move, `top.document-changed` from 7.9 to 0.7 ms), many rectangles on
+  several processors.
 - Looking a texture up asks the file system (`File.Exists`, the time of the file); the 3D view
   drew 533 decal runs a frame and spent 33 of 35 ms doing so. It keeps the sources by path and
   looks them up again only when the map's files change or the asset watcher reports a change.
@@ -895,6 +905,18 @@ Four small parts that later features build on:
   that writes the document names its `Outputs`. Another map forgets the results. A feature registers its
   generator with the command that generates it (`Generation.Register(generator, commandId)`), and
   the panel lists it (`Rows`); walkability, the normal map and the preview do (next section).
+- **Everything out of date or missing** (`generate.all {list?}`, Generate menu, wave 12): what
+  `generate.stale` makes and, in the same order, every listed result never made for the map,
+  except those a feature leaves out with a reason (`Generation.LeaveWhenMissing(id, document =>
+  reason or null)`: the sky cube map, made only when asked; masks or props from rules the map has
+  not; a map-wide decal taken from a file or none). The status line and the answer (`made`, each
+  with `missing`; `left`, each with `why`) say what was made and why the rest was left.
+- **Results kept in the project count as current when it opens** (`KeepMapPreview`, on
+  `MapOpened`): the preview, the normal map (unless a placeholder of one colour), the rules layers'
+  grids, the props of prop rules and the generated sky cube map (`env/cubemaps/skycube_generated.dds`,
+  decoded for its picture) are kept as the results of the version opened, so the list reads current
+  until what they are made from changes. Walkability, kept outside the map, is generated again on
+  opening when it was current at saving (`KeptResults`).
 
 ## Walkability, the normal map and preview, and problems
 
@@ -1022,9 +1044,12 @@ every other part).
   with its routes takes about 2.2 s (routes are searched in the game's blocks of 4 ogrids).
 - **Export as steps** (`model.Export`, `ExportViewModel`; `MainViewModel.ExportAsync`): the
   registered `ExportStep`s in their `Order` (`GenerateOrder` 100: the normal map when out of date
-  and the map does not keep its own; `PreviewOrder` 200: the preview, always, into the map only when
-  it differs; `GameFilesOrder` 500: the walkability marks into the terrain types), then writing the
-  map folder. Each step may change `ExportRun.Document`, the version the export writes, without
+  and the map does not keep its own; `PreviewOrder` 200: the preview, always; `GameFilesOrder` 500:
+  the walkability marks into the terrain types), then writing the map folder. The export works on
+  a copy: the normal map and the preview are generated on the pool into the version it writes
+  (`GenerateIntoExportAsync`, span `model.generate-export`), never into the project, whose history
+  and generated results stay as they were (Generate in the Procedural mode keeps a result with the
+  project); each step is a span `export.<id>`. Each step may change `ExportRun.Document`, the version the export writes, without
   touching the project: wave 9 registers the map-wide decals at `DecalsOrder` and generated path
   nodes at `PathNodesOrder` the same way (`model.Export.Register(new ExportStep(id, title, order) {
   Applies = run => ..., Run = async run => run.Document = ... })`). The status line says each step
@@ -1062,7 +1087,11 @@ every other part).
   (`generate.movePathNode {x, z, toX, toZ, layer?, within?}`), onto another node links them
   (`generate.linkPathNodes {x, z, toX, toZ, cut?, layer?, within?}`, control cuts), control and a
   click or Delete removes (`generate.removePathNode {x, z, layer?, within?}`); a line follows the
-  drag. Commands find the previewed node nearest the place within `within` ogrids (4). Each edit is
+  drag. Commands find the previewed node nearest the place within `within` ogrids (4). While the
+  symmetry mirrors edits, an edit is mirrored as markers placed by hand are: a node added gets a
+  node at its image in every other part (inside the map, not on itself), and moving, removing and
+  linking take the mirror partners along (the generated node nearest each image, within
+  `MainViewModel.PathNodePartnerReach`, 4 ogrids), all in one step. Each edit is
   a step of undo kept in the map (`PathNodeSettings.Edits`) and applied after every generation;
   the panel counts them and those whose node is gone (`generate.clearPathEdits {layer?, unmatched?}`
   forgets them). How an edit finds its node again is in the library's guide.
@@ -1312,7 +1341,10 @@ change, span `model.armies`), the place tool and the commands.
   opens (`PresetsViewModel.Open`; a deleted one stays deleted, an edited one is left alone). A
   preset may name an army role (`UnitPresetSettings.Role`: civilian, enemy, player) and wrecks
   (`Wrecks`): `units.placePreset {..., wreck?}` then places it for `UnitPresets.ArmyFor` (the
-  civilians; an army no player takes, `ARMY_9` first, else the civilians; the nearest spawn's army)
+  civilians; an army no player takes besides the civilians', `ARMY_9` first, and on a map without
+  one, a new map's `ARMY_17` and `NEUTRAL_CIVILIAN`, an extra army `ARMY_9` added in the same step
+  (`UnitPresets.ArmyOrNewFor`; the answer's `addedArmy`), so an enemy base is never the town's army;
+  the nearest spawn's army)
   in place of the tool's army, unless `army` is given, and wrecks into the army's `WRECKAGE` group;
   with the symmetry a player's preset's images go to the partner spawns' armies (`MirrorPlaced`).
   The tool keeps the role (`PresetRole`, `state` `presetRole`); applying says the army in the status line.
@@ -1454,7 +1486,12 @@ follow the terrain, and the reclaim. The maths is the library's (`PropOrientatio
   `props.followTerrain {on?}`, `props.reclaim` and, for automation, `props.set {alignment?,
   randomTurn?, randomTilt?, scaleMin?, scaleMax?, sink?, radius?, density?, spacing?, onlyOn?,
   notOn?, threshold?, eraseRadius?, onlyPalette?}`. The ones on the selection act on its props.
-- **Panel**: Placing, Palette (thumbnail, weight, cross; Add a prop and Clear, `props.clearPalette`), Palettes (presets of kind
+- **The palette is the tool's**, like a brush's settings: its changes are no steps of the map's
+  history. Clear is the one that throws work away, so it can be taken back: Restore
+  (`props.restorePalette`, shown while the palette stays empty) brings the props back with their
+  weights, and so does undo right after Clear, before the map is edited again
+  (`PropsViewModel.UndoesClear`; `MainViewModel.Undo` asks it first); `state.props.canRestorePalette`.
+- **Panel**: Placing, Palette (thumbnail, weight, cross; Add a prop, Clear, `props.clearPalette`, and Restore), Palettes (presets of kind
   `props`: the props with weights, the paint brush, the Placing settings), Rules (P-4,
   planned), Reclaim (map and per area, counted again only when the props, areas or catalogue
   change; span `model.props-reclaim`). The inspector's `PropSelection` adds pitch, roll, scale,
@@ -1500,6 +1537,17 @@ Terrain panel's generated list and `generate.stale`.
   `props.removeRule {rule?, keepProps?}` (its props go too, unless kept) and, in the Props menu,
   `props.keepFromRules` (the selected props of rules become hand-placed). Pasted and duplicated
   props are hand-placed.
+- **Editing the rules shows what they make** (wave 12): a rule added, changed, moved or taken out
+  (`paint.addMaskRule`, `setMaskRule`, `moveMaskRule`, `removeMaskRule`) makes every rules layer
+  again from its rules in the same step (`MainViewModel.WithRulesMade`, span `model.mask-rules-made`:
+  the masks from rules generated, about 70 to 200 ms a rules layer on an 81 km map) and keeps that as
+  the generator's result (`KeepRulesMade`), so the layer, its thumbnail, the composite and the views
+  show it at once and the entry reads current; the edit is the person asking. A change of what the
+  rules read (the terrain, the water level, a mask without rules) leaves them out of date until
+  Generate, as every result (F-7). Rules that cannot be made keep the edit and log why.
+- **Props from rules follow the symmetry**: on a map with a symmetry (`MapDocument.Symmetry`) a
+  rule's props come with their images in every other part (the library's `PropRules`), unless the
+  rule's Mirror is off (`props.setRule {mirror}`, the inspector's "Mirror with the map's symmetry").
 - Generating runs on a thread of the pool through `MainViewModel.GenerateAsync` and is one step of
   undo (`Generate the masks from rules`, `Generate the props from rules`); 7 500 trees on Seton's
   Clutch (20 km) take about 35 ms.
@@ -1805,7 +1853,9 @@ coverage"). Files: `ViewModels/CoverageStackViewModel.cs`, `MainViewModel.Covera
   target, chosen layer, whether kept in the document and each layer's source, combine, strength,
   clip, what it reads and summary; `stacks`: the keys the document keeps); `state.rules.masks.layer`.
 - Speed (Archsimkats Valley, debug): a strata stroke costs about 10 ms a dab without a stack and
-  about 17 ms with a stack of three layers (a mask reference among them).
+  about 17 ms with a stack of three layers (a mask reference among them). On an 81 km map (wave
+  12): a painted layer added costs 2 to 17 ms (it composites nothing), a mask reference a full
+  composite of the stack and those that read it, a strata stroke over four layers about 4 ms a move.
 - Tests: `CoverageStacksTest` (operations and the mouse), the library's `CoverageLayersTest`.
 
 ## Height layers and curves

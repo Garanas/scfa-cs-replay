@@ -732,7 +732,15 @@ for tools and the water's masks theirs in the same shape (the plan "Map Editor R
   keeping tiles that come out the same and the grid itself when nothing changed; `Composite` gives
   floats (previews, the draft of 9A); `TileOf` one tile below a layer. `ChangedTiles(previous,
   before, next, after)` marks the tiles a change touched (a layer's grid tiles, the tiles reading a
-  changed part of a mask), all of them when the layers, their order or settings changed.
+  changed part of a mask), all of them when the layers, their order or settings changed, except
+  that one layer added or removed (the others as they were) marks only where it works: none for a
+  hidden or powerless layer, the tiles where its alpha (coverage; in heights its coverage) is above
+  0, all for a mask reference or a layer without one. A grid without a stack follows as its own
+  painted layer (`CoverageLayers.Trivial`), so the first layer added to it is as cheap. A mask of a
+  coverage grid's own size is read pixel for pixel (its pixels lie at the grid's samples), and a
+  composite of up to 16 dirty tiles runs on the calling thread (`CoverageStacksSpeedTest`: an 81 km
+  map's painted layer added in 0.1 ms, a mask reference in about 14 ms, a stroke of four dabs over
+  three layers about 1 ms).
   `TakeChanges` puts a brush's change of the target itself into the chosen painted layer
   (`PaintProblem` says why a layer cannot be painted), so the composite is what the brush made: a
   weaker or clipped layer gets more, under a replacing layer it does not show. A stroke on an 81 km
@@ -1131,7 +1139,12 @@ User stories K-2 and P-4; generated only when asked, as the other results (F-7).
   props carry `Prop.Rule`; `PropRulesGenerator` (`propsFromRules`) replaces every prop with a rule
   (`RuleEdits.ReplaceRuleProps`, numbered after the props that stay) and never touches props
   placed by hand, which do not count for the rules' spacing. 20 000 props on a 20 km map take well
-  under a second (`PropRulesTest`).
+  under a second (`PropRulesTest`). On a map with a symmetry (`MapDocument.Symmetry`, an input of
+  the generator) a rule that mirrors (`PropRule.Mirror`, on by default; `PropRuleDto.Mirror`
+  written only when off) places each prop with its image in every other part (`ImagesOf`): a place
+  is tried for one part's share of the density, and a prop goes only with all its images, each
+  inside the map, allowed by the layers, the slope and the water where it lies and as far from
+  every prop as the spacing asks; a place on an axis is its own image.
 - **Edits** (`RuleEdits`): a mask's rules by place (`AddMaskRule`, `UpdateMaskRule`,
   `RemoveMaskRule`: without its last rule a mask is painted by hand again, `MoveMaskRule`,
   `SetMaskRules`); `MaskLayers.Rename` takes the rules along and points every rule that read the
@@ -1186,8 +1199,11 @@ src/FAForever.MapEditor.Project/Workspaces/ExampleUnitPresets` writes the shippe
 `ExampleUnitPresets.Ensure` writes into a workspace's `presets/units` once (`.examples` names those
 written; a copy equal to an earlier version, listed in `Earlier`, is updated; a changed one stays).
 `Workspaces/UnitPresets` holds the preset records (`UnitPresetSettings` with the optional `Role`,
-`Wrecks`, `Source`), `ArmyFor(document, role, x, z)` and `Place`. The game's folders, the coop maps
-and the vault are only read.
+`Wrecks`, `Source`), `ArmyFor(document, role, x, z)` and `Place`. An enemy is never put in a
+civilian army: on a map whose only extra armies are the civilians' (a new map's `ARMY_17` and
+`NEUTRAL_CIVILIAN`) `ArmyFor` has none for it, and `Place` adds the extra army `EnemyArmy`
+(`ARMY_9`, else the next free extra name; `ArmyOrNewFor` says which) in the same edit. The game's
+folders, the coop maps and the vault are only read.
 
 ## Tests
 
