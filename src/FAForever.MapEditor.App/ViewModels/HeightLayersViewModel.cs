@@ -116,30 +116,7 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
                 Help = "Which heightmaps the layer shapes: both (it keeps a place and an on/off of its own in each), the draft only or the final only",
             },
         ]);
-        HeightCurve CurveOf(MapDocument d) => HeightLayers.Find(d, Chosen)?.Curve ?? new HeightCurve();
-        const string set = "terrain.setCurve";
-        Curve = new SettingGroup("Curve",
-        [
-            new ChoiceSetting("Profile", set, "profile", Profiles, d => CurveOf(d).Profile.ToString(), run, Fixed)
-            {
-                Help = "Ridge raises, valley lowers, road flattens to the points' heights, cliff raises the left side",
-            },
-            new NumberSetting("Width", set, "width", d => CurveOf(d).Width, run, Fixed) { Minimum = 0, Maximum = 64, HasSlider = true, Help = "The part at full height, in ogrids" },
-            new NumberSetting("Falloff", set, "falloff", d => CurveOf(d).Falloff, run, Fixed) { Minimum = 0, Maximum = 64, HasSlider = true, Help = "How far beyond the width it fades out, in ogrids" },
-            new NumberSetting("Height", set, "height", d => CurveOf(d).Points.FirstOrDefault()?.Height ?? 0, run, Fixed)
-            {
-                // as the other fields: a slider beside it; a height typed may go beyond its end
-                Minimum = 0,
-                Maximum = 256,
-                HasSlider = true,
-                Help = "Every point's height: how much a ridge, valley or cliff rises, or the road's height in game units",
-            },
-            new BoolSetting("Closed", set, "closed", d => CurveOf(d).Closed, run, Fixed) { Help = "The last point joins the first" },
-            new BoolSetting("Mirrored", set, "mirrored", d => CurveOf(d).Symmetry is not null, run, Fixed)
-            {
-                Help = "The layer draws the curve's images in the other parts of the map too, by the chosen symmetry",
-            },
-        ]);
+        Curve = MakeCurveGroups(run, Fixed);
         DecalMasksSource DecalsOf(MapDocument d) => HeightLayers.Find(d, Chosen)?.Source as DecalMasksSource ?? DecalMasksSource.Every;
         const string decals = "terrain.setDecalMasks";
         DecalMasks = new SettingGroup("Decal masks",
@@ -327,7 +304,7 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
     };
 
     /// <summary>
-    /// The chosen curve's profile, width, falloff, height and whether it is closed.
+    /// The chosen curve's profile, width and height; the other groups are <see cref="CurveGroups"/>.
     /// </summary>
     public SettingGroup Curve { get; }
 
@@ -380,7 +357,7 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
     {
         base.RefreshSettings();
         // the base's constructor refreshes before the curve's group exists
-        Curve?.Refresh(IsCurve ? Document : null);
+        RefreshCurve();
         DecalMasks?.Refresh(IsDecalMasks ? Document : null);
         Use?.Refresh(Chosen is null ? null : Document);
     }

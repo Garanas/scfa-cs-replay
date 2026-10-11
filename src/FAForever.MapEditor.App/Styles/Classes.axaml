@@ -1111,4 +1111,24 @@
   <Style Selector="Button.regionrow.chosen:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource SelectedHoverBrush}" />
   </Style>
+
+  <!-- the curve inspector's table of points (T-4): compact fields in figures, a row per point, its own scroll -->
+  <Style Selector="TextBox.curvenodefield">
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="{StaticResource CurveNodeFieldPadding}" />
+    <Setter Property="Margin" Value="{StaticResource CurveNodeFieldGap}" />
+    <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+  </Style>
+  <Style Selector="ListBox.curvenodes">
+    <Setter Property="MaxHeight" Value="{StaticResource CurveNodeListHeight}" />
+  </Style>
+  <Style Selector="ListBox.curvenodes ListBoxItem">
+    <Setter Property="Padding" Value="{StaticResource CurveNodeRowPadding}" />
+  </Style>
+  <Style Selector="TextBlock.curvenodehead">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
 </Styles>

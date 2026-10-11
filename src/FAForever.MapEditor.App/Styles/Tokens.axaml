@@ -390,4 +390,9 @@
   <x:Double x:Key="WorkspaceSettingsListHeight">560</x:Double>
   <!-- room at the right of the Workspace settings page's list for its scroll bar, so the On export boxes stay whole -->
   <Thickness x:Key="WorkspaceSettingsListInset">0,0,16,0</Thickness>
+  <!-- the curve inspector's table of points (T-4): the most it takes before it scrolls, its compact fields and rows -->
+  <x:Double x:Key="CurveNodeListHeight">320</x:Double>
+  <Thickness x:Key="CurveNodeFieldPadding">4,2</Thickness>
+  <Thickness x:Key="CurveNodeFieldGap">0,0,4,2</Thickness>
+  <Thickness x:Key="CurveNodeRowPadding">4,4</Thickness>
 </ResourceDictionary>

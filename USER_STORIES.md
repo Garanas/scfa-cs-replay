@@ -264,9 +264,15 @@ reads again when it changes; and nothing that generates runs by itself.
       Decals along a curve (D2): `decals.alongCurve` (Decals menu, the curve inspector's "Decals
       along the curve", the place tool's "Along a curve...") places a decal or decal set along the
       curve once, as ordinary decals with spacing, width, offset, alternating sides, random turn and
-      jitter, and the images of a mirrored curve; one step of undo. Missing: the window's node
-      table and a height per point by hand in the views (wave 18). Cliff faces block walkability (D3): a
-      cliff curve's face counts as marked blocked unless marked open by hand, `blocksWalkability`.
+      jitter, and the images of a mirrored curve; one step of undo. Wave 18 (window): the
+      inspector shows every setting in groups that follow the profile; a table of points (place,
+      height, width, falloffs, strength, sharp; empty is the curve's value) with the grade of each
+      stretch (marked above a limit, 30 % by default), chosen points, Reverse, Even the grade and
+      Snap to the ground; the curve tool chooses a point it presses, sets a height by hand (shift
+      and a drag, + and -) and takes a new point's height from the last point, the ground or a
+      typed number; both views draw the width (dashed) and the fade's end (dotted). Cliff faces block
+      walkability (D3): a cliff curve's face counts as marked blocked unless marked open by hand,
+      `blocksWalkability`, the inspector's "Cliff face blocks walkability".
 - [x] **T-5 Heightmap layers.** A stack of layers that add up to the heightmap: the base, sculpting,
       curves, imported results of World Machine or Gaea; per layer a way of combining (add, maximum,
       minimum, replace), strength, a mask, visible or hidden, locked. Shape the general form in the

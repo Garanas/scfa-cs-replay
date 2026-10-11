@@ -67,8 +67,19 @@ public interface IMapTool
 /// <param name="Path">A line through many places, such as a curve (user story T-4).</param>
 /// <param name="Images">Lines drawn thinner than the path, such as the images of a curve mirrored by
 /// the symmetry (user story F-12).</param>
+/// <param name="Outlines">Dashed and dotted lines beside the path: its width and where its fade ends.</param>
+/// <param name="ChosenHandles">Which handles are chosen (drawn larger and filled). Given, the handles are drawn
+/// round, a corner square.</param>
+/// <param name="CornerHandles">Which handles are sharp corners of a curve.</param>
 public sealed record ToolMarks(IReadOnlyList<(float X, float Z)> Handles, (float X0, float Z0, float X1, float Z1)? Line = null, string? Label = null,
-    IReadOnlyList<(float X, float Z)>? Path = null, IReadOnlyList<IReadOnlyList<(float X, float Z)>>? Images = null);
+    IReadOnlyList<(float X, float Z)>? Path = null, IReadOnlyList<IReadOnlyList<(float X, float Z)>>? Images = null,
+    IReadOnlyList<MarkOutline>? Outlines = null, IReadOnlyList<int>? ChosenHandles = null, IReadOnlyList<int>? CornerHandles = null);
+
+/// <summary>
+/// A line along a path that shows how far it reaches, drawn dashed (where its full width ends) or
+/// dotted (where its fade ends), thinner for an image by the symmetry (user story T-4).
+/// </summary>
+public sealed record MarkOutline(IReadOnlyList<(float X, float Z)> Points, bool Dotted, bool Thin);
 
 /// <summary>
 /// The keys held with the mouse or a key.
@@ -221,7 +232,28 @@ public abstract record ToolShape;
 /// <summary>
 /// A line, or several joined (a ring), <paramref name="Width"/> pixels wide.
 /// </summary>
-public sealed record ToolLine(Vector2[] Points, bool Closed, float Width, ToolInk Ink) : ToolShape;
+public sealed record ToolLine(Vector2[] Points, bool Closed, float Width, ToolInk Ink) : ToolShape
+{
+    /// <summary>
+    /// Dashes or dots in place of a whole line.
+    /// </summary>
+    public ToolDash Dash { get; init; }
+}
+
+/// <summary>
+/// How a <see cref="ToolLine"/> is broken up.
+/// </summary>
+public enum ToolDash
+{
+    Solid,
+    Dashed,
+    Dotted,
+}
+
+/// <summary>
+/// A disc, <paramref name="Radius"/> pixels from its centre to its edge, filled and outlined.
+/// </summary>
+public sealed record ToolDisc(Vector2 Centre, float Radius, ToolInk Fill, ToolInk Stroke) : ToolShape;
 
 /// <summary>
 /// A square, <paramref name="Half"/> pixels from its centre to a side, filled and outlined.

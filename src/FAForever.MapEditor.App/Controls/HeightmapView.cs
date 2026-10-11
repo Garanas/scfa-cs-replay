@@ -613,7 +613,15 @@ public sealed partial class HeightmapView : Control
                         }
                         figure.EndFigure(line.Closed);
                     }
-                    context.DrawGeometry(null, new Pen(InkOf(line.Ink), line.Width), path);
+                    context.DrawGeometry(null, new Pen(InkOf(line.Ink), line.Width, line.Dash switch
+                    {
+                        ToolDash.Dashed => ReachDashes(false, line.Width),
+                        ToolDash.Dotted => ReachDashes(true, line.Width),
+                        _ => null,
+                    }), path);
+                    break;
+                case ToolDisc disc:
+                    context.DrawEllipse(InkOf(disc.Fill), new Pen(InkOf(disc.Stroke), 1.5), P(disc.Centre), disc.Radius, disc.Radius);
                     break;
                 case ToolSquare square:
                     context.DrawRectangle(InkOf(square.Fill), new Pen(InkOf(square.Stroke), 1.5),
@@ -946,6 +954,13 @@ public sealed partial class HeightmapView : Control
     public int PropDotsDrawn { get; private set; }
 
     /// <summary>
+    /// The dashes of a curve's width line (long) and fade line (dots), in lengths of a pen that is
+    /// <paramref name="thickness"/> wide, so a shadow under a line breaks where it does.
+    /// </summary>
+    private static DashStyle ReachDashes(bool dotted, double thickness) =>
+        dotted ? new DashStyle([1.5 / thickness, 3.5 / thickness], 0) : new DashStyle([6 / thickness, 4 / thickness], 0);
+
+    /// <summary>
     /// What the active tool shows (<see cref="IMapTool.Marks"/>): its line with the label at its
     /// end, such as the ruler's measurement, and its handles, such as a selected area's corners.
     /// </summary>
@@ -978,6 +993,16 @@ public sealed partial class HeightmapView : Control
                 context.DrawGeometry(null, new Pen(overlay.Selection.Brush, overlay.Selection.Thickness, DashStyle.Dash), line);
             }
         }
+        foreach (MarkOutline outline in marks.Outlines ?? [])
+        {
+            // how far a curve reaches (T-4): the width's edge dashed, the fade's end dotted, an image thinner
+            if (Line(outline.Points) is StreamGeometry line)
+            {
+                double thickness = outline.Thin ? 1 : 1.5;
+                context.DrawGeometry(null, new Pen(overlay.Shadow.Brush, thickness + 1.5, ReachDashes(outline.Dotted, thickness + 1.5)), line);
+                context.DrawGeometry(null, new Pen(overlay.Selection.Brush, thickness, ReachDashes(outline.Dotted, thickness)), line);
+            }
+        }
         if (marks.Path is { Count: >= 2 } path && Line(path) is StreamGeometry pathLine)
         {
             using (context.PushTransform(Matrix.CreateTranslation(1, 1)))
@@ -1004,10 +1029,26 @@ public sealed partial class HeightmapView : Control
                 context.DrawText(text, back.TopLeft + new Vector(3, 1));
             }
         }
-        foreach ((float x, float z) in marks.Handles)
+        for (int i = 0; i < marks.Handles.Count; i++)
         {
-            Point at = MapToControl(x, z);
-            context.DrawRectangle(overlay.Canvas, overlay.Selection, new Rect(at.X - 4, at.Y - 4, 8, 8));
+            Point at = MapToControl(marks.Handles[i].X, marks.Handles[i].Z);
+            if (marks.ChosenHandles is null)
+            {
+                context.DrawRectangle(overlay.Canvas, overlay.Selection, new Rect(at.X - 4, at.Y - 4, 8, 8));
+                continue;
+            }
+            // a curve's points: round, a sharp corner square, a chosen point larger and filled
+            bool chosen = marks.ChosenHandles.Contains(i);
+            double half = chosen ? 6 : 4;
+            IBrush fill = chosen ? overlay.Selection.Brush! : overlay.Canvas;
+            if (marks.CornerHandles?.Contains(i) == true)
+            {
+                context.DrawRectangle(fill, overlay.Selection, new Rect(at.X - half, at.Y - half, 2 * half, 2 * half));
+            }
+            else
+            {
+                context.DrawEllipse(fill, overlay.Selection, at, half, half);
+            }
         }
     }
 
