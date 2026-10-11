@@ -356,7 +356,9 @@ sets the window's `Stage` and raises `WorkspaceReady`, after which the editor op
 was started with:
 
 - `SetUp`: no workspace, or the remembered one is gone. A page asks for the workspace folder, the
-  game, FAF's data and the vault, filled in from FAF's `fa_path.lua`; `SetUpAsync` checks
+  game, FAF's data and the vault, filled in from FAF's `fa_path.lua` (the game, else from Steam's
+  library: `GameFolders`, also under Proton on Linux; the workspace folder in Documents, else the
+  home folder: `UserFolders`); `SetUpAsync` checks
   them, creates the workspace, remembers it and converts the assets.
 - `UpdateAssets`: the assets are missing or outdated (a new `.nx2` from FAF, another editor
   version); the page says why, and its button converts them.
@@ -2971,3 +2973,40 @@ faf-map workspace remove-scratch D:/scratch/ws                                  
 - A scratch workspace (`ScratchWorkspace`, the library's) has its own projects, presets, brushes
   (copied) and vault (`vault/maps`, where exports go), and the real workspace's assets through a
   directory junction (no administrator needed): a test editor may save, export and write presets.
+
+## Linux and macOS
+
+The editor runs on Linux (checked on Ubuntu 24.04 under Xvfb with Mesa, 2026-10-11): the setup page,
+a scratch workspace, importing vault maps, the panels, automation and the 3D view; the App, Project,
+Cli and Map tests pass there. macOS is built (`osx-arm64`) but never started.
+
+- **The 3D view needs OpenGL from the window.** On X11 Avalonia draws with GLX and turns Mesa's
+  software renderer llvmpipe down (a system without a graphics driver then draws the window in
+  software, and `OpenGlControlBase` never starts): `FAF_MAP_EDITOR_SOFTWARE_GL=1` allows it
+  (`Program.SoftwareOpenGlVariable`), for a container, CI or a computer without a driver. Without
+  OpenGL, `state.gpu.error` says so and `screenshot gpu=true` fails at once with that text
+  (`TerrainViewGpu.CheckOpenGlAsync`). Desktop OpenGL (`#version 330 core`) filters cube maps across
+  their faces only when asked: the view enables `TextureCubeMapSeamless` every frame, else the sky's
+  blurred levels show the cube as a box.
+- A window screenshot leaves the 3D view empty on every system (its picture is on the card): use
+  `screenshot gpu=true`.
+- `tools/editor-smoke.sh` (the setup page, an absolute default workspace folder) and
+  `tools/editor-smoke-3d.sh <exe> <out> <map>` (a workspace of empty but current assets, the map in
+  the 3D view on llvmpipe) run in the map editor workflow. Start `Xvfb :99 &` yourself in a
+  container; `xvfb-run` hangs there.
+- In a container whose first process collects no exited children (`docker run` without `--init`)
+  an exited editor stays a zombie; `faf-map editor stop` takes one for exited.
+- Snapshots are drawn on Windows; elsewhere the text is smoothed otherwise (0.9 % of the pixels on
+  Ubuntu), so `SnapshotTest` allows 2 % there.
+- Paths: names a person types become file names Windows accepts on every system (`FileNames`);
+  files the game, a map, a project, a preset or a plugin names are found in any case (`FilePaths`,
+  the library's guide); the user's folders fall back to the home folder (`UserFolders`).
+
+To try it: publish `linux-x64` from Windows (`dotnet publish src/FAForever.MapEditor.App -c Release -r
+linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true`)
+or build inside `mcr.microsoft.com/dotnet/sdk:10.0` (with `libfontconfig1`, `xvfb`, `libgl1-mesa-dri`,
+`libice6`, `libsm6` installed), mount the repository and the converted assets read-only, and make a
+scratch workspace inside the container. Its assets' manifest names the Windows archives, so the
+editor asks to convert them again: give the scratch workspace a source whose `assets` links the
+mounted folders and holds a manifest of its own naming stand-in archives (empty files, any case,
+under the source's `gameFolder`).

@@ -62,8 +62,8 @@ namespace FAForever.MapEditor.Project.Workspaces
             List<string> archives = [];
             foreach (string name in Names.Concat(OptionalNames))
             {
-                string scd = Path.Combine(gameFolder, "gamedata", name + ".scd");
-                if (!File.Exists(scd))
+                // in any case: on Linux the game's folder (Steam's Proton) may name them otherwise
+                if (FilePaths.FindFile(gameFolder, $"gamedata/{name}.scd") is not string scd)
                 {
                     if (OptionalNames.Contains(name))
                     {
@@ -73,9 +73,9 @@ namespace FAForever.MapEditor.Project.Workspaces
                 }
                 archives.Add(Path.GetFullPath(scd));
 
-                if (fafDataFolder is not null && File.Exists(Path.Combine(fafDataFolder, name + ".nx2")))
+                if (fafDataFolder is not null && FilePaths.FindFile(fafDataFolder, name + ".nx2") is string nx2)
                 {
-                    archives.Add(Path.GetFullPath(Path.Combine(fafDataFolder, name + ".nx2")));
+                    archives.Add(Path.GetFullPath(nx2));
                 }
             }
             return archives;

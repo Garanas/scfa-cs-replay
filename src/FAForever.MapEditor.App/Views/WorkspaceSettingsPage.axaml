@@ -19,7 +19,7 @@
           <ScrollViewer Classes="workspacesettingslist">
             <StackPanel Classes="stack">
               <controls:FolderField Heading="Supreme Commander: Forged Alliance" Label="game folder of the workspace"
-                                    Help="The folder the game is installed in, with gamedata\env.scd and gamedata\units.scd."
+                                    Help="The folder the game is installed in, with gamedata/env.scd and gamedata/units.scd."
                                     Folder="{Binding WorkspaceSettings.GameFolder}" BrowseCommand="{Binding WorkspaceSettings.BrowseGameFolderCommand}" />
               <controls:FolderField Heading="FAF's data" Label="FAF data folder of the workspace"
                                     Help="FAF's gamedata folder: its env.nx2 and units.nx2 replace files of the game. Empty without FAF."

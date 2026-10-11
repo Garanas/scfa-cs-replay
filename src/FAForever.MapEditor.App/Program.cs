@@ -42,8 +42,21 @@ public static class Program
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 
-    public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
-        .UsePlatformDetect()
-        .WithEditorFonts()
-        .LogToTrace();
+    /// <summary>
+    /// An environment variable that, set to 1, lets the window draw with Mesa's software OpenGL
+    /// (llvmpipe) on Linux, which Avalonia turns down by default: for the 3D view on a computer or
+    /// container without a graphics driver (a virtual display, CI). Slow, but the 3D view works.
+    /// </summary>
+    public const string SoftwareOpenGlVariable = "FAF_MAP_EDITOR_SOFTWARE_GL";
+
+    public static AppBuilder BuildAvaloniaApp()
+    {
+        AppBuilder builder = AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .WithEditorFonts()
+            .LogToTrace();
+        return Environment.GetEnvironmentVariable(SoftwareOpenGlVariable) == "1"
+            ? builder.With(new X11PlatformOptions { GlxRendererBlacklist = [] })
+            : builder;
+    }
 }

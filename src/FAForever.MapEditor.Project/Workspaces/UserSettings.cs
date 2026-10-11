@@ -30,7 +30,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// </summary>
         public static string DefaultFile => Environment.GetEnvironmentVariable(FileVariable) is { Length: > 0 } file
             ? file
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FAF Map Editor", "settings.json");
+            : Path.Combine(UserFolders.Settings, "FAF Map Editor", "settings.json");
 
         public static UserSettings Default => new UserSettings(DefaultFile);
 

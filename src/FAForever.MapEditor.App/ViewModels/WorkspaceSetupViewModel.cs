@@ -50,6 +50,12 @@ public sealed partial class WorkspaceSetupViewModel(IEditorDialogs dialogs, ILog
     public Func<FafInstallation?> FindFaf { get; set; } = () => FafInstallation.Find();
 
     /// <summary>
+    /// The game's folder when FAF does not say: Steam's (<see cref="GameFolders.Find"/>), also under
+    /// Proton on Linux.
+    /// </summary>
+    public Func<string?> FindGame { get; set; } = GameFolders.Find;
+
+    /// <summary>
     /// Raised when the workspace is set up and its assets are converted.
     /// </summary>
     public event Action<Workspace>? WorkspaceReady;
@@ -145,8 +151,8 @@ public sealed partial class WorkspaceSetupViewModel(IEditorDialogs dialogs, ILog
     public void Show()
     {
         FafInstallation? faf = FindFaf();
-        Folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FAF Map Editor");
-        GameFolder = faf?.GameFolder ?? "";
+        Folder = Path.Combine(UserFolders.Documents, "FAF Map Editor");
+        GameFolder = faf?.GameFolder ?? FindGame() ?? "";
         FafDataFolder = faf?.DataFolder ?? "";
         VaultFolder = faf?.VaultFolder ?? "";
         Stage = EditorStage.SetUp;
@@ -314,9 +320,9 @@ public sealed partial class WorkspaceSetupViewModel(IEditorDialogs dialogs, ILog
     {
         foreach (string name in GameArchives.Names)
         {
-            if (!File.Exists(Path.Combine(gameFolder, "gamedata", name + ".scd")))
+            if (FilePaths.FindFile(gameFolder, $"gamedata/{name}.scd") is null)
             {
-                return $"The game folder has no gamedata\\{name}.scd: choose the folder Supreme Commander: Forged Alliance is installed in.";
+                return $"The game folder has no {Path.Combine("gamedata", name + ".scd")}: choose the folder Supreme Commander: Forged Alliance is installed in.";
             }
         }
         if (!string.IsNullOrWhiteSpace(fafDataFolder) && !Directory.Exists(fafDataFolder))

@@ -57,6 +57,12 @@ if ! jq -e '.. | strings | select(test("Workspace folder"; "i"))' "$out/ui.json"
   echo "The setup page's controls are missing from the window (ui.json)" >&2
   status=1
 fi
+# the default workspace folder is a full path, also without a Documents folder (the home folder then)
+folder="$(jq -r '[.. | objects | select(.type? == "TextBox" and .label? == "Workspace folder") | .text][0] // ""' "$out/ui.json")"
+case "$folder" in
+  /*) echo "Default workspace folder: $folder" ;;
+  *) echo "The default workspace folder is not a full path: '$folder'" >&2; status=1 ;;
+esac
 if [ ! -s "$out/window.png" ]; then
   echo "No screenshot was written (screenshot.json)" >&2
   status=1

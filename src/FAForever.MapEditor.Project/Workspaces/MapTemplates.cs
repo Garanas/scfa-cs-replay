@@ -265,8 +265,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// </summary>
         public static string FileName(string name)
         {
-            char[] invalid = System.IO.Path.GetInvalidFileNameChars();
-            string cleaned = new string([.. name.Trim().Select(c => invalid.Contains(c) || c == '/' ? '-' : c)]);
+            string cleaned = FileNames.Clean(name);
             return cleaned.Length == 0 ? "Template" : cleaned;
         }
 

@@ -20,7 +20,10 @@ namespace FAForever.MapEditor.App.Tests
     {
         // a pixel counts as different when a channel differs by more than this; the share of such pixels allowed
         private const int ChannelTolerance = 24;
-        private const double PixelTolerance = 0.002;
+        // The snapshots are drawn on Windows. Elsewhere the text is smoothed otherwise (FreeType and
+        // fontconfig's hinting): the same window differed in 0.9 % of its pixels on Ubuntu 24.04, all
+        // along the letters, so other systems allow 2 %.
+        private static readonly double PixelTolerance = OperatingSystem.IsWindows() ? 0.002 : 0.02;
 
         private static string Snapshots => Path.Combine(HeadlessApp.RepositoryFolder, "tests", "FAForever.MapEditor.App.Tests", "snapshots");
 

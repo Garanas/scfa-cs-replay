@@ -7,6 +7,7 @@ using FAForever.FileFormats.Lua;
 using FAForever.FileFormats.Map;
 using FAForever.MapEditor.Project.Files;
 using FAForever.MapEditor.Project.Files.InMemory;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.Project
 {
@@ -403,7 +404,8 @@ namespace FAForever.MapEditor.Project
 
         private static string Single(string folder, string pattern)
         {
-            string[] files = Directory.GetFiles(folder, pattern, SearchOption.TopDirectoryOnly);
+            // in any case (Map.SCMAP, Map_Scenario.lua), as the game reads them
+            string[] files = Directory.GetFiles(folder, pattern, FilePaths.IgnoringCase());
             return files.Length == 1
                 ? files[0]
                 : throw new MapProjectException($"{folder} has {files.Length} files named {pattern}, expected one");
@@ -416,7 +418,7 @@ namespace FAForever.MapEditor.Project
         private static string? FindNamed(string folder, string? path, string usual)
         {
             string[] names = [Path.GetFileName(path ?? ""), usual];
-            return Directory.GetFiles(folder, "*.lua", SearchOption.TopDirectoryOnly)
+            return Directory.GetFiles(folder, "*.lua", FilePaths.IgnoringCase())
                 .Select(file => (file, rank: Array.FindIndex(names, name => name.Length > 0 && string.Equals(name, Path.GetFileName(file), StringComparison.OrdinalIgnoreCase))))
                 .Where(match => match.rank >= 0)
                 .OrderBy(match => match.rank)

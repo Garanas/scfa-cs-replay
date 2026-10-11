@@ -20,7 +20,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// </summary>
         public static string DefaultFolder => OperatingSystem.IsWindows()
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "FAForever")
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".faforever");
+            : Path.Combine(UserFolders.Home, ".faforever");
 
         /// <summary>
         /// Reads <c>fa_path.lua</c> in <paramref name="folder"/>, by default <see cref="DefaultFolder"/>;

@@ -69,8 +69,7 @@ public sealed class CaptureStampHandler(MainViewModel model) : IRequestHandler<C
 
     private static string Clean(string name)
     {
-        char[] invalid = Path.GetInvalidFileNameChars();
-        string cleaned = new string([.. name.Trim().Select(c => invalid.Contains(c) || c == '/' ? '-' : c)]);
+        string cleaned = FileNames.Clean(name);
         return cleaned.Length == 0 ? "Stamp" : cleaned;
     }
 }

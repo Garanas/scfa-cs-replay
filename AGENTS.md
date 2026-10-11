@@ -85,7 +85,12 @@ VS Code: tasks `build`, `test`, `test: watch`, `server`, `viewer`, `tailwind: wa
   its version carrying the commit), kept 90 days as the artifacts `faf-map-editor-<rid>-<commit>`
   (the Windows exe as it is, the others in a tar that keeps the executable bit). The Linux build is
   started on a virtual display first (`tools/editor-smoke.sh`: the setup page, automation, a
-  screenshot, closing; artifact `faf-map-editor-smoke-linux`); the macOS build is not started.
+  screenshot, closing) and draws a map of the tests in the 3D view on Mesa's software OpenGL
+  (`tools/editor-smoke-3d.sh`; artifact `faf-map-editor-smoke-linux`); the macOS build is not started.
+  **Linux works** (Ubuntu 24.04, 2026-10-11): the editor, its 3D view (desktop OpenGL 3.3+; without a
+  graphics driver `FAF_MAP_EDITOR_SOFTWARE_GL=1`), the App, Project, Cli and Map tests, and files named
+  in any case (the editor's guide, "Linux and macOS"). **macOS is untested**: never started, its file
+  dialogs, OpenGL (Apple's 4.1, deprecated) and default folders unchecked.
   The footer shows the commit a build came from (`src/FAForever.Vault.Viewer/Services/BuildInfo.cs`; CI
   passes it as the `SOURCE_REVISION` build argument, since the image build has no `.git`).
 

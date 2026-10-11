@@ -1,6 +1,6 @@
 # Builds the map editor as one standalone executable per system (the .NET runtime and every native
 # library inside it, nothing to install) on every push to main, keeps each as a workflow artifact,
-# and starts the Linux build on a virtual display to check that it runs.
+# and starts the Linux build on a virtual display to check that it runs and draws a map in 3D.
 
 name: Map editor
 
@@ -58,6 +58,12 @@ jobs:
         sleep 2
         DISPLAY=:99 timeout 300 bash tools/editor-smoke.sh "publish/${{ matrix.exe }}" smoke
 
+    # then a map of the tests in the 3D view, on Mesa's software OpenGL (a workspace with empty assets)
+    - name: Draw a map in 3D on the virtual display (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        DISPLAY=:99 timeout 300 bash tools/editor-smoke-3d.sh "publish/${{ matrix.exe }}" smoke3d tests/FAForever.FileFormats.Map.Tests/assets/maps/HardFFA.v0001
+
     - name: Keep what the start showed (Linux)
       if: always() && runner.os == 'Linux'
       uses: actions/upload-artifact@v4
@@ -68,6 +74,10 @@ jobs:
           smoke/state.json
           smoke/ui.json
           smoke/editor.log
+          smoke3d/view3d.png
+          smoke3d/window.png
+          smoke3d/state.json
+          smoke3d/editor.log
         if-no-files-found: ignore
         retention-days: 14
 

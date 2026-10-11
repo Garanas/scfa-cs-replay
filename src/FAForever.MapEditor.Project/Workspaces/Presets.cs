@@ -163,9 +163,9 @@ namespace FAForever.MapEditor.Project.Workspaces
             {
                 throw new ArgumentException("A preset needs a name", nameof(name));
             }
-            char[] invalid = Path.GetInvalidFileNameChars();
-            string file = new string([.. name.Trim().Select(c => invalid.Contains(c) || c is '/' or '\\' or ':' or '*' or '?' or '"' or '<' or '>' or '|' ? '-' : c)]);
-            return Path.Combine(KindFolder(kind), file.TrimEnd('.') + ".json");
+            string file = FileNames.Clean(name);
+            // a preset of the name in another case is the same one, as on Windows
+            return FilePaths.Existing(Path.Combine(KindFolder(kind), file.TrimEnd('.') + ".json"));
         }
 
         /// <summary>

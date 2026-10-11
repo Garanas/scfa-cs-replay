@@ -10,6 +10,12 @@ namespace FAForever.MapEditor.Project.Tests
         public const string CoopR01 = "assets/maps/SCCA_Coop_R01.v0020";
 
         /// <summary>
+        /// A local copy of the vault's maps (read only), for the tests that need more maps than the
+        /// assets hold; <c>FAF_VAULT_MAPS</c> names another folder (a Linux container mounts it elsewhere).
+        /// </summary>
+        public static string VaultMaps => Environment.GetEnvironmentVariable("FAF_VAULT_MAPS") is { Length: > 0 } folder ? folder : "D:/faf-vault/maps";
+
+        /// <summary>
         /// A path to a folder that does not exist yet; <see cref="Clean"/> removes them all.
         /// </summary>
         public static string New(string name) => Path.Combine(Root, $"{name}-{Guid.NewGuid():N}");

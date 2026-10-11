@@ -497,6 +497,21 @@ use so that the user's own stays alone). `FafInstallation` reads FAF's `fa_path.
   `AssetConverter.FormatVersion`, raise it when the output changes) from the archives as they are.
   Only FAF's `.nx2` are checked; same size and time is unchanged, otherwise the SHA-256 decides.
 - `Workspace.FindAsset("/env/Evergreen/layers/Eg_Grass001_albedo.dds")` gives the converted file.
+- **Case.** The game's file system ignores case, and maps name their files in any case
+  (`/env/Geothermal/layers/Geo_Ash...`). The converted assets are in lower case and every lookup into
+  them lowers the path first (`WorkspaceLayout.AssetOf`, `AssetCatalog.KeyOf`, `GameTextures`), and a
+  map's own files are compared ignoring case, so they resolve on Linux too: `faf-map dev resolve
+  <map folders...> --workspace <folder>` (`AssetResolution`) resolves every texture, decal, cube map,
+  prop and unit of a map down to its file and lists what does not (Archsimkats Valley, Seton's
+  Clutch, Kaali and HardFFA: all 311 resolve on Linux, 85 of them named in mixed case). Files outside
+  the assets are found in any case with `FilePaths.Existing`/`FindFile`/`InFolder` (only off
+  Windows does it look further than the path as written): the game's `gamedata/*.scd` and FAF's
+  `.nx2`, a map's `.scmap`, scenario and save (`FilePaths.IgnoringCase` for patterns), presets by
+  name (another case is the same preset, as on Windows), a plugin's `plugin.lua`/`plugin.json`, and
+  the images a project names relative to its folder (either separator). File names made from what a
+  person types keep to what Windows allows on every system (`FileNames.Clean`). The user's folders
+  (`UserFolders`: Documents, else home; `~/.config`, `~/.local/share`) never give a relative path,
+  and FAF's folder is `~/.faforever` off Windows.
 - `AssetCatalog.Load(assets)` lists what a map maker chooses from (user stories F-8, F-9): the
   props and units from their converted blueprints, the decals (`decals/`, `splats/`) and the
   stratum textures (`layers/`, albedo and normal map as one) from their PNGs, and the cube maps
