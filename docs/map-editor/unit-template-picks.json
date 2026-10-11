@@ -39,6 +39,6 @@
   { "name": "Crashed gunships, UEF", "map": "FAF_Coop_Prothyon_16", "army": "UEFAlly", "path": "Wrecks/M5_Wrecks", "role": "civilian", "wrecks": true, "area": [212, 1101, 230, 1117] },
   { "name": "Crashed air wing, mixed", "map": "X1MP_001", "army": "NEUTRAL_CIVILIAN", "path": "WRECKAGE", "role": "civilian", "wrecks": true, "area": [156, 48, 184, 74] },
   { "name": "Destroyed convoy", "map": "FAF_Coop_Operation_Trident", "army": "Civilians", "path": "M1_Wreckages", "role": "civilian", "wrecks": true, "area": [449, 920, 465, 937] },
-  { "name": "Naval graveyard", "map": "adaptive_canis_river.v0002", "army": "ARMY_15", "path": "", "role": "civilian", "wrecks": true, "area": [248, 248, 268, 266] },
+  { "name": "Naval graveyard", "map": "adaptive_canis_river.v0002", "army": "ARMY_15", "path": "", "role": "civilian", "wrecks": true, "area": [248, 248, 268, 266], "without": ["uas0401"] },
   { "name": "Naval graveyard, small", "map": "adaptive_canis_river.v0002", "army": "ARMY_15", "path": "", "role": "civilian", "wrecks": true, "area": [250, 223, 265, 237], "without": ["urc1101"] }
 ]
