@@ -64,6 +64,13 @@ dock under them (`Dock`: Problems, History, Assets, Console), the inspector on t
 (`Inspector`), the status bar, and the command palette over everything (`CommandPalette`,
 Ctrl+K). Where the user stories go in it is on the design's anatomy board.
 
+Opening, importing or making a map while another is open (`MainViewModel.Attach`) puts the window
+back at the Map mode and makes every list of entries (`PanelPartLists`) show its first entry, after
+`MapChanged` has let each view model forget the old map; the editor's first map opens in the mode
+the window starts in (Terrain). What belongs to the window (the view tab, the overlays, the dock,
+which tool each mode used last) and to the workspace (unit palettes) stays. A view model that holds
+something of the map listens to `MapChanged` itself; `OpeningAnotherMapTest` covers the shell's part.
+
 - **The controller** (`Commands/`, user story F-1) holds every command, sent through MediatR.
   A command is a request, a record whose properties are its arguments, with
   `[EditorCommand(id, title, Gesture, Story, Needs)]`, and its handler in the same file, in a

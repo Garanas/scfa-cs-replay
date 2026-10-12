@@ -245,6 +245,11 @@ public sealed partial class PanelParts : ObservableObject
     }
 
     /// <summary>
+    /// Chooses the first entry, as the list is when it is made.
+    /// </summary>
+    public void ChooseFirst() => Choose(_items[0].Id);
+
+    /// <summary>
     /// Raised whenever an entry is chosen, also the one chosen already (<see cref="Choose"/>): what
     /// choosing does besides showing it, such as the Map panel's area selected on the map.
     /// </summary>
