@@ -950,7 +950,10 @@ Four small parts that later features build on:
   generator another `Reads`, whose last result is handed to it): masks from rules before props from
   rules, walkability before path networks; a result made out of date by one put in place before it
   is generated too, each generator once, so one run leaves nothing out of date. A new generator
-  that writes the document names its `Outputs`. Another map forgets the results. A feature registers its
+  that writes the document names its `Outputs`. Another map forgets the results, the running flags
+  (a run of the map before that ends later is kept for no map) and every picture made from them (a
+  view model that keeps a picture of a result drops it when the result is none: `SkyCubeViewModel.Preview`;
+  `ProceduralAnotherMapTest` opens a second map after generating). A feature registers its
   generator with the command that generates it (`Generation.Register(generator, commandId)`), and
   the panel lists it (`Rows`); walkability, the normal map and the preview do (next section).
 - **Everything out of date or missing** (`generate.all {list?}`, Generate menu, wave 12): what
