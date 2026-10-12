@@ -1522,6 +1522,51 @@ User stories K-2 and P-4; generated only when asked, as the other results (F-7).
   reads them again when another tool changes them. The export leaves the rules out and writes the
   props of rules as any other prop.
 
+## The sketch (N-1)
+
+The map maker's drafts: sheets of pencil strokes that sketch the map before it is built. The sketch is
+the project's own: an optional file, edited like everything else (undoable edits of the document), kept
+and read again like the rest of the project, and never part of the map. It never reaches the game's
+files (the export reads no `MapDocument.Sketch`) nor `files/` (the other files of the map folder).
+
+- **Model** (`Files/InMemory/Sketch.cs`): `Sketch` (`Sheets`), `SketchSheet` (`Name`, `Shown`, `Opacity`
+  outside the Sketch mode, a `Legend` of six texts in the order of the colours, `Strokes`),
+  `SketchStroke` (`SketchColour`, `SketchWidth`, `Points` in ogrids). The six colours and three widths are
+  fixed values of the model (`SketchLook`: red, yellow, green, blue, white, black as `0xAARRGGBB`, the
+  same in both themes; a width is pixels on screen, 2, 4 and 7): a colour means nothing to the
+  editor, the sheet's legend says what the map maker meant. A stroke of one point is a dot.
+  `MapDocument.Sketch` is `Sketch.Empty` for a map without sheets.
+- **Edits** (`Editing/SketchEdits.cs`, `SketchGeometry.cs`): sheets are named (unique without regard to case,
+  at most 60 characters; a name matches exactly first, then without regard to case): `AddSheet`
+  (`Sheet 1`, `Sheet 2`, ...), `RenameSheet`, `DuplicateSheet` (the copy right after the original,
+  `Layout A copy`), `DeleteSheet`, `ShowSheet`, `SetSheetOpacity`, `SetLegend`, `ClearSheet`, and for
+  strokes `AddStrokes` (a sketch without sheets gets its first for them) and `Erase`. Every edit
+  returns the document itself when it changes nothing, so the session keeps no step for it.
+  `WithImages` repeats a stroke (or an eraser's path) under the parts of the map's symmetry, as the
+  brushes' dabs are (`MapSymmetry.Transforms`, identity first; an image that lies on the stroke or
+  on an earlier image is left out). `SketchGeometry` thins a line drawn by hand (`Thin`), smooths and
+  thins it to few places (`Smooth`: averaged with its neighbours twice, then Douglas and Peucker within
+  a tolerance of about a pixel), makes the straight line of Shift (`Straight`) and cuts: `Cut` takes
+  from a line what an eraser's path passed over, a capsule (the path's segment and the radius to both
+  sides, convex, so it meets a segment in one stretch: `Crosses`), so a stroke is cut in two where the
+  eraser crosses its middle and what is left shorter than `Shortest` goes; a stroke of one point goes
+  whole. `Erase` with `whole` removes a stroke the eraser touches entirely (Alt).
+- **Files**: `sketch/sketch.json` (`SketchDto`, its own `version` 1, not the project's format version: an
+  older project reads as if it held no sketch, and a project without sheets writes no file and no
+  folder, which another part of the project that lies in `sketch/`, the projected images N-2, keeps
+  alive). A stroke's places are one line of text, `x,z x,z ...` with a point and two decimals at most,
+  so a sheet of thousands of strokes stays small and readable and a diff shows a stroke a line. The
+  legend is six texts in colour order, left out when empty; a short legend is filled up. A file that
+  does not read (a place that is no `x,z`, two sheets of one name, a newer version) is a
+  `MapProjectException` naming the sheet. `MapProjectStore.Load` reads it, `Save` writes it only when its
+  text changes, `Reload` reads it again when it changes on disk and does nothing when the file holds
+  what the document has (the editor's own save, rounded as written), and a removed file is a removed
+  sketch (`MapProjectStore.Sketch.cs`).
+- **Resize**: `MapResize` moves the sketch by the offset the old map lies at in the new one, as it moves
+  the things on it; strokes may end up outside the map.
+- Tests: `SketchTest` (edits, symmetry, the eraser's cuts, thinning and smoothing, undo, the file, reading again, the
+  export, resize).
+
 ## Checks: problems of a map
 
 User story F-14 (`Checks/`): an `IProblemCheck` (or a `ProblemCheck` made of a function) reads a

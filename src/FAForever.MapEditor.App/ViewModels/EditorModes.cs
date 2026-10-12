@@ -256,18 +256,19 @@ public static class EditorModes
         // the Sketch mode (N-1, N-2, N-4): drafts of the map maker's own, kept in the project and never exported
         new ModeDefinition("sketch", "Sketch", "Icon.Sketch", "Draft the map: pencil strokes, symbols, labels and projected images; kept in the project, never exported", 1, "F10", "N-1",
             [
-                new ToolDefinition("sketch.pencil", "Pencil", "N-1", "Draw strokes in six colours and three widths, mirrored by the map's symmetry"),
-                new ToolDefinition("sketch.eraser", "Eraser", "N-1", "Rub out strokes where it passes; with Alt, whole strokes"),
+                new ToolDefinition("sketch.pencil", "Pencil", "N-1") { Make = model => new PencilTool(model) },
+                new ToolDefinition("sketch.eraser", "Eraser", "N-1") { Make = model => new EraserTool(model) },
                 new ToolDefinition("sketch.symbol", "Symbol", "N-4", "Stamp a spawn, mass, hydrocarbon, arrow, cross or question mark"),
                 new ToolDefinition("sketch.label", "Label", "N-4", "Write a label in a hand-drawn style"),
                 new ToolDefinition("sketch.select", "Select", "N-4", "Select strokes, symbols and labels to move, recolour or delete them"),
                 new ToolDefinition("sketch.image", "Image", "N-2", "Move, scale and turn a projected image"),
             ],
             [
-                new PlannedSection("Sheets", "N-1", "The sketch's sheets, each shown or hidden, one drawn into"),
+                new SketchSheetsSection(),
                 new PlannedSection("Projected images", "N-2", "Pictures laid over the map in the top view, each shown or hidden"),
             ],
-            []),
+            // the sheet chosen in the panel: its name, opacity, legend and counts
+            [new SketchSheetSection()]),
 
         // the Procedural mode (wave 8C): its tools and sections are ProceduralMode's
         new ModeDefinition(ProceduralMode.Id, "Procedural", "Icon.Procedural", "Generated results, connected regions, export steps", BottomGroup, "F11", "F-7",
@@ -305,6 +306,11 @@ public sealed record OverlayDefinition(string Id, string Title, string CommandTi
     public string? Swatch { get; init; }
 
     /// <summary>
+    /// The shortcut of the command that turns it on or off, e.g. <c>Ctrl+Shift+K</c>; null for none.
+    /// </summary>
+    public string? Gesture { get; init; }
+
+    /// <summary>
     /// The command that turns it on or off: <c>view.overlay.markers</c>.
     /// </summary>
     public string CommandId => $"view.overlay.{Id}";
@@ -317,9 +323,12 @@ public static class EditorOverlays
 {
     public static IReadOnlyList<OverlayDefinition> All { get; } =
     [
+
         new OverlayDefinition("markers", "Markers", "Show markers", "R-6") { Panel = "markers" },
         new OverlayDefinition("pathNodes", "Path nodes", "Show path nodes", "R-6") { Panel = "markers" },
         new OverlayDefinition("camera", "3D camera", "Show the 3D camera", "V-1"),
+        // the sketch lies over every mode's terrain; after the three chips that keep their room at 1280 pixels
+        new OverlayDefinition("sketch", "Sketch", "Show the sketch", "N-1") { Gesture = "Ctrl+Shift+K" },
         new OverlayDefinition("walkability", "Walkability", "Show walkability", "T-7") { Swatch = "MapBlockedBrush" },
         new OverlayDefinition("mask", "Mask", "Show the chosen mask", "K-1") { Swatch = "MapMaskBrush" },
         new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12"),

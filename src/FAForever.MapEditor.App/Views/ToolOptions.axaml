@@ -524,6 +524,68 @@
               <TextBlock Classes="mono" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Text}" ToolTip.Tip="{Binding Text}" VerticalAlignment="Center"
                          AutomationProperties.Name="Measurement" />
             </DataTemplate>
+            <!-- the Sketch mode's pencil (N-1): the six colours (keys 1 to 6), the width ([ and ]), Mirror, Smooth and the sheet drawn into -->
+            <DataTemplate DataType="tools:PencilTool">
+              <controls:ToolRow Classes="toolrow">
+                <ItemsControl ItemsSource="{Binding Colours}" AutomationProperties.Name="Pencil colours">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Classes="inline" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SketchColourChoice">
+                      <Button Classes="chip icononly" Classes.on="{Binding IsOn}" Command="{Binding ChooseCommand}" ToolTip.Tip="{Binding Help}"
+                              AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}">
+                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="Width" />
+                  <ItemsControl ItemsSource="{Binding Widths}" AutomationProperties.Name="Pencil widths">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Classes="inline" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:SketchWidthChoice">
+                        <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Title}" Command="{Binding ChooseCommand}"
+                                ToolTip.Tip="[ makes the pencil thinner, ] thicker" AutomationProperties.Name="{Binding Label}"
+                                AutomationProperties.HelpText="The width of the strokes on screen, the same at every zoom; [ and ] step it" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+                <CheckBox Content="Mirror" IsChecked="{Binding Mirror}" AutomationProperties.Name="Mirror strokes by the symmetry"
+                          AutomationProperties.HelpText="A stroke is repeated by the map's symmetry, as the brushes are; off for a one-off note" />
+                <CheckBox Content="Smooth" IsChecked="{Binding Smooth}" AutomationProperties.Name="Smooth the line"
+                          AutomationProperties.HelpText="The line you draw is smoothed and thinned to few places when you let go" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding SheetText}" VerticalAlignment="Center"
+                           AutomationProperties.Name="Sheet drawn into" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                           Text="Shift: a straight line · 1 to 6 colour · [ ] width · Ctrl+Shift+K shows or hides the sketch" AutomationProperties.Name="Pencil keys" />
+              </controls:ToolRow>
+            </DataTemplate>
+            <!-- the Sketch mode's eraser (N-1): its radius, Mirror, whole strokes (also Alt) and the sheet it erases in -->
+            <DataTemplate DataType="tools:EraserTool">
+              <controls:ToolRow Classes="toolrow">
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
+                  <Slider Minimum="1" Maximum="64" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Eraser radius in ogrids" />
+                </StackPanel>
+                <CheckBox Content="Whole strokes" IsChecked="{Binding Whole}" AutomationProperties.Name="Erase whole strokes"
+                          AutomationProperties.HelpText="A stroke the eraser touches goes entirely, as with Alt held; off, it rubs out only where it passes" />
+                <CheckBox Content="Mirror" IsChecked="{Binding Mirror}" AutomationProperties.Name="Erase where the symmetry repeats the eraser"
+                          AutomationProperties.HelpText="The eraser also works in the other parts of a symmetric map" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding SheetText}" VerticalAlignment="Center"
+                           AutomationProperties.Name="Sheet erased in" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                           Text="Alt: whole strokes · [ ] radius" AutomationProperties.Name="Eraser keys" />
+              </controls:ToolRow>
+            </DataTemplate>
             <!-- choosing a connected region of the navigation mesh (T-8) -->
             <DataTemplate DataType="tools:RegionTool">
               <TextBlock TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Text}" ToolTip.Tip="{Binding Text}" VerticalAlignment="Center"
