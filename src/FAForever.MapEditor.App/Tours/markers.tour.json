@@ -1,0 +1,92 @@
+{
+  "id": "markers",
+  "title": "A tour of the Markers mode",
+  "summary": "Spawns, mass and hydrocarbon deposits, path nodes and chains, with one deposit placed by you.",
+  "order": 50,
+  "needs": ["Map"],
+  "start": [{ "run": "markers.mode" }, { "run": "view.top" }],
+  "steps": [
+    {
+      "id": "welcome",
+      "title": "Markers",
+      "text": "Markers are the points the game reads from the map: where each army starts, where the mass and hydrocarbon deposits lie, the path nodes the AI follows, and places a script can point at. About ten steps. You will place one deposit yourself; Undo takes it away again."
+    },
+    {
+      "id": "panel",
+      "target": { "part": "panel" },
+      "title": "The panel lists the markers",
+      "text": "One row for each kind of marker with how many the map has, then the path nodes by layer, then the chains. The check box at the left of a row shows or hides that kind in the views. Choose a row to see it in the inspector."
+    },
+    {
+      "id": "tools",
+      "target": { "label": "Tools" },
+      "before": [{ "run": "tool.markers.select" }],
+      "title": "The tools",
+      "text": "Select picks markers. Spawn, Mass, Hydrocarbon, AI marker and Blank place one marker per click. Path node lays a path, Chain joins markers in an order, Weather and Clouds place weather, and Preset places a saved group of markers."
+    },
+    {
+      "id": "choose-mass",
+      "target": { "label": "Mass", "type": "Button", "index": 0 },
+      "before": [{ "run": "tool.markers.select" }],
+      "title": "Try it: choose the Mass tool",
+      "text": "Click Mass in the list of tools.",
+      "until": { "path": "tool", "value": "markers.mass" },
+      "doItForMe": { "run": "tool.markers.mass" },
+      "done": "The Mass tool is active. Its settings are in the row above the views."
+    },
+    {
+      "id": "place-mass",
+      "target": { "label": "Top view" },
+      "before": [{ "run": "view.top" }, { "run": "tool.markers.mass" }, { "run": "select.none" }],
+      "title": "Try it: place a mass deposit",
+      "text": "Click on the map. The deposit goes to the middle of the nearest ogrid, as the game puts it, and gets the next free name.",
+      "until": { "path": "selection.count", "value": 1 },
+      "doItForMe": { "run": "markers.place", "kind": "mass", "x": 96, "z": 96 },
+      "done": "That is one deposit, one step of Undo. It is selected, so the inspector shows it.",
+      "guide": { "after": true }
+    },
+    {
+      "id": "inspector",
+      "target": { "part": "inspector" },
+      "title": "The inspector edits the marker",
+      "text": "What you selected last: the deposit's name and resource, and for other kinds the army of a spawn, the type of an AI marker or the layer of a path node. A field changes every selected marker at once."
+    },
+    {
+      "id": "options",
+      "target": { "part": "options" },
+      "before": [{ "run": "tool.markers.path" }],
+      "title": "The tool's settings",
+      "text": "Spawns, AI markers and path nodes can snap to a grid, and a path node has its layer: land, amphibious, water or air. Deposits always snap to an ogrid's centre. A deposit on steep ground gets a warning here and in the status bar."
+    },
+    {
+      "id": "path",
+      "target": { "label": "Path node", "type": "Button", "index": 0 },
+      "title": "Paths of nodes",
+      "text": "With the Path node tool a click on empty ground places a node linked to the selected one, so clicks lay a path. Drag from one node to another to link them. Nodes of different layers never link. The Procedural mode can also generate a whole network for you."
+    },
+    {
+      "id": "chains",
+      "target": { "label": "Chains and options" },
+      "title": "Chains and the adaptive map",
+      "text": "A chain is a list of markers in an order, for scripts. Select markers and use Chain from the selection, or click them one by one with the Chain tool. The adaptive map entry makes deposits wait for the army that starts nearest."
+    },
+    {
+      "id": "kind",
+      "target": { "part": "inspector" },
+      "before": [{ "run": "view.inspectPart", "part": "markers.kind.mass" }],
+      "title": "A kind in the inspector",
+      "text": "Choosing the row Mass deposits shows how many there are, with Select them and Clear them. Clearing is one step of Undo."
+    },
+    {
+      "id": "chips",
+      "target": { "part": "views" },
+      "title": "Showing markers in the views",
+      "text": "The chips above the views switch the Markers and Path nodes overlays on and off. Choosing a marker tool shows its kind on its own."
+    },
+    {
+      "id": "end",
+      "title": "That is the Markers mode",
+      "text": "Spawns also make the armies, so the Units mode places each army's first base. Help, Tours starts this tour again and lists the others."
+    }
+  ]
+}

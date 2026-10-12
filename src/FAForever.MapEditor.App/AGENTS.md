@@ -2964,7 +2964,8 @@ step points at and explains it on a card. Code: `Tours/` (the format, the catalo
   again when it runs. A tour about the export rings the button and explains it; the person presses it. A command
   that cannot run now says why on the card (`state.tour.problem`).
 - **What a step waits for** (`TourState`): `until.path` is a path of automation's state (`tab`, `mode`, `tool`,
-  `dock`, `palette`, `selection.count`, `show.<overlay>`, `layout.modePanel`, `layout.inspector`, `layout.dock`,
+  `dock`, `palette`, `selection.count`, `show.<overlay>`, `generated.<result>` (a generated result's status by the id of its row: `walkability`, `Missing`, `Current`),
+  `units.place.unit` (the Place tool's unit), `layout.modePanel`, `layout.inspector`, `layout.dock`,
   `undo` (the last step's name, e.g. `Add a mask`), `coverageStacks.shown` (the Masks mode's chosen mask or the Paint
   mode's chosen stratum: `stratum-2`)), read cheaply from the model without automation, with the same values (`TourTest` compares them with
   `state`); a path a tour may wait on is added to `TourState`, not read from the whole state. The condition is
@@ -3045,7 +3046,14 @@ step points at and explains it on a card. Code: `Tours/` (the format, the catalo
   person may have skipped the step that adds one. The locator looks again a few frames when a target is not found
   or not reached (lists made again by the step's own commands, a panel scrolled on a later frame), and closes
   the tool rows it opened with More when the step changes or the tour ends.
-- Not built yet: the tours of the other modes (Markers, Units, Procedural with the export) and
+- **The tours of the modes** (`markers`, `units`, `procedural`, orders 50 to 70): each starts by choosing its mode,
+  and asks the person to act where it is cheap and safe (a mass deposit, a unit, the walkability; one step of undo
+  or no change to the map's data), with `until` and Do it for me. A step that points at a list targets the list
+  by its label (`Tools`; `TourLocator` accepts a list the mouse reaches through one of its rows),
+  a control with a label that occurs twice by `type` and `index`. A menu's entries lie in popups a tour cannot ring:
+  the step rings the menu's header (`File`) and names the entry. The Procedural tour never runs `file.export` or
+  `file.upload`. `TourTest.Open` gives the test window a palette (slot 3 is `uab1103`) for the Units tour.
+- Not built yet: a step that waits for a brush stroke (a stroke is no command), a ring inside an open menu,
   recording a tour (H-3).
 
 ## Small rules of editing, looks and speed

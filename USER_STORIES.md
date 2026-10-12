@@ -684,10 +684,13 @@ own sit beside the editor's.
       tour of the window (Start, Not now, Don't ask again; kept in `tours/.progress.json` with the
       tours finished). The tour of the window (twelve steps) is the first; the tours of the Terrain
       (twelve steps: tools, brush, draft and final, height layers, curves, history), Masks (ten: the
-      list, adding a mask, the brush, the stack and its rules, where masks are used) and Paint modes
-      (thirteen: strata, choosing one, textures, the brush and its limits, mask stacks, rules, the
-      shader, the 3D view) follow, each with steps that ask you to act. Missing: the tours of the other
-      modes (Markers, Units, Procedural with the export).
+      list, adding a mask, the brush, the stack and its rules, where masks are used), Paint (thirteen:
+      strata, choosing one, textures, the brush and its limits, mask stacks, rules, the shader, the 3D
+      view), Markers (place a mass deposit), Units (choose a unit from the palette, place it) and
+      Procedural modes (generate the walkability, preview it; the export's steps and the File menu's
+      Export to the vault and Upload to the vault, which it rings and explains and never runs) follow,
+      each with steps that ask you to act. Missing: a step that waits for a brush stroke (a stroke is no
+      command), a ring inside an open menu.
 - [x] **H-2 A guide made from the tours.** `faf-map guide` plays the tours in a test editor and writes a
       static guide (HTML and Markdown in `docs/guide`) with a picture per step, the target ringed and
       numbered, made again when the window changes. Today: `faf-map guide build --out <folder> --port <n>
