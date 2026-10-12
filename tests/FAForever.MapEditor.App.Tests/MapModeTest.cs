@@ -191,6 +191,80 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task TheInspectorShowsTheArmyTheListMovedToWhenTheChosenOneWent()
+        {
+            MainViewModel model = await Open();
+            model.InspectPart("map.army.ARMY_3");
+            Assert.AreEqual("ARMY_3", model.Armies.ChosenArmy?.Name);
+
+            // the chosen army removed: the list chooses a neighbour, and that army is the one whose fields the inspector shows
+            await Run(model, "map.removeArmy", new JsonObject { ["army"] = "ARMY_3" });
+            string shown = MapPartsViewModel.ArmyOf(model.MapParts.Parts.Chosen)!;
+            Assert.AreEqual(shown, model.Armies.ChosenArmy?.Name, "the fields shown are those of the entry shown");
+            Assert.AreEqual(shown, model.Armies.ArmyName);
+
+            // and when an add is undone while its entry is shown
+            string added = (string)(await Run(model, "map.addArmy")).Result!;
+            Assert.AreEqual($"map.army.{added}", model.MapParts.Parts.Chosen.Id, "an army added by the command shows its entry in the Map mode, as the panel's button does");
+            Assert.AreEqual(added, model.Armies.ChosenArmy?.Name);
+            await Run(model, "edit.undo");
+            shown = MapPartsViewModel.ArmyOf(model.MapParts.Parts.Chosen)!;
+            Assert.AreEqual(shown, model.Armies.ChosenArmy?.Name);
+            Assert.AreEqual(shown, model.Armies.ArmyName);
+        }
+
+        [TestMethod]
+        public async Task ARenameTheMapRefusesLeavesTheEntryShownAndTheFieldWithTheMapsName()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "map.addArea");
+            await Run(model, "map.addArea", new JsonObject { ["x0"] = 0, ["z0"] = 0, ["x1"] = 32, ["z1"] = 32 });
+            model.InspectPart("map.area.AREA_2");
+            TextSetting name = ((MapAreaPart)model.MapParts.Parts.Chosen.Content).Area.Fields.Settings.OfType<TextSetting>().Single(setting => setting.Label == "Name");
+            List<string?> raised = [];
+            name.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+            name.Text = "AREA_1";
+            await Task.Delay(50);
+            Assert.AreEqual("map.area.AREA_2", model.MapParts.Parts.Chosen.Id, "the other area's entry is not shown because its name was typed");
+            Assert.AreEqual("AREA_2", name.Text);
+            CollectionAssert.Contains(raised, nameof(TextSetting.Text), "the field is told to show the map's name again, the typed text is not the map's");
+            Assert.IsNotNull(model.Map!.Document.Markers.Areas.SingleOrDefault(area => area.Name == "AREA_2"));
+        }
+
+        [TestMethod]
+        public async Task AnArmyAddedByACommandInAnotherModeLeavesTheModeAlone()
+        {
+            MainViewModel model = await Open();
+            model.SelectMode("terrain");
+            await Run(model, "map.addArmy");
+            Assert.AreEqual("terrain", model.SelectedMode!.Definition.Id);
+        }
+
+        [TestMethod]
+        public async Task AnotherMapOpenedStartsTheListOverAtTheInformation()
+        {
+            MainViewModel model = await Open();
+            model.InspectPart("map.army.ARMY_3");
+            Assert.AreEqual("ARMY_3", model.Armies.ChosenArmy?.Name);
+
+            await model.OpenAsync(HardFfa);
+            Assert.AreEqual("map.information", model.MapParts.Parts.Chosen.Id, "not the entry of the map before");
+            Assert.IsNull(model.Armies.ChosenArmy, "no army of the new map is chosen because the old map's had that name");
+        }
+
+        [TestMethod]
+        public void ALineCountCountsTheLastLineWithoutABreak()
+        {
+            static int Lines(string text) => ScriptFilesViewModel.Lines([.. System.Text.Encoding.UTF8.GetBytes(text)]);
+            Assert.AreEqual(0, Lines(""));
+            Assert.AreEqual(1, Lines("a"));
+            Assert.AreEqual(1, Lines("a\n"));
+            Assert.AreEqual(2, Lines("a\nb"));
+            Assert.AreEqual(2, Lines("a\r\nb\r\n"));
+        }
+
+        [TestMethod]
         public async Task AutomationNamesTheEntries()
         {
             MainViewModel model = await Open();

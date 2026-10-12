@@ -55,6 +55,11 @@ public sealed partial class ScriptFilesViewModel : ObservableObject
         _ => string.Create(CultureInfo.InvariantCulture, $"{bytes / (1024.0 * 1024):0.#} MB"),
     };
 
+    /// <summary>
+    /// The lines of a script: its line breaks, and the last line when it does not end with one.
+    /// </summary>
+    public static int Lines(ImmutableArray<byte> script) => script.Count(b => b == '\n') + (script.Length > 0 && script[^1] != '\n' ? 1 : 0);
+
     public void Refresh(MapDocument? document, bool isProject)
     {
         IsProject = isProject;
@@ -71,7 +76,7 @@ public sealed partial class ScriptFilesViewModel : ObservableObject
         {
             _script = document.Script;
             Script = document.Script is ImmutableArray<byte> script
-                ? string.Create(CultureInfo.InvariantCulture, $"script.lua, {script.Count(b => b == '\n') + 1} lines, {SizeOf(script.Length)}")
+                ? string.Create(CultureInfo.InvariantCulture, $"script.lua, {Lines(script)} lines, {SizeOf(script.Length)}")
                 : "The map has no script yet: opening it makes one, the script of a skirmish map";
         }
         if (!ReferenceEquals(document.Files, _files))
