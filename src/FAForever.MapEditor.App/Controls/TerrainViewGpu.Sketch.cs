@@ -35,7 +35,7 @@ public sealed partial class TerrainViewGpu
         using Performance.Span measure = Performance.Measure("3d.sketch-frame");
         IReadOnlyList<SketchStroke> pending = _model.Sketch.Pending;
         // the line being drawn shows whether or not the overlay is on: drawing turns it on
-        IReadOnlyList<SketchLayer> layers = _model.ShowSketch ? SketchLines.Of(document.Sketch, _model.InSketchMode) : [];
+        IReadOnlyList<SketchLayer> layers = _model.ShowSketch ? SketchLines.Of(document.Sketch, _model.SketchDrawnFully) : [];
         IReadOnlyCollection<string> alive = document.Sketch.Sheets.Select(sheet => sheet.Name).ToArray();
         return new SketchFrame(layers, alive, pending, new Vector2((float)Bounds.Width, (float)Bounds.Height));
     }

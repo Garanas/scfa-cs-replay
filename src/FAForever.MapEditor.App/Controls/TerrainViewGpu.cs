@@ -571,6 +571,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.CameraMoved -= OnCameraMoved;
             _model.OverlaysChanged -= OnDocumentChanged;
             _model.Sketch.PendingChanged -= OnDocumentChanged;
+            _model.Sketch.ChosenChanged -= OnDocumentChanged;
             _model.PropertyChanged -= OnModelPropertyChanged;
         }
         _model = DataContext as MainViewModel;
@@ -583,6 +584,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.Selection.Changed += OnSelectionChanged;
             _model.OverlaysChanged += OnDocumentChanged;
             _model.Sketch.PendingChanged += OnDocumentChanged;
+            _model.Sketch.ChosenChanged += OnDocumentChanged;
             _model.PropertyChanged += OnModelPropertyChanged;
             AttachSkyCube();
         }

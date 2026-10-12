@@ -121,10 +121,94 @@ namespace FAForever.MapEditor.Project.Editing
         public static ImmutableArray<Vector2> Straight(IReadOnlyList<Vector2> points) =>
             points.Count <= 1 ? [.. points] : [points[0], points[^1]];
 
+        /// <summary>
+        /// The parts of a line that lie on the map (0 to <paramref name="width"/> by 0 to
+        /// <paramref name="height"/> ogrids): where the line leaves the map it is cut at the edge, and a
+        /// part that comes back is a line of its own, never joined across the excursion. A line wholly
+        /// on the map is returned as it is.
+        /// </summary>
+        /// <returns>The pieces in order; none when the whole line lies beyond the map.</returns>
+        public static IReadOnlyList<ImmutableArray<Vector2>> ClipToMap(ImmutableArray<Vector2> line, float width, float height)
+        {
+            bool Inside(Vector2 p) => p.X >= 0 && p.X <= width && p.Y >= 0 && p.Y <= height;
+            if (line.All(Inside))
+            {
+                return line.IsDefaultOrEmpty ? [] : [line];
+            }
+            List<ImmutableArray<Vector2>> pieces = [];
+            List<Vector2> current = [];
+            void End()
+            {
+                if (current.Count > 0)
+                {
+                    pieces.Add([.. current]);
+                    current.Clear();
+                }
+            }
+            for (int i = 0; i + 1 < line.Length; i++)
+            {
+                Vector2 a = line[i];
+                Vector2 b = line[i + 1];
+                if (!Liang(a, b, width, height, out float t0, out float t1))
+                {
+                    End();
+                    continue;
+                }
+                Vector2 from = a + (b - a) * t0;
+                Vector2 to = a + (b - a) * t1;
+                if (t0 > 0 || current.Count == 0 || Vector2.DistanceSquared(current[^1], from) > 1e-8f)
+                {
+                    End();
+                    current.Add(from);
+                }
+                current.Add(to);
+                if (t1 < 1)
+                {
+                    End();
+                }
+            }
+            End();
+            if (line.Length == 1 && Inside(line[0]))
+            {
+                pieces.Add(line);
+            }
+            return pieces;
+        }
+
+        // the part of the segment a-b inside the rectangle, as t from 0 to 1 along it (Liang and Barsky)
+        private static bool Liang(Vector2 a, Vector2 b, float width, float height, out float t0, out float t1)
+        {
+            t0 = 0;
+            t1 = 1;
+            Vector2 d = b - a;
+            float[] p = [-d.X, d.X, -d.Y, d.Y];
+            float[] q = [a.X, width - a.X, a.Y, height - a.Y];
+            for (int i = 0; i < 4; i++)
+            {
+                if (p[i] == 0)
+                {
+                    if (q[i] < 0)
+                    {
+                        return false;
+                    }
+                    continue;
+                }
+                float t = q[i] / p[i];
+                if (p[i] < 0)
+                {
+                    t0 = Math.Max(t0, t);
+                }
+                else
+                {
+                    t1 = Math.Min(t1, t);
+                }
+            }
+            return t0 <= t1;
+        }
+
         #endregion
 
         #region Erasing
-
         /// <summary>
         /// What is left of a line after an eraser of a radius passed along a path (a capsule: the
         /// line between two places, <paramref name="radius"/> to both sides), cut where it crossed.

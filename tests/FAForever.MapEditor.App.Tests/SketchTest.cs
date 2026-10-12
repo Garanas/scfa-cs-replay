@@ -5,6 +5,7 @@ using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.Tests
@@ -193,8 +194,8 @@ namespace FAForever.MapEditor.App.Tests
             await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((5, 5), (9, 9)), ["mirror"] = false });
             await Run(model, "sketch.showSheet", new JsonObject { ["on"] = false });
 
-            System.Collections.Immutable.ImmutableArray<FAForever.MapEditor.Project.Editing.SketchLayer> other = FAForever.MapEditor.Project.Editing.SketchLines.Of(Sketch(model), full: false);
-            System.Collections.Immutable.ImmutableArray<FAForever.MapEditor.Project.Editing.SketchLayer> inMode = FAForever.MapEditor.Project.Editing.SketchLines.Of(Sketch(model), full: true);
+            System.Collections.Immutable.ImmutableArray<FAForever.MapEditor.Project.Editing.SketchLayer> other = FAForever.MapEditor.Project.Editing.SketchLines.Of(Sketch(model), chosen: null);
+            System.Collections.Immutable.ImmutableArray<FAForever.MapEditor.Project.Editing.SketchLayer> inMode = FAForever.MapEditor.Project.Editing.SketchLines.Of(Sketch(model), chosen: "Sheet 1");
 
             Assert.AreEqual(1, other.Length, "a hidden sheet is not drawn");
             Assert.AreEqual(0.45f, other[0].Opacity, 1e-6f, "the other modes draw it at its own opacity");
@@ -561,6 +562,170 @@ namespace FAForever.MapEditor.App.Tests
             {
                 "sketch.deleteSelected", "sketch.editLabel", "sketch.label", "sketch.move", "sketch.recolour", "sketch.resize", "sketch.select", "sketch.setLabel", "sketch.setSymbol", "sketch.symbol",
             }, marks.Where(id => id.StartsWith("sketch.", StringComparison.Ordinal)).ToArray());
+        }
+
+        [TestMethod]
+        public async Task SelectAllAndDeleteInTheSketchModeActOnTheChosenSheetNeverOnTheMapsMarkers()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((10, 10), (60, 10)), ["mirror"] = false });
+            await Run(model, "sketch.symbol", new JsonObject { ["kind"] = "cross", ["x"] = 100, ["z"] = 100, ["mirror"] = false });
+            int spawns = model.ShownDocument!.Markers.Spawns.Length;
+            Assert.IsTrue(spawns > 0);
+            // markers selected before the Sketch mode was chosen
+            model.Selection.Set([.. model.ShownDocument.Markers.Spawns.Select(spawn => ObjectRef.Marker(spawn.Id))]);
+            Assert.IsFalse(model.Meets(Needs.Selection), "Delete has nothing to act on in the Sketch mode: the markers are not its selection");
+
+            await Run(model, "select.all");
+            Assert.AreEqual(2, model.Tool<SketchSelectTool>().Selected.Length, "the sheet's stroke and symbol");
+            Assert.IsTrue(model.Meets(Needs.Selection));
+
+            await Run(model, "edit.delete");
+            Assert.AreEqual(spawns, model.ShownDocument.Markers.Spawns.Length, "no marker is deleted");
+            Assert.AreEqual(0, Sketch(model).Sheets.Single().Strokes.Length + Sketch(model).Sheets.Single().Symbols.Length, "the sheet's items are");
+            Assert.IsTrue(model.Undo());
+            Assert.AreEqual(2, Sketch(model).Sheets.Single().Strokes.Length + Sketch(model).Sheets.Single().Symbols.Length);
+        }
+
+        [TestMethod]
+        public async Task TheMirrorBoxesAreOffAndDisabledWhileTheMapDoesNotMirror()
+        {
+            MainViewModel model = await Open();
+            PencilTool pencil = model.Tool<PencilTool>();
+            EraserTool eraser = model.Tool<EraserTool>();
+            SymbolTool symbol = model.Tool<SymbolTool>();
+            Assert.IsTrue(pencil.Mirror, "the box's own choice is on");
+
+            Assert.IsFalse(pencil.MirrorAvailable, "the map has no symmetry");
+            Assert.IsFalse(pencil.MirrorChecked, "so the box shows off");
+            StringAssert.Contains(pencil.MirrorTip, "no symmetry");
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "leftRight" });
+            Assert.IsTrue(pencil.MirrorAvailable && eraser.MirrorAvailable && symbol.MirrorAvailable);
+            Assert.IsTrue(pencil.MirrorChecked && eraser.MirrorChecked && symbol.MirrorChecked);
+            Assert.IsTrue(eraser.Mirrors);
+
+            model.Symmetry.MirrorsEdits = false;
+            Assert.IsFalse(pencil.MirrorChecked, "the bar's Mirror chip off: the box follows");
+            Assert.IsFalse(eraser.MirrorChecked);
+            Assert.IsFalse(eraser.Mirrors, "the eraser draws no circle for the images");
+            StringAssert.Contains(symbol.MirrorTip, "Mirror edits is off");
+            Assert.IsTrue(pencil.Mirror, "what the person chose stays for when mirroring is on again");
+            model.Symmetry.MirrorsEdits = true;
+            Assert.IsTrue(symbol.MirrorChecked);
+        }
+
+        [TestMethod]
+        public async Task TheEraserSaysWhatItCutAndWhatItRemoved()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((20, 100), (180, 100)), ["mirror"] = false });
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((20, 140), (180, 140)), ["mirror"] = false });
+            await Run(model, "sketch.symbol", new JsonObject { ["kind"] = "cross", ["x"] = 100, ["z"] = 140, ["size"] = 6, ["mirror"] = false });
+            await Run(model, "sketch.setEraser", new JsonObject { ["radius"] = 3, ["mirror"] = false });
+
+            await Run(model, "sketch.erase", new JsonObject { ["points"] = Points((100, 95), (100, 105)) });
+            Assert.AreEqual("Cut 1 stroke of Sheet 1", model.Status);
+            await Run(model, "sketch.erase", new JsonObject { ["points"] = Points((100, 135), (100, 145)), ["whole"] = true });
+            Assert.AreEqual("Removed 1 stroke and 1 symbol of Sheet 1", model.Status);
+
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((20, 60), (180, 60)), ["mirror"] = false });
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((20, 80), (180, 80)), ["mirror"] = false });
+            EraserTool eraser = model.Tool<EraserTool>();
+            eraser.Press(100, 50);
+            eraser.Drag(100, 90);
+            eraser.Release();
+            Assert.AreEqual("Cut 2 strokes of Sheet 1", model.Status, "the status counts what the whole drag did");
+        }
+
+        [TestMethod]
+        public async Task TheWholeStrokeEraserWithMirrorLeavesLabelsAtTheMirroredPlaceAlone()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "select.symmetry", new JsonObject { ["kind"] = "leftRight" });
+            float width = model.ShownDocument!.Width;
+            await Run(model, "sketch.label", new JsonObject { ["text"] = "mine", ["x"] = 40, ["z"] = 100, ["colour"] = "green", ["size"] = 16 });
+            await Run(model, "sketch.symbol", new JsonObject { ["kind"] = "cross", ["x"] = 40, ["z"] = 140, ["size"] = 10, ["mirror"] = true });
+            Assert.AreEqual(2, Sketch(model).Sheets.Single().Symbols.Length, "the symbol is repeated");
+
+            // the eraser passes the label's mirror image, where nothing is written
+            await Run(model, "sketch.erase", new JsonObject { ["points"] = Points((width - 40, 100)), ["whole"] = true, ["radius"] = 6, ["mirror"] = true });
+            Assert.AreEqual(1, Sketch(model).Sheets.Single().Labels.Length, "labels are never mirrored: the eraser's image does not reach it");
+
+            // symbols are repeated, so the eraser's image reaches the one at the mirrored place (both go)
+            await Run(model, "sketch.erase", new JsonObject { ["points"] = Points((width - 40, 140)), ["whole"] = true, ["radius"] = 6, ["mirror"] = true });
+            Assert.AreEqual(0, Sketch(model).Sheets.Single().Symbols.Length);
+            // and the eraser itself reaches the label where it passes
+            await Run(model, "sketch.erase", new JsonObject { ["points"] = Points((40, 100)), ["whole"] = true, ["radius"] = 6, ["mirror"] = true });
+            Assert.AreEqual(0, Sketch(model).Sheets.Single().Labels.Length);
+        }
+
+        [TestMethod]
+        public async Task UndoingTheDuplicateOrTheDeleteOfASheetChoosesTheSheetChosenBefore()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "sketch.addSheet", new JsonObject { ["name"] = "A" });
+            await Run(model, "sketch.addSheet", new JsonObject { ["name"] = "Edge" });
+            await Run(model, "sketch.addSheet", new JsonObject { ["name"] = "C" });
+            await Run(model, "sketch.chooseSheet", new JsonObject { ["sheet"] = "Edge" });
+
+            await Run(model, "sketch.duplicateSheet");
+            Assert.AreEqual("Edge copy", model.Sketch.Chosen);
+            Assert.IsTrue(model.Undo());
+            Assert.AreEqual("Edge", model.Sketch.Chosen, "the duplicate is gone: the sheet chosen before is");
+
+            await Run(model, "sketch.deleteSheet");
+            Assert.AreNotEqual("Edge", model.Sketch.Chosen);
+            Assert.IsTrue(model.Undo());
+            Assert.AreEqual("Edge", model.Sketch.Chosen, "the deleted sheet is back and chosen again");
+        }
+
+        [TestMethod]
+        public async Task AStrokeBeyondTheMapIsCutAtItsEdgeAndNotJoinedAcross()
+        {
+            MainViewModel model = await Open();
+            float size = model.ShownDocument!.Width;
+
+            CommandRun drawn = await Run(model, "sketch.draw", new JsonObject
+            {
+                ["points"] = Points((50, 50), (50, size + 40), (80, size + 40), (80, 50)),
+                ["mirror"] = false,
+            });
+
+            SketchSheet sheet = Sketch(model).Sheets.Single();
+            Assert.AreEqual(2, drawn.Result, "the way out and the way back are strokes of their own");
+            Assert.AreEqual(2, sheet.Strokes.Length);
+            foreach (SketchStroke stroke in sheet.Strokes)
+            {
+                Assert.IsTrue(stroke.Points.All(p => p.X >= 0 && p.X <= size && p.Y >= 0 && p.Y <= size), "every place lies on the map");
+            }
+            Assert.AreEqual(new Vector2(50, 50), sheet.Strokes[0].Points[0]);
+            Assert.AreEqual(new Vector2(50, size), sheet.Strokes[0].Points[^1], "cut at the edge where it left");
+            Assert.AreEqual(new Vector2(80, size), sheet.Strokes[1].Points[0], "and begun at the edge where it came back");
+
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "sketch.draw", new JsonObject { ["points"] = Points((size + 10, size + 10), (size + 50, size + 30)), ["mirror"] = false }));
+            Assert.AreEqual(2, Sketch(model).Sheets.Single().Strokes.Length, "a stroke wholly beyond the map is refused");
+        }
+
+        [TestMethod]
+        public async Task InTheSketchModeTheChosenSheetDrawsFullyAndTheOthersAtTheirOpacity()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((10, 10), (60, 60)), ["mirror"] = false });
+            await Run(model, "sketch.addSheet", new JsonObject { ["name"] = "2v2" });
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((10, 90), (60, 90)), ["mirror"] = false });
+
+            Assert.AreEqual("2v2", model.SketchDrawnFully);
+            var layers = FAForever.MapEditor.Project.Editing.SketchLines.Of(Sketch(model), model.SketchDrawnFully);
+            Assert.AreEqual(0.45f, layers.Single(layer => layer.Sheet.Name == "Sheet 1").Opacity, 1e-6f, "the sheet not chosen keeps its own opacity");
+            Assert.AreEqual(1f, layers.Single(layer => layer.Sheet.Name == "2v2").Opacity);
+
+            await Run(model, "sketch.chooseSheet", new JsonObject { ["sheet"] = "Sheet 1" });
+            layers = FAForever.MapEditor.Project.Editing.SketchLines.Of(Sketch(model), model.SketchDrawnFully);
+            Assert.AreEqual(1f, layers.Single(layer => layer.Sheet.Name == "Sheet 1").Opacity);
+            Assert.AreEqual(0.45f, layers.Single(layer => layer.Sheet.Name == "2v2").Opacity, 1e-6f);
+
+            model.SelectMode("terrain");
+            Assert.IsNull(model.SketchDrawnFully, "outside the mode every shown sheet draws at its own opacity");
         }
     }
 }

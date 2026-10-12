@@ -355,9 +355,15 @@ public sealed partial class SketchViewModel : ObservableObject
     {
         string? found = Items.FirstOrDefault(item => item.Name == name)?.Name
             ?? Items.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.Name;
+        string? old = Chosen;
         Chosen = found ?? throw new ArgumentException(Items.Count == 0
             ? $"The sketch has no sheet '{name}': it has none yet"
             : $"The sketch has no sheet '{name}': {string.Join(", ", Items.Select(item => item.Name))}");
+        if (old != Chosen && old is not null)
+        {
+            _before = old;
+        }
+        _lost = null;
         Show(_shown);
     }
 
@@ -379,6 +385,10 @@ public sealed partial class SketchViewModel : ObservableObject
     }
 
     private string? _wanted;
+
+    // the sheet chosen before the one chosen now, and the one an edit took away
+    private string? _before;
+    private string? _lost;
 
     /// <summary>
     /// Chooses a sheet the next time the sketch is shown, when the command that makes it has
@@ -403,9 +413,34 @@ public sealed partial class SketchViewModel : ObservableObject
             Items = [.. sheets.Select(sheet => new SketchSheetItem(sheet.Name, _run))];
             OnPropertyChanged(nameof(IsEmpty));
         }
-        string? chosen = choose is not null && sheets.Any(sheet => sheet.Name == choose) ? choose
-            : Chosen is string held && sheets.Any(sheet => sheet.Name == held) ? held
-            : sheets.FirstOrDefault()?.Name;
+        bool Has(string? name) => name is not null && sheets.Any(sheet => sheet.Name == name);
+        string? chosen;
+        if (Has(choose))
+        {
+            chosen = choose;
+            _lost = null;
+        }
+        else if (Has(_lost))
+        {
+            // the sheet chosen before an edit took it away (a delete) is back (its undo)
+            chosen = _lost;
+            _lost = null;
+        }
+        else if (Has(Chosen))
+        {
+            chosen = Chosen;
+        }
+        else
+        {
+            // the chosen sheet is gone (a duplicate undone, a sheet deleted): the one chosen before it,
+            // else the first
+            _lost = Chosen;
+            chosen = Has(_before) ? _before : sheets.FirstOrDefault()?.Name;
+        }
+        if (chosen != Chosen && Has(Chosen))
+        {
+            _before = Chosen;
+        }
         for (int i = 0; i < sheets.Length; i++)
         {
             SketchSheetItem item = Items[i];

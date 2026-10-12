@@ -33,6 +33,7 @@ public sealed partial class PencilTool : ObservableObject, IMapTool
         Colours[(int)Colour].IsOn = true;
         Widths[(int)Width].IsOn = true;
         model.Sketch.ChosenChanged += (_, _) => OnPropertyChanged(nameof(SheetText));
+        SketchMirrorHint.Watch(model.Symmetry, MirrorChanged);
     }
 
     /// <summary>
@@ -65,6 +66,34 @@ public sealed partial class PencilTool : ObservableObject, IMapTool
     /// </summary>
     [ObservableProperty]
     public partial bool Smooth { get; set; }
+
+    /// <summary>
+    /// Whether the Mirror box can be used: the map has a symmetry and the views' bar mirrors edits.
+    /// </summary>
+    public bool MirrorAvailable => _model.Symmetry.IsMirroring;
+
+    /// <summary>
+    /// The Mirror box: on only while it can be, so that it never says on when nothing is mirrored.
+    /// </summary>
+    public bool MirrorChecked
+    {
+        get => Mirror && MirrorAvailable;
+        set => Mirror = value;
+    }
+
+    /// <summary>
+    /// The box's tip: what it does, or why it is off.
+    /// </summary>
+    public string MirrorTip => SketchMirrorHint.Tip(_model.Symmetry, "A stroke is repeated by the map's symmetry, as the brushes are; off for a one-off note");
+
+    private void MirrorChanged()
+    {
+        OnPropertyChanged(nameof(MirrorAvailable));
+        OnPropertyChanged(nameof(MirrorChecked));
+        OnPropertyChanged(nameof(MirrorTip));
+    }
+
+    partial void OnMirrorChanged(bool value) => MirrorChanged();
 
     partial void OnColourChanged(SketchColour value)
     {

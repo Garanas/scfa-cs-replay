@@ -199,6 +199,7 @@ public sealed partial class HeightmapView : Control
             _model.Walkability.Changed -= OnOverlayChanged;
             _model.Handles.Changed -= OnOverlayChanged;
             _model.Sketch.PendingChanged -= OnOverlayChanged;
+            _model.Sketch.ChosenChanged -= OnOverlayChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
@@ -213,6 +214,7 @@ public sealed partial class HeightmapView : Control
             _model.Walkability.Changed += OnOverlayChanged;
             _model.Handles.Changed += OnOverlayChanged;
             _model.Sketch.PendingChanged += OnOverlayChanged;
+            _model.Sketch.ChosenChanged += OnOverlayChanged;
         }
         OnMapChanged(this, EventArgs.Empty);
     }

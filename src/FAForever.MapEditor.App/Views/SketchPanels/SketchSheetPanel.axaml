@@ -19,7 +19,9 @@
         </DockPanel>
         <TextBlock Classes="label" Text="{Binding ChosenOpacity, StringFormat='Other modes: {0:0}%'}" />
         <Slider Minimum="0" Maximum="100" Value="{Binding ChosenOpacity}" AutomationProperties.Name="Opacity of the sheet outside the Sketch mode"
-                AutomationProperties.HelpText="How opaque the sheet is in the views while another mode is chosen: it guides without getting in the way; in the Sketch mode it is drawn fully" />
+                AutomationProperties.HelpText="How opaque the sheet is in the views while another mode is chosen: it guides without getting in the way; in the Sketch mode the chosen sheet is drawn fully and the other shown sheets at their own opacity" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="In this mode the chosen sheet is drawn fully and the other shown sheets at their own opacity, so they can be told apart."
+                   AutomationProperties.Name="How the sheets are drawn in the Sketch mode" />
         <TextBlock Classes="overline" Text="{Binding Source=Legend, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
         <ItemsControl ItemsSource="{Binding Legend}" AutomationProperties.Name="Legend of the sheet">
           <ItemsControl.ItemTemplate>

@@ -35,6 +35,7 @@ public sealed partial class SymbolTool : ObservableObject, IMapTool
         Colours[(int)Colour].IsOn = true;
         Sizes[(int)Size].IsOn = true;
         model.Sketch.ChosenChanged += (_, _) => OnPropertyChanged(nameof(SheetText));
+        SketchMirrorHint.Watch(model.Symmetry, MirrorChanged);
     }
 
     /// <summary>
@@ -80,6 +81,33 @@ public sealed partial class SymbolTool : ObservableObject, IMapTool
     [ObservableProperty]
     public partial bool Mirror { get; set; } = true;
 
+    /// <summary>
+    /// Whether the Mirror box can be used: the map has a symmetry and the views' bar mirrors edits.
+    /// </summary>
+    public bool MirrorAvailable => _model.Symmetry.IsMirroring;
+
+    /// <summary>
+    /// The Mirror box: on only while it can be, so that it never says on when nothing is mirrored.
+    /// </summary>
+    public bool MirrorChecked
+    {
+        get => Mirror && MirrorAvailable;
+        set => Mirror = value;
+    }
+
+    /// <summary>
+    /// The box's tip: what it does, or why it is off.
+    /// </summary>
+    public string MirrorTip => SketchMirrorHint.Tip(_model.Symmetry, "A symbol is repeated by the map's symmetry, an arrow turned with it; off for a one-off note");
+
+    private void MirrorChanged()
+    {
+        OnPropertyChanged(nameof(MirrorAvailable));
+        OnPropertyChanged(nameof(MirrorChecked));
+        OnPropertyChanged(nameof(MirrorTip));
+    }
+
+    partial void OnMirrorChanged(bool value) => MirrorChanged();
     /// <summary>
     /// The way an arrow points when it is clicked rather than dragged, in degrees: 0 to +x, clockwise on the top view.
     /// </summary>
@@ -148,7 +176,7 @@ public sealed partial class SymbolTool : ObservableObject, IMapTool
 
     public double CursorRadius => 0;
 
-    public bool Mirrors => Mirror;
+    public bool Mirrors => MirrorChecked;
 
     /// <summary>
     /// Whether a symbol is being placed (the mouse is down).

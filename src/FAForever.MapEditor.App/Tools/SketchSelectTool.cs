@@ -165,6 +165,8 @@ public sealed partial class SketchSelectTool : ObservableObject, IMapTool
     {
         OnPropertyChanged(nameof(Summary));
         OnPropertyChanged(nameof(HasSelection));
+        // Delete in the Sketch mode needs a selection of the sketch
+        _model.Commands.NotifyCanRunChanged();
         if (redraw)
         {
             _model.ShowStroke();

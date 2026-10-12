@@ -581,8 +581,8 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                 </StackPanel>
-                <CheckBox Content="Mirror" IsChecked="{Binding Mirror}" AutomationProperties.Name="Mirror strokes by the symmetry"
-                          AutomationProperties.HelpText="A stroke is repeated by the map's symmetry, as the brushes are; off for a one-off note" />
+                <CheckBox Content="Mirror" IsChecked="{Binding MirrorChecked}" IsEnabled="{Binding MirrorAvailable}" ToolTip.Tip="{Binding MirrorTip}"
+                          AutomationProperties.Name="Mirror strokes by the symmetry" AutomationProperties.HelpText="{Binding MirrorTip}" />
                 <CheckBox Content="Smooth" IsChecked="{Binding Smooth}" AutomationProperties.Name="Smooth the line"
                           AutomationProperties.HelpText="The line you draw is smoothed and thinned to few places when you let go" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding SheetText}" VerticalAlignment="Center"
@@ -600,8 +600,8 @@
                 </StackPanel>
                 <CheckBox Content="Whole strokes" IsChecked="{Binding Whole}" AutomationProperties.Name="Erase whole strokes, symbols and labels"
                           AutomationProperties.HelpText="A stroke, symbol or label the eraser touches goes entirely, as with Alt held; off, it rubs out only where it passes strokes and leaves symbols and labels" />
-                <CheckBox Content="Mirror" IsChecked="{Binding Mirror}" AutomationProperties.Name="Erase where the symmetry repeats the eraser"
-                          AutomationProperties.HelpText="The eraser also works in the other parts of a symmetric map" />
+                <CheckBox Content="Mirror" IsChecked="{Binding MirrorChecked}" IsEnabled="{Binding MirrorAvailable}" ToolTip.Tip="{Binding MirrorTip}"
+                          AutomationProperties.Name="Erase where the symmetry repeats the eraser" AutomationProperties.HelpText="{Binding MirrorTip}" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding SheetText}" VerticalAlignment="Center"
                            AutomationProperties.Name="Sheet erased in" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
@@ -662,8 +662,8 @@
                   <TextBox Classes="toolfield commit mono" Text="{Binding TurnText, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Turn of the arrow in degrees"
                            AutomationProperties.HelpText="Degrees clockwise from pointing right; dragging while you place the arrow points it where the mouse goes" />
                 </StackPanel>
-                <CheckBox Content="Mirror" IsChecked="{Binding Mirror}" AutomationProperties.Name="Mirror symbols by the symmetry"
-                          AutomationProperties.HelpText="A symbol is repeated by the map's symmetry, an arrow turned with it; off for a one-off note" />
+                <CheckBox Content="Mirror" IsChecked="{Binding MirrorChecked}" IsEnabled="{Binding MirrorAvailable}" ToolTip.Tip="{Binding MirrorTip}"
+                          AutomationProperties.Name="Mirror symbols by the symmetry" AutomationProperties.HelpText="{Binding MirrorTip}" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding SheetText}" VerticalAlignment="Center"
                            AutomationProperties.Name="Sheet stamped into" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"

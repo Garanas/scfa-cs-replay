@@ -60,22 +60,23 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
-        /// The opacity a sheet is drawn at: fully in the Sketch mode (<paramref name="full"/>), at its own
-        /// in the other modes.
+        /// The opacity a sheet is drawn at: fully when it is the one <paramref name="chosen"/> in the Sketch
+        /// mode, at its own opacity otherwise (the other sheets of the Sketch mode, and every sheet in the other
+        /// modes, where <paramref name="chosen"/> is null).
         /// </summary>
-        public static float OpacityOf(SketchSheet sheet, bool full) => full ? 1 : sheet.Opacity;
+        public static float OpacityOf(SketchSheet sheet, string? chosen) => chosen is not null && sheet.Name == chosen ? 1 : sheet.Opacity;
 
         /// <summary>
         /// The sheets that show and have something to draw, in the order they lie in (the first
         /// below), each with its lines and opacity.
         /// </summary>
-        /// <param name="full">Whether the Sketch mode is the one chosen: every sheet then draws fully.</param>
-        public static ImmutableArray<SketchLayer> Of(Sketch sketch, bool full)
+        /// <param name="chosen">The sheet chosen in the Sketch mode, which draws fully; null outside the mode.</param>
+        public static ImmutableArray<SketchLayer> Of(Sketch sketch, string? chosen)
         {
             ImmutableArray<SketchLayer>.Builder layers = ImmutableArray.CreateBuilder<SketchLayer>();
             foreach (SketchSheet sheet in sketch.Sheets)
             {
-                float opacity = OpacityOf(sheet, full);
+                float opacity = OpacityOf(sheet, chosen);
                 if (!sheet.Shown || opacity <= 0)
                 {
                     continue;
@@ -112,15 +113,15 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// The sheets a view draws and how opaque each is: the shown sheets that hold something to draw,
-        /// at their own opacity outside the Sketch mode and fully in it. A sheet that is fully
-        /// transparent is left out.
+        /// at their own opacity, except the sheet <paramref name="chosen"/> in the Sketch mode, which is drawn
+        /// fully. A sheet that is fully transparent is left out.
         /// </summary>
-        /// <param name="full">Whether the Sketch mode is the one chosen: every sheet is drawn fully.</param>
-        public static IEnumerable<(SketchSheet Sheet, float Opacity)> Shown(Sketch sketch, bool full)
+        /// <param name="chosen">The sheet chosen in the Sketch mode; null outside the mode.</param>
+        public static IEnumerable<(SketchSheet Sheet, float Opacity)> Shown(Sketch sketch, string? chosen)
         {
             foreach (SketchSheet sheet in sketch.Sheets)
             {
-                float opacity = full ? 1 : sheet.Opacity;
+                float opacity = OpacityOf(sheet, chosen);
                 if (sheet.Shown && !sheet.IsBlank && opacity > 0)
                 {
                     yield return (sheet, opacity);

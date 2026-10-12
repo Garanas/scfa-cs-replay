@@ -425,5 +425,38 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.AreEqual(new Vector2(138, 148), result.Document.Sketch.Sheets[0].Strokes[0].Points[0], "by the offset of the old map in the new one (128, 128)");
             Assert.AreEqual(new Vector2(158, 168), result.Document.Sketch.Sheets[0].Strokes[0].Points[1]);
         }
+
+        [TestMethod]
+        public void ALineThatLeavesTheMapIsCutAtTheEdgeAndTheWayBackIsALineOfItsOwn()
+        {
+            IReadOnlyList<ImmutableArray<Vector2>> pieces = SketchGeometry.ClipToMap(
+                [new Vector2(50, 50), new Vector2(50, 140), new Vector2(80, 140), new Vector2(80, 50)], 100, 100);
+
+            Assert.AreEqual(2, pieces.Count);
+            CollectionAssert.AreEqual(new[] { new Vector2(50, 50), new Vector2(50, 100) }, pieces[0].ToArray());
+            CollectionAssert.AreEqual(new[] { new Vector2(80, 100), new Vector2(80, 50) }, pieces[1].ToArray());
+            Assert.AreEqual(1, SketchGeometry.ClipToMap([new Vector2(1, 1), new Vector2(99, 99)], 100, 100).Count, "a line on the map is as it was");
+            Assert.AreEqual(0, SketchGeometry.ClipToMap([new Vector2(120, 1), new Vector2(150, 99)], 100, 100).Count, "a line beyond it is nothing");
+            Assert.AreEqual(0, SketchGeometry.ClipToMap([new Vector2(120, 1)], 100, 100).Count);
+            // a line that crosses a corner without a place on the map
+            IReadOnlyList<ImmutableArray<Vector2>> across = SketchGeometry.ClipToMap([new Vector2(-10, 50), new Vector2(50, 110), new Vector2(110, 50)], 100, 100);
+            Assert.AreEqual(2, across.Count);
+        }
+
+        [TestMethod]
+        public void TheEraserCountsWhatItCutAndWhatItRemoved()
+        {
+            MapDocument document = Drawn(Map(), null, Line(SketchColour.Red, (0, 50), (100, 50)), Line(SketchColour.Blue, (0, 80), (100, 80)));
+
+            document.EraseCounted("Sheet 1", [new Vector2(50, 45), new Vector2(50, 55)], 3, false, [], out EraseCounts cut);
+            Assert.AreEqual(new EraseCounts(1, 0, 0, 0), cut);
+            Assert.AreEqual("Cut 1 stroke", cut.Describe());
+            document.EraseCounted("Sheet 1", [new Vector2(50, 75), new Vector2(50, 85)], 3, true, [], out EraseCounts whole);
+            Assert.AreEqual(new EraseCounts(0, 1, 0, 0), whole);
+            Assert.AreEqual("Removed 1 stroke", whole.Describe());
+            Assert.AreEqual("Cut 2 strokes, removed 1 stroke and 1 symbol", new EraseCounts(2, 1, 1, 0).Describe());
+            Assert.AreEqual("Removed 2 strokes, 1 symbol and 1 label", new EraseCounts(0, 2, 1, 1).Describe());
+            Assert.AreEqual(0, new EraseCounts().Touched);
+        }
     }
 }
