@@ -267,6 +267,130 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(!paths, heading.IsChecked);
             window.Close();
         });
+        private static async Task<int[]> TwoChains(MainViewModel model)
+        {
+            MapDocument document = model.ShownDocument!;
+            int[] ids = [.. document.Markers.Spawns.Select(spawn => spawn.Id).Take(2), .. document.Markers.Resources.Select(deposit => deposit.Id).Take(2)];
+            Assert.IsTrue((await Run(model, "markers.addChain", new JsonObject { ["name"] = "Alpha", ["markers"] = new JsonArray(ids[0], ids[1]) })).Ran);
+            Assert.IsTrue((await Run(model, "markers.addChain", new JsonObject { ["name"] = "Beta", ["markers"] = new JsonArray(ids[2], ids[3]) })).Ran);
+            return ids;
+        }
+
+        [TestMethod]
+        public async Task UndoingAChainsRenameLeavesTheToolsChainAndTheListsChoiceTheSame()
+        {
+            MainViewModel model = await Open();
+            await TwoChains(model);
+            Assert.AreEqual("Beta", model.Markers.SelectedChain?.Name);
+            Assert.AreEqual("markers.chain.Beta", model.Markers.Parts.Chosen.Id);
+
+            Assert.IsTrue((await Run(model, "markers.renameChain", new JsonObject { ["name"] = "Beta", ["to"] = "Gamma" })).Ran);
+            Assert.AreEqual("Gamma", model.Markers.SelectedChain?.Name);
+            Assert.AreEqual("markers.chain.Gamma", model.Markers.Parts.Chosen.Id);
+
+            // the chain Gamma goes with the undo: the list shows a chain again, and it is the one the chain tool adds to
+            Assert.IsTrue(model.Undo());
+            Assert.IsTrue(model.Markers.Parts.Chosen.Content is ChainPart);
+            Assert.AreEqual(((ChainPart)model.Markers.Parts.Chosen.Content).Name, model.Markers.SelectedChain?.Name);
+
+            // deleting the chain the list shows: the entry the list falls back to is the tool's as well
+            string shown = ((ChainPart)model.Markers.Parts.Chosen.Content).Name;
+            Assert.IsTrue((await Run(model, "markers.deleteChain", new JsonObject { ["name"] = shown })).Ran);
+            Assert.AreEqual((model.Markers.Parts.Chosen.Content as ChainPart)?.Name, model.Markers.SelectedChain?.Name);
+        }
+
+        [TestMethod]
+        public async Task AnEditOfTheMarkersDoesNotMoveTheListsChoiceToTheChainTool()
+        {
+            MainViewModel model = await Open();
+            await TwoChains(model);
+            model.InspectPart("markers.kind.mass");
+            Assert.AreEqual("Beta", model.Markers.SelectedChain?.Name, "the chain tool keeps its chain");
+
+            Assert.IsTrue((await Run(model, "markers.place", new JsonObject { ["kind"] = "mass", ["x"] = 100.5, ["z"] = 100.5 })).Ran);
+            Assert.AreEqual("markers.kind.mass", model.Markers.Parts.Chosen.Id, "the entry the person chose stays chosen");
+            Assert.AreEqual("Beta", model.Markers.SelectedChain?.Name);
+            Assert.AreEqual("Beta (2)", model.Markers.SelectedChain?.Summary);
+
+            // a chain made is shown, as before
+            Assert.IsTrue((await Run(model, "markers.addChain", new JsonObject { ["name"] = "Delta", ["markers"] = new JsonArray(model.ShownDocument!.Markers.Spawns[0].Id) })).Ran);
+            Assert.AreEqual("markers.chain.Delta", model.Markers.Parts.Chosen.Id);
+            Assert.AreEqual("Delta", model.Markers.SelectedChain?.Name);
+        }
+
+        [TestMethod]
+        public async Task TheWarningAboutADepositGoesWithTheDeposit()
+        {
+            MainViewModel model = await Open();
+            MapDocument document = model.ShownDocument!;
+            (float x, float z) = (100.5f, 100.5f);
+            JsonObject placed = (JsonObject)(await Run(model, "markers.place", new JsonObject { ["kind"] = "mass", ["x"] = x, ["z"] = z })).Result!;
+            ResourceMarker deposit = (ResourceMarker)model.ShownDocument!.Find(ObjectRef.Parse(placed["ref"]!.GetValue<string>()))!;
+            model.Markers.WarnAbout(deposit.Id, "Mass lies on steep ground");
+            Assert.AreEqual("Mass lies on steep ground", model.Markers.PlacementWarning);
+
+            // the warning is what the ground under the deposit earns now, not what was said when it was placed
+            model.Markers.Refresh(model.ShownDocument);
+            string? earned = MarkerEdits.Steepness(model.ShownDocument!.Terrain.Heightmap, deposit.Kind, deposit.Position.X, deposit.Position.Z) is float steep
+                ? Commands.PlaceMarkerHandler.SteepWarning(deposit, steep) : null;
+            Assert.AreEqual(earned, model.Markers.PlacementWarning);
+
+            model.Markers.WarnAbout(deposit.Id, "Mass lies on steep ground");
+            Assert.IsTrue(model.Undo());
+            Assert.IsNull(model.Markers.PlacementWarning, "the deposit is gone with the undo");
+        }
+
+        [TestMethod]
+        public async Task AnotherMapOpenedHasNoChosenChainHiddenKindsOrWarning()
+        {
+            MainViewModel model = await Open();
+            await TwoChains(model);
+            model.InspectPart("markers.kind.mass");
+            model.Markers.Show(MarkerKinds.Hydrocarbon, false);
+            model.Markers.WarnAbout(1, "Mass lies on steep ground");
+            Assert.IsNotNull(model.Markers.SelectedChain);
+
+            await model.OpenAsync(HardFfa);
+            Assert.IsNull(model.Markers.SelectedChain, "the chain tool starts a new chain");
+            Assert.AreEqual(model.Markers.Parts.Items[0].Id, model.Markers.Parts.Chosen.Id, "the list shows its first entry");
+            Assert.IsTrue(model.Markers.Shows(MarkerKinds.Hydrocarbon));
+            Assert.IsNull(model.Markers.PlacementWarning);
+        }
+
+        [TestMethod]
+        public async Task ANameTheMapRefusesIsNotLeftInTheFields()
+        {
+            MainViewModel model = await Open();
+            await TwoChains(model);
+
+            // a chain's name field: another chain has the name
+            ChainPart part = (ChainPart)model.Markers.Parts.Find("markers.chain.Beta")!.Content;
+            List<string?> raised = [];
+            part.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+            part.NameText = "Alpha";
+            for (int i = 0; i < 50 && !raised.Contains(nameof(ChainPart.NameText)); i++)
+            {
+                await Task.Yield();
+            }
+            CollectionAssert.Contains(raised, nameof(ChainPart.NameText), "the field is told to show the chain's own name again");
+            Assert.AreEqual("Beta", part.NameText);
+
+            // a marker's name field: another marker has the name
+            MapDocument document = model.ShownDocument!;
+            string taken = document.Markers.Resources[0].Name;
+            model.Selection.Set([ObjectRef.Marker(document.Markers.Resources[1].Id)]);
+            MarkerSelection section = model.Selection.Inspector.Sections.OfType<MarkerSelection>().Single();
+            raised.Clear();
+            section.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+            section.Name = taken;
+            for (int i = 0; i < 50 && !raised.Contains(nameof(MarkerSelection.Name)); i++)
+            {
+                await Task.Yield();
+            }
+            CollectionAssert.Contains(raised, nameof(MarkerSelection.Name), "the field is told to show the marker's own name again");
+            Assert.AreEqual(model.ShownDocument!.Markers.Resources[1].Name, section.Name);
+        }
+
         [TestMethod]
         public async Task ABlankMarkerIsAKindOfItsOwnPlacedChainedAndCleared()
         {

@@ -85,7 +85,7 @@ public sealed partial class MarkerSelection : SelectionSection
         {
             if (!_refreshing && CanRename && value.Trim() != _name && value.Trim().Length > 0)
             {
-                _ = Run("markers.set", new JsonObject { ["name"] = value.Trim() });
+                _ = ShowAfter(Run("markers.set", new JsonObject { ["name"] = value.Trim() }), nameof(Name));
             }
             else
             {
@@ -100,19 +100,19 @@ public sealed partial class MarkerSelection : SelectionSection
     public string? Resource
     {
         get => _resource;
-        set => Choose(ref _resource, value, "resource");
+        set => Choose(ref _resource, value, "resource", nameof(Resource));
     }
 
     public string? AiType
     {
         get => _aiType;
-        set => Choose(ref _aiType, value, "type");
+        set => Choose(ref _aiType, value, "type", nameof(AiType));
     }
 
     public string? Layer
     {
         get => _layer;
-        set => Choose(ref _layer, value, "layer");
+        set => Choose(ref _layer, value, "layer", nameof(Layer));
     }
 
     /// <summary>
@@ -142,7 +142,7 @@ public sealed partial class MarkerSelection : SelectionSection
             {
                 return;
             }
-            _ = Run("markers.set", new JsonObject { ["spawnWithArmy"] = value == Always ? "" : value });
+            _ = ShowAfter(Run("markers.set", new JsonObject { ["spawnWithArmy"] = value == Always ? "" : value }), nameof(SpawnWithArmy));
         }
     }
 
@@ -231,13 +231,13 @@ public sealed partial class MarkerSelection : SelectionSection
         _ => "marker",
     };
 
-    private void Choose(ref string? field, string? value, string argument)
+    private void Choose(ref string? field, string? value, string argument, string property)
     {
         if (_refreshing || value is null || value == field)
         {
             return;
         }
-        _ = Run("markers.set", new JsonObject { [argument] = value });
+        _ = ShowAfter(Run("markers.set", new JsonObject { [argument] = value }), property);
     }
 
     /// <summary>
@@ -253,11 +253,11 @@ public sealed partial class MarkerSelection : SelectionSection
         string text = value.Trim();
         if (text.Length == 0)
         {
-            _ = Run("markers.set", new JsonObject { ["clearNoRush"] = true });
+            _ = ShowAfter(Run("markers.set", new JsonObject { ["clearNoRush"] = true }), property);
         }
         else if (EditorCulture.TryParse(text, out float number))
         {
-            _ = Run("markers.set", new JsonObject { [argument] = number });
+            _ = ShowAfter(Run("markers.set", new JsonObject { [argument] = number }), property);
         }
         else
         {

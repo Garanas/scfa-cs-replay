@@ -41,7 +41,22 @@ public sealed partial class ChainPart(MarkersViewModel owner, string name) : Obs
                 OnPropertyChanged();
                 return;
             }
-            _ = owner.Run("markers.renameChain", new JsonObject { ["name"] = name, ["to"] = trimmed });
+            _ = ShowNameAfter(owner.Run("markers.renameChain", new JsonObject { ["name"] = name, ["to"] = trimmed }));
+        }
+    }
+
+    /// <summary>
+    /// A name the map refused (another chain has it) is not left in the field: it shows the chain's own again.
+    /// </summary>
+    private async Task ShowNameAfter(Task rename)
+    {
+        try
+        {
+            await rename;
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(NameText));
         }
     }
 
@@ -261,7 +276,15 @@ public sealed partial class MarkersViewModel
     /// </summary>
     partial void OnSelectedChainChanged(ChainItem? oldValue, ChainItem? newValue)
     {
-        if (newValue is not null && Parts?.Find(ChainPartId(newValue.Name)) is PanelPart part && Parts.Chosen != part)
+        if (newValue is not null && !_refreshingChains)
+        {
+            ChooseChainEntry(newValue);
+        }
+    }
+
+    private void ChooseChainEntry(ChainItem chain)
+    {
+        if (Parts?.Find(ChainPartId(chain.Name)) is PanelPart part && Parts.Chosen != part)
         {
             Parts.Choose(part.Id);
         }
