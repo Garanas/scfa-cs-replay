@@ -159,9 +159,19 @@ namespace FAForever.MapEditor.App.Tests
             window.MapView.Fit();
             (Rect Box, double Opacity) Key()
             {
-                Dispatcher.UIThread.RunJobs();
-                AvaloniaHeadlessPlatform.ForceRenderTimerTick();
-                return window.MapView.SketchKeyDrawn;
+                // a frame may come one tick late: draw until two frames agree
+                (Rect Box, double Opacity) drawn = (default, -1);
+                for (int frame = 0; frame < 5; frame++)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                    if (window.MapView.SketchKeyDrawn == drawn)
+                    {
+                        break;
+                    }
+                    drawn = window.MapView.SketchKeyDrawn;
+                }
+                return drawn;
             }
 
             (Rect box, double opacity) = Key();
