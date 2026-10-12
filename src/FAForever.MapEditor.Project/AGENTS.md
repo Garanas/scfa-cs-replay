@@ -661,6 +661,12 @@ use so that the user's own stays alone). `StoredSelections(projectFolder)` and `
 keep the selections stored under the digits 1 to 9 per project (the folder's full path), as the text of
 the things (`unit:UNIT_5`; the editor keeps units and areas), never in the map's files.
 `FafInstallation` reads FAF's `fa_path.lua` for the defaults.
+The workspace's folders besides `projects` and `assets` are the map maker's own and hold files the editor
+writes once and then leaves to them: `brushes/` (greyscale PNGs), `presets/` (saved settings), `plugins/` (Lua
+plugins) and `tours/` (the guided tours of user story H-1: a `*.tour.json` each, the editor's own written when
+the workspace opens, as the example plugins are, with `.examples` naming those written so a deleted one stays
+deleted, and `.progress.json` with the offer's answer and the tours finished). `Workspace.ToursFolder`; the App's
+guide, "Tours and the guide", describes the files.
 
 - `GameArchives` lays the archives over each other as the game mounts them: per name (`env`,
   `units`, and `textures` when the game has it) the game's `.scd`, then FAF's `.nx2`, which wins.

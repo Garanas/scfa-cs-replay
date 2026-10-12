@@ -1,0 +1,55 @@
+<!-- The guided tour (H-1) over the window: the dimming with a hole at what the step points at and a ring around it, the
+     step's card beside it, and the card that offers the window's tour once, at the window's corner. Only the dimming takes
+     the mouse; keys reach the window. The last child of the window's root grid, below the questions. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.TourOverlay"
+             x:DataType="vm:MainViewModel">
+  <Panel>
+    <Panel x:Name="Stage" IsVisible="{Binding Tour.IsRunning}">
+      <controls:TourSpotlight x:Name="Spotlight" />
+      <Border x:Name="Card" Classes="tourcard" IsVisible="{Binding Tour.ShowCard}" AutomationProperties.Name="Tour step"
+              KeyboardNavigation.TabNavigation="Cycle">
+        <StackPanel Classes="stack">
+          <TextBlock Classes="caption" Text="{Binding Tour.StepCountText}" AutomationProperties.Name="Step of the tour" />
+          <TextBlock Classes="heading" Text="{Binding Tour.StepTitle}" TextWrapping="Wrap" AutomationProperties.Name="Step title" />
+          <TextBlock Classes="lead" Text="{Binding Tour.StepText}" TextWrapping="Wrap" AutomationProperties.Name="Step text" />
+          <TextBlock Classes="caption" Text="{Binding Tour.WaitingText}" TextWrapping="Wrap" IsVisible="{Binding Tour.IsWaiting}"
+                     AutomationProperties.Name="Waiting for you" />
+          <TextBlock Classes="lead" Text="{Binding Tour.DoneText}" TextWrapping="Wrap" IsVisible="{Binding Tour.ShowsDone}"
+                     AutomationProperties.Name="Done" />
+          <TextBlock Classes="warning" Text="{Binding Tour.Problem}" TextWrapping="Wrap" IsVisible="{Binding Tour.HasProblem}"
+                     AutomationProperties.Name="A problem with this step" />
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Right" Classes="inline">
+              <Button Content="Back" IsEnabled="{Binding Tour.CanGoBack}" Command="{Binding RunCommand}" CommandParameter="help.tourBack"
+                      AutomationProperties.Name="Back" />
+              <Button Content="Do it for me" IsVisible="{Binding Tour.HasDoItForMe}" Command="{Binding RunCommand}" CommandParameter="help.tourDo"
+                      AutomationProperties.Name="Do it for me" AutomationProperties.HelpText="Runs the step instead of you" />
+              <Button Classes="accent" Content="{Binding Tour.NextText}" Command="{Binding RunCommand}" CommandParameter="help.tourNext"
+                      AutomationProperties.Name="Next step" />
+            </StackPanel>
+            <Button Content="End the tour" HorizontalAlignment="Left" Command="{Binding RunCommand}" CommandParameter="help.tourEnd"
+                    AutomationProperties.Name="End the tour" AutomationProperties.HelpText="Escape ends it too" />
+          </DockPanel>
+        </StackPanel>
+      </Border>
+    </Panel>
+    <Border x:Name="Offer" Classes="tourcard offer" IsVisible="{Binding Tour.OfferShown}" AutomationProperties.Name="Tour offer">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="heading" Text="Take a two-minute tour of the window?" TextWrapping="Wrap" />
+        <TextBlock Classes="caption" Text="Help, Tours has it later, and the other tours." TextWrapping="Wrap" />
+        <StackPanel Classes="inline">
+          <Button Classes="accent" Content="Start" Command="{Binding Tour.AnswerOfferCommand}" CommandParameter="start"
+                  AutomationProperties.Name="Start the tour" />
+          <Button Content="Not now" Command="{Binding Tour.AnswerOfferCommand}" CommandParameter="later"
+                  AutomationProperties.Name="Not now" AutomationProperties.HelpText="The tour is offered again next time" />
+          <Button Content="Don't ask again" Command="{Binding Tour.AnswerOfferCommand}" CommandParameter="never"
+                  AutomationProperties.Name="Don't ask again" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </Panel>
+</UserControl>

@@ -1,0 +1,57 @@
+<!-- The tours (H-1): the workspace's tours folder, each tour with its title, summary, number of steps and a check when it
+     was finished, and a Start button; a file that cannot be read is listed with its error. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             x:Class="FAForever.MapEditor.App.Views.ToursPage"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="scrim">
+    <Border Classes="dialog tours">
+      <StackPanel>
+        <Border Classes="dialogpart">
+          <StackPanel Classes="stack">
+            <TextBlock Classes="heading" Text="Tours" />
+            <TextBlock Classes="caption" TextWrapping="Wrap"
+                       Text="A tour dims the window, rings one part after another and explains it. Escape ends it; the editor puts back what it changed." />
+          </StackPanel>
+        </Border>
+        <Border Classes="dialogpart">
+          <ScrollViewer Classes="tourslist">
+            <StackPanel Classes="stack">
+              <ItemsControl ItemsSource="{Binding Tour.Items}" AutomationProperties.Name="Tours">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Classes="stack" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:TourListItem">
+                    <DockPanel AutomationProperties.Name="{Binding Label}">
+                      <Button DockPanel.Dock="Right" Classes="accent" Content="Start" Command="{Binding StartCommand}" IsEnabled="{Binding CanStart}"
+                              VerticalAlignment="Center" AutomationProperties.Name="{Binding Title, StringFormat='Start the tour {0}'}" />
+                      <StackPanel>
+                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
+                        <TextBlock Classes="caption" Text="{Binding Summary}" TextWrapping="Wrap" IsVisible="{Binding CanStart}" />
+                        <TextBlock Classes="caption" Text="{Binding StepsText}" IsVisible="{Binding CanStart}" />
+                        <TextBlock Classes="caption" Text="{Binding FinishedText}" IsVisible="{Binding IsFinished}" AutomationProperties.Name="Finished" />
+                        <TextBlock Classes="error" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" AutomationProperties.Name="Why the tour cannot be used" />
+                      </StackPanel>
+                    </DockPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="caption" Text="No tours are in the workspace's tours folder." IsVisible="{Binding Tour.IsEmpty}" />
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+        <Border Classes="dialogpart">
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Classes="accent" Content="Close" Command="{Binding Tour.CloseCommand}" />
+            <TextBlock Classes="caption" Text="{Binding Tour.Folder, StringFormat='A tour of your own: put a .tour.json file in {0}'}" TextWrapping="Wrap"
+                       VerticalAlignment="Center" AutomationProperties.Name="Where tours of one's own go" />
+          </DockPanel>
+        </Border>
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

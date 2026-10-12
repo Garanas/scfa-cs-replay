@@ -16,7 +16,7 @@
 
   <Grid>
     <DockPanel IsVisible="{Binding Setup.IsReady}">
-      <Border DockPanel.Dock="Top" Classes="menubar">
+      <Border x:Name="MenuBarBorder" DockPanel.Dock="Top" Classes="menubar">
         <DockPanel>
           <TextBlock DockPanel.Dock="Left" Classes="mapname" Text="{Binding MapName}" IsVisible="{Binding HasMap}" AutomationProperties.Name="Map" />
           <Button DockPanel.Dock="Right" Classes="search" Command="{Binding RunCommand}" CommandParameter="view.palette"
@@ -60,7 +60,7 @@
         </DockPanel>
       </Border>
 
-      <Border DockPanel.Dock="Bottom" Classes="bar">
+      <Border x:Name="StatusBarBorder" DockPanel.Dock="Bottom" Classes="bar">
         <DockPanel>
           <TextBlock x:Name="CursorText" DockPanel.Dock="Left" Classes="mono" AutomationProperties.Name="Place under the mouse" />
           <!-- regenerating on their own (Q5): the editor's switch, with what waits or runs (MainViewModel.AutoRegenerate), at the
@@ -107,7 +107,7 @@
                overlays' chips (made by MainWindow from the model's overlays) in a controls:ToolRow, what does not fit
                behind its More, over the views; the tabs only choose: both views stay in the tree, so the 3D view keeps
                its textures on the graphics card -->
-          <Border DockPanel.Dock="Top" Classes="toolbar views" ZIndex="1">
+          <Border x:Name="ViewsBarBorder" DockPanel.Dock="Top" Classes="toolbar views" ZIndex="1">
             <DockPanel>
               <!-- in the order of MapViewTab -->
               <TabControl x:Name="Views" DockPanel.Dock="Left" Classes="segmented" SelectedIndex="{Binding View, Converter={x:Static controls:EnumIndexConverter.Instance}}" AutomationProperties.Name="View">
@@ -195,6 +195,9 @@
     <views:NewMapPage x:Name="NewMapPageView" IsVisible="{Binding NewMapPage.IsOpen}" />
     <views:ShortcutsPage x:Name="ShortcutsPageView" IsVisible="{Binding Shortcuts.IsOpen}" />
     <views:WorkspaceSettingsPage x:Name="WorkspaceSettingsPageView" IsVisible="{Binding WorkspaceSettings.IsOpen}" />
+    <views:ToursPage x:Name="ToursPageView" IsVisible="{Binding Tour.IsOpen}" />
+    <!-- the guided tour (H-1): dims the window but the question below, rings what a step points at -->
+    <views:TourOverlay x:Name="TourLayer" />
     <!-- the questions over everything: one may come from a page (New map asks about unsaved changes) -->
     <views:QuestionDialog x:Name="Question" DataContext="{Binding Question}" IsVisible="{Binding IsOpen}" />
   </Grid>

@@ -198,6 +198,8 @@ public sealed partial class MainViewModel : ObservableObject
         InitializeReclaimExport();
         Plugins = new PluginsViewModel(this);
         InitializePluginsMode();
+        Tour = new TourViewModel(this);
+        Tour.PropertyChanged += (_, e) => OnPageChanged(e.PropertyName);
     }
 
     /// <summary>

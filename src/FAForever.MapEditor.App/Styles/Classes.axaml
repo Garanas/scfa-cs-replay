@@ -1103,6 +1103,30 @@
   <Style Selector="ListBox.versionfiles">
     <Setter Property="MaxHeight" Value="{StaticResource VersionFilesHeight}" />
   </Style>
+  <!-- the guided tour (H-1): the card beside what a step points at, and the offer at the window's corner -->
+  <Style Selector="Border.tourcard">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource TourRingBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource DialogRadius}" />
+    <Setter Property="Padding" Value="{StaticResource PanelPadding}" />
+    <Setter Property="Width" Value="{StaticResource TourCardWidth}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+  </Style>
+  <Style Selector="Border.tourcard.offer">
+    <Setter Property="Width" Value="{StaticResource TourOfferWidth}" />
+    <Setter Property="Margin" Value="{StaticResource TourOfferMargin}" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
+  </Style>
+  <!-- the Tours page: a tour's line, its title and summary and its steps beside the button -->
+  <Style Selector="Border.dialog.tours">
+    <Setter Property="Width" Value="{StaticResource PluginsDialogWidth}" />
+  </Style>
+  <Style Selector="ScrollViewer.tourslist">
+    <Setter Property="MaxHeight" Value="{StaticResource PluginsListHeight}" />
+  </Style>
   <!-- the keyboard shortcuts page (F-1) and the workspace settings page (F-5): wider pages, their lists scroll -->
   <Style Selector="Border.dialog.shortcuts, Border.dialog.workspacesettings">
     <Setter Property="Width" Value="{StaticResource PluginsDialogWidth}" />

@@ -143,6 +143,9 @@
       <SolidColorBrush x:Key="PlannedStrokeBrush" Color="{StaticResource Gray550}" />
       <!-- behind a dialog over the window -->
       <SolidColorBrush x:Key="ScrimBrush" Color="#99000000" />
+      <!-- the guided tour: the dimming over the window and the ring around what a step points at -->
+      <SolidColorBrush x:Key="TourScrimBrush" Color="#B3000000" />
+      <SolidColorBrush x:Key="TourRingBrush" Color="{StaticResource Blue300}" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Light">
       <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource Gray200}" />
@@ -221,6 +224,8 @@
       <SolidColorBrush x:Key="OnSelectedBrush" Color="#FF0A2540" />
       <SolidColorBrush x:Key="PlannedStrokeBrush" Color="#FFB0B0B0" />
       <SolidColorBrush x:Key="ScrimBrush" Color="#66000000" />
+      <SolidColorBrush x:Key="TourScrimBrush" Color="#80000000" />
+      <SolidColorBrush x:Key="TourRingBrush" Color="{StaticResource Blue500}" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
@@ -297,6 +302,16 @@
   <!-- the chosen generated result's picture in the inspector -->
   <x:Double x:Key="ProceduralPictureSize">128</x:Double>
   <x:Double x:Key="ActionButtonHeight">28</x:Double>
+  <!-- the guided tour: the ring's line, how far it lies from the target, its corners; the card's width, its distance from the target and from the window's edge -->
+  <x:Double x:Key="TourRingThickness">2</x:Double>
+  <x:Double x:Key="TourHolePadding">4</x:Double>
+  <x:Double x:Key="TourHoleRadius">6</x:Double>
+  <x:Double x:Key="TourCardWidth">320</x:Double>
+  <x:Double x:Key="TourCardGap">14</x:Double>
+  <x:Double x:Key="TourCardEdge">12</x:Double>
+  <x:Double x:Key="TourOfferWidth">300</x:Double>
+  <!-- where the first-start offer lies: from the window's right edge and above the status bar (29 pixels high) -->
+  <Thickness x:Key="TourOfferMargin">0,0,12,44</Thickness>
   <x:Double x:Key="ChipHeight">24</x:Double>
   <!-- a chip in the status bar (the switch of regenerating on their own): as high as the bar's text line allows -->
   <x:Double x:Key="StatusChipHeight">20</x:Double>

@@ -59,6 +59,11 @@ namespace FAForever.MapEditor.Project.Workspaces
         public string PluginsFolder => Path.Combine(Folder, WorkspaceLayout.Plugins);
 
         /// <summary>
+        /// The guided tours (user story H-1): a <c>*.tour.json</c> each, and <c>.progress.json</c>.
+        /// </summary>
+        public string ToursFolder => Path.Combine(Folder, WorkspaceLayout.Tours);
+
+        /// <summary>
         /// The presets of <see cref="PresetsFolder"/>.
         /// </summary>
         public PresetLibrary Presets => new PresetLibrary(PresetsFolder);

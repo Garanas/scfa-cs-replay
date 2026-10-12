@@ -155,6 +155,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
         ["focus"] = ("camera.focus", [], null),
         ["view"] = ("view.zoomTo", [], null),
         ["gpu-debug"] = ("view.gpuDebug", [], null),
+        ["tour"] = ("help.tour", [], "step"),
     };
 
     /// <summary>
@@ -702,6 +703,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["waves"] = WavesState(),
             ["panelParts"] = model.DescribePanelParts(),
             ["shortcuts"] = model.Shortcuts.Describe(),
+            ["tour"] = model.Tour.Describe(),
             ["workspaceSettings"] = model.WorkspaceSettings.Describe(),
             ["inspector"] = model.DescribeInspector(),
             ["images"] = ImagesState(),

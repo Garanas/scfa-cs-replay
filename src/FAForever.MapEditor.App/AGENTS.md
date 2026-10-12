@@ -48,6 +48,9 @@ keeps that up; go through this list with every change to the window, not only at
 7. **Look**: the views use tokens and style classes, never loose values (UI rules below); a
    change of look updates the snapshots on purpose (`UPDATE_SNAPSHOTS=1`), checked by eye.
 8. **This guide**: what the feature does and its rules, where a later reader looks for them.
+9. **The tours**: a control a tour points at that changes (its label, its place, its mode) keeps its step true:
+   run `TourTest` and read the step's text again (section "Tours and the guide"); a new part of the window worth a step
+   or a tour of its own is a line in the tour's file.
 
 The project skill `.claude/skills/editor-ui` holds the same rules in short, for agents.
 
@@ -88,7 +91,7 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
     `markers.setChain`, `markers.renameChain`, `markers.deleteChain`, `markers.setWeather`,
     `markers.addOptionalGroup`, `lighting.setSkybox`, `lighting.setCirrusLayer`, `map.setScmapVersion`, `file.showCommit`, `file.restoreCommit`, `view.togglePanel`,
     `view.resizePanel`, `view.movePanel`, `view.returnPanel`, `view.setToolbar`, `view.addToToolbar`, `view.removeFromToolbar`,
-    `view.inspectPart`, `presets.showFolder`), it selects what one
+    `view.inspectPart`, `presets.showFolder`, `help.tour`, `help.tourNext`, `help.tourBack`, `help.tourEnd`, `help.tourDo`, `help.tourOffer`), it selects what one
     clicks (`assets.select`) or drops what one drags (`assets.drop`), it is what a tool's click does
     (`markers.place`, `markers.link`), it is the mouse's or a view's own key in
     the views (`camera.look`, `camera.focus`, `view.zoomTo`, `brush.set`, `edit.goTo`), or it is
@@ -2926,6 +2929,84 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   `EconomyAmount` as one control (its `text` `5.2k 47.4k`, its `label` in words). Tests: `EconomyIconsTest`.
 - Tests: `PanelsAndShellTest` (the operations), `PanelsAndShellWindowTest` (the mouse and keys).
 
+## Tours and the guide
+
+User story H-1 (the guide, H-2, is made from the same files). A tour is a file, `tours/<name>.tour.json`
+in the workspace; the editor plays it over the window: it dims the window, rings the control or area a
+step points at and explains it on a card. Code: `Tours/` (the format, the catalogue, the locator),
+`ViewModels/TourViewModel` (`model.Tour`), `Views/TourOverlay` with `Controls/TourSpotlight`,
+`Views/ToursPage`, `Commands/Help/Tours.cs`.
+
+- **The format** (`Tours/TourScript`, System.Text.Json, comments and trailing commas allowed, a misspelt
+  field is an error): `id`, `title`, `summary`, `order` (where it comes in the list; the editor's own are 10,
+  20, ...), `needs` (`["Map"]`: an open map), `start` (actions run when it starts) and `steps`. A step has
+  `id` (unique in the tour), `title`, `text`, `target`, `before` (actions run when the step is entered, going
+  on or back), `until` (a step that asks the person to act: `{path, value}` of the state, below),
+  `doItForMe` (an action; needed with `until`), `done` (what the card says once `until` holds) and `guide`
+  (`more`, `margin`, `skip`, `after`: read only by the generated guide). A target names a `label` (with an
+  optional `type`, `under`, `index`: the controls automation's `click` finds), or a `part` (`menu`, `rail`,
+  `panel`, `options`, `views`, `top`, `3d`, `dock`, `inspector`, `status`: `screenshot part=`), or a place of
+  the map by `ref` or `x` and `z` (as `view-point`), or nothing: the card stands in the middle. An action is
+  `{"run": "<command id>", ...its arguments}`; a command with an argument called `id` or `run` takes them in
+  `args`. Write tour text as the UI text: English, plain, short sentences, the names the window shows.
+- **The catalogue** (`TourCatalog`, `EditorTours`): the editor's own tours are embedded (`Tours/*.tour.json`) and
+  written into the workspace's `tours/` when it opens, as the example plugins are into `plugins/`: `.examples`
+  names those written, so a deleted one stays deleted; a copy equal to an earlier shipped version
+  (`EditorTours.Earlier`, hashes of the file's text with line feeds) is brought up to date, a changed copy is
+  the person's. A tour that changes for a release adds its old hash there. Every `*.tour.json` of the folder
+  is read, and again when one changes (`ProjectWatcher`); a file that cannot be used (not JSON, a field
+  missing, a command the editor lacks, an `until` path a tour cannot wait on, a refused command) is listed with
+  its error on the Tours page and in `state.tour.errors`, and logged (`Tours`), never a crash.
+- **Actions run without a person** (`Commands.TryRunAsync(..., interactive: false)`): they ask nothing, and
+  `TourRefusals` lists what they never run: `file.*` (open, import, new, export, upload, push, commit, save),
+  `workspace.*`, `diagnostics.*`, `help.reportProblem`, the folders of Help, `help.tour*`, a plugin's own
+  commands and the plugins' reload, switch, fields and checks. The refusal is checked when the file is read and
+  again when it runs. A tour about the export rings the button and explains it; the person presses it. A command
+  that cannot run now says why on the card (`state.tour.problem`).
+- **What a step waits for** (`TourState`): `until.path` is a path of automation's state (`tab`, `mode`, `tool`,
+  `dock`, `palette`, `selection.count`, `show.<overlay>`, `layout.modePanel`, `layout.inspector`, `layout.dock`,
+  `undo`), read cheaply from the model without automation, with the same values (`TourTest` compares them with
+  `state`); a path a tour may wait on is added to `TourState`, not read from the whole state. The condition is
+  looked at when a command completes, the document changes or the view, mode, tool, dock or layout changes, at
+  most every 250 ms (span `tour.condition`) and latches: once true, the card says `done` and Next replaces Skip.
+  Try a step's condition with `wait path=... value=...`.
+- **The overlay** is the last child of the window's root grid, below the question. `TourSpotlight` draws the
+  scrim with a hole and the ring (tokens `TourScrimBrush`, `TourRingBrush`, `TourRingThickness`,
+  `TourHolePadding`, `TourHoleRadius`, both theme variants) when a step changes, never per frame, and takes the
+  mouse (`ICustomHitTest`) everywhere but through the hole of a step with `until`; keys are not taken, so the
+  window's shortcuts work and a step can ask for a key (`until` on the state it changes). The card
+  (`Border.tourcard`) lies beside the ring: right, then left, below, above, always inside the window
+  (`TourCardPlacement`, with a target too large for any side the card lies over its corner). It follows the
+  target: the target's own layout pass, the window's size, the layout's panels, the view, mode and tool find it
+  again (span `tour.show`). **Escape** ends the tour, once what is open over the editor (a list, a menu, More,
+  a question, a page) is closed.
+- **The locator** (`Automation/UiLocator`) is what `click`, `set`, `ui under` and the tours share: the controls
+  a label, `type`, `under` and `index` name, the regions of the window, a place of the map in the views'
+  pixels, and whether the mouse reaches a control at a point (`WhyUnreachable`). `Tours/TourLocator` adds what a
+  person needs to see the target: a setting behind a tool row's More is revealed, a panel the person hid or
+  floated in a window of its own is put back in its place for its step (`TourLayoutLedger` notes it), the
+  control is scrolled into view. **When the tour ends** the view, mode and tool and the layout are put back as
+  they were; the map is left alone.
+- **The offer**: once per workspace, after it is ready and a map is open, a small card at the window's lower
+  right offers the tour of the window (Start, Not now, Don't ask again). Start and Don't ask again are kept
+  (`tours/.progress.json`, which also holds the tours finished); Not now offers it again at the next start.
+  Editors started for automation show it too (it does not block; `state.tour.offer.shown`): answer it with
+  `run id=help.tourOffer answer=never` in a scratch workspace.
+- **Commands**: `help.tours` (the page: Help, Tours), `help.tour {id, step?, card?}` (the step by number from 1
+  or by id; `card: false` draws the dimming and ring only, for the guide's pictures; automation's alias
+  `tour id=window step=7` since `run` takes the command's own `id` as the command), `help.tourNext`,
+  `help.tourBack`, `help.tourEnd`, `help.tourDo`, `help.tourOffer {answer}`. `state.tour`: `running`, `id`,
+  `step`, `of`, `stepId`, `title`, `target` (`named`, `found`, `bounds` in window pixels, `why`), `card`
+  (`shown`, `bounds`), `acts`, `waiting`, `done`, `doItForMe`, `problem`, `layoutChanged`, `offer`, `page`,
+  `folder`, `tours` and `errors` (the catalogue).
+- **Keeping the tours true**: `TourTest` plays every step of every shipped tour at 1280 by 800 and 1024 by 700:
+  the target found, shown and reachable by the mouse, the card inside the window and off a small target,
+  Do it for me making `until` true; `TourWindowTest` the overlay in the window (the hole, Escape, a hidden or
+  floating panel back and away again). A change to a control a tour points at (its label, where it lies)
+  fails the build at the step to rewrite; the checklist's last item covers the text.
+- Not built yet: the tours of the modes (Terrain, Masks, Paint, Markers, Units, Procedural with the export),
+  the generated guide (`faf-map guide`, H-2) and recording a tour (H-3).
+
 ## Small rules of editing, looks and speed
 
 - **Placing on a marker**: a placing tool of the Markers mode pressed on a marker of its kind (any
@@ -3438,7 +3519,10 @@ faf-map workspace remove-scratch D:/scratch/ws                                  
   becomes `label=C:/Program Files/Git/env/...`): set `MSYS_NO_PATHCONV=1` for such a call.
 - A scratch workspace (`ScratchWorkspace`, the library's) has its own projects, presets, brushes
   (copied) and vault (`vault/maps`, where exports go), and the real workspace's assets through a
-  directory junction (no administrator needed): a test editor may save, export and write presets.
+  directory junction (no administrator needed): a test editor may save, export and write presets. Its
+  `tours/` folder gets the editor's tours when the editor opens it, and the first-start offer of the window's
+  tour shows at the window's lower right (`state.tour.offer`): `run id=help.tourOffer answer=never` clears it
+  for good in that workspace (`answer=later` for this run only), so it never covers what a test aims at.
 
 ## Linux and macOS
 

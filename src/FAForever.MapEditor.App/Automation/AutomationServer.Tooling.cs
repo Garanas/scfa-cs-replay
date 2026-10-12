@@ -30,7 +30,7 @@ public sealed partial class AutomationServer
         "set {label, value, under?, commit?: enter|blur|both}",
         "focus {ref? | refs? | selection?: true, pitch?: degrees, 50 by default} (else {x, z, radius?}: camera.focus)",
         "grid {target: heightmap|types|stratum:N|water:foam|water:flatness|water:depthBias|mask:<name>, x, z} or {target, x0, z0, x1, z1, step?}",
-        "screenshot {path, part: window|options|inspector|panel|dock|rail|top|3d|dialog, settle?}",
+        "screenshot {path, part: window|menu|rail|panel|options|views|top|3d|dock|inspector|status|dialog, settle?}",
         "wait {path: selection.count|stage|..., value, timeout?: seconds}",
     ];
 
@@ -42,7 +42,7 @@ public sealed partial class AutomationServer
     /// </summary>
     private const double FocusPitch = 50;
 
-    private static readonly string[] Parts = ["window", "options", "inspector", "panel", "dock", "rail", "top", "3d", "dialog"];
+    private static readonly string[] Parts = UiLocator.Parts;
 
     /// <summary>
     /// The tooling commands; false for any other.
@@ -433,26 +433,7 @@ public sealed partial class AutomationServer
     /// <summary>
     /// The control of a part of the window, for <c>screenshot {part}</c>.
     /// </summary>
-    private Control PartOf(string part) => part.ToLowerInvariant() switch
-    {
-        "window" => window,
-        "options" => Descendant<ToolOptions>(),
-        "inspector" => Descendant<Inspector>(),
-        "panel" => Descendant<ModePanel>(),
-        "dock" => Descendant<Views.Dock>(),
-        "rail" => Descendant<ModeRail>(),
-        "top" => window.MapView,
-        "3d" => window.View3D,
-        // the question over the window: its card, without the scrim over the rest
-        "dialog" => model.Question.IsOpen
-            ? Descendant<QuestionDialog>().GetVisualDescendants().OfType<Border>().FirstOrDefault(border => border.Name == "Dialog") ?? (Control)Descendant<QuestionDialog>()
-            : throw new InvalidOperationException("No question shows over the window"),
-        _ => throw new ArgumentException($"There is no part '{part}': {string.Join(", ", Parts)}"),
-    };
-
-    private T Descendant<T>() where T : Control =>
-        Windows.SelectMany(each => each.GetVisualDescendants().OfType<T>()).FirstOrDefault(control => control.IsEffectivelyVisible)
-        ?? throw new InvalidOperationException($"The window shows no {typeof(T).Name} now");
+    private Control PartOf(string part) => Locator.Region(part);
 
     /// <summary>
     /// A picture of one part of the window: the window drawn, cut to the part's place (with, for
