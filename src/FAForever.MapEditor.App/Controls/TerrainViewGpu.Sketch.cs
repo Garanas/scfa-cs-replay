@@ -16,15 +16,15 @@ public sealed partial class TerrainViewGpu
 {
     /// <summary>
     /// What the last frame drew of the sketch: sheets, lines (a stroke is one), pieces the lines were cut
-    /// into, lines being drawn, and the pieces made on the processor that frame (for automation).
+    /// into, lines being drawn, and the pieces made on the processor that frame, sheets laid over the scene as a layer (for automation).
     /// </summary>
-    public (int Sheets, int Lines, int Segments, int Pending, int Built) SketchDrawn =>
-        _renderer is null ? default : (_renderer.SketchDrawn.Sheets, _renderer.SketchDrawn.Lines, _renderer.SketchDrawn.Segments, _renderer.SketchDrawn.Pending, _renderer.SketchDrawn.Built);
+    public (int Sheets, int Lines, int Segments, int Pending, int Built, int Layers) SketchDrawn =>
+        _renderer is null ? default : (_renderer.SketchDrawn.Sheets, _renderer.SketchDrawn.Lines, _renderer.SketchDrawn.Segments, _renderer.SketchDrawn.Pending, _renderer.SketchDrawn.Built, _renderer.SketchDrawn.Layers);
 
     /// <summary>
-    /// Whether overlaps within a sheet are kept from darkening at its opacity (the frame buffer has a stencil).
+    /// Whether a sheet at less than full opacity is laid over the scene as one layer, so that its overlaps do not darken.
     /// </summary>
-    public bool SketchHasStencil => _renderer?.SketchHasStencil ?? false;
+    public bool SketchLayersWork => _renderer?.SketchLayersWork ?? false;
 
     private SketchFrame? SketchFrameOf(MapDocument document)
     {

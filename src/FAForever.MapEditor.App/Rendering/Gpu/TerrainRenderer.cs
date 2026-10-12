@@ -199,9 +199,10 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     public SketchDrawn SketchDrawn => _sketch.Drawn;
 
     /// <summary>
-    /// Whether the sketch keeps overlaps in a sheet from darkening (the frame buffer has a stencil).
+    /// Whether the sketch lays a sheet at less than full opacity over the scene as one layer (else its lines
+    /// darken where they overlap): false once the card refused the layer's frame buffer.
     /// </summary>
-    public bool SketchHasStencil => _sketch.HasStencil;
+    public bool SketchLayersWork => _sketch.LayersWork;
 
     /// <param name="brushes">The active tool's brush under the mouse and its images in the other
     /// parts of a symmetric map; null or empty for none.</param>

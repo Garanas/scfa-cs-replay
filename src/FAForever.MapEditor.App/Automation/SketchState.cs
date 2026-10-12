@@ -78,8 +78,8 @@ internal static class SketchState
                 ["pending"] = top.SketchDrawn.Pending,
             },
             // what the 3D view drew last (it draws only while it is shown): sheets, lines, the pieces they were cut
-            // into, lines being drawn, the pieces made that frame (0 while nothing changed), and whether a stencil
-            // keeps overlaps from darkening
+            // into, lines being drawn, the pieces made that frame (0 while nothing changed), the sheets laid over the scene as a layer, and whether
+            // the card makes such layers (they keep overlaps from darkening)
             ["drawn3d"] = new JsonObject
             {
                 ["sheets"] = view3d.SketchDrawn.Sheets,
@@ -87,7 +87,8 @@ internal static class SketchState
                 ["segments"] = view3d.SketchDrawn.Segments,
                 ["pending"] = view3d.SketchDrawn.Pending,
                 ["built"] = view3d.SketchDrawn.Built,
-                ["stencil"] = view3d.SketchHasStencil,
+                ["layers"] = view3d.SketchDrawn.Layers,
+                ["layersWork"] = view3d.SketchLayersWork,
             },
         };
     }

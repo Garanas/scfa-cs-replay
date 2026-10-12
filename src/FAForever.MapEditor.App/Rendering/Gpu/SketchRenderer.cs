@@ -14,9 +14,19 @@ namespace FAForever.MapEditor.App.Rendering.Gpu;
 /// <param name="Lines">Lines (a stroke is one) of those sheets.</param>
 /// <param name="Segments">Pieces the lines were cut into (at most an ogrid long, so that they follow the ground).</param>
 /// <param name="Pending">Lines being drawn with the mouse, with their images by the symmetry.</param>
-/// <param name="Built">Segments made on the processor this frame: 0 while the sketch did not change, only the
+/// <param name="Built">Pieces made on the processor this frame: 0 while the sketch did not change, only the
 /// added ones when strokes were added.</param>
-internal readonly record struct SketchDrawn(int Sheets, int Lines, int Segments, int Pending, int Built);
+/// <param name="Layers">Sheets drawn into a layer of their own and laid over the scene at their opacity.</param>
+internal readonly record struct SketchDrawn(int Sheets, int Lines, int Segments, int Pending, int Built, int Layers);
+
+/// <summary>
+/// What the 3D view hands the renderer to draw of the sketch in a frame.
+/// </summary>
+/// <param name="Layers">The sheets to draw (the shown ones, with their opacity in this mode).</param>
+/// <param name="Alive">The names of all the sketch's sheets.</param>
+/// <param name="Pending">The line being drawn and its images.</param>
+/// <param name="Size">The view's size, in the units the lines' widths are in (the view's own pixels).</param>
+internal sealed record SketchFrame(IReadOnlyList<SketchLayer> Layers, IReadOnlyCollection<string> Alive, IReadOnlyList<SketchStroke> Pending, Vector2 Size);
 
 /// <summary>
 /// The sketch's lines over the terrain (user story N-3), at the same width on screen at every
@@ -28,9 +38,10 @@ internal readonly record struct SketchDrawn(int Sheets, int Lines, int Segments,
 /// the ground when it is edited without being made again, lifts them a little towards the eye (so that the
 /// ground's own triangles do not hide them) and spreads each piece into a quad of pixels, a capsule of the
 /// line's width that the fragment shader rounds and smooths. A stroke added to a sheet adds only its own
-/// pieces to the sheet's buffer, written from its end backwards, so that the newest lie first: a sheet is
-/// drawn once with a stencil that lets a pixel be written once, so that overlaps do not darken at the
-/// sheet's opacity and the newest line lies on top, as in the top view.
+/// pieces to the sheet's buffer. A sheet at full opacity is drawn into the scene itself, the lines in the
+/// order they were drawn; a sheet at less is drawn at full opacity into a layer of its own (a texture
+/// the size of the view, tested against the scene's own depth buffer, which the layer's frame buffer shares)
+/// and laid over the scene at the sheet's opacity, so that lines that overlap do not darken, as in the top view.
 /// </remarks>
 internal sealed unsafe class SketchRenderer : IDisposable
 {
@@ -42,16 +53,23 @@ internal sealed unsafe class SketchRenderer : IDisposable
 
     private readonly GL _gl;
     private readonly TerrainRenderer.Program _program;
+    private readonly TerrainRenderer.Program _lay;
     private readonly Dictionary<string, Batch> _sheets = [];
     private readonly Batch _pending;
-    private bool? _stencilOf;
+    private readonly uint _layerVao;
+    private uint _layerFrame;
+    private uint _layerTexture;
+    private (int Width, int Height) _layerSize;
+    private uint _layerDepth;
     private int _built;
 
     public SketchRenderer(GL gl, bool es)
     {
         _gl = gl;
         _program = new TerrainRenderer.Program(gl, Vertex(es), Fragment(es));
+        _lay = new TerrainRenderer.Program(gl, LayVertex(es), LayFragment(es));
         _pending = new Batch(gl);
+        _layerVao = gl.GenVertexArray();
     }
 
     /// <summary>
@@ -60,29 +78,16 @@ internal sealed unsafe class SketchRenderer : IDisposable
     public SketchDrawn Drawn { get; private set; }
 
     /// <summary>
-    /// Whether overlaps in a sheet are kept from darkening at its opacity (the frame buffer has a stencil).
+    /// Whether a sheet at less than full opacity is drawn in a layer of its own (else its lines are
+    /// blended one by one, which darkens where they overlap): false once the card would not make the
+    /// layer's frame buffer.
     /// </summary>
-    public bool HasStencil => _stencil;
+    public bool LayersWork { get; private set; } = true;
 
-    // asked of the frame buffer being drawn into, the first time
-    private bool _stencil
-    {
-        get
-        {
-            if (_stencilOf is null)
-            {
-                _gl.GetFramebufferAttachmentParameter(FramebufferTarget.Framebuffer, FramebufferAttachment.StencilAttachment, FramebufferAttachmentParameterName.StencilSize, out int bits);
-                _stencilOf = _gl.GetError() == GLEnum.NoError && bits > 0;
-            }
-            return _stencilOf.Value;
-        }
-    }
-
-    /// <param name="heights">The heightmap's texture, bound to unit 0 by the caller.</param>
     /// <param name="layers">The sheets to draw, each with its lines and opacity.</param>
     /// <param name="alive">The names of every sheet of the sketch: the buffers of the others are let go.</param>
     /// <param name="pending">The lines being drawn.</param>
-    /// <param name="size">The view's size in pixels.</param>
+    /// <param name="size">The view's size, in the units the lines' widths are in.</param>
     public void Draw(Matrix4x4 viewProjection, Vector3 eye, Vector2 size, float heightScale, IReadOnlyList<SketchLayer> layers, IReadOnlyCollection<string> alive, IReadOnlyList<SketchStroke> pending)
     {
         using Performance.Span measure = Performance.Measure("3d.draw-sketch");
@@ -109,66 +114,139 @@ internal sealed unsafe class SketchRenderer : IDisposable
             segments += batch.Count;
         }
 
-        if (layers.Count == 0 && pending.Count == 0)
+        int layered = 0;
+        if (layers.Count > 0 || pending.Count > 0)
         {
-            Drawn = new SketchDrawn(0, 0, 0, 0, _built);
-            return;
-        }
-        _program.Use();
-        _program.Set("uViewProjection", viewProjection);
-        _program.Set("uViewSize", size.X, size.Y);
-        _program.Set("uEye", eye.X, eye.Y, eye.Z);
-        _program.Set("uHeights", 0);
-        _program.Set("uHeightScale", heightScale);
-        _gl.Enable(EnableCap.Blend);
-        _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
-        _gl.Enable(EnableCap.DepthTest);
-        _gl.DepthFunc(DepthFunction.Lequal);
-        _gl.DepthMask(false);
-        if (_stencil)
-        {
-            _gl.Enable(EnableCap.StencilTest);
-            _gl.StencilMask(0xFF);
-            _gl.StencilFunc(StencilFunction.Notequal, 1, 0xFF);
-            _gl.StencilOp(StencilOp.Keep, StencilOp.Keep, StencilOp.Replace);
-        }
-        foreach (SketchLayer layer in layers)
-        {
-            DrawBatch(_sheets[layer.Sheet.Name], layer.Opacity);
-        }
-        int pendingCount = pending.Count;
-        if (pendingCount > 0)
-        {
-            // the line the mouse draws and its images by the symmetry, which are fainter
-            _pending.Reset();
-            for (int i = 0; i < pendingCount; i++)
+            _program.Use();
+            _program.Set("uViewProjection", viewProjection);
+            _program.Set("uViewSize", size.X, size.Y);
+            _program.Set("uEye", eye.X, eye.Y, eye.Z);
+            _program.Set("uHeights", 0);
+            _program.Set("uHeightScale", heightScale);
+            _gl.Enable(EnableCap.Blend);
+            _gl.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
+            _gl.Enable(EnableCap.DepthTest);
+            _gl.DepthFunc(DepthFunction.Lequal);
+            _gl.DepthMask(false);
+            // the sheets at full opacity first, straight into the scene
+            foreach (SketchLayer layer in layers)
             {
-                _pending.Add(pending[i].Colour, pending[i].Width, pending[i].Points);
+                if (layer.Opacity >= 1 || !LayersWork)
+                {
+                    _program.Set("uAlpha", layer.Opacity);
+                    _sheets[layer.Sheet.Name].Draw();
+                }
             }
-            _pending.Flush();
-            DrawBatch(_pending, 1);
+            foreach (SketchLayer layer in layers)
+            {
+                if (layer.Opacity < 1 && LayersWork)
+                {
+                    if (DrawLayer(_sheets[layer.Sheet.Name], layer.Opacity))
+                    {
+                        layered++;
+                    }
+                    else
+                    {
+                        // the card cannot make a layer: this sheet is blended line by line, and the next ones
+                        _program.Use();
+                        _program.Set("uAlpha", layer.Opacity);
+                        _sheets[layer.Sheet.Name].Draw();
+                    }
+                }
+            }
+            int pendingCount = pending.Count;
+            if (pendingCount > 0)
+            {
+                // the line the mouse draws and its images by the symmetry
+                _pending.Reset();
+                for (int i = 0; i < pendingCount; i++)
+                {
+                    _pending.Add(pending[i].Colour, pending[i].Width, pending[i].Points);
+                }
+                _pending.Flush();
+                _program.Use();
+                _program.Set("uAlpha", 1f);
+                _pending.Draw();
+            }
+            _gl.BindVertexArray(0);
         }
-        if (_stencil)
-        {
-            _gl.Disable(EnableCap.StencilTest);
-        }
-        _gl.BindVertexArray(0);
-        _gl.DepthMask(false);
-        Drawn = new SketchDrawn(layers.Count, lines, segments, pendingCount, _built);
+        Drawn = new SketchDrawn(layers.Count, lines, segments, pending.Count, _built, layered);
     }
 
-    private void DrawBatch(Batch batch, float opacity)
+    /// <summary>
+    /// Draws a sheet at full opacity into the layer, then lays the layer over the scene at
+    /// <paramref name="opacity"/>.
+    /// </summary>
+    /// <returns>False when the layer cannot be made: the card refuses the frame buffer.</returns>
+    private bool DrawLayer(Batch batch, float opacity)
     {
         if (batch.Count == 0)
         {
-            return;
+            return true;
         }
-        if (_stencil)
+        _gl.GetInteger(GetPName.DrawFramebufferBinding, out int scene);
+        _gl.GetFramebufferAttachmentParameter(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, FramebufferAttachmentParameterName.ObjectType, out int depthType);
+        _gl.GetFramebufferAttachmentParameter(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, FramebufferAttachmentParameterName.ObjectName, out int depth);
+        Span<int> viewport = stackalloc int[4];
+        _gl.GetInteger(GetPName.Viewport, viewport);
+        int width = viewport[2];
+        int height = viewport[3];
+        if (depth == 0 || depthType != (int)GLEnum.Renderbuffer || width <= 0 || height <= 0)
         {
-            _gl.Clear(ClearBufferMask.StencilBufferBit);
+            LayersWork = false;
+            return false;
         }
-        _program.Set("uAlpha", opacity);
+        if (_layerFrame == 0)
+        {
+            _layerFrame = _gl.GenFramebuffer();
+            _layerTexture = _gl.GenTexture();
+        }
+        _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _layerFrame);
+        if (_layerSize != (width, height))
+        {
+            _gl.ActiveTexture(TextureUnit.Texture1);
+            _gl.BindTexture(TextureTarget.Texture2D, _layerTexture);
+            _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba8, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, null);
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Nearest);
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Nearest);
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)GLEnum.ClampToEdge);
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)GLEnum.ClampToEdge);
+            _gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, _layerTexture, 0);
+            _gl.ActiveTexture(TextureUnit.Texture0);
+            _layerSize = (width, height);
+        }
+        if (_layerDepth != (uint)depth)
+        {
+            // the scene's own depth buffer, only read: the sheet's lines hide behind the hills as they do in the scene
+            _gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, (uint)depth);
+            _layerDepth = (uint)depth;
+        }
+        if (_gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != GLEnum.FramebufferComplete)
+        {
+            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)scene);
+            LayersWork = false;
+            return false;
+        }
+        _gl.ClearColor(0, 0, 0, 0);
+        _gl.Clear(ClearBufferMask.ColorBufferBit);
+        _program.Use();
+        _program.Set("uAlpha", 1f);
         batch.Draw();
+        _gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)scene);
+
+        // over the scene, whatever its depth: the layer's lines were tested already
+        _gl.Disable(EnableCap.DepthTest);
+        _lay.Use();
+        _gl.ActiveTexture(TextureUnit.Texture1);
+        _gl.BindTexture(TextureTarget.Texture2D, _layerTexture);
+        _gl.BindSampler(1, 0);
+        _lay.Set("uLayer", 1);
+        _lay.Set("uAlpha", opacity);
+        _gl.BindVertexArray(_layerVao);
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
+        _gl.ActiveTexture(TextureUnit.Texture0);
+        _gl.Enable(EnableCap.DepthTest);
+        return true;
     }
 
     public void Dispose()
@@ -180,6 +258,13 @@ internal sealed unsafe class SketchRenderer : IDisposable
         _sheets.Clear();
         _pending.Dispose();
         _program.Dispose();
+        _lay.Dispose();
+        _gl.DeleteVertexArray(_layerVao);
+        if (_layerFrame != 0)
+        {
+            _gl.DeleteFramebuffer(_layerFrame);
+            _gl.DeleteTexture(_layerTexture);
+        }
     }
 
     /// <summary>
@@ -191,12 +276,12 @@ internal sealed unsafe class SketchRenderer : IDisposable
         private readonly uint _vao;
         private readonly uint _buffer;
         private int _capacity;
-        private int _first;
+        private int _count;
         private float[] _cpu = [];
         private ImmutableArray<SketchLine> _lines = [];
 
-        // the pieces of the lines added since the last Flush, a line each
-        private readonly List<float[]> _added = [];
+        // the pieces of the lines added since the last Flush
+        private readonly List<float> _added = [];
 
         public Batch(GL gl)
         {
@@ -208,7 +293,7 @@ internal sealed unsafe class SketchRenderer : IDisposable
         /// <summary>
         /// How many pieces the batch holds.
         /// </summary>
-        public int Count => _capacity - _first;
+        public int Count => _count;
 
         /// <summary>
         /// Makes the batch hold <paramref name="lines"/>: only the lines added to its end when it holds
@@ -245,9 +330,7 @@ internal sealed unsafe class SketchRenderer : IDisposable
         /// </summary>
         public void Reset()
         {
-            _capacity = 0;
-            _first = 0;
-            _cpu = [];
+            _count = 0;
             _lines = [];
             _added.Clear();
         }
@@ -264,11 +347,10 @@ internal sealed unsafe class SketchRenderer : IDisposable
             }
             uint packed = Pack(colour);
             float pixels = SketchLook.Pixels(width);
-            List<float> data = [];
             int count = 0;
             if (points.Length == 1)
             {
-                AddPiece(data, points[0], points[0], packed, pixels);
+                AddPiece(points[0], points[0], packed, pixels);
                 count = 1;
             }
             for (int i = 1; i < points.Length; i++)
@@ -278,26 +360,25 @@ internal sealed unsafe class SketchRenderer : IDisposable
                 int pieces = Math.Clamp((int)MathF.Ceiling(Vector2.Distance(a, b) / Piece), 1, 4096);
                 for (int p = 0; p < pieces; p++)
                 {
-                    AddPiece(data, Vector2.Lerp(a, b, (float)p / pieces), Vector2.Lerp(a, b, (float)(p + 1) / pieces), packed, pixels);
+                    AddPiece(Vector2.Lerp(a, b, (float)p / pieces), Vector2.Lerp(a, b, (float)(p + 1) / pieces), packed, pixels);
                     count++;
                 }
             }
-            _added.Add([.. data]);
             return count;
         }
 
-        private static void AddPiece(List<float> data, Vector2 a, Vector2 b, uint colour, float width)
+        private void AddPiece(Vector2 a, Vector2 b, uint colour, float width)
         {
-            data.Add(a.X);
-            data.Add(a.Y);
-            data.Add(b.X);
-            data.Add(b.Y);
-            data.Add(BitConverter.UInt32BitsToSingle(colour));
-            data.Add(width);
+            _added.Add(a.X);
+            _added.Add(a.Y);
+            _added.Add(b.X);
+            _added.Add(b.Y);
+            _added.Add(BitConverter.UInt32BitsToSingle(colour));
+            _added.Add(width);
         }
 
         /// <summary>
-        /// Puts the lines added on the card, each in front of the ones before it.
+        /// Puts the pieces added after those held, on the card.
         /// </summary>
         public void Flush()
         {
@@ -305,32 +386,16 @@ internal sealed unsafe class SketchRenderer : IDisposable
             {
                 return;
             }
-            int floats = _added.Sum(line => line.Length);
-            int needed = floats / 6;
+            int needed = _added.Count / 6;
             bool regrown = false;
-            if (needed > _first)
+            if (_count + needed > _capacity)
             {
-                // no room in front: a larger buffer, the pieces held at its end, all sent again
-                int old = Count;
-                int capacity = Math.Max(256, (old + needed) * 2);
-                float[] larger = new float[capacity * 6];
-                Array.Copy(_cpu, _first * 6, larger, (capacity - old) * 6, old * 6);
-                _cpu = larger;
-                _capacity = capacity;
-                _first = capacity - old;
+                // a larger buffer, all sent again
+                _capacity = Math.Max(256, (_count + needed) * 2);
+                Array.Resize(ref _cpu, _capacity * 6);
                 regrown = true;
             }
-            // the newest lowest: the lines in the order they were added, each in front of the one before
-            float[] block = new float[floats];
-            int at = floats;
-            foreach (float[] line in _added)
-            {
-                at -= line.Length;
-                Array.Copy(line, 0, block, at, line.Length);
-            }
-            _added.Clear();
-            _first -= needed;
-            Array.Copy(block, 0, _cpu, _first * 6, floats);
+            _added.CopyTo(_cpu, _count * 6);
             _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _buffer);
             if (regrown)
             {
@@ -338,29 +403,36 @@ internal sealed unsafe class SketchRenderer : IDisposable
                 {
                     _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)((nint)_capacity * Stride), source, BufferUsageARB.DynamicDraw);
                 }
-                return;
             }
-            fixed (float* source = block)
+            else
             {
-                _gl.BufferSubData(BufferTargetARB.ArrayBuffer, (nint)_first * Stride, (nuint)((nint)needed * Stride), source);
+                fixed (float* source = &_cpu[_count * 6])
+                {
+                    _gl.BufferSubData(BufferTargetARB.ArrayBuffer, (nint)_count * Stride, (nuint)((nint)needed * Stride), source);
+                }
             }
+            _count += needed;
+            _added.Clear();
         }
 
         public void Draw()
         {
+            if (_count == 0)
+            {
+                return;
+            }
             _gl.BindVertexArray(_vao);
             _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _buffer);
-            nint offset = (nint)_first * Stride;
             _gl.EnableVertexAttribArray(0);
-            _gl.VertexAttribPointer(0, 4, VertexAttribPointerType.Float, false, Stride, (void*)offset);
+            _gl.VertexAttribPointer(0, 4, VertexAttribPointerType.Float, false, Stride, null);
             _gl.VertexAttribDivisor(0, 1);
             _gl.EnableVertexAttribArray(1);
-            _gl.VertexAttribPointer(1, 4, VertexAttribPointerType.UnsignedByte, true, Stride, (void*)(offset + 4 * sizeof(float)));
+            _gl.VertexAttribPointer(1, 4, VertexAttribPointerType.UnsignedByte, true, Stride, (void*)(4 * sizeof(float)));
             _gl.VertexAttribDivisor(1, 1);
             _gl.EnableVertexAttribArray(2);
-            _gl.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, Stride, (void*)(offset + 5 * sizeof(float)));
+            _gl.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, Stride, (void*)(5 * sizeof(float)));
             _gl.VertexAttribDivisor(2, 1);
-            _gl.DrawArraysInstanced(PrimitiveType.TriangleStrip, 0, 4, (uint)Count);
+            _gl.DrawArraysInstanced(PrimitiveType.TriangleStrip, 0, 4, (uint)_count);
         }
 
         public void Dispose()
@@ -467,13 +539,24 @@ internal sealed unsafe class SketchRenderer : IDisposable
             outColor = vec4(vColour.rgb * alpha, alpha);
         }
         """;
-}
 
-/// <summary>
-/// What the 3D view hands the renderer to draw of the sketch in a frame.
-/// </summary>
-/// <param name="Layers">The sheets to draw (the shown ones, with their opacity in this mode).</param>
-/// <param name="Alive">The names of all the sketch's sheets.</param>
-/// <param name="Pending">The line being drawn and its images.</param>
-/// <param name="Size">The view's size in pixels.</param>
-internal sealed record SketchFrame(IReadOnlyList<SketchLayer> Layers, IReadOnlyCollection<string> Alive, IReadOnlyList<SketchStroke> Pending, Vector2 Size);
+    // a triangle over the whole view
+    private static string LayVertex(bool es) => TerrainShaders.Header(es) + """
+        void main()
+        {
+            vec2 corner = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+            gl_Position = vec4(corner * 2.0 - 1.0, 0.0, 1.0);
+        }
+        """;
+
+    private static string LayFragment(bool es) => TerrainShaders.Header(es) + """
+        uniform sampler2D uLayer;
+        uniform float uAlpha;
+        out vec4 outColor;
+
+        void main()
+        {
+            outColor = texelFetch(uLayer, ivec2(gl_FragCoord.xy), 0) * uAlpha;
+        }
+        """;
+}
