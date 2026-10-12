@@ -299,11 +299,13 @@
                       <controls:EconomyAmount Mass="{Binding Cost.Mass, FallbackValue=0}" Energy="{Binding Cost.Energy, FallbackValue=0}" Suffix="{Binding Cost.Suffix, FallbackValue={x:Null}}"
                                               AutomationProperties.Name="{Binding Cost.Text, StringFormat='Cost of the selected units: {0}'}" />
                     </DockPanel>
-                    <StackPanel Classes="inline">
-                      <TextBlock Classes="label" Text="Army" />
-                      <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" AutomationProperties.Name="Army of the selected units"
-                                AutomationProperties.HelpText="Choosing another gives the selected units to it, in its group INITIAL" />
-                    </StackPanel>
+                    <!-- a dash while they belong to different armies, as the Group's choice below shows one -->
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Army" Width="{StaticResource FactLabelWidth}" />
+                      <ComboBox ItemsSource="{Binding Armies}" SelectedItem="{Binding Army}" PlaceholderText="—" HorizontalAlignment="Stretch"
+                                AutomationProperties.Name="Army of the selected units"
+                                AutomationProperties.HelpText="Choosing another gives the selected units to it, in its group INITIAL; a dash when they belong to different armies" />
+                    </DockPanel>
                     <!-- the army's groups as a choice (U-11): a dash while they are in different ones or belong to several armies -->
                     <DockPanel>
                       <TextBlock DockPanel.Dock="Left" Classes="secondary" Text="Group" Width="{StaticResource FactLabelWidth}" />

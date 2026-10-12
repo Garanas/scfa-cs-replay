@@ -1,5 +1,6 @@
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.Tools;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
@@ -24,12 +25,29 @@ public sealed partial class MainViewModel
         && Selection.Items.All(thing => thing.Kind == ObjectKind.Unit
             && document.Find(thing) is PlacedUnit unit && Assets.Catalog.Find(unit.Unit.Blueprint) is { IsStructure: true });
 
+    private EditedMap? _unitsMap;
+    private string? _placedInto;
+
     private void InitializeUnits()
     {
         UnitPlaceTool place = Tool<UnitPlaceTool>();
         Presets.Register(UnitPreset.Of(this));
         // the tree and the inspector tell how a placed instance stands to its preset (U-9)
         Armies.PresetFingerprint = Presets.UnitPresetFingerprint;
+        // another map: no army, group or expanded node of the one before stays (a resize keeps the map)
+        MapChanged += (_, _) =>
+        {
+            if (Map is null || ReferenceEquals(Map, _unitsMap))
+            {
+                return;
+            }
+            _unitsMap = Map;
+            _placedInto = null;
+            place.ForgetMap();
+            Armies.ForgetMap();
+            place.Refresh(ShownDocument);
+            Armies.Refresh(ShownDocument);
+        };
         DocumentChanged += (_, _) =>
         {
             using Performance.Span measure = Performance.Measure("model.units");
@@ -42,6 +60,11 @@ public sealed partial class MainViewModel
         Presets.Changed += (_, _) =>
         {
             Armies.RefreshInstances();
+            // a preset deleted is no longer what a click places
+            if (place.Preset is string preset && Presets.Library is not null && !Presets.HasUnitsPreset(preset))
+            {
+                place.ClearPreset();
+            }
             Presets.CountInstances(ShownDocument, again: true);
             Problems.Schedule();
         };
@@ -69,12 +92,11 @@ public sealed partial class MainViewModel
         // the group chosen in the tree is where the place tool places
         // (a tree made again keeps its choice in a new node of the same key: that is no new choice, and must not
         // take the tool back from the army or group chosen in its row since)
-        string? placedInto = null;
         Armies.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(ArmiesViewModel.ChosenGroup) && Armies.ChosenGroup is GroupNode node && node.Key != placedInto)
+            if (e.PropertyName == nameof(ArmiesViewModel.ChosenGroup) && Armies.ChosenGroup is GroupNode node && node.Key != _placedInto)
             {
-                placedInto = node.Key;
+                _placedInto = node.Key;
                 place.PlaceInto(node.Army, node.PathText);
             }
         };
@@ -85,7 +107,7 @@ public sealed partial class MainViewModel
             {
                 // the army has no such group yet (INITIAL is made by placing): its root group stands for it in the tree,
                 // and the tool keeps the group it has
-                placedInto = $"{army}:";
+                _placedInto = $"{army}:";
                 Armies.Choose(army, []);
             }
         };

@@ -448,6 +448,21 @@ public sealed partial class PresetsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Whether the workspace has a units preset of that name; a file that cannot be read counts as there.
+    /// </summary>
+    public bool HasUnitsPreset(string name)
+    {
+        try
+        {
+            return Library?.Find(PresetKinds.Units, name) is not null;
+        }
+        catch (Exception exception) when (exception is MapProjectException or IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Deletes a preset of the workspace.
     /// </summary>
     /// <exception cref="ArgumentException">There is no such preset.</exception>
