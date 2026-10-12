@@ -2281,7 +2281,12 @@ mode panel's and inspector's templates only name it).
   moves it (one step; a click that moves nothing is none); Delete removes the selected one. While
   the tool is active both views draw every generator (`IMapTool.Shapes`: a square and an arrow the
   way its waves roll, the selected one in the hover ink; span `tool.wave-shapes`). Generators are
-  not things of the selection (they have no ids): the tool selects and moves them itself.
+  not things of the selection (they have no ids): the tool selects and moves them itself. The chosen
+  generator is `WaterSettings.SelectedGenerator`, one choice for the list, the tool and the commands:
+  Add (`water.addWaveGenerator`) and placing choose the new one, a map that is opened starts with the
+  first (`ForgetSelection` on `MapChanged`), a removal keeps the index (the last when it is gone).
+  The sky cube map's picture (`SkyCubeViewModel.Preview`) is the open map's: a map without a result
+  made in this session shows none.
   `water.placeWaveGenerator {x?, z?, heading?, speed?}` (Water menu) chooses the tool, or with a
   place places one (and its images) at once. `state.waves`: the tool's heading, speed, the
   selected generator and the generators' places and headings.

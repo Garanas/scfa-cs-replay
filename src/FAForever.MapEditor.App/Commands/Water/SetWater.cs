@@ -205,6 +205,11 @@ public sealed class AddWaveGeneratorHandler(MainViewModel model) : IRequestHandl
         Vector3 position = new Vector3(r.X ?? document.Width / 2f, document.Water.Elevation, r.Z ?? document.Height / 2f);
         model.EditMap("Add a wave generator", d => d with { Water = d.Water with { WaveGenerators = d.Water.WaveGenerators.Add(Default(position)) } });
         int index = model.ShownDocument!.Water.WaveGenerators.Length - 1;
+        // the one added is the one chosen, as when the Waves tool places one
+        if (index < model.WaterSettings.Generators.Count)
+        {
+            model.WaterSettings.SelectedGenerator = model.WaterSettings.Generators[index];
+        }
         model.Status = $"Added wave generator {index + 1} at {position.X:0.#}, {position.Z:0.#}";
         return Task.FromResult(index);
     }
