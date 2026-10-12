@@ -47,6 +47,9 @@ public sealed partial class MainViewModel
         }
     }
 
+    // where the sketch is turned on and off: the chip is the third of the views' bar, so a narrow window has it behind More
+    private const string SketchSwitches = "the Sketch chip in the views' bar (behind More when the window is narrow), the View menu or Ctrl+Shift+K";
+
     private string SketchNoteOf(Project.Files.InMemory.Sketch? sketch)
     {
         if (InSketchMode || sketch is null || sketch.ItemCount == 0)
@@ -55,13 +58,13 @@ public sealed partial class MainViewModel
         }
         if (!ShowSketch)
         {
-            return "The sketch is hidden. The Sketch chip in the views' bar shows it, or Ctrl+Shift+K.";
+            return $"The sketch is hidden. Show it with {SketchSwitches}.";
         }
         string[] shown = [.. sketch.Sheets.Where(sheet => sheet.Shown && !sheet.IsBlank && sheet.Opacity > 0)
             .Select(sheet => $"{sheet.Name} at {Math.Round(sheet.Opacity * 100):0}%")];
         return shown.Length == 0
             ? "No sheet of the sketch shows in the other modes: each sheet is hidden or fully transparent here."
-            : $"{string.Join(", ", shown)} over the terrain. The Sketch chip in the views' bar hides it, or Ctrl+Shift+K.";
+            : $"{string.Join(", ", shown)} over the terrain. Hide it with {SketchSwitches}.";
     }
 
     /// <summary>

@@ -64,6 +64,28 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         };
 
         /// <summary>
+        /// The colour a black or a white stroke has a thin halo of, as <c>0xAARRGGBB</c>, so that it shows on terrain
+        /// of its own tone (black on dark ground, white on light): the other of the two. Null for the other colours.
+        /// </summary>
+        public static uint? HaloArgb(SketchColour colour) => colour switch
+        {
+            SketchColour.Black => Argb(SketchColour.White),
+            SketchColour.White => Argb(SketchColour.Black),
+            _ => null,
+        };
+
+        /// <summary>
+        /// The rim of a swatch or a dot of the colour in a panel or a key, as <c>0xAARRGGBB</c>: the halo's colour for black
+        /// and white (so they show on a dark panel and on a light one), a faint grey for the others.
+        /// </summary>
+        public static uint RimArgb(SketchColour colour) => HaloArgb(colour) ?? 0x66808080;
+
+        /// <summary>
+        /// How far a halo reaches beyond the stroke's own edge, in pixels.
+        /// </summary>
+        public const float HaloPixels = 1.5f;
+
+        /// <summary>
         /// The width of a stroke on screen, in pixels.
         /// </summary>
         public static float Pixels(SketchWidth width) => width switch

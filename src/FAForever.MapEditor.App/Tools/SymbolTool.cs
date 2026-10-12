@@ -191,11 +191,6 @@ public sealed partial class SymbolTool : ObservableObject, IMapTool
         {
             return;
         }
-        if (input.View is { IsTopDown: false })
-        {
-            _model.Status = "Stamp in the top view: the 3D view does not take the Symbol tool yet";
-            return;
-        }
         _down = true;
         _at = new Vector2(x, z);
         _turn = Turn;

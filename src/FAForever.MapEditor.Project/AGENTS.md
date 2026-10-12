@@ -1597,9 +1597,10 @@ files (the export reads no `MapDocument.Sketch`) nor `files/` (the other files o
   `SketchLines.Shown(sketch, full)` gives the sheets to draw and their opacity (shown, not blank, not fully
   transparent; `full` in the Sketch mode); `SketchLines.Of(sheet)` the lines of one sheet as `SketchStroke`s in
   ogrids, its strokes first and then those of its symbols (`Of(symbol)`: a spawn is a ring and a dot, a mass
-  three rings, a hydrocarbon a star, an arrow a shaft and a head turned by `Turn`, a cross two lines, a
-  question mark a hook, a stem and a dot, all of the medium width). The top view and the 3D view draw
-  symbols through it. Labels are text, not lines: the top view draws them (`SketchLabels.Bounds` is the
+  a diamond and a dot, a hydrocarbon a star, an arrow a shaft and a head turned by `Turn`, a cross two lines, a
+  question mark a hook, a stem and a dot, thin for a symbol under 20 ogrids, medium from there). The top view and the 3D view draw
+  symbols through it. `SketchLook.HaloArgb` is the other tone of black and white (null for the other colours), which the views draw a
+  thin halo of (`HaloPixels`) under a black or white line, and `RimArgb` the rim of a swatch or a dot of a colour in a panel or a key. Labels are text, not lines: the top view draws them (`SketchLabels.Bounds` is the
   estimate of where one lies, from its text's length, for clicking, boxes and the eraser).
 - **Edits** (`Editing/SketchEdits.cs`, `SketchGeometry.cs`): sheets are named (unique without regard to case,
   at most 60 characters; a name matches exactly first, then without regard to case): `AddSheet`

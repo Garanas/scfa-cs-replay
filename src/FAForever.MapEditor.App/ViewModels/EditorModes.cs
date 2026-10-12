@@ -337,10 +337,11 @@ public static class EditorOverlays
     [
 
         new OverlayDefinition("markers", "Markers", "Show markers", "R-6") { Panel = "markers" },
-        new OverlayDefinition("pathNodes", "Path nodes", "Show path nodes", "R-6") { Panel = "markers" },
-        new OverlayDefinition("camera", "3D camera", "Show the 3D camera", "V-1"),
-        // the sketch lies over every mode's terrain; after the three chips that keep their room at 1280 pixels
+        // the sketch lies over every mode's terrain and has no other quick switch, so its chip is among the three that
+        // keep their room at 1280 pixels (with the 3D camera's); the Path nodes have their check box in the Markers panel
         new OverlayDefinition("sketch", "Sketch", "Show the sketch", "N-1") { Gesture = "Ctrl+Shift+K" },
+        new OverlayDefinition("camera", "3D camera", "Show the 3D camera", "V-1"),
+        new OverlayDefinition("pathNodes", "Path nodes", "Show path nodes", "R-6") { Panel = "markers" },
         new OverlayDefinition("walkability", "Walkability", "Show walkability", "T-7") { Swatch = "MapBlockedBrush" },
         new OverlayDefinition("mask", "Mask", "Show the chosen mask", "K-1") { Swatch = "MapMaskBrush" },
         new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12"),

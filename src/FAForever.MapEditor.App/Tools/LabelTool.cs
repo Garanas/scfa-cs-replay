@@ -89,14 +89,10 @@ public sealed partial class LabelTool : ObservableObject, IMapTool
         {
             return;
         }
-        if (input.View is { IsTopDown: false })
-        {
-            _model.Status = "Write in the top view: the 3D view does not take the Label tool yet";
-            return;
-        }
-        Vector2 screen = input.ViewAt(x, z).ToScreen(new Vector3(x, 0, z)) ?? Vector2.Zero;
+        ToolView view = input.ViewAt(x, z);
+        Vector2 screen = view.ToScreen(SketchPlaces.OnGround(view, _model.ShownDocument, x, z)) ?? Vector2.Zero;
         string sheet = _model.Sketch.Chosen ?? "";
-        _ = _model.Sketch.BeginLabel(new SketchLabelDraft(new Vector2(x, z), screen, Colour, Ogrids, sheet, null), "");
+        _ = _model.Sketch.BeginLabel(new SketchLabelDraft(new Vector2(x, z), screen, Colour, Ogrids, sheet, null) { ThreeD = !view.IsTopDown }, "");
     }
 
     public void Drag(float x, float z)

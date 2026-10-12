@@ -114,6 +114,11 @@ public sealed partial class SketchColourChoice(SketchColour colour, Func<SketchC
     public uint Argb => SketchLook.Argb(colour);
 
     /// <summary>
+    /// The rim of the swatch: the opposite tone for black and white, so that it shows on the panel in both themes.
+    /// </summary>
+    public uint RimArgb => SketchLook.RimArgb(colour);
+
+    /// <summary>
     /// The key that picks it, <c>1</c> to <c>6</c>.
     /// </summary>
     public string Key => ((int)colour + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -158,6 +163,11 @@ public sealed partial class SketchLegendItem(SketchColour colour, Func<SketchCol
     public SketchColour Colour => colour;
 
     public uint Argb => SketchLook.Argb(colour);
+
+    /// <summary>
+    /// The rim of the swatch: the opposite tone for black and white, so that it shows on the panel in both themes.
+    /// </summary>
+    public uint RimArgb => SketchLook.RimArgb(colour);
 
     public string Label => $"Legend of {colour.ToString().ToLowerInvariant()}";
 
@@ -320,9 +330,11 @@ public sealed partial class SketchViewModel : ObservableObject
     /// <summary>
     /// The sheets that are shown and have a legend text: what the key in a corner of the top view lists.
     /// </summary>
-    public IReadOnlyList<(string Sheet, IReadOnlyList<(SketchColour Colour, string Text)> Entries)> Keys(MapDocument document) =>
+    /// <param name="full">Whether the Sketch mode is the one chosen; in the other modes a sheet that is fully transparent has no
+    /// key (the key is drawn at the sheet's opacity).</param>
+    public IReadOnlyList<(string Sheet, IReadOnlyList<(SketchColour Colour, string Text)> Entries)> Keys(MapDocument document, bool full = true) =>
         [.. document.Sketch.Sheets
-            .Where(sheet => sheet.Shown && sheet.HasLegend)
+            .Where(sheet => sheet.Shown && sheet.HasLegend && (full || sheet.Opacity > 0))
             .Select(sheet => (sheet.Name, (IReadOnlyList<(SketchColour, string)>)[.. Enum.GetValues<SketchColour>().Where(colour => sheet.LegendOf(colour).Length > 0).Select(colour => (colour, sheet.LegendOf(colour)))]))];
 
     /// <summary>

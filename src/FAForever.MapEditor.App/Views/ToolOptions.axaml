@@ -559,7 +559,7 @@
                     <DataTemplate x:DataType="vm:SketchColourChoice">
                       <Button Classes="chip icononly" Classes.on="{Binding IsOn}" Command="{Binding ChooseCommand}" ToolTip.Tip="{Binding Help}"
                               AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}">
-                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" BorderBrush="{Binding RimArgb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
                       </Button>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
@@ -636,7 +636,7 @@
                     <DataTemplate x:DataType="vm:SketchColourChoice">
                       <Button Classes="chip icononly" Classes.on="{Binding IsOn}" Command="{Binding ChooseCommand}" ToolTip.Tip="{Binding Help}"
                               AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}">
-                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" BorderBrush="{Binding RimArgb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
                       </Button>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
@@ -683,7 +683,7 @@
                     <DataTemplate x:DataType="vm:SketchColourChoice">
                       <Button Classes="chip icononly" Classes.on="{Binding IsOn}" Command="{Binding ChooseCommand}" ToolTip.Tip="{Binding Help}"
                               AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}">
-                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" BorderBrush="{Binding RimArgb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
                       </Button>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
@@ -724,7 +724,7 @@
                     <DataTemplate x:DataType="vm:SketchColourChoice">
                       <Button Classes="chip icononly" Command="{Binding ChooseCommand}" ToolTip.Tip="{Binding Help}"
                               AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="Gives everything selected this colour, as the colour keys do">
-                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" BorderBrush="{Binding RimArgb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
                       </Button>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>

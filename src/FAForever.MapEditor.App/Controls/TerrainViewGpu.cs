@@ -210,7 +210,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     /// The textures of the terrain, decals and models being read, not on the card yet; for
     /// automation, which waits for them before a settled screenshot.
     /// </summary>
-    public int TexturesLoading => (_renderer?.TexturesLoading ?? 0) + (_objects?.TexturesLoading ?? 0);
+    public int TexturesLoading => (_renderer?.TexturesLoading ?? 0) + (_objects?.TexturesLoading ?? 0) + LabelsLoading;
 
     /// <summary>
     /// The decals drawn, the draws they take and the textures they use.

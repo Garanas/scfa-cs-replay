@@ -19,7 +19,7 @@
   <StreamGeometry x:Key="Icon.Sketch">M4 20 L5 15.5 L16 4.5 L19.5 8 L8.5 19 Z M14 6.5 L17.5 10</StreamGeometry>
   <!-- the sketch's six symbols (N-4), as the Symbol tool's choices: the shapes SketchLines draws -->
   <StreamGeometry x:Key="Icon.SymbolSpawn">M20 12 A8 8 0 1 1 4 12 A8 8 0 1 1 20 12 Z M12 12 L12.01 12</StreamGeometry>
-  <StreamGeometry x:Key="Icon.SymbolMass">M20 12 A8 8 0 1 1 4 12 A8 8 0 1 1 20 12 Z M17.3 12 A5.3 5.3 0 1 1 6.7 12 A5.3 5.3 0 1 1 17.3 12 Z M14.6 12 A2.6 2.6 0 1 1 9.4 12 A2.6 2.6 0 1 1 14.6 12 Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.SymbolMass">M12 4 L20 12 L12 20 L4 12 Z M12 12 L12.01 12</StreamGeometry>
   <StreamGeometry x:Key="Icon.SymbolHydrocarbon">M12 3 L14.12 9.09 L20.56 9.22 L15.42 13.11 L17.29 19.28 L12 15.6 L6.71 19.28 L8.58 13.11 L3.44 9.22 L9.88 9.09 Z</StreamGeometry>
   <StreamGeometry x:Key="Icon.SymbolArrow">M3 12 L21 12 M14 6 L21 12 L14 18</StreamGeometry>
   <StreamGeometry x:Key="Icon.SymbolCross">M5 5 L19 19 M5 19 L19 5</StreamGeometry>

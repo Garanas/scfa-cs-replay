@@ -168,6 +168,10 @@
                             AutomationProperties.Name="Resize the views" />
               <controls:TerrainViewGpu x:Name="Terrain3D" IsVisible="False" AutomationProperties.Name="3D view"
                                         AutomationProperties.HelpText="The wheel zooms towards the mouse; middle moves; space and the mouse turn; F focuses; Home shows the whole map" />
+              <!-- over the 3D view (MainWindow.ShowChosenView gives it the view's column): the text box of a label begun there -->
+              <Grid x:Name="ThreeDOverlays" IsVisible="False">
+                <sketchviews:LabelEditor DataContext="{Binding Sketch}" ThreeD="True" />
+              </Grid>
             </Grid>
             <GridSplitter x:Name="DockSplitter" Grid.Row="1" Classes="layoutsplitter" ResizeDirection="Rows"
                           AutomationProperties.Name="Resize the dock" />

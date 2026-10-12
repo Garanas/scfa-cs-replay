@@ -1,4 +1,4 @@
-<!-- The text box of a label being written (N-4), over the top view where the label goes: the Label tool opens it with a click, the Select
+<!-- The text box of a label being written (N-4), over the top view or the 3D view (ThreeD) where the label goes: the Label tool opens it with a click, the Select
      tool with a double click on a label. Enter keeps the text (sketch.label, or sketch.editLabel), Escape drops it. It lies in the window's tree,
      not in a popup, so automation reaches it: type text=... and key key=Enter. -->
 <UserControl xmlns="https://github.com/avaloniaui"
@@ -7,7 +7,7 @@
              x:Class="FAForever.MapEditor.App.Views.SketchPanels.LabelEditor"
              x:DataType="vm:SketchViewModel"
              Classes="labeleditor"
-             IsVisible="{Binding IsWriting}"
+             IsVisible="False"
              Margin="{Binding LabelMargin}">
   <TextBox x:Name="Box" Classes="labelbox" Text="{Binding LabelText, Mode=TwoWay}" Watermark="Label text"
            AutomationProperties.Name="Label text" AutomationProperties.HelpText="Type the label; Enter keeps it, Escape drops it" />
