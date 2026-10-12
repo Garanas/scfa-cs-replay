@@ -480,38 +480,21 @@ public sealed partial class AutomationServer
     /// </summary>
     private JsonObject ViewPoint(JsonObject arguments)
     {
-        MapDocument document = model.ShownDocument ?? throw new InvalidOperationException("No map is open");
-        Vector3 place;
-        if (arguments["ref"]?.GetValue<string>() is string text)
-        {
-            ObjectRef thing = ObjectRef.Parse(text);
-            place = document.PlaceOf(thing) ?? throw new ArgumentException($"The map has no {thing}");
-        }
-        else
-        {
-            float x = (float)(Number(arguments, "x") ?? throw new ArgumentException("x (or ref) is missing"));
-            float z = (float)(Number(arguments, "z") ?? throw new ArgumentException("z is missing"));
-            place = new Vector3(x, (float)(Number(arguments, "y") ?? document.Terrain.Heightmap.HeightAt(x, z)), z);
-        }
-
-        Point top = window.MapView.MapToControl(place.X, place.Z);
-        Size topSize = window.MapView.Bounds.Size;
-        Point? threeD = Project(model.Camera, window.View3D.Bounds.Size, place);
-        Size size = window.View3D.Bounds.Size;
+        MapPlace found = Locator.PlaceOnMap(arguments["ref"]?.GetValue<string>(), Number(arguments, "x"), Number(arguments, "z"), Number(arguments, "y"));
         return new JsonObject
         {
-            ["place"] = new JsonArray(Round(place.X), Round(place.Y), Round(place.Z)),
+            ["place"] = new JsonArray(Round(found.Place.X), Round(found.Place.Y), Round(found.Place.Z)),
             ["top"] = new JsonObject
             {
-                ["x"] = Round(top.X),
-                ["y"] = Round(top.Y),
-                ["inside"] = new Rect(topSize).Contains(top),
+                ["x"] = Round(found.Top.X),
+                ["y"] = Round(found.Top.Y),
+                ["inside"] = found.TopInside,
             },
-            ["3d"] = threeD is Point p ? new JsonObject
+            ["3d"] = found.ThreeD is Point p ? new JsonObject
             {
                 ["x"] = Round(p.X),
                 ["y"] = Round(p.Y),
-                ["inside"] = new Rect(size).Contains(p),
+                ["inside"] = found.ThreeDInside,
             } : null,
         };
     }

@@ -72,6 +72,21 @@ public sealed partial class MainWindow : Window
     public TerrainViewGpu View3D => Terrain3D;
 
     /// <summary>
+    /// The menu bar with the toolbar and the palette's button, for automation and the tours (<c>part menu</c>).
+    /// </summary>
+    public Border MenuBar => MenuBarBorder;
+
+    /// <summary>
+    /// The row of the view tabs and the overlays' chips (<c>part views</c>).
+    /// </summary>
+    public Border ViewsBar => ViewsBarBorder;
+
+    /// <summary>
+    /// The status bar under the editor (<c>part status</c>).
+    /// </summary>
+    public Border StatusBar => StatusBarBorder;
+
+    /// <summary>
     /// Closes the window without asking about unsaved changes, for automation.
     /// </summary>
     public void CloseWithoutAsking()

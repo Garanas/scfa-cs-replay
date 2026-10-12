@@ -79,13 +79,9 @@ public sealed partial class AutomationServer
         string label = Text(arguments, "label");
         string? type = arguments["type"]?.GetValue<string>();
         int index = arguments["index"]?.GetValue<int>() ?? 0;
-        // in the editor's window or a floating panel's (user story V-4)
-        Visual? under = UnderOf(arguments);
-        // what is open over them counts too: a context menu's or a flyout's item is clicked in the popup's own window
-        List<Control> matches = [.. (under is not null ? [under] : Windows.Cast<Visual>().Concat(OpenPopups().Select(popup => popup.Content).OfType<Visual>()))
-            .SelectMany(root => UiTree.FindAll(root, label))
-            .Distinct()
-            .Where(each => type is null || UiTree.IsOfType(each, type))];
+        // in the editor's window or a floating panel's (user story V-4); what is open over them counts too: a
+        // context menu's or a flyout's item is clicked in the popup's own window
+        List<Control> matches = [.. Locator.Matches(label, type, arguments["under"]?.GetValue<string>(), OpenPopups().Select(popup => popup.Content).OfType<Visual>())];
         if (matches.Count == 0)
         {
             throw new ArgumentException(type is null ? $"No control is named, labelled or reads '{label}'" : $"No {type} is named, labelled or reads '{label}'");
@@ -129,17 +125,7 @@ public sealed partial class AutomationServer
     /// Where a click on a control lands: its centre, but an item of a tree on its own line (the
     /// header's text), not in the middle of the items open below it.
     /// </summary>
-    private static Point HeaderCentre(Control control)
-    {
-        if (control is TreeViewItem item
-            && (item.GetVisualDescendants().OfType<Control>().FirstOrDefault(part => part.Name == "PART_HeaderPresenter")
-                ?? item.GetVisualDescendants().OfType<Control>().FirstOrDefault(part => part.Name == "PART_Header")) is Control header
-            && header.TranslatePoint(new Point(header.Bounds.Width / 2, header.Bounds.Height / 2), item) is Point inItem)
-        {
-            return inItem;
-        }
-        return new Point(control.Bounds.Width / 2, control.Bounds.Height / 2);
-    }
+    private static Point HeaderCentre(Control control) => UiLocator.HeaderCentre(control);
 
     /// <summary>
     /// Waits (at most <see cref="ClickWaitSeconds"/>) until the commands a click started are done,
