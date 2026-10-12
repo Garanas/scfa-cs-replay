@@ -36,7 +36,7 @@ public sealed partial class AutomationServer
     /// </summary>
     private static readonly string[] InputCommands =
     [
-        "mouse {view?: top|3d|window, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, to?: [x, y], steps?, notches?, modifiers?}",
+        "mouse {view?: top|3d|window, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, to?: [x, y], path?: [[x, y], ...] (action drag through several places), steps?, notches?, modifiers?}",
         "key {key: E|Delete|Escape|Ctrl+K|Shift..., action?: press|down|up, modifiers?, repeat?}",
         "type {text}",
         "drag {view?, from: [x, y], to?: [x, y], data?: asset key or preset:<units preset>, button?, steps?, modifiers?}",
@@ -63,6 +63,22 @@ public sealed partial class AutomationServer
             case "mouse":
             {
                 Control view = ViewOf(arguments);
+                if (arguments["path"] is JsonArray path && (arguments["action"]?.GetValue<string>() ?? "").Equals("drag", StringComparison.OrdinalIgnoreCase))
+                {
+                    // a drag through several places in one call: down at the first, moves to each in turn (steps between them), up at the last
+                    if (path.Count < 2)
+                    {
+                        throw new ArgumentException("path: [[x, y], [x, y], ...] needs at least two places");
+                    }
+                    Point[] places = [.. path.Select((place, i) => place is JsonArray { Count: 2 } pair
+                        ? InWindow(view, Pair(new JsonObject { ["p"] = pair.DeepClone() }, "p"))
+                        : throw new ArgumentException($"path: place {i} is not [x, y]"))];
+                    RefuseSystemDrag(places[0]);
+                    Input.DragThrough(places, WindowInput.ParseButton(arguments["button"]?.GetValue<string>()), (int)(Number(arguments, "steps") ?? 4), ModifiersOf(arguments));
+                    await LetInputSettleAsync();
+                    result["mouse"] = MouseAnswer();
+                    return true;
+                }
                 Point at = InWindow(view, Number(arguments, "x") ?? throw new ArgumentException("x is missing"), Number(arguments, "y") ?? throw new ArgumentException("y is missing"));
                 RawInputModifiers modifiers = ModifiersOf(arguments);
                 MouseButton button = WindowInput.ParseButton(arguments["button"]?.GetValue<string>());

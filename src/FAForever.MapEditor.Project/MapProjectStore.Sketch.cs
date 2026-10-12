@@ -58,8 +58,15 @@ namespace FAForever.MapEditor.Project
             return ReloadJson(document, file, ToDto(document.Sketch), (d, dto) => d with { Sketch = ToModel(dto, file) });
         }
 
+        /// <summary>
+        /// The newest version of the sketch's file this editor reads (2: symbols and labels).
+        /// </summary>
+        private const int SketchVersion = 2;
+
         private static SketchDto ToDto(Sketch sketch) => new SketchDto
         {
+            // version 1 while no sheet holds a symbol or a label: an older editor reads that file too
+            Version = sketch.Sheets.Any(sheet => !sheet.Symbols.IsEmpty || !sheet.Labels.IsEmpty) ? SketchVersion : 1,
             Sheets = [.. sketch.Sheets.Select(sheet => new SketchSheetDto
             {
                 Name = sheet.Name,
@@ -67,14 +74,29 @@ namespace FAForever.MapEditor.Project
                 Opacity = sheet.Opacity,
                 Legend = sheet.HasLegend ? [.. sheet.Legend] : null,
                 Strokes = [.. sheet.Strokes.Select(stroke => new SketchStrokeDto { Colour = stroke.Colour, Width = stroke.Width, Points = PointsText(stroke.Points) })],
+                Symbols = sheet.Symbols.IsEmpty ? null : [.. sheet.Symbols.Select(symbol => new SketchSymbolDto
+                {
+                    Kind = symbol.Kind,
+                    Place = PointsText([symbol.Place]),
+                    Colour = symbol.Colour,
+                    Size = MathF.Round(symbol.Size, 2),
+                    Turn = MathF.Round(symbol.Turn, 1) + 0f,
+                })],
+                Labels = sheet.Labels.IsEmpty ? null : [.. sheet.Labels.Select(label => new SketchLabelDto
+                {
+                    Text = label.Text,
+                    Place = PointsText([label.Place]),
+                    Colour = label.Colour,
+                    Size = MathF.Round(label.Size, 2),
+                })],
             })],
         };
 
         private static Sketch ToModel(SketchDto dto, string file)
         {
-            if (dto.Version > 1)
+            if (dto.Version > SketchVersion)
             {
-                throw new MapProjectException($"{file} is version {dto.Version} of the sketch's file; this editor reads version 1: update the editor");
+                throw new MapProjectException($"{file} is version {dto.Version} of the sketch's file; this editor reads versions 1 and {SketchVersion}: update the editor");
             }
             ImmutableArray<SketchSheet>.Builder sheets = ImmutableArray.CreateBuilder<SketchSheet>();
             foreach (SketchSheetDto sheet in dto.Sheets)
@@ -99,6 +121,17 @@ namespace FAForever.MapEditor.Project
                     Opacity = Math.Clamp(sheet.Opacity, 0, 1),
                     Legend = legend,
                     Strokes = [.. sheet.Strokes.Select(stroke => new SketchStroke(stroke.Colour, stroke.Width, ParsePoints(stroke.Points, file, sheet.Name)))],
+                    Symbols = [.. (sheet.Symbols ?? []).Select(symbol => new SketchSymbol(
+                        Enum.IsDefined(symbol.Kind) ? symbol.Kind : throw new MapProjectException($"{file}: the sheet '{sheet.Name}' has a symbol of a kind that does not exist"),
+                        ParsePoints(symbol.Place, file, sheet.Name)[0],
+                        symbol.Colour,
+                        Math.Clamp(symbol.Size, SketchLook.MinimumOgrids, SketchLook.MaximumOgrids),
+                        float.IsFinite(symbol.Turn) ? symbol.Turn : 0))],
+                    Labels = [.. (sheet.Labels ?? []).Select(label => new SketchLabel(
+                        label.Text ?? "",
+                        ParsePoints(label.Place, file, sheet.Name)[0],
+                        label.Colour,
+                        Math.Clamp(label.Size, SketchLook.MinimumOgrids, SketchLook.MaximumOgrids)))],
                 });
             }
             return new Sketch { Sheets = sheets.ToImmutable() };

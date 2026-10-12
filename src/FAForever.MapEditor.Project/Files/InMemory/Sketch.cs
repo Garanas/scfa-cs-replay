@@ -28,6 +28,17 @@ namespace FAForever.MapEditor.Project.Files.InMemory
     }
 
     /// <summary>
+    /// How large a symbol or a label is made by the tools' choices (user story N-4); the sketch itself keeps the
+    /// size in ogrids, so any number can be given to a command.
+    /// </summary>
+    public enum SketchSize
+    {
+        Small,
+        Medium,
+        Large,
+    }
+
+    /// <summary>
     /// The fixed values of the sketch's colours and widths, the same in both themes: they are map
     /// content, like a marker's colour.
     /// </summary>
@@ -81,6 +92,61 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         }
 
         /// <summary>
+        /// The width of the box of a symbol of a size, in ogrids.
+        /// </summary>
+        public static float SymbolOgrids(SketchSize size) => size switch
+        {
+            SketchSize.Small => 8,
+            SketchSize.Medium => 14,
+            SketchSize.Large => 24,
+            _ => throw new ArgumentOutOfRangeException(nameof(size)),
+        };
+
+        /// <summary>
+        /// The height of the letters of a label of a size, in ogrids.
+        /// </summary>
+        public static float LabelOgrids(SketchSize size) => size switch
+        {
+            SketchSize.Small => 10,
+            SketchSize.Medium => 16,
+            SketchSize.Large => 26,
+            _ => throw new ArgumentOutOfRangeException(nameof(size)),
+        };
+
+        /// <summary>
+        /// The least and the greatest size of a symbol or a label, in ogrids.
+        /// </summary>
+        public const float MinimumOgrids = 1, MaximumOgrids = 200;
+
+        /// <summary>
+        /// The size by its name (<c>large</c>).
+        /// </summary>
+        /// <exception cref="ArgumentException">No such size.</exception>
+        public static SketchSize ParseSize(string text) =>
+            Enum.TryParse(text.Trim(), ignoreCase: true, out SketchSize size) && Enum.IsDefined(size)
+                ? size
+                : throw new ArgumentException($"There is no size '{text}': {string.Join(", ", Enum.GetNames<SketchSize>().Select(name => name.ToLowerInvariant()))}, or a number of ogrids");
+
+        /// <summary>
+        /// The symbol by its name (<c>hydrocarbon</c>).
+        /// </summary>
+        /// <exception cref="ArgumentException">No such symbol.</exception>
+        public static SketchSymbolKind ParseSymbol(string text)
+        {
+            text = text.Trim();
+            string name = text.ToLowerInvariant() switch
+            {
+                "hydro" => nameof(SketchSymbolKind.Hydrocarbon),
+                "question mark" or "?" => nameof(SketchSymbolKind.Question),
+                "x" => nameof(SketchSymbolKind.Cross),
+                _ => text,
+            };
+            return Enum.TryParse(name, ignoreCase: true, out SketchSymbolKind kind) && Enum.IsDefined(kind)
+                ? kind
+                : throw new ArgumentException($"There is no symbol '{text}': {string.Join(", ", Enum.GetNames<SketchSymbolKind>().Select(n => n.ToLowerInvariant()))}");
+        }
+
+        /// <summary>
         /// The width by its name (<c>medium</c>).
         /// </summary>
         /// <exception cref="ArgumentException">No such width.</exception>
@@ -89,6 +155,32 @@ namespace FAForever.MapEditor.Project.Files.InMemory
                 ? width
                 : throw new ArgumentException($"There is no stroke width '{text}': {string.Join(", ", Enum.GetNames<SketchWidth>().Select(name => name.ToLowerInvariant()))}");
     }
+
+    /// <summary>
+    /// The six symbols a sheet can hold (user story N-4): what a map maker marks on a draft besides lines.
+    /// </summary>
+    public enum SketchSymbolKind
+    {
+        Spawn,
+        Mass,
+        Hydrocarbon,
+        Arrow,
+        Cross,
+        Question,
+    }
+
+    /// <summary>
+    /// A symbol stamped on a sheet (user story N-4): its kind, its centre in ogrids, its colour, its
+    /// size (the width of the box it fits in, in ogrids) and, for the arrow, which way it points.
+    /// </summary>
+    /// <param name="Turn">Degrees, 0 pointing to +x and growing clockwise on the top view (towards +z); only the arrow has a direction.</param>
+    public sealed record SketchSymbol(SketchSymbolKind Kind, Vector2 Place, SketchColour Colour, float Size, float Turn = 0);
+
+    /// <summary>
+    /// A label written on a sheet (user story N-4): a line of text centred on a place in ogrids, in a
+    /// colour, <paramref name="Size"/> ogrids high.
+    /// </summary>
+    public sealed record SketchLabel(string Text, Vector2 Place, SketchColour Colour, float Size);
 
     /// <summary>
     /// A stroke of the pencil: a line through places of the map, in ogrids, of one colour and width.
@@ -126,6 +218,26 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public ImmutableArray<SketchStroke> Strokes { get; init; } = [];
 
         /// <summary>
+        /// The symbols stamped on the sheet (user story N-4), in the order they were stamped.
+        /// </summary>
+        public ImmutableArray<SketchSymbol> Symbols { get; init; } = [];
+
+        /// <summary>
+        /// The labels written on the sheet (user story N-4), in the order they were written.
+        /// </summary>
+        public ImmutableArray<SketchLabel> Labels { get; init; } = [];
+
+        /// <summary>
+        /// Strokes, symbols and labels together.
+        /// </summary>
+        public int ItemCount => Strokes.Length + Symbols.Length + Labels.Length;
+
+        /// <summary>
+        /// Whether the sheet holds nothing to draw.
+        /// </summary>
+        public bool IsBlank => ItemCount == 0;
+
+        /// <summary>
         /// The opacity outside the Sketch mode of a new sheet.
         /// </summary>
         public const float DefaultOpacity = 0.45f;
@@ -146,9 +258,10 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public bool HasLegend => !Legend.IsDefaultOrEmpty && Legend.Any(text => text.Length > 0);
 
         /// <summary>
-        /// The colours some stroke of the sheet uses, in the legend's order.
+        /// The colours some stroke, symbol or label of the sheet uses, in the legend's order.
         /// </summary>
-        public IEnumerable<SketchColour> ColoursUsed => Strokes.Select(stroke => stroke.Colour).Distinct().Order();
+        public IEnumerable<SketchColour> ColoursUsed => Strokes.Select(stroke => stroke.Colour)
+            .Concat(Symbols.Select(symbol => symbol.Colour)).Concat(Labels.Select(label => label.Colour)).Distinct().Order();
     }
 
     /// <summary>
@@ -167,6 +280,11 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         /// The strokes of every sheet.
         /// </summary>
         public int StrokeCount => Sheets.Sum(sheet => sheet.Strokes.Length);
+
+        /// <summary>
+        /// The strokes, symbols and labels of every sheet.
+        /// </summary>
+        public int ItemCount => Sheets.Sum(sheet => sheet.ItemCount);
 
         /// <summary>
         /// The sheet of a name: the exact name first, then without regard to case; null when there is none.

@@ -232,6 +232,8 @@
   <!-- type: IBM Plex Sans for the text, IBM Plex Mono for numbers, coordinates and shortcuts (Assets/Fonts, EditorFonts) -->
   <FontFamily x:Key="SansFontFamily">fonts:Editor#IBM Plex Sans, $Default</FontFamily>
   <FontFamily x:Key="MonoFontFamily">fonts:Editor#IBM Plex Mono, $Default</FontFamily>
+  <!-- the sketch's labels in a hand-written style: Caveat (SIL Open Font License, Assets/Fonts/Caveat-OFL.txt), else a handwriting system font -->
+  <FontFamily x:Key="HandFontFamily">fonts:Editor#Caveat, Segoe Print, Bradley Hand, Comic Sans MS, cursive, $Default</FontFamily>
   <x:Double x:Key="FontSizeSmall">11</x:Double>
   <x:Double x:Key="FontSizeCaption">12</x:Double>
   <x:Double x:Key="FontSizeBody">13</x:Double>

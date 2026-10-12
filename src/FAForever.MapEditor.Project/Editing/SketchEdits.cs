@@ -142,13 +142,13 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
-        /// The document with every stroke of a sheet taken away; its legend stays.
+        /// The document with every stroke, symbol and label of a sheet taken away; its legend stays.
         /// </summary>
         /// <exception cref="ArgumentException">No such sheet.</exception>
         public static MapDocument ClearSheet(this MapDocument document, string sheet)
         {
             SketchSheet held = document.SheetNamed(sheet);
-            return held.Strokes.IsEmpty ? document : ChangeSheet(document, held, held with { Strokes = [] });
+            return held.IsBlank ? document : ChangeSheet(document, held, held with { Strokes = [], Symbols = [], Labels = [] });
         }
 
         private static string CheckedName(MapDocument document, string name, SketchSheet? except)
@@ -171,7 +171,7 @@ namespace FAForever.MapEditor.Project.Editing
 
         private static string Truncated(string name) => name.Length <= NameLength - 4 ? name : name[..(NameLength - 4)];
 
-        private static MapDocument ChangeSheet(MapDocument document, SketchSheet held, SketchSheet changed) =>
+        internal static MapDocument ChangeSheet(MapDocument document, SketchSheet held, SketchSheet changed) =>
             document with { Sketch = document.Sketch with { Sheets = document.Sketch.Sheets.SetItem(document.Sketch.Sheets.IndexOf(held), changed) } };
 
         #endregion
@@ -288,18 +288,44 @@ namespace FAForever.MapEditor.Project.Editing
                 throw new ArgumentException($"The eraser's radius is above 0 ogrids, not {radius}", nameof(radius));
             }
             SketchSheet held = document.SheetNamed(sheet);
-            if (path.Count == 0 || held.Strokes.IsEmpty)
+            if (path.Count == 0 || held.IsBlank)
             {
                 return document;
             }
 
             IReadOnlyList<ImmutableArray<Vector2>> paths = WithImages(path, parts);
             ImmutableArray<SketchStroke> strokes = held.Strokes;
+            ImmutableArray<SketchSymbol> symbols = held.Symbols;
+            ImmutableArray<SketchLabel> labels = held.Labels;
             foreach (ImmutableArray<Vector2> eraser in paths)
             {
                 strokes = EraseAlong(strokes, eraser, radius, whole, ref erased);
+                if (whole)
+                {
+                    // whole strokes (Alt) take the symbols and labels the eraser touches too (user story N-4)
+                    int before = symbols.Length + labels.Length;
+                    symbols = [.. symbols.Where(symbol => !Touched(SketchPicking.Bounds(symbol), eraser, radius))];
+                    labels = [.. labels.Where(label => !Touched(SketchLabels.Bounds(label), eraser, radius))];
+                    erased += before - symbols.Length - labels.Length;
+                }
             }
-            return erased == 0 ? document : ChangeSheet(document, held, held with { Strokes = strokes });
+            return erased == 0 ? document : ChangeSheet(document, held, held with { Strokes = strokes, Symbols = symbols, Labels = labels });
+        }
+
+        private static bool Touched((Vector2 Min, Vector2 Max) box, ImmutableArray<Vector2> path, float radius)
+        {
+            if (path.Length == 1)
+            {
+                return SketchPicking.Reaches(box, path[0], path[0], radius);
+            }
+            for (int i = 0; i + 1 < path.Length; i++)
+            {
+                if (SketchPicking.Reaches(box, path[i], path[i + 1], radius))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static ImmutableArray<SketchStroke> EraseAlong(ImmutableArray<SketchStroke> strokes, ImmutableArray<Vector2> path, float radius, bool whole, ref int erased)
@@ -394,6 +420,8 @@ namespace FAForever.MapEditor.Project.Editing
                 Sheets = [.. sketch.Sheets.Select(sheet => sheet with
                 {
                     Strokes = [.. sheet.Strokes.Select(stroke => stroke with { Points = [.. stroke.Points.Select(point => point + offset)] })],
+                    Symbols = [.. sheet.Symbols.Select(symbol => symbol with { Place = symbol.Place + offset })],
+                    Labels = [.. sheet.Labels.Select(label => label with { Place = label.Place + offset })],
                 })],
             };
         }
