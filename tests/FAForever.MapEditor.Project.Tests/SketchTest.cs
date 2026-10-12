@@ -42,6 +42,21 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void AnAddedStrokeExtendsTheLinesAndAnErasedOneDoesNot()
+        {
+            MapDocument map = Drawn(Map(), "A", Line(SketchColour.Red, (10, 10), (40, 40)));
+            System.Collections.Immutable.ImmutableArray<SketchLine> before = SketchLines.Of(map.Sketch.Sheets[0]);
+
+            MapDocument more = Drawn(map, "A", Line(SketchColour.Blue, (50, 50), (90, 50)));
+            System.Collections.Immutable.ImmutableArray<SketchLine> after = SketchLines.Of(more.Sketch.Sheets[0]);
+
+            Assert.AreEqual(2, after.Length);
+            Assert.IsTrue(SketchLines.Extends(before, after), "a view that drew the first lines only draws the added one");
+            Assert.IsFalse(SketchLines.Extends(after, before));
+            Assert.AreEqual(after, SketchLines.Of(more.Sketch.Sheets[0]), "the same sheet gives the same list again, made once");
+        }
+
+        [TestMethod]
         public void SheetsAreNamedUniquelyWithoutRegardToCase()
         {
             MapDocument document = Map().AddSheet(null, out string first).AddSheet("Layout A", out string second).AddSheet(null, out string third);

@@ -26,7 +26,14 @@ namespace FAForever.MapEditor.Project.Editing
         /// <summary>
         /// The lines of one sheet, in drawing order.
         /// </summary>
-        public static ImmutableArray<SketchLine> Of(SketchSheet sheet)
+        public static ImmutableArray<SketchLine> Of(SketchSheet sheet) => Made.GetValue(sheet, held => new Held(Make(held))).Lines;
+
+        // a sheet's lines, kept while the document holds that very sheet: the views ask every frame
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SketchSheet, Held> Made = [];
+
+        private sealed record Held(ImmutableArray<SketchLine> Lines);
+
+        private static ImmutableArray<SketchLine> Make(SketchSheet sheet)
         {
             ImmutableArray<SketchLine>.Builder lines = ImmutableArray.CreateBuilder<SketchLine>(sheet.Strokes.Length);
             foreach (SketchStroke stroke in sheet.Strokes)
