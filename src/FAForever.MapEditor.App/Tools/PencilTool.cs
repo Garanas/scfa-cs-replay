@@ -106,6 +106,12 @@ public sealed partial class PencilTool : ObservableObject, IMapTool
         {
             return;
         }
+        if (input.View is { IsTopDown: false })
+        {
+            // the 3D view shows no strokes yet (N-3): a line drawn there would only show in the top view
+            _model.Status = "Draw in the top view: the 3D view shows no sketch yet";
+            return;
+        }
         _points.Clear();
         _points.Add(new Vector2(x, z));
         _drawing = true;

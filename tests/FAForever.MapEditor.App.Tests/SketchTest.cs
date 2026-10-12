@@ -137,6 +137,22 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task The3DViewDrawsNoStrokesYet()
+        {
+            MainViewModel model = await Open();
+            ToolView threeD = new ToolView(false, null, _ => Vector2.Zero, _ => 1f);
+
+            model.Tool<PencilTool>().Press(50, 50, new ToolInput(ToolModifiers.None, 0.5f, View: threeD));
+            model.Tool<PencilTool>().Release();
+            model.Tool<EraserTool>().Press(50, 50, new ToolInput(ToolModifiers.None, 0.5f, View: threeD));
+            model.Tool<EraserTool>().Release();
+
+            Assert.IsTrue(Sketch(model).IsEmpty, "a stroke drawn there would only show in the top view");
+            Assert.IsNull(model.StrokeInProgress);
+            StringAssert.Contains(model.Status, "top view");
+        }
+
+        [TestMethod]
         public async Task ShiftDrawsAStraightLineAndSmoothThinsAWigglyOne()
         {
             MainViewModel model = await Open();

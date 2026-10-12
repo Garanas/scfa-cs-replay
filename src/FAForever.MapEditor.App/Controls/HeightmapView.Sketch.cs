@@ -22,7 +22,14 @@ namespace FAForever.MapEditor.App.Controls;
 /// </remarks>
 public sealed partial class HeightmapView
 {
-    private sealed record SketchRun(SketchColour Colour, SketchWidth Width, Geometry Geometry);
+    /// <summary>
+    /// Strokes of one colour and width that follow each other in a sheet, built as one geometry; at
+    /// most <see cref="StrokesPerRun"/>, so that a view zoomed in on a part of a large sketch draws only the
+    /// runs that lie in it (<paramref name="Bounds"/>, in ogrids).
+    /// </summary>
+    private sealed record SketchRun(SketchColour Colour, SketchWidth Width, Geometry Geometry, Rect Bounds, int Strokes);
+
+    private const int StrokesPerRun = 24;
 
     // a sheet's runs, kept while the document holds that very sheet
     private static readonly ConditionalWeakTable<SketchSheet, SketchRun[]> SketchRuns = [];
@@ -32,7 +39,7 @@ public sealed partial class HeightmapView
     /// <summary>
     /// How many strokes the last frame drew, and how many sheets (for tests and automation).
     /// </summary>
-    public (int Sheets, int Strokes, int Pending) SketchDrawn { get; private set; }
+    public (int Sheets, int Strokes, int Culled, int Pending) SketchDrawn { get; private set; }
 
     private SolidColorBrush SketchBrush(SketchColour colour)
     {
@@ -49,7 +56,11 @@ public sealed partial class HeightmapView
         using Performance.Span measure = Performance.Measure("top.sketch");
         int sheets = 0;
         int strokes = 0;
+        int culled = 0;
         bool full = model.InSketchMode;
+        // what lies in the view, in ogrids, with a stroke's half width around it
+        Rect visible = new Rect(ControlToMap(default), ControlToMap(new Point(Bounds.Width, Bounds.Height)));
+        visible = visible.Inflate(SketchLook.Pixels(SketchWidth.Thick) / _zoom);
         if (model.ShowSketch)
         {
             foreach (SketchSheet sheet in document.Sketch.Sheets)
@@ -71,6 +82,11 @@ public sealed partial class HeightmapView
                 {
                     foreach (SketchRun run in runs)
                     {
+                        if (!run.Bounds.Intersects(visible))
+                        {
+                            culled += run.Strokes;
+                            continue;
+                        }
                         context.DrawGeometry(null, SketchPen(run.Colour, run.Width, dashed: false), run.Geometry);
                     }
                 }
@@ -90,7 +106,7 @@ public sealed partial class HeightmapView
                 }
             }
         }
-        SketchDrawn = (sheets, strokes, pending);
+        SketchDrawn = (sheets, strokes, culled, pending);
         if (model.ShowSketch)
         {
             DrawSketchKey(context, document, model);
@@ -112,19 +128,27 @@ public sealed partial class HeightmapView
         {
             SketchStroke first = sheet.Strokes[from];
             int to = from;
-            while (to < sheet.Strokes.Length && sheet.Strokes[to].Colour == first.Colour && sheet.Strokes[to].Width == first.Width)
+            while (to < sheet.Strokes.Length && to - from < StrokesPerRun && sheet.Strokes[to].Colour == first.Colour && sheet.Strokes[to].Width == first.Width)
             {
                 to++;
             }
             StreamGeometry geometry = new StreamGeometry();
+            float left = float.MaxValue, top = float.MaxValue, right = float.MinValue, bottom = float.MinValue;
             using (StreamGeometryContext figures = geometry.Open())
             {
                 for (int i = from; i < to; i++)
                 {
                     AddFigure(figures, sheet.Strokes[i]);
+                    foreach (System.Numerics.Vector2 point in sheet.Strokes[i].Points)
+                    {
+                        left = Math.Min(left, point.X);
+                        top = Math.Min(top, point.Y);
+                        right = Math.Max(right, point.X);
+                        bottom = Math.Max(bottom, point.Y);
+                    }
                 }
             }
-            runs.Add(new SketchRun(first.Colour, first.Width, geometry));
+            runs.Add(new SketchRun(first.Colour, first.Width, geometry, new Rect(new Point(left, top), new Point(right, bottom)), to - from));
             from = to;
         }
         return [.. runs];

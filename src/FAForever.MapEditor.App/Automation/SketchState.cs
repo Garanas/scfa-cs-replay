@@ -73,6 +73,7 @@ internal static class SketchState
             {
                 ["sheets"] = top.SketchDrawn.Sheets,
                 ["strokes"] = top.SketchDrawn.Strokes,
+                ["culled"] = top.SketchDrawn.Culled,
                 ["pending"] = top.SketchDrawn.Pending,
             },
         };
