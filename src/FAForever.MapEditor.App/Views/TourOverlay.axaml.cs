@@ -23,6 +23,7 @@ public sealed partial class TourOverlay : UserControl
     private Control? _tracked;
     private Window? _window;
     private int _version;
+    private Task _latest = Task.CompletedTask;
     private bool _refreshPosted;
 
     public TourOverlay()
@@ -125,13 +126,14 @@ public sealed partial class TourOverlay : UserControl
     /// <summary>
     /// Finds the step's target and draws the step: the hole, the ring and the card. What the tour's commands wait for.
     /// </summary>
-    private async Task ShowAsync()
+    private Task ShowAsync() => _latest = ShowCoreAsync(++_version);
+
+    private async Task ShowCoreAsync(int version)
     {
         if (_model is not MainViewModel model || TopLevel.GetTopLevel(this) is not MainWindow window)
         {
             return;
         }
-        int version = ++_version;
         TourViewModel tour = model.Tour;
         if (!tour.IsRunning)
         {
@@ -140,11 +142,16 @@ public sealed partial class TourOverlay : UserControl
             Spotlight.LetThrough = false;
             return;
         }
-        _locator ??= new TourLocator(window, model, tour.Ledger) { Overlay = Spotlight };
+        _locator ??= new TourLocator(window, model, tour.Ledger) { Overlay = this };
         using Performance.Span measure = Performance.Measure("tour.show");
         TourPlace place = await _locator.ResolveAsync(tour.Step?.Target);
         if (version != _version || !tour.IsRunning)
         {
+            // a newer look at the step is on its way: whoever waited for this one waits for that
+            if (version != _version && _latest is { } newer)
+            {
+                await newer;
+            }
             return;
         }
         Apply(window, tour, place);

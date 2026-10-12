@@ -28,8 +28,8 @@ public sealed class TourSpotlight : Control, ICustomHitTest
     /// </summary>
     public static readonly StyledProperty<bool> LetThroughProperty = AvaloniaProperty.Register<TourSpotlight, bool>(nameof(LetThrough));
 
-    private IBrush _scrim = Brushes.Transparent;
-    private IBrush _ring = Brushes.Transparent;
+    private IBrush? _scrim;
+    private IBrush? _ring;
     private double _ringThickness = 2;
     private double _padding = 4;
     private double _radius = 6;
@@ -79,8 +79,8 @@ public sealed class TourSpotlight : Control, ICustomHitTest
 
     private void ReadTokens()
     {
-        _scrim = Token("TourScrimBrush", _scrim);
-        _ring = Token("TourRingBrush", _ring);
+        _scrim = Token<IBrush?>("TourScrimBrush", _scrim);
+        _ring = Token<IBrush?>("TourRingBrush", _ring);
         _ringThickness = Token("TourRingThickness", _ringThickness);
         _padding = Token("TourHolePadding", _padding);
         _radius = Token("TourHoleRadius", _radius);

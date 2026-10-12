@@ -25,7 +25,7 @@ public sealed class TourLocator(MainWindow window, MainViewModel model, TourLayo
     private readonly UiLocator _locator = new UiLocator(window, model);
 
     /// <summary>
-    /// A layer over the window that lets the mouse through at the target (the tour's scrim): the check
+    /// The tour's overlay, which lies over the window (dimming and card): the check
     /// that the mouse reaches the target looks through it.
     /// </summary>
     public Visual? Overlay { get; set; }

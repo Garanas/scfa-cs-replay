@@ -135,7 +135,7 @@ public sealed class UiLocator(MainWindow window, MainViewModel model)
     /// when it would: outside the window, or another control on top there (clipped by a scroll
     /// viewer, under the views, behind a panel).
     /// </summary>
-    /// <param name="ignore">A layer that lies over everything and lets the mouse through where the control is (the tour's scrim).</param>
+    /// <param name="ignore">A layer that lies over everything, with what it holds, and lets the mouse through where the control is (the tour's dimming and card).</param>
     public static string? WhyUnreachable(TopLevel top, Control control, Point point, Visual? ignore = null)
     {
         if (!new Rect(top.Bounds.Size).Contains(point))
@@ -146,7 +146,7 @@ public sealed class UiLocator(MainWindow window, MainViewModel model)
         {
             return "it is hidden";
         }
-        IInputElement? hit = ignore is null ? top.InputHitTest(point) : top.InputHitTest(point, visual => visual != ignore);
+        IInputElement? hit = ignore is null ? top.InputHitTest(point) : top.InputHitTest(point, visual => visual != ignore && !ignore.IsVisualAncestorOf(visual));
         if (hit is Visual visual && (visual == control || control.IsVisualAncestorOf(visual)))
         {
             return null;
