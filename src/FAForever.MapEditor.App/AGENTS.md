@@ -1571,6 +1571,14 @@ change, span `model.armies`), the place tool and the commands.
   toParent, toArmy?}` nests a group. The inspector's unit section shows the selection's army
   (choosing another runs `units.moveToArmy {army, group?}`) and group. A path is `INITIAL/Town`,
   empty for the root.
+- **What follows the map** (`MainViewModel.Units.cs`, `ArmiesViewModel.ForgetMap`, `UnitPlaceTool.ForgetMap`): another map
+  (not a resize of the same one) leaves nothing of the one before: the tree has no group or army chosen and no node
+  expanded, and the place tool's army is the default of the map shown (`ArmyChosen` false) with the group `INITIAL`.
+  The stored selections are read once per map (`MainViewModel.UnitSelection.cs`); a resize keeps them. A units preset
+  deleted from the workspace is no longer what the place tool places (`UnitPlaceTool.ClearPreset`, the unit chosen
+  before is), and no slot is lit for it. A palette made, renamed or deleted is the palette the user's settings keep.
+  The inspector's Army choice of selected units shows a dash while they belong to different armies, as the Group
+  choice does. Tests: `UnitsConsistencyTest`.
 - **Units presets** (`Tools/UnitPreset`, kind `units`, the Units mode's Unit presets, each with how many
   units it places, `Controls/PresetDetailConverter`): Save keeps the
   selected units, else the chosen group's, with places relative to their middle (on a whole

@@ -548,6 +548,24 @@ public sealed partial class ArmiesViewModel : ObservableObject
         NotifyInstanceChosen();
     }
 
+    /// <summary>
+    /// Forgets what was chosen, expanded and typed for the map that was open: another map shows its
+    /// tree and armies as they come, nothing chosen.
+    /// </summary>
+    public void ForgetMap()
+    {
+        _shown = null;
+        _treeKey = "";
+        _expanded.Clear();
+        Tree = [];
+        _chooseGroup = null;
+        _chooseArmy = null;
+        ChosenGroup = null;
+        ChosenArmy = null;
+        GroupName = "";
+        NewGroupName = "";
+    }
+
     private void RefreshRows(MapDocument? document)
     {
         if (document is null)

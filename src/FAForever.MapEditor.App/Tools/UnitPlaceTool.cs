@@ -163,6 +163,16 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
     }
 
     /// <summary>
+    /// Stops placing a preset (its file is gone): the unit chosen before is what a click places.
+    /// </summary>
+    public void ClearPreset()
+    {
+        _outlines = [];
+        PresetRole = null;
+        Preset = null;
+    }
+
+    /// <summary>
     /// What the unit button of the options row reads: the preset or unit's name.
     /// </summary>
     public string UnitButtonText => Preset is string preset ? preset : Unit is AssetEntry unit ? unit.Name : "Choose a unit";
@@ -756,6 +766,34 @@ public sealed partial class UnitPlaceTool : ObservableObject, IMapTool, IAssetDr
             }
         }
         RefreshGroups(document);
+    }
+
+    /// <summary>
+    /// Forgets the army and group of the map that was open: the next <see cref="Refresh"/> picks the
+    /// army that suits the map shown (<see cref="DefaultArmy"/>) and places into its <c>INITIAL</c>.
+    /// </summary>
+    public void ForgetMap()
+    {
+        _defaulting = true;
+        try
+        {
+            Army = null;
+        }
+        finally
+        {
+            _defaulting = false;
+        }
+        ArmyChosen = false;
+        _following = true;
+        try
+        {
+            Groups = [];
+            RefreshGroupsCore(model.ShownDocument);
+        }
+        finally
+        {
+            _following = false;
+        }
     }
 
     /// <summary>

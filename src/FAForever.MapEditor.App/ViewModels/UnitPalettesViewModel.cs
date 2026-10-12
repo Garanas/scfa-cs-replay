@@ -430,6 +430,7 @@ public sealed partial class UnitPalettesViewModel : ObservableObject
         Chosen = null;
         _remembered = made;
         Refresh();
+        Remember();
         return made;
     }
 
@@ -470,6 +471,7 @@ public sealed partial class UnitPalettesViewModel : ObservableObject
             _remembered = renamed;
         }
         Refresh();
+        Remember();
         return renamed;
     }
 
@@ -488,6 +490,7 @@ public sealed partial class UnitPalettesViewModel : ObservableObject
         library.Delete(UnitPalettes.Kind, preset.Name);
         _log.LogInformation("Deleted the palette {Palette}", preset.Name);
         Refresh();
+        Remember();
         return preset.Name;
     }
 

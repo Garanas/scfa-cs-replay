@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using FAForever.MapEditor.App.Diagnostics;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Workspaces;
@@ -106,12 +107,21 @@ public sealed partial class MainViewModel
     public StoredSelectionsViewModel StoredSelections { get; private set; } = null!;
 
     private long _storedRefreshedAt;
+    private EditedMap? _storedFor;
 
     private void InitializeUnitSelection()
     {
         SelectBy = new SelectByViewModel(this);
         StoredSelections = new StoredSelectionsViewModel(this, Logger("Selection"));
-        MapChanged += (_, _) => StoredSelections.Open(Map?.ProjectFolder);
+        // another map has its own stored selections; a resize of the same map keeps them
+        MapChanged += (_, _) =>
+        {
+            if (!ReferenceEquals(Map, _storedFor))
+            {
+                _storedFor = Map;
+                StoredSelections.Open(Map?.ProjectFolder);
+            }
+        };
         DocumentChanged += (_, _) =>
         {
             if (StoredSelections.HasChips && !ThrottledDuringStroke(ref _storedRefreshedAt))
