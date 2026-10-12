@@ -101,6 +101,8 @@ public sealed class TourLocator(MainWindow window, MainViewModel model, TourLayo
 
     private async Task<TourPlace> ResolveLabelAsync(TourTarget target)
     {
+        // what the step's commands changed (the mode's panel, a tool's options) is laid out after a frame
+        await SettleAsync();
         IReadOnlyList<Control> matches = _locator.Matches(target.Label!, target.Type, target.Under);
         if (matches.Count == 0)
         {
@@ -130,7 +132,18 @@ public sealed class TourLocator(MainWindow window, MainViewModel model, TourLayo
         ToolRow.Reveal(control);
         control.BringIntoView();
         await SettleAsync();
-        return Place(control, "control", reach: true);
+        TourPlace place = Place(control, "control", reach: true);
+        for (int attempt = 0; attempt < 4 && place.Why is not null; attempt++)
+        {
+            // a list made again after the step's commands replaces its rows, and a panel just made is hit-tested some frames after its layout: look for the control again
+            await Task.Delay(60);
+            await SettleAsync();
+            control = _locator.Matches(target.Label!, target.Type, target.Under).ElementAtOrDefault(index) ?? control;
+            control.BringIntoView();
+            await SettleAsync();
+            place = Place(control, "control", reach: true);
+        }
+        return place;
     }
 
     private async Task<TourPlace> ResolveMapAsync(TourTarget target)
@@ -168,8 +181,20 @@ public sealed class TourLocator(MainWindow window, MainViewModel model, TourLayo
             return TourPlace.Missing("it has no area in the window", kind);
         }
         string? why = reach ? UiLocator.WhyUnreachable(window, control, bounds.Center, Overlay) : null;
+        if (why is not null && control is ItemsControl && ReachesAnItemOf(window, control))
+        {
+            // a list lets the mouse through between its rows: reached where one of them is
+            why = null;
+        }
         return new TourPlace(true, bounds, why, kind, control);
     }
+
+    /// <summary>
+    /// Whether the mouse reaches a button, a tree item or a list item inside a list at its centre.
+    /// </summary>
+    private bool ReachesAnItemOf(Window top, Control list) =>
+        list.GetVisualDescendants().OfType<Control>().Any(item => item is Button or TreeViewItem or ListBoxItem
+            && item.IsEffectivelyVisible && BoundsOf(item) is Rect bounds && UiLocator.WhyUnreachable(top, item, bounds.Center, Overlay) is null);
 
     /// <summary>
     /// The movable panel a control lies in: the mode's panel, the inspector, the dock, or the panel of a

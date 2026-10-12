@@ -6,6 +6,7 @@ using FAForever.MapEditor.App.Automation;
 using FAForever.MapEditor.App.Tours;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.App.Views;
+using FAForever.MapEditor.Project.Workspaces;
 
 namespace FAForever.MapEditor.App.Tests
 {
@@ -49,8 +50,16 @@ namespace FAForever.MapEditor.App.Tests
             folder ??= ToursFolder();
             MainWindow window = new MainWindow { Width = width, Height = height };
             MainViewModel model = new MainViewModel(new WindowDialogs(window));
+            // the palette the Units tour places from: slot 3 is the Aeon Mass Extractor, as in the workspace's example palette
+            PresetLibrary presets = new PresetLibrary(Path.Combine(AppContext.BaseDirectory, "presets", Guid.NewGuid().ToString("N")));
+            presets.Save(UnitPalettes.ToPreset("Aeon T1 base", UnitPalettes.SetSlot(UnitPalettes.Empty, 2, UnitPaletteSlot.OfUnit("uab1103"))));
+            model.Presets.Use(presets);
             await model.OpenAsync(TestAssets.SandboxProject());
-            model.Assets.Use(TestAssets.Catalog());
+            string assets = TestAssets.Folder();
+            string unit = Path.Combine(assets, "units", "uab1103", "uab1103_unit.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(unit)!);
+            File.WriteAllText(unit, """{ "id": "UAB1103", "name": "Mass Extractor", "faction": "Aeon", "categories": ["AEON", "STRUCTURE"], "footprint": { "sizeX": 1, "sizeZ": 1 } }""");
+            model.Assets.Use(AssetCatalog.Load(assets));
             window.DataContext = model;
             window.Show();
             model.Tour.Open(folder);
@@ -193,7 +202,7 @@ namespace FAForever.MapEditor.App.Tests
 
                     await WithFrames(model.Tour.DoItAsync());
 
-                    Assert.IsTrue(model.Tour.IsDone, $"{at}: Do it for me did not make {each.Until!.Path} = {each.Until.Value}");
+                    Assert.IsTrue(model.Tour.IsDone, $"{at}: Do it for me did not make {each.Until!.Path} = {each.Until.Value} (problem: {model.Tour.Problem}; status: {model.Status}; value: {TourState.Read(model, each.Until.Path)})");
                     Assert.IsTrue(model.Tour.ShowsDone, at);
                     Assert.IsNull(model.Tour.Problem, at);
                     await WithFrames(model.Tour.EndAsync());
@@ -346,11 +355,15 @@ namespace FAForever.MapEditor.App.Tests
             Dispatcher.UIThread.RunJobs();
             JsonObject state = (JsonObject)await automation.HandleAsync("state", []);
 
-            foreach (string path in new[] { "tab", "mode", "tool", "dock", "palette", "selection.count", "show.markers", "layout.modePanel", "layout.inspector", "layout.dock", "undo" })
+            foreach (string path in new[] { "tab", "mode", "tool", "dock", "palette", "selection.count", "show.markers", "layout.modePanel", "layout.inspector", "layout.dock", "units.place.unit", "undo" })
             {
                 Assert.AreEqual(AutomationServer.At(state, path)?.ToJsonString(), TourState.Read(model, path)?.ToJsonString(), $"the path {path}");
             }
-            Assert.IsTrue(TourState.Known("show.grid") && !TourState.Known("nothing.here"));
+            foreach (JsonNode? row in (JsonArray)state["procedural"]!["rows"]!)
+            {
+                Assert.AreEqual(row!["state"]!.GetValue<string>(), TourState.Read(model, $"generated.{row["id"]!.GetValue<string>()}")!.GetValue<string>(), $"the result {row["id"]}");
+            }
+            Assert.IsTrue(TourState.Known("show.grid") && TourState.Known("generated.walkability") && !TourState.Known("nothing.here"));
             window.Close();
         });
 

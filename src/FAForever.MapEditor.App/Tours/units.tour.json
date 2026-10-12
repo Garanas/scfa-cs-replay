@@ -1,0 +1,91 @@
+{
+  "id": "units",
+  "title": "A tour of the Units mode",
+  "summary": "Armies, groups and units: the palette, placing one unit, placing many, and presets.",
+  "order": 60,
+  "needs": ["Map"],
+  "start": [{ "run": "units.mode" }, { "run": "view.top" }],
+  "steps": [
+    {
+      "id": "welcome",
+      "title": "Units",
+      "text": "The Units mode puts units on the map: each army's starting base, civilians, and wrecks. About ten steps. You will place one unit yourself; Undo takes it away again."
+    },
+    {
+      "id": "panel",
+      "target": { "part": "panel" },
+      "title": "The mode's panel",
+      "text": "The tools, a palette of ten slots to place from, the armies with their groups, and below them presets: ready-made settlements and wreck fields."
+    },
+    {
+      "id": "tools",
+      "target": { "label": "Tools" },
+      "title": "Two tools",
+      "text": "Place puts a unit where you click. Select picks units to move, turn, group or delete. Double click a unit to select its whole group."
+    },
+    {
+      "id": "palette",
+      "target": { "label": "Palette slots" },
+      "title": "The palette",
+      "text": "Ten slots of units you place often. Keys 1 to 9 and 0 pick a slot while the mouse is over a view; Tab changes the palette. A unit tile dragged from the Assets tab onto a slot keeps it there."
+    },
+    {
+      "id": "tree",
+      "target": { "label": "Armies and their unit groups" },
+      "title": "Armies and groups",
+      "text": "Every army has groups. INITIAL holds the units the game creates at the start, WRECKAGE the wrecks. The group you choose here is where the Place tool puts units. Choose an army or a group to edit it in the inspector."
+    },
+    {
+      "id": "options",
+      "target": { "part": "options" },
+      "before": [{ "run": "tool.units.place" }],
+      "title": "The Place tool's settings",
+      "text": "How to place, the unit, its army and its group come first. Behind More are the facing, the spacing and As wrecks. Q and E turn what you place."
+    },
+    {
+      "id": "choose-unit",
+      "target": { "label": "Palette slots" },
+      "before": [{ "run": "tool.units.place" }],
+      "title": "Try it: choose a unit",
+      "text": "Click slot 3, the Mass Extractor. The Place tool then places that unit.",
+      "until": { "path": "units.place.unit", "value": "uab1103" },
+      "doItForMe": { "run": "units.slot", "n": 3 },
+      "done": "The Place tool has the Mass Extractor. Choose a unit is the other way: it opens the picker with every unit of the workspace."
+    },
+    {
+      "id": "place-unit",
+      "target": { "label": "Top view" },
+      "before": [{ "run": "view.top" }, { "run": "tool.units.place" }],
+      "title": "Try it: place the unit",
+      "text": "Click on the map. A structure snaps to the build grid.",
+      "until": { "path": "undo", "value": "Place a unit" },
+      "doItForMe": { "run": "units.add", "blueprint": "uab1103", "x": 96, "z": 96 },
+      "done": "That is one unit, one step of Undo. Its army is the one whose spawn lies nearest the middle of the view.",
+      "guide": { "after": true }
+    },
+    {
+      "id": "how",
+      "target": { "label": "How to place" },
+      "before": [{ "run": "tool.units.place" }],
+      "title": "Many at once",
+      "text": "Single places one unit. Line and Rectangle are dragged out, Ring surrounds the selected structures, and Scatter paints units in a circle. The footprints show under the mouse before you click, in red where they would overlap."
+    },
+    {
+      "id": "inspector",
+      "target": { "part": "inspector" },
+      "title": "The inspector edits the units",
+      "text": "Edits what you chose last. A unit picked with the Select tool shows its army, group and blueprint, Replace, the faction chips, Group, Ungroup and the Wrecks check box. An army or group chosen in the tree shows its name, its units and Add a group. The unit the Place tool has shows on its tile."
+    },
+    {
+      "id": "presets",
+      "target": { "label": "Filter of the unit presets" },
+      "title": "Unit presets",
+      "text": "A preset is a saved group of units. The editor ships villages, farms and wreck fields; Save keeps your own. Click a preset to choose it, then click on the map to place it as a new group."
+    },
+    {
+      "id": "end",
+      "title": "That is the Units mode",
+      "text": "The Map mode holds the armies' teams and factions. Help, Tours starts this tour again and lists the others."
+    }
+  ]
+}

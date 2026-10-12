@@ -660,8 +660,11 @@ own sit beside the editor's.
       not written again, an untouched older copy is brought up to date) and read again when a file
       there changes. On the first start, once a map is open, a card at the window's corner offers the
       tour of the window (Start, Not now, Don't ask again; kept in `tours/.progress.json` with the
-      tours finished). The tour of the window (twelve steps) is the first. Missing: the tours of the
-      modes (Terrain, Masks, Paint, Markers, Units, Procedural with the export).
+      tours finished). The tour of the window (twelve steps) is the first; the tours of the Markers
+      (place a mass deposit), Units (choose a unit from the palette, place it) and Procedural modes
+      (generate the walkability, preview it; the export's steps and the File menu's Export to the vault
+      and Upload to the vault, which it rings and explains and never runs) follow it. Missing: the
+      tours of the Terrain, Masks and Paint modes.
 - [ ] **H-2 A guide made from the tours.** `faf-map guide` plays the tours in a test editor and writes a
       static guide (HTML and Markdown in `docs/guide`) with a picture per step, the target ringed and
       numbered, made again when the window changes. Missing: all of it.

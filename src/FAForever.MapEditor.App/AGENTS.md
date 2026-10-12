@@ -2880,7 +2880,8 @@ step points at and explains it on a card. Code: `Tours/` (the format, the catalo
   again when it runs. A tour about the export rings the button and explains it; the person presses it. A command
   that cannot run now says why on the card (`state.tour.problem`).
 - **What a step waits for** (`TourState`): `until.path` is a path of automation's state (`tab`, `mode`, `tool`,
-  `dock`, `palette`, `selection.count`, `show.<overlay>`, `layout.modePanel`, `layout.inspector`, `layout.dock`,
+  `dock`, `palette`, `selection.count`, `show.<overlay>`, `generated.<result>` (a generated result's status by the id of its row: `walkability`, `Missing`, `Current`),
+  `units.place.unit` (the Place tool's unit), `layout.modePanel`, `layout.inspector`, `layout.dock`,
   `undo`), read cheaply from the model without automation, with the same values (`TourTest` compares them with
   `state`); a path a tour may wait on is added to `TourState`, not read from the whole state. The condition is
   looked at when a command completes, the document changes or the view, mode, tool, dock or layout changes, at
@@ -2920,8 +2921,14 @@ step points at and explains it on a card. Code: `Tours/` (the format, the catalo
   Do it for me making `until` true; `TourWindowTest` the overlay in the window (the hole, Escape, a hidden or
   floating panel back and away again). A change to a control a tour points at (its label, where it lies)
   fails the build at the step to rewrite; the checklist's last item covers the text.
-- Not built yet: the tours of the modes (Terrain, Masks, Paint, Markers, Units, Procedural with the export),
-  the generated guide (`faf-map guide`, H-2) and recording a tour (H-3).
+- **The tours of the modes** (`markers`, `units`, `procedural`, orders 50 to 70): each starts by choosing its mode,
+  and asks the person to act where it is cheap and safe (a mass deposit, a unit, the walkability; one step of undo
+  or no change to the map's data), with `until` and Do it for me. A step that points at a list targets the list
+  by its label (`Tools`; `TourLocator` accepts a list the mouse reaches through one of its rows),
+  a control with a label that occurs twice by `type` and `index`. A menu's entries lie in popups a tour cannot ring:
+  the step rings the menu's header (`File`) and names the entry. The Procedural tour never runs `file.export` or
+  `file.upload`. `TourTest.Open` gives the test window a palette (slot 3 is `uab1103`) for the Units tour.
+- Not built yet: the tours of the Terrain, Masks and Paint modes, the generated guide (`faf-map guide`, H-2) and recording a tour (H-3).
 
 ## Small rules of editing, looks and speed
 
