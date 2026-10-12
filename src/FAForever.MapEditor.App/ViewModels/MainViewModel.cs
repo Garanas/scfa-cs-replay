@@ -161,6 +161,8 @@ public sealed partial class MainViewModel : ObservableObject
         Presets.UseStars(Assets);
         SavedBack = new SavedBackPresets(Logger("Presets"));
         MapChanged += (_, _) => SavedBack.Clear();
+        InitializeSketch();
+        InitializeImages();
         InitializeShell();
         InitializeSelection();
         InitializeSelectionTools();

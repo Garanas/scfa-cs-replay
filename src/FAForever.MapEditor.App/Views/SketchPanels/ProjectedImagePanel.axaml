@@ -1,0 +1,40 @@
+<!-- The chosen projected image in the Sketch mode's inspector (N-2): its picture's size in pixels, its name, opacity, centre, size and
+     turn, Fit to map and Fit to playable area, how it looks (Keep proportions, Greyscale, Locked, below or above the sketch), and
+     Replace the picture... and Remove. Nothing shows while no image is chosen. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.SketchPanels.ProjectedImagePanel"
+             x:DataType="vm:MainViewModel">
+  <StackPanel IsVisible="{Binding Images.HasChosen}" AutomationProperties.Name="Projected image">
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="heading" Text="{Binding Images.ChosenName, StringFormat='Image: {0}'}" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Chosen image" />
+        <TextBlock Classes="caption" Text="{Binding Images.PictureText}" AutomationProperties.Name="The chosen image's picture" />
+        <controls:SettingList DataContext="{Binding Images.Place}" ShowsTitle="False" />
+        <WrapPanel Classes="chips">
+          <Button Content="Fit to map" Command="{Binding RunCommand}" CommandParameter="images.fitToMap"
+                  AutomationProperties.Name="Fit the image to the map"
+                  AutomationProperties.HelpText="In the middle, not turned, as large as the map lets it be with the picture's proportions" />
+          <Button Content="Fit to playable area" Command="{Binding RunCommand}" CommandParameter="images.fitToPlayableArea"
+                  AutomationProperties.Name="Fit the image to the playable area"
+                  AutomationProperties.HelpText="As Fit to map, to the playable area; the whole map when it has no area" />
+        </WrapPanel>
+      </StackPanel>
+    </Border>
+    <Border Classes="group">
+      <StackPanel Classes="stack">
+        <TextBlock Classes="heading" Text="Look" />
+        <controls:SettingList DataContext="{Binding Images.Look}" ShowsTitle="False" />
+        <WrapPanel Classes="chips">
+          <Button Content="Replace the picture..." Command="{Binding RunCommand}" CommandParameter="images.replace"
+                  AutomationProperties.Name="Replace the image's picture"
+                  AutomationProperties.HelpText="Another picture in the same place, width and turn" />
+          <Button Content="Remove" Command="{Binding RunCommand}" CommandParameter="images.remove"
+                  AutomationProperties.Name="Remove the chosen image" />
+        </WrapPanel>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

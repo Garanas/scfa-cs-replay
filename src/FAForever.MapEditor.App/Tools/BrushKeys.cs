@@ -158,6 +158,13 @@ public static class BrushKeys
                 place.Radius = RadiusStep(place.Radius, steps);
                 status = Say("Radius", place.Radius, "0", " ogrids");
                 return true;
+            // the sketch's eraser (N-1): its radius; the pencil: its width, one of three
+            case EraserTool eraser when !strength:
+                status = $"Eraser radius: {eraser.StepRadius(steps).ToString("0", CultureInfo.InvariantCulture)} ogrids";
+                return true;
+            case PencilTool pencil:
+                status = $"Pencil width: {pencil.StepWidth(steps).ToString().ToLowerInvariant()}";
+                return true;
             default:
                 return false;
         }

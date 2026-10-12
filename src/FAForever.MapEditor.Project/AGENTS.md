@@ -603,6 +603,51 @@ User story M-8 (`Vault/`). How FAForever takes a map, from the source of the
 - Each stratum mask texture holds four layers, one per channel (red, green, blue, alpha): layer 1
   to 4 in the first, 5 to 8 in the second. A project keeps one grey PNG per layer.
 
+## The sketch's images (N-2)
+
+The map maker's own pictures, laid over the map in the top view to trace or build towards: a
+drawing, a screenshot of another map. A guide only. They live in the project's `sketch/` folder
+with the sketch itself (N-1, where the strokes are), are optional (a project without them reads as
+one with none, so the project format keeps its version), and are never exported: not in the game's
+files, not in `files/`. Brushes, masks, generators and checks never read them.
+
+- **Model**: `MapDocument.Images`, an `ImmutableArray<ProjectedImage>` in drawing order (the first
+  lowest). An image has a `Name` (letters, digits, spaces, dashes and underscores, which no other
+  image has in any case: it is also the name of its file, and Windows compares file names without
+  case; `ProjectedImages.Problem` says why a name is refused), its picture as PNG bytes
+  (`Picture`, with `PixelWidth` and `PixelHeight`), its `CentreX`, `CentreZ`, `Width` and `Height` in
+  ogrids (before the turn), `Turn` in degrees clockwise as the top view shows it, `Opacity` 0 to 1,
+  `Greyscale`, `Locked` (only the mouse honours it, the fields still change the image), `Shown`,
+  `AboveSketch` (over the sketch's strokes rather than under them) and `KeepProportions` (scaling a
+  corner and fitting keep the picture's proportions).
+- **Files**: `sketch/images.json` lists the images in order (`ProjectedImageDto`), each picture is
+  `sketch/images/<name>.png` (`MapProjectLayout.Image`). `MapProjectStore.Images.cs` writes both
+  only for a map with images, writes a picture only when its bytes changed (the document keeps the
+  same array while an image is moved, scaled or turned, so a drag writes the JSON alone), removes the
+  pictures of images that went (or were renamed) and the folder with the last one. Loading reads
+  the pictures' sizes without decoding them; a picture that is missing or no picture is a
+  `MapProjectException` naming the file (an optional file that silently went missing would be
+  written away by the next save). `Reload` reads `sketch/images.json` and `sketch/images/` again
+  when another tool changes them and returns the document itself when they say what it holds.
+- **Reading a picture** (`ProjectedImages.Read`): any format ImageMagick reads, turned upright by
+  its orientation tag, scaled down to `MaxPixels` (4096) on the longer side when larger, and kept as
+  an 8-bit PNG; an unreadable file is a `MapProjectException`. A 4096 by 4096 picture decodes to
+  64 MB in the top view, which is why the limit is there.
+- **Edits** (`ProjectedImageEdits`, by name like areas and armies): `AddImage` (a free name, fitted
+  to the map and centred), `UpdateImage`, `RemoveImage`, `RenameImage`, `ReplacePicture` (place and
+  turn stay; with Keep proportions the height follows the new picture), `FitImageToMap` and
+  `FitImageToPlayableArea` (the whole map without areas). A fit is not turned and, with Keep
+  proportions, as large as the rectangle lets the picture's own proportions be (not those a scaling
+  gave it). A resize of the map moves the images with the terrain they lie on (`MapResize`).
+- **Geometry** (`ProjectedImages`, pure functions): `Corners`, `ToLocal` and `ToMap` (the picture's
+  frame: from its middle, x along its top edge, z down it), `Contains`, `Knob` and `HandleAt` (a
+  corner within a reach, the turning knob a distance beyond the top edge, else the inside), and what
+  a drag makes of an image from the image as it was when the drag began: `Moved`, `Scaled` (the
+  opposite corner stays; keeping proportions the corner slides along the diagonal; never below 1
+  ogrid, never turned over), `Turned` (by the angle the mouse went about the middle, `snap` rounds
+  to 15 degrees) and `Rounded` (hundredths, so float pixels do not make fields of seven decimals).
+  The top view and the tool share these; they hold the tests (`ProjectedImagesTest`).
+
 ## The workspace and the game's assets
 
 One workspace per computer (`Workspaces/`): a folder with the map projects and the assets converted
@@ -1527,6 +1572,51 @@ User stories K-2 and P-4; generated only when asked, as the other results (F-7).
   of them, and an older project loads. Rules without their mask's PNG make an empty mask. `Reload`
   reads them again when another tool changes them. The export leaves the rules out and writes the
   props of rules as any other prop.
+
+## The sketch (N-1)
+
+The map maker's drafts: sheets of pencil strokes that sketch the map before it is built. The sketch is
+the project's own: an optional file, edited like everything else (undoable edits of the document), kept
+and read again like the rest of the project, and never part of the map. It never reaches the game's
+files (the export reads no `MapDocument.Sketch`) nor `files/` (the other files of the map folder).
+
+- **Model** (`Files/InMemory/Sketch.cs`): `Sketch` (`Sheets`), `SketchSheet` (`Name`, `Shown`, `Opacity`
+  outside the Sketch mode, a `Legend` of six texts in the order of the colours, `Strokes`),
+  `SketchStroke` (`SketchColour`, `SketchWidth`, `Points` in ogrids). The six colours and three widths are
+  fixed values of the model (`SketchLook`: red, yellow, green, blue, white, black as `0xAARRGGBB`, the
+  same in both themes; a width is pixels on screen, 2, 4 and 7): a colour means nothing to the
+  editor, the sheet's legend says what the map maker meant. A stroke of one point is a dot.
+  `MapDocument.Sketch` is `Sketch.Empty` for a map without sheets.
+- **Edits** (`Editing/SketchEdits.cs`, `SketchGeometry.cs`): sheets are named (unique without regard to case,
+  at most 60 characters; a name matches exactly first, then without regard to case): `AddSheet`
+  (`Sheet 1`, `Sheet 2`, ...), `RenameSheet`, `DuplicateSheet` (the copy right after the original,
+  `Layout A copy`), `DeleteSheet`, `ShowSheet`, `SetSheetOpacity`, `SetLegend`, `ClearSheet`, and for
+  strokes `AddStrokes` (a sketch without sheets gets its first for them) and `Erase`. Every edit
+  returns the document itself when it changes nothing, so the session keeps no step for it.
+  `WithImages` repeats a stroke (or an eraser's path) under the parts of the map's symmetry, as the
+  brushes' dabs are (`MapSymmetry.Transforms`, identity first; an image that lies on the stroke or
+  on an earlier image is left out). `SketchGeometry` thins a line drawn by hand (`Thin`), smooths and
+  thins it to few places (`Smooth`: averaged with its neighbours twice, then Douglas and Peucker within
+  a tolerance of about a pixel), makes the straight line of Shift (`Straight`) and cuts: `Cut` takes
+  from a line what an eraser's path passed over, a capsule (the path's segment and the radius to both
+  sides, convex, so it meets a segment in one stretch: `Crosses`), so a stroke is cut in two where the
+  eraser crosses its middle and what is left shorter than `Shortest` goes; a stroke of one point goes
+  whole. `Erase` with `whole` removes a stroke the eraser touches entirely (Alt).
+- **Files**: `sketch/sketch.json` (`SketchDto`, its own `version` 1, not the project's format version: an
+  older project reads as if it held no sketch, and a project without sheets writes no file and no
+  folder, which another part of the project that lies in `sketch/`, the projected images N-2, keeps
+  alive). A stroke's places are one line of text, `x,z x,z ...` with a point and two decimals at most,
+  so a sheet of thousands of strokes stays small and readable and a diff shows a stroke a line. The
+  legend is six texts in colour order, left out when empty; a short legend is filled up. A file that
+  does not read (a place that is no `x,z`, two sheets of one name, a newer version) is a
+  `MapProjectException` naming the sheet. `MapProjectStore.Load` reads it, `Save` writes it only when its
+  text changes, `Reload` reads it again when it changes on disk and does nothing when the file holds
+  what the document has (the editor's own save, rounded as written), and a removed file is a removed
+  sketch (`MapProjectStore.Sketch.cs`).
+- **Resize**: `MapResize` moves the sketch by the offset the old map lies at in the new one, as it moves
+  the things on it; strokes may end up outside the map.
+- Tests: `SketchTest` (edits, symmetry, the eraser's cuts, thinning and smoothing, undo, the file, reading again, the
+  export, resize).
 
 ## Checks: problems of a map
 

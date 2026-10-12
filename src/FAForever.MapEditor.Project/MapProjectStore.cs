@@ -99,7 +99,9 @@ namespace FAForever.MapEditor.Project
 
             SaveMasks(document, folder, previous);
             SaveWalkabilityMarks(document, folder, previous);
+            SaveImages(document, folder, previous);
             SaveRules(document, folder);
+            SaveSketch(document, folder);
             SaveHeightStack(document, folder, previous);
             SaveCoverageStacks(document, folder, previous);
 
@@ -166,7 +168,7 @@ namespace FAForever.MapEditor.Project
             try
             {
                 MapDocument document = MapProjectMapping.ToDocument(map, props, decals, markers, armies, images, script, files);
-                return LoadHeightStack(LoadCoverageStacks(WithRules(WithWalkabilityMarks(document, folder), folder), folder), folder);
+                return LoadHeightStack(LoadCoverageStacks(WithSketch(WithRules(WithImages(WithWalkabilityMarks(document, folder), folder), folder), folder), folder), folder);
             }
             catch (ArgumentException exception)
             {
@@ -259,6 +261,12 @@ namespace FAForever.MapEditor.Project
                     case MapProjectLayout.WalkabilityMarks:
                         document = ReloadWalkabilityMarks(document, folder);
                         break;
+                    case MapProjectLayout.Sketch:
+                        document = ReloadSketch(document, folder);
+                        break;
+                    case MapProjectLayout.ImagesFile:
+                        document = ReloadImages(document, folder);
+                        break;
                     case MapProjectLayout.Script:
                     {
                         ImmutableArray<byte>? script = File.Exists(Of(changed)) ? ImmutableCollectionsMarshal.AsImmutableArray(File.ReadAllBytes(Of(changed))) : null;
@@ -317,6 +325,10 @@ namespace FAForever.MapEditor.Project
                             {
                                 document = ReloadCoverageImage(document, folder, target, image);
                             }
+                        }
+                        else if (changed.StartsWith(MapProjectLayout.ImagesFolder + "/", StringComparison.Ordinal))
+                        {
+                            document = ReloadImages(document, folder);
                         }
                         else if (changed.StartsWith(MapProjectLayout.Files + "/", StringComparison.Ordinal))
                         {

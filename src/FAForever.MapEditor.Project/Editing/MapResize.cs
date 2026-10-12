@@ -183,6 +183,10 @@ namespace FAForever.MapEditor.Project.Editing
                 },
                 Masks = document.Masks.ToImmutableSortedDictionary(entry => entry.Key, entry => Resized(entry.Value, (byte)0), StringComparer.Ordinal),
                 WalkabilityMarks = document.WalkabilityMarks is TiledBuffer<byte> marks ? Resized(marks, (byte)0) : null,
+                // the sketch lies where the old map lies: its strokes move by the offset (and may end up outside the map)
+                Sketch = SketchEdits.Moved(document.Sketch, dx, dz),
+                // the projected images (N-2) lie over the terrain they were placed on: they move with it
+                Images = [.. document.Images.Select(image => image with { CentreX = image.CentreX + dx, CentreZ = image.CentreZ + dz })],
                 // the height layers (T-5) at the heightmap's corners: an absolute layer continues its
                 // edge, an adding one adds nothing where the map gains; a curve's points move along
                 HeightStack = document.HeightStack with { Layers = [.. document.HeightStack.Layers.Select(ResizedLayer)] },

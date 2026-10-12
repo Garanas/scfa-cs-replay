@@ -198,6 +198,7 @@ public sealed partial class HeightmapView : Control
             _model.SelectionChanged -= OnOverlayChanged;
             _model.Walkability.Changed -= OnOverlayChanged;
             _model.Handles.Changed -= OnOverlayChanged;
+            _model.Sketch.PendingChanged -= OnOverlayChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
@@ -211,6 +212,7 @@ public sealed partial class HeightmapView : Control
             _model.SelectionChanged += OnOverlayChanged;
             _model.Walkability.Changed += OnOverlayChanged;
             _model.Handles.Changed += OnOverlayChanged;
+            _model.Sketch.PendingChanged += OnOverlayChanged;
         }
         OnMapChanged(this, EventArgs.Empty);
     }
@@ -315,6 +317,15 @@ public sealed partial class HeightmapView : Control
             context.DrawImage(_bitmap, new Rect(0, 0, size.Width, size.Height), destination);
         }
 
+        // the projected images under the sketch lie right over the terrain (N-2)
+        if (_model?.ShownDocument is MapDocument underlay)
+        {
+            using (context.PushClip(new Rect(Bounds.Size)))
+            {
+                DrawImages(context, underlay, aboveSketch: false);
+            }
+        }
+
         if (_model is { ShowWalkability: true })
         {
             DrawWalkability(context, overlay, _model.Walkability);
@@ -342,6 +353,9 @@ public sealed partial class HeightmapView : Control
                 _markers.Render(context, overlay, _model.DrawnMarkers(document), _model.ShownMarkerKinds, _zoom, _offset);
                 DrawGeneratedPathNodes(context, overlay);
                 DrawSelection(context, overlay, document, _model.Selection.Items);
+                DrawSketch(context, document, _model);
+                // the projected images over the sketch (N-2)
+                DrawImages(context, document, aboveSketch: true);
             }
         }
 
@@ -380,7 +394,7 @@ public sealed partial class HeightmapView : Control
             // with the symmetry, every image of the brush where a stroke paints (F-12)
             Point map = ControlToMap(cursor);
             IReadOnlyList<SymmetricDab> images = _model.ShownDocument is MapDocument shown
-                ? SymmetricDabs.Of(_model.EditTransforms(shown), (float)map.X, (float)map.Y, rotation, brushShape is null)
+                ? SymmetricDabs.Of(tool.Mirrors ? _model.EditTransforms(shown) : [MapSymmetryTransform.Identity], (float)map.X, (float)map.Y, rotation, brushShape is null)
                 : [new SymmetricDab((float)map.X, (float)map.Y, rotation, false, MapSymmetryTransform.Identity)];
             foreach (SymmetricDab image in images)
             {
@@ -457,7 +471,7 @@ public sealed partial class HeightmapView : Control
         PointerPointProperties buttons = e.GetCurrentPoint(this).Properties;
         Point at = e.GetPosition(this);
         Focus();
-        if (buttons.IsLeftButtonPressed && _model?.HasMap == true && e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+        if (buttons.IsLeftButtonPressed && _model?.HasMap == true && e.KeyModifiers.HasFlag(KeyModifiers.Alt) && _model.ActiveTool?.Tool is not { UsesAlt: true })
         {
             // alt and a click: the 3D view looks here
             Point place = ControlToMap(at);

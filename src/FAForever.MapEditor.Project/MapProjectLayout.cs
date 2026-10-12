@@ -22,6 +22,9 @@ namespace FAForever.MapEditor.Project
     /// masks/NAME.png               8-bit grey, the map's size or half: masks for tools (K-1), not exported
     /// masks/NAME.rules.json        the rules a mask is generated from (K-2), when it has rules
     /// prop-rules.json              the rules that place props from the layers (P-4), when the map has rules
+    /// sketch/sketch.json           the map maker's sketch: sheets of pencil strokes with their legends (N-1), when the map has any; never exported
+    /// sketch/images.json           the pictures projected onto the map (N-2), in drawing order; absent without images, never exported
+    /// sketch/images/NAME.png       the picture of the projected image NAME, copied into the project (at most 4096 pixels on a side)
     /// stacks/heightmap.json        the heightmap's stack of layers (T-5), lowest first; absent without layers
     /// stacks/heightmap/NAME.png    16-bit grey, (width + 1) by (height + 1): a height layer's values
     /// stacks/heightmap/NAME.coverage.png   8-bit grey, the same size: how much of the layer there is, when not all
@@ -264,6 +267,35 @@ namespace FAForever.MapEditor.Project
         /// blocked, white open (<see cref="Editing.WalkabilityMarks"/>). Absent without marks.
         /// </summary>
         public const string WalkabilityMarks = "walkability-marks.png";
+
+        /// <summary>
+        /// The folder of the map maker's sketch and projected images (user stories N-1, N-2): the project's
+        /// own, optional, never exported.
+        /// </summary>
+        public const string SketchFolder = "sketch";
+
+        /// <summary>
+        /// The sketch's sheets of pencil strokes and their legends (user story N-1); absent while the map has no sheet.
+        /// </summary>
+        public const string Sketch = "sketch/sketch.json";
+
+        /// <summary>
+        /// The pictures projected onto the map (user story N-2): their places, sizes, turns and looks,
+        /// in the order they are drawn. Absent while the map has none. Part of the sketch, the
+        /// project's own: never exported.
+        /// </summary>
+        public const string ImagesFile = "sketch/images.json";
+
+        /// <summary>
+        /// The folder of the projected images' pictures, a PNG each named after its image
+        /// (<see cref="Image"/>). Absent while the map has none.
+        /// </summary>
+        public const string ImagesFolder = "sketch/images";
+
+        /// <summary>
+        /// The file of the picture of the projected image named <paramref name="name"/>.
+        /// </summary>
+        public static string Image(string name) => $"{ImagesFolder}/{name}.png";
 
         /// <summary>
         /// Which results kept outside the map (walkability) were current when the project was saved

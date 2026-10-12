@@ -122,7 +122,8 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
 - **Modes and tools** are data (`EditorModes`): a mode's id, title, icon (`Styles/Icons.axaml`),
   tools, panel sections and inspector sections. A mode remembers its last tool.
 - **Overlays** are data too (`EditorOverlays`): each is a chip above the views and a command in
-  the View menu (`view.overlay.<id>`). One with `Panel` is also a check box in that mode's panel
+  the View menu (`view.overlay.<id>`), with a shortcut when its definition has a `Gesture` (the
+  sketch's `Ctrl+Shift+K`). One with `Panel` is also a check box in that mode's panel
   (`OverlaySection`), which runs the same command; the Markers panel's overlays are the check boxes
   of the headings of their titles in its list (Markers, Path nodes).
 - **The views' bar** is one row of `ToolbarHeight`, as the tool's options are: the view tabs, then
@@ -152,9 +153,10 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
   so its settings last while the person switches tools (`ToolItem.Tool`; `MainViewModel.Tool<T>()`
   finds one by class). It implements `IMapTool`: `Press`, `Drag` and `Release` of the left mouse,
   in ogrids, and the radius of the circle drawn around the mouse. The views keep the rest of the
-  mouse (moving, zooming, alt and a click for the camera) and send the left button to the
+  mouse (moving, zooming, alt and a click for the camera, unless the tool says `UsesAlt`) and send the left button to the
   active tool, without knowing which tools exist. Its settings are observable properties; the
-  options bar picks the tool's `DataTemplate` by class.
+  options bar picks the tool's `DataTemplate` by class. A tool whose mirroring is off says so
+  (`Mirrors`), so the circle around the mouse is not repeated by the symmetry.
   - **The options row** (`Views/ToolOptions`, `Controls/ToolRow`) is one row of a fixed height
     (`ToolbarHeight`) for every tool and every width of the window, so the views below never move
     when the tool changes. A tool's template is a `controls:ToolRow Classes="toolrow"` whose
@@ -1756,6 +1758,88 @@ change, span `model.armies`), the place tool and the commands.
 - The Select by popover lies at the right of the top view. Within Area lists the areas by name and chooses
   none until one is picked (the count says `Choose an area`; Add and Select refuse until then).
 
+## The Sketch mode: strokes and sheets
+
+User story N-1 (the library's side: its guide, "The sketch"). The Sketch mode (rail, after Units, `F10`)
+holds the map maker's drafts: pencil strokes in sheets, drawn straight onto the map in the top view,
+kept in the project and never exported. The sketch shows in every mode, so a draft guides the work
+in the Terrain or the Markers mode: the chip `Sketch` (after the Markers, Path nodes and 3D camera chips,
+which keep their room at 1280 pixels, so it lies behind More there until the window is wider), the View menu's `Show the sketch` and `Ctrl+Shift+K` turn it on or
+off (`view.overlay.sketch`, `MainViewModel.ShowSketch`, on by default; an overlay may carry a shortcut:
+`OverlayDefinition.Gesture`). In the Sketch mode a sheet is drawn fully, in the other modes at its own
+opacity ("Other modes", 45% for a new sheet).
+
+- **The pencil** (`Tools/PencilTool`, `sketch.pencil`): drag to draw. The colour in hand (keys 1 to 6, also
+  on the keypad, or the six swatches in the options row), the width (`[` and `]`, or Thin, Medium,
+  Thick in the row), Mirror (on by default: the stroke is repeated by the map's symmetry while it mirrors
+  edits, as the brushes' dabs are) and Smooth (off by default); with Shift held the stroke is a
+  straight line from where it began; Escape gives the stroke up. The line is shown while the mouse is down
+  (`SketchViewModel.Pending`, the first stroke the mouse's and the others its images, dashed), and
+  becomes one stroke, one step of undo, when the mouse is released: the tool runs `sketch.draw` with the
+  places and its settings (the command is the one way a stroke gets into the document, so automation
+  draws what a person does). A click is a dot. The row keeps the colours, the width, Mirror and Smooth
+  first; the sheet drawn into and the keys lie behind More at 1280 pixels.
+- **The eraser** (`Tools/EraserTool`, `sketch.eraser`): rubs out the parts of the chosen sheet's strokes it
+  passes over (radius in ogrids, `[` and `]`; a stroke is cut in two where it crosses its middle); with
+  Alt held, or Whole strokes on, it removes the strokes it touches entirely; Mirror also erases where the
+  symmetry repeats it (the circles drawn around the mouse follow: `IMapTool.Mirrors`). It erases as the
+  mouse is dragged, so it holds a transaction as a brush's stroke does (`StartStroke`, `EndStroke`):
+  the whole drag is one step of undo, Escape throws it away. Alt with a click sends the 3D camera there in
+  every other tool; a tool that uses Alt itself says so (`IMapTool.UsesAlt`) and gets it.
+  `sketch.erase {points, radius?, whole?, mirror?, sheet?}` does the same to places given.
+- **Sheets**: the panel's Sheets list (`Views/SketchPanels/SketchSheetsPanel`): each sheet with its eye
+  (a chip, Shown or Hidden), its name and its count of strokes; the list chooses the sheet the pencil
+  and the eraser work in and the inspector shows, + (or Add a sheet) adds one, Duplicate and Delete work on
+  the chosen one. A first stroke on a map without sheets makes `Sheet 1`; drawing into a hidden sheet shows
+  it, and drawing turns the overlay on. The inspector (`SketchSheetPanel`): the sheet's Name (given on Enter or
+  when the field loses the keyboard), its opacity in the other modes (a slider: one step of undo for the
+  whole drag, merged by `sketch.opacity:<sheet>`), the legend (a text per colour, what that colour means on this
+  sheet), the count of strokes, Duplicate sheet and Clear. A legend text is typed into its field and
+  given like the name; each is one step of undo. The sheet chosen is the view model's
+  (`SketchViewModel.Chosen`, by name, kept while the sketch has the sheet, else the first; a sheet added,
+  renamed or duplicated by a command is chosen: `ChooseOnNextRefresh`), not an edit of the map.
+- **Commands** (`Commands/Sketch/`, all story N-1): `sketch.draw {points, colour?, width?, mirror?, smooth?,
+  straight?, tolerance?, sheet?}` (answers how many strokes it made), `sketch.erase`, `sketch.addSheet {name?}`,
+  `sketch.renameSheet {name, sheet?}`, `sketch.duplicateSheet {name?, sheet?}`, `sketch.deleteSheet {sheet?}`,
+  `sketch.clearSheet {sheet?}`, `sketch.showSheet {sheet?, on?}`, `sketch.chooseSheet {sheet}`,
+  `sketch.setLegend {colour, text, sheet?}`, `sketch.setOpacity {opacity, sheet?}`, `sketch.setPencil
+  {colour?, width?, mirror?, smooth?}` and `sketch.setEraser {radius?, mirror?, whole?}` (both choose their tool).
+  A colour is its name or its number from 1 to 6, a width `thin`, `medium` or `thick`, places are
+  `[[x, z], ...]` in ogrids; a sheet left out is the chosen one. The Sketch menu has add, duplicate,
+  delete and clear; the others have their controls in the panel, the inspector and the options row.
+  `sketch.draw` smooths and thins as the pencil's settings say (a line of an exact polyline stays
+  as it is while Smooth is off: `smooth: false`).
+- **In the other modes** the inspector ends with a Sketch block while the map has strokes
+  (`MainViewModel.SketchNote`: `Layout A at 45% over the terrain. The Sketch chip in the views' bar
+  hides it, or Ctrl+Shift+K.`, or that the sketch is hidden and how to show it); the Sketch mode's own
+  inspector holds the sheet instead.
+- **The top view** (`Controls/HeightmapView.Sketch.cs`, called from `Render` after the selection, before the
+  tool's own drawing, spans `top.sketch` and `top.sketch-build`): the strokes as lines of the width on
+  screen at every zoom (the pen's thickness is the pixels divided by the zoom, the geometry in the
+  map's own coordinates, drawn through the view's transform), round ends and joins, in the sketch's six
+  colours (the map's, made in code from the model's values like a marker's); a sheet is one layer, so
+  overlaps do not darken at its opacity. A sheet's lines are built once into geometries
+  (consecutive strokes of one colour and width are one geometry, which keeps the order they were drawn in)
+  and kept while the document holds that very sheet. While a shown sheet has a legend text, a small key lies in the view's lower
+  left corner (`Sketch.Keys`: the sheets' names when more than one has a legend). `SketchDrawn` says how
+  many sheets, strokes and pending lines the last frame drew. The 3D view draws nothing of the sketch yet
+  (N-3).
+- Automation: `state.sketch` (`show`, `inMode`, `chosen`, `strokes`, the `sheets` with their counts and
+  legends, the chosen sheet's `list` of strokes (colour, width, places, first and last place), `pencil`,
+  `eraser`, `pending`, the other modes' `note`, the `key`'s entries, `drawn`: sheets, strokes, `culled`
+  strokes outside the view, pending); `state.show.sketch`. The mouse draws as with any tool
+  (`mouse view=top x=.. y=.. action=down|move|up`, `modifiers=Shift` or `Alt`; digits are `D1` to `D6`).
+- Not built yet: the symbol, label and select tools (N-4), the image tool and the projected images (N-2),
+  the sketch in 3D (N-3).
+- **F10** is the Sketch mode's key like F1 to F9 and F11, F12 are the other modes'. Windows takes F10 for
+  the menu bar of a window; the window's shortcut handler runs first and marks the key handled (and
+  Avalonia then answers the message itself), which `key key=F10` shows choosing the mode. A real press
+  of F10 on Windows was not tried (automation never uses the real keyboard): when it turns out to open the
+  menu bar instead, give the mode another key (`ModeDefinition.Gesture`).
+- Tests: `SketchTest` (the commands, the tools, the keys, undo, the project), `SketchWindowTest` (the mouse and keys in
+  the window, the chips, the panel and the inspector), `CommandRegistryTest`'s list of commands
+  outside the menus.
+
 ## Markers: placing, linking, chains
 
 User stories R-1 to R-6, the Markers mode (F6). The library does the editing (`MarkerEdits`, its
@@ -2975,6 +3059,68 @@ step points at and explains it on a card. Code: `Tours/` (the format, the catalo
   the mouse; 3D picking passes props whose bounding sphere the ray misses; the brushes' watcher
   ignores folders (the start read the assets twice). Leaf textures (`CutOutTextures`) give their
   holes the leaves' colour before the mipmaps, and cut-out foliage is lit with its normals leaning up.
+
+## The Sketch mode's projected images (N-2)
+
+Pictures of the map maker's own laid over the map in the top view, to trace or build towards. The
+model, the files and the geometry are the library's (its guide, "The sketch's images"); this is
+what the window does with them. They are a guide: never exported, never in the 3D view (a picture
+stretches over hills).
+
+- **Commands** (`Commands/Sketch/ProjectedImages.cs`, every one with its story N-2): `images.project`
+  (`path`, `name`; without a path a file is asked for, which automation never does: it answers with
+  why; the image starts fitted to the map, is chosen and the Image tool is chosen), `images.choose`
+  (`name`; none clears), `images.remove`, `images.replace` (`path`), `images.fitToMap`,
+  `images.fitToPlayableArea` and `images.set` (`rename`, `opacity` in percent, `centreX`, `centreZ`,
+  `width`, `height`, `turn`, `greyscale`, `locked`, `shown`, `aboveSketch`, `keepProportions`). Each
+  but `choose` names its image with `name` (in any case) or acts on the chosen one, and is one step
+  of undo; `images.set` steps on the same fields of the same image merge (a slider dragged). With
+  Keep proportions a width given alone makes the height follow at the proportions it has now, and
+  the other way round. Every field of the inspector, the eye of the list and the tool's row run
+  these commands; none edits the document itself.
+- **State**: `ProjectedImagesViewModel` (`MainViewModel.Images`) holds the list (`Items`, one
+  `ProjectedImageItem` per image, updated in place so the list keeps its choice), the chosen image
+  (`ChosenName`; it follows a rename, and an image that went away, an undo, is no longer chosen) and
+  the inspector's settings, which are the `Setting` classes the other panels use. The overlay is
+  `MainViewModel.ShowImages` (default on): the chip "Images", the View menu entry and
+  `Ctrl+Shift+J` (`OverlayDefinition.Gesture`, which any overlay may have).
+- **The panel and the inspector** (`Views/SketchPanels/`): the "Projected images" section of the
+  Sketch mode lists the images (an eye, the name, the picture's size, `55%`), Project an image...
+  and a check box for the overlay; the chosen image's inspector (`ProjectedImageDetailsSection`,
+  empty while none is chosen) says the picture's size in pixels and where it is kept, then the name,
+  opacity, centre, width, height and turn, Fit to map, Fit to playable area, Keep proportions,
+  Greyscale, Locked, Order (below or above the sketch), Replace the picture... and Remove.
+- **The Image tool** (`Tools/ImageTool.cs`): a click chooses the top image under the mouse (the
+  images over the sketch before those under it, later ones before earlier ones; an unlocked image
+  before a locked one; a hidden image is not there), a click on nothing chooses none (Shift keeps
+  the choice). The chosen image has a square at each corner (scales about the opposite corner),
+  a knob 28 pixels beyond the middle of its top edge (turns; Shift in steps of 15 degrees) and its
+  inside (moves); `Shapes` draws them at a fixed size in the top view only. A drag is one step of
+  undo held from press to release (`StartStroke`), made from the image as it was at the press and
+  rounded to hundredths. A locked image has its outline and no handles and does not move. Presses in
+  the 3D view and while the overlay is off do nothing. Keys: Delete removes the chosen image, Escape
+  chooses none. Its row (`ToolOptions.axaml`): opacity, Keep proportions, Fit to map, Project an
+  image..., and the hint; the rest goes behind More.
+- **The top view** (`Controls/HeightmapView.Images.cs`): the images that lie under the sketch are
+  drawn right after the terrain (so the walkability, the grid, markers and units lie over them), the
+  images over the sketch after the sketch (23A's strokes) and before the tool's own drawing. Each is
+  turned and scaled in map coordinates with `PushTransform`, at its opacity, with hard pixels when
+  shown more than twice its size. A picture is decoded once (`Rendering/ProjectedPictures`, found by
+  the document's byte array, greyscale a picture of its own) and never per frame; an image whose
+  boxed corners lie outside the view is skipped. The span `top.images` measures a frame (a 4096
+  pixel picture and two others: p95 7 ms), `top.images-decode` the decoding (and the greyscale),
+  `tool.reshape-image` a mouse move of a drag.
+- **Automation**: `state.images` (`AutomationServer.Images.cs`): `count`, `chosen`, `shown` (the
+  overlay), `drawnTop` (how many the last frame drew), `items` (name, shown, opacity in percent,
+  centre, size, turn, pixels, greyscale, locked, aboveSketch, keepProportions), `tool` and, for the
+  chosen image, `points`: the pixels of its centre, four corners and knob in the top view, to aim
+  `mouse view=top x= y= action=drag to=[x,y]` at (with `modifiers=Shift` for the turn's steps).
+  Drive it as a person does: project, read `points`, drag a corner, `screenshot`.
+- **Tests**: `ProjectedImagesTest` (commands, list, fields, overlay, the tool's press, drag and
+  release on a model), `ProjectedImagesWindowTest` (the top view's pixels turned, transparent, grey,
+  hidden and in order; the mouse and the key through automation; the panel, the inspector's labels
+  and the tool's row). Pictures are made in the test with Magick.NET, never a person's file.
+  `CommandRegistryTest` lists `images.choose` and `images.set` among the commands outside the menus.
 
 ## Diagnostics: what goes well and wrong
 

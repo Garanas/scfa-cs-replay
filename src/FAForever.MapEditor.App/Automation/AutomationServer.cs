@@ -574,6 +574,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
                 },
             },
             ["painting"] = PaintingState.Describe(model),
+            ["sketch"] = SketchState.Describe(model, window.MapView),
             ["zoom"] = window.MapView.Zoom,
             ["tab"] = MapViews.First(view => view.View == model.View).Name,
             ["camera"] = new JsonObject
@@ -705,6 +706,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["tour"] = model.Tour.Describe(),
             ["workspaceSettings"] = model.WorkspaceSettings.Describe(),
             ["inspector"] = model.DescribeInspector(),
+            ["images"] = ImagesState(),
         };
     }
 
