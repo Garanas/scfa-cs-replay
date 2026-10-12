@@ -632,7 +632,7 @@
     <Setter Property="Width" Value="{StaticResource FactLabelWidth}" />
   </Style>
   <!-- the text box of a label being written over the top view (N-4): where the label goes, in the label's own hand -->
-  <Style Selector="UserControl.labeleditor">
+  <Style Selector=":is(UserControl).labeleditor">
     <Setter Property="Width" Value="{StaticResource LabelEditorWidth}" />
     <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="VerticalAlignment" Value="Top" />

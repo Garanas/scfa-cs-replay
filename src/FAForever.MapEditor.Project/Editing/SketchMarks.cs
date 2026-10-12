@@ -30,7 +30,7 @@ namespace FAForever.MapEditor.Project.Editing
         /// <summary>
         /// The width of a letter as a part of the label's size.
         /// </summary>
-        public const float LetterWidth = 0.42f;
+        public const float LetterWidth = 0.34f;
 
         /// <summary>
         /// The box of a label in ogrids: the text centred on its place.
