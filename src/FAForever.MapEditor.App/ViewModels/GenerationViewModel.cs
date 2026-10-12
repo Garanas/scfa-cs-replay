@@ -186,6 +186,7 @@ public sealed partial class GenerationViewModel : ObservableObject
     {
         Results.Forget();
         _timings.Clear();
+        _running.Clear();
         States = [];
     }
 

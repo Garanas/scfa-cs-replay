@@ -229,7 +229,11 @@ public sealed partial class MainViewModel
         }
         finally
         {
-            Generation.SetRunning(id, false);
+            if (Map == map)
+            {
+                // another map forgot the run (GenerationViewModel.Forget): its flag may be the new map's own run
+                Generation.SetRunning(id, false);
+            }
             Generation.Refresh(Map?.Document);
         }
     }

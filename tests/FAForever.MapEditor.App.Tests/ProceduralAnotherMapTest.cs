@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using FAForever.MapEditor.App.Commands;
 using FAForever.MapEditor.App.Rendering;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
 
 namespace FAForever.MapEditor.App.Tests
@@ -45,6 +46,52 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsNull(model.SkyCube.Preview, "the sky cube map's picture");
             Assert.IsNull(model.ProceduralList.PartOf(SkyCubeGenerator.GeneratorId)!.Picture, "the entry's picture");
             Assert.AreEqual("Not made in this session", model.ProceduralList.PartOf(SkyCubeGenerator.GeneratorId)!.MadeText);
+        }
+
+        /// <summary>
+        /// A generator that waits until it is let go.
+        /// </summary>
+        private sealed class SlowGenerator : IGenerator
+        {
+            public TaskCompletionSource Release { get; } = new TaskCompletionSource();
+
+            public ManualResetEventSlim Started { get; } = new ManualResetEventSlim();
+
+            public string Id => "slowTest";
+
+            public string Title => "Slow result";
+
+            public string Story => "F-7";
+
+            public IReadOnlyList<GeneratedInput> Inputs { get; } = [GeneratedInput.Heightmap];
+
+            public object Generate(MapDocument document)
+            {
+                Started.Set();
+                Release.Task.Wait();
+                return document.Width;
+            }
+        }
+
+        [TestMethod]
+        public async Task AResultStillGeneratingForTheMapBeforeIsNotRunningForTheNextOne()
+        {
+            MainViewModel model = new MainViewModel(new MainViewModelTest.Answers());
+            await model.OpenAsync(HardFfa);
+            SlowGenerator slow = new SlowGenerator();
+            model.Generation.Register(slow, "generate.walkability");
+            Task<GeneratedResult> running = model.GenerateAsync(slow.Id);
+            Assert.IsTrue(slow.Started.Wait(5000));
+            Assert.IsTrue(model.Generation.IsRunning(slow.Id));
+
+            await model.OpenAsync(Theta);
+
+            Assert.IsFalse(model.Generation.IsRunning(slow.Id), "the run was for the map before");
+            Assert.IsFalse(model.Procedural.Rows.First(row => row.Id == slow.Id).Row.IsRunning);
+            Assert.IsTrue(model.ProceduralList.PartOf(slow.Id)!.CanGenerate, "Generate is there for the new map");
+            slow.Release.SetResult();
+            await running;
+            Assert.AreEqual(GeneratedStatus.Missing, model.Generation.Rows.First(row => row.Id == slow.Id).State, "its result is of no map shown");
         }
     }
 }
