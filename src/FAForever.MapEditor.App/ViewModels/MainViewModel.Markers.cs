@@ -45,6 +45,8 @@ public sealed partial class MainViewModel
         DocumentChanged += (_, _) => Markers.Refresh(ShownDocument);
         MapChanged += (_, _) => Markers.Refresh(ShownDocument);
         PropertyChanged += OnMarkerToolChosen;
+        // a map opened has none of the previous one's chosen chain, hidden kinds or warning
+        Events.MapOpened += _ => Markers.Forget();
 
         // generated path networks (R-3; the Procedural mode's PathNodes part), markers presets (F-10), the adaptive script's groups (R-5)
         Generation.Register(new PathNetworkGenerator(), "markers.connectPaths");

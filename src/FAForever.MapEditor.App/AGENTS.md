@@ -1923,7 +1923,8 @@ inspector's `MarkerSelection`.
   spawns and AI markers to the tool's grid (`SnapChoice`: none, half an ogrid, ogrid centres).
   A deposit on ground that rises more than 1 over its footprint (`MarkerEdits.Steepness`: 3
   ogrids for mass, the extractor with its storages; 4 for hydrocarbon) says so in the status
-  line, the tool's options (`Markers.PlacementWarning`) and the inspector.
+  line, the tool's options (`Markers.PlacementWarning`, which follows the deposit it was placed for:
+  it goes with an undo, a delete or a level ground) and the inspector.
 - **Spawns** are the playable armies `ARMY_1` to `ARMY_n`: a new one is the next number, skipping
   an army's name such as the civilians' `ARMY_9`, and its army is added to the playable armies
   and to the armies; deleting one removes its army (kept as an extra army when it has units)
@@ -1987,7 +1988,13 @@ inspector's `MarkerSelection`.
   (`MarkersViewModel.SelectedChain`), and a chain made or renamed (`markers.addChain {name?,
   markers?}`: the selected markers in the order they were selected, `Chain_1` or the next free name)
   is chosen in the list. `ChainTool` adds the marker it clicks to the chosen chain (the first click
-  makes one), control takes it out, Escape lets go of the chain.
+  makes one), control takes it out, Escape lets go of the chain. The chain tool's chain follows
+  the map through edits and undo without moving the list's choice (the entry a person chose stays
+  chosen); when it is gone (deleted, or a rename undone) it becomes the chain the list falls back to,
+  or none when the list shows no chain. A name field that the map refuses (another chain or marker
+  has the name) shows the field's own name again (`ShowAfter`, as the inspector's number fields do).
+  Opening a map (`MarkersViewModel.Forget`, from `Events.MapOpened`) clears the chosen chain, shows
+  every kind again, chooses the list's first entry and drops the deposit warning.
 - **The inspector** (`MarkerSelection`, R-2, R-5): the name of one marker (a spawn keeps its
   army's), the resource of deposits, the type of AI markers (`AiMarker.KnownTypes` and the
   selection's own), the layer of path nodes (their links to the old layer go), the no-rush

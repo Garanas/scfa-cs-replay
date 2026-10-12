@@ -94,7 +94,7 @@ public sealed class PlaceMarkerHandler(MainViewModel model, MarkersViewModel mar
                 warning = SteepWarning(resource, steep);
                 model.Logger("Editor").LogInformation("{Marker} placed on steep ground, rising {Variation} over its footprint", added.Name, MathF.Round(steep, 1));
             }
-            markers.PlacementWarning = warning;
+            markers.WarnAbout(added.Id, warning);
         }
         model.Status = warning ?? $"Placed {added.Name}{MainViewModel.Mirrored(placed.Length)}";
         return Task.FromResult(new JsonObject

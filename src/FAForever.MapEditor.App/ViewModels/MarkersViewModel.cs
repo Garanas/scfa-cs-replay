@@ -438,7 +438,23 @@ public sealed partial class MarkersViewModel : ObservableObject
                 OnPropertyChanged();
                 return;
             }
-            _ = _run("markers.renameChain", new JsonObject { ["name"] = chain.Name, ["to"] = trimmed });
+            _ = ShowChainNameAfter(_run("markers.renameChain", new JsonObject { ["name"] = chain.Name, ["to"] = trimmed }));
+        }
+    }
+
+    /// <summary>
+    /// A name the map refused (another chain has it) is not left in the field: it shows the chosen chain's own again.
+    /// </summary>
+    private async Task ShowChainNameAfter(Task rename)
+    {
+        try
+        {
+            await rename;
+        }
+        finally
+        {
+            _chainName = SelectedChain?.Name ?? "";
+            OnPropertyChanged(nameof(ChainName));
         }
     }
 
@@ -517,16 +533,49 @@ public sealed partial class MarkersViewModel : ObservableObject
     #endregion
 
     /// <summary>
-    /// What placing a deposit last warned about (steep ground), or null.
+    /// What the deposit placed last warns about (steep ground), or null: it follows the deposit, so
+    /// it goes when the deposit does (undo, delete, another map) or when the ground under it is level.
     /// </summary>
     [ObservableProperty]
-    public partial string? PlacementWarning { get; set; }
+    public partial string? PlacementWarning { get; private set; }
+
+    private int? _warnedDeposit;
+
+    /// <summary>
+    /// A deposit was placed: it is the one the warning is about (null for none).
+    /// </summary>
+    public void WarnAbout(int id, string? warning)
+    {
+        _warnedDeposit = warning is null ? null : id;
+        PlacementWarning = warning;
+    }
+
+    private void RefreshWarning(MapDocument? document)
+    {
+        if (_warnedDeposit is not int id)
+        {
+            return;
+        }
+        string? warning = document?.FindMarker(id) is ResourceMarker deposit
+            && MarkerEdits.Steepness(document.Terrain.Heightmap, deposit.Kind, deposit.Position.X, deposit.Position.Z) is float steepness
+            ? Commands.PlaceMarkerHandler.SteepWarning(deposit, steepness)
+            : null;
+        if (warning is null)
+        {
+            _warnedDeposit = null;
+        }
+        if (warning != PlacementWarning)
+        {
+            PlacementWarning = warning;
+        }
+    }
 
     /// <summary>
     /// Shows the markers of a version of the document: the counts per kind, the chains, the armies.
     /// </summary>
     public void Refresh(MapDocument? document)
     {
+        RefreshWarning(document);
         if (ReferenceEquals(document?.Markers, _document?.Markers) && ReferenceEquals(document?.Scenario, _document?.Scenario)
             && ReferenceEquals(document?.Procedural.PathNodes, _document?.Procedural.PathNodes) && document is not null)
         {
@@ -548,6 +597,7 @@ public sealed partial class MarkersViewModel : ObservableObject
         }
 
         string? chosen = _chosenAfterRefresh ?? SelectedChain?.Name;
+        string? announced = _chosenAfterRefresh;
         Dictionary<int, string> names = [];
         foreach (Marker marker in document.Markers.All)
         {
@@ -556,10 +606,25 @@ public sealed partial class MarkersViewModel : ObservableObject
         Chains = [.. document.Markers.Chains.Select(chain => new ChainItem(chain.Name,
             [.. chain.MarkerIds.Select((id, index) => new ChainEntry(chain.Name, index, id, names.GetValueOrDefault(id, $"marker {id}")))]))];
         IsAdaptive = document.Scenario.AdaptiveMap;
-        SyncChainParts();
-        SelectedChain = Chains.FirstOrDefault(chain => chain.Name == chosen);
+        _refreshingChains = true;
+        try
+        {
+            SyncChainParts();
+            // the chain tool's chain stays; one that is gone gives way to the chain the list now shows, if it shows one
+            SelectedChain = Chains.FirstOrDefault(chain => chain.Name == chosen)
+                ?? (Parts.Chosen.Content is ChainPart shown ? Chains.FirstOrDefault(chain => chain.Name == shown.Name) : null);
+        }
+        finally
+        {
+            _refreshingChains = false;
+        }
         if (SelectedChain is not null)
         {
+            if (announced is not null && SelectedChain.Name == announced)
+            {
+                // a chain just made or renamed is the one the list shows
+                ChooseChainEntry(SelectedChain);
+            }
             _chosenAfterRefresh = null;
         }
 
@@ -586,4 +651,26 @@ public sealed partial class MarkersViewModel : ObservableObject
     }
 
     private string? _chosenAfterRefresh;
+
+    /// <summary>
+    /// Whether <see cref="Refresh"/> is bringing the chains up to date: the chain tool's chain then
+    /// follows the document without the list's choice moving to it.
+    /// </summary>
+    private bool _refreshingChains;
+
+    /// <summary>
+    /// What a map that was just opened has of the previous one's: no chain chosen, the list's first
+    /// entry shown, every kind shown, no warning about a deposit of the other map.
+    /// </summary>
+    internal void Forget()
+    {
+        SelectedChain = null;
+        _warnedDeposit = null;
+        PlacementWarning = null;
+        Show(MarkerKinds.All, true);
+        if (Parts.Items.Count > 0 && Parts.Chosen != Parts.Items[0])
+        {
+            Parts.Choose(Parts.Items[0].Id);
+        }
+    }
 }
