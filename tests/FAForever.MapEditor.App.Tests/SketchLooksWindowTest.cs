@@ -50,14 +50,6 @@ namespace FAForever.MapEditor.App.Tests
             return run;
         }
 
-        private static async Task<JsonNode> State(AutomationServer automation, string path)
-        {
-            Dispatcher.UIThread.RunJobs();
-            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
-            JsonObject state = (JsonObject)await automation.HandleAsync("state", new JsonObject { ["path"] = path });
-            return state[path]!;
-        }
-
         private static (int R, int G, int B) PixelAtPixel(MainWindow window, Point at)
         {
             Dispatcher.UIThread.RunJobs();
@@ -158,34 +150,35 @@ namespace FAForever.MapEditor.App.Tests
         [TestMethod]
         public Task TheKeyFollowsTheSheetsOpacityOutsideTheSketchModeAndShrinksWithASmallMap() => HeadlessApp.Run(async () =>
         {
-            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            (MainWindow window, MainViewModel model, _) = await Open();
             await Run(model, "sketch.draw", new JsonObject { ["points"] = new JsonArray(new JsonArray(60, 100), new JsonArray(120, 100)) });
             foreach (string colour in new[] { "red", "yellow", "green", "blue", "white", "black" })
             {
                 await Run(model, "sketch.setLegend", new JsonObject { ["colour"] = colour, ["text"] = $"What {colour} means here" });
             }
             window.MapView.Fit();
-            Dispatcher.UIThread.RunJobs();
+            (Rect Box, double Opacity) Key()
+            {
+                Dispatcher.UIThread.RunJobs();
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                return window.MapView.SketchKeyDrawn;
+            }
 
-            JsonNode key = (await State(automation, "sketch.drawn.key"))!;
-            Assert.AreEqual(1.0, key["opacity"]!.GetValue<double>(), "full in the Sketch mode");
-            double full = key["box"]![2]!.GetValue<double>();
+            (Rect box, double opacity) = Key();
+            Assert.AreEqual(1.0, opacity, "full in the Sketch mode");
+            double full = box.Width;
             Assert.IsTrue(full > 100, "the key is as wide as its texts need when the map fills the view");
-            Assert.IsTrue(key["box"]![0]!.GetValue<double>() < 40 && key["box"]![1]!.GetValue<double>() + key["box"]![3]!.GetValue<double>() > window.MapView.Bounds.Height - 40, "in the lower left corner");
+            Assert.IsTrue(box.X < 40 && box.Bottom > window.MapView.Bounds.Height - 40, "in the lower left corner");
 
             model.SelectMode("terrain");
-            Dispatcher.UIThread.RunJobs();
-            key = (await State(automation, "sketch.drawn.key"))!;
-            Assert.AreEqual(0.45, key["opacity"]!.GetValue<double>(), "at the sheet's opacity in the other modes");
+            Assert.AreEqual(0.45, Key().Opacity, 0.001, "at the sheet's opacity in the other modes");
             await Run(model, "sketch.setOpacity", new JsonObject { ["opacity"] = 0 });
-            Assert.IsNull(await State(automation, "sketch.drawn.key"), "a sheet that does not show has no key");
+            Assert.AreEqual(0, Key().Box.Width, "a sheet that does not show has no key");
             await Run(model, "sketch.setOpacity", new JsonObject { ["opacity"] = 0.45 });
 
             // zoomed out the key shrinks with the map, to half at the least, and takes no more than a third of the view
             window.MapView.Show(0.1, 512, 512);
-            Dispatcher.UIThread.RunJobs();
-            key = (await State(automation, "sketch.drawn.key"))!;
-            double small = key["box"]![2]!.GetValue<double>();
+            double small = Key().Box.Width;
             Assert.IsTrue(small < full, $"smaller zoomed out: {small} against {full}");
             Assert.IsTrue(small >= full * 0.5 - 1, $"never below half: {small}");
             window.Close();
