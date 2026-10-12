@@ -1,0 +1,41 @@
+<!-- The Sketch mode's projected images (N-2): the list in the order they are drawn, each with its eye (a check box that shows or
+     hides it in the top view), its name, its size in pixels and its opacity; choosing one chooses it for the Image tool and the
+     inspector. Project an image... asks for a picture; the Images chip and Ctrl+Shift+J show or hide them all. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.SketchPanels.ProjectedImagesList"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <TextBlock Classes="overline" Text="{Binding Source='Projected images', Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+      <ListBox ItemsSource="{Binding Images.Items}" SelectedItem="{Binding Images.ChosenItem}" IsVisible="{Binding !Images.IsEmpty}"
+               AutomationProperties.Name="Projected images"
+               AutomationProperties.HelpText="In the order they are drawn, the first lowest; the chosen image is the one the Image tool handles and the inspector shows">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ProjectedImageItem">
+            <DockPanel>
+              <CheckBox DockPanel.Dock="Left" Classes="boxonly" IsChecked="{Binding Shown}" AutomationProperties.Name="{Binding ShownLabel}" />
+              <TextBlock DockPanel.Dock="Right" Classes="caption mono" Text="{Binding OpacityText}" VerticalAlignment="Center" AutomationProperties.Name="Opacity" />
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="caption" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </DockPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <TextBlock Classes="caption" Text="{Binding Images.EmptyText}" IsVisible="{Binding Images.IsEmpty}" />
+      <WrapPanel Classes="chips">
+        <Button Content="Project an image..." Command="{Binding RunCommand}" CommandParameter="images.project"
+                AutomationProperties.Name="Project an image"
+                AutomationProperties.HelpText="Choose a picture (PNG, JPEG or anything else ImageMagick reads); it is copied into the project and never exported" />
+      </WrapPanel>
+      <CheckBox Content="Show the images (Ctrl+Shift+J)" IsChecked="{Binding ShowImages, Mode=OneWay}"
+                Command="{Binding RunCommand}" CommandParameter="view.overlay.images"
+                AutomationProperties.Name="Show the projected images"
+                AutomationProperties.HelpText="All of them at once, in the top view; the 3D view never shows them" />
+    </StackPanel>
+  </Border>
+</UserControl>

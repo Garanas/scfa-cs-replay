@@ -326,13 +326,14 @@ public sealed partial class MainViewModel
             "decals" => new OverlayItem(overlay, () => ShowDecals, value => ShowDecals = value),
             "navigation" => new OverlayItem(overlay, () => ShowNavigation, value => ShowNavigation = value),
             "generatedPathNodes" => new OverlayItem(overlay, () => ShowGeneratedPathNodes, value => ShowGeneratedPathNodes = value),
+            "images" => new OverlayItem(overlay, () => ShowImages, value => ShowImages = value),
             _ => new OverlayItem(overlay, () => false, null),
         })];
         foreach (OverlayDefinition overlay in EditorOverlays.All)
         {
             Commands.Register(new EditorCommand
             {
-                Id = overlay.CommandId, Title = overlay.CommandTitle, Story = overlay.Story,
+                Id = overlay.CommandId, Title = overlay.CommandTitle, Story = overlay.Story, Gesture = overlay.Gesture,
                 Incomplete = overlay.Missing is string missing ? new IncompleteAttribute(overlay.Story, missing) : null,
                 Parameters = [new CommandParameter("on", typeof(bool?), true)],
                 MakeRequest = overlay.IsIncomplete ? null : arguments => new ToggleOverlay(overlay.Id, arguments["on"]?.GetValue<bool>()),

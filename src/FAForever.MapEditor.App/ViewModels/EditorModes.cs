@@ -68,6 +68,18 @@ public sealed record MaskStackSection() : PanelSection("Mask");
 public sealed record OverlaySection() : PanelSection("Shown in the views");
 
 /// <summary>
+/// The Sketch mode's list of projected images (user story N-2): each with its eye and opacity, and a button that
+/// projects another picture; the chosen one is edited in the inspector (<see cref="ProjectedImageDetailsSection"/>).
+/// </summary>
+public sealed record ProjectedImagesSection() : PanelSection("Projected images");
+
+/// <summary>
+/// The chosen projected image (user story N-2), the Sketch mode's inspector: its picture's size, opacity, place, size and turn,
+/// fits to the map, what it looks like, and replacing or removing it. Nothing while no image is chosen.
+/// </summary>
+public sealed record ProjectedImageDetailsSection() : PanelSection("Image");
+
+/// <summary>
 /// The Units mode's palettes (user story U-8): the chosen palette's ten slots, each a unit or a
 /// units preset the keys 1 to 0 pick for the place tool, and the units placed last.
 /// </summary>
@@ -261,13 +273,13 @@ public static class EditorModes
                 new ToolDefinition("sketch.symbol", "Symbol", "N-4", "Stamp a spawn, mass, hydrocarbon, arrow, cross or question mark"),
                 new ToolDefinition("sketch.label", "Label", "N-4", "Write a label in a hand-drawn style"),
                 new ToolDefinition("sketch.select", "Select", "N-4", "Select strokes, symbols and labels to move, recolour or delete them"),
-                new ToolDefinition("sketch.image", "Image", "N-2", "Move, scale and turn a projected image"),
+                new ToolDefinition("sketch.image", "Image", "N-2") { Make = model => new ImageTool(model) },
             ],
             [
                 new PlannedSection("Sheets", "N-1", "The sketch's sheets, each shown or hidden, one drawn into"),
-                new PlannedSection("Projected images", "N-2", "Pictures laid over the map in the top view, each shown or hidden"),
+                new ProjectedImagesSection(),
             ],
-            []),
+            [new ProjectedImageDetailsSection()]),
 
         // the Procedural mode (wave 8C): its tools and sections are ProceduralMode's
         new ModeDefinition(ProceduralMode.Id, "Procedural", "Icon.Procedural", "Generated results, connected regions, export steps", BottomGroup, "F11", "F-7",
@@ -305,6 +317,11 @@ public sealed record OverlayDefinition(string Id, string Title, string CommandTi
     public string? Swatch { get; init; }
 
     /// <summary>
+    /// The key that turns it on or off, e.g. <c>Ctrl+Shift+J</c>; null for none.
+    /// </summary>
+    public string? Gesture { get; init; }
+
+    /// <summary>
     /// The command that turns it on or off: <c>view.overlay.markers</c>.
     /// </summary>
     public string CommandId => $"view.overlay.{Id}";
@@ -331,5 +348,6 @@ public static class EditorOverlays
         new OverlayDefinition("decals", "Decals", "Show decals", "V-3"),
         new OverlayDefinition("navigation", "Connected regions", "Show the connected regions: where units of a layer can path between", "T-8") { Swatch = "MapRegion1Brush" },
         new OverlayDefinition("generatedPathNodes", "Generated nodes", "Show the generated path nodes", "R-3") { Panel = "procedural" },
+        new OverlayDefinition("images", "Images", "Show the projected images in the top view", "N-2") { Gesture = "Ctrl+Shift+J" },
     ];
 }
