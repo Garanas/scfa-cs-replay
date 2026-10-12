@@ -260,7 +260,7 @@ public sealed partial class DecalGroupItem : ObservableObject
                 OnPropertyChanged();
                 return;
             }
-            _ = _owner.Run("decals.renameGroup", new JsonObject { ["group"] = Id, ["name"] = value });
+            _ = ShowAfter(_owner.Run("decals.renameGroup", new JsonObject { ["group"] = Id, ["name"] = value }), nameof(Name));
         }
     }
 
@@ -274,8 +274,24 @@ public sealed partial class DecalGroupItem : ObservableObject
         {
             if (value != _isShown)
             {
-                _ = _owner.Run("decals.showGroup", new JsonObject { ["group"] = Id, ["on"] = value });
+                _ = ShowAfter(_owner.Run("decals.showGroup", new JsonObject { ["group"] = Id, ["on"] = value }), nameof(IsShown));
             }
+        }
+    }
+
+    /// <summary>
+    /// Shows the model's value again once a command ran, also when it was refused (a name taken):
+    /// the binding wrote the text typed, which would stay.
+    /// </summary>
+    private async Task ShowAfter(Task edit, string property)
+    {
+        try
+        {
+            await edit;
+        }
+        finally
+        {
+            OnPropertyChanged(property);
         }
     }
 

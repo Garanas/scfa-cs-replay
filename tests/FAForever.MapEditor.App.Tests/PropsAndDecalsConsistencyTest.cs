@@ -149,6 +149,24 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task AGroupNameTheCommandRefusesIsShownAsTheModelHasIt()
+        {
+            MainViewModel model = await Open();
+            model.SelectMode("decals");
+            await Run(model, "decals.addGroup", new JsonObject { ["name"] = "Mud" });
+            await Run(model, "decals.addGroup", new JsonObject { ["name"] = "Sand" });
+            DecalGroupItem sand = model.Decals.Groups.Single(group => group.Name == "Sand");
+            List<string?> told = [];
+            sand.PropertyChanged += (_, e) => told.Add(e.PropertyName);
+
+            sand.Name = "Mud";
+            await Task.Delay(200);
+
+            Assert.IsTrue(told.Contains(nameof(DecalGroupItem.Name)), "the box is told to show the name again");
+            Assert.AreEqual(model.ShownDocument!.DecalGroups.Single(group => group.Id == sand.Id).Name, sand.Name);
+        }
+
+        [TestMethod]
         public async Task APaletteWeightBelowZeroIsZero()
         {
             MainViewModel model = await Open();
