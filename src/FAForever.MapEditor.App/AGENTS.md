@@ -1390,7 +1390,9 @@ User stories D-1 and D-2, the Decals mode (F8); the edits are the library's `Dec
   `decals.addGroup {name?}`, `decals.renameGroup {group, name}`, `decals.deleteGroup {group}` (the
   decals stay), `decals.addToGroup {group}`, `decals.removeFromGroup {group}`, `decals.selectGroup
   {group, add?}`, `decals.showGroup {group, on?}`; `group` is the group's id. Hidden groups are the
-  editor's, never the document's: another map shows every group again. Their decals
+  editor's, never the document's: another map shows every group again (the same map resized, or its
+  size undone, keeps what it hid). Add and Take out wait for a selected decal (`HasSelectedDecals`; their
+  tip says "Select decals on the map first"). Their decals
   (`HiddenDecals`) are not drawn in 3D (`TerrainRenderer` leaves them out of its runs), not picked
   in either view (`PickAt` passes `IsShown` to the library's `Nearest`; `PickOptions.HiddenDecals`),
   not selected by a box or Select all, and drop out of the selection when hidden.
@@ -2076,6 +2078,8 @@ library's guide, "What the game ignores and what it derives"): scaling props sho
 - **Where it paints** (P-3): `OnlyOn` and `NotOn` are `PaintLayer`s (a name and a function from
   the document to a mask), the map's strata today (`PaintLayer.Stratum`); the mask layers of K-1
   are to join `Layers` the same way. A place passes a `MaskCondition` (at least the threshold).
+  A layer is chosen by its `Key` (`stratum:N`, a mask's name), so a stratum chosen stays chosen when
+  its texture, and with it its name, changes; another map starts with Anywhere.
 - **The shelf and dropping**: a prop chosen on the shelf in the Props mode becomes the place
   tool's prop, or with the paint tool goes into the palette (another variant of the same tile
   takes the place of the one it added). A prop dropped on a view is placed there in any mode
@@ -2143,7 +2147,10 @@ Terrain panel's generated list and `generate.stale`.
   `props.addRuleCondition {rule?, layer?, threshold?, forbid?}`, `props.setRuleCondition {index,
   rule?, layer?, threshold?, forbid?, kind?}`, `props.removeRuleCondition {index}`,
   `props.removeRule {rule?, keepProps?}` (its props go too, unless kept) and, in the Props menu,
-  `props.keepFromRules` (the selected props of rules become hand-placed). Pasted and duplicated
+  `props.keepFromRules` (the selected props of rules become hand-placed). The chosen rule stays
+  chosen when it is renamed (typed, undone or redone); another map forgets the choice, the typed name
+  and the condition's layer (`PropRulesViewModel.Reset`). A rule's sliders for tilt, scale and sink
+  reach as far as the Placing section's (`PropsViewModel.MaxTilt` and the like). Pasted and duplicated
   props are hand-placed.
 - **Editing the rules shows what they make** (wave 12): a rule added, changed, moved or taken out
   (`paint.addMaskRule`, `setMaskRule`, `moveMaskRule`, `removeMaskRule`) makes every rules layer

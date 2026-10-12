@@ -1,4 +1,5 @@
 using FAForever.MapEditor.App.Diagnostics;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Files.InMemory;
 using FAForever.MapEditor.Project.Generation;
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,8 @@ public sealed partial class MainViewModel
     /// </summary>
     public PropRulesViewModel PropRules { get; private set; } = null!;
 
+    private EditedMap? _propRulesMap;
+
     private void InitializeRules()
     {
         Generation.Register(new MaskRulesGenerator(), "generate.masks");
@@ -36,6 +39,10 @@ public sealed partial class MainViewModel
         MapChanged += (_, _) =>
         {
             MaskRules.Editing = null;
+            if (IsAnotherMap(ref _propRulesMap))
+            {
+                PropRules.Reset();
+            }
             RefreshRules();
         };
         MaskRules.PreviewChanged += (_, _) => OnPropertyChanged(nameof(ShownGrid));

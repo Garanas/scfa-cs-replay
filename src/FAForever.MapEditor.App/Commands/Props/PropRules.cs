@@ -123,10 +123,6 @@ public sealed class SetPropRuleHandler(MainViewModel model) : IRequestHandler<Se
                 Sink = r.Sink ?? rule.Placement.Sink,
             },
         }), $"props.setRule:{name}:{given}");
-        if (newName is { Length: > 0 } && model.PropRules.Chosen == name)
-        {
-            model.PropRules.Chosen = newName;
-        }
         return Task.CompletedTask;
     }
 }

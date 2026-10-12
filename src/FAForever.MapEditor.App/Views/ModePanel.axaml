@@ -265,8 +265,10 @@
                             <Button Content="Select" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.SelectGroupCommand}" CommandParameter="{Binding}"
                                     AutomationProperties.Name="{Binding Name, StringFormat='Select the decals of {0}'}" />
                             <Button Content="Add" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.AddToGroupCommand}" CommandParameter="{Binding}"
+                                    ToolTip.Tip="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.SelectionTip}" ToolTip.ShowOnDisabled="True"
                                     AutomationProperties.Name="{Binding Name, StringFormat='Add the selected decals to {0}'}" />
                             <Button Content="Take out" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.RemoveFromGroupCommand}" CommandParameter="{Binding}"
+                                    ToolTip.Tip="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.SelectionTip}" ToolTip.ShowOnDisabled="True"
                                     AutomationProperties.Name="{Binding Name, StringFormat='Take the selected decals out of {0}'}" />
                             <Button Classes="beside" Content="×" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Decals.DeleteGroupCommand}" CommandParameter="{Binding}"
                                     AutomationProperties.Name="{Binding Name, StringFormat='Delete the decal group {0}'}" ToolTip.Tip="Its decals stay on the map" />
@@ -296,17 +298,17 @@
                   <CheckBox Content="Turn at random" IsChecked="{Binding RandomTurn}" AutomationProperties.Name="Turn each placed prop at random" />
                   <StackPanel>
                     <TextBlock Classes="label" Text="{Binding RandomTilt, StringFormat='Tilt at random: up to {0:0}°'}" />
-                    <Slider Minimum="0" Maximum="45" Value="{Binding RandomTilt}" AutomationProperties.Name="Most a placed prop leans at random in degrees" />
+                    <Slider Minimum="0" Maximum="{x:Static vm:PropsViewModel.MaxTilt}" Value="{Binding RandomTilt}" AutomationProperties.Name="Most a placed prop leans at random in degrees" />
                   </StackPanel>
                   <StackPanel>
                     <TextBlock Classes="label" Text="{Binding ScaleMin, StringFormat='Scale from {0:0.00}'}" />
-                    <Slider Minimum="0.1" Maximum="4" Value="{Binding ScaleMin}" AutomationProperties.Name="Smallest scale of a placed prop" />
+                    <Slider Minimum="{x:Static vm:PropsViewModel.MinScale}" Maximum="{x:Static vm:PropsViewModel.MaxScale}" Value="{Binding ScaleMin}" AutomationProperties.Name="Smallest scale of a placed prop" />
                     <TextBlock Classes="label" Text="{Binding ScaleMax, StringFormat='to {0:0.00}'}" />
-                    <Slider Minimum="0.1" Maximum="4" Value="{Binding ScaleMax}" AutomationProperties.Name="Largest scale of a placed prop" />
+                    <Slider Minimum="{x:Static vm:PropsViewModel.MinScale}" Maximum="{x:Static vm:PropsViewModel.MaxScale}" Value="{Binding ScaleMax}" AutomationProperties.Name="Largest scale of a placed prop" />
                   </StackPanel>
                   <StackPanel>
                     <TextBlock Classes="label" Text="{Binding Sink, StringFormat='Sink into the ground: {0:0.00}'}" />
-                    <Slider Minimum="0" Maximum="5" Value="{Binding Sink}" AutomationProperties.Name="How far placed props sink into the terrain"
+                    <Slider Minimum="0" Maximum="{x:Static vm:PropsViewModel.MaxSink}" Value="{Binding Sink}" AutomationProperties.Name="How far placed props sink into the terrain"
                             AutomationProperties.HelpText="In game units; Drop to ground sinks the selected props as far" />
                   </StackPanel>
                   <CheckBox Content="Props follow the terrain" IsChecked="{Binding FollowTerrain, Mode=OneWay}"

@@ -166,6 +166,37 @@ public sealed partial class PropRulesViewModel : ObservableObject
         Refresh(_document);
     }
 
+    /// <summary>
+    /// Forgets what belongs to the map before another one: the chosen rule, the name typed for a
+    /// new one and the layer chosen for a condition. The next <see cref="Refresh"/> chooses the
+    /// first rule of the new map.
+    /// </summary>
+    public void Reset()
+    {
+        _document = null;
+        _shownRules = default;
+        _shownProps = default;
+        _builtKey = "";
+        NewName = "";
+        NewLayer = null;
+        Chosen = null;
+    }
+
+    /// <summary>
+    /// The name the chosen rule has in a new list of rules when it was renamed: the list has as many
+    /// rules, the one in the chosen rule's place has a name the old list did not hold. Null when the
+    /// chosen rule was removed, or the rules changed in another way.
+    /// </summary>
+    private static string? RenamedTo(ImmutableArray<PropRule> before, ImmutableArray<PropRule> after, string? chosen)
+    {
+        if (chosen is null || before.IsDefault || before.Length != after.Length)
+        {
+            return null;
+        }
+        int index = before.ToList().FindIndex(rule => rule.Name == chosen);
+        return index >= 0 && before.All(rule => rule.Name != after[index].Name) ? after[index].Name : null;
+    }
+
     [RelayCommand]
     private Task Add() => _run("props.addRule", NewName.Trim().Length > 0 ? new JsonObject { ["name"] = NewName.Trim() } : []);
 
@@ -192,13 +223,15 @@ public sealed partial class PropRulesViewModel : ObservableObject
         ImmutableArray<Prop> props = document?.Props ?? [];
         if (rules != _shownRules || props != _shownProps)
         {
+            ImmutableArray<PropRule> before = _shownRules;
             _shownRules = rules;
             _shownProps = props;
             Dictionary<string, int> counts = props.Where(prop => prop.Rule is not null).GroupBy(prop => prop.Rule!).ToDictionary(group => group.Key, group => group.Count());
             Items = [.. rules.Select(rule => new PropRuleItem(rule.Name, SummaryOf(rule, counts.GetValueOrDefault(rule.Name))))];
             if (Chosen is null || document?.FindPropRule(Chosen) is null)
             {
-                Chosen = Items.FirstOrDefault()?.Name;
+                // a rule renamed (typed, undone or redone) stays the chosen one
+                Chosen = RenamedTo(before, rules, Chosen) ?? Items.FirstOrDefault()?.Name;
                 return;
             }
             OnPropertyChanged(nameof(ChosenItem));
@@ -286,10 +319,10 @@ public sealed partial class PropRulesViewModel : ObservableObject
                     Help = "ByCategory: rocks tilt with the ground, trees stand upright",
                 },
                 new BoolSetting("Random turn", set, "randomTurn", d => Read(d).Placement.RandomTurn, _run, Fixed),
-                new NumberSetting("Random tilt", set, "randomTilt", d => Read(d).Placement.RandomTilt, _run, Fixed) { Minimum = 0, Maximum = 30, HasSlider = true, Help = "The most a prop leans at random, in degrees" },
-                new NumberSetting("Smallest scale", set, "scaleMin", d => Read(d).Placement.ScaleMin, _run, Fixed) { Minimum = 0.1, Maximum = 3, HasSlider = true },
-                new NumberSetting("Largest scale", set, "scaleMax", d => Read(d).Placement.ScaleMax, _run, Fixed) { Minimum = 0.1, Maximum = 3, HasSlider = true },
-                new NumberSetting("Sink", set, "sink", d => Read(d).Placement.Sink, _run, Fixed) { Minimum = 0, Maximum = 2, HasSlider = true, Help = "How far into the terrain, in game units" },
+                new NumberSetting("Random tilt", set, "randomTilt", d => Read(d).Placement.RandomTilt, _run, Fixed) { Minimum = 0, Maximum = PropsViewModel.MaxTilt, HasSlider = true, Help = "The most a prop leans at random, in degrees" },
+                new NumberSetting("Smallest scale", set, "scaleMin", d => Read(d).Placement.ScaleMin, _run, Fixed) { Minimum = PropsViewModel.MinScale, Maximum = PropsViewModel.MaxScale, HasSlider = true },
+                new NumberSetting("Largest scale", set, "scaleMax", d => Read(d).Placement.ScaleMax, _run, Fixed) { Minimum = PropsViewModel.MinScale, Maximum = PropsViewModel.MaxScale, HasSlider = true },
+                new NumberSetting("Sink", set, "sink", d => Read(d).Placement.Sink, _run, Fixed) { Minimum = 0, Maximum = PropsViewModel.MaxSink, HasSlider = true, Help = "How far into the terrain, in game units" },
             ]),
         ];
     }

@@ -150,14 +150,40 @@ public sealed partial class DecalsViewModel : ObservableObject
     /// <summary>
     /// The panel's button: adds the selected decals to the group (<c>decals.addToGroup</c>).
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(HasSelectedDecals))]
     private Task AddToGroup(DecalGroupItem group) => _run("decals.addToGroup", new JsonObject { ["group"] = group.Id });
 
     /// <summary>
     /// The panel's button: takes the selected decals out of the group (<c>decals.removeFromGroup</c>).
     /// </summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(HasSelectedDecals))]
     private Task RemoveFromGroup(DecalGroupItem group) => _run("decals.removeFromGroup", new JsonObject { ["group"] = group.Id });
+
+    /// <summary>
+    /// Whether a decal is selected: Add and Take out act on the selected decals, so they wait for one.
+    /// </summary>
+    public bool HasSelectedDecals { get; private set; }
+
+    /// <summary>
+    /// What the disabled Add and Take out say; null while they are enabled.
+    /// </summary>
+    public string? SelectionTip => HasSelectedDecals ? null : "Select decals on the map first";
+
+    /// <summary>
+    /// The selection changed: whether it holds a decal.
+    /// </summary>
+    public void SelectionChanged(bool anyDecal)
+    {
+        if (anyDecal == HasSelectedDecals)
+        {
+            return;
+        }
+        HasSelectedDecals = anyDecal;
+        OnPropertyChanged(nameof(HasSelectedDecals));
+        OnPropertyChanged(nameof(SelectionTip));
+        AddToGroupCommand.NotifyCanExecuteChanged();
+        RemoveFromGroupCommand.NotifyCanExecuteChanged();
+    }
 
     /// <summary>
     /// The panel's cross: removes the group, keeping its decals (<c>decals.deleteGroup</c>).
@@ -234,7 +260,7 @@ public sealed partial class DecalGroupItem : ObservableObject
                 OnPropertyChanged();
                 return;
             }
-            _ = _owner.Run("decals.renameGroup", new JsonObject { ["group"] = Id, ["name"] = value });
+            _ = ShowAfter(_owner.Run("decals.renameGroup", new JsonObject { ["group"] = Id, ["name"] = value }), nameof(Name));
         }
     }
 
@@ -248,8 +274,24 @@ public sealed partial class DecalGroupItem : ObservableObject
         {
             if (value != _isShown)
             {
-                _ = _owner.Run("decals.showGroup", new JsonObject { ["group"] = Id, ["on"] = value });
+                _ = ShowAfter(_owner.Run("decals.showGroup", new JsonObject { ["group"] = Id, ["on"] = value }), nameof(IsShown));
             }
+        }
+    }
+
+    /// <summary>
+    /// Shows the model's value again once a command ran, also when it was refused (a name taken):
+    /// the binding wrote the text typed, which would stay.
+    /// </summary>
+    private async Task ShowAfter(Task edit, string property)
+    {
+        try
+        {
+            await edit;
+        }
+        finally
+        {
+            OnPropertyChanged(property);
         }
     }
 

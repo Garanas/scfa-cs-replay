@@ -36,10 +36,23 @@ public sealed partial class DecalsAlongCurveViewModel : ObservableObject
     public bool HasDecal => Decal is not null;
 
     /// <summary>
-    /// What the section calls the decal.
+    /// Another map was opened: a decal of the previous map's own files is not offered any more.
+    /// </summary>
+    public void ForgetMapsDecal()
+    {
+        if (DecalPlaceTool.IsOfAMap(Decal))
+        {
+            Decal = null;
+        }
+    }
+
+    /// <summary>
+    /// What the section calls the decal, as the place tool does: a texture by its name, a decal set
+    /// as <c>rock01 (set)</c>.
     /// </summary>
     public string Title => Decal is not string key ? "No decal chosen"
-        : _model.Assets.Find(key)?.Name ?? $"{Path.GetFileName(key)} (set)";
+        : _model.Assets.Find(key)?.Name
+        ?? (DecalSets.Find(_model.Assets.AllEntries, _model.ShownDocument, key) is not null ? $"{Path.GetFileName(key)} (set)" : Path.GetFileNameWithoutExtension(key));
 
     /// <summary>
     /// The decal's picture (a set's first texture's), for the thumbnail.

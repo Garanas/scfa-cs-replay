@@ -97,6 +97,23 @@ public sealed partial class DecalPlaceTool(MainViewModel model) : ObservableObje
     /// </summary>
     public string Help => "Click to place the decal, drag to size and turn it; Ctrl+P or Choose picks the decal, or choose one on the shelf or drag it onto the map";
 
+    /// <summary>
+    /// Whether a decal's key names a file of a map's own (<c>maps/&lt;folder&gt;/env/decals/rock01_albedo.png</c>),
+    /// which only that map has.
+    /// </summary>
+    public static bool IsOfAMap(string? key) => key is not null && key.TrimStart('/').StartsWith("maps/", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Another map was opened: a decal of the previous map's own files is not offered any more.
+    /// </summary>
+    public void ForgetMapsDecal()
+    {
+        if (IsOfAMap(Decal))
+        {
+            Decal = null;
+        }
+    }
+
     partial void OnDecalChanged(string? value)
     {
         Entry = value is null ? null : model.Assets.Find(value);
