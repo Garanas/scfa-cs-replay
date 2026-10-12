@@ -74,6 +74,20 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task AResizeKeepsTheChosenWaveGenerator()
+        {
+            MainViewModel model = await Open();
+            for (int i = 0; i < 3; i++)
+            {
+                await Run(model, "water.addWaveGenerator", new JsonObject { ["x"] = 10 + i, ["z"] = 10 });
+            }
+            Assert.AreEqual(2, model.WaterSettings.SelectedGenerator?.Index);
+            int width = model.Map!.Document.Width;
+            await Run(model, "map.resize", new JsonObject { ["width"] = width * 2, ["height"] = width * 2 });
+            Assert.AreEqual(2, model.WaterSettings.SelectedGenerator?.Index, "a resize keeps the map, so it keeps the choice");
+        }
+
+        [TestMethod]
         public async Task TheSkyCubeMapsPictureIsOfTheOpenMap()
         {
             MainViewModel model = await Open();

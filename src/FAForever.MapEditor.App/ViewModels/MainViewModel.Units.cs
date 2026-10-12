@@ -25,7 +25,6 @@ public sealed partial class MainViewModel
         && Selection.Items.All(thing => thing.Kind == ObjectKind.Unit
             && document.Find(thing) is PlacedUnit unit && Assets.Catalog.Find(unit.Unit.Blueprint) is { IsStructure: true });
 
-    private EditedMap? _unitsMap;
     private string? _placedInto;
 
     private void InitializeUnits()
@@ -34,14 +33,9 @@ public sealed partial class MainViewModel
         Presets.Register(UnitPreset.Of(this));
         // the tree and the inspector tell how a placed instance stands to its preset (U-9)
         Armies.PresetFingerprint = Presets.UnitPresetFingerprint;
-        // another map: no army, group or expanded node of the one before stays (a resize keeps the map)
-        MapChanged += (_, _) =>
+        // another map: no army, group or expanded node of the one before stays
+        AnotherMap += (_, _) =>
         {
-            if (Map is null || ReferenceEquals(Map, _unitsMap))
-            {
-                return;
-            }
-            _unitsMap = Map;
             _placedInto = null;
             place.ForgetMap();
             Armies.ForgetMap();

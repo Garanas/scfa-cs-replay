@@ -109,7 +109,7 @@ public sealed partial class MainViewModel
     private void InitializePainting()
     {
         DocumentChanged += (_, _) => Masks.Refresh(ShownDocument);
-        MapChanged += (_, _) => Masks.Reset();
+        AnotherMap += (_, _) => Masks.Reset();
         Masks.Changed += (_, _) =>
         {
             Tool<MaskPaintTool>().OnMaskChanged();

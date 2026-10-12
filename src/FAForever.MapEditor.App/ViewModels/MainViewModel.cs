@@ -437,7 +437,14 @@ public sealed partial class MainViewModel : ObservableObject
     public MapDocument? ShownDocument => _stroke?.Document ?? Map?.Document;
 
     /// <summary>
-    /// Raised when another map is opened.
+    /// Raised when a map takes the window (opened, imported or made), before <see cref="MapChanged"/>:
+    /// each part forgets here what it held of the map before (a choice, a filter, a half-made edit).
+    /// A resize keeps the map and raises only <see cref="MapChanged"/>.
+    /// </summary>
+    public event EventHandler? AnotherMap;
+
+    /// <summary>
+    /// Raised when another map is opened, and when the open map's size changes.
     /// </summary>
     public event EventHandler? MapChanged;
 
@@ -745,6 +752,7 @@ public sealed partial class MainViewModel : ObservableObject
         {
             SelectMode("map");
         }
+        AnotherMap?.Invoke(this, EventArgs.Empty);
         MapChanged?.Invoke(this, EventArgs.Empty);
         if (replaced)
         {

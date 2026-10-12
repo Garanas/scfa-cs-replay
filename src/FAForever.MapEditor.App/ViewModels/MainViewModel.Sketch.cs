@@ -98,21 +98,13 @@ public sealed partial class MainViewModel
     // whether the Sketch mode's Select tool holds a selection: what Delete acts on in that mode
     private bool SketchHasSelection => _tools.Values.OfType<Tools.SketchSelectTool>().FirstOrDefault()?.HasSelection == true;
 
-    // the map the Sketch panel shows the sheets of
-    private Project.EditedMap? _sketchOf;
-
     private void InitializeSketch()
     {
         Sketch = new SketchViewModel(RunWithAsync);
+        // another map has its own sheets: nothing of the last one's stays chosen or half drawn
+        AnotherMap += (_, _) => Sketch.Forget();
         DocumentChanged += (_, _) =>
         {
-            if (!ReferenceEquals(Map, _sketchOf))
-            {
-                // another map has its own sheets: nothing of the last one's stays chosen or half drawn
-                // (a resize or an undo keeps the map, so it keeps the choice)
-                _sketchOf = Map;
-                Sketch.Forget();
-            }
             Sketch.Refresh(ShownDocument);
             RefreshSketchNote();
         };

@@ -66,10 +66,13 @@ Ctrl+K). Where the user stories go in it is on the design's anatomy board.
 
 Opening, importing or making a map while another is open (`MainViewModel.Attach`) puts the window
 back at the Map mode and makes every list of entries (`PanelPartLists`) show its first entry, after
-`MapChanged` has let each view model forget the old map; the editor's first map opens in the mode
+`AnotherMap` has let each view model forget the old map; the editor's first map opens in the mode
 the window starts in (Terrain). What belongs to the window (the view tab, the overlays, the dock,
 which tool each mode used last) and to the workspace (unit palettes) stays. A view model that holds
-something of the map listens to `MapChanged` itself; `OpeningAnotherMapTest` covers the shell's part.
+something of the map (a choice, a filter, a half-made edit) forgets it on `MainViewModel.AnotherMap`,
+raised by `Attach` before `MapChanged`. `MapChanged` is raised on a resize too, which keeps the map
+and so keeps those choices: refresh on `MapChanged`, forget on `AnotherMap`.
+`OpeningAnotherMapTest` covers the shell's part.
 
 - **The controller** (`Commands/`, user story F-1) holds every command, sent through MediatR.
   A command is a request, a record whose properties are its arguments, with
@@ -1577,7 +1580,7 @@ change, span `model.armies`), the place tool and the commands.
 - **What follows the map** (`MainViewModel.Units.cs`, `ArmiesViewModel.ForgetMap`, `UnitPlaceTool.ForgetMap`): another map
   (not a resize of the same one) leaves nothing of the one before: the tree has no group or army chosen and no node
   expanded, and the place tool's army is the default of the map shown (`ArmyChosen` false) with the group `INITIAL`.
-  The stored selections are read once per map (`MainViewModel.UnitSelection.cs`); a resize keeps them. A units preset
+  The stored selections are read once per map (`AnotherMap` in `MainViewModel.UnitSelection.cs`); a resize keeps them. A units preset
   deleted from the workspace is no longer what the place tool places (`UnitPlaceTool.ClearPreset`, the unit chosen
   before is), and no slot is lit for it. A palette made, renamed or deleted is the palette the user's settings keep.
   The inspector's Army choice of selected units shows a dash while they belong to different armies, as the Group
@@ -2004,7 +2007,7 @@ inspector's `MarkerSelection`.
   chosen); when it is gone (deleted, or a rename undone) it becomes the chain the list falls back to,
   or none when the list shows no chain. A name field that the map refuses (another chain or marker
   has the name) shows the field's own name again (`ShowAfter`, as the inspector's number fields do).
-  Opening a map (`MarkersViewModel.Forget`, from `Events.MapOpened`) clears the chosen chain, shows
+  Opening a map (`MarkersViewModel.Forget`, on `AnotherMap`) clears the chosen chain, shows
   every kind again, chooses the list's first entry and drops the deposit warning.
 - **The inspector** (`MarkerSelection`, R-2, R-5): the name of one marker (a spawn keeps its
   army's), the resource of deposits, the type of AI markers (`AiMarker.KnownTypes` and the
@@ -2302,7 +2305,7 @@ mode panel's and inspector's templates only name it).
   not things of the selection (they have no ids): the tool selects and moves them itself. The chosen
   generator is `WaterSettings.SelectedGenerator`, one choice for the list, the tool and the commands:
   Add (`water.addWaveGenerator`) and placing choose the new one, a map that is opened starts with the
-  first (`ForgetSelection` on `MapChanged`), a removal keeps the index (the last when it is gone).
+  first (`ForgetSelection` on `AnotherMap`; a resize keeps the choice), a removal keeps the index (the last when it is gone).
   The sky cube map's picture (`SkyCubeViewModel.Preview`) is the open map's: a map without a result
   made in this session shows none.
   `water.placeWaveGenerator {x?, z?, heading?, speed?}` (Water menu) chooses the tool, or with a
@@ -3225,8 +3228,9 @@ stretches over hills).
   empty while none is chosen) says the picture's size in pixels and where it is kept, then the name,
   opacity, centre, width, height and turn, Fit to map, Fit to playable area, Keep proportions,
   Greyscale, Locked, Order (below or above the sketch), Replace the picture... and Remove.
-- **Another map**: the sheets and the images of a map are its own. When the shown map is another one (opened, created,
-  closed; not a resize or an undo, which keep the map), `SketchViewModel.Forget` and `ProjectedImagesViewModel.Forget`
+- **Another map**: the sheets and the images of a map are its own. When the shown map is another one (opened, imported,
+  created; not a resize or an undo, which keep the map), `SketchViewModel.Forget` and `ProjectedImagesViewModel.Forget`
+  (on `AnotherMap`)
   run before the panels show the new document: no sheet is chosen until the first of the new sketch is, no
   image stays chosen, the strokes and symbols being drawn and the label being written are dropped, and the Select tool's
   selection ends (`SketchViewModel.Forgotten`). Projecting an image turns the Images overlay on, as a stroke turns the

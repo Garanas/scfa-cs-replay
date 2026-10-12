@@ -107,21 +107,13 @@ public sealed partial class MainViewModel
     public StoredSelectionsViewModel StoredSelections { get; private set; } = null!;
 
     private long _storedRefreshedAt;
-    private EditedMap? _storedFor;
 
     private void InitializeUnitSelection()
     {
         SelectBy = new SelectByViewModel(this);
         StoredSelections = new StoredSelectionsViewModel(this, Logger("Selection"));
         // another map has its own stored selections; a resize of the same map keeps them
-        MapChanged += (_, _) =>
-        {
-            if (!ReferenceEquals(Map, _storedFor))
-            {
-                _storedFor = Map;
-                StoredSelections.Open(Map?.ProjectFolder);
-            }
-        };
+        AnotherMap += (_, _) => StoredSelections.Open(Map?.ProjectFolder);
         DocumentChanged += (_, _) =>
         {
             if (StoredSelections.HasChips && !ThrottledDuringStroke(ref _storedRefreshedAt))

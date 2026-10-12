@@ -76,12 +76,9 @@ public sealed partial class MainViewModel
         Presets.Register(new PresetKind(AtmospherePresets.LightingKind, "Lighting presets", CaptureLighting, ApplyLighting));
         Presets.Register(new PresetKind(AtmospherePresets.WaterKind, "Water presets", CaptureWater, ApplyWater));
         DocumentChanged += (_, _) => RefreshMapPanels();
-        MapChanged += (_, _) =>
-        {
-            // what the Water panel had chosen (a wave generator) belongs to the map that went
-            WaterSettings.ForgetSelection();
-            RefreshMapPanels();
-        };
+        // what the Water panel had chosen (a wave generator) belongs to the map that went
+        AnotherMap += (_, _) => WaterSettings.ForgetSelection();
+        MapChanged += (_, _) => RefreshMapPanels();
 
         // the Paint panel's one list of layers (S-1, S-2): a stratum chosen there is the one the strata tool paints, and back
         LayerTextures.PropertyChanged += (_, e) =>

@@ -21,22 +21,12 @@ public sealed partial class MainViewModel
 
     partial void OnShowImagesChanged(bool value) => RefreshOverlays();
 
-    // the map the list of images shows
-    private Project.EditedMap? _imagesOf;
-
     private void InitializeImages()
     {
         Images = new ProjectedImagesViewModel(RunWithAsync);
-        DocumentChanged += (_, _) =>
-        {
-            if (!ReferenceEquals(Map, _imagesOf))
-            {
-                // another map has its own images: none of the last one's stays chosen
-                _imagesOf = Map;
-                Images.Forget();
-            }
-            Images.Refresh(ShownDocument);
-        };
+        // another map has its own images: none of the last one's stays chosen
+        AnotherMap += (_, _) => Images.Forget();
+        DocumentChanged += (_, _) => Images.Refresh(ShownDocument);
         // a click on an image, or a choice in the panel, gives the inspector its fields
         Images.ChosenChanged += (_, _) =>
         {
