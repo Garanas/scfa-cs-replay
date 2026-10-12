@@ -598,14 +598,157 @@
                   <TextBlock Classes="label" Text="{Binding Radius, StringFormat='Radius: {0:0} ogrids'}" />
                   <Slider Minimum="1" Maximum="64" Value="{Binding Radius}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Eraser radius in ogrids" />
                 </StackPanel>
-                <CheckBox Content="Whole strokes" IsChecked="{Binding Whole}" AutomationProperties.Name="Erase whole strokes"
-                          AutomationProperties.HelpText="A stroke the eraser touches goes entirely, as with Alt held; off, it rubs out only where it passes" />
+                <CheckBox Content="Whole strokes" IsChecked="{Binding Whole}" AutomationProperties.Name="Erase whole strokes, symbols and labels"
+                          AutomationProperties.HelpText="A stroke, symbol or label the eraser touches goes entirely, as with Alt held; off, it rubs out only where it passes strokes and leaves symbols and labels" />
                 <CheckBox Content="Mirror" IsChecked="{Binding Mirror}" AutomationProperties.Name="Erase where the symmetry repeats the eraser"
                           AutomationProperties.HelpText="The eraser also works in the other parts of a symmetric map" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding SheetText}" VerticalAlignment="Center"
                            AutomationProperties.Name="Sheet erased in" />
                 <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                           Text="Alt: whole strokes · [ ] radius" AutomationProperties.Name="Eraser keys" />
+                           Text="Alt: whole strokes, symbols and labels · [ ] radius" AutomationProperties.Name="Eraser keys" />
+              </controls:ToolRow>
+            </DataTemplate>
+            <!-- the Sketch mode's Symbol tool (N-4): the six symbols, the colour (keys 1 to 6), the size, the turn of an arrow, Mirror and the sheet stamped into -->
+            <DataTemplate DataType="tools:SymbolTool">
+              <controls:ToolRow Classes="toolrow">
+                <ItemsControl ItemsSource="{Binding Kinds}" AutomationProperties.Name="Symbols">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Classes="inline" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SketchSymbolChoice">
+                      <Button Classes="chip icononly" Classes.on="{Binding IsOn}" Command="{Binding ChooseCommand}" ToolTip.Tip="{Binding Help}"
+                              AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}">
+                        <Path Classes="icon small" Data="{Binding Icon, Converter={x:Static controls:IconConverter.Instance}}" />
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding Colours}" AutomationProperties.Name="Symbol colours">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Classes="inline" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SketchColourChoice">
+                      <Button Classes="chip icononly" Classes.on="{Binding IsOn}" Command="{Binding ChooseCommand}" ToolTip.Tip="{Binding Help}"
+                              AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}">
+                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="Size" />
+                  <ItemsControl ItemsSource="{Binding Sizes}" AutomationProperties.Name="Symbol sizes">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Classes="inline" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:SketchSizeChoice">
+                        <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Title}" Command="{Binding ChooseCommand}"
+                                AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="How large the symbol is on the map, in ogrids: it grows and shrinks with the zoom" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+                <StackPanel Classes="inline" IsVisible="{Binding IsArrow}">
+                  <TextBlock Classes="label" Text="Turn:" />
+                  <TextBox Classes="toolfield commit mono" Text="{Binding TurnText, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Turn of the arrow in degrees"
+                           AutomationProperties.HelpText="Degrees clockwise from pointing right; dragging while you place the arrow points it where the mouse goes" />
+                </StackPanel>
+                <CheckBox Content="Mirror" IsChecked="{Binding Mirror}" AutomationProperties.Name="Mirror symbols by the symmetry"
+                          AutomationProperties.HelpText="A symbol is repeated by the map's symmetry, an arrow turned with it; off for a one-off note" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding SheetText}" VerticalAlignment="Center"
+                           AutomationProperties.Name="Sheet stamped into" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                           Text="Click to stamp · arrow: drag to point it · 1 to 6 colour" AutomationProperties.Name="Symbol keys" />
+              </controls:ToolRow>
+            </DataTemplate>
+            <!-- the Sketch mode's Label tool (N-4): the colour (keys 1 to 6), the size and how to write -->
+            <DataTemplate DataType="tools:LabelTool">
+              <controls:ToolRow Classes="toolrow">
+                <ItemsControl ItemsSource="{Binding Colours}" AutomationProperties.Name="Label colours">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Classes="inline" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SketchColourChoice">
+                      <Button Classes="chip icononly" Classes.on="{Binding IsOn}" Command="{Binding ChooseCommand}" ToolTip.Tip="{Binding Help}"
+                              AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}">
+                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Classes="inline">
+                  <TextBlock Classes="label" Text="Size" />
+                  <ItemsControl ItemsSource="{Binding Sizes}" AutomationProperties.Name="Label sizes">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Classes="inline" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:SketchSizeChoice">
+                        <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Title}" Command="{Binding ChooseCommand}"
+                                AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="How high the letters are on the map, in ogrids: they grow and shrink with the zoom" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding SheetText}" VerticalAlignment="Center"
+                           AutomationProperties.Name="Sheet written in" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                           Text="Click to write · Enter keeps · Escape drops · written once, not mirrored" AutomationProperties.Name="Label keys" />
+              </controls:ToolRow>
+            </DataTemplate>
+            <!-- the Sketch mode's Select tool (N-4): what is selected, and the colours and sizes that change it -->
+            <DataTemplate DataType="tools:SketchSelectTool">
+              <controls:ToolRow Classes="toolrow">
+                <TextBlock Classes="label" VerticalAlignment="Center" Text="{Binding Summary}" AutomationProperties.Name="Selection" />
+                <ItemsControl ItemsSource="{Binding Colours}" IsEnabled="{Binding HasSelection}" AutomationProperties.Name="Colours for the selection">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Classes="inline" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SketchColourChoice">
+                      <Button Classes="chip icononly" Command="{Binding ChooseCommand}" ToolTip.Tip="{Binding Help}"
+                              AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="Gives everything selected this colour, as the colour keys do">
+                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Classes="inline" IsEnabled="{Binding HasSelection}">
+                  <TextBlock Classes="label" Text="Size" />
+                  <ItemsControl ItemsSource="{Binding Sizes}" AutomationProperties.Name="Sizes for the selection">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Classes="inline" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:SketchSizeChoice">
+                        <Button Classes="chip" Content="{Binding Title}" Command="{Binding ChooseCommand}"
+                                AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="Sizes the selected symbols and labels; strokes have no size" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+                <Button Content="Delete" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="sketch.deleteSelected"
+                        IsEnabled="{Binding HasSelection}" AutomationProperties.Name="Delete the selected items of the sketch" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                           Text="Click or drag a box · Shift adds · drag to move · double-click a label to edit · Delete" AutomationProperties.Name="Select keys" />
               </controls:ToolRow>
             </DataTemplate>
             <!-- choosing a connected region of the navigation mesh (T-8) -->

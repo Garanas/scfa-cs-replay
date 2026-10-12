@@ -231,6 +231,12 @@ public enum ToolInk
     Shadow,
 
     /// <summary>
+    /// The handles and outlines of the sketch's Select and Image tools (<c>MapSketchHandleBrush</c>): a colour that none of
+    /// the sketch's six is, drawn over a dark rim (<see cref="Shadow"/>).
+    /// </summary>
+    Handle,
+
+    /// <summary>
     /// The sun (<c>WarningBrush</c>).
     /// </summary>
     Sun,

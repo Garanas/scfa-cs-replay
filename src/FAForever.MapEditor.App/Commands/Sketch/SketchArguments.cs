@@ -59,6 +59,82 @@ internal static class SketchArguments
     }
 
     /// <summary>
+    /// A size by its name (<c>large</c>) or a number of ogrids, as a JSON string or number.
+    /// </summary>
+    /// <param name="choice">The named size; null when a number was given.</param>
+    /// <param name="ogrids">The number given, or the named size's for a symbol or a label.</param>
+    /// <exception cref="ArgumentException">Not a size, or a number outside 1 to 200.</exception>
+    public static void SizeChoice(JsonNode node, bool label, out SketchSize? choice, out float ogrids)
+    {
+        string text = Text(node).Trim();
+        if (float.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float number))
+        {
+            if (!(number >= SketchLook.MinimumOgrids && number <= SketchLook.MaximumOgrids))
+            {
+                throw new ArgumentException($"A size lies between {SketchLook.MinimumOgrids} and {SketchLook.MaximumOgrids} ogrids, not {text}");
+            }
+            choice = null;
+            ogrids = number;
+            return;
+        }
+        SketchSize size = SketchLook.ParseSize(text);
+        choice = size;
+        ogrids = label ? SketchLook.LabelOgrids(size) : SketchLook.SymbolOgrids(size);
+    }
+
+    /// <summary>
+    /// A size in ogrids: a number, or the named size's for a symbol or a label.
+    /// </summary>
+    public static float Size(JsonNode node, bool label)
+    {
+        SizeChoice(node, label, out _, out float ogrids);
+        return ogrids;
+    }
+
+    /// <summary>
+    /// The sheet a symbol or a label goes into: the one named, else the one chosen; null for a sketch without
+    /// sheets (the first one is made for it), and a sheet that does not exist yet is added to the document.
+    /// </summary>
+    public static string? SheetForNew(MainViewModel model, MapDocument document, string? name, out MapDocument result)
+    {
+        string? sheet = name ?? (document.Sketch.IsEmpty ? null : Sheet(model, document, null));
+        result = document;
+        if (sheet is not null && !document.Sketch.IsEmpty && document.Sketch.Find(sheet) is null)
+        {
+            result = document.AddSheet(sheet, out sheet);
+        }
+        return sheet;
+    }
+
+    /// <summary>
+    /// What the Select tool has selected, and in which sheet.
+    /// </summary>
+    /// <exception cref="ArgumentException">Nothing is selected.</exception>
+    public static (string Sheet, System.Collections.Immutable.ImmutableArray<SketchItem> Items) Selected(MainViewModel model)
+    {
+        Tools.SketchSelectTool tool = model.Tool<Tools.SketchSelectTool>();
+        System.Collections.Immutable.ImmutableArray<SketchItem> items = tool.Selected;
+        if (items.IsEmpty)
+        {
+            throw new ArgumentException("Nothing of the sketch is selected: select items first (the Select tool, or sketch.select)");
+        }
+        return (tool.Sheet, items);
+    }
+
+    /// <summary>
+    /// The one label that is selected, as its place in the sheet.
+    /// </summary>
+    /// <exception cref="ArgumentException">No label is selected, or several.</exception>
+    public static int OnlyLabel(MainViewModel model, string sheet)
+    {
+        Tools.SketchSelectTool tool = model.Tool<Tools.SketchSelectTool>();
+        SketchItem[] labels = [.. tool.Selected.Where(item => item.Kind == SketchItemKind.Label)];
+        return tool.Sheet == sheet && labels.Length == 1
+            ? labels[0].Index
+            : throw new ArgumentException("Give the label: its place in the sheet's list, or select just one label");
+    }
+
+    /// <summary>
     /// How many strokes, as a phrase: <c>2 strokes</c>.
     /// </summary>
     public static string Strokes(int count) => count == 1 ? "1 stroke" : $"{count} strokes";

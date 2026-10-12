@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Media;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.Controls;
@@ -39,7 +40,7 @@ public sealed partial class HeightmapView
     /// <summary>
     /// How many strokes the last frame drew, and how many sheets (for tests and automation).
     /// </summary>
-    public (int Sheets, int Strokes, int Culled, int Pending) SketchDrawn { get; private set; }
+    public (int Sheets, int Strokes, int Culled, int Pending, int Symbols, int Labels) SketchDrawn { get; private set; }
 
     private SolidColorBrush SketchBrush(SketchColour colour)
     {
@@ -57,39 +58,37 @@ public sealed partial class HeightmapView
         int sheets = 0;
         int strokes = 0;
         int culled = 0;
+        int symbols = 0;
+        int labels = 0;
         bool full = model.InSketchMode;
         // what lies in the view, in ogrids, with a stroke's half width around it
         Rect visible = new Rect(ControlToMap(default), ControlToMap(new Point(Bounds.Width, Bounds.Height)));
         visible = visible.Inflate(SketchLook.Pixels(SketchWidth.Thick) / _zoom);
         if (model.ShowSketch)
         {
-            foreach (SketchSheet sheet in document.Sketch.Sheets)
+            foreach ((SketchSheet sheet, float opacity) in SketchLines.Shown(document.Sketch, full))
             {
-                if (!sheet.Shown || sheet.Strokes.IsEmpty)
-                {
-                    continue;
-                }
-                float opacity = full ? 1 : sheet.Opacity;
-                if (opacity <= 0)
-                {
-                    continue;
-                }
                 sheets++;
                 strokes += sheet.Strokes.Length;
+                symbols += sheet.Symbols.Length;
                 SketchRun[] runs = SketchRuns.GetValue(sheet, BuildSketchRuns);
                 // a sheet at full opacity needs no layer of its own
                 using (opacity < 1 ? context.PushOpacity(opacity) : (IDisposable?)null)
-                using (context.PushTransform(SketchMatrix()))
                 {
-                    foreach (SketchRun run in runs)
+                    using (context.PushTransform(SketchMatrix()))
                     {
-                        if (!run.Bounds.Intersects(visible))
+                        foreach (SketchRun run in runs)
                         {
-                            culled += run.Strokes;
-                            continue;
+                            if (!run.Bounds.Intersects(visible))
+                            {
+                                culled += run.Strokes;
+                                continue;
+                            }
+                            context.DrawGeometry(null, SketchPen(run.Colour, run.Width, dashed: false), run.Geometry);
                         }
-                        context.DrawGeometry(null, SketchPen(run.Colour, run.Width, dashed: false), run.Geometry);
                     }
+                    // the labels are text: drawn at their size on screen, over the lines
+                    labels += DrawLabels(context, sheet, visible);
                 }
             }
         }
@@ -107,12 +106,85 @@ public sealed partial class HeightmapView
                 }
             }
         }
-        SketchDrawn = (sheets, strokes, culled, pending);
+        int pendingSymbols = model.Sketch.PendingSymbols.Count;
+        if (pendingSymbols > 0)
+        {
+            using (context.PushTransform(SketchMatrix()))
+            {
+                for (int i = 0; i < pendingSymbols; i++)
+                {
+                    // the first is the symbol the mouse places, the others its images by the symmetry
+                    foreach (SketchStroke line in SketchLines.Of(model.Sketch.PendingSymbols[i]))
+                    {
+                        context.DrawGeometry(null, SketchPen(line.Colour, line.Width, dashed: i > 0), GeometryOf(line));
+                    }
+                }
+            }
+        }
+        SketchDrawn = (sheets, strokes, culled, pending + pendingSymbols, symbols, labels);
         if (model.ShowSketch)
         {
             DrawSketchKey(context, document, model);
         }
     }
+
+    // the labels' text, made once for a text, colour and size on screen
+    private readonly Dictionary<(string Text, SketchColour Colour, int Pixels), (FormattedText Ink, FormattedText Halo)> _labelTexts = [];
+
+    private Typeface? _labelFont;
+
+    /// <summary>
+    /// A label smaller than this on screen, in pixels, is not drawn: it could not be read.
+    /// </summary>
+    private const double SmallestLabel = 4;
+
+    /// <summary>
+    /// Draws the labels of a sheet in the hand-written font (the token <c>HandFontFamily</c>), centred on their
+    /// places, at their size on the map (so they grow with the zoom), over a halo of the colour that contrasts
+    /// with their own so that they read on any terrain.
+    /// </summary>
+    /// <returns>How many labels were drawn.</returns>
+    private int DrawLabels(DrawingContext context, SketchSheet sheet, Rect visible)
+    {
+        if (sheet.Labels.IsEmpty)
+        {
+            return 0;
+        }
+        if (_labelTexts.Count > 512)
+        {
+            _labelTexts.Clear();
+        }
+        _labelFont ??= new Typeface(Token<FontFamily>("HandFontFamily"), FontStyle.Normal, FontWeight.Bold);
+        int drawn = 0;
+        foreach (SketchLabel label in sheet.Labels)
+        {
+            double pixels = label.Size * _zoom;
+            (System.Numerics.Vector2 low, System.Numerics.Vector2 high) = SketchLabels.Bounds(label);
+            if (pixels < SmallestLabel || !new Rect(new Point(low.X, low.Y), new Point(high.X, high.Y)).Intersects(visible))
+            {
+                continue;
+            }
+            int size = (int)Math.Round(pixels);
+            if (!_labelTexts.TryGetValue((label.Text, label.Colour, size), out (FormattedText Ink, FormattedText Halo) text))
+            {
+                IBrush halo = SketchBrush(label.Colour == SketchColour.Black ? SketchColour.White : SketchColour.Black);
+                text = (MakeLabelText(label.Text, size, SketchBrush(label.Colour)), MakeLabelText(label.Text, size, halo));
+                _labelTexts[(label.Text, label.Colour, size)] = text;
+            }
+            Point centre = MapToControl(label.Place.X, label.Place.Y);
+            Point at = new Point(centre.X - text.Ink.Width / 2, centre.Y - text.Ink.Height / 2);
+            foreach ((double dx, double dz) in (ReadOnlySpan<(double, double)>)[(-1, 0), (1, 0), (0, -1), (0, 1)])
+            {
+                context.DrawText(text.Halo, new Point(at.X + dx, at.Y + dz));
+            }
+            context.DrawText(text.Ink, at);
+            drawn++;
+        }
+        return drawn;
+    }
+
+    private FormattedText MakeLabelText(string text, double pixels, IBrush brush) =>
+        new FormattedText(text, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, _labelFont!.Value, pixels, brush);
 
     // the map's place of an ogrid to the view's, as the view's own transform
     private Matrix SketchMatrix() => Matrix.CreateScale(_zoom, _zoom) * Matrix.CreateTranslation(_offset.X, _offset.Y);
@@ -124,12 +196,14 @@ public sealed partial class HeightmapView
     {
         using Performance.Span measure = Performance.Measure("top.sketch-build");
         List<SketchRun> runs = [];
+        // the strokes, then the lines of the symbols: the one function the 3D view draws from too
+        SketchStroke[] lines = [.. SketchLines.Of(sheet)];
         int from = 0;
-        while (from < sheet.Strokes.Length)
+        while (from < lines.Length)
         {
-            SketchStroke first = sheet.Strokes[from];
+            SketchStroke first = lines[from];
             int to = from;
-            while (to < sheet.Strokes.Length && to - from < StrokesPerRun && sheet.Strokes[to].Colour == first.Colour && sheet.Strokes[to].Width == first.Width)
+            while (to < lines.Length && to - from < StrokesPerRun && lines[to].Colour == first.Colour && lines[to].Width == first.Width)
             {
                 to++;
             }
@@ -139,8 +213,8 @@ public sealed partial class HeightmapView
             {
                 for (int i = from; i < to; i++)
                 {
-                    AddFigure(figures, sheet.Strokes[i]);
-                    foreach (System.Numerics.Vector2 point in sheet.Strokes[i].Points)
+                    AddFigure(figures, lines[i]);
+                    foreach (System.Numerics.Vector2 point in lines[i].Points)
                     {
                         left = Math.Min(left, point.X);
                         top = Math.Min(top, point.Y);
