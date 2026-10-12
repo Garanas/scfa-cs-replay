@@ -64,8 +64,26 @@ namespace FAForever.MapEditor.Cli.Guide
             {
                 editor.Run("help.tourEnd");
             }
+            ResetMap();
             return new GuideTour(tour.Id, tour.Title, tour.Summary, tour.Order, overviewImage, steps);
         }
+
+        /// <summary>
+        /// Undoes what a tour's steps did to the map (a placed deposit, a unit, a layer, a stroke), so that the next
+        /// tour's pictures show the map as the first tour found it.
+        /// </summary>
+        public void ResetMap()
+        {
+            for (int undone = 0; undone < MaxUndo && editor.Post("state")["undo"] is not null; undone++)
+            {
+                if (!editor.Run("edit.undo"))
+                {
+                    break;
+                }
+            }
+        }
+
+        private const int MaxUndo = 1000;
 
         private GuideStep BuildStep(TourFile tour, TourFileStep step)
         {
@@ -126,10 +144,12 @@ namespace FAForever.MapEditor.Cli.Guide
             }
             if (step.UntilPath is not null)
             {
-                JsonObject wait = new JsonObject { ["path"] = step.UntilPath, ["value"] = step.UntilValue?.DeepClone(), ["timeout"] = 15 };
+                // the editor's own verdict on the step's condition: it counts edits since the step began, and the
+                // beginning of a name, as the person's card does
+                JsonObject wait = new JsonObject { ["path"] = "tour.done", ["value"] = true, ["timeout"] = 30 };
                 if (editor.Post("wait", wait)["wait"]?["matched"]?.GetValue<bool>() != true)
                 {
-                    Console.Error.WriteLine($"{tour.Id}/{step.Id}: the condition {step.UntilPath} = {step.UntilValue} did not hold after Do it for me");
+                    Console.Error.WriteLine($"{tour.Id}/{step.Id}: the condition {step.UntilPath} = {step.UntilValue} did not hold after Do it for me (tour.done stayed false)");
                 }
             }
             JsonObject state = Shot(out MagickImage window, out double scale, out int[]? view3d);

@@ -36,9 +36,12 @@
     {
       "id": "top-view",
       "target": { "label": "Top view" },
-      "before": [{ "run": "view.top" }],
-      "title": "Sculpting in the top view",
-      "text": "Press the left mouse and drag over the map to raise the ground. Every stroke is one step of undo (Ctrl+Z). With symmetry on, the stroke is made in every part of the map."
+      "before": [{ "run": "view.top" }, { "run": "tool.terrain.sculpt" }],
+      "title": "Try it: make one stroke",
+      "text": "Press the left mouse in the top view and drag over the map to raise the ground. Every stroke is one step of undo (Ctrl+Z). With symmetry on, the stroke is made in every part of the map.",
+      "until": { "path": "edits", "value": 1 },
+      "doItForMe": { "run": "brush.stroke", "points": [[90, 112], [100, 106], [110, 104], [120, 104], [130, 106], [140, 112]] },
+      "done": "The ground rose where you dragged. Ctrl+Z takes the stroke back."
     },
     {
       "id": "draft-final",
@@ -52,7 +55,7 @@
       "before": [{ "run": "tool.terrain.sculpt" }],
       "title": "Try it: add a height layer",
       "text": "A height layer is a change on top of the ground below it. Click Sculpt layer to add one. The Sculpt tool then writes into the chosen layer, so you can hide, lock, weaken or remove what you sculpted later.",
-      "until": { "path": "undo", "value": "Add the height layer Sculpt" },
+      "until": { "path": "undo", "value": "Add the height layer Sculpt", "prefix": true },
       "doItForMe": { "run": "terrain.addLayer", "kind": "sculpt" },
       "done": "The layer is in the list under Height layers. Strokes now go into it."
     },

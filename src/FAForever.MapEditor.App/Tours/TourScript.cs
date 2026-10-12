@@ -121,7 +121,10 @@ public sealed record TourAction
 /// A state the step waits for: the value at a path of the editor's state (keys joined by dots, as
 /// automation's <c>wait</c> reads it): <c>tab</c> = <c>3d</c>.
 /// </summary>
-public sealed record TourCondition(string Path, JsonElement Value);
+/// <param name="Path">The state's path.</param>
+/// <param name="Value">What it must read; for <c>edits</c> how many edits the person must have made since the step began.</param>
+/// <param name="Prefix">The value is the beginning of the text read (a layer named again gets a number: <c>Add the height layer Sculpt2</c>).</param>
+public sealed record TourCondition(string Path, JsonElement Value, bool Prefix = false);
 
 /// <summary>
 /// What only the guide reads (user story H-2): a longer text, a crop larger or smaller than the

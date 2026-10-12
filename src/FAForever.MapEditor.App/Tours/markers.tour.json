@@ -75,7 +75,7 @@
       "target": { "part": "inspector" },
       "before": [{ "run": "view.inspectPart", "part": "markers.kind.mass" }],
       "title": "A kind in the inspector",
-      "text": "Choosing the row Mass deposits shows how many there are, with Select them and Clear them. Clearing is one step of Undo."
+      "text": "Choosing the row Mass in the list shows how many there are, with Select them and Clear them. Clearing is one step of Undo."
     },
     {
       "id": "chips",

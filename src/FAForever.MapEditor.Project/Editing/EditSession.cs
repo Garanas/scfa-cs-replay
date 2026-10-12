@@ -93,6 +93,13 @@ namespace FAForever.MapEditor.Project.Editing
         public bool InGroup => _group is not null;
 
         /// <summary>
+        /// How many edits this session has made (each kept edit, group or brush stroke counts one, an edit
+        /// merged into the one before it too; undo and redo do not): what a tour waits on to tell that the
+        /// person made a new step, since the step's name may be the last one's.
+        /// </summary>
+        public int Edits { get; private set; }
+
+        /// <summary>
         /// The edit that <see cref="Undo"/> would undo, e.g. for a menu item <c>Undo Raise terrain</c>.
         /// </summary>
         public string? UndoDescription => CanUndo ? _versions[_current].Description : null;
@@ -368,6 +375,7 @@ namespace FAForever.MapEditor.Project.Editing
                 Raise(new DocumentChange(last, first, group.Description, keep ? ChangeReason.Edit : ChangeReason.Undo));
                 return false;
             }
+            Edits++;
             _versions.Add(new Version(last, group.Description));
             if (_versions.Count > HistoryLimit + 1)
             {
@@ -391,6 +399,7 @@ namespace FAForever.MapEditor.Project.Editing
                 return false;
             }
 
+            Edits++;
             // a new edit ends the versions that could be redone
             _versions.RemoveRange(_current + 1, _versions.Count - _current - 1);
             if (mergeKey is not null && mergeKey == _mergeKey && _current > 0)

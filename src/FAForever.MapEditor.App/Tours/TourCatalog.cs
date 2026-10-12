@@ -71,7 +71,22 @@ public static class EditorTours
     private static readonly HashSet<string> Earlier = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "window.tour.json:589810bf33a41f0b9075f98be056355db553186d66ab640fdc689e510472215b",
+        "terrain.tour.json:4594fa12d6c8b7fb42872ccda984f41b9f6820c6c98b8ec8b2208c7f5b0f5143",
+        "masks.tour.json:11e507e8c87ca82aab583c705f3f33ed23313a8ac2786a34cde6d5ec28eaaaa3",
+        "paint.tour.json:b8238a30c83261b58092bd2b558bbd01e657bd0b461e054db6b676b3a4027bc9",
     };
+
+    /// <summary>
+    /// The environment variable that makes <see cref="Ensure"/> write the shipped tours over the copies the
+    /// workspace holds, whatever was changed in them: set to <c>1</c> by <c>faf-map editor start|restart --refresh-tours</c>,
+    /// for a developer who edits the embedded tours and tries them in a scratch workspace.
+    /// </summary>
+    public const string RefreshVariable = "FAF_MAP_EDITOR_REFRESH_TOURS";
+
+    /// <summary>
+    /// Whether the environment asks for the shipped tours to replace the workspace's copies.
+    /// </summary>
+    public static bool RefreshRequested => Environment.GetEnvironmentVariable(RefreshVariable) == "1";
 
     /// <summary>
     /// The shipped tours' file names.
@@ -91,8 +106,10 @@ public static class EditorTours
     /// <summary>
     /// Writes the tours the folder never had and brings untouched copies of earlier versions up to date.
     /// </summary>
+    /// <param name="folder">The workspace's <c>tours</c> folder.</param>
+    /// <param name="refresh">Whether a copy that differs from the shipped tour is written over, also one the person changed (development: <see cref="RefreshVariable"/>); a tour the person deleted stays deleted.</param>
     /// <returns>The files written or brought up to date now.</returns>
-    public static IReadOnlyList<string> Ensure(string folder)
+    public static IReadOnlyList<string> Ensure(string folder, bool refresh = false)
     {
         Directory.CreateDirectory(folder);
         string written = Path.Combine(folder, Written);
@@ -105,7 +122,7 @@ public static class EditorTours
             if (File.Exists(path))
             {
                 string onDisk = File.ReadAllText(path);
-                if (Normal(onDisk) != Normal(shipped) && Earlier.Contains($"{file}:{Hash(onDisk)}"))
+                if (Normal(onDisk) != Normal(shipped) && (refresh || Earlier.Contains($"{file}:{Hash(onDisk)}")))
                 {
                     File.WriteAllText(path, shipped);
                     now.Add(file);

@@ -34,6 +34,24 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void CountsTheEditsMadeAndNotUndoAndRedo()
+        {
+            EditSession session = new EditSession(original);
+            Assert.AreEqual(0, session.Edits);
+
+            session.Edit("Move a prop", MoveProp(1, Vector3.One));
+            session.Edit("Move a prop", MoveProp(1, Vector3.One * 2), mergeKey: "drag");
+            session.Edit("Move a prop", MoveProp(1, Vector3.One * 3), mergeKey: "drag");
+            Assert.AreEqual(3, session.Edits, "an edit merged into the step before counts: a stroke that continues is an edit");
+            Assert.IsFalse(session.Edit("Nothing", document => document));
+            Assert.AreEqual(3, session.Edits, "an edit that changes nothing is none");
+
+            session.Undo();
+            session.Redo();
+            Assert.AreEqual(3, session.Edits);
+        }
+
+        [TestMethod]
         public void ForgetsWhatCouldBeRedoneAfterANewEdit()
         {
             EditSession session = new EditSession(original);

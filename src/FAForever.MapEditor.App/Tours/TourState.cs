@@ -18,7 +18,7 @@ public static class TourState
     /// </summary>
     public static readonly IReadOnlyList<string> Paths =
     [
-        "tab", "mode", "tool", "dock", "palette", "selection.count", "show.<overlay>", "generated.<result>", "units.place.unit", "layout.modePanel", "layout.inspector", "layout.dock", "undo", "coverageStacks.shown",
+        "tab", "mode", "tool", "dock", "palette", "selection.count", "show.<overlay>", "generated.<result>", "units.place.unit", "layout.modePanel", "layout.inspector", "layout.dock", "undo", "edits", "coverageStacks.shown",
     ];
 
     /// <summary>
@@ -46,8 +46,36 @@ public static class TourState
     /// <summary>
     /// Whether the value at a path is the one a step waits for: numbers by value, the rest by their text.
     /// </summary>
-    public static bool Holds(MainViewModel model, TourCondition condition) =>
-        AutomationServer.Matches(Read(model, condition.Path), JsonNode.Parse(condition.Value.GetRawText()));
+    /// <remarks>
+    /// <c>edits</c> counts what the person made since the step began (<paramref name="editsAtStart"/> is the
+    /// state's <c>edits</c> then): the step holds once at least that many edits were made, e.g. one brush stroke.
+    /// <c>undo</c> holds when the last step has the name and an edit was made since the step began, so a
+    /// step the map already ended with does not finish it.
+    /// </remarks>
+    public static bool Holds(MainViewModel model, TourCondition condition, int editsAtStart = 0)
+    {
+        int made = (model.Map?.Session.Edits ?? 0) - editsAtStart;
+        if (condition.Path == "edits")
+        {
+            return condition.Value.ValueKind == JsonValueKind.Number && made >= condition.Value.GetInt32();
+        }
+        if (condition.Path == "undo" && made <= 0)
+        {
+            return false;
+        }
+        JsonNode? found = Read(model, condition.Path);
+        if (condition.Prefix)
+        {
+            return condition.Value.ValueKind == JsonValueKind.String && found is JsonValue text && text.TryGetValue(out string? read)
+                && read.StartsWith(condition.Value.GetString()!, StringComparison.Ordinal);
+        }
+        return AutomationServer.Matches(found, JsonNode.Parse(condition.Value.GetRawText()));
+    }
+
+    /// <summary>
+    /// How many edits the open map's session made: the state's <c>edits</c>.
+    /// </summary>
+    public static int Edits(MainViewModel model) => model.Map?.Session.Edits ?? 0;
 
     /// <summary>
     /// The state's part that tours read.
@@ -71,6 +99,7 @@ public static class TourState
         },
         ["units"] = new JsonObject { ["place"] = new JsonObject { ["unit"] = model.Tool<UnitPlaceTool>().Unit?.Key } },
         ["undo"] = model.Map?.Session.UndoDescription,
+        ["edits"] = Edits(model),
         ["coverageStacks"] = new JsonObject { ["shown"] = model.ShownCoverageTarget?.Key },
     };
 }

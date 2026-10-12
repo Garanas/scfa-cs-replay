@@ -92,7 +92,7 @@ namespace FAForever.MapEditor.Cli.Guide
             {
                 throw new GuideException("Give --settings: the settings file of a scratch workspace (faf-map workspace scratch <folder> --settings <file>)");
             }
-            EditorOptions start = new EditorOptions { Command = "start", Port = o.Port, Settings = o.Settings, Map = o.Map, Exe = o.Exe, Timeout = 180, Force = true };
+            EditorOptions start = new EditorOptions { Command = "start", Port = o.Port, Settings = o.Settings, Map = o.Map, Exe = o.Exe, Timeout = 180, Force = true, RefreshTours = true };
             if (EditorProcess.Start(start) != 0)
             {
                 throw new GuideException($"Could not start the test editor on port {o.Port}");

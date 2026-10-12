@@ -212,6 +212,85 @@ namespace FAForever.MapEditor.App.Tests
         });
 
         [TestMethod]
+        public Task AStepThatWaitsForAnEditWaitsForANewOneAndABrushStrokeIsOne() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, string folder) = await Open();
+            File.WriteAllText(Path.Combine(folder, "edits.tour.json"), """
+                {
+                  "id": "edits", "title": "Edits",
+                  "steps": [
+                    { "id": "stroke", "title": "Stroke", "text": "Make a stroke.", "until": { "path": "edits", "value": 1 },
+                      "doItForMe": { "run": "brush.stroke", "points": [[100, 100], [112, 104], [124, 100]] } },
+                    { "id": "raise", "title": "Raise", "text": "Raise the ground.", "until": { "path": "undo", "value": "Raise terrain" },
+                      "doItForMe": { "run": "brush.stroke", "points": [[60, 60], [72, 64]] } },
+                    { "id": "layer", "title": "Layer", "text": "Add a layer.", "until": { "path": "undo", "value": "Add the height layer Sculpt", "prefix": true },
+                      "doItForMe": { "run": "terrain.addLayer", "kind": "sculpt" } }
+                  ]
+                }
+                """);
+            model.Tour.Reload();
+            Assert.IsFalse(model.Tour.HasErrors, string.Join("; ", model.Tour.Entries.Where(entry => !entry.IsOk).Select(entry => entry.Error)));
+            int edits = model.Map!.Session.Edits;
+
+            // the stroke the person makes (the mouse: press, drag, release) is one edit and finishes the step
+            await WithFrames(model.Tour.StartAsync("edits", "stroke"));
+            Assert.IsFalse(model.Tour.IsDone);
+            model.Stroke([(100, 100), (112, 104), (124, 100)]);
+            Assert.IsTrue(model.Tour.Evaluate(), "a stroke is an edit made since the step began");
+            Assert.AreEqual(edits + 1, model.Map.Session.Edits);
+            Assert.AreEqual("Raise terrain", model.Map.Session.UndoDescription);
+
+            // the map's last step already has the name the step waits for: only a new step finishes it
+            await WithFrames(model.Tour.StartAsync("edits", "raise"));
+            Assert.IsFalse(model.Tour.IsDone, "the last step of the map is a Raise terrain made before the step began");
+            Assert.IsFalse(model.Tour.Evaluate());
+            await WithFrames(model.Tour.DoItAsync());
+            Assert.IsTrue(model.Tour.IsDone);
+            Assert.AreEqual(edits + 2, model.Map.Session.Edits, "brush.stroke is one edit");
+            Assert.AreEqual(2, model.Map.Session.History.Count(step => step.Description == "Raise terrain") , "and one step of undo each");
+
+            // a layer named again is Sculpt2: the step waits for the beginning of the name
+            await WithFrames(model.Tour.StartAsync("edits", "layer"));
+            await WithFrames(model.Tour.DoItAsync());
+            Assert.IsTrue(model.Tour.IsDone);
+            await WithFrames(model.Tour.StartAsync("edits", "layer"));
+            Assert.IsFalse(model.Tour.IsDone, "the last step is the layer added a moment ago");
+            await WithFrames(model.Tour.DoItAsync());
+            Assert.IsTrue(model.Tour.IsDone);
+            StringAssert.StartsWith(model.Map.Session.UndoDescription, "Add the height layer Sculpt");
+
+            await WithFrames(model.Tour.EndAsync());
+            window.Close();
+        });
+
+        [TestMethod]
+        public void AShippedTourIsWrittenOverAChangedCopyOnlyWhenRefreshIsAskedFor()
+        {
+            string folder = ToursFolder();
+            EditorTours.Ensure(folder);
+            string path = Path.Combine(folder, "terrain.tour.json");
+            File.WriteAllText(path, "{ \"id\": \"terrain\", \"title\": \"Mine\", \"steps\": [] }");
+
+            Assert.AreEqual(0, EditorTours.Ensure(folder).Count, "a changed copy is the person's");
+            CollectionAssert.AreEqual(new[] { "terrain.tour.json" }, EditorTours.Ensure(folder, refresh: true).ToArray(), "a developer's refresh writes the shipped one again");
+            Assert.AreEqual(EditorTours.Text("terrain.tour.json").Replace("\r\n", "\n"), File.ReadAllText(path).Replace("\r\n", "\n"));
+
+            File.Delete(path);
+            Assert.AreEqual(0, EditorTours.Ensure(folder, refresh: true).Count, "a tour the person deleted stays deleted");
+        }
+
+        [TestMethod]
+        public void AConditionMayNameTheBeginningOfATextAndAFileThatSaysSoIsRead()
+        {
+            Tour tour = TourScript.Parse("""
+                { "id": "p", "title": "P", "steps": [ { "id": "a", "title": "A", "text": "A.", "until": { "path": "undo", "value": "Add the", "prefix": true }, "doItForMe": { "run": "view.top" } } ] }
+                """, out string? error)!;
+            Assert.IsNull(error);
+            Assert.IsTrue(tour.Steps[0].Until!.Prefix);
+            Assert.IsTrue(TourState.Known("edits"));
+        }
+
+        [TestMethod]
         public void TheRefusedCommandsAreRefusedAndTheOthersAreNot()
         {
             string[] refused = ["file.upload", "file.export", "file.open", "file.import", "file.new", "file.push", "file.pull", "file.commit", "file.save", "file.enableVersionControl",
@@ -355,7 +434,7 @@ namespace FAForever.MapEditor.App.Tests
             Dispatcher.UIThread.RunJobs();
             JsonObject state = (JsonObject)await automation.HandleAsync("state", []);
 
-            foreach (string path in new[] { "tab", "mode", "tool", "dock", "palette", "selection.count", "show.markers", "layout.modePanel", "layout.inspector", "layout.dock", "units.place.unit", "undo", "coverageStacks.shown" })
+            foreach (string path in new[] { "tab", "mode", "tool", "dock", "palette", "selection.count", "show.markers", "layout.modePanel", "layout.inspector", "layout.dock", "units.place.unit", "undo", "edits", "coverageStacks.shown" })
             {
                 Assert.AreEqual(AutomationServer.At(state, path)?.ToJsonString(), TourState.Read(model, path)?.ToJsonString(), $"the path {path}");
             }

@@ -211,13 +211,22 @@ public sealed class TourLocator(MainWindow window, MainViewModel model, TourLayo
         {
             return TourPlace.Missing("it has no area in the window", kind);
         }
-        string? why = reach ? UiLocator.WhyUnreachable(window, control, bounds.Center, Overlay) : null;
+        return new TourPlace(true, bounds, reach ? WhyUnreachable(control, bounds) : null, kind, control);
+    }
+
+    /// <summary>
+    /// Why the mouse does not reach a control at the centre of its bounds now, or null. The overlay asks again when
+    /// the control moves, so a target that became reachable later (a panel laid out after the step began) says so.
+    /// </summary>
+    public string? WhyUnreachable(Control control, Rect bounds)
+    {
+        string? why = UiLocator.WhyUnreachable(window, control, bounds.Center, Overlay);
         if (why is not null && control is ItemsControl && ReachesAnItemOf(window, control))
         {
             // a list lets the mouse through between its rows: reached where one of them is
             why = null;
         }
-        return new TourPlace(true, bounds, why, kind, control);
+        return why;
     }
 
     /// <summary>

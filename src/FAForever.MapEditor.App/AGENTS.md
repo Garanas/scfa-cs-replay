@@ -2994,7 +2994,7 @@ step points at and explains it on a card. Code: `Tours/` (the format, the catalo
 - **What a step waits for** (`TourState`): `until.path` is a path of automation's state (`tab`, `mode`, `tool`,
   `dock`, `palette`, `selection.count`, `show.<overlay>`, `generated.<result>` (a generated result's status by the id of its row: `walkability`, `Missing`, `Current`),
   `units.place.unit` (the Place tool's unit), `layout.modePanel`, `layout.inspector`, `layout.dock`,
-  `undo` (the last step's name, e.g. `Add a mask`), `coverageStacks.shown` (the Masks mode's chosen mask or the Paint
+  `undo` (the last step's name, e.g. `Add a mask`; needs an edit made since the step began), `edits` (the edits made since the step began, see "Waiting for an edit"), `coverageStacks.shown` (the Masks mode's chosen mask or the Paint
   mode's chosen stratum: `stratum-2`)), read cheaply from the model without automation, with the same values (`TourTest` compares them with
   `state`); a path a tour may wait on is added to `TourState`, not read from the whole state. The condition is
   looked at when a command completes, the document changes or the view, mode, tool, dock or layout changes, at
@@ -3066,10 +3066,10 @@ step points at and explains it on a card. Code: `Tours/` (the format, the catalo
   `guide.json` shows what moved. The guide never runs a refused command (the tour runner refuses them),
   never uploads and works in a scratch workspace only (`faf-map workspace scratch`).
 - **The tours of the surface modes** (`terrain`, `masks`, `paint`, orders 20, 30, 40): each ends with a step that
-  points to the next. Their steps that ask the person to act use commands (a stroke is no command, so no step
-  waits for one): choose the Sculpt tool, add a height layer (`undo` = `Add the height layer Sculpt`), add a mask
-  (`undo` = `Add a mask`), choose Stratum 2 (`coverageStacks.shown`), the 3D view. An `undo` condition is true at
-  once when the last step of the map already has that name; the card then says done and Next goes on. A step
+  points to the next. Their steps that ask the person to act: choose the Sculpt tool, make one stroke (`edits` = 1, Do it for me
+  runs `brush.stroke`), add a height layer (`undo` = `Add the height layer Sculpt`, by prefix), add a mask
+  (`undo` = `Add a mask`), choose Stratum 2 (`coverageStacks.shown`), the 3D view. An `undo` condition needs an
+  edit made since the step began, so a map whose last step has that name does not finish it. A step
   that needs a control only a chosen mask has (the rules button) points at the inspector instead, since the
   person may have skipped the step that adds one. The locator looks again a few frames when a target is not found
   or not reached (lists made again by the step's own commands, a panel scrolled on a later frame), and closes
@@ -3081,8 +3081,29 @@ step points at and explains it on a card. Code: `Tours/` (the format, the catalo
   a control with a label that occurs twice by `type` and `index`. A menu's entries lie in popups a tour cannot ring:
   the step rings the menu's header (`File`) and names the entry. The Procedural tour never runs `file.export` or
   `file.upload`. `TourTest.Open` gives the test window a palette (slot 3 is `uab1103`) for the Units tour.
-- Not built yet: a step that waits for a brush stroke (a stroke is no command), a ring inside an open menu,
-  recording a tour (H-3).
+- **Waiting for an edit** (`brush.stroke {points}`, story T-1: a stroke through the active tool, one step of undo, as
+  the mouse makes it): `EditSession.Edits` counts the edits a session made (also one merged into the step before,
+  never undo or redo), `state.edits` shows it and a step may wait on `edits`: `{"path": "edits", "value": 1}` holds
+  once that many edits were made **since the step began** (`TourViewModel` notes the count when the step is entered).
+  A condition on `undo` holds only when an edit was also made since the step began, so a map whose last step already
+  has the name does not finish the step. `"prefix": true` matches the beginning of the text (a layer named again is
+  `Add the height layer Sculpt2`). The condition is looked at once the step's own `before` commands are all done
+  (a state left over from before, a stratum chosen earlier, would finish the step at once). The Terrain, Masks and
+  Paint tours have a "Try it: make one stroke" step (`doItForMe`: `brush.stroke`).
+- **Trying edited tours**: the editor writes the embedded tours into a workspace's `tours/` once, so a scratch
+  workspace keeps an old copy of a tour edited since. `faf-map editor start --refresh-tours` (also `restart`, not
+  remembered) sets `FAF_MAP_EDITOR_REFRESH_TOURS=1` and the editor writes the shipped tours over the copies of a
+  workspace whatever was changed in them (a tour the person deleted stays deleted); `guide build` starts its
+  editor so.
+- **The guide's map**: `guide build` undoes every step of the map's history after each tour (`GuideBuilder.ResetMap`),
+  so an earlier tour's stroke, deposit, unit or layer is not in a later tour's pictures. A step's after picture waits
+  for the editor's own `tour.done`. `guide check` plays the targets without the act steps, so a target that lies
+  differently once a step was acted (the Masks tour's Show it over the terrain without a mask in the list) is a
+  "moved" note, not an error.
+- The card is placed by its own size: its margin from the last step is cleared before it is measured
+  (`TourOverlay.Apply`). The reason a target is not reached (`state.tour.target.why`) is read again whenever the
+  overlay places the target again (`TourLocator.WhyUnreachable`).
+- Not built yet: a ring inside an open menu, recording a tour (H-3).
 
 ## Small rules of editing, looks and speed
 
@@ -3643,7 +3664,7 @@ faf-map workspace remove-scratch D:/scratch/ws                                  
   `faf-map-editor-shadow/<port>` in the temporary folder; only files that changed are copied again,
   and of `runtimes/` only this computer's; files the build no longer has are removed), so
   `dotnet build` writes the build output while the test editor runs; restart it to run the new
-  build (`state.build.built` tells). `--no-shadow` runs the build itself. It sets
+  build (`state.build.built` tells). `--no-shadow` runs the build itself. `--refresh-tours` (also on `restart`, never remembered) makes the editor write its embedded tours over the copies in the workspace's `tours/` (for trying an edited tour in a scratch workspace; see "Tours and the guide"). It sets
   `FAF_MAP_EDITOR_SETTINGS` to `--settings`, detached: its output goes to a log (`--log`, by
   default `editor-<port>.log` beside the settings file) and it inherits none of the CLI's handles,
   so a caller reading the CLI's output (an agent's shell) gets it when the CLI exits

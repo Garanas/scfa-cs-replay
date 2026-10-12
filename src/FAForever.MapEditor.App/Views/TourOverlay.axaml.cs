@@ -172,6 +172,8 @@ public sealed partial class TourOverlay : UserControl
         Rect? card = null;
         if (tour.ShowCard)
         {
+            // the margin of the last step would count in the card's size, and put the card too high or too far left
+            Card.Margin = default;
             Card.InvalidateMeasure();
             Card.Measure(new Size(Token("TourCardWidth", 320), Math.Max(0, Bounds.Height)));
             Rect? ringed = Spotlight.Ringed;
@@ -213,9 +215,15 @@ public sealed partial class TourOverlay : UserControl
             Refresh();
             return;
         }
-        if (_place.Bounds != now)
+        // the reason the mouse does not reach the target is read again whenever it moved, and while there is one
+        // (a panel laid out after the step began makes it reachable later)
+        if (_place.Bounds != now || _place.Why is not null)
         {
-            Apply(window, model.Tour, _place with { Bounds = now });
+            string? why = _place.Kind == "control" ? _locator.WhyUnreachable(control, now) : _place.Why;
+            if (_place.Bounds != now || why != _place.Why)
+            {
+                Apply(window, model.Tour, _place with { Bounds = now, Why = why });
+            }
         }
     }
 

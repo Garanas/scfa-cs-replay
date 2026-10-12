@@ -48,9 +48,12 @@
     {
       "id": "paint",
       "target": { "label": "Top view" },
-      "before": [{ "run": "view.top" }],
-      "title": "Painting",
-      "text": "Press the left mouse and drag over the map to paint the stratum's mask; with Erase on, the brush removes it. Each stroke is one step of undo; with symmetry on it paints every part of the map."
+      "before": [{ "run": "view.top" }, { "run": "tool.paint.strata" }],
+      "title": "Try it: paint one stroke",
+      "text": "Press the left mouse in the top view and drag over the map to paint the stratum's mask; with Erase on, the brush removes it. Each stroke is one step of undo; with symmetry on it paints every part of the map.",
+      "until": { "path": "edits", "value": 1 },
+      "doItForMe": { "run": "brush.stroke", "points": [[100, 100], [112, 104], [124, 100]] },
+      "done": "The stratum's mask is painted where you dragged. Ctrl+Z takes the stroke back."
     },
     {
       "id": "mask-layers",
