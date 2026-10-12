@@ -259,6 +259,7 @@ public sealed partial class MainViewModel
             commandsLog.LogInformation("{Command}: not built yet, user story {Story}: {Missing}", command.Id, command.Incomplete.Story, command.Incomplete.Missing);
         };
         Commands.Ran += command => commandsLog.LogInformation("Ran {Command}", command.Id);
+        Commands.Refused += (command, why) => commandsLog.LogInformation("{Command} did not run: {Reason}", command.Id, why);
 
         foreach (ToolDefinition tool in EditorModes.All.SelectMany(mode => mode.Tools))
         {

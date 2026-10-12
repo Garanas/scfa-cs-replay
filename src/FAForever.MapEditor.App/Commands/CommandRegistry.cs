@@ -125,6 +125,12 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
     public event Action<EditorCommand>? Ran;
 
     /// <summary>
+    /// Raised when a command could not run because the editor lacks what it needs (no map, a stroke
+    /// going on, nothing to undo), with the reason in words: the log says why it did not run.
+    /// </summary>
+    public event Action<EditorCommand, string>? Refused;
+
+    /// <summary>
     /// Raised after a command ran, with the arguments it was given and its result: what follows
     /// what was placed (the Units mode's last placed) reads them here.
     /// </summary>
@@ -272,7 +278,9 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
         if (!meets(command.Needs))
         {
             Count(command, "cannot_run");
-            return new CommandRun(false, null, WhyNot(command.Needs));
+            string why = WhyNot(command.Needs);
+            Refused?.Invoke(command, why);
+            return new CommandRun(false, null, why);
         }
 
         object request = command.MakeRequest(arguments ?? []);
@@ -340,7 +348,7 @@ public sealed class CommandRegistry(ISender sender, DialogGuard dialogs, Func<Ne
                 Needs.Redo => "nothing to redo (or a stroke is going on)",
                 Needs.Workspace => "no workspace is set up",
                 Needs.Project => "the map is no project on disk: save it as one first",
-                Needs.NoStroke => "a brush stroke is going on",
+                Needs.NoStroke => "a stroke is going on (a brush, the pencil or the eraser with the mouse down): release it or press Escape first",
                 Needs.Selection => "nothing is selected",
                 _ => need.ToString(),
             })];
