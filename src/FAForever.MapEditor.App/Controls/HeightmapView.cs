@@ -317,6 +317,15 @@ public sealed partial class HeightmapView : Control
             context.DrawImage(_bitmap, new Rect(0, 0, size.Width, size.Height), destination);
         }
 
+        // the projected images under the sketch lie right over the terrain (N-2)
+        if (_model?.ShownDocument is MapDocument underlay)
+        {
+            using (context.PushClip(new Rect(Bounds.Size)))
+            {
+                DrawImages(context, underlay, aboveSketch: false);
+            }
+        }
+
         if (_model is { ShowWalkability: true })
         {
             DrawWalkability(context, overlay, _model.Walkability);
@@ -345,6 +354,8 @@ public sealed partial class HeightmapView : Control
                 DrawGeneratedPathNodes(context, overlay);
                 DrawSelection(context, overlay, document, _model.Selection.Items);
                 DrawSketch(context, document, _model);
+                // the projected images over the sketch (N-2)
+                DrawImages(context, document, aboveSketch: true);
             }
         }
 

@@ -603,6 +603,51 @@ User story M-8 (`Vault/`). How FAForever takes a map, from the source of the
 - Each stratum mask texture holds four layers, one per channel (red, green, blue, alpha): layer 1
   to 4 in the first, 5 to 8 in the second. A project keeps one grey PNG per layer.
 
+## The sketch's images (N-2)
+
+The map maker's own pictures, laid over the map in the top view to trace or build towards: a
+drawing, a screenshot of another map. A guide only. They live in the project's `sketch/` folder
+with the sketch itself (N-1, where the strokes are), are optional (a project without them reads as
+one with none, so the project format keeps its version), and are never exported: not in the game's
+files, not in `files/`. Brushes, masks, generators and checks never read them.
+
+- **Model**: `MapDocument.Images`, an `ImmutableArray<ProjectedImage>` in drawing order (the first
+  lowest). An image has a `Name` (letters, digits, spaces, dashes and underscores, which no other
+  image has in any case: it is also the name of its file, and Windows compares file names without
+  case; `ProjectedImages.Problem` says why a name is refused), its picture as PNG bytes
+  (`Picture`, with `PixelWidth` and `PixelHeight`), its `CentreX`, `CentreZ`, `Width` and `Height` in
+  ogrids (before the turn), `Turn` in degrees clockwise as the top view shows it, `Opacity` 0 to 1,
+  `Greyscale`, `Locked` (only the mouse honours it, the fields still change the image), `Shown`,
+  `AboveSketch` (over the sketch's strokes rather than under them) and `KeepProportions` (scaling a
+  corner and fitting keep the picture's proportions).
+- **Files**: `sketch/images.json` lists the images in order (`ProjectedImageDto`), each picture is
+  `sketch/images/<name>.png` (`MapProjectLayout.Image`). `MapProjectStore.Images.cs` writes both
+  only for a map with images, writes a picture only when its bytes changed (the document keeps the
+  same array while an image is moved, scaled or turned, so a drag writes the JSON alone), removes the
+  pictures of images that went (or were renamed) and the folder with the last one. Loading reads
+  the pictures' sizes without decoding them; a picture that is missing or no picture is a
+  `MapProjectException` naming the file (an optional file that silently went missing would be
+  written away by the next save). `Reload` reads `sketch/images.json` and `sketch/images/` again
+  when another tool changes them and returns the document itself when they say what it holds.
+- **Reading a picture** (`ProjectedImages.Read`): any format ImageMagick reads, turned upright by
+  its orientation tag, scaled down to `MaxPixels` (4096) on the longer side when larger, and kept as
+  an 8-bit PNG; an unreadable file is a `MapProjectException`. A 4096 by 4096 picture decodes to
+  64 MB in the top view, which is why the limit is there.
+- **Edits** (`ProjectedImageEdits`, by name like areas and armies): `AddImage` (a free name, fitted
+  to the map and centred), `UpdateImage`, `RemoveImage`, `RenameImage`, `ReplacePicture` (place and
+  turn stay; with Keep proportions the height follows the new picture), `FitImageToMap` and
+  `FitImageToPlayableArea` (the whole map without areas). A fit is not turned and, with Keep
+  proportions, as large as the rectangle lets the picture's own proportions be (not those a scaling
+  gave it). A resize of the map moves the images with the terrain they lie on (`MapResize`).
+- **Geometry** (`ProjectedImages`, pure functions): `Corners`, `ToLocal` and `ToMap` (the picture's
+  frame: from its middle, x along its top edge, z down it), `Contains`, `Knob` and `HandleAt` (a
+  corner within a reach, the turning knob a distance beyond the top edge, else the inside), and what
+  a drag makes of an image from the image as it was when the drag began: `Moved`, `Scaled` (the
+  opposite corner stays; keeping proportions the corner slides along the diagonal; never below 1
+  ogrid, never turned over), `Turned` (by the angle the mouse went about the middle, `snap` rounds
+  to 15 degrees) and `Rounded` (hundredths, so float pixels do not make fields of seven decimals).
+  The top view and the tool share these; they hold the tests (`ProjectedImagesTest`).
+
 ## The workspace and the game's assets
 
 One workspace per computer (`Workspaces/`): a folder with the map projects and the assets converted

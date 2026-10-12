@@ -425,6 +425,10 @@
             <DataTemplate DataType="vm:LayerTexturesSection">
               <panels:LayerTexturesPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
             </DataTemplate>
+            <!-- the Sketch mode's projected images (N-2): the list, the chosen one in the inspector -->
+            <DataTemplate DataType="vm:ProjectedImagesSection">
+              <sketchpanels:ProjectedImagesList DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+            </DataTemplate>
             <!-- the Plugins mode (wave 14C): the plugins by category, the chosen one in the inspector -->
             <DataTemplate DataType="vm:PluginsListSection">
               <pluginpanels:PluginsList DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Plugins}" />

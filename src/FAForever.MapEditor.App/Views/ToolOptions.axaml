@@ -519,6 +519,28 @@
                 <TextBlock Classes="caption mono" TextWrapping="NoWrap" Text="{Binding Summary}" AutomationProperties.Name="New map size" />
               </controls:ToolRow>
             </DataTemplate>
+            <!-- moving, scaling and turning a projected image (N-2): its opacity and proportions, a fit to the map, a new picture, and how to use it -->
+            <DataTemplate DataType="tools:ImageTool">
+              <controls:ToolRow Classes="toolrow">
+                <StackPanel Classes="inline" IsVisible="{Binding Images.HasChosen}">
+                  <TextBlock Classes="label" Text="{Binding Images.Opacity.Text, StringFormat='Opacity: {0}%'}" />
+                  <Slider Minimum="0" Maximum="100" Value="{Binding Images.Opacity.Value}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Opacity of the chosen image in percent" />
+                </StackPanel>
+                <StackPanel Classes="inline" IsVisible="{Binding Images.HasChosen}">
+                  <TextBlock Classes="label" Text="Turn:" />
+                  <TextBox Classes="toolfield commit mono" Text="{Binding Images.Turn.Text, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Turn of the chosen image in degrees"
+                           AutomationProperties.HelpText="Degrees clockwise about its middle; the knob above the image turns it too" />
+                </StackPanel>
+                <CheckBox Content="Keep proportions" IsChecked="{Binding Images.KeepProportions.IsOn}" IsVisible="{Binding Images.HasChosen}"
+                          AutomationProperties.Name="Keep the chosen image's proportions"
+                          AutomationProperties.HelpText="A corner scales both sides together, and a fit keeps the picture's proportions" />
+                <Button Content="Fit to map" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="images.fitToMap"
+                        IsVisible="{Binding Images.HasChosen}" AutomationProperties.Name="Fit the chosen image to the map" />
+                <Button Content="Project an image..." Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="images.project"
+                        AutomationProperties.Name="Project an image from the tool's row" />
+                <TextBlock Classes="caption" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Hint}" ToolTip.Tip="{Binding Help}" />
+              </controls:ToolRow>
+            </DataTemplate>
             <!-- measuring distances and heights (V-5) -->
             <DataTemplate DataType="tools:RulerTool">
               <TextBlock Classes="mono" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding Text}" ToolTip.Tip="{Binding Text}" VerticalAlignment="Center"

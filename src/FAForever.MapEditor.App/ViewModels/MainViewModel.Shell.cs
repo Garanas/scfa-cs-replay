@@ -327,6 +327,7 @@ public sealed partial class MainViewModel
             "decals" => new OverlayItem(overlay, () => ShowDecals, value => ShowDecals = value),
             "navigation" => new OverlayItem(overlay, () => ShowNavigation, value => ShowNavigation = value),
             "generatedPathNodes" => new OverlayItem(overlay, () => ShowGeneratedPathNodes, value => ShowGeneratedPathNodes = value),
+            "images" => new OverlayItem(overlay, () => ShowImages, value => ShowImages = value),
             _ => new OverlayItem(overlay, () => false, null),
         })];
         foreach (OverlayDefinition overlay in EditorOverlays.All)

@@ -418,6 +418,10 @@
               <DataTemplate DataType="vm:SketchSheetSection">
                 <sketchpanels:SketchSheetPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Sketch}" />
               </DataTemplate>
+              <!-- the chosen projected image of the Sketch mode (N-2) -->
+              <DataTemplate DataType="vm:ProjectedImageDetailsSection">
+                <sketchpanels:ProjectedImagePanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext)}" />
+              </DataTemplate>
               <DataTemplate DataType="vm:PlannedSection">
                 <Border Classes="group">
                   <StackPanel Classes="stack">

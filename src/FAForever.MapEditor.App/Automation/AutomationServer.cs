@@ -704,6 +704,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["shortcuts"] = model.Shortcuts.Describe(),
             ["workspaceSettings"] = model.WorkspaceSettings.Describe(),
             ["inspector"] = model.DescribeInspector(),
+            ["images"] = ImagesState(),
         };
     }
 

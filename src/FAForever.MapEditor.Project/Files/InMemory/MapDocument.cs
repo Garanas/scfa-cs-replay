@@ -208,6 +208,13 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public Sketch Sketch { get; init; } = Sketch.Empty;
 
         /// <summary>
+        /// The pictures projected onto the map in the top view (user story N-2), in the order they are
+        /// drawn (the first lowest); empty for a map without. A guide only: kept in the project as
+        /// <c>sketch/images.json</c> with the pictures, never exported.
+        /// </summary>
+        public ImmutableArray<ProjectedImage> Images { get; init; } = [];
+
+        /// <summary>
         /// Whether the map may be uploaded to the vault. An upload (user story M-8) refuses a map
         /// for which this is false; exporting to the game's maps folder works for every map.
         /// </summary>

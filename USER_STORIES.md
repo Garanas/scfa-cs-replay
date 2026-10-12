@@ -638,12 +638,23 @@ layout before building it, and pictures projected onto the map to trace or build
       operation is a command (sketch.*) and one step of undo; the top view draws them as lines of a
       fixed width on screen at every zoom, dimmed outside the mode; the Sketch chip, the View menu
       and Ctrl+Shift+K show or hide the sketch in every mode. Missing: the 3D view draws no strokes
-      (N-3), no symbols, labels or selecting (N-4), no projected images (N-2).
-- [ ] **N-2 Projected images.** Lay pictures of one's own over the map in the top view (a drawing,
+      (N-3), no symbols, labels or selecting (N-4).
+- [x] **N-2 Projected images.** Lay pictures of one's own over the map in the top view (a drawing,
       a screenshot of another map): several per map, each moved, scaled and turned with handles or
       exact numbers, fitted to the map or its playable area, with an opacity, greyscale, locked,
       below or above the sketch, shown or hidden each and all at once with a key. The pictures
       are copied into the project. The 3D view does not show them (a picture stretches over hills).
+      Today: the Sketch mode's Image tool and its "Projected images" section: Project an image...
+      (any picture ImageMagick reads, copied into `sketch/images/` with its list in
+      `sketch/images.json`, at most 4096 pixels on a side), several per map, each drawn in the top
+      view only, turned and scaled in map coordinates at its opacity, greyscale when set, below or
+      above the sketch; a click chooses an image, a drag moves it, the corner squares scale it
+      (keeping its proportions), the knob turns it (Shift: steps of 15 degrees); the inspector has the
+      picture's size, name, opacity, centre, size, turn, Fit to map, Fit to playable area, Keep
+      proportions, Greyscale, Locked, Order, Replace the picture... and Remove; the Images overlay
+      (chip, View menu, Ctrl+Shift+J) hides them all; every operation is a command (`images.*`)
+      and one step of undo. Missing: moving an image forward or back in the drawing order (the
+      list's order is the order they were projected in).
 - [ ] **N-3 Sketch in 3D.** The 3D view draws the sketch's strokes over the terrain, the same width
       on screen at every distance.
 - [ ] **N-4 Symbols and labels.** Stamp symbols on a sheet (spawn, mass, hydrocarbon, arrow, cross,
