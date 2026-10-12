@@ -2409,7 +2409,7 @@ coverage"). Files: `ViewModels/CoverageStackViewModel.cs`, `MainViewModel.Covera
   (the chosen mask, stratum or water map), the `layers.*` commands with the target's key added, add
   choices Painted, Image, Mask, Stratum, Rules (`AddChoicesOf`; a new source is one more choice),
   `Reference` (what a mask layer reads: mask, threshold, inverted), `IsReference`, `IsRules`,
-  `Retarget` (another grid shown: its painted layer chosen). Its last layer cannot be removed.
+  `Retarget` (another grid shown: the layer its brush painted when it was shown last chosen, else its highest paintable one). Its last layer cannot be removed.
 - **`MainViewModel`**: `MaskStack`, `StratumStack`, `WaterStacks` (one per map, the content of the
   Water panel's map entries through `PanelParts.Replace` as `WaterMapPart.Stack`),
   `ShownCoverageTarget` (the mode's grid), `CoverageStackOf`, `ShowCoverageTarget`. A stack's chosen
@@ -2438,7 +2438,7 @@ coverage"). Files: `ViewModels/CoverageStackViewModel.cs`, `MainViewModel.Covera
   mode, that rules layer is chosen (`ShowEditedRulesLayer`: a rule added to a mask chooses the
   rules layer it made). `paint.addMaskRule`, `setMaskRule`, `removeMaskRule`, `moveMaskRule` take
   `mask` (also `stratum:N`) and `layer`. `paint.maskRules {name?}` opens a mask's rules in the Masks
-  mode. The preview shows while the mode's stack has a rules layer chosen (Masks and Paint modes).
+  mode. The preview shows while the mode's stack has a rules layer chosen (Masks and Paint modes; in the Paint mode also a stratum, not the lower or upper layer: `MainViewModel.ShowsStratumRules`). The editor's Close button chooses another layer of the stack (`MaskRules.Closed`), since the editor shows while a rules layer is chosen. Rename needs a name in the field (`Masks.CanRename`); the field is forgotten with the map, and the chosen mask follows a rename also by undo.
 - Commands: `layers.add {target?, source?: painted|image|mask|stratum|rules, name?, mask?, path?}`
   (in the Masks mode's menu), `layers.set {target?, layer?, name?, combine?, strength?, clip?,
   visible?, locked?, reads?, threshold?, invert?}`, `layers.move {target?, layer?, to?, by?}`,

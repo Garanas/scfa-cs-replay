@@ -59,7 +59,7 @@ public sealed partial class MasksViewModel : ObservableObject
     /// The chosen mask's name; null when the map has none.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ChosenItem), nameof(HasChosen))]
+    [NotifyPropertyChangedFor(nameof(ChosenItem), nameof(HasChosen), nameof(CanRename))]
     public partial string? Chosen { get; set; }
 
     /// <summary>
@@ -85,7 +85,18 @@ public sealed partial class MasksViewModel : ObservableObject
     /// The name the panel's field holds, for a new mask or a new name of the chosen one.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRename))]
     public partial string NewName { get; set; } = "";
+
+    /// <summary>
+    /// Whether Rename can work: a mask is chosen and the field holds its new name.
+    /// </summary>
+    public bool CanRename => HasChosen && NewName.Trim().Length > 0;
+
+    /// <summary>
+    /// Forgets the name typed for the previous map.
+    /// </summary>
+    public void Reset() => NewName = "";
 
     /// <summary>
     /// Whether a new mask has half the map's size, as the stratum masks mostly have.
@@ -109,7 +120,9 @@ public sealed partial class MasksViewModel : ObservableObject
         {
             return;
         }
-        bool sameNames = masks is not null && _shown is not null && masks.Keys.SequenceEqual(_shown.Keys);
+        // the same masks of the same sizes: another map's masks with the same names are not the same list
+        bool sameNames = masks is not null && _shown is not null && masks.Keys.SequenceEqual(_shown.Keys)
+            && masks.All(entry => _shown[entry.Key].Width == entry.Value.Width && _shown[entry.Key].Height == entry.Value.Height);
         ImmutableSortedDictionary<string, TiledBuffer<byte>>? before = _shown;
         _shown = masks;
         _shownStacks = document?.CoverageStacks;
@@ -132,13 +145,28 @@ public sealed partial class MasksViewModel : ObservableObject
         {
             Items = masks is null ? [] : [.. masks.Select(entry => new MaskItem(entry.Key, $"{entry.Value.Width} × {entry.Value.Height}", new CoveragePicture(entry.Value)) { Layers = LayersOf(entry.Key) })];
             OnPropertyChanged(nameof(IsEmpty));
-            string? chosen = Chosen is string name && masks?.ContainsKey(name) == true ? name : Items.FirstOrDefault()?.Name;
+            string? chosen = Chosen is string name && masks?.ContainsKey(name) == true ? name : RenamedFrom(before, masks) ?? Items.FirstOrDefault()?.Name;
             if (chosen == Chosen)
             {
                 OnPropertyChanged(nameof(ChosenItem));
             }
             Chosen = chosen;
         }
+    }
+
+    /// <summary>
+    /// The new name of the chosen mask when the masks differ from <paramref name="before"/> by that one
+    /// name (a rename, also by undo and redo): the choice follows the mask. Null otherwise.
+    /// </summary>
+    private string? RenamedFrom(ImmutableSortedDictionary<string, TiledBuffer<byte>>? before, ImmutableSortedDictionary<string, TiledBuffer<byte>>? masks)
+    {
+        if (Chosen is not string name || before is null || masks is null || !before.ContainsKey(name))
+        {
+            return null;
+        }
+        string[] added = [.. masks.Keys.Except(before.Keys)];
+        string[] removed = [.. before.Keys.Except(masks.Keys)];
+        return added.Length == 1 && removed.Length == 1 && removed[0] == name ? added[0] : null;
     }
 
     /// <summary>
