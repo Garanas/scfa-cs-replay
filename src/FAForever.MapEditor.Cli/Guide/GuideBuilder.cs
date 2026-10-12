@@ -144,10 +144,12 @@ namespace FAForever.MapEditor.Cli.Guide
             }
             if (step.UntilPath is not null)
             {
-                JsonObject wait = new JsonObject { ["path"] = step.UntilPath, ["value"] = step.UntilValue?.DeepClone(), ["timeout"] = 15 };
+                // the editor's own verdict on the step's condition: it counts edits since the step began, and the
+                // beginning of a name, as the person's card does
+                JsonObject wait = new JsonObject { ["path"] = "tour.done", ["value"] = true, ["timeout"] = 30 };
                 if (editor.Post("wait", wait)["wait"]?["matched"]?.GetValue<bool>() != true)
                 {
-                    Console.Error.WriteLine($"{tour.Id}/{step.Id}: the condition {step.UntilPath} = {step.UntilValue} did not hold after Do it for me");
+                    Console.Error.WriteLine($"{tour.Id}/{step.Id}: the condition {step.UntilPath} = {step.UntilValue} did not hold after Do it for me (tour.done stayed false)");
                 }
             }
             JsonObject state = Shot(out MagickImage window, out double scale, out int[]? view3d);

@@ -40,7 +40,7 @@
       "title": "Try it: make one stroke",
       "text": "Press the left mouse in the top view and drag over the map to raise the ground. Every stroke is one step of undo (Ctrl+Z). With symmetry on, the stroke is made in every part of the map.",
       "until": { "path": "edits", "value": 1 },
-      "doItForMe": { "run": "brush.stroke", "points": [[100, 100], [112, 104], [124, 100]] },
+      "doItForMe": { "run": "brush.stroke", "points": [[90, 112], [100, 106], [110, 104], [120, 104], [130, 106], [140, 112]] },
       "done": "The ground rose where you dragged. Ctrl+Z takes the stroke back."
     },
     {

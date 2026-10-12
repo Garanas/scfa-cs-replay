@@ -350,7 +350,7 @@
   <Thickness x:Key="EconomyValueGap">0,0,4,0</Thickness>
   <Thickness x:Key="EconomyTextGap">0,0,4,0</Thickness>
   <Thickness x:Key="EconomySuffixGap">4,0,0,0</Thickness>
-  <x:Double x:Key="SearchFieldWidth">360</x:Double>
+  <x:Double x:Key="SearchFieldWidth">300</x:Double>
   <x:Double x:Key="SearchFieldHeight">26</x:Double>
   <Thickness x:Key="SearchFieldPadding">10,0</Thickness>
   <x:Double x:Key="ToolbarDividerHeight">20</x:Double>
