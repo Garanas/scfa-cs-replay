@@ -181,6 +181,20 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
     public HeightStackKind ShownHeights => _shownHeights();
 
     /// <summary>
+    /// Forgets what the last map left: the chosen layer, the filters.
+    /// </summary>
+    public void ForgetMap()
+    {
+        Chosen = null;
+        ForgetShown();
+        UseFilter = "all";
+        SourceFilter = "all";
+        UpdateChips();
+        OnPropertyChanged(nameof(UseFilter));
+        OnPropertyChanged(nameof(SourceFilter));
+    }
+
+    /// <summary>
     /// Filters the list by use and by source (each left as it is when null).
     /// </summary>
     /// <exception cref="ArgumentException">A filter the list does not have.</exception>
@@ -242,6 +256,12 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
         };
     }
 
+    /// <summary>
+    /// A layer only in the other heightmap stays findable: choosing it, or changing its use while
+    /// the heightmap that no longer has it is shown, keeps it chosen.
+    /// </summary>
+    protected override Layer? FindLayer(MapDocument document, string? name) => base.FindLayer(document, name) ?? HeightStacks.Find(document, name);
+
     protected override string FilterKey => UseFilter + "/" + SourceFilter + "/" + ShownHeights;
 
     protected override bool Shows(MapDocument document, Layer layer)
@@ -290,7 +310,15 @@ public sealed partial class HeightLayersViewModel : LayerStackViewModel
     /// What else the inspector says about the chosen layer: an imported layer's file, a curve's
     /// points, the base's part.
     /// </summary>
-    public string ChosenFacts => ChosenLayer switch
+    public string ChosenFacts => (IsElsewhere ? $"Not in the {(ShownHeights == HeightStackKind.Draft ? "draft" : "final")} shown, so not in the list: switch the heightmap to see it there. " : "") + FactsOf(ChosenLayer);
+
+    /// <summary>
+    /// Whether the chosen layer is only in the heightmap that is not shown.
+    /// </summary>
+    public bool IsElsewhere => Chosen is not null && ChosenItem is null && ChosenLayer is not null && Document is MapDocument document
+        && HeightStacks.Of(document, ShownHeights).Find(Chosen) is null;
+
+    private string FactsOf(Layer? layer) => layer switch
     {
         { IsBase: true, Source: ImageSource image } => $"The final's base: read from {image.Path} again whenever the file changes (a procedural tool's output); the lowest layer.",
         { IsBase: true } => "The map's heights as they were when the stack began; the lowest layer.",

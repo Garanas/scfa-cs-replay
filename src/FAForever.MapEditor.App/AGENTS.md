@@ -2594,6 +2594,10 @@ User story T-9 (wave 9A); the library does the work (its guide, "Draft and final
   Write the draft, Use as the final's base..., Share the draft's base). `DraftFinalViewModel` holds
   its state. The inspector adds "Used in" (`terrain.setLayer use=...`: `Draft and final`, `Draft
   only`, `Final only`); its Shown is the shown heightmap's on/off.
+  A layer whose use leaves the shown heightmap (or that is added for the other one) stays chosen: the
+  inspector shows it (`IsElsewhere`, a line in `ChosenFacts`), its use reads what the document says, and
+  the list, which is the shown stack's, lacks it until the heightmap is switched. Opening another map
+  shows the final with no layer chosen and the filters on `all` (`HeightLayersViewModel.ForgetMap`).
 - **Commands**: `terrain.writeDraft` (Needs a project; writes `procedural/temp/draft-heightmap.gen.png`,
   `.r16` and the ticked masks; span `model.write-draft`), `terrain.setDraftOut {masks?, auto?}` (the
   map's settings, a step of undo), `terrain.useAsFinalBase {path?}` (asks for the output, starting in
