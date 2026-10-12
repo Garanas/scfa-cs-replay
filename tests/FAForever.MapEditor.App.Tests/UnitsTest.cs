@@ -648,7 +648,7 @@ namespace FAForever.MapEditor.App.Tests
 
             await armies.RemoveArmyCommand.ExecuteAsync(null);
             Assert.IsNull(model.ShownDocument!.FindArmy("NORTH"));
-            Assert.IsNull(armies.ChosenArmy);
+            Assert.AreEqual(MapPartsViewModel.ArmyOf(model.MapParts.Parts.Chosen), armies.ChosenArmy?.Name, "the army the Map panel moved to is the chosen one, whose fields the inspector shows");
             Assert.AreEqual(10, armies.Rows.Count);
 
             await armies.AddExtraArmyCommand.ExecuteAsync(null);

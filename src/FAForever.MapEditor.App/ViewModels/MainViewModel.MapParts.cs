@@ -176,7 +176,7 @@ public sealed partial class MainViewModel
     // the inspector then has to show
     private void FollowShownArmy()
     {
-        if (MapPartsViewModel.ArmyOf(MapParts.Parts.Chosen) is string shown && Armies.ChosenArmy?.Name != shown
+        if (SelectedMode?.Definition.Id == "map" && MapPartsViewModel.ArmyOf(MapParts.Parts.Chosen) is string shown && Armies.ChosenArmy?.Name != shown
             && Armies.Rows.FirstOrDefault(row => row.Name == shown) is ArmyRow row)
         {
             Follow(() => Armies.ChosenArmy = row);
