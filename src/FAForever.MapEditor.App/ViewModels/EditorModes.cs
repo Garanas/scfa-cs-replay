@@ -140,6 +140,23 @@ public static class EditorModes
             ],
             [new MapDetailsSection()]),
 
+        // the Sketch mode (N-1, N-2, N-4): drafts of the map maker's own, kept in the project and never exported
+        new ModeDefinition("sketch", "Sketch", "Icon.Sketch", "Draft the map: pencil strokes, symbols, labels and projected images; kept in the project, never exported", 0, "F10", "N-1",
+            [
+                new ToolDefinition("sketch.pencil", "Pencil", "N-1") { Make = model => new PencilTool(model) },
+                new ToolDefinition("sketch.eraser", "Eraser", "N-1") { Make = model => new EraserTool(model) },
+                new ToolDefinition("sketch.symbol", "Symbol", "N-4") { Make = model => new SymbolTool(model) },
+                new ToolDefinition("sketch.label", "Label", "N-4") { Make = model => new LabelTool(model) },
+                new ToolDefinition("sketch.select", "Select", "N-4") { Make = model => new SketchSelectTool(model) },
+                new ToolDefinition("sketch.image", "Image", "N-2") { Make = model => new ImageTool(model) },
+            ],
+            [
+                new SketchSheetsSection(),
+                new ProjectedImagesSection(),
+            ],
+            // the sheet or the projected image chosen in the panel
+            [new SketchSheetSection(), new ProjectedImageDetailsSection()]),
+
         new ModeDefinition("terrain", "Terrain", "Icon.Terrain", "Height layers, sculpting, curves, terrain types, walkability", 0, "F2", "T-1",
             [
                 new ToolDefinition("terrain.sculpt", "Sculpt", "T-1") { Make = model => new SculptTool(model) },
@@ -264,23 +281,6 @@ public static class EditorModes
             ],
             // the army or group chosen in the tree: its fields and buttons
             [new UnitGroupDetailsSection()]),
-
-        // the Sketch mode (N-1, N-2, N-4): drafts of the map maker's own, kept in the project and never exported
-        new ModeDefinition("sketch", "Sketch", "Icon.Sketch", "Draft the map: pencil strokes, symbols, labels and projected images; kept in the project, never exported", 1, "F10", "N-1",
-            [
-                new ToolDefinition("sketch.pencil", "Pencil", "N-1") { Make = model => new PencilTool(model) },
-                new ToolDefinition("sketch.eraser", "Eraser", "N-1") { Make = model => new EraserTool(model) },
-                new ToolDefinition("sketch.symbol", "Symbol", "N-4") { Make = model => new SymbolTool(model) },
-                new ToolDefinition("sketch.label", "Label", "N-4") { Make = model => new LabelTool(model) },
-                new ToolDefinition("sketch.select", "Select", "N-4") { Make = model => new SketchSelectTool(model) },
-                new ToolDefinition("sketch.image", "Image", "N-2") { Make = model => new ImageTool(model) },
-            ],
-            [
-                new SketchSheetsSection(),
-                new ProjectedImagesSection(),
-            ],
-            // the sheet or the projected image chosen in the panel
-            [new SketchSheetSection(), new ProjectedImageDetailsSection()]),
 
         // the Procedural mode (wave 8C): its tools and sections are ProceduralMode's
         new ModeDefinition(ProceduralMode.Id, "Procedural", "Icon.Procedural", "Generated results, connected regions, export steps", BottomGroup, "F11", "F-7",

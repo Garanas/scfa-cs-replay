@@ -622,8 +622,8 @@ reads again when it changes; and nothing that generates runs by itself.
 Drafts of the map maker's own, kept in the project and never exported: pencil strokes to work out a
 layout before building it, and pictures projected onto the map to trace or build towards.
 
-- [x] **N-1 Sketch.** Draw on the map with a pencil to draft it: the Sketch mode (on the rail, below
-      the modes that edit the map), six colours (red, yellow, green, blue, white, black; keys 1 to
+- [x] **N-1 Sketch.** Draw on the map with a pencil to draft it: the Sketch mode (on the rail, between
+      Map and Terrain), six colours (red, yellow, green, blue, white, black; keys 1 to
       6) and three widths, strokes mirrored by the map's symmetry, a straight line with Shift;
       an eraser that rubs out where it passes (Alt: whole strokes); several named sheets (layers),
       each shown or hidden, one drawn into, each with a legend that says what its colours mean.
@@ -708,7 +708,10 @@ own sit beside the editor's.
       not written again, an untouched older copy is brought up to date) and read again when a file
       there changes. On the first start, once a map is open, a card at the window's corner offers the
       tour of the window (Start, Not now, Don't ask again; kept in `tours/.progress.json` with the
-      tours finished). The tour of the window (twelve steps) is the first; the tours of the Terrain
+      tours finished). The tour of the window (twelve steps) is the first, then the tour of the Sketch mode
+      ("Drafting a map", fourteen: the tools, a line to draw and a symbol to stamp, colours and widths, Mirror and
+      the symmetry, sheets and the legend, labels, the eraser, projected images, showing the sketch, the sketch in 3D);
+      the tours of the Terrain
       (twelve steps: tools, brush, draft and final, height layers, curves, history), Masks (ten: the
       list, adding a mask, the brush, the stack and its rules, where masks are used), Paint (thirteen:
       strata, choosing one, textures, the brush and its limits, mask stacks, rules, the shader, the 3D

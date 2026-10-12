@@ -57,6 +57,7 @@ public static class Menus
         ]),
         new MenuLayout("Modes",
         [
+            Mode("sketch", "sketch.addSheet", "sketch.duplicateSheet", "sketch.deleteSheet", "sketch.clearSheet", Separator, "images.project", "images.replace", "images.fitToMap", "images.fitToPlayableArea", "images.remove"),
             Mode("terrain", "terrain.addLayer", "terrain.bake", "terrain.importHeightmap", "terrain.exportHeightmap", "terrain.saveBrush", Separator, "terrain.switchHeights", "terrain.writeDraft", "terrain.useAsFinalBase"),
             Mode("paint", "paint.chooseTexture", "paint.addStratum", "paint.shader"),
             Mode("masks", "paint.addMask", "paint.renameMask", "paint.duplicateMask", "paint.deleteMask", "layers.add", "paint.maskRules"),
@@ -66,7 +67,6 @@ public static class Menus
             Mode("props", "props.choose", "props.addToPalette", "props.clearPalette", "props.restorePalette", "props.followTerrain", Separator, "props.alignToTerrain", "props.upright", "props.dropToGround", "props.randomize", "props.replace", "props.randomVariant", Separator, "props.reclaim", "props.addRule", "props.keepFromRules"),
             Mode("decals", "decals.choose", "decals.addGroup", Separator, "decals.forward", "decals.backward", "decals.toFront", "decals.toBack", Separator, "decals.alongCurve"),
             Mode("units", "units.pick", "units.placeMode", "units.addMany", "units.addGroup", "units.selectGroup", "units.placePreset", "units.asWrecks", Separator, "units.group", "units.ungroup", "units.replace", "units.toFaction", "units.distribute", Separator, "units.newPalette", "units.renamePalette", "units.deletePalette", "units.nextPalette", Separator, "units.selectInstance", "units.saveInstance", "units.showPreset", "units.detachInstance"),
-            Mode("sketch", "sketch.addSheet", "sketch.duplicateSheet", "sketch.deleteSheet", "sketch.clearSheet", Separator, "images.project", "images.replace", "images.fitToMap", "images.fitToPlayableArea", "images.remove"),
             Mode("procedural"),
             Mode("plugins"),
             new MenuLayout("Assets", ["assets.browse", "assets.pick", "assets.star", "assets.reload", "assets.reloadShown"]),

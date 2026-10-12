@@ -23,7 +23,7 @@ example: it has every kind of step.
   shipped file, add the SHA-256 of its current text (lines ending in `\n`) to `EditorTours.Earlier`
   in `Tours/TourCatalog.cs` as `"<file>:<hash>"`, so an untouched old copy is brought up to date.
   A copy the person changed stays theirs.
-- **The order on the Tours page**: `order` (window 10, terrain 20, masks 30, paint 40, markers 50,
+- **The order on the Tours page**: `order` (window 10, sketch 15, terrain 20, masks 30, paint 40, markers 50,
   units 60, procedural 70). A new mode's tour takes a free number in that order.
 
 ## The file
