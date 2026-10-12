@@ -6,7 +6,8 @@ description: How to build and change the FAF map editor's window (src/FAForever.
 # The map editor's UI
 
 The full rules and their reasons are in `src/FAForever.MapEditor.App/AGENTS.md` (sections "Every
-feature: the checklist" and "UI rules"). This is the short form to work from.
+feature: the checklist" and "UI rules"). This is the short form to work from. A change to a control a
+guided tour points at, or a new tour, follows the `editor-tours` skill as well.
 
 ## Before writing Avalonia code
 

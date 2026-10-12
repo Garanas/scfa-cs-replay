@@ -50,7 +50,8 @@ keeps that up; go through this list with every change to the window, not only at
 8. **This guide**: what the feature does and its rules, where a later reader looks for them.
 9. **The tours**: a control a tour points at that changes (its label, its place, its mode) keeps its step true:
    run `TourTest` and read the step's text again (section "Tours and the guide"); a new part of the window worth a step
-   or a tour of its own is a line in the tour's file.
+   or a tour of its own is a line in the tour's file. The project skill `.claude/skills/editor-tours` is the short
+   form for writing and checking a tour.
 
 The project skill `.claude/skills/editor-ui` holds the same rules in short, for agents.
 
