@@ -31,10 +31,12 @@ public sealed partial class MainWindow : Window
         // the shortcuts before the focused control, except a text field's own keys and behind a page
         AddHandler(KeyDownEvent, OnShortcutKey, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnPageKeyLeftOver, Avalonia.Interactivity.RoutingStrategies.Bubble);
+        // Escape ends a guided tour, once what is open over the editor (a list, a menu, More) is closed
+        AddHandler(KeyDownEvent, OnTourKey, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         // a field that gives its value when it loses the keyboard gives it on Enter too
         AddHandler(KeyDownEvent, OnEnterInField, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
         // a page that opens takes the keyboard; one that closes gives it back to the views
-        foreach (Control page in new Control[] { DiagnosticsPageView, VersionControlPageView, ReportProblemPageView, NewMapPageView, ShortcutsPageView, WorkspaceSettingsPageView })
+        foreach (Control page in new Control[] { DiagnosticsPageView, VersionControlPageView, ReportProblemPageView, NewMapPageView, ShortcutsPageView, WorkspaceSettingsPageView, ToursPageView })
         {
             page.PropertyChanged += (_, e) =>
             {
@@ -490,6 +492,24 @@ public sealed partial class MainWindow : Window
             or Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End or Key.Back or Key.Delete or Key.Insert;
 
     /// <summary>
+    /// Escape ends the guided tour (user story H-1) unless something over the editor takes it first: an open list,
+    /// menu or More, a question, a page. The other keys reach the window as without a tour.
+    /// </summary>
+    private void OnTourKey(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled || e.Key != Key.Escape || e.KeyModifiers != KeyModifiers.None || _model is not { Tour.IsRunning: true, Question.IsOpen: false, IsPageOpen: false, Palette.IsOpen: false, Picker.IsOpen: false } model)
+        {
+            return;
+        }
+        if (this.GetVisualDescendants().Any(each => each is ComboBox { IsDropDownOpen: true } or ToolRow { IsExpanded: true }) || MainMenu.IsOpen)
+        {
+            return;
+        }
+        e.Handled = true;
+        _ = model.TryAsync(() => model.Tour.EndAsync());
+    }
+
+    /// <summary>
     /// Enter in a one-line text field gives its text to what it is bound to, as losing the keyboard
     /// does (the options row's numbers, the inspector's fields bound on losing the keyboard); the
     /// key goes on to what else Enter does there.
@@ -521,6 +541,7 @@ public sealed partial class MainWindow : Window
     {
         "workspaceSettings" => WorkspaceSettingsPageView,
         "shortcuts" => ShortcutsPageView,
+        "tours" => ToursPageView,
         "newMap" => NewMapPageView,
         "report" => ReportProblemPageView,
         "versionControl" => VersionControlPageView,

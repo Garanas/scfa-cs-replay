@@ -81,7 +81,7 @@ public static class Menus
         new MenuLayout(PluginsMenu, ["plugins.manage", "plugins.reload", Separator, "plugins.check"]),
         new MenuLayout("Help",
         [
-            "help.shortcuts", Separator,
+            "help.tours", "help.shortcuts", Separator,
             new MenuLayout("Folders",
             [
                 "help.workspaceFolder", "help.projectsFolder", "help.projectFolder", Separator,

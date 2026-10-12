@@ -188,13 +188,13 @@ public sealed class UiLocator(MainWindow window, MainViewModel model)
     /// The next frame of a window drawn: the frame asked for and the one after it, so the scene
     /// the mouse hits holds the layout of the moment of the call.
     /// </summary>
-    public static async Task NextFrameAsync(TopLevel top)
+    public static async Task NextFrameAsync(TopLevel top, int timeoutMilliseconds = 1000)
     {
         for (int i = 0; i < 2; i++)
         {
             TaskCompletionSource drawn = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             top.RequestAnimationFrame(_ => drawn.TrySetResult());
-            await Task.WhenAny(drawn.Task, Task.Delay(1000));
+            await Task.WhenAny(drawn.Task, Task.Delay(timeoutMilliseconds));
         }
     }
 
