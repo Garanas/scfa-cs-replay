@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.App.Tools;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Workspaces;
@@ -27,18 +28,42 @@ public sealed partial class MainViewModel
     /// </summary>
     public IDecalMaskPictures DecalPictures { get; private set; } = null!;
 
+    private EditedMap? _decalsMap;
+
+    /// <summary>
+    /// Whether the open map is not the one <paramref name="seen"/> holds (a map opened, not the same
+    /// map resized); remembers the open map in it. For the parts of the Props and Decals modes that
+    /// forget the previous map's state.
+    /// </summary>
+    private bool IsAnotherMap(ref EditedMap? seen)
+    {
+        if (ReferenceEquals(seen, Map))
+        {
+            return false;
+        }
+        seen = Map;
+        return true;
+    }
+
     private void InitializeDecals()
     {
         DecalPictures = new GameMaskPictures(() => Setup.Workspace);
         DocumentChanged += (_, _) => Decals.Refresh(ShownDocument);
         MapChanged += (_, _) =>
         {
-            Decals.Clear();
+            // another map shows every group again; the same map resized (or its size undone) keeps what it hid
+            if (IsAnotherMap(ref _decalsMap))
+            {
+                Decals.Clear();
+                DecalPlaceTool.ForgetMapsDecal();
+                DecalsAlong.ForgetMapsDecal();
+            }
             if (Map is not null)
             {
                 Map.Session.DecalPictures = DecalPictures;
             }
         };
+        Selection.Changed += (_, _) => Decals.SelectionChanged(Selection.Items.Any(thing => thing.Kind == ObjectKind.Decal));
         Decals.HiddenChanged += (_, _) =>
         {
             // what is hidden cannot stay selected

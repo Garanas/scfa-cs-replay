@@ -24,10 +24,19 @@ public sealed record PaintLayer(string Name, Func<MapDocument, TiledBuffer<byte>
     public bool IsNone => ReferenceEquals(this, None);
 
     /// <summary>
+    /// What a layer is, apart from the name it is shown by: a stratum's name follows its texture, so
+    /// the choice of a stratum survives a change of texture.
+    /// </summary>
+    public string Key { get; init; } = Name;
+
+    /// <summary>
     /// A stratum's mask (layer 1 to 8).
     /// </summary>
     public static PaintLayer Stratum(Stratum stratum) => new PaintLayer(stratum.Name, document =>
-        stratum.Layer >= 1 && stratum.Layer <= document.Terrain.StratumMasks.Layers.Length ? document.Terrain.StratumMasks.Layers[stratum.Layer - 1] : null);
+        stratum.Layer >= 1 && stratum.Layer <= document.Terrain.StratumMasks.Layers.Length ? document.Terrain.StratumMasks.Layers[stratum.Layer - 1] : null)
+    {
+        Key = $"stratum:{stratum.Layer}",
+    };
 
     /// <summary>
     /// A mask for tools of the map (user story K-1), by its name.
@@ -54,7 +63,29 @@ public sealed partial class PropPaintTool : ObservableObject, IMapTool
     public PropPaintTool(MainViewModel model)
     {
         _model = model;
-        model.MapChanged += (_, _) => ReadLayers();
+        model.MapChanged += (_, _) =>
+        {
+            // the layers of the previous map are not the new map's, whatever they are called
+            if (!ReferenceEquals(model.Map, _layersOf))
+            {
+                _layersOf = model.Map;
+                OnlyOn = PaintLayer.None;
+                NotOn = PaintLayer.None;
+            }
+            if (!_watchingStrata)
+            {
+                // a stratum's texture changed (user story S-2): its name in the choices follows
+                _watchingStrata = true;
+                model.StrataTool.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(StrataTool.Strata))
+                    {
+                        ReadLayers();
+                    }
+                };
+            }
+            ReadLayers();
+        };
         // a mask added, renamed or removed (user story K-1) is a layer to paint on, or no longer
         model.DocumentChanged += (_, _) =>
         {
@@ -67,6 +98,8 @@ public sealed partial class PropPaintTool : ObservableObject, IMapTool
 
     // the masks for tools the layers were read from
     private object? _masks;
+    private FAForever.MapEditor.Project.EditedMap? _layersOf;
+    private bool _watchingStrata;
 
     /// <summary>
     /// The radius in ogrids.
@@ -213,8 +246,8 @@ public sealed partial class PropPaintTool : ObservableObject, IMapTool
         MapDocument? document = _model.ShownDocument;
         _masks = document?.Masks;
         Layers = [PaintLayer.None, .. strata.Select(PaintLayer.Stratum), .. (document?.Masks.Keys ?? []).Select(PaintLayer.OfMask)];
-        OnlyOn = Layers.FirstOrDefault(layer => layer.Name == OnlyOn.Name) ?? PaintLayer.None;
-        NotOn = Layers.FirstOrDefault(layer => layer.Name == NotOn.Name) ?? PaintLayer.None;
+        OnlyOn = Layers.FirstOrDefault(layer => layer.Key == OnlyOn.Key) ?? PaintLayer.None;
+        NotOn = Layers.FirstOrDefault(layer => layer.Key == NotOn.Key) ?? PaintLayer.None;
         _model.Logger("Editor").LogDebug("The paint tool offers {Count} layers to paint on", Layers.Count - 1);
     }
 }

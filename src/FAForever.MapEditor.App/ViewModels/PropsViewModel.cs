@@ -80,6 +80,15 @@ public sealed partial class PaletteItem(AssetEntry? entry, string blueprint) : O
     [ObservableProperty]
     public partial double Weight { get; set; } = 1;
 
+    // a typed weight below 0 (or not a number) is 0, as props.addToPalette makes it: the paint tool never meets a negative one
+    partial void OnWeightChanged(double value)
+    {
+        if (!(value >= 0))
+        {
+            Weight = 0;
+        }
+    }
+
     public PaletteEntry ToEntry() => new PaletteEntry(Blueprint, Weight);
 }
 
@@ -109,6 +118,13 @@ public sealed record PropPaletteSettings(
 public sealed partial class PropsViewModel : ObservableObject
 {
     public const string PaletteKind = PresetKinds.Props;
+
+    // how far the sliders of how props stand reach, in the Placing section and in a rule's fields alike:
+    // the rule starts from the Placing section's values, so its sliders must hold them
+    public const double MaxTilt = 45;
+    public const double MinScale = 0.1;
+    public const double MaxScale = 4;
+    public const double MaxSink = 5;
 
     private readonly MainViewModel _model;
     private readonly ILogger _log;
