@@ -145,6 +145,16 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
         ? _run("water.removeWaveGenerator", new JsonObject { ["index"] = generator.Index })
         : Task.CompletedTask;
 
+    /// <summary>
+    /// Forgets which wave generator was chosen: another map is opened, whose generators are not those.
+    /// </summary>
+    public void ForgetSelection()
+    {
+        _shown = null;
+        SelectedGenerator = null;
+        Generators = [];
+    }
+
     public void Refresh(MapDocument? document)
     {
         _document = document;
@@ -185,7 +195,8 @@ public sealed partial class WaterSettingsViewModel : ObservableObject
             int? selected = SelectedGenerator?.Index;
             Generators = [.. document.Water.WaveGenerators.Select((generator, index) => new WaveGeneratorItem(index, string.Create(CultureInfo.InvariantCulture,
                 $"{index + 1}: {Path.GetFileNameWithoutExtension(generator.Texture)} at {generator.Position.X:0.#}, {generator.Position.Z:0.#}")))];
-            SelectedGenerator = selected is int index && index < Generators.Count ? Generators[index] : Generators.LastOrDefault();
+            // the chosen index stays (the last one when it is gone); with none chosen, the first
+            SelectedGenerator = selected is int index ? index < Generators.Count ? Generators[index] : Generators.LastOrDefault() : Generators.FirstOrDefault();
         }
         if (SelectedGenerator is not null)
         {
