@@ -64,6 +64,7 @@ internal static class SketchState
                 ["whole"] = eraser.Whole,
             },
             ["pending"] = model.Sketch.Pending.Count,
+            ["note"] = model.SketchNote,
             ["key"] = document is null ? new JsonArray() : new JsonArray([.. model.Sketch.Keys(document).Select(key => (JsonNode)new JsonObject
             {
                 ["sheet"] = key.Sheet,

@@ -411,6 +411,36 @@ namespace FAForever.MapEditor.App.Tests
 
 
         [TestMethod]
+        public async Task TheInspectorOfTheOtherModesSaysWhatTheSketchDoesOverTheTerrain()
+        {
+            MainViewModel model = await Open();
+            Assert.AreEqual("", model.SketchNote, "the Sketch mode's inspector holds the sheet itself");
+            model.SelectMode("terrain");
+            Assert.IsFalse(model.HasSketchNote, "a map without strokes has nothing to say");
+
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((20, 100), (80, 100)), ["mirror"] = false, ["sheet"] = "Layout A" });
+            Assert.IsTrue(model.HasSketchNote);
+            StringAssert.Contains(model.SketchNote, "Layout A at 45% over the terrain");
+            StringAssert.Contains(model.SketchNote, "Ctrl+Shift+K");
+
+            await Run(model, "sketch.setOpacity", new JsonObject { ["opacity"] = 0.6, ["sheet"] = "Layout A" });
+            StringAssert.Contains(model.SketchNote, "Layout A at 60%");
+            await Run(model, "sketch.addSheet", new JsonObject { ["name"] = "Ideas" });
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((20, 120), (80, 120)), ["mirror"] = false });
+            StringAssert.Contains(model.SketchNote, "Layout A at 60%, Ideas at 45%");
+
+            await Run(model, "view.overlay.sketch", new JsonObject { ["on"] = false });
+            StringAssert.Contains(model.SketchNote, "The sketch is hidden");
+            await Run(model, "view.overlay.sketch", new JsonObject { ["on"] = true });
+            await Run(model, "sketch.showSheet", new JsonObject { ["sheet"] = "Layout A", ["on"] = false });
+            await Run(model, "sketch.showSheet", new JsonObject { ["sheet"] = "Ideas", ["on"] = false });
+            StringAssert.Contains(model.SketchNote, "No sheet of the sketch shows");
+
+            model.SelectMode("sketch");
+            Assert.AreEqual("", model.SketchNote);
+        }
+
+        [TestMethod]
         public async Task TheSketchModeIsTheOneThatDrawsFully()
         {
             MainViewModel model = await Open();

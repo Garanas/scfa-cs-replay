@@ -448,6 +448,13 @@
               <TextBlock Classes="caption" TextWrapping="Wrap" Text="Nothing is selected. Choose a mode's Select tool and click a thing in either view, or drag a box around several in either view; shift adds, control toggles. The handles then move, turn and scale the selection." />
             </StackPanel>
           </Border>
+          <!-- what the sketch does over the terrain in the other modes (N-1): which sheets show at what opacity, and how to hide them -->
+          <Border Classes="group" IsVisible="{Binding HasSketchNote}">
+            <StackPanel Classes="stack">
+              <TextBlock Classes="overline" Text="{Binding Source=Sketch, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding SketchNote}" AutomationProperties.Name="The sketch over the terrain" />
+            </StackPanel>
+          </Border>
         </StackPanel>
       </Panel>
     </ScrollViewer>

@@ -1806,6 +1806,10 @@ opacity ("Other modes", 45% for a new sheet).
   delete and clear; the others have their controls in the panel, the inspector and the options row.
   `sketch.draw` smooths and thins as the pencil's settings say (a line of an exact polyline stays
   as it is while Smooth is off: `smooth: false`).
+- **In the other modes** the inspector ends with a Sketch block while the map has strokes
+  (`MainViewModel.SketchNote`: `Layout A at 45% over the terrain. The Sketch chip in the views' bar
+  hides it, or Ctrl+Shift+K.`, or that the sketch is hidden and how to show it); the Sketch mode's own
+  inspector holds the sheet instead.
 - **The top view** (`Controls/HeightmapView.Sketch.cs`, called from `Render` after the selection, before the
   tool's own drawing, spans `top.sketch` and `top.sketch-build`): the strokes as lines of the width on
   screen at every zoom (the pen's thickness is the pixels divided by the zoom, the geometry in the
@@ -1819,7 +1823,8 @@ opacity ("Other modes", 45% for a new sheet).
   (N-3).
 - Automation: `state.sketch` (`show`, `inMode`, `chosen`, `strokes`, the `sheets` with their counts and
   legends, the chosen sheet's `list` of strokes (colour, width, places, first and last place), `pencil`,
-  `eraser`, `pending`, the `key`'s entries, `drawn`); `state.show.sketch`. The mouse draws as with any tool
+  `eraser`, `pending`, the other modes' `note`, the `key`'s entries, `drawn`: sheets, strokes, `culled`
+  strokes outside the view, pending); `state.show.sketch`. The mouse draws as with any tool
   (`mouse view=top x=.. y=.. action=down|move|up`, `modifiers=Shift` or `Alt`; digits are `D1` to `D6`).
 - Not built yet: the symbol, label and select tools (N-4), the image tool and the projected images (N-2),
   the sketch in 3D (N-3).

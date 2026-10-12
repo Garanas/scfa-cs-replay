@@ -172,6 +172,8 @@ namespace FAForever.MapEditor.App.Tests
 
             model.SelectMode("terrain");
             Dispatcher.UIThread.RunJobs();
+            TextBlock note = (TextBlock)Find(window, "The sketch over the terrain");
+            StringAssert.Contains(note.Text, "Sheet 1 at 45% over the terrain", "the inspector of the other modes says so");
             (int dr, int dg, int db) = PixelAt(window, 90, 100);
             Assert.IsTrue(dr > dg + 20, "still red-ish in the Terrain mode");
             Assert.IsTrue(dg > g || db > b, $"but dimmed at the sheet's opacity: {dr}, {dg}, {db} against {r}, {g}, {b}");

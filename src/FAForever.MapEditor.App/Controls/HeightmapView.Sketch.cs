@@ -77,7 +77,8 @@ public sealed partial class HeightmapView
                 sheets++;
                 strokes += sheet.Strokes.Length;
                 SketchRun[] runs = SketchRuns.GetValue(sheet, BuildSketchRuns);
-                using (context.PushOpacity(opacity))
+                // a sheet at full opacity needs no layer of its own
+                using (opacity < 1 ? context.PushOpacity(opacity) : (IDisposable?)null)
                 using (context.PushTransform(SketchMatrix()))
                 {
                     foreach (SketchRun run in runs)
