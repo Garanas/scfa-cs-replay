@@ -14,6 +14,11 @@ public sealed partial class LabelEditor : UserControl
 {
     private SketchViewModel? _sketch;
 
+    /// <summary>
+    /// Whether the box lies over the 3D view: it shows for a label begun there; the other box, for one begun in the top view.
+    /// </summary>
+    public bool ThreeD { get; set; }
+
     public LabelEditor()
     {
         InitializeComponent();
@@ -24,25 +29,43 @@ public sealed partial class LabelEditor : UserControl
             if (_sketch is not null)
             {
                 _sketch.WritingStarted -= OnWritingStarted;
+                _sketch.PropertyChanged -= OnSketchChanged;
             }
             _sketch = DataContext as SketchViewModel;
             if (_sketch is not null)
             {
                 _sketch.WritingStarted += OnWritingStarted;
+                _sketch.PropertyChanged += OnSketchChanged;
             }
+            Show();
         };
     }
+
+    private void OnSketchChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SketchViewModel.Draft))
+        {
+            Show();
+        }
+    }
+
+    // the box of the view the label was begun in
+    private void Show() => IsVisible = _sketch?.Draft is { } draft && draft.ThreeD == ThreeD;
 
     private void OnWritingStarted(object? sender, EventArgs e) =>
         Dispatcher.UIThread.Post(() =>
         {
+            if (!IsVisible)
+            {
+                return;
+            }
             Box.Focus();
             Box.SelectAll();
         }, DispatcherPriority.Background);
 
     private void OnKey(object? sender, KeyEventArgs e)
     {
-        if (_sketch is not { IsWriting: true })
+        if (!IsVisible || _sketch is not { IsWriting: true })
         {
             return;
         }

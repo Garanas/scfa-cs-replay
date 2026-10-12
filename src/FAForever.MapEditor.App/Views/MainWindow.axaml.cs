@@ -200,6 +200,11 @@ public sealed partial class MainWindow : Window
             {
                 chip.Content = title;
             }
+            if (overlay.Definition.Gesture is string gesture && ToolTip.GetTip(chip) is null)
+            {
+                // the key that turns it on and off, which the View menu shows too
+                ToolTip.SetTip(chip, $"{overlay.Definition.CommandTitle} ({gesture})");
+            }
             ViewOptions.Children.Add(chip);
         }
     }
@@ -611,6 +616,9 @@ public sealed partial class MainWindow : Window
         Grid.SetColumnSpan(Heightmap, sideBySide ? 1 : 3);
         Grid.SetColumn(Terrain3D, sideBySide ? 2 : 0);
         Grid.SetColumnSpan(Terrain3D, sideBySide ? 1 : 3);
+        ThreeDOverlays.IsVisible = Terrain3D.IsVisible;
+        Grid.SetColumn(ThreeDOverlays, sideBySide ? 2 : 0);
+        Grid.SetColumnSpan(ThreeDOverlays, sideBySide ? 1 : 3);
         double split = _model?.Layout.SideBySideSplit ?? 0.5;
         Maps.ColumnDefinitions[0].Width = new GridLength(split, GridUnitType.Star);
         Maps.ColumnDefinitions[2].Width = new GridLength(1 - split, GridUnitType.Star);

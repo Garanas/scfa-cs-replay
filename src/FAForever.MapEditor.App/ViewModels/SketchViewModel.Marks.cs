@@ -58,7 +58,13 @@ public sealed partial class SketchSizeChoice(SketchSize size, Func<SketchSize, T
 /// <param name="Place">Where the label's text is centred, in ogrids.</param>
 /// <param name="Screen">Where the text box lies over the view, in its pixels.</param>
 /// <param name="Index">The label of the chosen sheet it edits; null for a new one.</param>
-public sealed record SketchLabelDraft(Vector2 Place, Vector2 Screen, SketchColour Colour, float Size, string Sheet, int? Index);
+public sealed record SketchLabelDraft(Vector2 Place, Vector2 Screen, SketchColour Colour, float Size, string Sheet, int? Index)
+{
+    /// <summary>
+    /// Whether the text box lies over the 3D view (<see cref="Screen"/> is in its pixels) and not the top view.
+    /// </summary>
+    public bool ThreeD { get; init; }
+}
 
 public sealed partial class SketchViewModel
 {

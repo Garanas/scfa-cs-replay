@@ -1763,8 +1763,9 @@ change, span `model.armies`), the place tool and the commands.
 User story N-1 (the library's side: its guide, "The sketch"). The Sketch mode (rail, after Units, `F10`)
 holds the map maker's drafts: pencil strokes in sheets, drawn straight onto the map in the top view or the
 3D view, kept in the project and never exported. The sketch shows in every mode, so a draft guides the work
-in the Terrain or the Markers mode: the chip `Sketch` (after the Markers, Path nodes and 3D camera chips,
-which keep their room at 1280 pixels, so it lies behind More there until the window is wider), the View menu's `Show the sketch` and `Ctrl+Shift+K` turn it on or
+in the Terrain or the Markers mode: the chip `Sketch` (the second of the overlay chips, Markers, Sketch, 3D camera, Path nodes, so
+it shows in the views' bar at 1280 pixels beside the 3D camera chip, which `ProceduralWindowTest` keeps there, while the Path nodes, which
+the Markers panel lists too, lie behind More; its tip names the key), the View menu's `Show the sketch` (with `Ctrl+Shift+K` beside it) and `Ctrl+Shift+K` turn it on or
 off (`view.overlay.sketch`, `MainViewModel.ShowSketch`, on by default; an overlay may carry a shortcut:
 `OverlayDefinition.Gesture`). In the Sketch mode a sheet is drawn fully, in the other modes at its own
 opacity ("Other modes", 45% for a new sheet).
@@ -1810,8 +1811,8 @@ opacity ("Other modes", 45% for a new sheet).
   `sketch.draw` smooths and thins as the pencil's settings say (a line of an exact polyline stays
   as it is while Smooth is off: `smooth: false`).
 - **In the other modes** the inspector ends with a Sketch block while the map has strokes
-  (`MainViewModel.SketchNote`: `Layout A at 45% over the terrain. The Sketch chip in the views' bar
-  hides it, or Ctrl+Shift+K.`, or that the sketch is hidden and how to show it); the Sketch mode's own
+  (`MainViewModel.SketchNote`: `Layout A at 45% over the terrain. Hide it with the Sketch chip in the views' bar
+  (behind More when the window is narrow), the View menu or Ctrl+Shift+K.`, or that the sketch is hidden and how to show it); the Sketch mode's own
   inspector holds the sheet instead.
 - **The top view** (`Controls/HeightmapView.Sketch.cs`, called from `Render` after the selection, before the
   tool's own drawing, spans `top.sketch` and `top.sketch-build`): the strokes as lines of the width on
@@ -1820,21 +1821,27 @@ opacity ("Other modes", 45% for a new sheet).
   colours (the map's, made in code from the model's values like a marker's); a sheet is one layer, so
   overlaps do not darken at its opacity. A sheet's lines are built once into geometries
   (consecutive strokes of one colour and width are one geometry, which keeps the order they were drawn in)
-  and kept while the document holds that very sheet. While a shown sheet has a legend text, a small key lies in the view's lower
-  left corner (`Sketch.Keys`: the sheets' names when more than one has a legend). `SketchDrawn` says how
+  and kept while the document holds that very sheet. A black line has a halo of white under it and a white one of black (`SketchLook.HaloArgb`, 1.5 pixels
+  beyond the line's edge, drawn first under every line of the sheet inside the sheet's layer, so overlaps still do not darken), so both show
+  on terrain of their own tone. While a shown sheet has a legend text, a small key lies in the view's lower
+  left corner (`Sketch.Keys`: the sheets' names when more than one has a legend; drawn at the sheets' opacity outside the Sketch mode, a
+  sheet that does not show has none, and scaled with a small map: at most 40% of the map's width on screen and a third of the view, never below
+  half size; its black and white dots have the halo's colours as their rim, `SketchLook.RimArgb`; `SketchKeyDrawn`, `state.sketch.drawn.key`). `SketchDrawn` says how
   many sheets, strokes and pending lines the last frame drew. Both views draw from the one list
   `SketchLines.Of(sketch, full)` (the Project guide, "The sketch as lines").
 - **The 3D view** (story N-3; `Controls/TerrainViewGpu.Sketch.cs` hands the frame over,
   `Rendering/Gpu/SketchRenderer.cs` draws it, after the overlays and before the brush, spans `3d.sketch-frame`,
   `3d.sketch-build`, `3d.draw-sketch`): the strokes lie on the terrain as lines of the same width on screen
   at every distance, round at ends and joins, in the six colours, hidden with the Sketch overlay, a sheet at
-  its opacity outside the Sketch mode. The projected images are not drawn here (a picture would stretch
-  over the hills). A line is cut into pieces of at most an ogrid in the map's places once and kept on the card
+  its opacity outside the Sketch mode, black and white lines with a halo of the other tone (a second pass before the lines, the vertex shader
+  widening a piece by `uHalo` and swapping its colour; it sends the other colours' pieces out of the view). The projected images are not drawn here (a picture would stretch
+  over the hills). Labels are drawn here as text (below, "Labels in 3D"). A line is cut into pieces of at most an ogrid in the map's places once and kept on the card
   per sheet (a buffer of pieces: two places, the colour, the width); a stroke added to a sheet adds only its
   pieces (`SketchLines.Extends`), anything else makes the sheet's again, and a sheet that no longer exists lets
   its buffer go. The vertex shader reads each end's height from the heightmap's texture (so the lines follow
-  the ground while it is edited), lifts it 0.2 ogrid plus 0.25% of the distance to the eye (the terrain's
-  own triangles, which are coarser on large maps, would hide a line lying exactly on it), cuts a piece at
+  the ground while it is edited), lifts it 0.2 ogrid plus 0.25% of the distance to the eye plus half the
+  ground's slope there (the terrain's own triangles, which are coarser on large maps and stray from the bilinear height by about the slope, would hide a line lying exactly on
+  it: on a very steep face it would be dashed), cuts a piece at
   the camera's near plane and spreads it into a quad of pixels, a capsule of the width that the fragment
   shader smooths (one pixel) and rounds; the depth is interpolated along the piece, tested against the scene
   (hills, props and units hide the line, as they hide the grid) and not written. A sheet at full opacity is
@@ -1848,10 +1855,18 @@ opacity ("Other modes", 45% for a new sheet).
   `3d.draw-sketch` 0.9 ms a frame on the processor, `3d.gpu-frame` 1.3 ms for the whole frame, `3d.sketch-frame`
   0.01 ms, and `3d.sketch-build` nothing while the sketch stays as it is (the first frame after the file was
   read, building all of it: 7.8 ms in all).
+- **Labels in 3D** (`Rendering/Gpu/LabelBitmaps`, `SketchRenderer.DrawLabels`, span `3d.draw-sketch-labels`): a label is the picture of its text
+  (the same `SketchLabelPainter` as the top view draws with, so the same hand and halo), made on the interface's thread outside the 3D
+  frame (`LabelBitmaps.Get` answers null for one not made yet, makes it in the background and asks the view to draw again; a screenshot waits
+  for `TerrainViewGpu.TexturesLoading`), kept per text, colour and size and uploaded as a texture. It is drawn on a quad that faces the screen, centred over its place a little above
+  the ground, as large on screen as its size on the map makes it at that distance within 11 to 44 pixels of the view (so it reads near and far),
+  in one of 13 sizes. It is seen whole or not at all: the renderer walks the line from the eye to the label over the heightmap
+  (`HiddenByGround`) and leaves the label out when the ground is in the way; hills and models do not hide it. A sheet's labels are drawn at its opacity.
+  `state.sketch.drawn3d.labels` counts them.
 - Automation: `state.sketch` (`show`, `inMode`, `chosen`, `strokes`, the `sheets` with their counts and
   legends, the chosen sheet's `list` of strokes (colour, width, places, first and last place), `pencil`,
   `eraser`, `pending`, the other modes' `note`, the `key`'s entries, `drawn`: sheets, strokes, `culled`
-  strokes outside the view, pending), `drawn3d`: what the 3D view drew last while it is shown (`sheets`, `lines`,
+  strokes outside the view, pending, `key`: the legend's box [x, y, width, height] and opacity), `drawn3d`: what the 3D view drew last while it is shown (`sheets`, `lines`,
   `segments`: the pieces the lines were cut into, `pending`, `built`: pieces made that frame, 0 while the
   sketch stays as it is, `layers`: sheets laid over the scene as a layer, `layersWork`); `state.show.sketch`.
   A command that cannot run because a stroke is going on (the mouse is down in the pencil, the eraser or a
@@ -3198,7 +3213,8 @@ kept in `sketch/sketch.json`, edited only through commands that are one step of 
 - **The Symbol tool** (`Tools/SymbolTool`, `sketch.symbol`): the row has the six symbols as icons (spawn, mass,
   hydrocarbon, arrow, cross, question mark: `Icon.SymbolSpawn` ... in `Styles/Icons.axaml`, the shapes
   `SketchLines` draws), the six colours (keys 1 to 6 as the pencil; the tool keeps a colour of its own),
-  Small, Medium and Large (a symbol 8, 14 or 24 ogrids wide, so it grows with the zoom: a symbol is map
+  Small, Medium and Large (a symbol 8, 14 or 24 ogrids wide, drawn with thin lines under 20 ogrids so that its rings and corners
+  stay open when the map is shown small, so it grows with the zoom: a symbol is map
   content, a stroke is a line of pixels), the Turn field for an arrow and Mirror (on by default: repeated by the
   map's symmetry, an arrow turned with it). A click stamps the symbol in hand on release; while the mouse is
   down it is shown under it with its images by the symmetry dashed (`SketchViewModel.PendingSymbols`); an
@@ -3251,8 +3267,12 @@ kept in `sketch/sketch.json`, edited only through commands that are one step of 
   (`steps` moves between two, 4 by default) and lets go at the last: a drag with corners in one call.
 - **Performance**: `tool.sketch-symbol` and `tool.sketch-select` measure a mouse move of the tools; the
   symbols' lines are part of a sheet's runs (`top.sketch-build`), the labels of `top.sketch`.
-- **Not built**: no symbol or label in the 3D view's mouse (the tools say so in the status line; the lines of
-  symbols reach the 3D view through `SketchLines`, labels do not), no keys for the symbols (the row's
+- **In the 3D view** the Symbol, Label and Select tools work as the pencil and the eraser do, on the place of the terrain the mouse points at:
+  a symbol is stamped there (its lines and its images by the symmetry show while the mouse is down), a label is begun there (the text box is the
+  second `LabelEditor` of the window, `ThreeD="True"`, over the 3D view's column in `ThreeDOverlays`; the draft's `ThreeD` says which box shows) and the
+  Select tool picks and boxes by the terrain places (a box is on the ground, not on the screen) and outlines its selection in 3D along the ground
+  (`SketchSelectTool.Outline`). The Select tool's outline of a label is the estimate of its box on the ground, not the picture's.
+- **Not built**: no keys for the symbols (the row's
   icons choose them), no resizing of strokes, no rotating of a selection.
 - Tests: `SketchMarksTest` (the commands, the tools on a model, undo, the eraser, counts, the project),
   `SketchMarksWindowTest` (the rows' labels, the mouse in the window, the text box over the view, the handles'
