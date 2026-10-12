@@ -138,6 +138,7 @@ public partial class LayerStackViewModel : ObservableObject
     private string _maskNames = "";
     private string _signature = "";
     private MapDocument? _document;
+    private Layer? _chosenSeen;
 
     /// <summary>
     /// What the clip choice says for none.
@@ -205,9 +206,16 @@ public partial class LayerStackViewModel : ObservableObject
         }
     }
 
-    public Layer? ChosenLayer => ChosenItem?.Layer ?? (Chosen is null ? null : _shown?.Find(Chosen));
+    public Layer? ChosenLayer => ChosenItem?.Layer ?? (Chosen is null || _document is null ? null : FindLayer(_document, Chosen));
 
-    public bool CanRemove => ChosenItem is { IsBase: false } && (!KeepsLastLayer || Items.Count > 1);
+    /// <summary>
+    /// The layer of that name the document has for this control: the stack's own by default; a
+    /// stack that lives in two places (the heightmaps) also finds a layer that is only in the other
+    /// one, which stays chosen when its use changes.
+    /// </summary>
+    protected virtual Layer? FindLayer(MapDocument document, string? name) => _read(document)?.Find(name);
+
+    public bool CanRemove => ChosenLayer is { IsBase: false } && (!KeepsLastLayer || Items.Count > 1);
 
     /// <summary>
     /// Whether the last layer stays (a grid of coverage is made by at least one).
@@ -281,13 +289,12 @@ public partial class LayerStackViewModel : ObservableObject
         string signature = FilterKey + "#" + string.Join("|", layers.Select(layer => layer.Name + ":" + SummaryOf(layer) + ":" + layer.Path));
         if (document is not null && stack is not null && signature == _signature)
         {
-            bool chosenChanged = false;
             if (!ReferenceEquals(stack, _shown))
             {
                 FollowPreviews(document, stack);
-                // a setting the list does not show (a curve mirrored, its falloff) changed the chosen layer: its fields follow
-                chosenChanged = !ReferenceEquals(_shown?.Layers.FirstOrDefault(layer => layer.Name == Chosen), stack.Layers.FirstOrDefault(layer => layer.Name == Chosen));
             }
+            // a setting the list does not show (a curve mirrored, its falloff) changed the chosen layer: its fields follow
+            bool chosenChanged = !ReferenceEquals(_chosenSeen, Chosen is null ? null : FindLayer(document, Chosen));
             _shown = stack;
             if (newSettings || chosenChanged)
             {
@@ -304,7 +311,7 @@ public partial class LayerStackViewModel : ObservableObject
             .Select(entry => new StackLayerItem(entry.Layer, entry.Index, count, document is null || stack is null ? null : PreviewPicture.OfLayer(document, stack, entry.Layer),
                 SummaryOf(entry.Layer), this)).Reverse()];
         Summary = SummaryOfStack(count);
-        string? chosen = Chosen is string name && layers.Any(layer => layer.Name == name)
+        string? chosen = Chosen is string name && (layers.Any(layer => layer.Name == name) || (document is not null && FindLayer(document, name) is not null))
             ? name
             : Preferred(document, layers)?.Name;
         if (chosen == Chosen)
@@ -381,7 +388,7 @@ public partial class LayerStackViewModel : ObservableObject
     public void Choose(string name) =>
         Chosen = Items.FirstOrDefault(item => item.Name == name)?.Name
             ?? Items.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.Name
-            ?? _shown?.Find(name)?.Name
+            ?? (_document is null ? null : FindLayer(_document, name)?.Name)
             ?? throw new ArgumentException(Items.Count == 0
                 ? $"The map has no {Commands.Word}s"
                 : $"The map has no {Commands.Word} '{name}': {string.Join(", ", Items.Select(item => item.Name))}");
@@ -522,7 +529,7 @@ public partial class LayerStackViewModel : ObservableObject
     private SettingGroup MakeLayerSettings(IReadOnlyList<string> masks)
     {
         JsonObject Fixed() => new JsonObject { [Commands.LayerArgument] = Chosen };
-        Layer Of(MapDocument d) => _read(d)?.Find(Chosen) ?? NoLayer;
+        Layer Of(MapDocument d) => FindLayer(d, Chosen) ?? NoLayer;
         string set = Commands.Set;
         return new SettingGroup("Layer",
         [
@@ -544,6 +551,7 @@ public partial class LayerStackViewModel : ObservableObject
     protected virtual void RefreshSettings()
     {
         Layer.Refresh(Chosen is null ? null : _document);
+        _chosenSeen = Chosen is null || _document is null ? null : FindLayer(_document, Chosen);
         RefreshNotes();
     }
 

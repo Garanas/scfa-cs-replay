@@ -134,6 +134,61 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
+        public async Task ALayerMovedOutOfTheShownHeightmapStaysChosenAndItsUseShows()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "terrain.addLayer");
+            await Run(model, "terrain.switchHeights", new JsonObject { ["to"] = "draft" });
+            await Run(model, "terrain.addLayer");
+            Assert.AreEqual("Sculpt 2", model.HeightStack.Chosen);
+            Assert.AreEqual("Draft and final", model.HeightStack.Use.Settings.OfType<ChoiceSetting>().Single().Chosen);
+
+            await Run(model, "terrain.setLayer", new JsonObject { ["use"] = "Final only" });
+            Assert.AreEqual("Sculpt 2", model.HeightStack.Chosen, "the layer the user changed stays chosen");
+            Assert.AreEqual("Final only", model.HeightStack.Use.Settings.OfType<ChoiceSetting>().Single().Chosen, "the inspector says what the layer is used in");
+            Assert.AreEqual("Sculpt 2", model.HeightStack.ChosenLayer?.Name);
+            Assert.AreEqual("Sculpt 2", model.HeightStack.Layer.Settings.OfType<TextSetting>().First().Text, "its settings are its own");
+            CollectionAssert.DoesNotContain(Listed(model), "Sculpt 2", "the draft's list is the draft's");
+            Assert.IsTrue(model.HeightStack.IsElsewhere);
+            StringAssert.Contains(model.HeightStack.ChosenFacts, "Not in the draft");
+            Assert.IsTrue(model.HeightStack.CanRemove);
+
+            // undo brings it back into the list, still chosen
+            model.Undo();
+            Assert.AreEqual("Sculpt 2", model.HeightStack.Chosen);
+            Assert.AreEqual("Draft and final", model.HeightStack.Use.Settings.OfType<ChoiceSetting>().Single().Chosen);
+            CollectionAssert.Contains(Listed(model), "Sculpt 2");
+        }
+
+        [TestMethod]
+        public async Task AddingALayerForTheOtherHeightmapChoosesIt()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "terrain.addLayer");
+            await Run(model, "terrain.switchHeights", new JsonObject { ["to"] = "draft" });
+            await Run(model, "terrain.addLayer", new JsonObject { ["use"] = "final" });
+            Assert.AreEqual("Sculpt 2", model.HeightStack.Chosen);
+            Assert.AreEqual("Final only", model.HeightStack.Use.Settings.OfType<ChoiceSetting>().Single().Chosen);
+        }
+
+        [TestMethod]
+        public async Task AnotherMapStartsWithTheFinalAndNothingChosenOrFiltered()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "terrain.addLayer");
+            await Run(model, "terrain.switchHeights", new JsonObject { ["to"] = "draft" });
+            await Run(model, "terrain.filterLayers", new JsonObject { ["use"] = "draft", ["source"] = "curve" });
+            Assert.AreEqual("Sculpt", model.HeightStack.Chosen);
+
+            await model.OpenAsync(HardFfa);
+            Assert.AreEqual(HeightStackKind.Final, model.ShownHeights);
+            Assert.AreEqual("all", model.HeightStack.UseFilter);
+            Assert.AreEqual("all", model.HeightStack.SourceFilter);
+            Assert.IsNull(model.HeightStack.Chosen);
+            Assert.IsTrue(model.HeightStack.UseChips.Single(chip => chip.Value == "all").IsOn);
+        }
+
+        [TestMethod]
         public async Task TheListFiltersByUseAndSource()
         {
             MainViewModel model = await Open();

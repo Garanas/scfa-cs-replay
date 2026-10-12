@@ -1,4 +1,6 @@
 using FAForever.MapEditor.App.Tools;
+using FAForever.MapEditor.Project;
+using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
@@ -13,12 +15,21 @@ public sealed partial class MainViewModel
     /// </summary>
     public HeightLayersViewModel HeightStack { get; private set; } = null!;
 
+    private EditedMap? _heightsOfMap;
+
     private void InitializeHeightLayers()
     {
         HeightStack = new HeightLayersViewModel(RunWithAsync, () => ShownHeights);
         DocumentChanged += (_, _) => HeightStack.Refresh(ShownDocument);
         MapChanged += (_, _) =>
         {
+            if (!ReferenceEquals(Map, _heightsOfMap))
+            {
+                // another map: nothing of the last one's choice, filters or shown heightmap carries over (a resize keeps the map)
+                _heightsOfMap = Map;
+                ShownHeights = HeightStackKind.Final;
+                HeightStack.ForgetMap();
+            }
             HeightStack.Refresh(ShownDocument);
             FollowChosenHeightLayer();
         };
