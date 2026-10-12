@@ -1,4 +1,5 @@
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 using MediatR;
@@ -58,6 +59,11 @@ public sealed class ResizeMapHandler(MainViewModel model) : IRequestHandler<Resi
             FillHeight = request.FillHeight,
             FitPlayableArea = request.FitPlayableArea,
         };
+        if (width == document.Width && height == document.Height && !request.FitPlayableArea
+            && MapResize.OffsetOf(document.Width, document.Height, settings) == (0, 0))
+        {
+            throw new ArgumentException($"The map is {document.Width} by {document.Height} ogrids already and nothing moves: choose another size, move the old map or fit the playable area");
+        }
         MapResizeResult result = await model.ResizeMapAsync(settings);
         return result.Removed.ToString();
     }

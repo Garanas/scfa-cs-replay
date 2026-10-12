@@ -72,13 +72,47 @@ public abstract partial class Setting : ObservableObject
     protected abstract void Show(MapDocument document);
 
     /// <summary>
-    /// Runs the command with the value.
+    /// Runs the command with the value. A command the map refuses (an area renamed to another's
+    /// name) changes nothing, so <paramref name="settled"/> runs once the command is done, to show
+    /// the field what the map has instead of what was typed (<see cref="ShowAgain"/>).
     /// </summary>
-    protected void Give(JsonNode? value)
+    protected void Give(JsonNode? value, Action? settled = null)
     {
         JsonObject arguments = _fixed?.Invoke() ?? [];
         arguments[Argument] = ValueOf is null ? value : ValueOf(value);
-        _ = _run(_command, arguments);
+        _ = GiveAsync(arguments, settled);
+    }
+
+    private async Task GiveAsync(JsonObject arguments, Action? settled)
+    {
+        await _run(_command, arguments);
+        if (settled is not null)
+        {
+            // after the field's own change is through: a notification inside it is not shown
+            await Task.Yield();
+            settled();
+        }
+    }
+
+    /// <summary>
+    /// Makes a field that was given a value the map did not take show the map's value again. A
+    /// binding takes a notification for the value it last saw as no change, so the field is told
+    /// the given value first, then the map's.
+    /// </summary>
+    /// <param name="given">The value the field was given.</param>
+    /// <param name="shown">What the map has.</param>
+    /// <param name="set">Sets the setting's value without a command.</param>
+    /// <param name="property">The property the field is bound to.</param>
+    protected void ShowAgain<T>(T given, T shown, Action<T> set, string property) where T : IEquatable<T>
+    {
+        if (given.Equals(shown))
+        {
+            return;
+        }
+        set(given);
+        OnPropertyChanged(property);
+        set(shown);
+        OnPropertyChanged(property);
     }
 
     /// <summary>
@@ -131,7 +165,8 @@ public sealed partial class NumberSetting(string label, string command, string a
                 OnPropertyChanged();
                 return;
             }
-            Give(number);
+            string typed = value;
+            Give(number, () => ShowAgain(typed, _text, text => _text = text, nameof(Text)));
         }
     }
 
@@ -190,7 +225,7 @@ public sealed partial class TextSetting(string label, string command, string arg
         {
             if (value != _text)
             {
-                Give(value);
+                Give(value, () => ShowAgain(value, _text, text => _text = text, nameof(Text)));
             }
         }
     }
@@ -221,7 +256,7 @@ public sealed partial class BoolSetting(string label, string command, string arg
         {
             if (value != _isOn)
             {
-                Give(value);
+                Give(value, () => ShowAgain(value, _isOn, isOn => _isOn = isOn, nameof(IsOn)));
             }
         }
     }
@@ -264,7 +299,7 @@ public sealed partial class ChoiceSetting(string label, string command, string a
         {
             if (value is not null && value != _chosen)
             {
-                Give(Value is null ? value : Value(value));
+                Give(Value is null ? value : Value(value), () => ShowAgain(value, _chosen ?? "", chosen => _chosen = chosen, nameof(Chosen)));
             }
         }
     }

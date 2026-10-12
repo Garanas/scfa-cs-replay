@@ -57,6 +57,7 @@ public sealed class AddArmyHandler(MainViewModel model, ArmiesViewModel armies, 
         string added = "";
         UnitCommands.Apply(edit, d => d.AddArmy(request.Name, !request.Extra, spawn, out added));
         armies.ChooseArmyWhenShown(added);
+        model.ShowAddedArmy(added);
         model.Status = request.Extra ? $"Added the extra army {added}" : $"Added the army {added} with its spawn";
         return Task.FromResult(added);
     }

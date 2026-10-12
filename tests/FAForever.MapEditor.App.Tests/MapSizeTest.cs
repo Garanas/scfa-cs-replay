@@ -50,6 +50,41 @@ namespace FAForever.MapEditor.App.Tests
         private static Task<CommandRun> Run(MainViewModel model, string id, JsonObject? arguments = null) => model.Commands.RunAsync(id, arguments ?? [], interactive: false);
 
         [TestMethod]
+        public async Task AResizeThatChangesNothingIsRefusedAndMakesNoStep()
+        {
+            MainViewModel model = await Open();
+            int steps = model.History.Count;
+
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => Run(model, "map.resize", new JsonObject { ["width"] = 256, ["height"] = 256 }));
+            Assert.AreEqual(steps, model.History.Count);
+
+            // moving the old map, or fitting the playable area, is a change
+            Assert.IsTrue((await Run(model, "map.resize", new JsonObject { ["width"] = 256, ["height"] = 256, ["offsetX"] = 8 })).Ran);
+            Assert.AreEqual(steps + 1, model.History.Count);
+        }
+
+        [TestMethod]
+        public async Task AnotherMapOpenedGivesTheSizeToolItsStartingOptions()
+        {
+            MainViewModel model = await Open();
+            MapSizeTool tool = model.Tool<MapSizeTool>();
+            tool.SetOffset(8, 4);
+            tool.FillWithHeight = true;
+            tool.FillHeight = 12;
+            tool.FitPlayableArea = true;
+            tool.Anchor = MapAnchor.TopLeft;
+            tool.SetOffset(8, 4);
+
+            await model.OpenAsync(HardFfa);
+            Assert.IsFalse(tool.CustomOffset);
+            Assert.AreEqual((0, 0), (tool.OffsetX, tool.OffsetZ));
+            Assert.AreEqual(MapAnchor.Centre, tool.Anchor);
+            Assert.IsFalse(tool.FillWithHeight);
+            Assert.AreEqual(35f, tool.FillHeight);
+            Assert.IsFalse(tool.FitPlayableArea);
+        }
+
+        [TestMethod]
         public async Task ResizesTheMapAsOneStepOfUndo()
         {
             MainViewModel model = await Open();

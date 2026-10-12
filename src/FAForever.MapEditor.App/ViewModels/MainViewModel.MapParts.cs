@@ -42,6 +42,7 @@ public sealed partial class MainViewModel
 
         DocumentChanged += (_, _) => RefreshMapParts();
         MapChanged += (_, _) => RefreshMapParts();
+        Events.MapOpened += _ => StartMapPartsOver();
 
         parts.Chose += (_, _) =>
         {
@@ -110,6 +111,7 @@ public sealed partial class MainViewModel
             if (MapParts.Refresh(ShownDocument, MapInformation, ScriptFiles))
             {
                 FollowChosenArmy();
+                FollowShownArmy();
                 FollowSelectedArea();
             }
         }
@@ -117,6 +119,38 @@ public sealed partial class MainViewModel
         {
             _followingMapParts = false;
         }
+        if (_showArmyWhenListed is string army && MapParts.Parts.Find(MapPartsViewModel.ArmyPart(army)) is not null)
+        {
+            _showArmyWhenListed = null;
+            InspectPart(MapPartsViewModel.ArmyPart(army));
+        }
+    }
+
+    // the army a command added, to show in the inspector once the list has its entry
+    private string? _showArmyWhenListed;
+
+    /// <summary>
+    /// Shows a new army's entry in the Map mode's inspector, as the panel's Add army does, when the
+    /// army was added by a command (the Map menu, automation) while the Map mode is shown. The
+    /// entry is the list's once the document that has the army shows.
+    /// </summary>
+    public void ShowAddedArmy(string army)
+    {
+        if (SelectedMode?.Definition.Id == "map")
+        {
+            _showArmyWhenListed = army;
+        }
+    }
+
+    // a map was opened: the list shows its information and no army is the chosen one, not the entry
+    // or the army of the same name that the map before it had chosen
+    private void StartMapPartsOver()
+    {
+        Follow(() =>
+        {
+            Armies.ChosenArmy = null;
+            MapParts.Parts.Choose(MapPartsViewModel.InformationPart);
+        });
     }
 
     // a tool an entry of the list chose: the status line says so, as choosing it on the panel does
@@ -134,6 +168,18 @@ public sealed partial class MainViewModel
             && parts.Find(MapPartsViewModel.ArmyPart(row.Name)) is not null)
         {
             Follow(() => parts.Choose(MapPartsViewModel.ArmyPart(row.Name)));
+        }
+    }
+
+    // the army entry the list shows is the chosen army, whatever made it show: the entry chosen
+    // before went (an army removed, an add undone) and the list moved to a neighbour, whose fields
+    // the inspector then has to show
+    private void FollowShownArmy()
+    {
+        if (MapPartsViewModel.ArmyOf(MapParts.Parts.Chosen) is string shown && Armies.ChosenArmy?.Name != shown
+            && Armies.Rows.FirstOrDefault(row => row.Name == shown) is ArmyRow row)
+        {
+            Follow(() => Armies.ChosenArmy = row);
         }
     }
 
@@ -167,7 +213,8 @@ public sealed partial class MainViewModel
 
     /// <summary>
     /// Runs a command for an area's fields in the Map mode's inspector: a renamed area's entry is
-    /// shown again under its new name (the selection that follows the rename would take the inspector).
+    /// shown again under its new name (the selection that follows the rename would take the inspector);
+    /// a rename the map refused (another area has that name) leaves the entry shown.
     /// </summary>
     private async Task RunAreaFieldAsync(string id, JsonObject arguments)
     {
@@ -175,21 +222,15 @@ public sealed partial class MainViewModel
         string? rename = id == "map.setArea" ? arguments["rename"]?.GetValue<string>()?.Trim() : null;
         bool shown = name is not null && MapParts.Parts.Chosen.Id == MapPartsViewModel.AreaPart(name) && InspectorOwner == InspectorOwner.Part;
         await RunWithAsync(id, arguments);
-        if (shown && rename is { Length: > 0 } && MapParts.Parts.Find(MapPartsViewModel.AreaPart(rename)) is not null)
+        if (shown && rename is { Length: > 0 } && rename != name && MapParts.Parts.Find(MapPartsViewModel.AreaPart(name!)) is null
+            && MapParts.Parts.Find(MapPartsViewModel.AreaPart(rename)) is not null)
         {
             InspectPart(MapPartsViewModel.AreaPart(rename));
         }
     }
 
-    // the panel's Add army and Add extra: the new army's entry is shown
-    private async Task AddArmyFromPanelAsync(bool extra)
-    {
-        CommandRun run = await RunAndAnswerAsync("map.addArmy", new JsonObject { ["extra"] = extra });
-        if (run.Result is string army && MapParts.Parts.Find(MapPartsViewModel.ArmyPart(army)) is not null)
-        {
-            InspectPart(MapPartsViewModel.ArmyPart(army));
-        }
-    }
+    // the panel's Add army and Add extra: the command shows the new army's entry (ShowAddedArmy)
+    private Task AddArmyFromPanelAsync(bool extra) => RunAndAnswerAsync("map.addArmy", new JsonObject { ["extra"] = extra });
 
     // the panel's Add an area: the new area is selected with its handles, and its entry shown
     private async Task AddAreaFromPanelAsync()

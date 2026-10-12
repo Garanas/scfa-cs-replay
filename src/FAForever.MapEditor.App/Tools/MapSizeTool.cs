@@ -114,6 +114,19 @@ public sealed partial class MapSizeTool(MainViewModel model) : ObservableObject,
     }
 
     /// <summary>
+    /// A map was opened: every option is as it is when the editor starts, not what the map before
+    /// it was given (its size and where it lies in the new one, the fill and the fit).
+    /// </summary>
+    public void StartOver()
+    {
+        Anchor = MapAnchor.Centre;
+        FillWithHeight = false;
+        FillHeight = 35;
+        FitPlayableArea = false;
+        Reset();
+    }
+
+    /// <summary>
     /// The arguments of <c>map.resize</c> for these settings.
     /// </summary>
     public JsonObject Arguments()

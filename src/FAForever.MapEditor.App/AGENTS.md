@@ -2222,6 +2222,11 @@ mode panel's and inspector's templates only name it).
   field again or dragging a slider is one step. A slider's binding is one way and only a slider
   the person touches (focus or pointer over it) gives its value: a slider coerces its value by
   itself when its range arrives after the value, which once rewrote every area to 1 by 1.
+- **A field shows what the map has**: a value a command refused (an area renamed to another area's
+  name, `The map has an area X already`) leaves the map as it was, and the field shows the map's
+  value again (`Setting.Give` and `ShowAgain`: a binding ignores a notification for the value it last
+  saw, so the field is told the typed value, then the map's). The Map panel's entry stays on the area
+  whose rename was refused.
 - **Commands**: `map.information {name?, description?, author?, version?, type?, preview?,
   noRushRadius?, adaptiveMap?}` (without arguments: the Map panel's Information entry in the
   inspector; the reclaim is not typed: a read-only line under the Game fields,
@@ -2296,6 +2301,13 @@ library's (`MapResize`, `MapScript`; its guide).
   says what was removed (decision: things outside are removed, spawns kept at the edge, areas cut)
   and that the normal map and preview are out of date. A document of another size (a resize, its
   undo) raises `MapChanged` and resets the camera, so both views start over; the tool takes the size.
+- **A map opened starts the Map mode over**: its list shows the Information entry, no army is the
+  chosen one (an army of the same name in the map before is not), and the Map size tool has its
+  starting options (size, anchor, offset, fill, fit). The entry shown while an army is shown is the
+  chosen army's: when the army shown is removed (or its add undone) the list moves to a neighbour
+  and that army becomes `ChosenArmy`, so the inspector's fields are its own. `map.addArmy` in the
+  Map mode shows the new army's entry, as the panel's Add army does (`ShowAddedArmy`). `map.resize`
+  refuses a size, offset and fit that change nothing (no step of undo).
 - **The playable area**: `map.setPlayableArea {name?}` (none: the first area again); the inspector of
   one selected area has a check box "Playable area", and so has an area's entry in the Map panel's
   list; the inspector of Size and playable area chooses it too; the top view labels it and the Map
