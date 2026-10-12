@@ -155,6 +155,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
         ["focus"] = ("camera.focus", [], null),
         ["view"] = ("view.zoomTo", [], null),
         ["gpu-debug"] = ("view.gpuDebug", [], null),
+        ["tour"] = ("help.tour", [], "step"),
     };
 
     /// <summary>
