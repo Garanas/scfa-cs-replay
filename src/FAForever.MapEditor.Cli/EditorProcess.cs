@@ -58,6 +58,10 @@ namespace FAForever.MapEditor.Cli
             {
                 start.Environment["FAF_MAP_EDITOR_SETTINGS"] = Path.GetFullPath(settings);
             }
+            if (o.RefreshTours)
+            {
+                start.Environment["FAF_MAP_EDITOR_REFRESH_TOURS"] = "1";
+            }
             // detached: its output goes to the log, so a caller reading this tool's output to the end
             // is not kept waiting by the editor holding the same pipe
             string log = LogFile(o);
@@ -160,6 +164,7 @@ namespace FAForever.MapEditor.Cli
                 Shadow = o.Shadow ?? Text("shadow"),
                 NoShadow = o.NoShadow || remembered["noShadow"]?.GetValue<bool>() == true,
                 Log = o.Log ?? Text("log"),
+                RefreshTours = o.RefreshTours,
             };
         }
 

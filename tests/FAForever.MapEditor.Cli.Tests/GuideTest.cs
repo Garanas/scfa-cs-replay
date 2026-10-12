@@ -29,6 +29,57 @@ namespace FAForever.MapEditor.Cli.Tests
             ]);
 
         [TestMethod]
+        public void TheMapIsUndoneBetweenToursSoTheNextTourFindsItAsTheFirstDid()
+        {
+            // a stand-in for the editor's automation: a history of three steps that edit.undo takes back one by one
+            int steps = 3;
+            int undone = 0;
+            using System.Net.HttpListener listener = new System.Net.HttpListener();
+            int port = Random.Shared.Next(20000, 40000);
+            listener.Prefixes.Add($"http://localhost:{port}/");
+            listener.Start();
+            Task server = Task.Run(async () =>
+            {
+                while (listener.IsListening)
+                {
+                    System.Net.HttpListenerContext context;
+                    try
+                    {
+                        context = await listener.GetContextAsync();
+                    }
+                    catch (Exception exception) when (exception is System.Net.HttpListenerException or ObjectDisposedException)
+                    {
+                        return;
+                    }
+                    string path = context.Request.Url!.AbsolutePath;
+                    string answer = path == "/state"
+                        ? (steps > 0 ? "{\"ok\":true,\"undo\":\"Raise terrain\"}" : "{\"ok\":true,\"undo\":null}")
+                        : "{\"ok\":true,\"ran\":true}";
+                    if (path == "/run")
+                    {
+                        steps--;
+                        undone++;
+                    }
+                    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(answer);
+                    context.Response.ContentType = "application/json";
+                    await context.Response.OutputStream.WriteAsync(bytes);
+                    context.Response.Close();
+                }
+            });
+            try
+            {
+                using EditorSession editor = new EditorSession(port);
+                new GuideBuilder(editor, Path.GetTempPath(), Path.GetTempPath(), 1280, 800).ResetMap();
+                Assert.AreEqual(3, undone, "every step of the tour's edits is undone");
+                Assert.AreEqual(0, steps);
+            }
+            finally
+            {
+                listener.Stop();
+            }
+        }
+
+        [TestMethod]
         public void ACropIsTheTargetAndItsMarginInsideTheWindow()
         {
             CollectionAssert.AreEqual(new[] { 60, 60, 120, 110 }, GuideGeometry.Crop([100, 100, 40, 30], 40, 1280, 800));

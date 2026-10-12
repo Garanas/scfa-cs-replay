@@ -64,8 +64,26 @@ namespace FAForever.MapEditor.Cli.Guide
             {
                 editor.Run("help.tourEnd");
             }
+            ResetMap();
             return new GuideTour(tour.Id, tour.Title, tour.Summary, tour.Order, overviewImage, steps);
         }
+
+        /// <summary>
+        /// Undoes what a tour's steps did to the map (a placed deposit, a unit, a layer, a stroke), so that the next
+        /// tour's pictures show the map as the first tour found it.
+        /// </summary>
+        public void ResetMap()
+        {
+            for (int undone = 0; undone < MaxUndo && editor.Post("state")["undo"] is not null; undone++)
+            {
+                if (!editor.Run("edit.undo"))
+                {
+                    break;
+                }
+            }
+        }
+
+        private const int MaxUndo = 1000;
 
         private GuideStep BuildStep(TourFile tour, TourFileStep step)
         {

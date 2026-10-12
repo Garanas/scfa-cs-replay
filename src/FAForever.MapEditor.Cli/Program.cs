@@ -69,6 +69,9 @@ namespace FAForever.MapEditor.Cli
 
         [Option("log", HelpText = "start: the file the editor's own output goes to; by default editor-<port>.log beside the settings file (else in the temporary folder).")]
         public string? Log { get; set; }
+
+        [Option("refresh-tours", HelpText = "start and restart: the editor writes its shipped tours over the copies in the workspace's tours folder (also changed ones), for trying edited tours; not remembered.")]
+        public bool RefreshTours { get; set; }
     }
 
     [Verb("workspace", HelpText = "Set up the workspace, convert the game's assets into it, show whether they are current, or make a scratch workspace for tests.")]

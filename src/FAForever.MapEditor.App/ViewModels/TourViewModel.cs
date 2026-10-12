@@ -94,6 +94,8 @@ public sealed partial class TourViewModel : ObservableObject
     private bool _offerAnswered;
     private bool _offerDismissed;
     private TourRestore? _restore;
+    private int _editsAtStart;
+    private bool _entering;
 
     public TourViewModel(MainViewModel model)
     {
@@ -403,15 +405,27 @@ public sealed partial class TourViewModel : ObservableObject
         StepIndex = index;
         IsDone = false;
         Problem = null;
-        foreach (TourAction action in Step.Before)
+        // the step's own commands change what it waits for: look at the condition only once they are all done, so
+        // a state left over from before (a stratum chosen earlier) does not finish the step at once
+        _entering = true;
+        try
         {
-            if (await RunActionAsync(action) is string why)
+            foreach (TourAction action in Step.Before)
             {
-                Problem = $"A command of the step did not run: {why}";
+                if (await RunActionAsync(action) is string why)
+                {
+                    Problem = $"A command of the step did not run: {why}";
+                }
             }
+        }
+        finally
+        {
+            _entering = false;
         }
         OnPropertyChanged(nameof(DoneText));
         await RefreshStageAsync();
+        // what the person makes from here on counts for a step that waits for an edit
+        _editsAtStart = TourState.Edits(_model);
         Evaluate();
     }
 
@@ -463,7 +477,7 @@ public sealed partial class TourViewModel : ObservableObject
     /// </summary>
     private void Poke()
     {
-        if (Step is not { Acts: true } || IsDone || _checkPending)
+        if (Step is not { Acts: true } || IsDone || _checkPending || _entering)
         {
             return;
         }
@@ -488,12 +502,12 @@ public sealed partial class TourViewModel : ObservableObject
     public bool Evaluate()
     {
         _lastCheck = _clock.Elapsed;
-        if (Step is not { Until: { } until } || IsDone)
+        if (Step is not { Until: { } until } || IsDone || _entering)
         {
             return IsDone;
         }
         using Performance.Span measure = Performance.Measure("tour.condition");
-        if (TourState.Holds(_model, until))
+        if (TourState.Holds(_model, until, _editsAtStart))
         {
             IsDone = true;
             OnPropertyChanged(nameof(DoneText));
@@ -551,7 +565,7 @@ public sealed partial class TourViewModel : ObservableObject
     {
         try
         {
-            EditorTours.Ensure(folder);
+            EditorTours.Ensure(folder, EditorTours.RefreshRequested);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

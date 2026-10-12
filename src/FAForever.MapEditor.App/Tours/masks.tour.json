@@ -42,9 +42,12 @@
     {
       "id": "paint",
       "target": { "label": "Top view" },
-      "before": [{ "run": "view.top" }],
-      "title": "Painting a mask",
-      "text": "Press the left mouse and drag over the map. The painted part shows in colour over the terrain while the mask is shown. Each stroke is one step of undo."
+      "before": [{ "run": "view.top" }, { "run": "tool.masks.paint" }],
+      "title": "Try it: paint a mask",
+      "text": "Press the left mouse in the top view and drag over the map. The painted part shows in colour over the terrain. Each stroke is one step of undo. A mask has to be chosen in the list first; add one if the list is empty.",
+      "until": { "path": "edits", "value": 1 },
+      "doItForMe": { "run": "brush.stroke", "points": [[100, 100], [112, 104], [124, 100]] },
+      "done": "The painted part shows in colour. Ctrl+Z takes the stroke back."
     },
     {
       "id": "show-it",
@@ -60,7 +63,6 @@
     },
     {
       "id": "used",
-      "target": { "label": "Show Mask", "type": "ToggleButton" },
       "title": "Where masks are used",
       "text": "A height layer takes a mask as its clip, so it works only there. A stratum's layer can read a mask, and props can be placed by rules from one. Masks are for your tools: the game never gets them."
     },

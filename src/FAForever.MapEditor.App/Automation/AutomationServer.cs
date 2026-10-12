@@ -548,6 +548,7 @@ public sealed partial class AutomationServer(MainWindow window, MainViewModel mo
             ["modified"] = model.Map?.Session.IsModified ?? false,
             ["busy"] = model.IsBusy,
             ["undo"] = model.Map?.Session.UndoDescription,
+            ["edits"] = model.Map?.Session.Edits ?? 0,
             ["redo"] = model.Map?.Session.RedoDescription,
             ["history"] = new JsonArray([.. (model.Map?.Session.History ?? []).Select(step => (JsonNode)JsonValue.Create(step.IsCurrent ? $"> {step.Description}" : step.Description))]),
             ["brush"] = new JsonObject
