@@ -22,8 +22,6 @@ public sealed partial class MainViewModel
     /// </summary>
     public PropRulesViewModel PropRules { get; private set; } = null!;
 
-    private EditedMap? _propRulesMap;
-
     private void InitializeRules()
     {
         Generation.Register(new MaskRulesGenerator(), "generate.masks");
@@ -36,13 +34,10 @@ public sealed partial class MainViewModel
         // a rule chosen takes the inspector from the selection (P-4)
         PropRules.ChosenInList += (_, _) => Selection.Clear();
         DocumentChanged += (_, _) => RefreshRules();
+        AnotherMap += (_, _) => PropRules.Reset();
         MapChanged += (_, _) =>
         {
             MaskRules.Editing = null;
-            if (IsAnotherMap(ref _propRulesMap))
-            {
-                PropRules.Reset();
-            }
             RefreshRules();
         };
         MaskRules.PreviewChanged += (_, _) => OnPropertyChanged(nameof(ShownGrid));

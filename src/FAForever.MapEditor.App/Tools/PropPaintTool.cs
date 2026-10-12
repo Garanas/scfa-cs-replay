@@ -63,15 +63,14 @@ public sealed partial class PropPaintTool : ObservableObject, IMapTool
     public PropPaintTool(MainViewModel model)
     {
         _model = model;
+        // the layers of the previous map are not the new map's, whatever they are called
+        model.AnotherMap += (_, _) =>
+        {
+            OnlyOn = PaintLayer.None;
+            NotOn = PaintLayer.None;
+        };
         model.MapChanged += (_, _) =>
         {
-            // the layers of the previous map are not the new map's, whatever they are called
-            if (!ReferenceEquals(model.Map, _layersOf))
-            {
-                _layersOf = model.Map;
-                OnlyOn = PaintLayer.None;
-                NotOn = PaintLayer.None;
-            }
             if (!_watchingStrata)
             {
                 // a stratum's texture changed (user story S-2): its name in the choices follows
@@ -98,7 +97,6 @@ public sealed partial class PropPaintTool : ObservableObject, IMapTool
 
     // the masks for tools the layers were read from
     private object? _masks;
-    private FAForever.MapEditor.Project.EditedMap? _layersOf;
     private bool _watchingStrata;
 
     /// <summary>
