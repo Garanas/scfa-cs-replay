@@ -1,3 +1,4 @@
+using FAForever.MapEditor.Cli.Guide;
 using CommandLine;
 using FAForever.MapEditor.Project;
 using FAForever.MapEditor.Project.Workspaces;
@@ -138,7 +139,7 @@ namespace FAForever.MapEditor.Cli
     public static class Program
     {
         public static int Main(string[] args) =>
-            Parser.Default.ParseArguments<UnpackOptions, PackOptions, EditorOptions, WorkspaceOptions, DevOptions>(args).MapResult(
+            Parser.Default.ParseArguments<UnpackOptions, PackOptions, EditorOptions, WorkspaceOptions, DevOptions, GuideOptions>(args).MapResult(
                 (UnpackOptions o) => Run(() => Unpack(o)),
                 (PackOptions o) => o.Watch ? Watch(o) : Run(() => Pack(o)),
                 (EditorOptions o) => o.Command switch
@@ -150,6 +151,7 @@ namespace FAForever.MapEditor.Cli
                 },
                 (WorkspaceOptions o) => Run(() => WorkspaceCommand.Run(o)),
                 (DevOptions o) => Dev(o),
+                (GuideOptions o) => Guide.GuideCommand.Run(o),
                 _ => 2);
 
         /// <summary>

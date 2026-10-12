@@ -67,6 +67,7 @@ dotnet build FAForever.sln                              # build everything
 dotnet test FAForever.sln                               # run every test project
 dotnet watch --project src/FAForever.Vault.Server       # run the hosted app on http://127.0.0.1:5080
 dotnet run --project src/FAForever.MapEditor.App -- [folder] [--automation 5371]   # the map editor
+faf-map guide build --out docs/guide --port 5399 --settings <scratch settings>   # the editor's guide from its tours (check, render too)
 tools/tailwindcss.exe -i Styles/app.css -o wwwroot/css/app.css --watch   # from src/FAForever.Vault.Viewer/
 ```
 
