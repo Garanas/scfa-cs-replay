@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using FAForever.MapEditor.App.Tools;
 
 namespace FAForever.MapEditor.App.ViewModels;
 
@@ -48,7 +49,7 @@ public sealed partial class MainViewModel
 
     private string SketchNoteOf(Project.Files.InMemory.Sketch? sketch)
     {
-        if (InSketchMode || sketch is null || sketch.StrokeCount == 0)
+        if (InSketchMode || sketch is null || sketch.ItemCount == 0)
         {
             return "";
         }
@@ -56,7 +57,7 @@ public sealed partial class MainViewModel
         {
             return "The sketch is hidden. The Sketch chip in the views' bar shows it, or Ctrl+Shift+K.";
         }
-        string[] shown = [.. sketch.Sheets.Where(sheet => sheet.Shown && !sheet.Strokes.IsEmpty && sheet.Opacity > 0)
+        string[] shown = [.. sketch.Sheets.Where(sheet => sheet.Shown && !sheet.IsBlank && sheet.Opacity > 0)
             .Select(sheet => $"{sheet.Name} at {Math.Round(sheet.Opacity * 100):0}%")];
         return shown.Length == 0
             ? "No sheet of the sketch shows in the other modes: each sheet is hidden or fully transparent here."
@@ -83,6 +84,11 @@ public sealed partial class MainViewModel
             {
                 OnPropertyChanged(nameof(InSketchMode));
                 RefreshSketchNote();
+            }
+            else if (e.PropertyName == nameof(ActiveTool) && ActiveTool?.Tool is not (LabelTool or SketchSelectTool))
+            {
+                // a label being written belongs to the tools that write it
+                Sketch.Drop();
             }
         };
     }

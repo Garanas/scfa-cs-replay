@@ -104,6 +104,8 @@
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
       <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />
+      <!-- the handles and outlines of the Select and Image tools of the sketch: a violet none of the sketch's six colours is, over a dark rim -->
+      <SolidColorBrush x:Key="MapSketchHandleBrush" Color="#FFC04DFF" />
       <!-- walkability over the map (T-7): where units cannot go, and what changed since the time before -->
       <SolidColorBrush x:Key="MapBlockedBrush" Color="#70C0392B" />
       <SolidColorBrush x:Key="MapNewlyBlockedBrush" Color="#F0FF5A36" />
@@ -190,6 +192,8 @@
       <SolidColorBrush x:Key="MapAreaBrush" Color="#E6FFFFFF" />
       <SolidColorBrush x:Key="MapSelectionBrush" Color="#FFFFD23F" />
       <SolidColorBrush x:Key="MapSelectionFillBrush" Color="#30FFD23F" />
+      <!-- the handles and outlines of the Select and Image tools of the sketch: a violet none of the sketch's six colours is, over a dark rim -->
+      <SolidColorBrush x:Key="MapSketchHandleBrush" Color="#FFC04DFF" />
       <SolidColorBrush x:Key="MapBlockedBrush" Color="#70C0392B" />
       <SolidColorBrush x:Key="MapNewlyBlockedBrush" Color="#F0FF5A36" />
       <SolidColorBrush x:Key="MapOpenedBrush" Color="#F03FE0C8" />
@@ -232,6 +236,8 @@
   <!-- type: IBM Plex Sans for the text, IBM Plex Mono for numbers, coordinates and shortcuts (Assets/Fonts, EditorFonts) -->
   <FontFamily x:Key="SansFontFamily">fonts:Editor#IBM Plex Sans, $Default</FontFamily>
   <FontFamily x:Key="MonoFontFamily">fonts:Editor#IBM Plex Mono, $Default</FontFamily>
+  <!-- the sketch's labels in a hand-written style: Caveat (SIL Open Font License, Assets/Fonts/Caveat-OFL.txt), else a handwriting system font -->
+  <FontFamily x:Key="HandFontFamily">fonts:Editor#Caveat, Segoe Print, Bradley Hand, Comic Sans MS, cursive, $Default</FontFamily>
   <x:Double x:Key="FontSizeSmall">11</x:Double>
   <x:Double x:Key="FontSizeCaption">12</x:Double>
   <x:Double x:Key="FontSizeBody">13</x:Double>
@@ -239,6 +245,9 @@
   <x:Double x:Key="FontSizeTitle">26</x:Double>
   <!-- the numbers on spawns in the top view -->
   <x:Double x:Key="FontSizeMapLabel">11</x:Double>
+  <!-- the label editor of the sketch (N-4): the text box over the top view, as wide as it is, and the size of its letters in the hand font -->
+  <x:Double x:Key="LabelEditorWidth">220</x:Double>
+  <x:Double x:Key="FontSizeLabelEditor">18</x:Double>
   <!-- the space between the letters of a group's label in capitals -->
   <x:Double x:Key="OverlineLetterSpacing">0.7</x:Double>
 

@@ -270,9 +270,9 @@ public static class EditorModes
             [
                 new ToolDefinition("sketch.pencil", "Pencil", "N-1") { Make = model => new PencilTool(model) },
                 new ToolDefinition("sketch.eraser", "Eraser", "N-1") { Make = model => new EraserTool(model) },
-                new ToolDefinition("sketch.symbol", "Symbol", "N-4", "Stamp a spawn, mass, hydrocarbon, arrow, cross or question mark"),
-                new ToolDefinition("sketch.label", "Label", "N-4", "Write a label in a hand-drawn style"),
-                new ToolDefinition("sketch.select", "Select", "N-4", "Select strokes, symbols and labels to move, recolour or delete them"),
+                new ToolDefinition("sketch.symbol", "Symbol", "N-4") { Make = model => new SymbolTool(model) },
+                new ToolDefinition("sketch.label", "Label", "N-4") { Make = model => new LabelTool(model) },
+                new ToolDefinition("sketch.select", "Select", "N-4") { Make = model => new SketchSelectTool(model) },
                 new ToolDefinition("sketch.image", "Image", "N-2") { Make = model => new ImageTool(model) },
             ],
             [

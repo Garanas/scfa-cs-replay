@@ -184,7 +184,8 @@ public sealed partial class ImageTool(MainViewModel model) : ObservableObject, I
             }
             screen[i] = point;
         }
-        List<ToolShape> shapes = [new ToolLine(screen, true, 2, ToolInk.Selection)];
+        // the handle colour over a dark rim: nothing the sketch's own six colours (the yellow pencil) can be taken for
+        List<ToolShape> shapes = [new ToolLine(screen, true, 4, ToolInk.Shadow), new ToolLine(screen, true, 2, ToolInk.Handle)];
         if (image.Locked)
         {
             return shapes;
@@ -194,12 +195,13 @@ public sealed partial class ImageTool(MainViewModel model) : ObservableObject, I
         (double mx, double mz) = ProjectedImages.Knob(image, 0);
         if (view.ToScreen(new Vector3((float)kx, 0, (float)kz)) is Vector2 knob && view.ToScreen(new Vector3((float)mx, 0, (float)mz)) is Vector2 middle)
         {
-            shapes.Add(new ToolLine([middle, knob], false, 1.5f, ToolInk.Selection));
-            shapes.Add(new ToolDisc(knob, 6, ToolInk.Fill, ToolInk.Selection));
+            shapes.Add(new ToolLine([middle, knob], false, 3.5f, ToolInk.Shadow));
+            shapes.Add(new ToolLine([middle, knob], false, 1.5f, ToolInk.Handle));
+            shapes.Add(new ToolDisc(knob, 6, ToolInk.Handle, ToolInk.Shadow));
         }
         foreach (Vector2 corner in screen)
         {
-            shapes.Add(new ToolSquare(corner, 5, ToolInk.Fill, ToolInk.Selection));
+            shapes.Add(new ToolSquare(corner, 5, ToolInk.Handle, ToolInk.Shadow));
         }
         return shapes;
     }

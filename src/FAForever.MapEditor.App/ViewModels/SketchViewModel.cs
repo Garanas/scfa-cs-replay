@@ -31,8 +31,16 @@ public sealed partial class SketchSheetItem(string name, Func<string, JsonObject
     public partial bool Shown { get; internal set; } = true;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CountText))]
+    [NotifyPropertyChangedFor(nameof(CountText), nameof(Label), nameof(Summary))]
     public partial int Strokes { get; internal set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CountText), nameof(Label), nameof(Summary))]
+    public partial int Symbols { get; internal set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CountText), nameof(Label), nameof(Summary))]
+    public partial int Labels { get; internal set; }
 
     [ObservableProperty]
     public partial bool IsChosen { get; internal set; }
@@ -40,7 +48,12 @@ public sealed partial class SketchSheetItem(string name, Func<string, JsonObject
     /// <summary>
     /// <c>34</c>, <c>1</c>: how many strokes, as a number for the panel's row.
     /// </summary>
-    public string CountText => Strokes.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    public string CountText => (Strokes + Symbols + Labels).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// <c>34 strokes · 3 symbols · 5 labels</c>: what the sheet holds, the kinds it has none of left out.
+    /// </summary>
+    public string Summary => Describe(Strokes, Symbols, Labels, " · ");
 
     /// <summary>
     /// What a screen reader says of its check box.
@@ -55,7 +68,28 @@ public sealed partial class SketchSheetItem(string name, Func<string, JsonObject
     /// <summary>
     /// What a screen reader says of the row.
     /// </summary>
-    public string Label => $"{Name}: {Strokes} {(Strokes == 1 ? "stroke" : "strokes")}{(Shown ? "" : ", hidden")}";
+    public string Label => $"{Name}: {Describe(Strokes, Symbols, Labels, ", ")}{(Shown ? "" : ", hidden")}";
+
+    /// <summary>
+    /// How many strokes, symbols and labels, as a phrase; a sheet without anything holds <c>0 strokes</c>.
+    /// </summary>
+    public static string Describe(int strokes, int symbols, int labels, string separator)
+    {
+        List<string> parts = [];
+        if (strokes > 0 || (symbols == 0 && labels == 0))
+        {
+            parts.Add($"{strokes} {(strokes == 1 ? "stroke" : "strokes")}");
+        }
+        if (symbols > 0)
+        {
+            parts.Add($"{symbols} {(symbols == 1 ? "symbol" : "symbols")}");
+        }
+        if (labels > 0)
+        {
+            parts.Add($"{labels} {(labels == 1 ? "label" : "labels")}");
+        }
+        return string.Join(separator, parts);
+    }
 
     /// <summary>
     /// The check box of its eye: shows the sheet or hides it (<c>sketch.showSheet</c>).
@@ -70,7 +104,7 @@ public sealed partial class SketchSheetItem(string name, Func<string, JsonObject
 /// One of the six pencils in a row of choices: its colour, its key and whether it is the one in
 /// hand (user story N-1).
 /// </summary>
-public sealed partial class SketchColourChoice(SketchColour colour, Func<SketchColour, Task> choose) : ObservableObject
+public sealed partial class SketchColourChoice(SketchColour colour, Func<SketchColour, Task> choose, string tool = "Pencil") : ObservableObject
 {
     public SketchColour Colour => colour;
 
@@ -89,7 +123,7 @@ public sealed partial class SketchColourChoice(SketchColour colour, Func<SketchC
     [ObservableProperty]
     public partial bool IsOn { get; internal set; }
 
-    public string Label => $"Pencil {Title.ToLowerInvariant()}";
+    public string Label => $"{tool} {Title.ToLowerInvariant()}";
 
     public string Help => $"{Title}: key {Key}";
 
@@ -271,7 +305,7 @@ public sealed partial class SketchViewModel : ObservableObject
     /// <summary>
     /// What the inspector says of the chosen sheet: <c>34 strokes</c>.
     /// </summary>
-    public string ChosenCount => ChosenItem is { } item ? $"{item.Strokes} {(item.Strokes == 1 ? "stroke" : "strokes")}" : "";
+    public string ChosenCount => ChosenItem?.Summary ?? "";
 
     /// <summary>
     /// The six texts of the chosen sheet's legend, in the order of the colours.
@@ -355,6 +389,11 @@ public sealed partial class SketchViewModel : ObservableObject
     private void Show(Sketch? sketch, string? choose = null)
     {
         _shown = sketch;
+        if (sketch is null)
+        {
+            // no map: no label is being written
+            Drop();
+        }
         choose ??= _wanted;
         _wanted = null;
         ImmutableArray<SketchSheet> sheets = sketch is null ? [] : sketch.Sheets;
@@ -372,6 +411,8 @@ public sealed partial class SketchViewModel : ObservableObject
             SketchSheetItem item = Items[i];
             item.Shown = sheets[i].Shown;
             item.Strokes = sheets[i].Strokes.Length;
+            item.Symbols = sheets[i].Symbols.Length;
+            item.Labels = sheets[i].Labels.Length;
             item.IsChosen = sheets[i].Name == chosen;
         }
         SketchSheet? shownSheet = sheets.FirstOrDefault(sheet => sheet.Name == chosen);

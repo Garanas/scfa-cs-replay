@@ -1054,6 +1054,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             ToolInk.AxisX => "MapHandleAxisXBrush",
             ToolInk.AxisZ => "MapHandleAxisZBrush",
             ToolInk.Shadow => "OverlayShadowBrush",
+            ToolInk.Handle => "MapSketchHandleBrush",
             ToolInk.Danger => "DangerBrush",
             _ => "WarningBrush",
         };

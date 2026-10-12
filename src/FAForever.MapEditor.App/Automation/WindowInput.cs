@@ -113,6 +113,25 @@ public sealed class WindowInput
     }
 
     /// <summary>
+    /// Presses a button at the first place and drags it through the others in turn,
+    /// <paramref name="steps"/> moves to each, then lets go at the last.
+    /// </summary>
+    public void DragThrough(IReadOnlyList<Point> places, MouseButton button = MouseButton.Left, int steps = 4, RawInputModifiers modifiers = RawInputModifiers.None)
+    {
+        Move(places[0], modifiers);
+        Down(places[0], button, modifiers);
+        steps = Math.Max(1, steps);
+        for (int p = 1; p < places.Count; p++)
+        {
+            for (int i = 1; i <= steps; i++)
+            {
+                Move(places[p - 1] + (places[p] - places[p - 1]) * ((double)i / steps), modifiers);
+            }
+        }
+        Up(places[^1], button, modifiers);
+    }
+
+    /// <summary>
     /// Presses a key and lets it go, as a keyboard does: down, the text it types (a printable key
     /// without control or alt), up.
     /// </summary>

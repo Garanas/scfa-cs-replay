@@ -388,7 +388,7 @@ namespace FAForever.MapEditor.Project.Tests
             File.WriteAllText(file, """{ "sheets": [ { "name": "A" }, { "name": "a" } ] }""");
             StringAssert.Contains(Assert.ThrowsException<MapProjectException>(() => MapProjectStore.Load(project)).Message, "two sheets are named");
 
-            File.WriteAllText(file, """{ "version": 2, "sheets": [] }""");
+            File.WriteAllText(file, """{ "version": 3, "sheets": [] }""");
             StringAssert.Contains(Assert.ThrowsException<MapProjectException>(() => MapProjectStore.Load(project)).Message, "update the editor");
 
             File.WriteAllText(file, """{ "sheets": [ { "name": "A", "legend": ["x"], "strokes": [ { "colour": "Green", "points": "1,2" } ] } ] }""");

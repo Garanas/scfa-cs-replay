@@ -58,7 +58,10 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsInstanceOfType<PencilTool>(model.ActiveTool!.Tool, "the pencil is the first tool");
             Assert.IsFalse(model.Tools.Single(tool => tool.Definition.Id == "sketch.pencil").Definition.IsIncomplete);
             Assert.IsFalse(model.Tools.Single(tool => tool.Definition.Id == "sketch.eraser").Definition.IsIncomplete);
-            Assert.IsTrue(model.Tools.Single(tool => tool.Definition.Id == "sketch.symbol").Definition.IsIncomplete, "symbols are wave 24");
+            foreach (string id in new[] { "sketch.symbol", "sketch.label", "sketch.select" })
+            {
+                Assert.IsFalse(model.Tools.Single(tool => tool.Definition.Id == id).Definition.IsIncomplete, id);
+            }
             Assert.AreEqual("sketch.mode", model.Commands.Find("sketch.mode")!.Id);
             Assert.AreEqual("Ctrl+Shift+K", model.Commands.Find("view.overlay.sketch")!.Gesture);
             Assert.IsTrue(model.ShowSketch, "the sketch shows in every mode from the start");
@@ -543,8 +546,7 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = await Open();
             string[] ids = [.. model.Commands.All.Where(command => command.Id.StartsWith("sketch.", StringComparison.Ordinal) && !command.Id.EndsWith(".mode", StringComparison.Ordinal)
                     && !command.Id.StartsWith("sketch.pencil", StringComparison.Ordinal) && !command.Id.StartsWith("sketch.eraser", StringComparison.Ordinal)
-                    && !command.Id.StartsWith("sketch.symbol", StringComparison.Ordinal) && !command.Id.StartsWith("sketch.label", StringComparison.Ordinal)
-                    && !command.Id.StartsWith("sketch.select", StringComparison.Ordinal) && !command.Id.StartsWith("sketch.image", StringComparison.Ordinal))
+                    && !command.Id.StartsWith("sketch.image", StringComparison.Ordinal) && command.Story != "N-4")
                 .Select(command => command.Id).Order()];
 
             CollectionAssert.AreEqual(new[]
@@ -553,6 +555,12 @@ namespace FAForever.MapEditor.App.Tests
                 "sketch.renameSheet", "sketch.setEraser", "sketch.setLegend", "sketch.setOpacity", "sketch.setPencil", "sketch.showSheet",
             }, ids);
             Assert.IsTrue(ids.All(id => model.Commands.Find(id)!.Story == "N-1"));
+
+            string[] marks = [.. model.Commands.All.Where(command => command.Story == "N-4").Select(command => command.Id).Order()];
+            CollectionAssert.AreEqual(new[]
+            {
+                "sketch.deleteSelected", "sketch.editLabel", "sketch.label", "sketch.move", "sketch.recolour", "sketch.resize", "sketch.select", "sketch.setLabel", "sketch.setSymbol", "sketch.symbol",
+            }, marks.Where(id => id.StartsWith("sketch.", StringComparison.Ordinal)).ToArray());
         }
     }
 }

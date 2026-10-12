@@ -110,7 +110,7 @@ public sealed partial class EraserTool : ObservableObject, IMapTool
         model.EndStroke(edit);
         if (_erased > 0)
         {
-            model.Status = $"Erased {_erased} {(_erased == 1 ? "stroke" : "strokes")} of {_sheet}";
+            model.Status = $"Erased {_erased} {(_erased == 1 ? "item" : "items")} of {_sheet}";
         }
     }
 
