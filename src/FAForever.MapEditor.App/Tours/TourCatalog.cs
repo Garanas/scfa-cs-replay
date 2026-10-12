@@ -70,6 +70,7 @@ public static class EditorTours
     /// </summary>
     private static readonly HashSet<string> Earlier = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
+        "window.tour.json:589810bf33a41f0b9075f98be056355db553186d66ab640fdc689e510472215b",
     };
 
     /// <summary>

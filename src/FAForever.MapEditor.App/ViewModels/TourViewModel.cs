@@ -115,6 +115,9 @@ public sealed partial class TourViewModel : ObservableObject
         model.Layout.Changed += (_, _) => Poke();
         model.Layout.PlacesChanged += (_, _) => Poke();
         model.Palette.PropertyChanged += (_, _) => Poke();
+        // the stratum or mask chosen in a panel's list is no command
+        model.StrataTool.PropertyChanged += (_, _) => Poke();
+        model.Masks.PropertyChanged += (_, _) => Poke();
         // another map: a tour about the old one ends
         model.MapChanged += (_, _) =>
         {

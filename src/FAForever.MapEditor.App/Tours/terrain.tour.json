@@ -1,0 +1,90 @@
+{
+  "id": "terrain",
+  "title": "Shaping the terrain",
+  "summary": "Sculpt the ground in layers you can change later: tools, brushes, height layers and undo.",
+  "order": 20,
+  "needs": ["Map"],
+  "start": [{ "run": "terrain.mode" }, { "run": "view.top" }],
+  "steps": [
+    {
+      "id": "welcome",
+      "title": "Shaping the terrain",
+      "text": "The Terrain mode shapes the ground: where it rises, falls and where units can walk. Twelve steps. Back and Next go through them; Escape ends the tour."
+    },
+    {
+      "id": "tools",
+      "target": { "label": "Tools" },
+      "title": "The tools",
+      "text": "Sculpt raises and lowers with a brush. Stamp presses a picture into the ground. Curve draws roads, rivers, ridges and cliffs along a line. Terrain types sets what the game uses for footsteps and effects. Walkability marks by hand where land units may go. Ruler measures distance and slope."
+    },
+    {
+      "id": "choose-sculpt",
+      "target": { "label": "Sculpt", "under": "Tools" },
+      "before": [{ "run": "tool.terrain.ruler" }],
+      "title": "Try it: choose Sculpt",
+      "text": "Click Sculpt.",
+      "until": { "path": "tool", "value": "terrain.sculpt" },
+      "doItForMe": { "run": "tool.terrain.sculpt" },
+      "done": "Sculpt is the tool for the general form of the map."
+    },
+    {
+      "id": "options",
+      "target": { "part": "options" },
+      "title": "The brush",
+      "text": "The shape of the brush, what it does (raise, lower, smooth, flatten, set a height, noise, erode, scale), how its edge fades, its radius and its strength. More holds the rest. The keys [ and ] make the brush smaller and larger."
+    },
+    {
+      "id": "top-view",
+      "target": { "label": "Top view" },
+      "before": [{ "run": "view.top" }],
+      "title": "Sculpting in the top view",
+      "text": "Press the left mouse and drag over the map to raise the ground. Every stroke is one step of undo (Ctrl+Z). With symmetry on, the stroke is made in every part of the map."
+    },
+    {
+      "id": "draft-final",
+      "target": { "label": "Show the draft heightmap" },
+      "title": "Draft and final",
+      "text": "A map can have two heightmaps. The draft is the rough shape you send to a tool such as World Machine or Gaea. The final is the one the game gets. The chips choose which one the views show and the brushes change."
+    },
+    {
+      "id": "add-layer",
+      "target": { "label": "Add a sculpting layer" },
+      "before": [{ "run": "tool.terrain.sculpt" }],
+      "title": "Try it: add a height layer",
+      "text": "A height layer is a change on top of the ground below it. Click Sculpt layer to add one. The Sculpt tool then writes into the chosen layer, so you can hide, lock, weaken or remove what you sculpted later.",
+      "until": { "path": "undo", "value": "Add the height layer Sculpt" },
+      "doItForMe": { "run": "terrain.addLayer", "kind": "sculpt" },
+      "done": "The layer is in the list under Height layers. Strokes now go into it."
+    },
+    {
+      "id": "layer-list",
+      "target": { "part": "panel" },
+      "title": "The layers",
+      "text": "The highest layer is first. Each row has a box to show or hide the layer, a small picture, its name and how it combines, and a lock. The chips above the list filter it. Under it, Sculpt layer, Image and Curve add more, and Bake ends the stack."
+    },
+    {
+      "id": "inspector",
+      "target": { "part": "inspector" },
+      "title": "The layer's settings",
+      "text": "The inspector edits the chosen layer: its name, how it combines with the layers below (add, subtract, multiply and more), its strength, a mask that limits where it works, whether it is shown or locked, and whether it counts for the draft, the final or both."
+    },
+    {
+      "id": "curve",
+      "target": { "label": "Curve", "type": "Button", "under": "Tools" },
+      "title": "Curves",
+      "text": "The Curve tool makes a layer from a line. Click points on the map to draw it and choose its profile: a road, a river, a ridge, a valley or a cliff. Drag a point to move it. The inspector then holds the width, falloff and height."
+    },
+    {
+      "id": "history",
+      "target": { "label": "History", "type": "TabItem" },
+      "before": [{ "run": "view.history" }],
+      "title": "Everything can be undone",
+      "text": "History lists every step. Ctrl+Z undoes the last one, Ctrl+Y does it again, and a click on a step goes back to it. Strokes made in this tour are in the list too."
+    },
+    {
+      "id": "end",
+      "title": "That is the Terrain mode",
+      "text": "Next: the Masks mode, which marks where things may happen, and the Paint mode. Help, Tours lists them."
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "id": "masks",
+  "title": "Masks: where things may happen",
+  "summary": "Make a mask of your own, paint it, build it from layers and rules, and see where it is used.",
+  "order": 30,
+  "needs": ["Map"],
+  "start": [{ "run": "masks.mode" }, { "run": "view.top" }],
+  "steps": [
+    {
+      "id": "welcome",
+      "title": "Masks",
+      "text": "A mask is a picture of the map that says where something may happen: where rivers go, where forests grow, what to erode. Height layers, strata and prop rules read masks. Ten steps."
+    },
+    {
+      "id": "tools",
+      "target": { "label": "Tools" },
+      "title": "The mask brush",
+      "text": "The mask brush paints the chosen mask. It is the one tool of the mode."
+    },
+    {
+      "id": "list",
+      "target": { "part": "panel" },
+      "title": "The list of masks",
+      "text": "Each mask has a small picture that follows your strokes, and its size. Choose one to paint it and to edit it in the inspector. Under the list: a name field, Add a mask, Rename, Duplicate, Delete, and Show it over the terrain."
+    },
+    {
+      "id": "add-mask",
+      "target": { "label": "Add a mask" },
+      "before": [{ "run": "masks.mode" }],
+      "title": "Try it: add a mask",
+      "text": "Type a name if you like, then click Add a mask. A mask starts empty. Half the map's size makes a coarser mask, which is enough for most uses.",
+      "until": { "path": "undo", "value": "Add a mask" },
+      "doItForMe": { "run": "paint.addMask" },
+      "done": "The new mask is in the list and chosen. Delete removes it again, and so does undo."
+    },
+    {
+      "id": "options",
+      "target": { "part": "options" },
+      "title": "The brush's settings",
+      "text": "The chosen mask's name, the brush shape and how its edge fades, the radius and the strength, and Erase, which takes the mask away instead of adding it."
+    },
+    {
+      "id": "paint",
+      "target": { "label": "Top view" },
+      "before": [{ "run": "view.top" }],
+      "title": "Painting a mask",
+      "text": "Press the left mouse and drag over the map. The painted part shows in colour over the terrain while the mask is shown. Each stroke is one step of undo."
+    },
+    {
+      "id": "show-it",
+      "target": { "label": "Show it over the terrain" },
+      "title": "Seeing the mask",
+      "text": "Show it over the terrain keeps the chosen mask visible, also when another tool is active. The chip Mask above the views does the same."
+    },
+    {
+      "id": "stack",
+      "target": { "part": "inspector" },
+      "title": "A mask is a stack of layers",
+      "text": "The inspector lists the layers of the chosen mask. A layer can be painted, an image, another mask, a stratum's mask, or rules. Each has a way of combining with the layers below, a strength and a clip. Up, Down and Remove arrange them. A rules layer builds a mask without painting: it follows the terrain by slope, height, distance from the water or noise, so grass on flat ground needs no brush."
+    },
+    {
+      "id": "used",
+      "target": { "label": "Show Mask", "type": "ToggleButton" },
+      "title": "Where masks are used",
+      "text": "A height layer takes a mask as its clip, so it works only there. A stratum's layer can read a mask, and props can be placed by rules from one. Masks are for your tools: the game never gets them."
+    },
+    {
+      "id": "end",
+      "title": "That is the Masks mode",
+      "text": "Next: the Paint mode, where strata give the terrain its textures. Help, Tours lists it."
+    }
+  ]
+}

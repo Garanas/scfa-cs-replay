@@ -17,7 +17,7 @@ public static class TourState
     /// </summary>
     public static readonly IReadOnlyList<string> Paths =
     [
-        "tab", "mode", "tool", "dock", "palette", "selection.count", "show.<overlay>", "layout.modePanel", "layout.inspector", "layout.dock", "undo",
+        "tab", "mode", "tool", "dock", "palette", "selection.count", "show.<overlay>", "layout.modePanel", "layout.inspector", "layout.dock", "undo", "coverageStacks.shown",
     ];
 
     /// <summary>
@@ -66,5 +66,6 @@ public static class TourState
             ["dock"] = model.Layout.ShowDock,
         },
         ["undo"] = model.Map?.Session.UndoDescription,
+        ["coverageStacks"] = new JsonObject { ["shown"] = model.ShownCoverageTarget?.Key },
     };
 }

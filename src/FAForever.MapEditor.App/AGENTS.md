@@ -2881,7 +2881,8 @@ step points at and explains it on a card. Code: `Tours/` (the format, the catalo
   that cannot run now says why on the card (`state.tour.problem`).
 - **What a step waits for** (`TourState`): `until.path` is a path of automation's state (`tab`, `mode`, `tool`,
   `dock`, `palette`, `selection.count`, `show.<overlay>`, `layout.modePanel`, `layout.inspector`, `layout.dock`,
-  `undo`), read cheaply from the model without automation, with the same values (`TourTest` compares them with
+  `undo` (the last step's name, e.g. `Add a mask`), `coverageStacks.shown` (the Masks mode's chosen mask or the Paint
+  mode's chosen stratum: `stratum-2`)), read cheaply from the model without automation, with the same values (`TourTest` compares them with
   `state`); a path a tour may wait on is added to `TourState`, not read from the whole state. The condition is
   looked at when a command completes, the document changes or the view, mode, tool, dock or layout changes, at
   most every 250 ms (span `tour.condition`) and latches: once true, the card says `done` and Next replaces Skip.
@@ -2920,7 +2921,16 @@ step points at and explains it on a card. Code: `Tours/` (the format, the catalo
   Do it for me making `until` true; `TourWindowTest` the overlay in the window (the hole, Escape, a hidden or
   floating panel back and away again). A change to a control a tour points at (its label, where it lies)
   fails the build at the step to rewrite; the checklist's last item covers the text.
-- Not built yet: the tours of the modes (Terrain, Masks, Paint, Markers, Units, Procedural with the export),
+- **The tours of the surface modes** (`terrain`, `masks`, `paint`, orders 20, 30, 40): each ends with a step that
+  points to the next. Their steps that ask the person to act use commands (a stroke is no command, so no step
+  waits for one): choose the Sculpt tool, add a height layer (`undo` = `Add the height layer Sculpt`), add a mask
+  (`undo` = `Add a mask`), choose Stratum 2 (`coverageStacks.shown`), the 3D view. An `undo` condition is true at
+  once when the last step of the map already has that name; the card then says done and Next goes on. A step
+  that needs a control only a chosen mask has (the rules button) points at the inspector instead, since the
+  person may have skipped the step that adds one. The locator looks again a few frames when a target is not found
+  or not reached (lists made again by the step's own commands, a panel scrolled on a later frame), and closes
+  the tool rows it opened with More when the step changes or the tour ends.
+- Not built yet: the tours of the other modes (Markers, Units, Procedural with the export),
   the generated guide (`faf-map guide`, H-2) and recording a tour (H-3).
 
 ## Small rules of editing, looks and speed
