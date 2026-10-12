@@ -26,7 +26,7 @@
                       AutomationProperties.Name="{Binding EyeLabel}" />
               <TextBlock DockPanel.Dock="Right" Classes="caption mono" Text="{Binding CountText}" VerticalAlignment="Center"
                          AutomationProperties.Name="{Binding Name, StringFormat='Strokes of {0}'}" />
-              <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" AutomationProperties.Name="{Binding Label}" />
+              <TextBlock Text="{Binding Name}" Margin="{StaticResource InlineGap}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" AutomationProperties.Name="{Binding Label}" />
             </DockPanel>
           </DataTemplate>
         </ListBox.ItemTemplate>

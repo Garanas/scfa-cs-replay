@@ -535,12 +535,9 @@
                   </ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:SketchColourChoice">
-                      <Button Classes="chip" Classes.on="{Binding IsOn}" Command="{Binding ChooseCommand}" ToolTip.Tip="{Binding Help}"
+                      <Button Classes="chip icononly" Classes.on="{Binding IsOn}" Command="{Binding ChooseCommand}" ToolTip.Tip="{Binding Help}"
                               AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}">
-                        <StackPanel Classes="inline">
-                          <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
-                          <TextBlock Classes="mono" Text="{Binding Key}" />
-                        </StackPanel>
+                        <Border Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
                       </Button>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>

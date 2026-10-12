@@ -622,12 +622,23 @@ reads again when it changes; and nothing that generates runs by itself.
 Drafts of the map maker's own, kept in the project and never exported: pencil strokes to work out a
 layout before building it, and pictures projected onto the map to trace or build towards.
 
-- [ ] **N-1 Sketch.** Draw on the map with a pencil to draft it: the Sketch mode (on the rail, below
+- [x] **N-1 Sketch.** Draw on the map with a pencil to draft it: the Sketch mode (on the rail, below
       the modes that edit the map), six colours (red, yellow, green, blue, white, black; keys 1 to
       6) and three widths, strokes mirrored by the map's symmetry, a straight line with Shift;
       an eraser that rubs out where it passes (Alt: whole strokes); several named sheets (layers),
       each shown or hidden, one drawn into, each with a legend that says what its colours mean.
       The sketch shows in every mode, dimmed outside the Sketch mode, and a key shows or hides it.
+      Today: the Sketch mode (F10) with the pencil (keys 1 to 6 pick the colour, [ and ] the width;
+      Mirror repeats a stroke by the map's symmetry, Smooth thins the line to few places, Shift draws
+      a straight line, Escape gives a stroke up) and the eraser (a radius; it cuts a stroke in two
+      where it crosses its middle, with Alt or Whole strokes it removes whole strokes, Mirror);
+      several sheets, each shown or hidden, with an opacity outside the mode and a legend of six
+      texts shown as a key in the top view's corner; the strokes are kept in the project as
+      sketch/sketch.json (optional, read again when it changes on disk, never exported), every
+      operation is a command (sketch.*) and one step of undo; the top view draws them as lines of a
+      fixed width on screen at every zoom, dimmed outside the mode; the Sketch chip, the View menu
+      and Ctrl+Shift+K show or hide the sketch in every mode. Missing: the 3D view draws no strokes
+      (N-3), no symbols, labels or selecting (N-4), no projected images (N-2).
 - [ ] **N-2 Projected images.** Lay pictures of one's own over the map in the top view (a drawing,
       a screenshot of another map): several per map, each moved, scaled and turned with handles or
       exact numbers, fitted to the map or its playable area, with an opacity, greyscale, locked,

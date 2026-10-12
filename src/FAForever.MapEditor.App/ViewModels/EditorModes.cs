@@ -323,14 +323,16 @@ public static class EditorOverlays
 {
     public static IReadOnlyList<OverlayDefinition> All { get; } =
     [
+
         new OverlayDefinition("markers", "Markers", "Show markers", "R-6") { Panel = "markers" },
         new OverlayDefinition("pathNodes", "Path nodes", "Show path nodes", "R-6") { Panel = "markers" },
         new OverlayDefinition("camera", "3D camera", "Show the 3D camera", "V-1"),
+        // the sketch lies over every mode's terrain; after the three chips that keep their room at 1280 pixels
+        new OverlayDefinition("sketch", "Sketch", "Show the sketch", "N-1") { Gesture = "Ctrl+Shift+K" },
         new OverlayDefinition("walkability", "Walkability", "Show walkability", "T-7") { Swatch = "MapBlockedBrush" },
         new OverlayDefinition("mask", "Mask", "Show the chosen mask", "K-1") { Swatch = "MapMaskBrush" },
         new OverlayDefinition("symmetry", "Symmetry", "Show symmetry", "F-12"),
         new OverlayDefinition("grid", "Grid", "Show the grid", "V-3"),
-        new OverlayDefinition("sketch", "Sketch", "Show the sketch", "N-1") { Gesture = "Ctrl+Shift+K" },
         new OverlayDefinition("areas", "Areas", "Show areas", "M-5") { Swatch = "MapAreaBrush" },
         new OverlayDefinition("props", "Props", "Show props", "V-2"),
         new OverlayDefinition("units", "Units", "Show units", "V-2"),
