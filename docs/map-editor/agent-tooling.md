@@ -153,6 +153,22 @@ commands that exist.
 | 86 | 22B | Reset the click count between `mouse` calls; a check that a control lies inside its scroll viewer's view | Open |
 | 87 | 22C | `click` on combo list items; the shelf's virtualised tiles by label; `state.units.place.armyChosen` | Open |
 
+## Waves 23 to 26
+
+| # | From | Wish | Status |
+|---|---|---|---|
+| 88 | 23A, 24A | Make a large sketch quickly (`sketch.draw` is one stroke a call, about 0.35 s) | Open |
+| 89 | 23A | A drag through several places in one call | Built: `mouse action=drag path=` (24B) |
+| 90 | 23A | A pixel probe: the colour a view drew at a place | Open |
+| 91 | 23A | A command refused while a stroke is going on says why | Built: the answer's reason and a Commands log line (24A) |
+| 92 | 23B | `perf before=` limited to the spans asked for | Open |
+| 93 | 24A | `perf frames=n` that draws n frames; GL errors checked per pass and shown in `state` | Open |
+| 94 | 24A, 26A, 24B | `editor restart` drops unsaved edits; `editor start` copies the App's build, so building the Cli alone runs the old App; `--artifacts-path` to find the App | Open |
+| 95 | 24B | `ui` saying why a control is hidden (the ancestor that is not visible) | Open |
+| 96 | 26B | GPU screenshots show the GL frame only, not Avalonia's overlays over the 3D view; a screenshot of an open menu | Open |
+| 97 | 25, tour | `mouse` taking map places rather than the view's pixels (its error says only that `x` is missing) | Open |
+| 98 | 26A | A screenshot right after a tool change showed the old tool's row: `settle` does not wait for it | Open |
+
 ## Still open, by theme
 
 - **Camera and views**: a `camera` command (51), a screenshot framing a thing in 3D (46), the 3D

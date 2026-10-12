@@ -32,6 +32,9 @@ every inspector section was planned. At the end, all 66 stories are done.
 | 19 | 3 | Units: placing many at once, palettes, preset instances | 722 / 650 |
 | 20 | 3 | Units: select by and stored selections, editing many, placement checks | 750 / 701 |
 | 22 | 3 | Fixing the units walkthrough (wave 21 was the walkthrough) and automation of drags, popups and the theme | 768 / 710 |
+| 23 | 2 | Sketch: the pencil, eraser and sheets; projected images | 840 / 748 |
+| 24 | 2 | Sketch: strokes and symbols in 3D; symbols, labels and the Select tool | 862 / 760 |
+| 26 | 2 | Fixing the sketch walkthrough (wave 25 was the walkthrough) | 878 / 766 |
 
 ## How a wave ran
 
@@ -420,6 +423,49 @@ another session, so they were numbered 19 and on, and were merged on a branch of
   failed once in a full run and passed alone and in the next full runs: it depends on test order.
 - **Not proven in the game**: the flatness rule follows faf-re's reconstruction, not a check in the
   game; the 10 structures of Liberation it flags (1.04 to 1.52 against 1) are worth a look in the game.
+
+## Waves 23 to 26: sketching a map
+
+The owner found it hard to come up with a map from nothing and asked for pencil drawings on the map
+in a few colours, and for an image projected onto it. The plan and a mock are the artifact "Sketch
+and Reference" (memory note `sketch-plan`; a copy for agents in `D:\wtef\sketch-plan.html`), which
+became stories N-1 to N-4. Decisions: a Sketch mode of its own, the sketch shown in every mode with
+keys to hide it (Ctrl+Shift+K the sketch, Ctrl+Shift+J the images); several sheets; the eraser rubs
+out parts of strokes, with Alt whole strokes; six colours (red, yellow, green, blue, white, black)
+with a legend per sheet; symbols and labels in the first round; several images, in the top view only
+(over hills a picture stretches); turning a sketch into the map (masks, curves, markers) later. The
+sketch and the images are kept under `sketch/` in the project, optional (no new project format) and
+never exported. The main session committed the stories and a skeleton of the mode (its tools and
+sections planned) first, so that two agents could build into one mode at once.
+
+- **Wave 23**: 23A the strokes and sheets (`sketch/sketch.json`, the pencil with Mirror, Smooth and
+  Shift, the eraser cutting strokes in two, sheets with an opacity outside the mode and a legend, the
+  top view's lines of a constant width on screen, `OverlayDefinition.Gesture`); 23B projected images
+  (`sketch/images.json` and a PNG per picture, at most 4096 pixels a side, the Image tool's move,
+  corner scale and turn knob, opacity, greyscale, locked, below or above the sketch).
+- **Wave 24**: 24A the sketch in 3D (`SketchRenderer`: pieces of at most 1 ogrid lifted onto the
+  heightmap in the vertex shader, capsules of a constant width on screen, a sheet below full opacity
+  drawn into a layer of its own so overlaps do not darken; 4,000 strokes cost about 1 ms a frame);
+  24B symbols and labels (`sketch.json` version 2 only when a sheet holds one), the Caveat font
+  (SIL OFL) for labels, the Select tool, violet handles for the Image and Select tools, `mouse
+  action=drag path=`. Both agents wrote `SketchLines`, the one list of lines every view draws from;
+  the merge kept 24A's cached lines and 24B's symbol shapes.
+- **Wave 25**, the walkthrough: 14 issues, 1 major (Ctrl+A in the Select tool selected the map's
+  markers, and Delete removed the spawns).
+- **Wave 26**: 26A the tools and sheets (Select all and Delete on the sheet, the Mirror boxes off
+  while the map does not mirror, the eraser's counts, strokes cut at the map's edge, the chosen sheet
+  drawn fully and the others at their opacity); 26B the looks and 3D (a mass symbol of a diamond and
+  a dot, halos for black and white lines and rims for their swatches, the Sketch chip second in the
+  views' bar, Symbol, Label and Select in 3D with labels drawn there, lines lifted by the slope on
+  steep ground, a legend key that follows the opacity and the zoom).
+- **After the waves**, at the owner's request: the Sketch mode moved to the top of the rail, between
+  Map and Terrain, and a tour of it, "Drafting a map" (14 steps, order 15). The waves ran beside a
+  session building tours (waves 27 to 29), so this change took no wave number.
+- **Merging**: wave 23's test of the sketch's store left a stray file in `sketch/images/`, which the
+  images' save removes; the test now keeps its file elsewhere in `sketch/`. On the merged tree of wave
+  26 the legend key's headless test read a frame one tick late about one run in four; it now draws
+  until two frames agree.
+- **Unexplained**: 26B's test editor quit twice without a word in its log (see wish 78).
 
 ## The agents' tooling
 
