@@ -165,6 +165,8 @@ public sealed partial class SketchSelectTool : ObservableObject, IMapTool
     {
         OnPropertyChanged(nameof(Summary));
         OnPropertyChanged(nameof(HasSelection));
+        // Delete in the Sketch mode needs a selection of the sketch
+        _model.Commands.NotifyCanRunChanged();
         if (redraw)
         {
             _model.ShowStroke();
@@ -190,11 +192,6 @@ public sealed partial class SketchSelectTool : ObservableObject, IMapTool
         _shift = input.Modifiers.HasFlag(ToolModifiers.Shift);
         if (_model.ShownDocument is not MapDocument document)
         {
-            return;
-        }
-        if (input.View is { IsTopDown: false })
-        {
-            _model.Status = "Select in the top view: the 3D view does not take the Select tool yet";
             return;
         }
         if (_model.Sketch.Chosen is not string name || document.Sketch.Find(name) is not SketchSheet sheet)
@@ -337,10 +334,11 @@ public sealed partial class SketchSelectTool : ObservableObject, IMapTool
     private async Task EditLabel(SketchSheet sheet, int index, ToolInput input)
     {
         SketchLabel label = sheet.Labels[index];
-        Vector2 screen = input.ViewAt(label.Place.X, label.Place.Y).ToScreen(new Vector3(label.Place.X, 0, label.Place.Y)) ?? Vector2.Zero;
+        ToolView view = input.ViewAt(label.Place.X, label.Place.Y);
+        Vector2 screen = view.ToScreen(SketchPlaces.OnGround(view, _model.ShownDocument, label.Place.X, label.Place.Y)) ?? Vector2.Zero;
         _selected = [new SketchItem(SketchItemKind.Label, index)];
         Changed();
-        await _model.Sketch.BeginLabel(new SketchLabelDraft(label.Place, screen, label.Colour, label.Size, sheet.Name, index), label.Text);
+        await _model.Sketch.BeginLabel(new SketchLabelDraft(label.Place, screen, label.Colour, label.Size, sheet.Name, index) { ThreeD = !view.IsTopDown }, label.Text);
     }
 
     public bool Key(string key, ToolModifiers modifiers)
@@ -398,18 +396,15 @@ public sealed partial class SketchSelectTool : ObservableObject, IMapTool
     /// </summary>
     public IReadOnlyList<ToolShape> Shapes(ToolView view)
     {
-        if (!view.IsTopDown || _model.ShownDocument?.Sketch.Find(_sheet) is not SketchSheet sheet)
+        if (_model.ShownDocument is not MapDocument document || document.Sketch.Find(_sheet) is not SketchSheet sheet)
         {
             return [];
         }
         List<ToolShape> shapes = [];
         if (DraggedBox is { } box)
         {
-            Vector3 low = new Vector3(Math.Min(box.X0, box.X1), 0, Math.Min(box.Z0, box.Z1));
-            Vector3 high = new Vector3(Math.Max(box.X0, box.X1), 0, Math.Max(box.Z0, box.Z1));
-            if (view.ToScreen(low) is Vector2 a && view.ToScreen(high) is Vector2 c)
+            if (Outline(view, document, new Vector2(Math.Min(box.X0, box.X1), Math.Min(box.Z0, box.Z1)), new Vector2(Math.Max(box.X0, box.X1), Math.Max(box.Z0, box.Z1))) is Vector2[] corners)
             {
-                Vector2[] corners = [a, new Vector2(c.X, a.Y), c, new Vector2(a.X, c.Y)];
                 shapes.Add(new ToolLine(corners, true, 3, ToolInk.Shadow));
                 shapes.Add(new ToolLine(corners, true, 1.5f, ToolInk.Handle) { Dash = ToolDash.Dashed });
             }
@@ -429,30 +424,53 @@ public sealed partial class SketchSelectTool : ObservableObject, IMapTool
                 min = Vector2.Min(min, low);
                 max = Vector2.Max(max, high);
             }
-            AddBox(shapes, view, min, max);
+            AddBox(shapes, view, document, min, max);
             return shapes;
         }
         foreach (SketchItem item in items)
         {
             (Vector2 low, Vector2 high) = SketchPicking.Bounds(sheet, item);
-            AddBox(shapes, view, low, high);
+            AddBox(shapes, view, document, low, high);
         }
         return shapes;
     }
 
-    private static void AddBox(List<ToolShape> shapes, ToolView view, Vector2 low, Vector2 high)
+    private static void AddBox(List<ToolShape> shapes, ToolView view, MapDocument document, Vector2 low, Vector2 high)
     {
         // a few pixels of air round the item, so a thin line is not hidden by its own outline
-        float air = 3 * view.OgridsPerPixelAt(new Vector3(low.X, 0, low.Y));
-        low -= new Vector2(air);
-        high += new Vector2(air);
-        if (view.ToScreen(new Vector3(low.X, 0, low.Y)) is not Vector2 a || view.ToScreen(new Vector3(high.X, 0, high.Y)) is not Vector2 c)
+        float air = 3 * view.OgridsPerPixelAt(SketchPlaces.OnGround(view, document, low.X, low.Y));
+        if (Outline(view, document, low - new Vector2(air), high + new Vector2(air)) is not Vector2[] corners)
         {
             return;
         }
-        Vector2[] corners = [a, new Vector2(c.X, a.Y), c, new Vector2(a.X, c.Y)];
         shapes.Add(new ToolLine(corners, true, 4, ToolInk.Shadow));
         shapes.Add(new ToolLine(corners, true, 2, ToolInk.Handle) { Dash = ToolDash.Dashed });
+    }
+
+    /// <summary>
+    /// The outline of a box on the map, in the view's pixels: its four corners in the top view, in 3D the same edges
+    /// along the ground (a few places on each, so they follow the hills); null while a corner is out of sight.
+    /// </summary>
+    private static Vector2[]? Outline(ToolView view, MapDocument document, Vector2 low, Vector2 high)
+    {
+        int steps = view.IsTopDown ? 1 : 12;
+        List<Vector2> points = [];
+        Vector2[] corners = [low, new Vector2(high.X, low.Y), high, new Vector2(low.X, high.Y)];
+        for (int side = 0; side < 4; side++)
+        {
+            Vector2 from = corners[side];
+            Vector2 to = corners[(side + 1) % 4];
+            for (int step = 0; step < steps; step++)
+            {
+                Vector2 place = Vector2.Lerp(from, to, (float)step / steps);
+                if (view.ToScreen(SketchPlaces.OnGround(view, document, place.X, place.Y)) is not Vector2 screen)
+                {
+                    return null;
+                }
+                points.Add(screen);
+            }
+        }
+        return [.. points];
     }
 
     /// <summary>

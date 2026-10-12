@@ -1597,9 +1597,10 @@ files (the export reads no `MapDocument.Sketch`) nor `files/` (the other files o
   `SketchLines.Shown(sketch, full)` gives the sheets to draw and their opacity (shown, not blank, not fully
   transparent; `full` in the Sketch mode); `SketchLines.Of(sheet)` the lines of one sheet as `SketchStroke`s in
   ogrids, its strokes first and then those of its symbols (`Of(symbol)`: a spawn is a ring and a dot, a mass
-  three rings, a hydrocarbon a star, an arrow a shaft and a head turned by `Turn`, a cross two lines, a
-  question mark a hook, a stem and a dot, all of the medium width). The top view and the 3D view draw
-  symbols through it. Labels are text, not lines: the top view draws them (`SketchLabels.Bounds` is the
+  a diamond and a dot, a hydrocarbon a star, an arrow a shaft and a head turned by `Turn`, a cross two lines, a
+  question mark a hook, a stem and a dot, thin for a symbol under 20 ogrids, medium from there). The top view and the 3D view draw
+  symbols through it. `SketchLook.HaloArgb` is the other tone of black and white (null for the other colours), which the views draw a
+  thin halo of (`HaloPixels`) under a black or white line, and `RimArgb` the rim of a swatch or a dot of a colour in a panel or a key. Labels are text, not lines: the top view draws them (`SketchLabels.Bounds` is the
   estimate of where one lies, from its text's length, for clicking, boxes and the eraser).
 - **Edits** (`Editing/SketchEdits.cs`, `SketchGeometry.cs`): sheets are named (unique without regard to case,
   at most 60 characters; a name matches exactly first, then without regard to case): `AddSheet`
@@ -1616,10 +1617,16 @@ files (the export reads no `MapDocument.Sketch`) nor `files/` (the other files o
   sides, convex, so it meets a segment in one stretch: `Crosses`), so a stroke is cut in two where the
   eraser crosses its middle and what is left shorter than `Shortest` goes; a stroke of one point goes
   whole. `Erase` with `whole` removes a stroke the eraser touches entirely, and the symbols and labels it
-  touches (Alt). `ClearSheet` takes the symbols and labels too.
-- **The sketch as lines** (`Editing/SketchLines.cs`): every view draws from one list, `SketchLines.Of(sketch, full)`: a
-  `SketchLayer` per sheet that shows and has something to draw (`full`: the Sketch mode draws every sheet
-  at opacity 1, the other modes at the sheet's own), holding its `SketchLine`s (colour, width, places in
+  touches (Alt). `EraseCounted` is `Erase` that also says what it did (`EraseCounts`: strokes cut, strokes,
+  symbols and labels removed; `Describe` words it as `Cut 2 strokes, removed 1 stroke and 1 symbol`); a
+  label is only reached by the eraser's own path, never by its images under the symmetry (labels are not
+  mirrored when written). `ClearSheet` takes the symbols and labels too. `SketchGeometry.ClipToMap` cuts a
+  line at the map's edge: what lies beyond is left out and a part that comes back is a line of its own;
+  `sketch.draw` applies it, so a stroke never hangs beyond the map.
+- **The sketch as lines** (`Editing/SketchLines.cs`): every view draws from one list, `SketchLines.Of(sketch, chosen)`: a
+  `SketchLayer` per sheet that shows and has something to draw (`chosen`: the sheet chosen in the Sketch mode
+  draws at opacity 1; every other sheet, and every sheet in the other modes where `chosen` is null, at the
+  sheet's own), holding its `SketchLine`s (colour, width, places in
   ogrids; a stroke is one line, a dot one place) in drawing order. `SketchLines.Of(sheet)` is kept while the
   document holds that very sheet (a view may ask every frame), and `Extends(earlier, later)` says that a
   list is another with lines added at its end, so that a view that drew the first only makes the added

@@ -29,6 +29,11 @@ namespace FAForever.MapEditor.Project.Editing
         private const int CircleSegments = 24;
 
         /// <summary>
+        /// From this size in ogrids a symbol's lines are of the medium width, below it thin.
+        /// </summary>
+        public const float ThickSymbol = 20;
+
+        /// <summary>
         /// The lines of one sheet, in drawing order.
         /// </summary>
         public static ImmutableArray<SketchLine> Of(SketchSheet sheet) => Made.GetValue(sheet, held => new Held(Make(held))).Lines;
@@ -60,22 +65,23 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
-        /// The opacity a sheet is drawn at: fully in the Sketch mode (<paramref name="full"/>), at its own
-        /// in the other modes.
+        /// The opacity a sheet is drawn at: fully when it is the one <paramref name="chosen"/> in the Sketch
+        /// mode, at its own opacity otherwise (the other sheets of the Sketch mode, and every sheet in the other
+        /// modes, where <paramref name="chosen"/> is null).
         /// </summary>
-        public static float OpacityOf(SketchSheet sheet, bool full) => full ? 1 : sheet.Opacity;
+        public static float OpacityOf(SketchSheet sheet, string? chosen) => chosen is not null && sheet.Name == chosen ? 1 : sheet.Opacity;
 
         /// <summary>
         /// The sheets that show and have something to draw, in the order they lie in (the first
         /// below), each with its lines and opacity.
         /// </summary>
-        /// <param name="full">Whether the Sketch mode is the one chosen: every sheet then draws fully.</param>
-        public static ImmutableArray<SketchLayer> Of(Sketch sketch, bool full)
+        /// <param name="chosen">The sheet chosen in the Sketch mode, which draws fully; null outside the mode.</param>
+        public static ImmutableArray<SketchLayer> Of(Sketch sketch, string? chosen)
         {
             ImmutableArray<SketchLayer>.Builder layers = ImmutableArray.CreateBuilder<SketchLayer>();
             foreach (SketchSheet sheet in sketch.Sheets)
             {
-                float opacity = OpacityOf(sheet, full);
+                float opacity = OpacityOf(sheet, chosen);
                 if (!sheet.Shown || opacity <= 0)
                 {
                     continue;
@@ -112,15 +118,15 @@ namespace FAForever.MapEditor.Project.Editing
 
         /// <summary>
         /// The sheets a view draws and how opaque each is: the shown sheets that hold something to draw,
-        /// at their own opacity outside the Sketch mode and fully in it. A sheet that is fully
-        /// transparent is left out.
+        /// at their own opacity, except the sheet <paramref name="chosen"/> in the Sketch mode, which is drawn
+        /// fully. A sheet that is fully transparent is left out.
         /// </summary>
-        /// <param name="full">Whether the Sketch mode is the one chosen: every sheet is drawn fully.</param>
-        public static IEnumerable<(SketchSheet Sheet, float Opacity)> Shown(Sketch sketch, bool full)
+        /// <param name="chosen">The sheet chosen in the Sketch mode; null outside the mode.</param>
+        public static IEnumerable<(SketchSheet Sheet, float Opacity)> Shown(Sketch sketch, string? chosen)
         {
             foreach (SketchSheet sheet in sketch.Sheets)
             {
-                float opacity = full ? 1 : sheet.Opacity;
+                float opacity = OpacityOf(sheet, chosen);
                 if (sheet.Shown && !sheet.IsBlank && opacity > 0)
                 {
                     yield return (sheet, opacity);
@@ -129,8 +135,8 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
-        /// The lines a symbol is drawn with, in ogrids, all of <see cref="SketchWidth.Medium"/>: a spawn is a ring
-        /// with a dot, a mass three rings inside one another, a hydrocarbon a star, an arrow a shaft with a head
+        /// The lines a symbol is drawn with, in ogrids, all of <see cref="SketchWidth.Thin"/> (<see cref="SketchWidth.Medium"/> from <see cref="ThickSymbol"/> ogrids up): a spawn is a ring
+        /// with a dot, a mass a diamond with a dot (never a ring, so that it cannot be taken for a spawn when small), a hydrocarbon a star, an arrow a shaft with a head
         /// (turned by <see cref="SketchSymbol.Turn"/>), a cross two crossing lines, a question mark a hook, a
         /// stem and a dot.
         /// </summary>
@@ -144,9 +150,8 @@ namespace FAForever.MapEditor.Project.Editing
                     shapes.Add([Vector2.Zero]);
                     break;
                 case SketchSymbolKind.Mass:
-                    shapes.Add(Circle(0.5f));
-                    shapes.Add(Circle(0.33f));
-                    shapes.Add(Circle(0.16f));
+                    shapes.Add([new Vector2(0, -0.5f), new Vector2(0.5f, 0), new Vector2(0, 0.5f), new Vector2(-0.5f, 0), new Vector2(0, -0.5f)]);
+                    shapes.Add([Vector2.Zero]);
                     break;
                 case SketchSymbolKind.Hydrocarbon:
                     Vector2[] star = new Vector2[11];
@@ -185,7 +190,9 @@ namespace FAForever.MapEditor.Project.Editing
             float turn = symbol.Kind == SketchSymbolKind.Arrow ? symbol.Turn * MathF.PI / 180 : 0;
             float cos = MathF.Cos(turn);
             float sin = MathF.Sin(turn);
-            return [.. shapes.Select(shape => new SketchStroke(symbol.Colour, SketchWidth.Medium,
+            // a small symbol is drawn with a thin line, so that its rings and corners do not fill in when the map is shown small
+            SketchWidth width = symbol.Size >= ThickSymbol ? SketchWidth.Medium : SketchWidth.Thin;
+            return [.. shapes.Select(shape => new SketchStroke(symbol.Colour, width,
                 [.. shape.Select(point => symbol.Place + symbol.Size * new Vector2(point.X * cos - point.Y * sin, point.X * sin + point.Y * cos))]))];
         }
 

@@ -18,7 +18,7 @@ namespace FAForever.MapEditor.App.Commands;
 /// <param name="Whole">Whole strokes (the eraser's Alt); left out, the eraser's.</param>
 /// <param name="Mirror">Left out, the eraser's.</param>
 /// <param name="Sheet">The sheet to erase in; left out, the one chosen in the panel.</param>
-/// <returns>How many strokes the eraser touched, with Whole also the symbols and labels it removed.</returns>
+/// <returns>How many strokes the eraser cut and removed, with Whole also the symbols and labels it removed.</returns>
 [UndoStep]
 [EditorCommand("sketch.erase", "Erase in the sketch", Story = "N-1")]
 public sealed record EraseSketch(float[][] Points, float? Radius = null, bool? Whole = null, bool? Mirror = null, string? Sheet = null) : IRequest<int>;
@@ -33,9 +33,9 @@ public sealed class EraseSketchHandler(MainViewModel model, CurrentEdit edit) : 
         float radius = r.Radius ?? (float)eraser.Radius;
         bool whole = r.Whole ?? eraser.Whole;
         IReadOnlyList<MapSymmetryTransform> parts = r.Mirror ?? eraser.Mirror ? model.EditTransforms(document) : [];
-        int erased = 0;
-        edit.Transaction.Apply(d => d.Erase(sheet, SketchArguments.Points(r.Points), radius, whole, parts, out erased));
-        model.Status = erased == 0 ? $"The eraser touched nothing of {sheet}" : $"Erased {erased} {(erased == 1 ? "item" : "items")} of {sheet}";
-        return Task.FromResult(erased);
+        EraseCounts counts = default;
+        edit.Transaction.Apply(d => d.EraseCounted(sheet, SketchArguments.Points(r.Points), radius, whole, parts, out counts));
+        model.Status = counts.Touched == 0 ? $"The eraser touched nothing of {sheet}" : $"{counts.Describe()} of {sheet}";
+        return Task.FromResult(counts.Touched);
     }
 }

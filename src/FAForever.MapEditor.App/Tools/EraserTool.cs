@@ -23,6 +23,7 @@ public sealed partial class EraserTool : ObservableObject, IMapTool
     {
         this.model = model;
         model.Sketch.ChosenChanged += (_, _) => OnPropertyChanged(nameof(SheetText));
+        SketchMirrorHint.Watch(model.Symmetry, MirrorChanged);
     }
 
     /// <summary>
@@ -33,7 +34,7 @@ public sealed partial class EraserTool : ObservableObject, IMapTool
     private EditTransaction? _edit;
     private (float X, float Z) _last;
     private bool _whole;
-    private int _erased;
+    private EraseCounts _erased;
     private string _sheet = "";
 
     /// <summary>
@@ -54,11 +55,39 @@ public sealed partial class EraserTool : ObservableObject, IMapTool
     [ObservableProperty]
     public partial bool Whole { get; set; }
 
+    /// <summary>
+    /// Whether the Mirror box can be used: the map has a symmetry and the views' bar mirrors edits.
+    /// </summary>
+    public bool MirrorAvailable => model.Symmetry.IsMirroring;
+
+    /// <summary>
+    /// The Mirror box: on only while it can be, so that it never says on when nothing is mirrored.
+    /// </summary>
+    public bool MirrorChecked
+    {
+        get => Mirror && MirrorAvailable;
+        set => Mirror = value;
+    }
+
+    /// <summary>
+    /// The box's tip: what it does, or why it is off.
+    /// </summary>
+    public string MirrorTip => SketchMirrorHint.Tip(model.Symmetry, "The eraser also works in the other parts of a symmetric map");
+
+    private void MirrorChanged()
+    {
+        OnPropertyChanged(nameof(MirrorAvailable));
+        OnPropertyChanged(nameof(MirrorChecked));
+        OnPropertyChanged(nameof(MirrorTip));
+    }
+
+    partial void OnMirrorChanged(bool value) => MirrorChanged();
+
     public double CursorRadius => Radius;
 
     public bool UsesAlt => true;
 
-    public bool Mirrors => Mirror;
+    public bool Mirrors => MirrorChecked;
 
     public string SheetText => model.Sketch.Chosen is string sheet ? $"Sheet: {sheet}" : "No sheet yet";
 
@@ -72,7 +101,7 @@ public sealed partial class EraserTool : ObservableObject, IMapTool
         }
         _sheet = model.Sketch.Chosen ?? "";
         _whole = Whole || input.Modifiers.HasFlag(ToolModifiers.Alt);
-        _erased = 0;
+        _erased = default;
         _last = (x, z);
         _edit = model.StartStroke($"Erase in the sketch{(_whole ? " (whole strokes)" : "")}");
         Erase([new Vector2(x, z)]);
@@ -108,9 +137,9 @@ public sealed partial class EraserTool : ObservableObject, IMapTool
         }
         _edit = null;
         model.EndStroke(edit);
-        if (_erased > 0)
+        if (_erased.Touched > 0)
         {
-            model.Status = $"Erased {_erased} {(_erased == 1 ? "item" : "items")} of {_sheet}";
+            model.Status = $"{_erased.Describe()} of {_sheet}";
         }
     }
 
@@ -138,8 +167,8 @@ public sealed partial class EraserTool : ObservableObject, IMapTool
             return;
         }
         IReadOnlyList<MapSymmetryTransform> parts = Mirror ? model.EditTransforms(document) : [];
-        int erased = 0;
-        _edit.Apply(d => d.Erase(_sheet, path, (float)Radius, _whole, parts, out erased));
+        EraseCounts erased = default;
+        _edit.Apply(d => d.EraseCounted(_sheet, path, (float)Radius, _whole, parts, out erased));
         _erased += erased;
     }
 }

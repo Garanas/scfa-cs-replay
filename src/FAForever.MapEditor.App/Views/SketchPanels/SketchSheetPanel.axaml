@@ -19,13 +19,15 @@
         </DockPanel>
         <TextBlock Classes="label" Text="{Binding ChosenOpacity, StringFormat='Other modes: {0:0}%'}" />
         <Slider Minimum="0" Maximum="100" Value="{Binding ChosenOpacity}" AutomationProperties.Name="Opacity of the sheet outside the Sketch mode"
-                AutomationProperties.HelpText="How opaque the sheet is in the views while another mode is chosen: it guides without getting in the way; in the Sketch mode it is drawn fully" />
+                AutomationProperties.HelpText="How opaque the sheet is in the views while another mode is chosen: it guides without getting in the way; in the Sketch mode the chosen sheet is drawn fully and the other shown sheets at their own opacity" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="In this mode the chosen sheet is drawn fully and the other shown sheets at their own opacity, so they can be told apart."
+                   AutomationProperties.Name="How the sheets are drawn in the Sketch mode" />
         <TextBlock Classes="overline" Text="{Binding Source=Legend, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
         <ItemsControl ItemsSource="{Binding Legend}" AutomationProperties.Name="Legend of the sheet">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:SketchLegendItem">
               <DockPanel>
-                <Border DockPanel.Dock="Left" Classes="swatch" Margin="{StaticResource SwatchGap}" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                <Border DockPanel.Dock="Left" Classes="swatch" Margin="{StaticResource SwatchGap}" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" BorderBrush="{Binding RimArgb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
                 <TextBox Text="{Binding Text, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="{Binding Label}"
                          AutomationProperties.HelpText="What this colour means on the sheet; shown as a key in a corner of the top view while the sheet is shown" />
               </DockPanel>

@@ -77,6 +77,7 @@ internal static class SketchState
                 ["size"] = symbol.Ogrids,
                 ["turn"] = symbol.Turn,
                 ["mirror"] = symbol.Mirror,
+                ["mirrorAvailable"] = symbol.MirrorAvailable,
                 ["state"] = symbol.Describe(),
             },
             ["label"] = new JsonObject
@@ -97,6 +98,7 @@ internal static class SketchState
                 ["colour"] = pencil.Colour.ToString().ToLowerInvariant(),
                 ["width"] = pencil.Width.ToString().ToLowerInvariant(),
                 ["mirror"] = pencil.Mirror,
+                ["mirrorAvailable"] = pencil.MirrorAvailable,
                 ["smooth"] = pencil.Smooth,
                 ["drawing"] = pencil.IsDrawing,
             },
@@ -104,6 +106,7 @@ internal static class SketchState
             {
                 ["radius"] = eraser.Radius,
                 ["mirror"] = eraser.Mirror,
+                ["mirrorAvailable"] = eraser.MirrorAvailable,
                 ["whole"] = eraser.Whole,
             },
             ["pending"] = model.Sketch.Pending.Count,
@@ -121,6 +124,14 @@ internal static class SketchState
                 ["pending"] = top.SketchDrawn.Pending,
                 ["symbols"] = top.SketchDrawn.Symbols,
                 ["labels"] = top.SketchDrawn.Labels,
+                // the legend's key: its box in the view's pixels [x, y, width, height] and its opacity; null while none is drawn
+                ["key"] = top.SketchKeyDrawn.Box.Width > 0
+                    ? new JsonObject
+                    {
+                        ["box"] = new JsonArray(Math.Round(top.SketchKeyDrawn.Box.X), Math.Round(top.SketchKeyDrawn.Box.Y), Math.Round(top.SketchKeyDrawn.Box.Width), Math.Round(top.SketchKeyDrawn.Box.Height)),
+                        ["opacity"] = Math.Round(top.SketchKeyDrawn.Opacity, 2),
+                    }
+                    : null,
             },
             // what the 3D view drew last (it draws only while it is shown): sheets, lines, the pieces they were cut
             // into, lines being drawn, the pieces made that frame (0 while nothing changed), the sheets laid over the scene as a layer, and whether
@@ -133,6 +144,7 @@ internal static class SketchState
                 ["pending"] = view3d.SketchDrawn.Pending,
                 ["built"] = view3d.SketchDrawn.Built,
                 ["layers"] = view3d.SketchDrawn.Layers,
+                ["labels"] = view3d.SketchDrawn.Labels,
                 ["layersWork"] = view3d.SketchLayersWork,
             },
         };

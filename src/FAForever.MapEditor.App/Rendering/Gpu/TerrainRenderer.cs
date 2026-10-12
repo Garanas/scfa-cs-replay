@@ -298,7 +298,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
             // the sketch lies on the terrain as the overlays do, over the decals and the water, under the brush
             _gl.ActiveTexture(TextureUnit.Texture0);
             Bind(0, _heights, 0);
-            _sketch.Draw(viewProjection, eye, strokes.Size, document.Terrain.Heightmap.Scale, strokes.Layers, strokes.Alive, strokes.Pending);
+            _sketch.Draw(viewProjection, eye, strokes.Size, document.Terrain.Heightmap.Scale, strokes.Layers, strokes.Alive, strokes.Pending, document.Terrain.Heightmap, strokes.Labels, strokes.Scale);
         }
         if (brushes is { Count: > 0 })
         {

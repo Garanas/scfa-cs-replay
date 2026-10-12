@@ -81,7 +81,7 @@
       "id": "chips",
       "target": { "part": "views" },
       "title": "Showing markers in the views",
-      "text": "The chips above the views switch the Markers and Path nodes overlays on and off. Choosing a marker tool shows its kind on its own."
+      "text": "The chips above the views switch the Markers overlay on and off (Path nodes too, behind More when the window is narrow). Choosing a marker tool shows its kind on its own."
     },
     {
       "id": "end",
