@@ -689,8 +689,13 @@ own sit beside the editor's.
       view), Markers (place a mass deposit), Units (choose a unit from the palette, place it) and
       Procedural modes (generate the walkability, preview it; the export's steps and the File menu's
       Export to the vault and Upload to the vault, which it rings and explains and never runs) follow,
-      each with steps that ask you to act. Missing: a step that waits for a brush stroke (a stroke is no
-      command), a ring inside an open menu.
+      each with steps that ask you to act. A brush stroke is a command (`brush.stroke {points}`, one
+      step of undo through the active tool), so the Terrain, Masks and Paint tours have a "Try it: make
+      one stroke" step that waits for it (`edits`, the edits made since the step began) with Do it for
+      me. A step that waits for the last undo name needs a new step, not one the map already had. A
+      developer who edits the embedded tours starts the editor with `faf-map editor start|restart
+      --refresh-tours` to have them written over the workspace's copies. Missing: a ring inside an open
+      menu.
 - [x] **H-2 A guide made from the tours.** `faf-map guide` plays the tours in a test editor and writes a
       static guide (HTML and Markdown in `docs/guide`) with a picture per step, the target ringed and
       numbered, made again when the window changes. Today: `faf-map guide build --out <folder> --port <n>
@@ -702,10 +707,11 @@ own sit beside the editor's.
       and the date), WebP pictures with alt text, and a Markdown and a dark HTML page per tour and an
       index; `guide render` writes the pages again from `guide.json` without an editor; `guide check`
       plays the targets without pictures and reports targets not found (exit 1), targets that moved by
-      more than 8 pixels, and steps and tours added or removed. The pictures are made on the person's
-      computer (`docs/guide/README.md`); CI keeps only the tours true. Missing: the guide of the
-      modes' tours (they are not written yet), a theme besides dark, and a check run by CI (it needs
-      the editor started on a virtual display).
+      more than 8 pixels, and steps and tours added or removed. All seven tours are in the guide (82
+      steps); the map's edits of one tour (a stroke, a deposit, a unit, a layer) are undone before the
+      next tour is played, so every tour is pictured on the map the first one found. The pictures are
+      made on the person's computer (`docs/guide/README.md`); CI keeps only the tours true. Missing: a
+      theme besides dark, and a check run by CI (it needs the editor started on a virtual display).
 - [ ] **H-3 Record a tour.** The editor writes a draft tour from what a person does (the commands run
       and the labels of the controls clicked). Missing: all of it.
 - [ ] **H-4 Tours of one's own.** A map maker writes tours for their team or community. Today: the
