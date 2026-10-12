@@ -177,6 +177,7 @@ faf-map editor run id=file.open folder=<project> discard=true --port 5372   # wi
 faf-map editor run id=view.inspectPart part=water.foam --port 5372   # an entry of the Water or Lighting panel's list in the inspector (state.panelParts)
 faf-map editor run id=help.shortcuts query=undo --port 5372          # the keyboard shortcuts page (state.shortcuts); help.presetsFolder ... answer their paths
 faf-map editor run id=file.workspaceSettings --port 5372             # the workspace settings page (state.workspaceSettings); never Convert again in a scratch workspace
+faf-map editor tour id=window step=7 --port 5372                     # a guided tour at a step (number or id; card=false: the ring only); state.tour: target bounds, card, waiting, done; tourNext, tourBack, tourDo, tourEnd; run id=help.tourOffer answer=never clears the first-start card in a scratch workspace
 ```
 
 A new part of a mode follows "the panel says what there is, the inspector edits what you chose":

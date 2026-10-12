@@ -13,7 +13,9 @@ namespace FAForever.MapEditor.Project.Workspaces
     ///   maps/                map templates a new map starts from: JSON files of its settings, map
     ///                        projects in folders (MapTemplates)
     /// plugins/               the Lua plugins: a folder each with its plugin.lua (and plugin.json)
-    /// assets/                converted from the game's archives; made again whenever they change
+    /// tours/                 the guided tours: a *.tour.json each (the editor's own written here, a map maker's beside them),
+    ///                        and .progress.json (what was offered and which tours were finished)
+    /// assets/               converted from the game's archives; made again whenever they change
     ///   manifest.json        what they were converted from, and by which editor (AssetManifestDto)
     ///   env/..., units/...   the game's paths in lower case: textures as PNG, blueprints as JSON
     ///                        (PropBlueprintDto, UnitBlueprintDto), meshes as glTF (.glb)
@@ -29,6 +31,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         public const string Brushes = "brushes";
         public const string Presets = "presets";
         public const string Plugins = "plugins";
+        public const string Tours = "tours";
         public const string Assets = "assets";
         public const string AssetsInProgress = "assets.new";
         public const string Manifest = "manifest.json";
@@ -42,7 +45,7 @@ namespace FAForever.MapEditor.Project.Workspaces
         /// <summary>
         /// The folders a new workspace starts with.
         /// </summary>
-        public static readonly IReadOnlyList<string> Folders = [Projects, Brushes, Presets, Plugins];
+        public static readonly IReadOnlyList<string> Folders = [Projects, Brushes, Presets, Plugins, Tours];
 
         /// <summary>
         /// Where the conversion puts the file of a game path, relative to <see cref="Assets"/>:

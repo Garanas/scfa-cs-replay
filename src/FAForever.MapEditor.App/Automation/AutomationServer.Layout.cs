@@ -32,32 +32,35 @@ public sealed partial class AutomationServer
     /// <summary>
     /// The editor's window, then the floating panels' windows.
     /// </summary>
-    private IEnumerable<Window> Windows => [window, .. window.FloatingWindows];
+    private IEnumerable<Window> Windows => Locator.Windows;
+
+    private UiLocator? _locator;
+
+    /// <summary>
+    /// Where things are in the window, shared with the guided tours (<see cref="UiLocator"/>).
+    /// </summary>
+    private UiLocator Locator => _locator ??= new UiLocator(window, model);
 
     /// <summary>
     /// The first control named, labelled or reading the text, in the editor's window or a floating one.
     /// </summary>
-    private Control? FindInWindows(string text, bool hidden = false) =>
-        Windows.Select(each => UiTree.Find(each, text, hidden)).FirstOrDefault(control => control is not null);
+    private Control? FindInWindows(string text, bool hidden = false) => Locator.FindInWindows(text, hidden);
 
     /// <summary>
     /// Where to look for <paramref name="arguments"/>' <c>under</c>: that control, else null for every window.
     /// </summary>
-    private Visual? UnderOf(JsonObject arguments) => arguments["under"]?.GetValue<string>() is { Length: > 0 } under
-        ? FindPartInWindows(under) ?? throw new ArgumentException($"No control or heading is named, labelled or reads '{under}'")
-        : null;
+    private Visual? UnderOf(JsonObject arguments) => Locator.Under(arguments["under"]?.GetValue<string>());
 
     /// <summary>
     /// The first control or the part under a section heading named, labelled or reading the text, in
     /// the editor's window or a floating one.
     /// </summary>
-    private Control? FindPartInWindows(string text, bool hidden = false) =>
-        Windows.Select(each => UiTree.FindPart(each, text, hidden)).FirstOrDefault(control => control is not null);
+    private Control? FindPartInWindows(string text, bool hidden = false) => Locator.FindPartInWindows(text, hidden);
 
     /// <summary>
     /// The window a control lies in: the editor's or a floating panel's.
     /// </summary>
-    private TopLevel WindowOf(Visual control) => TopLevel.GetTopLevel(control) ?? window;
+    private TopLevel WindowOf(Visual control) => Locator.WindowOf(control);
 
     /// <summary>
     /// The input of the window a control lies in.

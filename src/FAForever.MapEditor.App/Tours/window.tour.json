@@ -1,0 +1,87 @@
+{
+  "id": "window",
+  "title": "A tour of the window",
+  "summary": "The parts of the editor's window, in about two minutes.",
+  "order": 10,
+  "needs": ["Map"],
+  "start": [{ "run": "terrain.mode" }, { "run": "view.top" }],
+  "steps": [
+    {
+      "id": "welcome",
+      "title": "A tour of the window",
+      "text": "Twelve steps, about two minutes. Back and Next go through them; Escape ends the tour, and Help, Tours starts it again."
+    },
+    {
+      "id": "modes",
+      "target": { "part": "rail" },
+      "title": "The modes",
+      "text": "Each mode is one kind of work: the map's settings, the shape of the terrain, its paint and masks, water, lighting, markers, props, decals, units and sketches. F1 to F12 choose them; Procedural and Plugins sit at the bottom."
+    },
+    {
+      "id": "panel",
+      "target": { "part": "panel" },
+      "title": "The mode's panel",
+      "text": "What the mode has: its tools first, then what it works on, the height layers here. Choose an entry to edit it in the inspector."
+    },
+    {
+      "id": "options",
+      "target": { "part": "options" },
+      "title": "The tool's settings",
+      "text": "The active tool's settings in one row, the most used first. What does not fit the window lies behind More.",
+      "guide": { "more": "Brush settings are kept per tool. The keys [ and ] make a brush smaller and larger." }
+    },
+    {
+      "id": "views",
+      "target": { "part": "views" },
+      "title": "What the views show",
+      "text": "Top, 3D or both side by side, the map's symmetry, and a chip for each overlay: markers, path nodes, the 3D camera, and more behind More."
+    },
+    {
+      "id": "top-view",
+      "target": { "label": "Top view" },
+      "before": [{ "run": "view.top" }],
+      "title": "The top view",
+      "text": "The map from above. The left mouse uses the tool, the right or middle mouse moves the map, the wheel zooms."
+    },
+    {
+      "id": "try-3d",
+      "target": { "label": "3D", "type": "TabItem", "under": "View" },
+      "before": [{ "run": "view.top" }],
+      "title": "Try it: the 3D view",
+      "text": "Click 3D, or press Ctrl+2.",
+      "until": { "path": "tab", "value": "3d" },
+      "doItForMe": { "run": "view.3d" },
+      "done": "That is the 3D view. The wheel zooms towards the mouse, the middle mouse moves, space and the mouse turn the view. Both views share the camera.",
+      "guide": { "after": true }
+    },
+    {
+      "id": "dock",
+      "target": { "part": "dock" },
+      "title": "The dock",
+      "text": "The problems the checks found, the history of undo steps, the workspace's assets to drag onto the map, and the Console."
+    },
+    {
+      "id": "inspector",
+      "target": { "part": "inspector" },
+      "title": "The inspector",
+      "text": "Edits what you chose last: an entry of the panel, things on the map, or an asset on the shelf."
+    },
+    {
+      "id": "status",
+      "target": { "part": "status" },
+      "title": "The status bar",
+      "text": "What the last operation did, the mode and tool, what is out of date, and the switch that makes results again on their own."
+    },
+    {
+      "id": "palette",
+      "target": { "label": "Command palette" },
+      "title": "Every operation is a command",
+      "text": "Ctrl+K finds any of them by name, with its shortcut. The menus hold the same commands."
+    },
+    {
+      "id": "end",
+      "title": "That is the window",
+      "text": "Help, Tours starts this tour again and lists the others."
+    }
+  ]
+}

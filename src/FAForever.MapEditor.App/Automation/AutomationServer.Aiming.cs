@@ -63,7 +63,7 @@ public sealed partial class AutomationServer
                 }
                 continue;
             }
-            why = WhyUnreachable(top, control, point);
+            why = UiLocator.WhyUnreachable(top, control, point);
             if (why is null)
             {
                 return (top, point, revealed);
@@ -73,69 +73,12 @@ public sealed partial class AutomationServer
     }
 
     /// <summary>
-    /// Why the mouse at <paramref name="point"/> would not reach <paramref name="control"/>, or
-    /// null when it would: outside the window, or another control on top there (clipped by a
-    /// scroll viewer, under the views, behind a panel).
+    /// A control as a reason names it (<see cref="UiLocator.Describe"/>).
     /// </summary>
-    private static string? WhyUnreachable(TopLevel top, Control control, Point point)
-    {
-        if (!new Rect(top.Bounds.Size).Contains(point))
-        {
-            return "it lies outside the window";
-        }
-        if (!control.IsEffectivelyVisible)
-        {
-            return "it is hidden";
-        }
-        IInputElement? hit = top.InputHitTest(point);
-        if (hit is Visual visual && (visual == control || control.IsVisualAncestorOf(visual)))
-        {
-            return null;
-        }
-        if (hit is Visual under && under.IsVisualAncestorOf(control)
-            && (!control.IsHitTestVisible || ItemAround(control) is Control item && (item == under || item.IsVisualAncestorOf(under))))
-        {
-            // a control the mouse passes through (a text, a tree item's header text): reached when
-            // nothing else lies over it, the item or button around it taking the click
-            return null;
-        }
-        return hit is Visual other ? $"the mouse would reach {Describe(other)} there" : "the mouse would reach nothing there";
-    }
+    private static string Describe(Visual visual) => UiLocator.Describe(visual);
 
     /// <summary>
-    /// The item of a tree or list, or the button, a control lies in: what a click on it reaches.
+    /// The next frame of a window drawn (<see cref="UiLocator.NextFrameAsync"/>).
     /// </summary>
-    private static Control? ItemAround(Control control) =>
-        control.GetVisualAncestors().OfType<Control>().FirstOrDefault(each => each is TreeViewItem or ListBoxItem or Button);
-
-    /// <summary>
-    /// A control as a reason names it: its type and label or name, and the control it lies in.
-    /// </summary>
-    private static string Describe(Visual visual)
-    {
-        List<string> chain = [];
-        for (Visual? each = visual; each is not null && chain.Count < 3; each = each.GetVisualParent())
-        {
-            if (each is Control control && (Avalonia.Automation.AutomationProperties.GetName(control) is { Length: > 0 } || control.Name is { Length: > 0 } || chain.Count == 0))
-            {
-                string name = Avalonia.Automation.AutomationProperties.GetName(control) is { Length: > 0 } label ? $" '{label}'" : control.Name is { Length: > 0 } named ? $" {named}" : "";
-                chain.Add(control.GetType().Name + name);
-            }
-        }
-        return string.Join(" in ", chain);
-    }
-
-    /// <summary>
-    /// The next frame of a window drawn: the frame asked for and the one after it, so the scene
-    /// the mouse hits holds the layout of the moment of the call.
-    /// </summary>
-    private async Task NextFrameAsync(TopLevel top)
-    {
-        for (int i = 0; i < 2; i++)
-        {
-            TaskCompletionSource drawn = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            top.RequestAnimationFrame(_ => drawn.TrySetResult());
-            await Task.WhenAny(drawn.Task, Task.Delay(1000));
-        }
-    }
+    private static Task NextFrameAsync(TopLevel top) => UiLocator.NextFrameAsync(top);
 }

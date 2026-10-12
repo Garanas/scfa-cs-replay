@@ -12,6 +12,11 @@ public sealed partial class MainViewModel
     public ShortcutsViewModel Shortcuts { get; private set; } = null!;
 
     /// <summary>
+    /// The guided tours (Help, Tours; user story H-1).
+    /// </summary>
+    public TourViewModel Tour { get; private set; } = null!;
+
+    /// <summary>
     /// The workspace's settings page (File, Workspace settings).
     /// </summary>
     public WorkspaceSettingsViewModel WorkspaceSettings { get; private set; } = null!;

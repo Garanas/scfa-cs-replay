@@ -27,6 +27,7 @@
   <ItemGroup>
     <!-- the example plugins, written into a workspace's plugins folder once (Plugins/ExamplePlugins.cs) -->
     <EmbeddedResource Include="Plugins\Examples\**\*.lua;Plugins\Examples\**\*.json" LogicalName="Examples/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Tours\*.tour.json" LogicalName="Tours/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

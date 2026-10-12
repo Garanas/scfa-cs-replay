@@ -17,6 +17,7 @@ public sealed partial class MainViewModel
     public string? OpenPageName =>
         WorkspaceSettings?.IsOpen == true ? "workspaceSettings"
         : Shortcuts?.IsOpen == true ? "shortcuts"
+        : Tour?.IsOpen == true ? "tours"
         : NewMapPage?.IsOpen == true ? "newMap"
         : Report?.IsOpen == true ? "report"
         : VersionControl?.IsOpen == true ? "versionControl"
@@ -35,6 +36,9 @@ public sealed partial class MainViewModel
                 break;
             case "shortcuts":
                 Shortcuts.IsOpen = false;
+                break;
+            case "tours":
+                Tour.IsOpen = false;
                 break;
             case "newMap":
                 NewMapPage.IsOpen = false;

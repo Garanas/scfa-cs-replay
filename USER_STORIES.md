@@ -638,3 +638,36 @@ layout before building it, and pictures projected onto the map to trace or build
 - [ ] **N-4 Symbols and labels.** Stamp symbols on a sheet (spawn, mass, hydrocarbon, arrow, cross,
       question mark) and write labels in a hand-drawn style; select strokes, symbols and labels
       to move, recolour or delete them.
+
+## H: Help and learning
+
+Learning the editor from the editor: guided tours that point at the window's parts, and a guide made from
+the same tours. The tours are files (`*.tour.json`) in the workspace's `tours` folder, so a map maker's
+own sit beside the editor's.
+
+- [x] **H-1 Tours.** Guided tours over the window that dim it, ring a control or an area, name it and
+      explain it, step by step, and can ask you to try it (with Do it for me). Today: Help, Tours lists
+      the tours (title, summary, steps, a check once finished, Start; a file that cannot be read is
+      listed with its error); `help.tour {id, step?, card?}`, `help.tourNext`, `help.tourBack`,
+      `help.tourEnd`, `help.tourDo`; one card at a time beside the target (right, left, below or above,
+      always inside the window) with the step count, title, text, what it waits for or what happened,
+      End the tour, Back, Next, Do it for me; Escape ends it; the window's keys keep working, and the
+      mouse reaches only the target of a step that asks you to act. A step whose target is behind a
+      tool row's More shows it first; a panel that is hidden or floating comes back for its step, and
+      when the tour ends the layout, the view, the mode and the tool are as they were. The tour's own
+      commands run without a person and never leave the map (no open, import, export, upload, push,
+      report). The editor's tours are written into `tours/` when the workspace opens (a deleted one is
+      not written again, an untouched older copy is brought up to date) and read again when a file
+      there changes. On the first start, once a map is open, a card at the window's corner offers the
+      tour of the window (Start, Not now, Don't ask again; kept in `tours/.progress.json` with the
+      tours finished). The tour of the window (twelve steps) is the first. Missing: the tours of the
+      modes (Terrain, Masks, Paint, Markers, Units, Procedural with the export).
+- [ ] **H-2 A guide made from the tours.** `faf-map guide` plays the tours in a test editor and writes a
+      static guide (HTML and Markdown in `docs/guide`) with a picture per step, the target ringed and
+      numbered, made again when the window changes. Missing: all of it.
+- [ ] **H-3 Record a tour.** The editor writes a draft tour from what a person does (the commands run
+      and the labels of the controls clicked). Missing: all of it.
+- [ ] **H-4 Tours of one's own.** A map maker writes tours for their team or community. Today: the
+      editor reads every `*.tour.json` of the workspace's `tours` folder, with the same format as its
+      own, and lists a tour that cannot be read with why. Missing: tours that come with a plugin, a
+      page that checks a tour against the window.
