@@ -1761,7 +1761,7 @@ change, span `model.armies`), the place tool and the commands.
 
 ## The Sketch mode: strokes and sheets
 
-User story N-1 (the library's side: its guide, "The sketch"). The Sketch mode (rail, after Units, `F10`)
+User story N-1 (the library's side: its guide, "The sketch"). The Sketch mode (rail, between Map and Terrain, `F10`)
 holds the map maker's drafts: pencil strokes in sheets, drawn straight onto the map in the top view or the
 3D view, kept in the project and never exported. The sketch shows in every mode, so a draft guides the work
 in the Terrain or the Markers mode: the chip `Sketch` (the second of the overlay chips, Markers, Sketch, 3D camera, Path nodes, so

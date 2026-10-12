@@ -15,7 +15,7 @@
       "id": "modes",
       "target": { "part": "rail" },
       "title": "The modes",
-      "text": "Each mode is one kind of work: the map's settings, the shape of the terrain, its paint and masks, water, lighting, markers, props, decals, units and sketches. F1 to F12 choose them; Procedural and Plugins sit at the bottom."
+      "text": "Each mode is one kind of work: the map's settings, sketches to draft it, the shape of the terrain, its paint and masks, water, lighting, markers, props, decals and units. F1 to F12 choose them; Procedural and Plugins sit at the bottom."
     },
     {
       "id": "panel",
@@ -81,7 +81,7 @@
     {
       "id": "end",
       "title": "That is the window",
-      "text": "Next: the tours of the modes, one for each of Terrain, Masks, Paint, Markers, Units and Procedural. Help, Tours lists them and starts this one again."
+      "text": "Next: the tours of the modes, one for sketching a draft and one for each of Terrain, Masks, Paint, Markers, Units and Procedural. Help, Tours lists them and starts this one again."
     }
   ]
 }
