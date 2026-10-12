@@ -16,6 +16,7 @@
   <!-- the Masks and Procedural modes and the Plugins entry at the rail's bottom -->
   <StreamGeometry x:Key="Icon.Masks">M4 4 L20 4 L20 20 L4 20 Z M4 15 C8 11 11 18 15 13 S19 9 20 10</StreamGeometry>
   <StreamGeometry x:Key="Icon.Procedural">M4 20 L13 11 M16 3 L17 6.5 L20.5 7.5 L17 8.5 L16 12 L15 8.5 L11.5 7.5 L15 6.5 Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Sketch">M4 20 L5 15.5 L16 4.5 L19.5 8 L8.5 19 Z M14 6.5 L17.5 10</StreamGeometry>
   <StreamGeometry x:Key="Icon.Plugins">M9 3 L9 8 M15 3 L15 8 M6 8 L18 8 L18 12 A6 6 0 0 1 6 12 Z M12 18 L12 21</StreamGeometry>
   <!-- the shelf's order by mass or energy (F-8): longest first -->
   <StreamGeometry x:Key="Icon.Sort">M4 6 L20 6 M4 12 L15 12 M4 18 L10 18</StreamGeometry>

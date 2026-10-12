@@ -253,6 +253,22 @@ public static class EditorModes
             // the army or group chosen in the tree: its fields and buttons
             [new UnitGroupDetailsSection()]),
 
+        // the Sketch mode (N-1, N-2, N-4): drafts of the map maker's own, kept in the project and never exported
+        new ModeDefinition("sketch", "Sketch", "Icon.Sketch", "Draft the map: pencil strokes, symbols, labels and projected images; kept in the project, never exported", 1, "F10", "N-1",
+            [
+                new ToolDefinition("sketch.pencil", "Pencil", "N-1", "Draw strokes in six colours and three widths, mirrored by the map's symmetry"),
+                new ToolDefinition("sketch.eraser", "Eraser", "N-1", "Rub out strokes where it passes; with Alt, whole strokes"),
+                new ToolDefinition("sketch.symbol", "Symbol", "N-4", "Stamp a spawn, mass, hydrocarbon, arrow, cross or question mark"),
+                new ToolDefinition("sketch.label", "Label", "N-4", "Write a label in a hand-drawn style"),
+                new ToolDefinition("sketch.select", "Select", "N-4", "Select strokes, symbols and labels to move, recolour or delete them"),
+                new ToolDefinition("sketch.image", "Image", "N-2", "Move, scale and turn a projected image"),
+            ],
+            [
+                new PlannedSection("Sheets", "N-1", "The sketch's sheets, each shown or hidden, one drawn into"),
+                new PlannedSection("Projected images", "N-2", "Pictures laid over the map in the top view, each shown or hidden"),
+            ],
+            []),
+
         // the Procedural mode (wave 8C): its tools and sections are ProceduralMode's
         new ModeDefinition(ProceduralMode.Id, "Procedural", "Icon.Procedural", "Generated results, connected regions, export steps", BottomGroup, "F11", "F-7",
             ProceduralMode.Tools,
