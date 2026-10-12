@@ -18,7 +18,7 @@ internal static class SketchState
     /// </summary>
     private const int ListedStrokes = 200;
 
-    public static JsonObject Describe(MainViewModel model, HeightmapView top)
+    public static JsonObject Describe(MainViewModel model, HeightmapView top, TerrainViewGpu view3d)
     {
         PencilTool pencil = model.Tool<PencilTool>();
         EraserTool eraser = model.Tool<EraserTool>();
@@ -76,6 +76,18 @@ internal static class SketchState
                 ["strokes"] = top.SketchDrawn.Strokes,
                 ["culled"] = top.SketchDrawn.Culled,
                 ["pending"] = top.SketchDrawn.Pending,
+            },
+            // what the 3D view drew last (it draws only while it is shown): sheets, lines, the pieces they were cut
+            // into, lines being drawn, the pieces made that frame (0 while nothing changed), and whether a stencil
+            // keeps overlaps from darkening
+            ["drawn3d"] = new JsonObject
+            {
+                ["sheets"] = view3d.SketchDrawn.Sheets,
+                ["lines"] = view3d.SketchDrawn.Lines,
+                ["segments"] = view3d.SketchDrawn.Segments,
+                ["pending"] = view3d.SketchDrawn.Pending,
+                ["built"] = view3d.SketchDrawn.Built,
+                ["stencil"] = view3d.SketchHasStencil,
             },
         };
     }
