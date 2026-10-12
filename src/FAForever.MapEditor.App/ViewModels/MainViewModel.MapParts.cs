@@ -42,7 +42,6 @@ public sealed partial class MainViewModel
 
         DocumentChanged += (_, _) => RefreshMapParts();
         MapChanged += (_, _) => RefreshMapParts();
-        Events.MapOpened += _ => StartMapPartsOver();
 
         parts.Chose += (_, _) =>
         {
@@ -140,17 +139,6 @@ public sealed partial class MainViewModel
         {
             _showArmyWhenListed = army;
         }
-    }
-
-    // a map was opened: the list shows its information and no army is the chosen one, not the entry
-    // or the army of the same name that the map before it had chosen
-    private void StartMapPartsOver()
-    {
-        Follow(() =>
-        {
-            Armies.ChosenArmy = null;
-            MapParts.Parts.Choose(MapPartsViewModel.InformationPart);
-        });
     }
 
     // a tool an entry of the list chose: the status line says so, as choosing it on the panel does

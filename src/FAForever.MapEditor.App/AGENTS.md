@@ -2341,9 +2341,10 @@ library's (`MapResize`, `MapScript`; its guide).
   says what was removed (decision: things outside are removed, spawns kept at the edge, areas cut)
   and that the normal map and preview are out of date. A document of another size (a resize, its
   undo) raises `MapChanged` and resets the camera, so both views start over; the tool takes the size.
-- **A map opened starts the Map mode over**: its list shows the Information entry, no army is the
-  chosen one (an army of the same name in the map before is not), and the Map size tool has its
-  starting options (size, anchor, offset, fill, fit). The entry shown while an army is shown is the
+- **A map opened starts the Map mode over**: its list shows the Information entry (the shell's
+  `ChooseFirst`), no army is the chosen one (an army of the same name in the map before is not:
+  `ArmiesViewModel.ForgetMap`), and the Map size tool has its starting options (size, anchor, offset,
+  fill, fit: `MapSizeTool.StartOver`), all on `AnotherMap`. The entry shown while an army is shown is the
   chosen army's: when the army shown is removed (or its add undone) the list moves to a neighbour
   and that army becomes `ChosenArmy`, so the inspector's fields are its own. `map.addArmy` in the
   Map mode shows the new army's entry, as the panel's Add army does (`ShowAddedArmy`). `map.resize`

@@ -26,7 +26,7 @@ public sealed partial class MainViewModel
         DocumentChanged += (_, _) => FollowMapSize(raise: true);
         MapChanged += (_, _) => FollowMapSize(raise: false);
         Events.MapOpened += KeepMapPreview;
-        Events.MapOpened += _ => Tool<MapSizeTool>().StartOver();
+        AnotherMap += (_, _) => Tool<MapSizeTool>().StartOver();
     }
 
     private void FollowMapSize(bool raise)
