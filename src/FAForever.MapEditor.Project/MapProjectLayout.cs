@@ -266,6 +266,24 @@ namespace FAForever.MapEditor.Project
         public const string WalkabilityMarks = "walkability-marks.png";
 
         /// <summary>
+        /// The pictures projected onto the map (user story N-2): their places, sizes, turns and looks,
+        /// in the order they are drawn. Absent while the map has none. Part of the sketch, the
+        /// project's own: never exported.
+        /// </summary>
+        public const string ImagesFile = "sketch/images.json";
+
+        /// <summary>
+        /// The folder of the projected images' pictures, a PNG each named after its image
+        /// (<see cref="Image"/>). Absent while the map has none.
+        /// </summary>
+        public const string ImagesFolder = "sketch/images";
+
+        /// <summary>
+        /// The file of the picture of the projected image named <paramref name="name"/>.
+        /// </summary>
+        public static string Image(string name) => $"{ImagesFolder}/{name}.png";
+
+        /// <summary>
         /// Which results kept outside the map (walkability) were current when the project was saved
         /// (<see cref="Generation.KeptResults"/>), generated again when it opens. Absent without any.
         /// </summary>
