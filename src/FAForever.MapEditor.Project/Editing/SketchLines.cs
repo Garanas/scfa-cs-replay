@@ -29,6 +29,11 @@ namespace FAForever.MapEditor.Project.Editing
         private const int CircleSegments = 24;
 
         /// <summary>
+        /// From this size in ogrids a symbol's lines are of the medium width, below it thin.
+        /// </summary>
+        public const float ThickSymbol = 20;
+
+        /// <summary>
         /// The lines of one sheet, in drawing order.
         /// </summary>
         public static ImmutableArray<SketchLine> Of(SketchSheet sheet) => Made.GetValue(sheet, held => new Held(Make(held))).Lines;
@@ -129,8 +134,8 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
-        /// The lines a symbol is drawn with, in ogrids, all of <see cref="SketchWidth.Medium"/>: a spawn is a ring
-        /// with a dot, a mass three rings inside one another, a hydrocarbon a star, an arrow a shaft with a head
+        /// The lines a symbol is drawn with, in ogrids, all of <see cref="SketchWidth.Thin"/> (<see cref="SketchWidth.Medium"/> from <see cref="ThickSymbol"/> ogrids up): a spawn is a ring
+        /// with a dot, a mass a diamond with a dot (never a ring, so that it cannot be taken for a spawn when small), a hydrocarbon a star, an arrow a shaft with a head
         /// (turned by <see cref="SketchSymbol.Turn"/>), a cross two crossing lines, a question mark a hook, a
         /// stem and a dot.
         /// </summary>
@@ -144,9 +149,8 @@ namespace FAForever.MapEditor.Project.Editing
                     shapes.Add([Vector2.Zero]);
                     break;
                 case SketchSymbolKind.Mass:
-                    shapes.Add(Circle(0.5f));
-                    shapes.Add(Circle(0.33f));
-                    shapes.Add(Circle(0.16f));
+                    shapes.Add([new Vector2(0, -0.5f), new Vector2(0.5f, 0), new Vector2(0, 0.5f), new Vector2(-0.5f, 0), new Vector2(0, -0.5f)]);
+                    shapes.Add([Vector2.Zero]);
                     break;
                 case SketchSymbolKind.Hydrocarbon:
                     Vector2[] star = new Vector2[11];
@@ -185,7 +189,9 @@ namespace FAForever.MapEditor.Project.Editing
             float turn = symbol.Kind == SketchSymbolKind.Arrow ? symbol.Turn * MathF.PI / 180 : 0;
             float cos = MathF.Cos(turn);
             float sin = MathF.Sin(turn);
-            return [.. shapes.Select(shape => new SketchStroke(symbol.Colour, SketchWidth.Medium,
+            // a small symbol is drawn with a thin line, so that its rings and corners do not fill in when the map is shown small
+            SketchWidth width = symbol.Size >= ThickSymbol ? SketchWidth.Medium : SketchWidth.Thin;
+            return [.. shapes.Select(shape => new SketchStroke(symbol.Colour, width,
                 [.. shape.Select(point => symbol.Place + symbol.Size * new Vector2(point.X * cos - point.Y * sin, point.X * sin + point.Y * cos))]))];
         }
 

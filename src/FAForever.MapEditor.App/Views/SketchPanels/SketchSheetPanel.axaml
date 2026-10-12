@@ -25,7 +25,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:SketchLegendItem">
               <DockPanel>
-                <Border DockPanel.Dock="Left" Classes="swatch" Margin="{StaticResource SwatchGap}" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                <Border DockPanel.Dock="Left" Classes="swatch" Margin="{StaticResource SwatchGap}" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" BorderBrush="{Binding RimArgb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
                 <TextBox Text="{Binding Text, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="{Binding Label}"
                          AutomationProperties.HelpText="What this colour means on the sheet; shown as a key in a corner of the top view while the sheet is shown" />
               </DockPanel>

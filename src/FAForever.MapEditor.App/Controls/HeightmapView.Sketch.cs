@@ -78,6 +78,14 @@ public sealed partial class HeightmapView
                 {
                     using (context.PushTransform(SketchMatrix()))
                     {
+                        // the halos of the black and white lines first, under every line of the sheet
+                        foreach (SketchRun run in runs)
+                        {
+                            if (SketchLook.HaloArgb(run.Colour) is not null && run.Bounds.Intersects(visible))
+                            {
+                                context.DrawGeometry(null, SketchPen(run.Colour, run.Width, dashed: false, halo: true), run.Geometry);
+                            }
+                        }
                         foreach (SketchRun run in runs)
                         {
                             if (!run.Bounds.Intersects(visible))
@@ -103,7 +111,12 @@ public sealed partial class HeightmapView
                 {
                     SketchStroke stroke = model.Sketch.Pending[i];
                     // the first is the line the mouse draws, the others its images by the symmetry
-                    context.DrawGeometry(null, SketchPen(stroke.Colour, stroke.Width, dashed: i > 0), GeometryOf(stroke));
+                    StreamGeometry geometry = GeometryOf(stroke);
+                    if (SketchLook.HaloArgb(stroke.Colour) is not null)
+                    {
+                        context.DrawGeometry(null, SketchPen(stroke.Colour, stroke.Width, dashed: i > 0, halo: true), geometry);
+                    }
+                    context.DrawGeometry(null, SketchPen(stroke.Colour, stroke.Width, dashed: i > 0), geometry);
                 }
             }
         }
@@ -115,7 +128,12 @@ public sealed partial class HeightmapView
                 for (int i = 0; i < pendingSymbols; i++)
                 {
                     // the first is the symbol the mouse places, the others its images by the symmetry
-                    foreach (SketchStroke line in SketchLines.Of(model.Sketch.PendingSymbols[i]))
+                    SketchStroke[] lines = [.. SketchLines.Of(model.Sketch.PendingSymbols[i])];
+                    foreach (SketchStroke line in lines.Where(line => SketchLook.HaloArgb(line.Colour) is not null))
+                    {
+                        context.DrawGeometry(null, SketchPen(line.Colour, line.Width, dashed: i > 0, halo: true), GeometryOf(line));
+                    }
+                    foreach (SketchStroke line in lines)
                     {
                         context.DrawGeometry(null, SketchPen(line.Colour, line.Width, dashed: i > 0), GeometryOf(line));
                     }
@@ -129,15 +147,7 @@ public sealed partial class HeightmapView
         }
     }
 
-    // the labels' text, made once for a text, colour and size on screen
-    private readonly Dictionary<(string Text, SketchColour Colour, int Pixels), (FormattedText Ink, FormattedText Halo)> _labelTexts = [];
-
-    private Typeface? _labelFont;
-
-    /// <summary>
-    /// A label smaller than this on screen, in pixels, is not drawn: it could not be read.
-    /// </summary>
-    private const double SmallestLabel = 4;
+    private SketchLabelPainter? _labelPainter;
 
     /// <summary>
     /// Draws the labels of a sheet in the hand-written font (the token <c>HandFontFamily</c>), centred on their
@@ -151,47 +161,32 @@ public sealed partial class HeightmapView
         {
             return 0;
         }
-        if (_labelTexts.Count > 512)
-        {
-            _labelTexts.Clear();
-        }
-        _labelFont ??= new Typeface(Token<FontFamily>("HandFontFamily"), FontStyle.Normal, FontWeight.Bold);
+        _labelPainter ??= new SketchLabelPainter(() => new Typeface(Token<FontFamily>("HandFontFamily"), FontStyle.Normal, FontWeight.Bold));
         int drawn = 0;
         foreach (SketchLabel label in sheet.Labels)
         {
             double pixels = label.Size * _zoom;
             (System.Numerics.Vector2 low, System.Numerics.Vector2 high) = SketchLabels.Bounds(label);
-            if (pixels < SmallestLabel || !new Rect(new Point(low.X, low.Y), new Point(high.X, high.Y)).Intersects(visible))
+            if (pixels < SketchLabelPainter.Smallest || !new Rect(new Point(low.X, low.Y), new Point(high.X, high.Y)).Intersects(visible))
             {
                 continue;
             }
-            int size = (int)Math.Round(pixels);
-            if (!_labelTexts.TryGetValue((label.Text, label.Colour, size), out (FormattedText Ink, FormattedText Halo) text))
-            {
-                IBrush halo = SketchBrush(label.Colour == SketchColour.Black ? SketchColour.White : SketchColour.Black);
-                text = (MakeLabelText(label.Text, size, SketchBrush(label.Colour)), MakeLabelText(label.Text, size, halo));
-                _labelTexts[(label.Text, label.Colour, size)] = text;
-            }
-            Point centre = MapToControl(label.Place.X, label.Place.Y);
-            Point at = new Point(centre.X - text.Ink.Width / 2, centre.Y - text.Ink.Height / 2);
-            foreach ((double dx, double dz) in (ReadOnlySpan<(double, double)>)[(-1, 0), (1, 0), (0, -1), (0, 1)])
-            {
-                context.DrawText(text.Halo, new Point(at.X + dx, at.Y + dz));
-            }
-            context.DrawText(text.Ink, at);
+            _labelPainter.Draw(context, label, MapToControl(label.Place.X, label.Place.Y), (int)Math.Round(pixels));
             drawn++;
         }
         return drawn;
     }
 
-    private FormattedText MakeLabelText(string text, double pixels, IBrush brush) =>
-        new FormattedText(text, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, _labelFont!.Value, pixels, brush);
-
     // the map's place of an ogrid to the view's, as the view's own transform
     private Matrix SketchMatrix() => Matrix.CreateScale(_zoom, _zoom) * Matrix.CreateTranslation(_offset.X, _offset.Y);
 
-    private Pen SketchPen(SketchColour colour, SketchWidth width, bool dashed) =>
-        new Pen(SketchBrush(colour), SketchLook.Pixels(width) / _zoom, dashed ? new DashStyle([2, 2], 0) : null, PenLineCap.Round, PenLineJoin.Round);
+    // a halo is the pen of the opposite tone (black under white, white under black) a little wider than the line
+    private Pen SketchPen(SketchColour colour, SketchWidth width, bool dashed, bool halo = false) =>
+        new Pen(halo ? SketchBrush(SketchHaloColour(colour)) : SketchBrush(colour),
+            (SketchLook.Pixels(width) + (halo ? 2 * SketchLook.HaloPixels : 0)) / _zoom,
+            dashed ? new DashStyle([2, 2], 0) : null, PenLineCap.Round, PenLineJoin.Round);
+
+    private static SketchColour SketchHaloColour(SketchColour colour) => colour == SketchColour.Black ? SketchColour.White : SketchColour.Black;
 
     private static SketchRun[] BuildSketchRuns(SketchSheet sheet)
     {
@@ -264,9 +259,18 @@ public sealed partial class HeightmapView
     /// The legends of the shown sheets, as a small key in the view's lower left corner: a dot in the
     /// colour and what it means, under the sheet's name when more than one sheet has a legend.
     /// </summary>
+    // the key takes at most this share of the map's width on screen, and is never scaled below this
+    private const double KeyShareOfMap = 0.4, KeyLeastScale = 0.5;
+
+    /// <summary>
+    /// Where the last frame drew the legend's key, in the view's pixels (empty for none), and how opaque (for tests and automation).
+    /// </summary>
+    public (Rect Box, double Opacity) SketchKeyDrawn { get; private set; }
+
     private void DrawSketchKey(DrawingContext context, MapDocument document, MainViewModel model)
     {
-        IReadOnlyList<(string Sheet, IReadOnlyList<(SketchColour Colour, string Text)> Entries)> keys = model.Sketch.Keys(document);
+        SketchKeyDrawn = default;
+        IReadOnlyList<(string Sheet, IReadOnlyList<(SketchColour Colour, string Text)> Entries)> keys = model.Sketch.Keys(document, model.InSketchMode);
         if (keys.Count == 0)
         {
             return;
@@ -295,7 +299,15 @@ public sealed partial class HeightmapView
         double rowHeight = rows.Max(row => row.Text.Height) + gap / 2;
         width = rows.Max(row => row.Text.Width + (row.Colour is null ? 0 : dot * 2 + gap)) + gap * 2;
         double height = rows.Count * rowHeight + gap * 2;
-        Rect box = new Rect(gap * 2, Bounds.Height - height - gap * 2, width, height);
+        // the key follows the sheets' opacity outside the Sketch mode, and keeps to a corner: it shrinks with the map
+        // when that is zoomed out (never below half) and takes at most a third of the view
+        double opacity = model.InSketchMode ? 1 : document.Sketch.Sheets.Where(sheet => keys.Any(key => key.Sheet == sheet.Name)).Max(sheet => sheet.Opacity);
+        double scale = Math.Clamp(Math.Min(document.Terrain.Heightmap.Samples.Width * _zoom * KeyShareOfMap / (width + gap * 4), Math.Min(Bounds.Width, Bounds.Height) / 3 / Math.Max(width, height)), KeyLeastScale, 1);
+        Rect box = new Rect(0, 0, width, height);
+        Point corner = new Point(gap * 2, Bounds.Height - height * scale - gap * 2);
+        SketchKeyDrawn = (new Rect(corner.X, corner.Y, width * scale, height * scale), opacity);
+        using IDisposable placed = context.PushTransform(Matrix.CreateScale(scale, scale) * Matrix.CreateTranslation(corner.X, corner.Y));
+        using IDisposable faded = context.PushOpacity(opacity);
         context.DrawRectangle(Token<IBrush>("SurfaceBrush"), new Pen(Token<IBrush>("InputStrokeBrush"), 1), box, 4, 4);
         double y = box.Y + gap;
         foreach ((FormattedText row, SketchColour? colour) in rows)
@@ -303,7 +315,7 @@ public sealed partial class HeightmapView
             double x = box.X + gap;
             if (colour is SketchColour swatch)
             {
-                context.DrawEllipse(SketchBrush(swatch), new Pen(Token<IBrush>("InputStrokeBrush"), 1), new Point(x + dot, y + rowHeight / 2 - gap / 4), dot, dot);
+                context.DrawEllipse(SketchBrush(swatch), new Pen(new SolidColorBrush(Color.FromUInt32(SketchLook.RimArgb(swatch))), 1), new Point(x + dot, y + rowHeight / 2 - gap / 4), dot, dot);
                 x += dot * 2 + gap;
             }
             context.DrawText(row, new Point(x, y));
