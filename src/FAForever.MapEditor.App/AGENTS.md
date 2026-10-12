@@ -1761,8 +1761,8 @@ change, span `model.armies`), the place tool and the commands.
 ## The Sketch mode: strokes and sheets
 
 User story N-1 (the library's side: its guide, "The sketch"). The Sketch mode (rail, after Units, `F10`)
-holds the map maker's drafts: pencil strokes in sheets, drawn straight onto the map in the top view,
-kept in the project and never exported. The sketch shows in every mode, so a draft guides the work
+holds the map maker's drafts: pencil strokes in sheets, drawn straight onto the map in the top view or the
+3D view, kept in the project and never exported. The sketch shows in every mode, so a draft guides the work
 in the Terrain or the Markers mode: the chip `Sketch` (after the Markers, Path nodes and 3D camera chips,
 which keep their room at 1280 pixels, so it lies behind More there until the window is wider), the View menu's `Show the sketch` and `Ctrl+Shift+K` turn it on or
 off (`view.overlay.sketch`, `MainViewModel.ShowSketch`, on by default; an overlay may carry a shortcut:
@@ -1822,15 +1822,43 @@ opacity ("Other modes", 45% for a new sheet).
   (consecutive strokes of one colour and width are one geometry, which keeps the order they were drawn in)
   and kept while the document holds that very sheet. While a shown sheet has a legend text, a small key lies in the view's lower
   left corner (`Sketch.Keys`: the sheets' names when more than one has a legend). `SketchDrawn` says how
-  many sheets, strokes and pending lines the last frame drew. The 3D view draws nothing of the sketch yet
-  (N-3).
+  many sheets, strokes and pending lines the last frame drew. Both views draw from the one list
+  `SketchLines.Of(sketch, full)` (the Project guide, "The sketch as lines").
+- **The 3D view** (story N-3; `Controls/TerrainViewGpu.Sketch.cs` hands the frame over,
+  `Rendering/Gpu/SketchRenderer.cs` draws it, after the overlays and before the brush, spans `3d.sketch-frame`,
+  `3d.sketch-build`, `3d.draw-sketch`): the strokes lie on the terrain as lines of the same width on screen
+  at every distance, round at ends and joins, in the six colours, hidden with the Sketch overlay, a sheet at
+  its opacity outside the Sketch mode. The projected images are not drawn here (a picture would stretch
+  over the hills). A line is cut into pieces of at most an ogrid in the map's places once and kept on the card
+  per sheet (a buffer of pieces: two places, the colour, the width); a stroke added to a sheet adds only its
+  pieces (`SketchLines.Extends`), anything else makes the sheet's again, and a sheet that no longer exists lets
+  its buffer go. The vertex shader reads each end's height from the heightmap's texture (so the lines follow
+  the ground while it is edited), lifts it 0.2 ogrid plus 0.25% of the distance to the eye (the terrain's
+  own triangles, which are coarser on large maps, would hide a line lying exactly on it), cuts a piece at
+  the camera's near plane and spreads it into a quad of pixels, a capsule of the width that the fragment
+  shader smooths (one pixel) and rounds; the depth is interpolated along the piece, tested against the scene
+  (hills, props and units hide the line, as they hide the grid) and not written. A sheet at full opacity is
+  drawn into the scene in the order it was drawn; one at less is drawn at full opacity into a layer (a texture
+  of the view's size, the frame buffer sharing the scene's depth renderbuffer, which the view has as a
+  renderbuffer; made on the first use) and laid over the scene at its opacity, so overlaps in a sheet do not
+  darken, as in the top view; when the card refuses that frame buffer (`SketchLayersWork` false) the sheet
+  is blended line by line and overlaps darken. The line being drawn and its images by the symmetry
+  (`SketchViewModel.Pending`) are drawn at full opacity, as a sheet of its own. Measured (the sandbox
+  map, 2 sheets of 2000 strokes each, 324,000 pieces, one sheet as a layer, an RTX-class card through ANGLE):
+  `3d.draw-sketch` 0.9 ms a frame on the processor, `3d.gpu-frame` 1.3 ms for the whole frame, `3d.sketch-frame`
+  0.01 ms, and `3d.sketch-build` nothing while the sketch stays as it is (the first frame after the file was
+  read, building all of it: 7.8 ms in all).
 - Automation: `state.sketch` (`show`, `inMode`, `chosen`, `strokes`, the `sheets` with their counts and
   legends, the chosen sheet's `list` of strokes (colour, width, places, first and last place), `pencil`,
   `eraser`, `pending`, the other modes' `note`, the `key`'s entries, `drawn`: sheets, strokes, `culled`
-  strokes outside the view, pending); `state.show.sketch`. The mouse draws as with any tool
+  strokes outside the view, pending), `drawn3d`: what the 3D view drew last while it is shown (`sheets`, `lines`,
+  `segments`: the pieces the lines were cut into, `pending`, `built`: pieces made that frame, 0 while the
+  sketch stays as it is, `layers`: sheets laid over the scene as a layer, `layersWork`); `state.show.sketch`.
+  A command that cannot run because a stroke is going on (the mouse is down in the pencil, the eraser or a
+  brush: `Needs.NoStroke`) answers `ran: false` with `why` and logs "did not run" (`CommandRegistry.Refused`).
+  The mouse draws as with any tool in both views (`mouse view=3d x=.. y=.. action=down|move|up` for the 3D view)
   (`mouse view=top x=.. y=.. action=down|move|up`, `modifiers=Shift` or `Alt`; digits are `D1` to `D6`).
-- Not built yet: the symbol, label and select tools (N-4), the image tool and the projected images (N-2),
-  the sketch in 3D (N-3).
+- Not built yet: the symbol, label and select tools (N-4).
 - **F10** is the Sketch mode's key like F1 to F9 and F11, F12 are the other modes'. Windows takes F10 for
   the menu bar of a window; the window's shortcut handler runs first and marks the key handled (and
   Avalonia then answers the message itself), which `key key=F10` shows choosing the mode. A real press
