@@ -22,6 +22,7 @@ namespace FAForever.MapEditor.Project
     /// masks/NAME.png               8-bit grey, the map's size or half: masks for tools (K-1), not exported
     /// masks/NAME.rules.json        the rules a mask is generated from (K-2), when it has rules
     /// prop-rules.json              the rules that place props from the layers (P-4), when the map has rules
+    /// sketch/sketch.json           the map maker's sketch: sheets of pencil strokes with their legends (N-1), when the map has any; never exported
     /// stacks/heightmap.json        the heightmap's stack of layers (T-5), lowest first; absent without layers
     /// stacks/heightmap/NAME.png    16-bit grey, (width + 1) by (height + 1): a height layer's values
     /// stacks/heightmap/NAME.coverage.png   8-bit grey, the same size: how much of the layer there is, when not all
@@ -264,6 +265,17 @@ namespace FAForever.MapEditor.Project
         /// blocked, white open (<see cref="Editing.WalkabilityMarks"/>). Absent without marks.
         /// </summary>
         public const string WalkabilityMarks = "walkability-marks.png";
+
+        /// <summary>
+        /// The folder of the map maker's sketch and projected images (user stories N-1, N-2): the project's
+        /// own, optional, never exported.
+        /// </summary>
+        public const string SketchFolder = "sketch";
+
+        /// <summary>
+        /// The sketch's sheets of pencil strokes and their legends (user story N-1); absent while the map has no sheet.
+        /// </summary>
+        public const string Sketch = "sketch/sketch.json";
 
         /// <summary>
         /// Which results kept outside the map (walkability) were current when the project was saved

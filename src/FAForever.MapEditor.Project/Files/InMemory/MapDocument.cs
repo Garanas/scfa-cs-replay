@@ -202,6 +202,12 @@ namespace FAForever.MapEditor.Project.Files.InMemory
         public TiledBuffer<byte>? WalkabilityMarks { get; init; }
 
         /// <summary>
+        /// The map maker's sketch (user story N-1): sheets of pencil strokes that draft the map. The
+        /// project's own, kept as <c>sketch/sketch.json</c>; the export never reads it.
+        /// </summary>
+        public Sketch Sketch { get; init; } = Sketch.Empty;
+
+        /// <summary>
         /// Whether the map may be uploaded to the vault. An upload (user story M-8) refuses a map
         /// for which this is false; exporting to the game's maps folder works for every map.
         /// </summary>
