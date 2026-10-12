@@ -139,7 +139,12 @@ public sealed partial class SkyCubeViewModel : ObservableObject
         }
         HasFile = document.Files.ContainsKey(SkyCubeMaps.FilePath);
         SkyCubeResult? result = _generation.Results.ResultOf(SkyCubeGenerator.GeneratorId)?.Value as SkyCubeResult;
-        if (result is not null && (Preview is not TexturePicture shown || shown.Texture != result.Preview))
+        if (result is null)
+        {
+            // another map was opened (its results are forgotten): nothing of the map before it
+            Preview = null;
+        }
+        else if (Preview is not TexturePicture shown || shown.Texture != result.Preview)
         {
             Preview = new TexturePicture(result.Preview, TexturePicture.Colour);
         }
