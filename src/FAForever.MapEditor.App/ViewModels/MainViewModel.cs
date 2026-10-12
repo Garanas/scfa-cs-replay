@@ -720,6 +720,7 @@ public sealed partial class MainViewModel : ObservableObject
     private void Attach(EditedMap map, string status)
     {
         CancelStroke();
+        bool replaced = Map is not null;
         if (Map is not null)
         {
             Map.Session.StateChanged -= OnSessionChanged;
@@ -740,7 +741,19 @@ public sealed partial class MainViewModel : ObservableObject
             _watcher = null;
         }
         ResetCamera();
+        if (replaced)
+        {
+            SelectMode("map");
+        }
         MapChanged?.Invoke(this, EventArgs.Empty);
+        if (replaced)
+        {
+            // each panel's list shows its first entry, as in a window that opened this map first
+            foreach (PanelParts list in PanelPartLists.Values)
+            {
+                list.ChooseFirst();
+            }
+        }
         Refresh(map.Document.IsPublishable ? status : $"{status}. This is the sandbox: try anything here; it can be exported to play, not uploaded to the vault");
         Events.OnMapOpened(map);
         GenerateKeptResults(map);
