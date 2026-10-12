@@ -616,3 +616,25 @@ reads again when it changes; and nothing that generates runs by itself.
       1280 by 800 the top view keeps 464 pixels of height. Missing: dragging a panel by its header.
 - [x] **V-5 Ruler.** Measure distances and heights: the ruler tool (Terrain mode), the distance in
       ogrids and km, the rise and slope, drawn in the top view and in the status line.
+
+## N: Notes and sketches
+
+Drafts of the map maker's own, kept in the project and never exported: pencil strokes to work out a
+layout before building it, and pictures projected onto the map to trace or build towards.
+
+- [ ] **N-1 Sketch.** Draw on the map with a pencil to draft it: the Sketch mode (on the rail, below
+      the modes that edit the map), six colours (red, yellow, green, blue, white, black; keys 1 to
+      6) and three widths, strokes mirrored by the map's symmetry, a straight line with Shift;
+      an eraser that rubs out where it passes (Alt: whole strokes); several named sheets (layers),
+      each shown or hidden, one drawn into, each with a legend that says what its colours mean.
+      The sketch shows in every mode, dimmed outside the Sketch mode, and a key shows or hides it.
+- [ ] **N-2 Projected images.** Lay pictures of one's own over the map in the top view (a drawing,
+      a screenshot of another map): several per map, each moved, scaled and turned with handles or
+      exact numbers, fitted to the map or its playable area, with an opacity, greyscale, locked,
+      below or above the sketch, shown or hidden each and all at once with a key. The pictures
+      are copied into the project. The 3D view does not show them (a picture stretches over hills).
+- [ ] **N-3 Sketch in 3D.** The 3D view draws the sketch's strokes over the terrain, the same width
+      on screen at every distance.
+- [ ] **N-4 Symbols and labels.** Stamp symbols on a sheet (spawn, mass, hydrocarbon, arrow, cross,
+      question mark) and write labels in a hand-drawn style; select strokes, symbols and labels
+      to move, recolour or delete them.
