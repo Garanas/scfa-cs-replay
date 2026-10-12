@@ -2920,8 +2920,39 @@ step points at and explains it on a card. Code: `Tours/` (the format, the catalo
   Do it for me making `until` true; `TourWindowTest` the overlay in the window (the hole, Escape, a hidden or
   floating panel back and away again). A change to a control a tour points at (its label, where it lies)
   fails the build at the step to rewrite; the checklist's last item covers the text.
-- Not built yet: the tours of the modes (Terrain, Masks, Paint, Markers, Units, Procedural with the export),
-  the generated guide (`faf-map guide`, H-2) and recording a tour (H-3).
+- **The guide** (`faf-map guide`, H-2; code `src/FAForever.MapEditor.Cli/Guide/`, tests `GuideTest`): the same
+  tour files make a static guide. `guide build --out docs/guide --port <n> --settings <scratch settings>
+  [--tours a,b] [--map <folder>] [--size 1280x800] [--overview window]` starts a test editor itself (the
+  `editor start` machinery; port 5371 and a workspace named like a person's own are refused), sets the
+  window size, answers the offer (`help.tourOffer answer=never`), turns `generate.automatic` off, reads the
+  tours from the workspace's `tours/` and plays each step that has no `guide.skip`: `tour id step card=false`
+  (the editor draws only the dimming and the ring), `screenshot settle=true`, `state` (`tour.target.bounds`),
+  a crop round the target with `guide.margin` (40 px by default; a crop of more than 55 % of the window is the
+  whole window), saved as WebP (PNG when
+  Magick.NET cannot write it). A step without a target is a card only: no picture. A step with `doItForMe`
+  (and `guide.after` not false) runs `help.tourDo`, waits for its `until` and pictures what follows, the
+  crop widened to the 3D view when that shows. **The 3D view**: a window screenshot leaves it empty, so
+  where it shows `screenshot gpu=true` is put in at the view's bounds, dimmed as the scrim dims the rest
+  (alpha 0xB3 in the dark theme) except in the hole round the target, where the ring is drawn again. An
+  overview (the tours of `--overview`, the window's) is the window after the tour ended, an outline round
+  each found target and a badge with the step's number, the numbers only. The window's size, the dark
+  theme and a scratch workspace make the pictures the same from run to run. The 3D frame is a card's, so
+  pictures differ with the graphics driver; only the owner's computer, with the game's textures, makes the
+  true ones.
+  Outputs: `guide.json` (per tour and step: number, id, title, text, `guide.more`, `done`, target (the
+  editor's name for it, found, bounds `[x, y, w, h]`, why), the pictures; the editor's version, its build
+  time, the date, the window), `images/<tour>/NN-<step>.webp` (`NN-<step>-after`, `00-overview`),
+  `index.md`/`index.html` and `<tour>.md`/`.html` (`GuidePages`: one small stylesheet, dark, no scripts; alt
+  text on every picture from the step's title, with ", after the step" on an after picture).
+  `guide render --out <folder>` writes the pages again from `guide.json` (text edits need no new pictures),
+  `guide check --out <folder> --port <n> --settings <file> [--tours a,b]` plays the targets without
+  pictures and prints per step what changed (`GuideCheck`): a target not found fails (exit 1), a target
+  whose bounds changed by more than 8 pixels, a step or tour added or removed is a note. Run the check
+  after a change to a control a tour points at; the pictures are made again with `build` and the diff of
+  `guide.json` shows what moved. The guide never runs a refused command (the tour runner refuses them),
+  never uploads and works in a scratch workspace only (`faf-map workspace scratch`).
+- Not built yet: the tours of the modes (Terrain, Masks, Paint, Markers, Units, Procedural with the export)
+  and recording a tour (H-3).
 
 ## Small rules of editing, looks and speed
 

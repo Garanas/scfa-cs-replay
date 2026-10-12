@@ -662,9 +662,21 @@ own sit beside the editor's.
       tour of the window (Start, Not now, Don't ask again; kept in `tours/.progress.json` with the
       tours finished). The tour of the window (twelve steps) is the first. Missing: the tours of the
       modes (Terrain, Masks, Paint, Markers, Units, Procedural with the export).
-- [ ] **H-2 A guide made from the tours.** `faf-map guide` plays the tours in a test editor and writes a
+- [x] **H-2 A guide made from the tours.** `faf-map guide` plays the tours in a test editor and writes a
       static guide (HTML and Markdown in `docs/guide`) with a picture per step, the target ringed and
-      numbered, made again when the window changes. Missing: all of it.
+      numbered, made again when the window changes. Today: `faf-map guide build --out <folder> --port <n>
+      --settings <file> [--tours a,b] [--map <folder>] [--size 1280x800]` starts a test editor in a scratch
+      workspace (never port 5371), plays each tour's steps without the card (rings and dimming only: no
+      text in the pictures), crops a picture round each target, does a step's Do it for me and pictures
+      the result (the 3D view's frame put in where it shows), draws an overview of the window with
+      numbered outlines, and writes `guide.json` (texts, targets, bounds, pictures, the editor's version
+      and the date), WebP pictures with alt text, and a Markdown and a dark HTML page per tour and an
+      index; `guide render` writes the pages again from `guide.json` without an editor; `guide check`
+      plays the targets without pictures and reports targets not found (exit 1), targets that moved by
+      more than 8 pixels, and steps and tours added or removed. The pictures are made on the person's
+      computer (`docs/guide/README.md`); CI keeps only the tours true. Missing: the guide of the
+      modes' tours (they are not written yet), a theme besides dark, and a check run by CI (it needs
+      the editor started on a virtual display).
 - [ ] **H-3 Record a tour.** The editor writes a draft tour from what a person does (the commands run
       and the labels of the controls clicked). Missing: all of it.
 - [ ] **H-4 Tours of one's own.** A map maker writes tours for their team or community. Today: the
