@@ -1781,7 +1781,7 @@ opacity ("Other modes", 45% for a new sheet).
   first; the sheet drawn into and the keys lie behind More at 1280 pixels.
 - **The eraser** (`Tools/EraserTool`, `sketch.eraser`): rubs out the parts of the chosen sheet's strokes it
   passes over (radius in ogrids, `[` and `]`; a stroke is cut in two where it crosses its middle); with
-  Alt held, or Whole strokes on, it removes the strokes it touches entirely; Mirror also erases where the
+  Alt held, or Whole strokes on, it removes the strokes, symbols and labels it touches entirely; Mirror also erases where the
   symmetry repeats it (the circles drawn around the mouse follow: `IMapTool.Mirrors`). It erases as the
   mouse is dragged, so it holds a transaction as a brush's stroke does (`StartStroke`, `EndStroke`):
   the whole drag is one step of undo, Escape throws it away. Alt with a click sends the 3D camera there in
@@ -1829,7 +1829,7 @@ opacity ("Other modes", 45% for a new sheet).
   `eraser`, `pending`, the other modes' `note`, the `key`'s entries, `drawn`: sheets, strokes, `culled`
   strokes outside the view, pending); `state.show.sketch`. The mouse draws as with any tool
   (`mouse view=top x=.. y=.. action=down|move|up`, `modifiers=Shift` or `Alt`; digits are `D1` to `D6`).
-- Not built yet: the symbol, label and select tools (N-4), the image tool and the projected images (N-2),
+- Symbols, labels and selecting (N-4) and the projected images (N-2) have their own sections below; not built yet:
   the sketch in 3D (N-3).
 - **F10** is the Sketch mode's key like F1 to F9 and F11, F12 are the other modes'. Windows takes F10 for
   the menu bar of a window; the window's shortcut handler runs first and marks the key handled (and
@@ -3122,6 +3122,76 @@ stretches over hills).
   and the tool's row). Pictures are made in the test with Magick.NET, never a person's file.
   `CommandRegistryTest` lists `images.choose` and `images.set` among the commands outside the menus.
 
+## The Sketch mode's symbols, labels and selecting (N-4)
+
+Beside the pencil's strokes a sheet holds symbols and labels (the library's side: its guide, "The sketch"),
+and the Select tool moves, recolours and deletes all three. They are the sketch's own like the strokes:
+kept in `sketch/sketch.json`, edited only through commands that are one step of undo each, never exported.
+
+- **The Symbol tool** (`Tools/SymbolTool`, `sketch.symbol`): the row has the six symbols as icons (spawn, mass,
+  hydrocarbon, arrow, cross, question mark: `Icon.SymbolSpawn` ... in `Styles/Icons.axaml`, the shapes
+  `SketchLines` draws), the six colours (keys 1 to 6 as the pencil; the tool keeps a colour of its own),
+  Small, Medium and Large (a symbol 8, 14 or 24 ogrids wide, so it grows with the zoom: a symbol is map
+  content, a stroke is a line of pixels), the Turn field for an arrow and Mirror (on by default: repeated by the
+  map's symmetry, an arrow turned with it). A click stamps the symbol in hand on release; while the mouse is
+  down it is shown under it with its images by the symmetry dashed (`SketchViewModel.PendingSymbols`); an
+  arrow dragged a few pixels points where the mouse goes, else it takes the Turn of the row; Escape gives it
+  up. The tool runs `sketch.symbol {x, z, kind?, colour?, size?, turn?, mirror?, sheet?}`, which is the one way a
+  symbol gets into the document (answers how many it made). `sketch.setSymbol {kind?, colour?, size?, turn?,
+  mirror?}` sets the tool up and chooses it; a size is `small`, `medium`, `large` or a number of ogrids from 1
+  to 200.
+- **The Label tool** (`Tools/LabelTool`, `sketch.label`): a click opens a text box over the top view where the
+  label goes (`Views/SketchPanels/LabelEditor`, in the window's tree next to the Select by popover, so
+  automation reaches it: `type text=...`, `key key=Enter`; its state is `SketchViewModel.Draft` and
+  `LabelText`, `state.sketch.label.writing`); Enter keeps the text (`sketch.label {text, x, z, colour?, size?,
+  sheet?}`: written once in the chosen sheet, never mirrored), Escape drops it, a click elsewhere keeps what
+  is there and begins another, another tool drops it, an empty text makes nothing. Colour (keys 1 to 6) and
+  size as the Symbol tool's; the text's centre is the click. `sketch.setLabel {colour?, size?}` sets it up.
+  **The hand-written style** is Caveat (SIL Open Font License, `Assets/Fonts/Caveat-Variable.ttf` with its
+  licence `Caveat-OFL.txt`, registered with the other fonts as `fonts:Editor`), named by the token
+  `HandFontFamily` (Caveat, then the handwriting fonts Segoe Print, Bradley Hand and Comic Sans MS, then the
+  default); the top view draws the label in bold at its size on the map over a halo (black, white for the
+  black colour) so it reads on any terrain, cached per text, colour and size on screen
+  (`HeightmapView.DrawLabels`, in the `top.sketch` span; a label under 4 pixels is not drawn).
+- **The Select tool** (`Tools/SketchSelectTool`, `sketch.select`): a click selects the topmost stroke, symbol
+  or label of the chosen sheet within 6 pixels, a drag on nothing draws a box that selects what it crosses,
+  Shift adds (a click on a selected item with Shift takes it away), a drag on the selection moves it (one
+  step of undo from press to release, a transaction as the Image tool's; X and Z held keep the move on an
+  axis; Escape throws it away), the colour keys 1 to 6 or the swatches of the row recolour it, Small, Medium
+  and Large of the row size the selected symbols and labels, Delete or the Delete button removes it, Ctrl+A
+  selects the whole sheet, Escape selects nothing and a double click on a label opens its text for editing
+  (`sketch.editLabel`). The selection belongs to the tool, not the document: it is dropped when another sheet
+  is chosen and loses the items a later version of the sheet no longer has; undo keeps it. The commands do
+  what the mouse does: `sketch.select {at: [x, z], box: [x0, z0, x1, z1], all, add, reach?, sheet?}` (answers how
+  many are selected; nothing given selects nothing), `sketch.move {dx, dz}`, `sketch.recolour {colour}`,
+  `sketch.resize {size}`, `sketch.deleteSelected` and `sketch.editLabel {text, label?, sheet?}`.
+- **The eraser with Alt** (or Whole strokes) also removes the symbols and labels its path touches
+  (`SketchEdits.Erase`; a symbol by its box, a label by its estimated box); without it they stay.
+- **The handles' colour**: the outlines and handles of the Select and Image tools use `ToolInk.Handle`
+  (token `MapSketchHandleBrush`, a violet that none of the sketch's six colours is, the same in both themes)
+  over a dark rim (`ToolInk.Shadow`: a wider line under the outline, a dark stroke on the squares and the
+  knob), so they cannot be taken for the yellow pencil. The Select tool draws its marquee the same way
+  (in `Shapes`, not as `IMapTool.Box`, whose yellow box the other select tools keep). `SketchMarksWindowTest`
+  checks that no sketch colour equals the token.
+- **Counts**: the sheets' list and the inspector say what a sheet holds (`34 strokes · 3 symbols · 5 labels`,
+  `SketchSheetItem.Summary`; the list's number is all of it); the other modes' note counts a sheet that has
+  only symbols or labels.
+- **Automation**: `state.sketch.symbols` and `.labels` (the chosen sheet's, with kind or text, place, colour,
+  size, turn), `.symbol`, `.label` (and its `writing`) and `.select` (`sheet`, `selected`: kind and index of
+  each, `count`, `summary`, `dragging`, `box`), the sheets' `symbols` and `labels` counts, and
+  `.drawn.symbols` and `.drawn.labels` (what the last frame of the top view drew).
+  `mouse view=top action=drag path=[[x, y], [x, y], ...]` presses at the first place, moves through the others
+  (`steps` moves between two, 4 by default) and lets go at the last: a drag with corners in one call.
+- **Performance**: `tool.sketch-symbol` and `tool.sketch-select` measure a mouse move of the tools; the
+  symbols' lines are part of a sheet's runs (`top.sketch-build`), the labels of `top.sketch`.
+- **Not built**: no symbol or label in the 3D view's mouse (the tools say so in the status line; the lines of
+  symbols reach the 3D view through `SketchLines`, labels do not), no keys for the symbols (the row's
+  icons choose them), no resizing of strokes, no rotating of a selection.
+- Tests: `SketchMarksTest` (the commands, the tools on a model, undo, the eraser, counts, the project),
+  `SketchMarksWindowTest` (the rows' labels, the mouse in the window, the text box over the view, the handles'
+  inks and the token in both themes, the path drag), `SketchTest`'s list of commands, `CommandRegistryTest`'s
+  list of commands outside the menus.
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session
@@ -3312,8 +3382,8 @@ changes them. Places are in device-independent pixels of a view (`view: top|3d`)
 (the default); a hidden view is refused (`tab` first). The mouse finds what lies under it in the
 last frame drawn.
 
-- `mouse {view?, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, clicks?, to?: [x, y], steps?, notches?, modifiers?}`:
-  `click` is the default; `clicks` (1 to 3) presses that many times in a row (`clicks=2` is `doubleClick`: the views count it, `ToolInput.Clicks`); `drag` presses at `x, y` and lets go at `to` after `steps` moves; `wheel`
+- `mouse {view?, x, y, button?: left|right|middle, action?: move|down|up|click|doubleClick|drag|wheel, clicks?, to?: [x, y], path?: [[x, y], ...], steps?, notches?, modifiers?}`:
+  `click` is the default; `clicks` (1 to 3) presses that many times in a row (`clicks=2` is `doubleClick`: the views count it, `ToolInput.Clicks`); `drag` presses at `x, y` and lets go at `to` after `steps` moves; `drag` with `path` needs no `x, y`: it presses at the first place, moves through the others in turn (`steps` moves between two, 4 by default) and lets go at the last (`WindowInput.DragThrough`), so a line, a box with a corner or a stroke is one call; `wheel`
   turns `notches` (positive zooms in). The answer's `mouse` has where it is and what it hit.
 - `key {key, action?, modifiers?, repeat?}`: a name (`E`, `Delete`, `Escape`, `Enter`, `F5`, `Up`, `5`,
   `Shift`, `Ctrl`, `Alt`) or a gesture (`Ctrl+K`, `Ctrl+Shift+Z`); modifiers as a list or

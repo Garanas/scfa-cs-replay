@@ -1573,20 +1573,34 @@ User stories K-2 and P-4; generated only when asked, as the other results (F-7).
   reads them again when another tool changes them. The export leaves the rules out and writes the
   props of rules as any other prop.
 
-## The sketch (N-1)
+## The sketch (N-1, N-4)
 
-The map maker's drafts: sheets of pencil strokes that sketch the map before it is built. The sketch is
+The map maker's drafts: sheets of pencil strokes, symbols and labels that sketch the map before it is built. The sketch is
 the project's own: an optional file, edited like everything else (undoable edits of the document), kept
 and read again like the rest of the project, and never part of the map. It never reaches the game's
 files (the export reads no `MapDocument.Sketch`) nor `files/` (the other files of the map folder).
 
 - **Model** (`Files/InMemory/Sketch.cs`): `Sketch` (`Sheets`), `SketchSheet` (`Name`, `Shown`, `Opacity`
   outside the Sketch mode, a `Legend` of six texts in the order of the colours, `Strokes`),
-  `SketchStroke` (`SketchColour`, `SketchWidth`, `Points` in ogrids). The six colours and three widths are
+  `SketchStroke` (`SketchColour`, `SketchWidth`, `Points` in ogrids), and beside the strokes (N-4) `Symbols` and `Labels`:
+  `SketchSymbol` (`SketchSymbolKind` spawn, mass, hydrocarbon, arrow, cross or question; `Place`, the centre
+  in ogrids; `Colour`; `Size`, the width of its box in ogrids; `Turn`, degrees clockwise from +x, which only
+  the arrow has) and `SketchLabel` (`Text`, one line of at most 120 characters, centred on `Place`;
+  `Colour`; `Size`, the height of its letters in ogrids). `SketchLook` has the three sizes the tools offer
+  (`SketchSize`: a symbol 8, 14 or 24 ogrids, a label 10, 16 or 26) and the names that parse (`ParseSymbol`:
+  `hydro` and `?` too; `ParseSize`); the sketch itself keeps any size from 1 to 200 ogrids. The six colours and three widths are
   fixed values of the model (`SketchLook`: red, yellow, green, blue, white, black as `0xAARRGGBB`, the
   same in both themes; a width is pixels on screen, 2, 4 and 7): a colour means nothing to the
   editor, the sheet's legend says what the map maker meant. A stroke of one point is a dot.
   `MapDocument.Sketch` is `Sketch.Empty` for a map without sheets.
+- **Lines** (`Editing/SketchLines.cs`): the sketch as lines to draw, the one function every view draws from.
+  `SketchLines.Shown(sketch, full)` gives the sheets to draw and their opacity (shown, not blank, not fully
+  transparent; `full` in the Sketch mode); `SketchLines.Of(sheet)` the lines of one sheet as `SketchStroke`s in
+  ogrids, its strokes first and then those of its symbols (`Of(symbol)`: a spawn is a ring and a dot, a mass
+  three rings, a hydrocarbon a star, an arrow a shaft and a head turned by `Turn`, a cross two lines, a
+  question mark a hook, a stem and a dot, all of the medium width). The top view and the 3D view draw
+  symbols through it. Labels are text, not lines: the top view draws them (`SketchLabels.Bounds` is the
+  estimate of where one lies, from its text's length, for clicking, boxes and the eraser).
 - **Edits** (`Editing/SketchEdits.cs`, `SketchGeometry.cs`): sheets are named (unique without regard to case,
   at most 60 characters; a name matches exactly first, then without regard to case): `AddSheet`
   (`Sheet 1`, `Sheet 2`, ...), `RenameSheet`, `DuplicateSheet` (the copy right after the original,
@@ -1601,22 +1615,38 @@ files (the export reads no `MapDocument.Sketch`) nor `files/` (the other files o
   from a line what an eraser's path passed over, a capsule (the path's segment and the radius to both
   sides, convex, so it meets a segment in one stretch: `Crosses`), so a stroke is cut in two where the
   eraser crosses its middle and what is left shorter than `Shortest` goes; a stroke of one point goes
-  whole. `Erase` with `whole` removes a stroke the eraser touches entirely (Alt).
-- **Files**: `sketch/sketch.json` (`SketchDto`, its own `version` 1, not the project's format version: an
+  whole. `Erase` with `whole` removes a stroke the eraser touches entirely, and the symbols and labels it
+  touches (Alt). `ClearSheet` takes the symbols and labels too.
+- **Marks and selecting** (N-4; `Editing/SketchMarkEdits.cs`, `SketchMarks.cs`): `AddSymbols` and `AddLabel` (a
+  sketch without sheets gets its first; a label's text is trimmed, one line), `SetLabelText`, and
+  `WithImages(symbol, parts)`, which repeats a symbol under the symmetry (an arrow points the way its image
+  does: its tip goes through the transform too; a symbol on the centre is its own image). Labels are
+  written once, never mirrored. An item of a sheet is a `SketchItem` (`SketchItemKind` stroke, symbol or
+  label, and its place in the sheet's list of that kind), valid for the version of the sheet it came from:
+  `MoveItems`, `RecolourItems`, `ResizeItems` (symbols and labels), `DeleteItems` (the rest are renumbered).
+  `SketchPicking` finds items: `Pick(sheet, place, reach)` the topmost within a few pixels (labels over
+  symbols over strokes, later over earlier), `InBox` what a box crosses (a stroke that passes through it, a
+  symbol whose centre lies in it, a label whose box meets it), `Reaches` where an eraser's path meets a
+  box.
+- **Files**: `sketch/sketch.json` (`SketchDto`, its own `version`, not the project's format version: 1 for strokes only, 2 when
+  some sheet holds a symbol or a label, so a sketch of strokes stays readable by an older editor; an
   older project reads as if it held no sketch, and a project without sheets writes no file and no
   folder, which another part of the project that lies in `sketch/`, the projected images N-2, keeps
   alive). A stroke's places are one line of text, `x,z x,z ...` with a point and two decimals at most,
   so a sheet of thousands of strokes stays small and readable and a diff shows a stroke a line. The
-  legend is six texts in colour order, left out when empty; a short legend is filled up. A file that
+  legend is six texts in colour order, left out when empty; a short legend is filled up. A symbol is
+  `{kind, place: "x,z", colour, size, turn}` and a label `{text, place, colour, size}`, left out of a sheet that
+  has none. A file that
   does not read (a place that is no `x,z`, two sheets of one name, a newer version) is a
   `MapProjectException` naming the sheet. `MapProjectStore.Load` reads it, `Save` writes it only when its
   text changes, `Reload` reads it again when it changes on disk and does nothing when the file holds
   what the document has (the editor's own save, rounded as written), and a removed file is a removed
   sketch (`MapProjectStore.Sketch.cs`).
 - **Resize**: `MapResize` moves the sketch by the offset the old map lies at in the new one, as it moves
-  the things on it; strokes may end up outside the map.
+  the things on it; strokes, symbols and labels may end up outside the map.
 - Tests: `SketchTest` (edits, symmetry, the eraser's cuts, thinning and smoothing, undo, the file, reading again, the
-  export, resize).
+  export, resize), `SketchMarksTest` (symbols, labels, their images, the lines, picking, moving, recolouring and
+  deleting, the eraser with Alt, files of version 1 and 2).
 
 ## Checks: problems of a map
 

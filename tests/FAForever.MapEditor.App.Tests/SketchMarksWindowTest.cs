@@ -250,6 +250,37 @@ namespace FAForever.MapEditor.App.Tests
             window.Close();
         });
 
+
+        [TestMethod]
+        public Task MouseDragWithAPathGoesThroughEveryPlaceInOneCall() => HeadlessApp.Run(async () =>
+        {
+            (MainWindow window, MainViewModel model, AutomationServer automation) = await Open();
+            await Run(model, "sketch.setPencil", new JsonObject { ["mirror"] = false, ["colour"] = "blue" });
+            Point a = window.MapView.MapToControl(40, 40);
+            Point b = window.MapView.MapToControl(100, 40);
+            Point c = window.MapView.MapToControl(100, 100);
+
+            JsonNode answer = await automation.HandleAsync("mouse", new JsonObject
+            {
+                ["view"] = "top",
+                ["action"] = "drag",
+                ["path"] = new JsonArray(new JsonArray(a.X, a.Y), new JsonArray(b.X, b.Y), new JsonArray(c.X, c.Y)),
+            });
+
+            Assert.IsNotNull(answer["mouse"]);
+            SketchStroke stroke = model.ShownDocument!.Sketch.Sheets.Single().Strokes.Single();
+            Assert.IsTrue(stroke.Points.Length >= 3, "the corner is a place of the line");
+            Assert.IsTrue(stroke.Points.Any(place => Math.Abs(place.X - 100) < 1.5 && Math.Abs(place.Y - 40) < 1.5), "it went through the corner");
+            Assert.IsTrue(Vector2Close(stroke.Points[^1], 100, 100), "and ended at the last place");
+
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() => automation.HandleAsync("mouse", new JsonObject
+            {
+                ["view"] = "top",
+                ["action"] = "drag",
+                ["path"] = new JsonArray(new JsonArray(a.X, a.Y)),
+            }));
+            window.Close();
+        });
         [TestMethod]
         public Task TheHandlesOfTheSelectAndImageToolsHaveAColourNoPencilHas() => HeadlessApp.Run(async () =>
         {
