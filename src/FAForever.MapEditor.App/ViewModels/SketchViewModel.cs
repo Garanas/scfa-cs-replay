@@ -382,6 +382,33 @@ public sealed partial class SketchViewModel : ObservableObject
     partial void OnChosenChanged(string? value) => ChosenChanged?.Invoke(this, EventArgs.Empty);
 
     /// <summary>
+    /// Forgets what the sketch of another map left: the chosen sheet and the ones chosen before it, the strokes and symbols
+    /// being drawn and the label being written. The next <see cref="Refresh"/> shows the new map's sketch with its first
+    /// sheet chosen.
+    /// </summary>
+    public void Forget()
+    {
+        _shown = null;
+        _wanted = null;
+        _before = null;
+        _lost = null;
+        Drop();
+        if (Pending.Count > 0 || PendingSymbols.Count > 0)
+        {
+            Pending = [];
+            PendingSymbols = [];
+            PendingChanged?.Invoke(this, EventArgs.Empty);
+        }
+        Chosen = null;
+        Forgotten?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Raised by <see cref="Forget"/>: the tools drop what they hold of the last map's sheets.
+    /// </summary>
+    public event EventHandler? Forgotten;
+
+    /// <summary>
     /// Shows the sketch of a document: the sheets are made again when their names change, else they
     /// follow their counts and eyes. The chosen sheet stays while the sketch has it, else the first
     /// is chosen; a sheet just made is chosen when <paramref name="choose"/> names it.

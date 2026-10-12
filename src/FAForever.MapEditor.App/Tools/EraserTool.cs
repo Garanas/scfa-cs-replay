@@ -95,11 +95,11 @@ public sealed partial class EraserTool : ObservableObject, IMapTool
 
     public void Press(float x, float z, ToolInput input)
     {
-        if (model.ShownDocument is null)
+        if (model.ShownDocument is null || model.SketchIsHidden())
         {
             return;
         }
-        _sheet = model.Sketch.Chosen ?? "";
+        _sheet =model.Sketch.Chosen ?? "";
         _whole = Whole || input.Modifiers.HasFlag(ToolModifiers.Alt);
         _erased = default;
         _last = (x, z);

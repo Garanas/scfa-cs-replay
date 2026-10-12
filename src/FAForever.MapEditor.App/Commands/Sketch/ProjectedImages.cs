@@ -87,6 +87,8 @@ public sealed class ProjectImageHandler(MainViewModel model, IEditorDialogs dial
         ProjectedImage added = image;
         model.EditMap($"Project the image {stem}", d => d.AddImage(image, out added));
         model.Images.Choose(added.Name);
+        // as a stroke does for the sketch: what was just made shows
+        model.ShowImages = true;
         if (model.ActiveTool?.Definition.Id != "sketch.image")
         {
             model.SelectTool("sketch.image");

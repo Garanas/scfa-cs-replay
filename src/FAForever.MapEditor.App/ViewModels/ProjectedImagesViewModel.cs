@@ -27,9 +27,16 @@ public sealed partial class ProjectedImageItem(ProjectedImage image, Func<string
         {
             if (value != Image.Shown)
             {
-                _ = run("images.set", new JsonObject { ["name"] = Name, ["shown"] = value });
+                _ = Set(value);
             }
         }
+    }
+
+    private async Task Set(bool value)
+    {
+        await run("images.set", new JsonObject { ["name"] = Name, ["shown"] = value });
+        // a command that was refused (a stroke is being drawn) leaves the check box as the image is
+        OnPropertyChanged(nameof(Shown));
     }
 
     public string ShownLabel => $"Show the image {Name}";
@@ -279,6 +286,29 @@ public sealed partial class ProjectedImagesViewModel : ObservableObject
         Place.Refresh(document);
         Look.Refresh(document);
         if (lost)
+        {
+            ChosenChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Forgets the images of another map: the list is emptied and no image is chosen, until the next <see cref="Refresh"/>
+    /// shows the new map's images.
+    /// </summary>
+    public void Forget()
+    {
+        bool had = _chosenName is not null;
+        _document = null;
+        _chosenName = null;
+        _chosenPicture = default;
+        _rebuilding = true;
+        Items.Clear();
+        _rebuilding = false;
+        OnPropertyChanged(nameof(IsEmpty));
+        Changed();
+        Place.Refresh(null);
+        Look.Refresh(null);
+        if (had)
         {
             ChosenChanged?.Invoke(this, EventArgs.Empty);
         }
