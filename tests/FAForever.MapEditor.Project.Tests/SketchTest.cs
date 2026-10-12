@@ -330,11 +330,11 @@ namespace FAForever.MapEditor.Project.Tests
             Assert.IsFalse(File.Exists(Path.Combine(project, "sketch", "sketch.json")));
             Assert.IsFalse(Directory.Exists(Path.Combine(project, "sketch")), "the empty folder goes");
 
-            Directory.CreateDirectory(Path.Combine(project, "sketch", "images"));
-            File.WriteAllText(Path.Combine(project, "sketch", "images", "a.png"), "x");
+            Directory.CreateDirectory(Path.Combine(project, "sketch"));
+            File.WriteAllText(Path.Combine(project, "sketch", "notes.txt"), "x");
             MapProjectStore.Save(drawn, project);
             MapProjectStore.Save(plain, project);
-            Assert.IsTrue(File.Exists(Path.Combine(project, "sketch", "images", "a.png")), "what else lies in the folder stays");
+            Assert.IsTrue(File.Exists(Path.Combine(project, "sketch", "notes.txt")), "what else lies in the folder stays");
         }
 
         [TestMethod]
