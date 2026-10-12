@@ -21,6 +21,18 @@ public interface IMapTool
     /// </summary>
     double CursorRadius { get; }
 
+    /// <summary>
+    /// Whether the tool uses alt held with the mouse itself (the sketch's eraser: whole strokes); the
+    /// views then leave an alt click to it instead of sending the 3D camera there.
+    /// </summary>
+    bool UsesAlt => false;
+
+    /// <summary>
+    /// Whether the circle the views draw around the mouse is repeated by the map's symmetry (as a
+    /// stroke of the tool would be); false for a tool whose mirroring is off.
+    /// </summary>
+    bool Mirrors => true;
+
     void Press(float x, float z);
 
     void Drag(float x, float z);

@@ -323,6 +323,7 @@ public sealed partial class MainViewModel
             "areas" => new OverlayItem(overlay, () => ShowAreas, value => ShowAreas = value),
             "mask" => new OverlayItem(overlay, () => ShowMask, value => ShowMask = value),
             "grid" => new OverlayItem(overlay, () => ShowGrid, value => ShowGrid = value, () => EditorCulture.Format(GridSpacing)),
+            "sketch" => new OverlayItem(overlay, () => ShowSketch, value => ShowSketch = value),
             "decals" => new OverlayItem(overlay, () => ShowDecals, value => ShowDecals = value),
             "navigation" => new OverlayItem(overlay, () => ShowNavigation, value => ShowNavigation = value),
             "generatedPathNodes" => new OverlayItem(overlay, () => ShowGeneratedPathNodes, value => ShowGeneratedPathNodes = value),
@@ -332,7 +333,7 @@ public sealed partial class MainViewModel
         {
             Commands.Register(new EditorCommand
             {
-                Id = overlay.CommandId, Title = overlay.CommandTitle, Story = overlay.Story,
+                Id = overlay.CommandId, Title = overlay.CommandTitle, Story = overlay.Story, Gesture = overlay.Gesture,
                 Incomplete = overlay.Missing is string missing ? new IncompleteAttribute(overlay.Story, missing) : null,
                 Parameters = [new CommandParameter("on", typeof(bool?), true)],
                 MakeRequest = overlay.IsIncomplete ? null : arguments => new ToggleOverlay(overlay.Id, arguments["on"]?.GetValue<bool>()),

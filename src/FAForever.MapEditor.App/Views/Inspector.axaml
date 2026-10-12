@@ -8,6 +8,7 @@
              xmlns:workspaces="using:FAForever.MapEditor.Project.Workspaces"
              xmlns:panels="using:FAForever.MapEditor.App.Views.MapPanels"
              xmlns:rules="using:FAForever.MapEditor.App.Views.RulePanels"
+             xmlns:sketchpanels="using:FAForever.MapEditor.App.Views.SketchPanels"
              x:Class="FAForever.MapEditor.App.Views.Inspector"
              x:DataType="vm:MainViewModel">
   <Border Classes="inspector">
@@ -412,6 +413,10 @@
               <!-- the army or group chosen in the Units mode's tree (U-3, M-4) -->
               <DataTemplate DataType="vm:UnitGroupDetailsSection">
                 <panels:UnitGroupPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Armies}" />
+              </DataTemplate>
+              <!-- the chosen sheet of the Sketch mode (N-1) -->
+              <DataTemplate DataType="vm:SketchSheetSection">
+                <sketchpanels:SketchSheetPanel DataContext="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Sketch}" />
               </DataTemplate>
               <DataTemplate DataType="vm:PlannedSection">
                 <Border Classes="group">

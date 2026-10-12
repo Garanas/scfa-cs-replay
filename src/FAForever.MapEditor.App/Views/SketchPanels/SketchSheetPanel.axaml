@@ -1,0 +1,46 @@
+<!-- The Sketch mode's inspector (N-1): the chosen sheet's name, its opacity outside the Sketch mode, the legend (what each colour means),
+     its strokes, and Duplicate and Clear. Names and legend texts are typed and given on Enter or when the field loses the keyboard. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
+             xmlns:controls="using:FAForever.MapEditor.App.Controls"
+             x:Class="FAForever.MapEditor.App.Views.SketchPanels.SketchSheetPanel"
+             x:DataType="vm:SketchViewModel">
+  <Border Classes="group">
+    <StackPanel Classes="stack">
+      <TextBlock Classes="heading" Text="Sheet" />
+      <TextBlock Classes="caption" IsVisible="{Binding !HasChosen}"
+                 Text="No sheet yet: draw with the pencil, or add one in the panel." />
+      <StackPanel Classes="stack" IsVisible="{Binding HasChosen}">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Left" Classes="setting" Text="Name" />
+          <TextBox Text="{Binding ChosenName, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Name of the sheet"
+                   AutomationProperties.HelpText="Not empty and not another sheet's; given on Enter or when the field loses the keyboard" />
+        </DockPanel>
+        <TextBlock Classes="label" Text="{Binding ChosenOpacity, StringFormat='Other modes: {0:0}%'}" />
+        <Slider Minimum="0" Maximum="100" Value="{Binding ChosenOpacity}" AutomationProperties.Name="Opacity of the sheet outside the Sketch mode"
+                AutomationProperties.HelpText="How opaque the sheet is in the views while another mode is chosen: it guides without getting in the way; in the Sketch mode it is drawn fully" />
+        <TextBlock Classes="overline" Text="{Binding Source=Legend, Converter={x:Static controls:UpperCaseConverter.Instance}}" />
+        <ItemsControl ItemsSource="{Binding Legend}" AutomationProperties.Name="Legend of the sheet">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SketchLegendItem">
+              <DockPanel>
+                <Border DockPanel.Dock="Left" Classes="swatch" Background="{Binding Argb, Converter={x:Static controls:ArgbBrushConverter.Instance}}" />
+                <TextBox Text="{Binding Text, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="{Binding Label}"
+                         AutomationProperties.HelpText="What this colour means on the sheet; shown as a key in a corner of the top view while the sheet is shown" />
+              </DockPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="caption" Text="Shown as a key in the top view's corner while this sheet is shown." />
+        <TextBlock Text="{Binding ChosenCount}" AutomationProperties.Name="Strokes of the chosen sheet" />
+        <WrapPanel Classes="chips">
+          <Button Content="Duplicate sheet" Command="{Binding DuplicateCommand}"
+                  AutomationProperties.HelpText="A copy with its strokes, legend and opacity, right after it" />
+          <Button Content="Clear" Command="{Binding ClearCommand}" AutomationProperties.Name="Clear the chosen sheet"
+                  AutomationProperties.HelpText="Takes every stroke off the sheet; its legend stays; undo brings them back" />
+        </WrapPanel>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>
