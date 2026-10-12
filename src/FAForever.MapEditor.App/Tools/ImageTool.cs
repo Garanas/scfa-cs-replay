@@ -26,7 +26,7 @@ public sealed partial class ImageTool(MainViewModel model) : ObservableObject, I
     /// <summary>
     /// How far beyond the top edge the turning knob lies, in pixels.
     /// </summary>
-    internal const float KnobPixels = 28;
+    public const float KnobPixels = 28;
 
     /// <summary>
     /// How far the mouse must go, in pixels, before a press becomes a drag.
@@ -265,12 +265,12 @@ public sealed partial class ImageTool(MainViewModel model) : ObservableObject, I
         string name = _name!;
         ImageHandle handle = _handle;
         (float X, float Z) from = _from;
-        _edit.Apply(_ => before.UpdateImage(name, _ => handle switch
+        _edit.Apply(_ => before.UpdateImage(name, _ => ProjectedImages.Rounded(handle switch
         {
             ImageHandle.Move => ProjectedImages.Moved(start, x - from.X, z - from.Z),
             ImageHandle.Turn => ProjectedImages.Turned(start, from.X, from.Z, x, z, snap),
             _ => ProjectedImages.Scaled(start, handle, x, z, start.KeepProportions),
-        }));
+        })));
         model.ShowStroke();
     }
 }

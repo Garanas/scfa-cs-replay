@@ -323,6 +323,19 @@ namespace FAForever.MapEditor.Project.Editing
         }
 
         /// <summary>
+        /// The image with its place, size and turn rounded to hundredths, as a drag leaves them: the
+        /// mouse's float pixels do not make fields of seven decimals.
+        /// </summary>
+        public static ProjectedImage Rounded(ProjectedImage image) => image with
+        {
+            CentreX = Math.Round(image.CentreX, 2),
+            CentreZ = Math.Round(image.CentreZ, 2),
+            Width = Math.Max(MinimumSize, Math.Round(image.Width, 2)),
+            Height = Math.Max(MinimumSize, Math.Round(image.Height, 2)),
+            Turn = Math.Round(image.Turn, 2),
+        };
+
+        /// <summary>
         /// An angle in degrees brought into the range -180 (excluded) to 180.
         /// </summary>
         public static double Normalized(double degrees)

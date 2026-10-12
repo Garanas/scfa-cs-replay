@@ -260,7 +260,6 @@ public sealed class SetImageHandler(MainViewModel model) : IRequestHandler<SetIm
         }
 
         bool renamed = rename is not null && rename != image.Name;
-        bool wasChosen = string.Equals(model.Images.ChosenName, image.Name, StringComparison.Ordinal);
         string name = image.Name;
         model.EditMap(renamed ? $"Rename the image {name} to {rename}" : $"Change the image {name}", d => d.UpdateImage(name, current =>
         {
@@ -291,10 +290,6 @@ public sealed class SetImageHandler(MainViewModel model) : IRequestHandler<SetIm
                 KeepProportions = keep,
             };
         }), $"images.set:{name}:{string.Join(",", fields)}");
-        if (renamed && wasChosen)
-        {
-            model.Images.Choose(rename);
-        }
         return Task.CompletedTask;
     }
 }

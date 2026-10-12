@@ -79,6 +79,7 @@ public sealed partial class ProjectedImagesViewModel : ObservableObject
     private readonly Func<string, JsonObject, Task> _run;
     private MapDocument? _document;
     private string? _chosenName;
+    private System.Collections.Immutable.ImmutableArray<byte> _chosenPicture;
     private bool _rebuilding;
 
     public ProjectedImagesViewModel(Func<string, JsonObject, Task> run)
@@ -220,6 +221,7 @@ public sealed partial class ProjectedImagesViewModel : ObservableObject
             return;
         }
         _chosenName = chosen;
+        _chosenPicture = chosen is null ? default : _document!.FindImage(chosen)!.Picture;
         Changed();
         Place.Refresh(_document);
         Look.Refresh(_document);
@@ -253,15 +255,25 @@ public sealed partial class ProjectedImagesViewModel : ObservableObject
             _rebuilding = false;
             OnPropertyChanged(nameof(IsEmpty));
         }
-        bool lost = _chosenName is not null && document?.FindImage(_chosenName) is null;
-        if (lost)
+        bool lost = false;
+        if (_chosenName is not null)
         {
-            _chosenName = null;
-        }
-        // a name changed by a rename follows its image: the entry at the same place
-        else if (_chosenName is not null && document?.FindImage(_chosenName) is { } found && found.Name != _chosenName)
-        {
-            _chosenName = found.Name;
+            if (document?.FindImage(_chosenName) is { } found)
+            {
+                // a name in another case is the same image
+                _chosenName = found.Name;
+                _chosenPicture = found.Picture;
+            }
+            else if (document?.Images.FirstOrDefault(image => image.Picture == _chosenPicture) is { } renamed)
+            {
+                // renamed (or the rename undone): the image that holds the same picture
+                _chosenName = renamed.Name;
+            }
+            else
+            {
+                _chosenName = null;
+                lost = true;
+            }
         }
         Changed();
         Place.Refresh(document);
