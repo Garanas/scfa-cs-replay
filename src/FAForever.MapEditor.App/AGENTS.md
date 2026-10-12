@@ -2864,6 +2864,68 @@ Wave 8's shell (user stories F-1, F-5, F-7, F-8, F-10, K-1, L-1, P-2, W-1, W-2).
   ignores folders (the start read the assets twice). Leaf textures (`CutOutTextures`) give their
   holes the leaves' colour before the mipmaps, and cut-out foliage is lit with its normals leaning up.
 
+## The Sketch mode's projected images (N-2)
+
+Pictures of the map maker's own laid over the map in the top view, to trace or build towards. The
+model, the files and the geometry are the library's (its guide, "The sketch's images"); this is
+what the window does with them. They are a guide: never exported, never in the 3D view (a picture
+stretches over hills).
+
+- **Commands** (`Commands/Sketch/ProjectedImages.cs`, every one with its story N-2): `images.project`
+  (`path`, `name`; without a path a file is asked for, which automation never does: it answers with
+  why; the image starts fitted to the map, is chosen and the Image tool is chosen), `images.choose`
+  (`name`; none clears), `images.remove`, `images.replace` (`path`), `images.fitToMap`,
+  `images.fitToPlayableArea` and `images.set` (`rename`, `opacity` in percent, `centreX`, `centreZ`,
+  `width`, `height`, `turn`, `greyscale`, `locked`, `shown`, `aboveSketch`, `keepProportions`). Each
+  but `choose` names its image with `name` (in any case) or acts on the chosen one, and is one step
+  of undo; `images.set` steps on the same fields of the same image merge (a slider dragged). With
+  Keep proportions a width given alone makes the height follow at the proportions it has now, and
+  the other way round. Every field of the inspector, the eye of the list and the tool's row run
+  these commands; none edits the document itself.
+- **State**: `ProjectedImagesViewModel` (`MainViewModel.Images`) holds the list (`Items`, one
+  `ProjectedImageItem` per image, updated in place so the list keeps its choice), the chosen image
+  (`ChosenName`; it follows a rename, and an image that went away, an undo, is no longer chosen) and
+  the inspector's settings, which are the `Setting` classes the other panels use. The overlay is
+  `MainViewModel.ShowImages` (default on): the chip "Images", the View menu entry and
+  `Ctrl+Shift+J` (`OverlayDefinition.Gesture`, which any overlay may have).
+- **The panel and the inspector** (`Views/SketchPanels/`): the "Projected images" section of the
+  Sketch mode lists the images (an eye, the name, the picture's size, `55%`), Project an image...
+  and a check box for the overlay; the chosen image's inspector (`ProjectedImageDetailsSection`,
+  empty while none is chosen) says the picture's size in pixels and where it is kept, then the name,
+  opacity, centre, width, height and turn, Fit to map, Fit to playable area, Keep proportions,
+  Greyscale, Locked, Order (below or above the sketch), Replace the picture... and Remove.
+- **The Image tool** (`Tools/ImageTool.cs`): a click chooses the top image under the mouse (the
+  images over the sketch before those under it, later ones before earlier ones; an unlocked image
+  before a locked one; a hidden image is not there), a click on nothing chooses none (Shift keeps
+  the choice). The chosen image has a square at each corner (scales about the opposite corner),
+  a knob 28 pixels beyond the middle of its top edge (turns; Shift in steps of 15 degrees) and its
+  inside (moves); `Shapes` draws them at a fixed size in the top view only. A drag is one step of
+  undo held from press to release (`StartStroke`), made from the image as it was at the press and
+  rounded to hundredths. A locked image has its outline and no handles and does not move. Presses in
+  the 3D view and while the overlay is off do nothing. Keys: Delete removes the chosen image, Escape
+  chooses none. Its row (`ToolOptions.axaml`): opacity, Keep proportions, Fit to map, Project an
+  image..., and the hint; the rest goes behind More.
+- **The top view** (`Controls/HeightmapView.Images.cs`): the images that lie under the sketch are
+  drawn right after the terrain (so the walkability, the grid, markers and units lie over them), the
+  images over the sketch after the sketch (23A's strokes) and before the tool's own drawing. Each is
+  turned and scaled in map coordinates with `PushTransform`, at its opacity, with hard pixels when
+  shown more than twice its size. A picture is decoded once (`Rendering/ProjectedPictures`, found by
+  the document's byte array, greyscale a picture of its own) and never per frame; an image whose
+  boxed corners lie outside the view is skipped. The span `top.images` measures a frame (a 4096
+  pixel picture and two others: p95 7 ms), `top.images-decode` the decoding (and the greyscale),
+  `tool.reshape-image` a mouse move of a drag.
+- **Automation**: `state.images` (`AutomationServer.Images.cs`): `count`, `chosen`, `shown` (the
+  overlay), `drawnTop` (how many the last frame drew), `items` (name, shown, opacity in percent,
+  centre, size, turn, pixels, greyscale, locked, aboveSketch, keepProportions), `tool` and, for the
+  chosen image, `points`: the pixels of its centre, four corners and knob in the top view, to aim
+  `mouse view=top x= y= action=drag to=[x,y]` at (with `modifiers=Shift` for the turn's steps).
+  Drive it as a person does: project, read `points`, drag a corner, `screenshot`.
+- **Tests**: `ProjectedImagesTest` (commands, list, fields, overlay, the tool's press, drag and
+  release on a model), `ProjectedImagesWindowTest` (the top view's pixels turned, transparent, grey,
+  hidden and in order; the mouse and the key through automation; the panel, the inspector's labels
+  and the tool's row). Pictures are made in the test with Magick.NET, never a person's file.
+  `CommandRegistryTest` lists `images.choose` and `images.set` among the commands outside the menus.
+
 ## Diagnostics: what goes well and wrong
 
 User story F-17. The editor keeps what a service keeps for Loki and Prometheus, per session

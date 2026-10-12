@@ -526,6 +526,11 @@
                   <TextBlock Classes="label" Text="{Binding Images.Opacity.Text, StringFormat='Opacity: {0}%'}" />
                   <Slider Minimum="0" Maximum="100" Value="{Binding Images.Opacity.Value}" Width="{StaticResource ToolSliderWidth}" AutomationProperties.Name="Opacity of the chosen image in percent" />
                 </StackPanel>
+                <StackPanel Classes="inline" IsVisible="{Binding Images.HasChosen}">
+                  <TextBlock Classes="label" Text="Turn:" />
+                  <TextBox Classes="toolfield commit mono" Text="{Binding Images.Turn.Text, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Turn of the chosen image in degrees"
+                           AutomationProperties.HelpText="Degrees clockwise about its middle; the knob above the image turns it too" />
+                </StackPanel>
                 <CheckBox Content="Keep proportions" IsChecked="{Binding Images.KeepProportions.IsOn}" IsVisible="{Binding Images.HasChosen}"
                           AutomationProperties.Name="Keep the chosen image's proportions"
                           AutomationProperties.HelpText="A corner scales both sides together, and a fit keeps the picture's proportions" />

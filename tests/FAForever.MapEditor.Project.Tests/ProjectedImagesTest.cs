@@ -296,6 +296,18 @@ namespace FAForever.MapEditor.Project.Tests
         }
 
         [TestMethod]
+        public void AnImageMovesWithTheTerrainWhenTheMapIsResized()
+        {
+            MapDocument map = NewMap.Create(new NewMapSettings { Size = 256, Players = 2 }).AddImage(Image(Picture(20, 20), "A"), out _);
+            map = map.UpdateImage("A", image => image with { CentreX = 100, CentreZ = 50, Width = 40, Height = 40 });
+
+            MapDocument grown = MapResize.Resize(map, new MapResizeSettings { Width = 512, Height = 512, Anchor = MapAnchor.Centre }).Document;
+
+            Assert.AreEqual((228.0, 178.0, 40.0), (grown.Images[0].CentreX, grown.Images[0].CentreZ, grown.Images[0].Width), "the old map lies 128 ogrids in, and the image with it");
+            Assert.AreEqual(map.Images[0].Picture, grown.Images[0].Picture);
+        }
+
+        [TestMethod]
         public void ReloadsImagesChangedOnDisk()
         {
             MapDocument map = Map().AddImage(Image(Picture(20, 20), "A"), out _);

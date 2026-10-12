@@ -1,5 +1,6 @@
 using System.Numerics;
 using CommunityToolkit.Mvvm.ComponentModel;
+using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
 using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
@@ -241,6 +242,7 @@ public sealed partial class ImageTool(MainViewModel model) : ObservableObject, I
     /// </summary>
     private void Reshape(float x, float z, bool snap)
     {
+        using Performance.Span measure = Performance.Measure("tool.reshape-image");
         if (_edit is null)
         {
             if (model.StrokeInProgress is not null)
