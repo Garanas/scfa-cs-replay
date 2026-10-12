@@ -99,8 +99,8 @@
                     <Button Content="Add a mask" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.addMask"
                             AutomationProperties.Name="Add a mask" />
                     <Button Content="Rename" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.renameMask"
-                            IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.HasChosen}"
-                            AutomationProperties.Name="Rename the chosen mask" />
+                            IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.CanRename}"
+                            AutomationProperties.Name="Rename the chosen mask" AutomationProperties.HelpText="Type the new name in the field first" />
                     <Button Content="Duplicate" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RunCommand}" CommandParameter="paint.duplicateMask"
                             IsEnabled="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Masks.HasChosen}"
                             AutomationProperties.Name="Duplicate the chosen mask" AutomationProperties.HelpText="A copy with its stack of layers, under the name in the field or a free one" />

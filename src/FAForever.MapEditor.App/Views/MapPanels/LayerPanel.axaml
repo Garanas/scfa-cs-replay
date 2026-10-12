@@ -27,6 +27,6 @@
         <controls:SettingList DataContext="{Binding StratumStack.DecalMasks}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).StratumStack.IsDecalMasks}" />
       </StackPanel>
     </Border>
-    <rules:MaskRulesPanel IsVisible="{Binding StratumStack.IsRules}" />
+    <rules:MaskRulesPanel IsVisible="{Binding ShowsStratumRules}" />
   </StackPanel>
 </UserControl>

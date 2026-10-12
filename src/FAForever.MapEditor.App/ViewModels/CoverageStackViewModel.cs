@@ -79,13 +79,19 @@ public sealed partial class CoverageStackViewModel : LayerStackViewModel
     public bool IsRules => ChosenLayer?.Source is RulesSource;
 
     /// <summary>
-    /// Shows another grid (another mask or stratum chosen): its painted layer is chosen.
+    /// Shows another grid (another mask or stratum chosen): <paramref name="painted"/>, the layer its
+    /// brush painted when it was shown last, is chosen when the grid has it, else its highest layer
+    /// that can be painted.
     /// </summary>
-    public void Retarget(MapDocument? document)
+    public void Retarget(MapDocument? document, string? painted = null)
     {
         Chosen = null;
         ForgetShown();
         Refresh(document);
+        if (painted is not null && Chosen != painted && Items.Any(item => item.Name == painted && LayerSources.CanPaint(item.Layer.Source)))
+        {
+            Chosen = painted;
+        }
     }
 
     protected override Layer? Preferred(MapDocument? document, ImmutableArray<Layer> layers) =>

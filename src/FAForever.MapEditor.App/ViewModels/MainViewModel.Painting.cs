@@ -43,7 +43,7 @@ public sealed partial class MainViewModel
     private bool ShowsRulesPreview => SelectedMode?.Definition.Id switch
     {
         "masks" => MaskStack?.IsRules == true,
-        "paint" => StratumStack?.IsRules == true,
+        "paint" => ShowsStratumRules,
         _ => false,
     };
 
@@ -109,6 +109,7 @@ public sealed partial class MainViewModel
     private void InitializePainting()
     {
         DocumentChanged += (_, _) => Masks.Refresh(ShownDocument);
+        MapChanged += (_, _) => Masks.Reset();
         Masks.Changed += (_, _) =>
         {
             Tool<MaskPaintTool>().OnMaskChanged();

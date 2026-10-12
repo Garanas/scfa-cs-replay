@@ -222,7 +222,17 @@ public sealed partial class MaskRulesViewModel : ObservableObject
     private Task Add() => Run("paint.addMaskRule", new JsonObject { ["kind"] = NewKind.Kind.ToString() });
 
     [RelayCommand]
-    private void Close() => Editing = null;
+    private void Close()
+    {
+        Editing = null;
+        Closed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Raised when the person closes the rule editor (its Close button): the stack that showed its
+    /// rules layer chooses another layer, since the editor shows while a rules layer is chosen.
+    /// </summary>
+    public event EventHandler? Closed;
 
     /// <summary>
     /// A mask's Rules... button in the Paint panel.

@@ -41,6 +41,12 @@ public sealed partial class MainViewModel
         _ => null,
     };
 
+    /// <summary>
+    /// Whether the Paint mode's inspector shows the rule editor: a stratum is chosen in the layers' list
+    /// (the lower and the upper layer have no mask) and a rules layer is chosen in its stack.
+    /// </summary>
+    public bool ShowsStratumRules => StratumStack?.IsRules == true && LayerTextures?.Selected is { IsStratum: true };
+
     private LayerTarget? MaskTarget => Masks.Chosen is string name ? LayerTarget.Mask(name) : null;
 
     private LayerTarget? StratumTarget => StrataTool.Painted is Stratum stratum ? LayerTarget.Stratum(stratum.Layer) : null;
@@ -115,6 +121,22 @@ public sealed partial class MainViewModel
             RefreshAll();
             ShowEditedRulesLayer();
         };
+        // Close on the rule editor: the editor shows while a rules layer is chosen, so another layer is chosen
+        MaskRules.Closed += (_, _) =>
+        {
+            CoverageStackViewModel? shown = SelectedMode?.Definition.Id switch
+            {
+                "masks" => MaskStack,
+                "paint" => StratumStack,
+                _ => null,
+            };
+            StackLayerItem? other = shown?.Items.FirstOrDefault(item => item.Layer.Source is not RulesSource && LayerSources.CanPaint(item.Layer.Source) && !item.Layer.Locked)
+                ?? shown?.Items.FirstOrDefault(item => item.Layer.Source is not RulesSource);
+            if (shown is { IsRules: true } && other is not null)
+            {
+                shown.Choose(other.Name);
+            }
+        };
         MaskRules.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(MaskRulesViewModel.Editing))
@@ -130,12 +152,18 @@ public sealed partial class MainViewModel
                 FollowChosenPaintLayer(stack);
             }
         };
-        Masks.Changed += (_, _) => MaskStack.Retarget(ShownDocument);
+        // another grid shown: the layer its brush painted when it was shown last is chosen again
+        void ShowGrid(CoverageStackViewModel stack)
+        {
+            string? painted = stack.Target is LayerTarget target ? Map?.Session.PaintLayers.GetValueOrDefault(target.Key) : null;
+            stack.Retarget(ShownDocument, painted);
+        }
+        Masks.Changed += (_, _) => ShowGrid(MaskStack);
         StrataTool.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(StrataTool.Painted))
             {
-                StratumStack.Retarget(ShownDocument);
+                ShowGrid(StratumStack);
             }
         };
         MaskStack.PropertyChanged += (_, e) =>
@@ -150,6 +178,26 @@ public sealed partial class MainViewModel
             if (e.PropertyName == nameof(LayerStackViewModel.Chosen))
             {
                 FollowChosenRulesLayer(StratumStack);
+            }
+        };
+        // the rule editor shows only for a stratum: the lower and the upper layer have none
+        void RulesVisibilityChanged()
+        {
+            OnPropertyChanged(nameof(ShowsStratumRules));
+            OnPropertyChanged(nameof(ShownGrid));
+        }
+        LayerTextures.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(LayerTexturesViewModel.Selected))
+            {
+                RulesVisibilityChanged();
+            }
+        };
+        StratumStack.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CoverageStackViewModel.IsRules))
+            {
+                RulesVisibilityChanged();
             }
         };
         // the rule editor shows the rules layer of the mode's stack
