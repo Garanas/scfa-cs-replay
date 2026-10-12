@@ -72,8 +72,13 @@ public sealed partial class ImageTool(MainViewModel model) : ObservableObject, I
         _name = null;
         _start = null;
         _handle = ImageHandle.None;
-        if (input.View is { IsTopDown: false } || model.ShownDocument is not MapDocument document || !model.ShowImages)
+        if (input.View is { IsTopDown: false } || model.ShownDocument is not MapDocument document)
         {
+            return;
+        }
+        if (!model.ShowImages)
+        {
+            model.Status = "The projected images are hidden: show them with the Images chip in the views' bar or Ctrl+Shift+J";
             return;
         }
         float reach = HandlePixels * input.OgridsPerPixel;

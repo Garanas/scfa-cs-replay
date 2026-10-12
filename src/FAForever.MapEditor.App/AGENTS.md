@@ -3222,6 +3222,14 @@ stretches over hills).
   empty while none is chosen) says the picture's size in pixels and where it is kept, then the name,
   opacity, centre, width, height and turn, Fit to map, Fit to playable area, Keep proportions,
   Greyscale, Locked, Order (below or above the sketch), Replace the picture... and Remove.
+- **Another map**: the sheets and the images of a map are its own. When the shown map is another one (opened, created,
+  closed; not a resize or an undo, which keep the map), `SketchViewModel.Forget` and `ProjectedImagesViewModel.Forget`
+  run before the panels show the new document: no sheet is chosen until the first of the new sketch is, no
+  image stays chosen, the strokes and symbols being drawn and the label being written are dropped, and the Select tool's
+  selection ends (`SketchViewModel.Forgotten`). Projecting an image turns the Images overlay on, as a stroke turns the
+  Sketch overlay on. With an overlay off, the tools that work on what it shows say so in the status instead of doing
+  nothing or changing what cannot be seen: the Image tool, the Eraser and the Select tool
+  (`MainViewModel.SketchIsHidden`). Tests: `SketchConsistencyTest`.
 - **The Image tool** (`Tools/ImageTool.cs`): a click chooses the top image under the mouse (the
   images over the sketch before those under it, later ones before earlier ones; an unlocked image
   before a locked one; a hidden image is not there), a click on nothing chooses none (Shift keeps

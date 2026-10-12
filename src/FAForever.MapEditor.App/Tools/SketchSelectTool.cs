@@ -67,6 +67,13 @@ public sealed partial class SketchSelectTool : ObservableObject, IMapTool
             Clear();
             OnPropertyChanged(nameof(SheetText));
         };
+        // a selection is of a sheet of the map it was made in
+        model.Sketch.Forgotten += (_, _) =>
+        {
+            _sheet = "";
+            Clear();
+            OnPropertyChanged(nameof(SheetText));
+        };
     }
 
     /// <summary>
@@ -190,7 +197,7 @@ public sealed partial class SketchSelectTool : ObservableObject, IMapTool
         _mode = Mode.None;
         _dragging = false;
         _shift = input.Modifiers.HasFlag(ToolModifiers.Shift);
-        if (_model.ShownDocument is not MapDocument document)
+        if (_model.ShownDocument is not MapDocument document || _model.SketchIsHidden())
         {
             return;
         }
