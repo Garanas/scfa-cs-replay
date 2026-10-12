@@ -638,7 +638,7 @@ layout before building it, and pictures projected onto the map to trace or build
       operation is a command (sketch.*) and one step of undo; the top view draws them as lines of a
       fixed width on screen at every zoom, dimmed outside the mode; the Sketch chip, the View menu
       and Ctrl+Shift+K show or hide the sketch in every mode. Missing: the 3D view draws no strokes
-      (N-3), no symbols, labels or selecting (N-4).
+      (N-3).
 - [x] **N-2 Projected images.** Lay pictures of one's own over the map in the top view (a drawing,
       a screenshot of another map): several per map, each moved, scaled and turned with handles or
       exact numbers, fitted to the map or its playable area, with an opacity, greyscale, locked,
@@ -655,11 +655,30 @@ layout before building it, and pictures projected onto the map to trace or build
       (chip, View menu, Ctrl+Shift+J) hides them all; every operation is a command (`images.*`)
       and one step of undo. Missing: moving an image forward or back in the drawing order (the
       list's order is the order they were projected in).
-- [ ] **N-3 Sketch in 3D.** The 3D view draws the sketch's strokes over the terrain, the same width
-      on screen at every distance.
-- [ ] **N-4 Symbols and labels.** Stamp symbols on a sheet (spawn, mass, hydrocarbon, arrow, cross,
+- [x] **N-3 Sketch in 3D.** The 3D view draws the sketch's strokes over the terrain, the same width
+      on screen at every distance. Today: the shown sheets' strokes lie on the terrain following its heights
+      (also while it is edited), as lines of a constant width on screen with round ends and joins, in
+      the sketch's colours, a sheet at its opacity outside the Sketch mode as one layer (overlaps do not darken), hidden
+      with the Sketch chip or Ctrl+Shift+K; the pencil and the eraser work in the 3D view (the line and its
+      images by the symmetry show while the mouse is down); `state.sketch.drawn3d` counts what the 3D view
+      drew; a command refused while a stroke is going on says why. Missing: the projected images stay
+      out of 3D by decision; labels are not drawn in 3D (symbols are, as lines).
+- [x] **N-4 Symbols and labels.** Stamp symbols on a sheet (spawn, mass, hydrocarbon, arrow, cross,
       question mark) and write labels in a hand-drawn style; select strokes, symbols and labels
       to move, recolour or delete them.
+      Today: the Sketch mode's Symbol tool (a row of the six symbols as icons, the colour (keys 1 to 6), Small, Medium
+      or Large, the turn of an arrow, Mirror: a click stamps one, an arrow follows the drag, the map's
+      symmetry repeats it with the arrow turned), the Label tool (a click opens a text box over the view,
+      Enter keeps the text, Escape drops it; written once, in the hand-written font Caveat that ships
+      with the editor), the Select tool (click, Shift, or a box selects strokes, symbols and labels of the
+      chosen sheet; a drag moves them, a colour key or the row recolours, the row sizes symbols and labels,
+      Delete removes, a double click on a label edits it; one action is one step of undo), the eraser with
+      Alt removing symbols and labels too, handles and outlines of the Select and Image tools in a violet no
+      pencil has over a dark rim; kept in `sketch/sketch.json` (version 2), shown by the top view and
+      counted in the sheets' list; every operation is a command (`sketch.symbol`, `sketch.label`,
+      `sketch.select`, `sketch.move`, ...) and symbols reach the 3D view through `SketchLines`.
+      Missing: the Symbol, Label and Select tools do not take the 3D view's mouse, labels are not drawn in 3D,
+      symbols have no keys of their own, strokes cannot be resized or a selection turned.
 
 ## H: Help and learning
 

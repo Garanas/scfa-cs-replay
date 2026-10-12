@@ -20,7 +20,7 @@ internal static class TerrainShaders
     /// The heightmap as 16-bit samples, one per ogrid corner, read with interpolation in between;
     /// normals from the slope around a point.
     /// </summary>
-    private const string Heights = """
+    internal const string Heights = """
         uniform usampler2D uHeights;
         uniform float uHeightScale;
 

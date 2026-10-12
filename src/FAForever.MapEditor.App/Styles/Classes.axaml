@@ -631,6 +631,17 @@
   <Style Selector="TextBlock.fieldlabel">
     <Setter Property="Width" Value="{StaticResource FactLabelWidth}" />
   </Style>
+  <!-- the text box of a label being written over the top view (N-4): where the label goes, in the label's own hand -->
+  <Style Selector=":is(UserControl).labeleditor">
+    <Setter Property="Width" Value="{StaticResource LabelEditorWidth}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+  </Style>
+  <Style Selector="TextBox.labelbox">
+    <Setter Property="FontFamily" Value="{StaticResource HandFontFamily}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeLabelEditor}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MapSketchHandleBrush}" />
+  </Style>
   <!-- the chips of the stored selections along the bottom of the top view -->
   <Style Selector="ItemsControl.storedchips">
     <Setter Property="Margin" Value="{StaticResource PopoverOffset}" />

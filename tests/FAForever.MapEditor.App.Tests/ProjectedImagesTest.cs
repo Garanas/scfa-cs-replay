@@ -412,7 +412,7 @@ namespace FAForever.MapEditor.App.Tests
             Assert.AreEqual(128.0, Image(model).CentreX, "a drag in the 3D view moves nothing");
 
             await Run(model, "images.set", new JsonObject { ["locked"] = true });
-            Assert.AreEqual(1, tool.Shapes(top).Count, "a locked image has its outline alone");
+            Assert.IsTrue(tool.Shapes(top).Count == 2 && tool.Shapes(top).All(shape => shape is ToolLine), "a locked image has its outline alone, over its dark rim");
             tool.Press(128, 128, ToolInput.Default);
             tool.Drag(150, 150, ToolInput.Default);
             tool.Release();

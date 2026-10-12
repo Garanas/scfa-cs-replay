@@ -70,11 +70,6 @@ public sealed partial class EraserTool : ObservableObject, IMapTool
         {
             return;
         }
-        if (input.View is { IsTopDown: false })
-        {
-            model.Status = "Erase in the top view: the 3D view shows no sketch yet";
-            return;
-        }
         _sheet = model.Sketch.Chosen ?? "";
         _whole = Whole || input.Modifiers.HasFlag(ToolModifiers.Alt);
         _erased = 0;
@@ -115,7 +110,7 @@ public sealed partial class EraserTool : ObservableObject, IMapTool
         model.EndStroke(edit);
         if (_erased > 0)
         {
-            model.Status = $"Erased {_erased} {(_erased == 1 ? "stroke" : "strokes")} of {_sheet}";
+            model.Status = $"Erased {_erased} {(_erased == 1 ? "item" : "items")} of {_sheet}";
         }
     }
 

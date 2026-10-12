@@ -112,6 +112,7 @@ faf-map editor view-point ref=unit:UNIT_1 --port 5372          # its pixel in th
 faf-map editor tool id=units.select --port 5372
 faf-map editor mouse view=3d x=335 y=260 --port 5372           # click there (action=move|down|up|drag|wheel)
 faf-map editor mouse view=top x=100 y=80 action=drag to=[160,80] modifiers=Shift --port 5372
+faf-map editor mouse view=top action=drag path=[[100,80],[140,60],[160,100]] --port 5372   # a drag through several places in one call (steps= moves between two)
 faf-map editor key key=E --port 5372                           # the view has the keyboard after the click
 faf-map editor key key=Shift action=down --port 5372           # held across mouse actions until action=up
 faf-map editor key key=Ctrl+K --port 5372 && faf-map editor type text=undo --port 5372

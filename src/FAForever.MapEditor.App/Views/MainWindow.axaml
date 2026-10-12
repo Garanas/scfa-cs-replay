@@ -9,6 +9,7 @@
         xmlns:vm="using:FAForever.MapEditor.App.ViewModels"
         xmlns:controls="using:FAForever.MapEditor.App.Controls"
         xmlns:views="using:FAForever.MapEditor.App.Views"
+        xmlns:sketchviews="using:FAForever.MapEditor.App.Views.SketchPanels"
         x:Class="FAForever.MapEditor.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="{Binding Title}"
@@ -146,6 +147,8 @@
                    chips of the selections stored under the digits, along the bottom -->
               <Grid x:Name="TopOverlays" Grid.Column="0">
                 <views:SelectByPopover DataContext="{Binding SelectBy}" />
+                <!-- the text box of a label being written (N-4), where the label goes -->
+                <sketchviews:LabelEditor DataContext="{Binding Sketch}" />
                 <ItemsControl Classes="storedchips" ItemsSource="{Binding StoredSelections.Chips}" IsVisible="{Binding StoredSelections.HasChips}"
                               AutomationProperties.Name="Stored selections">
                   <ItemsControl.ItemsPanel>

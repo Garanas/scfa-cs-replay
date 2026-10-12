@@ -80,6 +80,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     private readonly Program _sky;
     private readonly Program _brush;
     private readonly Program _overlay;
+    private readonly SketchRenderer _sketch;
     private uint _walkTexture;
     private object? _walkOf;
     private uint _gridTexture;
@@ -133,6 +134,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _sky = new Program(gl, TerrainShaders.SkyVertex(es), TerrainShaders.SkyFragment(es));
         _brush = new Program(gl, TerrainShaders.BrushVertex(es), TerrainShaders.BrushFragment(es));
         _overlay = new Program(gl, TerrainShaders.OverlayVertex(es), TerrainShaders.OverlayFragment(es));
+        _sketch = new SketchRenderer(gl, es);
 
         _repeat = Sampler(GLEnum.Repeat);
         _clamp = Sampler(GLEnum.ClampToEdge);
@@ -191,6 +193,17 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// </summary>
     public int Debug { get; set; }
 
+    /// <summary>
+    /// What the last frame drew of the sketch (user story N-3).
+    /// </summary>
+    public SketchDrawn SketchDrawn => _sketch.Drawn;
+
+    /// <summary>
+    /// Whether the sketch lays a sheet at less than full opacity over the scene as one layer (else its lines
+    /// darken where they overlap): false once the card refused the layer's frame buffer.
+    /// </summary>
+    public bool SketchLayersWork => _sketch.LayersWork;
+
     /// <param name="brushes">The active tool's brush under the mouse and its images in the other
     /// parts of a symmetric map; null or empty for none.</param>
     /// <param name="brushColor">Its colour, from the theme's overlay token.</param>
@@ -206,7 +219,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
     /// (<c>TerrainViewGpu.SkyCube</c>), which share their textures.</param>
     public void Render(MapDocument document, Matrix4x4 viewProjection, Func<string, TextureSource?> findTexture, IReadOnlyList<BrushPreview>? brushes = null, Vector3 brushColor = default, (ObjectRenderer Renderer, ObjectFrame Frame)? objects = null,
         (IReadOnlySet<int>? Hidden, IReadOnlySet<int>? Highlighted, Vector3 Color)? decals = null, TerrainOverlays? overlays = null,
-        Func<string, TextureSource?>? findCube = null, Vector3 eye = default, bool showDecals = true, bool sweep = true)
+        Func<string, TextureSource?>? findCube = null, Vector3 eye = default, bool showDecals = true, bool sweep = true, SketchFrame? sketch = null)
     {
         _hidden = decals?.Hidden;
         _highlighted = decals?.Highlighted;
@@ -279,6 +292,13 @@ internal sealed unsafe class TerrainRenderer : IDisposable
                 // (trees far away included) stays in front; over the decals and the water
                 DrawOverlays(document, viewProjection, overlays);
             }
+        }
+        if (sketch is SketchFrame strokes)
+        {
+            // the sketch lies on the terrain as the overlays do, over the decals and the water, under the brush
+            _gl.ActiveTexture(TextureUnit.Texture0);
+            Bind(0, _heights, 0);
+            _sketch.Draw(viewProjection, eye, strokes.Size, document.Terrain.Heightmap.Scale, strokes.Layers, strokes.Alive, strokes.Pending);
         }
         if (brushes is { Count: > 0 })
         {
@@ -1098,6 +1118,7 @@ internal sealed unsafe class TerrainRenderer : IDisposable
         _gl.DeleteTexture(_mask0);
         _gl.DeleteTexture(_mask1);
         _overlay.Dispose();
+        _sketch.Dispose();
         if (_walkTexture != 0)
         {
             _gl.DeleteTexture(_walkTexture);

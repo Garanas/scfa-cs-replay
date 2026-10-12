@@ -58,7 +58,10 @@ namespace FAForever.MapEditor.App.Tests
             Assert.IsInstanceOfType<PencilTool>(model.ActiveTool!.Tool, "the pencil is the first tool");
             Assert.IsFalse(model.Tools.Single(tool => tool.Definition.Id == "sketch.pencil").Definition.IsIncomplete);
             Assert.IsFalse(model.Tools.Single(tool => tool.Definition.Id == "sketch.eraser").Definition.IsIncomplete);
-            Assert.IsTrue(model.Tools.Single(tool => tool.Definition.Id == "sketch.symbol").Definition.IsIncomplete, "symbols are wave 24");
+            foreach (string id in new[] { "sketch.symbol", "sketch.label", "sketch.select" })
+            {
+                Assert.IsFalse(model.Tools.Single(tool => tool.Definition.Id == id).Definition.IsIncomplete, id);
+            }
             Assert.AreEqual("sketch.mode", model.Commands.Find("sketch.mode")!.Id);
             Assert.AreEqual("Ctrl+Shift+K", model.Commands.Find("view.overlay.sketch")!.Gesture);
             Assert.IsTrue(model.ShowSketch, "the sketch shows in every mode from the start");
@@ -137,19 +140,68 @@ namespace FAForever.MapEditor.App.Tests
         }
 
         [TestMethod]
-        public async Task The3DViewDrawsNoStrokesYet()
+        public async Task ThePencilAndTheEraserWorkInThe3DViewToo()
         {
             MainViewModel model = await Open();
+            await Run(model, "sketch.setPencil", new JsonObject { ["mirror"] = false });
+            // a 3D view: the mouse is already turned into places of the map by the view
             ToolView threeD = new ToolView(false, null, _ => Vector2.Zero, _ => 1f);
+            ToolInput input = new ToolInput(ToolModifiers.None, 3f, View: threeD);
 
-            model.Tool<PencilTool>().Press(50, 50, new ToolInput(ToolModifiers.None, 0.5f, View: threeD));
-            model.Tool<PencilTool>().Release();
-            model.Tool<EraserTool>().Press(50, 50, new ToolInput(ToolModifiers.None, 0.5f, View: threeD));
-            model.Tool<EraserTool>().Release();
+            PencilTool pencil = model.Tool<PencilTool>();
+            pencil.Press(50, 50, input);
+            pencil.Drag(80, 60, input);
+            Assert.AreEqual(1, model.Sketch.Pending.Count, "the line shows while the mouse is down, in the 3D view too");
+            pencil.Release();
+            Assert.AreEqual(1, Sketch(model).StrokeCount);
+            Assert.AreEqual(0, model.Sketch.Pending.Count);
 
-            Assert.IsTrue(Sketch(model).IsEmpty, "a stroke drawn there would only show in the top view");
+            EraserTool eraser = model.Tool<EraserTool>();
+            eraser.Press(65, 55, input);
+            eraser.Release();
+            Assert.AreEqual(2, Sketch(model).StrokeCount, "the eraser cut the stroke in two in the 3D view too");
             Assert.IsNull(model.StrokeInProgress);
-            StringAssert.Contains(model.Status, "top view");
+        }
+
+        [TestMethod]
+        public async Task ACommandRefusedForAStrokeGoingOnSaysWhyInTheAnswerAndTheLog()
+        {
+            MainViewModel model = await Open();
+            List<string> refused = [];
+            model.Commands.Refused += (command, why) => refused.Add($"{command.Id}: {why}");
+            EraserTool eraser = model.Tool<EraserTool>();
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((10, 10), (60, 60)), ["mirror"] = false });
+            eraser.Press(30, 30);
+
+            CommandRun run = await model.Commands.TryRunAsync("sketch.draw", new JsonObject { ["points"] = Points((20, 20), (70, 20)) }, interactive: false);
+
+            Assert.IsFalse(run.Ran);
+            StringAssert.Contains(run.Why, "a stroke is going on");
+            StringAssert.Contains(run.Why, "Escape");
+            Assert.AreEqual(1, refused.Count);
+            StringAssert.StartsWith(refused[0], "sketch.draw: ");
+            eraser.Release();
+        }
+
+        [TestMethod]
+        public async Task TheSketchIsOneListOfLinesPerShownSheetAtItsOpacity()
+        {
+            MainViewModel model = await Open();
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((10, 10), (60, 60)), ["colour"] = "red", ["mirror"] = false });
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((20, 10)), ["colour"] = "blue", ["width"] = "thick", ["mirror"] = false });
+            await Run(model, "sketch.addSheet", new JsonObject { ["name"] = "Hidden" });
+            await Run(model, "sketch.draw", new JsonObject { ["points"] = Points((5, 5), (9, 9)), ["mirror"] = false });
+            await Run(model, "sketch.showSheet", new JsonObject { ["on"] = false });
+
+            System.Collections.Immutable.ImmutableArray<FAForever.MapEditor.Project.Editing.SketchLayer> other = FAForever.MapEditor.Project.Editing.SketchLines.Of(Sketch(model), full: false);
+            System.Collections.Immutable.ImmutableArray<FAForever.MapEditor.Project.Editing.SketchLayer> inMode = FAForever.MapEditor.Project.Editing.SketchLines.Of(Sketch(model), full: true);
+
+            Assert.AreEqual(1, other.Length, "a hidden sheet is not drawn");
+            Assert.AreEqual(0.45f, other[0].Opacity, 1e-6f, "the other modes draw it at its own opacity");
+            Assert.AreEqual(1f, inMode[0].Opacity, "the Sketch mode draws it fully");
+            Assert.AreEqual(2, other[0].Lines.Length);
+            Assert.AreEqual(SketchColour.Red, other[0].Lines[0].Colour);
+            Assert.AreEqual(1, other[0].Lines[1].Points.Length, "a dot is a line of one place");
         }
 
         [TestMethod]
@@ -494,8 +546,7 @@ namespace FAForever.MapEditor.App.Tests
             MainViewModel model = await Open();
             string[] ids = [.. model.Commands.All.Where(command => command.Id.StartsWith("sketch.", StringComparison.Ordinal) && !command.Id.EndsWith(".mode", StringComparison.Ordinal)
                     && !command.Id.StartsWith("sketch.pencil", StringComparison.Ordinal) && !command.Id.StartsWith("sketch.eraser", StringComparison.Ordinal)
-                    && !command.Id.StartsWith("sketch.symbol", StringComparison.Ordinal) && !command.Id.StartsWith("sketch.label", StringComparison.Ordinal)
-                    && !command.Id.StartsWith("sketch.select", StringComparison.Ordinal) && !command.Id.StartsWith("sketch.image", StringComparison.Ordinal))
+                    && !command.Id.StartsWith("sketch.image", StringComparison.Ordinal) && command.Story != "N-4")
                 .Select(command => command.Id).Order()];
 
             CollectionAssert.AreEqual(new[]
@@ -504,6 +555,12 @@ namespace FAForever.MapEditor.App.Tests
                 "sketch.renameSheet", "sketch.setEraser", "sketch.setLegend", "sketch.setOpacity", "sketch.setPencil", "sketch.showSheet",
             }, ids);
             Assert.IsTrue(ids.All(id => model.Commands.Find(id)!.Story == "N-1"));
+
+            string[] marks = [.. model.Commands.All.Where(command => command.Story == "N-4").Select(command => command.Id).Order()];
+            CollectionAssert.AreEqual(new[]
+            {
+                "sketch.deleteSelected", "sketch.editLabel", "sketch.label", "sketch.move", "sketch.recolour", "sketch.resize", "sketch.select", "sketch.setLabel", "sketch.setSymbol", "sketch.symbol",
+            }, marks.Where(id => id.StartsWith("sketch.", StringComparison.Ordinal)).ToArray());
         }
     }
 }
