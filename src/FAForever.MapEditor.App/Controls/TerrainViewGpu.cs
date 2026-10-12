@@ -370,7 +370,7 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
                     using Performance.Span lookup = Performance.Measure("3d.find-texture");
                     return _model.WideDecals.TextureOf(path) ?? FindTexture(path, document, workspace);
                 }, BrushUnderMouse(document), BrushColor(), Objects(camera), Decals(), Overlays(document),
-                    path => FindCube(path, document, workspace), camera.Eye, _model.ShowDecals);
+                    path => FindCube(path, document, workspace), camera.Eye, _model.ShowDecals, sketch: SketchFrameOf(document));
                 _shapes?.Draw(ToolShapes(document), new Vector2((float)Bounds.Width, (float)Bounds.Height), Ink);
             }
             catch (InvalidOperationException exception)
@@ -570,6 +570,8 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.Selection.Changed -= OnSelectionChanged;
             _model.CameraMoved -= OnCameraMoved;
             _model.OverlaysChanged -= OnDocumentChanged;
+            _model.Sketch.PendingChanged -= OnDocumentChanged;
+            _model.PropertyChanged -= OnModelPropertyChanged;
         }
         _model = DataContext as MainViewModel;
         if (_model is not null)
@@ -580,6 +582,8 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
             _model.CursorChanged += OnDocumentChanged;
             _model.Selection.Changed += OnSelectionChanged;
             _model.OverlaysChanged += OnDocumentChanged;
+            _model.Sketch.PendingChanged += OnDocumentChanged;
+            _model.PropertyChanged += OnModelPropertyChanged;
             AttachSkyCube();
         }
         RequestNextFrameRendering();
@@ -591,6 +595,15 @@ public sealed partial class TerrainViewGpu : OpenGlControlBase, ICustomHitTest
     private void OnCameraMoved(object? sender, EventArgs e) => RequestNextFrameRendering();
 
     private void OnDocumentChanged(object? sender, EventArgs e) => RequestNextFrameRendering();
+
+    // the Sketch mode draws its sheets fully, the other modes at their opacity
+    private void OnModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ViewModels.MainViewModel.InSketchMode))
+        {
+            RequestNextFrameRendering();
+        }
+    }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {

@@ -1602,6 +1602,14 @@ files (the export reads no `MapDocument.Sketch`) nor `files/` (the other files o
   sides, convex, so it meets a segment in one stretch: `Crosses`), so a stroke is cut in two where the
   eraser crosses its middle and what is left shorter than `Shortest` goes; a stroke of one point goes
   whole. `Erase` with `whole` removes a stroke the eraser touches entirely (Alt).
+- **The sketch as lines** (`Editing/SketchLines.cs`): every view draws from one list, `SketchLines.Of(sketch, full)`: a
+  `SketchLayer` per sheet that shows and has something to draw (`full`: the Sketch mode draws every sheet
+  at opacity 1, the other modes at the sheet's own), holding its `SketchLine`s (colour, width, places in
+  ogrids; a stroke is one line, a dot one place) in drawing order. `SketchLines.Of(sheet)` is kept while the
+  document holds that very sheet (a view may ask every frame), and `Extends(earlier, later)` says that a
+  list is another with lines added at its end, so that a view that drew the first only makes the added
+  ones. Whatever a sheet holds that is drawn with lines belongs in `Of(sheet)`, so that the top view and
+  the 3D view show it without further work.
 - **Files**: `sketch/sketch.json` (`SketchDto`, its own `version` 1, not the project's format version: an
   older project reads as if it held no sketch, and a project without sheets writes no file and no
   folder, which another part of the project that lies in `sketch/`, the projected images N-2, keeps

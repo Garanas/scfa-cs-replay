@@ -655,8 +655,14 @@ layout before building it, and pictures projected onto the map to trace or build
       (chip, View menu, Ctrl+Shift+J) hides them all; every operation is a command (`images.*`)
       and one step of undo. Missing: moving an image forward or back in the drawing order (the
       list's order is the order they were projected in).
-- [ ] **N-3 Sketch in 3D.** The 3D view draws the sketch's strokes over the terrain, the same width
-      on screen at every distance.
+- [x] **N-3 Sketch in 3D.** The 3D view draws the sketch's strokes over the terrain, the same width
+      on screen at every distance. Today: the shown sheets' strokes lie on the terrain following its heights
+      (also while it is edited), as lines of a constant width on screen with round ends and joins, in
+      the sketch's colours, a sheet at its opacity outside the Sketch mode as one layer (overlaps do not darken), hidden
+      with the Sketch chip or Ctrl+Shift+K; the pencil and the eraser work in the 3D view (the line and its
+      images by the symmetry show while the mouse is down); `state.sketch.drawn3d` counts what the 3D view
+      drew; a command refused while a stroke is going on says why. Missing: the projected images stay
+      out of 3D by decision; symbols and labels (N-4) are not drawn yet.
 - [ ] **N-4 Symbols and labels.** Stamp symbols on a sheet (spawn, mass, hydrocarbon, arrow, cross,
       question mark) and write labels in a hand-drawn style; select strokes, symbols and labels
       to move, recolour or delete them.

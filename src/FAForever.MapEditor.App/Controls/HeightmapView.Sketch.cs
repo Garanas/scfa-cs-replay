@@ -1,8 +1,10 @@
 using System.Runtime.CompilerServices;
+using System.Collections.Immutable;
 using Avalonia;
 using Avalonia.Media;
 using FAForever.MapEditor.App.Diagnostics;
 using FAForever.MapEditor.App.ViewModels;
+using FAForever.MapEditor.Project.Editing;
 using FAForever.MapEditor.Project.Files.InMemory;
 
 namespace FAForever.MapEditor.App.Controls;
@@ -63,20 +65,12 @@ public sealed partial class HeightmapView
         visible = visible.Inflate(SketchLook.Pixels(SketchWidth.Thick) / _zoom);
         if (model.ShowSketch)
         {
-            foreach (SketchSheet sheet in document.Sketch.Sheets)
+            foreach (SketchLayer layer in SketchLines.Of(document.Sketch, full))
             {
-                if (!sheet.Shown || sheet.Strokes.IsEmpty)
-                {
-                    continue;
-                }
-                float opacity = full ? 1 : sheet.Opacity;
-                if (opacity <= 0)
-                {
-                    continue;
-                }
+                float opacity = layer.Opacity;
                 sheets++;
-                strokes += sheet.Strokes.Length;
-                SketchRun[] runs = SketchRuns.GetValue(sheet, BuildSketchRuns);
+                strokes += layer.Lines.Length;
+                SketchRun[] runs = SketchRuns.GetValue(layer.Sheet, BuildSketchRuns);
                 // a sheet at full opacity needs no layer of its own
                 using (opacity < 1 ? context.PushOpacity(opacity) : (IDisposable?)null)
                 using (context.PushTransform(SketchMatrix()))
@@ -123,13 +117,14 @@ public sealed partial class HeightmapView
     private static SketchRun[] BuildSketchRuns(SketchSheet sheet)
     {
         using Performance.Span measure = Performance.Measure("top.sketch-build");
+        ImmutableArray<SketchLine> lines = SketchLines.Of(sheet);
         List<SketchRun> runs = [];
         int from = 0;
-        while (from < sheet.Strokes.Length)
+        while (from < lines.Length)
         {
-            SketchStroke first = sheet.Strokes[from];
+            SketchLine first = lines[from];
             int to = from;
-            while (to < sheet.Strokes.Length && to - from < StrokesPerRun && sheet.Strokes[to].Colour == first.Colour && sheet.Strokes[to].Width == first.Width)
+            while (to < lines.Length && to - from < StrokesPerRun && lines[to].Colour == first.Colour && lines[to].Width == first.Width)
             {
                 to++;
             }
@@ -139,8 +134,8 @@ public sealed partial class HeightmapView
             {
                 for (int i = from; i < to; i++)
                 {
-                    AddFigure(figures, sheet.Strokes[i]);
-                    foreach (System.Numerics.Vector2 point in sheet.Strokes[i].Points)
+                    AddFigure(figures, lines[i].Points);
+                    foreach (System.Numerics.Vector2 point in lines[i].Points)
                     {
                         left = Math.Min(left, point.X);
                         top = Math.Min(top, point.Y);
@@ -160,27 +155,27 @@ public sealed partial class HeightmapView
         StreamGeometry geometry = new StreamGeometry();
         using (StreamGeometryContext figures = geometry.Open())
         {
-            AddFigure(figures, stroke);
+            AddFigure(figures, stroke.Points);
         }
         return geometry;
     }
 
-    private static void AddFigure(StreamGeometryContext figures, SketchStroke stroke)
+    private static void AddFigure(StreamGeometryContext figures, ImmutableArray<System.Numerics.Vector2> points)
     {
-        if (stroke.Points.IsDefaultOrEmpty)
+        if (points.IsDefaultOrEmpty)
         {
             return;
         }
-        Point first = new Point(stroke.Points[0].X, stroke.Points[0].Y);
+        Point first = new Point(points[0].X, points[0].Y);
         figures.BeginFigure(first, false);
-        if (stroke.Points.Length == 1)
+        if (points.Length == 1)
         {
             // a dot is a line of no length: the round ends make it a disc
             figures.LineTo(first);
         }
-        for (int i = 1; i < stroke.Points.Length; i++)
+        for (int i = 1; i < points.Length; i++)
         {
-            figures.LineTo(new Point(stroke.Points[i].X, stroke.Points[i].Y));
+            figures.LineTo(new Point(points[i].X, points[i].Y));
         }
         figures.EndFigure(false);
     }
